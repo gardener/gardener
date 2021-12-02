@@ -674,7 +674,7 @@ var _ = Describe("Seed", func() {
 				}
 			})
 
-			DescribeTable("should allow without consulting the graph because verb is get, list, watch, create, delete",
+			DescribeTable("should allow without consulting the graph because verb is get, list, watch, create",
 				func(verb string) {
 					attrs.Verb = verb
 

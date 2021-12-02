@@ -297,7 +297,7 @@ var _ = Describe("BackupEntry", func() {
 		})
 
 		It("should not return error when it's deleted successfully", func() {
-			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating infrastructure succeeds")
+			Expect(c.Create(ctx, expected)).To(Succeed(), "creating BackupEntry succeeds")
 			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
 		})
 	})
