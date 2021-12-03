@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcdcopybackupstask"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime"
@@ -96,13 +97,14 @@ type Shoot struct {
 
 // Components contains different components deployed in the Shoot cluster.
 type Components struct {
-	BackupEntry       backupentry.Interface
-	SourceBackupEntry backupentry.Interface
-	ControlPlane      *ControlPlane
-	Extensions        *Extensions
-	NetworkPolicies   component.Deployer
-	SystemComponents  *SystemComponents
-	Logging           *Logging
+	BackupEntry              backupentry.Interface
+	SourceBackupEntry        backupentry.Interface
+	ControlPlane             *ControlPlane
+	Extensions               *Extensions
+	NetworkPolicies          component.Deployer
+	SystemComponents         *SystemComponents
+	Logging                  *Logging
+	DependencyWatchdogAccess dependencywatchdog.AccessInterface
 }
 
 // ControlPlane contains references to K8S control plane components.
