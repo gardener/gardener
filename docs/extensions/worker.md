@@ -71,11 +71,6 @@ spec:
     machineImage:
       name: coreos
       version: 1967.5.0
-    nodeTemplate:
-      capacity:
-        cpu: 2
-        gpu: 0
-        memory: 8Gi
     userData: c29tZSBkYXRhIHRvIGJvb3RzdHJhcCB0aGUgVk0K
     volume:
       size: 20Gi
@@ -100,8 +95,6 @@ Also, as you can see, Gardener copies the output of the infrastructure creation 
 In the `.spec.pools[]` field the desired worker pools are listed.
 In the above example, one pool with machine type `m4.large` and `min=3`, `max=5` machines shall be spread over two availability zones (`eu-west-1b`, `eu-west-1c`).
 This information together with the infrastructure status must be used to determine the proper configuration for the machine classes.
-
-The `spec.pools[].nodeTemplate.capacity` field contains the resource information of the machine like `cpu`, `gpu` and `memory`. This info is used by Cluster Autoscaler to generate `nodeTemplate` during scaling the `nodeGroup` from zero.
 
 The `spec.pools[].machineControllerManager` field allows to configure the settings for machine-controller-manager component. Providers must populate these settings on worker-pool to the related [fields](https://github.com/gardener/machine-controller-manager/blob/master/kubernetes/machine_objects/machine-deployment.yaml#L30-L34) in MachineDeployment.
 

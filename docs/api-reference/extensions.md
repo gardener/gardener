@@ -3413,38 +3413,6 @@ DefaultStatus
 </tr>
 </tbody>
 </table>
-<h3 id="extensions.gardener.cloud/v1alpha1.NodeTemplate">NodeTemplate
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#extensions.gardener.cloud/v1alpha1.WorkerPool">WorkerPool</a>)
-</p>
-<p>
-<p>NodeTemplate contains information about the expected node properties.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>capacity</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#resourcelist-v1-core">
-Kubernetes core/v1.ResourceList
-</a>
-</em>
-</td>
-<td>
-<p>Capacity represents the expected Node capacity.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="extensions.gardener.cloud/v1alpha1.Object">Object
 </h3>
 <p>
@@ -4050,20 +4018,6 @@ string
 <td>
 <em>(Optional)</em>
 <p>KubernetesVersion is the kubernetes version in this worker pool</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>nodeTemplate</code></br>
-<em>
-<a href="#extensions.gardener.cloud/v1alpha1.NodeTemplate">
-NodeTemplate
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>NodeTemplate contains resource information of the machine which is used by Cluster Autoscaler to generate nodeTemplate during scaling a nodeGroup from zero</p>
 </td>
 </tr>
 </tbody>
