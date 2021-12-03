@@ -1,0 +1,28 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+metadata:
+  name: local
+  namespace: garden-local
+  annotations:
+    shoot.gardener.cloud/infrastructure-cleanup-wait-period-seconds: "0"
+spec:
+  seedName: local
+  cloudProfileName: local
+  secretBindingName: local # dummy, doesn't contain any credentials
+  region: local
+  networking:
+    type: local
+  provider:
+    type: local
+    workers:
+    - name: local
+      machine:
+        type: local
+      cri:
+        name: containerd
+      minimum: 1
+      maximum: 1 # currently, only single-node clusters are supported
+      maxSurge: 1
+      maxUnavailable: 0
+  kubernetes:
+    version: 1.21.0
