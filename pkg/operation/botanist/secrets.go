@@ -57,6 +57,8 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 		// Remove legacy secrets from ShootState.
 		// TODO(rfranzke): Remove in a future version.
 		for _, name := range []string{
+			"gardener",
+			"gardener-internal",
 			"kube-scheduler",
 			"kube-controller-manager",
 			"cluster-autoscaler",
