@@ -22,6 +22,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcdcopybackupstask"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -38,6 +39,10 @@ func (b *Botanist) DefaultEtcdCopyBackupsTask() etcdcopybackupstask.Interface {
 		&etcdcopybackupstask.Values{
 			Name:      b.Shoot.GetInfo().Name,
 			Namespace: b.Shoot.SeedNamespace,
+			WaitForFinalSnapshot: &druidv1alpha1.WaitForFinalSnapshotSpec{
+				Enabled: true,
+				Timeout: &metav1.Duration{Duration: etcdcopybackupstask.DefaultWaitForFinalSnapshotTimeout},
+			},
 		},
 		etcdcopybackupstask.DefaultInterval,
 		etcdcopybackupstask.DefaultSevereThreshold,

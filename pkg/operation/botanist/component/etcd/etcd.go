@@ -588,7 +588,7 @@ func (e *etcd) Snapshot(ctx context.Context, podExecutor kubernetes.PodExecutor)
 		podsList.Items[0].GetName(),
 		containerNameBackupRestore,
 		"/bin/sh",
-		fmt.Sprintf("curl -k https://etcd-%s-local:%d/snapshot/full", e.role, PortBackupRestore),
+		fmt.Sprintf("curl -k https://etcd-%s-local:%d/snapshot/full?final=true", e.role, PortBackupRestore),
 	)
 	return err
 }
