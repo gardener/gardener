@@ -2026,8 +2026,8 @@ message SeedSpec {
   // Provider defines the provider type and region for this Seed cluster.
   optional SeedProvider provider = 5;
 
-  // SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
-  // the account the Seed cluster has been deployed to.
+  // SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
+  // cluster to be registered as Seed.
   // +optional
   optional k8s.io.api.core.v1.SecretReference secretRef = 6;
 

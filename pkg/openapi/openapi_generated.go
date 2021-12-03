@@ -6428,7 +6428,7 @@ func schema_pkg_apis_core_v1alpha1_SeedSpec(ref common.ReferenceCallback) common
 					},
 					"secretRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for the account the Seed cluster has been deployed to.",
+							Description: "SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes cluster to be registered as Seed.",
 							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
 						},
 					},
@@ -13234,7 +13234,7 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 					},
 					"secretRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for the account the Seed cluster has been deployed to.",
+							Description: "SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes cluster to be registered as Seed.",
 							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
 						},
 					},

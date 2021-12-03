@@ -263,7 +263,6 @@ var _ = Describe("Actuator", func() {
 				},
 			},
 			Data: map[string][]byte{
-				"foo":        []byte("bar"),
 				"kubeconfig": []byte("kubeconfig"),
 			},
 			Type: corev1.SecretTypeOpaque,
