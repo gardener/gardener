@@ -258,6 +258,15 @@ kind-down:
 	kind delete cluster --name gardener-local
 	rm -f $(REPO_ROOT)/example/provider-local/base/kubeconfig
 
+# workaround for https://github.com/GoogleContainerTools/skaffold/issues/6416
+export SKAFFOLD_LABEL := skaffold.dev/run-id=gardener-local
+gardener-up: $(SKAFFOLD) $(HELM)
+	VERSION=$(EFFECTIVE_VERSION) $(SKAFFOLD) run
+
+gardener-down: $(SKAFFOLD) $(HELM)
+	kubectl --kubeconfig=$(REPO_ROOT)/example/gardener-local/kind/kubeconfig delete validatingwebhookconfiguration/validate-namespace-deletion --ignore-not-found
+	$(SKAFFOLD) delete
+
 register-local-env:
 	kubectl apply -k $(REPO_ROOT)/example/provider-local/overlays/local
 

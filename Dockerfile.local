@@ -1,0 +1,200 @@
+############# base
+FROM alpine:3.13.6 AS base
+
+# Define GOTRACEBACK to mark this container as using the Go language runtime
+# for `skaffold debug` (https://skaffold.dev/docs/workflows/debug/).
+ENV GOTRACEBACK=single
+
+RUN apk add --update tzdata
+
+############# builder-base #############
+FROM golang:1.17.5 AS builder-base
+
+WORKDIR /go/src/github.com/gardener/gardener
+
+# `skaffold debug` sets SKAFFOLD_GO_GCFLAGS to disable compiler optimizations
+ARG SKAFFOLD_GO_GCFLAGS
+ARG TARGETOS
+ARG TARGETARCH
+
+ENV CGO_ENABLED=0
+ENV GOOS=$TARGETOS
+ENV GOARCH=$TARGETARCH
+
+ARG VERSION
+RUN echo "-X k8s.io/component-base/version.gitVersion=$VERSION \
+        -X k8s.io/component-base/version.buildDate=$(date '+%Y-%m-%dT%H:%M:%S%z' | sed 's/\([0-9][0-9]\)$/:\1/g') \
+        -X k8s.io/component-base/version/verflag.programName=Gardener" > /tmp/build-flags
+
+############# apiserver #############
+FROM builder-base AS builder-apiserver
+
+# manually copy the packages we need to keep the build context slim
+COPY cmd cmd
+COPY pkg pkg
+COPY plugin plugin
+
+COPY go.mod go.sum ./
+
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    go build -gcflags="${SKAFFOLD_GO_GCFLAGS}" \
+    -ldflags="$(cat /tmp/build-flags)" \
+    -o /gardener-apiserver ./cmd/gardener-apiserver
+
+FROM base AS apiserver
+
+COPY --from=builder-apiserver /gardener-apiserver /gardener-apiserver
+ENTRYPOINT ["/gardener-apiserver"]
+
+############# controller-manager #############
+FROM builder-base AS builder-controller-manager
+
+# manually copy the packages we need to keep the build context slim
+COPY charts/images.go charts/images.yaml charts/
+COPY cmd cmd
+COPY pkg pkg
+
+COPY go.mod go.sum ./
+
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    go build -gcflags="${SKAFFOLD_GO_GCFLAGS}" \
+    -ldflags="$(cat /tmp/build-flags)" \
+    -o /gardener-controller-manager ./cmd/gardener-controller-manager
+
+FROM base AS controller-manager
+
+COPY --from=builder-controller-manager /gardener-controller-manager /gardener-controller-manager
+ENTRYPOINT ["/gardener-controller-manager"]
+
+############# scheduler #############
+FROM builder-base AS builder-scheduler
+
+# manually copy the packages we need to keep the build context slim
+COPY cmd cmd
+COPY pkg pkg
+
+COPY go.mod go.sum ./
+
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    go build -gcflags="${SKAFFOLD_GO_GCFLAGS}" \
+    -ldflags="$(cat /tmp/build-flags)" \
+    -o /gardener-scheduler ./cmd/gardener-scheduler
+
+FROM base AS scheduler
+
+COPY --from=builder-scheduler /gardener-scheduler /gardener-scheduler
+ENTRYPOINT ["/gardener-scheduler"]
+
+############# admission-controller #############
+FROM builder-base AS builder-admission-controller
+
+# manually copy the packages we need to keep the build context slim
+COPY charts/images.go charts/
+COPY cmd cmd
+COPY pkg pkg
+
+COPY go.mod go.sum ./
+
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    go build -gcflags="${SKAFFOLD_GO_GCFLAGS}" \
+    -ldflags="$(cat /tmp/build-flags)" \
+    -o /gardener-admission-controller ./cmd/gardener-admission-controller
+
+FROM base AS admission-controller
+
+COPY --from=builder-admission-controller /gardener-admission-controller /gardener-admission-controller
+ENTRYPOINT ["/gardener-admission-controller"]
+
+############# resource-manager #############
+FROM builder-base AS builder-resource-manager
+
+# manually copy the packages we need to keep the build context slim
+COPY cmd cmd
+COPY pkg pkg
+
+COPY go.mod go.sum ./
+
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    go build -gcflags="${SKAFFOLD_GO_GCFLAGS}" \
+    -ldflags="$(cat /tmp/build-flags)" \
+    -o /gardener-resource-manager ./cmd/gardener-resource-manager
+
+FROM base AS resource-manager
+
+COPY --from=builder-resource-manager /gardener-resource-manager /gardener-resource-manager
+ENTRYPOINT ["/gardener-resource-manager"]
+
+############# seed-admission-controller #############
+FROM builder-base AS builder-seed-admission-controller
+
+# manually copy the packages we need to keep the build context slim
+COPY charts/images.go charts/images.yaml charts/
+COPY cmd cmd
+COPY pkg pkg
+
+COPY go.mod go.sum ./
+
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    go build -gcflags="${SKAFFOLD_GO_GCFLAGS}" \
+    -ldflags="$(cat /tmp/build-flags)" \
+    -o /gardener-seed-admission-controller ./cmd/gardener-seed-admission-controller
+
+FROM base AS seed-admission-controller
+
+COPY --from=builder-seed-admission-controller /gardener-seed-admission-controller /gardener-seed-admission-controller
+ENTRYPOINT ["/gardener-seed-admission-controller"]
+
+############# gardenlet #############
+FROM builder-base AS builder-gardenlet
+
+# manually copy the packages we need to keep the build context slim
+COPY charts/images.go charts/images.yaml charts/doc.go charts/
+COPY cmd cmd
+COPY pkg pkg
+COPY third_party third_party
+
+COPY go.mod go.sum ./
+
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    go build -gcflags="${SKAFFOLD_GO_GCFLAGS}" \
+    -ldflags="$(cat /tmp/build-flags)" \
+    -o /gardenlet ./cmd/gardenlet
+
+FROM base AS gardenlet
+
+RUN apk add --update openvpn
+
+COPY charts /charts
+COPY --from=builder-gardenlet /gardenlet /gardenlet
+ENTRYPOINT ["/gardenlet"]
+
+############# extension-provider-local #############
+FROM builder-base AS builder-extension-provider-local
+
+# manually copy the packages we need to keep the build context slim
+COPY charts/images.go charts/images.yaml charts/doc.go charts/
+COPY cmd cmd
+COPY extensions extensions
+COPY pkg pkg
+COPY third_party third_party
+
+COPY go.mod go.sum ./
+
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    go build -gcflags="${SKAFFOLD_GO_GCFLAGS}" \
+    -ldflags="$(cat /tmp/build-flags)" \
+    -o /gardener-extension-provider-local ./cmd/gardener-extension-provider-local
+
+FROM base AS extension-provider-local
+
+COPY charts/gardener/provider-local/internal /charts/gardener/provider-local/internal
+COPY --from=builder-extension-provider-local /gardener-extension-provider-local /gardener-extension-provider-local
+ENTRYPOINT ["/gardener-extension-provider-local"]
