@@ -1,0 +1,13 @@
+images:
+- name: machine-controller-manager
+  sourceRepository: github.com/gardener/machine-controller-manager
+  repository: eu.gcr.io/gardener-project/gardener/machine-controller-manager
+  tag: "v0.41.0"
+- name: machine-controller-manager-provider-local
+  sourceRepository: github.com/gardener/machine-controller-manager-provider-local
+  repository: ghcr.io/gardener/machine-controller-manager-provider-local
+  tag: sha-c0296e3
+- name: kindnet
+  sourceRepository: github.com/kubernetes-sigs/kind
+  repository: docker.io/kindest/kindnetd
+  tag: v20210326-1e038dc5
