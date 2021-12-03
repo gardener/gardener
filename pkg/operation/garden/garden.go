@@ -170,7 +170,7 @@ var gardenRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, select
 
 // ReadGardenSecrets reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.
 // The Secret objects are stored on the Controller in order to pass them to created Garden objects later.
-func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string, log logrus.FieldLogger) (map[string]*corev1.Secret, error) {
+func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string, log logrus.FieldLogger, enforceInternalDomainSecret bool) (map[string]*corev1.Secret, error) {
 	var (
 		logInfo                             []string
 		secretsMap                          = make(map[string]*corev1.Secret)
@@ -273,7 +273,7 @@ func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string, l
 		// is used in all kubeconfigs. With that we have a robust endpoint stable against underlying ip/hostname changes.
 		// And there can only be one of this internal domain secret because otherwise the gardener would not know which
 		// domain it should use.
-		if numberOfInternalDomainSecrets == 0 {
+		if enforceInternalDomainSecret && numberOfInternalDomainSecrets == 0 {
 			return nil, fmt.Errorf("need an internal domain secret but found none")
 		}
 	}
