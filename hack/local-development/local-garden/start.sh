@@ -43,7 +43,7 @@ for i in 1..10; do
 done
 
 echo "# Configuring RBAC resources for Gardener components"
-$(dirname $0)/configure-rbac
+$(dirname $0)/../dev-setup-configure-rbac "$(dirname $0)/kubeconfigs/default-admin.conf" $(is_seedauthorizer_enabled) "clientcerts"
 
 echo "# Applying proxy RBAC for the extension controller"
 echo "# After this step, you can start using the cluster at KUBECONFIG=hack/local-development/local-garden/kubeconfigs/default-admin.conf"

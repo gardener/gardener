@@ -21,7 +21,13 @@ kubeconfig="$KUBECONFIG"
 if [[ $(k8s_env) == "$NODELESS" ]]; then
   kubeconfig="$(dirname $0)/local-garden/kubeconfigs/gardener-admission-controller.conf"
 else
-  mktemp_kubeconfig
+  if [[ $(k8s_env) == "$KIND" ]]; then
+    __tmp_kubeconfig="$(mktemp)"
+    serviceaccount_based_kubeconfig "gardener-admission-controller" > "$__tmp_kubeconfig"
+  else
+    mktemp_kubeconfig
+  fi
+
   kubeconfig="$__tmp_kubeconfig"
   trap cleanup_kubeconfig EXIT
 fi

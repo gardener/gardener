@@ -21,7 +21,13 @@ kubeconfig="$KUBECONFIG"
 if [[ $(k8s_env) == "$NODELESS" ]]; then
   kubeconfig="$(dirname $0)/local-garden/kubeconfigs/gardener-apiserver.conf"
 else
-  mktemp_kubeconfig
+  if [[ $(k8s_env) == "$KIND" ]]; then
+    __tmp_kubeconfig="$(mktemp)"
+    serviceaccount_based_kubeconfig "gardener-apiserver" > "$__tmp_kubeconfig"
+  else
+    mktemp_kubeconfig
+  fi
+
   kubeconfig="$__tmp_kubeconfig"
   trap cleanup_kubeconfig EXIT
 fi
@@ -67,8 +73,10 @@ ld_flags="$("$(dirname $0)"/../get-build-ld-flags.sh)"
 case $(k8s_env) in
     $KIND)
         echo "Found kind ..."
-        kubectl -n garden port-forward service/etcd 32379:2379 > /dev/null &
-        trap "kill -9 $! > /dev/null" EXIT
+        if ! nc -z -w 1 localhost 32379 &>/dev/null ; then
+          kubectl -n garden port-forward service/etcd 32379:2379 > /dev/null &
+          trap "kill -9 $! > /dev/null" EXIT
+        fi
         GO111MODULE=on go run \
           -mod=vendor \
           -ldflags "$ld_flags" \

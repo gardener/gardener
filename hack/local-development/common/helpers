@@ -161,3 +161,30 @@ get_host_address () {
     echo "host.docker.internal"
   fi
 }
+
+serviceaccount_based_kubeconfig() {
+  if ! kubectl -n garden get sa "$1" >/dev/null 2>&1; then
+    kubectl -n garden create sa "$1" >/dev/null
+  fi
+
+  cat <<EOF
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: $(kubectl config view --minify --flatten -o jsonpath={.clusters[0].cluster.certificate-authority-data})
+    server: $(kubectl config view --minify --flatten -o jsonpath={.clusters[0].cluster.server})
+  name: cluster
+contexts:
+- context:
+    cluster: cluster
+    user: cluster
+  name: cluster
+current-context: cluster
+kind: Config
+preferences: {}
+users:
+- name: cluster
+  user:
+    token: $(kubectl -n garden get secret "$(kubectl -n garden get sa "$1" -o jsonpath={.secrets[0].name})" -o jsonpath={.data.token} | base64 -d)
+EOF
+}

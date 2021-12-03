@@ -297,3 +297,12 @@ nIjRtpdOj7GZ4IZYyIAdBNlgPoCX6rc8mhQA4ehT0CN/D/xIkKIz76CtCVtUhE0P
 EOF
 
 $(dirname "${0}")/dev-setup-register-gardener "$@"
+
+if [[ "$kubernetes_env" == "$KIND" ]]; then
+  echo "# Configuring RBAC resources for Gardener components"
+  seedauthorizer_enabled=false
+  if [[ "$(kubectl -n kube-system get pod -l component=kube-apiserver -o json | jq -r '.items[0].spec.containers[0].command | map(select(. == "--authorization-webhook-config-file=/etc/gardener/controlplane/auth-webhook-kubeconfig-local.yaml")) | length')" == "1" ]]; then
+    seedauthorizer_enabled=true
+  fi
+  $(dirname $0)/dev-setup-configure-rbac "" "$seedauthorizer_enabled" "serviceaccounts"
+fi
