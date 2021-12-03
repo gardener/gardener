@@ -92,3 +92,13 @@ COPY charts/utils-templates /charts/utils-templates
 WORKDIR /
 
 ENTRYPOINT ["/landscaper-gardenlet"]
+
+############# gardener-extension-provider-local #############
+FROM base AS gardener-extension-provider-local
+
+COPY --from=builder-provider-local /gardener-extension-provider-local /gardener-extension-provider-local
+COPY charts/gardener/provider-local /charts/gardener/provider-local
+
+WORKDIR /
+
+ENTRYPOINT ["/gardener-extension-provider-local"]

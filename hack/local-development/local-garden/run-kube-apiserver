@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 
-IP_ROUTE=""
-IP_ADDRESS=""
+source $(dirname "${0}")/../common/helpers
+
 ADD_HOSTS=""
-if ! ( [[ "$(uname -s)" == *"Darwin"* ]] || [[ "$(uname -s)" == "Linux" && "$(uname -r)" =~ "microsoft-standard" ]] ); then
-  IP_ROUTE=$(ip route get 1)
-  IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
-  ADD_HOSTS="--add-host gardener.localhost:$IP_ADDRESS"
+host_address="$(get_host_address)"
+if [ "$host_address" != "host.docker.internal" ] ; then
+  ADD_HOSTS="--add-host gardener.localhost:$host_address"
 fi
 
 LABEL=${1:-local-garden}

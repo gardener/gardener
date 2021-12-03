@@ -72,6 +72,11 @@ func RegisterWebhooks(ctx context.Context, mgr manager.Manager, namespace, provi
 			TimeoutSeconds:          pointer.Int32(10),
 		}
 
+		shootMode := ModeURLWithServiceName
+		if mode == ModeURL {
+			shootMode = ModeURL
+		}
+
 		switch webhook.Target {
 		case TargetSeed:
 			webhookToRegister.FailurePolicy = &fail
@@ -81,7 +86,7 @@ func RegisterWebhooks(ctx context.Context, mgr manager.Manager, namespace, provi
 		case TargetShoot:
 			webhookToRegister.FailurePolicy = &ignore
 			webhookToRegister.MatchPolicy = &exact
-			webhookToRegister.ClientConfig = buildClientConfigFor(webhook, namespace, providerName, servicePort, ModeURLWithServiceName, url, caBundle)
+			webhookToRegister.ClientConfig = buildClientConfigFor(webhook, namespace, providerName, servicePort, shootMode, url, caBundle)
 			webhooksToRegisterShoot = append(webhooksToRegisterShoot, webhookToRegister)
 		default:
 			return nil, nil, fmt.Errorf("invalid webhook target: %s", webhook.Target)
