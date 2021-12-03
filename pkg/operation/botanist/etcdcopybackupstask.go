@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcdcopybackupstask"
@@ -55,12 +54,12 @@ func (b *Botanist) DeployEtcdCopyBackupsTask(ctx context.Context) error {
 		return err
 	}
 
-	sourceBackupEntryName := fmt.Sprintf("%s-%s", backupentry.SourcePrefix, b.Shoot.BackupEntryName)
+	sourceBackupEntryName := fmt.Sprintf("%s-%s", v1beta1constants.BackupSourcePrefix, b.Shoot.BackupEntryName)
 	sourceBackupEntry := &extensionsv1alpha1.BackupEntry{}
 	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(sourceBackupEntryName), sourceBackupEntry); err != nil {
 		return err
 	}
-	sourceSecretName := fmt.Sprintf("%s-%s", backupentry.SourcePrefix, v1beta1constants.BackupSecretName)
+	sourceSecretName := fmt.Sprintf("%s-%s", v1beta1constants.BackupSourcePrefix, v1beta1constants.BackupSecretName)
 	sourceSecret := &corev1.Secret{}
 	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, sourceSecretName), sourceSecret); err != nil {
 		return err

@@ -116,8 +116,8 @@ func (a *actuator) deleteEtcdBackupSecret(ctx context.Context, secretName string
 
 func emptyEtcdBackupSecret(backupEntryName string) *corev1.Secret {
 	secretName := v1beta1constants.BackupSecretName
-	if strings.HasPrefix(backupEntryName, backupentry.SourcePrefix) {
-		secretName = fmt.Sprintf("%s-%s", backupentry.SourcePrefix, v1beta1constants.BackupSecretName)
+	if strings.HasPrefix(backupEntryName, v1beta1constants.BackupSourcePrefix) {
+		secretName = fmt.Sprintf("%s-%s", v1beta1constants.BackupSourcePrefix, v1beta1constants.BackupSecretName)
 	}
 	shootTechnicalID, _ := backupentry.ExtractShootDetailsFromBackupEntryName(backupEntryName)
 

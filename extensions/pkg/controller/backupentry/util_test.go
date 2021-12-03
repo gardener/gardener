@@ -23,7 +23,6 @@ import (
 )
 
 var _ = Describe("Util", func() {
-
 	DescribeTable("#ExtractShootDetailsFromBackupEntryName",
 		func(backupEntryName, expectedShootTechnicalID, expectedShootUID string) {
 			shootTechnicalID, shootUID := ExtractShootDetailsFromBackupEntryName(backupEntryName)
