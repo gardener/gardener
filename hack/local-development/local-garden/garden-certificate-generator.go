@@ -313,11 +313,6 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 				APIServerHost: "localhost:2443",
 			}},
 		},
-		&secrets.RSASecretConfig{
-			Name:       "gardenlet",
-			Bits:       4096,
-			UsedForSSH: false,
-		},
 	}
 
 	credentials := make(map[string]certsAndKeys)
