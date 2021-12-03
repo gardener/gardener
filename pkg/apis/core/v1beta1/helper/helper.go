@@ -957,16 +957,6 @@ func GetLatestQualifyingShootMachineImage(image gardencorev1beta1.MachineImage, 
 	return true, &gardencorev1beta1.ShootMachineImage{Name: image.Name, Version: &latestImageVersion.Version}, nil
 }
 
-// FindMachineTypeByName tries to find the machine type details with the given name. If it cannot be found it returns nil.
-func FindMachineTypeByName(machines []gardencorev1beta1.MachineType, name string) *gardencorev1beta1.MachineType {
-	for _, m := range machines {
-		if m.Name == name {
-			return &m
-		}
-	}
-	return nil
-}
-
 // SystemComponentsAllowed checks if the given worker allows system components to be scheduled onto it
 func SystemComponentsAllowed(worker *gardencorev1beta1.Worker) bool {
 	return worker.SystemComponents == nil || worker.SystemComponents.Allow
