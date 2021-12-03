@@ -71,6 +71,16 @@ var _ = Describe("validator", func() {
 					ExpirableVersion: core.ExpirableVersion{
 						Version: "0.0.1",
 					},
+					CRI: []core.CRI{
+						{
+							Name: core.CRINameContainerD,
+							ContainerRuntimes: []core.ContainerRuntime{
+								{
+									Type: "test-cr",
+								},
+							},
+						},
+					},
 				},
 			}
 			volumeType        = "volume-type-1"
@@ -214,6 +224,9 @@ var _ = Describe("validator", func() {
 								Name: "worker-name",
 								Machine: core.Machine{
 									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name: validMachineImageName,
+									},
 								},
 								Minimum: 1,
 								Maximum: 1,
@@ -224,6 +237,9 @@ var _ = Describe("validator", func() {
 								Zones: []string{"europe-a"},
 							},
 						},
+						InfrastructureConfig: &runtime.RawExtension{Raw: []byte(`{
+"kind": "InfrastructureConfig",
+"apiVersion": "some.random.config/v1beta1"}`)},
 					},
 				},
 			}
@@ -1425,7 +1441,7 @@ var _ = Describe("validator", func() {
 				var (
 					classificationPreview = core.ClassificationPreview
 
-					imageName1 = "some-image"
+					imageName1 = validMachineImageName
 					imageName2 = "other-image"
 
 					expiredVersion          = "1.1.1"
@@ -2184,6 +2200,211 @@ var _ = Describe("validator", func() {
 					Expect(err.Error()).To(ContainSubstring("spec.provider.workers[0].volume.size"))
 					Expect(err.Error()).To(ContainSubstring("spec.provider.workers[2].volume.size"))
 				})
+			})
+
+			Context("RawExtension internal API usage checks", func() {
+				BeforeEach(func() {
+					shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
+						Raw: []byte(`{
+						"kind": "InfrastructureConfig",
+						"apiVersion": "azure.provider.extensions.gardener.cloud/__internal",
+						"key": "value"
+						}`),
+					}
+
+					shoot.Spec.Provider.ControlPlaneConfig = &runtime.RawExtension{
+						Raw: []byte(`{
+						"apiVersion": "aws.provider.extensions.gardener.cloud/__internal",
+						"kind": "ControlPlaneConfig",
+						"key": "value"
+						}`),
+					}
+
+					shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{
+						Raw: []byte(`{
+						"apiVersion": "calico.networking.extensions.gardener.cloud/__internal",
+						"kind": "NetworkConfig",
+						"key": "value"
+						}`)}
+
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, core.Worker{
+						Name: "worker-with-invalid-providerConfig",
+						Machine: core.Machine{
+							Type: "machine-type-1",
+							Image: &core.ShootMachineImage{
+								Name:    validMachineImageName,
+								Version: "0.0.1",
+								ProviderConfig: &runtime.RawExtension{
+									Raw: []byte(`{
+									"apiVersion": "memoryone-chost.os.extensions.gardener.cloud/__internal",
+									"kind": "OperatingSystemConfiguration",
+									"key": "value"
+									}`)},
+							},
+						},
+						CRI: &core.CRI{
+							Name: core.CRINameContainerD,
+							ContainerRuntimes: []core.ContainerRuntime{
+								{
+									Type: "test-cr",
+									ProviderConfig: &runtime.RawExtension{
+										Raw: []byte(`{
+										"apiVersion": "some.api/__internal",
+										"kind": "ContainerRuntimeConfig",
+										"some-key": "some-value"
+										}`)},
+								},
+							},
+						},
+
+						Minimum: 1,
+						Maximum: 1,
+						Volume: &core.Volume{
+							VolumeSize: "40Gi",
+							Type:       &volumeType,
+						},
+						Zones: []string{"europe-a"},
+						ProviderConfig: &runtime.RawExtension{
+							Raw: []byte(`{
+							"apiVersion": "aws.provider.extensions.gardener.cloud/__internal",
+							"kind": "WorkerConfig",
+							"key": "value"
+							}`)},
+					})
+				})
+
+				It("ensures new clusters cannot use the apiVersion 'internal'", func() {
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err.Error()).To(ContainSubstring("spec.provider.infrastructureConfig: Invalid value: \"azure.provider.extensions.gardener.cloud/__internal, Kind=InfrastructureConfig\": must not use apiVersion 'internal'"))
+					Expect(err.Error()).To(ContainSubstring("spec.provider.controlPlaneConfig: Invalid value: \"aws.provider.extensions.gardener.cloud/__internal, Kind=ControlPlaneConfig\": must not use apiVersion 'internal'"))
+					Expect(err.Error()).To(ContainSubstring("spec.networking.providerConfig: Invalid value: \"calico.networking.extensions.gardener.cloud/__internal, Kind=NetworkConfig\": must not use apiVersion 'internal'"))
+					Expect(err.Error()).To(ContainSubstring("spec.provider.workers[1].providerConfig: Invalid value: \"aws.provider.extensions.gardener.cloud/__internal, Kind=WorkerConfig\": must not use apiVersion 'internal'"))
+					Expect(err.Error()).To(ContainSubstring("spec.provider.workers[1].machine.image.providerConfig: Invalid value: \"memoryone-chost.os.extensions.gardener.cloud/__internal, Kind=OperatingSystemConfiguration\": must not use apiVersion 'internal'"))
+					Expect(err.Error()).To(ContainSubstring("spec.provider.workers[1].cri.containerRuntimes[0].providerConfig: Invalid value: \"some.api/__internal, Kind=ContainerRuntimeConfig\": must not use apiVersion 'internal'"))
+				})
+
+				// TODO (voelzmo): remove this test and the associated production code once we gave owners of existing Shoots a nice grace period to move away from 'internal' apiVersion
+				It("ensures existing clusters can still use the apiVersion 'internal' for compatibility reasons", func() {
+					oldShoot := shoot.DeepCopy()
+
+					// update the Shoot spec to avoid early exit in the admission process
+					shoot.Spec.Provider.Workers[0].Maximum = 1337
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("admits new clusters using other apiVersion than 'internal'", func() {
+					shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
+						Raw: []byte(`{
+						"kind": "InfrastructureConfig",
+						"apiVersion": "azure.provider.extensions.gardener.cloud/v1",
+						"key": "value"
+						}`),
+					}
+
+					shoot.Spec.Provider.ControlPlaneConfig = &runtime.RawExtension{
+						Raw: []byte(`{
+						"apiVersion": "aws.provider.extensions.gardener.cloud/v1alpha1",
+						"kind": "ControlPlaneConfig",
+						"key": "value"
+						}`),
+					}
+
+					shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{
+						Raw: []byte(`{
+						"apiVersion": "calico.networking.extensions.gardener.cloud/v1alpha1",
+						"kind": "NetworkConfig",
+						"key": "value"
+						}`)}
+
+					shoot.Spec.Provider.Workers[1].Machine.Image = &core.ShootMachineImage{
+						Name:    validMachineImageName,
+						Version: "0.0.1",
+						ProviderConfig: &runtime.RawExtension{Raw: []byte(`{
+						"apiVersion": "memoryone-chost.os.extensions.gardener.cloud/v1alpha1",
+						"kind": "OperatingSystemConfiguration",
+						"key": "value"
+						}`)},
+					}
+
+					shoot.Spec.Provider.Workers[1].ProviderConfig = &runtime.RawExtension{
+						Raw: []byte(`{
+						"apiVersion": "aws.provider.extensions.gardener.cloud/v1alpha1",
+						"kind": "WorkerConfig",
+						"key": "value"
+						}`)}
+
+					shoot.Spec.Provider.Workers[1].CRI = &core.CRI{
+						Name: core.CRINameContainerD,
+						ContainerRuntimes: []core.ContainerRuntime{
+							{
+								Type: "test-cr",
+								ProviderConfig: &runtime.RawExtension{
+									Raw: []byte(`{
+									"apiVersion": "some.api/v1alpha1",
+									"kind": "ContainerRuntimeConfig",
+									"key": "value"
+									}`)},
+							},
+						},
+					}
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
+				})
+			})
+
+			It("allows RawExtensions to contain arbitrary json blobs", func() {
+				shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
+					Raw: []byte(`{
+					"key": "value"
+					}`),
+				}
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("doesn't throw an error when the passed json is invalid", func() {
+				shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
+					Raw: []byte(`{
+					"key": invalid-value
+					}`),
+				}
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).ToNot(HaveOccurred())
 			})
 		})
 

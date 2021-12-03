@@ -23,16 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/apiserver/pkg/admission"
-
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -43,11 +33,25 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
+
+	"github.com/Masterminds/semver"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/apiserver/pkg/admission"
 )
 
 const (
 	// PluginName is the name of this admission plugin.
 	PluginName = "ShootValidator"
+
+	internalVersionErrorMsg = "must not use apiVersion 'internal'"
 )
 
 // Register registers a plugin.
@@ -236,6 +240,10 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	validationContext.addMetadataAnnotations(a)
 
 	var allErrs field.ErrorList
+	// TODO (voelzmo): remove this 'if' statement once we gave owners of existing Shoots a nice grace period to move away from 'internal' apiVersion
+	if a.GetOperation() == admission.Create {
+		allErrs = append(allErrs, validationContext.validateAPIVersionForRawExtensions()...)
+	}
 	allErrs = append(allErrs, validationContext.validateShootNetworks()...)
 	allErrs = append(allErrs, validationContext.validateKubernetes()...)
 	allErrs = append(allErrs, validationContext.validateRegion()...)
@@ -585,6 +593,56 @@ func (c *validationContext) validateProvider() field.ErrorList {
 	}
 
 	return allErrs
+}
+
+func (c *validationContext) validateAPIVersionForRawExtensions() field.ErrorList {
+	var allErrs field.ErrorList
+
+	if ok, gvk := usesInternalVersion(c.shoot.Spec.Provider.InfrastructureConfig); ok {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "infrastructureConfig"), gvk, internalVersionErrorMsg))
+	}
+
+	if ok, gvk := usesInternalVersion(c.shoot.Spec.Provider.ControlPlaneConfig); ok {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "controlPlaneConfig"), gvk, internalVersionErrorMsg))
+	}
+
+	if ok, gvk := usesInternalVersion(c.shoot.Spec.Networking.ProviderConfig); ok {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "networking", "providerConfig"), gvk, internalVersionErrorMsg))
+	}
+
+	for i, worker := range c.shoot.Spec.Provider.Workers {
+		workerPath := field.NewPath("spec", "provider", "workers").Index(i)
+		if ok, gvk := usesInternalVersion(worker.ProviderConfig); ok {
+			allErrs = append(allErrs, field.Invalid(workerPath.Child("providerConfig"), gvk, internalVersionErrorMsg))
+		}
+
+		if ok, gvk := usesInternalVersion(worker.Machine.Image.ProviderConfig); ok {
+			allErrs = append(allErrs, field.Invalid(workerPath.Child("machine", "image", "providerConfig"), gvk, internalVersionErrorMsg))
+		}
+
+		if worker.CRI != nil && worker.CRI.ContainerRuntimes != nil {
+			for j, cr := range worker.CRI.ContainerRuntimes {
+				if ok, gvk := usesInternalVersion(cr.ProviderConfig); ok {
+					allErrs = append(allErrs, field.Invalid(workerPath.Child("cri", "containerRuntimes").Index(j).Child("providerConfig"), gvk, internalVersionErrorMsg))
+				}
+			}
+		}
+	}
+	return allErrs
+}
+
+func usesInternalVersion(ext *runtime.RawExtension) (bool, string) {
+	if ext == nil {
+		return false, ""
+	}
+
+	// we ignore any errors while trying to parse the GVK from the RawExtension, because the RawExtension could contain arbitrary json.
+	// However, *if* the RawExtension is a k8s-like object, we want to ensure that only external APIs can be used.
+	_, gvk, _ := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, nil, nil)
+	if gvk != nil && gvk.Version == runtime.APIVersionInternal {
+		return true, gvk.String()
+	}
+	return false, ""
 }
 
 func validateVolumeSize(volumeTypeConstraints []core.VolumeType, machineTypeConstraints []core.MachineType, machineType string, volume *core.Volume) (bool, string) {
