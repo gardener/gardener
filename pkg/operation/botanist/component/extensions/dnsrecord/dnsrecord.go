@@ -282,7 +282,6 @@ func (c *dnsRecord) SetValues(values []string) {
 func (c *dnsRecord) valuesDontMatchDNSRecord() bool {
 	return c.values.SecretName != c.dnsRecord.Spec.SecretRef.Name ||
 		!pointer.StringEqual(c.values.Zone, c.dnsRecord.Spec.Zone) ||
-		c.values.DNSName != c.dnsRecord.Spec.Name ||
 		!reflect.DeepEqual(c.values.Values, c.dnsRecord.Spec.Values) ||
 		!pointer.Int64Equal(c.values.TTL, c.dnsRecord.Spec.TTL)
 }

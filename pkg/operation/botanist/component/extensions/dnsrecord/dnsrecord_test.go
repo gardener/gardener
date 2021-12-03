@@ -316,8 +316,7 @@ var _ = Describe("DNSRecord", func() {
 			},
 				table.Entry("secretName changes", func() { values.SecretName = "new-secret-name" }, func() { expectedDNSRecord.Spec.SecretRef.Name = "new-secret-name" }),
 				table.Entry("zone changes", func() { values.Zone = pointer.String("new-zone") }, func() { expectedDNSRecord.Spec.Zone = pointer.String("new-zone") }),
-				table.Entry("DNSName changes", func() { values.DNSName = "new-dnsname" }, func() { expectedDNSRecord.Spec.Name = "new-dnsname" }),
-				table.Entry("DNSNameRecord values change", func() { values.Values = []string{"8.8.8.8"} }, func() { expectedDNSRecord.Spec.Values = []string{"8.8.8.8"} }),
+				table.Entry("values changes", func() { values.Values = []string{"8.8.8.8"} }, func() { expectedDNSRecord.Spec.Values = []string{"8.8.8.8"} }),
 				table.Entry("TTL changes", func() { values.TTL = pointer.Int64(1337) }, func() { expectedDNSRecord.Spec.TTL = pointer.Int64(1337) }),
 				table.Entry("zone is nil", func() { values.Zone = nil }, func() { expectedDNSRecord.Spec.Zone = nil }),
 			)
