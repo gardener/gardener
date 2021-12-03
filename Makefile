@@ -264,3 +264,6 @@ register-local-env:
 tear-down-local-env:
 	kubectl annotate project local confirmation.gardener.cloud/deletion=true
 	kubectl delete -k $(REPO_ROOT)/example/provider-local/overlays/local
+
+test-e2e-local:
+	./hack/test-e2e-local.sh
