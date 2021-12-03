@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: etcd
+spec:
+  replicas: 1
+  serviceName: etcd
+  selector:
+    matchLabels:
+      app: etcd
+  template:
+    metadata:
+      labels:
+        app: etcd
+    spec:
+      containers:
+      - image: quay.io/coreos/etcd:v3.5.1
+        name: etcd
+        command:
+        - etcd
+        - --name=etcd
+        - --trusted-ca-file=/tls/ca.crt
+        - --key-file=/tls/server.key
+        - --cert-file=/tls/server.crt
+        - --client-cert-auth
+        - --listen-client-urls=https://0.0.0.0:2379
+        - --advertise-client-urls=https://etcd-client.garden.svc:2379
+        - --initial-cluster-state=new
+        - --initial-cluster-token=new
+        - --data-dir=/etcd-data
+        volumeMounts:
+        - name: tls
+          mountPath: /tls
+        - name: data
+          mountPath: /etcd-data
+        ports:
+        - name: client
+          containerPort: 2379
+        - name: discovery
+          containerPort: 2380
+      volumes:
+      - name: tls
+        secret:
+          secretName: etcd-tls
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 15Gi
