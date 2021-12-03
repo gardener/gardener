@@ -30,6 +30,8 @@ LOCAL_GARDEN_LABEL                         := local-garden
 REMOTE_GARDEN_LABEL                        := remote-garden
 ACTIVATE_SEEDAUTHORIZER                    := false
 SEED_NAME                                  := ""
+DEV_SETUP_WITH_WEBHOOKS                    := false
+KIND_ENV                                   := "skaffold"
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
@@ -48,7 +50,7 @@ include hack/tools.mk
 
 .PHONY: dev-setup
 dev-setup:
-	@./hack/local-development/dev-setup
+	@if [[ "$(DEV_SETUP_WITH_WEBHOOKS)" == "true" ]]; then ./hack/local-development/dev-setup --with-webhooks; else ./hack/local-development/dev-setup; fi
 
 .PHONY: dev-setup-register-gardener
 dev-setup-register-gardener:
@@ -243,3 +245,15 @@ verify: check format test test-integration test-prometheus
 
 .PHONY: verify-extended
 verify-extended: check-generate check format test-cov test-cov-clean test-integration test-prometheus
+
+#####################################################################
+# Rules for local environment                                       #
+#####################################################################
+
+kind-up:
+	kind create cluster --name gardener-local --config $(REPO_ROOT)/example/gardener-local/kind/cluster-$(KIND_ENV).yaml --kubeconfig $(REPO_ROOT)/example/gardener-local/kind/kubeconfig
+	cp $(REPO_ROOT)/example/gardener-local/kind/kubeconfig $(REPO_ROOT)/example/provider-local/base/kubeconfig
+
+kind-down:
+	kind delete cluster --name gardener-local
+	rm -f $(REPO_ROOT)/example/provider-local/base/kubeconfig
