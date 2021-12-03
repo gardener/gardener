@@ -50,6 +50,20 @@ func (mr *MockInterfaceMockRecorder) HasPathFrom(arg0, arg1, arg2, arg3, arg4, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasPathFrom", reflect.TypeOf((*MockInterface)(nil).HasPathFrom), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
+// HasVertex mocks base method.
+func (m *MockInterface) HasVertex(arg0 graph.VertexType, arg1, arg2 string) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasVertex", arg0, arg1, arg2)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasVertex indicates an expected call of HasVertex.
+func (mr *MockInterfaceMockRecorder) HasVertex(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasVertex", reflect.TypeOf((*MockInterface)(nil).HasVertex), arg0, arg1, arg2)
+}
+
 // Setup mocks base method.
 func (m *MockInterface) Setup(arg0 context.Context, arg1 cache.Cache) error {
 	m.ctrl.T.Helper()

@@ -300,6 +300,17 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		}
 	})
 
+	Describe("#HasVertex", func() {
+		It("should return false", func() {
+			Expect(graph.HasVertex(VertexTypeSeed, seed1.Namespace, seed1.Name)).To(BeFalse())
+		})
+
+		It("should return true", func() {
+			fakeInformerSeed.Add(seed1)
+			Expect(graph.HasVertex(VertexTypeSeed, seed1.Namespace, seed1.Name)).To(BeTrue())
+		})
+	})
+
 	It("should behave as expected for gardencorev1beta1.Seed", func() {
 		By("add")
 		fakeInformerSeed.Add(seed1)

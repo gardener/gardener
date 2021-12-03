@@ -103,8 +103,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 		switch requestResource {
 		case backupBucketResource:
 			return a.authorize(seedName, graph.VertexTypeBackupBucket, attrs,
-				[]string{"update", "patch"},
-				[]string{"create", "delete", "get", "list", "watch"},
+				[]string{"update", "patch", "delete"},
+				[]string{"create", "get", "list", "watch"},
 				[]string{"status"},
 			)
 		case backupEntryResource:
@@ -372,6 +372,12 @@ func (a *authorizer) hasPathFrom(seedName string, fromType graph.VertexType, att
 	namespace := attrs.GetNamespace()
 	if fromType == graph.VertexTypeNamespace {
 		namespace = ""
+	}
+
+	// If the vertex does not exist in the graph (i.e., the resource does not exist in the system) then we allow the
+	// request.
+	if attrs.GetVerb() == "delete" && !a.graph.HasVertex(fromType, namespace, attrs.GetName()) {
+		return auth.DecisionAllow, "", nil
 	}
 
 	if !a.graph.HasPathFrom(fromType, namespace, attrs.GetName(), graph.VertexTypeSeed, "", seedName) {

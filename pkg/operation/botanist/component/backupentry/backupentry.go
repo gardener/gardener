@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -198,16 +197,6 @@ func (b *backupEntry) reconcile(ctx context.Context, backupEntry *gardencorev1be
 
 // Destroy deletes the BackupEntry resource
 func (b *backupEntry) Destroy(ctx context.Context) error {
-	// SeedAuthorizer will reject a DELETE request to BackupEntry that does not exist with reason 'no relationship found'.
-	// That's why early exit when the BackupEntry does not exist.
-	if err := b.client.Get(ctx, client.ObjectKeyFromObject(b.backupEntry), b.backupEntry); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-
-		return err
-	}
-
 	return kutil.DeleteObject(
 		ctx,
 		b.client,

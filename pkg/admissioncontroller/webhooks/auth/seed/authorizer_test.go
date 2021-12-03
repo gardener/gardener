@@ -404,9 +404,23 @@ var _ = Describe("Seed", func() {
 				Expect(reason).To(BeEmpty())
 			})
 
+			It("should allow when verb is delete and resource does not exist", func() {
+				attrs.Verb = "delete"
+
+				graph.EXPECT().HasVertex(graphpkg.VertexTypeShootState, namespace, name).Return(false)
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+
 			DescribeTable("should return correct result if path exists",
 				func(verb string) {
 					attrs.Verb = verb
+
+					if verb == "delete" {
+						graph.EXPECT().HasVertex(graphpkg.VertexTypeShootState, namespace, name).Return(true).Times(2)
+					}
 
 					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeShootState, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
@@ -674,17 +688,20 @@ var _ = Describe("Seed", func() {
 				Entry("list", "list"),
 				Entry("watch", "watch"),
 				Entry("create", "create"),
-				Entry("delete", "delete"),
 			)
 
-			It("should have no opinion because no allowed verb", func() {
-				attrs.Verb = "deletecollection"
+			DescribeTable("should have no opinion because no allowed verb",
+				func(verb string) {
+					attrs.Verb = verb
 
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionNoOpinion))
-				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create delete get list watch update patch]"))
-			})
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get list watch update patch delete]"))
+				},
+
+				Entry("deletecollection", "deletecollection"),
+			)
 
 			It("should have no opinion because no allowed subresource", func() {
 				attrs.Subresource = "foo"
@@ -695,10 +712,24 @@ var _ = Describe("Seed", func() {
 				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [status]"))
 			})
 
+			It("should allow when verb is delete and resource does not exist", func() {
+				attrs.Verb = "delete"
+
+				graph.EXPECT().HasVertex(graphpkg.VertexTypeBackupBucket, "", name).Return(false)
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+
 			DescribeTable("should return correct result if path exists",
 				func(verb, subresource string) {
 					attrs.Verb = verb
 					attrs.Subresource = subresource
+
+					if verb == "delete" {
+						graph.EXPECT().HasVertex(graphpkg.VertexTypeBackupBucket, "", name).Return(true).Times(2)
+					}
 
 					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeBackupBucket, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
@@ -717,6 +748,7 @@ var _ = Describe("Seed", func() {
 				Entry("patch w/ subresource", "patch", "status"),
 				Entry("update w/o subresource", "update", ""),
 				Entry("update w/ subresource", "update", "status"),
+				Entry("delete", "delete", ""),
 			)
 
 			It("should allow because seed name is ambiguous", func() {
@@ -786,6 +818,16 @@ var _ = Describe("Seed", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
 				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [status]"))
+			})
+
+			It("should allow when verb is delete and resource does not exist", func() {
+				attrs.Verb = "delete"
+
+				graph.EXPECT().HasVertex(graphpkg.VertexTypeBackupEntry, namespace, name).Return(false)
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
 			})
 
 			DescribeTable("should return correct result if path exists",
@@ -1917,9 +1959,23 @@ var _ = Describe("Seed", func() {
 				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
 			})
 
+			It("should allow when verb is delete and resource does not exist", func() {
+				attrs.Verb = "delete"
+
+				graph.EXPECT().HasVertex(graphpkg.VertexTypeSecret, namespace, name).Return(false)
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+
 			DescribeTable("should return correct result if path exists",
 				func(verb string) {
 					attrs.Verb = verb
+
+					if verb == "delete" {
+						graph.EXPECT().HasVertex(graphpkg.VertexTypeSecret, namespace, name).Return(true).Times(2)
+					}
 
 					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeSecret, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
