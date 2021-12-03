@@ -19,11 +19,12 @@ import (
 	"flag"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 var gardenerCfg *GardenerConfig
@@ -128,6 +129,9 @@ func mergeGardenerConfig(base, overwrite *GardenerConfig) *GardenerConfig {
 	}
 	if StringSet(overwrite.GardenerKubeconfig) {
 		base.GardenerKubeconfig = overwrite.GardenerKubeconfig
+	}
+	if overwrite.SkipAccessingShoot {
+		base.SkipAccessingShoot = overwrite.SkipAccessingShoot
 	}
 
 	return base
