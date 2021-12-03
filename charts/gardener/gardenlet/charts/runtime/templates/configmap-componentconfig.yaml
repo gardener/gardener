@@ -181,6 +181,10 @@ data:
     logging:
 {{ toYaml .Values.global.gardenlet.config.logging | indent 6 }}
     {{- end }}
+    {{- if .Values.global.gardenlet.config.monitoring }}
+    monitoring:
+{{ toYaml .Values.global.gardenlet.config.monitoring | indent 6 }}
+    {{- end }}
     {{- if .Values.global.gardenlet.config.sni }}
     sni:
 {{ toYaml .Values.global.gardenlet.config.sni | trim | indent 6 }}
