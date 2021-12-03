@@ -815,6 +815,15 @@ func commandForKubernetesVersion(
 		fmt.Sprintf("--cluster-name=%s", clusterName),
 		"--cluster-signing-cert-file=/srv/kubernetes/ca/ca.crt",
 		"--cluster-signing-key-file=/srv/kubernetes/ca/ca.key",
+	)
+
+	if k8sVersionGreaterEqual119, _ := versionutils.CompareVersions(version, ">=", "1.19"); k8sVersionGreaterEqual119 {
+		command = append(command, "--cluster-signing-duration=30d")
+	} else {
+		command = append(command, "--experimental-cluster-signing-duration=30d")
+	}
+
+	command = append(command,
 		"--concurrent-deployment-syncs=50",
 		"--concurrent-endpoint-syncs=15",
 		"--concurrent-gc-syncs=30",
