@@ -66,6 +66,7 @@ require (
 	k8s.io/klog/v2 v2.9.0
 	k8s.io/kube-aggregator v0.22.2
 	k8s.io/kube-openapi v0.0.0-20210421082810-95288971da7e
+	k8s.io/kube-proxy v0.22.2
 	k8s.io/kubelet v0.22.2
 	k8s.io/metrics v0.22.2
 	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a
@@ -91,4 +92,5 @@ replace (
 	k8s.io/component-base => k8s.io/component-base v0.22.2
 	k8s.io/helm => k8s.io/helm v2.13.1+incompatible
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.22.2
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.22.2
 )

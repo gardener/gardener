@@ -1426,6 +1426,9 @@ k8s.io/kube-openapi/pkg/util
 k8s.io/kube-openapi/pkg/util/proto
 k8s.io/kube-openapi/pkg/util/sets
 k8s.io/kube-openapi/pkg/validation/spec
+# k8s.io/kube-proxy v0.22.2 => k8s.io/kube-proxy v0.22.2
+## explicit
+k8s.io/kube-proxy/config/v1alpha1
 # k8s.io/kubelet v0.22.2
 ## explicit
 k8s.io/kubelet/config/v1beta1
@@ -1546,3 +1549,4 @@ sigs.k8s.io/yaml
 # k8s.io/component-base => k8s.io/component-base v0.22.2
 # k8s.io/helm => k8s.io/helm v2.13.1+incompatible
 # k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.22.2
+# k8s.io/kube-proxy => k8s.io/kube-proxy v0.22.2
