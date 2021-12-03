@@ -1,0 +1,7 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: ControllerDeployment
+metadata:
+  name: provider-local
+providerConfig:
+  values:
+    replicaCount: 0

@@ -257,3 +257,10 @@ kind-up:
 kind-down:
 	kind delete cluster --name gardener-local
 	rm -f $(REPO_ROOT)/example/provider-local/base/kubeconfig
+
+register-local-env:
+	kubectl apply -k $(REPO_ROOT)/example/provider-local/overlays/local
+
+tear-down-local-env:
+	kubectl annotate project local confirmation.gardener.cloud/deletion=true
+	kubectl delete -k $(REPO_ROOT)/example/provider-local/overlays/local

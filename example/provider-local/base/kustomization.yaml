@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+secretGenerator:
+- name: seed-local
+  namespace: garden
+  files:
+  - kubeconfig
+
+resources:
+- cloudprofile.yaml
+- controller-registration.yaml
+- project.yaml
+- secretbinding.yaml
+
+patchesStrategicMerge:
+- patch-controller-registration.yaml
