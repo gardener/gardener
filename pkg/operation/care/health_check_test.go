@@ -798,33 +798,42 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckLoggingControlPlane",
-		func(statefulSets []*appsv1.StatefulSet, isTestingShoot bool, conditionMatcher types.GomegaMatcher) {
+		func(statefulSets []*appsv1.StatefulSet, isTestingShoot bool, lokiEnabled bool, conditionMatcher types.GomegaMatcher) {
 			var (
 				statefulSetLister = constStatefulSetLister(statefulSets)
 				checker           = care.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion, gardenerVersion)
 			)
 
-			exitCondition, err := checker.CheckLoggingControlPlane(seedNamespace, isTestingShoot, condition, statefulSetLister)
+			exitCondition, err := checker.CheckLoggingControlPlane(seedNamespace, isTestingShoot, lokiEnabled, condition, statefulSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
 		Entry("all healthy",
 			requiredLoggingControlPlaneStatefulSets,
 			false,
+			true,
 			BeNil()),
 		Entry("required stateful set missing",
 			nil,
 			false,
+			true,
 			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 		Entry("stateful set unhealthy",
 			[]*appsv1.StatefulSet{
 				newStatefulSet(lokiStatefulSet.Namespace, lokiStatefulSet.Name, roleOf(lokiStatefulSet), false),
 			},
 			false,
+			true,
 			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 		Entry("shoot purpose is testing, omit all checks",
 			[]*appsv1.StatefulSet{},
 			true,
+			true,
+			BeNil()),
+		Entry("loki is disabled in gardenlet config, omit all checks",
+			[]*appsv1.StatefulSet{},
+			false,
+			false,
 			BeNil()),
 	)
 
