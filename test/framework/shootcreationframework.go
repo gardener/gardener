@@ -393,7 +393,9 @@ func (f *ShootCreationFramework) CreateShoot(ctx context.Context, initializeShoo
 		return nil, err
 	}
 
-	if err := DownloadKubeconfig(ctx, shootFramework.GardenClient, shootFramework.Seed.Spec.SecretRef.Namespace, shootFramework.Seed.Spec.SecretRef.Name, f.Config.seedKubeconfigPath); err != nil {
+	if seedSecretRef := shootFramework.Seed.Spec.SecretRef; seedSecretRef == nil {
+		f.Logger.Info("seed does not have secretRef set, skip constructing seed client")
+	} else if err := DownloadKubeconfig(ctx, shootFramework.GardenClient, shootFramework.Seed.Spec.SecretRef.Namespace, shootFramework.Seed.Spec.SecretRef.Name, f.Config.seedKubeconfigPath); err != nil {
 		f.Logger.Fatalf("Cannot download seed kubeconfig: %s", err.Error())
 		return nil, err
 	}
