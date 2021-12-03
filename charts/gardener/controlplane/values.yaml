@@ -273,6 +273,8 @@ global:
       limits:
         cpu: 300m
         memory: 512Mi
+  # service:
+  #   clusterIP: 1.2.3.4
   # podAnnotations: # YAML formated annotations used for pod template
   # podLabels: # YAML formated labels used for pod template
     vpa: false

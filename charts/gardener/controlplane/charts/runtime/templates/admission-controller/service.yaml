@@ -11,6 +11,12 @@ metadata:
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
 spec:
+  type: ClusterIP
+{{- if .Values.global.admission.service }}
+{{- if .Values.global.admission.service.clusterIP }}
+  clusterIP: {{ .Values.global.admission.service.clusterIP }}
+{{- end }}
+{{- end }}
   selector:
     app: gardener
     role: admission-controller
