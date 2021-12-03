@@ -818,9 +818,9 @@ func commandForKubernetesVersion(
 	)
 
 	if k8sVersionGreaterEqual119, _ := versionutils.CompareVersions(version, ">=", "1.19"); k8sVersionGreaterEqual119 {
-		command = append(command, "--cluster-signing-duration=30d")
+		command = append(command, "--cluster-signing-duration=720h")
 	} else {
-		command = append(command, "--experimental-cluster-signing-duration=30d")
+		command = append(command, "--experimental-cluster-signing-duration=720h")
 	}
 
 	command = append(command,

@@ -472,9 +472,9 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 	)
 
 	if version.ConstraintK8sGreaterEqual119.Check(k.version) {
-		command = append(command, "--cluster-signing-duration=30d")
+		command = append(command, "--cluster-signing-duration=720h")
 	} else {
-		command = append(command, "--experimental-cluster-signing-duration=30d")
+		command = append(command, "--experimental-cluster-signing-duration=720h")
 	}
 
 	command = append(command,
