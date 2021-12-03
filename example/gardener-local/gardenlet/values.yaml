@@ -1,0 +1,85 @@
+global:
+  gardenlet:
+    additionalVolumes:
+    - name: kube-root-ca
+      configMap:
+        name: kube-root-ca.crt
+    additionalVolumeMounts:
+    - name: kube-root-ca
+      mountPath: /var/kube-root-ca
+
+    config:
+      gardenClientConnection:
+        kubeconfigSecret:
+          name: gardenlet-kubeconfig
+          namespace: garden
+        bootstrapKubeconfig:
+          name: gardenlet-kubeconfig-bootstrap
+          namespace: garden
+          kubeconfig: |
+            apiVersion: v1
+            kind: Config
+            current-context: gardenlet-bootstrap
+            clusters:
+            - cluster:
+                certificate-authority: /var/kube-root-ca/ca.crt
+                server: https://kubernetes.default.svc:443
+              name: default
+            contexts:
+            - context:
+                cluster: default
+                user: gardenlet-bootstrap
+              name: gardenlet-bootstrap
+            users:
+            - name: gardenlet-bootstrap
+              user:
+                token: 07401b.f395accd246ae52d
+      controllers:
+        shoot:
+          reconcileInMaintenanceOnly: true
+      featureGates:
+        Logging: true
+        HVPA: true
+        HVPAForShootedSeed: true
+        ManagedIstio: true
+        APIServerSNI: true
+        CachedRuntimeClients: true
+        SeedKubeScheduler: false
+        ReversedVPN: true
+        UseDNSRecords: true
+        DenyInvalidExtensionResources: true
+      seedConfig:
+        apiVersion: core.gardener.cloud/v1beta1
+        kind: Seed
+        metadata:
+          name: local
+        spec:
+          provider:
+            type: local
+            region: local
+          dns:
+            ingressDomain: local.seed.local.gardener.cloud
+          secretRef:
+            name: seed-local
+            namespace: garden
+          networks:
+            nodes: 172.19.0.0/16
+            pods: 10.1.0.0/16
+            services: 10.2.0.0/16
+            shootDefaults:
+              pods: 10.3.0.0/16
+              services: 10.4.0.0/16
+          settings:
+            dependencyWatchdog:
+              probe:
+                enabled: false
+            excessCapacityReservation:
+              enabled: false
+            ownerChecks:
+              enabled: false
+            scheduling:
+              visible: true
+            shootDNS:
+              enabled: true
+            verticalPodAutoscaler:
+              enabled: true
