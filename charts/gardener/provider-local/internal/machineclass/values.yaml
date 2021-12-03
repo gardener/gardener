@@ -1,0 +1,10 @@
+machineClasses:
+- name: class-1
+  image: repository:tag
+  secret:
+    cloudConfig: base64(abc)
+#   labels:
+#     foo: bar
+  credentialsSecretRef:
+    name: cloudprovider
+    namespace: shoot-namespace

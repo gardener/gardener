@@ -1,0 +1,29 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: extensions.gardener.cloud:{{ .Values.providerName }}:{{ .Release.Namespace }}:machine-controller-manager
+  ownerReferences:
+  - apiVersion: v1
+    kind: Namespace
+    name: {{ .Release.Namespace }}
+    uid: {{ .Values.namespace.uid }}
+    controller: true
+    blockOwnerDeletion: true
+rules:
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - "*"
+  verbs:
+  - "*"
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - secrets
+  - endpoints
+  - events
+  - pods
+  verbs:
+  - "*"

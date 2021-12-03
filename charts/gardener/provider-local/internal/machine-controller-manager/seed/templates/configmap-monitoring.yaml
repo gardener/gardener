@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: machine-controller-manager-monitoring-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    extensions.gardener.cloud/configuration: monitoring
+data:
+  alerting_rules: |
+    machine-controller-manager.rules.yaml: |
+      groups:
+      - name: machine-controller-manager.rules
+        rules:
+        - alert: MachineControllerManagerDown
+          expr: absent(up{job="machine-controller-manager"} == 1)
+          for: 15m
+          labels:
+            service: machine-controller-manager
+            severity: critical
+            type: seed
+            visibility: operator
+          annotations:
+            description: There are no running machine controller manager instances. No shoot nodes can be created/maintained.
+            summary: Machine controller manager is down.
+
+  scrape_config: |
+    - job_name: machine-controller-manager
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [{{ .Release.Namespace }}]
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
+        action: keep
+        regex: machine-controller-manager;metrics
+      # common metrics
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        target_label: pod
+      metric_relabel_configs:
+      - source_labels: [ __name__ ]
+        regex: ^(mcm_cloud_api_requests_failed_total|mcm_cloud_api_requests_total|mcm_machine_controller_frozen|mcm_machine_current_status_phase|mcm_machine_deployment_failed_machines|mcm_machine_items_total|mcm_machine_set_failed_machines|mcm_machine_deployment_items_total|mcm_machine_set_items_total|mcm_scrape_failure_total|process_max_fds|process_open_fds|mcm_workqueue_adds_total|mcm_workqueue_depth|mcm_workqueue_queue_duration_seconds_bucket|mcm_workqueue_queue_duration_seconds_sum|mcm_workqueue_queue_duration_seconds_count|mcm_workqueue_work_duration_seconds_bucket|mcm_workqueue_work_duration_seconds_sum|mcm_workqueue_work_duration_seconds_count|mcm_workqueue_unfinished_work_seconds|mcm_workqueue_longest_running_processor_seconds|mcm_workqueue_retries_total)$
+        action: keep
+
+  dashboard_operators: |
+    machine-controller-manager-dashboard.json: |-
+{{ .Files.Get "mcm-monitoring-dashboard.json" | indent 6 }}

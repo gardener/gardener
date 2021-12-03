@@ -31,8 +31,10 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.currentStatus.phase`,description="Current status of the machine."
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC.\nPopulated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata"
 
-// Machine TODO
+// Machine is the representation of a physical or virtual machine.
 type Machine struct {
 	// ObjectMeta for machine object
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -81,6 +83,7 @@ type ClassSpec struct {
 
 // NodeTemplateSpec describes the data a node should have when created from a template
 type NodeTemplateSpec struct {
+	// +kubebuilder:validation:XPreserveUnknownFields
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -146,9 +149,12 @@ const (
 
 	// MachineFailed means operation failed leading to machine status failure
 	MachineFailed MachinePhase = "Failed"
+
+	// MachineCrashLoopBackOff means creation or deletion of the machine is failing.
+	MachineCrashLoopBackOff MachinePhase = "CrashLoopBackOff"
 )
 
-// MachinePhase is a label for the condition of a machines at the current time.
+// MachineState is a current state of the machine.
 type MachineState string
 
 // These are the valid statuses of machines.

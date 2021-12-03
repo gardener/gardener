@@ -1,0 +1,4 @@
+apiVersion: v1
+description: A Helm chart for MachineClasses controlled by the machine-controller-manager in the shoot cluster
+name: machineclass
+version: 0.1.0

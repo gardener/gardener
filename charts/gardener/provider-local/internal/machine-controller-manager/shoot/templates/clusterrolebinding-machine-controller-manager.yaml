@@ -1,0 +1,12 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: extensions.gardener.cloud:{{ .Values.providerName }}:machine-controller-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: extensions.gardener.cloud:{{ .Values.providerName }}:machine-controller-manager
+subjects:
+- kind: User
+  name: system:machine-controller-manager
