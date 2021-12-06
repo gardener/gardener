@@ -364,6 +364,53 @@ var _ = Describe("Worker", func() {
 				Spec: wSpec,
 			}))
 		})
+		It("should initialize nodeTemplate when it exists for pool in worker resource, but absent in cloudProfile", func() {
+			defer test.WithVars(&worker.TimeNow, mockNow.Do)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			newValues := *values
+			newValues.Workers = []gardencorev1beta1.Worker{
+				values.Workers[1],
+			}
+			newValues.MachineTypes = []gardencorev1beta1.MachineType{}
+
+			expectedWorkerSpec := wSpec.DeepCopy()
+			expectedWorkerSpec.Pools = []extensionsv1alpha1.WorkerPool{
+				wSpec.Pools[1],
+			}
+
+			existingWorker := w.DeepCopy()
+			existingWorker.Spec.Pools = []extensionsv1alpha1.WorkerPool{
+				wSpec.Pools[1],
+			}
+
+			Expect(c.Create(ctx, existingWorker)).To(Succeed(), "creating worker succeeds")
+
+			defaultDepWaiter = worker.New(log, c, &newValues, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+			obj := &extensionsv1alpha1.Worker{}
+
+			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(obj).To(DeepEqual(&extensionsv1alpha1.Worker{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
+					Kind:       extensionsv1alpha1.WorkerResource,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+					Annotations: map[string]string{
+						"gardener.cloud/operation": "reconcile",
+						"gardener.cloud/timestamp": now.UTC().String(),
+					},
+					ResourceVersion: "2",
+				},
+				Spec: *expectedWorkerSpec,
+			}))
+		})
 	})
 
 	Describe("#Wait", func() {
@@ -509,7 +556,7 @@ var _ = Describe("Worker", func() {
 			mc.EXPECT().Status().Return(mc)
 
 			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(empty), gomock.AssignableToTypeOf(empty)).
-				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("workers"), name))
+				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("workers"), name)).AnyTimes()
 
 			// deploy with wait-for-state annotation
 			obj := w.DeepCopy()

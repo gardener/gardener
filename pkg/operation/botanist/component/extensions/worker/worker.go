@@ -199,19 +199,23 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			workerPoolKubernetesVersion = *workerPool.Kubernetes.Version
 		}
 
-		// initializing nodeTemplate by fetching details from cloudprofile
-		var nodeTemplate extensionsv1alpha1.NodeTemplate
-		machineDetails := gardencorev1beta1helper.FindMachineTypeByName(w.values.MachineTypes, workerPool.Machine.Type)
-		if machineDetails == nil {
-			return nil, fmt.Errorf("unable to initialize nodeTemplate for workerPool %q, machine type %q not found in cloudprofile", workerPool.Name, workerPool.Machine.Type)
-		}
+		var nodeTemplate *extensionsv1alpha1.NodeTemplate
+		nodeTemplate = w.findExistingNodeTemplateByName(workerPool.Name)
 
-		nodeTemplate = extensionsv1alpha1.NodeTemplate{
-			Capacity: corev1.ResourceList{
-				corev1.ResourceCPU:    machineDetails.CPU,
-				"gpu":                 machineDetails.GPU,
-				corev1.ResourceMemory: machineDetails.Memory,
-			},
+		if nodeTemplate == nil {
+			// initializing nodeTemplate by fetching details from cloudprofile
+			machineDetails := gardencorev1beta1helper.FindMachineTypeByName(w.values.MachineTypes, workerPool.Machine.Type)
+			if machineDetails == nil {
+				return nil, fmt.Errorf("unable to initialize nodeTemplate for workerPool %q, machine type %q not found in cloudprofile", workerPool.Name, workerPool.Machine.Type)
+			}
+
+			nodeTemplate = &extensionsv1alpha1.NodeTemplate{
+				Capacity: corev1.ResourceList{
+					corev1.ResourceCPU:    machineDetails.CPU,
+					"gpu":                 machineDetails.GPU,
+					corev1.ResourceMemory: machineDetails.Memory,
+				},
+			}
 		}
 
 		pools = append(pools, extensionsv1alpha1.WorkerPool{
@@ -228,7 +232,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 				Name:    workerPool.Machine.Image.Name,
 				Version: *workerPool.Machine.Image.Version,
 			},
-			NodeTemplate:                     &nodeTemplate,
+			NodeTemplate:                     nodeTemplate,
 			ProviderConfig:                   pConfig,
 			UserData:                         userData,
 			Volume:                           volume,
@@ -357,4 +361,19 @@ func (w *worker) SetWorkerNameToOperatingSystemConfigsMap(maps map[string]*opera
 // MachineDeployments returns the generated machine deployments of the Worker.
 func (w *worker) MachineDeployments() []extensionsv1alpha1.MachineDeployment {
 	return w.machineDeployments
+}
+
+func (w *worker) findExistingNodeTemplateByName(poolName string) *extensionsv1alpha1.NodeTemplate {
+	obj := &extensionsv1alpha1.Worker{}
+	err := w.client.Get(context.TODO(), client.ObjectKey{Name: w.worker.Name, Namespace: w.worker.Namespace}, obj)
+	if err != nil {
+		return nil
+	}
+
+	for _, pool := range obj.Spec.Pools {
+		if pool.Name == poolName && pool.NodeTemplate != nil {
+			return pool.NodeTemplate
+		}
+	}
+	return nil
 }
