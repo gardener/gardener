@@ -20,8 +20,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -66,6 +66,8 @@ func NewGardenControllerFactory(clientMap clientmap.ClientMap, cfg *config.Contr
 
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
 func (f *GardenControllerFactory) Run(ctx context.Context) error {
+	log := logf.Log.WithName("controller")
+
 	gardenClientSet, err := f.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return fmt.Errorf("failed to get garden client: %+v", err)
@@ -80,15 +82,15 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	}
 
 	runtime.Must(garden.BootstrapCluster(ctx, gardenClientSet))
-	logger.Logger.Info("Successfully bootstrapped the Garden cluster.")
+	log.Info("Successfully bootstrapped Garden cluster")
 
 	// Create controllers.
-	bastionController, err := bastioncontroller.NewBastionController(ctx, f.clientMap, f.cfg.Controllers.Bastion.MaxLifetime.Duration)
+	bastionController, err := bastioncontroller.NewBastionController(ctx, log, f.clientMap, f.cfg.Controllers.Bastion.MaxLifetime.Duration)
 	if err != nil {
 		return fmt.Errorf("failed initializing Bastion controller: %w", err)
 	}
 
-	cloudProfileController, err := cloudprofilecontroller.NewCloudProfileController(ctx, f.clientMap, f.recorder, logger.Logger)
+	cloudProfileController, err := cloudprofilecontroller.NewCloudProfileController(ctx, log, f.clientMap, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing CloudProfile controller: %w", err)
 	}
@@ -98,7 +100,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing ControllerRegistration controller: %w", err)
 	}
 
-	csrController, err := csrcontroller.NewCSRController(ctx, f.clientMap)
+	csrController, err := csrcontroller.NewCSRController(ctx, log, f.clientMap)
 	if err != nil {
 		return fmt.Errorf("failed initializing CSR controller: %w", err)
 	}
@@ -171,13 +173,13 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		go eventController.Run(ctx)
 	}
 
-	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Get().GitVersion)
+	log.Info("gardener-controller-manager initialized")
 
 	// Shutdown handling
 	<-ctx.Done()
 
-	logger.Logger.Infof("I have received a stop signal and will no longer watch resources.")
-	logger.Logger.Infof("Bye Bye!")
+	log.Info("I have received a stop signal and will no longer watch resources")
+	log.Info("Bye Bye!")
 
 	return nil
 }

@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	"golang.org/x/time/rate"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -51,7 +51,7 @@ type GenericClientMap struct {
 	// lock guards concurrent access to clientSets
 	lock sync.RWMutex
 
-	log logrus.FieldLogger
+	log logr.Logger
 
 	// stopCh is saved on the first call to Start and is used to start the caches of newly created ClientSets.
 	stopCh  <-chan struct{}
@@ -70,7 +70,7 @@ type clientMapEntry struct {
 }
 
 // NewGenericClientMap creates a new GenericClientMap with the given factory and logger.
-func NewGenericClientMap(factory clientmap.ClientSetFactory, logger logrus.FieldLogger) *GenericClientMap {
+func NewGenericClientMap(factory clientmap.ClientSetFactory, logger logr.Logger) *GenericClientMap {
 	return &GenericClientMap{
 		clientSets: make(map[clientmap.ClientSetKey]*clientMapEntry),
 		factory:    factory,
@@ -102,7 +102,7 @@ func (cm *GenericClientMap) GetClient(ctx context.Context, key clientmap.ClientS
 					return false, fmt.Errorf("failed to refresh ClientSet's server version: %w", err)
 				}
 				if serverVersion.GitVersion != oldVersion {
-					cm.log.Infof("New server version discovered for ClientSet with key %q: %s", key.Key(), serverVersion.GitVersion)
+					cm.log.Info("New server version discovered for ClientSet", "key", key.Key(), "serverVersion", serverVersion.GitVersion)
 				}
 
 				// invalidate client if the config of the client has changed (e.g. kubeconfig secret)
@@ -112,7 +112,7 @@ func (cm *GenericClientMap) GetClient(ctx context.Context, key clientmap.ClientS
 				}
 
 				if hash != entry.hash {
-					cm.log.Infof("Refreshing ClientSet with key %q due to changed ClientSetHash: %s/%s", key.Key(), entry.hash, hash)
+					cm.log.Info("Refreshing ClientSet due to changed ClientSetHash", "key", key.Key(), "oldHash", entry.hash, "newHash", hash)
 					return true, nil
 				}
 
@@ -151,7 +151,7 @@ func (cm *GenericClientMap) addClientSet(ctx context.Context, key clientmap.Clie
 		return entry, nil
 	}
 
-	cm.log.Infof("Creating new ClientSet for key %q", key.Key())
+	cm.log.Info("Creating new ClientSet", "key", key.Key())
 	cs, err := cm.factory.NewClientSet(ctx, key)
 	if err != nil {
 		return nil, fmt.Errorf("error creating new ClientSet for key %q: %w", key.Key(), err)
@@ -195,7 +195,7 @@ func (cm *GenericClientMap) InvalidateClient(key clientmap.ClientSetKey) error {
 		return nil
 	}
 
-	cm.log.Infof("Invalidating ClientSet for key %q", key.Key())
+	cm.log.Info("Invalidating ClientSet", "key", key.Key())
 	if entry.cancel != nil {
 		entry.cancel()
 	}

@@ -962,17 +962,6 @@ func SystemComponentsAllowed(worker *gardencorev1beta1.Worker) bool {
 	return worker.SystemComponents == nil || worker.SystemComponents.Allow
 }
 
-// UpdateMachineImages updates the machine images in place.
-func UpdateMachineImages(workers []gardencorev1beta1.Worker, machineImages []*gardencorev1beta1.ShootMachineImage) {
-	for _, machineImage := range machineImages {
-		for idx, worker := range workers {
-			if worker.Machine.Image != nil && machineImage.Name == worker.Machine.Image.Name {
-				workers[idx].Machine.Image = machineImage
-			}
-		}
-	}
-}
-
 // KubernetesVersionExistsInCloudProfile checks if the given Kubernetes version exists in the CloudProfile
 func KubernetesVersionExistsInCloudProfile(cloudProfile *gardencorev1beta1.CloudProfile, currentVersion string) (bool, gardencorev1beta1.ExpirableVersion, error) {
 	for _, version := range cloudProfile.Spec.Kubernetes.Versions {

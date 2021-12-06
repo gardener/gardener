@@ -95,17 +95,6 @@ var _ = Describe("logrus", func() {
 		})
 	})
 
-	Describe("#NewIDLogger", func() {
-		It("should return an Entry object an ID field", func() {
-			logger := NewLogger(InfoLevel, FormatText)
-
-			fieldLogger := NewIDLogger(logger)
-
-			entry, _ := fieldLogger.(*logrus.Entry)
-			Expect(entry.Data).To(HaveKeyWithValue(IDFieldName, Not(BeEmpty())))
-		})
-	})
-
 	Describe("#AddWriter", func() {
 		It("should return a pointer to a Test Logger object ('info' level)", func() {
 			logger := AddWriter(NewLogger("", FormatText), GinkgoWriter)

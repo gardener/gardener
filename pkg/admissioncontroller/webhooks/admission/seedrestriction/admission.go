@@ -241,8 +241,8 @@ func (h *handler) admitCertificateSigningRequest(seedName string, request admiss
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if !gutil.IsSeedClientCert(x509cr, usages) {
-		return admission.Errored(http.StatusForbidden, fmt.Errorf("can only create CSRs for seed clusters"))
+	if ok, reason := gutil.IsSeedClientCert(x509cr, usages); !ok {
+		return admission.Errored(http.StatusForbidden, fmt.Errorf("can only create CSRs for seed clusters: %s", reason))
 	}
 
 	seedNameInCSR, _ := seedidentity.FromCertificateSigningRequest(x509cr)

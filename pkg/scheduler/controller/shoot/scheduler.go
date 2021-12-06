@@ -40,7 +40,6 @@ func AddToManager(
 	ctrlOptions := controller.Options{
 		Reconciler: &reconciler{
 			config:       config,
-			logger:       mgr.GetLogger().WithName(ControllerName),
 			gardenClient: mgr.GetClient(),
 			recorder:     mgr.GetEventRecorderFor(ControllerName),
 		},

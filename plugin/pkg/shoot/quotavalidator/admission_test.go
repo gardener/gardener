@@ -21,7 +21,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	"github.com/gardener/gardener/pkg/logger"
 	mocktime "github.com/gardener/gardener/pkg/utils/time/mock"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 
@@ -214,10 +213,6 @@ var _ = Describe("quotavalidator", func() {
 				},
 			}
 		)
-
-		BeforeSuite(func() {
-			logger.Logger = logger.NewLogger("", "")
-		})
 
 		BeforeEach(func() {
 			shoot = *shootBase.DeepCopy()

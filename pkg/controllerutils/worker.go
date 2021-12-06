@@ -20,38 +20,48 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	"github.com/gardener/gardener/pkg/logger"
 )
 
-// CreateWorker creates and runs a worker thread that just processes items in the
-// specified queue. The worker will run until stopCh is closed. The worker will be
-// added to the wait group when started and marked done when finished.
-// The given context is injected into the `reconciler` if it implements `inject.Stoppable`.
-// Optionally passed inject functions are called with the `reconciler` but potentially returned errors are disregarded.
-func CreateWorker(ctx context.Context, queue workqueue.RateLimitingInterface, resourceType string, reconciler reconcile.Reconciler, waitGroup *sync.WaitGroup, workerCh chan<- int, injectFn ...inject.Func) {
-	fns := append(injectFn, func(i interface{}) error {
-		_, err := inject.StopChannelInto(ctx.Done(), i)
-		return err
-	})
+// WorkerOptions are options for a controller's worker.
+type WorkerOptions struct {
+	logger logr.Logger
+}
 
-	for _, f := range fns {
-		if err := f(reconciler); err != nil {
-			logger.Logger.Errorf("An error occurred while reconciler injection: %v", err)
-		}
+// WorkerOption is a func that mutates WorkerOptions.
+type WorkerOption func(*WorkerOptions)
+
+// WithLogger configures the logr.Logger to use for a controller worker.
+// If set, a logger preconfigured with the name and namespace field will be injected into the context.Context on
+// each Reconcile call. It can be retrieved via log.FromContext.
+func WithLogger(logger logr.Logger) WorkerOption {
+	return func(options *WorkerOptions) {
+		options.logger = logger
+	}
+}
+
+// CreateWorker creates and runs a worker goroutine that just processes items in the
+// specified queue. The worker will run until ctx is cancelled. The worker will be
+// added to the wait group when started and marked done when finished.
+func CreateWorker(ctx context.Context, queue workqueue.RateLimitingInterface, resourceType string, reconciler reconcile.Reconciler, waitGroup *sync.WaitGroup, workerCh chan<- int, opts ...WorkerOption) {
+	options := WorkerOptions{}
+	for _, o := range opts {
+		o(&options)
 	}
 
 	waitGroup.Add(1)
 	workerCh <- 1
 	go func() {
 		wait.UntilWithContext(ctx, func(ctx context.Context) {
-			worker(ctx, queue, resourceType, reconciler)
+			worker(ctx, queue, resourceType, reconciler, options)
 		}, time.Second)
 		workerCh <- -1
 		waitGroup.Done()
@@ -76,7 +86,10 @@ func requestFromKey(key interface{}) (reconcile.Request, error) {
 
 // worker runs a worker thread that just dequeues items, processes them, and marks them done.
 // It enforces that the reconciler is never invoked concurrently with the same key.
-func worker(ctx context.Context, queue workqueue.RateLimitingInterface, resourceType string, reconciler reconcile.Reconciler) {
+func worker(ctx context.Context, queue workqueue.RateLimitingInterface, resourceType string, reconciler reconcile.Reconciler, opts WorkerOptions) {
+	// TODO(timebertt): remove this var and all usages of logger.Logger, once all controllers have migrated to logr.
+	controllerLogger := opts.logger
+
 	exit := false
 	for !exit {
 		exit = func() bool {
@@ -88,14 +101,33 @@ func worker(ctx context.Context, queue workqueue.RateLimitingInterface, resource
 
 			req, err := requestFromKey(key)
 			if err != nil {
-				logger.Logger.WithError(err).Error("Cannot obtain request from key")
+				if controllerLogger != nil {
+					controllerLogger.Error(err, "cannot obtain request from key")
+				} else {
+					logger.Logger.WithError(err).Error("cannot obtain request from key")
+				}
 				queue.Forget(key)
 				return false
 			}
 
-			res, err := reconciler.Reconcile(ctx, req)
+			var (
+				reconcileCtx    = ctx
+				reconcileLogger logr.Logger
+			)
+			if controllerLogger != nil {
+				reconcileLogger = controllerLogger.WithValues("name", req.Name, "namespace", req.Namespace)
+				reconcileCtx = logf.IntoContext(ctx, reconcileLogger)
+			}
+
+			res, err := reconciler.Reconcile(reconcileCtx, req)
 			if err != nil {
-				logger.Logger.Infof("Error syncing %s %v: %v", resourceType, key, err)
+				if reconcileLogger != nil {
+					// resource type is not added to logger here. Ideally, each controller sets WithName and it is clear from
+					// which controller the error log comes.
+					reconcileLogger.Error(err, "error reconciling request")
+				} else {
+					logger.Logger.Infof("Error syncing %s %v: %v", resourceType, key, err)
+				}
 				queue.AddRateLimited(key)
 				return false
 			}

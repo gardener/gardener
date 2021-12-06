@@ -31,12 +31,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	gardenercoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
 	settingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
 	kcache "github.com/gardener/gardener/pkg/client/kubernetes/cache"
-	"github.com/gardener/gardener/pkg/logger"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
@@ -384,7 +384,7 @@ var cacheError = &kcache.CacheError{}
 func (d *fallbackClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 	err := d.Client.Get(ctx, key, obj)
 	if err != nil && errors.As(err, &cacheError) {
-		logger.Logger.Debug("Falling back to API reader because a cache error occurred: %w", err)
+		logf.Log.V(1).Info("Falling back to API reader because a cache error occurred", "error", err)
 		return d.reader.Get(ctx, key, obj)
 	}
 	return err
@@ -395,7 +395,7 @@ func (d *fallbackClient) Get(ctx context.Context, key client.ObjectKey, obj clie
 func (d *fallbackClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 	err := d.Client.List(ctx, list, opts...)
 	if err != nil && errors.As(err, &cacheError) {
-		logger.Logger.Debug("Falling back to API reader because a cache error occurred: %w", err)
+		logf.Log.V(1).Info("Falling back to API reader because a cache error occurred", "error", err)
 		return d.reader.List(ctx, list, opts...)
 	}
 	return err
