@@ -69,19 +69,24 @@ type Values struct {
 	caCertificate []byte
 }
 
+type accessNameToServer struct {
+	name   string
+	server string
+}
+
 func (g *gardener) Deploy(ctx context.Context) error {
 	var (
-		accessNameToServer = map[string]string{
-			v1beta1constants.SecretNameGardener:         g.values.ServerOutOfCluster,
-			v1beta1constants.SecretNameGardenerInternal: g.values.ServerInCluster,
+		accessNamesToServers = []accessNameToServer{
+			{v1beta1constants.SecretNameGardener, g.values.ServerOutOfCluster},
+			{v1beta1constants.SecretNameGardenerInternal, g.values.ServerInCluster},
 		}
-		serviceAccountNames = make([]string, 0, len(accessNameToServer))
+		serviceAccountNames = make([]string, 0, len(accessNamesToServers))
 	)
 
-	for name, server := range accessNameToServer {
+	for _, v := range accessNamesToServers {
 		var (
-			shootAccessSecret = gutil.NewShootAccessSecret(name, g.namespace).WithNameOverride(name)
-			kubeconfig        = kutil.NewKubeconfig(g.namespace, server, g.values.caCertificate, clientcmdv1.AuthInfo{Token: ""})
+			shootAccessSecret = gutil.NewShootAccessSecret(v.name, g.namespace).WithNameOverride(v.name)
+			kubeconfig        = kutil.NewKubeconfig(g.namespace, v.server, g.values.caCertificate, clientcmdv1.AuthInfo{Token: ""})
 		)
 
 		serviceAccountNames = append(serviceAccountNames, shootAccessSecret.ServiceAccountName)
