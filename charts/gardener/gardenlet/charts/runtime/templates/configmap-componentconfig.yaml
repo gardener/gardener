@@ -101,6 +101,9 @@ data:
         {{- if .Values.global.gardenlet.config.controllers.seed.leaseResyncSeconds }}
         leaseResyncSeconds: {{ .Values.global.gardenlet.config.controllers.seed.leaseResyncSeconds }}
         {{- end }}
+        {{- if .Values.global.gardenlet.config.controllers.seed.leaseResyncGracePeriod }}
+        leaseResyncGracePeriod: {{ .Values.global.gardenlet.config.controllers.seed.leaseResyncGracePeriod }}
+        {{- end }}
       {{- end }}
       shoot:
         concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.shoot.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.shoot.concurrentSyncs }}

@@ -198,6 +198,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.SyncPeriod).To(PointTo(Equal(DefaultControllerSyncPeriod)))
 			Expect(obj.LeaseResyncSeconds).To(PointTo(Equal(int32(2))))
 			Expect(obj.LeaseDurationSeconds).To(PointTo(Equal(int32(2))))
+			Expect(obj.LeaseResyncGracePeriod).To(PointTo(Equal(int32(10))))
 		})
 	})
 

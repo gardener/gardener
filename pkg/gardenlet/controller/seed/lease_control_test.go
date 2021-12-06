@@ -113,8 +113,9 @@ var _ = Describe("LeaseReconciler", func() {
 		gardenletConf = &config.GardenletConfiguration{
 			Controllers: &config.GardenletControllerConfiguration{
 				Seed: &config.SeedControllerConfiguration{
-					LeaseResyncSeconds:   pointer.Int32(2),
-					LeaseDurationSeconds: pointer.Int32(2),
+					LeaseResyncSeconds:     pointer.Int32(2),
+					LeaseDurationSeconds:   pointer.Int32(2),
+					LeaseResyncGracePeriod: pointer.Int32(10),
 				},
 			},
 		}

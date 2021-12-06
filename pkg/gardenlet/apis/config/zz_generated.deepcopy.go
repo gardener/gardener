@@ -955,6 +955,11 @@ func (in *SeedControllerConfiguration) DeepCopyInto(out *SeedControllerConfigura
 		*out = new(int32)
 		**out = **in
 	}
+	if in.LeaseResyncGracePeriod != nil {
+		in, out := &in.LeaseResyncGracePeriod, &out.LeaseResyncGracePeriod
+		*out = new(int32)
+		**out = **in
+	}
 	return
 }
 

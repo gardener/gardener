@@ -251,6 +251,11 @@ type SeedControllerConfiguration struct {
 	// Defaults to 2
 	// +optional
 	LeaseResyncSeconds *int32 `json:"leaseResyncSeconds,omitempty"`
+	// LeaseResyncGracePeriod is the amount of missed lease resyncs before the health status
+	// is changed to false.
+	// Defaults to 10
+	// +optional
+	LeaseResyncGracePeriod *int32 `json:"leaseResyncGracePeriod,omitempty"`
 }
 
 // ShootControllerConfiguration defines the configuration of the Shoot

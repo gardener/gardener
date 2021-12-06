@@ -203,6 +203,10 @@ type SeedControllerConfiguration struct {
 	// LeaseResyncSeconds defines how often (in seconds) the seed lease is renewed.
 	// Default: 2s
 	LeaseResyncSeconds *int32
+	// LeaseResyncGracePeriod is the amount of missed lease resyncs before the health status
+	// is changed to false.
+	// Default: 10
+	LeaseResyncGracePeriod *int32
 }
 
 // ShootControllerConfiguration defines the configuration of the Shoot

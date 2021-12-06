@@ -45,10 +45,6 @@ func (c *Controller) seedLeaseAdd(obj interface{}) {
 	c.seedLeaseQueue.Add(key)
 }
 
-// LeaseResyncGracePeriod is the amount of missed lease resyncs before the health status
-// is changed to false.
-const LeaseResyncGracePeriod = 10
-
 type leaseReconciler struct {
 	clientMap     clientmap.ClientMap
 	logger        logrus.FieldLogger

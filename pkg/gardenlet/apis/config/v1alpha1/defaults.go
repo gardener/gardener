@@ -252,6 +252,10 @@ func SetDefaults_SeedControllerConfiguration(obj *SeedControllerConfiguration) {
 	if obj.LeaseDurationSeconds == nil {
 		obj.LeaseDurationSeconds = pointer.Int32(2)
 	}
+
+	if obj.LeaseResyncGracePeriod == nil {
+		obj.LeaseResyncGracePeriod = pointer.Int32(10)
+	}
 }
 
 // SetDefaults_ShootControllerConfiguration sets defaults for the shoot controller.

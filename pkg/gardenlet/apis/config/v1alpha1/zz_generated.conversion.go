@@ -1363,6 +1363,7 @@ func autoConvert_v1alpha1_SeedControllerConfiguration_To_config_SeedControllerCo
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	out.LeaseDurationSeconds = (*int32)(unsafe.Pointer(in.LeaseDurationSeconds))
 	out.LeaseResyncSeconds = (*int32)(unsafe.Pointer(in.LeaseResyncSeconds))
+	out.LeaseResyncGracePeriod = (*int32)(unsafe.Pointer(in.LeaseResyncGracePeriod))
 	return nil
 }
 
@@ -1376,6 +1377,7 @@ func autoConvert_config_SeedControllerConfiguration_To_v1alpha1_SeedControllerCo
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	out.LeaseDurationSeconds = (*int32)(unsafe.Pointer(in.LeaseDurationSeconds))
 	out.LeaseResyncSeconds = (*int32)(unsafe.Pointer(in.LeaseResyncSeconds))
+	out.LeaseResyncGracePeriod = (*int32)(unsafe.Pointer(in.LeaseResyncGracePeriod))
 	return nil
 }
 
