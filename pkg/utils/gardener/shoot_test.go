@@ -388,6 +388,15 @@ var _ = Describe("Shoot", func() {
 						validate()
 						Expect(shootAccessSecret.Secret.Data).To(HaveKeyWithValue("kubeconfig", kubeconfigRaw))
 					})
+
+					It("should work w/ target secret", func() {
+						targetSecretName, targetSecretNamespace := "tname", "tnamespace"
+
+						shootAccessSecret.WithTargetSecret(targetSecretName, targetSecretNamespace)
+						validate()
+						Expect(shootAccessSecret.Secret.Annotations).To(HaveKeyWithValue("token-requestor.resources.gardener.cloud/target-secret-name", targetSecretName))
+						Expect(shootAccessSecret.Secret.Annotations).To(HaveKeyWithValue("token-requestor.resources.gardener.cloud/target-secret-namespace", targetSecretNamespace))
+					})
 				})
 
 				Context("update", func() {
@@ -452,6 +461,15 @@ var _ = Describe("Shoot", func() {
 
 						validate()
 						Expect(shootAccessSecret.Secret.Data).NotTo(HaveKey("token"))
+					})
+
+					It("should work w/ target secret", func() {
+						targetSecretName, targetSecretNamespace := "tname", "tnamespace"
+
+						shootAccessSecret.WithTargetSecret(targetSecretName, targetSecretNamespace)
+						validate()
+						Expect(shootAccessSecret.Secret.Annotations).To(HaveKeyWithValue("token-requestor.resources.gardener.cloud/target-secret-name", targetSecretName))
+						Expect(shootAccessSecret.Secret.Annotations).To(HaveKeyWithValue("token-requestor.resources.gardener.cloud/target-secret-namespace", targetSecretNamespace))
 					})
 				})
 			})
