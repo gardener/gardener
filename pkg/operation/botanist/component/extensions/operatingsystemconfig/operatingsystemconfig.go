@@ -195,27 +195,28 @@ type Data struct {
 
 // Deploy uses the client to create or update the OperatingSystemConfig custom resources.
 func (o *operatingSystemConfig) Deploy(ctx context.Context) error {
-	fns := o.forEachWorkerPoolAndPurposeTaskFn(func(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
-		d, err := o.newDeployer(osc, worker, purpose)
-		if err != nil {
-			return err
-		}
-		_, err = d.deploy(ctx, v1beta1constants.GardenerOperationReconcile)
+	return o.reconcile(ctx, func(d deployer) error {
+		_, err := d.deploy(ctx, v1beta1constants.GardenerOperationReconcile)
 		return err
 	})
-
-	return flow.Parallel(fns...)(ctx)
 }
 
 // Restore uses the seed client and the ShootState to create the OperatingSystemConfig custom resources in the Shoot
 // namespace in the Seed and restore its state.
 func (o *operatingSystemConfig) Restore(ctx context.Context, shootState *v1alpha1.ShootState) error {
+	return o.reconcile(ctx, func(d deployer) error {
+		return extensions.RestoreExtensionWithDeployFunction(ctx, o.client, shootState, extensionsv1alpha1.OperatingSystemConfigResource, d.deploy)
+	})
+}
+
+func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(deployer) error) error {
 	fns := o.forEachWorkerPoolAndPurposeTaskFn(func(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
 		d, err := o.newDeployer(osc, worker, purpose)
 		if err != nil {
 			return err
 		}
-		return extensions.RestoreExtensionWithDeployFunction(ctx, o.client, shootState, extensionsv1alpha1.OperatingSystemConfigResource, d.deploy)
+
+		return reconcileFn(d)
 	})
 
 	return flow.Parallel(fns...)(ctx)
