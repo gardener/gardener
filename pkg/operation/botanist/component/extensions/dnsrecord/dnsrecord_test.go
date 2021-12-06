@@ -36,6 +36,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -48,9 +49,9 @@ import (
 )
 
 const (
+	secretName          = "dnsrecord-testsecret"
 	name                = "foo"
 	namespace           = "shoot--foo--bar"
-	secretName          = "testsecret"
 	extensionType       = "provider"
 	zone                = "zone"
 	dnsName             = "foo.bar.external.example.com"
@@ -102,6 +103,7 @@ var _ = Describe("DNSRecord", func() {
 			Values:     []string{address},
 			TTL:        pointer.Int64(ttl),
 		}
+
 		dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
 
 		dns = &extensionsv1alpha1.DNSRecord{
@@ -219,105 +221,107 @@ var _ = Describe("DNSRecord", func() {
 			Expect(dnsRecord.Deploy(ctx)).To(MatchError(testErr))
 		})
 
-		It("should deploy the DNSRecord resource if ReconcileOnce is true and the DNSRecord is not found", func() {
-			values.ReconcileOnce = true
-			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
+		Context("When ReconcileOnChange is true", func() {
+			var expectedDNSRecord *extensionsv1alpha1.DNSRecord
 
-			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+			BeforeEach(func() {
+				values.ReconcileOnChange = true
 
-			deployedDNS := &extensionsv1alpha1.DNSRecord{}
-			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.DNSRecordResource,
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: namespace,
-					Annotations: map[string]string{
-						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-						v1beta1constants.GardenerTimestamp: now.UTC().String(),
+				expectedDNSRecord = &extensionsv1alpha1.DNSRecord{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
+						Kind:       extensionsv1alpha1.DNSRecordResource},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name,
+						Namespace: namespace,
+						Annotations: map[string]string{
+							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
+							v1beta1constants.GardenerTimestamp: now.UTC().String(),
+						},
 					},
-					ResourceVersion: "1",
-				},
-				Spec: dns.Spec,
-			}))
-		})
+					Spec: dns.Spec,
+				}
+				expectedDNSRecord.ResourceVersion = "2"
+			})
 
-		It("should deploy the DNSRecord resource if ReconcileOnce is true and the DNSRecord is not Succeeded", func() {
-			values.ReconcileOnce = true
-			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
+			It("should deploy the DNSRecord resource if the DNSRecord is not found", func() {
+				expectedDNSRecord.ResourceVersion = "1"
 
-			existingDNS := dns.DeepCopy()
-			delete(existingDNS.Annotations, v1beta1constants.GardenerOperation)
-			metav1.SetMetaDataAnnotation(&existingDNS.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
-			existingDNS.Spec.Zone = pointer.String("other-zone")
-			existingDNS.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				State: gardencorev1beta1.LastOperationStateError,
-			}
-			Expect(c.Create(ctx, existingDNS)).To(Succeed())
+				Expect(dnsRecord.Deploy(ctx)).To(Succeed())
 
-			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+				deployedDNS := &extensionsv1alpha1.DNSRecord{}
+				err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(deployedDNS).To(DeepEqual(expectedDNSRecord))
+			})
 
-			deployedDNS := &extensionsv1alpha1.DNSRecord{}
-			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.DNSRecordResource,
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            name,
-					Namespace:       namespace,
-					ResourceVersion: "2",
-					Annotations: map[string]string{
-						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-						v1beta1constants.GardenerTimestamp: now.UTC().String(),
-					},
-				},
-				Spec: dns.Spec,
-				Status: extensionsv1alpha1.DNSRecordStatus{
+			It("should deploy the DNSRecord resource if the DNSRecord is not Succeeded", func() {
+				existingDNS := dns.DeepCopy()
+				delete(existingDNS.Annotations, v1beta1constants.GardenerOperation)
+				metav1.SetMetaDataAnnotation(&existingDNS.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
+				existingDNS.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					State: gardencorev1beta1.LastOperationStateError,
+				}
+
+				expectedDNSRecord.Status = extensionsv1alpha1.DNSRecordStatus{
 					DefaultStatus: extensionsv1alpha1.DefaultStatus{
 						LastOperation: &gardencorev1beta1.LastOperation{
 							State: gardencorev1beta1.LastOperationStateError,
 						},
 					},
-				},
-			}))
+				}
+
+				Expect(c.Create(ctx, existingDNS)).To(Succeed())
+				Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+
+				deployedDNS := &extensionsv1alpha1.DNSRecord{}
+				err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(deployedDNS).To(DeepEqual(expectedDNSRecord))
+			})
+
+			It("should only update the timestamp annotation if the DNSRecord exists with the same values", func() {
+				delete(dns.Annotations, v1beta1constants.GardenerOperation)
+				// set old timestamp (e.g. added on creation / earlier Deploy call)
+				metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
+
+				expectedDNSRecord.Annotations = map[string]string{
+					v1beta1constants.GardenerTimestamp: now.UTC().String(),
+				}
+
+				Expect(c.Create(ctx, dns)).To(Succeed())
+				Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+
+				deployedDNS := &extensionsv1alpha1.DNSRecord{}
+				err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(deployedDNS).To(DeepEqual(expectedDNSRecord))
+			})
+
+			table.DescribeTable("should reconcile the DNSRecord if desired values differ from current state", func(modifyValues func(), modifyExpected func()) {
+				delete(dns.Annotations, v1beta1constants.GardenerOperation)
+				// set old timestamp (e.g. added on creation / earlier Deploy call)
+				metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
+				Expect(c.Create(ctx, dns)).To(Succeed())
+
+				modifyValues()
+				dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
+				modifyExpected()
+				Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+
+				deployedDNS := &extensionsv1alpha1.DNSRecord{}
+				err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(deployedDNS).To(DeepEqual(expectedDNSRecord))
+			},
+				table.Entry("secretName changes", func() { values.SecretName = "new-secret-name" }, func() { expectedDNSRecord.Spec.SecretRef.Name = "new-secret-name" }),
+				table.Entry("zone changes", func() { values.Zone = pointer.String("new-zone") }, func() { expectedDNSRecord.Spec.Zone = pointer.String("new-zone") }),
+				table.Entry("values changes", func() { values.Values = []string{"8.8.8.8"} }, func() { expectedDNSRecord.Spec.Values = []string{"8.8.8.8"} }),
+				table.Entry("TTL changes", func() { values.TTL = pointer.Int64(1337) }, func() { expectedDNSRecord.Spec.TTL = pointer.Int64(1337) }),
+				table.Entry("zone is nil", func() { values.Zone = nil }, func() { expectedDNSRecord.Spec.Zone = nil }),
+			)
 		})
 
-		It("should update the timestamp annotation if ReconcileOnce is true and the DNSRecord is found", func() {
-			values.ReconcileOnce = true
-			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
-			delete(dns.Annotations, v1beta1constants.GardenerOperation)
-			// set old timestamp (e.g. added on creation / earlier Deploy call)
-			metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
-			Expect(c.Create(ctx, dns)).To(Succeed())
-
-			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
-
-			deployedDNS := &extensionsv1alpha1.DNSRecord{}
-			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.DNSRecordResource,
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            name,
-					Namespace:       namespace,
-					ResourceVersion: "2",
-					Annotations: map[string]string{
-						v1beta1constants.GardenerTimestamp: now.UTC().String(),
-					},
-				},
-				Spec: dns.Spec,
-			}))
-		})
 	})
 
 	Describe("#Wait", func() {

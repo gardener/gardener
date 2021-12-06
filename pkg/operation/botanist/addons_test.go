@@ -58,7 +58,9 @@ import (
 var _ = Describe("addons", func() {
 
 	var (
-		ctrl *gomock.Controller
+		shootName     = "testShoot"
+		seedNamespace = "shoot--foo--bar"
+		ctrl          *gomock.Controller
 
 		scheme *runtime.Scheme
 		client client.Client
@@ -287,7 +289,7 @@ var _ = Describe("addons", func() {
 						Type: externalProvider,
 					},
 					SecretRef: corev1.SecretReference{
-						Name:      shootName + "-" + DNSExternalName,
+						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + DNSExternalName,
 						Namespace: seedNamespace,
 					},
 					Zone:       pointer.String(externalZone),
@@ -299,7 +301,7 @@ var _ = Describe("addons", func() {
 			}))
 
 			secret := &corev1.Secret{}
-			err = client.Get(ctx, types.NamespacedName{Name: shootName + "-" + DNSExternalName, Namespace: seedNamespace}, secret)
+			err = client.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + DNSExternalName, Namespace: seedNamespace}, secret)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(secret).To(DeepDerivativeEqual(&corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
@@ -307,7 +309,7 @@ var _ = Describe("addons", func() {
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            shootName + "-" + DNSExternalName,
+					Name:            DNSRecordSecretPrefix + "-" + shootName + "-" + DNSExternalName,
 					Namespace:       seedNamespace,
 					ResourceVersion: "1",
 				},

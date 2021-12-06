@@ -16,16 +16,18 @@ package dnsrecord
 
 import (
 	"context"
+	"reflect"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -62,10 +64,9 @@ type Values struct {
 	Name string
 	// SecretName is the name of the secret referenced by the DNSRecord resource.
 	SecretName string
-	// ReconcileOnce specifies that the DNSRecord resource should only be created and never reconciled after that again.
-	// However, on Deploy it is still updated with the timestamp annotation.
-	// This mode is used for owner DNS records.
-	ReconcileOnce bool
+	// ReconcileOnChange specifies that the DNSRecord resource should only be reconciled when first created or if its desired state has changed compared to the current one.
+	// This mode is used for owner DNS records to avoid competing reconciliations during the control plane migration "bad case" scenario.
+	ReconcileOnChange bool
 	// Type is the type of the DNSRecord provider.
 	Type string
 	// SecretData is the secret data of the DNSRecord (containing provider credentials, etc.)
@@ -163,7 +164,7 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 		return nil
 	}
 
-	if c.values.ReconcileOnce {
+	if c.values.ReconcileOnChange {
 		if err := c.client.Get(ctx, client.ObjectKeyFromObject(c.dnsRecord), c.dnsRecord); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return nil, err
@@ -178,6 +179,8 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 			patch := client.MergeFrom(c.dnsRecord.DeepCopy())
 			if c.dnsRecord.Status.LastOperation != nil && c.dnsRecord.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
 				// If the DNSRecord is not yet Succeeded, reconcile it again.
+				_ = mutateFn()
+			} else if c.valuesDontMatchDNSRecord() {
 				_ = mutateFn()
 			} else {
 				// Otherwise, just update the timestamp annotation.
@@ -274,4 +277,11 @@ func (c *dnsRecord) SetRecordType(recordType extensionsv1alpha1.DNSRecordType) {
 // SetValues sets the values in the values.
 func (c *dnsRecord) SetValues(values []string) {
 	c.values.Values = values
+}
+
+func (c *dnsRecord) valuesDontMatchDNSRecord() bool {
+	return c.values.SecretName != c.dnsRecord.Spec.SecretRef.Name ||
+		!pointer.StringEqual(c.values.Zone, c.dnsRecord.Spec.Zone) ||
+		!reflect.DeepEqual(c.values.Values, c.dnsRecord.Spec.Values) ||
+		!pointer.Int64Equal(c.values.TTL, c.dnsRecord.Spec.TTL)
 }

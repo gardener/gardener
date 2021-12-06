@@ -54,9 +54,7 @@ import (
 )
 
 const (
-	shootName      = "foo"
 	shootNamespace = "bar"
-	seedNamespace  = "shoot--foo--bar"
 
 	externalDomain   = "foo.bar.external.example.com"
 	externalProvider = "external-provider"
@@ -72,10 +70,12 @@ const (
 
 var _ = Describe("dnsrecord", func() {
 	var (
-		ctrl *gomock.Controller
+		shootName     string
+		seedNamespace string
+		ctrl          *gomock.Controller
 
 		scheme *runtime.Scheme
-		client client.Client
+		c      client.Client
 
 		externalDNSRecord *mockdnsrecord.MockInterface
 		internalDNSRecord *mockdnsrecord.MockInterface
@@ -90,16 +90,22 @@ var _ = Describe("dnsrecord", func() {
 	)
 
 	BeforeEach(func() {
+		shootName = "foo"
+		seedNamespace = "shoot--foo--bar"
 		ctrl = gomock.NewController(GinkgoT())
 
 		scheme = runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(corev1.AddToScheme(scheme)).NotTo(HaveOccurred())
-		client = fake.NewClientBuilder().WithScheme(scheme).Build()
+		c = fake.NewClientBuilder().WithScheme(scheme).Build()
 
 		externalDNSRecord = mockdnsrecord.NewMockInterface(ctrl)
 		internalDNSRecord = mockdnsrecord.NewMockInterface(ctrl)
 
+		cleanup = test.WithVar(&dnsrecord.TimeNow, func() time.Time { return now })
+	})
+
+	JustBeforeEach(func() {
 		b = &Botanist{
 			Operation: &operation.Operation{
 				Config: &config.GardenletConfiguration{
@@ -154,15 +160,12 @@ var _ = Describe("dnsrecord", func() {
 		})
 
 		renderer := cr.NewWithServerVersion(&version.Info{})
-		chartApplier := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(client, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
+		chartApplier := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
 		Expect(chartApplier).NotTo(BeNil(), "should return chart applier")
-
 		b.K8sSeedClient = fakeclientset.NewClientSetBuilder().
-			WithClient(client).
+			WithClient(c).
 			WithChartApplier(chartApplier).
 			Build()
-
-		cleanup = test.WithVar(&dnsrecord.TimeNow, func() time.Time { return now })
 	})
 
 	AfterEach(func() {
@@ -172,14 +175,14 @@ var _ = Describe("dnsrecord", func() {
 
 	Context("DefaultExternalDNSRecord", func() {
 		It("should create a component that creates the DNSRecord and its secret on Deploy", func() {
-			c := b.DefaultExternalDNSRecord()
-			c.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
-			c.SetValues([]string{address})
+			r := b.DefaultExternalDNSRecord()
+			r.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
+			r.SetValues([]string{address})
 
-			Expect(c.Deploy(ctx)).ToNot(HaveOccurred())
+			Expect(r.Deploy(ctx)).ToNot(HaveOccurred())
 
 			dnsRecord := &extensionsv1alpha1.DNSRecord{}
-			err := client.Get(ctx, types.NamespacedName{Name: shootName + "-" + DNSExternalName, Namespace: seedNamespace}, dnsRecord)
+			err := c.Get(ctx, types.NamespacedName{Name: shootName + "-" + DNSExternalName, Namespace: seedNamespace}, dnsRecord)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dnsRecord).To(DeepDerivativeEqual(&extensionsv1alpha1.DNSRecord{
 				TypeMeta: metav1.TypeMeta{
@@ -200,7 +203,7 @@ var _ = Describe("dnsrecord", func() {
 						Type: externalProvider,
 					},
 					SecretRef: corev1.SecretReference{
-						Name:      shootName + "-" + DNSExternalName,
+						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + DNSExternalName,
 						Namespace: seedNamespace,
 					},
 					Zone:       pointer.String(externalZone),
@@ -212,7 +215,7 @@ var _ = Describe("dnsrecord", func() {
 			}))
 
 			secret := &corev1.Secret{}
-			err = client.Get(ctx, types.NamespacedName{Name: shootName + "-" + DNSExternalName, Namespace: seedNamespace}, secret)
+			err = c.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + DNSExternalName, Namespace: seedNamespace}, secret)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(secret).To(DeepDerivativeEqual(&corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
@@ -220,7 +223,7 @@ var _ = Describe("dnsrecord", func() {
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            shootName + "-" + DNSExternalName,
+					Name:            DNSRecordSecretPrefix + "-" + shootName + "-" + DNSExternalName,
 					Namespace:       seedNamespace,
 					ResourceVersion: "1",
 				},
@@ -234,14 +237,14 @@ var _ = Describe("dnsrecord", func() {
 
 	Context("DefaultInternalDNSRecord", func() {
 		It("should create a component that creates the DNSRecord and its secret on Deploy", func() {
-			c := b.DefaultInternalDNSRecord()
-			c.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
-			c.SetValues([]string{address})
+			r := b.DefaultInternalDNSRecord()
+			r.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
+			r.SetValues([]string{address})
 
-			Expect(c.Deploy(ctx)).ToNot(HaveOccurred())
+			Expect(r.Deploy(ctx)).ToNot(HaveOccurred())
 
 			dnsRecord := &extensionsv1alpha1.DNSRecord{}
-			err := client.Get(ctx, types.NamespacedName{Name: shootName + "-" + DNSInternalName, Namespace: seedNamespace}, dnsRecord)
+			err := c.Get(ctx, types.NamespacedName{Name: shootName + "-" + DNSInternalName, Namespace: seedNamespace}, dnsRecord)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dnsRecord).To(DeepDerivativeEqual(&extensionsv1alpha1.DNSRecord{
 				TypeMeta: metav1.TypeMeta{
@@ -262,7 +265,7 @@ var _ = Describe("dnsrecord", func() {
 						Type: internalProvider,
 					},
 					SecretRef: corev1.SecretReference{
-						Name:      shootName + "-" + DNSInternalName,
+						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + DNSInternalName,
 						Namespace: seedNamespace,
 					},
 					Zone:       pointer.String(internalZone),
@@ -274,7 +277,7 @@ var _ = Describe("dnsrecord", func() {
 			}))
 
 			secret := &corev1.Secret{}
-			err = client.Get(ctx, types.NamespacedName{Name: shootName + "-" + DNSInternalName, Namespace: seedNamespace}, secret)
+			err = c.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + DNSInternalName, Namespace: seedNamespace}, secret)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(secret).To(DeepDerivativeEqual(&corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
@@ -282,7 +285,7 @@ var _ = Describe("dnsrecord", func() {
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            shootName + "-" + DNSInternalName,
+					Name:            DNSRecordSecretPrefix + "-" + shootName + "-" + DNSInternalName,
 					Namespace:       seedNamespace,
 					ResourceVersion: "1",
 				},
@@ -311,7 +314,7 @@ var _ = Describe("dnsrecord", func() {
 		Context("restore (DNS enabled and restore operation)", func() {
 			var shootState = &gardencorev1alpha1.ShootState{}
 
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				b.SetShootState(shootState)
 				b.Shoot.GetInfo().Status = gardencorev1beta1.ShootStatus{
 					LastOperation: &gardencorev1beta1.LastOperation{
@@ -333,7 +336,7 @@ var _ = Describe("dnsrecord", func() {
 		})
 
 		Context("destroy (DNS disabled)", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				b.Shoot.DisableDNS = true
 			})
 
@@ -367,7 +370,7 @@ var _ = Describe("dnsrecord", func() {
 		Context("restore (DNS enabled and restore operation)", func() {
 			var shootState = &gardencorev1alpha1.ShootState{}
 
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				b.SetShootState(shootState)
 				b.Shoot.GetInfo().Status = gardencorev1beta1.ShootStatus{
 					LastOperation: &gardencorev1beta1.LastOperation{
@@ -389,7 +392,7 @@ var _ = Describe("dnsrecord", func() {
 		})
 
 		Context("destroy (DNS disabled)", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				b.Shoot.DisableDNS = true
 			})
 
@@ -455,6 +458,87 @@ var _ = Describe("dnsrecord", func() {
 		It("should call Migrate and fail if it failed", func() {
 			internalDNSRecord.EXPECT().Migrate(ctx).Return(testErr)
 			Expect(b.MigrateInternalDNSRecord(ctx)).To(MatchError(testErr))
+		})
+	})
+
+	// TODO (voelzmo): remove this when all DNSRecord secrets have migrated to a prefixed version
+	Describe("#CleanupOrphanedDNSRecordSecrets", func() {
+		var (
+			orphanedInternalSecret *corev1.Secret
+			regularInternalSecret  *corev1.Secret
+			orphanedExternalSecret *corev1.Secret
+			regularExternalSecret  *corev1.Secret
+		)
+
+		JustBeforeEach(func() {
+			// create an internal secret which is not prefixed with 'dnsrecord-' and is of the form '<shootName>-internal'
+			orphanedInternalSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      shootName + "-" + DNSInternalName,
+				Namespace: seedNamespace,
+			}}
+			err := c.Create(ctx, orphanedInternalSecret)
+			Expect(err).ToNot(HaveOccurred())
+
+			// create a regular internal secret which is prefixed with 'dnsrecord-'
+			regularInternalSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + DNSInternalName,
+				Namespace: seedNamespace,
+			}}
+			err = c.Create(ctx, regularInternalSecret)
+			Expect(err).ToNot(HaveOccurred())
+
+			// create an external secret which is not prefixed with 'dnsrecord-' and is of the form '<shootName>-external'
+			orphanedExternalSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      shootName + "-" + DNSExternalName,
+				Namespace: seedNamespace,
+			}}
+			err = c.Create(ctx, orphanedExternalSecret)
+			Expect(err).ToNot(HaveOccurred())
+
+			// create a regular external secret which is prefixed with 'dnsrecord-'
+			regularExternalSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + DNSExternalName,
+				Namespace: seedNamespace,
+			}}
+			err = c.Create(ctx, regularExternalSecret)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should clean up orphaned Secrets, but keep prefixed secrets", func() {
+			Expect(b.CleanupOrphanedDNSRecordSecrets(ctx)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: orphanedInternalSecret.Name, Namespace: seedNamespace}, &corev1.Secret{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, client.ObjectKey{Name: orphanedExternalSecret.Name, Namespace: seedNamespace}, &corev1.Secret{})).To(BeNotFoundError())
+
+			internalSecret := &corev1.Secret{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: regularInternalSecret.Name, Namespace: seedNamespace}, internalSecret)).To(Succeed())
+			Expect(internalSecret).To(DeepDerivativeEqual(regularInternalSecret))
+
+			Expect(b.CleanupOrphanedDNSRecordSecrets(ctx)).To(Succeed())
+			externalSecret := &corev1.Secret{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: regularExternalSecret.Name, Namespace: seedNamespace}, externalSecret)).To(Succeed())
+			Expect(externalSecret).To(DeepDerivativeEqual(regularExternalSecret))
+		})
+
+		Context("When the Shoot name is 'gardener'", func() {
+			BeforeEach(func() {
+				shootName = "gardener"
+				seedNamespace = "shoot--gardener--bar"
+			})
+
+			It("should clean up the external orphaned secret, but keep the internal orphaned secret", func() {
+				Expect(b.CleanupOrphanedDNSRecordSecrets(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: orphanedExternalSecret.Name, Namespace: seedNamespace}, &corev1.Secret{})).To(BeNotFoundError())
+
+				internalSecret := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKey{Name: orphanedInternalSecret.Name, Namespace: seedNamespace}, internalSecret)).To(Succeed())
+				Expect(internalSecret).To(DeepDerivativeEqual(orphanedInternalSecret))
+			})
+		})
+
+		It("should not fail the clean up of orphaned Secret when there are none", func() {
+			Expect(b.CleanupOrphanedDNSRecordSecrets(ctx)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: orphanedExternalSecret.Name, Namespace: seedNamespace}, &corev1.Secret{})).To(BeNotFoundError())
+			Expect(b.CleanupOrphanedDNSRecordSecrets(ctx)).To(Succeed())
 		})
 	})
 })
