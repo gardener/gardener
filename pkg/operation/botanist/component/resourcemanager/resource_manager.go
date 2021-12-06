@@ -199,6 +199,15 @@ type Values struct {
 	// WatchedNamespace restricts the gardener-resource-manager to only watch ManagedResources in the defined namespace.
 	// If not set the gardener-resource-manager controller watches for ManagedResources in all namespaces
 	WatchedNamespace *string
+	// VPA contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
+	VPA *VPAConfig
+}
+
+// VPAConfig contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
+type VPAConfig struct {
+	// MinAllowed specifies the minimal amount of resources that will be recommended
+	// for the container.
+	MinAllowed corev1.ResourceList
 }
 
 func (r *resourceManager) Deploy(ctx context.Context) error {
@@ -743,6 +752,14 @@ func (r *resourceManager) ensureVPA(ctx context.Context) error {
 		}
 		vpa.Spec.UpdatePolicy = &autoscalingv1beta2.PodUpdatePolicy{
 			UpdateMode: &vpaUpdateMode,
+		}
+		vpa.Spec.ResourcePolicy = &autoscalingv1beta2.PodResourcePolicy{
+			ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+				{
+					ContainerName: autoscalingv1beta2.DefaultContainerResourcePolicy,
+					MinAllowed:    r.values.VPA.MinAllowed,
+				},
+			},
 		}
 		return nil
 	})

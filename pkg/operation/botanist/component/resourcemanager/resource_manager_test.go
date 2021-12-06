@@ -268,6 +268,12 @@ var _ = Describe("ResourceManager", func() {
 			TargetDiffersFromSourceCluster:       true,
 			TargetDisableCache:                   &targetDisableCache,
 			WatchedNamespace:                     &watchedNamespace,
+			VPA: &VPAConfig{
+				MinAllowed: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("20m"),
+					corev1.ResourceMemory: resource.MustParse("30Mi"),
+				},
+			},
 		}
 		resourceManager = New(c, deployNamespace, image, replicas, cfg)
 		resourceManager.SetSecrets(secrets)
@@ -518,6 +524,17 @@ var _ = Describe("ResourceManager", func() {
 				},
 				UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
 					UpdateMode: &updateMode,
+				},
+				ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
+					ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+						{
+							ContainerName: autoscalingv1beta2.DefaultContainerResourcePolicy,
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("20m"),
+								corev1.ResourceMemory: resource.MustParse("30Mi"),
+							},
+						},
+					},
 				},
 			},
 		}
