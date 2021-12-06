@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -210,6 +211,14 @@ func (o *operatingSystemConfig) Restore(ctx context.Context, shootState *v1alpha
 }
 
 func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(deployer) error) error {
+	if err := gutil.
+		NewShootAccessSecret(downloader.SecretName, o.values.Namespace).
+		WithTargetSecret(downloader.SecretName, metav1.NamespaceSystem).
+		WithTokenExpirationDuration("2160h").
+		Reconcile(ctx, o.client); err != nil {
+		return err
+	}
+
 	fns := o.forEachWorkerPoolAndPurposeTaskFn(func(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
 		d, err := o.newDeployer(osc, worker, purpose)
 		if err != nil {
@@ -219,7 +228,12 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 		return reconcileFn(d)
 	})
 
-	return flow.Parallel(fns...)(ctx)
+	if err := flow.Parallel(fns...)(ctx); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove in a future release.
+	return kutil.DeleteObject(ctx, o.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-downloader", Namespace: o.values.Namespace}})
 }
 
 // Wait waits until the OperatingSystemConfig CRD is ready (deployed or restored). It also reads the produced secret

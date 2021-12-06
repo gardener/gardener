@@ -58,7 +58,7 @@ const (
 	Name = "cloud-config-downloader"
 	// UnitName is the name of the cloud-config-downloader service.
 	UnitName = Name + ".service"
-	// SecretName is a constant for the secret name for the cloud-config-downloader's kubeconfig secret.
+	// SecretName is a constant for the secret name for the cloud-config-downloader's shoot access secret.
 	SecretName = Name
 	// UnitRestartSeconds is the number of seconds after which the cloud-config-downloader unit will be restarted.
 	UnitRestartSeconds = 30

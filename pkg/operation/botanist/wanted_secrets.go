@@ -20,7 +20,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
@@ -311,26 +310,6 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				CertType:  secrets.ClientCert,
 				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCAKubelet],
 			},
-		},
-
-		// Secret definition for cloud-config-downloader
-		&secrets.ControlPlaneSecretConfig{
-			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: downloader.SecretName,
-
-				CommonName:   downloader.SecretName,
-				Organization: nil,
-				DNSNames:     nil,
-				IPAddresses:  nil,
-
-				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-			},
-
-			KubeConfigRequests: []secrets.KubeConfigRequest{{
-				ClusterName:   b.Shoot.SeedNamespace,
-				APIServerHost: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
-			}},
 		},
 
 		// Secret definition for monitoring
