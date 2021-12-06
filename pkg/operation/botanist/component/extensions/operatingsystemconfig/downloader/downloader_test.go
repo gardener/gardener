@@ -52,28 +52,8 @@ var _ = Describe("Downloader", func() {
 					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						SecretRef: &extensionsv1alpha1.FileContentSecretRef{
-							Name:    "cloud-config-downloader",
+							Name:    "ca",
 							DataKey: "ca.crt",
-						},
-					},
-				},
-				extensionsv1alpha1.File{
-					Path:        "/var/lib/cloud-config-downloader/credentials/client.crt",
-					Permissions: pointer.Int32(0644),
-					Content: extensionsv1alpha1.FileContent{
-						SecretRef: &extensionsv1alpha1.FileContentSecretRef{
-							Name:    "cloud-config-downloader",
-							DataKey: "cloud-config-downloader.crt",
-						},
-					},
-				},
-				extensionsv1alpha1.File{
-					Path:        "/var/lib/cloud-config-downloader/credentials/client.key",
-					Permissions: pointer.Int32(0644),
-					Content: extensionsv1alpha1.FileContent{
-						SecretRef: &extensionsv1alpha1.FileContentSecretRef{
-							Name:    "cloud-config-downloader",
-							DataKey: "cloud-config-downloader.key",
 						},
 					},
 				},
@@ -117,6 +97,7 @@ rules:
   resourceNames:
   - ` + secretName1 + `
   - ` + secretName2 + `
+  - cloud-config-downloader
   resources:
   - secrets
   verbs:
@@ -136,6 +117,11 @@ roleRef:
 subjects:
 - kind: User
   name: cloud-config-downloader
+- kind: Group
+  name: system:bootstrappers
+- kind: ServiceAccount
+  name: cloud-config-downloader
+  namespace: kube-system
 `
 
 			clusterRoleBindingNodeBootstrapperYAML = `apiVersion: rbac.authorization.k8s.io/v1
@@ -221,30 +207,71 @@ set -o pipefail
 
 {
 SECRET_NAME="` + ccdSecretName + `"
+TOKEN_SECRET_NAME="cloud-config-downloader"
 
-PATH_CLOUDCONFIG_DOWNLOADER_SERVER="/var/lib/cloud-config-downloader/credentials/server"
-PATH_CLOUDCONFIG_DOWNLOADER_CA_CERT="/var/lib/cloud-config-downloader/credentials/ca.crt"
 PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_CERT="/var/lib/cloud-config-downloader/credentials/client.crt"
 PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_KEY="/var/lib/cloud-config-downloader/credentials/client.key"
-PATH_CLOUDCONFIG_CHECKSUM="/var/lib/cloud-config-downloader/downloaded_checksum"
+PATH_BOOTSTRAP_TOKEN="/var/lib/cloud-config-downloader/credentials/bootstrap-token"
+PATH_CLOUDCONFIG_DOWNLOADER_TOKEN="/var/lib/cloud-config-downloader/credentials/token"
 
-if ! SECRET="$(wget \
-  -qO- \
-  --header         "Accept: application/yaml" \
-  --ca-certificate "$PATH_CLOUDCONFIG_DOWNLOADER_CA_CERT" \
-  --certificate    "$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_CERT" \
-  --private-key    "$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_KEY" \
-  "$(cat "$PATH_CLOUDCONFIG_DOWNLOADER_SERVER")/api/v1/namespaces/kube-system/secrets/$SECRET_NAME")"; then
+function readSecret() {
+  wget \
+    -qO- \
+    --header         "Accept: application/yaml" \
+    --ca-certificate "/var/lib/cloud-config-downloader/credentials/ca.crt" \
+    "${@:2}" "$(cat "/var/lib/cloud-config-downloader/credentials/server")/api/v1/namespaces/kube-system/secrets/$1"
+}
 
+function readSecretWithToken() {
+  readSecret "$1" "--header=Authorization: Bearer $2"
+}
+
+function readSecretWithClientCertificate() {
+  readSecret "$1" "--certificate=$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_CERT" "--private-key=$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_KEY"
+}
+
+function extractDataKeyFromSecret() {
+  echo "$1" | sed -rn "s/  $2: (.*)/\1/p" | base64 -d
+}
+
+# download shoot access token for cloud-config-downloader
+if [[ -f "$PATH_CLOUDCONFIG_DOWNLOADER_TOKEN" ]]; then
+  if ! SECRET="$(readSecretWithToken "$TOKEN_SECRET_NAME" "$(cat "$PATH_CLOUDCONFIG_DOWNLOADER_TOKEN")")"; then
+    echo "Could not retrieve the shoot access secret with name $TOKEN_SECRET_NAME with existing token"
+    exit 1
+  fi
+else
+  if [[ -f "$PATH_BOOTSTRAP_TOKEN" ]]; then
+    if ! SECRET="$(readSecretWithToken "$TOKEN_SECRET_NAME" "$(cat "$PATH_BOOTSTRAP_TOKEN")")"; then
+      echo "Could not retrieve the shoot access secret with name $TOKEN_SECRET_NAME with bootstrap token"
+      exit 1
+    fi
+  else
+    if ! SECRET="$(readSecretWithClientCertificate "$TOKEN_SECRET_NAME")"; then
+      echo "Could not retrieve the shoot access secret with name $TOKEN_SECRET_NAME with client certificate"
+      exit 1
+    fi
+  fi
+fi
+
+TOKEN="$(extractDataKeyFromSecret "$SECRET" "token")"
+echo "$TOKEN" > "$PATH_CLOUDCONFIG_DOWNLOADER_TOKEN"
+
+# delete legacy credentials from disk
+# TODO(rfranzke): Delete in future release.
+rm -f "$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_CERT" "$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_KEY"
+
+# download and run the cloud config execution script
+if ! SECRET="$(readSecretWithToken "$SECRET_NAME" "$TOKEN")"; then
   echo "Could not retrieve the cloud config script in secret with name $SECRET_NAME"
   exit 1
 fi
 
 CHECKSUM="$(echo "$SECRET" | sed -rn 's/    checksum\/data-script: (.*)/\1/p' | sed -e 's/^"//' -e 's/"$//')"
-echo "$CHECKSUM" > "$PATH_CLOUDCONFIG_CHECKSUM"
+echo "$CHECKSUM" > "/var/lib/cloud-config-downloader/downloaded_checksum"
 
-SCRIPT="$(echo "$SECRET" | sed -rn 's/  script: (.*)/\1/p')"
-echo "$SCRIPT" | base64 -d | bash
+SCRIPT="$(extractDataKeyFromSecret "$SECRET" "script")"
+echo "$SCRIPT" | bash
 
 exit $?
 }
