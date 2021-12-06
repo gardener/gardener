@@ -50,6 +50,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
@@ -71,13 +72,7 @@ import (
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/sirupsen/logrus"
 	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
-	networkingv1 "k8s.io/api/networking/v1"
-	networkingv1beta1 "k8s.io/api/networking/v1beta1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -85,7 +80,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
@@ -417,8 +411,6 @@ func RunReconcileSeedFlow(
 			images.ImageNameVpaUpdater,
 			images.ImageNameHvpaController,
 			images.ImageNameKubeStateMetrics,
-			images.ImageNameNginxIngressControllerSeed,
-			images.ImageNameIngressDefaultBackend,
 		},
 		imagevector.RuntimeVersion(kubernetesVersion.String()),
 		imagevector.TargetVersion(kubernetesVersion.String()),
@@ -1096,6 +1088,10 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
+	nginxIngress, err := defaultNginxIngress(seedClient, imageVector, kubernetesVersion)
+	if err != nil {
+		return err
+	}
 	kubeScheduler, err := defaultKubeScheduler(seedClient, imageVector, kubernetesVersion)
 	if err != nil {
 		return err
@@ -1159,6 +1155,10 @@ func runCreateSeedFlow(
 			Name: "Deploying VPN authorization server",
 			Fn:   vpnAuthzServer.Deploy,
 		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying nginx-ingress",
+			Fn:   nginxIngress.Deploy,
+		})
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{Logger: log}); err != nil {
@@ -1199,6 +1199,7 @@ func RunDeleteSeedFlow(
 		autoscaler      = clusterautoscaler.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace)
 		gsac            = seedadmissioncontroller.New(seedClient, v1beta1constants.GardenNamespace, "")
 		resourceManager = resourcemanager.New(seedClient, v1beta1constants.GardenNamespace, "", resourcemanager.Values{})
+		nginxIngress    = nginxingress.New(seedClient, v1beta1constants.GardenNamespace, nginxingress.Values{KubernetesVersion: kubernetesVersion})
 		etcdDruid       = etcd.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, conf, "", nil)
 		networkPolicies = networkpolicies.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, networkpolicies.GlobalValues{})
 		clusterIdentity = clusteridentity.NewForSeed(seedClient, v1beta1constants.GardenNamespace, "")
@@ -1240,6 +1241,10 @@ func RunDeleteSeedFlow(
 			Name: "Destroying gardener-seed-admission-controller",
 			Fn:   component.OpDestroyAndWait(gsac).Destroy,
 		})
+		destroyNginxIngress = g.Add(flow.Task{
+			Name: "Destroying nginx-ingress",
+			Fn:   component.OpDestroyAndWait(nginxIngress).Destroy,
+		})
 		destroyKubeScheduler = g.Add(flow.Task{
 			Name: "Destroying kube-scheduler",
 			Fn:   component.OpDestroyAndWait(scheduler).Destroy,
@@ -1265,6 +1270,7 @@ func RunDeleteSeedFlow(
 			Fn:   resourceManager.Destroy,
 			Dependencies: flow.NewTaskIDs(
 				destroySeedAdmissionController,
+				destroyNginxIngress,
 				destroyEtcdDruid,
 				destroyClusterIdentity,
 				destroyClusterAutoscaler,
@@ -1631,140 +1637,6 @@ func determineClusterIdentity(ctx context.Context, c client.Client) (string, err
 		return string(gardenNamespace.UID), nil
 	}
 	return clusterIdentity.Data[v1beta1constants.ClusterIdentity], nil
-}
-
-const annotationSeedIngressClass = "seed.gardener.cloud/ingress-class"
-
-func migrateIngressClassForShootIngresses(ctx context.Context, gardenClient, seedClient client.Client, seed *Seed, newClass string, kubernetesVersion *semver.Version) error {
-	if oldClass, ok := seed.GetInfo().Annotations[annotationSeedIngressClass]; ok && oldClass == newClass {
-		return nil
-	}
-
-	shootNamespaces := &corev1.NamespaceList{}
-	if err := seedClient.List(ctx, shootNamespaces, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}); err != nil {
-		return err
-	}
-
-	if err := switchIngressClass(ctx, seedClient, kutil.Key(v1beta1constants.GardenNamespace, "aggregate-prometheus"), newClass, kubernetesVersion); err != nil {
-		return err
-	}
-	if err := switchIngressClass(ctx, seedClient, kutil.Key(v1beta1constants.GardenNamespace, "grafana"), newClass, kubernetesVersion); err != nil {
-		return err
-	}
-
-	for _, ns := range shootNamespaces.Items {
-		if err := switchIngressClass(ctx, seedClient, kutil.Key(ns.Name, "alertmanager"), newClass, kubernetesVersion); err != nil {
-			return err
-		}
-		if err := switchIngressClass(ctx, seedClient, kutil.Key(ns.Name, "prometheus"), newClass, kubernetesVersion); err != nil {
-			return err
-		}
-		if err := switchIngressClass(ctx, seedClient, kutil.Key(ns.Name, "grafana-operators"), newClass, kubernetesVersion); err != nil {
-			return err
-		}
-		if err := switchIngressClass(ctx, seedClient, kutil.Key(ns.Name, "grafana-users"), newClass, kubernetesVersion); err != nil {
-			return err
-		}
-	}
-
-	return seed.UpdateInfo(ctx, gardenClient, false, func(seed *gardencorev1beta1.Seed) error {
-		metav1.SetMetaDataAnnotation(&seed.ObjectMeta, annotationSeedIngressClass, newClass)
-		return nil
-	})
-}
-
-func switchIngressClass(ctx context.Context, seedClient client.Client, ingressKey types.NamespacedName, newClass string, kubernetesVersion *semver.Version) error {
-	// We need to use `versionutils.CompareVersions` because this function normalizes the seed version first.
-	// This is especially necessary if the seed cluster is a non Gardener managed cluster and thus might have some
-	// custom version suffix.
-	lessEqual121, err := versionutils.CompareVersions(kubernetesVersion.String(), "<=", "1.21.x")
-	if err != nil {
-		return err
-	}
-	if lessEqual121 {
-		ingress := &extensionsv1beta1.Ingress{}
-
-		if err := seedClient.Get(ctx, ingressKey, ingress); err != nil {
-			if apierrors.IsNotFound(err) {
-				return nil
-			}
-			return err
-		}
-
-		annotations := ingress.GetAnnotations()
-		if annotations == nil {
-			annotations = make(map[string]string)
-		}
-		annotations[networkingv1beta1.AnnotationIngressClass] = newClass
-		ingress.SetAnnotations(annotations)
-
-		return seedClient.Update(ctx, ingress)
-	}
-
-	ingress := &networkingv1.Ingress{}
-
-	if err := seedClient.Get(ctx, ingressKey, ingress); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-
-	ingress.Spec.IngressClassName = &newClass
-	delete(ingress.Annotations, networkingv1beta1.AnnotationIngressClass)
-
-	return seedClient.Update(ctx, ingress)
-}
-
-func computeNginxIngress(seed *Seed) map[string]interface{} {
-	values := map[string]interface{}{
-		"enabled": managedIngress(seed),
-	}
-
-	if seed.GetInfo().Spec.Ingress != nil && seed.GetInfo().Spec.Ingress.Controller.ProviderConfig != nil {
-		values["config"] = seed.GetInfo().Spec.Ingress.Controller.ProviderConfig
-	}
-
-	return values
-}
-
-func computeNginxIngressClass(seed *Seed, kubernetesVersion *semver.Version) (string, error) {
-	managed := managedIngress(seed)
-
-	// We need to use `versionutils.CompareVersions` because this function normalizes the seed version first.
-	// This is especially necessary if the seed cluster is a non Gardener managed cluster and thus might have some
-	// custom version suffix.
-	greaterEqual122, err := versionutils.CompareVersions(kubernetesVersion.String(), ">=", "1.22")
-	if err != nil {
-		return "", err
-	}
-
-	if managed && greaterEqual122 {
-		return v1beta1constants.SeedNginxIngressClass122, nil
-	}
-	if managed {
-		return v1beta1constants.SeedNginxIngressClass, nil
-	}
-	return v1beta1constants.ShootNginxIngressClass, nil
-}
-
-func deleteIngressController(ctx context.Context, c client.Client) error {
-	return kutil.DeleteObjects(
-		ctx,
-		c,
-		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:seed:nginx-ingress"}},
-		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:seed:nginx-ingress"}},
-		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress", Namespace: v1beta1constants.GardenNamespace}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-controller", Namespace: v1beta1constants.GardenNamespace}},
-		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-controller", Namespace: v1beta1constants.GardenNamespace}},
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-controller", Namespace: v1beta1constants.GardenNamespace}},
-		&policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-controller", Namespace: v1beta1constants.GardenNamespace}},
-		&autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-controller", Namespace: v1beta1constants.GardenNamespace}},
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-k8s-backend", Namespace: v1beta1constants.GardenNamespace}},
-		&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress", Namespace: v1beta1constants.GardenNamespace}},
-		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress", Namespace: v1beta1constants.GardenNamespace}},
-		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-k8s-backend", Namespace: v1beta1constants.GardenNamespace}},
-	)
 }
 
 func deletePriorityClassIfValueNotTheSame(ctx context.Context, k8sClient client.Client, priorityClassName string, valueToCompare int32) error {

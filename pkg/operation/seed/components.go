@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
@@ -85,6 +86,25 @@ func defaultKubeScheduler(c client.Client, imageVector imagevector.ImageVector, 
 	}
 
 	return scheduler, nil
+}
+
+func defaultNginxIngress(c client.Client, imageVector imagevector.ImageVector, kubernetesVersion *semver.Version) (component.DeployWaiter, error) {
+	imageController, err := imageVector.FindImage(charts.ImageNameNginxIngressControllerSeed, imagevector.TargetVersion(kubernetesVersion.String()))
+	if err != nil {
+		return nil, err
+	}
+	imageDefaultBackend, err := imageVector.FindImage(charts.ImageNameIngressDefaultBackend, imagevector.TargetVersion(kubernetesVersion.String()))
+	if err != nil {
+		return nil, err
+	}
+
+	values := nginxingress.Values{
+		ImageController:     imageController.String(),
+		ImageDefaultBackend: imageDefaultBackend.String(),
+		KubernetesVersion:   kubernetesVersion,
+	}
+
+	return nginxingress.New(c, v1beta1constants.GardenNamespace, values), nil
 }
 
 func defaultGardenerSeedAdmissionController(c client.Client, imageVector imagevector.ImageVector) (component.DeployWaiter, error) {
