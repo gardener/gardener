@@ -423,6 +423,10 @@ func (in *BackupEntryStatus) DeepCopyInto(out *BackupEntryStatus) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.MigrationStartTime != nil {
+		in, out := &in.MigrationStartTime, &out.MigrationStartTime
+		*out = (*in).DeepCopy()
+	}
 	return
 }
 
@@ -4266,6 +4270,10 @@ func (in *ShootStatus) DeepCopyInto(out *ShootStatus) {
 		in, out := &in.AdvertisedAddresses, &out.AdvertisedAddresses
 		*out = make([]ShootAdvertisedAddress, len(*in))
 		copy(*out, *in)
+	}
+	if in.MigrationStartTime != nil {
+		in, out := &in.MigrationStartTime, &out.MigrationStartTime
+		*out = (*in).DeepCopy()
 	}
 	return
 }

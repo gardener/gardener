@@ -396,6 +396,8 @@ const (
 	// Gardener will wait for the specified time after the Infrastructure extension object has been deleted to allow
 	// controllers to gracefully cleanup everything (default behaviour is 300s).
 	AnnotationShootInfrastructureCleanupWaitPeriodSeconds = "shoot.gardener.cloud/infrastructure-cleanup-wait-period-seconds"
+	// AnnotationShootForceRestore is a key for an annotation on a Shoot or BackupEntry resource to trigger a forceful restoration to a different seed.
+	AnnotationShootForceRestore = "shoot.gardener.cloud/force-restore"
 	// AnnotationReversedVPN moves the vpn-server to the seed.
 	AnnotationReversedVPN = "alpha.featuregates.shoot.gardener.cloud/reversed-vpn"
 	// AnnotationNodeLocalDNS enables a per node dns cache on the shoot cluster.

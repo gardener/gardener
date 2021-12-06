@@ -1828,6 +1828,7 @@ func autoConvert_v1beta1_BackupEntryStatus_To_core_BackupEntryStatus(in *BackupE
 	out.LastError = (*core.LastError)(unsafe.Pointer(in.LastError))
 	out.ObservedGeneration = in.ObservedGeneration
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
+	out.MigrationStartTime = (*metav1.Time)(unsafe.Pointer(in.MigrationStartTime))
 	return nil
 }
 
@@ -1841,6 +1842,7 @@ func autoConvert_core_BackupEntryStatus_To_v1beta1_BackupEntryStatus(in *core.Ba
 	out.LastError = (*LastError)(unsafe.Pointer(in.LastError))
 	out.ObservedGeneration = in.ObservedGeneration
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
+	out.MigrationStartTime = (*metav1.Time)(unsafe.Pointer(in.MigrationStartTime))
 	return nil
 }
 
@@ -5002,6 +5004,7 @@ func autoConvert_v1beta1_ShootStatus_To_core_ShootStatus(in *ShootStatus, out *c
 	out.UID = types.UID(in.UID)
 	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
 	out.AdvertisedAddresses = *(*[]core.ShootAdvertisedAddress)(unsafe.Pointer(&in.AdvertisedAddresses))
+	out.MigrationStartTime = (*metav1.Time)(unsafe.Pointer(in.MigrationStartTime))
 	return nil
 }
 
@@ -5026,6 +5029,7 @@ func autoConvert_core_ShootStatus_To_v1beta1_ShootStatus(in *core.ShootStatus, o
 	out.UID = types.UID(in.UID)
 	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
 	out.AdvertisedAddresses = *(*[]ShootAdvertisedAddress)(unsafe.Pointer(&in.AdvertisedAddresses))
+	out.MigrationStartTime = (*metav1.Time)(unsafe.Pointer(in.MigrationStartTime))
 	return nil
 }
 

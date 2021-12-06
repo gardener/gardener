@@ -177,13 +177,13 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	controllerCtx, cancel := context.WithCancel(ctx)
 
 	go backupBucketController.Run(controllerCtx, *f.cfg.Controllers.BackupBucket.ConcurrentSyncs)
-	go backupEntryController.Run(controllerCtx, *f.cfg.Controllers.BackupEntry.ConcurrentSyncs)
+	go backupEntryController.Run(controllerCtx, *f.cfg.Controllers.BackupEntry.ConcurrentSyncs, *f.cfg.Controllers.BackupEntryMigration.ConcurrentSyncs)
 	go bastionController.Run(controllerCtx, *f.cfg.Controllers.Bastion.ConcurrentSyncs)
 	go controllerInstallationController.Run(controllerCtx, *f.cfg.Controllers.ControllerInstallation.ConcurrentSyncs, *f.cfg.Controllers.ControllerInstallationCare.ConcurrentSyncs)
 	go managedSeedController.Run(controllerCtx, *f.cfg.Controllers.ManagedSeed.ConcurrentSyncs)
 	go networkPolicyController.Run(controllerCtx, *f.cfg.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
 	go seedController.Run(controllerCtx, *f.cfg.Controllers.Seed.ConcurrentSyncs)
-	go shootController.Run(controllerCtx, *f.cfg.Controllers.Shoot.ConcurrentSyncs, *f.cfg.Controllers.ShootCare.ConcurrentSyncs)
+	go shootController.Run(controllerCtx, *f.cfg.Controllers.Shoot.ConcurrentSyncs, *f.cfg.Controllers.ShootCare.ConcurrentSyncs, *f.cfg.Controllers.ShootMigration.ConcurrentSyncs)
 
 	// TODO(timebertt): this can be removed once we have refactored gardenlet to native controller-runtime controllers,
 	// with https://github.com/kubernetes-sigs/controller-runtime/pull/1678 source.Kind already retries getting

@@ -48,16 +48,16 @@ import (
 type reconciler struct {
 	clientMap clientmap.ClientMap
 	recorder  record.EventRecorder
-	logger    *logrus.Logger
+	logger    logrus.FieldLogger
 	config    *config.GardenletConfiguration
 }
 
 // newReconciler returns the new backupEntry reconciler.
-func newReconciler(clientMap clientmap.ClientMap, recorder record.EventRecorder, config *config.GardenletConfiguration) reconcile.Reconciler {
+func newReconciler(clientMap clientmap.ClientMap, recorder record.EventRecorder, logger logrus.FieldLogger, config *config.GardenletConfiguration) reconcile.Reconciler {
 	return &reconciler{
 		clientMap: clientMap,
 		recorder:  recorder,
-		logger:    logger.Logger,
+		logger:    logger,
 		config:    config,
 	}
 }

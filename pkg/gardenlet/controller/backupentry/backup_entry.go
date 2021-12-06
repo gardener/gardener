@@ -24,8 +24,10 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"k8s.io/client-go/tools/cache"
@@ -38,13 +40,15 @@ import (
 
 // Controller controls BackupEntries.
 type Controller struct {
-	gardenClient client.Client
-	config       *config.GardenletConfiguration
-	reconciler   reconcile.Reconciler
-	recorder     record.EventRecorder
+	gardenClient        client.Client
+	config              *config.GardenletConfiguration
+	reconciler          reconcile.Reconciler
+	migrationReconciler reconcile.Reconciler
+	recorder            record.EventRecorder
 
-	backupEntryInformer runtimecache.Informer
-	backupEntryQueue    workqueue.RateLimitingInterface
+	backupEntryInformer       runtimecache.Informer
+	backupEntryQueue          workqueue.RateLimitingInterface
+	backupEntryMigrationQueue workqueue.RateLimitingInterface
 
 	workerCh               chan int
 	numberOfRunningWorkers int
@@ -65,13 +69,15 @@ func NewBackupEntryController(ctx context.Context, clientMap clientmap.ClientMap
 	}
 
 	controller := &Controller{
-		gardenClient:        gardenClient.Client(),
-		config:              config,
-		reconciler:          newReconciler(clientMap, recorder, config),
-		recorder:            recorder,
-		backupEntryInformer: backupEntryInformer,
-		backupEntryQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupEntry"),
-		workerCh:            make(chan int),
+		gardenClient:              gardenClient.Client(),
+		config:                    config,
+		reconciler:                newReconciler(clientMap, recorder, logger.Logger, config),
+		migrationReconciler:       newMigrationReconciler(clientMap, logger.Logger, config),
+		recorder:                  recorder,
+		backupEntryInformer:       backupEntryInformer,
+		backupEntryQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupEntry"),
+		backupEntryMigrationQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupEntryMigration"),
+		workerCh:                  make(chan int),
 	}
 
 	controller.backupEntryInformer.AddEventHandler(cache.FilteringResourceEventHandler{
@@ -83,11 +89,22 @@ func NewBackupEntryController(ctx context.Context, clientMap clientmap.ClientMap
 		},
 	})
 
+	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) {
+		controller.backupEntryInformer.AddEventHandler(cache.FilteringResourceEventHandler{
+			FilterFunc: controllerutils.BackupEntryMigrationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
+			Handler: cache.ResourceEventHandlerFuncs{
+				AddFunc:    controller.backupEntryMigrationAdd,
+				UpdateFunc: controller.backupEntryMigrationUpdate,
+				DeleteFunc: controller.backupEntryMigrationDelete,
+			},
+		})
+	}
+
 	return controller, nil
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(ctx context.Context, workers int) {
+func (c *Controller) Run(ctx context.Context, workers, migrationWorkers int) {
 	var waitGroup sync.WaitGroup
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.backupEntryInformer.HasSynced) {
@@ -106,19 +123,26 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	logger.Logger.Info("BackupEntry controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.backupEntryQueue, "backupentry", c.reconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.backupEntryQueue, "BackupEntry", c.reconciler, &waitGroup, c.workerCh)
+	}
+	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) {
+		for i := 0; i < migrationWorkers; i++ {
+			controllerutils.CreateWorker(ctx, c.backupEntryMigrationQueue, "BackupEntry Migration", c.migrationReconciler, &waitGroup, c.workerCh)
+		}
 	}
 
 	// Shutdown handling
 	<-ctx.Done()
 	c.backupEntryQueue.ShutDown()
+	c.backupEntryMigrationQueue.ShutDown()
 
 	for {
-		if c.backupEntryQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Info("No running BackupEntry worker and no items left in the queues. Terminated BackupEntry controller...")
+		queueLengths := c.backupEntryQueue.Len() + c.backupEntryMigrationQueue.Len()
+		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
+			logger.Logger.Info("No running BackupEntry workers and no items left in the queues. Terminated BackupEntry controller...")
 			break
 		}
-		logger.Logger.Infof("Waiting for %d BackupEntry worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.backupEntryQueue.Len())
+		logger.Logger.Infof("Waiting for %d BackupEntry worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, queueLengths)
 		time.Sleep(5 * time.Second)
 	}
 

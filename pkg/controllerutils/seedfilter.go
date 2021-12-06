@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// SeedFilterFunc returns a filtering func for the seeds.
+// SeedFilterFunc returns a filtering func for seeds.
 func SeedFilterFunc(seedName string) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
 		seed, ok := obj.(*gardencorev1beta1.Seed)
@@ -40,7 +40,7 @@ func SeedFilterFunc(seedName string) func(obj interface{}) bool {
 	}
 }
 
-// ShootFilterFunc returns a filtering func for the seeds.
+// ShootFilterFunc returns a filtering func for shoots.
 func ShootFilterFunc(seedName string) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
 		shoot, ok := obj.(*gardencorev1beta1.Shoot)
@@ -59,12 +59,35 @@ func ShootFilterFunc(seedName string) func(obj interface{}) bool {
 	}
 }
 
-// ShootIsManagedByThisGardenlet checks if the given shoot is managed by this gardenlet by comparing it with the seed name from the GardenletConfiguration.
-func ShootIsManagedByThisGardenlet(shoot *gardencorev1beta1.Shoot, gc *config.GardenletConfiguration) bool {
-	return *shoot.Spec.SeedName == confighelper.SeedNameFromSeedConfig(gc.SeedConfig)
+// ShootMigrationFilterFunc returns a filtering func for shoots that are being migrated to a different seed.
+func ShootMigrationFilterFunc(seedName string) func(obj interface{}) bool {
+	return func(obj interface{}) bool {
+		shoot, ok := obj.(*gardencorev1beta1.Shoot)
+		if !ok {
+			return false
+		}
+
+		if shoot.Spec.SeedName != nil && shoot.Status.SeedName != nil && *shoot.Spec.SeedName != *shoot.Status.SeedName {
+			return *shoot.Spec.SeedName == seedName
+		}
+
+		return false
+	}
 }
 
-// ControllerInstallationFilterFunc returns a filtering func for the seeds.
+// ShootIsManagedByThisGardenlet checks if the given shoot is managed by this gardenlet by comparing it with the seed name from the GardenletConfiguration.
+func ShootIsManagedByThisGardenlet(shoot *gardencorev1beta1.Shoot, gc *config.GardenletConfiguration) bool {
+	seedName := confighelper.SeedNameFromSeedConfig(gc.SeedConfig)
+
+	return shoot.Spec.SeedName != nil && *shoot.Spec.SeedName == seedName
+}
+
+// ShootIsBeingMigratedToThisGardenlet checks if the given shoot is currently being migrated to this gardenlet.
+func ShootIsBeingMigratedToThisGardenlet(shoot *gardencorev1beta1.Shoot, gc *config.GardenletConfiguration) bool {
+	return ShootIsManagedByThisGardenlet(shoot, gc) && shoot.Status.SeedName != nil && *shoot.Spec.SeedName != *shoot.Status.SeedName
+}
+
+// ControllerInstallationFilterFunc returns a filtering func for ControllerInstallations.
 func ControllerInstallationFilterFunc(seedName string) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
 		controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
@@ -76,7 +99,7 @@ func ControllerInstallationFilterFunc(seedName string) func(obj interface{}) boo
 	}
 }
 
-// BackupBucketFilterFunc returns a filtering func for the seeds.
+// BackupBucketFilterFunc returns a filtering func for BackupBuckets.
 func BackupBucketFilterFunc(seedName string) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
 		backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
@@ -91,7 +114,7 @@ func BackupBucketFilterFunc(seedName string) func(obj interface{}) bool {
 	}
 }
 
-// BackupEntryFilterFunc returns a filtering func for the seeds.
+// BackupEntryFilterFunc returns a filtering func for BackupEntries.
 func BackupEntryFilterFunc(seedName string) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
 		backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
@@ -110,6 +133,22 @@ func BackupEntryFilterFunc(seedName string) func(obj interface{}) bool {
 	}
 }
 
+// BackupEntryMigrationFilterFunc returns a filtering func for backup entries that are being migrated to a different seed.
+func BackupEntryMigrationFilterFunc(seedName string) func(obj interface{}) bool {
+	return func(obj interface{}) bool {
+		backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
+		if !ok {
+			return false
+		}
+
+		if backupEntry.Spec.SeedName != nil && backupEntry.Status.SeedName != nil && *backupEntry.Spec.SeedName != *backupEntry.Status.SeedName {
+			return *backupEntry.Spec.SeedName == seedName
+		}
+
+		return false
+	}
+}
+
 // BackupEntryIsManagedByThisGardenlet checks if the given BackupEntry is managed by this gardenlet by comparing it with the seed name from the GardenletConfiguration.
 func BackupEntryIsManagedByThisGardenlet(backupEntry *gardencorev1beta1.BackupEntry, gc *config.GardenletConfiguration) bool {
 	seedName := confighelper.SeedNameFromSeedConfig(gc.SeedConfig)
@@ -117,7 +156,12 @@ func BackupEntryIsManagedByThisGardenlet(backupEntry *gardencorev1beta1.BackupEn
 	return backupEntry.Spec.SeedName != nil && *backupEntry.Spec.SeedName == seedName
 }
 
-// BastionFilterFunc returns a filtering func for the seeds.
+// BackupEntryIsBeingMigratedToThisGardenlet checks if the given BackupEntry is currently being migrated to this gardenlet.
+func BackupEntryIsBeingMigratedToThisGardenlet(backupEntry *gardencorev1beta1.BackupEntry, gc *config.GardenletConfiguration) bool {
+	return BackupEntryIsManagedByThisGardenlet(backupEntry, gc) && backupEntry.Status.SeedName != nil && *backupEntry.Spec.SeedName != *backupEntry.Status.SeedName
+}
+
+// BastionFilterFunc returns a filtering func for Bastions.
 func BastionFilterFunc(seedName string) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
 		bastion, ok := obj.(*operationsv1alpha1.Bastion)
