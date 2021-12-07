@@ -19,9 +19,15 @@ spec:
       app: vpa-updater
   template:
     metadata:
-{{- if .Values.updater.podAnnotations }}
+{{- if or .Values.updater.podAnnotations .Values.updater.createServiceAccount }}
       annotations:
+{{- if .Values.updater.createServiceAccount }}
+        # TODO(rfranzke): Remove in a future release.
+        security.gardener.cloud/trigger: rollout
+{{- end }}
+{{- if .Values.updater.podAnnotations }}
 {{ toYaml .Values.updater.podAnnotations | indent 8 }}
+{{- end }}
 {{- end }}
       labels:
         app: vpa-updater

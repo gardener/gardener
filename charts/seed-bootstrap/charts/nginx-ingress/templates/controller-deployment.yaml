@@ -23,6 +23,8 @@ spec:
   template:
     metadata:
       annotations:
+        # TODO(rfranzke): Remove in a future release.
+        security.gardener.cloud/trigger: rollout
 {{ include "nginx-ingress.deployment.annotations" . | indent 8 }}
       labels:
         app: nginx-ingress
