@@ -110,4 +110,12 @@ baz`, spaces)).To(Equal(`foo
 			Expect(v["bar"].(map[string]interface{})["baz"]).To(Equal("bang"))
 		})
 	})
+
+	DescribeTable("#IifString",
+		func(condition bool, expectation string) {
+			Expect(IifString(condition, "true", "false")).To(Equal(expectation))
+		},
+		Entry("condition is true", true, "true"),
+		Entry("condition is false", false, "false"),
+	)
 })

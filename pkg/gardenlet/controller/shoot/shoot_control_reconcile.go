@@ -27,17 +27,19 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
 
-// runReconcileShootFlow reconciles the Shoot cluster's state.
+// runReconcileShootFlow reconciles the Shoot cluster.
 // It receives an Operation object <o> which stores the Shoot object.
-func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
+func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operation.Operation, operationType gardencorev1beta1.LastOperationType) *gardencorev1beta1helper.WrappedLastErrors {
 	// We create the botanists (which will do the actual work).
 	var (
+		isRestoring             = operationType == gardencorev1beta1.LastOperationTypeRestore
 		botanist                *botanistpkg.Botanist
 		tasksWithErrors         []string
 		isCopyOfBackupsRequired bool
@@ -50,7 +52,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		}
 	}
 
-	errorContext := errors.NewErrorContext("Shoot cluster reconciliation", tasksWithErrors)
+	errorContext := errors.NewErrorContext(fmt.Sprintf("Shoot cluster %s", utils.IifString(isRestoring, "restoration", "reconciliation")), tasksWithErrors)
 
 	err = errors.HandleErrors(errorContext,
 		func(errorID string) error {
@@ -91,7 +93,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		sniPhase                       = botanist.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase
 		requestControlPlanePodsRestart = controllerutils.HasTask(o.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
 
-		g                      = flow.NewGraph("Shoot cluster reconciliation")
+		g                      = flow.NewGraph(fmt.Sprintf("Shoot cluster %s", utils.IifString(isRestoring, "restoration", "reconciliation")))
 		ensureShootStateExists = g.Add(flow.Task{
 			Name: "Ensuring that ShootState exists",
 			Fn:   flow.TaskFn(botanist.EnsureShootStateExists).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -404,7 +406,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Dependencies: flow.NewTaskIDs(deployNetwork),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying shoot cluster-identity",
+			Name:         "Deploying shoot cluster identity",
 			Fn:           flow.TaskFn(botanist.DeployClusterIdentity).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, ensureShootClusterIdentity, waitUntilOperatingSystemConfigReady),
 		})
@@ -560,7 +562,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Dependencies: flow.NewTaskIDs(deployExtensionResources),
 		})
 		deleteStaleExtensionResources = g.Add(flow.Task{
-			Name:         "Delete stale extension resources",
+			Name:         "Deleting stale extension resources",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.DeleteStaleResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
@@ -580,7 +582,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Dependencies: flow.NewTaskIDs(deployContainerRuntimeResources),
 		})
 		deleteStaleContainerRuntimeResources = g.Add(flow.Task{
-			Name:         "Delete stale container runtime resources",
+			Name:         "Deleting stale container runtime resources",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ContainerRuntime.DeleteStaleResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
@@ -590,7 +592,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Dependencies: flow.NewTaskIDs(deleteStaleContainerRuntimeResources),
 		})
 		_ = g.Add(flow.Task{
-			Name: "Restart control plane pods",
+			Name: "Restarting control plane pods",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				if err := botanist.RestartControlPlanePods(ctx); err != nil {
 					return err
@@ -614,7 +616,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		ErrorContext:     errorContext,
 		ErrorCleaner:     o.CleanShootTaskError,
 	}); err != nil {
-		o.Logger.Errorf("Failed to reconcile Shoot %q: %+v", o.Shoot.GetInfo().Name, err)
+		o.Logger.Errorf("Failed to %s Shoot cluster %q: %+v", utils.IifString(isRestoring, "restore", "reconcile"), o.Shoot.GetInfo().Name, err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
 	}
 
@@ -626,7 +628,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		}
 	}
 
-	o.Logger.Infof("Successfully reconciled Shoot %q", o.Shoot.GetInfo().Name)
+	o.Logger.Infof("Successfully %s Shoot cluster %q", utils.IifString(isRestoring, "restored", "reconciled"), o.Shoot.GetInfo().Name)
 	return nil
 }
 
