@@ -582,6 +582,15 @@ var _ = Describe("Actuator", func() {
 				},
 			)
 		}
+
+		expectLegacySecretDeletion = func() {
+			shc.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "garden", Name: "gardenlet-imagevector-overwrite"}})
+			shc.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "garden", Name: "gardenlet-imagevector-overwrite-components"}})
+			shc.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "garden", Name: "gardenlet-configmap"}})
+			shc.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: "garden", Name: "gardenlet-cert"}})
+			shc.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: "garden", Name: "gardenlet-kubeconfig-seed"}})
+			shc.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: "garden", Name: "gardenlet-kubeconfig-garden"}})
+		}
 	)
 
 	Describe("#Reconcile", func() {
@@ -659,6 +668,7 @@ var _ = Describe("Actuator", func() {
 				expectPrepareGardenClientConnection(true)
 				expectGetGardenletChartValues(true)
 				expectApplyGardenletChart()
+				expectLegacySecretDeletion()
 
 				status, wait, err := actuator.Reconcile(ctx, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
@@ -692,6 +702,7 @@ var _ = Describe("Actuator", func() {
 				expectPrepareGardenClientConnection(true)
 				expectGetGardenletChartValues(true)
 				expectApplyGardenletChart()
+				expectLegacySecretDeletion()
 
 				status, wait, err := actuator.Reconcile(ctx, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
@@ -726,6 +737,7 @@ var _ = Describe("Actuator", func() {
 				expectPrepareGardenClientConnection(false)
 				expectGetGardenletChartValues(true)
 				expectApplyGardenletChart()
+				expectLegacySecretDeletion()
 
 				status, wait, err := actuator.Reconcile(ctx, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
@@ -758,6 +770,7 @@ var _ = Describe("Actuator", func() {
 				expectMergeWithParent()
 				expectGetGardenletChartValues(false)
 				expectApplyGardenletChart()
+				expectLegacySecretDeletion()
 
 				status, wait, err := actuator.Reconcile(ctx, managedSeed)
 				Expect(err).ToNot(HaveOccurred())

@@ -357,6 +357,18 @@ var _ = Describe("Util", func() {
 				Expect(rest.Host).To(Equal(restConfig.Host))
 			})
 		})
+		Describe("#DeleteNonUniqueGardenletSecretsAndCms", func() {
+			It("Should delete unneeded configmaps and secrets", func() {
+				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "garden", Name: "gardenlet-imagevector-overwrite"}})
+				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "garden", Name: "gardenlet-imagevector-overwrite-components"}})
+				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "garden", Name: "gardenlet-configmap"}})
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: "garden", Name: "gardenlet-cert"}})
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: "garden", Name: "gardenlet-kubeconfig-seed"}})
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: "garden", Name: "gardenlet-kubeconfig-garden"}})
+
+				Expect(DeleteNonUniqueGardenletSecretsAndCms(ctx, c)).ToNot(HaveOccurred())
+			})
+		})
 	})
 
 	Describe("GetSeedName", func() {
