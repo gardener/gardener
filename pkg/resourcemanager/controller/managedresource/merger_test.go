@@ -562,6 +562,46 @@ var _ = Describe("merger", func() {
 		})
 	})
 
+	Describe("#mergeDaemonSet", func() {
+		var (
+			old, new *appsv1.DaemonSet
+			s        *runtime.Scheme
+		)
+
+		BeforeEach(func() {
+			s = runtime.NewScheme()
+			Expect(appsv1.AddToScheme(s)).ToNot(HaveOccurred(), "schema add should succeed")
+
+			old = &appsv1.DaemonSet{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: appsv1.DaemonSetSpec{
+					Template: defaultPodTemplateSpec,
+				},
+			}
+
+			new = old.DeepCopy()
+		})
+
+		It("should overwrite old .spec.containers[*].resources if preserveResources is false", func() {
+			new.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
+
+			expected := old.DeepCopy()
+			expected.Spec.Template.Spec.Containers[0].Resources = new.Spec.Template.Spec.Containers[0].Resources
+
+			Expect(mergeDaemonSet(s, old, new, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(new).To(Equal(expected))
+		})
+
+		It("should not overwrite old .spec.containers[*].resources if preserveResources is true", func() {
+			new.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
+
+			expected := old.DeepCopy()
+
+			Expect(mergeDaemonSet(s, old, new, true)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(new).To(Equal(expected))
+		})
+	})
+
 	Describe("#mergeContainer", func() {
 		var (
 			old, new *corev1.Container
@@ -659,17 +699,16 @@ var _ = Describe("merger", func() {
 			s = runtime.NewScheme()
 			Expect(batchv1.AddToScheme(s)).ToNot(HaveOccurred(), "schema add should succeed")
 
+			podTemplateSpec := defaultPodTemplateSpec
+			podTemplateSpec.Labels = map[string]string{"controller-uid": "1a2b3c", "job-name": "pi"}
+
 			old = &batchv1.Job{
 				ObjectMeta: metav1.ObjectMeta{},
 				Spec: batchv1.JobSpec{
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
 					},
-					Template: corev1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{
-							Labels: map[string]string{"controller-uid": "1a2b3c", "job-name": "pi"},
-						},
-					},
+					Template: podTemplateSpec,
 				},
 			}
 
@@ -681,7 +720,7 @@ var _ = Describe("merger", func() {
 
 			expected := old.DeepCopy()
 
-			Expect(mergeJob(s, old, new)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(mergeJob(s, old, new, false)).NotTo(HaveOccurred(), "merge should be successful")
 			Expect(new).To(Equal(expected))
 		})
 
@@ -690,7 +729,7 @@ var _ = Describe("merger", func() {
 
 			expected := old.DeepCopy()
 
-			Expect(mergeJob(s, old, new)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(mergeJob(s, old, new, false)).NotTo(HaveOccurred(), "merge should be successful")
 			Expect(new).To(Equal(expected))
 		})
 
@@ -705,7 +744,109 @@ var _ = Describe("merger", func() {
 				"version":        "v0.1.0",
 			}
 
-			Expect(mergeJob(s, old, new)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(mergeJob(s, old, new, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(new).To(Equal(expected))
+		})
+
+		It("should overwrite old .spec.containers[*].resources if preserveResources is false", func() {
+			new.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
+
+			expected := old.DeepCopy()
+			expected.Spec.Template.Spec.Containers[0].Resources = new.Spec.Template.Spec.Containers[0].Resources
+
+			Expect(mergeJob(s, old, new, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(new).To(Equal(expected))
+		})
+
+		It("should not overwrite old .spec.containers[*].resources if preserveResources is true", func() {
+			new.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
+
+			expected := old.DeepCopy()
+
+			Expect(mergeJob(s, old, new, true)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(new).To(Equal(expected))
+		})
+	})
+
+	Describe("#mergeCronJob", func() {
+		var (
+			old, new *batchv1.CronJob
+			s        *runtime.Scheme
+		)
+
+		BeforeEach(func() {
+			s = runtime.NewScheme()
+			Expect(batchv1.AddToScheme(s)).ToNot(HaveOccurred(), "schema add should succeed")
+
+			podTemplateSpec := defaultPodTemplateSpec
+			podTemplateSpec.Labels = map[string]string{"controller-uid": "1a2b3c", "job-name": "pi"}
+
+			old = &batchv1.CronJob{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec: batchv1.CronJobSpec{
+					JobTemplate: batchv1.JobTemplateSpec{
+						Spec: batchv1.JobSpec{
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
+							},
+							Template: podTemplateSpec,
+						},
+					},
+				},
+			}
+
+			new = old.DeepCopy()
+		})
+
+		It("should not overwrite old .spec.selector if the new one is nil", func() {
+			new.Spec.JobTemplate.Spec.Selector = nil
+
+			expected := old.DeepCopy()
+
+			Expect(mergeCronJob(s, old, new, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(new).To(Equal(expected))
+		})
+
+		It("should not overwrite old .spec.template.labels if the new one is nil", func() {
+			new.Spec.JobTemplate.Spec.Template.Labels = nil
+
+			expected := old.DeepCopy()
+
+			Expect(mergeCronJob(s, old, new, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(new).To(Equal(expected))
+		})
+
+		It("should be able to merge new .spec.template.labels with the old ones", func() {
+			new.Spec.JobTemplate.Spec.Template.Labels = map[string]string{"app": "myapp", "version": "v0.1.0"}
+
+			expected := old.DeepCopy()
+			expected.Spec.JobTemplate.Spec.Template.Labels = map[string]string{
+				"app":            "myapp",
+				"controller-uid": "1a2b3c",
+				"job-name":       "pi",
+				"version":        "v0.1.0",
+			}
+
+			Expect(mergeCronJob(s, old, new, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(new).To(Equal(expected))
+		})
+
+		It("should overwrite old .spec.containers[*].resources if preserveResources is false", func() {
+			new.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
+
+			expected := old.DeepCopy()
+			expected.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Resources = new.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Resources
+
+			Expect(mergeCronJob(s, old, new, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(new).To(Equal(expected))
+		})
+
+		It("should not overwrite old .spec.containers[*].resources if preserveResources is true", func() {
+			new.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
+
+			expected := old.DeepCopy()
+
+			Expect(mergeCronJob(s, old, new, true)).NotTo(HaveOccurred(), "merge should be successful")
 			Expect(new).To(Equal(expected))
 		})
 	})
