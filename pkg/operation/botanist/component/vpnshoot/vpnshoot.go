@@ -44,8 +44,8 @@ import (
 )
 
 const (
-	// LabelValue is the value of a label used for the identification of vpn-shoot pods.
-	LabelValue = "vpn-shoot"
+	// labelValue is the value of a label used for the identification of vpn-shoot pods.
+	labelValue = "vpn-shoot"
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 	ManagedResourceName = "shoot-core-vpn-shoot"
 	// SecretNameVPNShootClient is the constant for the shoot secret name when ReversedVPN is enabled.
@@ -356,7 +356,7 @@ func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
 				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
 					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
-					v1beta1constants.LabelApp:       LabelValue,
+					v1beta1constants.LabelApp:       labelValue,
 					managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 				},
 			},
@@ -377,7 +377,7 @@ func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
 							v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
-							v1beta1constants.LabelApp:       LabelValue,
+							v1beta1constants.LabelApp:       labelValue,
 							managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 							"type":                          "tunnel",
 						},
@@ -485,7 +485,7 @@ func (v *vpnShoot) SetSecrets(secrets Secrets) {
 }
 
 func getLabels() map[string]string {
-	return map[string]string{v1beta1constants.LabelApp: LabelValue}
+	return map[string]string{v1beta1constants.LabelApp: labelValue}
 }
 
 func (v *vpnShoot) getEnvVars() []corev1.EnvVar {
