@@ -238,9 +238,10 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 // It will return an error in case it has not finished yet, and nil if all resources are gone.
 func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 	var (
-		c       = b.K8sShootClient.Client()
-		ensurer = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
-		ops     = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
+		c                  = b.K8sShootClient.Client()
+		ensurer            = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
+		ops                = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
+		snapshotContentOps = utilclient.NewCleanOps(utilclient.NewVolumeSnapshotContentCleaner(), ensurer)
 	)
 
 	cleanOptions, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds, 1)
@@ -282,7 +283,7 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		// Cleaning up VolumeSnapshots can take a longer time if many snapshots were taken.
 		// Hence, we only finalize these objects after 1h.
 		cleanResourceFn(ops, c, &volumesnapshotv1beta1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
-		cleanResourceFn(ops, c, &volumesnapshotv1beta1.VolumeSnapshotContentList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
+		cleanResourceFn(snapshotContentOps, c, &volumesnapshotv1beta1.VolumeSnapshotContentList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
 	)(ctx)
 }
 

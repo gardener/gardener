@@ -19,15 +19,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes/client"
+	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	mockutilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client/mock"
 	"github.com/gardener/gardener/pkg/utils/test"
 	mocktime "github.com/gardener/gardener/pkg/utils/time/mock"
 
 	"github.com/golang/mock/gomock"
+	volumesnapshotv1beta1 "github.com/kubernetes-csi/external-snapshotter/v2/pkg/apis/volumesnapshot/v1beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -37,6 +40,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestClient(t *testing.T) {
@@ -48,6 +52,7 @@ var _ = Describe("Cleaner", func() {
 	var (
 		ctrl *gomock.Controller
 		c    *mockclient.MockClient
+		ctx  context.Context
 
 		cm1Key client.ObjectKey
 		cm2Key client.ObjectKey
@@ -60,11 +65,14 @@ var _ = Describe("Cleaner", func() {
 
 		cm2WithFinalizer corev1.ConfigMap
 		nsWithFinalizer  corev1.Namespace
+
+		timeOps *mocktime.MockOps
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
+		ctx = context.Background()
 
 		cm1Key = kutil.Key("n", "foo")
 		cm2Key = kutil.Key("n", "bar")
@@ -79,19 +87,14 @@ var _ = Describe("Cleaner", func() {
 		cm2WithFinalizer.Finalizers = []string{"finalize.me"}
 		ns.DeepCopyInto(&nsWithFinalizer)
 		nsWithFinalizer.Spec.Finalizers = []corev1.FinalizerName{"kubernetes"}
+
+		timeOps = mocktime.NewMockOps(ctrl)
 	})
 	AfterEach(func() {
 		ctrl.Finish()
 	})
 
 	Context("Cleaner", func() {
-		var (
-			timeOps *mocktime.MockOps
-		)
-		BeforeEach(func() {
-			timeOps = mocktime.NewMockOps(ctrl)
-		})
-
 		Describe("#Clean", func() {
 			It("should delete the target object", func() {
 				var (
@@ -275,6 +278,152 @@ var _ = Describe("Cleaner", func() {
 
 				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(10))).To(Succeed())
 			})
+		})
+	})
+
+	Describe("VolumeSnapshotCleaner", func() {
+		var (
+			cl       client.Client
+			cleaner  Cleaner
+			labels   map[string]string
+			cleanOps []CleanOption
+
+			deletionTimestamp                metav1.Time
+			cleanupContent, remainingContent map[string]*volumesnapshotv1beta1.VolumeSnapshotContent
+		)
+
+		BeforeEach(func() {
+			var (
+				deletionTimestampLater = metav1.NewTime(deletionTimestamp.Add(-1 * time.Second))
+				now                    = time.Unix(60, 0)
+				finalizers             = []string{"foo/bar"}
+			)
+
+			deletionTimestamp = metav1.NewTime(time.Unix(30, 0))
+			timeOps.EXPECT().Now().Return(now).AnyTimes()
+
+			cleaner = NewVolumeSnapshotContentCleaner(timeOps)
+			labels = map[string]string{"action": "cleanup"}
+			cleanOps = []CleanOption{
+				utilclient.ListWith{
+					client.MatchingLabels(labels),
+				},
+				utilclient.DeleteWith{
+					client.GracePeriodSeconds(29),
+				},
+			}
+
+			cleanupContent = map[string]*volumesnapshotv1beta1.VolumeSnapshotContent{
+				"content1": {
+					ObjectMeta: metav1.ObjectMeta{
+						DeletionTimestamp: &deletionTimestamp,
+						Finalizers:        finalizers,
+						Name:              "content1",
+						Namespace:         "default",
+						Labels:            labels,
+					},
+				},
+				"content2": {
+					ObjectMeta: metav1.ObjectMeta{
+						DeletionTimestamp: &deletionTimestamp,
+						Finalizers:        finalizers,
+						Name:              "content2",
+						Namespace:         "default",
+						Annotations: map[string]string{
+							"snapshot.storage.kubernetes.io/volumesnapshot-being-deleted": "yes",
+							"snapshot.storage.kubernetes.io/volumesnapshot-being-created": "yes",
+						},
+						Labels: labels,
+					},
+				},
+				"content3": {
+					ObjectMeta: metav1.ObjectMeta{
+						DeletionTimestamp: &deletionTimestamp,
+						Finalizers:        finalizers,
+						Name:              "content3",
+						Namespace:         "default",
+						Annotations: map[string]string{
+							"snapshot.storage.kubernetes.io/volumesnapshot-being-created": "yes",
+						},
+						Labels: labels,
+					},
+				},
+			}
+
+			remainingContent = map[string]*volumesnapshotv1beta1.VolumeSnapshotContent{
+				// Object not in deletion.
+				"content4": {
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "content4",
+						Namespace: "default",
+						Annotations: map[string]string{
+							"snapshot.storage.kubernetes.io/volumesnapshot-being-created": "yes",
+						},
+						Labels: labels,
+					},
+				},
+				// Object w/o matching label.
+				"content5": {
+					ObjectMeta: metav1.ObjectMeta{
+						DeletionTimestamp: &deletionTimestamp,
+						Finalizers:        finalizers,
+						Name:              "content5",
+						Namespace:         "default",
+					},
+				},
+				// Object w/ deletionTimestamp before grace period passed.
+				"content6": {
+					ObjectMeta: metav1.ObjectMeta{
+						DeletionTimestamp: &deletionTimestampLater,
+						Finalizers:        finalizers,
+						Name:              "content6",
+						Namespace:         "default",
+					},
+				},
+			}
+
+			fakeClientBuilder := fakeclient.NewClientBuilder()
+			for _, content := range cleanupContent {
+				obj := content
+				fakeClientBuilder.WithObjects(obj)
+			}
+
+			for _, content := range remainingContent {
+				obj := content
+				fakeClientBuilder.WithObjects(obj)
+			}
+
+			cl = fakeClientBuilder.WithScheme(kubernetes.ShootScheme).Build()
+		})
+
+		It("should maintain the right annotations for all contents in the list to be cleaned up", func() {
+			Expect(cleaner.Clean(ctx, cl, &volumesnapshotv1beta1.VolumeSnapshotContentList{}, cleanOps...)).To(Succeed())
+
+			contents := &volumesnapshotv1beta1.VolumeSnapshotContentList{}
+			Expect(cl.List(ctx, contents)).To(Succeed())
+
+			for _, content := range contents.Items {
+				if _, ok := cleanupContent[content.Name]; ok {
+					Expect(content.Annotations).To(HaveKeyWithValue("snapshot.storage.kubernetes.io/volumesnapshot-being-deleted", "yes"))
+					Expect(content.Annotations).NotTo(HaveKeyWithValue("snapshot.storage.kubernetes.io/volumesnapshot-being-created", "yes"))
+					continue
+				}
+				expected := remainingContent[content.Name]
+				Expect(expected).NotTo(BeNil())
+				Expect(expected.Annotations).To(Equal(content.Annotations))
+			}
+		})
+
+		It("should maintain the right annotations for the content to be cleaned up", func() {
+			cleanupContent := cleanupContent["content1"]
+
+			Expect(cleaner.Clean(ctx, cl, cleanupContent, cleanOps...)).To(Succeed())
+
+			content := &volumesnapshotv1beta1.VolumeSnapshotContent{}
+			Expect(cl.Get(ctx, client.ObjectKeyFromObject(cleanupContent), content)).To(Succeed())
+
+			Expect(content.Annotations).To(HaveKeyWithValue("snapshot.storage.kubernetes.io/volumesnapshot-being-deleted", "yes"))
+			Expect(content.Annotations).NotTo(HaveKeyWithValue("snapshot.storage.kubernetes.io/volumesnapshot-being-created", "yes"))
 		})
 	})
 
