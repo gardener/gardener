@@ -17,7 +17,6 @@ package botanist_test
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -65,7 +64,7 @@ var _ = Describe("BackupEntry", func() {
 			},
 			Status: gardencorev1beta1.ShootStatus{
 				LastOperation: &gardencorev1beta1.LastOperation{
-					Type: v1beta1.LastOperationTypeRestore,
+					Type: gardencorev1beta1.LastOperationTypeRestore,
 				},
 			},
 		})
@@ -121,7 +120,7 @@ var _ = Describe("BackupEntry", func() {
 				},
 				Status: gardencorev1beta1.ShootStatus{
 					LastOperation: &gardencorev1beta1.LastOperation{
-						Type: v1beta1.LastOperationTypeReconcile,
+						Type: gardencorev1beta1.LastOperationTypeReconcile,
 					},
 				},
 			})

@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shootsecrets"
@@ -86,7 +87,11 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 
 		if b.Shoot.GetInfo().DeletionTimestamp == nil {
 			if b.Shoot.ReversedVPNEnabled {
-				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList, kubeapiserver.SecretNameVPNSeed, kubeapiserver.SecretNameVPNSeedTLSAuth, "vpn-shoot"); err != nil {
+				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList,
+					kubeapiserver.SecretNameVPNSeed,
+					kubeapiserver.SecretNameVPNSeedTLSAuth,
+					vpnshoot.SecretNameVPNShoot,
+				); err != nil {
 					return err
 				}
 
@@ -97,13 +102,17 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 					if err := b.cleanupSecrets(ctx, &gardenerResourceDataList,
 						vpnseedserver.DeploymentName,
 						kubeapiserver.SecretNameHTTPProxy,
-						vpnseedserver.VpnShootSecretName,
+						vpnshoot.SecretNameVPNShootClient,
 					); err != nil {
 						return err
 					}
 				}
 			} else {
-				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList, vpnseedserver.DeploymentName, vpnseedserver.VpnShootSecretName, vpnseedserver.VpnSeedServerTLSAuth); err != nil {
+				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList,
+					vpnseedserver.DeploymentName,
+					vpnshoot.SecretNameVPNShootClient,
+					vpnseedserver.VpnSeedServerTLSAuth,
+				); err != nil {
 					return err
 				}
 			}

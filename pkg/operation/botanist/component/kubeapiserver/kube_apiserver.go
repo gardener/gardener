@@ -45,6 +45,8 @@ const (
 	ServicePortName = "kube-apiserver"
 	// UserName is the name of the kube-apiserver user when communicating with the kubelet.
 	UserName = "system:kube-apiserver:kubelet"
+	// UserNameVPNSeed is the user name for the vpn-seed components (used as common name in its client certificate)
+	UserNameVPNSeed = "vpn-seed"
 )
 
 // Interface contains functions for a kube-apiserver deployer.

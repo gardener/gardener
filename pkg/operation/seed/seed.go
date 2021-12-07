@@ -54,6 +54,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -583,6 +584,7 @@ func RunReconcileSeedFlow(
 			// shoot system components
 			coredns.CentralLoggingConfiguration,
 			metricsserver.CentralLoggingConfiguration,
+			vpnshoot.CentralLoggingConfiguration,
 		}
 		userAllowedComponents := []string{
 			v1beta1constants.DeploymentNameKubeAPIServer,

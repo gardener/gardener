@@ -313,7 +313,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.ResourceManager.Wait).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
-		_ = g.Add(flow.Task{
+		deployVpnSeedServer = g.Add(flow.Task{
 			Name:         "Deploying vpn-seed-server",
 			Fn:           flow.TaskFn(botanist.DeployVPNServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployNamespace),
@@ -430,6 +430,11 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Name:         "Deploying metrics-server system component",
 			Fn:           flow.TaskFn(botanist.DeployMetricsServer).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, waitUntilOperatingSystemConfigReady, deployKubeScheduler),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying vpn-shoot system component",
+			Fn:           flow.TaskFn(botanist.DeployVPNShoot).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployKubeScheduler, deployVpnSeedServer, waitUntilKubeAPIServerIsReady),
 		})
 		deployManagedResourcesForAddons = g.Add(flow.Task{
 			Name:         "Deploying managed resources for system components and optional addons",

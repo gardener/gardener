@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -305,6 +306,7 @@ func (h *Health) checkControlPlane(
 
 var versionConstraintGreaterEqual131 *semver.Constraints
 var versionConstraintGreaterEqual132 *semver.Constraints
+var versionConstraintGreaterEqual138 *semver.Constraints
 
 func init() {
 	var err error
@@ -312,6 +314,8 @@ func init() {
 	versionConstraintGreaterEqual131, err = semver.NewConstraint(">= 1.31")
 	utilruntime.Must(err)
 	versionConstraintGreaterEqual132, err = semver.NewConstraint(">= 1.32")
+	utilruntime.Must(err)
+	versionConstraintGreaterEqual138, err = semver.NewConstraint(">= 1.38")
 	utilruntime.Must(err)
 }
 
@@ -334,6 +338,11 @@ func (h *Health) checkSystemComponents(
 	if versionConstraintGreaterEqual132.Check(checker.gardenerVersion) {
 		// TODO: Add this ManagedResource unconditionally to the `managedResourcesShoot` in a future version.
 		managedResources = append(managedResources, coredns.ManagedResourceName)
+	}
+
+	if versionConstraintGreaterEqual138.Check(checker.gardenerVersion) {
+		// TODO: Add this ManagedResource unconditionally to the `managedResourcesShoot` in a future version.
+		managedResources = append(managedResources, vpnshoot.ManagedResourceName)
 	}
 
 	for _, name := range managedResources {

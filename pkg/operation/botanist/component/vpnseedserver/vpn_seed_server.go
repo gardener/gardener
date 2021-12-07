@@ -53,8 +53,6 @@ const (
 	VpnSeedServerTLSAuth = "vpn-seed-server-tlsauth"
 	// vpnSeedServerDH is the name of seed server DH Secret.
 	vpnSeedServerDH = "vpn-seed-server-dh"
-	// VpnShootSecretName is the name of the shoot secret.
-	VpnShootSecretName = "vpn-shoot-client"
 	// DeploymentName is the name of vpn seed server deployment.
 	DeploymentName = v1beta1constants.DeploymentNameVPNSeedServer
 	// ServiceName is the name of the vpn seed server service running internally on the control plane in seed.

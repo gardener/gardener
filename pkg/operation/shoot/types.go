@@ -44,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/operation/garden"
 
@@ -148,6 +149,7 @@ type SystemComponents struct {
 	Namespaces      component.DeployWaiter
 	CoreDNS         coredns.Interface
 	MetricsServer   metricsserver.Interface
+	VPNShoot        vpnshoot.Interface
 }
 
 // DNS contains references to internal and external DNSProvider and DNSEntry deployers.
