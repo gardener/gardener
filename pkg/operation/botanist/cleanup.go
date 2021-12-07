@@ -248,6 +248,11 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		return err
 	}
 
+	snapshotCleanOptions, err := b.getCleanOptions(ZeroGracePeriod, FinalizeAfterOneHour, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds, 1)
+	if err != nil {
+		return err
+	}
+
 	if metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.AnnotationShootSkipCleanup) {
 		return flow.Parallel(
 			cleanResourceFn(ops, c, &corev1.ServiceList{}, ServiceCleanOption, cleanOptions),
@@ -276,8 +281,8 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		cleanResourceFn(ops, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, cleanOptions),
 		// Cleaning up VolumeSnapshots can take a longer time if many snapshots were taken.
 		// Hence, we only finalize these objects after 1h.
-		cleanResourceFn(ops, c, &volumesnapshotv1beta1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, FinalizeAfterOneHour),
-		cleanResourceFn(ops, c, &volumesnapshotv1beta1.VolumeSnapshotContentList{}, VolumeSnapshotContentCleanOption, FinalizeAfterOneHour),
+		cleanResourceFn(ops, c, &volumesnapshotv1beta1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
+		cleanResourceFn(ops, c, &volumesnapshotv1beta1.VolumeSnapshotContentList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
 	)(ctx)
 }
 
