@@ -34,9 +34,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | ReversedVPN                                  | `false` | `Alpha` | `1.22` |        |
 | AdminKubeconfigRequest                       | `false` | `Alpha` | `1.24` |        |
 | UseDNSRecords                                | `false` | `Alpha` | `1.27` |        |
-| DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha` | `1.28` | `1.31` |
-| DisallowKubeconfigRotationForShootInDeletion | `true`  | `Beta`  | `1.32` | `1.35` |
-| DisallowKubeconfigRotationForShootInDeletion | `true`  | `GA`    | `1.36` |        |
 | RotateSSHKeypairOnMaintenance                | `false` | `Alpha` | `1.28` |        |
 | DenyInvalidExtensionResources                | `false` | `Alpha` | `1.31` |        |
 | WorkerPoolKubernetesVersion                  | `false` | `Alpha` | `1.35` |        |
@@ -44,16 +41,20 @@ The following tables are a summary of the feature gates that you can set on diff
 
 ## Feature gates for graduated or deprecated features
 
-| Feature                | Default | Stage     | Since  | Until  |
-| ---------------------- | ------- | --------- | ------ | ------ |
-| NodeLocalDNS           | `false` | `Alpha`   | `1.7`  |        |
-| NodeLocalDNS           |         | `Removed` | `1.26` |        |
-| KonnectivityTunnel     | `false` | `Alpha`   | `1.6`  |        |
-| KonnectivityTunnel     |         | `Removed` | `1.27` |        |
-| MountHostCADirectories | `false` | `Alpha`   | `1.11` | `1.25` |
-| MountHostCADirectories | `true`  | `Beta`    | `1.26` | `1.27` |
-| MountHostCADirectories | `true`  | `GA`      | `1.27` |        |
-| MountHostCADirectories |         | `Removed` | `1.30` |        |
+| Feature                                      | Default | Stage     | Since  | Until  |
+| -------------------------------------------- | ------- | --------- | ------ | ------ |
+| NodeLocalDNS                                 | `false` | `Alpha`   | `1.7`  |        |
+| NodeLocalDNS                                 |         | `Removed` | `1.26` |        |
+| KonnectivityTunnel                           | `false` | `Alpha`   | `1.6`  |        |
+| KonnectivityTunnel                           |         | `Removed` | `1.27` |        |
+| MountHostCADirectories                       | `false` | `Alpha`   | `1.11` | `1.25` |
+| MountHostCADirectories                       | `true`  | `Beta`    | `1.26` | `1.27` |
+| MountHostCADirectories                       | `true`  | `GA`      | `1.27` |        |
+| MountHostCADirectories                       |         | `Removed` | `1.30` |        |
+| DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha`   | `1.28` | `1.31` |
+| DisallowKubeconfigRotationForShootInDeletion | `true`  | `Beta`    | `1.32` | `1.35` |
+| DisallowKubeconfigRotationForShootInDeletion | `true`  | `GA`      | `1.36` |        |
+| DisallowKubeconfigRotationForShootInDeletion |         | `Removed` | `1.38` |        |
 
 ## Using a feature
 

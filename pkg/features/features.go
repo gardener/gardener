@@ -92,14 +92,6 @@ const (
 	// alpha: v1.27.0
 	UseDNSRecords featuregate.Feature = "UseDNSRecords"
 
-	// DisallowKubeconfigRotationForShootInDeletion when enabled disallows kubeconfig rotations to be requested
-	// for shoots that are already in the deletion phase, i.e. `metadata.deletionTimestamp` is set
-	// owner: @vpnachev
-	// alpha: v1.28.0
-	// beta: v1.32.0
-	// GA: v1.36.0
-	DisallowKubeconfigRotationForShootInDeletion featuregate.Feature = "DisallowKubeconfigRotationForShootInDeletion"
-
 	// RotateSSHKeypairOnMaintenance enables SSH keypair rotation in the maintenance controller of the gardener-controller-manager.
 	// owner: @petersutter
 	// alpha: v1.28.0
