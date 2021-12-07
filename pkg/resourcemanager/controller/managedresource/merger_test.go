@@ -153,14 +153,15 @@ var _ = Describe("merger", func() {
 		})
 
 		It("should merge current and desired .metadata.annotations", func() {
-			current.SetAnnotations(map[string]string{"foo": "bar"})
-			desired.SetAnnotations(map[string]string{"other": "baz"})
+			current.SetAnnotations(map[string]string{"foo": "bar", "reference.resources.gardener.cloud/secret-foo": "bar"})
+			desired.SetAnnotations(map[string]string{"other": "baz", "reference.resources.gardener.cloud/secret-bar": "foo"})
 			existingAnnotations := map[string]string{"existing": "ignored"}
 
 			expected := desired.DeepCopy()
 			expected.SetAnnotations(map[string]string{
 				"foo":   "bar",
 				"other": "baz",
+				"reference.resources.gardener.cloud/secret-bar": "foo",
 			})
 			addAnnotations(origin, expected)
 

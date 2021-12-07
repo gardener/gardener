@@ -15,7 +15,10 @@
 package managedresource
 
 import (
+	"strings"
+
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -67,7 +70,16 @@ func merge(origin string, desired, current *unstructured.Unstructured, forceOver
 	if forceOverwriteAnnotations {
 		ann = desired.GetAnnotations()
 	} else {
-		ann = mergeMapsBasedOnOldMap(desired.GetAnnotations(), oldObject.GetAnnotations(), existingAnnotations)
+		// Here, we drop the 'reference' annotations from `oldObject` which are used by the garbage collector controller.
+		// Typically, all annotations which were previously added to the desired state of a resource are preserved in the
+		// `status` of the respective `ManagedResource`. This way, in subsequent reconciliations the controller can know
+		// whether found annotations were earlier managed by us and have to be dropped or kept.
+		// However, when an object has existing 'reference' annotations which were are not found in the `status` of the
+		// `ManagedResource` (this can happen when resources are migrated from one `ManagedResource` to another) then
+		// they would be kept.
+		// Since the correct 'reference' annotations must be part of the `desired` object anyways, there is anyways no
+		// point in potentially keeping old 'reference' annotations from `oldObject`, so we can always drop them here.
+		ann = mergeMapsBasedOnOldMap(desired.GetAnnotations(), dropReferenceAnnotations(oldObject.GetAnnotations()), existingAnnotations)
 	}
 
 	if ann == nil {
@@ -353,5 +365,15 @@ func mergeMapsBasedOnOldMap(desired, current, old map[string]string) map[string]
 		return nil
 	}
 
+	return out
+}
+
+func dropReferenceAnnotations(annotations map[string]string) map[string]string {
+	out := make(map[string]string, len(annotations))
+	for k, v := range annotations {
+		if !strings.HasPrefix(k, references.AnnotationKeyPrefix) {
+			out[k] = v
+		}
+	}
 	return out
 }
