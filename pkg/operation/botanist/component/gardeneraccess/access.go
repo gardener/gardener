@@ -111,7 +111,7 @@ func (g *gardener) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, g.client, g.namespace, ManagedResourceName, false, data)
+	return managedresources.CreateForShoot(ctx, g.client, g.namespace, ManagedResourceName, true, data)
 }
 
 func (g *gardener) Destroy(ctx context.Context) error {
