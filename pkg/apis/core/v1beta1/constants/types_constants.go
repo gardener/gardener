@@ -481,8 +481,6 @@ const (
 	SeedsGroup = "gardener.cloud:system:seeds"
 	// SeedUserNamePrefix is the identity user name prefix for gardenlets when authenticating to the API server.
 	SeedUserNamePrefix = "gardener.cloud:system:seed:"
-	// SeedUserNameSuffixAmbiguous is the default seed name in case the gardenlet config.SeedConfig is not set
-	SeedUserNameSuffixAmbiguous = "<ambiguous>"
 
 	// ProjectName is the key of a label on namespaces whose value holds the project name.
 	ProjectName = "project.gardener.cloud/name"
