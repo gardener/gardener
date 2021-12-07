@@ -261,6 +261,29 @@ var _ = Describe("merger", func() {
 		})
 	})
 
+	var defaultPodTemplateSpec corev1.PodTemplateSpec
+	BeforeEach(func() {
+		defaultPodTemplateSpec = corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{
+						Name: "foo-container",
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("50m"),
+								corev1.ResourceMemory: resource.MustParse("150Mi"),
+							},
+							Limits: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("500m"),
+								corev1.ResourceMemory: resource.MustParse("1Gi"),
+							},
+						},
+					},
+				},
+			},
+		}
+	})
+
 	Describe("#mergeDeployment", func() {
 		var (
 			old, new *appsv1.Deployment
@@ -278,15 +301,7 @@ var _ = Describe("merger", func() {
 						MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
 					},
 					Replicas: pointer.Int32Ptr(1),
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Name: "foo-container",
-								},
-							},
-						},
-					},
+					Template: defaultPodTemplateSpec,
 				},
 			}
 
@@ -319,6 +334,25 @@ var _ = Describe("merger", func() {
 			Expect(mergeDeployment(s, old, new, false, false)).NotTo(HaveOccurred(), "merge should be successful")
 			Expect(new).To(Equal(expected))
 		})
+
+		It("should overwrite old .spec.containers[*].resources if preserveResources is false", func() {
+			new.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
+
+			expected := old.DeepCopy()
+			expected.Spec.Template.Spec.Containers[0].Resources = new.Spec.Template.Spec.Containers[0].Resources
+
+			Expect(mergeDeployment(s, old, new, true, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(new).To(Equal(expected))
+		})
+
+		It("should not overwrite old .spec.containers[*].resources if preserveResources is true", func() {
+			new.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
+
+			expected := old.DeepCopy()
+
+			Expect(mergeDeployment(s, old, new, true, true)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(new).To(Equal(expected))
+		})
 	})
 
 	Describe("#mergeDeploymentAnnotations", func() {
@@ -342,25 +376,7 @@ var _ = Describe("merger", func() {
 						MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
 					},
 					Replicas: pointer.Int32Ptr(1),
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Name: "foo-container",
-									Resources: corev1.ResourceRequirements{
-										Requests: corev1.ResourceList{
-											corev1.ResourceCPU:    resource.MustParse("50m"),
-											corev1.ResourceMemory: resource.MustParse("150Mi"),
-										},
-										Limits: corev1.ResourceList{
-											corev1.ResourceCPU:    resource.MustParse("500m"),
-											corev1.ResourceMemory: resource.MustParse("1Gi"),
-										},
-									},
-								},
-							},
-						},
-					},
+					Template: defaultPodTemplateSpec,
 				},
 			}
 
@@ -439,7 +455,7 @@ var _ = Describe("merger", func() {
 		})
 	})
 
-	Describe("#mergeStatefulset", func() {
+	Describe("#mergeStatefulSet", func() {
 		var (
 			old, new *appsv1.StatefulSet
 			s        *runtime.Scheme
@@ -456,15 +472,7 @@ var _ = Describe("merger", func() {
 						MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
 					},
 					Replicas: pointer.Int32Ptr(1),
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Name: "foo-container",
-								},
-							},
-						},
-					},
+					Template: defaultPodTemplateSpec,
 				},
 			}
 
@@ -498,12 +506,22 @@ var _ = Describe("merger", func() {
 			Expect(new).To(Equal(expected))
 		})
 
-		It("should use new .spec.replicas if preserveReplicas is false", func() {
-			new.Spec.Replicas = pointer.Int32Ptr(2)
+		It("should overwrite old .spec.containers[*].resources if preserveResources is false", func() {
+			new.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
 
-			expected := new.DeepCopy()
+			expected := old.DeepCopy()
+			expected.Spec.Template.Spec.Containers[0].Resources = new.Spec.Template.Spec.Containers[0].Resources
 
-			Expect(mergeStatefulSet(s, old, new, false, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(mergeStatefulSet(s, old, new, true, false)).NotTo(HaveOccurred(), "merge should be successful")
+			Expect(new).To(Equal(expected))
+		})
+
+		It("should not overwrite old .spec.containers[*].resources if preserveResources is true", func() {
+			new.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
+
+			expected := old.DeepCopy()
+
+			Expect(mergeStatefulSet(s, old, new, true, true)).NotTo(HaveOccurred(), "merge should be successful")
 			Expect(new).To(Equal(expected))
 		})
 

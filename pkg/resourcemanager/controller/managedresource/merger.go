@@ -145,14 +145,10 @@ func mergePodTemplate(oldPod, newPod *corev1.PodTemplateSpec, preserveResources 
 	}
 
 	// Do not overwrite a PodTemplate's resource requests / limits if it is scaled by an HVPA
-	for _, newContainer := range newPod.Spec.Containers {
-		newContainerName := newContainer.Name
-
-		for _, oldContainer := range oldPod.Spec.Containers {
-			oldContainerName := oldContainer.Name
-
-			if newContainerName == oldContainerName {
-				mergeContainer(&oldContainer, &newContainer, preserveResources)
+	for i, newContainer := range newPod.Spec.Containers {
+		for j, oldContainer := range oldPod.Spec.Containers {
+			if newContainer.Name == oldContainer.Name {
+				mergeContainer(&oldPod.Spec.Containers[j], &newPod.Spec.Containers[i], preserveResources)
 			}
 		}
 	}
@@ -231,7 +227,7 @@ func mergeStatefulSet(scheme *runtime.Scheme, oldObj, newObj runtime.Object, pre
 		newStatefulSet.Spec.VolumeClaimTemplates = oldStatefulSet.Spec.VolumeClaimTemplates
 	}
 
-	mergePodTemplate(&oldStatefulSet.Spec.Template, &oldStatefulSet.Spec.Template, preserveResources)
+	mergePodTemplate(&oldStatefulSet.Spec.Template, &newStatefulSet.Spec.Template, preserveResources)
 
 	return scheme.Convert(newStatefulSet, newObj, nil)
 }
