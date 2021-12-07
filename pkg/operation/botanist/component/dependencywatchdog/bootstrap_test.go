@@ -65,6 +65,7 @@ var _ = Describe("DependencyWatchdog", func() {
 				configMapName = dwdName + "-config-" + configMapDataHash
 
 				serviceAccountYAML = `apiVersion: v1
+automountServiceAccountToken: false
 kind: ServiceAccount
 metadata:
   creationTimestamp: null
@@ -240,6 +241,7 @@ spec:
     metadata:
       annotations:
         ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
+        security.gardener.cloud/trigger: rollout
       creationTimestamp: null`
 
 					if role == RoleEndpoint {

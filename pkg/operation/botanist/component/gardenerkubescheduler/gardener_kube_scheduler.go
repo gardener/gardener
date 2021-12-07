@@ -192,6 +192,10 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 				Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							// TODO(rfranzke): Remove in a future release.
+							"security.gardener.cloud/trigger": "rollout",
+						},
 						Labels: getLabels(),
 					},
 					Spec: corev1.PodSpec{
@@ -268,11 +272,14 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 				},
 			},
 		}
-		serviceAccount = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
-			Name:      Name,
-			Namespace: k.namespace,
-			Labels:    getLabels(),
-		}}
+		serviceAccount = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      Name,
+				Namespace: k.namespace,
+				Labels:    getLabels(),
+			},
+			AutomountServiceAccountToken: pointer.Bool(false),
+		}
 		roleBinding = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      roleBindingName,
