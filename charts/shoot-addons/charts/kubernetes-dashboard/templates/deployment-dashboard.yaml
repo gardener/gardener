@@ -20,6 +20,9 @@ spec:
     type: RollingUpdate
   template:
     metadata:
+      annotations:
+        # TODO(rfranzke): Remove in a future release.
+        security.gardener.cloud/trigger: rollout
       labels:
         gardener.cloud/role: optional-addon
         origin: gardener
