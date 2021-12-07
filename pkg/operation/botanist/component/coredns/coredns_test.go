@@ -86,6 +86,7 @@ var _ = Describe("CoreDNS", func() {
 	Describe("#Deploy", func() {
 		var (
 			serviceAccountYAML = `apiVersion: v1
+automountServiceAccountToken: false
 kind: ServiceAccount
 metadata:
   creationTimestamp: null
@@ -278,16 +279,18 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      annotations:
 `
+				if len(podAnnotations) > 0 {
+					out += `      annotations:
+`
+				}
 
 				for k, v := range podAnnotations {
 					out += `        ` + k + `: ` + v + `
 `
 				}
 
-				out += `        scheduler.alpha.kubernetes.io/critical-pod: ""
-      creationTimestamp: null
+				out += `      creationTimestamp: null
       labels:
         gardener.cloud/role: system-component
         k8s-app: kube-dns

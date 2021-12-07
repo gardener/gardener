@@ -177,6 +177,7 @@ spec:
   - Ingress
 `
 			serviceAccountYAML = `apiVersion: v1
+automountServiceAccountToken: false
 kind: ServiceAccount
 metadata:
   creationTimestamp: null
@@ -265,7 +266,7 @@ status: {}
 kind: Deployment
 metadata:
   annotations:
-    ` + utils.Indent(getAnnotations(reversedVPNEnabled, secretNameTest, secretNameDHTest, secretNameTLSAuthTest), 4) + ``
+    ` + utils.Indent(getAnnotations(reversedVPNEnabled, secretNameTest, secretNameDHTest, secretNameTLSAuthTest), 4)
 				out += `
   creationTimestamp: null
   labels:
@@ -288,7 +289,8 @@ spec:
   template:
     metadata:
       annotations:
-        ` + utils.Indent(getAnnotations(reversedVPNEnabled, secretNameTest, secretNameDHTest, secretNameTLSAuthTest), 8) + ``
+        ` + utils.Indent(getAnnotations(reversedVPNEnabled, secretNameTest, secretNameDHTest, secretNameTLSAuthTest), 8) + `
+        security.gardener.cloud/trigger: rollout`
 				out += `
       creationTimestamp: null
       labels:
@@ -305,7 +307,7 @@ spec:
         - name: POD_NETWORK
           value: ` + podNetwork + `
         - name: NODE_NETWORK
-          value: ` + nodeNetwork + ``
+          value: ` + nodeNetwork
 				if reversedVPNEnabled {
 					out += `
         - name: ENDPOINT
@@ -313,7 +315,7 @@ spec:
         - name: OPENVPN_PORT
           value: "` + strconv.Itoa(int(openVPNPort)) + `"
         - name: REVERSED_VPN_HEADER
-          value: ` + reversedVPNHeader + ``
+          value: ` + reversedVPNHeader
 				}
 				out += `
         image: ` + image + `
@@ -367,13 +369,13 @@ spec:
       - name: vpn-shoot-tlsauth
         secret:
           defaultMode: 400
-          secretName: ` + secretNameTLSAuthTest + ``
+          secretName: ` + secretNameTLSAuthTest
 				if !reversedVPNEnabled {
 					out += `
       - name: vpn-shoot-dh
         secret:
           defaultMode: 400
-          secretName: ` + secretNameDHTest + ``
+          secretName: ` + secretNameDHTest
 				}
 				out += `
 status: {}
