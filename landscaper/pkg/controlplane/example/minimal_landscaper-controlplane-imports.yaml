@@ -1,3 +1,4 @@
+# This file contains a minimal Control Plane import configuration.
 apiVersion: controlplane.gardener.landscaper.gardener.cloud/v1alpha1
 kind: Imports
 runtimeCluster:
@@ -30,8 +31,8 @@ internalDomain:
   provider: aws-route53
   domain: internal.test.domain
   credentials:
-    AWS_ACCESS_KEY_ID: <very-secret>
-    AWS_SECRET_ACCESS_KEY: <very-secret>
+    AWS_ACCESS_KEY_ID: <very-secret-base64>
+    AWS_SECRET_ACCESS_KEY: <very-secret-base64>
 
 
 gardenerAPIserver:
@@ -99,8 +100,10 @@ gardenerAPIserver:
 #         name:
 #         namespace:
 
-# Analogously to the Gardener API Server, you can provide a custom CA certificate and key and a custom TLS serving certificate
+# Analogously to the Gardener API Server, you can also provide a custom CA certificate, key TLS serving certificate.
+# Omitted for brevity.
 gardenerAdmissionController:
   enabled: true
 
-# For the Gardener Controller Manager, analogously to the Gardener API Server, you can provide a custom TLS serving certificate
+# Please note: For the Gardener Controller Manager, you can also provide a custom TLS & CA certificate.
+# Omitted for brevity.

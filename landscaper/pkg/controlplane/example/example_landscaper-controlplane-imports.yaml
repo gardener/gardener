@@ -1,0 +1,363 @@
+# This file contains an exemplary Control Plane import configuration.
+apiVersion: controlplane.gardener.landscaper.gardener.cloud/v1alpha1
+kind: Imports
+runtimeCluster:
+  apiVersion: landscaper.gardener.cloud/v1alpha1
+  kind: Target
+  spec:
+    type: landscaper.gardener.cloud/kubernetes-cluster
+    config:
+      kubeconfig: |
+        ---
+        apiVersion:...
+        # here goes the kubeconfig of the runtime cluster
+
+
+virtualGarden:
+  enabled: false
+  # specify when virtual garden option is enabled
+  #kubeconfig:
+  #  apiVersion: landscaper.gardener.cloud/v1alpha1
+  #  kind: Target
+  #  spec:
+  #    type: landscaper.gardener.cloud/kubernetes-cluster
+  #    config:
+  #      kubeconfig: |
+  #        ---
+  #        apiVersion:...
+  #        # here goes the kubeconfig of the virtual-garden cluster
+
+certificateRotation:
+  rotate: false
+
+internalDomain:
+  provider: aws-route53
+  domain: internal.test.domain
+  credentials:
+    AWS_ACCESS_KEY_ID: <very-secret-base64>
+    AWS_SECRET_ACCESS_KEY: <very-secret-base64>
+
+defaultDomains:
+  - provider: aws-route53
+    domain: default.internal.test.domain
+    zone: abc
+    credentials:
+      AWS_ACCESS_KEY_ID: <very-secret-base64>
+      AWS_SECRET_ACCESS_KEY: <very-secret-base64>
+
+
+gardenerAPIserver:
+#  deploymentConfiguration:
+#    replicaCount: 1
+#    resources:
+#      requests:
+#        cpu: 200m
+#        memory: 500Mi
+#      limits:
+#        cpu: 3000m
+#        memory: 6Gi
+#    vpa: false
+#    podLabels:
+#      my: label
+#    hvpa:
+#      enabled: true
+#      hvpaConfigurationHPA:
+#        minReplicas: 1
+#        maxReplicas: 2
+#        targetAverageUtilizationCpu: 80
+#        targetAverageUtilizationMemory: 80
+#      hvpaConfigurationVPA:
+#        scaleUpMode: "Auto"
+#        scaleDownMode: "Off"
+#        limitsRequestsGapScaleParams:
+#          cpu:
+#            value: "3"
+#            percentage: 70
+#          memory:
+#            value: "4G"
+#            percentage: 70
+#        scaleUpStabilization:
+#          stabilizationDuration: "10m"
+#          minChange:
+#            cpu:
+#              value: 1000m
+#              percentage: 80
+#            memory:
+#              value: 1500M
+#              percentage: 80
+#        scaleDownStabilization:
+#          stabilizationDuration: "45m"
+#          minChange:
+#            cpu:
+#              value: 1000m
+#              percentage: 80
+#            memory:
+#              value: 1500M
+#              percentage: 80
+  componentConfiguration:
+#    featureGates:
+       # See: https://github.com/gardener/gardener/blob/master/docs/deployment/feature_gates.md
+#      anyGardenerAPIServeFeatureGate: true
+
+#    admission:
+#      enableAdmissionPlugins:
+#        - ShootVPAEnabledByDefault
+#      plugins:
+#        - name: ValidatingAdmissionWebhook
+#          configuration:
+#            apiVersion: apiserver.config.k8s.io/v1
+#            kind: WebhookAdmissionConfiguration
+#            kubeConfigFile: "test"
+#      validatingWebhook:
+#        tokenProjection:
+#          enabled: true
+
+#    goAwayChance: 0.01
+#    http2MaxStreamsPerConnection: 1000
+#    shutdownDelayDuration: 20s
+#    requests:
+#      maxNonMutatingInflight: 400
+#      maxMutatingInflight: 200
+#      minTimeout: 1m0s
+#      timeout: 1m0s
+
+#    watchCacheSize:
+#      default: 100
+#      resources:
+#        - apiGroup: core.gardener.cloud
+#          resource: shoots
+#          size: 500
+#        - apiGroup: core.gardener.cloud
+#          resource: projects
+#          size: 500
+
+#    audit:
+#      log:
+#        .... Please see the import configuration
+#      webhook:
+#        kubeconfig:
+#        .... Please see the import configuration
+#      policy:
+#        .... Please see the import configuration
+    etcd:
+      url: "virtual-garden-etcd-main-client.garden.svc:2379"
+    # Custom certificate configuration for the Gardener API Server
+#     Optional: set CA (public) of Etcd cluster
+#     caBundle: |
+#     -----BEGIN CERTIFICATE-----
+#     ...
+#     -----END CERTIFICATE-----
+#
+#         This configuration is required if the etcd has client authentication enabled
+#         client credentials have been signed by the etcd CA
+#     clientCert: |
+#     -----BEGIN CERTIFICATE-----
+#     ...
+#     -----END CERTIFICATE-----
+#
+#     clientKey: |
+#     -----BEGIN RSA PRIVATE KEY-----
+#     ...
+#     -----END RSA PRIVATE KEY-----
+#
+#     Alternatively: set a secret reference to a secret in the runtime cluster containing
+#     the PEM-encoded CA certificate and TLS serving certificates (keys: `ca.crt`, `tls.crt`, `tls.key`)
+#    secretRef:
+#      name:
+#      namespace:
+#
+#    Optional: CA configuration of the Gardener API Server
+#     ca:
+#       crt: |
+#       -----BEGIN CERTIFICATE-----
+#       ...
+#       -----END CERTIFICATE-----
+#
+#       Required to generate the TLS serving certificates only if ca/crt is provided and tls/crt is not
+#       key: |
+#       -----BEGIN RSA PRIVATE KEY-----
+#       ...
+#       -----END RSA PRIVATE KEY-----
+#
+#       Alternatively: set a secret reference to a secret in the runtime cluster containing
+#       the PEM-encoded CA certificate (keys: `ca.crt`, optionally: `ca.key`)
+#       secretRef:
+#         name:
+#         namespace:
+#
+#     Optional: set custom TLS certificates
+#     tls:
+#       crt: |
+#          -----BEGIN CERTIFICATE-----
+#          ...
+#          -----END CERTIFICATE-----
+#
+#       key: |
+#          -----BEGIN RSA PRIVATE KEY-----
+#          ...
+#          -----END RSA PRIVATE KEY-----
+#
+#       Alternatively: set a secret reference to a secret in the runtime cluster containing the PEM-encoded TLS serving certificates (keys: `tls.crt`, `tls.key`)
+#       secretRef:
+#         name:
+#         namespace:
+
+rbac:
+  seedAuthorizer:
+    enabled: true
+
+# Analogously to the Gardener API Server, you can provide a custom CA certificate and key and a custom TLS serving certificate
+gardenerAdmissionController:
+  enabled: true
+  seedRestriction:
+    enabled: true
+#  deploymentConfiguration:
+#    replicaCount: 1
+#    resources:
+#      requests:
+#        cpu: 100m
+#        memory: 700Mi
+#      limits:
+#        cpu: 3000m
+#        memory: 6Gi
+#    vpa: false
+#    podLabels:
+#      gago: admission
+
+#  componentConfiguration:
+#    config:
+#      apiVersion: admissioncontroller.config.gardener.cloud/v1alpha1
+#      kind: AdmissionControllerConfiguration
+#      logLevel: "info"
+#      server:
+#        https:
+#          bindAddress: 0.0.0.0
+#          port: 2721
+#        resourceAdmissionConfiguration:
+#          limits:
+#            - apiGroups: [ "core.gardener.cloud" ]
+#              apiVersions: [ "*" ]
+#              resources: [ "shoots", "plants", "seeds" ]
+#              size: 100k
+#          unrestrictedSubjects:
+#            - kind: Group
+#              name: gardener.cloud:system:seeds
+#              apiGroup: rbac.authorization.k8s.io
+#          operationMode: block
+#        enableDebugHandlers: true
+#      debugging:
+#        enableProfiling: true
+#        enableContentionProfiling: true
+
+
+#gardenerScheduler:
+#  deploymentConfiguration:
+#    replicaCount: 1
+#    resources:
+#      requests:
+#        cpu: 150m
+#        memory: 600Mi
+#      limits:
+#        cpu: 3000m
+#        memory: 6Gi
+#    vpa: false
+#    podLabels:
+#      gago: controller
+#  componentConfiguration:
+#    config:
+#      apiVersion: scheduler.config.gardener.cloud/v1alpha1
+#      kind: SchedulerConfiguration
+#      clientConnection:
+#        qps: 100
+#        burst: 130
+#      leaderElection:
+#        leaderElect: true
+#        leaseDuration: 15s
+#        renewDeadline: 10s
+#        retryPeriod: 2s
+#        resourceLock: leases
+#        resourceNamespace: garden
+#        resourceName: gardener-scheduler-leader-election
+#      logLevel: info
+#      logFormat: text
+#      server:
+#        healthProbes:
+#          bindAddress: 0.0.0.0
+#          port: 10251
+#        metrics:
+#          bindAddress: 0.0.0.0
+#          port: 19252
+#      debugging:
+#        enableProfiling: false
+#        enableContentionProfiling: false
+
+#gardenerControllerManager:
+#  deploymentConfiguration:
+#    replicaCount: 1
+#    resources:
+#      requests:
+#        cpu: 150m
+#        memory: 600Mi
+#      limits:
+#        cpu: 3000m
+#        memory: 6Gi
+#    vpa: false
+#    podLabels:
+#      gago: controller
+#  componentConfiguration:
+#    config:
+#      apiVersion: controllermanager.config.gardener.cloud/v1alpha1
+#      kind: ControllerManagerConfiguration
+#      gardenClientConnection:
+#        qps: 100
+#        burst: 130
+#      controllers:
+#        controllerRegistration:
+#          concurrentSyncs: 15
+#        project:
+#          concurrentSyncs: 50
+#          quotas:
+#            - config:
+#                apiVersion: v1
+#                kind: ResourceQuota
+#                spec:
+#                  hard:
+#                    count/quotas.core.gardener.cloud: "100"
+#                    count/plants.core.gardener.cloud: "100"
+#                    count/secretbindings.core.gardener.cloud: "100"
+#                    count/shoots.core.gardener.cloud: "100"
+#                    count/terminals.dashboard.gardener.cloud: "100"
+#                    count/openidconnectpresets.settings.gardener.cloud: "100"
+#                    count/configmaps: "500"
+#                    count/roles: "500"
+#                    count/rolebindings: "500"
+#                    count/secrets: "500"
+#                    count/serviceaccounts: "30"
+#              projectSelector: { }
+#        seed:
+#          concurrentSyncs: 15
+#        secretBinding:
+#          concurrentSyncs: 20
+#        shootMaintenance:
+#          concurrentSyncs: 20
+#        shootReference:
+#          concurrentSyncs: 20
+#          protectAuditPolicyConfigMaps: true
+#        debugging:
+#          enableProfiling: true
+#          enableContentionProfiling: true
+#        featureGates:
+          # See: https://github.com/gardener/gardener/blob/master/docs/deployment/feature_gates.md
+#          anyGardenerControllerManagerFeaturegate: true
+
+
+
+
+#alerting:
+#- authType: smtp
+#  toEmailAddress: email-address-to-send-alerts-to
+#  fromEmailAddress: email-address-to-send-alerts-from
+#  smarthost: smtp-host-used-for-sending
+#  authUsername: smtp-authentication-username
+#  authIdentity: smtp-authentication-username
+#  authPassword: smtp-authentication-password

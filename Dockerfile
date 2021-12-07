@@ -93,6 +93,17 @@ WORKDIR /
 
 ENTRYPOINT ["/landscaper-gardenlet"]
 
+############# landscaper-controlplane #############
+FROM base AS landscaper-controlplane
+
+COPY --from=builder /go/bin/landscaper-controlplane /landscaper-controlplane
+COPY charts/gardener/controlplane /charts/gardener/controlplane
+COPY charts/utils-templates /charts/utils-templates
+
+WORKDIR /
+
+ENTRYPOINT ["/landscaper-controlplane"]
+
 ############# gardener-extension-provider-local #############
 FROM base AS gardener-extension-provider-local
 
