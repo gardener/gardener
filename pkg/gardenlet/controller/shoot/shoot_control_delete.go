@@ -388,7 +388,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		})
 		cleanShootNamespaces = g.Add(flow.Task{
 			Name:         "Cleaning shoot namespaces",
-			Fn:           flow.TaskFn(botanist. CleanShootNamespaces).Timeout(10 * time.Minute).DoIf(cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.CleanShootNamespaces).Timeout(10 * time.Minute).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(cleanKubernetesResources),
 		})
 		destroyNetwork = g.Add(flow.Task{

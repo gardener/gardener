@@ -148,7 +148,7 @@ func ExtractErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 
 var _ error = (*MultiErrorWithCodes)(nil)
 
-// MultiErrorWithCodes is a struct that contains multiple errors and `ErrorCodes`s.
+// MultiErrorWithCodes is a struct that contains multiple errors and ErrorCodes.
 type MultiErrorWithCodes struct {
 	errors      []error
 	errorFormat func(errs []error) string
