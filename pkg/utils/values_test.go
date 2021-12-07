@@ -32,11 +32,12 @@ type object struct {
 
 // This is for instance an internal type which does not have json marshalling annotations
 type objectUpperCase struct {
-	Object  *objectUpperCase
-	Objects []objectUpperCase
-	String  *string
-	Int     *int32
-	Bool    *bool
+	Object     *objectUpperCase
+	Objects    []objectUpperCase
+	String     *string
+	Int        *int32
+	Bool       *bool
+	BoolWithMe *bool
 }
 
 var _ = Describe("Values", func() {
@@ -121,6 +122,14 @@ var _ = Describe("Values", func() {
 			Expect(result).To(Equal(values))
 		})
 
+		It("should convert an object to a values map with lower-case keys - only the first letter should be changed", func() {
+			objUpper.BoolWithMe = pointer.Bool(true)
+			result, err := ToValuesMapWithOptions(objUpper, Options{LowerCaseKeys: true})
+			Expect(err).ToNot(HaveOccurred())
+			values["boolWithMe"] = true
+			Expect(result).To(Equal(values))
+		})
+
 		It("should convert an object to a values map with lower-case keys - deep recursion", func() {
 			objUpper = &objectUpperCase{
 				Objects: []objectUpperCase{
@@ -163,6 +172,92 @@ var _ = Describe("Values", func() {
 			}
 
 			result, err := ToValuesMapWithOptions(objUpper, Options{LowerCaseKeys: true})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(values))
+		})
+
+		It("should convert an object to a values map removing entries with zero values", func() {
+			obj.String = pointer.String("")
+			result, err := ToValuesMapWithOptions(obj, Options{RemoveZeroEntries: true})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(values))
+		})
+
+		It("should convert an object to a values map containing empty entries", func() {
+			obj.String = pointer.String("")
+
+			result, err := ToValuesMapWithOptions(obj, Options{RemoveZeroEntries: false})
+			Expect(err).ToNot(HaveOccurred())
+			values["string"] = ""
+			Expect(result).To(Equal(values))
+		})
+
+		It("should convert an object to a values map with nested slices", func() {
+			obj.String = pointer.String("")
+
+			obj = &object{
+				Objects: []object{
+					{
+						Object: &object{
+							String: pointer.String("one"),
+							Objects: []object{
+								{
+									String: pointer.String("two-l1"),
+									Objects: []object{
+										{
+											String: pointer.String(""),
+											Int:    pointer.Int32(3),
+										},
+									},
+								},
+								{
+									String: pointer.String("two-l2"),
+									Objects: []object{
+										{
+											Int: pointer.Int32(4),
+										},
+									},
+								},
+							},
+						},
+						Int: pointer.Int32(42),
+					},
+				},
+				Bool: pointer.Bool(true),
+			}
+
+			values = map[string]interface{}{
+				"objects": []interface{}{
+					map[string]interface{}{
+						"object": map[string]interface{}{
+							"string": "one",
+							"objects": []interface{}{
+								map[string]interface{}{
+									"string": "two-l1",
+									"objects": []interface{}{
+										map[string]interface{}{
+											// empty string removed
+											"int": float64(3),
+										},
+									},
+								},
+								map[string]interface{}{
+									"string": "two-l2",
+									"objects": []interface{}{
+										map[string]interface{}{
+											"int": float64(4),
+										},
+									},
+								},
+							},
+						},
+						"int": float64(42),
+					},
+				},
+				"bool": true,
+			}
+
+			result, err := ToValuesMapWithOptions(obj, Options{RemoveZeroEntries: true})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(values))
 		})

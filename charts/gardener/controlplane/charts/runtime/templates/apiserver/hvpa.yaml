@@ -58,7 +58,7 @@ spec:
 {{- end }}
     scaleDown:
       updatePolicy:
-        updateMode: {{ .Values.global.apiserver.hvpa.vpaScaleDownMode }}
+        updateMode: "{{ .Values.global.apiserver.hvpa.vpaScaleDownMode }}"
 {{- if .Values.global.apiserver.hvpa.vpaScaleDownStabilization }}
 {{ toYaml .Values.global.apiserver.hvpa.vpaScaleDownStabilization | indent 6 }}
 {{- end }}

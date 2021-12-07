@@ -18,7 +18,6 @@ import (
 	"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports"
 	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ApplicationChartValuesHelper provides methods computing the values to be used when applying the control plane application chart
@@ -30,8 +29,6 @@ type ApplicationChartValuesHelper interface {
 // valuesHelper is a concrete implementation of ApplicationChartValuesHelper
 // Contains all values that are needed to render the control plane application chart
 type valuesHelper struct {
-	// GardenClient targets the garden cluster (either the virtual-garden or the runtime cluster if no-virtual garden is used)
-	GardenClient client.Client
 	// VirtualGarden defines if the application chart is installed into a virtual Garden cluster
 	// this has implications on how the Webhook configurations are set up (cannot use k8s services directly
 	// as Configuration and GAC are not deployed in the same cluster)
@@ -57,11 +54,13 @@ type valuesHelper struct {
 	// Uses the resourceAdmissionConfiguration.Limits{apiGroups, apiVersions, resources / not: size, operationMode}
 	// Configured to .Values.global.admission.config.server.resourceAdmissionConfiguration.limits
 	AdmissionControllerConfig *admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration
+	// SeedRestrictionEnabled configures if the validating webhook with name validate-namespace-deletion should contain
+	// the webhook seed-restriction.gardener.cloud
+	SeedRestrictionEnabled *bool
 }
 
 // NewApplicationChartValuesHelper creates a new ApplicationChartValuesHelper.
 func NewApplicationChartValuesHelper(
-	gardenClient client.Client,
 	virtualGarden bool,
 	virtualGardenClusterIP *string,
 	caPublicCertGardenerAPIServer string,
@@ -71,9 +70,9 @@ func NewApplicationChartValuesHelper(
 	diffieHellmannKey string,
 	alerting []imports.Alerting,
 	admissionControllerConfig *admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration,
+	seedRestrictionEnabled *bool,
 ) ApplicationChartValuesHelper {
 	return &valuesHelper{
-		GardenClient:                    gardenClient,
 		VirtualGarden:                   virtualGarden,
 		VirtualGardenClusterIP:          virtualGardenClusterIP,
 		CAPublicCertGardenerAPIServer:   caPublicCertGardenerAPIServer,
@@ -83,6 +82,7 @@ func NewApplicationChartValuesHelper(
 		DiffieHellmannKey:               diffieHellmannKey,
 		Alerting:                        alerting,
 		AdmissionControllerConfig:       admissionControllerConfig,
+		SeedRestrictionEnabled:          seedRestrictionEnabled,
 	}
 }
 
@@ -152,8 +152,15 @@ func (v valuesHelper) GetApplicationChartValues() (map[string]interface{}, error
 		return nil, err
 	}
 
+	if v.SeedRestrictionEnabled != nil && *v.SeedRestrictionEnabled {
+		values, err = utils.SetToValuesMap(values, v.SeedRestrictionEnabled, "admission", "seedRestriction", "enabled")
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if v.AdmissionControllerConfig != nil && v.AdmissionControllerConfig.Server.ResourceAdmissionConfiguration != nil {
-		v, err := utils.ToValuesMap(v.AdmissionControllerConfig.Server.ResourceAdmissionConfiguration)
+		v, err := utils.ToValuesMapWithOptions(v.AdmissionControllerConfig.Server.ResourceAdmissionConfiguration, utils.Options{RemoveZeroEntries: true})
 		if err != nil {
 			return nil, err
 		}
@@ -173,7 +180,8 @@ func (v valuesHelper) GetApplicationChartValues() (map[string]interface{}, error
 		switch alert.AuthType {
 		case "none":
 			alertValues = map[string]interface{}{
-				"url": alert.Url,
+				"auth_type": alert.AuthType,
+				"url":       alert.Url,
 			}
 		case "smtp":
 			alertValues = map[string]interface{}{
@@ -187,16 +195,18 @@ func (v valuesHelper) GetApplicationChartValues() (map[string]interface{}, error
 			}
 		case "basic":
 			alertValues = map[string]interface{}{
-				"url":      alert.Url,
-				"username": alert.Username,
-				"password": alert.Password,
+				"auth_type": alert.AuthType,
+				"url":       alert.Url,
+				"username":  alert.Username,
+				"password":  alert.Password,
 			}
 		case "certificate":
 			alertValues = map[string]interface{}{
-				"url":      alert.Url,
-				"ca_crt":   alert.CaCert,
-				"tls_cert": alert.TlsCert,
-				"tls_key":  alert.TlsKey,
+				"auth_type": alert.AuthType,
+				"url":       alert.Url,
+				"ca_crt":    alert.CaCert,
+				"tls_cert":  alert.TlsCert,
+				"tls_key":   alert.TlsKey,
 			}
 		}
 		alertingValues = append(alertingValues, alertValues)
