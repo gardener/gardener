@@ -841,6 +841,7 @@ func autoConvert_v1alpha1_CA_To_imports_CA(in *CA, out *imports.CA, s conversion
 	out.SecretRef = (*corev1.SecretReference)(unsafe.Pointer(in.SecretRef))
 	out.Crt = (*string)(unsafe.Pointer(in.Crt))
 	out.Key = (*string)(unsafe.Pointer(in.Key))
+	out.Validity = (*metav1.Duration)(unsafe.Pointer(in.Validity))
 	return nil
 }
 
@@ -853,6 +854,7 @@ func autoConvert_imports_CA_To_v1alpha1_CA(in *imports.CA, out *CA, s conversion
 	out.SecretRef = (*corev1.SecretReference)(unsafe.Pointer(in.SecretRef))
 	out.Crt = (*string)(unsafe.Pointer(in.Crt))
 	out.Key = (*string)(unsafe.Pointer(in.Key))
+	out.Validity = (*metav1.Duration)(unsafe.Pointer(in.Validity))
 	return nil
 }
 
@@ -1395,6 +1397,7 @@ func autoConvert_v1alpha1_TLSServer_To_imports_TLSServer(in *TLSServer, out *imp
 	out.SecretRef = (*corev1.SecretReference)(unsafe.Pointer(in.SecretRef))
 	out.Crt = (*string)(unsafe.Pointer(in.Crt))
 	out.Key = (*string)(unsafe.Pointer(in.Key))
+	out.Validity = (*metav1.Duration)(unsafe.Pointer(in.Validity))
 	return nil
 }
 
@@ -1407,6 +1410,7 @@ func autoConvert_imports_TLSServer_To_v1alpha1_TLSServer(in *imports.TLSServer, 
 	out.SecretRef = (*corev1.SecretReference)(unsafe.Pointer(in.SecretRef))
 	out.Crt = (*string)(unsafe.Pointer(in.Crt))
 	out.Key = (*string)(unsafe.Pointer(in.Key))
+	out.Validity = (*metav1.Duration)(unsafe.Pointer(in.Validity))
 	return nil
 }
 
