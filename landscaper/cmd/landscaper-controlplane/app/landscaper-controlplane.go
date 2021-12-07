@@ -115,24 +115,41 @@ func run(ctx context.Context, opts *Options, log *logrus.Logger) error {
 	}
 
 	// Create Virtual Garden client
-	var virtualGardenClient *kubernetes.Interface
+	var (
+		virtualGardenClient *kubernetes.Interface
+		virtualGardenCA     []byte
+	)
+
 	if imports.VirtualGarden != nil && imports.VirtualGarden.Enabled {
 		gardenClusterTargetConfig := &landscaperv1alpha1.KubernetesClusterTargetConfig{}
 		if err := json.Unmarshal(imports.VirtualGarden.Kubeconfig.Spec.Configuration.RawMessage, gardenClusterTargetConfig); err != nil {
 			return fmt.Errorf("failed to parse the virtual-garden cluster kubeconfig : %w", err)
 		}
 
-		vGardenClient, err := kubernetes.NewClientFromBytes([]byte(gardenClusterTargetConfig.Kubeconfig), kubernetes.WithClientOptions(
+		config, err := kubernetes.RESTConfigFromClientConnectionConfiguration(nil, []byte(gardenClusterTargetConfig.Kubeconfig))
+		if err != nil {
+			return fmt.Errorf("failed to create the virtual-garden cluster client : %w", err)
+		}
+
+		if len(config.CAData) == 0 {
+			return fmt.Errorf("the kubeconfig of the virtual garden kubeconfig does not contain a CA certificate: %w", err)
+		}
+
+		// remember CA to generate virtual Garden kubeconfigs
+		virtualGardenCA = config.CAData
+
+		opts := append([]kubernetes.ConfigFunc{kubernetes.WithRESTConfig(config)}, kubernetes.WithClientOptions(
 			client.Options{
 				Scheme: kubernetes.GardenScheme,
 			}))
+		vGardenClient, err := kubernetes.NewWithConfig(opts...)
 		if err != nil {
 			return fmt.Errorf("failed to create the Virtual Garden cluster client: %w", err)
 		}
 		virtualGardenClient = &vGardenClient
 	}
 
-	operation, err := controlplanecontroller.NewOperation(runtimeClient, virtualGardenClient, log, imports, opts.ComponentDescriptorPath)
+	operation, err := controlplanecontroller.NewOperation(runtimeClient, virtualGardenClient, virtualGardenCA, log, imports, opts.ComponentDescriptorPath)
 	if err != nil {
 		return err
 	}

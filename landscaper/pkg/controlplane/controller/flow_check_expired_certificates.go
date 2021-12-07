@@ -16,6 +16,7 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	landscaperutils "github.com/gardener/gardener/landscaper/common/utils"
 	"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/validation"
@@ -42,7 +43,8 @@ func (o *operation) CheckForExpiringCertificates(ctx context.Context) error {
 			return err
 		}
 
-		if landscaperutils.CertificateNeedsRenewal(cert, certificateRotationThresholdPercentage) {
+		needsRenewal, nextRenewal := landscaperutils.CertificateNeedsRenewal(cert, certificateRotationThresholdPercentage)
+		if needsRenewal {
 			// regenerate the TLS certificates for the Gardener API Server
 			o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Crt = nil
 			o.exports.GardenerAPIServerTLSServing.Rotated = true
@@ -61,6 +63,8 @@ func (o *operation) CheckForExpiringCertificates(ctx context.Context) error {
 			o.imports.GardenerAPIServer.ComponentConfiguration.CA.Crt = nil
 			o.exports.GardenerAPIServerCA.Rotated = true
 			o.log.Infof("Gardener API server CA certificate needs to be regenerated. Reason: %d % of certificate's lifetime exceeded", certificateRotationThresholdPercentage)
+		} else {
+			o.log.Infof("Next Gardener API Server CA rotation is in %s", nextRenewal.Round(time.Hour).String())
 		}
 	}
 
@@ -71,7 +75,8 @@ func (o *operation) CheckForExpiringCertificates(ctx context.Context) error {
 			return err
 		}
 
-		if landscaperutils.CertificateNeedsRenewal(cert, certificateRotationThresholdPercentage) {
+		needsRenewal, nextRenewal := landscaperutils.CertificateNeedsRenewal(cert, certificateRotationThresholdPercentage)
+		if needsRenewal {
 			o.imports.GardenerAdmissionController.ComponentConfiguration.CA.Crt = nil
 			o.exports.GardenerAdmissionControllerCA.Rotated = true
 			o.log.Infof("Gardener Admission Controller CA certificate needs to be regenerated. Reason: %d % of certificate's lifetime exceeded", certificateRotationThresholdPercentage)
@@ -80,6 +85,8 @@ func (o *operation) CheckForExpiringCertificates(ctx context.Context) error {
 			o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.Crt = nil
 			o.exports.GardenerAdmissionControllerTLSServing.Rotated = true
 			o.log.Infof("Gardener Admission Controller TLS certificate needs to be regenerated. Reason: Gardener Admission Controller CA certificate will be rotated")
+		} else {
+			o.log.Infof("Next Admission Controller CA rotation is in %s", nextRenewal.Round(time.Hour).String())
 		}
 	}
 
@@ -90,11 +97,14 @@ func (o *operation) CheckForExpiringCertificates(ctx context.Context) error {
 			return err
 		}
 
-		if landscaperutils.CertificateNeedsRenewal(cert, certificateRotationThresholdPercentage) {
+		needsRenewal, nextRenewal := landscaperutils.CertificateNeedsRenewal(cert, certificateRotationThresholdPercentage)
+		if needsRenewal {
 			// regenerate the TLS certificates for the Gardener API Server
 			o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Crt = nil
 			o.exports.GardenerAPIServerTLSServing.Rotated = true
 			o.log.Infof("Gardener API Server TLS certificate needs to be regenerated. Reason: %d % of certificate's lifetime exceeded", certificateRotationThresholdPercentage)
+		} else {
+			o.log.Infof("Next Gardener API Server TLS certificate rotation is in %s", nextRenewal.Round(time.Hour).String())
 		}
 	}
 
@@ -104,11 +114,14 @@ func (o *operation) CheckForExpiringCertificates(ctx context.Context) error {
 			return err
 		}
 
-		if landscaperutils.CertificateNeedsRenewal(cert, certificateRotationThresholdPercentage) {
+		needsRenewal, nextRenewal := landscaperutils.CertificateNeedsRenewal(cert, certificateRotationThresholdPercentage)
+		if needsRenewal {
 			// regenerate the TLS certificates for the Gardener Controller Manager
 			o.imports.GardenerControllerManager.ComponentConfiguration.TLS.Crt = nil
 			o.exports.GardenerControllerManagerTLSServing.Rotated = true
 			o.log.Infof("Gardener Controller Manager TLS certificate needs to be regenerated. Reason: %d % of certificate's lifetime exceeded", certificateRotationThresholdPercentage)
+		} else {
+			o.log.Infof("Next Gardener Controller Manager TLS certificate rotation is in %s", nextRenewal.Round(time.Hour).String())
 		}
 	}
 
@@ -118,11 +131,14 @@ func (o *operation) CheckForExpiringCertificates(ctx context.Context) error {
 			return err
 		}
 
-		if landscaperutils.CertificateNeedsRenewal(cert, certificateRotationThresholdPercentage) {
+		needsRenewal, nextRenewal := landscaperutils.CertificateNeedsRenewal(cert, certificateRotationThresholdPercentage)
+		if needsRenewal {
 			// regenerate the TLS certificates for the Gardener Admission Controller
 			o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.Crt = nil
 			o.exports.GardenerAdmissionControllerTLSServing.Rotated = true
 			o.log.Infof("Gardener Admission Controller TLS certificate needs to be regenerated. Reason: %d % of certificate's lifetime exceeded", certificateRotationThresholdPercentage)
+		} else {
+			o.log.Infof("Next Gardener Gardener Admission Controller TLS certificate rotation is in %s", nextRenewal.Round(time.Hour).String())
 		}
 	}
 

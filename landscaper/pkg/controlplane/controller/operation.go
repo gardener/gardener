@@ -61,6 +61,9 @@ type operation struct {
 	// runtimeClient is the client for the virtual-garden cluster
 	virtualGardenClient *kubernetes.Interface
 
+	// virtualGardenCA is the CA of the virtual-garden cluster
+	virtualGardenCA []byte
+
 	// log is a logger.
 	log logrus.FieldLogger
 
@@ -131,16 +134,11 @@ type Image struct {
 }
 
 // NewOperation returns a new operation structure that implements Interface.
-func NewOperation(
-	runtimeCLient kubernetes.Interface,
-	virtualGardenClient *kubernetes.Interface,
-	log *logrus.Logger,
-	imports *imports.Imports,
-	componentDescriptorPath string,
-) (Interface, error) {
+func NewOperation(runtimeCLient kubernetes.Interface, virtualGardenClient *kubernetes.Interface, virtualGardenCA []byte, log *logrus.Logger, imports *imports.Imports, componentDescriptorPath string) (Interface, error) {
 	op := &operation{
 		runtimeClient:       runtimeCLient,
 		virtualGardenClient: virtualGardenClient,
+		virtualGardenCA:     virtualGardenCA,
 		log:                 log,
 		imports:             imports,
 		chartPath:           charts.Path,

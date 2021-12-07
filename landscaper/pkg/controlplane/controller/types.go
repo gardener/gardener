@@ -46,12 +46,6 @@ const (
 	// secretNameLandscaperGardenerAPIServerKey is the name of the secret in the runtime cluster holding the generated private key of the Gardener API Server
 	secretNameLandscaperGardenerAdmissionControllerKey = "landscaper-controlplane-admission-controller-ca-key"
 
-	// secretDataKeyEtcdEncryption is a constant for a key in the data map that contains the config
-	// which is used to encrypt etcd data.
-	secretDataKeyEtcdEncryption = "encryption-config.yaml"
-	// secretDataKeyDiffieHellmann is a constant for a key in the data map that contains the Diffie-Hellmann key
-	secretDataKeyDiffieHellmann = "dh2048.pem"
-
 	// cmNameClusterIdentity is the name of the config map containing the cluster identity
 	cmNameClusterIdentity = "cluster-identity"
 	// cmDataKeyClusterIdentity is the data key for the config map containing the cluster identity
@@ -68,7 +62,12 @@ const (
 
 	// mutatingWebhookNameGardenerAdmissionController is the name of the mutating webhook configuration for the Gardener Admission Controller
 	mutatingWebhookNameGardenerAdmissionController = "gardener-admission-controller"
+	// mutatingWebhookNameValidateNamespaceDeletion is the name of the validating webhook configuration to validate resources in the Garden cluster.
+	// Served by the Gardener Admission Controller
+	validatingWebhookNameValidateNamespaceDeletion = "validate-namespace-deletion"
 
+	// secretDataKeyDiffieHellmann is a constant for a key in the data map that contains the Diffie-Hellmann key
+	secretDataKeyDiffieHellmann = "dh2048.pem"
 	// secretDataKeyCACrt is a key in a secret containing a CA certificate
 	secretDataKeyCACrt = "ca.crt"
 	// secretDataKeyCAKey is a key in a secret containing a CA key
@@ -81,7 +80,8 @@ const (
 	secretDataKeyAPIServerCrt = "gardener-apiserver.crt"
 	// secretDataKeyAPIServerKey is a key in a secret for the Gardener API Server TLS key
 	secretDataKeyAPIServerKey = "gardener-apiserver.key"
-	// secretDataKeyAPIServerEncryptionConfig is a key in a secret for the Gardener API Server encryption configuration
+	// secretDataKeyAPIServerEncryptionConfig is a constant for a key in the secret containing the config
+	// which is used to encrypt etcd data.
 	secretDataKeyAPIServerEncryptionConfig = "encryption-config.yaml"
 	// secretDataKeyControllerManagerCrt is a key in a secret for the Gardener Controller Manager TLS certificate
 	secretDataKeyControllerManagerCrt = "gardener-controller-manager.crt"

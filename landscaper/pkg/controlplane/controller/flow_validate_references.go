@@ -31,10 +31,10 @@ import (
 // FetchAndValidateConfigurationFromSecretReferences fetches the configuration that is provided as secret references, validates and adds it to the import configuration.
 func (o *operation) FetchAndValidateConfigurationFromSecretReferences(ctx context.Context) error {
 	// Gardener API Server
-	if o.imports.GardenerAPIServer.ComponentConfiguration.CA != nil && o.imports.GardenerAPIServer.ComponentConfiguration.CA.SecretRef != nil {
+	if o.imports.GardenerAPIServer.ComponentConfiguration.CA.SecretRef != nil {
 		ca, key, err := ValidateCAConfigurationFromSecretReferences(ctx, o.runtimeClient.Client(), o.imports.GardenerAPIServer.ComponentConfiguration.CA.SecretRef, field.NewPath("gardenerAPIServer.componentConfiguration.ca"))
 		if err != nil {
-			return fmt.Errorf("failed to validate Gardener API Server TLS certificates: %v", err)
+			return fmt.Errorf("failed to validate Gardener API Server CA certificate: %v", err)
 		}
 
 		if ca != nil {
@@ -48,7 +48,7 @@ func (o *operation) FetchAndValidateConfigurationFromSecretReferences(ctx contex
 		}
 	}
 
-	if o.imports.GardenerAPIServer.ComponentConfiguration.TLS != nil && o.imports.GardenerAPIServer.ComponentConfiguration.TLS.SecretRef != nil {
+	if o.imports.GardenerAPIServer.ComponentConfiguration.TLS.SecretRef != nil {
 		cert, key, err := ValidateTLSConfigurationFromSecretReferences(ctx, o.runtimeClient.Client(), o.imports.GardenerAPIServer.ComponentConfiguration.TLS.SecretRef, o.imports.GardenerAPIServer.ComponentConfiguration.CA, field.NewPath("gardenerAPIServer.componentConfiguration.tls"))
 		if err != nil {
 			return fmt.Errorf("failed to validate Gardener API Server TLS certificates: %v", err)
@@ -100,7 +100,7 @@ func (o *operation) FetchAndValidateConfigurationFromSecretReferences(ctx contex
 	}
 
 	// Gardener Admission Controller
-	if o.imports.GardenerAdmissionController != nil && o.imports.GardenerAdmissionController.ComponentConfiguration != nil && o.imports.GardenerAdmissionController.ComponentConfiguration.CA != nil && o.imports.GardenerAdmissionController.ComponentConfiguration.CA.SecretRef != nil {
+	if o.imports.GardenerAdmissionController.Enabled && o.imports.GardenerAdmissionController.ComponentConfiguration.CA.SecretRef != nil {
 		ca, key, err := ValidateCAConfigurationFromSecretReferences(ctx, o.runtimeClient.Client(), o.imports.GardenerAdmissionController.ComponentConfiguration.CA.SecretRef, field.NewPath("gardenerAdmissionController.componentConfiguration.ca"))
 		if err != nil {
 			return fmt.Errorf("failed to validate GardenerAdmissionController TLS certificates: %v", err)
@@ -117,10 +117,10 @@ func (o *operation) FetchAndValidateConfigurationFromSecretReferences(ctx contex
 		}
 	}
 
-	if o.imports.GardenerAdmissionController != nil && o.imports.GardenerAdmissionController.ComponentConfiguration != nil && o.imports.GardenerAdmissionController.ComponentConfiguration.TLS != nil && o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.SecretRef != nil {
+	if o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.SecretRef != nil {
 		cert, key, err := ValidateTLSConfigurationFromSecretReferences(ctx, o.runtimeClient.Client(), o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.SecretRef, o.imports.GardenerAdmissionController.ComponentConfiguration.CA, field.NewPath("gardenerAdmissionController.componentConfiguration.tls"))
 		if err != nil {
-			return fmt.Errorf("failed to validate GardernAPI Server TLS certificates: %v", err)
+			return fmt.Errorf("failed to validate Gardener API Server TLS certificates: %v", err)
 		}
 
 		if cert != nil {
@@ -135,7 +135,7 @@ func (o *operation) FetchAndValidateConfigurationFromSecretReferences(ctx contex
 	}
 
 	// Gardener Controller Manager
-	if o.imports.GardenerControllerManager != nil && o.imports.GardenerControllerManager.ComponentConfiguration != nil && o.imports.GardenerControllerManager.ComponentConfiguration.TLS != nil && o.imports.GardenerControllerManager.ComponentConfiguration.TLS.SecretRef != nil {
+	if o.imports.GardenerControllerManager.ComponentConfiguration.TLS.SecretRef != nil {
 		cert, key, err := ValidateTLSConfigurationFromSecretReferences(ctx, o.runtimeClient.Client(), o.imports.GardenerControllerManager.ComponentConfiguration.TLS.SecretRef, o.imports.GardenerAPIServer.ComponentConfiguration.CA, field.NewPath("gardenerControllerManager.componentConfiguration.tls"))
 		if err != nil {
 			return fmt.Errorf("failed to validate GardenerControllerManager TLS certificates: %v", err)

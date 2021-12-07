@@ -114,24 +114,17 @@ func (o *operation) SyncWithExistingGardenerInstallation(ctx context.Context) er
 		}
 
 		if o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Crt == nil {
-			apiServerCrt, foundServerCrt := secret.Data[secretDataKeyAPIServerCrt]
-			if foundServerCrt {
-				if errors := validation.ValidateTLSServingCertificate(string(apiServerCrt), field.NewPath("gardenerAPIServer.componentConfiguration.tls.crt")); len(errors) > 0 {
-					return fmt.Errorf("the existing Gardener APIServer's TLS serving certificate configured in the secret (%s/%s) is erroneous: %s", gardencorev1beta1constants.GardenNamespace, secretNameGardenerAPIServerCert, errors.ToAggregate().Error())
-				}
-			}
-
-			apiServerKey, foundServerKey := secret.Data[secretDataKeyAPIServerKey]
-			if foundServerKey {
-				if errors := validation.ValidatePrivateKey(string(apiServerKey), field.NewPath("gardenerAPIServer.componentConfiguration.tls.key")); len(errors) > 0 {
-					return fmt.Errorf("the existing Gardener APIServer's TLS serving key configured in the secret (%s/%s) is erroneous: %s", gardencorev1beta1constants.GardenNamespace, secretNameGardenerAPIServerCert, errors.ToAggregate().Error())
-				}
-			}
+			crt, foundServerCrt := secret.Data[secretDataKeyAPIServerCrt]
+			key, foundServerKey := secret.Data[secretDataKeyAPIServerKey]
 
 			// only use if both the certificate and key are found
 			if foundServerCrt && foundServerKey {
-				o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Crt = pointer.String(string(apiServerCrt))
-				o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Key = pointer.String(string(apiServerKey))
+				if errors := validation.ValidateTLS(string(crt), string(key), o.imports.GardenerAPIServer.ComponentConfiguration.CA.Crt, field.NewPath("gardenerAPIServer.componentConfiguration.tls")); len(errors) > 0 {
+					return fmt.Errorf("the existing Gardener APIServer's TLS serving certificate configured in the secret (%s/%s) is erroneous: %s", gardencorev1beta1constants.GardenNamespace, secretNameGardenerAPIServerCert, errors.ToAggregate().Error())
+				}
+
+				o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Crt = pointer.String(string(crt))
+				o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Key = pointer.String(string(key))
 				o.log.Infof("Using existing Gardener API Server TLS serving certificate and key found in secret %s/%s in the runtime cluster", gardencorev1beta1constants.GardenNamespace, secretNameGardenerAPIServerCert)
 			}
 		}
@@ -187,21 +180,13 @@ func (o *operation) SyncWithExistingGardenerInstallation(ctx context.Context) er
 		}
 
 		crt, foundCrt := secret.Data[secretDataKeyTLSCrt]
-		if foundCrt {
-			if errors := validation.ValidateTLSServingCertificate(string(crt), field.NewPath("gardenerAdmissionController.componentConfiguration.tls.crt")); len(errors) > 0 {
-				return fmt.Errorf("the existing Gardener Admission Controller's TLS serving certificate configured in the secret (%s/%s) is erroneous: %s", gardencorev1beta1constants.GardenNamespace, secretNameGardenerAdmissionControllerCert, errors.ToAggregate().Error())
-			}
-		}
-
 		key, foundKey := secret.Data[secretDataKeyTLSKey]
-		if foundKey {
-			if errors := validation.ValidatePrivateKey(string(key), field.NewPath("gardenerAdmissionController.componentConfiguration.tls.key")); len(errors) > 0 {
-				return fmt.Errorf("the existing Gardener Admission Controller's TLS serving key configured in the secret (%s/%s) is erroneous: %s", gardencorev1beta1constants.GardenNamespace, secretNameGardenerAdmissionControllerCert, errors.ToAggregate().Error())
-			}
-		}
 
 		// only use if both the certificate and key are found
 		if foundCrt && foundKey {
+			if errors := validation.ValidateTLS(string(crt), string(key), o.imports.GardenerAdmissionController.ComponentConfiguration.CA.Crt, field.NewPath("gardenerAdmissionController.componentConfiguration.tls")); len(errors) > 0 {
+				return fmt.Errorf("the existing Gardener Admission Controller TLS serving certificate configured in the secret (%s/%s) is erroneous: %s", gardencorev1beta1constants.GardenNamespace, secretNameGardenerAdmissionControllerCert, errors.ToAggregate().Error())
+			}
 			o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.Crt = pointer.String(string(crt))
 			o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.Key = pointer.String(string(key))
 			o.log.Infof("Using existing Gardener Admission Controller TLS serving certificate and key found in secret %s/%s in the runtime cluster", gardencorev1beta1constants.GardenNamespace, secretNameGardenerAdmissionControllerCert)
@@ -218,21 +203,13 @@ func (o *operation) SyncWithExistingGardenerInstallation(ctx context.Context) er
 		}
 
 		crt, foundCrt := secret.Data[secretDataKeyControllerManagerCrt]
-		if foundCrt {
-			if errors := validation.ValidateTLSServingCertificate(string(crt), field.NewPath("gardenerControllerManager.componentConfiguration.tls.crt")); len(errors) > 0 {
-				return fmt.Errorf("the existing Gardener Controller Managers's TLS serving certificate configured in the secret (%s/%s) is erroneous: %s", gardencorev1beta1constants.GardenNamespace, secretNameGardenerControllerManagerCert, errors.ToAggregate().Error())
-			}
-		}
-
 		key, foundKey := secret.Data[secretDataKeyControllerManagerKey]
-		if foundKey {
-			if errors := validation.ValidatePrivateKey(string(key), field.NewPath("gardenerControllerManager.componentConfiguration.tls.key")); len(errors) > 0 {
-				return fmt.Errorf("the existing ardener Controller Managers's TLS serving key configured in the secret (%s/%s) is erroneous: %s", gardencorev1beta1constants.GardenNamespace, secretNameGardenerAdmissionControllerCert, errors.ToAggregate().Error())
-			}
-		}
 
 		// only use if both the certificate and key are found
 		if foundCrt && foundKey {
+			if errors := validation.ValidateTLS(string(crt), string(key), o.imports.GardenerAPIServer.ComponentConfiguration.CA.Crt, field.NewPath("gardenerControllerManager.componentConfiguration.tls")); len(errors) > 0 {
+				return fmt.Errorf("the existing Gardener Controller Manager TLS serving certificate configured in the secret (%s/%s) is erroneous: %s", gardencorev1beta1constants.GardenNamespace, secretNameGardenerAdmissionControllerCert, errors.ToAggregate().Error())
+			}
 			o.imports.GardenerControllerManager.ComponentConfiguration.TLS.Crt = pointer.String(string(crt))
 			o.imports.GardenerControllerManager.ComponentConfiguration.TLS.Key = pointer.String(string(key))
 			o.log.Infof("Using existing Gardener Controller Managers TLS serving certificate and key found in secret %s/%s in the runtime cluster", gardencorev1beta1constants.GardenNamespace, secretNameGardenerControllerManagerCert)
