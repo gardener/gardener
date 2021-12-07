@@ -64,6 +64,13 @@ func ValidateLandscaperImports(imports *imports.Imports) field.ErrorList {
 		allErrs = append(allErrs, ValidateAdmissionController(*imports.GardenerAdmissionController, field.NewPath("gardenerAdmissionController"))...)
 	}
 
+	// When the seedAuthorizer option is enabled (removes the ClusterAdmin RBAC role & binding for the Gardenlets)
+	// then the seed restriction webhook serving the authorisation webhook in the admission controller must be enabled
+	if imports.Rbac != nil && imports.Rbac.SeedAuthorizer != nil && imports.Rbac.SeedAuthorizer.Enabled != nil && *imports.Rbac.SeedAuthorizer.Enabled &&
+		imports.GardenerAdmissionController != nil && (imports.GardenerAdmissionController.Enabled == false || imports.GardenerAdmissionController.SeedRestriction == nil || !imports.GardenerAdmissionController.SeedRestriction.Enabled) {
+		allErrs = append(allErrs, field.Forbidden(field.NewPath("rbac").Child("seedAuthorizer").Child("enabled"), "When the seed authorizer option is enabled, then the seed restriction webhook serving the authorisation webhook in the admission controller must be enabled"))
+	}
+
 	return allErrs
 }
 
@@ -329,5 +336,25 @@ func ValidateTLSServingCertificateAgainstCA(cert, ca string, fldPath *field.Path
 		allErrs = append(allErrs, field.Invalid(fldPath, nil, fmt.Sprintf("failed to verify the TLS serving certificate against the given CA bundle: %s", err.Error())))
 	}
 
+	return allErrs
+}
+
+// ValidateTLS is a wrapper for TLS validation functions
+func ValidateTLS(cert string, key string, ca *string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if err := ValidateTLSServingCertificate(cert, fldPath.Child("crt")); err != nil {
+		allErrs = append(allErrs, err...)
+	}
+
+	if err := ValidatePrivateKey(key, fldPath.Child("key")); err != nil {
+		allErrs = append(allErrs, err...)
+	}
+
+	if ca != nil {
+		if err := ValidateTLSServingCertificateAgainstCA(cert, *ca, fldPath.Child("crt")); err != nil {
+			allErrs = append(allErrs, err...)
+		}
+	}
 	return allErrs
 }

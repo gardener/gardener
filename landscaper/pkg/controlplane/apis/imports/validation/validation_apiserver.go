@@ -21,7 +21,9 @@ import (
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/utils"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	landscaperv1alpha1 "github.com/gardener/landscaper/apis/core/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/apis/audit"
@@ -73,7 +75,6 @@ func ValidateAPIServerComponentConfiguration(config imports.APIServerComponentCo
 	// validation of mandatory configuration
 	allErrs = append(allErrs, ValidateAPIServerETCDConfiguration(config.Etcd, fldPath.Child("etcd"))...)
 
-	// TODO: ADJUST TESTS - config.CA is never nil as it is defaulted now
 	// validation of optional configuration
 	if (config.CA.Crt == nil && config.CA.SecretRef == nil) && (config.TLS.Crt != nil || config.TLS.SecretRef != nil) {
 		// the control plane helm chart requires the public CA bundle to validate the Gardener API server TLS certificates
@@ -140,14 +141,14 @@ var (
 )
 
 // ValidateAPIServerAuditConfiguration validates the Audit configuration of the Gardener API server
-func ValidateAPIServerAuditConfiguration(config *imports.APIServerAuditConfiguration, featureGates []string, fldPath *field.Path) field.ErrorList {
+func ValidateAPIServerAuditConfiguration(config *imports.APIServerAuditConfiguration, featureGates map[string]bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// setting DynamicConfiguration requires feature flag DynamicAuditing=true
 	if config.DynamicConfiguration != nil && *config.DynamicConfiguration {
 		found := false
-		for _, feature := range featureGates {
-			if feature == "DynamicAuditing=true" {
+		for feature, enabled := range featureGates {
+			if feature == "DynamicAuditing" && enabled {
 				found = true
 				break
 			}
@@ -203,6 +204,11 @@ func ValidateAPIServerAuditConfiguration(config *imports.APIServerAuditConfigura
 
 		if len(config.Webhook.Kubeconfig.Spec.Configuration.RawMessage) == 0 {
 			allErrs = append(allErrs, field.Invalid(fldPathWebhook.Child("kubeconfig"), "", "The kubeconfig for the external audit log backend must be set"))
+		}
+
+		gardenClusterTargetConfig := &landscaperv1alpha1.KubernetesClusterTargetConfig{}
+		if err := json.Unmarshal(config.Webhook.Kubeconfig.Spec.Configuration.RawMessage, gardenClusterTargetConfig); err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPathWebhook.Child("kubeconfig"), "", "The kubeconfig for the external audit log backend could not be parsed"))
 		}
 	}
 

@@ -79,7 +79,7 @@ type APIServerComponentConfiguration struct {
 	ClusterIdentity *string `json:"clusterIdentity,omitempty"`
 	// Encryption configures an optional encryption configuration
 	// Defaults:
-	// - resources (controllerregistrations.core.gardener.cloud, shootstates.core.gardener.cloud)
+	// - resources (secrets, controllerregistrations.core.gardener.cloud, controllerdeployments.core.gardener.cloud, shootstates.core.gardener.cloud)
 	//   providers:
 	//    - aescbc with a randomly generated key
 	//    - identity: {}
@@ -106,7 +106,7 @@ type APIServerComponentConfiguration struct {
 	TLS *TLSServer `json:"tls,omitempty"`
 	// FeatureGates are optional feature gates that shall be activated on the Gardener API server
 	// +optional
-	FeatureGates []string `json:"featureGates,omitempty"`
+	FeatureGates map[string]bool `json:"featureGates,omitempty"`
 	// Admission contains admission configuration for the Gardener API server
 	// +optional
 	Admission *APIServerAdmissionConfiguration `json:"admission,omitempty"`
