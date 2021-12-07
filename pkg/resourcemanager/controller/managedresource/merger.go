@@ -105,9 +105,13 @@ func merge(origin string, desired, current *unstructured.Unstructured, forceOver
 	case appsv1.SchemeGroupVersion.WithKind("Deployment").GroupKind(), extensionsv1beta1.SchemeGroupVersion.WithKind("Deployment").GroupKind():
 		return mergeDeployment(scheme.Scheme, oldObject, newObject, preserveReplicas, preserveResources)
 	case batchv1.SchemeGroupVersion.WithKind("Job").GroupKind():
-		return mergeJob(scheme.Scheme, oldObject, newObject)
+		return mergeJob(scheme.Scheme, oldObject, newObject, preserveResources)
+	case batchv1.SchemeGroupVersion.WithKind("CronJob").GroupKind():
+		return mergeCronJob(scheme.Scheme, oldObject, newObject, preserveResources)
 	case appsv1.SchemeGroupVersion.WithKind("StatefulSet").GroupKind(), extensionsv1beta1.SchemeGroupVersion.WithKind("StatefulSet").GroupKind():
 		return mergeStatefulSet(scheme.Scheme, oldObject, newObject, preserveReplicas, preserveResources)
+	case appsv1.SchemeGroupVersion.WithKind("DaemonSet").GroupKind():
+		return mergeDaemonSet(scheme.Scheme, oldObject, newObject, preserveResources)
 	case corev1.SchemeGroupVersion.WithKind("Service").GroupKind():
 		return mergeService(scheme.Scheme, oldObject, newObject)
 	case corev1.SchemeGroupVersion.WithKind("ServiceAccount").GroupKind():
@@ -182,7 +186,7 @@ func mergeContainer(oldContainer, newContainer *corev1.Container, preserveResour
 	}
 }
 
-func mergeJob(scheme *runtime.Scheme, oldObj, newObj runtime.Object) error {
+func mergeJob(scheme *runtime.Scheme, oldObj, newObj runtime.Object, preserveResources bool) error {
 	oldJob := &batchv1.Job{}
 	if err := scheme.Convert(oldObj, oldJob, nil); err != nil {
 		return err
@@ -202,7 +206,34 @@ func mergeJob(scheme *runtime.Scheme, oldObj, newObj runtime.Object) error {
 	// Do not overwrite Job managed labels as 'controller-uid' and 'job-name'. '.spec.template' is immutable.
 	newJob.Spec.Template.Labels = labels.Merge(oldJob.Spec.Template.Labels, newJob.Spec.Template.Labels)
 
+	mergePodTemplate(&oldJob.Spec.Template, &newJob.Spec.Template, preserveResources)
+
 	return scheme.Convert(newJob, newObj, nil)
+}
+
+func mergeCronJob(scheme *runtime.Scheme, oldObj, newObj runtime.Object, preserveResources bool) error {
+	oldCronJob := &batchv1.CronJob{}
+	if err := scheme.Convert(oldObj, oldCronJob, nil); err != nil {
+		return err
+	}
+
+	newCronJob := &batchv1.CronJob{}
+	if err := scheme.Convert(newObj, newCronJob, nil); err != nil {
+		return err
+	}
+
+	// Do not overwrite a CronJob's '.spec.jobTemplate.spec.selector' if the new CronJobs's '.spec.jobTemplate.spec.selector'
+	// field is unset.
+	if newCronJob.Spec.JobTemplate.Spec.Selector == nil && oldCronJob.Spec.JobTemplate.Spec.Selector != nil {
+		newCronJob.Spec.JobTemplate.Spec.Selector = oldCronJob.Spec.JobTemplate.Spec.Selector
+	}
+
+	// Do not overwrite CronJob managed labels as 'controller-uid' and 'job-name'. '.spec.jobTemplate.spec.template' is immutable.
+	newCronJob.Spec.JobTemplate.Spec.Template.Labels = labels.Merge(oldCronJob.Spec.JobTemplate.Spec.Template.Labels, newCronJob.Spec.JobTemplate.Spec.Template.Labels)
+
+	mergePodTemplate(&oldCronJob.Spec.JobTemplate.Spec.Template, &newCronJob.Spec.JobTemplate.Spec.Template, preserveResources)
+
+	return scheme.Convert(newCronJob, newObj, nil)
 }
 
 func mergeStatefulSet(scheme *runtime.Scheme, oldObj, newObj runtime.Object, preserveReplicas, preserveResources bool) error {
@@ -230,6 +261,22 @@ func mergeStatefulSet(scheme *runtime.Scheme, oldObj, newObj runtime.Object, pre
 	mergePodTemplate(&oldStatefulSet.Spec.Template, &newStatefulSet.Spec.Template, preserveResources)
 
 	return scheme.Convert(newStatefulSet, newObj, nil)
+}
+
+func mergeDaemonSet(scheme *runtime.Scheme, oldObj, newObj runtime.Object, preserveResources bool) error {
+	oldDaemonSet := &appsv1.DaemonSet{}
+	if err := scheme.Convert(oldObj, oldDaemonSet, nil); err != nil {
+		return err
+	}
+
+	newDaemonSet := &appsv1.DaemonSet{}
+	if err := scheme.Convert(newObj, newDaemonSet, nil); err != nil {
+		return err
+	}
+
+	mergePodTemplate(&oldDaemonSet.Spec.Template, &newDaemonSet.Spec.Template, preserveResources)
+
+	return scheme.Convert(newDaemonSet, newObj, nil)
 }
 
 // mergeService merges new service into old service
