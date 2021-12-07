@@ -45,6 +45,7 @@ import (
 	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
@@ -119,6 +120,12 @@ func defaultGardenerResourceManager(c client.Client, imageVector imagevector.Ima
 		HealthSyncPeriod:                     utils.DurationPtr(time.Minute),
 		ResourceClass:                        pointer.String(v1beta1constants.SeedResourceManagerClass),
 		SyncPeriod:                           utils.DurationPtr(time.Hour),
+		VPA: &resourcemanager.VPAConfig{
+			MinAllowed: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("20m"),
+				corev1.ResourceMemory: resource.MustParse("64Mi"),
+			},
+		},
 	})
 
 	gardenerResourceManager.SetSecrets(resourcemanager.Secrets{
