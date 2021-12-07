@@ -1,0 +1,14 @@
+# This ClusterRoleBinding is similar to 'system:node-proxier' with the difference that it binds the kube-proxy's
+# ServiceAccount to the `'system:node-proxier` ClusterRole.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: gardener.cloud:target:node-proxier
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:node-proxier
+subjects:
+- kind: ServiceAccount
+  name: kube-proxy
+  namespace: kube-system

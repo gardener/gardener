@@ -96,8 +96,6 @@ spec:
         operator: Exists
       hostNetwork: true
       serviceAccountName: kube-proxy
-      # not used - kubeconfig is mounted.
-      automountServiceAccountToken: false
       containers:
       - name: kube-proxy
         image: {{ $pool.kubeProxyImage }}

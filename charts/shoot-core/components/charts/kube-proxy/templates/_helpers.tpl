@@ -88,5 +88,5 @@ conntrack_fix.sh: |
 {{- end -}}
 
 {{- define "kube-proxy.conntrack-fix-script.name" -}}
-kube-proxy-conntrack-fix-script-{{ include "kube-proxy.secret-kubeconfig.data" . | sha256sum | trunc 8 }}
+kube-proxy-conntrack-fix-script-{{ include "kube-proxy.conntrack-fix-script.data" . | sha256sum | trunc 8 }}
 {{- end }}

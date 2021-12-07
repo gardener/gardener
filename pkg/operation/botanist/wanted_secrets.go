@@ -256,26 +256,6 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 		},
 
-		// Secret definition for kube-proxy
-		&secrets.ControlPlaneSecretConfig{
-			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "kube-proxy",
-
-				CommonName:   user.KubeProxy,
-				Organization: nil,
-				DNSNames:     nil,
-				IPAddresses:  nil,
-
-				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-			},
-
-			KubeConfigRequests: []secrets.KubeConfigRequest{{
-				ClusterName:   b.Shoot.SeedNamespace,
-				APIServerHost: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
-			}},
-		},
-
 		// Secret definition for prometheus
 		// TODO(rfranzke): Delete this in a future release once all monitoring configurations of extensions have been
 		// adapted.
