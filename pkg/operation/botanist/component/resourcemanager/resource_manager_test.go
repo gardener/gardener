@@ -26,7 +26,6 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -70,12 +69,9 @@ var _ = Describe("ResourceManager", func() {
 
 		// optional configuration
 		clusterIdentity                      = "foo"
-		secretNameKubeconfig                 = "kubeconfig-secret"
 		secretNameServer                     = "server-secret"
-		secretMountPathKubeconfig            = "/etc/gardener-resource-manager"
 		secretMountPathServer                = "/etc/gardener-resource-manager-tls"
 		secretMountPathAPIAccess             = "/var/run/secrets/kubernetes.io/serviceaccount"
-		secretChecksumKubeconfig             = "1234"
 		secretChecksumServer                 = "5678"
 		secrets                              Secrets
 		alwaysUpdate                               = true
@@ -113,6 +109,7 @@ var _ = Describe("ResourceManager", func() {
 		defaultLabels                map[string]string
 		roleBinding                  *rbacv1.RoleBinding
 		role                         *rbacv1.Role
+		secret                       *corev1.Secret
 		service                      *corev1.Service
 		serviceAccount               *corev1.ServiceAccount
 		updateMode                   = autoscalingv1beta2.UpdateModeAuto
@@ -129,9 +126,8 @@ var _ = Describe("ResourceManager", func() {
 		c = mockclient.NewMockClient(ctrl)
 
 		secrets = Secrets{
-			Kubeconfig: component.Secret{Name: secretNameKubeconfig, Checksum: secretChecksumKubeconfig},
-			Server:     component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
-			ServerCA:   component.Secret{Data: map[string][]byte{"ca.crt": caBundle}},
+			Server:   component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
+			ServerCA: component.Secret{Data: map[string][]byte{"ca.crt": caBundle}},
 		}
 		allowAll = []rbacv1.PolicyRule{{
 			APIGroups: []string{"*"},
@@ -222,6 +218,22 @@ var _ = Describe("ResourceManager", func() {
 				Namespace: deployNamespace,
 			}}}
 
+		secret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "shoot-access-gardener-resource-manager",
+				Namespace: deployNamespace,
+				Annotations: map[string]string{
+					"serviceaccount.resources.gardener.cloud/name":                      "gardener-resource-manager",
+					"serviceaccount.resources.gardener.cloud/namespace":                 "kube-system",
+					"serviceaccount.resources.gardener.cloud/token-expiration-duration": "24h",
+				},
+				Labels: map[string]string{
+					"resources.gardener.cloud/purpose": "token-requestor",
+				},
+			},
+			Type: corev1.SecretTypeOpaque,
+		}
+
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-resource-manager",
@@ -302,7 +314,7 @@ var _ = Describe("ResourceManager", func() {
 			"--target-disable-cache",
 			fmt.Sprintf("--port=%d", serverPort),
 			fmt.Sprintf("--tls-cert-dir=%v", secretMountPathServer),
-			fmt.Sprintf("--target-kubeconfig=%v/%v", secretMountPathKubeconfig, secretsutils.DataKeyKubeconfig),
+			"--target-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 		}
 		cmdWithoutWatchedNamespace = []string{"/gardener-resource-manager",
 			"--always-update=true",
@@ -327,7 +339,7 @@ var _ = Describe("ResourceManager", func() {
 			"--target-disable-cache",
 			fmt.Sprintf("--port=%d", serverPort),
 			fmt.Sprintf("--tls-cert-dir=%v", secretMountPathServer),
-			fmt.Sprintf("--target-kubeconfig=%v/%v", secretMountPathKubeconfig, secretsutils.DataKeyKubeconfig),
+			"--target-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 		}
 
 		serviceAccount = &corev1.ServiceAccount{
@@ -354,8 +366,7 @@ var _ = Describe("ResourceManager", func() {
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
-							"checksum/secret-" + secretNameKubeconfig: secretChecksumKubeconfig,
-							"checksum/secret-" + secretNameServer:     secretChecksumServer,
+							"checksum/secret-" + secretNameServer: secretChecksumServer,
 						},
 						Labels: map[string]string{
 							"projected-token-mount.resources.gardener.cloud/skip": "true",
@@ -441,8 +452,8 @@ var _ = Describe("ResourceManager", func() {
 										ReadOnly:  true,
 									},
 									{
-										MountPath: secretMountPathKubeconfig,
-										Name:      "gardener-resource-manager",
+										Name:      "kubeconfig",
+										MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
 										ReadOnly:  true,
 									},
 								},
@@ -497,11 +508,36 @@ var _ = Describe("ResourceManager", func() {
 								},
 							},
 							{
-								Name: "gardener-resource-manager",
+								Name: "kubeconfig",
 								VolumeSource: corev1.VolumeSource{
-									Secret: &corev1.SecretVolumeSource{
-										SecretName:  secretNameKubeconfig,
+									Projected: &corev1.ProjectedVolumeSource{
 										DefaultMode: pointer.Int32(420),
+										Sources: []corev1.VolumeProjection{
+											{
+												Secret: &corev1.SecretProjection{
+													LocalObjectReference: corev1.LocalObjectReference{
+														Name: "generic-token-kubeconfig",
+													},
+													Items: []corev1.KeyToPath{{
+														Key:  "kubeconfig",
+														Path: "kubeconfig",
+													}},
+													Optional: pointer.Bool(false),
+												},
+											},
+											{
+												Secret: &corev1.SecretProjection{
+													LocalObjectReference: corev1.LocalObjectReference{
+														Name: "shoot-access-gardener-resource-manager",
+													},
+													Items: []corev1.KeyToPath{{
+														Key:  resourcesv1alpha1.DataKeyToken,
+														Path: resourcesv1alpha1.DataKeyToken,
+													}},
+													Optional: pointer.Bool(false),
+												},
+											},
+										},
 									},
 								},
 							},
@@ -715,6 +751,22 @@ webhooks:
   sideEffects: None
   timeoutSeconds: 10
 `
+		clusterRoleBindingTargetYAML := `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    resources.gardener.cloud/keep-object: "true"
+  creationTimestamp: null
+  name: gardener.cloud:target:resource-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: gardener-resource-manager
+  namespace: kube-system
+`
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "managedresource-shoot-core-gardener-resource-manager",
@@ -723,6 +775,7 @@ webhooks:
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{
 				"mutatingwebhookconfiguration__" + deployNamespace + "__gardener-resource-manager-shoot.yaml": []byte(mutatingWebhookConfigurationYAML),
+				"clusterrolebinding____gardener.cloud_target_resource-manager.yaml":                           []byte(clusterRoleBindingTargetYAML),
 			},
 		}
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -788,8 +841,13 @@ webhooks:
 				resourceManager.SetSecrets(secrets)
 			})
 
-			It("should deploy a role in the watched namespace", func() {
+			It("should successfully deploy all resources (w/ shoot access secret)", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(secret))
+						}),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()).
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -842,12 +900,25 @@ webhooks:
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(networkPolicy))
 						}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 				)
+
 				Expect(resourceManager.Deploy(ctx)).To(Succeed())
+			})
+
+			It("should fail because the shoot access secret cannot be updated", func() {
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Return(fakeErr),
+				)
+
+				Expect(resourceManager.Deploy(ctx)).To(MatchError(fakeErr))
 			})
 
 			It("should fail because the service account cannot be updated", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()).Return(fakeErr),
 				)
@@ -855,8 +926,10 @@ webhooks:
 				Expect(resourceManager.Deploy(ctx)).To(MatchError(fakeErr))
 			})
 
-			It("should fail because the Role cannot be created", func() {
+			It("should fail because the role cannot be created", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(watchedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&rbacv1.Role{})),
@@ -868,6 +941,8 @@ webhooks:
 
 			It("should fail because the role binding cannot be created", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(watchedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&rbacv1.Role{})),
@@ -881,6 +956,8 @@ webhooks:
 
 			It("should fail because the service cannot be created", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(watchedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&rbacv1.Role{})),
@@ -896,6 +973,8 @@ webhooks:
 
 			It("should fail because the service account has no token yet", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(watchedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&rbacv1.Role{})),
@@ -912,6 +991,8 @@ webhooks:
 
 			It("should fail because the deployment can not be created", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(watchedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&rbacv1.Role{})),
@@ -933,6 +1014,8 @@ webhooks:
 
 			It("should fail because the PDB cannot be created", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(watchedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&rbacv1.Role{})),
@@ -956,6 +1039,8 @@ webhooks:
 
 			It("should fail because the VPA can not be created", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(watchedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&rbacv1.Role{})),
@@ -981,6 +1066,8 @@ webhooks:
 
 			It("should fail because the managed resource secret can not be created", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(watchedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&rbacv1.Role{})),
@@ -1008,6 +1095,8 @@ webhooks:
 
 			It("should fail because the managed resource can not be created", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(watchedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&rbacv1.Role{})),
@@ -1049,6 +1138,11 @@ webhooks:
 
 			It("should deploy a ClusterRole allowing access to mr related resources", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(secret))
+						}),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()).
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -1101,12 +1195,15 @@ webhooks:
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(networkPolicy))
 						}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 				)
 				Expect(resourceManager.Deploy(ctx)).To(Succeed())
 			})
 
 			It("should fail because the ClusterRole can not be created", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(clusterRoleName), gomock.AssignableToTypeOf(&rbacv1.ClusterRole{})),
@@ -1118,6 +1215,8 @@ webhooks:
 
 			It("should fail because the ClusterRoleBinding can not be created", func() {
 				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(clusterRoleName), gomock.AssignableToTypeOf(&rbacv1.ClusterRole{})),
@@ -1137,7 +1236,6 @@ webhooks:
 				deployment.Spec.Template.Spec.Containers[0].Command = cmd[:len(cmd)-1]
 				deployment.Spec.Template.Spec.Volumes = deployment.Spec.Template.Spec.Volumes[:len(deployment.Spec.Template.Spec.Volumes)-1]
 				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = deployment.Spec.Template.Spec.Containers[0].VolumeMounts[:len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-1]
-				delete(deployment.Spec.Template.ObjectMeta.Annotations, "checksum/secret-"+secretNameKubeconfig)
 				deployment.Spec.Template.Labels["gardener.cloud/role"] = "seed"
 				deployment.Spec.Template.Spec.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].PodAffinityTerm.LabelSelector.MatchLabels["gardener.cloud/role"] = "seed"
 				pdb.Spec.Selector.MatchLabels["gardener.cloud/role"] = "seed"
@@ -1156,7 +1254,6 @@ webhooks:
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-shoot-apiserver")
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/from-shoot-apiserver")
 
-				secrets.Kubeconfig.Name, secrets.Kubeconfig.Checksum = "", ""
 				cfg.TargetDiffersFromSourceCluster = false
 				resourceManager = New(c, deployNamespace, image, replicas, cfg)
 				resourceManager.SetSecrets(secrets)
@@ -1232,6 +1329,7 @@ webhooks:
 					c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
 					c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: secret.Name}}),
 					c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 				)
@@ -1354,6 +1452,24 @@ webhooks:
 				Expect(resourceManager.Destroy(ctx)).To(MatchError(fakeErr))
 			})
 
+			It("should fail because the secret cannot be deleted", func() {
+				gomock.InOrder(
+					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "managedresource-shoot-core-gardener-resource-manager"}}),
+					c.EXPECT().Get(gomock.Any(), client.ObjectKey{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+					c.EXPECT().Delete(ctx, &policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager-vpa"}}),
+					c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
+					c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: secret.Name}}).Return(fakeErr),
+				)
+
+				Expect(resourceManager.Destroy(ctx)).To(MatchError(fakeErr))
+			})
+
 			It("should fail because the role cannot be deleted", func() {
 				gomock.InOrder(
 					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "shoot-core-gardener-resource-manager"}}),
@@ -1366,6 +1482,7 @@ webhooks:
 					c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
 					c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: secret.Name}}),
 					c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}).Return(fakeErr),
 				)
 
@@ -1384,6 +1501,7 @@ webhooks:
 					c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
 					c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: secret.Name}}),
 					c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}).Return(fakeErr),
 				)
