@@ -26,7 +26,7 @@ The Gardener operator has to either deploy the Gardenlet into the cluster they w
 
 Please see [this](../../example/45-secret-seed-backup.yaml), [this](../../example/50-seed.yaml)(, and optionally [this](../../example/40-secret-seed.yaml)) example manifests.
 
-## `Quota`s
+## Shoot`Quota`s
 
 In order to allow end-users not having their own dedicated infrastructure account to try out Gardener the operator can register an account owned by them that they allow to be used for trial clusters.
 Trial clusters can be put under quota such that they don't consume too many resources (resulting in costs), and so that one user cannot consume all resources on their own.
@@ -67,3 +67,7 @@ Please see [this](../../example/90-shoot.yaml) example manifest and consult the 
 ## `(Cluster)OpenIDConnectPreset`s
 
 Please see [this](../usage/openidconnect-presets.md) separate documentation file.
+
+## Overview Data Model
+
+![Gardener Overview Data Model](gardener-data-model-overview.png)
