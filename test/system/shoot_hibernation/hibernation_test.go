@@ -28,12 +28,14 @@ func init() {
 }
 
 var _ = Describe("Shoot hibernation testing", func() {
-	f := framework.NewShootFramework(nil)
+	f := framework.NewShootFramework(&framework.ShootConfig{
+		SkipSeedInitialization: true,
+	})
 
 	framework.CIt("should hibernate shoot", func(ctx context.Context) {
 		hibernation := f.Shoot.Spec.Hibernation
 		if hibernation != nil && hibernation.Enabled != nil && *hibernation.Enabled {
-			Fail("shoot is already hibernated")
+			Skip("shoot is already hibernated")
 		}
 
 		err := f.HibernateShoot(ctx)

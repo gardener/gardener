@@ -49,6 +49,7 @@ type ShootConfig struct {
 
 	CreateTestNamespace         bool
 	DisableTestNamespaceCleanup bool
+	SkipSeedInitialization      bool
 }
 
 // ShootFramework represents the shoot test framework that includes
@@ -194,7 +195,7 @@ func (f *ShootFramework) AddShoot(ctx context.Context, shootName, shootNamespace
 	}
 
 	// seed could be temporarily offline so no specified seed is a valid state
-	if shoot.Spec.SeedName != nil {
+	if shoot.Spec.SeedName != nil && !f.Config.SkipSeedInitialization {
 		f.Seed, f.SeedClient, err = f.GetSeed(ctx, *shoot.Spec.SeedName)
 		if err != nil {
 			return err
