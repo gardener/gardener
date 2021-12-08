@@ -187,7 +187,7 @@ func (r *leaseReconciler) newOrRenewedLease(lease *coordinationv1.Lease, holderI
 	lease.OwnerReferences = []metav1.OwnerReference{ownerReference}
 	lease.Spec = coordinationv1.LeaseSpec{
 		HolderIdentity:       pointer.String(holderIdentity),
-		LeaseDurationSeconds: r.config.Controllers.Seed.LeaseDurationSeconds,
+		LeaseDurationSeconds: r.config.Controllers.Seed.LeaseResyncSeconds,
 		RenewTime:            &metav1.MicroTime{Time: r.nowFunc().Time},
 	}
 	return lease

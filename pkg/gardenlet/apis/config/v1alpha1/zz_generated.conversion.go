@@ -1361,9 +1361,8 @@ func Convert_config_SeedConfig_To_v1alpha1_SeedConfig(in *config.SeedConfig, out
 func autoConvert_v1alpha1_SeedControllerConfiguration_To_config_SeedControllerConfiguration(in *SeedControllerConfiguration, out *config.SeedControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
-	out.LeaseDurationSeconds = (*int32)(unsafe.Pointer(in.LeaseDurationSeconds))
 	out.LeaseResyncSeconds = (*int32)(unsafe.Pointer(in.LeaseResyncSeconds))
-	out.LeaseResyncGracePeriod = (*int32)(unsafe.Pointer(in.LeaseResyncGracePeriod))
+	out.LeaseResyncMissThreshold = (*int32)(unsafe.Pointer(in.LeaseResyncMissThreshold))
 	return nil
 }
 
@@ -1375,9 +1374,8 @@ func Convert_v1alpha1_SeedControllerConfiguration_To_config_SeedControllerConfig
 func autoConvert_config_SeedControllerConfiguration_To_v1alpha1_SeedControllerConfiguration(in *config.SeedControllerConfiguration, out *SeedControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
-	out.LeaseDurationSeconds = (*int32)(unsafe.Pointer(in.LeaseDurationSeconds))
 	out.LeaseResyncSeconds = (*int32)(unsafe.Pointer(in.LeaseResyncSeconds))
-	out.LeaseResyncGracePeriod = (*int32)(unsafe.Pointer(in.LeaseResyncGracePeriod))
+	out.LeaseResyncMissThreshold = (*int32)(unsafe.Pointer(in.LeaseResyncMissThreshold))
 	return nil
 }
 

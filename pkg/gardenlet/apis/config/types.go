@@ -197,16 +197,13 @@ type SeedControllerConfiguration struct {
 	ConcurrentSyncs *int
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod *metav1.Duration
-	// LeaseDurationSeconds defines how long the lease is valid (used for Lease.spec.leaseDurationSeconds).
-	// Default: 2s
-	LeaseDurationSeconds *int32
 	// LeaseResyncSeconds defines how often (in seconds) the seed lease is renewed.
 	// Default: 2s
 	LeaseResyncSeconds *int32
-	// LeaseResyncGracePeriod is the amount of missed lease resyncs before the health status
+	// LeaseResyncMissThreshold is the amount of missed lease resyncs before the health status
 	// is changed to false.
 	// Default: 10
-	LeaseResyncGracePeriod *int32
+	LeaseResyncMissThreshold *int32
 }
 
 // ShootControllerConfiguration defines the configuration of the Shoot

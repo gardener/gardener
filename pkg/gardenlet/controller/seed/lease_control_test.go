@@ -113,9 +113,8 @@ var _ = Describe("LeaseReconciler", func() {
 		gardenletConf = &config.GardenletConfiguration{
 			Controllers: &config.GardenletControllerConfiguration{
 				Seed: &config.SeedControllerConfiguration{
-					LeaseResyncSeconds:     pointer.Int32(2),
-					LeaseDurationSeconds:   pointer.Int32(2),
-					LeaseResyncGracePeriod: pointer.Int32(10),
+					LeaseResyncSeconds:       pointer.Int32(2),
+					LeaseResyncMissThreshold: pointer.Int32(10),
 				},
 			},
 		}
@@ -176,11 +175,11 @@ var _ = Describe("LeaseReconciler", func() {
 		Expect(healthManager.Get()).To(BeTrue())
 	})
 
-	It("should check if LeaseDurationSeconds matches the expectedLease value", func() {
+	It("should check if LeaseResyncSeconds matches the expectedLease value", func() {
 		expectedCondition = gardenletReadyCondition()
 		expectedLease.Spec.LeaseDurationSeconds = pointer.Int32(3)
 
-		gardenletConf.Controllers.Seed.LeaseDurationSeconds = pointer.Int32(3)
+		gardenletConf.Controllers.Seed.LeaseResyncSeconds = pointer.Int32(3)
 		request = reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)}
 
 		_, err := reconciler.Reconcile(ctx, request)

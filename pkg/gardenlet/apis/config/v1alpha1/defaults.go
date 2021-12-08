@@ -249,12 +249,8 @@ func SetDefaults_SeedControllerConfiguration(obj *SeedControllerConfiguration) {
 		obj.LeaseResyncSeconds = pointer.Int32(2)
 	}
 
-	if obj.LeaseDurationSeconds == nil {
-		obj.LeaseDurationSeconds = pointer.Int32(2)
-	}
-
-	if obj.LeaseResyncGracePeriod == nil {
-		obj.LeaseResyncGracePeriod = pointer.Int32(10)
+	if obj.LeaseResyncMissThreshold == nil {
+		obj.LeaseResyncMissThreshold = pointer.Int32(10)
 	}
 }
 
