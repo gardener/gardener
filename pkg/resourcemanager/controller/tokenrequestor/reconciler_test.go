@@ -195,7 +195,7 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret.Data).NotTo(HaveKey("token"))
-			Expect(secret.Annotations).NotTo(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
+			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
 
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(Succeed())
 			Expect(serviceAccount.AutomountServiceAccountToken).To(PointTo(BeFalse()))
@@ -209,7 +209,6 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(targetSecret), targetSecret)).To(Succeed())
 			Expect(targetSecret.Data).To(HaveKeyWithValue("token", []byte(token)))
-			Expect(targetSecret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
 		})
 
 		It("should create a new service account, generate a new token and requeue, and create the target secret in the next reconciliation", func() {
@@ -249,11 +248,10 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(targetSecret), targetSecret)).To(Succeed())
 			Expect(targetSecret.Data).To(HaveKeyWithValue("token", []byte(token)))
-			Expect(targetSecret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
 
 			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret.Data).NotTo(HaveKey("token"))
-			Expect(secret.Annotations).NotTo(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
+			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
 		})
 
 		It("should fail when the provided kubeconfig cannot be decoded", func() {

@@ -141,38 +141,33 @@ func (r *reconciler) reconcileServiceAccount(ctx context.Context, secret *corev1
 	return serviceAccount, nil
 }
 
-func (r *reconciler) reconcileSecret(ctx context.Context, secret *corev1.Secret, token string, renewDuration time.Duration) error {
-	if targetSecret := getTargetSecretFromAnnotations(secret.Annotations); targetSecret != nil {
-		if _, err := controllerutil.CreateOrUpdate(ctx, r.targetClient, targetSecret, r.populateToken(targetSecret, token, renewDuration)); err != nil {
+func (r *reconciler) reconcileSecret(ctx context.Context, sourceSecret *corev1.Secret, token string, renewDuration time.Duration) error {
+	patch := client.MergeFrom(sourceSecret.DeepCopy())
+	metav1.SetMetaDataAnnotation(&sourceSecret.ObjectMeta, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, r.clock.Now().UTC().Add(renewDuration).Format(time.RFC3339))
+
+	if targetSecret := getTargetSecretFromAnnotations(sourceSecret.Annotations); targetSecret != nil {
+		if _, err := controllerutil.CreateOrUpdate(ctx, r.targetClient, targetSecret, r.populateToken(targetSecret, token)); err != nil {
 			return err
 		}
 
-		patch := client.MergeFrom(secret.DeepCopy())
-		if err := r.depopulateToken(secret)(); err != nil {
+		if err := r.depopulateToken(sourceSecret)(); err != nil {
 			return err
 		}
-		return r.client.Patch(ctx, secret, patch)
+	} else {
+		if err := r.populateToken(sourceSecret, token)(); err != nil {
+			return err
+		}
 	}
 
-	patch := client.MergeFrom(secret.DeepCopy())
-	if err := r.populateToken(secret, token, renewDuration)(); err != nil {
-		return err
-	}
-	return r.client.Patch(ctx, secret, patch)
+	return r.client.Patch(ctx, sourceSecret, patch)
 }
 
-func (r *reconciler) populateToken(secret *corev1.Secret, token string, renewDuration time.Duration) func() error {
+func (r *reconciler) populateToken(secret *corev1.Secret, token string) func() error {
 	return func() error {
 		if secret.Data == nil {
 			secret.Data = make(map[string][]byte, 1)
 		}
-
-		if err := updateTokenInSecretData(secret.Data, token); err != nil {
-			return err
-		}
-
-		metav1.SetMetaDataAnnotation(&secret.ObjectMeta, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, r.clock.Now().UTC().Add(renewDuration).Format(time.RFC3339))
-		return nil
+		return updateTokenInSecretData(secret.Data, token)
 	}
 }
 
@@ -180,8 +175,6 @@ func (r *reconciler) depopulateToken(secret *corev1.Secret) func() error {
 	return func() error {
 		delete(secret.Data, resourcesv1alpha1.DataKeyToken)
 		delete(secret.Data, resourcesv1alpha1.DataKeyKubeconfig)
-		delete(secret.Annotations, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp)
-
 		return nil
 	}
 }
