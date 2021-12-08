@@ -153,6 +153,7 @@ func mergePodTemplate(oldPod, newPod *corev1.PodTemplateSpec, preserveResources 
 		for j, oldContainer := range oldPod.Spec.Containers {
 			if newContainer.Name == oldContainer.Name {
 				mergeContainer(&oldPod.Spec.Containers[j], &newPod.Spec.Containers[i], preserveResources)
+				break
 			}
 		}
 	}
