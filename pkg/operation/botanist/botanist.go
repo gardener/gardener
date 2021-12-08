@@ -173,6 +173,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
+	o.Shoot.Components.SystemComponents.NodeProblemDetector, err = b.DefaultNodeProblemDetector()
+	if err != nil {
+		return nil, err
+	}
 
 	// Logging
 	o.Shoot.Components.Logging.ShootRBACProxy, err = logging.NewKubeRBACProxy(&logging.Values{

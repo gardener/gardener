@@ -29,6 +29,11 @@ const (
 	ManagedResourceName = "shoot-core-node-problem-detector"
 )
 
+// Interface contains functions for a node-problem-detector deployer.
+type Interface interface {
+	component.DeployWaiter
+}
+
 // New creates a new instance of DeployWaiter for nodeProblemDetector.
 func New(
 	client client.Client,
