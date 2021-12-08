@@ -65,7 +65,10 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 		predicate.Or(
 			predicateutils.HasOperationAnnotation(),
 			extensionspredicate.LastOperationNotSuccessful(),
-			extensionspredicate.IsDeleting(),
+			predicate.And(
+				predicate.GenerationChangedPredicate{},
+				extensionspredicate.IsDeleting(),
+			),
 		),
 		extensionspredicate.ShootNotFailed(),
 	}
