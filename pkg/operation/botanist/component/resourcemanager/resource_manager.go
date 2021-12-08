@@ -77,6 +77,7 @@ const (
 	roleName           = "gardener-resource-manager"
 	serviceAccountName = "gardener-resource-manager"
 
+	volumeNameBootstrapKubeconfig  = "kubeconfig-bootstrap"
 	volumeNameCerts                = "tls"
 	volumeNameAPIServerAccess      = "kube-api-access-gardener"
 	volumeMountPathCerts           = "/etc/gardener-resource-manager-tls"
@@ -620,7 +621,23 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 		}
 
 		if r.values.TargetDiffersFromSourceCluster {
-			if r.secrets.shootAccess != nil {
+			if r.secrets.BootstrapKubeconfig != nil {
+				metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum/secret-"+r.secrets.BootstrapKubeconfig.Name, r.secrets.BootstrapKubeconfig.Checksum)
+				deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+					Name: volumeNameBootstrapKubeconfig,
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName:  r.secrets.BootstrapKubeconfig.Name,
+							DefaultMode: pointer.Int32(420),
+						},
+					},
+				})
+				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+					MountPath: gutil.VolumeMountPathGenericKubeconfig,
+					Name:      volumeNameBootstrapKubeconfig,
+					ReadOnly:  true,
+				})
+			} else if r.secrets.shootAccess != nil {
 				utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, r.secrets.shootAccess.Secret.Name))
 			}
 		}
@@ -1069,6 +1086,9 @@ func (r *resourceManager) SetSecrets(s Secrets) { r.secrets = s }
 
 // Secrets is collection of secrets for the gardener-resource-manager.
 type Secrets struct {
+	// BootstrapKubeconfig is the kubeconfig of the gardener-resource-manager used during the bootstrapping process. Its
+	// token requestor controller will request a JWT token for itself with this kubeconfig.
+	BootstrapKubeconfig *component.Secret
 	// ServerCA is a secret containing a CA certificate which was used to sign the server certificate provided in the
 	// 'Server' secret.
 	ServerCA component.Secret

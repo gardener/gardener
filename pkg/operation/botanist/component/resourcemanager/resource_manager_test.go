@@ -906,6 +906,89 @@ subjects:
 				Expect(resourceManager.Deploy(ctx)).To(Succeed())
 			})
 
+			It("should successfully deploy all resources (w/ bootstrap kubeconfig)", func() {
+				secretNameBootstrapKubeconfig, secretChecksumBootstrapKubeconfig := "bootstrap-kubeconfig", "bootchecksum"
+
+				secrets.BootstrapKubeconfig = &component.Secret{Name: secretNameBootstrapKubeconfig, Checksum: secretChecksumBootstrapKubeconfig}
+				resourceManager = New(c, deployNamespace, image, replicas, cfg)
+				resourceManager.SetSecrets(secrets)
+
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(secret))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(serviceAccount))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(watchedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&rbacv1.Role{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.Role{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(role))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&rbacv1.RoleBinding{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(roleBinding))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.Service{})).Times(2),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(service))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, serviceAccount.Name), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.ServiceAccount) error {
+						(&corev1.ServiceAccount{Secrets: []corev1.ObjectReference{{Name: serviceAccountSecretName}}}).DeepCopyInto(obj)
+						return nil
+					}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							deployment.Spec.Template.Annotations["checksum/secret-"+secretNameBootstrapKubeconfig] = secretChecksumBootstrapKubeconfig
+							deployment.Spec.Template.Spec.Containers[0].VolumeMounts[len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-1].Name = "kubeconfig-bootstrap"
+							deployment.Spec.Template.Spec.Volumes[len(deployment.Spec.Template.Spec.Volumes)-1] = corev1.Volume{
+								Name: "kubeconfig-bootstrap",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName:  secretNameBootstrapKubeconfig,
+										DefaultMode: pointer.Int32(420),
+									},
+								},
+							}
+
+							Expect(obj).To(DeepEqual(deployment))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, pdb.Name), gomock.AssignableToTypeOf(&policyv1beta1.PodDisruptionBudget{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1beta1.PodDisruptionBudget{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(pdb))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager-vpa"), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(vpa))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "managedresource-shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+						Expect(obj).To(DeepEqual(managedResourceSecret))
+					}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+						Expect(obj).To(DeepEqual(managedResource))
+					}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "allow-kube-apiserver-to-gardener-resource-manager"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(networkPolicy))
+						}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+				)
+
+				Expect(resourceManager.Deploy(ctx)).To(Succeed())
+			})
+
 			It("should fail because the shoot access secret cannot be updated", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
