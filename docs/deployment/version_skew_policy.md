@@ -9,7 +9,7 @@ Gardener versions are expressed as `x.y.z`, where `x` is the major version, `y` 
 The Gardener project maintains release branches for the most recent three minor releases.
 
 Applicable fixes, including security fixes, may be backported to those three release branches, depending on severity and feasibility.
-Patch releases are cut from those branches at a regular cadence, plus additional urgent releases, when required.
+Patch releases are cut from those branches at a regular cadence, plus additional urgent releases when required.
 
 For more information, see [this document](../development/process.md#releases).
 
@@ -17,7 +17,7 @@ For more information, see [this document](../development/process.md#releases).
 
 Technically, we follow the same [policy](https://kubernetes.io/releases/version-skew-policy/) as the Kubernetes project.
 However, given that our release cadence is much more frequent compared to Kubernetes (every `14d` vs. every `120d`), in many cases it is possible to skip a version.
-Still, to be on the safe side, it is highly recommended following the described policy.
+Still, to be on the safe side, it is highly recommended to follow the described policy.
 
 #### gardener-apiserver
 
@@ -49,7 +49,7 @@ Pre-requisites:
 
 - In a single-instance setup, the existing `gardener-apiserver` instance is **1.37**
 - In a multi-instance setup, all `gardener-apiserver` instances are at **1.37** or **1.38** (this ensures maximum skew of 1 minor version between the oldest and newest `gardener-apiserver` instance)
-- The `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, and `gardenlet` instances that communicate with this `gardener-apiserver` are at version **1.37** (this ensures they are not newer than the existing API server version, and are within 1 minor version of the new API server version)
+- The `gardener-controller-manager`, `gardener-scheduler`, `gardener-admission-controller`, and `gardenlet` instances that communicate with this `gardener-apiserver` are at version **1.37** (this ensures they are not newer than the existing API server version and are within 1 minor version of the new API server version)
 
 Action:
 
