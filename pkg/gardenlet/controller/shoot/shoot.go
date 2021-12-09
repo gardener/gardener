@@ -86,6 +86,11 @@ func NewShootController(
 		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
 	}
 
+	seedInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Seed{})
+	if err != nil {
+		return nil, fmt.Errorf("could not get Seed informer: %w", err)
+	}
+
 	shootController := &Controller{
 		clientMap:   clientMap,
 		gardenCache: gardenClient.Cache(),
@@ -131,9 +136,9 @@ func NewShootController(
 		},
 	})
 
-	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) {
+	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && confighelper.OwnerChecksEnabledInSeedConfig(config.SeedConfig) {
 		shootInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-			FilterFunc: controllerutils.ShootMigrationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
+			FilterFunc: controllerutils.ShootMigrationFilterFunc(ctx, gardenClient.Cache(), confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 			Handler: cache.ResourceEventHandlerFuncs{
 				AddFunc:    shootController.shootMigrationAdd,
 				UpdateFunc: shootController.shootMigrationUpdate,
@@ -144,6 +149,7 @@ func NewShootController(
 
 	shootController.hasSyncedFuncs = []cache.InformerSynced{
 		shootInformer.HasSynced,
+		seedInformer.HasSynced,
 	}
 
 	return shootController, nil
@@ -205,7 +211,7 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 		controllerutils.CreateWorker(ctx, c.shootSeedQueue, "Shooted Seeds Reconciliation", c.shootReconciler, &waitGroup, c.workerCh)
 		controllerutils.CreateWorker(ctx, c.seedRegistrationQueue, "Shooted Seeds Registration", c.seedRegistrationReconciler, &waitGroup, c.workerCh)
 	}
-	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) {
+	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && confighelper.OwnerChecksEnabledInSeedConfig(c.config.SeedConfig) {
 		for i := 0; i < shootMigrationWorkers; i++ {
 			controllerutils.CreateWorker(ctx, c.shootMigrationQueue, "Shoot Migration", c.migrationReconciler, &waitGroup, c.workerCh)
 		}

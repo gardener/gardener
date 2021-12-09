@@ -19,6 +19,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -60,18 +61,14 @@ func ShootFilterFunc(seedName string) func(obj interface{}) bool {
 }
 
 // ShootMigrationFilterFunc returns a filtering func for shoots that are being migrated to a different seed.
-func ShootMigrationFilterFunc(seedName string) func(obj interface{}) bool {
+func ShootMigrationFilterFunc(ctx context.Context, c client.Reader, seedName string) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
 		shoot, ok := obj.(*gardencorev1beta1.Shoot)
 		if !ok {
 			return false
 		}
 
-		if shoot.Spec.SeedName != nil && shoot.Status.SeedName != nil && *shoot.Spec.SeedName != *shoot.Status.SeedName {
-			return *shoot.Spec.SeedName == seedName
-		}
-
-		return false
+		return ShootIsBeingMigratedToSeed(ctx, c, shoot, seedName)
 	}
 }
 
@@ -82,9 +79,16 @@ func ShootIsManagedByThisGardenlet(shoot *gardencorev1beta1.Shoot, gc *config.Ga
 	return shoot.Spec.SeedName != nil && *shoot.Spec.SeedName == seedName
 }
 
-// ShootIsBeingMigratedToThisGardenlet checks if the given shoot is currently being migrated to this gardenlet.
-func ShootIsBeingMigratedToThisGardenlet(shoot *gardencorev1beta1.Shoot, gc *config.GardenletConfiguration) bool {
-	return ShootIsManagedByThisGardenlet(shoot, gc) && shoot.Status.SeedName != nil && *shoot.Spec.SeedName != *shoot.Status.SeedName
+// ShootIsBeingMigratedToSeed checks if the given shoot is currently being migrated to the seed with the given name.
+func ShootIsBeingMigratedToSeed(ctx context.Context, c client.Reader, shoot *gardencorev1beta1.Shoot, seedName string) bool {
+	if shoot.Spec.SeedName != nil && shoot.Status.SeedName != nil && *shoot.Spec.SeedName != *shoot.Status.SeedName && *shoot.Spec.SeedName == seedName {
+		seed := &gardencorev1beta1.Seed{}
+		if err := c.Get(ctx, kutil.Key(*shoot.Status.SeedName), seed); err != nil {
+			return false
+		}
+		return gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(seed.Spec.Settings)
+	}
+	return false
 }
 
 // ControllerInstallationFilterFunc returns a filtering func for ControllerInstallations.
@@ -134,18 +138,14 @@ func BackupEntryFilterFunc(seedName string) func(obj interface{}) bool {
 }
 
 // BackupEntryMigrationFilterFunc returns a filtering func for backup entries that are being migrated to a different seed.
-func BackupEntryMigrationFilterFunc(seedName string) func(obj interface{}) bool {
+func BackupEntryMigrationFilterFunc(ctx context.Context, c client.Reader, seedName string) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
 		backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
 		if !ok {
 			return false
 		}
 
-		if backupEntry.Spec.SeedName != nil && backupEntry.Status.SeedName != nil && *backupEntry.Spec.SeedName != *backupEntry.Status.SeedName {
-			return *backupEntry.Spec.SeedName == seedName
-		}
-
-		return false
+		return BackupEntryIsBeingMigratedToSeed(ctx, c, backupEntry, seedName)
 	}
 }
 
@@ -156,9 +156,16 @@ func BackupEntryIsManagedByThisGardenlet(backupEntry *gardencorev1beta1.BackupEn
 	return backupEntry.Spec.SeedName != nil && *backupEntry.Spec.SeedName == seedName
 }
 
-// BackupEntryIsBeingMigratedToThisGardenlet checks if the given BackupEntry is currently being migrated to this gardenlet.
-func BackupEntryIsBeingMigratedToThisGardenlet(backupEntry *gardencorev1beta1.BackupEntry, gc *config.GardenletConfiguration) bool {
-	return BackupEntryIsManagedByThisGardenlet(backupEntry, gc) && backupEntry.Status.SeedName != nil && *backupEntry.Spec.SeedName != *backupEntry.Status.SeedName
+// BackupEntryIsBeingMigratedToSeed checks if the given BackupEntry is currently being migrated to the seed with the given name.
+func BackupEntryIsBeingMigratedToSeed(ctx context.Context, c client.Reader, backupEntry *gardencorev1beta1.BackupEntry, seedName string) bool {
+	if backupEntry.Spec.SeedName != nil && backupEntry.Status.SeedName != nil && *backupEntry.Spec.SeedName != *backupEntry.Status.SeedName && *backupEntry.Spec.SeedName == seedName {
+		seed := &gardencorev1beta1.Seed{}
+		if err := c.Get(ctx, kutil.Key(*backupEntry.Status.SeedName), seed); err != nil {
+			return false
+		}
+		return gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(seed.Spec.Settings)
+	}
+	return false
 }
 
 // BastionFilterFunc returns a filtering func for Bastions.

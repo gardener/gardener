@@ -47,6 +47,7 @@ type Controller struct {
 	recorder            record.EventRecorder
 
 	backupEntryInformer       runtimecache.Informer
+	seedInformer              runtimecache.Informer
 	backupEntryQueue          workqueue.RateLimitingInterface
 	backupEntryMigrationQueue workqueue.RateLimitingInterface
 
@@ -68,6 +69,11 @@ func NewBackupEntryController(ctx context.Context, clientMap clientmap.ClientMap
 		return nil, fmt.Errorf("failed to get BackupEntry Informer: %w", err)
 	}
 
+	seedInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Seed{})
+	if err != nil {
+		return nil, fmt.Errorf("could not get Seed informer: %w", err)
+	}
+
 	controller := &Controller{
 		gardenClient:              gardenClient.Client(),
 		config:                    config,
@@ -75,6 +81,7 @@ func NewBackupEntryController(ctx context.Context, clientMap clientmap.ClientMap
 		migrationReconciler:       newMigrationReconciler(clientMap, logger.Logger, config),
 		recorder:                  recorder,
 		backupEntryInformer:       backupEntryInformer,
+		seedInformer:              seedInformer,
 		backupEntryQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupEntry"),
 		backupEntryMigrationQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupEntryMigration"),
 		workerCh:                  make(chan int),
@@ -89,9 +96,9 @@ func NewBackupEntryController(ctx context.Context, clientMap clientmap.ClientMap
 		},
 	})
 
-	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) {
+	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && confighelper.OwnerChecksEnabledInSeedConfig(config.SeedConfig) {
 		controller.backupEntryInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-			FilterFunc: controllerutils.BackupEntryMigrationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
+			FilterFunc: controllerutils.BackupEntryMigrationFilterFunc(ctx, gardenClient.Cache(), confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 			Handler: cache.ResourceEventHandlerFuncs{
 				AddFunc:    controller.backupEntryMigrationAdd,
 				UpdateFunc: controller.backupEntryMigrationUpdate,
@@ -107,8 +114,8 @@ func NewBackupEntryController(ctx context.Context, clientMap clientmap.ClientMap
 func (c *Controller) Run(ctx context.Context, workers, migrationWorkers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.backupEntryInformer.HasSynced) {
-		logger.Logger.Fatal("Timed out waiting for BackupEntry Informer to sync")
+	if !cache.WaitForCacheSync(ctx.Done(), c.backupEntryInformer.HasSynced, c.seedInformer.HasSynced) {
+		logger.Logger.Fatal("Timed out waiting for caches to sync")
 		return
 	}
 
@@ -125,7 +132,7 @@ func (c *Controller) Run(ctx context.Context, workers, migrationWorkers int) {
 	for i := 0; i < workers; i++ {
 		controllerutils.CreateWorker(ctx, c.backupEntryQueue, "BackupEntry", c.reconciler, &waitGroup, c.workerCh)
 	}
-	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) {
+	if gardenletfeatures.FeatureGate.Enabled(features.ForceRestore) && confighelper.OwnerChecksEnabledInSeedConfig(c.config.SeedConfig) {
 		for i := 0; i < migrationWorkers; i++ {
 			controllerutils.CreateWorker(ctx, c.backupEntryMigrationQueue, "BackupEntry Migration", c.migrationReconciler, &waitGroup, c.workerCh)
 		}

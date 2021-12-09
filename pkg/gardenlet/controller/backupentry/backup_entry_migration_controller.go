@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/sirupsen/logrus"
@@ -109,7 +110,7 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	}
 
 	// If the backup entry is being deleted or no longer being migrated to this seed, clear migration start time and don't requeue
-	if backupEntry.DeletionTimestamp != nil || !controllerutils.BackupEntryIsBeingMigratedToThisGardenlet(backupEntry, r.config) {
+	if backupEntry.DeletionTimestamp != nil || !controllerutils.BackupEntryIsBeingMigratedToSeed(ctx, gardenClient.Cache(), backupEntry, confighelper.SeedNameFromSeedConfig(r.config.SeedConfig)) {
 		log.Debugf("[BACKUPENTRY MIGRATION] Clearing migration start time")
 		if err := setMigrationStartTime(ctx, gardenClient.Client(), backupEntry, nil); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not clear migration start time: %w", err)
