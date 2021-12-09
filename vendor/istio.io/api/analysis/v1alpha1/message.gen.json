@@ -18,24 +18,7 @@
           },
           "documentationUrl": {
             "description": "A url pointing to the Istio documentation for this specific error type. Should be of the form `^http(s)?://(preliminary\\.)?istio.io/docs/reference/config/analysis/` Required.",
-            "type": "string",
-            "format": "string"
-          }
-        }
-      },
-      "istio.analysis.v1alpha1.AnalysisMessageBase.Type": {
-        "description": "A unique identifier for the type of message. Name is intended to be human-readable, code is intended to be machine readable. There should be a one-to-one mapping between name and code. (i.e. do not re-use names or codes between message types.)",
-        "type": "object",
-        "properties": {
-          "name": {
-            "description": "A human-readable name for the message type. e.g. \"InternalError\", \"PodMissingProxy\". This should be the same for all messages of the same type. Required.",
-            "type": "string",
-            "format": "string"
-          },
-          "code": {
-            "description": "A 7 character code matching `^IST[0-9]{4}$` intended to uniquely identify the message type. (e.g. \"IST0001\" is mapped to the \"InternalError\" message type.) 0000-0100 are reserved. Required.",
-            "type": "string",
-            "format": "string"
+            "type": "string"
           }
         }
       },
@@ -49,6 +32,20 @@
           "INFO"
         ]
       },
+      "istio.analysis.v1alpha1.AnalysisMessageBase.Type": {
+        "description": "A unique identifier for the type of message. Name is intended to be human-readable, code is intended to be machine readable. There should be a one-to-one mapping between name and code. (i.e. do not re-use names or codes between message types.)",
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "A human-readable name for the message type. e.g. \"InternalError\", \"PodMissingProxy\". This should be the same for all messages of the same type. Required.",
+            "type": "string"
+          },
+          "code": {
+            "description": "A 7 character code matching `^IST[0-9]{4}$` intended to uniquely identify the message type. (e.g. \"IST0001\" is mapped to the \"InternalError\" message type.) 0000-0100 are reserved. Required.",
+            "type": "string"
+          }
+        }
+      },
       "istio.analysis.v1alpha1.AnalysisMessageWeakSchema": {
         "description": "AnalysisMessageWeakSchema is the set of information that's needed to define a weakly-typed schema. The purpose of this proto is to provide a mechanism for validating istio/istio/galley/pkg/config/analysis/msg/messages.yaml to make sure that we don't allow committing underspecified types.",
         "type": "object",
@@ -58,13 +55,11 @@
           },
           "description": {
             "description": "A human readable description of what the error means. Required.",
-            "type": "string",
-            "format": "string"
+            "type": "string"
           },
           "template": {
             "description": "A go-style template string (https://golang.org/pkg/fmt/#hdr-Printing) defining how to combine the args for a particular message into a log line. Required.",
-            "type": "string",
-            "format": "string"
+            "type": "string"
           },
           "args": {
             "description": "A description of the arguments for a particular message type",
@@ -80,13 +75,11 @@
         "properties": {
           "name": {
             "description": "Required",
-            "type": "string",
-            "format": "string"
+            "type": "string"
           },
           "goType": {
             "description": "Required. Should be a golang type, used in code generation. Ideally this will change to a less language-pinned type before this gets out of alpha, but for compatibility with current istio/istio code it's go_type for now.",
-            "type": "string",
-            "format": "string"
+            "type": "string"
           }
         }
       },
@@ -105,8 +98,7 @@
             "description": "A list of strings specifying the resource identifiers that were the cause of message generation. A \"path\" here is a (NAMESPACE\\/)?RESOURCETYPE/NAME tuple that uniquely identifies a particular resource. There doesn't seem to be a single concept for this, but this is intuitively taken from https://kubernetes.io/docs/reference/using-api/api-concepts/#standard-api-terminology At least one is required.",
             "type": "array",
             "items": {
-              "type": "string",
-              "format": "string"
+              "type": "string"
             }
           }
         }
@@ -120,8 +112,7 @@
           },
           "detail": {
             "description": "Any detail regarding specifics of the error. Should be human-readable.",
-            "type": "string",
-            "format": "string"
+            "type": "string"
           }
         }
       }

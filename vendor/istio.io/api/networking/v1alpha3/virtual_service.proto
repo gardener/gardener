@@ -202,6 +202,9 @@ option go_package = "istio.io/api/networking/v1alpha3";
 // +genclient
 // +k8s:deepcopy-gen=true
 // -->
+// <!-- istio code generation tags
+// +istio.io/sync-start
+// -->
 message VirtualService {
   // The destination hosts to which traffic is being sent. Could
   // be a DNS name with wildcard prefix or an IP address.  Depending on the
@@ -284,9 +287,6 @@ message VirtualService {
   // The value "." is reserved and defines an export to the same namespace that
   // the virtual service is declared in. Similarly the value "*" is reserved and
   // defines an export to all namespaces.
-  //
-  // NOTE: in the current release, the `exportTo` value is restricted to
-  // "." or "*" (i.e., the current namespace or all namespaces).
   repeated string export_to = 6;
 }
 
@@ -515,7 +515,7 @@ message VirtualService {
 //     protocol: HTTP
 //   resolution: DNS
 // ---
-// apiVersion: networking.istio.io/v1alpha3
+// apiVersion: networking.istio.io/v1beta1
 // kind: VirtualService
 // metadata:
 //   name: my-wiki-rule
@@ -629,6 +629,7 @@ message HTTPRoute {
   // Percentage of the traffic to be mirrored by the `mirror` field.
   // Use of integer `mirror_percent` value is deprecated. Use the
   // double `mirror_percentage` field instead
+  // $hide_from_docs
   google.protobuf.UInt32Value mirror_percent = 18 [deprecated=true];
 
   // Percentage of the traffic to be mirrored by the `mirror` field.
@@ -805,7 +806,7 @@ message Headers {
     // Append the given values to the headers specified by keys
     // (will create a comma-separated list of values)
     map<string, string> add = 2;
-    // Remove a the specified headers
+    // Remove the specified headers
     repeated string remove = 3;
   }
 }
@@ -1010,7 +1011,7 @@ message HTTPMatchRequest {
   //
   // - `prefix: "value"` for prefix-based match
   //
-  // - `regex: "value"` for ECMAscript style regex-based match
+  // - `regex: "value"` for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
   //
   // **Note:** Case-insensitive matching could be enabled via the
   // `ignore_uri_case` flag.
@@ -1023,7 +1024,7 @@ message HTTPMatchRequest {
   //
   // - `prefix: "value"` for prefix-based match
   //
-  // - `regex: "value"` for ECMAscript style regex-based match
+  // - `regex: "value"` for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
   //
   StringMatch scheme = 2;
 
@@ -1034,7 +1035,7 @@ message HTTPMatchRequest {
   //
   // - `prefix: "value"` for prefix-based match
   //
-  // - `regex: "value"` for ECMAscript style regex-based match
+  // - `regex: "value"` for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
   //
   StringMatch method = 3;
 
@@ -1045,7 +1046,7 @@ message HTTPMatchRequest {
   //
   // - `prefix: "value"` for prefix-based match
   //
-  // - `regex: "value"` for ECMAscript style regex-based match
+  // - `regex: "value"` for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
   //
   StringMatch authority = 4;
 
@@ -1058,7 +1059,7 @@ message HTTPMatchRequest {
   //
   // - `prefix: "value"` for prefix-based match
   //
-  // - `regex: "value"` for ECMAscript style regex-based match
+  // - `regex: "value"` for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
   //
   // If the value is empty and only the name of header is specfied, presence of the header is checked.
   // **Note:** The keys `uri`, `scheme`, `method`, and `authority` will be ignored.
@@ -1069,9 +1070,9 @@ message HTTPMatchRequest {
   // in these cases it is not required to explicitly select the port.
   uint32 port = 6;
 
-  // One or more labels that constrain the applicability of a rule to
-  // workloads with the given labels. If the VirtualService has a list of
-  // gateways specified in the top-level `gateways` field, it must include the reserved gateway
+  // One or more labels that constrain the applicability of a rule to source (client) workloads
+  // with the given labels. If the VirtualService has a list of gateways specified
+  // in the top-level `gateways` field, it must include the reserved gateway
   // `mesh` for this field to be applicable.
   map<string, string> source_labels = 7;
 
@@ -1412,6 +1413,25 @@ message HTTPRedirect {
   // this value.
   string authority = 2;
 
+  enum RedirectPortSelection {
+    FROM_PROTOCOL_DEFAULT = 0;
+    FROM_REQUEST_PORT = 1;
+  }
+  oneof redirect_port {
+    // On a redirect, overwrite the port portion of the URL with this value.
+    uint32 port = 4;
+    // On a redirect, dynamically set the port:
+    // * FROM_PROTOCOL_DEFAULT: automatically set to 80 for HTTP and 443 for HTTPS.
+    // * FROM_REQUEST_PORT: automatically use the port of the request.
+    RedirectPortSelection derive_port = 5;
+  }
+
+  // On a redirect, overwrite the scheme portion of the URL with this value.
+  // For example, `http` or `https`.
+  // If unset, the original scheme will be used.
+  // If `derivePort` is set to `FROM_PROTOCOL_DEFAULT`, this will impact the port used as well
+  string scheme = 6;
+
   // On a redirect, Specifies the HTTP status code to use in the redirect
   // response. The default response code is MOVED_PERMANENTLY (301).
   uint32 redirect_code = 3;
@@ -1498,6 +1518,8 @@ message StringMatch {
 // Describes the retry policy to use when a HTTP request fails. For
 // example, the following rule sets the maximum number of retries to 3 when
 // calling ratings:v1 service, with a 2s timeout per retry attempt.
+// A retry will be attempted if there is a connect-failure, refused_stream
+// or when the upstream server responds with Service Unavailable(503).
 //
 // {{<tabset category-name="example">}}
 // {{<tab name="v1alpha3" category-value="v1alpha3">}}
@@ -1517,7 +1539,7 @@ message StringMatch {
 //     retries:
 //       attempts: 3
 //       perTryTimeout: 2s
-//       retryOn: gateway-error,connect-failure,refused-stream
+//       retryOn: connect-failure,refused-stream,503
 // ```
 // {{</tab>}}
 //
@@ -1559,6 +1581,7 @@ message HTTPRetry {
 
   // Specifies the conditions under which retry takes place.
   // One or more policies can be specified using a ‘,’ delimited list.
+  // If retry_on specifies a valid HTTP status, it will be added to retriable_status_codes retry policy.
   // See the [retry policies](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-on)
   // and [gRPC retry policies](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-grpc-on) for more details.
   string retry_on = 3;

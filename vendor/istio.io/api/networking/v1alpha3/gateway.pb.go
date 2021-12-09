@@ -373,9 +373,6 @@ const (
 	// not have direct connectivity between their respective
 	// endpoints. Use of this mode assumes that both the source and
 	// the destination are using Istio mTLS to secure traffic.
-	// In order for this mode to be enabled, the gateway deployment
-	// must be configured with the `ISTIO_META_ROUTER_MODE=sni-dnat`
-	// environment variable.
 	ServerTLSSettings_AUTO_PASSTHROUGH ServerTLSSettings_TLSmode = 3
 	// Secure connections from the downstream using mutual TLS by
 	// presenting server certificates for authentication.  Compared
@@ -470,6 +467,9 @@ func (ServerTLSSettings_TLSProtocol) EnumDescriptor() ([]byte, []int) {
 // +kubetype-gen:groupVersion=networking.istio.io/v1alpha3
 // +genclient
 // +k8s:deepcopy-gen=true
+// -->
+// <!-- istio code generation tags
+// +istio.io/sync-start
 // -->
 type Gateway struct {
 	// A list of server specifications.

@@ -362,13 +362,43 @@ import "networking/v1alpha3/sidecar.proto";
 //         name: my-wasm-extension # This must match the name above
 //         config_discovery:
 //           config_source:
-//             api_config_source:
-//               api_type: GRPC
-//               transport_api_version: V3
-//               grpc_services:
-//               - envoy_grpc:
-//                   cluster_name: xds-grpc
+//             ads: {}
 //           type_urls: ["envoy.extensions.filters.http.wasm.v3.Wasm"]
+// ```
+//
+// The following example adds a Wasm service extension for all proxies using a locally available Wasm file.
+// The singleton Wasm extension is used to maintain a shared state between workers executing Wasm filters.
+// For example, a local rate limit extension would rely on a singleton to limit requests across all workers.
+// As another example, an authorization Wasm extension can use a singleton to maintain a database of accounts.
+//
+// ```yaml
+// apiVersion: networking.istio.io/v1alpha3
+// kind: EnvoyFilter
+// metadata:
+//   name: wasm-service
+//   namespace: myns
+// spec:
+//   configPatches:
+//   - applyTo: BOOTSTRAP
+//     patch:
+//       operation: MERGE
+//       value:
+//         bootstrap_extensions:
+//         - name: envoy.bootstrap.wasm
+//           typed_config:
+//             "@type": type.googleapis.com/envoy.extensions.wasm.v3.WasmService
+//             singleton: true
+//             config:
+//               name: my_plugin
+//               configuration:
+//                 "@type": type.googleapis.com/google.protobuf.StringValue
+//                 value: |
+//                   {}
+//               vm_config:
+//                 runtime: "envoy.wasm.runtime.v8"
+//                 code:
+//                   local:
+//                     filename: "/etc/envoy_filter_http_wasm_example.wasm"
 // ```
 package istio.networking.v1alpha3;
 
@@ -435,6 +465,9 @@ message EnvoyFilter {
     // Applies the patch to or adds an extension config in ECDS output. Note that ECDS
     // is only supported by HTTP filters.
     EXTENSION_CONFIG = 9;
+
+    // Applies the patch to bootstrap configuration.
+    BOOTSTRAP = 10;
   };
 
   // PatchContext selects a class of configurations based on the
@@ -479,12 +512,14 @@ message EnvoyFilter {
   message ClusterMatch {
     // The service port for which this cluster was generated.  If
     // omitted, applies to clusters for any port.
+    // **Note:** for inbound cluster, it is the service target port.
     uint32 port_number = 1;
 
     // The fully qualified service name for this cluster. If omitted,
     // applies to clusters for any service. For services defined
     // through service entries, the service name is same as the hosts
     // defined in the service entry.
+    // **Note:** for inbound cluster, this is ignored.
     string service = 2;
 
     // The subset associated with the service. If omitted, applies to
@@ -815,4 +850,22 @@ message EnvoyFilter {
 
   // One or more patches with match conditions.
   repeated EnvoyConfigObjectPatch config_patches = 4 [(google.api.field_behavior) = REQUIRED];
+ 
+  // Priority defines the order in which patch sets are applied within a context.
+  // When one patch depends on another patch, the order of patch application
+  // is significant. The API provides two primary ways to order patches.
+  // Patch sets in the root namespace are applied before the patch sets in the
+  // workload namespace. Patches within a patch set are processed in the order
+  // that they appear in the `configPatches` list.
+  //
+  // The default value for priority is 0 and the range is [ min-int32, max-int32 ].
+  // A patch set with a negative priority is processed before the default. A patch
+  // set with a positive priority is processed after the default.
+  // 
+  // It is recommended to start with priority values that are multiples of 10
+  // to leave room for further insertion.
+  //
+  // Patch sets are sorted in the following ascending key order:
+  // priority, creation time, fully qualified resource name.
+  int32 priority = 5;
 }

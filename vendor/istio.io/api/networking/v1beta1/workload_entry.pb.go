@@ -254,6 +254,9 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 // +genclient
 // +k8s:deepcopy-gen=true
 // -->
+// <!-- istio code generation tags
+// +istio.io/sync-from:networking/v1alpha3/workload_entry.proto
+// -->
 type WorkloadEntry struct {
 	// Address associated with the network endpoint without the
 	// port.  Domain names can be used if and only if the resolution is set

@@ -291,7 +291,30 @@ message Topology {
   ForwardClientCertDetails forward_client_cert_details = 2;
 }
 
-// ProxyConfig defines variables for individual Envoy instances.
+// ProxyConfig defines variables for individual Envoy instances. This can be configured on a per-workload basis
+// as well as by the mesh-wide defaults.
+// To set the mesh wide defaults, configure the `defaultConfig` section of `meshConfig`. For example:
+//
+// ```
+// meshConfig:
+//   defaultConfig:
+//     discoveryAddress: istiod:15012
+// ```
+//
+// This can also be configured on a per-workload basis by configuring the `proxy.istio.io/config` annotation on the pod. For example:
+//
+// ```
+// annotations:
+//   proxy.istio.io/config: |
+//     discoveryAddress: istiod:15012
+// ```
+//
+// If both are configured, the two are merged with per field semantics; the field set in annotation will fully replace the field from mesh config defaults.
+// This is different than a deep merge provided by protobuf.
+// For example, `"tracing": { "sampling": 5 }` would completely override a setting configuring a tracing provider
+// such as `"tracing": { "zipkin": { "address": "..." } }`.
+//
+// Note: fields in ProxyConfig are not dynamically configured; changes will require restart of workloads to take effect.
 message ProxyConfig {
   // Path to the generated configuration file directory.
   // Proxy agent generates the actual configuration and stores it in this directory.
@@ -498,6 +521,10 @@ message ProxyConfig {
   // The plugin certificates (the 'cacerts' secret), self-signed certificates (the 'istio-ca-secret' secret)
   // are added automatically by Istiod.
   repeated string ca_certificates_pem = 34;
+
+  // Specifies the details of the proxy image.
+  // $hide_from_docs
+  ProxyImage image = 35;
 }
 
 message RemoteService {
@@ -513,4 +540,17 @@ message RemoteService {
 
   // If set then set `SO_KEEPALIVE` on the socket to enable TCP Keepalives.
   istio.networking.v1alpha3.ConnectionPoolSettings.TCPSettings.TcpKeepalive tcp_keepalive = 3;
+}
+
+// The following values are used to construct proxy image url.
+// $hub/$image_name/$tag-$image_type
+// example: docker.io/istio/proxyv2:1.11.1 or docker.io/istio/proxyv2:1.11.1-distroless
+// This information was previously part of the Values API.
+// $hide_from_docs
+message ProxyImage {
+  // The image type of the image.
+  // Istio publishes default, debug, and distroless images.
+  // Other values are allowed if those image types (example: centos) are published to the specified hub.
+  // supported values: default, debug, distroless.
+  string image_type = 1;
 }

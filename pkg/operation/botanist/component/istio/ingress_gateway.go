@@ -73,7 +73,7 @@ func NewIngressGateway(
 
 func (i *ingress) Deploy(ctx context.Context) error {
 	// TODO(mvladev): Rotate this on on every istio version upgrade.
-	for _, filterName := range []string{"tcp-metadata-exchange-1.8", "tcp-stats-filter-1.8"} {
+	for _, filterName := range []string{"tcp-metadata-exchange-1.9", "tcp-metadata-exchange-1.10", "metadata-exchange-1.9", "metadata-exchange-1.10", "tcp-stats-filter-1.9", "stats-filter-1.9"} {
 		if err := crclient.IgnoreNotFound(i.client.Delete(ctx, &networkingv1alpha3.EnvoyFilter{
 			ObjectMeta: metav1.ObjectMeta{Name: filterName, Namespace: i.namespace},
 		})); err != nil {

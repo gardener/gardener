@@ -173,3 +173,11 @@ rules:
   - get
   - watch
   - list
+- apiGroups:
+  - extensions.istio.io
+  resources:
+  - wasmplugins
+  verbs:
+  - get
+  - watch
+  - list

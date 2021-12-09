@@ -257,6 +257,9 @@ option go_package = "istio.io/api/networking/v1alpha3";
 // +genclient
 // +k8s:deepcopy-gen=true
 // -->
+// <!-- istio code generation tags
+// +istio.io/sync-start
+// -->
 message WorkloadEntry {
   // Address associated with the network endpoint without the
   // port.  Domain names can be used if and only if the resolution is set
