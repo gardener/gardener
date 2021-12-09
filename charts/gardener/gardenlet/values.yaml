@@ -166,7 +166,7 @@ global:
           workers: 3
         backupCompactionController:
           workers: 3
-          enableBackupCompaction: true
+          enableBackupCompaction: false
           eventsThreshold: 1000000
           activeDeadlineDuration: "3h"
     # seedConfig: {}

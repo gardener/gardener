@@ -778,7 +778,7 @@ func ComputeExpectedGardenletConfiguration(
 			},
 			BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
 				Workers:                pointer.Int64(3),
-				EnableBackupCompaction: pointer.BoolPtr(true),
+				EnableBackupCompaction: pointer.BoolPtr(false),
 				EventsThreshold:        pointer.Int64Ptr(1000000),
 				ActiveDeadlineDuration: &metav1.Duration{Duration: time.Hour * 3},
 			},
