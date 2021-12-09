@@ -43,7 +43,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
-	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
@@ -426,7 +425,8 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 	defer controllerCancel()
 
 	// Initialize /healthz manager.
-	g.HealthManager = healthz.NewPeriodicHealthz(clock.RealClock{}, seedcontroller.LeaseResyncGracePeriodSeconds*time.Second)
+	healthGracePeriod := time.Duration((*g.Config.Controllers.Seed.LeaseResyncSeconds)*(*g.Config.Controllers.Seed.LeaseResyncMissThreshold)) * time.Second
+	g.HealthManager = healthz.NewPeriodicHealthz(clock.RealClock{}, healthGracePeriod)
 
 	if g.CertificateManager != nil {
 		g.CertificateManager.ScheduleCertificateRotation(controllerCtx, controllerCancel, g.Recorder)

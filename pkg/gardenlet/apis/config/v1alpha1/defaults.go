@@ -244,6 +244,14 @@ func SetDefaults_SeedControllerConfiguration(obj *SeedControllerConfiguration) {
 		v := DefaultControllerSyncPeriod
 		obj.SyncPeriod = &v
 	}
+
+	if obj.LeaseResyncSeconds == nil {
+		obj.LeaseResyncSeconds = pointer.Int32(2)
+	}
+
+	if obj.LeaseResyncMissThreshold == nil {
+		obj.LeaseResyncMissThreshold = pointer.Int32(10)
+	}
 }
 
 // SetDefaults_ShootControllerConfiguration sets defaults for the shoot controller.

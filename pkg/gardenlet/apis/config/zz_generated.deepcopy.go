@@ -945,6 +945,16 @@ func (in *SeedControllerConfiguration) DeepCopyInto(out *SeedControllerConfigura
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.LeaseResyncSeconds != nil {
+		in, out := &in.LeaseResyncSeconds, &out.LeaseResyncSeconds
+		*out = new(int32)
+		**out = **in
+	}
+	if in.LeaseResyncMissThreshold != nil {
+		in, out := &in.LeaseResyncMissThreshold, &out.LeaseResyncMissThreshold
+		*out = new(int32)
+		**out = **in
+	}
 	return
 }
 

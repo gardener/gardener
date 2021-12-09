@@ -41,6 +41,7 @@ import (
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
@@ -61,8 +62,9 @@ var _ = Describe("LeaseReconciler", func() {
 		expectedCondition *gardencorev1beta1.Condition
 		expectedLease     *coordinationv1.Lease
 
-		request    reconcile.Request
-		reconciler reconcile.Reconciler
+		request       reconcile.Request
+		reconciler    reconcile.Reconciler
+		gardenletConf *config.GardenletConfiguration
 	)
 
 	BeforeEach(func() {
@@ -107,6 +109,15 @@ var _ = Describe("LeaseReconciler", func() {
 				Body:       io.NopCloser(strings.NewReader("")),
 			},
 		}
+
+		gardenletConf = &config.GardenletConfiguration{
+			Controllers: &config.GardenletControllerConfiguration{
+				Seed: &config.SeedControllerConfiguration{
+					LeaseResyncSeconds:       pointer.Int32(2),
+					LeaseResyncMissThreshold: pointer.Int32(10),
+				},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -118,7 +129,7 @@ var _ = Describe("LeaseReconciler", func() {
 		healthManager = healthz.NewDefaultHealthz()
 		healthManager.Start()
 
-		reconciler = NewLeaseReconciler(fakeClientMap, log, healthManager, nowFunc)
+		reconciler = NewLeaseReconciler(fakeClientMap, log, healthManager, nowFunc, gardenletConf)
 	})
 
 	AfterEach(func() {
@@ -154,6 +165,17 @@ var _ = Describe("LeaseReconciler", func() {
 		expectedCondition = nil
 
 		Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{}))
+		Expect(healthManager.Get()).To(BeTrue())
+	})
+
+	It("should check if LeaseResyncSeconds matches the expectedLease value", func() {
+		expectedCondition = gardenletReadyCondition()
+		expectedLease.Spec.LeaseDurationSeconds = pointer.Int32(3)
+
+		gardenletConf.Controllers.Seed.LeaseResyncSeconds = pointer.Int32(3)
+		request = reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)}
+
+		Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: 3 * time.Second}))
 		Expect(healthManager.Get()).To(BeTrue())
 	})
 
@@ -205,14 +227,7 @@ var _ = Describe("LeaseReconciler", func() {
 	})
 
 	It("adds GardenletReady condition after renewing lease", func() {
-		expectedCondition = &gardencorev1beta1.Condition{
-			Type:               "GardenletReady",
-			Status:             "True",
-			Reason:             "GardenletReady",
-			Message:            "Gardenlet is posting ready status.",
-			LastTransitionTime: now,
-			LastUpdateTime:     now,
-		}
+		expectedCondition = gardenletReadyCondition()
 
 		Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: 2 * time.Second}))
 		Expect(healthManager.Get()).To(BeTrue())
@@ -229,14 +244,7 @@ var _ = Describe("LeaseReconciler", func() {
 		}}
 		Expect(c.Status().Update(ctx, seed)).To(Succeed())
 
-		expectedCondition = &gardencorev1beta1.Condition{
-			Type:               "GardenletReady",
-			Status:             "True",
-			Reason:             "GardenletReady",
-			Message:            "Gardenlet is posting ready status.",
-			LastTransitionTime: now,
-			LastUpdateTime:     now,
-		}
+		expectedCondition = gardenletReadyCondition()
 
 		Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: 2 * time.Second}))
 		Expect(healthManager.Get()).To(BeTrue())
@@ -260,4 +268,16 @@ func (c failingLeaseClient) Update(ctx context.Context, obj client.Object, opts 
 		return fmt.Errorf("fake")
 	}
 	return c.Client.Update(ctx, obj, opts...)
+}
+
+func gardenletReadyCondition() *gardencorev1beta1.Condition {
+	now := metav1.NewTime(time.Now().Round(time.Second))
+	return &gardencorev1beta1.Condition{
+		Type:               "GardenletReady",
+		Status:             "True",
+		Reason:             "GardenletReady",
+		Message:            "Gardenlet is posting ready status.",
+		LastTransitionTime: now,
+		LastUpdateTime:     now,
+	}
 }

@@ -655,6 +655,8 @@ func ComputeExpectedGardenletConfiguration(
 				SyncPeriod: &metav1.Duration{
 					Duration: time.Minute,
 				},
+				LeaseResyncSeconds:       pointer.Int32(2),
+				LeaseResyncMissThreshold: pointer.Int32(10),
 			},
 			Shoot: &gardenletconfigv1alpha1.ShootControllerConfiguration{
 				ReconcileInMaintenanceOnly: pointer.Bool(false),
