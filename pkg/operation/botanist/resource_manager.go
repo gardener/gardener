@@ -27,6 +27,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
 )
@@ -57,6 +59,12 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		SyncPeriod:                           utils.DurationPtr(time.Minute),
 		TargetDisableCache:                   pointer.Bool(true),
 		WatchedNamespace:                     pointer.String(b.Shoot.SeedNamespace),
+		VPA: &resourcemanager.VPAConfig{
+			MinAllowed: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("20m"),
+				corev1.ResourceMemory: resource.MustParse("30Mi"),
+			},
+		},
 	}
 
 	// ensure grm is present during hibernation (if the cluster is not hibernated yet) to reconcile any changes to
