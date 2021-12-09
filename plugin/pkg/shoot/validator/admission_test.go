@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/pointer"
 
@@ -37,7 +38,9 @@ import (
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 )
@@ -49,6 +52,7 @@ var _ = Describe("validator", func() {
 			coreInformerFactory coreinformers.SharedInformerFactory
 			cloudProfile        core.CloudProfile
 			seed                core.Seed
+			secretBinding       core.SecretBinding
 			project             core.Project
 			shoot               core.Shoot
 
@@ -191,6 +195,12 @@ var _ = Describe("validator", func() {
 					},
 				},
 			}
+			secretBindingBase = core.SecretBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-secret",
+					Namespace: namespaceName,
+				},
+			}
 			shootBase = core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "shoot",
@@ -243,18 +253,27 @@ var _ = Describe("validator", func() {
 					},
 				},
 			}
+
+			cleanup func()
 		)
 
 		BeforeEach(func() {
 			project = projectBase
 			cloudProfile = *cloudProfileBase.DeepCopy()
 			seed = seedBase
+			secretBinding = secretBindingBase
 			shoot = *shootBase.DeepCopy()
 
 			admissionHandler, _ = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			coreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
+
+			cleanup = test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, false)
+		})
+
+		AfterEach(func() {
+			cleanup()
 		})
 
 		Context("name/project length checks", func() {
@@ -639,6 +658,28 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(BeForbiddenError())
+			})
+
+			Context("when SecretBindingProviderValidation=true", func() {
+				It("should reject because the cloud provider in shoot and secret binding differ", func() {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, true)()
+
+					secretBinding.Provider = &core.SecretBindingProvider{
+						Type: "gcp",
+					}
+					shoot.Spec.Provider.Type = "aws"
+					cloudProfile.Spec.Type = "aws"
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+				})
 			})
 
 			It("should pass because no seed has to be specified (however can be). The scheduler sets the seed instead.", func() {

@@ -17,6 +17,8 @@ package validation_test
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -26,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )
 
 var _ = Describe("SecretBinding Validation Tests", func() {
@@ -96,10 +99,11 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 		It("should forbid empty SecretBinding resources", func() {
 			secretBinding.ObjectMeta = metav1.ObjectMeta{}
 			secretBinding.SecretRef = corev1.SecretReference{}
+			secretBinding.Provider = &core.SecretBindingProvider{}
 
 			errorList := ValidateSecretBinding(secretBinding)
 
-			Expect(errorList).To(HaveLen(3))
+			Expect(errorList).To(HaveLen(4))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("metadata.name"),
@@ -111,6 +115,10 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("secretRef.name"),
+			}))
+			Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("provider.type"),
 			}))
 		})
 
@@ -146,6 +154,53 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("quotas"),
+			}))
+		})
+
+		Context("when SecretBindingProviderValidation=true", func() {
+			It("should forbid updating the secret binding provider", func() {
+				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, true)()
+
+				secretBinding.Provider = &core.SecretBindingProvider{
+					Type: "old-type",
+				}
+
+				newSecretBinding := prepareSecretBindingForUpdate(secretBinding)
+				newSecretBinding.Provider = &core.SecretBindingProvider{
+					Type: "new-type",
+				}
+
+				errorList := ValidateSecretBindingUpdate(newSecretBinding, secretBinding)
+
+				Expect(errorList).To(HaveLen(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("provider"),
+				}))
+			})
+		})
+
+		It("should allow nil provider when SecretBindingProviderValidation feature gate is not enabled", func() {
+			defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, false)()
+
+			secretBinding.Provider = nil
+
+			errorList := ValidateSecretBinding(secretBinding)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid nil provider when SecretBindingProviderValidation feature gate is enabled", func() {
+			defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, true)()
+
+			secretBinding.Provider = nil
+
+			errorList := ValidateSecretBinding(secretBinding)
+
+			Expect(errorList).To(HaveLen(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("provider"),
 			}))
 		})
 	})

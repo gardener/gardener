@@ -156,6 +156,7 @@
 * [Migration from Gardener `v0` to `v1`](deployment/migration_v0_to_v1.md)
 * [Feature Gates in Gardener](deployment/feature_gates.md)
 * [Configuring the Logging stack](deployment/configuring_logging.md)
+* [SecretBinding Provider Controller](deployment/secret_binding_provider_controller.md)
 
 ## Monitoring
 

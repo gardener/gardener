@@ -38,6 +38,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | DenyInvalidExtensionResources                | `false` | `Alpha` | `1.31` |        |
 | WorkerPoolKubernetesVersion                  | `false` | `Alpha` | `1.35` |        |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` |        |
+| SecretBindingProviderValidation              | `false` | `Alpha` | `1.38` |        |
 
 ## Feature gates for graduated or deprecated features
 
@@ -109,3 +110,7 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 * `DenyInvalidExtensionResources` causes the `seed-admission-controller` to deny invalid extension resources, instead of just logging validation errors.
 * `WorkerPoolKubernetesVersion` allows to overwrite the Kubernetes version used for shoot clusters per worker pool (see [this document](../usage/worker_pool_k8s_versions.md))
 * `CopyEtcdBackupsDuringControlPlaneMigration` enables the copy of etcd backups from the object store of the source seed to the object store of the destination seed during control plane migration.
+* `SecretBindingProviderValidation` enables validations on Gardener API server that:
+	- requires the provider type of a SecretBinding to be set (on SecretBinding creation)
+	- requires the SecretBinding provider type to match the Shoot provider type (on Shoot creation)
+	- enforces immutability on the provider type of a SecretBinding

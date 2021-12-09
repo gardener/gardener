@@ -112,4 +112,12 @@ const (
 	// owner: @plkokanov
 	// alpha: v1.37.0
 	CopyEtcdBackupsDuringControlPlaneMigration featuregate.Feature = "CopyEtcdBackupsDuringControlPlaneMigration"
+
+	// SecretBindingProviderValidation enables validations on Gardener API server that:
+	// - requires the provider type of a SecretBinding to be set (on SecretBinding creation)
+	// - requires the SecretBinding provider type to match the Shoot provider type (on Shoot creation)
+	// - enforces immutability on the provider type of a SecretBinding
+	// owner: @ialidzhikov
+	// alpha: v1.38.0
+	SecretBindingProviderValidation featuregate.Feature = "SecretBindingProviderValidation"
 )

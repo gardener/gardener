@@ -33,6 +33,18 @@ type SecretBinding struct {
 	// Quotas is a list of references to Quota objects in the same or another namespace.
 	// +optional
 	Quotas []corev1.ObjectReference `json:"quotas,omitempty" protobuf:"bytes,3,rep,name=quotas"`
+	// Provider defines the provider type of the SecretBinding.
+	// +optional
+	Provider *SecretBindingProvider `json:"provider,omitempty" protobuf:"bytes,4,opt,name=provider"`
+}
+
+// SecretBindingProvider defines the provider type of the SecretBinding.
+type SecretBindingProvider struct {
+	// Type is the type of the provider.
+	//
+	// For backwards compatibility, the field can contain multiple providers separated by a comma.
+	// However the usage of single SecretBinding (hence Secret) for different cloud providers is strongly discouraged.
+	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

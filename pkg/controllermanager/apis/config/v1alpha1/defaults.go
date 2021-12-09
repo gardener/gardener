@@ -127,6 +127,15 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		}
 	}
 
+	if obj.Controllers.SecretBindingProvider == nil {
+		obj.Controllers.SecretBindingProvider = &SecretBindingProviderControllerConfiguration{
+			// The SecretBinding provider controller is disabled by default as it is considered alpha.
+			//
+			// TODO (ialidzhikov): Enable the controller by default.
+			ConcurrentSyncs: 0,
+		}
+	}
+
 	if obj.Controllers.ShootReference == nil {
 		obj.Controllers.ShootReference = &ShootReferenceControllerConfiguration{
 			ConcurrentSyncs: 5,
