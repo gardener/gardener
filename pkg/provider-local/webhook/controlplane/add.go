@@ -23,7 +23,6 @@ import (
 	oscutils "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -39,7 +38,7 @@ func AddToManager(mgr manager.Manager) (*extensionswebhook.Webhook, error) {
 	return controlplane.New(mgr, controlplane.Args{
 		Kind:     controlplane.KindShoot,
 		Provider: local.Type,
-		Types:    []client.Object{&extensionsv1alpha1.OperatingSystemConfig{}},
+		Types:    []extensionswebhook.Type{{Obj: &extensionsv1alpha1.OperatingSystemConfig{}}},
 		Mutator:  genericmutator.NewMutator(NewEnsurer(logger), oscutils.NewUnitSerializer(), kubelet.NewConfigCodec(fciCodec), fciCodec, logger),
 	})
 }

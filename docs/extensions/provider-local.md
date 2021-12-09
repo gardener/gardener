@@ -127,6 +127,14 @@ Otherwise, it reconciles the `kube-apiserver` `Service` in the shoot namespaces 
 All such `Service`s are of type `LoadBalancer`.
 Since the local Kubernetes clusters used as seed typically don't support such services, this controller sets the `.status.ingress.loadBalancer.ip[0]` to the IP of the host.
 
+#### `Node`
+
+This controller reconciles the `Node`s of [kind](https://kind.sigs.k8s.io/) clusters.
+Typically, the `.status.{capacity,allocatable}` values are determined by the resources configured for the Docker daemon (see for example [this](https://docs.docker.com/desktop/mac/#resources) for Mac).
+Since many of the `Pod`s deployed by Gardener have quite high `.spec.resources.{requests,limits}`, the kind `Node`s easily get filled up and only a few `Pod`s can be scheduled (even if they barely consume any of their reserved resources).
+In order to improve the user experience, the controller submits an empty patch which triggers the "Node webhook" (see below section) in case the `.status.{capacity,allocatable}` values are not high enough.
+The webhook will increase the capacity of the `Node`s to allow all `Pod`s to be scheduled.
+
 #### Health Checks
 
 The health check controller leverages the [health check library](healthcheck-library.md) in order to
@@ -152,6 +160,11 @@ It sets the `nodePort` to `30443` to enable communication from the host (this re
 
 This webhook reacts on `Pod`s created when the `machine-controller-manager` reconciles `Machine`s.
 It sets the `.spec.dnsPolicy=None` and `.spec.dnsConfig.nameServers` to the cluster IP of the `coredns` `Service` created in the `gardener-extension-provider-local-coredns` namespaces (see the [Bootstrapping section](#bootstrapping) for more details).
+
+#### Node
+
+This webhook reacts on [kind](https://kind.sigs.k8s.io/) `Node`s and sets the `.status.{allocatable,capacity}.cpu="100"` and `.status.{allocatable,capacity}.memory="100Gi"` fields.
+See also the above section about the "Node controller" for more information.
 
 #### Shoot
 

@@ -12,35 +12,68 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shoot
+package node
 
 import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
-	"github.com/gardener/gardener/extensions/pkg/webhook/shoot"
+	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane"
+	"github.com/gardener/gardener/pkg/provider-local/local"
 
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
+// WebhookName is the name of the node webhook.
+const WebhookName = "node"
+
 var (
-	logger = log.Log.WithName("local-shoot-webhook")
+	logger = log.Log.WithName("local-node-webhook")
 
 	// DefaultAddOptions are the default AddOptions for AddToManager.
 	DefaultAddOptions = AddOptions{}
 )
 
-// AddOptions are options to apply when adding the local shoot webhook to the manager.
+// AddOptions are options to apply when adding the local exposure webhook to the manager.
 type AddOptions struct{}
 
 // AddToManagerWithOptions creates a webhook with the given options and adds it to the manager.
 func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) (*extensionswebhook.Webhook, error) {
 	logger.Info("Adding webhook to manager")
 
-	return shoot.New(mgr, shoot.Args{
-		Types:   []extensionswebhook.Type{{Obj: &corev1.ConfigMap{}}},
-		Mutator: NewMutator(),
-	})
+	var (
+		name          = "node"
+		kind          = controlplane.KindSeed
+		provider      = local.Type
+		types         = []extensionswebhook.Type{{Obj: &corev1.Node{}, Subresources: []string{"status"}}}
+		failurePolicy = admissionregistrationv1.Ignore
+	)
+
+	logger = logger.WithValues("kind", kind, "provider", provider)
+
+	handler, err := extensionswebhook.NewBuilder(mgr, logger).WithMutator(&mutator{}, types...).Build()
+	if err != nil {
+		return nil, err
+	}
+
+	logger.Info("Creating webhook", "name", name)
+
+	return &extensionswebhook.Webhook{
+		Name:           name,
+		Kind:           kind,
+		Provider:       provider,
+		Types:          types,
+		Target:         extensionswebhook.TargetSeed,
+		Path:           name,
+		Webhook:        &admission.Webhook{Handler: handler},
+		ObjectSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/hostname": "gardener-local-control-plane"}},
+		FailurePolicy:  &failurePolicy,
+		TimeoutSeconds: pointer.Int32(1),
+	}, nil
 }
 
 // AddToManager creates a webhook with the default options and adds it to the manager.

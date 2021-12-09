@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -39,7 +38,7 @@ var logger = log.Log.WithName("shoot-webhook")
 // Args are arguments for creating a webhook targeting a shoot.
 type Args struct {
 	// Types is a list of resource types.
-	Types []client.Object
+	Types []extensionswebhook.Type
 	// Mutator is a mutator to be used by the admission handler. It doesn't need the shoot client.
 	Mutator extensionswebhook.Mutator
 	// MutatorWithShootClient is a mutator to be used by the admission handler. It needs the shoot client.

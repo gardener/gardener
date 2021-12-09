@@ -79,6 +79,8 @@ rules:
   - deployments
   - services
   - services/status
+  - nodes
+  - nodes/status
   - serviceaccounts
   - clusterroles
   - clusterrolebindings

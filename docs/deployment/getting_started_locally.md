@@ -10,6 +10,10 @@ Based on [Skaffold](https://skaffold.dev/), the container images for all require
 
 ![Architecture Diagram](content/getting_started_locally.png)
 
+## Prerequisites
+
+- Make sure your Docker daemon is up-to-date, up and running and has enough resources (at least `2` CPUs and `2Gi` memory; see [here](https://docs.docker.com/desktop/mac/#resources) how to configure the resources for Docker for Mac).
+
 ## Setting up the KinD cluster (garden and seed)
 
 ```bash

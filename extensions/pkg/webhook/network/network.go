@@ -16,7 +16,6 @@ package network
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -40,7 +39,7 @@ type Args struct {
 	// CloudProvider is the cloud provider of this webhook.
 	CloudProvider string
 	// Types is a list of resource types.
-	Types []client.Object
+	Types []extensionswebhook.Type
 	// Mutator is a mutator to be used by the admission handler.
 	Mutator webhook.Mutator
 }

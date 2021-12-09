@@ -32,6 +32,8 @@ controllers:
     concurrentSyncs: 5
   network:
     concurrentSyncs: 5
+  node:
+    concurrentSyncs: 1
   service:
     concurrentSyncs: 5
     hostIP: "127.0.0.1"

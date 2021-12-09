@@ -33,6 +33,7 @@ import (
 	localhealthcheck "github.com/gardener/gardener/pkg/provider-local/controller/healthcheck"
 	localinfrastructure "github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	localnetwork "github.com/gardener/gardener/pkg/provider-local/controller/network"
+	localnode "github.com/gardener/gardener/pkg/provider-local/controller/node"
 	localservice "github.com/gardener/gardener/pkg/provider-local/controller/service"
 	localworker "github.com/gardener/gardener/pkg/provider-local/controller/worker"
 	"github.com/gardener/gardener/pkg/provider-local/local"
@@ -104,6 +105,11 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			APIServerSNIEnabled:     true,
 		}
 
+		// options for the node controller
+		nodeCtrlOpts = &localnode.ControllerOptions{
+			MaxConcurrentReconciles: 1,
+		}
+
 		// options for the operatingsystemconfig controller
 		operatingSystemConfigCtrlOpts = &controllercmd.ControllerOptions{
 			MaxConcurrentReconciles: 5,
@@ -147,6 +153,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			controllercmd.PrefixOption("infrastructure-", infraCtrlOpts),
 			controllercmd.PrefixOption("worker-", &workerCtrlOptsUnprefixed),
 			controllercmd.PrefixOption("service-", serviceCtrlOpts),
+			controllercmd.PrefixOption("node-", nodeCtrlOpts),
 			controllercmd.PrefixOption("operatingsystemconfig-", operatingSystemConfigCtrlOpts),
 			controllercmd.PrefixOption("network-", networkCtrlOpts),
 			controllercmd.PrefixOption("healthcheck-", healthCheckCtrlOpts),
@@ -202,6 +209,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			networkCtrlOpts.Completed().Apply(&localnetwork.DefaultAddOptions.Controller)
 			operatingSystemConfigCtrlOpts.Completed().Apply(&oscommon.DefaultAddOptions.Controller)
 			serviceCtrlOpts.Completed().Apply(&localservice.DefaultAddOptions)
+			nodeCtrlOpts.Completed().Apply(&localnode.DefaultAddOptions)
 			workerCtrlOpts.Completed().Apply(&localworker.DefaultAddOptions.Controller)
 
 			reconcileOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation)

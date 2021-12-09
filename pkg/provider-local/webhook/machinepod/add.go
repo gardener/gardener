@@ -22,13 +22,12 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// WebhookName is the name of the shoot webhook.
+// WebhookName is the name of the machine pod webhook.
 const WebhookName = "machinepod"
 
 var (
@@ -49,7 +48,7 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) (*extensionsw
 		name     = "machinepod"
 		kind     = controlplane.KindSeed
 		provider = local.Type
-		types    = []client.Object{&corev1.Pod{}}
+		types    = []extensionswebhook.Type{{Obj: &corev1.Pod{}}}
 	)
 
 	logger = logger.WithValues("kind", kind, "provider", provider)
