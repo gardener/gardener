@@ -317,10 +317,20 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Fn:           flow.TaskFn(botanist.DeployGardenerResourceManager).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
-		_ = g.Add(flow.Task{
+		scalingUpGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Scaling up gardener-resource-manager",
 			Fn:           flow.TaskFn(botanist.ScaleGardenerResourceManagerToOne).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+		waitUntilGardenerResourceManagerReady = g.Add(flow.Task{
+			Name:         "Waiting until gardener-resource-manager reports readiness",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.ResourceManager.Wait).DoIf(cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(scalingUpGardenerResourceManager),
+		})
+		deployGardenerAccess = g.Add(flow.Task{
+			Name:         "Deploying Gardener shoot access resources",
+			Fn:           flow.TaskFn(botanist.DeployGardenerAccess).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deploySecrets, waitUntilGardenerResourceManagerReady),
 		})
 		deployControlPlaneExposure = g.Add(flow.Task{
 			Name:         "Deploying shoot control plane exposure components",
@@ -335,7 +345,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.TaskFn(botanist.InitializeDesiredShootClients).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, waitUntilKubeAPIServerIsReady, deployInternalDomainDNSRecord, waitUntilControlPlaneExposureReady),
+			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, waitUntilKubeAPIServerIsReady, deployInternalDomainDNSRecord, waitUntilControlPlaneExposureReady, deployGardenerAccess),
 		})
 
 		// Redeploy the worker extensions, and kube-controller-manager to make sure all components that depend on the
