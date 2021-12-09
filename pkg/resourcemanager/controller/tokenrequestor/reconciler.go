@@ -277,9 +277,28 @@ func updateTokenInSecretData(data map[string][]byte, token string) error {
 		return nil
 	}
 
-	kubeconfig := &clientcmdv1.Config{}
-	if _, _, err := clientcmdlatest.Codec.Decode(data[resourcesv1alpha1.DataKeyKubeconfig], nil, kubeconfig); err != nil {
+	kubeconfig, authInfo, err := decodeKubeconfigAndGetUser(data[resourcesv1alpha1.DataKeyKubeconfig])
+	if err != nil {
 		return err
+	}
+
+	if authInfo != nil {
+		authInfo.Token = token
+	}
+
+	kubeconfigEncoded, err := runtime.Encode(clientcmdlatest.Codec, kubeconfig)
+	if err != nil {
+		return err
+	}
+
+	data[resourcesv1alpha1.DataKeyKubeconfig] = kubeconfigEncoded
+	return nil
+}
+
+func decodeKubeconfigAndGetUser(data []byte) (*clientcmdv1.Config, *clientcmdv1.AuthInfo, error) {
+	kubeconfig := &clientcmdv1.Config{}
+	if _, _, err := clientcmdlatest.Codec.Decode(data, nil, kubeconfig); err != nil {
+		return nil, nil, err
 	}
 
 	var userName string
@@ -292,16 +311,9 @@ func updateTokenInSecretData(data map[string][]byte, token string) error {
 
 	for i, users := range kubeconfig.AuthInfos {
 		if users.Name == userName {
-			kubeconfig.AuthInfos[i].AuthInfo.Token = token
-			break
+			return kubeconfig, &kubeconfig.AuthInfos[i].AuthInfo, nil
 		}
 	}
 
-	kubeconfigEncoded, err := runtime.Encode(clientcmdlatest.Codec, kubeconfig)
-	if err != nil {
-		return err
-	}
-
-	data[resourcesv1alpha1.DataKeyKubeconfig] = kubeconfigEncoded
-	return nil
+	return nil, nil, nil
 }
