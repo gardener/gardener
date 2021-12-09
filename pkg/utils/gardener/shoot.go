@@ -224,6 +224,8 @@ type ShootAccessSecret struct {
 
 	tokenExpirationDuration string
 	kubeconfig              *clientcmdv1.Config
+	targetSecretName        string
+	targetSecretNamespace   string
 }
 
 // NewShootAccessSecret returns a new ShootAccessSecret object and initializes it with an empty corev1.Secret object
@@ -275,6 +277,13 @@ func (s *ShootAccessSecret) WithKubeconfig(kubeconfigRaw *clientcmdv1.Config) *S
 	return s
 }
 
+// WithTargetSecret sets the kubeconfig field of the ShootAccessSecret.
+func (s *ShootAccessSecret) WithTargetSecret(name, namespace string) *ShootAccessSecret {
+	s.targetSecretName = name
+	s.targetSecretNamespace = namespace
+	return s
+}
+
 // Reconcile creates or patches the given shoot access secret. Based on the struct configuration, it adds the required
 // annotations for the token requestor controller of gardener-resource-manager.
 func (s *ShootAccessSecret) Reconcile(ctx context.Context, c client.Client) error {
@@ -286,6 +295,14 @@ func (s *ShootAccessSecret) Reconcile(ctx context.Context, c client.Client) erro
 
 		if s.tokenExpirationDuration != "" {
 			metav1.SetMetaDataAnnotation(&s.Secret.ObjectMeta, resourcesv1alpha1.ServiceAccountTokenExpirationDuration, s.tokenExpirationDuration)
+		}
+
+		if s.targetSecretName != "" {
+			metav1.SetMetaDataAnnotation(&s.Secret.ObjectMeta, resourcesv1alpha1.TokenRequestorTargetSecretName, s.targetSecretName)
+		}
+
+		if s.targetSecretNamespace != "" {
+			metav1.SetMetaDataAnnotation(&s.Secret.ObjectMeta, resourcesv1alpha1.TokenRequestorTargetSecretNamespace, s.targetSecretNamespace)
 		}
 
 		if s.kubeconfig == nil {
