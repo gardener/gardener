@@ -228,17 +228,22 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Fn:           flow.TaskFn(botanist.DeployReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
 		})
+		deployOwnerDomainDNSRecord = g.Add(flow.Task{
+			Name:         "Deploying owner domain DNS record",
+			Fn:           flow.TaskFn(botanist.DeployOwnerDNSResources).DoIf(cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists, deployReferencedResources),
+		})
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Deploying internal domain DNS record",
 			Fn:           flow.TaskFn(botanist.DeployInternalDNSResources).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady, deployOwnerDomainDNSRecord),
 		})
 		deployAdditionalDNSProviders = g.Add(flow.Task{
 			Name: "Deploying additional DNS providers",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.DeployDNSProviders(ctx, additionalDNSProviders)
 			}).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, deployInternalDomainDNSRecord, deployOwnerDomainDNSRecord),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying network policies",
@@ -248,7 +253,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
 			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, deployOwnerDomainDNSRecord),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Scaling up etcd main and event",
