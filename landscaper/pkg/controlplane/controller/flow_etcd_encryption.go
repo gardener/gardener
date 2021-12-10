@@ -19,51 +19,20 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 )
 
-// GetOrGenerateEncryptionConfiguration creates an etcd encryption configuration for the Gardener API server by either reusing
-// an existing configuration from the runtime cluster, or generating a new configuration
-func (o *operation) GetOrGenerateEncryptionConfiguration(ctx context.Context) error {
-	secret := &corev1.Secret{}
-	if err := o.runtimeClient.Client().Get(ctx, kutil.Key(gardencorev1beta1constants.GardenNamespace, secretNameGardenerEncryptionConfig), secret); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
-		secret = nil
-	}
-
-	var (
-		containsEncryptionConfig bool
-		data                     []byte
-	)
-
-	if secret != nil {
-		data, containsEncryptionConfig = secret.Data[secretDataKeyEtcdEncryption]
-	}
-
-	if secret == nil || !containsEncryptionConfig {
+// GenerateEncryptionConfiguration generates a missing etcd encryption configuration for the Gardener API server
+func (o *operation) GenerateEncryptionConfiguration(ctx context.Context) error {
+	if o.imports.GardenerAPIServer.ComponentConfiguration.Encryption == nil {
 		config, err := generateEncryptionConfiguration()
 		if err != nil {
 			return fmt.Errorf("failed to generate encryption configuration for Gardener API server: %w", err)
 		}
 		o.log.Infof("Successfully generated new etcd encryption configuration for the Gardener API Server")
 		o.imports.GardenerAPIServer.ComponentConfiguration.Encryption = config
-		return nil
 	}
-
-	encryptionConfig, err := etcdencryption.Load(data)
-	if err != nil {
-		return fmt.Errorf("failed to reuse existing etcd encryption configuration from the secret %s/%s in the runtime cluster: %w", gardencorev1beta1constants.GardenNamespace, secretNameGardenerEncryptionConfig, err)
-	}
-
-	o.log.Infof("Reusing etcd encryption configuration for the Gardener API Server from the secret %s/%s in the runtime cluster", gardencorev1beta1constants.GardenNamespace, secretNameGardenerEncryptionConfig)
-	o.imports.GardenerAPIServer.ComponentConfiguration.Encryption = encryptionConfig
 
 	return nil
 }

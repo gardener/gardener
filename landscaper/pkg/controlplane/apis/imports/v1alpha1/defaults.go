@@ -16,11 +16,20 @@ package v1alpha1
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gardener/gardener/pkg/scheduler/apis/config/encoding"
 	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	landscaperv1alpha1 "github.com/gardener/landscaper/apis/core/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+)
+
+var (
+	// defaultValidityCACertificates is 5 years
+	defaultValidityCACertificates = metav1.Duration{Duration: time.Hour * 43800}
+	// defaultValidityTLSCertificates is 1 year
+	defaultValidityTLSCertificates = metav1.Duration{Duration: time.Hour * 8760}
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -39,16 +48,46 @@ func SetDefaults_Imports(obj *Imports) {
 		obj.GardenerAdmissionController.SeedRestriction = &SeedRestriction{Enabled: true}
 	}
 
-	// initialise empty as we anyways need to generate certificates
-	if obj.GardenerControllerManager == nil {
-		obj.GardenerControllerManager = &GardenerControllerManager{
-			ComponentConfiguration: &ControllerManagerComponentConfiguration{},
-		}
+	if obj.GardenerAPIServer.ComponentConfiguration.CA == nil {
+		obj.GardenerAPIServer.ComponentConfiguration.CA = &CA{}
 	}
 
-	// initialise empty as we anyways need to generate certificates
+	if obj.GardenerAPIServer.ComponentConfiguration.CA.Validity == nil {
+		obj.GardenerAPIServer.ComponentConfiguration.CA.Validity = &defaultValidityCACertificates
+	}
+
+	if obj.GardenerAPIServer.ComponentConfiguration.TLS == nil {
+		obj.GardenerAPIServer.ComponentConfiguration.TLS = &TLSServer{}
+	}
+
+	if obj.GardenerAPIServer.ComponentConfiguration.TLS.Validity == nil {
+		obj.GardenerAPIServer.ComponentConfiguration.TLS.Validity = &defaultValidityTLSCertificates
+	}
+
 	if obj.GardenerAdmissionController == nil {
 		obj.GardenerAdmissionController = &GardenerAdmissionController{}
+	}
+
+	if obj.GardenerAdmissionController.Enabled {
+		if obj.GardenerAdmissionController.ComponentConfiguration == nil {
+			obj.GardenerAdmissionController.ComponentConfiguration = &AdmissionControllerComponentConfiguration{}
+		}
+
+		if obj.GardenerAdmissionController.ComponentConfiguration.CA == nil {
+			obj.GardenerAdmissionController.ComponentConfiguration.CA = &CA{}
+		}
+
+		if obj.GardenerAdmissionController.ComponentConfiguration.CA.Validity == nil {
+			obj.GardenerAdmissionController.ComponentConfiguration.CA.Validity = &defaultValidityCACertificates
+		}
+
+		if obj.GardenerAdmissionController.ComponentConfiguration.TLS == nil {
+			obj.GardenerAdmissionController.ComponentConfiguration.TLS = &TLSServer{}
+		}
+
+		if obj.GardenerAdmissionController.ComponentConfiguration.TLS.Validity == nil {
+			obj.GardenerAdmissionController.ComponentConfiguration.TLS.Validity = &defaultValidityTLSCertificates
+		}
 	}
 
 	if obj.GardenerAPIServer.ComponentConfiguration.Admission != nil &&
@@ -77,6 +116,22 @@ func SetDefaults_Imports(obj *Imports) {
 				},
 			},
 		}
+	}
+
+	if obj.GardenerControllerManager == nil {
+		obj.GardenerControllerManager = &GardenerControllerManager{}
+	}
+
+	if obj.GardenerControllerManager.ComponentConfiguration == nil {
+		obj.GardenerControllerManager.ComponentConfiguration = &ControllerManagerComponentConfiguration{}
+	}
+
+	if obj.GardenerControllerManager.ComponentConfiguration.TLS == nil {
+		obj.GardenerControllerManager.ComponentConfiguration.TLS = &TLSServer{}
+	}
+
+	if obj.GardenerControllerManager.ComponentConfiguration.TLS.Validity == nil {
+		obj.GardenerControllerManager.ComponentConfiguration.TLS.Validity = &defaultValidityTLSCertificates
 	}
 }
 

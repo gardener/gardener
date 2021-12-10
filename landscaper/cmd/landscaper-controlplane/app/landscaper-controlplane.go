@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/gardener/gardener/landscaper/common/utils"
 	"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports"
 	importsv1alpha1 "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1"
 	importvalidation "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/validation"
 	controlplanecontroller "github.com/gardener/gardener/landscaper/pkg/controlplane/controller"
-	"github.com/gardener/gardener/landscaper/pkg/controlplane/util"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	landscaperv1alpha1 "github.com/gardener/landscaper/apis/core/v1alpha1"
@@ -139,13 +139,25 @@ func run(ctx context.Context, opts *Options, log *logrus.Logger) error {
 	log.Infof("Initialization of operation complete.")
 
 	if opts.OperationType == landscaperconstants.OperationReconcile {
-		exports, err := operation.Reconcile(ctx)
-		if err != nil {
-			return err
+		exports, successfullyDeployedApplicationChart, successfullyDeployedRuntimeChart, err := operation.Reconcile(ctx)
+
+		// make sure to always write the exports when something got deployed to the cluster (even if an error occurred after)
+		if successfullyDeployedApplicationChart {
+			log.Infof("Writing exports file to EXPORTS_PATH(%s)", opts.ExportsPath)
+			err = utils.ExportsToFile(exports, opts.ExportsPath)
+			if err != nil {
+				return err
+			}
 		}
 
-		log.Infof("Writing exports file to EXPORTS_PATH(%s)", opts.ExportsPath)
-		err = util.ExportsToFile(exports, opts.ExportsPath)
+		// if the reconciliation fails after successful deployment, we need to guarantee that the exports are written
+		// this is relevant for certificate rotation  - new certificates are already applied to
+		// the (virtual) garden cluster, but the control plane in the runtime cluster still uses the old certs.
+		if successfullyDeployedApplicationChart && !successfullyDeployedRuntimeChart {
+			// there is nothing we can do besides logging it. Should be a scary message, so operators really check.
+			log.Warnf("The runtime chart failed after the application chart already successfully deployed. This can be a problem when a certificate rotation happened during the execution. Please verify that the applied certificates in the garden cluster (Gardener API Server public CA certificate in APIService 'v1beta1.core.gardener.cloud', Gardener Admission Controller public CA certificate in the validating webhook 'validate-namespace-deletion', Gardener Admission Controller public CA certificate in the mutating webhook 'gardener-admission-controller') match what is deployed in the runtime cluster for the Gardener control plane components. A mismatch will break your Gardener installation.")
+		}
+
 		if err != nil {
 			return err
 		}

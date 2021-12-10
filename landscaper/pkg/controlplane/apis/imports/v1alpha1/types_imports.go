@@ -197,10 +197,12 @@ type SeedAuthorizer struct {
 	Enabled *bool `json:"enabled,omitempty"`
 }
 
-// CertificateRotation determines whether to regenerate the certificates that are missing in the import configuration
-// per default, missing configurations are taking from an existing Gardener installation
+// CertificateRotation contains settings related to certificate rotation
 // Also, see here: https://github.com/gardener/gardener/issues/4856
 type CertificateRotation struct {
-	// Rotate defines if the certificates should be rotated during this execution
+	// Rotate defines that all certificates (except from the etcd certificates) should be rotated
+	// This includes the CA of the Gardener API Server, the CA of the Gardener Admission Controller as well as all the TLS serving certificates of the Gardener Control Plane.
+	// Please note: certificates are automatically rotated after 80% of their lifetime.
+	// This is just a manual flag to force regeneration.
 	Rotate bool `json:"rotate,omitempty"`
 }

@@ -17,11 +17,14 @@ package controller
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	secretsutil "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
 
@@ -29,8 +32,8 @@ import (
 // Fetches existing CA certificates from the virtual-garden cluster or generates new CA certificates.
 func (o *operation) GenerateCACertificates(ctx context.Context) error {
 	// Gardener API Server CA
-	if o.imports.GardenerAPIServer.ComponentConfiguration.CA == nil {
-		publicKeyBytes, privateKeyBytes, err := generateCACertificate(o.log, commonNameGardenerCA, 5)
+	if o.imports.GardenerAPIServer.ComponentConfiguration.CA.Crt == nil {
+		publicKeyBytes, privateKeyBytes, err := generateCACertificate(o.log, commonNameGardenerCA, *o.imports.GardenerAPIServer.ComponentConfiguration.CA.Validity)
 		if err != nil {
 			return err
 		}
@@ -39,31 +42,68 @@ func (o *operation) GenerateCACertificates(ctx context.Context) error {
 			Crt: pointer.String(string(publicKeyBytes)),
 		}
 
-		// private key of the Gardener CA is only required to sign & generate new TLS serving certificates for the Gardener API server.
-		// If those are already provided, we do not need the private CA key.
-		if privateKeyBytes != nil {
-			o.imports.GardenerAPIServer.ComponentConfiguration.CA.Key = pointer.String(string(privateKeyBytes))
+		// The private key of the Gardener CA is only required to sign & generate new TLS serving certificates for the Gardener API server.
+		// However, we need to export the private key in any case
+		o.imports.GardenerAPIServer.ComponentConfiguration.CA.Key = pointer.String(string(privateKeyBytes))
+
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      secretNameLandscaperGardenerAPIServerKey,
+				Namespace: v1beta1constants.GardenNamespace,
+			},
+		}
+
+		// store the generated private key for future TLS certificate rotation (there is no resource in the Gardener
+		// controlplane helm chart that holds the CA private key)
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, o.runtimeClient.Client(), secret, func() error {
+			secret.Data = map[string][]byte{
+				secretDataKeyCAKey: privateKeyBytes,
+			}
+			return nil
+		}); err != nil {
+			return fmt.Errorf("could not create or patch secret in the runtime cluster (%s/%s) with the generated Gardener API Server CA private key: %w", v1beta1constants.GardenNamespace, secretNameLandscaperGardenerAPIServerKey, err)
 		}
 	}
 
 	// Gardener Admission Controller CA
-	if o.imports.GardenerAdmissionController.Enabled &&
-		(o.imports.GardenerAdmissionController.ComponentConfiguration == nil || o.imports.GardenerAdmissionController.ComponentConfiguration.CA == nil) {
+	if o.imports.GardenerAdmissionController.Enabled && o.imports.GardenerAdmissionController.ComponentConfiguration.CA.Crt == nil {
 		publicKeyBytes, privateKeyBytes, err := o.generateAdmissionControllerCA()
 		if err != nil {
 			return err
-		}
-
-		if o.imports.GardenerAdmissionController.ComponentConfiguration == nil {
-			o.imports.GardenerAdmissionController.ComponentConfiguration = &imports.AdmissionControllerComponentConfiguration{}
 		}
 
 		o.imports.GardenerAdmissionController.ComponentConfiguration.CA = &imports.CA{
 			Crt: pointer.String(string(publicKeyBytes)),
 			Key: pointer.String(string(privateKeyBytes)),
 		}
+
+		// in addition to exporting the CA private key, store it in a secret in the runtime cluster for future TLS certificate rotations
+		// Reason: there is no resource in the Gardener control plane helm chart containing the CA private key.
+		err = o.deployCAPrivateKeyInCluster(ctx, privateKeyBytes)
+		if err != nil {
+			return err
+		}
 	}
 
+	return nil
+}
+
+func (o *operation) deployCAPrivateKeyInCluster(ctx context.Context, privateKeyBytes []byte) error {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretNameLandscaperGardenerAdmissionControllerKey,
+			Namespace: v1beta1constants.GardenNamespace,
+		},
+	}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, o.runtimeClient.Client(), secret, func() error {
+		secret.Data = map[string][]byte{
+			secretDataKeyCAKey: privateKeyBytes,
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("could not create or patch secret in the runtime cluster (%s/%s) with the generated Admission Controller CA private key: %w", v1beta1constants.GardenNamespace, secretNameLandscaperGardenerAdmissionControllerKey, err)
+	}
 	return nil
 }
 
@@ -80,20 +120,18 @@ func (o *operation) generateAdmissionControllerCA() ([]byte, []byte, error) {
 	// configuration in the virtual garden cluster.
 	// Therefore, the edge case that the Gardener Admission Controller is deleted from the runtime cluster,
 	// but its webhook configurations including its CA are still deployed in the virtual garden, is not handled.
-	return generateCACertificate(o.log, commonNameGardenerAdmissionController, 5)
+	return generateCACertificate(o.log, commonNameGardenerAdmissionController, *o.imports.GardenerAdmissionController.ComponentConfiguration.CA.Validity)
 }
 
 // generateCACertificate generates a CA certificate and returns the PEM-encode certificate and private key
-func generateCACertificate(log logrus.FieldLogger, commonName string, yearsValidity int) ([]byte, []byte, error) {
+func generateCACertificate(log logrus.FieldLogger, commonName string, validity metav1.Duration) ([]byte, []byte, error) {
 	var caCertificate *secretsutil.Certificate
-	date := time.Now().UTC().AddDate(yearsValidity, 0, 0)
-	validity := date.Sub(time.Now().UTC())
 	apiServerCABundle := secretsutil.CertificateSecretConfig{
 		Name:       commonName,
 		CertType:   secretsutil.CACert,
 		SigningCA:  caCertificate,
 		CommonName: commonName,
-		Validity:   &validity,
+		Validity:   &validity.Duration,
 	}
 	certificate, err := apiServerCABundle.GenerateCertificate()
 	if err != nil {

@@ -30,11 +30,11 @@ import (
 
 // FetchAndValidateConfigurationFromSecretReferences fetches the configuration that is provided as secret references, validates and adds it to the import configuration.
 func (o *operation) FetchAndValidateConfigurationFromSecretReferences(ctx context.Context) error {
-	// Gardener API Server Controller
+	// Gardener API Server
 	if o.imports.GardenerAPIServer.ComponentConfiguration.CA != nil && o.imports.GardenerAPIServer.ComponentConfiguration.CA.SecretRef != nil {
 		ca, key, err := ValidateCAConfigurationFromSecretReferences(ctx, o.runtimeClient.Client(), o.imports.GardenerAPIServer.ComponentConfiguration.CA.SecretRef, field.NewPath("gardenerAPIServer.componentConfiguration.ca"))
 		if err != nil {
-			return fmt.Errorf("failed to validate GardernAPI Server TLS certificates: %v", err)
+			return fmt.Errorf("failed to validate Gardener API Server TLS certificates: %v", err)
 		}
 
 		if ca != nil {
@@ -51,7 +51,7 @@ func (o *operation) FetchAndValidateConfigurationFromSecretReferences(ctx contex
 	if o.imports.GardenerAPIServer.ComponentConfiguration.TLS != nil && o.imports.GardenerAPIServer.ComponentConfiguration.TLS.SecretRef != nil {
 		cert, key, err := ValidateTLSConfigurationFromSecretReferences(ctx, o.runtimeClient.Client(), o.imports.GardenerAPIServer.ComponentConfiguration.TLS.SecretRef, o.imports.GardenerAPIServer.ComponentConfiguration.CA, field.NewPath("gardenerAPIServer.componentConfiguration.tls"))
 		if err != nil {
-			return fmt.Errorf("failed to validate GardernAPI Server TLS certificates: %v", err)
+			return fmt.Errorf("failed to validate Gardener API Server TLS certificates: %v", err)
 		}
 
 		if cert != nil {
@@ -63,13 +63,6 @@ func (o *operation) FetchAndValidateConfigurationFromSecretReferences(ctx contex
 			o.log.Debugf("Using configured Gardener API Server TLS serving key configured in the secret %s/%s in the runtime cluster", o.imports.GardenerAPIServer.ComponentConfiguration.TLS.SecretRef.Namespace, o.imports.GardenerAPIServer.ComponentConfiguration.TLS.SecretRef.Name)
 			o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Key = pointer.String(*key)
 		}
-	}
-
-	// make sure there is a Gardener API Server CA private key to sign TLS serving certificates
-	// This can happen if the TLS serving certificate is not set and the secret reference in imports.GardenerAPIServer.ComponentConfiguration.TLS.SecretRef is set, but does not contain the CA's private key.
-	// Could not be caught in the API validation as above we fetch the secrets via the secret reference for the first time.
-	if o.imports.GardenerAPIServer.ComponentConfiguration.CA != nil && o.imports.GardenerAPIServer.ComponentConfiguration.CA.SecretRef != nil && o.imports.GardenerAPIServer.ComponentConfiguration.CA.Key == nil && o.imports.GardenerAPIServer.ComponentConfiguration.TLS == nil {
-		return fmt.Errorf("when providing a custom CA for the Gardener API server but the TLS serving certificate is not provided, the private key of the CA is required in order to generate the TLS serving certs for the Gardener API server")
 	}
 
 	if o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef != nil {

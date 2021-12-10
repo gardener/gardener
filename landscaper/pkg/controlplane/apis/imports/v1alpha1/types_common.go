@@ -16,6 +16,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -65,6 +66,8 @@ type TLSServer struct {
 	// Key is the key for the configured TLS certificate.
 	// +optional
 	Key *string `json:"key,omitempty"`
+	// Validity specifies the lifetime of a generated TLS certificate (ignored for existing certificates)
+	Validity *metav1.Duration `json:"validity,omitempty"`
 }
 
 // CA contains the x509 CA public cert and optionally a private key
@@ -82,4 +85,6 @@ type CA struct {
 	// The private key is required for signing
 	// +optional
 	Key *string `json:"key,omitempty"`
+	// Validity specifies the lifetime of a generated CA certificates (ignored for existing certificates)
+	Validity *metav1.Duration `json:"validity,omitempty"`
 }

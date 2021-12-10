@@ -12,23 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validation_test
+package controller_test
 
 import (
-	"net"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var (
-	x509Organization = []string{"gardener.cloud:system:seeds"}
-	x509DnsNames     = []string{"my.alternative.apiserver.domain"}
-	x509IpAddresses  = []net.IP{net.ParseIP("100.64.0.10").To4()}
-)
-
 func TestValidation(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Landscaper Controlplane API Imports Validation Suite")
+	RunSpecs(t, "Landscaper Controlplane Controller Suite")
 }

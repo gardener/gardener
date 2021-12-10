@@ -42,7 +42,7 @@ func ValidateControllerManager(config imports.GardenerControllerManager, fldPath
 func ValidateControllerManagerComponentConfiguration(config imports.ControllerManagerComponentConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if config.TLS != nil {
+	if config.TLS.Crt != nil {
 		allErrs = append(allErrs, ValidateCommonTLSServer(*config.TLS, fldPath.Child("tls"))...)
 	}
 
