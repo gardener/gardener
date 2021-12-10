@@ -96,7 +96,7 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, nil
 	}
 
-	mustRequeue, requeueAfter, err := r.requeue(ctx, secret.Annotations)
+	mustRequeue, requeueAfter, err := r.requeue(ctx, secret)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -190,14 +190,14 @@ func (r *reconciler) createServiceAccountToken(ctx context.Context, sa *corev1.S
 	return r.targetCoreV1Client.ServiceAccounts(sa.Namespace).CreateToken(ctx, sa.Name, tokenRequest, metav1.CreateOptions{})
 }
 
-func (r *reconciler) requeue(ctx context.Context, annotations map[string]string) (bool, time.Duration, error) {
-	renewTimestamp := annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
+func (r *reconciler) requeue(ctx context.Context, secret *corev1.Secret) (bool, time.Duration, error) {
+	renewTimestamp := secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
 
 	if len(renewTimestamp) == 0 {
 		return false, 0, nil
 	}
 
-	if targetSecret := getTargetSecretFromAnnotations(annotations); targetSecret != nil {
+	if targetSecret := getTargetSecretFromAnnotations(secret.Annotations); targetSecret != nil {
 		if err := r.targetClient.Get(ctx, client.ObjectKeyFromObject(targetSecret), targetSecret); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return false, 0, fmt.Errorf("could not read target secret: %w", err)
@@ -205,6 +205,14 @@ func (r *reconciler) requeue(ctx context.Context, annotations map[string]string)
 			// target secret is not found, so do not requeue to make sure it gets created
 			return false, 0, nil
 		}
+	}
+
+	tokenExists, err := tokenExistsInSecretData(secret.Data)
+	if err != nil {
+		return false, 0, fmt.Errorf("could not check whether token exists in secret data: %w", err)
+	}
+	if !tokenExists {
+		return false, 0, nil
 	}
 
 	renewTime, err := time.Parse(time.RFC3339, renewTimestamp)
@@ -277,9 +285,41 @@ func updateTokenInSecretData(data map[string][]byte, token string) error {
 		return nil
 	}
 
-	kubeconfig := &clientcmdv1.Config{}
-	if _, _, err := clientcmdlatest.Codec.Decode(data[resourcesv1alpha1.DataKeyKubeconfig], nil, kubeconfig); err != nil {
+	kubeconfig, authInfo, err := decodeKubeconfigAndGetUser(data[resourcesv1alpha1.DataKeyKubeconfig])
+	if err != nil {
 		return err
+	}
+
+	if authInfo != nil {
+		authInfo.Token = token
+	}
+
+	kubeconfigEncoded, err := runtime.Encode(clientcmdlatest.Codec, kubeconfig)
+	if err != nil {
+		return err
+	}
+
+	data[resourcesv1alpha1.DataKeyKubeconfig] = kubeconfigEncoded
+	return nil
+}
+
+func tokenExistsInSecretData(data map[string][]byte) (bool, error) {
+	if _, ok := data[resourcesv1alpha1.DataKeyKubeconfig]; !ok {
+		return data[resourcesv1alpha1.DataKeyToken] != nil, nil
+	}
+
+	_, authInfo, err := decodeKubeconfigAndGetUser(data[resourcesv1alpha1.DataKeyKubeconfig])
+	if err != nil {
+		return false, err
+	}
+
+	return authInfo != nil && authInfo.Token != "", nil
+}
+
+func decodeKubeconfigAndGetUser(data []byte) (*clientcmdv1.Config, *clientcmdv1.AuthInfo, error) {
+	kubeconfig := &clientcmdv1.Config{}
+	if _, _, err := clientcmdlatest.Codec.Decode(data, nil, kubeconfig); err != nil {
+		return nil, nil, err
 	}
 
 	var userName string
@@ -292,16 +332,9 @@ func updateTokenInSecretData(data map[string][]byte, token string) error {
 
 	for i, users := range kubeconfig.AuthInfos {
 		if users.Name == userName {
-			kubeconfig.AuthInfos[i].AuthInfo.Token = token
-			break
+			return kubeconfig, &kubeconfig.AuthInfos[i].AuthInfo, nil
 		}
 	}
 
-	kubeconfigEncoded, err := runtime.Encode(clientcmdlatest.Codec, kubeconfig)
-	if err != nil {
-		return err
-	}
-
-	data[resourcesv1alpha1.DataKeyKubeconfig] = kubeconfigEncoded
-	return nil
+	return nil, nil, nil
 }
