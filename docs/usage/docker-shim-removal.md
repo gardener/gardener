@@ -7,10 +7,10 @@ Don't Panic! The Kubernetes community has [published a blogpost](https://kuberne
 Gardener also needs to switch from using the built-in dockershim to `containerd`.
 Gardener will not change running Shoot clusters. But changes to the container runtime will be coupled to the K8s version selected by the Shoot:
 - starting with K8s version 1.22 Shoots not explicitly selecting a container runtime will get `containerd` instead of `docker`. Shoots can still select `docker` explicitly if needed.
-- starting with K8s version 1.23 `docker` can no longer be selected. 
+- starting with K8s version 1.23 `docker` can no longer be selected.
 
 At this point in time, we have no plans to support other container runtimes, such as `cri-o`.
-    
+
 ## What should I do?
 As a gardener operator:
 - add `containerd` and `docker` to `.spec.machineImages[].versions[].cri.name` in your CloudProfile to allow users selecting a container runtime for their Shoots (see below). **Note:** Please take a look at our detailed information regarding [container runtime support in Gardener Operating System Extensions](#container-runtime-support-in-gardener-operating-system-extensions)
@@ -34,11 +34,11 @@ See [the official kubernetes documentation](https://kubernetes.io/releases/) for
 
 ## Container Runtime support in Gardener Operating System Extensions
 
-| Operating System | docker support     | containerd support | 
+| Operating System | docker support     | containerd support |
 |------------------|--------------------|--------------------|
 | GardenLinux      | :white_check_mark: | >= v0.3.0 |
 | Ubuntu           | :white_check_mark: | >= v1.4.0 |
-| SuSE CHost       | :white_check_mark: | [in progress](https://github.com/gardener/gardener-extension-os-suse-chost/issues/42) |
+| SuSE CHost       | :white_check_mark: | >= v1.14.0 |
 | CoreOS/FlatCar   | :white_check_mark: | >= v1.8.0 |
 
 **Note**: If you're using a different Operating System Extension, start evaluating now if it provides support for `containerd`. Please refer to [our documentation of the `operatingsystemconfig` contract](https://github.com/gardener/gardener/blob/master/docs/extensions/operatingsystemconfig.md#cri-support) to understand how to support `containerd` for an Operating System Extension.
