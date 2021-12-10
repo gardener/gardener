@@ -2202,6 +2202,72 @@ message ShootExtensionStatusList {
   repeated ShootExtensionStatus items = 2;
 }
 
+// ShootLeftover represents leftover resources in a Seed cluster that once contained the control plane
+// of a Shoot cluster that are no longer needed and should be properly cleaned up.
+message ShootLeftover {
+  // Standard object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Spec defines the ShootLeftover properties.
+  // +optional
+  optional ShootLeftoverSpec spec = 2;
+
+  // Most recently observed status of the ShootLeftover.
+  // +optional
+  optional ShootLeftoverStatus status = 3;
+}
+
+// ShootLeftoverList is a collection of ShootLeftovers.
+message ShootLeftoverList {
+  // Standard list object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  // Items is the list of ShootLeftovers.
+  repeated ShootLeftover items = 2;
+}
+
+// ShootLeftoverSpec is the specification of a ShootLeftover.
+message ShootLeftoverSpec {
+  // SeedName is the name of the Seed cluster that contains the leftover resources.
+  optional string seedName = 1;
+
+  // ShootName is the name of the Shoot cluster.
+  optional string shootName = 2;
+
+  // TechnicalID is the technical ID of the Shoot cluster.
+  // It is the name of the leftover namespace and Cluster resource, and part of the name of the BackupEntry resource.
+  // If nil, it will be determined automatically.
+  // +optional
+  optional string technicalID = 3;
+
+  // UID is the unique identifier of the Shoot cluster. It is part of the name of the BackupEntry resource.
+  // If nil, it will be determined automatically if the shoot still exists.
+  // +optional
+  optional string uid = 4;
+}
+
+// ShootLeftoverStatus holds the most recently observed status of the ShootLeftover.
+message ShootLeftoverStatus {
+  // Conditions represents the latest available observations of a ShootLeftover's current state.
+  // +patchMergeKey=type
+  // +patchStrategy=merge
+  // +optional
+  repeated Condition conditions = 1;
+
+  // LastOperation holds information about the last operation on the ShootLeftover.
+  // +optional
+  optional github.com.gardener.gardener.pkg.apis.core.v1beta1.LastOperation lastOperation = 2;
+
+  // LastErrors holds information about the last occurred error(s) during an operation.
+  // +optional
+  repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.LastError lastErrors = 3;
+
+  // ObservedGeneration is the most recent generation observed for this ShootLeftover.
+  optional int64 observedGeneration = 4;
+}
+
 // ShootList is a list of Shoot objects.
 message ShootList {
   // Standard list object metadata.

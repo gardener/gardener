@@ -172,6 +172,10 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootAdvertisedAddress":                 schema_pkg_apis_core_v1alpha1_ShootAdvertisedAddress(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootExtensionStatus":                   schema_pkg_apis_core_v1alpha1_ShootExtensionStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootExtensionStatusList":               schema_pkg_apis_core_v1alpha1_ShootExtensionStatusList(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootLeftover":                          schema_pkg_apis_core_v1alpha1_ShootLeftover(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootLeftoverList":                      schema_pkg_apis_core_v1alpha1_ShootLeftoverList(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootLeftoverSpec":                      schema_pkg_apis_core_v1alpha1_ShootLeftoverSpec(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootLeftoverStatus":                    schema_pkg_apis_core_v1alpha1_ShootLeftoverStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootList":                              schema_pkg_apis_core_v1alpha1_ShootList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootMachineImage":                      schema_pkg_apis_core_v1alpha1_ShootMachineImage(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootNetworks":                          schema_pkg_apis_core_v1alpha1_ShootNetworks(ref),
@@ -6895,6 +6899,213 @@ func schema_pkg_apis_core_v1alpha1_ShootExtensionStatusList(ref common.Reference
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootExtensionStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ShootLeftover(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootLeftover represents leftover resources in a Seed cluster that once contained the control plane of a Shoot cluster that are no longer needed and should be properly cleaned up.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Spec defines the ShootLeftover properties.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootLeftoverSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Most recently observed status of the ShootLeftover.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootLeftoverStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootLeftoverSpec", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootLeftoverStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ShootLeftoverList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootLeftoverList is a collection of ShootLeftovers.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard list object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Items is the list of ShootLeftovers.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootLeftover"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootLeftover", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ShootLeftoverSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootLeftoverSpec is the specification of a ShootLeftover.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"seedName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SeedName is the name of the Seed cluster that contains the leftover resources.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"shootName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ShootName is the name of the Shoot cluster.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"technicalID": {
+						SchemaProps: spec.SchemaProps{
+							Description: "TechnicalID is the technical ID of the Shoot cluster. It is the name of the leftover namespace and Cluster resource, and part of the name of the BackupEntry resource. If nil, it will be determined automatically.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"uid": {
+						SchemaProps: spec.SchemaProps{
+							Description: "UID is the unique identifier of the Shoot cluster. It is part of the name of the BackupEntry resource. If nil, it will be determined automatically if the shoot still exists.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"seedName", "shootName"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ShootLeftoverStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootLeftoverStatus holds the most recently observed status of the ShootLeftover.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"conditions": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "type",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Conditions represents the latest available observations of a ShootLeftover's current state.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition"),
+									},
+								},
+							},
+						},
+					},
+					"lastOperation": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastOperation holds information about the last operation on the ShootLeftover.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation"),
+						},
+					},
+					"lastErrors": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastErrors holds information about the last occurred error(s) during an operation.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError"),
+									},
+								},
+							},
+						},
+					},
+					"observedGeneration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ObservedGeneration is the most recent generation observed for this ShootLeftover.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation"},
 	}
 }
 

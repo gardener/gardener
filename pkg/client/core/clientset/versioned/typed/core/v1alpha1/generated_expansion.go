@@ -46,4 +46,6 @@ type ShootExpansion interface{}
 
 type ShootExtensionStatusExpansion interface{}
 
+type ShootLeftoverExpansion interface{}
+
 type ShootStateExpansion interface{}

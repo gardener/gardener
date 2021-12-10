@@ -52,6 +52,8 @@ type Interface interface {
 	Shoots() ShootInformer
 	// ShootExtensionStatuses returns a ShootExtensionStatusInformer.
 	ShootExtensionStatuses() ShootExtensionStatusInformer
+	// ShootLeftovers returns a ShootLeftoverInformer.
+	ShootLeftovers() ShootLeftoverInformer
 	// ShootStates returns a ShootStateInformer.
 	ShootStates() ShootStateInformer
 }
@@ -135,6 +137,11 @@ func (v *version) Shoots() ShootInformer {
 // ShootExtensionStatuses returns a ShootExtensionStatusInformer.
 func (v *version) ShootExtensionStatuses() ShootExtensionStatusInformer {
 	return &shootExtensionStatusInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ShootLeftovers returns a ShootLeftoverInformer.
+func (v *version) ShootLeftovers() ShootLeftoverInformer {
+	return &shootLeftoverInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // ShootStates returns a ShootStateInformer.

@@ -84,6 +84,10 @@ func (c *FakeCoreV1alpha1) ShootExtensionStatuses(namespace string) v1alpha1.Sho
 	return &FakeShootExtensionStatuses{c, namespace}
 }
 
+func (c *FakeCoreV1alpha1) ShootLeftovers(namespace string) v1alpha1.ShootLeftoverInterface {
+	return &FakeShootLeftovers{c, namespace}
+}
+
 func (c *FakeCoreV1alpha1) ShootStates(namespace string) v1alpha1.ShootStateInterface {
 	return &FakeShootStates{c, namespace}
 }

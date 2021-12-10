@@ -98,6 +98,14 @@ type ShootExtensionStatusListerExpansion interface{}
 // ShootExtensionStatusNamespaceLister.
 type ShootExtensionStatusNamespaceListerExpansion interface{}
 
+// ShootLeftoverListerExpansion allows custom methods to be added to
+// ShootLeftoverLister.
+type ShootLeftoverListerExpansion interface{}
+
+// ShootLeftoverNamespaceListerExpansion allows custom methods to be added to
+// ShootLeftoverNamespaceLister.
+type ShootLeftoverNamespaceListerExpansion interface{}
+
 // ShootStateListerExpansion allows custom methods to be added to
 // ShootStateLister.
 type ShootStateListerExpansion interface{}

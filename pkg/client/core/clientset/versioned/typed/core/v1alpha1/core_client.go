@@ -40,6 +40,7 @@ type CoreV1alpha1Interface interface {
 	SeedsGetter
 	ShootsGetter
 	ShootExtensionStatusesGetter
+	ShootLeftoversGetter
 	ShootStatesGetter
 }
 
@@ -102,6 +103,10 @@ func (c *CoreV1alpha1Client) Shoots(namespace string) ShootInterface {
 
 func (c *CoreV1alpha1Client) ShootExtensionStatuses(namespace string) ShootExtensionStatusInterface {
 	return newShootExtensionStatuses(c, namespace)
+}
+
+func (c *CoreV1alpha1Client) ShootLeftovers(namespace string) ShootLeftoverInterface {
+	return newShootLeftovers(c, namespace)
 }
 
 func (c *CoreV1alpha1Client) ShootStates(namespace string) ShootStateInterface {

@@ -45,4 +45,8 @@ const (
 	// the Seed cluster of a core.gardener.cloud/{v1alpha1,v1beta1} Shoot
 	// referred in the status.
 	ShootStatusSeedName = "status.seedName"
+
+	// ShootLeftoverSeedName is the field selector path for finding
+	// the Seed cluster of a core.gardener.cloud/v1alpha1 ShootLeftover.
+	ShootLeftoverSeedName = "spec.seedName"
 )

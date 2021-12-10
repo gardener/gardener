@@ -35,6 +35,7 @@ import (
 	seedstore "github.com/gardener/gardener/pkg/registry/core/seed/storage"
 	shootstore "github.com/gardener/gardener/pkg/registry/core/shoot/storage"
 	shootextensionstatusstore "github.com/gardener/gardener/pkg/registry/core/shootextensionstatus/storage"
+	shootleftoverstore "github.com/gardener/gardener/pkg/registry/core/shootleftover/storage"
 	shootstatestore "github.com/gardener/gardener/pkg/registry/core/shootstate/storage"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -119,6 +120,10 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 
 	shootExtensionStatusStorage := shootextensionstatusstore.NewStorage(restOptionsGetter)
 	storage["shootextensionstatuses"] = shootExtensionStatusStorage.ShootExtensionStatus
+
+	shootLeftoverStorage := shootleftoverstore.NewStorage(restOptionsGetter)
+	storage["shootleftovers"] = shootLeftoverStorage.ShootLeftover
+	storage["shootleftovers/status"] = shootLeftoverStorage.Status
 
 	return storage
 }
