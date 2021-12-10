@@ -148,6 +148,7 @@
 ## Deployment
 
 * [Setup Gardener on a Kubernetes cluster](deployment/setup_gardener.md)
+* [Version Skew Policy](deployment/version_skew_policy.md)
 * [Deploying Gardenlets](deployment/deploy_gardenlet.md)
     * [Automatic Deployment of Gardenlets](deployment/deploy_gardenlet_automatically.md)
     * [Deploy a Gardenlet Manually](deployment/deploy_gardenlet_manually.md)
