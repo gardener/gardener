@@ -82,7 +82,7 @@ func (f *ShootClientSetFactory) CalculateClientSetHash(ctx context.Context, k cl
 	}
 
 	kubeconfigSecret := &corev1.Secret{}
-	if err := seedClient.Client().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: v1beta1constants.SecretNameGardener}, kubeconfigSecret); err != nil {
+	if err := seedClient.Client().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: f.secretName(seedNamespace)}, kubeconfigSecret); err != nil {
 		return "", err
 	}
 
@@ -101,16 +101,7 @@ func (f *ShootClientSetFactory) NewClientSet(ctx context.Context, k clientmap.Cl
 		return nil, err
 	}
 
-	secretName := v1beta1constants.SecretNameGardener
-	// If the gardenlet runs in the same cluster like the API server of the shoot then use the internal kubeconfig
-	// and communicate internally. Otherwise, fall back to the "external" kubeconfig and communicate via the
-	// load balancer of the shoot API server.
-	addr, err := LookupHost(fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, seedNamespace))
-	if err != nil {
-		f.log.Info("service DNS name lookup of kube-apiserver failed, falling back to external kubeconfig", "error", err)
-	} else if len(addr) > 0 {
-		secretName = v1beta1constants.SecretNameGardenerInternal
-	}
+	secretName := f.secretName(seedNamespace)
 
 	clientOptions := client.Options{
 		Scheme: kubernetes.ShootScheme,
@@ -131,6 +122,22 @@ func (f *ShootClientSetFactory) NewClientSet(ctx context.Context, k clientmap.Cl
 	}
 
 	return clientSet, err
+}
+
+func (f *ShootClientSetFactory) secretName(seedNamespace string) string {
+	secretName := v1beta1constants.SecretNameGardener
+
+	// If the gardenlet runs in the same cluster like the API server of the shoot then use the internal kubeconfig
+	// and communicate internally. Otherwise, fall back to the "external" kubeconfig and communicate via the
+	// load balancer of the shoot API server.
+	addr, err := LookupHost(fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, seedNamespace))
+	if err != nil {
+		f.log.Info("service DNS name lookup of kube-apiserver failed, falling back to external kubeconfig", "error", err)
+	} else if len(addr) > 0 {
+		secretName = v1beta1constants.SecretNameGardenerInternal
+	}
+
+	return secretName
 }
 
 var _ clientmap.Invalidate = &ShootClientSetFactory{}
