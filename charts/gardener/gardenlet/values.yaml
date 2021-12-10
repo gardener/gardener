@@ -161,16 +161,16 @@ global:
       #       namespace: istio-ingress-handler-2
       #       labels:
       #         istio: ingressgateway-handler-2
-      etcdConfig:
-        etcdController:
-          workers: 3
-        custodianController:
-          workers: 3
-        backupCompactionController:
-          workers: 3
-          enableBackupCompaction: true
-          eventsThreshold: 1000000
-          activeDeadlineDuration: "3h"
+      #etcdConfig:
+      #  etcdController:
+      #    workers: 3
+      #  custodianController:
+      #    workers: 3
+      #  backupCompactionController:
+      #    workers: 3
+      #    enableBackupCompaction: true
+      #    eventsThreshold: 1000000
+      #    activeDeadlineDuration: "3h"
     # seedConfig: {}
     # logging:
     #   fluentBit:
