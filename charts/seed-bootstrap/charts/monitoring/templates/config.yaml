@@ -30,6 +30,10 @@ data:
         target_label: __address__
       - action: labelmap
         regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [ __meta_kubernetes_namespace ]
+        target_label: namespace
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        target_label: pod
 
     - job_name: garden
       scheme: https
@@ -53,6 +57,10 @@ data:
         target_label: __address__
       - action: labelmap
         regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [ __meta_kubernetes_namespace ]
+        target_label: namespace
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        target_label: pod
 
     - job_name: cadvisor
       metrics_path: /federate
