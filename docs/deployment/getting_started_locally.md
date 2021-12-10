@@ -12,7 +12,8 @@ Based on [Skaffold](https://skaffold.dev/), the container images for all require
 
 ## Prerequisites
 
-- Make sure your Docker daemon is up-to-date, up and running and has enough resources (at least `2` CPUs and `2Gi` memory; see [here](https://docs.docker.com/desktop/mac/#resources) how to configure the resources for Docker for Mac).
+- Make sure your Docker daemon is up-to-date, up and running and has enough resources (at least `8` CPUs and `8Gi` memory; see [here](https://docs.docker.com/desktop/mac/#resources) how to configure the resources for Docker for Mac).
+  > Please note that 8 CPU / 8Gi memory might not be enough for more than two `Shoot` clusters, i.e., you might need to increase these values if you want to run additional `Shoot`s.
 
 ## Setting up the KinD cluster (garden and seed)
 

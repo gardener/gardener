@@ -158,6 +158,7 @@ global:
       SeedChange: true
       AdminKubeconfigRequest: true
       WorkerPoolKubernetesVersion: true
+    resources: {}
 
   # Gardener admission controller configuration values
   admission:
@@ -247,6 +248,7 @@ global:
               nIjRtpdOj7GZ4IZYyIAdBNlgPoCX6rc8mhQA4ehT0CN/D/xIkKIz76CtCVtUhE0P
               9vnayDhnZXJcT8dPkJHYucd+rydSy2PZUVU2LospQ+V9scuThRID
               -----END RSA PRIVATE KEY-----
+    resources: {}
 
   # Gardener controller manager configuration values
   controller:
@@ -258,6 +260,7 @@ global:
       featureGates:
         CachedRuntimeClients: true
         UseDNSRecords: true
+    resources: {}
 
   # General system configuration
   internalDomain:

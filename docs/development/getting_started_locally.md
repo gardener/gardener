@@ -12,7 +12,18 @@ The Gardener components, however, will be run as regular processes on your machi
 
 ## Prerequisites
 
-- Make sure your Docker daemon is up-to-date, up and running and has enough resources (at least `2` CPUs and `2Gi` memory; see [here](https://docs.docker.com/desktop/mac/#resources) how to configure the resources for Docker for Mac).
+- Make sure your Docker daemon is up-to-date, up and running and has enough resources (at least `4` CPUs and `4Gi` memory; see [here](https://docs.docker.com/desktop/mac/#resources) how to configure the resources for Docker for Mac).
+  > Please note that 4 CPU / 4Gi memory might not be enough for more than one `Shoot` cluster, i.e., you might need to increase these values if you want to run additional `Shoot`s.
+- Make sure that you increase the maximum number of open files on your host:
+  - On Mac, run `sudo launchctl limit maxfiles 65536 200000`
+  - On Linux, extend the `/etc/security/limits.conf` file with
+
+    ```text
+    * hard nofile 97816
+    * soft nofile 97816
+    ```
+
+    and reload the terminal.
 
 ## Setting up the KinD cluster (garden and seed)
 

@@ -50,7 +50,7 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) (*extensionsw
 		kind          = controlplane.KindSeed
 		provider      = local.Type
 		types         = []extensionswebhook.Type{{Obj: &corev1.Node{}, Subresources: []string{"status"}}}
-		failurePolicy = admissionregistrationv1.Ignore
+		failurePolicy = admissionregistrationv1.Fail
 	)
 
 	logger = logger.WithValues("kind", kind, "provider", provider)
