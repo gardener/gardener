@@ -219,42 +219,6 @@ var _ = Describe("ShootClientMap", func() {
 			Expect(err).To(MatchError(fmt.Sprintf("error creating new ClientSet for key %q: fake", key.Key())))
 		})
 
-		It("should fall-back to external kubeconfig if internal kubeconfig is not found", func() {
-			fakeErr := fmt.Errorf("fake")
-			mockGardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
-					shoot.DeepCopyInto(obj.(*gardencorev1beta1.Shoot))
-					return nil
-				})
-
-			timesCalled := 0
-			internal.NewClientFromSecret = func(ctx context.Context, c client.Client, namespace, secretName string, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
-				if timesCalled == 0 {
-					Expect(c).To(BeIdenticalTo(fakeSeedClientSet.Client()))
-					Expect(namespace).To(Equal(shoot.Status.TechnicalID))
-					Expect(secretName).To(Equal("gardener-internal"))
-					timesCalled++
-					return nil, apierrors.NewNotFound(corev1.Resource("secret"), "gardener-internal")
-				} else {
-					Expect(c).To(BeIdenticalTo(fakeSeedClientSet.Client()))
-					Expect(namespace).To(Equal(shoot.Status.TechnicalID))
-					Expect(secretName).To(Equal("gardener"))
-					Expect(fns).To(ConsistOfConfigFuncs(
-						kubernetes.WithClientConnectionOptions(clientConnectionConfig),
-						kubernetes.WithClientOptions(clientOptions),
-						kubernetes.WithDisabledCachedClient(),
-					))
-					timesCalled++
-					return nil, fakeErr
-				}
-			}
-
-			cs, err := cm.GetClient(ctx, key)
-			Expect(timesCalled).To(Equal(2), "should call NewClientFromSecret twice (first with internal then with external kubeconfig)")
-			Expect(cs).To(BeNil())
-			Expect(err).To(MatchError(fmt.Sprintf("error creating new ClientSet for key %q: fake", key.Key())))
-		})
-
 		It("should correctly construct a new ClientSet (in-cluster)", func() {
 			fakeCS := fakeclientset.NewClientSet()
 			changedTechnicalID := "foo"

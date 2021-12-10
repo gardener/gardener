@@ -20,7 +20,6 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	baseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -101,27 +100,11 @@ func (f *ShootClientSetFactory) NewClientSet(ctx context.Context, k clientmap.Cl
 		return nil, err
 	}
 
-	secretName := f.secretName(seedNamespace)
-
-	clientOptions := client.Options{
-		Scheme: kubernetes.ShootScheme,
-	}
-
-	clientSet, err := NewClientFromSecret(ctx, seedClient.Client(), seedNamespace, secretName,
+	return NewClientFromSecret(ctx, seedClient.Client(), seedNamespace, f.secretName(seedNamespace),
 		kubernetes.WithClientConnectionOptions(f.ClientConnectionConfig),
-		kubernetes.WithClientOptions(clientOptions),
+		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.ShootScheme}),
 		kubernetes.WithDisabledCachedClient(),
 	)
-
-	if secretName == v1beta1constants.SecretNameGardenerInternal && err != nil && apierrors.IsNotFound(err) {
-		clientSet, err = NewClientFromSecret(ctx, seedClient.Client(), seedNamespace, v1beta1constants.SecretNameGardener,
-			kubernetes.WithClientConnectionOptions(f.ClientConnectionConfig),
-			kubernetes.WithClientOptions(clientOptions),
-			kubernetes.WithDisabledCachedClient(),
-		)
-	}
-
-	return clientSet, err
 }
 
 func (f *ShootClientSetFactory) secretName(seedNamespace string) string {
