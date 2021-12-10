@@ -28,12 +28,14 @@ func init() {
 }
 
 var _ = Describe("Shoot hibernation wake-up testing", func() {
-	f := framework.NewShootFramework(nil)
+	f := framework.NewShootFramework(&framework.ShootConfig{
+		SkipSeedInitialization: true,
+	})
 
 	framework.CIt("should wake up shoot", func(ctx context.Context) {
 		hibernation := f.Shoot.Spec.Hibernation
 		if hibernation == nil || hibernation.Enabled == nil || !*hibernation.Enabled {
-			Fail("shoot is already woken up")
+			Skip("shoot is already woken up")
 		}
 
 		err := f.WakeUpShoot(ctx)
