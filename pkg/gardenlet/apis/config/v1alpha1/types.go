@@ -506,7 +506,7 @@ type ETCDController struct {
 	// Workers specify number of worker threads in ETCD controller
 	// Defaults to 3
 	// +optional
-	Workers *int64 `json:"etcdControllerWorkers,omitempty"`
+	Workers *int64 `json:"workers,omitempty"`
 }
 
 // CustodianController contains config specific to custodian controller
@@ -514,7 +514,7 @@ type CustodianController struct {
 	// Workers specify number of worker threads in custodian controller
 	// Defaults to 3
 	// +optional
-	Workers *int64 `json:"custodianControllerWorkers,omitempty"`
+	Workers *int64 `json:"workers,omitempty"`
 }
 
 // BackupCompactionController contains config specific to backup compaction controller
@@ -522,7 +522,7 @@ type BackupCompactionController struct {
 	// Workers specify number of worker threads in backup compaction controller
 	// Defaults to 3
 	// +optional
-	Workers *int64 `json:"compactionControllerWorkers,omitempty"`
+	Workers *int64 `json:"workers,omitempty"`
 	// EnableBackupCompaction enables automatic compaction of etcd backups
 	// Defaults to false
 	// +optional
