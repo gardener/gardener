@@ -798,39 +798,6 @@ var _ = Describe("merger", func() {
 			new = old.DeepCopy()
 		})
 
-		It("should not overwrite old .spec.selector if the new one is nil", func() {
-			new.Spec.JobTemplate.Spec.Selector = nil
-
-			expected := old.DeepCopy()
-
-			Expect(mergeCronJob(s, old, new, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
-		})
-
-		It("should not overwrite old .spec.template.labels if the new one is nil", func() {
-			new.Spec.JobTemplate.Spec.Template.Labels = nil
-
-			expected := old.DeepCopy()
-
-			Expect(mergeCronJob(s, old, new, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
-		})
-
-		It("should be able to merge new .spec.template.labels with the old ones", func() {
-			new.Spec.JobTemplate.Spec.Template.Labels = map[string]string{"app": "myapp", "version": "v0.1.0"}
-
-			expected := old.DeepCopy()
-			expected.Spec.JobTemplate.Spec.Template.Labels = map[string]string{
-				"app":            "myapp",
-				"controller-uid": "1a2b3c",
-				"job-name":       "pi",
-				"version":        "v0.1.0",
-			}
-
-			Expect(mergeCronJob(s, old, new, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
-		})
-
 		It("should overwrite old .spec.containers[*].resources if preserveResources is false", func() {
 			new.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
 

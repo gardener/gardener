@@ -223,15 +223,6 @@ func mergeCronJob(scheme *runtime.Scheme, oldObj, newObj runtime.Object, preserv
 		return err
 	}
 
-	// Do not overwrite a CronJob's '.spec.jobTemplate.spec.selector' if the new CronJobs's '.spec.jobTemplate.spec.selector'
-	// field is unset.
-	if newCronJob.Spec.JobTemplate.Spec.Selector == nil && oldCronJob.Spec.JobTemplate.Spec.Selector != nil {
-		newCronJob.Spec.JobTemplate.Spec.Selector = oldCronJob.Spec.JobTemplate.Spec.Selector
-	}
-
-	// Do not overwrite CronJob managed labels as 'controller-uid' and 'job-name'. '.spec.jobTemplate.spec.template' is immutable.
-	newCronJob.Spec.JobTemplate.Spec.Template.Labels = labels.Merge(oldCronJob.Spec.JobTemplate.Spec.Template.Labels, newCronJob.Spec.JobTemplate.Spec.Template.Labels)
-
 	mergePodTemplate(&oldCronJob.Spec.JobTemplate.Spec.Template, &newCronJob.Spec.JobTemplate.Spec.Template, preserveResources)
 
 	return scheme.Convert(newCronJob, newObj, nil)
