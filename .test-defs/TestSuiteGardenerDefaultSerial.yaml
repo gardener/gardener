@@ -21,4 +21,4 @@ spec:
       -ginkgo.focus="\[DEFAULT\].*\[SERIAL\]"
       -ginkgo.skip="\[DISRUPTIVE\]"
 
-  image: eu.gcr.io/gardener-project/3rd/golang:1.17.3
+  image: eu.gcr.io/gardener-project/3rd/golang:1.17.5

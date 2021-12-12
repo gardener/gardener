@@ -16,4 +16,4 @@ spec:
     -shoot-name=$SHOOT_NAME
     -deploy-gardenlet=$DEPLOY_GARDENLET
     -backup-provider=$BACKUP_PROVIDER
-  image: eu.gcr.io/gardener-project/3rd/golang:1.17.3
+  image: eu.gcr.io/gardener-project/3rd/golang:1.17.5
