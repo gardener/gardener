@@ -513,7 +513,7 @@ type ETCDConfig struct {
 // ETCDController contains config specific to ETCD controller
 type ETCDController struct {
 	// Workers specify number of worker threads in ETCD controller
-	// Defaults to 3
+	// Defaults to 50
 	// +optional
 	Workers *int64 `json:"workers,omitempty"`
 }
@@ -521,7 +521,7 @@ type ETCDController struct {
 // CustodianController contains config specific to custodian controller
 type CustodianController struct {
 	// Workers specify number of worker threads in custodian controller
-	// Defaults to 3
+	// Defaults to 10
 	// +optional
 	Workers *int64 `json:"workers,omitempty"`
 }
