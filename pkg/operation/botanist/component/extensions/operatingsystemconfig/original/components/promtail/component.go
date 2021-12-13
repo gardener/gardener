@@ -27,19 +27,23 @@ import (
 
 const (
 	// UnitName is the name of the promtail service.
-	UnitName = v1beta1constants.OperatingSystemConfigUnitNamePromtailService
+	UnitName           = v1beta1constants.OperatingSystemConfigUnitNamePromtailService
+	unitNameFetchToken = "promtail-fetch-token.service"
 
 	// PathDirectory is the path for the promtail's directory.
 	PathDirectory = "/var/lib/promtail"
-	// PathAuthToken is the path for the promtail authentication token,
-	// which is used to auth agains the Loki sidecar proxy.
+	// PathSetActiveJournalFileScript is the path for the active journal file script.
+	PathSetActiveJournalFileScript = PathDirectory + "/scripts/set_active_journal_file.sh"
+	// PathFetchTokenScript is the path to a script which fetches promtail's token for communication with the Loki
+	// sidecar proxy.
+	PathFetchTokenScript = PathDirectory + "/scripts/fetch-token.sh"
+	// PathAuthToken is the path for the file containing promtail's authentication token for communication with the Loki
+	// sidecar proxy.
 	PathAuthToken = PathDirectory + "/auth-token"
 	// PathConfig is the path for the promtail's configuration file.
 	PathConfig = v1beta1constants.OperatingSystemConfigFilePathPromtailConfig
 	// PathCACert is the path for the loki-tls certificate authority.
 	PathCACert = PathDirectory + "/ca.crt"
-	// PathSetActiveJournalFileScript is the path for the active journal file script.
-	PathSetActiveJournalFileScript = PathDirectory + "/scripts/set_active_journal_file.sh"
 
 	// ServerPort is the promtail listening port.
 	ServerPort = 3001
@@ -67,12 +71,22 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		return []extensionsv1alpha1.Unit{
 			getPromtailUnit(
 				"/bin/systemctl disable "+UnitName,
-				"/bin/sh -c \"echo 'service does not have configuration'\"",
-				fmt.Sprintf("/bin/sh -c \"echo service %s is removed!; while true; do sleep 86400; done\"", UnitName),
-			)}, nil, nil
+				`/bin/sh -c "echo 'service does not have configuration'"`,
+				fmt.Sprintf(`/bin/sh -c "echo service %s is removed!; while true; do sleep 86400; done"`, UnitName),
+			),
+			getFetchTokenScriptUnit(
+				"/bin/systemctl disable "+unitNameFetchToken,
+				fmt.Sprintf(`/bin/sh -c "rm -f `+PathAuthToken+`; echo service %s is removed!; while true; do sleep 86400; done"`, unitNameFetchToken),
+			),
+		}, nil, nil
 	}
 
 	promtailConfigFile, err := getPromtailConfigurationFile(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	fetchTokenScriptFile, err := getFetchTokenScriptFile()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -81,11 +95,16 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 			getPromtailUnit(
 				execStartPreCopyBinaryFromContainer("promtail", ctx.Images[charts.ImageNamePromtail]),
 				"/bin/sh "+PathSetActiveJournalFileScript,
-				v1beta1constants.OperatingSystemConfigFilePathBinaries+`/promtail -config.file=`+PathConfig),
+				v1beta1constants.OperatingSystemConfigFilePathBinaries+`/promtail -config.file=`+PathConfig,
+			),
+			getFetchTokenScriptUnit(
+				"",
+				PathFetchTokenScript,
+			),
 		},
 		[]extensionsv1alpha1.File{
 			promtailConfigFile,
-			getPromtailAuthTokenFile(ctx),
+			fetchTokenScriptFile,
 			getPromtailCAFile(ctx),
 			setActiveJournalFile(),
 		}, nil

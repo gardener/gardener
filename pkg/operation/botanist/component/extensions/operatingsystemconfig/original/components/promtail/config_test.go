@@ -40,8 +40,7 @@ var _ = Describe("Promtail", func() {
 				Repository: promtailRepository,
 				Tag:        &promtailImageTag,
 			}
-			lokiIngress           = "ingress.loki.testClusterDomain"
-			promtailRBACAuthToken = "lkjnaojsnfs"
+			lokiIngress = "ingress.loki.testClusterDomain"
 		)
 
 		It("should return the expected units and files when shoot logging is enabled", func() {
@@ -51,9 +50,8 @@ var _ = Describe("Promtail", func() {
 				Images: map[string]*imagevector.Image{
 					charts.ImageNamePromtail: promtailImage,
 				},
-				LokiIngress:           lokiIngress,
-				PromtailRBACAuthToken: promtailRBACAuthToken,
-				PromtailEnabled:       true,
+				LokiIngress:     lokiIngress,
+				PromtailEnabled: true,
 			}
 
 			conf := defaultConfig
@@ -89,7 +87,24 @@ RestartSec=5
 EnvironmentFile=/etc/environment
 ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh ` + promtailRepository + ":" + promtailImageTag + " -c " + "\"cp /usr/bin/promtail /opt/bin\"" + `
 ExecStartPre=/bin/sh ` + PathSetActiveJournalFileScript + `
-ExecStart=/opt/bin/promtail -config.file=` + PathConfig)},
+ExecStart=/opt/bin/promtail -config.file=` + PathConfig),
+				},
+				extensionsv1alpha1.Unit{
+					Name:    "promtail-fetch-token.service",
+					Command: pointer.String("start"),
+					Enable:  pointer.Bool(true),
+					Content: pointer.String(`[Unit]
+Description=promtail token fetcher
+After=cloud-config-downloader.service
+[Install]
+WantedBy=multi-user.target
+[Service]
+Restart=always
+RestartSec=300
+RuntimeMaxSec=120
+EnvironmentFile=/etc/environment
+ExecStart=/var/lib/promtail/scripts/fetch-token.sh`),
+				},
 			))
 
 			Expect(files).To(ConsistOf(
@@ -104,12 +119,34 @@ ExecStart=/opt/bin/promtail -config.file=` + PathConfig)},
 					},
 				},
 				extensionsv1alpha1.File{
-					Path:        PathAuthToken,
-					Permissions: pointer.Int32Ptr(0644),
+					Path:        "/var/lib/promtail/scripts/fetch-token.sh",
+					Permissions: pointer.Int32(0744),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
-							Data:     utils.EncodeBase64([]byte(promtailRBACAuthToken)),
+							Data: utils.EncodeBase64([]byte(`#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+{
+if ! SECRET="$(wget \
+  -qO- \
+  --header         "Accept: application/yaml" \
+  --header         "Authorization: Bearer $(cat "/var/lib/cloud-config-downloader/credentials/token")" \
+  --ca-certificate "/var/lib/cloud-config-downloader/credentials/ca.crt" \
+  "$(cat "/var/lib/cloud-config-downloader/credentials/server")/api/v1/namespaces/kube-system/secrets/gardener-promtail")"; then
+
+  echo "Could not retrieve the promtail token secret"
+  exit 1
+fi
+
+echo "$SECRET" | sed -rn "s/  token: (.*)/\1/p" | base64 -d > "/var/lib/promtail/auth-token"
+
+exit $?
+}
+`)),
 						},
 					},
 				},
@@ -172,9 +209,27 @@ MemorySwapMax=0
 Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
-ExecStartPre=` + "/bin/systemctl disable " + UnitName + `
+ExecStartPre=/bin/systemctl disable promtail.service
 ExecStartPre=/bin/sh -c "echo 'service does not have configuration'"
-ExecStart=/bin/sh -c "echo service ` + UnitName + ` is removed!; while true; do sleep 86400; done"`)},
+ExecStart=/bin/sh -c "echo service promtail.service is removed!; while true; do sleep 86400; done"`),
+				},
+				extensionsv1alpha1.Unit{
+					Name:    "promtail-fetch-token.service",
+					Command: pointer.String("start"),
+					Enable:  pointer.Bool(true),
+					Content: pointer.String(`[Unit]
+Description=promtail token fetcher
+After=cloud-config-downloader.service
+[Install]
+WantedBy=multi-user.target
+[Service]
+Restart=always
+RestartSec=300
+RuntimeMaxSec=120
+EnvironmentFile=/etc/environment
+ExecStartPre=/bin/systemctl disable promtail-fetch-token.service
+ExecStart=/bin/sh -c "rm -f /var/lib/promtail/auth-token; echo service promtail-fetch-token.service is removed!; while true; do sleep 86400; done"`),
+				},
 			))
 
 			Expect(files).To(BeNil())

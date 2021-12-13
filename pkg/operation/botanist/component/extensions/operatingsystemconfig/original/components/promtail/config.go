@@ -15,14 +15,40 @@
 package promtail
 
 import (
+	"bytes"
+	_ "embed"
 	"fmt"
+	"text/template"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
+
+	"github.com/Masterminds/sprig"
 	"github.com/gardener/gardener/pkg/utils"
 	"gopkg.in/yaml.v3"
 	"k8s.io/utils/pointer"
 )
+
+var (
+	tplNameFetchToken = "fetch-token"
+	//go:embed templates/scripts/fetch-token.tpl.sh
+	tplContentFetchToken string
+	tplFetchToken        *template.Template
+)
+
+func init() {
+	var err error
+	tplFetchToken, err = template.
+		New(tplNameFetchToken).
+		Funcs(sprig.TxtFuncMap()).
+		Parse(tplContentFetchToken)
+	if err != nil {
+		panic(err)
+	}
+}
 
 const setActiveJournalFileScript = `#!/bin/bash
 PERSISTANT_JOURNAL_FILE=/var/log/journal
@@ -145,19 +171,6 @@ func getPromtailConfigurationFile(ctx components.Context) (extensionsv1alpha1.Fi
 	}, nil
 }
 
-func getPromtailAuthTokenFile(ctx components.Context) extensionsv1alpha1.File {
-	return extensionsv1alpha1.File{
-		Path:        PathAuthToken,
-		Permissions: pointer.Int32(0644),
-		Content: extensionsv1alpha1.FileContent{
-			Inline: &extensionsv1alpha1.FileContentInline{
-				Encoding: "b64",
-				Data:     utils.EncodeBase64([]byte(ctx.PromtailRBACAuthToken)),
-			},
-		},
-	}
-}
-
 func getPromtailCAFile(ctx components.Context) extensionsv1alpha1.File {
 	var cABundle []byte
 	if ctx.CABundle != nil {
@@ -213,5 +226,58 @@ EnvironmentFile=/etc/environment
 ExecStartPre=` + execStartPre + `
 ExecStartPre=` + execStartPreConfig + `
 ExecStart=` + execStart),
+	}
+}
+
+func getFetchTokenScriptFile() (extensionsv1alpha1.File, error) {
+	var script bytes.Buffer
+	if err := tplFetchToken.Execute(&script, map[string]interface{}{
+		"pathCredentialsToken":  downloader.PathCredentialsToken,
+		"pathCredentialsServer": downloader.PathCredentialsServer,
+		"pathCredentialsCACert": downloader.PathCredentialsCACert,
+		"pathAuthToken":         PathAuthToken,
+		"dataKeyToken":          resourcesv1alpha1.DataKeyToken,
+		"secretName":            logging.PromtailTokenSecretName,
+	}); err != nil {
+		return extensionsv1alpha1.File{}, err
+	}
+
+	return extensionsv1alpha1.File{
+		Path:        PathFetchTokenScript,
+		Permissions: pointer.Int32(0744),
+		Content: extensionsv1alpha1.FileContent{
+			Inline: &extensionsv1alpha1.FileContentInline{
+				Encoding: "b64",
+				Data:     utils.EncodeBase64(script.Bytes()),
+			},
+		},
+	}, nil
+}
+
+func getFetchTokenScriptUnit(execStartPre, execStart string) extensionsv1alpha1.Unit {
+	unitContent := `[Unit]
+Description=promtail token fetcher
+After=` + downloader.UnitName + `
+[Install]
+WantedBy=multi-user.target
+[Service]
+Restart=always
+RestartSec=300
+RuntimeMaxSec=120
+EnvironmentFile=/etc/environment`
+
+	if execStartPre != "" {
+		unitContent += `
+ExecStartPre=` + execStartPre
+	}
+
+	unitContent += `
+ExecStart=` + execStart
+
+	return extensionsv1alpha1.Unit{
+		Name:    unitNameFetchToken,
+		Command: pointer.String("start"),
+		Enable:  pointer.Bool(true),
+		Content: &unitContent,
 	}
 }
