@@ -25,7 +25,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
@@ -84,7 +83,7 @@ func (b *Botanist) wantedCertificateAuthorities() map[string]*secrets.Certificat
 }
 
 func (b *Botanist) generateStaticTokenConfig() *secrets.StaticTokenSecretConfig {
-	staticTokenConfig := &secrets.StaticTokenSecretConfig{
+	return &secrets.StaticTokenSecretConfig{
 		Name: kubeapiserver.SecretNameStaticToken,
 		Tokens: map[string]secrets.TokenConfig{
 			common.KubecfgUsername: {
@@ -98,15 +97,6 @@ func (b *Botanist) generateStaticTokenConfig() *secrets.StaticTokenSecretConfig 
 			},
 		},
 	}
-
-	if b.isShootNodeLoggingEnabled() {
-		staticTokenConfig.Tokens[logging.PromtailName] = secrets.TokenConfig{
-			Username: logging.PromtailRBACName,
-			UserID:   logging.PromtailRBACName,
-		}
-	}
-
-	return staticTokenConfig
 }
 
 // generateWantedSecrets returns a list of Secret configuration objects satisfying the secret config interface,

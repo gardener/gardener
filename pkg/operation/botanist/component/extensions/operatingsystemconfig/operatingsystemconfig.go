@@ -76,12 +76,8 @@ type Interface interface {
 	SetKubeletCACertificate(string)
 	// SetSSHPublicKeys sets the SSHPublicKeys value.
 	SetSSHPublicKeys([]string)
-	// SetPromtailRBACAuthToken set the auth token used by Promtail to authenticate agains the loki sidecar proxy
-	SetPromtailRBACAuthToken(string)
-	// SetLokiIngressHostName sets the ingress host name of the shoot's Loki
-	SetLokiIngressHostName(string)
 	// WorkerNameToOperatingSystemConfigsMap returns a map whose key is a worker name and whose value is a structure
-	// containing both the downloader as well as the original operating system config data.
+	// containing both the downloader and the original operating system config data.
 	WorkerNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs
 }
 
@@ -129,11 +125,9 @@ type OriginalValues struct {
 	MachineTypes []gardencorev1beta1.MachineType
 	// SSHPublicKeys is a list of public SSH keys.
 	SSHPublicKeys []string
-	// PromtailRBACAuthToken is the token needed by Promtial to auth agains Loki sidecar proxy
-	PromtailRBACAuthToken string
 	// PromtailEnabled states whether Promtail shall be enabled.
 	PromtailEnabled bool
-	// LokiIngressHostName is the ingress host name of the shoot's Loki
+	// LokiIngressHostName is the ingress host name of the shoot's Loki.
 	LokiIngressHostName string
 }
 
@@ -460,16 +454,6 @@ func (o *operatingSystemConfig) SetSSHPublicKeys(keys []string) {
 	o.values.SSHPublicKeys = keys
 }
 
-// SetPromtailRBACAuthToken set the auth token used by Promtail to authenticate agains the loki sidecar proxy
-func (o *operatingSystemConfig) SetPromtailRBACAuthToken(token string) {
-	o.values.PromtailRBACAuthToken = token
-}
-
-// SetLokiIngressHostName sets the ingress host name of the shoot's Loki
-func (o *operatingSystemConfig) SetLokiIngressHostName(hostName string) {
-	o.values.LokiIngressHostName = hostName
-}
-
 // WorkerNameToOperatingSystemConfigsMap returns a map whose key is a worker name and whose value is a structure
 // containing both the downloader as well as the original operating system config data.
 func (o *operatingSystemConfig) WorkerNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs {
@@ -523,7 +507,6 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		kubernetesVersion:       kubernetesVersion,
 		sshPublicKeys:           o.values.SSHPublicKeys,
 		lokiIngressHostName:     o.values.LokiIngressHostName,
-		promtailRBACAuthToken:   o.values.PromtailRBACAuthToken,
 		promtailEnabled:         o.values.PromtailEnabled,
 	}, nil
 }
@@ -582,7 +565,6 @@ type deployer struct {
 	kubernetesVersion       *semver.Version
 	sshPublicKeys           []string
 	lokiIngressHostName     string
-	promtailRBACAuthToken   string
 	promtailEnabled         bool
 }
 
@@ -629,7 +611,6 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			KubeletDataVolumeName:   d.kubeletDataVolumeName,
 			KubernetesVersion:       d.kubernetesVersion,
 			SSHPublicKeys:           d.sshPublicKeys,
-			PromtailRBACAuthToken:   d.promtailRBACAuthToken,
 			PromtailEnabled:         d.promtailEnabled,
 			LokiIngress:             d.lokiIngressHostName,
 		})

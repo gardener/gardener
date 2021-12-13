@@ -142,30 +142,6 @@ func (mr *MockInterfaceMockRecorder) SetKubeletCACertificate(arg0 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetKubeletCACertificate", reflect.TypeOf((*MockInterface)(nil).SetKubeletCACertificate), arg0)
 }
 
-// SetLokiIngressHostName mocks base method.
-func (m *MockInterface) SetLokiIngressHostName(arg0 string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetLokiIngressHostName", arg0)
-}
-
-// SetLokiIngressHostName indicates an expected call of SetLokiIngressHostName.
-func (mr *MockInterfaceMockRecorder) SetLokiIngressHostName(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLokiIngressHostName", reflect.TypeOf((*MockInterface)(nil).SetLokiIngressHostName), arg0)
-}
-
-// SetPromtailRBACAuthToken mocks base method.
-func (m *MockInterface) SetPromtailRBACAuthToken(arg0 string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetPromtailRBACAuthToken", arg0)
-}
-
-// SetPromtailRBACAuthToken indicates an expected call of SetPromtailRBACAuthToken.
-func (mr *MockInterfaceMockRecorder) SetPromtailRBACAuthToken(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetPromtailRBACAuthToken", reflect.TypeOf((*MockInterface)(nil).SetPromtailRBACAuthToken), arg0)
-}
-
 // SetSSHPublicKeys mocks base method.
 func (m *MockInterface) SetSSHPublicKeys(arg0 []string) {
 	m.ctrl.T.Helper()
