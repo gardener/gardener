@@ -305,9 +305,7 @@ var _ = Describe("ShootClientMap", func() {
 		})
 
 		Context("correctly calculate hash", func() {
-			var secretName string
-
-			AfterEach(func() {
+			test := func(secretName string) {
 				changedTechnicalID := "foo"
 				gomock.InOrder(
 					mockGardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).
@@ -342,17 +340,17 @@ var _ = Describe("ShootClientMap", func() {
 				hash, err = factory.CalculateClientSetHash(ctx, keys.ForShoot(shoot))
 				Expect(hash).To(Equal("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))
 				Expect(err).NotTo(HaveOccurred())
-			})
+			}
 
 			It("when in-cluster", func() {
-				secretName = "gardener-internal"
+				test("gardener-internal")
 			})
 
 			It("when out-of-cluster", func() {
 				internal.LookupHost = func(host string) ([]string, error) {
 					return nil, nil
 				}
-				secretName = "gardener"
+				test("gardener")
 			})
 		})
 	})
