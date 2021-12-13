@@ -31,15 +31,16 @@ import (
 )
 
 const (
-	// PromtailName is the name used for labeling the Kubernetes resources associated with Promtail installed on the shoot nodes.
-	PromtailName = "gardener-promtail"
-	// PromtailRBACName is the name of the user used by promtail to auth gains Kube-RBAC-Proxy
-	PromtailRBACName = "gardener.cloud:logging:promtail"
-
 	managedResourceName = "shoot-node-logging"
 
 	kubeRBACProxyName            = "kube-rbac-proxy"
 	kubeRBACProxyClusterRoleName = "gardener.cloud:logging:kube-rbac-proxy"
+
+	promtailName     = "gardener-promtail"
+	promtailRBACName = "gardener.cloud:logging:promtail"
+	// PromtailTokenSecretName is the name of a secret in the kube-system namespace in the target cluster containing
+	// promtail's token for communication with the kube-apiserver.
+	PromtailTokenSecretName = promtailName
 )
 
 // Values are the values for the kube-rbac-proxy.
@@ -77,6 +78,11 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	promtailShootAccessSecret := k.newPromtailShootAccessSecret()
+	if err := promtailShootAccessSecret.Reconcile(ctx, k.Client); err != nil {
+		return err
+	}
+
 	var (
 		kubeRBACProxyClusterRolebinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
@@ -97,7 +103,7 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 
 		promtailClusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   PromtailRBACName,
+				Name:   promtailRBACName,
 				Labels: getPromtailLabels(),
 			},
 			Rules: []rbacv1.PolicyRule{
@@ -131,7 +137,7 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 
 		promtailClusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   PromtailRBACName,
+				Name:   promtailRBACName,
 				Labels: getPromtailLabels(),
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -140,15 +146,20 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 				Name:     promtailClusterRole.Name,
 			},
 			Subjects: []rbacv1.Subject{{
-				Kind: rbacv1.UserKind,
-				Name: PromtailRBACName,
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      promtailShootAccessSecret.ServiceAccountName,
+				Namespace: metav1.NamespaceSystem,
 			}},
 		}
 
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 	)
 
-	resources, err := registry.AddAllAndSerialize(kubeRBACProxyClusterRolebinding, promtailClusterRole, promtailClusterRoleBinding)
+	resources, err := registry.AddAllAndSerialize(
+		kubeRBACProxyClusterRolebinding,
+		promtailClusterRole,
+		promtailClusterRoleBinding,
+	)
 	if err != nil {
 		return err
 	}
@@ -168,6 +179,7 @@ func (k *kubeRBACProxy) Destroy(ctx context.Context) error {
 
 	return kutil.DeleteObjects(ctx, k.Client,
 		k.newKubeRBACProxyShootAccessSecret().Secret,
+		k.newPromtailShootAccessSecret().Secret,
 		// TODO(rfranzke): Remove in a future release.
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-rbac-proxy-kubeconfig", Namespace: k.Namespace}},
 	)
@@ -175,6 +187,12 @@ func (k *kubeRBACProxy) Destroy(ctx context.Context) error {
 
 func (k *kubeRBACProxy) newKubeRBACProxyShootAccessSecret() *gutil.ShootAccessSecret {
 	return gutil.NewShootAccessSecret(kubeRBACProxyName, k.Values.Namespace)
+}
+
+func (k *kubeRBACProxy) newPromtailShootAccessSecret() *gutil.ShootAccessSecret {
+	return gutil.NewShootAccessSecret("promtail", k.Values.Namespace).
+		WithServiceAccountName(promtailName).
+		WithTargetSecret(PromtailTokenSecretName, metav1.NamespaceSystem)
 }
 
 func getKubeRBACProxyLabels() map[string]string {
@@ -185,6 +203,6 @@ func getKubeRBACProxyLabels() map[string]string {
 
 func getPromtailLabels() map[string]string {
 	return map[string]string{
-		"app": PromtailName,
+		"app": promtailName,
 	}
 }
