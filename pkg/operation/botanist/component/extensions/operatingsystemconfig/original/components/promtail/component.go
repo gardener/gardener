@@ -63,8 +63,7 @@ func execStartPreCopyBinaryFromContainer(binaryName string, image *imagevector.I
 }
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	promtailAuthTokenFile := getPromtailAuthTokenFile(ctx)
-	if promtailAuthTokenFile == nil {
+	if !ctx.PromtailEnabled {
 		return []extensionsv1alpha1.Unit{
 			getPromtailUnit(
 				"/bin/systemctl disable "+UnitName,
@@ -86,7 +85,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		},
 		[]extensionsv1alpha1.File{
 			promtailConfigFile,
-			*getPromtailAuthTokenFile(ctx),
+			getPromtailAuthTokenFile(ctx),
 			getPromtailCAFile(ctx),
 			setActiveJournalFile(),
 		}, nil

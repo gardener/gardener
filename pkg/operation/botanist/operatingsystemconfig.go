@@ -71,6 +71,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 				KubeletConfigParameters: components.KubeletConfigParametersFromCoreV1beta1KubeletConfig(b.Shoot.GetInfo().Spec.Kubernetes.Kubelet),
 				KubeletCLIFlags:         components.KubeletCLIFlagsFromCoreV1beta1KubeletConfig(b.Shoot.GetInfo().Spec.Kubernetes.Kubelet),
 				MachineTypes:            b.Shoot.CloudProfile.Spec.MachineTypes,
+				PromtailEnabled:         b.isShootNodeLoggingEnabled(),
 			},
 		},
 		operatingsystemconfig.DefaultInterval,

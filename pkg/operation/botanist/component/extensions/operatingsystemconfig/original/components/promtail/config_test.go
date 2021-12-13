@@ -53,6 +53,7 @@ var _ = Describe("Promtail", func() {
 				},
 				LokiIngress:           lokiIngress,
 				PromtailRBACAuthToken: promtailRBACAuthToken,
+				PromtailEnabled:       true,
 			}
 
 			conf := defaultConfig
@@ -134,6 +135,7 @@ ExecStart=/opt/bin/promtail -config.file=` + PathConfig)},
 				},
 			))
 		})
+
 		It("should return the expected units and files when shoot logging is not enabled", func() {
 			ctx := components.Context{
 				CABundle:      &cABundle,
@@ -141,8 +143,8 @@ ExecStart=/opt/bin/promtail -config.file=` + PathConfig)},
 				Images: map[string]*imagevector.Image{
 					charts.ImageNamePromtail: promtailImage,
 				},
-				LokiIngress:           lokiIngress,
-				PromtailRBACAuthToken: "",
+				LokiIngress:     lokiIngress,
+				PromtailEnabled: false,
 			}
 
 			units, files, err := New().Config(ctx)
@@ -185,12 +187,12 @@ ExecStart=/bin/sh -c "echo service ` + UnitName + ` is removed!; while true; do 
 				Images: map[string]*imagevector.Image{
 					charts.ImageNamePromtail: promtailImage,
 				},
-				LokiIngress:           "",
-				PromtailRBACAuthToken: promtailRBACAuthToken,
+				PromtailEnabled: true,
+				LokiIngress:     "",
 			}
 
 			units, files, err := New().Config(ctx)
-			Expect(err).ToNot(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("loki ingress url is missing")))
 			Expect(units).To(BeNil())
 			Expect(files).To(BeNil())
 		})

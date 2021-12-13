@@ -114,7 +114,7 @@ var defaultConfig = config{
 
 func getPromtailConfiguration(ctx components.Context) (config, error) {
 	if ctx.LokiIngress == "" {
-		return config{}, fmt.Errorf("loki ingress url is misssing for %s", ctx.ClusterDomain)
+		return config{}, fmt.Errorf("loki ingress url is missing for %s", ctx.ClusterDomain)
 	}
 	conf := defaultConfig
 	conf.Client.Url = "https://" + ctx.LokiIngress + "/loki/api/v1/push"
@@ -145,11 +145,8 @@ func getPromtailConfigurationFile(ctx components.Context) (extensionsv1alpha1.Fi
 	}, nil
 }
 
-func getPromtailAuthTokenFile(ctx components.Context) *extensionsv1alpha1.File {
-	if len(ctx.PromtailRBACAuthToken) == 0 {
-		return nil
-	}
-	return &extensionsv1alpha1.File{
+func getPromtailAuthTokenFile(ctx components.Context) extensionsv1alpha1.File {
+	return extensionsv1alpha1.File{
 		Path:        PathAuthToken,
 		Permissions: pointer.Int32(0644),
 		Content: extensionsv1alpha1.FileContent{

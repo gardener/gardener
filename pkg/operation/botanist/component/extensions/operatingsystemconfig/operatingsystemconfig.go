@@ -131,6 +131,8 @@ type OriginalValues struct {
 	SSHPublicKeys []string
 	// PromtailRBACAuthToken is the token needed by Promtial to auth agains Loki sidecar proxy
 	PromtailRBACAuthToken string
+	// PromtailEnabled states whether Promtail shall be enabled.
+	PromtailEnabled bool
 	// LokiIngressHostName is the ingress host name of the shoot's Loki
 	LokiIngressHostName string
 }
@@ -522,6 +524,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		sshPublicKeys:           o.values.SSHPublicKeys,
 		lokiIngressHostName:     o.values.LokiIngressHostName,
 		promtailRBACAuthToken:   o.values.PromtailRBACAuthToken,
+		promtailEnabled:         o.values.PromtailEnabled,
 	}, nil
 }
 
@@ -580,6 +583,7 @@ type deployer struct {
 	sshPublicKeys           []string
 	lokiIngressHostName     string
 	promtailRBACAuthToken   string
+	promtailEnabled         bool
 }
 
 // exposed for testing
@@ -626,6 +630,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			KubernetesVersion:       d.kubernetesVersion,
 			SSHPublicKeys:           d.sshPublicKeys,
 			PromtailRBACAuthToken:   d.promtailRBACAuthToken,
+			PromtailEnabled:         d.promtailEnabled,
 			LokiIngress:             d.lokiIngressHostName,
 		})
 		if err != nil {
