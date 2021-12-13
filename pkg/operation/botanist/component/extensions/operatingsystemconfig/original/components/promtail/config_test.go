@@ -67,9 +67,9 @@ var _ = Describe("Promtail", func() {
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
 					Name:    UnitName,
-					Command: pointer.StringPtr("start"),
-					Enable:  pointer.BoolPtr(true),
-					Content: pointer.StringPtr(`[Unit]
+					Command: pointer.String("start"),
+					Enable:  pointer.Bool(true),
+					Content: pointer.String(`[Unit]
 Description=promtail daemon
 Documentation=https://grafana.com/docs/loki/latest/clients/promtail/
 [Install]
@@ -88,13 +88,13 @@ RestartSec=5
 EnvironmentFile=/etc/environment
 ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh ` + promtailRepository + ":" + promtailImageTag + " -c " + "\"cp /usr/bin/promtail /opt/bin\"" + `
 ExecStartPre=/bin/sh ` + PathSetActiveJournalFileScript + `
-ExecStart=/opt/bin/promtail -config.file=` + PathPromtailConfig)},
+ExecStart=/opt/bin/promtail -config.file=` + PathConfig)},
 			))
 
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{
-					Path:        PathPromtailConfig,
-					Permissions: pointer.Int32Ptr(0644),
+					Path:        "/var/lib/promtail/config/config",
+					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -103,7 +103,7 @@ ExecStart=/opt/bin/promtail -config.file=` + PathPromtailConfig)},
 					},
 				},
 				extensionsv1alpha1.File{
-					Path:        PathPromtailAuthToken,
+					Path:        PathAuthToken,
 					Permissions: pointer.Int32Ptr(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
@@ -113,8 +113,8 @@ ExecStart=/opt/bin/promtail -config.file=` + PathPromtailConfig)},
 					},
 				},
 				extensionsv1alpha1.File{
-					Path:        PathPromtailCACert,
-					Permissions: pointer.Int32Ptr(0644),
+					Path:        "/var/lib/promtail/ca.crt",
+					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -123,8 +123,8 @@ ExecStart=/opt/bin/promtail -config.file=` + PathPromtailConfig)},
 					},
 				},
 				extensionsv1alpha1.File{
-					Path:        PathSetActiveJournalFileScript,
-					Permissions: pointer.Int32Ptr(0644),
+					Path:        "/var/lib/promtail/scripts/set_active_journal_file.sh",
+					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -150,10 +150,10 @@ ExecStart=/opt/bin/promtail -config.file=` + PathPromtailConfig)},
 
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
-					Name:    UnitName,
-					Command: pointer.StringPtr("start"),
-					Enable:  pointer.BoolPtr(true),
-					Content: pointer.StringPtr(`[Unit]
+					Name:    "promtail.service",
+					Command: pointer.String("start"),
+					Enable:  pointer.Bool(true),
+					Content: pointer.String(`[Unit]
 Description=promtail daemon
 Documentation=https://grafana.com/docs/loki/latest/clients/promtail/
 [Install]

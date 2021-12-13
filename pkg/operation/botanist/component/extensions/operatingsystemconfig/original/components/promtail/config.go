@@ -28,7 +28,7 @@ const setActiveJournalFileScript = `#!/bin/bash
 PERSISTANT_JOURNAL_FILE=/var/log/journal
 TEMP_JOURNAL_FILE=/run/log/journal
 if [ ! -d "$PERSISTANT_JOURNAL_FILE" ] && [ -d "$TEMP_JOURNAL_FILE" ]; then
-	sed -i -e "s|$PERSISTANT_JOURNAL_FILE|$TEMP_JOURNAL_FILE|g" ` + PathPromtailConfig + `
+	sed -i -e "s|$PERSISTANT_JOURNAL_FILE|$TEMP_JOURNAL_FILE|g" ` + PathConfig + `
 fi`
 
 type config struct {
@@ -66,17 +66,17 @@ var defaultConfig = config{
 	Server: server{
 		Disable:        true,
 		LogLevel:       "info",
-		HTTPListenPort: PromtailServerPort,
+		HTTPListenPort: ServerPort,
 	},
 	Client: client{
 		Url:             "http://localhost:3100/loki/api/v1/push",
-		BearerTokenFile: PathPromtailAuthToken,
+		BearerTokenFile: PathAuthToken,
 		TLSConfig: tlsConfig{
-			CAFile: PathPromtailCACert,
+			CAFile: PathCACert,
 		},
 	},
 	Positions: positions{
-		Filename: PromtailPositionFile,
+		Filename: PositionFile,
 	},
 	ScrapeConfigs: scrapeConfigs{
 		{
@@ -122,20 +122,20 @@ func getPromtailConfiguration(ctx components.Context) (config, error) {
 	return conf, nil
 }
 
-func getPromtailConfigurationFile(ctx components.Context) (*extensionsv1alpha1.File, error) {
+func getPromtailConfigurationFile(ctx components.Context) (extensionsv1alpha1.File, error) {
 	conf, err := getPromtailConfiguration(ctx)
 	if err != nil {
-		return nil, err
+		return extensionsv1alpha1.File{}, err
 	}
 
 	configYaml, err := yaml.Marshal(&conf)
 	if err != nil {
-		return nil, err
+		return extensionsv1alpha1.File{}, err
 	}
 
-	return &extensionsv1alpha1.File{
-		Path:        PathPromtailConfig,
-		Permissions: pointer.Int32Ptr(0644),
+	return extensionsv1alpha1.File{
+		Path:        PathConfig,
+		Permissions: pointer.Int32(0644),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -150,8 +150,8 @@ func getPromtailAuthTokenFile(ctx components.Context) *extensionsv1alpha1.File {
 		return nil
 	}
 	return &extensionsv1alpha1.File{
-		Path:        PathPromtailAuthToken,
-		Permissions: pointer.Int32Ptr(0644),
+		Path:        PathAuthToken,
+		Permissions: pointer.Int32(0644),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -161,14 +161,14 @@ func getPromtailAuthTokenFile(ctx components.Context) *extensionsv1alpha1.File {
 	}
 }
 
-func getPromtailCAFile(ctx components.Context) *extensionsv1alpha1.File {
+func getPromtailCAFile(ctx components.Context) extensionsv1alpha1.File {
 	var cABundle []byte
 	if ctx.CABundle != nil {
 		cABundle = []byte(*ctx.CABundle)
 	}
-	return &extensionsv1alpha1.File{
-		Path:        PathPromtailCACert,
-		Permissions: pointer.Int32Ptr(0644),
+	return extensionsv1alpha1.File{
+		Path:        PathCACert,
+		Permissions: pointer.Int32(0644),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -178,10 +178,10 @@ func getPromtailCAFile(ctx components.Context) *extensionsv1alpha1.File {
 	}
 }
 
-func setActiveJournalFile(ctx components.Context) *extensionsv1alpha1.File {
-	return &extensionsv1alpha1.File{
+func setActiveJournalFile() extensionsv1alpha1.File {
+	return extensionsv1alpha1.File{
 		Path:        PathSetActiveJournalFileScript,
-		Permissions: pointer.Int32Ptr(0644),
+		Permissions: pointer.Int32(0644),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -191,12 +191,12 @@ func setActiveJournalFile(ctx components.Context) *extensionsv1alpha1.File {
 	}
 }
 
-func getPromtailUnit(execStartPre, execStartPreConfig, execStart string) *extensionsv1alpha1.Unit {
-	return &extensionsv1alpha1.Unit{
+func getPromtailUnit(execStartPre, execStartPreConfig, execStart string) extensionsv1alpha1.Unit {
+	return extensionsv1alpha1.Unit{
 		Name:    UnitName,
-		Command: pointer.StringPtr("start"),
-		Enable:  pointer.BoolPtr(true),
-		Content: pointer.StringPtr(`[Unit]
+		Command: pointer.String("start"),
+		Enable:  pointer.Bool(true),
+		Content: pointer.String(`[Unit]
 Description=promtail daemon
 Documentation=https://grafana.com/docs/loki/latest/clients/promtail/
 [Install]
