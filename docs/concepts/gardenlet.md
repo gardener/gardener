@@ -30,13 +30,13 @@ is scalable. Gardener achieves the same for cluster management by using a **gard
 as primary "agent" on every seed cluster, and is only responsible for shoot clusters
 located in its particular seed cluster:
 
-![Counterparts in the Gardener Architecture and the Kubernetes Architecture](gardenlet-architecture-similarities.png)
+![Counterparts in the Gardener Architecture and the Kubernetes Architecture](images/gardenlet-architecture-similarities.png)
 
 The `gardener-controller-manager` has control loops to manage resources of the Gardener API. However, instead of letting the `gardener-controller-manager` talk directly to seed clusters or shoot clusters, the responsibility isn’t only delegated to the gardenlet, but also managed using a reversed control flow: It's up to the gardenlet to contact the Gardener API server, for example, to share a status for its managed seed clusters.
 
 Reversing the control flow allows placing seed clusters or shoot clusters behind firewalls without the necessity of direct access via VPN tunnels anymore.
 
-![Reversed Control Flow Using a Gardenlet](gardenlet-architecture-detailed.png)
+![Reversed Control Flow Using a Gardenlet](images/gardenlet-architecture-detailed.png)
 
 ## TLS Bootstrapping
 

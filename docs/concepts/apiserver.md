@@ -70,4 +70,4 @@ Please see [this](../usage/openidconnect-presets.md) separate documentation file
 
 ## Overview Data Model
 
-![Gardener Overview Data Model](gardener-data-model-overview.png)
+![Gardener Overview Data Model](images/gardener-data-model-overview.png)
