@@ -31,8 +31,10 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	mockchartutil "github.com/gardener/gardener/pkg/utils/chart/mocks"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	mocksecretsutil "github.com/gardener/gardener/pkg/utils/secrets/mock"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/Masterminds/semver"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -260,6 +262,11 @@ var _ = Describe("Actuator", func() {
 			"replicas": 1,
 		}
 
+		shootAccessSecrets                 []*gutil.ShootAccessSecret
+		legacySecretNamesToCleanup         []string
+		exposureShootAccessSecrets         []*gutil.ShootAccessSecret
+		legacyExposureSecretNamesToCleanup []string
+
 		errNotFound = &apierrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}}
 		logger      = log.Log.WithName("test")
 	)
@@ -277,6 +284,11 @@ var _ = Describe("Actuator", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: "control-plane", Namespace: namespace},
 			Spec:       extensionsv1alpha1.ControlPlaneSpec{},
 		}
+
+		shootAccessSecrets = []*gutil.ShootAccessSecret{gutil.NewShootAccessSecret("new-cp", "")}
+		legacySecretNamesToCleanup = []string{"legacy-cp"}
+		exposureShootAccessSecrets = []*gutil.ShootAccessSecret{gutil.NewShootAccessSecret("new-cp-exposure", "")}
+		legacyExposureSecretNamesToCleanup = []string{"legacy-cp-exposure"}
 	})
 
 	AfterEach(func() {
@@ -286,11 +298,11 @@ var _ = Describe("Actuator", func() {
 	DescribeTable("#Reconcile",
 		func(configName string, checksums map[string]string, webhooks []admissionregistrationv1.MutatingWebhook, withShootCRDsChart bool) {
 			// Create mock client
-			client := mockclient.NewMockClient(ctrl)
+			c := mockclient.NewMockClient(ctrl)
 
 			if len(webhooks) > 0 {
-				client.EXPECT().Get(ctx, resourceKeyShootWebhooksNetworkPolicy, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(errNotFound)
-				client.EXPECT().Create(ctx, createdNetworkPolicyForShootWebhooks).Return(nil)
+				c.EXPECT().Get(ctx, resourceKeyShootWebhooksNetworkPolicy, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(errNotFound)
+				c.EXPECT().Create(ctx, createdNetworkPolicyForShootWebhooks).Return(nil)
 
 				data, _ := marshalWebhooks(webhooks, providerName, shootK8sVersion116)
 				createdMRSecretForShootWebhooks := &corev1.Secret{
@@ -298,33 +310,33 @@ var _ = Describe("Actuator", func() {
 					Data:       map[string][]byte{"mutatingwebhookconfiguration.yaml": data},
 					Type:       corev1.SecretTypeOpaque,
 				}
-				client.EXPECT().Get(ctx, resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
-				client.EXPECT().Create(ctx, createdMRSecretForShootWebhooks).Return(nil)
-				client.EXPECT().Get(ctx, resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
-				client.EXPECT().Create(ctx, createdMRForShootWebhooks).Return(nil)
+				c.EXPECT().Get(ctx, resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
+				c.EXPECT().Create(ctx, createdMRSecretForShootWebhooks).Return(nil)
+				c.EXPECT().Get(ctx, resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
+				c.EXPECT().Create(ctx, createdMRForShootWebhooks).Return(nil)
 			}
 
-			client.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
+			c.EXPECT().Get(ctx, cpSecretKey, &corev1.Secret{}).DoAndReturn(clientGet(cpSecret))
 			if configName != "" {
-				client.EXPECT().Get(ctx, cpConfigMapKey, &corev1.ConfigMap{}).DoAndReturn(clientGet(cpConfigMap))
+				c.EXPECT().Get(ctx, cpConfigMapKey, &corev1.ConfigMap{}).DoAndReturn(clientGet(cpConfigMap))
 			}
 
-			client.EXPECT().Get(ctx, resourceKeyCPShootChart, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
-			client.EXPECT().Create(ctx, createdMRSecretForCPShootChart).Return(nil)
-			client.EXPECT().Get(ctx, resourceKeyCPShootChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
-			client.EXPECT().Create(ctx, createdMRForCPShootChart).Return(nil)
+			c.EXPECT().Get(ctx, resourceKeyCPShootChart, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
+			c.EXPECT().Create(ctx, createdMRSecretForCPShootChart).Return(nil)
+			c.EXPECT().Get(ctx, resourceKeyCPShootChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
+			c.EXPECT().Create(ctx, createdMRForCPShootChart).Return(nil)
 
 			if withShootCRDsChart {
-				client.EXPECT().Get(ctx, resourceKeyCPShootCRDsChart, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
-				client.EXPECT().Create(ctx, createdMRSecretForCPShootCRDsChart).Return(nil)
-				client.EXPECT().Get(ctx, resourceKeyCPShootCRDsChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
-				client.EXPECT().Create(ctx, createdMRForCPShootCRDsChart).Return(nil)
+				c.EXPECT().Get(ctx, resourceKeyCPShootCRDsChart, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
+				c.EXPECT().Create(ctx, createdMRSecretForCPShootCRDsChart).Return(nil)
+				c.EXPECT().Get(ctx, resourceKeyCPShootCRDsChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
+				c.EXPECT().Create(ctx, createdMRForCPShootCRDsChart).Return(nil)
 			}
 
-			client.EXPECT().Get(ctx, resourceKeyStorageClassesChart, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
-			client.EXPECT().Create(ctx, createdMRSecretForStorageClassesChart).Return(nil)
-			client.EXPECT().Get(ctx, resourceKeyStorageClassesChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
-			client.EXPECT().Create(ctx, createdMRForStorageClassesChart).Return(nil)
+			c.EXPECT().Get(ctx, resourceKeyStorageClassesChart, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
+			c.EXPECT().Create(ctx, createdMRSecretForStorageClassesChart).Return(nil)
+			c.EXPECT().Get(ctx, resourceKeyStorageClassesChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
+			c.EXPECT().Create(ctx, createdMRForStorageClassesChart).Return(nil)
 
 			// Create mock Gardener clientset and chart applier
 			gardenerClientset := mockkubernetes.NewMockInterface(ctrl)
@@ -370,9 +382,30 @@ var _ = Describe("Actuator", func() {
 			}
 			vp.EXPECT().GetStorageClassesChartValues(ctx, cp, cluster).Return(storageClassesChartValues, nil)
 
+			// Handle shoot access secrets and legacy secret cleanup
+			c.EXPECT().Get(ctx, kutil.Key(namespace, shootAccessSecrets[0].Secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
+			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+				Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      shootAccessSecrets[0].Secret.Name,
+							Namespace: namespace,
+							Annotations: map[string]string{
+								"serviceaccount.resources.gardener.cloud/name":      shootAccessSecrets[0].ServiceAccountName,
+								"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
+							},
+							Labels: map[string]string{
+								"resources.gardener.cloud/purpose": "token-requestor",
+							},
+						},
+						Type: corev1.SecretTypeOpaque,
+					}))
+				})
+			c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: legacySecretNamesToCleanup[0], Namespace: namespace}})
+
 			// Create actuator
-			a := NewActuator(providerName, secrets, nil, configChart, ccmChart, ccmShootChart, cpShootCRDsChart, storageClassesChart, nil, vp, crf, imageVector, configName, webhooks, webhookServerPort, logger)
-			err := a.(inject.Client).InjectClient(client)
+			a := NewActuator(providerName, secrets, shootAccessSecrets, legacySecretNamesToCleanup, nil, nil, nil, configChart, ccmChart, ccmShootChart, cpShootCRDsChart, storageClassesChart, nil, vp, crf, imageVector, configName, webhooks, webhookServerPort, logger)
+			err := a.(inject.Client).InjectClient(c)
 			Expect(err).NotTo(HaveOccurred())
 			a.(*actuator).gardenerClientset = gardenerClientset
 			a.(*actuator).chartApplier = chartApplier
@@ -429,14 +462,16 @@ var _ = Describe("Actuator", func() {
 				client.EXPECT().Get(gomock.Any(), resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deletedMRForShootWebhooks.Name))
 			}
 
+			// Handle shoot access secrets and legacy secret cleanup
+			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecrets[0].Secret.Name, Namespace: namespace}})
+			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: legacySecretNamesToCleanup[0], Namespace: namespace}})
+
 			// Create actuator
-			a := NewActuator(providerName, secrets, nil, configChart, ccmChart, nil, cpShootCRDsChart, nil, nil, nil, nil, nil, configName, webhooks, webhookServerPort, logger)
-			err := a.(inject.Client).InjectClient(client)
-			Expect(err).NotTo(HaveOccurred())
+			a := NewActuator(providerName, secrets, shootAccessSecrets, legacySecretNamesToCleanup, nil, nil, nil, configChart, ccmChart, nil, cpShootCRDsChart, nil, nil, nil, nil, nil, configName, webhooks, webhookServerPort, logger)
+			Expect(a.(inject.Client).InjectClient(client)).To(Succeed())
 
 			// Call Delete method and check the result
-			err = a.Delete(ctx, cp, cluster)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(a.Delete(ctx, cp, cluster)).To(Succeed())
 		},
 		Entry("should delete secrets and charts", cloudProviderConfigName, []admissionregistrationv1.MutatingWebhook{{}}, true),
 		Entry("should delete secrets and charts (no config)", "", []admissionregistrationv1.MutatingWebhook{{}}, true),
@@ -446,6 +481,9 @@ var _ = Describe("Actuator", func() {
 
 	DescribeTable("#ReconcileExposure",
 		func() {
+			// Create mock client
+			c := mockclient.NewMockClient(ctrl)
+
 			// Create mock Gardener clientset and chart applier
 			gardenerClientset := mockkubernetes.NewMockInterface(ctrl)
 			gardenerClientset.EXPECT().Version().Return(seedVersion)
@@ -461,8 +499,30 @@ var _ = Describe("Actuator", func() {
 			vp := mockgenericactuator.NewMockValuesProvider(ctrl)
 			vp.EXPECT().GetControlPlaneExposureChartValues(ctx, cpExposure, cluster, exposureChecksums).Return(controlPlaneExposureChartValues, nil)
 
+			// Handle shoot access secrets and legacy secret cleanup
+			c.EXPECT().Get(ctx, kutil.Key(namespace, exposureShootAccessSecrets[0].Secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
+			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+				Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					Expect(obj).To(DeepEqual(&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      exposureShootAccessSecrets[0].Secret.Name,
+							Namespace: namespace,
+							Annotations: map[string]string{
+								"serviceaccount.resources.gardener.cloud/name":      exposureShootAccessSecrets[0].ServiceAccountName,
+								"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
+							},
+							Labels: map[string]string{
+								"resources.gardener.cloud/purpose": "token-requestor",
+							},
+						},
+						Type: corev1.SecretTypeOpaque,
+					}))
+				})
+			c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: legacyExposureSecretNamesToCleanup[0], Namespace: namespace}})
+
 			// Create actuator
-			a := NewActuator(providerName, nil, exposureSecrets, nil, nil, nil, nil, nil, cpExposureChart, vp, nil, imageVector, "", nil, 0, logger)
+			a := NewActuator(providerName, nil, nil, nil, exposureSecrets, exposureShootAccessSecrets, legacyExposureSecretNamesToCleanup, nil, nil, nil, nil, nil, cpExposureChart, vp, nil, imageVector, "", nil, 0, logger)
+			Expect(a.(inject.Client).InjectClient(c)).To(Succeed())
 			a.(*actuator).gardenerClientset = gardenerClientset
 			a.(*actuator).chartApplier = chartApplier
 
@@ -486,14 +546,16 @@ var _ = Describe("Actuator", func() {
 			cpExposureChart := mockchartutil.NewMockInterface(ctrl)
 			cpExposureChart.EXPECT().Delete(ctx, client, namespace).Return(nil)
 
+			// Handle shoot access secrets and legacy secret cleanup
+			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: exposureShootAccessSecrets[0].Secret.Name, Namespace: namespace}})
+			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: legacyExposureSecretNamesToCleanup[0], Namespace: namespace}})
+
 			// Create actuator
-			a := NewActuator(providerName, nil, exposureSecrets, nil, nil, nil, nil, nil, cpExposureChart, nil, nil, nil, "", nil, 0, logger)
-			err := a.(inject.Client).InjectClient(client)
-			Expect(err).NotTo(HaveOccurred())
+			a := NewActuator(providerName, nil, nil, nil, exposureSecrets, exposureShootAccessSecrets, legacyExposureSecretNamesToCleanup, nil, nil, nil, nil, nil, cpExposureChart, nil, nil, nil, "", nil, 0, logger)
+			Expect(a.(inject.Client).InjectClient(client)).To(Succeed())
 
 			// Call Delete method and check the result
-			err = a.Delete(ctx, cpExposure, cluster)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(a.Delete(ctx, cpExposure, cluster)).To(Succeed())
 		},
 		Entry("should delete secrets and charts"),
 	)

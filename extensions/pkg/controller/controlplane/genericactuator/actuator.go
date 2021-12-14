@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -77,7 +78,8 @@ type ValuesProvider interface {
 // the values provided by the given values provider.
 func NewActuator(
 	providerName string,
-	secrets, exposureSecrets secretutil.Interface,
+	secrets secretutil.Interface, shootAccessSecrets []*gutil.ShootAccessSecret, legacySecretNamesToCleanup []string,
+	exposureSecrets secretutil.Interface, exposureShootAccessSecrets []*gutil.ShootAccessSecret, legacyExposureSecretNamesToCleanup []string,
 	configChart, controlPlaneChart, controlPlaneShootChart, controlPlaneShootCRDsChart, storageClassesChart, controlPlaneExposureChart chart.Interface,
 	vp ValuesProvider,
 	chartRendererFactory extensionscontroller.ChartRendererFactory,
@@ -88,9 +90,16 @@ func NewActuator(
 	logger logr.Logger,
 ) controlplane.Actuator {
 	return &actuator{
-		providerName:               providerName,
+		providerName: providerName,
+
 		secrets:                    secrets,
-		exposureSecrets:            exposureSecrets,
+		shootAccessSecrets:         shootAccessSecrets,
+		legacySecretNamesToCleanup: legacySecretNamesToCleanup,
+
+		exposureSecrets:                    exposureSecrets,
+		exposureShootAccessSecrets:         exposureShootAccessSecrets,
+		legacyExposureSecretNamesToCleanup: legacyExposureSecretNamesToCleanup,
+
 		configChart:                configChart,
 		controlPlaneChart:          controlPlaneChart,
 		controlPlaneShootChart:     controlPlaneShootChart,
@@ -109,9 +118,18 @@ func NewActuator(
 
 // actuator is an Actuator that acts upon and updates the status of ControlPlane resources.
 type actuator struct {
-	providerName               string
+	providerName string
+
+	// Deprecated: Use 'shootAccessSecrets' instead.
 	secrets                    secretutil.Interface
-	exposureSecrets            secretutil.Interface
+	shootAccessSecrets         []*gutil.ShootAccessSecret
+	legacySecretNamesToCleanup []string
+
+	// Deprecated: Use 'exposureShootAccessSecrets' instead.
+	exposureSecrets                    secretutil.Interface
+	exposureShootAccessSecrets         []*gutil.ShootAccessSecret
+	legacyExposureSecretNamesToCleanup []string
+
 	configChart                chart.Interface
 	controlPlaneChart          chart.Interface
 	controlPlaneShootChart     chart.Interface
@@ -208,6 +226,12 @@ func (a *actuator) reconcileControlPlaneExposure(
 		checksums = controlplane.ComputeChecksums(deployedSecrets, nil)
 	}
 
+	for _, shootAccessSecret := range a.exposureShootAccessSecrets {
+		if err := shootAccessSecret.WithNamespaceOverride(cp.Namespace).Reconcile(ctx, a.client); err != nil {
+			return false, fmt.Errorf("could not reconcile control plane exposure shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kutil.ObjectName(cp), err)
+		}
+	}
+
 	// Get control plane exposure chart values
 	values, err := a.vp.GetControlPlaneExposureChartValues(ctx, cp, cluster, checksums)
 	if err != nil {
@@ -219,6 +243,12 @@ func (a *actuator) reconcileControlPlaneExposure(
 	version := cluster.Shoot.Spec.Kubernetes.Version
 	if err := a.controlPlaneExposureChart.Apply(ctx, a.chartApplier, cp.Namespace, a.imageVector, a.gardenerClientset.Version(), version, values); err != nil {
 		return false, fmt.Errorf("could not apply control plane exposure chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
+	}
+
+	for _, name := range a.legacyExposureSecretNamesToCleanup {
+		if err := kutil.DeleteObject(ctx, a.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: cp.Namespace}}); err != nil {
+			return false, fmt.Errorf("could not delete legacy control plane exposure secret '%s' for controlplane '%s': %w", name, kutil.ObjectName(cp), err)
+		}
 	}
 
 	return false, nil
@@ -251,6 +281,12 @@ func (a *actuator) reconcileControlPlane(
 		deployedSecrets, err = a.secrets.Deploy(ctx, a.clientset, a.gardenerClientset, cp.Namespace)
 		if err != nil {
 			return false, fmt.Errorf("could not deploy secrets for controlplane '%s': %w", kutil.ObjectName(cp), err)
+		}
+	}
+
+	for _, shootAccessSecret := range a.shootAccessSecrets {
+		if err := shootAccessSecret.WithNamespaceOverride(cp.Namespace).Reconcile(ctx, a.client); err != nil {
+			return false, fmt.Errorf("could not reconcile shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kutil.ObjectName(cp), err)
 		}
 	}
 
@@ -356,6 +392,12 @@ func (a *actuator) reconcileControlPlane(
 		}
 	}
 
+	for _, name := range a.legacySecretNamesToCleanup {
+		if err := kutil.DeleteObject(ctx, a.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: cp.Namespace}}); err != nil {
+			return false, fmt.Errorf("could not delete legacy secret '%s' for controlplane '%s': %w", name, kutil.ObjectName(cp), err)
+		}
+	}
+
 	return requeue, nil
 }
 
@@ -377,7 +419,7 @@ func (a *actuator) Delete(
 func (a *actuator) deleteControlPlaneExposure(
 	ctx context.Context,
 	cp *extensionsv1alpha1.ControlPlane,
-	cluster *extensionscontroller.Cluster,
+	_ *extensionscontroller.Cluster,
 ) error {
 	// Delete control plane objects
 	if a.controlPlaneExposureChart != nil {
@@ -391,7 +433,19 @@ func (a *actuator) deleteControlPlaneExposure(
 	if a.exposureSecrets != nil {
 		a.logger.Info("Deleting secrets for control plane with purpose exposure", "controlplane", kutil.ObjectName(cp))
 		if err := a.exposureSecrets.Delete(ctx, a.clientset, cp.Namespace); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("could not delete secrets for controlplane exposure '%s': %w", kutil.ObjectName(cp), err)
+			return fmt.Errorf("could not delete secrets for control plane exposure '%s': %w", kutil.ObjectName(cp), err)
+		}
+	}
+
+	for _, shootAccessSecret := range a.exposureShootAccessSecrets {
+		if err := kutil.DeleteObject(ctx, a.client, shootAccessSecret.WithNamespaceOverride(cp.Namespace).Secret); err != nil {
+			return fmt.Errorf("could not delete control plane exposure shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kutil.ObjectName(cp), err)
+		}
+	}
+
+	for _, name := range a.legacyExposureSecretNamesToCleanup {
+		if err := kutil.DeleteObject(ctx, a.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: cp.Namespace}}); err != nil {
+			return fmt.Errorf("could not delete control plane exposure legacy secret '%s' for controlplane '%s': %w", name, kutil.ObjectName(cp), err)
 		}
 	}
 
@@ -403,7 +457,7 @@ func (a *actuator) deleteControlPlaneExposure(
 func (a *actuator) deleteControlPlane(
 	ctx context.Context,
 	cp *extensionsv1alpha1.ControlPlane,
-	cluster *extensionscontroller.Cluster,
+	_ *extensionscontroller.Cluster,
 ) error {
 	// Delete the managed resources
 	if err := managedresources.Delete(ctx, a.client, cp.Namespace, StorageClassesChartResourceName, false); err != nil {
@@ -458,6 +512,18 @@ func (a *actuator) deleteControlPlane(
 		a.logger.Info("Deleting secrets", "controlplane", kutil.ObjectName(cp))
 		if err := a.secrets.Delete(ctx, a.clientset, cp.Namespace); client.IgnoreNotFound(err) != nil {
 			return fmt.Errorf("could not delete secrets for controlplane '%s': %w", kutil.ObjectName(cp), err)
+		}
+	}
+
+	for _, shootAccessSecret := range a.shootAccessSecrets {
+		if err := kutil.DeleteObject(ctx, a.client, shootAccessSecret.WithNamespaceOverride(cp.Namespace).Secret); err != nil {
+			return fmt.Errorf("could not delete shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kutil.ObjectName(cp), err)
+		}
+	}
+
+	for _, name := range a.legacySecretNamesToCleanup {
+		if err := kutil.DeleteObject(ctx, a.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: cp.Namespace}}); err != nil {
+			return fmt.Errorf("could not delete legacy secret '%s' for controlplane '%s': %w", name, kutil.ObjectName(cp), err)
 		}
 	}
 
