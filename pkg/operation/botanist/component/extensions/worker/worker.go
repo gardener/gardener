@@ -133,6 +133,9 @@ func (w *worker) Deploy(ctx context.Context) error {
 func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
 	var pools []extensionsv1alpha1.WorkerPool
 
+	obj := &extensionsv1alpha1.Worker{}
+	_ = w.client.Get(ctx, client.ObjectKey{Name: w.worker.Name, Namespace: w.worker.Namespace}, obj)
+
 	for _, workerPool := range w.values.Workers {
 		var volume *extensionsv1alpha1.Volume
 		if workerPool.Volume != nil {
@@ -199,22 +202,19 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			workerPoolKubernetesVersion = *workerPool.Kubernetes.Version
 		}
 
-		var nodeTemplate *extensionsv1alpha1.NodeTemplate
-		nodeTemplate = w.findExistingNodeTemplateByName(workerPool.Name)
+		nodeTemplate, _ := w.findExistingNodeTemplateByName(ctx, obj, workerPool.Name)
 
 		if nodeTemplate == nil {
-			// initializing nodeTemplate by fetching details from cloudprofile
+			// initializing nodeTemplate by fetching details from cloudprofile, if present there
 			machineDetails := gardencorev1beta1helper.FindMachineTypeByName(w.values.MachineTypes, workerPool.Machine.Type)
-			if machineDetails == nil {
-				return nil, fmt.Errorf("unable to initialize nodeTemplate for workerPool %q, machine type %q not found in cloudprofile", workerPool.Name, workerPool.Machine.Type)
-			}
-
-			nodeTemplate = &extensionsv1alpha1.NodeTemplate{
-				Capacity: corev1.ResourceList{
-					corev1.ResourceCPU:    machineDetails.CPU,
-					"gpu":                 machineDetails.GPU,
-					corev1.ResourceMemory: machineDetails.Memory,
-				},
+			if machineDetails != nil {
+				nodeTemplate = &extensionsv1alpha1.NodeTemplate{
+					Capacity: corev1.ResourceList{
+						corev1.ResourceCPU:    machineDetails.CPU,
+						"gpu":                 machineDetails.GPU,
+						corev1.ResourceMemory: machineDetails.Memory,
+					},
+				}
 			}
 		}
 
@@ -363,17 +363,11 @@ func (w *worker) MachineDeployments() []extensionsv1alpha1.MachineDeployment {
 	return w.machineDeployments
 }
 
-func (w *worker) findExistingNodeTemplateByName(poolName string) *extensionsv1alpha1.NodeTemplate {
-	obj := &extensionsv1alpha1.Worker{}
-	err := w.client.Get(context.TODO(), client.ObjectKey{Name: w.worker.Name, Namespace: w.worker.Namespace}, obj)
-	if err != nil {
-		return nil
-	}
-
+func (w *worker) findExistingNodeTemplateByName(ctx context.Context, obj *extensionsv1alpha1.Worker, poolName string) (*extensionsv1alpha1.NodeTemplate, error) {
 	for _, pool := range obj.Spec.Pools {
 		if pool.Name == poolName && pool.NodeTemplate != nil {
-			return pool.NodeTemplate
+			return pool.NodeTemplate, nil
 		}
 	}
-	return nil
+	return nil, nil
 }
