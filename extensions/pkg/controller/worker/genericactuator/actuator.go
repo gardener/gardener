@@ -66,8 +66,10 @@ type genericActuator struct {
 	chartApplier         gardenerkubernetes.ChartApplier
 	chartRendererFactory extensionscontroller.ChartRendererFactory
 
-	// TODO(rfranzke/BeckerMax): Remove this flag when all provider extensions enable the token requestor.
-	useTokenRequestor bool
+	// TODO(rfranzke/BeckerMax): Remove these flags when all provider extensions enable the token requestor and
+	//  projected token mount.
+	useTokenRequestor      bool
+	useProjectedTokenMount bool
 }
 
 // NewActuator creates a new Actuator that reconciles
@@ -82,16 +84,18 @@ func NewActuator(
 	imageVector imagevector.ImageVector,
 	chartRendererFactory extensionscontroller.ChartRendererFactory,
 	useTokenRequestor bool,
+	useProjectedTokenMount bool,
 ) worker.Actuator {
 	return &genericActuator{
-		logger:               logger.WithName("worker-actuator"),
-		delegateFactory:      delegateFactory,
-		mcmName:              mcmName,
-		mcmSeedChart:         mcmSeedChart,
-		mcmShootChart:        mcmShootChart,
-		imageVector:          imageVector,
-		chartRendererFactory: chartRendererFactory,
-		useTokenRequestor:    useTokenRequestor,
+		logger:                 logger.WithName("worker-actuator"),
+		delegateFactory:        delegateFactory,
+		mcmName:                mcmName,
+		mcmSeedChart:           mcmSeedChart,
+		mcmShootChart:          mcmShootChart,
+		imageVector:            imageVector,
+		chartRendererFactory:   chartRendererFactory,
+		useTokenRequestor:      useTokenRequestor,
+		useProjectedTokenMount: useProjectedTokenMount,
 	}
 }
 

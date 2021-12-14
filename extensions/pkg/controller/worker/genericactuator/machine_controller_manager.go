@@ -59,6 +59,7 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, lo
 	}
 
 	mcmValues["useTokenRequestor"] = a.useTokenRequestor
+	mcmValues["useProjectedTokenMount"] = a.useProjectedTokenMount
 
 	if a.useTokenRequestor {
 		if err := gutil.NewShootAccessSecret(a.mcmName, workerObj.Namespace).Reconcile(ctx, a.client); err != nil {
