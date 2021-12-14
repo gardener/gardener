@@ -73,6 +73,9 @@ ld_flags="$("$(dirname $0)"/../get-build-ld-flags.sh)"
 case $(k8s_env) in
     $KIND)
         echo "Found kind ..."
+        # If one uses the kind config from `make kind-up` (example/gardener-local/kind/cluster-local.yaml), there is
+        # already a host port mapping for etcd on port 32379 (which is more stable than a kubectl port-forward).
+        # If port 32379 is not open, fallback to port-forward.
         if ! nc -z -w 1 localhost 32379 &>/dev/null ; then
           kubectl -n garden port-forward service/etcd 32379:2379 > /dev/null &
           trap "kill -9 $! > /dev/null" EXIT

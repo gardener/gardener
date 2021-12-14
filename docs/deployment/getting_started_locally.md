@@ -82,14 +82,15 @@ The reason is that your host most probably cannot resolve the DNS names of the c
 Hence, if you want to access the shoot cluster, you have to run the following command which will extend your `/etc/hosts` file with the required information to make the DNS names resolvable:
 
 ```bash
-sudo bash -c 'cat <<EOF >> /etc/hosts
+cat <<EOF | sudo tee -a /etc/hosts
+
 # Manually created to access local Gardener shoot clusters with names 'local' or 'e2e-local' in the 'garden-local' namespace.
 # TODO: Remove this again when the shoot cluster access is no longer required.
 127.0.0.1 api.local.local.external.local.gardener.cloud
 127.0.0.1 api.local.local.internal.local.gardener.cloud
 127.0.0.1 api.e2e-local.local.external.local.gardener.cloud
 127.0.0.1 api.e2e-local.local.internal.local.gardener.cloud
-EOF'
+EOF
 ```
 
 Now you can access it by running
@@ -110,3 +111,7 @@ kubectl --kubeconfig=/tmp/kubeconfig-shoot-local.yaml get nodes
 ```shell
 make kind-down
 ```
+
+## Further reading
+
+This setup makes use of the local provider extension. You can read more about it in [this document](../extensions/provider-local.md).

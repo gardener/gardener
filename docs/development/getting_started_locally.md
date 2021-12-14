@@ -140,3 +140,7 @@ kubectl --kubeconfig=/tmp/kubeconfig-shoot-local.yaml get nodes
 make tear-down-local-env
 make kind-down
 ```
+
+## Further reading
+
+This setup makes use of the local provider extension. You can read more about it in [this document](../extensions/provider-local.md).
