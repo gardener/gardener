@@ -37,26 +37,18 @@ build:
     docker:
       dockerfile: Dockerfile.local
       target: apiserver
-      buildArgs:
-        VERSION: "{{.VERSION}}"
   - image: eu.gcr.io/gardener-project/gardener/controller-manager
     docker:
       dockerfile: Dockerfile.local
       target: controller-manager
-      buildArgs:
-        VERSION: "{{.VERSION}}"
   - image: eu.gcr.io/gardener-project/gardener/scheduler
     docker:
       dockerfile: Dockerfile.local
       target: scheduler
-      buildArgs:
-        VERSION: "{{.VERSION}}"
   - image: eu.gcr.io/gardener-project/gardener/admission-controller
     docker:
       dockerfile: Dockerfile.local
       target: admission-controller
-      buildArgs:
-        VERSION: "{{.VERSION}}"
 deploy:
   helm:
     releases:
@@ -96,8 +88,6 @@ build:
     docker:
       dockerfile: Dockerfile.local
       target: extension-provider-local
-      buildArgs:
-        VERSION: "{{.VERSION}}"
     sync:
       infer:
       - charts/gardener/provider-local/internal
@@ -147,20 +137,14 @@ build:
     docker:
       dockerfile: Dockerfile.local
       target: gardenlet
-      buildArgs:
-        VERSION: "{{.VERSION}}"
   - image: eu.gcr.io/gardener-project/gardener/resource-manager
     docker:
       dockerfile: Dockerfile.local
       target: resource-manager
-      buildArgs:
-        VERSION: "{{.VERSION}}"
   - image: eu.gcr.io/gardener-project/gardener/seed-admission-controller
     docker:
       dockerfile: Dockerfile.local
       target: seed-admission-controller
-      buildArgs:
-        VERSION: "{{.VERSION}}"
 deploy:
   helm:
     hooks:

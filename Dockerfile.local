@@ -22,7 +22,9 @@ ENV GOOS=$TARGETOS
 ENV GOARCH=$TARGETARCH
 
 ARG VERSION
-RUN echo "-X k8s.io/component-base/version.gitVersion=$VERSION \
+COPY VERSION .
+
+RUN echo "-X k8s.io/component-base/version.gitVersion=${VERSION:-$(cat VERSION)} \
         -X k8s.io/component-base/version.buildDate=$(date '+%Y-%m-%dT%H:%M:%S%z' | sed 's/\([0-9][0-9]\)$/:\1/g') \
         -X k8s.io/component-base/version/verflag.programName=Gardener" > /tmp/build-flags
 

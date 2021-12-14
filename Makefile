@@ -262,7 +262,7 @@ kind-down:
 # workaround for https://github.com/GoogleContainerTools/skaffold/issues/6416
 export SKAFFOLD_LABEL := skaffold.dev/run-id=gardener-local
 gardener-up: $(SKAFFOLD) $(HELM)
-	VERSION=$(EFFECTIVE_VERSION) $(SKAFFOLD) run
+	$(SKAFFOLD) run
 
 gardener-down: $(SKAFFOLD) $(HELM)
 	kubectl --kubeconfig=$(REPO_ROOT)/example/gardener-local/kind/kubeconfig delete validatingwebhookconfiguration/validate-namespace-deletion --ignore-not-found
