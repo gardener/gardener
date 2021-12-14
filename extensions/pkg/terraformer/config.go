@@ -92,6 +92,12 @@ func (t *terraformer) UseV2(v2 bool) Terraformer {
 	return t
 }
 
+// UseProjectedTokenMount configures the useProjectedTokenMount field.
+func (t *terraformer) UseProjectedTokenMount(useProjectedTokenMount bool) Terraformer {
+	t.useProjectedTokenMount = useProjectedTokenMount
+	return t
+}
+
 // SetLogLevel sets the log level of the Terraformer pod. It only takes effect when UseV2 is set to true.
 func (t *terraformer) SetLogLevel(level string) Terraformer {
 	t.logLevel = level
