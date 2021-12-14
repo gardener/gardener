@@ -35,5 +35,6 @@ It is worth noting that:
 - The annotation will take effect during the next shoot reconciliation. This happens automatically once per day in the maintenance period (unless you have disabled it). 
 - During the reconfiguration of the node-local-dns there might be a short disruption in terms of domain name resolution depending on the setup. Usually, dns requests are repeated for some time as udp is an unreliable protocol, but that strictly depends on the application/way the domain name resolution happens. It is recommended to let the shoot be reconciled during the next maintenance period. 
 - If a short DNS outage is not a big issue, you can [trigger reconciliation](./shoot_operations.md#immediate-reconciliation) directly after setting the annotation.
+- Switching node-local-dns off by removing the annotation can be a rather destructive operation that will result in pods without a working dns configuration.
 
 For more information about `node-local-dns` please refer to the [KEP](https://github.com/kubernetes/enhancements/blob/master/keps/sig-network/1024-nodelocal-cache-dns/README.md) or to the [usage documentation](https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/). 
