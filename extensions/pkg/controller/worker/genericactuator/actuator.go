@@ -65,21 +65,33 @@ type genericActuator struct {
 	gardenerClientset    gardenerkubernetes.Interface
 	chartApplier         gardenerkubernetes.ChartApplier
 	chartRendererFactory extensionscontroller.ChartRendererFactory
+
+	// TODO(rfranzke/BeckerMax): Remove this flag when all provider extensions enable the token requestor.
+	useTokenRequestor bool
 }
 
 // NewActuator creates a new Actuator that reconciles
 // Worker resources of Gardener's `extensions.gardener.cloud` API group.
 // It provides a default implementation that allows easier integration of providers.
-func NewActuator(logger logr.Logger, delegateFactory DelegateFactory, mcmName string, mcmSeedChart, mcmShootChart chart.Interface, imageVector imagevector.ImageVector, chartRendererFactory extensionscontroller.ChartRendererFactory) worker.Actuator {
+func NewActuator(
+	logger logr.Logger,
+	delegateFactory DelegateFactory,
+	mcmName string,
+	mcmSeedChart,
+	mcmShootChart chart.Interface,
+	imageVector imagevector.ImageVector,
+	chartRendererFactory extensionscontroller.ChartRendererFactory,
+	useTokenRequestor bool,
+) worker.Actuator {
 	return &genericActuator{
-		logger: logger.WithName("worker-actuator"),
-
+		logger:               logger.WithName("worker-actuator"),
 		delegateFactory:      delegateFactory,
 		mcmName:              mcmName,
 		mcmSeedChart:         mcmSeedChart,
 		mcmShootChart:        mcmShootChart,
 		imageVector:          imageVector,
 		chartRendererFactory: chartRendererFactory,
+		useTokenRequestor:    useTokenRequestor,
 	}
 }
 
