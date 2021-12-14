@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/extensions/pkg/controller"
+	. "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -27,7 +27,9 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,7 +55,7 @@ var _ = Describe("Utils", func() {
 
 	Describe("UnsafeGuessKind", func() {
 		It("should guess the kind correctly", func() {
-			Expect(controller.UnsafeGuessKind(&extensionsv1alpha1.Infrastructure{})).To(Equal("Infrastructure"))
+			Expect(UnsafeGuessKind(&extensionsv1alpha1.Infrastructure{})).To(Equal("Infrastructure"))
 		})
 	})
 
@@ -141,7 +143,7 @@ var _ = Describe("Utils", func() {
 				c.EXPECT().Update(ctx, worker),
 			)
 
-			Expect(controller.DeleteAllFinalizers(ctx, c, worker)).To(Succeed())
+			Expect(DeleteAllFinalizers(ctx, c, worker)).To(Succeed())
 			Expect(len(worker.Finalizers)).To(Equal(0))
 		})
 	})
@@ -172,7 +174,7 @@ var _ = Describe("Utils", func() {
 			ctx := context.TODO()
 			test.EXPECTPatch(ctx, c, expectedWorker, workerWithAnnotation, types.MergePatchType)
 
-			Expect(controller.RemoveAnnotation(ctx, c, worker, annotation)).To(Succeed())
+			Expect(RemoveAnnotation(ctx, c, worker, annotation)).To(Succeed())
 			Expect(len(worker.Annotations)).To(Equal(1))
 			notdeletedAnnotation, ok := worker.Annotations["test-no-delete-annotation-key"]
 			Expect(ok).To(BeTrue())
@@ -204,7 +206,7 @@ var _ = Describe("Utils", func() {
 			)
 
 			It("should return false when lastOperation is missing", func() {
-				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+				Expect(ShouldSkipOperation(operationType, worker)).To(BeFalse())
 			})
 
 			It("should return true when lastOperation is migrate and succeeded", func() {
@@ -212,14 +214,14 @@ var _ = Describe("Utils", func() {
 					Type:  gardencorev1beta1.LastOperationTypeMigrate,
 					State: gardencorev1beta1.LastOperationStateSucceeded,
 				}
-				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeTrue())
+				Expect(ShouldSkipOperation(operationType, worker)).To(BeTrue())
 			})
 
 			It("should return false when lastOperation is not migrate", func() {
 				worker.Status.LastOperation = &gardencorev1beta1.LastOperation{
 					Type: gardencorev1beta1.LastOperationTypeRestore,
 				}
-				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+				Expect(ShouldSkipOperation(operationType, worker)).To(BeFalse())
 			})
 		})
 
@@ -229,7 +231,7 @@ var _ = Describe("Utils", func() {
 			)
 
 			It("should return false when lastOperation is missing", func() {
-				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+				Expect(ShouldSkipOperation(operationType, worker)).To(BeFalse())
 			})
 
 			It("should return false when lastOperation is migrate and succeeded", func() {
@@ -237,7 +239,7 @@ var _ = Describe("Utils", func() {
 					Type:  gardencorev1beta1.LastOperationTypeMigrate,
 					State: gardencorev1beta1.LastOperationStateSucceeded,
 				}
-				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+				Expect(ShouldSkipOperation(operationType, worker)).To(BeFalse())
 			})
 
 			It("should return false when lastOperation is not migrate", func() {
@@ -245,7 +247,7 @@ var _ = Describe("Utils", func() {
 					Type:  gardencorev1beta1.LastOperationTypeReconcile,
 					State: gardencorev1beta1.LastOperationStateSucceeded,
 				}
-				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+				Expect(ShouldSkipOperation(operationType, worker)).To(BeFalse())
 			})
 		})
 
@@ -255,7 +257,7 @@ var _ = Describe("Utils", func() {
 			)
 
 			It("should return false when lastOperation is missing", func() {
-				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+				Expect(ShouldSkipOperation(operationType, worker)).To(BeFalse())
 			})
 
 			It("should return true when lastOperation is migrate and succeeded", func() {
@@ -263,7 +265,7 @@ var _ = Describe("Utils", func() {
 					Type:  gardencorev1beta1.LastOperationTypeMigrate,
 					State: gardencorev1beta1.LastOperationStateSucceeded,
 				}
-				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeTrue())
+				Expect(ShouldSkipOperation(operationType, worker)).To(BeTrue())
 			})
 
 			It("should return false when lastOperation is not migrate", func() {
@@ -271,7 +273,7 @@ var _ = Describe("Utils", func() {
 					Type:  gardencorev1beta1.LastOperationTypeReconcile,
 					State: gardencorev1beta1.LastOperationStateSucceeded,
 				}
-				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+				Expect(ShouldSkipOperation(operationType, worker)).To(BeFalse())
 			})
 		})
 
@@ -281,7 +283,7 @@ var _ = Describe("Utils", func() {
 			)
 
 			It("should return false when lastOperation is missing", func() {
-				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+				Expect(ShouldSkipOperation(operationType, worker)).To(BeFalse())
 			})
 
 			It("should return false when lastOperation is migrate and succeeded", func() {
@@ -289,7 +291,7 @@ var _ = Describe("Utils", func() {
 					Type:  gardencorev1beta1.LastOperationTypeMigrate,
 					State: gardencorev1beta1.LastOperationStateSucceeded,
 				}
-				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+				Expect(ShouldSkipOperation(operationType, worker)).To(BeFalse())
 			})
 
 			It("should return false when lastOperation is not migrate", func() {
@@ -297,7 +299,7 @@ var _ = Describe("Utils", func() {
 					Type:  gardencorev1beta1.LastOperationTypeReconcile,
 					State: gardencorev1beta1.LastOperationStateSucceeded,
 				}
-				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+				Expect(ShouldSkipOperation(operationType, worker)).To(BeFalse())
 			})
 		})
 	})
@@ -320,27 +322,27 @@ var _ = Describe("Utils", func() {
 			}
 		})
 		It("should return false when lastOperation is missing", func() {
-			Expect(controller.IsMigrated(worker)).To(BeFalse())
+			Expect(IsMigrated(worker)).To(BeFalse())
 		})
 		It("should return false when lastOperation type is not Migrated", func() {
 			worker.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				Type: gardencorev1beta1.LastOperationTypeReconcile,
 			}
-			Expect(controller.IsMigrated(worker)).To(BeFalse())
+			Expect(IsMigrated(worker)).To(BeFalse())
 		})
 		It("should return false when lastOperation type is Migrated but state is not succeeded", func() {
 			worker.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				Type:  gardencorev1beta1.LastOperationTypeMigrate,
 				State: gardencorev1beta1.LastOperationStateProcessing,
 			}
-			Expect(controller.IsMigrated(worker)).To(BeFalse())
+			Expect(IsMigrated(worker)).To(BeFalse())
 		})
 		It("should return true when lastOperation type is Migrated and state is succeeded", func() {
 			worker.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				Type:  gardencorev1beta1.LastOperationTypeMigrate,
 				State: gardencorev1beta1.LastOperationStateSucceeded,
 			}
-			Expect(controller.IsMigrated(worker)).To(BeTrue())
+			Expect(IsMigrated(worker)).To(BeTrue())
 		})
 	})
 
@@ -371,8 +373,40 @@ var _ = Describe("Utils", func() {
 					refSecret.DeepCopyInto(secret)
 					return nil
 				})
-			Expect(controller.GetObjectByReference(ctx, c, ref, namespace, secret)).To(Succeed())
+			Expect(GetObjectByReference(ctx, c, ref, namespace, secret)).To(Succeed())
 			Expect(secret).To(Equal(refSecret))
 		})
 	})
+
+	DescribeTable("#UseTokenRequestor",
+		func(gardenerVersion string, matcher gomegatypes.GomegaMatcher) {
+			Expect(UseTokenRequestor(gardenerVersion)).To(matcher)
+		},
+
+		Entry("return true", "v1.36.0-dev", BeTrue()),
+		Entry("return true", "v1.36.0", BeTrue()),
+		Entry("return true", "v1.36.1", BeTrue()),
+		Entry("return true", "v1.37.0", BeTrue()),
+		Entry("return true", "v1.37.1", BeTrue()),
+		Entry("return true", "v1.38.0-dev", BeTrue()),
+		Entry("return false", "v1.35.0", BeFalse()),
+		Entry("return false", "v1.35.9", BeFalse()),
+		Entry("return false", "", BeFalse()),
+	)
+
+	DescribeTable("#UseServiceAccountTokenVolumeProjection",
+		func(gardenerVersion string, matcher gomegatypes.GomegaMatcher) {
+			Expect(UseServiceAccountTokenVolumeProjection(gardenerVersion)).To(matcher)
+		},
+
+		Entry("return true", "v1.37.0-dev", BeTrue()),
+		Entry("return true", "v1.37.0", BeTrue()),
+		Entry("return true", "v1.37.1", BeTrue()),
+		Entry("return true", "v1.38.0", BeTrue()),
+		Entry("return true", "v1.38.1", BeTrue()),
+		Entry("return true", "v1.39.0-dev", BeTrue()),
+		Entry("return false", "v1.36.0", BeFalse()),
+		Entry("return false", "v1.36.9", BeFalse()),
+		Entry("return false", "", BeFalse()),
+	)
 })
