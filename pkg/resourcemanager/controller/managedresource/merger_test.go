@@ -658,8 +658,10 @@ var _ = Describe("merger", func() {
 			new = old.DeepCopy()
 		})
 
-		It("should not overwrite old .spec.selector if the new one is nil", func() {
-			new.Spec.Selector = nil
+		It("should not overwrite old .spec.selector", func() {
+			new.Spec.Selector = &metav1.LabelSelector{
+				MatchLabels: map[string]string{"foo": "bar"},
+			}
 
 			expected := old.DeepCopy()
 
