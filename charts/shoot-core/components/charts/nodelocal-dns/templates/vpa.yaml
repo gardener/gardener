@@ -5,5 +5,5 @@ metadata:
   name: node-local-dns
   namespace: {{ .Release.Namespace }}
   annotations:
-      resources.gardener.cloud/mode: Ignore
+    resources.gardener.cloud/mode: Ignore
 {{- end }}

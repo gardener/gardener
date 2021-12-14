@@ -4,4 +4,4 @@ metadata:
   name: gardener.cloud:psp:node-local-dns
   namespace: kube-system
   annotations:
-      resources.gardener.cloud/mode: Ignore
+    resources.gardener.cloud/mode: Ignore

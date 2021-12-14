@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// DefaultNodeLocalDNS returns a deployer for the NodeLocalDNS.
+// DefaultNodeLocalDNS returns a deployer for the node-local-dns.
 func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 	image, err := b.ImageVector.FindImage(charts.ImageNameNodeLocalDns, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
@@ -69,12 +69,12 @@ func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 	), nil
 }
 
-// DeployNodeLocalDNS deploys the NodeLocalDNS system component.
+// DeployNodeLocalDNS deploys the node-local-dns system component.
 func (b *Botanist) DeployNodeLocalDNS(ctx context.Context) error {
 	return b.Shoot.Components.SystemComponents.NodeLocalDNS.Deploy(ctx)
 }
 
-// DestroyNodeLocalDNS deletes the managed resource.
+// DestroyNodeLocalDNS deletes the managed resource node-local-dns.
 func (b *Botanist) DestroyNodeLocalDNS(ctx context.Context) error {
-	return client.IgnoreNotFound(managedresources.Delete(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, "shoot-core-nodelocaldns", false))
+	return client.IgnoreNotFound(managedresources.Delete(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, "shoot-core-node-local-dns", false))
 }

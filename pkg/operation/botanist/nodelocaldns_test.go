@@ -67,7 +67,7 @@ var _ = Describe("NodeLocalDNS", func() {
 			}
 		})
 
-		It("should successfully create a nodelocaldns interface", func() {
+		It("should successfully create a node-local-dns interface", func() {
 			kubernetesClient.EXPECT().Client()
 			botanist.ImageVector = imagevector.ImageVector{{Name: charts.ImageNameNodeLocalDns}}
 

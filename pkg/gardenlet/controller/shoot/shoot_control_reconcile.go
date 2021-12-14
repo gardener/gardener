@@ -429,12 +429,12 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, initializeShootClients, waitUntilOperatingSystemConfigReady, deployKubeScheduler),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Destroy NodeLocalDNS system component",
+			Name:         "Destroy node-local-dns system component",
 			Fn:           flow.TaskFn(botanist.DestroyNodeLocalDNS).SkipIf(o.Shoot.HibernationEnabled || o.Shoot.NodeLocalDNSEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, initializeShootClients, waitUntilOperatingSystemConfigReady, deployKubeScheduler),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying NodeLocalDNS system component",
+			Name:         "Deploying node-local-dns system component",
 			Fn:           flow.TaskFn(botanist.DeployNodeLocalDNS).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled || !o.Shoot.NodeLocalDNSEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, initializeShootClients, waitUntilOperatingSystemConfigReady, deployKubeScheduler),
 		})

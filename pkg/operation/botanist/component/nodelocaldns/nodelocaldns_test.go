@@ -52,7 +52,7 @@ var _ = Describe("NodeLocalDNS", func() {
 	var (
 		ctx = context.TODO()
 
-		managedResourceName = "shoot-core-nodelocaldns"
+		managedResourceName = "shoot-core-node-local-dns"
 		namespace           = "some-namespace"
 		image               = "some-image:some-tag"
 

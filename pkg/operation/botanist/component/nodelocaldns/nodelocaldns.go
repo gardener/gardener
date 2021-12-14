@@ -44,18 +44,18 @@ import (
 )
 
 const (
-	// LabelKey is the key of a label used for the identification of NodeLocalDNS pods.
+	// LabelKey is the key of a label used for the identification of node-local-dns pods.
 	LabelKey = "k8s-app"
-	// LabelValue is the value of a label used for the identification of NodeLocalDNS pods.
+	// LabelValue is the value of a label used for the identification of node-local-dns pods.
 	LabelValue = "node-local-dns"
 	// PortServiceServer is the service port used for the DNS server.
 	PortServiceServer = 53
 	// PortServer is the target port used for the DNS server.
 	PortServer = 8053
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
-	ManagedResourceName = "shoot-core-nodelocaldns"
+	ManagedResourceName = "shoot-core-node-local-dns"
 
-	// prometheus configuration fot node-local-dns
+	// prometheus configuration for node-local-dns
 	prometheusPort   = 9253
 	prometheusScrape = true
 
@@ -65,15 +65,15 @@ const (
 	configDataKey = "Corefile"
 )
 
-// Interface contains functions for a NodeLocalDNS deployer.
+// Interface contains functions for a node-local-dns deployer.
 type Interface interface {
 	component.DeployWaiter
 	component.MonitoringComponent
 }
 
-// Values is a set of configuration values for the nodelocaldns component.
+// Values is a set of configuration values for the node-local-dns component.
 type Values struct {
-	// Image is the container image used for NodeLocalDNS.
+	// Image is the container image used for node-local-dns.
 	Image string
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
 	VPAEnabled bool
@@ -81,13 +81,13 @@ type Values struct {
 	ForceTcpToClusterDNS bool
 	// ForceTcpToUpstreamDNS enforces upgrade to tcp connections for communication between node local and upstream dns.
 	ForceTcpToUpstreamDNS bool
-	// ClusterDNS
+	// ClusterDNS is the ClusterIP of kube-system/coredns Service
 	ClusterDNS string
-	// DNSServer
+	// DNSServer is the ClusterIP of kube-system/coredns Service
 	DNSServer string
 }
 
-// New creates a new instance of DeployWaiter for nodelocaldns.
+// New creates a new instance of DeployWaiter for node-local-dns.
 func New(
 	client client.Client,
 	namespace string,
