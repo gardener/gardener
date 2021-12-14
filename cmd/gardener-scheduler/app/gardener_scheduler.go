@@ -117,7 +117,7 @@ func runCommand(ctx context.Context, opts *Options) error {
 	// set the logger used by sigs.k8s.io/controller-runtime
 	runtimelog.SetLogger(log)
 
-	log.Info("Starting Gardener scheduler...", "version", version.Get())
+	log.Info("Starting gardener-scheduler...", "version", version.Get())
 	log.Info("Feature Gates", "featureGates", schedulerfeatures.FeatureGate.String())
 
 	// Prepare a Kubernetes client object for the Garden cluster which contains all the Clientsets

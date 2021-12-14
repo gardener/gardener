@@ -79,6 +79,10 @@ data:
       secretBinding:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.secretBinding.concurrentSyncs is required" .Values.global.controller.config.controllers.secretBinding.concurrentSyncs }}
       {{- end }}
+      {{- if .Values.global.controller.config.controllers.secretBindingProvider }}
+      secretBindingProvider:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.secretBindingProvider.concurrentSyncs is required" .Values.global.controller.config.controllers.secretBindingProvider.concurrentSyncs }}
+      {{- end }}
       {{- if .Values.global.controller.config.controllers.seed }}
       seed:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.seed.concurrentSyncs is required" .Values.global.controller.config.controllers.seed.concurrentSyncs }}

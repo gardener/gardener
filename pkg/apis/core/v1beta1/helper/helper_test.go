@@ -206,6 +206,19 @@ var _ = Describe("helper", func() {
 			})
 		})
 
+		DescribeTable("#RemoveConditions",
+			func(conditions []gardencorev1beta1.Condition, conditionTypes []gardencorev1beta1.ConditionType, expectedResult []gardencorev1beta1.Condition) {
+				Expect(RemoveConditions(conditions, conditionTypes...)).To(Equal(expectedResult))
+			},
+			Entry("remove foo", []gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}, []gardencorev1beta1.ConditionType{"foo"},
+				[]gardencorev1beta1.Condition{{Type: "bar"}}),
+			Entry("remove bar", []gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}, []gardencorev1beta1.ConditionType{"bar"},
+				[]gardencorev1beta1.Condition{{Type: "foo"}}),
+			Entry("don't remove anything", []gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}, nil,
+				[]gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}),
+			Entry("remove from an empty slice", nil, []gardencorev1beta1.ConditionType{"foo"}, nil),
+		)
+
 		Describe("#GetCondition", func() {
 			It("should return the found condition", func() {
 				var (
@@ -950,6 +963,41 @@ var _ = Describe("helper", func() {
 		Entry("dns providers but no type", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{}}}, false),
 		Entry("dns providers but different type", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{Type: &differentType}}}, false),
 		Entry("dns providers and unmanaged type", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{Type: &unmanagedType}}}, true),
+	)
+
+	DescribeTable("#SeedSettingOwnerChecksEnabled",
+		func(settings *gardencorev1beta1.SeedSettings, expected bool) {
+			Expect(SeedSettingOwnerChecksEnabled(settings)).To(Equal(expected))
+		},
+
+		Entry("no settings", nil, true),
+		Entry("no owner checks setting", &gardencorev1beta1.SeedSettings{}, true),
+		Entry("owner checks enabled", &gardencorev1beta1.SeedSettings{OwnerChecks: &gardencorev1beta1.SeedSettingOwnerChecks{Enabled: true}}, true),
+		Entry("owner checks disabled", &gardencorev1beta1.SeedSettings{OwnerChecks: &gardencorev1beta1.SeedSettingOwnerChecks{Enabled: false}}, false),
+	)
+
+	DescribeTable("#SeedSettingDependencyWatchdogEndpointEnabled",
+		func(settings *gardencorev1beta1.SeedSettings, expected bool) {
+			Expect(SeedSettingDependencyWatchdogEndpointEnabled(settings)).To(Equal(expected))
+		},
+
+		Entry("no settings", nil, true),
+		Entry("no dwd setting", &gardencorev1beta1.SeedSettings{}, true),
+		Entry("no dwd endpoint setting", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{}}, true),
+		Entry("dwd endpoint enabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Endpoint: &gardencorev1beta1.SeedSettingDependencyWatchdogEndpoint{Enabled: true}}}, true),
+		Entry("dwd endpoint disabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Endpoint: &gardencorev1beta1.SeedSettingDependencyWatchdogEndpoint{Enabled: false}}}, false),
+	)
+
+	DescribeTable("#SeedSettingDependencyWatchdogProbeEnabled",
+		func(settings *gardencorev1beta1.SeedSettings, expected bool) {
+			Expect(SeedSettingDependencyWatchdogProbeEnabled(settings)).To(Equal(expected))
+		},
+
+		Entry("no settings", nil, true),
+		Entry("no dwd setting", &gardencorev1beta1.SeedSettings{}, true),
+		Entry("no dwd endpoint setting", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{}}, true),
+		Entry("dwd endpoint enabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Probe: &gardencorev1beta1.SeedSettingDependencyWatchdogProbe{Enabled: true}}}, true),
+		Entry("dwd endpoint disabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Probe: &gardencorev1beta1.SeedSettingDependencyWatchdogProbe{Enabled: false}}}, false),
 	)
 
 	DescribeTable("#IsAPIServerExposureManaged",
@@ -2087,5 +2135,41 @@ var _ = Describe("helper", func() {
 		Entry("workerKubernetes = nil", semver.MustParse("1.2.3"), nil, semver.MustParse("1.2.3")),
 		Entry("workerKubernetes.version = nil", semver.MustParse("1.2.3"), &gardencorev1beta1.WorkerKubernetes{}, semver.MustParse("1.2.3")),
 		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &gardencorev1beta1.WorkerKubernetes{Version: pointer.String("4.5.6")}, semver.MustParse("4.5.6")),
+	)
+
+	DescribeTable("#GetSecretBindingTypes",
+		func(secretBinding *gardencorev1beta1.SecretBinding, expected []string) {
+			actual := GetSecretBindingTypes(secretBinding)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("with single-value provider type", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo"}}, []string{"foo"}),
+		Entry("with multi-value provider type", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo,bar,baz"}}, []string{"foo", "bar", "baz"}),
+	)
+
+	DescribeTable("#SecretBindingHasType",
+		func(secretBinding *gardencorev1beta1.SecretBinding, toFind string, expected bool) {
+			actual := SecretBindingHasType(secretBinding, toFind)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("with empty provider field", &gardencorev1beta1.SecretBinding{}, "foo", false),
+		Entry("when single-value provider type equals to the given type", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo"}}, "foo", true),
+		Entry("when single-value provider type does not match the given type", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo"}}, "bar", false),
+		Entry("when multi-value provider type contains the given type", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo,bar"}}, "bar", true),
+		Entry("when multi-value provider type does not contain the given type", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo,bar"}}, "baz", false),
+	)
+
+	DescribeTable("#AddTypeToSecretBinding",
+		func(secretBinding *gardencorev1beta1.SecretBinding, toAdd, expected string) {
+			AddTypeToSecretBinding(secretBinding, toAdd)
+			Expect(secretBinding.Provider.Type).To(Equal(expected))
+		},
+
+		Entry("with empty provider field", &gardencorev1beta1.SecretBinding{}, "foo", "foo"),
+		Entry("when single-value provider type already exists", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo"}}, "foo", "foo"),
+		Entry("when single-value provider type does not exist", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo"}}, "bar", "foo,bar"),
+		Entry("when multi-value provider type already exists", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo,bar"}}, "foo", "foo,bar"),
+		Entry("when multi-value provider type does not exist", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo,bar"}}, "baz", "foo,bar,baz"),
 	)
 })

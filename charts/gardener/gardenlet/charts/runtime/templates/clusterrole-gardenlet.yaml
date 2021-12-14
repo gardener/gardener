@@ -212,6 +212,7 @@ rules:
   - druid.gardener.cloud
   resources:
   - etcds
+  - etcdcopybackupstasks
   verbs:
   - create
   - delete

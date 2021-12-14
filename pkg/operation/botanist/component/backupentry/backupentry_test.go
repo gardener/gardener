@@ -20,9 +20,10 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/backupentry"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -48,7 +49,7 @@ var _ = Describe("BackupEntry", func() {
 		expected         *gardencorev1beta1.BackupEntry
 		values           *Values
 		log              logrus.FieldLogger
-		defaultDepWaiter component.DeployMigrateWaiter
+		defaultDepWaiter Interface
 
 		mockNow *mocktime.MockNow
 		now     time.Time
@@ -186,8 +187,9 @@ var _ = Describe("BackupEntry", func() {
 			defaultDepWaiter = New(log, c, values, time.Millisecond, 500*time.Millisecond)
 		})
 
-		It("should correctly restore BackupEntry", func() {
+		It("should not change the BucketName of the BackupEntry when the CopyEtcdBackupsDuringControlPlaneMigration feature gate is disabled", func() {
 			defer test.WithVars(&TimeNow, mockNow.Do)()
+			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.CopyEtcdBackupsDuringControlPlaneMigration, false)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			existing := expected.DeepCopy()
@@ -203,6 +205,28 @@ var _ = Describe("BackupEntry", func() {
 
 			expected.ResourceVersion = "2"
 			expected.Spec.BucketName = differentBucketName
+			expected.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationRestore
+
+			Expect(actual).To(DeepEqual(expected))
+		})
+
+		It("should change the BucketName of the BackupEntry when the CopyEtcdBackupsDuringControlPlaneMigration feature gate is enabled", func() {
+			defer test.WithVars(&TimeNow, mockNow.Do)()
+			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.CopyEtcdBackupsDuringControlPlaneMigration, true)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			existing := expected.DeepCopy()
+			existing.ResourceVersion = ""
+			existing.Spec.BucketName = differentBucketName
+			existing.Spec.SeedName = &differentSeedName
+			Expect(c.Create(ctx, existing)).To(Succeed(), "restoring BackupEntry succeeds")
+
+			Expect(defaultDepWaiter.Restore(ctx, nil)).To(Succeed())
+
+			actual := &gardencorev1beta1.BackupEntry{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, actual)).To(Succeed())
+
+			expected.ResourceVersion = "2"
 			expected.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationRestore
 
 			Expect(actual).To(DeepEqual(expected))
@@ -268,14 +292,34 @@ var _ = Describe("BackupEntry", func() {
 	})
 
 	Describe("#Destroy", func() {
-		It("should be nil because it's not implemented", func() {
-			Expect(defaultDepWaiter.Destroy(ctx)).To(BeNil())
+		It("should not return error when it's not found", func() {
+			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
+		})
+
+		It("should not return error when it's deleted successfully", func() {
+			Expect(c.Create(ctx, expected)).To(Succeed(), "creating BackupEntry succeeds")
+			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
 		})
 	})
 
 	Describe("#WaitCleanup", func() {
 		It("should be nil because it's not implemented", func() {
 			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(BeNil())
+		})
+	})
+
+	Describe("#Get", func() {
+		It("should return error if the backupentry does not exist", func() {
+			_, err := defaultDepWaiter.Get(ctx)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should return the retrived backupentry and save it locally", func() {
+			Expect(c.Create(ctx, expected)).To(Succeed())
+			backupEntry, err := defaultDepWaiter.Get(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(backupEntry).To(Equal(expected))
+			Expect(defaultDepWaiter.GetActualBucketName()).To(Equal(expected.Spec.BucketName))
 		})
 	})
 })

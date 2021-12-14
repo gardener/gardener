@@ -634,6 +634,11 @@ func (in *CA) DeepCopyInto(out *CA) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Validity != nil {
+		in, out := &in.Validity, &out.Validity
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	return
 }
 
@@ -1211,6 +1216,11 @@ func (in *TLSServer) DeepCopyInto(out *TLSServer) {
 	if in.Key != nil {
 		in, out := &in.Key, &out.Key
 		*out = new(string)
+		**out = **in
+	}
+	if in.Validity != nil {
+		in, out := &in.Validity, &out.Validity
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	return

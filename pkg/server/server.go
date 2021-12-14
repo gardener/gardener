@@ -20,7 +20,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gardener/gardener/pkg/logger"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // Server is a HTTP(S) server.
@@ -36,6 +36,7 @@ type Server struct {
 // Start starts the server. If the TLS cert and key paths are provided then it will start it as HTTPS server.
 func (s *Server) Start(ctx context.Context) {
 	var (
+		log           = logf.Log.WithName("server")
 		listenAddress = fmt.Sprintf("%s:%d", s.bindAddress, s.port)
 		serverMux     = http.NewServeMux()
 		server        = &http.Server{Addr: listenAddress, Handler: serverMux}
@@ -52,16 +53,16 @@ func (s *Server) Start(ctx context.Context) {
 	// Server startup logic.
 	go func() {
 		if s.tlsCertPath != nil && s.tlsKeyPath != nil {
-			logger.Logger.Infof("Starting new HTTPS server on %s", listenAddress)
+			log.Info("Starting new HTTPS server", "listenAddress", listenAddress)
 			if err := server.ListenAndServeTLS(*s.tlsCertPath, *s.tlsKeyPath); err != http.ErrServerClosed {
-				logger.Logger.Errorf("Could not start HTTPS server: %v", err)
+				log.Error(err, "Could not start HTTPS server")
 			}
 			return
 		}
 
-		logger.Logger.Infof("Starting new HTTP server on %s", listenAddress)
+		log.Info("Starting new HTTP server", "listenAddress", listenAddress)
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
-			logger.Logger.Errorf("Could not start HTTP server: %v", err)
+			log.Error(err, "Could not start HTTP server")
 		}
 	}()
 
@@ -71,7 +72,7 @@ func (s *Server) Start(ctx context.Context) {
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		logger.Logger.Errorf("Error when shutting down server: %v", err)
+		log.Error(err, "error shutting down server")
 	}
-	logger.Logger.Info("Server stopped.")
+	log.Info("Server stopped")
 }

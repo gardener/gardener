@@ -106,6 +106,11 @@ var _ = Describe("ExtensionValidator", func() {
 
 			Expect(err).To(HaveOccurred())
 		})
+
+		It("should do nothing because the spec has not changed", func() {
+			attrs := admission.NewAttributesRecord(backupBucket, backupBucket, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupbuckets").WithVersion("version"), "", admission.Update, &metav1.DeleteOptions{}, false, nil)
+			Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+		})
 	})
 
 	Context("BackupEntry", func() {
@@ -171,6 +176,11 @@ var _ = Describe("ExtensionValidator", func() {
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 			Expect(err).To(HaveOccurred())
+		})
+
+		It("should do nothing because the spec has not changed", func() {
+			attrs := admission.NewAttributesRecord(backupEntry, backupEntry, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupentries").WithVersion("version"), "", admission.Update, &metav1.DeleteOptions{}, false, nil)
+			Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 		})
 	})
 
@@ -260,6 +270,11 @@ var _ = Describe("ExtensionValidator", func() {
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 			Expect(err).To(HaveOccurred())
+		})
+
+		It("should do nothing because the spec has not changed", func() {
+			attrs := admission.NewAttributesRecord(seed, seed, core.Kind("Seed").WithVersion("version"), seed.Namespace, seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.DeleteOptions{}, false, nil)
+			Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 		})
 	})
 
@@ -363,6 +378,11 @@ var _ = Describe("ExtensionValidator", func() {
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
 			Expect(err).To(HaveOccurred())
+		})
+
+		It("should do nothing because the spec has not changed", func() {
+			attrs := admission.NewAttributesRecord(shoot, shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.DeleteOptions{}, false, nil)
+			Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 		})
 	})
 

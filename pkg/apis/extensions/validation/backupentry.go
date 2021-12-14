@@ -76,7 +76,6 @@ func ValidateBackupEntrySpecUpdate(new, old *extensionsv1alpha1.BackupEntrySpec,
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Region, old.Region, fldPath.Child("region"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.BucketName, old.BucketName, fldPath.Child("bucketName"))...)
 
 	return allErrs
 }

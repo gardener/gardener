@@ -2,7 +2,7 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
-  name: gardener.cloud:vpa:{{ .Values.clusterType }}:metrics-reader
+  name: gardener.cloud:vpa:{{ include "vpa.rbac-name-infix" . }}:metrics-reader
   labels:
   {{ toYaml .Values.labels | indent 4 }}
   annotations:
@@ -10,16 +10,14 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: gardener.cloud:vpa:{{ .Values.clusterType }}:metrics-reader
+  name: gardener.cloud:vpa:{{ include "vpa.rbac-name-infix" . }}:metrics-reader
 {{- if .Values.recommender.enabled }}
 subjects:
-{{- if .Values.recommender.enableServiceAccount }}
 - kind: ServiceAccount
   name: vpa-recommender
+{{- if .Values.recommender.createServiceAccount }}
   namespace: {{ .Release.Namespace }}
 {{- else }}
-- apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: gardener.cloud:vpa:recommender
+  namespace: kube-system
 {{- end }}
 {{- end }}

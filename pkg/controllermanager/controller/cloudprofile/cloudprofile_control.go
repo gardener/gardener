@@ -18,12 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
-
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -31,13 +25,18 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 func (c *Controller) cloudProfileAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		c.logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
 	c.cloudProfileQueue.Add(key)
@@ -50,39 +49,36 @@ func (c *Controller) cloudProfileUpdate(_, newObj interface{}) {
 func (c *Controller) cloudProfileDelete(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		c.logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
 	c.cloudProfileQueue.Add(key)
 }
 
 // NewCloudProfileReconciler creates a new instance of a reconciler which reconciles CloudProfiles.
-func NewCloudProfileReconciler(l logrus.FieldLogger, gardenClient client.Client, recorder record.EventRecorder) reconcile.Reconciler {
+func NewCloudProfileReconciler(gardenClient client.Client, recorder record.EventRecorder) reconcile.Reconciler {
 	return &cloudProfileReconciler{
-		logger:       l,
 		gardenClient: gardenClient,
 		recorder:     recorder,
 	}
 }
 
 type cloudProfileReconciler struct {
-	logger       logrus.FieldLogger
 	gardenClient client.Client
 	recorder     record.EventRecorder
 }
 
 func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, cloudProfile); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			log.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
-
-	cloudProfileLogger := logger.NewFieldLogger(r.logger, "cloudprofile", cloudProfile.Name)
 
 	// The deletionTimestamp labels the CloudProfile as intended to get deleted. Before deletion, it has to be ensured that
 	// no Shoots and Seed are assigned to the CloudProfile anymore. If this is the case then the controller will remove
@@ -94,31 +90,22 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 
 		associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, r.gardenClient, cloudProfile)
 		if err != nil {
-			cloudProfileLogger.Error(err.Error())
 			return reconcile.Result{}, err
 		}
 
 		if len(associatedShoots) == 0 {
-			cloudProfileLogger.Infof("No Shoots are referencing the CloudProfile. Deletion accepted.")
-
-			if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, cloudProfile, gardencorev1beta1.GardenerName); client.IgnoreNotFound(err) != nil {
-				cloudProfileLogger.Errorf("could not remove finalizer from CloudProfile: %s", err.Error())
-				return reconcile.Result{}, err
-			}
-			return reconcile.Result{}, nil
+			log.Info("No Shoots are referencing the CloudProfile, deletion accepted")
+			return reconcile.Result{}, client.IgnoreNotFound(controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, cloudProfile, gardencorev1beta1.GardenerName))
 		}
 
-		message := fmt.Sprintf("Can't delete CloudProfile, because the following Shoots are still referencing it: %+v", associatedShoots)
-		cloudProfileLogger.Info(message)
+		message := fmt.Sprintf("Cannot delete CloudProfile, because the following Shoots are still referencing it: %+v", associatedShoots)
 		r.recorder.Event(cloudProfile, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
-
-		return reconcile.Result{}, fmt.Errorf("Cannot delete CloudProfile %q, because the following Shoots are still referencing it: %+v", cloudProfile.Name, associatedShoots)
+		return reconcile.Result{}, fmt.Errorf(message)
 	}
 
 	if !controllerutil.ContainsFinalizer(cloudProfile, gardencorev1beta1.GardenerName) {
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, cloudProfile, gardencorev1beta1.GardenerName); err != nil {
-			cloudProfileLogger.Errorf("could not add finalizer to CloudProfile: %s", err.Error())
-			return reconcile.Result{}, err
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to CloudProfile: %w", err)
 		}
 	}
 
@@ -127,10 +114,9 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 	migrationHappened := migrateMachineImageVersionCRISupport(cloudProfile)
 
 	if migrationHappened {
-		cloudProfileLogger.Infof("migrated Machine Image Versions to explicitly contain `docker` as supported CRI")
+		log.Info("migrated Machine Image Versions to explicitly contain `docker` as supported CRI")
 		if err := r.gardenClient.Update(ctx, cloudProfile); err != nil {
-			cloudProfileLogger.Errorf("failed to update Cloud Profile spec: %+v", err)
-			return reconcile.Result{}, err
+			return reconcile.Result{}, fmt.Errorf("failed to update Cloud Profile spec for machine image CRI migration: %w", err)
 		}
 	}
 

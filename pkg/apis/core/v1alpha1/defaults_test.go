@@ -228,10 +228,12 @@ var _ = Describe("Defaults", func() {
 		It("should default the seed settings (w/o taints)", func() {
 			SetDefaults_Seed(obj)
 
+			Expect(obj.Spec.Settings.DependencyWatchdog).NotTo(BeNil())
 			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
 			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
+			Expect(obj.Spec.Settings.OwnerChecks.Enabled).To(BeTrue())
 		})
 
 		It("should allow taints that were not allowed in version v1.12", func() {
@@ -244,35 +246,80 @@ var _ = Describe("Defaults", func() {
 
 			SetDefaults_Seed(obj)
 
+			Expect(obj.Spec.Settings.DependencyWatchdog).NotTo(BeNil())
 			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
 			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
+			Expect(obj.Spec.Settings.OwnerChecks.Enabled).To(BeTrue())
 			Expect(obj.Spec.Taints).To(HaveLen(3))
 			Expect(obj.Spec.Taints).To(Equal(taints))
 		})
 
 		It("should not default the seed settings because they were provided", func() {
 			var (
+				dwdEndpointEnabled        = false
+				dwdProbeEnabled           = false
 				excessCapacityReservation = false
 				scheduling                = true
 				shootDNS                  = false
 				vpaEnabled                = false
+				ownerChecks               = false
 			)
 
 			obj.Spec.Settings = &SeedSettings{
+				DependencyWatchdog: &SeedSettingDependencyWatchdog{
+					Endpoint: &SeedSettingDependencyWatchdogEndpoint{Enabled: dwdEndpointEnabled},
+					Probe:    &SeedSettingDependencyWatchdogProbe{Enabled: dwdProbeEnabled},
+				},
 				ExcessCapacityReservation: &SeedSettingExcessCapacityReservation{Enabled: excessCapacityReservation},
 				Scheduling:                &SeedSettingScheduling{Visible: scheduling},
 				ShootDNS:                  &SeedSettingShootDNS{Enabled: shootDNS},
 				VerticalPodAutoscaler:     &SeedSettingVerticalPodAutoscaler{Enabled: vpaEnabled},
+				OwnerChecks:               &SeedSettingOwnerChecks{Enabled: ownerChecks},
 			}
 
 			SetDefaults_Seed(obj)
 
+			Expect(obj.Spec.Settings.DependencyWatchdog.Endpoint.Enabled).To(Equal(dwdEndpointEnabled))
+			Expect(obj.Spec.Settings.DependencyWatchdog.Probe.Enabled).To(Equal(dwdProbeEnabled))
 			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(Equal(excessCapacityReservation))
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(Equal(scheduling))
 			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(Equal(shootDNS))
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(Equal(vpaEnabled))
+			Expect(obj.Spec.Settings.OwnerChecks.Enabled).To(Equal(ownerChecks))
+		})
+	})
+
+	Describe("#SetDefaults_SeedSettingDependencyWatchdog", func() {
+		var obj *SeedSettingDependencyWatchdog
+
+		BeforeEach(func() {
+			obj = &SeedSettingDependencyWatchdog{}
+		})
+
+		It("should default the settings", func() {
+			SetDefaults_SeedSettingDependencyWatchdog(obj)
+
+			Expect(obj.Endpoint.Enabled).To(BeTrue())
+			Expect(obj.Probe.Enabled).To(BeTrue())
+		})
+
+		It("should not default the seed settings because they were provided", func() {
+			var (
+				dwdEndpointEnabled = false
+				dwdProbeEnabled    = false
+			)
+
+			obj = &SeedSettingDependencyWatchdog{
+				Endpoint: &SeedSettingDependencyWatchdogEndpoint{Enabled: dwdEndpointEnabled},
+				Probe:    &SeedSettingDependencyWatchdogProbe{Enabled: dwdProbeEnabled},
+			}
+
+			SetDefaults_SeedSettingDependencyWatchdog(obj)
+
+			Expect(obj.Endpoint.Enabled).To(Equal(dwdEndpointEnabled))
+			Expect(obj.Probe.Enabled).To(Equal(dwdProbeEnabled))
 		})
 	})
 
@@ -341,6 +388,22 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent).To(PointTo(Equal(high)))
 			Expect(obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent).To(PointTo(Equal(low)))
+		})
+
+		It("should default the serializeImagePulls field", func() {
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.Kubelet.SerializeImagePulls).To(PointTo(BeTrue()))
+		})
+
+		It("should not default the serializeImagePulls field if it is already set", func() {
+			falseVar := false
+			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+			obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = &falseVar
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.Kubelet.SerializeImagePulls).To(PointTo(BeFalse()))
 		})
 
 		It("should not default the kube-controller-manager's pod eviction timeout field", func() {

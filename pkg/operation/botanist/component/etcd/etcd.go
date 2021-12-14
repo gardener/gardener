@@ -109,6 +109,10 @@ type Interface interface {
 	SetBackupConfig(config *BackupConfig)
 	// SetHVPAConfig sets the HVPA configuration.
 	SetHVPAConfig(config *HVPAConfig)
+	// Get retrieves the Etcd resource
+	Get(context.Context) (*druidv1alpha1.Etcd, error)
+	// SetOwnerCheckConfig sets the owner check configuration.
+	SetOwnerCheckConfig(config *OwnerCheckConfig)
 }
 
 // New creates a new instance of DeployWaiter for the Etcd.
@@ -160,9 +164,10 @@ type etcd struct {
 
 	etcd *druidv1alpha1.Etcd
 
-	secrets      Secrets
-	backupConfig *BackupConfig
-	hvpaConfig   *HVPAConfig
+	secrets          Secrets
+	backupConfig     *BackupConfig
+	hvpaConfig       *HVPAConfig
+	ownerCheckConfig *OwnerCheckConfig
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
@@ -180,9 +185,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		networkPolicy = e.emptyNetworkPolicy()
 		hvpa          = e.emptyHVPA()
 
-		existingEtcd        *druidv1alpha1.Etcd
-		existingSts         = &appsv1.StatefulSet{}
-		foundEtcd, foundSts bool
+		existingEtcd *druidv1alpha1.Etcd
+		existingSts  *appsv1.StatefulSet
 	)
 
 	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); err != nil {
@@ -190,31 +194,31 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			return err
 		}
 	} else {
-		foundEtcd = true
 		existingEtcd = e.etcd.DeepCopy()
 	}
 
 	stsName := e.etcd.Name
-	if foundEtcd && existingEtcd.Status.Etcd != nil && existingEtcd.Status.Etcd.Name != "" {
+	if existingEtcd != nil && existingEtcd.Status.Etcd != nil && existingEtcd.Status.Etcd.Name != "" {
 		stsName = existingEtcd.Status.Etcd.Name
 	}
 
-	if err := e.client.Get(ctx, client.ObjectKey{Namespace: e.namespace, Name: stsName}, existingSts); err != nil {
+	var sts appsv1.StatefulSet
+	if err := e.client.Get(ctx, client.ObjectKey{Namespace: e.namespace, Name: stsName}, &sts); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return err
 		}
 	} else {
-		foundSts = true
+		existingSts = &sts
 	}
 
 	var (
-		replicas = e.computeReplicas(foundEtcd, existingEtcd)
+		replicas = e.computeReplicas(existingEtcd)
 
 		protocolTCP             = corev1.ProtocolTCP
 		intStrPortEtcdClient    = intstr.FromInt(int(PortEtcdClient))
 		intStrPortBackupRestore = intstr.FromInt(int(PortBackupRestore))
 
-		resourcesEtcd, resourcesBackupRestore = e.computeContainerResources(foundSts, existingSts)
+		resourcesEtcd, resourcesBackupRestore = e.computeContainerResources(existingSts)
 		quota                                 = resource.MustParse("8Gi")
 		storageCapacity                       = resource.MustParse(e.storageCapacity)
 		garbageCollectionPolicy               = druidv1alpha1.GarbageCollectionPolicy(druidv1alpha1.GarbageCollectionPolicyExponential)
@@ -341,7 +345,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			ServerPort:              &PortEtcdServer,
 			ClientPort:              &PortEtcdClient,
 			Metrics:                 &metrics,
-			DefragmentationSchedule: e.computeDefragmentationSchedule(foundEtcd, existingEtcd),
+			DefragmentationSchedule: e.computeDefragmentationSchedule(existingEtcd),
 			Quota:                   &quota,
 		}
 		e.etcd.Spec.Backup = druidv1alpha1.BackupSpec{
@@ -365,9 +369,19 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				Provider:  &provider,
 				Prefix:    fmt.Sprintf("%s/etcd-%s", e.backupConfig.Prefix, e.role),
 			}
-			e.etcd.Spec.Backup.FullSnapshotSchedule = e.computeFullSnapshotSchedule(foundEtcd, existingEtcd)
+			e.etcd.Spec.Backup.FullSnapshotSchedule = e.computeFullSnapshotSchedule(existingEtcd)
 			e.etcd.Spec.Backup.DeltaSnapshotPeriod = &deltaSnapshotPeriod
 			e.etcd.Spec.Backup.DeltaSnapshotMemoryLimit = &deltaSnapshotMemoryLimit
+		}
+
+		if e.ownerCheckConfig != nil {
+			e.etcd.Spec.Backup.OwnerCheck = &druidv1alpha1.OwnerCheckSpec{
+				Name:        e.ownerCheckConfig.Name,
+				ID:          e.ownerCheckConfig.ID,
+				Interval:    &metav1.Duration{Duration: 30 * time.Second},
+				Timeout:     &metav1.Duration{Duration: 2 * time.Minute},
+				DNSCacheTTL: &metav1.Duration{Duration: 1 * time.Minute},
+			}
 		}
 
 		e.etcd.Spec.StorageCapacity = &storageCapacity
@@ -574,7 +588,7 @@ func (e *etcd) Snapshot(ctx context.Context, podExecutor kubernetes.PodExecutor)
 		podsList.Items[0].GetName(),
 		containerNameBackupRestore,
 		"/bin/sh",
-		fmt.Sprintf("curl -k https://etcd-%s-local:%d/snapshot/full", e.role, PortBackupRestore),
+		fmt.Sprintf("curl -k https://etcd-%s-local:%d/snapshot/full?final=true", e.role, PortBackupRestore),
 	)
 	return err
 }
@@ -586,9 +600,20 @@ func (e *etcd) ServiceDNSNames() []string {
 	)
 }
 
+// Get retrieves the Etcd resource
+func (e *etcd) Get(ctx context.Context) (*druidv1alpha1.Etcd, error) {
+	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); err != nil {
+		return nil, err
+	}
+	return e.etcd, nil
+}
+
 func (e *etcd) SetSecrets(secrets Secrets)                 { e.secrets = secrets }
 func (e *etcd) SetBackupConfig(backupConfig *BackupConfig) { e.backupConfig = backupConfig }
 func (e *etcd) SetHVPAConfig(hvpaConfig *HVPAConfig)       { e.hvpaConfig = hvpaConfig }
+func (e *etcd) SetOwnerCheckConfig(ownerCheckConfig *OwnerCheckConfig) {
+	e.ownerCheckConfig = ownerCheckConfig
+}
 
 func (e *etcd) podLabelSelector() labels.Selector {
 	app, _ := labels.NewRequirement(v1beta1constants.LabelApp, selection.Equals, []string{LabelAppValue})
@@ -596,7 +621,7 @@ func (e *etcd) podLabelSelector() labels.Selector {
 	return labels.NewSelector().Add(*role, *app)
 }
 
-func (e *etcd) computeContainerResources(foundSts bool, existingSts *appsv1.StatefulSet) (*corev1.ResourceRequirements, *corev1.ResourceRequirements) {
+func (e *etcd) computeContainerResources(existingSts *appsv1.StatefulSet) (*corev1.ResourceRequirements, *corev1.ResourceRequirements) {
 	var (
 		resourcesEtcd = &corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
@@ -620,7 +645,7 @@ func (e *etcd) computeContainerResources(foundSts bool, existingSts *appsv1.Stat
 		}
 	)
 
-	if foundSts && e.hvpaConfig != nil && e.hvpaConfig.Enabled {
+	if existingSts != nil && e.hvpaConfig != nil && e.hvpaConfig.Enabled {
 		for k := range existingSts.Spec.Template.Spec.Containers {
 			v := existingSts.Spec.Template.Spec.Containers[k]
 			switch v.Name {
@@ -635,29 +660,28 @@ func (e *etcd) computeContainerResources(foundSts bool, existingSts *appsv1.Stat
 	return resourcesEtcd, resourcesBackupRestore
 }
 
-func (e *etcd) computeReplicas(foundEtcd bool, existingEtcd *druidv1alpha1.Etcd) int {
+func (e *etcd) computeReplicas(existingEtcd *druidv1alpha1.Etcd) int {
 	if !e.retainReplicas {
 		return 1
 	}
 
-	if foundEtcd {
+	if existingEtcd != nil {
 		return existingEtcd.Spec.Replicas
 	}
-
 	return 0
 }
 
-func (e *etcd) computeDefragmentationSchedule(foundEtcd bool, existingEtcd *druidv1alpha1.Etcd) *string {
+func (e *etcd) computeDefragmentationSchedule(existingEtcd *druidv1alpha1.Etcd) *string {
 	defragmentationSchedule := e.defragmentationSchedule
-	if foundEtcd && existingEtcd.Spec.Etcd.DefragmentationSchedule != nil {
+	if existingEtcd != nil && existingEtcd.Spec.Etcd.DefragmentationSchedule != nil {
 		defragmentationSchedule = existingEtcd.Spec.Etcd.DefragmentationSchedule
 	}
 	return defragmentationSchedule
 }
 
-func (e *etcd) computeFullSnapshotSchedule(foundEtcd bool, existingEtcd *druidv1alpha1.Etcd) *string {
+func (e *etcd) computeFullSnapshotSchedule(existingEtcd *druidv1alpha1.Etcd) *string {
 	fullSnapshotSchedule := &e.backupConfig.FullSnapshotSchedule
-	if foundEtcd && existingEtcd.Spec.Backup.FullSnapshotSchedule != nil {
+	if existingEtcd != nil && existingEtcd.Spec.Backup.FullSnapshotSchedule != nil {
 		fullSnapshotSchedule = existingEtcd.Spec.Backup.FullSnapshotSchedule
 	}
 	return fullSnapshotSchedule
@@ -697,4 +721,13 @@ type HVPAConfig struct {
 	MaintenanceTimeWindow gardencorev1beta1.MaintenanceTimeWindow
 	// The update mode to use for scale down.
 	ScaleDownUpdateMode *string
+}
+
+// OwnerCheckConfig contains parameters related to checking if the seed is an owner
+// of the shoot. The ownership can change during control plane migration.
+type OwnerCheckConfig struct {
+	// Name is the domain name of the owner DNS record.
+	Name string
+	// ID is the seed ID value that is expected to be found in the owner DNS record.
+	ID string
 }

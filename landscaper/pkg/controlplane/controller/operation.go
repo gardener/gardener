@@ -24,7 +24,7 @@ import (
 	"github.com/gardener/component-spec/bindings-go/apis/v2/cdutils"
 	"github.com/gardener/component-spec/bindings-go/codec"
 	"github.com/gardener/gardener/charts"
-	exports "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports"
+	"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports"
 	"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports"
 	admissionconfighelper "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/helper"
 	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
@@ -35,13 +35,12 @@ import (
 	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/sirupsen/logrus"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Interface is an interface for the operation.
 type Interface interface {
 	// Reconcile performs a reconcile operation.
-	Reconcile(context.Context) (*exports.Exports, error)
+	Reconcile(context.Context) (*exports.Exports, bool, bool, error)
 	// Delete performs a delete operation.
 	Delete(context.Context) error
 }
@@ -52,14 +51,10 @@ const (
 	gardenerControllerManagerImageName   = "controller-manager"
 	gardenerSchedulerImageName           = "scheduler"
 	gardenerAdmissionControllerImageName = "admission-controller"
-	prefix                               = "controlplane"
 )
 
 // operation contains the configuration for an operation.
 type operation struct {
-	// client is the Kubernetes client for the hosting cluster.
-	client client.Client
-
 	// runtimeClient is the client for the runtime cluster
 	runtimeClient kubernetes.Interface
 
@@ -68,9 +63,6 @@ type operation struct {
 
 	// log is a logger.
 	log logrus.FieldLogger
-
-	// namespace is the namespace in the runtime cluster into which the controlplane shall be deployed.
-	namespace string
 
 	// imports contains the imports configuration.
 	imports *imports.Imports
@@ -115,6 +107,12 @@ type operation struct {
 	// chartPath is the path on the local filesystem to the chart directory
 	// exposed for testing
 	chartPath string
+
+	// successfullyDeployedApplicationChart marks that the application chart has been deployed successfully
+	successfullyDeployedApplicationChart bool
+
+	// successfullyDeployedRuntimeChart marks that the runtime chart has been deployed successfully
+	successfullyDeployedRuntimeChart bool
 }
 
 // ImageReferences contains the parsed image from the component descriptor
@@ -155,7 +153,6 @@ func NewOperation(
 	var err error
 	if imports.GardenerAdmissionController.Enabled &&
 		imports.GardenerAdmissionController.ComponentConfiguration != nil {
-		// imports.GardenerAdmissionController.Config.Configuration != nil {
 
 		op.admissionControllerConfig, err = admissionconfighelper.ConvertAdmissionControllerConfigurationExternal(imports.GardenerAdmissionController.ComponentConfiguration.Config)
 		if err != nil {
@@ -163,9 +160,7 @@ func NewOperation(
 		}
 	}
 
-	if imports.GardenerControllerManager.ComponentConfiguration != nil &&
-		imports.GardenerControllerManager.ComponentConfiguration.Config != nil {
-
+	if imports.GardenerControllerManager.ComponentConfiguration.Config != nil {
 		op.controllerManagerConfig, err = controllermanagerconfighelper.ConvertControllerManagerConfigurationExternal(imports.GardenerControllerManager.ComponentConfiguration.Config)
 		if err != nil {
 			return nil, fmt.Errorf("could not convert to external controller manager configuration: %v", err)
@@ -180,6 +175,11 @@ func NewOperation(
 		if err != nil {
 			return nil, fmt.Errorf("could not convert to external scheduler configuration: %v", err)
 		}
+	}
+
+	if imports.GardenerAdmissionController.Enabled {
+		op.exports.GardenerAdmissionControllerCA = &exports.Certificate{}
+		op.exports.GardenerAdmissionControllerTLSServing = &exports.Certificate{}
 	}
 
 	return op, nil

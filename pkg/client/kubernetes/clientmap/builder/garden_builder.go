@@ -17,12 +17,11 @@ package builder
 import (
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
-
-	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
 )
 
 // GardenClientMapBuilder can build a ClientMap which can be used to construct a ClientMap for requesting and storing
@@ -32,19 +31,12 @@ import (
 type GardenClientMapBuilder struct {
 	restConfig      *rest.Config
 	uncachedObjects []client.Object
-	logger          logrus.FieldLogger
 	seedName        string
 }
 
 // NewGardenClientMapBuilder creates a new GardenClientMapBuilder.
 func NewGardenClientMapBuilder() *GardenClientMapBuilder {
 	return &GardenClientMapBuilder{}
-}
-
-// WithLogger sets the logger attribute of the builder.
-func (b *GardenClientMapBuilder) WithLogger(logger logrus.FieldLogger) *GardenClientMapBuilder {
-	b.logger = logger
-	return b
 }
 
 // WithRESTConfig sets the restConfig attribute of the builder. This restConfig will be used to construct a new client
@@ -69,9 +61,6 @@ func (b *GardenClientMapBuilder) ForSeed(name string) *GardenClientMapBuilder {
 
 // Build builds the GardenClientMap using the provided attributes.
 func (b *GardenClientMapBuilder) Build() (clientmap.ClientMap, error) {
-	if b.logger == nil {
-		return nil, fmt.Errorf("logger is required but not set")
-	}
 	if b.restConfig == nil {
 		return nil, fmt.Errorf("restConfig is required but not set")
 	}
@@ -80,5 +69,5 @@ func (b *GardenClientMapBuilder) Build() (clientmap.ClientMap, error) {
 		RESTConfig:      b.restConfig,
 		UncachedObjects: b.uncachedObjects,
 		SeedName:        b.seedName,
-	}, b.logger), nil
+	}), nil
 }

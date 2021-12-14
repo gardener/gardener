@@ -73,7 +73,7 @@ func (g *graph) handleCertificateSigningRequestCreate(name string, request []byt
 	if err != nil {
 		return
 	}
-	if !gutil.IsSeedClientCert(x509cr, usages) {
+	if ok, _ := gutil.IsSeedClientCert(x509cr, usages); !ok {
 		return
 	}
 	seedName, _ := seedidentity.FromCertificateSigningRequest(x509cr)

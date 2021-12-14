@@ -146,5 +146,7 @@ func (p *provider) Wait(ctx context.Context) error {
 }
 
 func (p *provider) WaitCleanup(ctx context.Context) error {
-	return kutil.WaitUntilResourceDeleted(ctx, p.client, p.dnsProvider, 5*time.Second)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+	return kutil.WaitUntilResourceDeleted(timeoutCtx, p.client, p.dnsProvider, 5*time.Second)
 }

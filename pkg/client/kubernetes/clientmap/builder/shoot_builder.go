@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sirupsen/logrus"
 	baseconfig "k8s.io/component-base/config"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -33,19 +32,11 @@ type ShootClientMapBuilder struct {
 	gardenClientFunc       func(ctx context.Context) (kubernetes.Interface, error)
 	seedClientFunc         func(ctx context.Context, name string) (kubernetes.Interface, error)
 	clientConnectionConfig *baseconfig.ClientConnectionConfiguration
-
-	logger logrus.FieldLogger
 }
 
 // NewShootClientMapBuilder constructs a new ShootClientMapBuilder.
 func NewShootClientMapBuilder() *ShootClientMapBuilder {
 	return &ShootClientMapBuilder{}
-}
-
-// WithLogger sets the logger attribute of the builder.
-func (b *ShootClientMapBuilder) WithLogger(logger logrus.FieldLogger) *ShootClientMapBuilder {
-	b.logger = logger
-	return b
 }
 
 // WithGardenClientMap sets the ClientMap that should be used to retrieve Garden clients.
@@ -80,9 +71,6 @@ func (b *ShootClientMapBuilder) WithClientConnectionConfig(cfg *baseconfig.Clien
 
 // Build builds the ShootClientMap using the provided attributes.
 func (b *ShootClientMapBuilder) Build() (clientmap.ClientMap, error) {
-	if b.logger == nil {
-		return nil, fmt.Errorf("logger is required but not set")
-	}
 	if b.gardenClientFunc == nil {
 		return nil, fmt.Errorf("garden client is required but not set")
 	}
@@ -97,6 +85,5 @@ func (b *ShootClientMapBuilder) Build() (clientmap.ClientMap, error) {
 		GetGardenClient:        b.gardenClientFunc,
 		GetSeedClient:          b.seedClientFunc,
 		ClientConnectionConfig: *b.clientConnectionConfig,
-		Log:                    b.logger,
-	}, b.logger), nil
+	}), nil
 }

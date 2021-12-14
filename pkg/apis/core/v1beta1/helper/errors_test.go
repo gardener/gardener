@@ -17,6 +17,7 @@ package helper_test
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -77,6 +78,72 @@ var _ = Describe("errors", func() {
 		Entry("multiple code error given", NewErrorWithCodes("", gardencorev1beta1.ErrorInfraUnauthorized, gardencorev1beta1.ErrorConfigurationProblem), ConsistOf(Equal(gardencorev1beta1.ErrorInfraUnauthorized), Equal(gardencorev1beta1.ErrorConfigurationProblem))),
 		Entry("wrapped code error", fmt.Errorf("error %w", NewErrorWithCodes("", gardencorev1beta1.ErrorInfraUnauthorized)), ConsistOf(Equal(gardencorev1beta1.ErrorInfraUnauthorized))),
 	)
+
+	Describe("#MultiErrorWithCodes", func() {
+		var (
+			formatFn   func(errs []error) string
+			multiError *MultiErrorWithCodes
+
+			errs []error
+		)
+
+		JustBeforeEach(func() {
+			formatFn = func(err []error) string {
+				return strconv.Itoa(len(errs))
+			}
+			multiError = NewMultiErrorWithCodes(formatFn)
+
+			for _, err := range errs {
+				multiError.Append(err)
+			}
+		})
+
+		Context("when no errors added", func() {
+			It("should return no codes", func() {
+				Expect(multiError.Codes()).To(BeEmpty())
+			})
+
+			It("should return nil", func() {
+				Expect(multiError.ErrorOrNil()).To(BeNil())
+			})
+
+			It("should return correct error string", func() {
+				output := multiError.Error()
+				numErrors, err := strconv.Atoi(output)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(numErrors).To(Equal(len(errs)))
+			})
+		})
+
+		Context("when errors are added", func() {
+			BeforeEach(func() {
+				errs = []error{
+					NewErrorWithCodes("InsufficientPrivileges", gardencorev1beta1.ErrorInfraInsufficientPrivileges),
+					NewErrorWithCodes("InsufficientPrivileges", gardencorev1beta1.ErrorInfraInsufficientPrivileges),
+					NewErrorWithCodes("ErrorConfigurationProblem", gardencorev1beta1.ErrorConfigurationProblem),
+					errors.New("foo"),
+				}
+			})
+
+			It("should return unified codes", func() {
+				Expect(multiError.Codes()).To(ConsistOf([]gardencorev1beta1.ErrorCode{
+					gardencorev1beta1.ErrorInfraInsufficientPrivileges,
+					gardencorev1beta1.ErrorConfigurationProblem,
+				}))
+			})
+
+			It("should return error", func() {
+				Expect(multiError.ErrorOrNil()).ToNot(BeNil())
+			})
+
+			It("should return correct error string", func() {
+				output := multiError.Error()
+				numErrors, err := strconv.Atoi(output)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(numErrors).To(Equal(len(errs)))
+			})
+		})
+	})
 
 	var (
 		unauthorizedError                = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraUnauthorized}}

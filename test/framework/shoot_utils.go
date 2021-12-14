@@ -278,6 +278,11 @@ func setShootNetworkingSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreati
 		shoot.Spec.DNS = &gardencorev1beta1.DNS{Domain: &cfg.externalDomain}
 		clearDNS = false
 	}
+
+	if StringSet(cfg.networkingType) {
+		shoot.Spec.Networking.Type = cfg.networkingType
+	}
+
 	if StringSet(cfg.networkingPods) {
 		shoot.Spec.Networking.Pods = &cfg.networkingPods
 	}

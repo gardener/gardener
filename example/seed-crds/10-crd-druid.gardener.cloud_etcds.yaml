@@ -51,10 +51,33 @@ spec:
                 description: BackupSpec defines parametes associated with the full
                   and delta snapshots of etcd
                 properties:
-                  backupCompactionSchedule:
-                    description: BackupCompactionSchedule defines the cron standard
-                      for compacting the snapstore
-                    type: string
+                  compactionResources:
+                    description: 'CompactionResources defines the compute Resources
+                      required by compaction job. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Limits describes the maximum amount of compute
+                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Requests describes the minimum amount of compute
+                          resources required. If Requests is omitted for a container,
+                          it defaults to Limits if that is explicitly specified, otherwise
+                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                    type: object
                   compression:
                     description: SnapshotCompression defines the specification for
                       compression of Snapshots.
@@ -108,6 +131,31 @@ spec:
                   image:
                     description: Image defines the etcd container image and tag
                     type: string
+                  ownerCheck:
+                    description: OwnerCheck defines parameters related to checking
+                      if the cluster owner, as specified in the owner DNS record,
+                      is the expected one.
+                    properties:
+                      dnsCacheTTL:
+                        description: DNSCacheTTL is the DNS cache TTL for owner checks.
+                        type: string
+                      id:
+                        description: ID is the owner id value that is expected to
+                          be found in the owner DNS record.
+                        type: string
+                      interval:
+                        description: Interval is the time interval between owner checks.
+                        type: string
+                      name:
+                        description: Name is the domain name of the owner DNS record.
+                        type: string
+                      timeout:
+                        description: Timeout is the timeout for owner checks.
+                        type: string
+                    required:
+                    - id
+                    - name
+                    type: object
                   port:
                     description: Port define the port on which etcd-backup-restore
                       server will exposed.

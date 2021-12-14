@@ -76,6 +76,8 @@ global:
         seed:
           concurrentSyncs: 5
           syncPeriod: 1m
+        # leaseResyncSeconds: 2
+        # leaseResyncMissThreshold: 10
         shoot:
           concurrentSyncs: 20
           syncPeriod: 1h
@@ -159,7 +161,16 @@ global:
       #       namespace: istio-ingress-handler-2
       #       labels:
       #         istio: ingressgateway-handler-2
-
+    # etcdConfig:
+    #   etcdController:
+    #     workers: 3
+    #   custodianController:
+    #     workers: 3
+    #   backupCompactionController:
+    #     workers: 3
+    #     enableBackupCompaction: false
+    #     eventsThreshold: 1000000
+    #     activeDeadlineDuration: "3h"
     # seedConfig: {}
     # logging:
     #   fluentBit:
@@ -169,3 +180,16 @@ global:
     #   loki:
     #     garden:
     #       priority: 100
+    # monitoring:
+    #   shoot:
+    #     remoteWrite:
+    #       url: https://remoteWriteUrl # remote write URL
+    #       keep: # metrics that should be forwarded to the external write endpoint. If empty all metrics get forwarded
+    #       - kube_pod_container_info
+    #       queueConfig: | # queue_config of prometheus remote write as multiline string
+    #         max_shards: 100
+    #         batch_send_deadline: 20s
+    #         min_backoff: 500ms
+    #         max_backoff: 60s
+    #     externalLabels: # add additional labels to metrics to identify it on the central instance
+    #       additional: label

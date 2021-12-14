@@ -17,12 +17,13 @@ package cmd
 import (
 	"os"
 
+	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var (
 	// Log is log.Log. Exposed for testing.
-	Log = log.Log
+	Log logr.Logger = log.Log
 	// Exit calls os.Exit. Exposed for testing.
 	Exit = os.Exit
 )

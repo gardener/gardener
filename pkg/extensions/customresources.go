@@ -114,6 +114,7 @@ func WaitUntilObjectReadyWithHealthFunction(
 
 		if postReadyFunc != nil {
 			if err := postReadyFunc(); err != nil {
+				lastObservedError = err
 				return retry.SevereError(err)
 			}
 		}

@@ -119,6 +119,24 @@ func SetDefaults_Seed(obj *Seed) {
 	if obj.Spec.Settings.VerticalPodAutoscaler == nil {
 		obj.Spec.Settings.VerticalPodAutoscaler = &SeedSettingVerticalPodAutoscaler{Enabled: true}
 	}
+
+	if obj.Spec.Settings.OwnerChecks == nil {
+		obj.Spec.Settings.OwnerChecks = &SeedSettingOwnerChecks{Enabled: true}
+	}
+
+	if obj.Spec.Settings.DependencyWatchdog == nil {
+		obj.Spec.Settings.DependencyWatchdog = &SeedSettingDependencyWatchdog{}
+	}
+}
+
+// SetDefaults_SeedSettingDependencyWatchdog sets defaults for SeedSettingDependencyWatchdog objects.
+func SetDefaults_SeedSettingDependencyWatchdog(obj *SeedSettingDependencyWatchdog) {
+	if obj.Endpoint == nil {
+		obj.Endpoint = &SeedSettingDependencyWatchdogEndpoint{Enabled: true}
+	}
+	if obj.Probe == nil {
+		obj.Probe = &SeedSettingDependencyWatchdogProbe{Enabled: true}
+	}
 }
 
 // SetDefaults_Shoot sets default values for Shoot objects.
@@ -217,6 +235,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 	if obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent == nil {
 		obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = pointer.Int32(40)
+	}
+	if obj.Spec.Kubernetes.Kubelet.SerializeImagePulls == nil {
+		obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = pointer.Bool(true)
 	}
 
 	var (

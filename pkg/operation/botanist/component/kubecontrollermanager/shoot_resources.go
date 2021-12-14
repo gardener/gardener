@@ -17,14 +17,38 @@ package kubecontrollermanager
 import (
 	"context"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
+
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (k *kubeControllerManager) deployShootManagedResource(ctx context.Context) error {
-	return kutil.DeleteObjects(
-		ctx,
-		k.seedClient,
-		k.emptyManagedResource(),
-		k.emptyManagedResourceSecret(),
+func (k *kubeControllerManager) reconcileShootResources(ctx context.Context, serviceAccountName string) error {
+	var (
+		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:target:kube-controller-manager",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "system:kube-controller-manager",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccountName,
+				Namespace: metav1.NamespaceSystem,
+			}},
+		}
 	)
+
+	data, err := registry.AddAllAndSerialize(clusterRoleBinding)
+	if err != nil {
+		return err
+	}
+
+	return managedresources.CreateForShoot(ctx, k.seedClient, k.namespace, managedResourceName, true, data)
 }

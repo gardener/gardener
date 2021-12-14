@@ -17,14 +17,10 @@ package validation_test
 import (
 	"net"
 	"testing"
-	"time"
 
-	"github.com/gardener/gardener/pkg/utils/secrets"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
-
-const x509CommonName = "gardener.cloud:system:seed:test"
 
 var (
 	x509Organization = []string{"gardener.cloud:system:seeds"}
@@ -35,51 +31,4 @@ var (
 func TestValidation(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Landscaper Controlplane API Imports Validation Suite")
-}
-
-func GenerateTLSServingCertificate(ca *secrets.Certificate) secrets.Certificate {
-	return GenerateCertificate(10*time.Hour, secrets.ServerCert, ca)
-}
-
-func GenerateClientCertificate(ca *secrets.Certificate) secrets.Certificate {
-	return GenerateCertificate(10*time.Hour, secrets.ClientCert, ca)
-}
-
-// GenerateTLSServingCertificate is a common utility function for validation tests to generate
-// a TLS serving certificate
-func GenerateCertificate(validity time.Duration, certType secrets.CertType, ca *secrets.Certificate) secrets.Certificate {
-	caCertConfig := &secrets.CertificateSecretConfig{
-		Name:         "test",
-		CommonName:   x509CommonName,
-		Organization: x509Organization,
-		DNSNames:     x509DnsNames,
-		IPAddresses:  x509IpAddresses,
-		CertType:     certType,
-		Validity:     &validity,
-	}
-
-	if ca != nil {
-		caCertConfig.SigningCA = ca
-	}
-
-	cert, err := caCertConfig.GenerateCertificate()
-	Expect(err).ToNot(HaveOccurred())
-	return *cert
-}
-
-// GenerateCACertificate is a common utility function for validation tests to generate a CA certificate
-func GenerateCACertificate(commonName string) secrets.Certificate {
-	validity := 10 * time.Hour
-	caCertConfig := &secrets.CertificateSecretConfig{
-		Name:         commonName,
-		CommonName:   commonName,
-		Organization: x509Organization,
-		DNSNames:     x509DnsNames,
-		IPAddresses:  x509IpAddresses,
-		CertType:     secrets.CACert,
-		Validity:     &validity,
-	}
-	cert, err := caCertConfig.GenerateCertificate()
-	Expect(err).ToNot(HaveOccurred())
-	return *cert
 }

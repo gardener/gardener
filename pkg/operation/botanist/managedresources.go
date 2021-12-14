@@ -17,12 +17,9 @@ package botanist
 import (
 	"context"
 	"fmt"
-	"time"
-
-	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/retry"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -47,26 +44,7 @@ func (b *Botanist) WaitUntilAllManagedResourcesDeleted(ctx context.Context) erro
 }
 
 func (b *Botanist) waitUntilManagedResourceAreDeleted(ctx context.Context, listOpt ...client.ListOption) error {
-	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
-		managedResources := &resourcesv1alpha1.ManagedResourceList{}
-		if err := b.K8sSeedClient.Client().List(ctx,
-			managedResources,
-			listOpt...); err != nil {
-			return retry.SevereError(err)
-		}
-
-		if len(managedResources.Items) == 0 {
-			return retry.Ok()
-		}
-
-		names := make([]string, 0, len(managedResources.Items))
-		for _, resource := range managedResources.Items {
-			names = append(names, resource.Name)
-		}
-
-		b.Logger.Infof("Waiting until all managed resources have been deleted in the shoot cluster...")
-		return retry.MinorError(fmt.Errorf("not all managed resources have been deleted in the shoot cluster (still existing: %s)", names))
-	})
+	return managedresources.WaitUntilListDeleted(ctx, b.K8sSeedClient.Client(), &resourcesv1alpha1.ManagedResourceList{}, listOpt...)
 }
 
 // KeepObjectsForAllManagedResources sets ManagedResource.Spec.KeepObjects to true.

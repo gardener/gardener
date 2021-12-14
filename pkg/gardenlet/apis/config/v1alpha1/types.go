@@ -83,6 +83,10 @@ type GardenletConfiguration struct {
 	// by the Gardenlet in the seed clusters.
 	// +optional
 	SNI *SNI `json:"sni,omitempty"`
+	// ETCDConfig contains an optional configuration for the
+	// backup compaction feature in etcdbr
+	// +optional
+	ETCDConfig *ETCDConfig `json:"etcdConfig,omitempty"`
 	// ExposureClassHandlers is a list of optional of exposure class handlers.
 	// +optional
 	ExposureClassHandlers []ExposureClassHandler `json:"exposureClassHandlers,omitempty"`
@@ -239,6 +243,15 @@ type SeedControllerConfiguration struct {
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
+	// LeaseResyncSeconds defines how often (in seconds) the seed lease is renewed.
+	// Defaults to 2
+	// +optional
+	LeaseResyncSeconds *int32 `json:"leaseResyncSeconds,omitempty"`
+	// LeaseResyncMissThreshold is the amount of missed lease resyncs before the health status
+	// is changed to false.
+	// Defaults to 10
+	// +optional
+	LeaseResyncMissThreshold *int32 `json:"leaseResyncMissThreshold,omitempty"`
 }
 
 // ShootControllerConfiguration defines the configuration of the Shoot
@@ -482,6 +495,55 @@ type SNIIngress struct {
 	// Defaults to "istio: ingressgateway".
 	// +optional
 	Labels map[string]string `json:"labels,omitempty"`
+}
+
+// ETCDConfig contains ETCD related configs
+type ETCDConfig struct {
+	// ETCDController contains config specific to ETCD controller
+	// +optional
+	ETCDController *ETCDController `json:"etcdController,omitempty"`
+	// CustodianController contains config specific to custodian controller
+	// +optional
+	CustodianController *CustodianController `json:"custodianController,omitempty"`
+	// BackupCompactionController contains config specific to backup compaction controller
+	// +optional
+	BackupCompactionController *BackupCompactionController `json:"backupCompactionController,omitempty"`
+}
+
+// ETCDController contains config specific to ETCD controller
+type ETCDController struct {
+	// Workers specify number of worker threads in ETCD controller
+	// Defaults to 50
+	// +optional
+	Workers *int64 `json:"workers,omitempty"`
+}
+
+// CustodianController contains config specific to custodian controller
+type CustodianController struct {
+	// Workers specify number of worker threads in custodian controller
+	// Defaults to 10
+	// +optional
+	Workers *int64 `json:"workers,omitempty"`
+}
+
+// BackupCompactionController contains config specific to backup compaction controller
+type BackupCompactionController struct {
+	// Workers specify number of worker threads in backup compaction controller
+	// Defaults to 3
+	// +optional
+	Workers *int64 `json:"workers,omitempty"`
+	// EnableBackupCompaction enables automatic compaction of etcd backups
+	// Defaults to false
+	// +optional
+	EnableBackupCompaction *bool `json:"enableBackupCompaction,omitempty"`
+	// EventsThreshold defines total number of etcd events that can be allowed before a backup compaction job is triggered
+	// Defaults to 1 Million events
+	// +optional
+	EventsThreshold *int64 `json:"eventsThreshold,omitempty"`
+	// ActiveDeadlineDuration defines duration after which a running backup compaction job will be killed
+	// Defaults to 3 hours
+	// +optional
+	ActiveDeadlineDuration *metav1.Duration `json:"activeDeadlineDuration,omitempty"`
 }
 
 // ExposureClassHandler contains configuration for an exposure class handler.

@@ -277,7 +277,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{"druid.gardener.cloud"},
-				Resources: []string{"etcds"},
+				Resources: []string{"etcds", "etcdcopybackupstasks"},
 				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
 			},
 			{
@@ -655,6 +655,8 @@ func ComputeExpectedGardenletConfiguration(
 				SyncPeriod: &metav1.Duration{
 					Duration: time.Minute,
 				},
+				LeaseResyncSeconds:       pointer.Int32(2),
+				LeaseResyncMissThreshold: pointer.Int32(10),
 			},
 			Shoot: &gardenletconfigv1alpha1.ShootControllerConfiguration{
 				ReconcileInMaintenanceOnly: pointer.Bool(false),

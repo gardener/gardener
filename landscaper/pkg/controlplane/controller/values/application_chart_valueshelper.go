@@ -152,11 +152,6 @@ func (v valuesHelper) GetApplicationChartValues() (map[string]interface{}, error
 		return nil, err
 	}
 
-	values, err = utils.SetToValuesMap(values, v.DiffieHellmannKey, "apiserver", "caBundle")
-	if err != nil {
-		return nil, err
-	}
-
 	if v.AdmissionControllerConfig != nil && v.AdmissionControllerConfig.Server.ResourceAdmissionConfiguration != nil {
 		v, err := utils.ToValuesMap(v.AdmissionControllerConfig.Server.ResourceAdmissionConfiguration)
 		if err != nil {

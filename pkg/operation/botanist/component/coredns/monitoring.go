@@ -79,17 +79,19 @@ var (
 	monitoringScrapeConfig = `job_name: ` + monitoringPrometheusJobName + `
 scheme: https
 tls_config:
-  insecure_skip_verify: true
-  cert_file: /etc/prometheus/seed/prometheus.crt
-  key_file: /etc/prometheus/seed/prometheus.key
+  ca_file: /etc/prometheus/seed/ca.crt
+authorization:
+  type: Bearer
+  credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
 honor_labels: false
 kubernetes_sd_configs:
 - role: endpoints
   api_server: https://` + v1beta1constants.DeploymentNameKubeAPIServer + `:` + strconv.Itoa(kubeapiserver.Port) + `
   tls_config:
     ca_file: /etc/prometheus/seed/ca.crt
-    cert_file: /etc/prometheus/seed/prometheus.crt
-    key_file: /etc/prometheus/seed/prometheus.key
+  authorization:
+    type: Bearer
+    credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
 relabel_configs:
 - source_labels:
   - __meta_kubernetes_service_name

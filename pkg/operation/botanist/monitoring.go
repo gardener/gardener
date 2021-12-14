@@ -69,6 +69,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		b.Shoot.Components.ControlPlane.KubeScheduler,
 		b.Shoot.Components.ControlPlane.KubeControllerManager,
 		b.Shoot.Components.SystemComponents.CoreDNS,
+		b.Shoot.Components.SystemComponents.VPNShoot,
 	}
 
 	if b.Shoot.WantsClusterAutoscaler {
@@ -110,6 +111,16 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		scrapeConfigs.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.PrometheusConfigMapScrapeConfig]))
 	}
 
+	// Create shoot token secret for kube-state-metrics and prometheus components
+	for _, name := range []string{
+		v1beta1constants.DeploymentNameKubeStateMetricsShoot,
+		v1beta1constants.StatefulSetNamePrometheus,
+	} {
+		if err := gutil.NewShootAccessSecret(name, b.Shoot.SeedNamespace).Reconcile(ctx, b.K8sSeedClient.Client()); err != nil {
+			return err
+		}
+	}
+
 	alerting, err := b.getCustomAlertingConfigs(ctx, b.GetSecretKeysOfRole(v1beta1constants.GardenRoleAlerting))
 	if err != nil {
 		return err
@@ -141,6 +152,9 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"kubernetesVersion": b.Shoot.GetInfo().Spec.Kubernetes.Version,
 			"nodeLocalDNS": map[string]interface{}{
 				"enabled": b.Shoot.NodeLocalDNSEnabled,
+			},
+			"reversedVPN": map[string]interface{}{
+				"enabled": b.Shoot.ReversedVPNEnabled,
 			},
 			"ingress": map[string]interface{}{
 				"class":           ingressClass,
@@ -334,7 +348,13 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
+		// TODO(rfranzke): Remove in a future release.
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics", Namespace: b.Shoot.SeedNamespace}},
+		// TODO(rfranzke): Uncomment this in a future release once all monitoring configurations of extensions have been
+		// adapted.
+		//&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: b.Shoot.SeedNamespace}},
+	)
 }
 
 // DeploySeedGrafana deploys the grafana charts to the Seed cluster.
@@ -387,7 +407,7 @@ func getIngressClass(seed *gardencorev1beta1.Seed) (string, error) {
 	}
 
 	if seed.Status.KubernetesVersion == nil {
-		return "", fmt.Errorf("Kubernetes version is missing in status for seed %q", seed.Name)
+		return "", fmt.Errorf("kubernetes version is missing in status for seed %q", seed.Name)
 	}
 
 	greaterEqual122, err := versionutils.CompareVersions(*seed.Status.KubernetesVersion, ">=", "1.22")
@@ -559,6 +579,7 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 				Name:      "kube-state-metrics",
 			},
 		},
+		gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeStateMetricsShoot, b.Shoot.SeedNamespace).Secret,
 		&autoscalingv1beta2.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: b.Shoot.SeedNamespace,
@@ -584,6 +605,7 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 				Name:      "allow-prometheus",
 			},
 		},
+		gutil.NewShootAccessSecret(v1beta1constants.StatefulSetNamePrometheus, b.Shoot.SeedNamespace).Secret,
 		&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: b.Shoot.SeedNamespace,

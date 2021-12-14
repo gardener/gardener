@@ -31,13 +31,16 @@ const (
 	StatusProgressing Status = "progressing"
 	// StatusUnhealthy indicates that a shoot is considered unhealthy.
 	StatusUnhealthy Status = "unhealthy"
+	// StatusUnknown indicates that the shoot health status is not known.
+	StatusUnknown Status = "unknown"
 )
 
 var (
 	shootStatusValues = map[Status]int{
 		StatusHealthy:     3,
 		StatusProgressing: 2,
-		StatusUnhealthy:   1,
+		StatusUnknown:     1,
+		StatusUnhealthy:   0,
 	}
 )
 
@@ -66,6 +69,8 @@ func ConditionStatusToStatus(status gardencorev1beta1.ConditionStatus) Status {
 		return StatusHealthy
 	case gardencorev1beta1.ConditionProgressing:
 		return StatusProgressing
+	case gardencorev1beta1.ConditionUnknown:
+		return StatusUnknown
 	}
 	return StatusUnhealthy
 }

@@ -16,6 +16,8 @@ package genericactuator
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -90,12 +92,7 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, be *extensionsv1a
 		return err
 	}
 
-	etcdSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      v1beta1constants.BackupSecretName,
-			Namespace: shootTechnicalID,
-		},
-	}
+	etcdSecret := emptyEtcdBackupSecret(be.Name)
 
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, a.client, etcdSecret, func() error {
 		etcdSecret.Data = etcdSecretData
@@ -106,7 +103,30 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, be *extensionsv1a
 
 // Delete deletes the BackupEntry.
 func (a *actuator) Delete(ctx context.Context, be *extensionsv1alpha1.BackupEntry) error {
+	if err := a.deleteEtcdBackupSecret(ctx, be.Name); err != nil {
+		return err
+	}
 	return a.backupEntryDelegate.Delete(ctx, be)
+}
+
+func (a *actuator) deleteEtcdBackupSecret(ctx context.Context, secretName string) error {
+	etcdSecret := emptyEtcdBackupSecret(secretName)
+	return kutil.DeleteObject(ctx, a.client, etcdSecret)
+}
+
+func emptyEtcdBackupSecret(backupEntryName string) *corev1.Secret {
+	secretName := v1beta1constants.BackupSecretName
+	if strings.HasPrefix(backupEntryName, v1beta1constants.BackupSourcePrefix) {
+		secretName = fmt.Sprintf("%s-%s", v1beta1constants.BackupSourcePrefix, v1beta1constants.BackupSecretName)
+	}
+	shootTechnicalID, _ := backupentry.ExtractShootDetailsFromBackupEntryName(backupEntryName)
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: shootTechnicalID,
+		},
+	}
 }
 
 // Restore restores the BackupEntry.

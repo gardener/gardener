@@ -222,7 +222,7 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 		if len(associatedShoots) == 0 && len(associatedBackupBuckets) == 0 {
 			log.Info("No Shoots, ControllerInstallations or BackupBuckets are referencing the Seed. Deletion accepted.")
 
-			if err := seedpkg.RunDeleteSeedFlow(ctx, gardenClient, seedClientSet, seedObj, log); err != nil {
+			if err := seedpkg.RunDeleteSeedFlow(ctx, gardenClient, seedClientSet, seedObj, r.config.DeepCopy(), log); err != nil {
 				message := fmt.Sprintf("Failed to delete Seed Cluster (%s).", err.Error())
 				conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "DebootstrapFailed", message)
 				log.Error(message)
@@ -311,7 +311,7 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 		return err
 	}
 
-	gardenSecrets, err := garden.ReadGardenSecrets(ctx, gardenClient, gutil.ComputeGardenNamespace(seed.Name), log)
+	gardenSecrets, err := garden.ReadGardenSecrets(ctx, gardenClient, gutil.ComputeGardenNamespace(seed.Name), log, true)
 	if err != nil {
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "GardenSecretsError", err.Error())
 		_ = r.patchSeedStatus(ctx, gardenClient, log, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped)

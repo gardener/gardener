@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	v1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	etcd "github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	gomock "github.com/golang/mock/gomock"
@@ -79,6 +80,21 @@ func (mr *MockInterfaceMockRecorder) Destroy(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
 }
 
+// Get mocks base method.
+func (m *MockInterface) Get(arg0 context.Context) (*v1alpha1.Etcd, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0)
+	ret0, _ := ret[0].(*v1alpha1.Etcd)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockInterfaceMockRecorder) Get(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInterface)(nil).Get), arg0)
+}
+
 // ScrapeConfigs mocks base method.
 func (m *MockInterface) ScrapeConfigs() ([]string, error) {
 	m.ctrl.T.Helper()
@@ -130,6 +146,18 @@ func (m *MockInterface) SetHVPAConfig(arg0 *etcd.HVPAConfig) {
 func (mr *MockInterfaceMockRecorder) SetHVPAConfig(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHVPAConfig", reflect.TypeOf((*MockInterface)(nil).SetHVPAConfig), arg0)
+}
+
+// SetOwnerCheckConfig mocks base method.
+func (m *MockInterface) SetOwnerCheckConfig(arg0 *etcd.OwnerCheckConfig) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetOwnerCheckConfig", arg0)
+}
+
+// SetOwnerCheckConfig indicates an expected call of SetOwnerCheckConfig.
+func (mr *MockInterfaceMockRecorder) SetOwnerCheckConfig(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOwnerCheckConfig", reflect.TypeOf((*MockInterface)(nil).SetOwnerCheckConfig), arg0)
 }
 
 // SetSecrets mocks base method.

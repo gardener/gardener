@@ -427,6 +427,9 @@ option go_package = "istio.io/api/networking/v1alpha3";
 // +genclient
 // +k8s:deepcopy-gen=true
 // -->
+// <!-- istio code generation tags
+// +istio.io/sync-start
+// -->
 message Sidecar {
   // Criteria used to select the specific set of pods/VMs on which this
   // `Sidecar` configuration should be applied. If omitted, the `Sidecar`
@@ -607,7 +610,7 @@ message OutboundTrafficPolicy {
   // Envoy's dynamic forward proxy can handle only HTTP and TLS
   // connections.
   // $hide_from_docs
-  istio.networking.v1alpha3.Destination egress_proxy = 2;
+  Destination egress_proxy = 2;
 }
 
 

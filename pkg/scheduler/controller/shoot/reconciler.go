@@ -26,7 +26,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -41,31 +41,30 @@ import (
 const MsgUnschedulable = "Failed to schedule shoot"
 
 type reconciler struct {
-	logger       logr.Logger
 	config       *config.ShootSchedulerConfiguration
 	gardenClient client.Client
 	recorder     record.EventRecorder
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
-		r.logger.Error(err, "Unable to retrieve object from store", "request", request)
+		log.Error(err, "Unable to retrieve object from store")
 		return reconcile.Result{}, err
 	}
 
-	logger := r.logger.WithValues("shoot", client.ObjectKeyFromObject(shoot))
-
 	if shoot.Spec.SeedName != nil {
-		logger.Info("Shoot already scheduled onto seed, nothing left to do", "seed", *shoot.Spec.SeedName)
+		log.Info("Shoot already scheduled onto seed, nothing left to do", "seed", *shoot.Spec.SeedName)
 		return reconcile.Result{}, nil
 	}
 
 	if shoot.DeletionTimestamp != nil {
-		logger.Info("Ignoring shoot because it has been marked for deletion")
+		log.Info("Ignoring shoot because it has been marked for deletion")
 		return reconcile.Result{}, nil
 	}
 
@@ -84,7 +83,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	logger.Info(
+	log.Info(
 		"Shoot successfully scheduled to seed",
 		"cloudprofile", shoot.Spec.CloudProfileName,
 		"region", shoot.Spec.Region,

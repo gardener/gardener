@@ -25,18 +25,18 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DeploySeedLogging will install the Helm release "seed-bootstrap/charts/loki" in the Seed clusters.
 func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
-
 	// check if loki is enabled in gardenlet config, default is true
 	var lokiEnabled = true
 	if b.Config != nil &&
@@ -47,7 +47,11 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	}
 
 	if !b.Shoot.IsLoggingEnabled() || !lokiEnabled {
-		return common.DeleteShootLoggingStack(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
+		return b.destroyShootLoggingStack(ctx)
+	}
+
+	if err := b.Shoot.Components.Logging.ShootRBACProxy.Deploy(ctx); err != nil {
+		return err
 	}
 
 	images, err := b.InjectSeedSeedImages(map[string]interface{}{},
@@ -78,7 +82,6 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 
 	if b.isShootNodeLoggingEnabled() {
 		lokiValues["rbacSidecarEnabled"] = true
-		lokiValues["kubeRBACProxyKubeconfigCheckSum"] = b.LoadCheckSum(logging.SecretNameLokiKubeRBACProxyKubeconfig)
 		lokiValues["ingress"] = map[string]interface{}{
 			"class": ingressClass,
 			"hosts": []map[string]interface{}{
@@ -92,8 +95,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 			},
 		}
 	} else {
-		err := common.DeleteShootNodeLoggingStack(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
-		if err != nil {
+		if err := b.destroyShootNodeLogging(ctx); err != nil {
 			return err
 		}
 	}
@@ -131,6 +133,28 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "loki-config"}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "telegraf-config"}},
+	)
+}
+
+func (b *Botanist) destroyShootLoggingStack(ctx context.Context) error {
+	if err := b.destroyShootNodeLogging(ctx); err != nil {
+		return err
+	}
+
+	return common.DeleteLoki(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
+}
+
+func (b *Botanist) destroyShootNodeLogging(ctx context.Context) error {
+	if err := b.Shoot.Components.Logging.ShootRBACProxy.Destroy(ctx); err != nil {
+		return err
+	}
+
+	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
+		&extensionsv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: b.Shoot.SeedNamespace}},
+		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: common.LokiTLS, Namespace: b.Shoot.SeedNamespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-prometheus-to-loki-telegraf", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: b.Shoot.SeedNamespace}},
 	)
 }
 

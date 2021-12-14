@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	landscaperv1alpha1 "github.com/gardener/landscaper/apis/core/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
 	. "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1"
@@ -42,13 +43,47 @@ var _ = Describe("Defaults", func() {
 				Rbac: &Rbac{
 					SeedAuthorizer: &SeedAuthorizer{Enabled: pointer.Bool(true)},
 				},
+				GardenerAPIServer: GardenerAPIServer{
+					ComponentConfiguration: APIServerComponentConfiguration{
+						CA: &CA{
+							Validity: &metav1.Duration{
+								Duration: 157680000000000000,
+							},
+						},
+						TLS: &TLSServer{
+							Validity: &metav1.Duration{
+								Duration: 31536000000000000,
+							},
+						},
+					},
+				},
 				GardenerAdmissionController: &GardenerAdmissionController{
 					Enabled: true,
 					SeedRestriction: &SeedRestriction{
 						Enabled: true,
 					},
+					ComponentConfiguration: &AdmissionControllerComponentConfiguration{
+						CA: &CA{
+							Validity: &metav1.Duration{
+								Duration: 157680000000000000,
+							},
+						},
+						TLS: &TLSServer{
+							Validity: &metav1.Duration{
+								Duration: 31536000000000000,
+							},
+						},
+					},
 				},
-				GardenerControllerManager: &GardenerControllerManager{ComponentConfiguration: &ControllerManagerComponentConfiguration{}},
+				GardenerControllerManager: &GardenerControllerManager{
+					ComponentConfiguration: &ControllerManagerComponentConfiguration{
+						TLS: &TLSServer{
+							Validity: &metav1.Duration{
+								Duration: 31536000000000000,
+							},
+						},
+					},
+				},
 			}))
 		})
 
@@ -71,6 +106,16 @@ var _ = Describe("Defaults", func() {
 			Expect(obj).To(Equal(&Imports{
 				GardenerAPIServer: GardenerAPIServer{
 					ComponentConfiguration: APIServerComponentConfiguration{
+						CA: &CA{
+							Validity: &metav1.Duration{
+								Duration: 157680000000000000,
+							},
+						},
+						TLS: &TLSServer{
+							Validity: &metav1.Duration{
+								Duration: 31536000000000000,
+							},
+						},
 						Admission: &APIServerAdmissionConfiguration{
 							MutatingWebhook: &APIServerAdmissionWebhookCredentials{
 								Kubeconfig: &landscaperv1alpha1.Target{Spec: landscaperv1alpha1.TargetSpec{Configuration: landscaperv1alpha1.AnyJSON{
@@ -84,7 +129,15 @@ var _ = Describe("Defaults", func() {
 					},
 				},
 				GardenerAdmissionController: &GardenerAdmissionController{},
-				GardenerControllerManager:   &GardenerControllerManager{ComponentConfiguration: &ControllerManagerComponentConfiguration{}},
+				GardenerControllerManager: &GardenerControllerManager{
+					ComponentConfiguration: &ControllerManagerComponentConfiguration{
+						TLS: &TLSServer{
+							Validity: &metav1.Duration{
+								Duration: 31536000000000000,
+							},
+						},
+					},
+				},
 			}))
 		})
 
@@ -107,6 +160,16 @@ var _ = Describe("Defaults", func() {
 			Expect(obj).To(Equal(&Imports{
 				GardenerAPIServer: GardenerAPIServer{
 					ComponentConfiguration: APIServerComponentConfiguration{
+						CA: &CA{
+							Validity: &metav1.Duration{
+								Duration: 157680000000000000,
+							},
+						},
+						TLS: &TLSServer{
+							Validity: &metav1.Duration{
+								Duration: 31536000000000000,
+							},
+						},
 						Admission: &APIServerAdmissionConfiguration{
 							ValidatingWebhook: &APIServerAdmissionWebhookCredentials{
 								Kubeconfig: &landscaperv1alpha1.Target{Spec: landscaperv1alpha1.TargetSpec{Configuration: landscaperv1alpha1.AnyJSON{
@@ -120,7 +183,15 @@ var _ = Describe("Defaults", func() {
 					},
 				},
 				GardenerAdmissionController: &GardenerAdmissionController{},
-				GardenerControllerManager:   &GardenerControllerManager{ComponentConfiguration: &ControllerManagerComponentConfiguration{}},
+				GardenerControllerManager: &GardenerControllerManager{
+					ComponentConfiguration: &ControllerManagerComponentConfiguration{
+						TLS: &TLSServer{
+							Validity: &metav1.Duration{
+								Duration: 31536000000000000,
+							},
+						},
+					},
+				},
 			}))
 		})
 

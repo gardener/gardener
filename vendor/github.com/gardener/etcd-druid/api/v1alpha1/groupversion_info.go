@@ -39,6 +39,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(GroupVersion,
 		&Etcd{},
 		&EtcdList{},
+		&EtcdCopyBackupsTask{},
+		&EtcdCopyBackupsTaskList{},
 	)
 	metav1.AddToGroupVersion(scheme, GroupVersion)
 

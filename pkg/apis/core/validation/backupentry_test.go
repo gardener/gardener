@@ -75,17 +75,16 @@ var _ = Describe("validation", func() {
 				"Field": Equal("spec.bucketName"),
 			}))))
 		})
+	})
 
-		It("should forbid updating some keys", func() {
+	Context("#ValidateBackupEntryUpdate", func() {
+		It("update should not return error", func() {
 			newBackupEntry := prepareBackupEntryForUpdate(backupEntry)
 			newBackupEntry.Spec.BucketName = "another-bucketName"
 
 			errorList := ValidateBackupEntryUpdate(newBackupEntry, backupEntry)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.bucketName"),
-			}))))
+			Expect(errorList).To(HaveLen(0))
 		})
 	})
 })

@@ -48,6 +48,8 @@ const (
 	DNSProviderRoleAdditional = "managed-dns-provider"
 	// DNSRealmAnnotation is the annotation key for restricting provider access for shoot DNS entries
 	DNSRealmAnnotation = "dns.gardener.cloud/realms"
+	// DNSRecordSecretPrefix is a constant for prefixing secrets referenced by DNSRecords
+	DNSRecordSecretPrefix = "dnsrecord"
 )
 
 // DeployExternalDNS deploys the external DNSOwner, DNSProvider, and DNSEntry resources.
@@ -399,8 +401,10 @@ func (b *Botanist) DeleteDNSProviders(ctx context.Context) error {
 		return err
 	}
 
+	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
 	return kutil.WaitUntilResourcesDeleted(
-		ctx,
+		timeoutCtx,
 		b.K8sSeedClient.Client(),
 		&dnsv1alpha1.DNSProviderList{},
 		5*time.Second,

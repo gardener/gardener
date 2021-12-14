@@ -1196,6 +1196,20 @@ Kubernetes core/v1.SecretReference
 <p>Quotas is a list of references to Quota objects in the same or another namespace.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>provider</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SecretBindingProvider">
+SecretBindingProvider
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Provider defines the provider type of the SecretBinding.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.Seed">Seed
@@ -1324,8 +1338,8 @@ Kubernetes core/v1.SecretReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
-the account the Seed cluster has been deployed to.</p>
+<p>SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
+cluster to be registered as Seed.</p>
 </td>
 </tr>
 <tr>
@@ -4712,6 +4726,19 @@ int32
 Default: 40</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>serializeImagePulls</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SerializeImagePulls describes whether the images are pulled one at a time.
+Default: true</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeletConfigEviction">KubeletConfigEviction
@@ -7140,6 +7167,38 @@ int32
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.SecretBindingProvider">SecretBindingProvider
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SecretBinding">SecretBinding</a>)
+</p>
+<p>
+<p>SecretBindingProvider defines the provider type of the SecretBinding.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Type is the type of the provider.</p>
+<p>For backwards compatibility, the field can contain multiple providers separated by a comma.
+However the usage of single SecretBinding (hence Secret) for different cloud providers is strongly discouraged.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.SeedBackup">SeedBackup
 </h3>
 <p>
@@ -7513,6 +7572,117 @@ Kubernetes meta/v1.LabelSelector
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdog">SeedSettingDependencyWatchdog
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettings">SeedSettings</a>)
+</p>
+<p>
+<p>SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>endpoint</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdogEndpoint">
+SeedSettingDependencyWatchdogEndpoint
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Endpoint controls the endpoint settings for the dependency-watchdog for the seed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>probe</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdogProbe">
+SeedSettingDependencyWatchdogProbe
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Probe controls the probe settings for the dependency-watchdog for the seed.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdogEndpoint">SeedSettingDependencyWatchdogEndpoint
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdog">SeedSettingDependencyWatchdog</a>)
+</p>
+<p>
+<p>SeedSettingDependencyWatchdogEndpoint controls the endpoint settings for the dependency-watchdog for the seed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled controls whether the endpoint controller of the dependency-watchdog should be enabled. This controller
+helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in
+CrashLoopBackoff status and restarting them once their dependants become ready and available again.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdogProbe">SeedSettingDependencyWatchdogProbe
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdog">SeedSettingDependencyWatchdog</a>)
+</p>
+<p>
+<p>SeedSettingDependencyWatchdogProbe controls the probe settings for the dependency-watchdog for the seed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled controls whether the probe controller of the dependency-watchdog should be enabled. This controller
+scales down the kube-controller-manager of shoot clusters in case their respective kube-apiserver is not
+reachable via its external ingress in order to avoid melt-down situations.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSettingExcessCapacityReservation">SeedSettingExcessCapacityReservation
 </h3>
 <p>
@@ -7571,6 +7741,37 @@ map[string]string
 <td>
 <em>(Optional)</em>
 <p>Annotations is a map of annotations that will be injected/merged into every load balancer service object.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSettingOwnerChecks">SeedSettingOwnerChecks
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettings">SeedSettings</a>)
+</p>
+<p>
+<p>SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It
+is enabled by default because it is a prerequisite for control plane migration.</p>
 </td>
 </tr>
 </tbody>
@@ -7758,6 +7959,34 @@ SeedSettingVerticalPodAutoscaler
 <p>VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>ownerChecks</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingOwnerChecks">
+SeedSettingOwnerChecks
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>dependencyWatchdog</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdog">
+SeedSettingDependencyWatchdog
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSpec">SeedSpec
@@ -7845,8 +8074,8 @@ Kubernetes core/v1.SecretReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
-the account the Seed cluster has been deployed to.</p>
+<p>SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
+cluster to be registered as Seed.</p>
 </td>
 </tr>
 <tr>
@@ -8187,8 +8416,8 @@ Kubernetes core/v1.SecretReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
-the account the Seed cluster has been deployed to.</p>
+<p>SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
+cluster to be registered as Seed.</p>
 </td>
 </tr>
 <tr>

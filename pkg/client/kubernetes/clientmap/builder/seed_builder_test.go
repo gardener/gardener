@@ -15,32 +15,18 @@
 package builder
 
 import (
-	"github.com/gardener/gardener/pkg/logger"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	baseconfig "k8s.io/component-base/config"
 )
 
 var _ = Describe("SeedClientMapBuilder", func() {
 	var (
-		fakeLogger logrus.FieldLogger
-
 		clientConnectionConfig *baseconfig.ClientConnectionConfiguration
 	)
 
 	BeforeEach(func() {
-		fakeLogger = logger.NewNopLogger()
-
 		clientConnectionConfig = &baseconfig.ClientConnectionConfiguration{}
-	})
-
-	Context("#logger", func() {
-		It("should be correctly set by WithLogger", func() {
-			builder := NewSeedClientMapBuilder().WithLogger(fakeLogger)
-			Expect(builder.logger).To(BeEquivalentTo(fakeLogger))
-		})
 	})
 
 	Context("#clientConnectionConfig", func() {
@@ -51,21 +37,14 @@ var _ = Describe("SeedClientMapBuilder", func() {
 	})
 
 	Context("#Build", func() {
-		It("should fail if logger was not set", func() {
-			clientMap, err := NewSeedClientMapBuilder().Build()
-			Expect(err).To(MatchError("logger is required but not set"))
-			Expect(clientMap).To(BeNil())
-		})
-
 		It("should fail if clientConnectionConfig was not set", func() {
-			clientMap, err := NewSeedClientMapBuilder().WithLogger(fakeLogger).Build()
+			clientMap, err := NewSeedClientMapBuilder().Build()
 			Expect(err).To(MatchError("clientConnectionConfig is required but not set"))
 			Expect(clientMap).To(BeNil())
 		})
 
 		It("should succeed to build ClientMap", func() {
 			clientSet, err := NewSeedClientMapBuilder().
-				WithLogger(fakeLogger).
 				WithClientConnectionConfig(clientConnectionConfig).
 				Build()
 			Expect(err).NotTo(HaveOccurred())

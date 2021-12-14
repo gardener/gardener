@@ -20,22 +20,23 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
-
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
 	// ControllerName is the name of this controller.
-	ControllerName = "bastion-controller"
+	ControllerName = "bastion"
 )
 
 // Controller controls Bastions.
@@ -43,6 +44,7 @@ type Controller struct {
 	reconciler     reconcile.Reconciler
 	hasSyncedFuncs []cache.InformerSynced
 
+	log                    logr.Logger
 	gardenClient           client.Client
 	bastionQueue           workqueue.RateLimitingInterface
 	workerCh               chan int
@@ -54,12 +56,15 @@ type Controller struct {
 // It creates and returns a new Garden controller to control Bastions.
 func NewBastionController(
 	ctx context.Context,
+	log logr.Logger,
 	clientMap clientmap.ClientMap,
 	maxLifetime time.Duration,
 ) (
 	*Controller,
 	error,
 ) {
+	log = log.WithName(ControllerName)
+
 	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return nil, err
@@ -75,11 +80,11 @@ func NewBastionController(
 		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
 	}
 
-	logger := logger.Logger.WithField("controller", ControllerName)
 	bastionController := &Controller{
+		reconciler:   NewBastionReconciler(gardenClient.Client(), maxLifetime),
+		log:          log,
 		gardenClient: gardenClient.Client(),
 		bastionQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "bastion"),
-		reconciler:   NewBastionReconciler(logger, gardenClient.Client(), maxLifetime),
 		workerCh:     make(chan int),
 		maxLifetime:  maxLifetime,
 	}
@@ -107,22 +112,21 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	// Check if informers cache has been populated
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
-		logger.Logger.Error("Time out waiting for caches to sync")
+		c.log.Error(wait.ErrWaitTimeout, "timed out waiting for caches to sync")
 		return
 	}
 
 	go func() {
 		for res := range c.workerCh {
 			c.numberOfRunningWorkers += res
-			logger.Logger.Debugf("Current number of running Bastion workers is %d", c.numberOfRunningWorkers)
 		}
 	}()
 
-	logger.Logger.Info("Bastion controller initialized.")
+	c.log.Info("Bastion controller initialized")
 
 	// Start the workers
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.bastionQueue, "Bastion", c.reconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.bastionQueue, "Bastion", c.reconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log))
 	}
 
 	<-ctx.Done()
@@ -130,10 +134,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for {
 		if c.bastionQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Debug("No running Bastion worker and no items left in the queues. Terminating Bastion controller...")
+			c.log.V(1).Info("No running Bastion worker and no items left in the queues. Terminating Bastion controller...")
 			break
 		}
-		logger.Logger.Debugf("Waiting for %d Bastion worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.bastionQueue.Len())
+		c.log.V(1).Info("Waiting for Bastion workers to finish...", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.bastionQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

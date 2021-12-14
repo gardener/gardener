@@ -27,20 +27,23 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
 
-// runReconcileShootFlow reconciles the Shoot cluster's state.
+// runReconcileShootFlow reconciles the Shoot cluster.
 // It receives an Operation object <o> which stores the Shoot object.
-func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
+func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operation.Operation, operationType gardencorev1beta1.LastOperationType) *gardencorev1beta1helper.WrappedLastErrors {
 	// We create the botanists (which will do the actual work).
 	var (
-		botanist        *botanistpkg.Botanist
-		tasksWithErrors []string
-		err             error
+		isRestoring             = operationType == gardencorev1beta1.LastOperationTypeRestore
+		botanist                *botanistpkg.Botanist
+		tasksWithErrors         []string
+		isCopyOfBackupsRequired bool
+		err                     error
 	)
 
 	for _, lastError := range o.Shoot.GetInfo().Status.LastErrors {
@@ -49,11 +52,11 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		}
 	}
 
-	errorContext := errors.NewErrorContext("Shoot cluster reconciliation", tasksWithErrors)
+	errorContext := errors.NewErrorContext(fmt.Sprintf("Shoot cluster %s", utils.IifString(isRestoring, "restoration", "reconciliation")), tasksWithErrors)
 
 	err = errors.HandleErrors(errorContext,
 		func(errorID string) error {
-			o.CleanShootTaskErrorAndUpdateStatusLabel(ctx, errorID)
+			o.CleanShootTaskError(ctx, errorID)
 			return nil
 		},
 		nil,
@@ -68,6 +71,10 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		}),
 		errors.ToExecute("Check required extensions", func() error {
 			return botanist.WaitUntilRequiredExtensionsReady(ctx)
+		}),
+		errors.ToExecute("Check if copy of backups is required", func() error {
+			isCopyOfBackupsRequired, err = botanist.IsCopyOfBackupsRequired(ctx)
+			return err
 		}),
 	)
 
@@ -86,7 +93,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		sniPhase                       = botanist.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase
 		requestControlPlanePodsRestart = controllerutils.HasTask(o.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
 
-		g                      = flow.NewGraph("Shoot cluster reconciliation")
+		g                      = flow.NewGraph(fmt.Sprintf("Shoot cluster %s", utils.IifString(isRestoring, "restoration", "reconciliation")))
 		ensureShootStateExists = g.Add(flow.Task{
 			Name: "Ensuring that ShootState exists",
 			Fn:   flow.TaskFn(botanist.EnsureShootStateExists).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -94,11 +101,6 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		deployNamespace = g.Add(flow.Task{
 			Name: "Deploying Shoot namespace in Seed",
 			Fn:   flow.TaskFn(botanist.DeploySeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
-		})
-		deployLokiRBACProxy = g.Add(flow.Task{
-			Name:         "Deploying kube-rbac-proxy in Shoot",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.Logging.ShootRBACProxy.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(),
 		})
 		ensureShootClusterIdentity = g.Add(flow.Task{
 			Name:         "Ensuring Shoot cluster identity",
@@ -153,7 +155,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		deploySeedLogging = g.Add(flow.Task{
 			Name:         "Deploying shoot logging stack in Seed",
 			Fn:           flow.TaskFn(botanist.DeploySeedLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployNamespace, deployLokiRBACProxy, deploySecrets),
+			Dependencies: flow.NewTaskIDs(deployNamespace, deploySecrets),
 		})
 		deployReferencedResources = g.Add(flow.Task{
 			Name:         "Deploying referenced resources",
@@ -211,20 +213,50 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			}).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(!staticNodesCIDR),
 			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady),
 		})
+		deploySourceBackupEntry = g.Add(flow.Task{
+			Name:         "Deploying source backup entry",
+			Fn:           flow.TaskFn(botanist.DeploySourceBackupEntry).DoIf(isCopyOfBackupsRequired),
+			Dependencies: flow.NewTaskIDs(deployOwnerDomainDNSRecord),
+		})
+		waitUntilSourceBackupEntryInGardenReconciled = g.Add(flow.Task{
+			Name:         "Waiting until the source backup entry has been reconciled",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.SourceBackupEntry.Wait).DoIf(isCopyOfBackupsRequired),
+			Dependencies: flow.NewTaskIDs(deploySourceBackupEntry),
+		})
 		deployBackupEntryInGarden = g.Add(flow.Task{
 			Name:         "Deploying backup entry",
 			Fn:           flow.TaskFn(botanist.DeployBackupEntry).DoIf(allowBackup),
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists, deployOwnerDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists, deployOwnerDomainDNSRecord, waitUntilSourceBackupEntryInGardenReconciled),
 		})
 		waitUntilBackupEntryInGardenReconciled = g.Add(flow.Task{
 			Name:         "Waiting until the backup entry has been reconciled",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.BackupEntry.Wait).DoIf(allowBackup),
 			Dependencies: flow.NewTaskIDs(deployBackupEntryInGarden),
 		})
+		copyEtcdBackups = g.Add(flow.Task{
+			Name:         "Copying etcd backups to new seed's backup bucket",
+			Fn:           flow.TaskFn(botanist.DeployEtcdCopyBackupsTask).DoIf(isCopyOfBackupsRequired),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilBackupEntryInGardenReconciled, waitUntilSourceBackupEntryInGardenReconciled),
+		})
+		waitUntilEtcdBackupsCopied = g.Add(flow.Task{
+			Name:         "Waiting until etcd backups are copied",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.EtcdCopyBackupsTask.Wait).DoIf(isCopyOfBackupsRequired),
+			Dependencies: flow.NewTaskIDs(copyEtcdBackups),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying copy etcd backups task resource",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.EtcdCopyBackupsTask.Destroy).DoIf(isCopyOfBackupsRequired),
+			Dependencies: flow.NewTaskIDs(waitUntilEtcdBackupsCopied),
+		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
 			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilBackupEntryInGardenReconciled),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilBackupEntryInGardenReconciled, waitUntilEtcdBackupsCopied),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying source backup entry",
+			Fn:           flow.TaskFn(botanist.DestroySourceBackupEntry).DoIf(allowBackup),
+			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",
@@ -283,7 +315,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.ResourceManager.Wait).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
-		_ = g.Add(flow.Task{
+		deployVpnSeedServer = g.Add(flow.Task{
 			Name:         "Deploying vpn-seed-server",
 			Fn:           flow.TaskFn(botanist.DeployVPNServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployNamespace),
@@ -308,10 +340,15 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ControlPlaneExposure.WaitCleanup).DoIf(useSNI),
 			Dependencies: flow.NewTaskIDs(destroyControlPlaneExposure),
 		})
+		deployGardenerAccess = g.Add(flow.Task{
+			Name:         "Deploying Gardener shoot access resources",
+			Fn:           flow.TaskFn(botanist.DeployGardenerAccess).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deploySecrets, waitUntilGardenerResourceManagerReady),
+		})
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.TaskFn(botanist.InitializeDesiredShootClients).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilControlPlaneExposureReady, waitUntilControlPlaneExposureDeleted, deployInternalDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilControlPlaneExposureReady, waitUntilControlPlaneExposureDeleted, deployInternalDomainDNSRecord, deployGardenerAccess),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Rewriting Shoot secrets if EncryptionConfiguration has changed",
@@ -321,6 +358,11 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		deployKubeScheduler = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes scheduler",
 			Fn:           flow.TaskFn(botanist.DeployKubeScheduler).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deploySecrets, waitUntilGardenerResourceManagerReady),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying dependency-watchdog shoot access resources",
+			Fn:           flow.TaskFn(botanist.DeployDependencyWatchdogAccess).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, waitUntilGardenerResourceManagerReady),
 		})
 		deployKubeControllerManager = g.Add(flow.Task{
@@ -336,7 +378,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		deployOperatingSystemConfig = g.Add(flow.Task{
 			Name:         "Deploying operating system specific configuration for shoot workers",
 			Fn:           flow.TaskFn(botanist.DeployOperatingSystemConfig).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady, deployLokiRBACProxy),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady),
 		})
 		waitUntilOperatingSystemConfigReady = g.Add(flow.Task{
 			Name:         "Waiting until operating system configurations for worker nodes have been reconciled",
@@ -364,7 +406,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Dependencies: flow.NewTaskIDs(deployNetwork),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying shoot cluster-identity",
+			Name:         "Deploying shoot cluster identity",
 			Fn:           flow.TaskFn(botanist.DeployClusterIdentity).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, ensureShootClusterIdentity, waitUntilOperatingSystemConfigReady),
 		})
@@ -390,6 +432,11 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Name:         "Deploying metrics-server system component",
 			Fn:           flow.TaskFn(botanist.DeployMetricsServer).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, waitUntilOperatingSystemConfigReady, deployKubeScheduler),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying vpn-shoot system component",
+			Fn:           flow.TaskFn(botanist.DeployVPNShoot).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployKubeScheduler, deployVpnSeedServer, waitUntilKubeAPIServerIsReady),
 		})
 		deployManagedResourcesForAddons = g.Add(flow.Task{
 			Name:         "Deploying managed resources for system components and optional addons",
@@ -425,6 +472,11 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Name:         "Deploying nginx ingress DNS record",
 			Fn:           flow.TaskFn(botanist.DeployIngressDNSResources).DoIf(!o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(nginxLBReady),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Cleaning up orphaned DNSRecord secrets",
+			Fn:           flow.TaskFn(botanist.CleanupOrphanedDNSRecordSecrets).DoIf(!o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(deployInternalDomainDNSRecord, deployExternalDomainDNSRecord, deployOwnerDomainDNSRecord, deployIngressDomainDNSRecord),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying additional DNS providers",
@@ -510,7 +562,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Dependencies: flow.NewTaskIDs(deployExtensionResources),
 		})
 		deleteStaleExtensionResources = g.Add(flow.Task{
-			Name:         "Delete stale extension resources",
+			Name:         "Deleting stale extension resources",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.DeleteStaleResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
@@ -530,7 +582,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Dependencies: flow.NewTaskIDs(deployContainerRuntimeResources),
 		})
 		deleteStaleContainerRuntimeResources = g.Add(flow.Task{
-			Name:         "Delete stale container runtime resources",
+			Name:         "Deleting stale container runtime resources",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ContainerRuntime.DeleteStaleResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
@@ -540,7 +592,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Dependencies: flow.NewTaskIDs(deleteStaleContainerRuntimeResources),
 		})
 		_ = g.Add(flow.Task{
-			Name: "Restart control plane pods",
+			Name: "Restarting control plane pods",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				if err := botanist.RestartControlPlanePods(ctx); err != nil {
 					return err
@@ -562,9 +614,9 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		Logger:           o.Logger,
 		ProgressReporter: r.newProgressReporter(o.ReportShootProgress),
 		ErrorContext:     errorContext,
-		ErrorCleaner:     o.CleanShootTaskErrorAndUpdateStatusLabel,
+		ErrorCleaner:     o.CleanShootTaskError,
 	}); err != nil {
-		o.Logger.Errorf("Failed to reconcile Shoot %q: %+v", o.Shoot.GetInfo().Name, err)
+		o.Logger.Errorf("Failed to %s Shoot cluster %q: %+v", utils.IifString(isRestoring, "restore", "reconcile"), o.Shoot.GetInfo().Name, err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
 	}
 
@@ -576,7 +628,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		}
 	}
 
-	o.Logger.Infof("Successfully reconciled Shoot %q", o.Shoot.GetInfo().Name)
+	o.Logger.Infof("Successfully %s Shoot cluster %q", utils.IifString(isRestoring, "restored", "reconciled"), o.Shoot.GetInfo().Name)
 	return nil
 }
 

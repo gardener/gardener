@@ -22,17 +22,17 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -92,14 +92,15 @@ var _ = Describe("KubeControllerManager", func() {
 		}
 
 		// checksums
-		secretChecksumKubeconfig        = "1234"
 		secretChecksumServer            = "5678"
 		secretChecksumCA                = "1234"
 		secretChecksumServiceAccountKey = "1234"
 
-		vpaName             = "kube-controller-manager-vpa"
-		hvpaName            = "kube-controller-manager"
-		managedResourceName = "shoot-core-kube-controller-manager"
+		vpaName                   = "kube-controller-manager-vpa"
+		hvpaName                  = "kube-controller-manager"
+		secretName                = "shoot-access-kube-controller-manager"
+		managedResourceName       = "shoot-core-kube-controller-manager"
+		managedResourceSecretName = "managedresource-shoot-core-kube-controller-manager"
 	)
 
 	BeforeEach(func() {
@@ -128,28 +129,21 @@ var _ = Describe("KubeControllerManager", func() {
 			})
 
 			Context("missing secret information", func() {
-				It("should return an error because the kubeconfig secret information is not provided", func() {
-					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(ContainSubstring("missing kubeconfig secret information")))
-				})
-
 				It("should return an error because the server secret information is not provided", func() {
-					kubeControllerManager.SetSecrets(Secrets{Kubeconfig: component.Secret{Name: "kube-controller-manager", Checksum: secretChecksumKubeconfig}})
 					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(ContainSubstring("missing server secret information")))
 				})
 
 				It("should return an error because the CA secret information is not provided", func() {
 					kubeControllerManager.SetSecrets(Secrets{
-						Kubeconfig: component.Secret{Name: "kube-controller-manager", Checksum: secretChecksumKubeconfig},
-						Server:     component.Secret{Name: "kube-controller-manager-server", Checksum: secretChecksumServer},
+						Server: component.Secret{Name: "kube-controller-manager-server", Checksum: secretChecksumServer},
 					})
 					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(ContainSubstring("missing CA secret information")))
 				})
 
 				It("should return an error because the ServiceAccountKey secret information is not provided", func() {
 					kubeControllerManager.SetSecrets(Secrets{
-						Kubeconfig: component.Secret{Name: "kube-controller-manager", Checksum: secretChecksumKubeconfig},
-						Server:     component.Secret{Name: "kube-controller-manager-server", Checksum: secretChecksumServer},
-						CA:         component.Secret{Name: "ca", Checksum: secretChecksumCA},
+						Server: component.Secret{Name: "kube-controller-manager-server", Checksum: secretChecksumServer},
+						CA:     component.Secret{Name: "ca", Checksum: secretChecksumCA},
 					})
 					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(ContainSubstring("missing ServiceAccountKey secret information")))
 				})
@@ -157,7 +151,6 @@ var _ = Describe("KubeControllerManager", func() {
 			Context("secret information available", func() {
 				BeforeEach(func() {
 					kubeControllerManager.SetSecrets(Secrets{
-						Kubeconfig:        component.Secret{Name: "kube-controller-manager", Checksum: secretChecksumKubeconfig},
 						Server:            component.Secret{Name: "kube-controller-manager-server", Checksum: secretChecksumServer},
 						CA:                component.Secret{Name: "ca", Checksum: secretChecksumCA},
 						ServiceAccountKey: component.Secret{Name: "service-account-key", Checksum: secretChecksumServiceAccountKey},
@@ -173,10 +166,23 @@ var _ = Describe("KubeControllerManager", func() {
 					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(fakeErr))
 				})
 
+				It("should fail when the secret cannot be created", func() {
+					gomock.InOrder(
+						c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Return(fakeErr),
+					)
+
+					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(fakeErr))
+				})
+
 				It("should fail because the deployment cannot be created", func() {
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).Return(fakeErr),
 					)
@@ -188,6 +194,8 @@ var _ = Describe("KubeControllerManager", func() {
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
 						c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}).Return(fakeErr),
@@ -200,6 +208,8 @@ var _ = Describe("KubeControllerManager", func() {
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
 						c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}),
@@ -210,32 +220,60 @@ var _ = Describe("KubeControllerManager", func() {
 					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(fakeErr))
 				})
 
-				It("should fail because the managed resource cannot be deleted", func() {
+				It("should fail because the managed resource secret cannot be created", func() {
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
 						c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{}), gomock.Any()),
-						c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}).Return(fakeErr),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Return(fakeErr),
 					)
 
 					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(fakeErr))
 				})
 
-				It("should fail because the managed resource secret cannot be deleted", func() {
+				It("should fail because the managed resource cannot be created", func() {
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
 						c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{}), gomock.Any()),
-						c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}),
-						c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretName(managedResourceName, true), Namespace: namespace}}).Return(fakeErr),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}), gomock.Any()).Return(fakeErr),
+					)
+
+					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(fakeErr))
+				})
+
+				It("should fail because the legacy secret cannot be deleted", func() {
+					gomock.InOrder(
+						c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
+						c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: hvpaName, Namespace: namespace}}),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{}), gomock.Any()),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}), gomock.Any()),
+						c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "kube-controller-manager"}}).Return(fakeErr),
 					)
 
 					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(fakeErr))
@@ -267,6 +305,21 @@ var _ = Describe("KubeControllerManager", func() {
 							}},
 						},
 					},
+				}
+
+				secret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      secretName,
+						Namespace: namespace,
+						Annotations: map[string]string{
+							"serviceaccount.resources.gardener.cloud/name":      "kube-controller-manager",
+							"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
+						},
+						Labels: map[string]string{
+							"resources.gardener.cloud/purpose": "token-requestor",
+						},
+					},
+					Type: corev1.SecretTypeOpaque,
 				}
 
 				hvpaUpdateModeAuto = hvpav1alpha1.UpdateModeAuto
@@ -388,7 +441,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 				replicas      int32 = 1
 				deploymentFor       = func(version string, config *gardencorev1beta1.KubeControllerManagerConfig) *appsv1.Deployment {
-					return &appsv1.Deployment{
+					deploy := &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      v1beta1constants.DeploymentNameKubeControllerManager,
 							Namespace: namespace,
@@ -412,7 +465,6 @@ var _ = Describe("KubeControllerManager", func() {
 									Annotations: map[string]string{
 										"checksum/secret-ca":                             secretChecksumCA,
 										"checksum/secret-service-account-key":            secretChecksumServiceAccountKey,
-										"checksum/secret-kube-controller-manager":        secretChecksumKubeconfig,
 										"checksum/secret-kube-controller-manager-server": secretChecksumServer,
 									},
 									Labels: map[string]string{
@@ -426,6 +478,7 @@ var _ = Describe("KubeControllerManager", func() {
 									},
 								},
 								Spec: corev1.PodSpec{
+									AutomountServiceAccountToken: pointer.Bool(false),
 									Containers: []corev1.Container{
 										{
 											Name:            "kube-controller-manager",
@@ -473,10 +526,6 @@ var _ = Describe("KubeControllerManager", func() {
 													MountPath: "/srv/kubernetes/service-account-key",
 												},
 												{
-													Name:      "kube-controller-manager",
-													MountPath: "/var/lib/kube-controller-manager",
-												},
-												{
 													Name:      "kube-controller-manager-server",
 													MountPath: "/var/lib/kube-controller-manager-server",
 												},
@@ -501,14 +550,6 @@ var _ = Describe("KubeControllerManager", func() {
 											},
 										},
 										{
-											Name: "kube-controller-manager",
-											VolumeSource: corev1.VolumeSource{
-												Secret: &corev1.SecretVolumeSource{
-													SecretName: "kube-controller-manager",
-												},
-											},
-										},
-										{
 											Name: "kube-controller-manager-server",
 											VolumeSource: corev1.VolumeSource{
 												Secret: &corev1.SecretVolumeSource{
@@ -521,6 +562,48 @@ var _ = Describe("KubeControllerManager", func() {
 							},
 						},
 					}
+
+					Expect(gutil.InjectGenericKubeconfig(deploy, secret.Name)).To(Succeed())
+					return deploy
+				}
+
+				clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  name: gardener.cloud:target:kube-controller-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:kube-controller-manager
+subjects:
+- kind: ServiceAccount
+  name: kube-controller-manager
+  namespace: kube-system
+`
+				managedResourceSecret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      managedResourceSecretName,
+						Namespace: namespace,
+					},
+					Type: corev1.SecretTypeOpaque,
+					Data: map[string][]byte{
+						"clusterrolebinding____gardener.cloud_target_kube-controller-manager.yaml": []byte(clusterRoleBindingYAML),
+					},
+				}
+				managedResource = &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      managedResourceName,
+						Namespace: namespace,
+						Labels:    map[string]string{"origin": "gardener"},
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						SecretRefs: []corev1.LocalObjectReference{
+							{Name: managedResourceSecretName},
+						},
+						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+						KeepObjects:  pointer.Bool(true),
+					},
 				}
 
 				emptyConfig                = &gardencorev1beta1.KubeControllerManagerConfig{}
@@ -559,7 +642,6 @@ var _ = Describe("KubeControllerManager", func() {
 					)
 
 					kubeControllerManager.SetSecrets(Secrets{
-						Kubeconfig:        component.Secret{Name: "kube-controller-manager", Checksum: secretChecksumKubeconfig},
 						Server:            component.Secret{Name: "kube-controller-manager-server", Checksum: secretChecksumServer},
 						CA:                component.Secret{Name: "ca", Checksum: secretChecksumCA},
 						ServiceAccountKey: component.Secret{Name: "service-account-key", Checksum: secretChecksumServiceAccountKey},
@@ -576,6 +658,11 @@ var _ = Describe("KubeControllerManager", func() {
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
 							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 								Expect(obj).To(DeepEqual(serviceFor(version)))
+							}),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+								Expect(obj).To(DeepEqual(secret))
 							}),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
@@ -605,8 +692,18 @@ var _ = Describe("KubeControllerManager", func() {
 					}
 
 					gomock.InOrder(
-						c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}),
-						c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretName(managedResourceName, true), Namespace: namespace}}),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).
+							Do(func(ctx context.Context, obj client.Object, _ ...client.UpdateOption) {
+								Expect(obj).To(DeepEqual(managedResourceSecret))
+							}),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
+							Do(func(ctx context.Context, obj client.Object, _ ...client.UpdateOption) {
+								Expect(obj).To(DeepEqual(managedResource))
+							}),
+
+						c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}),
 					)
 
 					Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
@@ -704,6 +801,9 @@ func commandForKubernetesVersion(
 		"--allocate-node-cidrs=true",
 		"--attach-detach-reconcile-sync-period=1m0s",
 		"--controllers=*,bootstrapsigner,tokencleaner",
+		"--authentication-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+		"--authorization-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+		"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 	)
 
 	if nodeCIDRMaskSize != nil {
@@ -715,6 +815,15 @@ func commandForKubernetesVersion(
 		fmt.Sprintf("--cluster-name=%s", clusterName),
 		"--cluster-signing-cert-file=/srv/kubernetes/ca/ca.crt",
 		"--cluster-signing-key-file=/srv/kubernetes/ca/ca.key",
+	)
+
+	if k8sVersionGreaterEqual119, _ := versionutils.CompareVersions(version, ">=", "1.19"); k8sVersionGreaterEqual119 {
+		command = append(command, "--cluster-signing-duration=720h")
+	} else {
+		command = append(command, "--experimental-cluster-signing-duration=720h")
+	}
+
+	command = append(command,
 		"--concurrent-deployment-syncs=50",
 		"--concurrent-endpoint-syncs=15",
 		"--concurrent-gc-syncs=30",
@@ -749,7 +858,6 @@ func commandForKubernetesVersion(
 	command = append(command,
 		fmt.Sprintf("--horizontal-pod-autoscaler-sync-period=%s", horizontalPodAutoscalerConfig.SyncPeriod.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-tolerance=%v", *horizontalPodAutoscalerConfig.Tolerance),
-		"--kubeconfig=/var/lib/kube-controller-manager/kubeconfig",
 		"--leader-elect=true",
 		fmt.Sprintf("--node-monitor-grace-period=%s", nodeMonitorGracePeriodSetting),
 		fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeoutSetting),
@@ -761,8 +869,6 @@ func commandForKubernetesVersion(
 		fmt.Sprintf("--horizontal-pod-autoscaler-downscale-stabilization=%s", horizontalPodAutoscalerConfig.DownscaleStabilization.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-initial-readiness-delay=%s", horizontalPodAutoscalerConfig.InitialReadinessDelay.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-cpu-initialization-period=%s", horizontalPodAutoscalerConfig.CPUInitializationPeriod.Duration.String()),
-		"--authentication-kubeconfig=/var/lib/kube-controller-manager/kubeconfig",
-		"--authorization-kubeconfig=/var/lib/kube-controller-manager/kubeconfig",
 		"--tls-cert-file=/var/lib/kube-controller-manager-server/kube-controller-manager-server.crt",
 		"--tls-private-key-file=/var/lib/kube-controller-manager-server/kube-controller-manager-server.key",
 		"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",

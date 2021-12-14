@@ -72,7 +72,10 @@ generate_group () {
   controller-gen crd paths="$package_path" output:crd:dir="$output_dir" output:stdout
 
   while IFS= read -r crd; do
-    mv "$crd" "$output_dir/$file_name_prefix$(basename $crd)"
+    crd_out="$output_dir/$file_name_prefix$(basename $crd)"
+    if [ "$crd" != "$crd_out" ]; then
+      mv "$crd" "$crd_out"
+    fi
   done < <(ls "$output_dir/${group}"_*.yaml)
 }
 

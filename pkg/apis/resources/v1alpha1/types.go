@@ -54,20 +54,35 @@ const (
 	// for the invalidation of the static ServiceAccount token.
 	StaticTokenConsider = "token-invalidator.resources.gardener.cloud/consider"
 
-	// ResourceManagerPurpose is a constant for the key in a label describing the purpose of the respective object reconciled by the resource manager.
+	// TokenRequestorTargetSecretName is a constant for an annotation on a Secret which indicates that the token requestor
+	// shall sync the token to a secret in the target cluster with the given name.
+	TokenRequestorTargetSecretName = "token-requestor.resources.gardener.cloud/target-secret-name"
+	// TokenRequestorTargetSecretNamespace is a constant for an annotation on a Secret which indicates that the token
+	// requestor shall sync the token to a secret in the target cluster with the given namespace.
+	TokenRequestorTargetSecretNamespace = "token-requestor.resources.gardener.cloud/target-secret-namespace"
+
+	// ResourceManagerPurpose is a constant for the key in a label describing the purpose of the respective object
+	// reconciled by the resource manager.
 	ResourceManagerPurpose = "resources.gardener.cloud/purpose"
-	// LabelPurposeTokenRequest is a constant for a label value indicating that this secret should be reconciled by the token-requestor.
+	// LabelPurposeTokenRequest is a constant for a label value indicating that this secret should be reconciled by the
+	// token-requestor.
 	LabelPurposeTokenRequest = "token-requestor"
-	// LabelPurposeTokenInvalidation is a constant for a label value indicating that this secret should be considered by the token-invalidator.
+	// LabelPurposeTokenInvalidation is a constant for a label value indicating that this secret should be considered by
+	// the token-invalidator.
 	LabelPurposeTokenInvalidation = "token-invalidator"
-	// ServiceAccountName is the key of an annotation of a secret whose value contains the service account name
+
+	// ServiceAccountName is the key of an annotation of a secret whose value contains the service account name.
 	ServiceAccountName = "serviceaccount.resources.gardener.cloud/name"
-	// ServiceAccountNamespace is the key of an annotation of a secret whose value contains the service account namespace
+	// ServiceAccountNamespace is the key of an annotation of a secret whose value contains the service account
+	// namespace.
 	ServiceAccountNamespace = "serviceaccount.resources.gardener.cloud/namespace"
-	// ServiceAccountTokenExpirationDuration is the key of an annotation of a secret whose value contains the expiration duration of the token created
+	// ServiceAccountTokenExpirationDuration is the key of an annotation of a secret whose value contains the expiration
+	// duration of the token created.
 	ServiceAccountTokenExpirationDuration = "serviceaccount.resources.gardener.cloud/token-expiration-duration"
-	// ServiceAccountTokenRenewTimestamp is the key of an annotation of a secret whose value contains the timestamp when the token needs to be renewed
+	// ServiceAccountTokenRenewTimestamp is the key of an annotation of a secret whose value contains the timestamp when
+	// the token needs to be renewed.
 	ServiceAccountTokenRenewTimestamp = "serviceaccount.resources.gardener.cloud/token-renew-timestamp"
+
 	// DataKeyToken is the data key whose value contains a service account token.
 	DataKeyToken = "token"
 	// DataKeyKubeconfig is the data key whose value contains a kubeconfig with a service account token.

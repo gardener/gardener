@@ -95,6 +95,21 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 		pod.Spec.Containers[i].VolumeMounts = append(pod.Spec.Containers[i].VolumeMounts, getVolumeMount())
 	}
 
+	// Workaround https://github.com/kubernetes/kubernetes/issues/82573 - this got fixed with
+	// https://github.com/kubernetes/kubernetes/pull/89193 starting with Kubernetes 1.19, however, we don't know to
+	// which node the newly created Pod gets scheduled (it could be that the API server is already running on 1.19 while
+	// the kubelets are still on 1.18). Hence, let's just unconditionally add this and remove this coding again once we
+	// drop support for seed and shoot clusters < 1.19.
+	{
+		if pod.Spec.SecurityContext == nil {
+			pod.Spec.SecurityContext = &corev1.PodSecurityContext{}
+		}
+
+		if pod.Spec.SecurityContext.FSGroup == nil {
+			pod.Spec.SecurityContext.FSGroup = pointer.Int64(65534)
+		}
+	}
+
 	marshaledPod, err := json.Marshal(pod)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)

@@ -90,13 +90,6 @@ filter-kubernetes.conf: |-
 
   [FILTER]
       Name                parser
-      Match               kubernetes.*vpn-shoot*vpn-shoot*
-      Key_Name            log
-      Parser              vpnshootParser
-      Reserve_Data        True
-
-  [FILTER]
-      Name                parser
       Match               kubernetes.*node-exporter*node-exporter*
       Key_Name            log
       Parser              nodeexporterParser
@@ -201,13 +194,6 @@ parsers.conf: |-
       Regex       ^level=(?<severity>\w+)\s+ts=(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+caller=(?<source>[^\s]*+)\s+(?<log>.*)
       Time_Key    time
       Time_Format %Y-%m-%dT%H:%M:%S.%L
-
-  [PARSER]
-      Name        vpnshootParser
-      Format      regex
-      Regex       ^(?<time>[^0-9]*\d{1,2}\s+[^\s]+\s+\d{4})\s+(?<log>.*)
-      Time_Key    time
-      Time_Format %a %b%t%d %H:%M:%S %Y
 
   [PARSER]
       Name        kubernetesdashboardParser

@@ -53,7 +53,10 @@ func (c *Controller) seedUpdate(oldObj, newObj interface{}) {
 		return
 	}
 
-	c.seedAdd(newObj, !apiequality.Semantic.DeepEqual(oldObject.Spec.DNS.Provider, newObject.Spec.DNS.Provider))
+	enqueue := !apiequality.Semantic.DeepEqual(oldObject.Spec.DNS.Provider, newObject.Spec.DNS.Provider) ||
+		newObject.DeletionTimestamp != nil
+
+	c.seedAdd(newObj, enqueue)
 }
 
 func (c *Controller) seedDelete(obj interface{}) {

@@ -38,7 +38,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -62,7 +61,7 @@ func (r *shootReconciler) prepareShootForMigration(ctx context.Context, logger l
 		return reconcile.Result{}, nil
 	}
 
-	r.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventPrepareMigration, "Prepare Shoot cluster for migration")
+	r.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventPrepareMigration, "Preparing Shoot cluster for migration")
 	shootNamespace := shootpkg.ComputeTechnicalID(project.Name, shoot)
 	if err = r.updateShootStatusOperationStart(ctx, gardenClient.Client(), shoot, shootNamespace, gardencorev1beta1.LastOperationTypeMigrate); err != nil {
 		return reconcile.Result{}, err
@@ -70,7 +69,7 @@ func (r *shootReconciler) prepareShootForMigration(ctx context.Context, logger l
 
 	o, operationErr := r.initializeOperation(ctx, logger, gardenClient, shoot, project, cloudProfile, seed)
 	if operationErr != nil {
-		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, fmt.Sprintf("Could not initialize a new operation for preparation of Shoot Control Plane migration: %s", operationErr.Error()), gardencorev1beta1.LastOperationTypeMigrate, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
+		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, fmt.Sprintf("Could not initialize a new operation for Shoot cluster preparation for migration: %s", operationErr.Error()), gardencorev1beta1.LastOperationTypeMigrate, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(operationErr, updateErr)
 	}
 	// At this point the migration is allowed, hence, check if the seed is up-to-date, then sync the Cluster resource
@@ -79,7 +78,7 @@ func (r *shootReconciler) prepareShootForMigration(ctx context.Context, logger l
 		return patchShootStatusAndRequeueOnSyncError(ctx, gardenClient.Client(), shoot, logger, err)
 	}
 
-	if flowErr := r.runPrepareShootControlPlaneMigration(ctx, o); flowErr != nil {
+	if flowErr := r.runPrepareShootForMigrationFlow(ctx, o); flowErr != nil {
 		r.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventMigrationPreparationFailed, flowErr.Description)
 		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, flowErr.Description, gardencorev1beta1.LastOperationTypeMigrate, flowErr.LastErrors...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(flowErr.Description), updateErr)
@@ -88,7 +87,7 @@ func (r *shootReconciler) prepareShootForMigration(ctx context.Context, logger l
 	return r.finalizeShootPrepareForMigration(ctx, gardenClient.Client(), shoot, o)
 }
 
-func (r *shootReconciler) runPrepareShootControlPlaneMigration(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
+func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
 	var (
 		botanist                     *botanistpkg.Botanist
 		err                          error
@@ -103,11 +102,11 @@ func (r *shootReconciler) runPrepareShootControlPlaneMigration(ctx context.Conte
 		}
 	}
 
-	errorContext := utilerrors.NewErrorContext("Shoot's control plane preparation for migration", tasksWithErrors)
+	errorContext := utilerrors.NewErrorContext("Shoot cluster preparation for migration", tasksWithErrors)
 
 	err = utilerrors.HandleErrors(errorContext,
 		func(errorID string) error {
-			o.CleanShootTaskErrorAndUpdateStatusLabel(ctx, errorID)
+			o.CleanShootTaskError(ctx, errorID)
 			return nil
 		},
 		nil,
@@ -172,7 +171,7 @@ func (r *shootReconciler) runPrepareShootControlPlaneMigration(ctx context.Conte
 		defaultTimeout          = 10 * time.Minute
 		defaultInterval         = 5 * time.Second
 
-		g = flow.NewGraph("Shoot's control plane preparation for migration")
+		g = flow.NewGraph("Shoot cluster preparation for migration")
 
 		ensureShootStateExists = g.Add(flow.Task{
 			Name: "Ensuring that ShootState exists",
@@ -304,7 +303,7 @@ func (r *shootReconciler) runPrepareShootControlPlaneMigration(ctx context.Conte
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
 		migrateBackupEntryInGarden = g.Add(flow.Task{
-			Name:         "Migrate BackupEntry to new seed",
+			Name:         "Migrating BackupEntry to new seed",
 			Fn:           botanist.Shoot.Components.BackupEntry.Migrate,
 			Dependencies: flow.NewTaskIDs(createETCDSnapshot),
 		})
@@ -341,13 +340,13 @@ func (r *shootReconciler) runPrepareShootControlPlaneMigration(ctx context.Conte
 		Logger:           o.Logger,
 		ProgressReporter: r.newProgressReporter(o.ReportShootProgress),
 		ErrorContext:     errorContext,
-		ErrorCleaner:     o.CleanShootTaskErrorAndUpdateStatusLabel,
+		ErrorCleaner:     o.CleanShootTaskError,
 	}); err != nil {
-		o.Logger.Errorf("Failed to prepare Shoot %q for migration: %+v", o.Shoot.GetInfo().Name, err)
+		o.Logger.Errorf("Failed to prepare Shoot cluster %q for migration: %+v", o.Shoot.GetInfo().Name, err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
 	}
 
-	o.Logger.Infof("Successfully prepared Shoot's control plane for migration %q", o.Shoot.GetInfo().Name)
+	o.Logger.Infof("Successfully prepared Shoot cluster %q for migration", o.Shoot.GetInfo().Name)
 	return nil
 }
 
@@ -367,19 +366,10 @@ func (r *shootReconciler) finalizeShootPrepareForMigration(ctx context.Context, 
 		return reconcile.Result{}, err
 	}
 
-	r.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventMigrationPrepared, "Shoot Control Plane prepared for migration, successfully")
-
-	statusPatch := client.MergeFrom(shoot.DeepCopy())
-	shoot.Status.RetryCycleStartTime = nil
-	shoot.Status.SeedName = nil
-	shoot.Status.LastErrors = nil
-	shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
-		Type:           gardencorev1beta1.LastOperationTypeRestore,
-		State:          gardencorev1beta1.LastOperationStatePending,
-		Progress:       0,
-		Description:    "Shoot cluster state has been successfully prepared for migration.",
-		LastUpdateTime: metav1.Now(),
+	r.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventMigrationPrepared, "Prepared Shoot cluster for migration")
+	if err := r.patchShootStatusOperationSuccess(ctx, gardenClient, shoot, o.Shoot.SeedNamespace, nil, gardencorev1beta1.LastOperationTypeMigrate); err != nil {
+		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{}, gardenClient.Status().Patch(ctx, shoot, statusPatch)
+	return reconcile.Result{}, nil
 }

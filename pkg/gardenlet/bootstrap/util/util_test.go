@@ -369,11 +369,6 @@ var _ = Describe("Util", func() {
 			})
 			Expect(result).To(Equal("test-name"))
 		})
-
-		It("should return the default name", func() {
-			result := GetSeedName(nil)
-			Expect(result).To(Equal("<ambiguous>"))
-		})
 	})
 
 	Describe("GetTargetClusterName", func() {

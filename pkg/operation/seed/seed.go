@@ -54,6 +54,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -583,6 +584,7 @@ func RunReconcileSeedFlow(
 			// shoot system components
 			coredns.CentralLoggingConfiguration,
 			metricsserver.CentralLoggingConfiguration,
+			vpnshoot.CentralLoggingConfiguration,
 		}
 		userAllowedComponents := []string{
 			v1beta1constants.DeploymentNameKubeAPIServer,
@@ -1035,7 +1037,7 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	return runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, imageVector, imageVectorOverwrites, seed, log, anySNI, deployedSecretsMap)
+	return runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, imageVector, imageVectorOverwrites, seed, conf, log, anySNI, deployedSecretsMap)
 }
 
 func runCreateSeedFlow(
@@ -1046,6 +1048,7 @@ func runCreateSeedFlow(
 	imageVector imagevector.ImageVector,
 	imageVectorOverwrites map[string]string,
 	seed *Seed,
+	conf *config.GardenletConfiguration,
 	log logrus.FieldLogger,
 	anySNI bool,
 	deployedSecretsMap map[string]*corev1.Secret,
@@ -1079,7 +1082,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	etcdDruid, err := defaultEtcdDruid(seedClient, kubernetesVersion.String(), imageVector, imageVectorOverwrites)
+	etcdDruid, err := defaultEtcdDruid(seedClient, kubernetesVersion.String(), conf, imageVector, imageVectorOverwrites)
 	if err != nil {
 		return err
 	}
@@ -1091,7 +1094,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	dwdEndpoint, dwdProbe, err := defaultDependencyWatchdogs(seedClient, kubernetesVersion.String(), imageVector)
+	dwdEndpoint, dwdProbe, err := defaultDependencyWatchdogs(seedClient, kubernetesVersion.String(), imageVector, seed.GetInfo().Spec.Settings)
 	if err != nil {
 		return err
 	}
@@ -1177,6 +1180,7 @@ func RunDeleteSeedFlow(
 	gardenClient client.Client,
 	seedClientSet kubernetes.Interface,
 	seed *Seed,
+	conf *config.GardenletConfiguration,
 	log logrus.FieldLogger,
 ) error {
 	seedClient := seedClientSet.Client()
@@ -1201,11 +1205,11 @@ func RunDeleteSeedFlow(
 		autoscaler      = clusterautoscaler.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace)
 		gsac            = seedadmissioncontroller.New(seedClient, v1beta1constants.GardenNamespace, "")
 		resourceManager = resourcemanager.New(seedClient, v1beta1constants.GardenNamespace, "", 0, resourcemanager.Values{})
-		etcdDruid       = etcd.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, "", nil)
+		etcdDruid       = etcd.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, conf, "", nil)
 		networkPolicies = networkpolicies.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, networkpolicies.GlobalValues{})
 		clusterIdentity = clusteridentity.NewForSeed(seedClient, v1beta1constants.GardenNamespace, "")
-		dwdEndpoint     = dependencywatchdog.New(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.Values{Role: dependencywatchdog.RoleEndpoint})
-		dwdProbe        = dependencywatchdog.New(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.Values{Role: dependencywatchdog.RoleProbe})
+		dwdEndpoint     = dependencywatchdog.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
+		dwdProbe        = dependencywatchdog.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
 		extAuthzServer  = extauthzserver.NewExtAuthServer(seedClient, v1beta1constants.GardenNamespace, "", 1)
 	)
 	scheduler, err := gardenerkubescheduler.Bootstrap(seedClient, v1beta1constants.GardenNamespace, nil, kubernetesVersion)

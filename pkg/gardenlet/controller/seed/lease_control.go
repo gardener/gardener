@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/healthz"
 )
 
@@ -44,30 +45,22 @@ func (c *Controller) seedLeaseAdd(obj interface{}) {
 	c.seedLeaseQueue.Add(key)
 }
 
-const (
-	// LeaseDurationSeconds defines how long the lease is valid (used for Lease.spec.leaseDurationSeconds).
-	LeaseDurationSeconds = 2
-	// LeaseResyncSeconds defines how often (in seconds) the seed lease is renewed.
-	LeaseResyncSeconds = 2
-	// LeaseResyncGracePeriodSeconds is the grace period for how long the lease may not be resynced before the health status
-	// is changed to false.
-	LeaseResyncGracePeriodSeconds = LeaseResyncSeconds * 10
-)
-
 type leaseReconciler struct {
 	clientMap     clientmap.ClientMap
 	logger        logrus.FieldLogger
 	healthManager healthz.Manager
 	nowFunc       func() metav1.Time
+	config        *config.GardenletConfiguration
 }
 
 // NewLeaseReconciler creates a new reconciler that periodically renews the gardenlet's lease.
-func NewLeaseReconciler(clientMap clientmap.ClientMap, l logrus.FieldLogger, healthManager healthz.Manager, nowFunc func() metav1.Time) reconcile.Reconciler {
+func NewLeaseReconciler(clientMap clientmap.ClientMap, l logrus.FieldLogger, healthManager healthz.Manager, nowFunc func() metav1.Time, config *config.GardenletConfiguration) reconcile.Reconciler {
 	return &leaseReconciler{
 		clientMap:     clientMap,
 		logger:        l,
 		nowFunc:       nowFunc,
 		healthManager: healthManager,
+		config:        config,
 	}
 }
 
@@ -98,7 +91,7 @@ func (r *leaseReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{RequeueAfter: LeaseResyncSeconds * time.Second}, nil
+	return reconcile.Result{RequeueAfter: time.Duration(*r.config.Controllers.Seed.LeaseResyncSeconds) * time.Second}, nil
 }
 
 func (r *leaseReconciler) reconcile(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed) error {
@@ -194,7 +187,7 @@ func (r *leaseReconciler) newOrRenewedLease(lease *coordinationv1.Lease, holderI
 	lease.OwnerReferences = []metav1.OwnerReference{ownerReference}
 	lease.Spec = coordinationv1.LeaseSpec{
 		HolderIdentity:       pointer.String(holderIdentity),
-		LeaseDurationSeconds: pointer.Int32(LeaseDurationSeconds),
+		LeaseDurationSeconds: r.config.Controllers.Seed.LeaseResyncSeconds,
 		RenewTime:            &metav1.MicroTime{Time: r.nowFunc().Time},
 	}
 	return lease

@@ -17,7 +17,6 @@ package builder
 import (
 	"fmt"
 
-	"github.com/sirupsen/logrus"
 	baseconfig "k8s.io/component-base/config"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -28,19 +27,11 @@ import (
 // clients for Seed clusters.
 type SeedClientMapBuilder struct {
 	clientConnectionConfig *baseconfig.ClientConnectionConfiguration
-
-	logger logrus.FieldLogger
 }
 
 // NewSeedClientMapBuilder constructs a new SeedClientMapBuilder.
 func NewSeedClientMapBuilder() *SeedClientMapBuilder {
 	return &SeedClientMapBuilder{}
-}
-
-// WithLogger sets the logger attribute of the builder.
-func (b *SeedClientMapBuilder) WithLogger(logger logrus.FieldLogger) *SeedClientMapBuilder {
-	b.logger = logger
-	return b
 }
 
 // WithClientConnectionConfig sets the ClientConnectionConfiguration that should be used by ClientSets created by this ClientMap.
@@ -51,14 +42,11 @@ func (b *SeedClientMapBuilder) WithClientConnectionConfig(cfg *baseconfig.Client
 
 // Build builds the SeedClientMap using the provided attributes.
 func (b *SeedClientMapBuilder) Build() (clientmap.ClientMap, error) {
-	if b.logger == nil {
-		return nil, fmt.Errorf("logger is required but not set")
-	}
 	if b.clientConnectionConfig == nil {
 		return nil, fmt.Errorf("clientConnectionConfig is required but not set")
 	}
 
 	return internal.NewSeedClientMap(&internal.SeedClientSetFactory{
 		ClientConnectionConfig: *b.clientConnectionConfig,
-	}, b.logger), nil
+	}), nil
 }

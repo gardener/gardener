@@ -273,6 +273,9 @@ const (
 	LabelSeedProvider = "seed.gardener.cloud/provider"
 	// LabelShootProvider is used to identify the shoot provider.
 	LabelShootProvider = "shoot.gardener.cloud/provider"
+	// LabelShootProviderPrefix is used to prefix label that indicates the provider type.
+	// The label key is in the form provider.shoot.gardener.cloud/<type>.
+	LabelShootProviderPrefix = "provider.shoot.gardener.cloud/"
 	// LabelNetworkingProvider is used to identify the networking provider for the cni plugin.
 	LabelNetworkingProvider = "networking.shoot.gardener.cloud/provider"
 	// LabelExtensionPrefix is used to prefix extension specific labels.
@@ -388,6 +391,11 @@ const (
 	// namespaces' step. Concretely, after the specified seconds, all the finalizers of the affected resources are
 	// forcefully removed.
 	AnnotationShootCleanupNamespaceResourcesFinalizeGracePeriodSeconds = "shoot.gardener.cloud/cleanup-namespaces-finalize-grace-period-seconds"
+	// AnnotationShootInfrastructureCleanupWaitPeriodSeconds is a key for an annotation on a Shoot
+	// resource that declares the wait period in seconds for infrastructure resources cleanup. Concretely,
+	// Gardener will wait for the specified time after the Infrastructure extension object has been deleted to allow
+	// controllers to gracefully cleanup everything (default behaviour is 300s).
+	AnnotationShootInfrastructureCleanupWaitPeriodSeconds = "shoot.gardener.cloud/infrastructure-cleanup-wait-period-seconds"
 	// AnnotationReversedVPN moves the vpn-server to the seed.
 	AnnotationReversedVPN = "alpha.featuregates.shoot.gardener.cloud/reversed-vpn"
 	// AnnotationNodeLocalDNS enables a per node dns cache on the shoot cluster.
@@ -476,8 +484,6 @@ const (
 	SeedsGroup = "gardener.cloud:system:seeds"
 	// SeedUserNamePrefix is the identity user name prefix for gardenlets when authenticating to the API server.
 	SeedUserNamePrefix = "gardener.cloud:system:seed:"
-	// SeedUserNameSuffixAmbiguous is the default seed name in case the gardenlet config.SeedConfig is not set
-	SeedUserNameSuffixAmbiguous = "<ambiguous>"
 
 	// ProjectName is the key of a label on namespaces whose value holds the project name.
 	ProjectName = "project.gardener.cloud/name"
@@ -499,6 +505,8 @@ const (
 	BackupSecretName string = "etcd-backup"
 	// DataKeyBackupBucketName is the name of a data key whose value contains the backup bucket name.
 	DataKeyBackupBucketName string = "bucketName"
+	// BackupSourcePrefix is the prefix for names of resources related to source backupentries when copying backups.
+	BackupSourcePrefix = "source"
 
 	// GardenerAudience is the identifier for Gardener controllers when interacting with the API Server
 	GardenerAudience = "gardener"

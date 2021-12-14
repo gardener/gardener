@@ -38,6 +38,10 @@ roleRef:
   kind: ClusterRole
   name: gardener.cloud:monitoring:prometheus
 subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: kube-system
+# TODO(rfranzke): Delete these subjects in a future release once all monitoring configurations of extensions have been adapted.
 - kind: User
   name: garden.sapcloud.io:monitoring:prometheus
 - kind: User

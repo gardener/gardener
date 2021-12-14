@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	baseconfig "k8s.io/component-base/config"
@@ -33,10 +32,10 @@ type seedClientMap struct {
 	clientmap.ClientMap
 }
 
-// NewSeedClientMap creates a new seedClientMap with the given factory and logger.
-func NewSeedClientMap(factory *SeedClientSetFactory, logger logrus.FieldLogger) clientmap.ClientMap {
+// NewSeedClientMap creates a new seedClientMap with the given factory.
+func NewSeedClientMap(factory *SeedClientSetFactory) clientmap.ClientMap {
 	return &seedClientMap{
-		ClientMap: NewGenericClientMap(factory, logger),
+		ClientMap: NewGenericClientMap(factory, log.WithValues("clientmap", "SeedClientMap")),
 	}
 }
 

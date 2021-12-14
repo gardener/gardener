@@ -11,6 +11,10 @@ controllers:
   plant:
     syncPeriod: 10s
     concurrentSyncs: 5
+  secretBinding:
+    concurrentSyncs: 5
+  secretBindingProvider:
+    concurrentSyncs: 0
   seed:
     concurrentSyncs: 5
     syncPeriod: 30s

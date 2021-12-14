@@ -1053,6 +1053,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*SecretBindingProvider)(nil), (*core.SecretBindingProvider)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_SecretBindingProvider_To_core_SecretBindingProvider(a.(*SecretBindingProvider), b.(*core.SecretBindingProvider), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.SecretBindingProvider)(nil), (*SecretBindingProvider)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SecretBindingProvider_To_v1alpha1_SecretBindingProvider(a.(*core.SecretBindingProvider), b.(*SecretBindingProvider), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*SeedBackup)(nil), (*core.SeedBackup)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_SeedBackup_To_core_SeedBackup(a.(*SeedBackup), b.(*core.SeedBackup), scope)
 	}); err != nil {
@@ -1113,6 +1123,36 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*SeedSettingDependencyWatchdog)(nil), (*core.SeedSettingDependencyWatchdog)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_SeedSettingDependencyWatchdog_To_core_SeedSettingDependencyWatchdog(a.(*SeedSettingDependencyWatchdog), b.(*core.SeedSettingDependencyWatchdog), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.SeedSettingDependencyWatchdog)(nil), (*SeedSettingDependencyWatchdog)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SeedSettingDependencyWatchdog_To_v1alpha1_SeedSettingDependencyWatchdog(a.(*core.SeedSettingDependencyWatchdog), b.(*SeedSettingDependencyWatchdog), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*SeedSettingDependencyWatchdogEndpoint)(nil), (*core.SeedSettingDependencyWatchdogEndpoint)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_SeedSettingDependencyWatchdogEndpoint_To_core_SeedSettingDependencyWatchdogEndpoint(a.(*SeedSettingDependencyWatchdogEndpoint), b.(*core.SeedSettingDependencyWatchdogEndpoint), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.SeedSettingDependencyWatchdogEndpoint)(nil), (*SeedSettingDependencyWatchdogEndpoint)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SeedSettingDependencyWatchdogEndpoint_To_v1alpha1_SeedSettingDependencyWatchdogEndpoint(a.(*core.SeedSettingDependencyWatchdogEndpoint), b.(*SeedSettingDependencyWatchdogEndpoint), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*SeedSettingDependencyWatchdogProbe)(nil), (*core.SeedSettingDependencyWatchdogProbe)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_SeedSettingDependencyWatchdogProbe_To_core_SeedSettingDependencyWatchdogProbe(a.(*SeedSettingDependencyWatchdogProbe), b.(*core.SeedSettingDependencyWatchdogProbe), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.SeedSettingDependencyWatchdogProbe)(nil), (*SeedSettingDependencyWatchdogProbe)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SeedSettingDependencyWatchdogProbe_To_v1alpha1_SeedSettingDependencyWatchdogProbe(a.(*core.SeedSettingDependencyWatchdogProbe), b.(*SeedSettingDependencyWatchdogProbe), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*SeedSettingExcessCapacityReservation)(nil), (*core.SeedSettingExcessCapacityReservation)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_SeedSettingExcessCapacityReservation_To_core_SeedSettingExcessCapacityReservation(a.(*SeedSettingExcessCapacityReservation), b.(*core.SeedSettingExcessCapacityReservation), scope)
 	}); err != nil {
@@ -1130,6 +1170,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*core.SeedSettingLoadBalancerServices)(nil), (*SeedSettingLoadBalancerServices)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_core_SeedSettingLoadBalancerServices_To_v1alpha1_SeedSettingLoadBalancerServices(a.(*core.SeedSettingLoadBalancerServices), b.(*SeedSettingLoadBalancerServices), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*SeedSettingOwnerChecks)(nil), (*core.SeedSettingOwnerChecks)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_SeedSettingOwnerChecks_To_core_SeedSettingOwnerChecks(a.(*SeedSettingOwnerChecks), b.(*core.SeedSettingOwnerChecks), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.SeedSettingOwnerChecks)(nil), (*SeedSettingOwnerChecks)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SeedSettingOwnerChecks_To_v1alpha1_SeedSettingOwnerChecks(a.(*core.SeedSettingOwnerChecks), b.(*SeedSettingOwnerChecks), scope)
 	}); err != nil {
 		return err
 	}
@@ -3104,6 +3154,7 @@ func autoConvert_v1alpha1_KubeletConfig_To_core_KubeletConfig(in *KubeletConfig,
 	out.SystemReserved = (*core.KubeletConfigReserved)(unsafe.Pointer(in.SystemReserved))
 	out.ImageGCHighThresholdPercent = (*int32)(unsafe.Pointer(in.ImageGCHighThresholdPercent))
 	out.ImageGCLowThresholdPercent = (*int32)(unsafe.Pointer(in.ImageGCLowThresholdPercent))
+	out.SerializeImagePulls = (*bool)(unsafe.Pointer(in.SerializeImagePulls))
 	return nil
 }
 
@@ -3132,6 +3183,7 @@ func autoConvert_core_KubeletConfig_To_v1alpha1_KubeletConfig(in *core.KubeletCo
 	out.SystemReserved = (*KubeletConfigReserved)(unsafe.Pointer(in.SystemReserved))
 	out.ImageGCHighThresholdPercent = (*int32)(unsafe.Pointer(in.ImageGCHighThresholdPercent))
 	out.ImageGCLowThresholdPercent = (*int32)(unsafe.Pointer(in.ImageGCLowThresholdPercent))
+	out.SerializeImagePulls = (*bool)(unsafe.Pointer(in.SerializeImagePulls))
 	return nil
 }
 
@@ -4295,6 +4347,7 @@ func autoConvert_v1alpha1_SecretBinding_To_core_SecretBinding(in *SecretBinding,
 	out.ObjectMeta = in.ObjectMeta
 	out.SecretRef = in.SecretRef
 	out.Quotas = *(*[]v1.ObjectReference)(unsafe.Pointer(&in.Quotas))
+	out.Provider = (*core.SecretBindingProvider)(unsafe.Pointer(in.Provider))
 	return nil
 }
 
@@ -4307,6 +4360,7 @@ func autoConvert_core_SecretBinding_To_v1alpha1_SecretBinding(in *core.SecretBin
 	out.ObjectMeta = in.ObjectMeta
 	out.SecretRef = in.SecretRef
 	out.Quotas = *(*[]v1.ObjectReference)(unsafe.Pointer(&in.Quotas))
+	out.Provider = (*SecretBindingProvider)(unsafe.Pointer(in.Provider))
 	return nil
 }
 
@@ -4335,6 +4389,26 @@ func autoConvert_core_SecretBindingList_To_v1alpha1_SecretBindingList(in *core.S
 // Convert_core_SecretBindingList_To_v1alpha1_SecretBindingList is an autogenerated conversion function.
 func Convert_core_SecretBindingList_To_v1alpha1_SecretBindingList(in *core.SecretBindingList, out *SecretBindingList, s conversion.Scope) error {
 	return autoConvert_core_SecretBindingList_To_v1alpha1_SecretBindingList(in, out, s)
+}
+
+func autoConvert_v1alpha1_SecretBindingProvider_To_core_SecretBindingProvider(in *SecretBindingProvider, out *core.SecretBindingProvider, s conversion.Scope) error {
+	out.Type = in.Type
+	return nil
+}
+
+// Convert_v1alpha1_SecretBindingProvider_To_core_SecretBindingProvider is an autogenerated conversion function.
+func Convert_v1alpha1_SecretBindingProvider_To_core_SecretBindingProvider(in *SecretBindingProvider, out *core.SecretBindingProvider, s conversion.Scope) error {
+	return autoConvert_v1alpha1_SecretBindingProvider_To_core_SecretBindingProvider(in, out, s)
+}
+
+func autoConvert_core_SecretBindingProvider_To_v1alpha1_SecretBindingProvider(in *core.SecretBindingProvider, out *SecretBindingProvider, s conversion.Scope) error {
+	out.Type = in.Type
+	return nil
+}
+
+// Convert_core_SecretBindingProvider_To_v1alpha1_SecretBindingProvider is an autogenerated conversion function.
+func Convert_core_SecretBindingProvider_To_v1alpha1_SecretBindingProvider(in *core.SecretBindingProvider, out *SecretBindingProvider, s conversion.Scope) error {
+	return autoConvert_core_SecretBindingProvider_To_v1alpha1_SecretBindingProvider(in, out, s)
 }
 
 func autoConvert_v1alpha1_Seed_To_core_Seed(in *Seed, out *core.Seed, s conversion.Scope) error {
@@ -4538,6 +4612,68 @@ func Convert_core_SeedSelector_To_v1alpha1_SeedSelector(in *core.SeedSelector, o
 	return autoConvert_core_SeedSelector_To_v1alpha1_SeedSelector(in, out, s)
 }
 
+func autoConvert_v1alpha1_SeedSettingDependencyWatchdog_To_core_SeedSettingDependencyWatchdog(in *SeedSettingDependencyWatchdog, out *core.SeedSettingDependencyWatchdog, s conversion.Scope) error {
+	out.Endpoint = (*core.SeedSettingDependencyWatchdogEndpoint)(unsafe.Pointer(in.Endpoint))
+	out.Probe = (*core.SeedSettingDependencyWatchdogProbe)(unsafe.Pointer(in.Probe))
+	return nil
+}
+
+// Convert_v1alpha1_SeedSettingDependencyWatchdog_To_core_SeedSettingDependencyWatchdog is an autogenerated conversion function.
+func Convert_v1alpha1_SeedSettingDependencyWatchdog_To_core_SeedSettingDependencyWatchdog(in *SeedSettingDependencyWatchdog, out *core.SeedSettingDependencyWatchdog, s conversion.Scope) error {
+	return autoConvert_v1alpha1_SeedSettingDependencyWatchdog_To_core_SeedSettingDependencyWatchdog(in, out, s)
+}
+
+func autoConvert_core_SeedSettingDependencyWatchdog_To_v1alpha1_SeedSettingDependencyWatchdog(in *core.SeedSettingDependencyWatchdog, out *SeedSettingDependencyWatchdog, s conversion.Scope) error {
+	out.Endpoint = (*SeedSettingDependencyWatchdogEndpoint)(unsafe.Pointer(in.Endpoint))
+	out.Probe = (*SeedSettingDependencyWatchdogProbe)(unsafe.Pointer(in.Probe))
+	return nil
+}
+
+// Convert_core_SeedSettingDependencyWatchdog_To_v1alpha1_SeedSettingDependencyWatchdog is an autogenerated conversion function.
+func Convert_core_SeedSettingDependencyWatchdog_To_v1alpha1_SeedSettingDependencyWatchdog(in *core.SeedSettingDependencyWatchdog, out *SeedSettingDependencyWatchdog, s conversion.Scope) error {
+	return autoConvert_core_SeedSettingDependencyWatchdog_To_v1alpha1_SeedSettingDependencyWatchdog(in, out, s)
+}
+
+func autoConvert_v1alpha1_SeedSettingDependencyWatchdogEndpoint_To_core_SeedSettingDependencyWatchdogEndpoint(in *SeedSettingDependencyWatchdogEndpoint, out *core.SeedSettingDependencyWatchdogEndpoint, s conversion.Scope) error {
+	out.Enabled = in.Enabled
+	return nil
+}
+
+// Convert_v1alpha1_SeedSettingDependencyWatchdogEndpoint_To_core_SeedSettingDependencyWatchdogEndpoint is an autogenerated conversion function.
+func Convert_v1alpha1_SeedSettingDependencyWatchdogEndpoint_To_core_SeedSettingDependencyWatchdogEndpoint(in *SeedSettingDependencyWatchdogEndpoint, out *core.SeedSettingDependencyWatchdogEndpoint, s conversion.Scope) error {
+	return autoConvert_v1alpha1_SeedSettingDependencyWatchdogEndpoint_To_core_SeedSettingDependencyWatchdogEndpoint(in, out, s)
+}
+
+func autoConvert_core_SeedSettingDependencyWatchdogEndpoint_To_v1alpha1_SeedSettingDependencyWatchdogEndpoint(in *core.SeedSettingDependencyWatchdogEndpoint, out *SeedSettingDependencyWatchdogEndpoint, s conversion.Scope) error {
+	out.Enabled = in.Enabled
+	return nil
+}
+
+// Convert_core_SeedSettingDependencyWatchdogEndpoint_To_v1alpha1_SeedSettingDependencyWatchdogEndpoint is an autogenerated conversion function.
+func Convert_core_SeedSettingDependencyWatchdogEndpoint_To_v1alpha1_SeedSettingDependencyWatchdogEndpoint(in *core.SeedSettingDependencyWatchdogEndpoint, out *SeedSettingDependencyWatchdogEndpoint, s conversion.Scope) error {
+	return autoConvert_core_SeedSettingDependencyWatchdogEndpoint_To_v1alpha1_SeedSettingDependencyWatchdogEndpoint(in, out, s)
+}
+
+func autoConvert_v1alpha1_SeedSettingDependencyWatchdogProbe_To_core_SeedSettingDependencyWatchdogProbe(in *SeedSettingDependencyWatchdogProbe, out *core.SeedSettingDependencyWatchdogProbe, s conversion.Scope) error {
+	out.Enabled = in.Enabled
+	return nil
+}
+
+// Convert_v1alpha1_SeedSettingDependencyWatchdogProbe_To_core_SeedSettingDependencyWatchdogProbe is an autogenerated conversion function.
+func Convert_v1alpha1_SeedSettingDependencyWatchdogProbe_To_core_SeedSettingDependencyWatchdogProbe(in *SeedSettingDependencyWatchdogProbe, out *core.SeedSettingDependencyWatchdogProbe, s conversion.Scope) error {
+	return autoConvert_v1alpha1_SeedSettingDependencyWatchdogProbe_To_core_SeedSettingDependencyWatchdogProbe(in, out, s)
+}
+
+func autoConvert_core_SeedSettingDependencyWatchdogProbe_To_v1alpha1_SeedSettingDependencyWatchdogProbe(in *core.SeedSettingDependencyWatchdogProbe, out *SeedSettingDependencyWatchdogProbe, s conversion.Scope) error {
+	out.Enabled = in.Enabled
+	return nil
+}
+
+// Convert_core_SeedSettingDependencyWatchdogProbe_To_v1alpha1_SeedSettingDependencyWatchdogProbe is an autogenerated conversion function.
+func Convert_core_SeedSettingDependencyWatchdogProbe_To_v1alpha1_SeedSettingDependencyWatchdogProbe(in *core.SeedSettingDependencyWatchdogProbe, out *SeedSettingDependencyWatchdogProbe, s conversion.Scope) error {
+	return autoConvert_core_SeedSettingDependencyWatchdogProbe_To_v1alpha1_SeedSettingDependencyWatchdogProbe(in, out, s)
+}
+
 func autoConvert_v1alpha1_SeedSettingExcessCapacityReservation_To_core_SeedSettingExcessCapacityReservation(in *SeedSettingExcessCapacityReservation, out *core.SeedSettingExcessCapacityReservation, s conversion.Scope) error {
 	out.Enabled = in.Enabled
 	return nil
@@ -4576,6 +4712,26 @@ func autoConvert_core_SeedSettingLoadBalancerServices_To_v1alpha1_SeedSettingLoa
 // Convert_core_SeedSettingLoadBalancerServices_To_v1alpha1_SeedSettingLoadBalancerServices is an autogenerated conversion function.
 func Convert_core_SeedSettingLoadBalancerServices_To_v1alpha1_SeedSettingLoadBalancerServices(in *core.SeedSettingLoadBalancerServices, out *SeedSettingLoadBalancerServices, s conversion.Scope) error {
 	return autoConvert_core_SeedSettingLoadBalancerServices_To_v1alpha1_SeedSettingLoadBalancerServices(in, out, s)
+}
+
+func autoConvert_v1alpha1_SeedSettingOwnerChecks_To_core_SeedSettingOwnerChecks(in *SeedSettingOwnerChecks, out *core.SeedSettingOwnerChecks, s conversion.Scope) error {
+	out.Enabled = in.Enabled
+	return nil
+}
+
+// Convert_v1alpha1_SeedSettingOwnerChecks_To_core_SeedSettingOwnerChecks is an autogenerated conversion function.
+func Convert_v1alpha1_SeedSettingOwnerChecks_To_core_SeedSettingOwnerChecks(in *SeedSettingOwnerChecks, out *core.SeedSettingOwnerChecks, s conversion.Scope) error {
+	return autoConvert_v1alpha1_SeedSettingOwnerChecks_To_core_SeedSettingOwnerChecks(in, out, s)
+}
+
+func autoConvert_core_SeedSettingOwnerChecks_To_v1alpha1_SeedSettingOwnerChecks(in *core.SeedSettingOwnerChecks, out *SeedSettingOwnerChecks, s conversion.Scope) error {
+	out.Enabled = in.Enabled
+	return nil
+}
+
+// Convert_core_SeedSettingOwnerChecks_To_v1alpha1_SeedSettingOwnerChecks is an autogenerated conversion function.
+func Convert_core_SeedSettingOwnerChecks_To_v1alpha1_SeedSettingOwnerChecks(in *core.SeedSettingOwnerChecks, out *SeedSettingOwnerChecks, s conversion.Scope) error {
+	return autoConvert_core_SeedSettingOwnerChecks_To_v1alpha1_SeedSettingOwnerChecks(in, out, s)
 }
 
 func autoConvert_v1alpha1_SeedSettingScheduling_To_core_SeedSettingScheduling(in *SeedSettingScheduling, out *core.SeedSettingScheduling, s conversion.Scope) error {
@@ -4644,6 +4800,8 @@ func autoConvert_v1alpha1_SeedSettings_To_core_SeedSettings(in *SeedSettings, ou
 	out.ShootDNS = (*core.SeedSettingShootDNS)(unsafe.Pointer(in.ShootDNS))
 	out.LoadBalancerServices = (*core.SeedSettingLoadBalancerServices)(unsafe.Pointer(in.LoadBalancerServices))
 	out.VerticalPodAutoscaler = (*core.SeedSettingVerticalPodAutoscaler)(unsafe.Pointer(in.VerticalPodAutoscaler))
+	out.OwnerChecks = (*core.SeedSettingOwnerChecks)(unsafe.Pointer(in.OwnerChecks))
+	out.DependencyWatchdog = (*core.SeedSettingDependencyWatchdog)(unsafe.Pointer(in.DependencyWatchdog))
 	return nil
 }
 
@@ -4658,6 +4816,8 @@ func autoConvert_core_SeedSettings_To_v1alpha1_SeedSettings(in *core.SeedSetting
 	out.ShootDNS = (*SeedSettingShootDNS)(unsafe.Pointer(in.ShootDNS))
 	out.LoadBalancerServices = (*SeedSettingLoadBalancerServices)(unsafe.Pointer(in.LoadBalancerServices))
 	out.VerticalPodAutoscaler = (*SeedSettingVerticalPodAutoscaler)(unsafe.Pointer(in.VerticalPodAutoscaler))
+	out.OwnerChecks = (*SeedSettingOwnerChecks)(unsafe.Pointer(in.OwnerChecks))
+	out.DependencyWatchdog = (*SeedSettingDependencyWatchdog)(unsafe.Pointer(in.DependencyWatchdog))
 	return nil
 }
 

@@ -125,9 +125,13 @@ spec:
         - mountPath: /var/prometheus/data
           name: prometheus-db
           subPath: prometheus-
-        # we mount the Shoot cluster's CA and certs
+        # TODO(rfranzke): Delete this in a future release once all monitoring configurations of extensions have been
+        # adapted.
         - mountPath: /etc/prometheus/seed
-          name: prometheus-kubeconfig
+          name: prometheus-client-cert
+        - name: shoot-access
+          mountPath: /var/run/secrets/gardener.cloud/shoot/token
+          readOnly: true
         {{- if hasKey .Values.alerting.auth_type "certificate" }}
         - mountPath: /etc/prometheus/operator
           name: prometheus-remote-am-tls
@@ -152,8 +156,11 @@ spec:
         volumeMounts:
         - name: blackbox-exporter-config-prometheus
           mountPath: /vpn
-        - mountPath: /var/run/secrets/blackbox
-          name: prometheus-kubeconfig
+        - mountPath: /var/run/secrets/shoot-ca
+          name: shoot-ca
+          readOnly: true
+        - name: shoot-access
+          mountPath: /var/run/secrets/gardener.cloud/shoot/token
           readOnly: true
       - name: prometheus-config-reloader
         image: {{ index .Values.images "configmap-reloader" }}
@@ -196,9 +203,14 @@ spec:
       - name: etcd-client-tls
         secret:
           secretName: etcd-client-tls
-      - name: prometheus-kubeconfig
+      # TODO(rfranzke): Delete this in a future release once all monitoring configurations of extensions have been
+      #	adapted.
+      - name: prometheus-client-cert
         secret:
           secretName: prometheus
+      - name: shoot-access
+        secret:
+          secretName: shoot-access-prometheus
       - name: prometheus-kubelet
         secret:
           secretName: prometheus-kubelet

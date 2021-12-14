@@ -13,7 +13,7 @@ require (
 	github.com/frankban/quicktest v1.13.1 // indirect
 	github.com/gardener/component-spec/bindings-go v0.0.33
 	github.com/gardener/dependency-watchdog v0.6.1-0.20210623112844-96f73d5dc311
-	github.com/gardener/etcd-druid v0.6.1-0.20211022081522-071746e9d0bd
+	github.com/gardener/etcd-druid v0.7.0
 	github.com/gardener/external-dns-management v0.7.18
 	github.com/gardener/hvpa-controller v0.3.1
 	github.com/gardener/landscaper/apis v0.7.0
@@ -52,8 +52,8 @@ require (
 	gonum.org/v1/gonum v0.8.2
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
-	istio.io/api v0.0.0-20210520012029-891c0c12abfd
-	istio.io/client-go v1.10.1
+	istio.io/api v0.0.0-20211118170605-3f0f902cdfd1
+	istio.io/client-go v1.12.0
 	k8s.io/api v0.22.2
 	k8s.io/apiextensions-apiserver v0.22.2
 	k8s.io/apimachinery v0.22.2

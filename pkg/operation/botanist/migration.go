@@ -16,10 +16,14 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // MigrateAllExtensionResources migrates all extension CRs.
@@ -56,6 +60,46 @@ func (b *Botanist) runParallelTaskForEachComponent(ctx context.Context, componen
 		fns = append(fns, fn(component))
 	}
 	return flow.Parallel(fns...)(ctx)
+}
+
+// IsCopyOfBackupsRequired check if etcd backups need to be copied between seeds.
+func (b *Botanist) IsCopyOfBackupsRequired(ctx context.Context) (bool, error) {
+	if !gardenletfeatures.FeatureGate.Enabled(features.CopyEtcdBackupsDuringControlPlaneMigration) ||
+		b.Seed.GetInfo().Spec.Backup == nil || !b.isRestorePhase() {
+		return false, nil
+	}
+
+	// First we check if the etcd-main Etcd resource has been created. This is only true if backups have been copied.
+	if _, err := b.Shoot.Components.ControlPlane.EtcdMain.Get(ctx); client.IgnoreNotFound(err) != nil {
+		return false, err
+	} else if err == nil {
+		return false, nil
+	}
+
+	backupEntry, err := b.Shoot.Components.BackupEntry.Get(ctx)
+	if err != nil {
+		return false, fmt.Errorf("error while retrieving BackupEntry: %w", err)
+	}
+
+	// If the Shoot's original BackupEntry has not been switched to the destination Seed's BackupBucket, then backup copying has not been started yet
+	// and the source BackupEntry has not been created.
+	if backupEntry.Spec.BucketName != string(b.Seed.GetInfo().UID) {
+		return true, nil
+	}
+
+	sourceBackupEntry, err := b.Shoot.Components.SourceBackupEntry.Get(ctx)
+	if err != nil {
+		return false, fmt.Errorf("error while retrieving source BackupEntry: %w", err)
+	}
+
+	// If the source BackupEntry exists, then the Shoot's original BackupEntry must have had its bucketName switched to the BackupBucket of the
+	// destination Seed and the source BackupEntry's bucketName must point to the BackupBucket of the source seed. Otherwise copy of backups is
+	// impossible and data loss will occur.
+	if sourceBackupEntry.Spec.BucketName == backupEntry.Spec.BucketName {
+		return false, fmt.Errorf("backups have not been copied and source and target backupentry point to the same bucket: %s. ", sourceBackupEntry.Spec.BucketName)
+	}
+
+	return true, nil
 }
 
 func (b *Botanist) isRestorePhase() bool {

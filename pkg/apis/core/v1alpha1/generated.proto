@@ -1047,6 +1047,11 @@ message KubeletConfig {
   // +optional
   // Default: 40
   optional int32 imageGCLowThresholdPercent = 17;
+
+  // SerializeImagePulls describes whether the images are pulled one at a time.
+  // +optional
+  // Default: true
+  optional bool serializeImagePulls = 18;
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
@@ -1771,6 +1776,10 @@ message SecretBinding {
   // Quotas is a list of references to Quota objects in the same or another namespace.
   // +optional
   repeated k8s.io.api.core.v1.ObjectReference quotas = 3;
+
+  // Provider defines the provider type of the SecretBinding.
+  // +optional
+  optional SecretBindingProvider provider = 4;
 }
 
 // SecretBindingList is a collection of SecretBindings.
@@ -1781,6 +1790,15 @@ message SecretBindingList {
 
   // Items is the list of SecretBindings.
   repeated SecretBinding items = 2;
+}
+
+// SecretBindingProvider defines the provider type of the SecretBinding.
+message SecretBindingProvider {
+  // Type is the type of the provider.
+  //
+  // For backwards compatibility, the field can contain multiple providers separated by a comma.
+  // However the usage of single SecretBinding (hence Secret) for different cloud providers is strongly discouraged.
+  optional string type = 1;
 }
 
 // Seed represents an installation request for an external controller.
@@ -1895,6 +1913,33 @@ message SeedSelector {
   repeated string providerTypes = 2;
 }
 
+// SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.
+message SeedSettingDependencyWatchdog {
+  // Endpoint controls the endpoint settings for the dependency-watchdog for the seed.
+  // +optional
+  optional SeedSettingDependencyWatchdogEndpoint endpoint = 1;
+
+  // Probe controls the probe settings for the dependency-watchdog for the seed.
+  // +optional
+  optional SeedSettingDependencyWatchdogProbe probe = 2;
+}
+
+// SeedSettingDependencyWatchdogEndpoint controls the endpoint settings for the dependency-watchdog for the seed.
+message SeedSettingDependencyWatchdogEndpoint {
+  // Enabled controls whether the endpoint controller of the dependency-watchdog should be enabled. This controller
+  // helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in
+  // CrashLoopBackoff status and restarting them once their dependants become ready and available again.
+  optional bool enabled = 1;
+}
+
+// SeedSettingDependencyWatchdogProbe controls the probe settings for the dependency-watchdog for the seed.
+message SeedSettingDependencyWatchdogProbe {
+  // Enabled controls whether the probe controller of the dependency-watchdog should be enabled. This controller
+  // scales down the kube-controller-manager of shoot clusters in case their respective kube-apiserver is not
+  // reachable via its external ingress in order to avoid melt-down situations.
+  optional bool enabled = 1;
+}
+
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.
 message SeedSettingExcessCapacityReservation {
   // Enabled controls whether the excess capacity reservation should be enabled.
@@ -1907,6 +1952,13 @@ message SeedSettingLoadBalancerServices {
   // Annotations is a map of annotations that will be injected/merged into every load balancer service object.
   // +optional
   map<string, string> annotations = 1;
+}
+
+// SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
+message SeedSettingOwnerChecks {
+  // Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It
+  // is enabled by default because it is a prerequisite for control plane migration.
+  optional bool enabled = 1;
 }
 
 // SeedSettingScheduling controls settings for scheduling decisions for the seed.
@@ -1954,6 +2006,14 @@ message SeedSettings {
   // VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.
   // +optional
   optional SeedSettingVerticalPodAutoscaler verticalPodAutoscaler = 5;
+
+  // SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
+  // +optional
+  optional SeedSettingOwnerChecks ownerChecks = 6;
+
+  // DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.
+  // +optional
+  optional SeedSettingDependencyWatchdog dependencyWatchdog = 7;
 }
 
 // SeedSpec is the specification of a Seed.
@@ -1979,8 +2039,8 @@ message SeedSpec {
   // Provider defines the provider type and region for this Seed cluster.
   optional SeedProvider provider = 5;
 
-  // SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
-  // the account the Seed cluster has been deployed to.
+  // SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
+  // cluster to be registered as Seed.
   // +optional
   optional k8s.io.api.core.v1.SecretReference secretRef = 6;
 

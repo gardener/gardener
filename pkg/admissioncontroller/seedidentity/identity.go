@@ -26,7 +26,7 @@ import (
 )
 
 // FromUserInfoInterface returns the seed name and a boolean indicating whether the provided user has the
-// gardener.cloud:system:seeds group. If the seed name is ambiguous then an empty string will be returned.
+// gardener.cloud:system:seeds group.
 func FromUserInfoInterface(u user.Info) (string, bool) {
 	if u == nil {
 		return "", false
@@ -41,9 +41,12 @@ func FromUserInfoInterface(u user.Info) (string, bool) {
 		return "", false
 	}
 
-	var seedName string
-	if suffix := strings.TrimPrefix(userName, v1beta1constants.SeedUserNamePrefix); suffix != v1beta1constants.SeedUserNameSuffixAmbiguous {
-		seedName = suffix
+	seedName := strings.TrimPrefix(userName, v1beta1constants.SeedUserNamePrefix)
+	if seedName == "" ||
+		// Do no longer consider "ambiguous" gardenlets as valid users.
+		// TODO(rfranzke): Drop this in a future version.
+		seedName == "<ambiguous>" {
+		return "", false
 	}
 
 	return seedName, true

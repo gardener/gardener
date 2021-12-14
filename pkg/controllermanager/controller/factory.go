@@ -20,11 +20,13 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -64,6 +66,8 @@ func NewGardenControllerFactory(clientMap clientmap.ClientMap, cfg *config.Contr
 
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
 func (f *GardenControllerFactory) Run(ctx context.Context) error {
+	log := logf.Log.WithName("controller")
+
 	gardenClientSet, err := f.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return fmt.Errorf("failed to get garden client: %+v", err)
@@ -78,15 +82,15 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	}
 
 	runtime.Must(garden.BootstrapCluster(ctx, gardenClientSet))
-	logger.Logger.Info("Successfully bootstrapped the Garden cluster.")
+	log.Info("Successfully bootstrapped Garden cluster")
 
 	// Create controllers.
-	bastionController, err := bastioncontroller.NewBastionController(ctx, f.clientMap, f.cfg.Controllers.Bastion.MaxLifetime.Duration)
+	bastionController, err := bastioncontroller.NewBastionController(ctx, log, f.clientMap, f.cfg.Controllers.Bastion.MaxLifetime.Duration)
 	if err != nil {
 		return fmt.Errorf("failed initializing Bastion controller: %w", err)
 	}
 
-	cloudProfileController, err := cloudprofilecontroller.NewCloudProfileController(ctx, f.clientMap, f.recorder, logger.Logger)
+	cloudProfileController, err := cloudprofilecontroller.NewCloudProfileController(ctx, log, f.clientMap, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing CloudProfile controller: %w", err)
 	}
@@ -96,7 +100,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing ControllerRegistration controller: %w", err)
 	}
 
-	csrController, err := csrcontroller.NewCSRController(ctx, f.clientMap)
+	csrController, err := csrcontroller.NewCSRController(ctx, log, f.clientMap)
 	if err != nil {
 		return fmt.Errorf("failed initializing CSR controller: %w", err)
 	}
@@ -154,9 +158,9 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	go plantController.Run(ctx, f.cfg.Controllers.Plant.ConcurrentSyncs)
 	go projectController.Run(ctx, f.cfg.Controllers.Project.ConcurrentSyncs)
 	go quotaController.Run(ctx, f.cfg.Controllers.Quota.ConcurrentSyncs)
-	go secretBindingController.Run(ctx, f.cfg.Controllers.SecretBinding.ConcurrentSyncs)
+	go secretBindingController.Run(ctx, f.cfg.Controllers.SecretBinding.ConcurrentSyncs, f.cfg.Controllers.SecretBindingProvider.ConcurrentSyncs)
 	go seedController.Run(ctx, f.cfg.Controllers.Seed.ConcurrentSyncs)
-	go shootController.Run(ctx, f.cfg.Controllers.ShootMaintenance.ConcurrentSyncs, f.cfg.Controllers.ShootQuota.ConcurrentSyncs, f.cfg.Controllers.ShootHibernation.ConcurrentSyncs, f.cfg.Controllers.ShootReference.ConcurrentSyncs, f.cfg.Controllers.ShootRetry.ConcurrentSyncs)
+	go shootController.Run(ctx, f.cfg.Controllers.ShootMaintenance.ConcurrentSyncs, f.cfg.Controllers.ShootQuota.ConcurrentSyncs, f.cfg.Controllers.ShootHibernation.ConcurrentSyncs, f.cfg.Controllers.ShootReference.ConcurrentSyncs, f.cfg.Controllers.ShootRetry.ConcurrentSyncs, f.cfg.Controllers.ShootConditions.ConcurrentSyncs, f.cfg.Controllers.ShootStatusLabel.ConcurrentSyncs)
 	go exposureClassController.Run(ctx, f.cfg.Controllers.ExposureClass.ConcurrentSyncs)
 	go managedSeedSetController.Run(ctx, f.cfg.Controllers.ManagedSeedSet.ConcurrentSyncs)
 
@@ -169,13 +173,13 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		go eventController.Run(ctx)
 	}
 
-	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Get().GitVersion)
+	log.Info("gardener-controller-manager initialized")
 
 	// Shutdown handling
 	<-ctx.Done()
 
-	logger.Logger.Infof("I have received a stop signal and will no longer watch resources.")
-	logger.Logger.Infof("Bye Bye!")
+	log.Info("I have received a stop signal and will no longer watch resources")
+	log.Info("Bye Bye!")
 
 	return nil
 }
@@ -207,6 +211,19 @@ func addAllFieldIndexes(ctx context.Context, indexer client.FieldIndexer) error 
 		return []string{*shoot.Spec.SeedName}
 	}); err != nil {
 		return fmt.Errorf("failed to add indexer to Shoot Informer: %w", err)
+	}
+
+	if err := indexer.IndexField(ctx, &seedmanagementv1alpha1.ManagedSeed{}, seedmanagement.ManagedSeedShootName, func(obj client.Object) []string {
+		ms, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
+		if !ok {
+			return []string{""}
+		}
+		if ms.Spec.Shoot == nil {
+			return []string{""}
+		}
+		return []string{ms.Spec.Shoot.Name}
+	}); err != nil {
+		return fmt.Errorf("failed to add indexer to ManagedSeed Informer: %w", err)
 	}
 
 	return nil

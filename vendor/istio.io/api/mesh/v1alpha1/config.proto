@@ -18,6 +18,7 @@ import "google/protobuf/duration.proto";
 import "google/protobuf/wrappers.proto";
 import "mesh/v1alpha1/proxy.proto";
 import "networking/v1alpha3/destination_rule.proto";
+import "networking/v1alpha3/virtual_service.proto";
 import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
 
 // $title: Global Mesh Options
@@ -52,8 +53,8 @@ message MeshConfig {
   // MongoDB, etc. Envoy will timeout on the protocol detection after
   // the specified period, defaulting to non mTLS plain TCP
   // traffic. Set this field to tweak the period that Envoy will wait
-  // for the client to send the first bits of data. (MUST BE >=1ms or 
-  // 0s to disable). Default detection timeout is 5s.
+  // for the client to send the first bits of data. (MUST BE >=1ms or
+  // 0s to disable). Default detection timeout is 0s (no timeout).
   google.protobuf.Duration protocol_detection_timeout = 42;
 
   // If set then set `SO_KEEPALIVE` on the socket to enable TCP Keepalives.
@@ -222,6 +223,21 @@ message MeshConfig {
       // The certificate is retrieved from the endpoint.
       string spiffe_bundle_url = 2;
     }
+    // Optional. Specify the kubernetes signers (External CA) that use this trustAnchor
+    // when Istiod is acting as RA(registration authority)
+    // If set, they are used for these signers. Otherwise, this trustAnchor is used for all signers.
+    repeated string cert_signers = 3;
+
+    // Optional. Specify the list of trust domains to which this trustAnchor data belongs.
+    // If set, they are used for these trust domains. Otherwise, this trustAnchor is used for default trust domain
+    // and its aliases.
+    // Note that we can have multiple trustAnchor data for a same trust_domain.
+    // In that case, trustAnchors with a same trust domain will be merged and used together to verify peer certificates.
+    // If neither cert_signers nor trust_domains is set, this trustAnchor is used for all trust domains and all signers.
+    // If only trust_domains is set, this trustAnchor is used for these trust_domains and all signers.
+    // If only cert_signers is set, this trustAnchor is used for these cert_signers and all trust domains.
+    // If both cert_signers and trust_domains is set, this trustAnchor is only used for these signers and trust domains.
+    repeated string trust_domains = 4;
   }
 
   // The extra root certificates for workload-to-workload communication.
@@ -416,6 +432,7 @@ message MeshConfig {
   // If not specified, this will be enabled by default.
   google.protobuf.BoolValue enable_prometheus_merge = 51;
 
+  // $hide_from_docs
   // `VerifyCertificateAtClient` sets the mesh global default for peer certificate validation
   // at the client-side proxy when `SIMPLE` TLS or `MUTUAL` TLS (non `ISTIO_MUTUAL`) origination
   // modes are used. This setting can be overridden at the host level via DestinationRule API.
@@ -436,20 +453,20 @@ message MeshConfig {
   // For wildcard host name in DestinationRule, client-side proxy will do a suffix match. For example,
   // if host is `*.x.y.com`, client-side proxy will verify the presented server certificate SAN matches
   // ``.x.y.com` suffix.
-  google.protobuf.BoolValue verify_certificate_at_client = 54;
+  google.protobuf.BoolValue verify_certificate_at_client = 54 [deprecated=true];
 
   message CA {
-    // REQUIRED. Address of the CA server implementing the Istio CA gRPC API. 
+    // REQUIRED. Address of the CA server implementing the Istio CA gRPC API.
     // Can be IP address or a fully qualified DNS name with port
     // Eg: custom-ca.default.svc.cluster.local:8932, 192.168.23.2:9000
     string address = 1;
-    // Use the tls_settings to specify the tls mode to use. 
+    // Use the tls_settings to specify the tls mode to use.
     // Regarding tls_settings:
     // - DISABLE MODE is legitimate for the case Istiod is making the request via an Envoy sidecar.
     // DISABLE MODE can also be used for testing
-    // - TLS MUTUAL MODE be on by default. If the CA certificates 
-    // (cert bundle to verify the CA server's certificate) is omitted, Istiod will 
-    // use the system root certs to verify the CA server's certificate. 
+    // - TLS MUTUAL MODE be on by default. If the CA certificates
+    // (cert bundle to verify the CA server's certificate) is omitted, Istiod will
+    // use the system root certs to verify the CA server's certificate.
     istio.networking.v1alpha3.ClientTLSSettings tls_settings = 2;
     // timeout for forward CSR requests from Istiod to External CA
     // Default: 10s
@@ -483,6 +500,12 @@ message MeshConfig {
       StackdriverProvider stackdriver = 7;
       // Configures an OpenCensusAgent tracing provider.
       OpenCensusAgentTracingProvider opencensus = 8;
+      // Configures a Apache SkyWalking provider.
+      SkyWalkingTracingProvider skywalking = 9;
+      // Configures a Prometheus metrics provider.
+      PrometheusMetricsProvider prometheus = 10;
+      // Configures an Envoy File Access Log provider.
+      EnvoyFileAccessLogProvider envoy_file_access_log = 11;
     }
 
     message EnvoyExternalAuthorizationRequestBody {
@@ -508,8 +531,8 @@ message MeshConfig {
 
     message EnvoyExternalAuthorizationHttpProvider {
       // REQUIRED. Specifies the service that implements the Envoy ext_authz HTTP authorization service.
-      // The format is "[<Namespace>/]<Hostname>". The specification of <Namespace> is required only when it is insufficient
-      // to unambiguously resolve a service in the service registry. The <Hostname> is a fully qualified host name of a
+      // The format is `[<Namespace>/]<Hostname>`. The specification of `<Namespace>` is required only when it is insufficient
+      // to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
       // service defined by the Kubernetes service or ServiceEntry.
       //
       // Example: "my-ext-authz.foo.svc.cluster.local" or "bar/my-ext-authz.example.com".
@@ -595,8 +618,8 @@ message MeshConfig {
 
     message EnvoyExternalAuthorizationGrpcProvider {
       // REQUIRED. Specifies the service that implements the Envoy ext_authz gRPC authorization service.
-      // The format is "[<Namespace>/]<Hostname>". The specification of <Namespace> is required only when it is insufficient
-      // to unambiguously resolve a service in the service registry. The <Hostname> is a fully qualified host name of a
+      // The format is `[<Namespace>/]<Hostname>`. The specification of `<Namespace>` is required only when it is insufficient
+      // to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
       // service defined by the Kubernetes service or ServiceEntry.
       //
       // Example: "my-ext-authz.foo.svc.cluster.local" or "bar/my-ext-authz.example.com".
@@ -629,8 +652,8 @@ message MeshConfig {
     // Defines configuration for a Zipkin tracer.
     message ZipkinTracingProvider {
       // REQUIRED. Specifies the service that the Zipkin API.
-      // The format is "[<Namespace>/]<Hostname>". The specification of <Namespace> is required only when it is insufficient
-      // to unambiguously resolve a service in the service registry. The <Hostname> is a fully qualified host name of a
+      // The format is `[<Namespace>/]<Hostname>`. The specification of `<Namespace>` is required only when it is insufficient
+      // to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
       // service defined by the Kubernetes service or ServiceEntry.
       //
       // Example: "zipkin.default.svc.cluster.local" or "bar/zipkin.example.com".
@@ -647,8 +670,8 @@ message MeshConfig {
     // Defines configuration for a Lightstep tracer.
     message LightstepTracingProvider {
       // REQUIRED. Specifies the service for the Lightstep collector.
-      // The format is "[<Namespace>/]<Hostname>". The specification of <Namespace> is required only when it is insufficient
-      // to unambiguously resolve a service in the service registry. The <Hostname> is a fully qualified host name of a
+      // The format is `[<Namespace>/]<Hostname>`. The specification of `<Namespace>` is required only when it is insufficient
+      // to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
       // service defined by the Kubernetes service or ServiceEntry.
       //
       // Example: "lightstep.default.svc.cluster.local" or "bar/lightstep.example.com".
@@ -668,8 +691,8 @@ message MeshConfig {
     // Defines configuration for a Datadog tracer.
     message DatadogTracingProvider {
       // REQUIRED. Specifies the service for the Datadog agent.
-      // The format is "[<Namespace>/]<Hostname>". The specification of <Namespace> is required only when it is insufficient
-      // to unambiguously resolve a service in the service registry. The <Hostname> is a fully qualified host name of a
+      // The format is `[<Namespace>/]<Hostname>`. The specification of `<Namespace>` is required only when it is insufficient
+      // to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
       // service defined by the Kubernetes service or ServiceEntry.
       //
       // Example: "datadog.default.svc.cluster.local" or "bar/datadog.example.com".
@@ -681,6 +704,23 @@ message MeshConfig {
       // Optional. Controls the overall path length allowed in a reported span.
       // NOTE: currently only controls max length of the path tag.
       uint32 max_tag_length = 3;
+    }
+
+    // Defines configuration for a SkyWalking tracer.
+    message SkyWalkingTracingProvider {
+      // REQUIRED. Specifies the service for the SkyWalking receiver.
+      // The format is `[<Namespace>/]<Hostname>`. The specification of `<Namespace>` is required only when it is insufficient
+      // to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
+      // service defined by the Kubernetes service or ServiceEntry.
+      //
+      // Example: "skywalking.default.svc.cluster.local" or "bar/skywalking.example.com".
+      string service = 1;
+
+      // REQUIRED. Specifies the port of the service.
+      uint32 port = 2;
+
+      // Optional. The SkyWalking OAP access token.
+      string access_token = 3;
     }
 
     // Defines configuration for Stackdriver.
@@ -709,8 +749,8 @@ message MeshConfig {
     // Defines configuration for an OpenCensus tracer writing to an OpenCensus backend.
     message OpenCensusAgentTracingProvider {
       // REQUIRED. Specifies the service for the OpenCensusAgent.
-      // The format is "[<Namespace>/]<Hostname>". The specification of <Namespace> is required only when it is insufficient
-      // to unambiguously resolve a service in the service registry. The <Hostname> is a fully qualified host name of a
+      // The format is `[<Namespace>/]<Hostname>`. The specification of `<Namespace>` is required only when it is insufficient
+      // to unambiguously resolve a service in the service registry. The `<Hostname>` is a fully qualified host name of a
       // service defined by the Kubernetes service or ServiceEntry.
       //
       // Example: "ocagent.default.svc.cluster.local" or "bar/ocagent.example.com".
@@ -752,6 +792,14 @@ message MeshConfig {
       // NOTE: currently only controls max length of the path tag.
       uint32 max_tag_length = 4;
     }
+
+    message PrometheusMetricsProvider {}
+
+    message EnvoyFileAccessLogProvider {
+      // Path to a local file to write the access log entries.
+      // If unspecified, defaults to `/dev/stdout`.
+      string path = 1;
+    }
   }
 
   // Defines a list of extension providers that extend Istio's functionality. For example, the AuthorizationPolicy
@@ -760,11 +808,16 @@ message MeshConfig {
 
   // Holds the name references to the providers that will be used by default
   // in other Istio configuration resources if the provider is not specified.
+  //
+  // These names must match a provider defined in `extension_providers` that is
+  // one of the supported tracing providers.
   message DefaultProviders {
-    // Name of the default provider for tracing. This must match a provider
-    // defined in `extension_providers` that is one of the support tracing
-    // providers.
-    string tracing = 1;
+    // Name of the default provider(s) for tracing.
+    repeated string tracing = 1;
+    // Name of the default provider(s) for metrics.
+    repeated string metrics = 2;
+    // Name of the default provider(s) for access logging.
+    repeated string access_logging = 3;
   }
 
   // Specifies extension providers to use by default in Istio configuration resources.
@@ -828,8 +881,18 @@ message MeshConfig {
   // If not set, the NormalizationType.DEFAULT configuration will be used.
   ProxyPathNormalization path_normalization = 61;
 
+  // Configure the default HTTP retry policy.
+  // The default number of retry attempts is set at 2 for these errors:
+  //   "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes".
+  // Setting the number of attempts to 0 disables retry policy globally.
+  // This setting can be overriden on a per-host basis using the Virtual Service
+  // API.
+  // All settings in the retry policy except `perTryTimeout` can currently be
+  // configured globally via this field.
+  istio.networking.v1alpha3.HTTPRetry default_http_retry_policy = 62;
+
   // $hide_from_docs
-  // Next available field number: 62
+  // Next available field number: 63
   reserved 1;
   reserved "mixer_check_server";
   reserved 2;

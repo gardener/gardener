@@ -2,7 +2,7 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
-  name: gardener.cloud:vpa:{{ .Values.clusterType }}:admission-controller
+  name: gardener.cloud:vpa:{{ include "vpa.rbac-name-infix" . }}:admission-controller
   labels:
   {{ toYaml .Values.labels | indent 4 }}
   annotations:
@@ -10,16 +10,14 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: gardener.cloud:vpa:{{ .Values.clusterType }}:admission-controller
+  name: gardener.cloud:vpa:{{ include "vpa.rbac-name-infix" . }}:admission-controller
 {{- if .Values.admissionController.enabled }}
 subjects:
-{{- if .Values.admissionController.enableServiceAccount }}
 - kind: ServiceAccount
   name: vpa-admission-controller
+{{- if .Values.admissionController.createServiceAccount }}
   namespace: {{ .Release.Namespace }}
 {{- else }}
-- apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: gardener.cloud:vpa:admission-controller
+  namespace: kube-system
 {{- end }}
 {{- end }}

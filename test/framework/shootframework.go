@@ -24,8 +24,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -35,7 +35,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -50,6 +49,7 @@ type ShootConfig struct {
 
 	CreateTestNamespace         bool
 	DisableTestNamespaceCleanup bool
+	SkipSeedInitialization      bool
 }
 
 // ShootFramework represents the shoot test framework that includes
@@ -195,7 +195,7 @@ func (f *ShootFramework) AddShoot(ctx context.Context, shootName, shootNamespace
 	}
 
 	// seed could be temporarily offline so no specified seed is a valid state
-	if shoot.Spec.SeedName != nil {
+	if shoot.Spec.SeedName != nil && !f.Config.SkipSeedInitialization {
 		f.Seed, f.SeedClient, err = f.GetSeed(ctx, *shoot.Spec.SeedName)
 		if err != nil {
 			return err
@@ -208,19 +208,21 @@ func (f *ShootFramework) AddShoot(ctx context.Context, shootName, shootNamespace
 		return nil
 	}
 
-	if err := retry.UntilTimeout(ctx, k8sClientInitPollInterval, k8sClientInitTimeout, func(ctx context.Context) (bool, error) {
-		shootClient, err = kubernetes.NewClientFromSecret(ctx, f.SeedClient.Client(), ComputeTechnicalID(f.Project.Name, shoot), gardencorev1beta1.GardenerName, kubernetes.WithClientOptions(client.Options{
-			Scheme: kubernetes.ShootScheme,
-		}))
-		if err != nil {
-			return retry.MinorError(fmt.Errorf("could not construct Shoot client: %w", err))
+	if !f.GardenerFrameworkConfig.SkipAccessingShoot {
+		if err := retry.UntilTimeout(ctx, k8sClientInitPollInterval, k8sClientInitTimeout, func(ctx context.Context) (bool, error) {
+			shootClient, err = kubernetes.NewClientFromSecret(ctx, f.GardenClient.Client(), shoot.Namespace, shoot.Name+"."+gutil.ShootProjectSecretSuffixKubeconfig, kubernetes.WithClientOptions(client.Options{
+				Scheme: kubernetes.ShootScheme,
+			}))
+			if err != nil {
+				return retry.MinorError(fmt.Errorf("could not construct Shoot client: %w", err))
+			}
+			return retry.Ok()
+		}); err != nil {
+			return err
 		}
-		return retry.Ok()
-	}); err != nil {
-		return err
-	}
 
-	f.ShootClient = shootClient
+		f.ShootClient = shootClient
+	}
 
 	return nil
 }

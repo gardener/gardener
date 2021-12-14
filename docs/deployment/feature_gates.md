@@ -34,25 +34,28 @@ The following tables are a summary of the feature gates that you can set on diff
 | ReversedVPN                                  | `false` | `Alpha` | `1.22` |        |
 | AdminKubeconfigRequest                       | `false` | `Alpha` | `1.24` |        |
 | UseDNSRecords                                | `false` | `Alpha` | `1.27` |        |
-| DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha` | `1.28` | `1.31` |
-| DisallowKubeconfigRotationForShootInDeletion | `true`  | `Beta`  | `1.32` | `1.35` |
-| DisallowKubeconfigRotationForShootInDeletion | `true`  | `GA`    | `1.36` |        |
 | RotateSSHKeypairOnMaintenance                | `false` | `Alpha` | `1.28` |        |
 | DenyInvalidExtensionResources                | `false` | `Alpha` | `1.31` |        |
 | WorkerPoolKubernetesVersion                  | `false` | `Alpha` | `1.35` |        |
+| CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` |        |
+| SecretBindingProviderValidation              | `false` | `Alpha` | `1.38` |        |
 
 ## Feature gates for graduated or deprecated features
 
-| Feature                | Default | Stage     | Since  | Until  |
-| ---------------------- | ------- | --------- | ------ | ------ |
-| NodeLocalDNS           | `false` | `Alpha`   | `1.7`  |        |
-| NodeLocalDNS           |         | `Removed` | `1.26` |        |
-| KonnectivityTunnel     | `false` | `Alpha`   | `1.6`  |        |
-| KonnectivityTunnel     |         | `Removed` | `1.27` |        |
-| MountHostCADirectories | `false` | `Alpha`   | `1.11` | `1.25` |
-| MountHostCADirectories | `true`  | `Beta`    | `1.26` | `1.27` |
-| MountHostCADirectories | `true`  | `GA`      | `1.27` |        |
-| MountHostCADirectories |         | `Removed` | `1.30` |        |
+| Feature                                      | Default | Stage     | Since  | Until  |
+| -------------------------------------------- | ------- | --------- | ------ | ------ |
+| NodeLocalDNS                                 | `false` | `Alpha`   | `1.7`  |        |
+| NodeLocalDNS                                 |         | `Removed` | `1.26` |        |
+| KonnectivityTunnel                           | `false` | `Alpha`   | `1.6`  |        |
+| KonnectivityTunnel                           |         | `Removed` | `1.27` |        |
+| MountHostCADirectories                       | `false` | `Alpha`   | `1.11` | `1.25` |
+| MountHostCADirectories                       | `true`  | `Beta`    | `1.26` | `1.27` |
+| MountHostCADirectories                       | `true`  | `GA`      | `1.27` |        |
+| MountHostCADirectories                       |         | `Removed` | `1.30` |        |
+| DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha`   | `1.28` | `1.31` |
+| DisallowKubeconfigRotationForShootInDeletion | `true`  | `Beta`    | `1.32` | `1.35` |
+| DisallowKubeconfigRotationForShootInDeletion | `true`  | `GA`      | `1.36` |        |
+| DisallowKubeconfigRotationForShootInDeletion |         | `Removed` | `1.38` |        |
 
 ## Using a feature
 
@@ -106,3 +109,8 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 * `RotateSSHKeypairOnMaintenance` enables SSH keypair rotation in the maintenance controller of the gardener-controller-manager. Details can be found in [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md).
 * `DenyInvalidExtensionResources` causes the `seed-admission-controller` to deny invalid extension resources, instead of just logging validation errors.
 * `WorkerPoolKubernetesVersion` allows to overwrite the Kubernetes version used for shoot clusters per worker pool (see [this document](../usage/worker_pool_k8s_versions.md))
+* `CopyEtcdBackupsDuringControlPlaneMigration` enables the copy of etcd backups from the object store of the source seed to the object store of the destination seed during control plane migration.
+* `SecretBindingProviderValidation` enables validations on Gardener API server that:
+	- requires the provider type of a SecretBinding to be set (on SecretBinding creation)
+	- requires the SecretBinding provider type to match the Shoot provider type (on Shoot creation)
+	- enforces immutability on the provider type of a SecretBinding

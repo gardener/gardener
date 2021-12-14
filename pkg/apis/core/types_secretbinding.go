@@ -31,6 +31,17 @@ type SecretBinding struct {
 	SecretRef corev1.SecretReference
 	// Quotas is a list of references to Quota objects in the same or another namespace.
 	Quotas []corev1.ObjectReference
+	// Provider defines the provider type of the SecretBinding.
+	Provider *SecretBindingProvider
+}
+
+// SecretBindingProvider defines the provider type of the SecretBinding.
+type SecretBindingProvider struct {
+	// Type is the type of the provider.
+	//
+	// For backwards compatibility, the field can contain multiple providers separated by a comma.
+	// However the usage of single SecretBinding (hence Secret) for different cloud providers is strongly discouraged.
+	Type string
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

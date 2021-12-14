@@ -213,8 +213,13 @@ ExecStart=/var/lib/cloud-config-downloader/download-cloud-config.sh
 [Install]
 WantedBy=multi-user.target`
 
-	ccdScript = `#!/bin/bash -eu
+	ccdScript = `#!/bin/bash
 
+set -o errexit
+set -o nounset
+set -o pipefail
+
+{
 SECRET_NAME="` + ccdSecretName + `"
 
 PATH_CLOUDCONFIG_DOWNLOADER_SERVER="/var/lib/cloud-config-downloader/credentials/server"
@@ -240,5 +245,8 @@ echo "$CHECKSUM" > "$PATH_CLOUDCONFIG_CHECKSUM"
 
 SCRIPT="$(echo "$SECRET" | sed -rn 's/  script: (.*)/\1/p')"
 echo "$SCRIPT" | base64 -d | bash
+
+exit $?
+}
 `
 )

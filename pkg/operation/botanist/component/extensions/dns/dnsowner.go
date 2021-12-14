@@ -81,5 +81,7 @@ func (o *owner) Destroy(ctx context.Context) error {
 func (o *owner) Wait(_ context.Context) error { return nil }
 
 func (o *owner) WaitCleanup(ctx context.Context) error {
-	return kutil.WaitUntilResourceDeleted(ctx, o.client, o.dnsOwner, 5*time.Second)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+	return kutil.WaitUntilResourceDeleted(timeoutCtx, o.client, o.dnsOwner, 5*time.Second)
 }

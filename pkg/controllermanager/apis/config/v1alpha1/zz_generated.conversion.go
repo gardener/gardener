@@ -185,6 +185,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*SecretBindingProviderControllerConfiguration)(nil), (*config.SecretBindingProviderControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_SecretBindingProviderControllerConfiguration_To_config_SecretBindingProviderControllerConfiguration(a.(*SecretBindingProviderControllerConfiguration), b.(*config.SecretBindingProviderControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.SecretBindingProviderControllerConfiguration)(nil), (*SecretBindingProviderControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_SecretBindingProviderControllerConfiguration_To_v1alpha1_SecretBindingProviderControllerConfiguration(a.(*config.SecretBindingProviderControllerConfiguration), b.(*SecretBindingProviderControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*SeedControllerConfiguration)(nil), (*config.SeedControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_SeedControllerConfiguration_To_config_SeedControllerConfiguration(a.(*SeedControllerConfiguration), b.(*config.SeedControllerConfiguration), scope)
 	}); err != nil {
@@ -212,6 +222,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*config.ServerConfiguration)(nil), (*ServerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(a.(*config.ServerConfiguration), b.(*ServerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ShootConditionsControllerConfiguration)(nil), (*config.ShootConditionsControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ShootConditionsControllerConfiguration_To_config_ShootConditionsControllerConfiguration(a.(*ShootConditionsControllerConfiguration), b.(*config.ShootConditionsControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.ShootConditionsControllerConfiguration)(nil), (*ShootConditionsControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_ShootConditionsControllerConfiguration_To_v1alpha1_ShootConditionsControllerConfiguration(a.(*config.ShootConditionsControllerConfiguration), b.(*ShootConditionsControllerConfiguration), scope)
 	}); err != nil {
 		return err
 	}
@@ -262,6 +282,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*config.ShootRetryControllerConfiguration)(nil), (*ShootRetryControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_config_ShootRetryControllerConfiguration_To_v1alpha1_ShootRetryControllerConfiguration(a.(*config.ShootRetryControllerConfiguration), b.(*ShootRetryControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ShootStatusLabelControllerConfiguration)(nil), (*config.ShootStatusLabelControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ShootStatusLabelControllerConfiguration_To_config_ShootStatusLabelControllerConfiguration(a.(*ShootStatusLabelControllerConfiguration), b.(*config.ShootStatusLabelControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.ShootStatusLabelControllerConfiguration)(nil), (*ShootStatusLabelControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_ShootStatusLabelControllerConfiguration_To_v1alpha1_ShootStatusLabelControllerConfiguration(a.(*config.ShootStatusLabelControllerConfiguration), b.(*ShootStatusLabelControllerConfiguration), scope)
 	}); err != nil {
 		return err
 	}
@@ -444,6 +474,7 @@ func autoConvert_v1alpha1_ControllerManagerControllerConfiguration_To_config_Con
 	}
 	out.Quota = (*config.QuotaControllerConfiguration)(unsafe.Pointer(in.Quota))
 	out.SecretBinding = (*config.SecretBindingControllerConfiguration)(unsafe.Pointer(in.SecretBinding))
+	out.SecretBindingProvider = (*config.SecretBindingProviderControllerConfiguration)(unsafe.Pointer(in.SecretBindingProvider))
 	out.Seed = (*config.SeedControllerConfiguration)(unsafe.Pointer(in.Seed))
 	if err := Convert_v1alpha1_ShootMaintenanceControllerConfiguration_To_config_ShootMaintenanceControllerConfiguration(&in.ShootMaintenance, &out.ShootMaintenance, s); err != nil {
 		return err
@@ -456,6 +487,8 @@ func autoConvert_v1alpha1_ControllerManagerControllerConfiguration_To_config_Con
 	}
 	out.ShootReference = (*config.ShootReferenceControllerConfiguration)(unsafe.Pointer(in.ShootReference))
 	out.ShootRetry = (*config.ShootRetryControllerConfiguration)(unsafe.Pointer(in.ShootRetry))
+	out.ShootConditions = (*config.ShootConditionsControllerConfiguration)(unsafe.Pointer(in.ShootConditions))
+	out.ShootStatusLabel = (*config.ShootStatusLabelControllerConfiguration)(unsafe.Pointer(in.ShootStatusLabel))
 	out.ManagedSeedSet = (*config.ManagedSeedSetControllerConfiguration)(unsafe.Pointer(in.ManagedSeedSet))
 	return nil
 }
@@ -484,6 +517,7 @@ func autoConvert_config_ControllerManagerControllerConfiguration_To_v1alpha1_Con
 	}
 	out.Quota = (*QuotaControllerConfiguration)(unsafe.Pointer(in.Quota))
 	out.SecretBinding = (*SecretBindingControllerConfiguration)(unsafe.Pointer(in.SecretBinding))
+	out.SecretBindingProvider = (*SecretBindingProviderControllerConfiguration)(unsafe.Pointer(in.SecretBindingProvider))
 	out.Seed = (*SeedControllerConfiguration)(unsafe.Pointer(in.Seed))
 	if err := Convert_config_ShootMaintenanceControllerConfiguration_To_v1alpha1_ShootMaintenanceControllerConfiguration(&in.ShootMaintenance, &out.ShootMaintenance, s); err != nil {
 		return err
@@ -496,6 +530,8 @@ func autoConvert_config_ControllerManagerControllerConfiguration_To_v1alpha1_Con
 	}
 	out.ShootReference = (*ShootReferenceControllerConfiguration)(unsafe.Pointer(in.ShootReference))
 	out.ShootRetry = (*ShootRetryControllerConfiguration)(unsafe.Pointer(in.ShootRetry))
+	out.ShootConditions = (*ShootConditionsControllerConfiguration)(unsafe.Pointer(in.ShootConditions))
+	out.ShootStatusLabel = (*ShootStatusLabelControllerConfiguration)(unsafe.Pointer(in.ShootStatusLabel))
 	out.ManagedSeedSet = (*ManagedSeedSetControllerConfiguration)(unsafe.Pointer(in.ManagedSeedSet))
 	return nil
 }
@@ -754,6 +790,26 @@ func Convert_config_SecretBindingControllerConfiguration_To_v1alpha1_SecretBindi
 	return autoConvert_config_SecretBindingControllerConfiguration_To_v1alpha1_SecretBindingControllerConfiguration(in, out, s)
 }
 
+func autoConvert_v1alpha1_SecretBindingProviderControllerConfiguration_To_config_SecretBindingProviderControllerConfiguration(in *SecretBindingProviderControllerConfiguration, out *config.SecretBindingProviderControllerConfiguration, s conversion.Scope) error {
+	out.ConcurrentSyncs = in.ConcurrentSyncs
+	return nil
+}
+
+// Convert_v1alpha1_SecretBindingProviderControllerConfiguration_To_config_SecretBindingProviderControllerConfiguration is an autogenerated conversion function.
+func Convert_v1alpha1_SecretBindingProviderControllerConfiguration_To_config_SecretBindingProviderControllerConfiguration(in *SecretBindingProviderControllerConfiguration, out *config.SecretBindingProviderControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_v1alpha1_SecretBindingProviderControllerConfiguration_To_config_SecretBindingProviderControllerConfiguration(in, out, s)
+}
+
+func autoConvert_config_SecretBindingProviderControllerConfiguration_To_v1alpha1_SecretBindingProviderControllerConfiguration(in *config.SecretBindingProviderControllerConfiguration, out *SecretBindingProviderControllerConfiguration, s conversion.Scope) error {
+	out.ConcurrentSyncs = in.ConcurrentSyncs
+	return nil
+}
+
+// Convert_config_SecretBindingProviderControllerConfiguration_To_v1alpha1_SecretBindingProviderControllerConfiguration is an autogenerated conversion function.
+func Convert_config_SecretBindingProviderControllerConfiguration_To_v1alpha1_SecretBindingProviderControllerConfiguration(in *config.SecretBindingProviderControllerConfiguration, out *SecretBindingProviderControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_config_SecretBindingProviderControllerConfiguration_To_v1alpha1_SecretBindingProviderControllerConfiguration(in, out, s)
+}
+
 func autoConvert_v1alpha1_SeedControllerConfiguration_To_config_SeedControllerConfiguration(in *SeedControllerConfiguration, out *config.SeedControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
 	out.MonitorPeriod = (*v1.Duration)(unsafe.Pointer(in.MonitorPeriod))
@@ -830,6 +886,26 @@ func autoConvert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in *
 // Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration is an autogenerated conversion function.
 func Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in *config.ServerConfiguration, out *ServerConfiguration, s conversion.Scope) error {
 	return autoConvert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in, out, s)
+}
+
+func autoConvert_v1alpha1_ShootConditionsControllerConfiguration_To_config_ShootConditionsControllerConfiguration(in *ShootConditionsControllerConfiguration, out *config.ShootConditionsControllerConfiguration, s conversion.Scope) error {
+	out.ConcurrentSyncs = in.ConcurrentSyncs
+	return nil
+}
+
+// Convert_v1alpha1_ShootConditionsControllerConfiguration_To_config_ShootConditionsControllerConfiguration is an autogenerated conversion function.
+func Convert_v1alpha1_ShootConditionsControllerConfiguration_To_config_ShootConditionsControllerConfiguration(in *ShootConditionsControllerConfiguration, out *config.ShootConditionsControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ShootConditionsControllerConfiguration_To_config_ShootConditionsControllerConfiguration(in, out, s)
+}
+
+func autoConvert_config_ShootConditionsControllerConfiguration_To_v1alpha1_ShootConditionsControllerConfiguration(in *config.ShootConditionsControllerConfiguration, out *ShootConditionsControllerConfiguration, s conversion.Scope) error {
+	out.ConcurrentSyncs = in.ConcurrentSyncs
+	return nil
+}
+
+// Convert_config_ShootConditionsControllerConfiguration_To_v1alpha1_ShootConditionsControllerConfiguration is an autogenerated conversion function.
+func Convert_config_ShootConditionsControllerConfiguration_To_v1alpha1_ShootConditionsControllerConfiguration(in *config.ShootConditionsControllerConfiguration, out *ShootConditionsControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_config_ShootConditionsControllerConfiguration_To_v1alpha1_ShootConditionsControllerConfiguration(in, out, s)
 }
 
 func autoConvert_v1alpha1_ShootHibernationControllerConfiguration_To_config_ShootHibernationControllerConfiguration(in *ShootHibernationControllerConfiguration, out *config.ShootHibernationControllerConfiguration, s conversion.Scope) error {
@@ -940,6 +1016,26 @@ func autoConvert_config_ShootRetryControllerConfiguration_To_v1alpha1_ShootRetry
 // Convert_config_ShootRetryControllerConfiguration_To_v1alpha1_ShootRetryControllerConfiguration is an autogenerated conversion function.
 func Convert_config_ShootRetryControllerConfiguration_To_v1alpha1_ShootRetryControllerConfiguration(in *config.ShootRetryControllerConfiguration, out *ShootRetryControllerConfiguration, s conversion.Scope) error {
 	return autoConvert_config_ShootRetryControllerConfiguration_To_v1alpha1_ShootRetryControllerConfiguration(in, out, s)
+}
+
+func autoConvert_v1alpha1_ShootStatusLabelControllerConfiguration_To_config_ShootStatusLabelControllerConfiguration(in *ShootStatusLabelControllerConfiguration, out *config.ShootStatusLabelControllerConfiguration, s conversion.Scope) error {
+	out.ConcurrentSyncs = in.ConcurrentSyncs
+	return nil
+}
+
+// Convert_v1alpha1_ShootStatusLabelControllerConfiguration_To_config_ShootStatusLabelControllerConfiguration is an autogenerated conversion function.
+func Convert_v1alpha1_ShootStatusLabelControllerConfiguration_To_config_ShootStatusLabelControllerConfiguration(in *ShootStatusLabelControllerConfiguration, out *config.ShootStatusLabelControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ShootStatusLabelControllerConfiguration_To_config_ShootStatusLabelControllerConfiguration(in, out, s)
+}
+
+func autoConvert_config_ShootStatusLabelControllerConfiguration_To_v1alpha1_ShootStatusLabelControllerConfiguration(in *config.ShootStatusLabelControllerConfiguration, out *ShootStatusLabelControllerConfiguration, s conversion.Scope) error {
+	out.ConcurrentSyncs = in.ConcurrentSyncs
+	return nil
+}
+
+// Convert_config_ShootStatusLabelControllerConfiguration_To_v1alpha1_ShootStatusLabelControllerConfiguration is an autogenerated conversion function.
+func Convert_config_ShootStatusLabelControllerConfiguration_To_v1alpha1_ShootStatusLabelControllerConfiguration(in *config.ShootStatusLabelControllerConfiguration, out *ShootStatusLabelControllerConfiguration, s conversion.Scope) error {
+	return autoConvert_config_ShootStatusLabelControllerConfiguration_To_v1alpha1_ShootStatusLabelControllerConfiguration(in, out, s)
 }
 
 func autoConvert_v1alpha1_TLSServer_To_config_TLSServer(in *TLSServer, out *config.TLSServer, s conversion.Scope) error {

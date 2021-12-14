@@ -28,6 +28,7 @@ spec:
         networking.gardener.cloud/to-shoot-apiserver: allowed
         networking.gardener.cloud/from-prometheus: allowed
     spec:
+      automountServiceAccountToken: false
       containers:
       - name: kube-state-metrics
         image: {{ index .Values.images "kube-state-metrics" }}
@@ -36,12 +37,13 @@ spec:
         - /kube-state-metrics
         - --port=8080
         - --telemetry-port=8081
-        - --kubeconfig=/etc/kube-state-metrics/config/kubeconfig
+        - --kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
         - --namespace=kube-system
         - --collectors=daemonsets,deployments,nodes,pods,statefulsets,verticalpodautoscalers,replicasets
         volumeMounts:
         - name: kubeconfig
-          mountPath: /etc/kube-state-metrics/config
+          mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
+          readOnly: true
         ports:
         - name: metrics
           containerPort: 8080
@@ -64,5 +66,18 @@ spec:
             memory: 32Mi
       volumes:
       - name: kubeconfig
-        secret:
-          secretName: kube-state-metrics
+        projected:
+          defaultMode: 420
+          sources:
+          - secret:
+              items:
+              - key: kubeconfig
+                path: kubeconfig
+              name: generic-token-kubeconfig
+              optional: false
+          - secret:
+              items:
+              - key: token
+                path: token
+              name: shoot-access-kube-state-metrics
+              optional: false

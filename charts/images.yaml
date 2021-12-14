@@ -30,7 +30,7 @@ images:
 - name: etcd-druid
   sourceRepository: github.com/gardener/etcd-druid
   repository: eu.gcr.io/gardener-project/gardener/etcd-druid
-  tag: "v0.5.2"
+  tag: "v0.7.2"
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
@@ -95,7 +95,7 @@ images:
 - name: vpn-seed-server
   sourceRepository: github.com/gardener/vpn2
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed-server
-  tag: "0.5.0"
+  tag: "0.6.0"
 
 # Monitoring
 - name: alertmanager
@@ -139,7 +139,7 @@ images:
 - name: vpn-shoot-client
   sourceRepository: github.com/gardener/vpn2
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot-client
-  tag: "0.5.0"
+  tag: "0.6.0"
 - name: coredns
   sourceRepository: github.com/coredns/coredns
   repository: coredns/coredns
@@ -278,11 +278,11 @@ images:
 - name: istio-proxy
   sourceRepository: github.com/istio/istio
   repository: gcr.io/istio-release/proxyv2
-  tag: "1.10.2-distroless"
+  tag: "1.12.0-distroless"
 - name: istio-istiod
   sourceRepository: github.com/istio/istio
   repository: gcr.io/istio-release/pilot
-  tag: "1.10.2-distroless"
+  tag: "1.12.0-distroless"
 
 # External Authorization Server for the Istio Endpoint of Reversed VPN
 - name: ext-authz-server

@@ -17,6 +17,7 @@ package validation_test
 import (
 	"time"
 
+	testutils "github.com/gardener/gardener/landscaper/common/test-utils"
 	"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports"
 	. "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/validation"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -41,16 +42,16 @@ var _ = Describe("ValidateAPIServer", func() {
 		gardenerAPIServer imports.GardenerAPIServer
 		path              = field.NewPath("apiserver")
 
-		caAPIServerTLS                = GenerateCACertificate("gardener.cloud:system:apiserver")
+		caAPIServerTLS                = testutils.GenerateCACertificate("gardener.cloud:system:apiserver")
 		caAPIServerCrt                = string(caAPIServerTLS.CertificatePEM)
 		caAPIServerKey                = string(caAPIServerTLS.PrivateKeyPEM)
-		apiServerTLSServingCert       = GenerateTLSServingCertificate(&caAPIServerTLS)
+		apiServerTLSServingCert       = testutils.GenerateTLSServingCertificate(&caAPIServerTLS)
 		apiServerTLSServingCertString = string(apiServerTLSServingCert.CertificatePEM)
 		apiServerTLSServingKeyString  = string(apiServerTLSServingCert.PrivateKeyPEM)
 
-		caEtcdTLS      = GenerateCACertificate("gardener.cloud:system:etcd-virtual")
+		caEtcdTLS      = testutils.GenerateCACertificate("gardener.cloud:system:etcd-virtual")
 		caEtcdString   = string(caEtcdTLS.CertificatePEM)
-		etcdClientCert = GenerateClientCertificate(&caEtcdTLS)
+		etcdClientCert = testutils.GenerateClientCertificate(&caEtcdTLS)
 		etcdCertString = string(etcdClientCert.CertificatePEM)
 		etcdKeyString  = string(etcdClientCert.PrivateKeyPEM)
 	)
@@ -203,7 +204,7 @@ var _ = Describe("ValidateAPIServer", func() {
 		})
 		Context("CA", func() {
 			It("CA public key must be provided in order to validate the TLS serving cert of the Gardener API server", func() {
-				gardenerAPIServer.ComponentConfiguration.CA = nil
+				gardenerAPIServer.ComponentConfiguration.CA.Crt = nil
 				errorList := ValidateAPIServer(gardenerAPIServer, path)
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -216,7 +217,7 @@ var _ = Describe("ValidateAPIServer", func() {
 
 			It("CA private key must be provided to generate TLS serving certs", func() {
 				gardenerAPIServer.ComponentConfiguration.CA.Key = nil
-				gardenerAPIServer.ComponentConfiguration.TLS = nil
+				gardenerAPIServer.ComponentConfiguration.TLS.Crt = nil
 				errorList := ValidateAPIServer(gardenerAPIServer, path)
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -243,7 +244,7 @@ var _ = Describe("ValidateAPIServer", func() {
 
 		Context("TLS Serving", func() {
 			It("should forbid invalid TLS configuration - TLS serving certificate is not signed by the provided CA", func() {
-				someUnknownCA := string(GenerateCACertificate("gardener.cloud:system:unknown").CertificatePEM)
+				someUnknownCA := string(testutils.GenerateCACertificate("gardener.cloud:system:unknown").CertificatePEM)
 				gardenerAPIServer.ComponentConfiguration.CA.Crt = pointer.String(someUnknownCA)
 				errorList := ValidateAPIServer(gardenerAPIServer, path)
 				Expect(errorList).To(ConsistOf(

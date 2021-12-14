@@ -23,16 +23,18 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/version"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/Masterminds/semver"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -53,8 +55,6 @@ const (
 	ServiceName   = "kube-controller-manager"
 	containerName = v1beta1constants.DeploymentNameKubeControllerManager
 
-	// SecretName is a constant for the secret name for the kube-controller-manager's kubeconfig secret.
-	SecretName = "kube-controller-manager"
 	// SecretNameServer is the name of the kube-controller-manager server certificate secret.
 	SecretNameServer = "kube-controller-manager-server"
 
@@ -67,8 +67,6 @@ const (
 	volumeMountPathCA = "/srv/kubernetes/ca"
 	// volumeMountPathServiceAccountKey is the volume mount path for the service account key that is a PEM-encoded private RSA or ECDSA key used to sign service account tokens.
 	volumeMountPathServiceAccountKey = "/srv/kubernetes/service-account-key"
-	// volumeMountPathKubeconfig is the volume mount path for the kubeconfig which can be used by the kube-controller-manager to communicate with the kube-apiserver.
-	volumeMountPathKubeconfig = "/var/lib/kube-controller-manager"
 	// volumeMountPathServer is the volume mount path for the x509 TLS server certificate and key for the HTTPS server inside the kube-controller-manager (which is used for metrics and health checks).
 	volumeMountPathServer = "/var/lib/kube-controller-manager-server"
 
@@ -140,9 +138,6 @@ type kubeControllerManager struct {
 }
 
 func (k *kubeControllerManager) Deploy(ctx context.Context) error {
-	if k.secrets.Kubeconfig.Name == "" || k.secrets.Kubeconfig.Checksum == "" {
-		return fmt.Errorf("missing kubeconfig secret information")
-	}
 	if k.secrets.Server.Name == "" || k.secrets.Server.Checksum == "" {
 		return fmt.Errorf("missing server secret information")
 	}
@@ -154,10 +149,11 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	}
 
 	var (
-		vpa        = k.emptyVPA()
-		hvpa       = k.emptyHVPA()
-		service    = k.emptyService()
-		deployment = k.emptyDeployment()
+		vpa               = k.emptyVPA()
+		hvpa              = k.emptyHVPA()
+		service           = k.emptyService()
+		shootAccessSecret = k.newShootAccessSecret()
+		deployment        = k.emptyDeployment()
 
 		port              int32 = 10257
 		probeURIScheme          = corev1.URISchemeHTTPS
@@ -196,6 +192,10 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if err := shootAccessSecret.Reconcile(ctx, k.seedClient); err != nil {
+		return err
+	}
+
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient, deployment, func() error {
 		deployment.Labels = utils.MergeStringMaps(getLabels(), map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
@@ -208,7 +208,6 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				Annotations: map[string]string{
 					"checksum/secret-" + k.secrets.CA.Name:                k.secrets.CA.Checksum,
 					"checksum/secret-" + k.secrets.ServiceAccountKey.Name: k.secrets.ServiceAccountKey.Checksum,
-					"checksum/secret-" + k.secrets.Kubeconfig.Name:        k.secrets.Kubeconfig.Checksum,
 					"checksum/secret-" + k.secrets.Server.Name:            k.secrets.Server.Checksum,
 				},
 				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
@@ -220,6 +219,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				}),
 			},
 			Spec: corev1.PodSpec{
+				AutomountServiceAccountToken: pointer.Bool(false),
 				Containers: []corev1.Container{
 					{
 						Name:            containerName,
@@ -258,10 +258,6 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 								MountPath: volumeMountPathServiceAccountKey,
 							},
 							{
-								Name:      k.secrets.Kubeconfig.Name,
-								MountPath: volumeMountPathKubeconfig,
-							},
-							{
 								Name:      k.secrets.Server.Name,
 								MountPath: volumeMountPathServer,
 							},
@@ -286,14 +282,6 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						},
 					},
 					{
-						Name: k.secrets.Kubeconfig.Name,
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: k.secrets.Kubeconfig.Name,
-							},
-						},
-					},
-					{
 						Name: k.secrets.Server.Name,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
@@ -304,6 +292,8 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				},
 			},
 		}
+
+		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, shootAccessSecret.Secret.Name))
 		return nil
 	}); err != nil {
 		return err
@@ -401,14 +391,16 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		}
 	}
 
-	// create managed resource that deploys resources to the Shoot API Server
-	return k.deployShootManagedResource(ctx)
+	if err := k.reconcileShootResources(ctx, shootAccessSecret.ServiceAccountName); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove in a future release.
+	return kutil.DeleteObject(ctx, k.seedClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: k.namespace}})
 }
 
-func (k *kubeControllerManager) SetSecrets(secrets Secrets) { k.secrets = secrets }
-func (k *kubeControllerManager) SetShootClient(c client.Client) {
-	k.shootClient = c
-}
+func (k *kubeControllerManager) SetSecrets(secrets Secrets)      { k.secrets = secrets }
+func (k *kubeControllerManager) SetShootClient(c client.Client)  { k.shootClient = c }
 func (k *kubeControllerManager) SetReplicaCount(replicas int32)  { k.replicas = replicas }
 func (k *kubeControllerManager) Destroy(_ context.Context) error { return nil }
 
@@ -426,6 +418,10 @@ func (k *kubeControllerManager) emptyService() *corev1.Service {
 
 func (k *kubeControllerManager) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeControllerManager, Namespace: k.namespace}}
+}
+
+func (k *kubeControllerManager) newShootAccessSecret() *gutil.ShootAccessSecret {
+	return gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeControllerManager, k.namespace)
 }
 
 func (k *kubeControllerManager) emptyManagedResource() *resourcesv1alpha1.ManagedResource {
@@ -459,6 +455,9 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		"--allocate-node-cidrs=true",
 		"--attach-detach-reconcile-sync-period=1m0s",
 		"--controllers=*,bootstrapsigner,tokencleaner",
+		"--authentication-kubeconfig="+gutil.PathGenericKubeconfig,
+		"--authorization-kubeconfig="+gutil.PathGenericKubeconfig,
+		"--kubeconfig="+gutil.PathGenericKubeconfig,
 	)
 
 	if k.config.NodeCIDRMaskSize != nil {
@@ -470,6 +469,15 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--cluster-name=%s", k.namespace),
 		fmt.Sprintf("--cluster-signing-cert-file=%s/%s", volumeMountPathCA, secrets.DataKeyCertificateCA),
 		fmt.Sprintf("--cluster-signing-key-file=%s/%s", volumeMountPathCA, secrets.DataKeyPrivateKeyCA),
+	)
+
+	if version.ConstraintK8sGreaterEqual119.Check(k.version) {
+		command = append(command, "--cluster-signing-duration=720h")
+	} else {
+		command = append(command, "--experimental-cluster-signing-duration=720h")
+	}
+
+	command = append(command,
 		"--concurrent-deployment-syncs=50",
 		"--concurrent-endpoint-syncs=15",
 		"--concurrent-gc-syncs=30",
@@ -504,7 +512,6 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 	command = append(command,
 		fmt.Sprintf("--horizontal-pod-autoscaler-sync-period=%s", defaultHorizontalPodAutoscalerConfig.SyncPeriod.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-tolerance=%v", *defaultHorizontalPodAutoscalerConfig.Tolerance),
-		fmt.Sprintf("--kubeconfig=%s/%s", volumeMountPathKubeconfig, secrets.DataKeyKubeconfig),
 		"--leader-elect=true",
 		fmt.Sprintf("--node-monitor-grace-period=%s", nodeMonitorGracePeriod.Duration),
 		fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeout.Duration),
@@ -516,8 +523,6 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--horizontal-pod-autoscaler-downscale-stabilization=%s", defaultHorizontalPodAutoscalerConfig.DownscaleStabilization.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-initial-readiness-delay=%s", defaultHorizontalPodAutoscalerConfig.InitialReadinessDelay.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-cpu-initialization-period=%s", defaultHorizontalPodAutoscalerConfig.CPUInitializationPeriod.Duration.String()),
-		fmt.Sprintf("--authentication-kubeconfig=%s/%s", volumeMountPathKubeconfig, secrets.DataKeyKubeconfig),
-		fmt.Sprintf("--authorization-kubeconfig=%s/%s", volumeMountPathKubeconfig, secrets.DataKeyKubeconfig),
 		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameServer)),
 		fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameServer)),
 		fmt.Sprintf("--tls-cipher-suites=%s", strings.Join(kutil.TLSCipherSuites(k.version), ",")),
@@ -590,8 +595,6 @@ func (k *kubeControllerManager) computeResourceRequirements(ctx context.Context)
 
 // Secrets is collection of secrets for the kube-controller-manager.
 type Secrets struct {
-	// Kubeconfig is a secret that contains a kubeconfig which can be used by the kube-controller-manager to communicate with the kube-apiserver.
-	Kubeconfig component.Secret
 	// Server is a secret containing a x509 TLS server certificate and key for the HTTPS server inside the kube-controller-manager (which is used for metrics and health checks).
 	Server component.Secret
 	// CA is a secret containing a root CA x509 certificate and key that is used for the flags.

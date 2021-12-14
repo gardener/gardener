@@ -19,39 +19,29 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
-
-	"github.com/sirupsen/logrus"
 )
 
 // DelegatingClientMapBuilder can build a DelegatingClientMap which will delegate calls to different ClientMaps
 // based on the type of the key (e.g. a call with keys.ForShoot() will be delegated to the ShootClientMap).
 type DelegatingClientMapBuilder struct {
-	gardenClientMapFunc func(logger logrus.FieldLogger) (clientmap.ClientMap, error)
-	seedClientMapFunc   func(logger logrus.FieldLogger) (clientmap.ClientMap, error)
-	shootClientMapFunc  func(gardenClients, seedClients clientmap.ClientMap, logger logrus.FieldLogger) (clientmap.ClientMap, error)
-	plantClientMapFunc  func(gardenClients clientmap.ClientMap, logger logrus.FieldLogger) (clientmap.ClientMap, error)
-
-	logger logrus.FieldLogger
+	gardenClientMapFunc func() (clientmap.ClientMap, error)
+	seedClientMapFunc   func() (clientmap.ClientMap, error)
+	shootClientMapFunc  func(gardenClients, seedClients clientmap.ClientMap) (clientmap.ClientMap, error)
+	plantClientMapFunc  func(gardenClients clientmap.ClientMap) (clientmap.ClientMap, error)
 }
 
 // NewDelegatingClientMapBuilder creates a new DelegatingClientMapBuilder.
 func NewDelegatingClientMapBuilder() *DelegatingClientMapBuilder {
 	return &DelegatingClientMapBuilder{
-		gardenClientMapFunc: func(_ logrus.FieldLogger) (clientmap.ClientMap, error) {
+		gardenClientMapFunc: func() (clientmap.ClientMap, error) {
 			return nil, fmt.Errorf("garden ClientMap is required but not set")
 		},
 	}
 }
 
-// WithLogger sets the logger attribute of the builder.
-func (b *DelegatingClientMapBuilder) WithLogger(logger logrus.FieldLogger) *DelegatingClientMapBuilder {
-	b.logger = logger
-	return b
-}
-
 // WithGardenClientMap sets the ClientMap that should be used for Garden clients.
 func (b *DelegatingClientMapBuilder) WithGardenClientMap(clientMap clientmap.ClientMap) *DelegatingClientMapBuilder {
-	b.gardenClientMapFunc = func(_ logrus.FieldLogger) (clientmap.ClientMap, error) {
+	b.gardenClientMapFunc = func() (clientmap.ClientMap, error) {
 		return clientMap, nil
 	}
 	return b
@@ -59,9 +49,8 @@ func (b *DelegatingClientMapBuilder) WithGardenClientMap(clientMap clientmap.Cli
 
 // WithGardenClientMapBuilder sets a ClientMap builder that should be used to build a ClientMap for Garden clients.
 func (b *DelegatingClientMapBuilder) WithGardenClientMapBuilder(builder *GardenClientMapBuilder) *DelegatingClientMapBuilder {
-	b.gardenClientMapFunc = func(logger logrus.FieldLogger) (clientmap.ClientMap, error) {
+	b.gardenClientMapFunc = func() (clientmap.ClientMap, error) {
 		return builder.
-			WithLogger(logger.WithField("ClientMap", "GardenClientMap")).
 			Build()
 	}
 	return b
@@ -69,7 +58,7 @@ func (b *DelegatingClientMapBuilder) WithGardenClientMapBuilder(builder *GardenC
 
 // WithSeedClientMap sets the ClientMap that should be used for Seed clients.
 func (b *DelegatingClientMapBuilder) WithSeedClientMap(clientMap clientmap.ClientMap) *DelegatingClientMapBuilder {
-	b.seedClientMapFunc = func(_ logrus.FieldLogger) (clientmap.ClientMap, error) {
+	b.seedClientMapFunc = func() (clientmap.ClientMap, error) {
 		return clientMap, nil
 	}
 	return b
@@ -77,9 +66,8 @@ func (b *DelegatingClientMapBuilder) WithSeedClientMap(clientMap clientmap.Clien
 
 // WithSeedClientMapBuilder sets a ClientMap builder that should be used to build a ClientMap for Seed clients.
 func (b *DelegatingClientMapBuilder) WithSeedClientMapBuilder(builder *SeedClientMapBuilder) *DelegatingClientMapBuilder {
-	b.seedClientMapFunc = func(logger logrus.FieldLogger) (clientmap.ClientMap, error) {
+	b.seedClientMapFunc = func() (clientmap.ClientMap, error) {
 		return builder.
-			WithLogger(logger.WithField("ClientMap", "SeedClientMap")).
 			Build()
 	}
 	return b
@@ -87,7 +75,7 @@ func (b *DelegatingClientMapBuilder) WithSeedClientMapBuilder(builder *SeedClien
 
 // WithShootClientMap sets the ClientMap that should be used for Shoot clients.
 func (b *DelegatingClientMapBuilder) WithShootClientMap(clientMap clientmap.ClientMap) *DelegatingClientMapBuilder {
-	b.shootClientMapFunc = func(_, _ clientmap.ClientMap, _ logrus.FieldLogger) (clientmap.ClientMap, error) {
+	b.shootClientMapFunc = func(_, _ clientmap.ClientMap) (clientmap.ClientMap, error) {
 		return clientMap, nil
 	}
 	return b
@@ -95,9 +83,8 @@ func (b *DelegatingClientMapBuilder) WithShootClientMap(clientMap clientmap.Clie
 
 // WithShootClientMapBuilder sets a ClientMap builder that should be used to build a ClientMap for Shoot clients.
 func (b *DelegatingClientMapBuilder) WithShootClientMapBuilder(builder *ShootClientMapBuilder) *DelegatingClientMapBuilder {
-	b.shootClientMapFunc = func(gardenClients, seedClients clientmap.ClientMap, logger logrus.FieldLogger) (clientmap.ClientMap, error) {
+	b.shootClientMapFunc = func(gardenClients, seedClients clientmap.ClientMap) (clientmap.ClientMap, error) {
 		return builder.
-			WithLogger(logger.WithField("ClientMap", "ShootClientMap")).
 			WithGardenClientMap(gardenClients).
 			WithSeedClientMap(seedClients).
 			Build()
@@ -107,7 +94,7 @@ func (b *DelegatingClientMapBuilder) WithShootClientMapBuilder(builder *ShootCli
 
 // WithPlantClientMap sets the ClientMap that should be used for Plant clients.
 func (b *DelegatingClientMapBuilder) WithPlantClientMap(clientMap clientmap.ClientMap) *DelegatingClientMapBuilder {
-	b.plantClientMapFunc = func(_ clientmap.ClientMap, _ logrus.FieldLogger) (clientmap.ClientMap, error) {
+	b.plantClientMapFunc = func(_ clientmap.ClientMap) (clientmap.ClientMap, error) {
 		return clientMap, nil
 	}
 	return b
@@ -115,9 +102,8 @@ func (b *DelegatingClientMapBuilder) WithPlantClientMap(clientMap clientmap.Clie
 
 // WithPlantClientMapBuilder sets a ClientMap builder that should be used to build a ClientMap for Plant clients.
 func (b *DelegatingClientMapBuilder) WithPlantClientMapBuilder(builder *PlantClientMapBuilder) *DelegatingClientMapBuilder {
-	b.plantClientMapFunc = func(gardenClients clientmap.ClientMap, logger logrus.FieldLogger) (clientmap.ClientMap, error) {
+	b.plantClientMapFunc = func(gardenClients clientmap.ClientMap) (clientmap.ClientMap, error) {
 		return builder.
-			WithLogger(logger.WithField("ClientMap", "PlantClientMap")).
 			WithGardenClientMap(gardenClients).
 			Build()
 	}
@@ -126,11 +112,7 @@ func (b *DelegatingClientMapBuilder) WithPlantClientMapBuilder(builder *PlantCli
 
 // Build builds the DelegatingClientMap using the provided attributes.
 func (b *DelegatingClientMapBuilder) Build() (clientmap.ClientMap, error) {
-	if b.logger == nil {
-		return nil, fmt.Errorf("logger is required but not set")
-	}
-
-	gardenClients, err := b.gardenClientMapFunc(b.logger)
+	gardenClients, err := b.gardenClientMapFunc()
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct garden ClientMap: %w", err)
 	}
@@ -138,7 +120,7 @@ func (b *DelegatingClientMapBuilder) Build() (clientmap.ClientMap, error) {
 	var seedClients, shootClients, plantClients clientmap.ClientMap
 
 	if b.seedClientMapFunc != nil {
-		seedClients, err = b.seedClientMapFunc(b.logger)
+		seedClients, err = b.seedClientMapFunc()
 		if err != nil {
 			return nil, fmt.Errorf("failed to construct seed ClientMap: %w", err)
 		}
@@ -149,14 +131,14 @@ func (b *DelegatingClientMapBuilder) Build() (clientmap.ClientMap, error) {
 			return nil, fmt.Errorf("failed to construct shoot ClientMap, seed ClientMap is required but not set")
 		}
 
-		shootClients, err = b.shootClientMapFunc(gardenClients, seedClients, b.logger)
+		shootClients, err = b.shootClientMapFunc(gardenClients, seedClients)
 		if err != nil {
 			return nil, fmt.Errorf("failed to construct shoot ClientMap: %w", err)
 		}
 	}
 
 	if b.plantClientMapFunc != nil {
-		plantClients, err = b.plantClientMapFunc(gardenClients, b.logger)
+		plantClients, err = b.plantClientMapFunc(gardenClients)
 		if err != nil {
 			return nil, fmt.Errorf("failed to construct plant ClientMap: %w", err)
 		}

@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -36,10 +35,10 @@ type gardenClientMap struct {
 	clientmap.ClientMap
 }
 
-// NewGardenClientMap creates a new gardenClientMap with the given factory and logger.
-func NewGardenClientMap(factory *GardenClientSetFactory, logger logrus.FieldLogger) clientmap.ClientMap {
+// NewGardenClientMap creates a new gardenClientMap with the given factory.
+func NewGardenClientMap(factory *GardenClientSetFactory) clientmap.ClientMap {
 	return &gardenClientMap{
-		ClientMap: NewGenericClientMap(factory, logger),
+		ClientMap: NewGenericClientMap(factory, log.WithValues("clientmap", "GardenClientMap")),
 	}
 }
 

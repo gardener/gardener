@@ -146,6 +146,62 @@ func ExtractErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 	return codes
 }
 
+var _ error = (*MultiErrorWithCodes)(nil)
+
+// MultiErrorWithCodes is a struct that contains multiple errors and ErrorCodes.
+type MultiErrorWithCodes struct {
+	errors      []error
+	errorFormat func(errs []error) string
+
+	errorCodeStr sets.String
+	codes        []gardencorev1beta1.ErrorCode
+}
+
+// NewMultiErrorWithCodes returns a new instance of `MultiErrorWithCodes`.
+func NewMultiErrorWithCodes(errorFormat func(errs []error) string) *MultiErrorWithCodes {
+	return &MultiErrorWithCodes{
+		errorFormat:  errorFormat,
+		errorCodeStr: sets.NewString(),
+	}
+}
+
+// Append appends the given error to the `MultiErrorWithCodes`.
+func (m *MultiErrorWithCodes) Append(err error) {
+	for _, code := range ExtractErrorCodes(err) {
+		if m.errorCodeStr.Has(string(code)) {
+			continue
+		}
+		m.errorCodeStr.Insert(string(code))
+		m.codes = append(m.codes, code)
+	}
+
+	m.errors = append(m.errors, err)
+}
+
+// Codes returns all underlying `gardencorev1beta1.ErrorCode` codes.
+func (m *MultiErrorWithCodes) Codes() []gardencorev1beta1.ErrorCode {
+	if m.codes == nil {
+		return nil
+	}
+
+	cp := make([]gardencorev1beta1.ErrorCode, len(m.codes))
+	copy(cp, m.codes)
+	return cp
+}
+
+// ErrorOrNil returns nil if no underlying errors are given.
+func (m *MultiErrorWithCodes) ErrorOrNil() error {
+	if len(m.errors) == 0 {
+		return nil
+	}
+	return m
+}
+
+// Error implements the error interface.
+func (m *MultiErrorWithCodes) Error() string {
+	return m.errorFormat(m.errors)
+}
+
 // FormatLastErrDescription formats the error message string for the last occurred error.
 func FormatLastErrDescription(err error) string {
 	errString := err.Error()

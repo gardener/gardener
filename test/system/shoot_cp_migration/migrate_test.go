@@ -51,6 +51,7 @@ var (
 	shootNamespace             *string
 	mrExcludeList              *string
 	resourcesWithGeneratedName *string
+	addTestRunTaint            *string
 	gardenerConfig             *GardenerConfig
 )
 
@@ -61,14 +62,16 @@ func init() {
 	shootNamespace = flag.String("shoot-namespace", "", "namespace of the shoot")
 	mrExcludeList = flag.String("mr-exclude-list", "", "comma-separated values of the ManagedResources that will be exlude during the 'CreationTimestamp' check")
 	resourcesWithGeneratedName = flag.String("resources-with-generated-name", "", "comma-separated names of resources deployed via managed resources that get their name generated during reconciliation and will be excluded during the 'CreationTimestamp' check")
+	addTestRunTaint = flag.String("add-test-run-taint", "", "if this property is set to 'true' the 'test.gardener.cloud/test-run' taint with the value of the 'TM_TESTRUN_ID' environment variable, will be applied to the shoot")
 }
 
 var _ = ginkgo.Describe("Shoot migration testing", func() {
 	f := NewGardenerFramework(gardenerConfig)
 	t := NewShootMigrationTest(f, &ShootMigrationConfig{
-		ShootName:      *shootName,
-		ShootNamespace: *shootNamespace,
-		TargetSeedName: *targetSeedName,
+		ShootName:       *shootName,
+		ShootNamespace:  *shootNamespace,
+		TargetSeedName:  *targetSeedName,
+		AddTestRunTaint: *addTestRunTaint,
 	})
 	guestBookApp := applications.GuestBookTest{}
 	testSecret := &corev1.Secret{

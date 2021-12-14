@@ -63,6 +63,8 @@ controllers:
   seed:
     concurrentSyncs: 5
     syncPeriod: 1m
+  # leaseResyncSeconds: 2
+  # leaseResyncMissThreshold: 10
   managedSeed:
     concurrentSyncs: 5
     syncPeriod: 1h
@@ -101,9 +103,10 @@ featureGates:
   APIServerSNI: true
   CachedRuntimeClients: true
   SeedKubeScheduler: false
-  ReversedVPN: false
+  ReversedVPN: true
   UseDNSRecords: true
   DenyInvalidExtensionResources: true
+  CopyEtcdBackupsDuringControlPlaneMigration: false
 # seedConfig:
 #   metadata:
 #     name: my-seed
@@ -143,6 +146,16 @@ featureGates:
 #       serviceExternalIP: 10.8.10.11 # Optional external ip for the ingress gateway load balancer.
 #       labels:
 #         network: internal
+etcdConfig:
+  etcdController:
+    workers: 3
+  custodianController:
+    workers: 3
+  backupCompactionController:
+    workers: 3
+    enableBackupCompaction: false
+    eventsThreshold: 1000000
+    activeDeadlineDuration: "3h"
 # monitoring:
 #   shoot:
 #     remoteWrite:

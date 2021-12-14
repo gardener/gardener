@@ -18,14 +18,14 @@ import (
 	"context"
 	"sync"
 
-	"github.com/gardener/gardener/pkg/chartrenderer"
-	"github.com/gardener/gardener/pkg/logger"
-
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/gardener/gardener/pkg/chartrenderer"
 )
 
 // clientSet is a struct containing the configuration for the respective Kubernetes
@@ -135,7 +135,7 @@ func (c *clientSet) Start(ctx context.Context) {
 	c.startOnce.Do(func() {
 		go func() {
 			if err := c.cache.Start(ctx); err != nil {
-				logger.Logger.Errorf("cache.Start returned error, which should never happen, ignoring.")
+				logf.Log.Error(err, "cache.Start returned error, which should never happen, ignoring")
 			}
 		}()
 	})

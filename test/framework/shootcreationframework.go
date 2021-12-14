@@ -48,6 +48,7 @@ type ShootCreationConfig struct {
 	shootK8sVersion               string
 	externalDomain                string
 	workerZone                    string
+	networkingType                string
 	networkingPods                string
 	networkingServices            string
 	networkingNodes               string
@@ -151,12 +152,10 @@ func validateShootCreationConfig(cfg *ShootCreationConfig) {
 		cfg.allowPrivilegedContainers = &parsedBool
 	}
 
-	if !StringSet(cfg.infrastructureProviderConfig) {
-		ginkgo.Fail(fmt.Sprintf("you need to specify the filepath to the infrastructureProviderConfig for the provider '%s'", cfg.shootProviderType))
-	}
-
-	if !FileExists(cfg.infrastructureProviderConfig) {
-		ginkgo.Fail(fmt.Sprintf("path to the infrastructureProviderConfig of the Shoot is invalid: %s", cfg.infrastructureProviderConfig))
+	if StringSet(cfg.infrastructureProviderConfig) {
+		if !FileExists(cfg.infrastructureProviderConfig) {
+			ginkgo.Fail(fmt.Sprintf("you need to specify the filepath to the infrastructureProviderConfig for the provider '%s'", cfg.shootProviderType))
+		}
 	}
 
 	if StringSet(cfg.controlPlaneProviderConfig) {
@@ -254,6 +253,10 @@ func mergeShootCreationConfig(base, overwrite *ShootCreationConfig) *ShootCreati
 		base.workerZone = overwrite.workerZone
 	}
 
+	if StringSet(overwrite.networkingType) {
+		base.networkingType = overwrite.networkingType
+	}
+
 	if StringSet(overwrite.networkingPods) {
 		base.networkingPods = overwrite.networkingPods
 	}
@@ -327,6 +330,7 @@ func RegisterShootCreationFrameworkFlags() *ShootCreationConfig {
 	flag.StringVar(&newCfg.shootK8sVersion, "k8s-version", "", "kubernetes version to use for the shoot.")
 	flag.StringVar(&newCfg.externalDomain, "external-domain", "", "external domain to use for the shoot. If not set, will use the default domain.")
 	flag.StringVar(&newCfg.workerZone, "worker-zone", "", "zone to use for every worker of the shoot.")
+	flag.StringVar(&newCfg.networkingType, "networking-type", "calico", "the spec.networking.type to use for this shoot. Optional. Defaults to calico.")
 	flag.StringVar(&newCfg.networkingPods, "networking-pods", "", "the spec.networking.pods to use for this shoot. Optional.")
 	flag.StringVar(&newCfg.networkingServices, "networking-services", "", "the spec.networking.services to use for this shoot. Optional.")
 	flag.StringVar(&newCfg.networkingNodes, "networking-nodes", "", "the spec.networking.nodes to use for this shoot. Optional.")
@@ -389,7 +393,9 @@ func (f *ShootCreationFramework) CreateShoot(ctx context.Context, initializeShoo
 		return nil, err
 	}
 
-	if err := DownloadKubeconfig(ctx, shootFramework.GardenClient, shootFramework.Seed.Spec.SecretRef.Namespace, shootFramework.Seed.Spec.SecretRef.Name, f.Config.seedKubeconfigPath); err != nil {
+	if seedSecretRef := shootFramework.Seed.Spec.SecretRef; seedSecretRef == nil {
+		f.Logger.Info("seed does not have secretRef set, skip constructing seed client")
+	} else if err := DownloadKubeconfig(ctx, shootFramework.GardenClient, shootFramework.Seed.Spec.SecretRef.Namespace, shootFramework.Seed.Spec.SecretRef.Name, f.Config.seedKubeconfigPath); err != nil {
 		f.Logger.Fatalf("Cannot download seed kubeconfig: %s", err.Error())
 		return nil, err
 	}
@@ -403,8 +409,12 @@ func (f *ShootCreationFramework) CreateShoot(ctx context.Context, initializeShoo
 func (f *ShootCreationFramework) InitializeShootWithFlags(ctx context.Context) error {
 	// if running in test machinery, test will be executed from root of the project
 	if !FileExists(fmt.Sprintf(".%s", f.Config.shootYamlPath)) {
-		// locally, we need find the example shoot
-		f.Config.shootYamlPath = filepath.Join(f.TemplatesDir, f.Config.shootYamlPath)
+		path := f.Config.shootYamlPath
+		if !filepath.IsAbs(f.Config.shootYamlPath) {
+			// locally, we need find the example shoot
+			path = filepath.Join(f.TemplatesDir, f.Config.shootYamlPath)
+		}
+		f.Config.shootYamlPath = path
 		if !FileExists(f.Config.shootYamlPath) {
 			return fmt.Errorf("shoot template should exist")
 		}

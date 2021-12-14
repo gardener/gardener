@@ -87,6 +87,9 @@ type ControllerManagerControllerConfiguration struct {
 	// SecretBinding defines the configuration of the SecretBinding controller.
 	// +optional
 	SecretBinding *SecretBindingControllerConfiguration `json:"secretBinding,omitempty"`
+	// SecretBindingProvider defines the configuration of the SecretBinding provider controller.
+	// +optional
+	SecretBindingProvider *SecretBindingProviderControllerConfiguration `json:"secretBindingProvider,omitempty"`
 	// Seed defines the configuration of the Seed lifecycle controller.
 	// +optional
 	Seed *SeedControllerConfiguration `json:"seed,omitempty"`
@@ -102,6 +105,12 @@ type ControllerManagerControllerConfiguration struct {
 	// ShootRetry defines the configuration of the ShootRetry controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
 	// +optional
 	ShootRetry *ShootRetryControllerConfiguration `json:"shootRetry,omitempty"`
+	// ShootConditions defines the configuration of the ShootConditions controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
+	// +optional
+	ShootConditions *ShootConditionsControllerConfiguration `json:"shootConditions,omitempty"`
+	// ShootStatusLabel defines the configuration of the ShootStatusLabel controller.
+	// +optional
+	ShootStatusLabel *ShootStatusLabelControllerConfiguration `json:"shootStatusLabel,omitempty"`
 	// ManagedSeedSet defines the configuration of the ManagedSeedSet controller.
 	// +optional
 	ManagedSeedSet *ManagedSeedSetControllerConfiguration `json:"managedSeedSet,omitempty"`
@@ -223,6 +232,14 @@ type SecretBindingControllerConfiguration struct {
 	ConcurrentSyncs int `json:"concurrentSyncs"`
 }
 
+// SecretBindingProviderControllerConfiguration defines the configuration of the
+// SecretBinding provider controller.
+type SecretBindingProviderControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+}
+
 // SeedControllerConfiguration defines the configuration of the
 // Seed controller.
 type SeedControllerConfiguration struct {
@@ -297,6 +314,22 @@ type ShootRetryControllerConfiguration struct {
 	// Defaults to 10m.
 	// +optional
 	RetryPeriod *metav1.Duration `json:"retryPeriod,omitempty"`
+}
+
+// ShootConditionsControllerConfiguration defines the configuration of the
+// ShootConditions controller.
+type ShootConditionsControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+}
+
+// ShootStatusLabelControllerConfiguration defines the configuration of the
+// ShootStatusLabel controller.
+type ShootStatusLabelControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
 }
 
 // ManagedSeedSetControllerConfiguration defines the configuration of the

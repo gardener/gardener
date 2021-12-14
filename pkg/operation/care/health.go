@@ -25,12 +25,14 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -58,6 +60,8 @@ type Health struct {
 	shootClient            kubernetes.Interface
 
 	logger logrus.FieldLogger
+
+	gardenletConfiguration *gardenletconfig.GardenletConfiguration
 }
 
 // ShootClientInit is a function that initializes a kubernetes client for a Shoot.
@@ -71,6 +75,7 @@ func NewHealth(op *operation.Operation, shootClientInit ShootClientInit) *Health
 		initializeShootClients: shootClientInit,
 		shootClient:            op.K8sShootClient,
 		logger:                 op.Logger,
+		gardenletConfiguration: op.Config,
 	}
 }
 
@@ -277,8 +282,17 @@ func (h *Health) checkControlPlane(
 	if exitCondition, err := checker.CheckMonitoringControlPlane(h.shoot.SeedNamespace, h.shoot.Purpose == gardencorev1beta1.ShootPurposeTesting, wantsAlertmanager, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
+
+	lokiEnabled := true
+	if h.gardenletConfiguration != nil &&
+		h.gardenletConfiguration.Logging != nil &&
+		h.gardenletConfiguration.Logging.Loki != nil &&
+		h.gardenletConfiguration.Logging.Loki.Enabled != nil {
+		lokiEnabled = *h.gardenletConfiguration.Logging.Loki.Enabled
+	}
+
 	if gardenletfeatures.FeatureGate.Enabled(features.Logging) {
-		if exitCondition, err := checker.CheckLoggingControlPlane(h.shoot.SeedNamespace, h.shoot.Purpose == gardencorev1beta1.ShootPurposeTesting, condition, seedStatefulSetLister); err != nil || exitCondition != nil {
+		if exitCondition, err := checker.CheckLoggingControlPlane(h.shoot.SeedNamespace, h.shoot.Purpose == gardencorev1beta1.ShootPurposeTesting, lokiEnabled, condition, seedStatefulSetLister); err != nil || exitCondition != nil {
 			return exitCondition, err
 		}
 	}
@@ -292,6 +306,7 @@ func (h *Health) checkControlPlane(
 
 var versionConstraintGreaterEqual131 *semver.Constraints
 var versionConstraintGreaterEqual132 *semver.Constraints
+var versionConstraintGreaterEqual138 *semver.Constraints
 
 func init() {
 	var err error
@@ -299,6 +314,8 @@ func init() {
 	versionConstraintGreaterEqual131, err = semver.NewConstraint(">= 1.31")
 	utilruntime.Must(err)
 	versionConstraintGreaterEqual132, err = semver.NewConstraint(">= 1.32")
+	utilruntime.Must(err)
+	versionConstraintGreaterEqual138, err = semver.NewConstraint(">= 1.38")
 	utilruntime.Must(err)
 }
 
@@ -321,6 +338,11 @@ func (h *Health) checkSystemComponents(
 	if versionConstraintGreaterEqual132.Check(checker.gardenerVersion) {
 		// TODO: Add this ManagedResource unconditionally to the `managedResourcesShoot` in a future version.
 		managedResources = append(managedResources, coredns.ManagedResourceName)
+	}
+
+	if versionConstraintGreaterEqual138.Check(checker.gardenerVersion) {
+		// TODO: Add this ManagedResource unconditionally to the `managedResourcesShoot` in a future version.
+		managedResources = append(managedResources, vpnshoot.ManagedResourceName)
 	}
 
 	for _, name := range managedResources {

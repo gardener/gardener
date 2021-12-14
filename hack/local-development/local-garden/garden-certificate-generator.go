@@ -51,11 +51,12 @@ type credentialsType string
 var (
 	certs credentialsType = "certs"
 	sas   credentialsType = "sa"
+	rsas  credentialsType = "rsa"
 )
 
 type certsAndKeys struct {
 	certPEM, privateKeyPEM string
-	saPubPEM, saPrivPEM    string
+	rsaPubPEM, rsaPrivPEM  string
 	kubeConfig             string
 
 	credType credentialsType
@@ -312,18 +313,10 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 				APIServerHost: "localhost:2443",
 			}},
 		},
-		&secrets.ControlPlaneSecretConfig{
-			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name:         "gardenlet",
-				CommonName:   v1beta1constants.SeedUserNamePrefix + v1beta1constants.SeedUserNameSuffixAmbiguous,
-				Organization: []string{v1beta1constants.SeedsGroup},
-				CertType:     secrets.ClientCert,
-				SigningCA:    caCertificate,
-			},
-			KubeConfigRequests: []secrets.KubeConfigRequest{{
-				ClusterName:   "local-garden",
-				APIServerHost: "localhost:2443",
-			}},
+		&secrets.RSASecretConfig{
+			Name:       "gardenlet",
+			Bits:       4096,
+			UsedForSSH: false,
 		},
 	}
 
@@ -357,11 +350,18 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 			if err != nil {
 				return nil, err
 			}
-			credentials[s.GetName()] = certsAndKeys{
-				saPubPEM:  saPubPEMString,
-				saPrivPEM: saPrivPEMString,
-				credType:  sas,
+
+			val := certsAndKeys{
+				rsaPubPEM:  saPubPEMString,
+				rsaPrivPEM: saPrivPEMString,
+				credType:   rsas,
 			}
+
+			if saCredentials.Name == "" {
+				val.credType = sas
+			}
+
+			credentials[s.GetName()] = val
 		}
 	}
 
@@ -411,11 +411,16 @@ func main() {
 	for credentialName, credential := range credentials {
 		switch {
 		case credential.credType == sas:
-			if err := saveToFile(filepath.Join(certFilesPath, credentialName+".pub"), credential.saPubPEM); err != nil {
+			if err := saveToFile(filepath.Join(certFilesPath, credentialName+".pub"), credential.rsaPubPEM); err != nil {
 				fmt.Println(err.Error())
 			}
 
-			if err := saveToFile(filepath.Join(keyFilePath, credentialName+".key"), credential.saPrivPEM); err != nil {
+			if err := saveToFile(filepath.Join(keyFilePath, credentialName+".key"), credential.rsaPrivPEM); err != nil {
+				fmt.Println(err.Error())
+			}
+
+		case credential.credType == rsas:
+			if err := saveToFile(filepath.Join(keyFilePath, credentialName+".key"), credential.rsaPrivPEM); err != nil {
 				fmt.Println(err.Error())
 			}
 

@@ -68,8 +68,8 @@ type SeedSpec struct {
 	Networks SeedNetworks
 	// Provider defines the provider type and region for this Seed cluster.
 	Provider SeedProvider
-	// SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
-	// the account the Seed cluster has been deployed to.
+	// SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
+	// cluster to be registered as Seed.
 	SecretRef *corev1.SecretReference
 	// Settings contains certain settings for this seed cluster.
 	Settings *SeedSettings
@@ -206,6 +206,10 @@ type SeedSettings struct {
 	LoadBalancerServices *SeedSettingLoadBalancerServices
 	// VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.
 	VerticalPodAutoscaler *SeedSettingVerticalPodAutoscaler
+	// SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
+	OwnerChecks *SeedSettingOwnerChecks
+	// DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.
+	DependencyWatchdog *SeedSettingDependencyWatchdog
 }
 
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
@@ -243,6 +247,37 @@ type SeedSettingVerticalPodAutoscaler struct {
 	// Enabled controls whether the VPA components shall be deployed into the garden namespace in the seed cluster. It
 	// is enabled by default because Gardener heavily relies on a VPA being deployed. You should only disable this if
 	// your seed cluster already has another, manually/custom managed VPA deployment.
+	Enabled bool
+}
+
+// SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
+type SeedSettingOwnerChecks struct {
+	// Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It
+	// is enabled by default because it is a prerequisite for control plane migration.
+	Enabled bool
+}
+
+// SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.
+type SeedSettingDependencyWatchdog struct {
+	// Endpoint controls the endpoint settings for the dependency-watchdog for the seed.
+	Endpoint *SeedSettingDependencyWatchdogEndpoint
+	// Probe controls the probe settings for the dependency-watchdog for the seed.
+	Probe *SeedSettingDependencyWatchdogProbe
+}
+
+// SeedSettingDependencyWatchdogEndpoint controls the endpoint settings for the dependency-watchdog for the seed.
+type SeedSettingDependencyWatchdogEndpoint struct {
+	// Enabled controls whether the endpoint controller of the dependency-watchdog should be enabled. This controller
+	// helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in
+	// CrashLoopBackoff status and restarting them once their dependants become ready and available again.
+	Enabled bool
+}
+
+// SeedSettingDependencyWatchdogProbe controls the probe settings for the dependency-watchdog for the seed.
+type SeedSettingDependencyWatchdogProbe struct {
+	// Enabled controls whether the probe controller of the dependency-watchdog should be enabled. This controller
+	// scales down the kube-controller-manager of shoot clusters in case their respective kube-apiserver is not
+	// reachable via its external ingress in order to avoid melt-down situations.
 	Enabled bool
 }
 

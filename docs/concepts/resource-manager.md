@@ -432,13 +432,12 @@ serviceaccount.resources.gardener.cloud/token-expiration-duration: 6h
 
 It automatically renews once 80% of the lifetime is reached or after `24h`.
 
-If the `Secret` is annotated with
+Optionally, the controller can also populate the token into a `Secret` in the target cluster. This can be requested by annotating the `Secret` in the source cluster with
 
 ```yaml
-serviceaccount.resources.gardener.cloud/skip-deletion: "true"
+token-requestor.resources.gardener.cloud/target-secret-name: "foo"
+token-requestor.resources.gardener.cloud/target-secret-namespace: "bar"
 ```
-
-then the respective `ServiceAccount` will not be deleted when the `Secret` is deleted.
 
 ## Webhooks
 

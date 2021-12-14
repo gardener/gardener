@@ -2,7 +2,7 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
-  name: gardener.cloud:vpa:{{ .Values.clusterType }}:target-reader
+  name: gardener.cloud:vpa:{{ include "vpa.rbac-name-infix" . }}:target-reader
   labels:
   {{ toYaml .Values.labels | indent 4 }}
   annotations:
@@ -10,40 +10,34 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: gardener.cloud:vpa:{{ .Values.clusterType }}:target-reader
+  name: gardener.cloud:vpa:{{ include "vpa.rbac-name-infix" . }}:target-reader
 {{- if or .Values.admissionController.enabled .Values.recommender.enabled .Values.updater.enabled }}
 subjects:
 {{- if .Values.recommender.enabled }}
-{{- if .Values.recommender.enableServiceAccount }}
 - kind: ServiceAccount
   name: vpa-recommender
+{{- if .Values.recommender.createServiceAccount }}
   namespace: {{ .Release.Namespace }}
 {{- else }}
-- apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: gardener.cloud:vpa:recommender
+  namespace: kube-system
 {{- end }}
 {{- end }}
 {{- if .Values.admissionController.enabled }}
-{{- if .Values.admissionController.enableServiceAccount }}
 - kind: ServiceAccount
   name: vpa-admission-controller
+{{- if .Values.admissionController.createServiceAccount }}
   namespace: {{ .Release.Namespace }}
 {{- else }}
-- apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: gardener.cloud:vpa:admission-controller
+  namespace: kube-system
 {{- end }}
 {{- end }}
 {{- if .Values.updater.enabled }}
-{{- if .Values.updater.enableServiceAccount }}
 - kind: ServiceAccount
   name: vpa-updater
+{{- if .Values.updater.createServiceAccount }}
   namespace: {{ .Release.Namespace }}
 {{- else }}
-- apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: gardener.cloud:vpa:updater
+  namespace: kube-system
 {{- end }}
 {{- end }}
 {{- end }}

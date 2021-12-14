@@ -25,13 +25,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
-	"github.com/sirupsen/logrus"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
@@ -39,12 +32,19 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 func (c *Controller) csrAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
 	c.csrQueue.Add(key)
@@ -55,23 +55,21 @@ func (c *Controller) csrUpdate(_, newObj interface{}) {
 }
 
 // NewCSRReconciler creates a new instance of a reconciler which reconciles CSRs.
-func NewCSRReconciler(l logrus.FieldLogger, gardenClient kubernetes.Interface, certificatesAPIVersion string) reconcile.Reconciler {
+func NewCSRReconciler(gardenClient kubernetes.Interface, certificatesAPIVersion string) reconcile.Reconciler {
 	return &csrReconciler{
-		logger:                 l,
 		gardenClient:           gardenClient,
 		certificatesAPIVersion: certificatesAPIVersion,
 	}
 }
 
 type csrReconciler struct {
-	logger                 logrus.FieldLogger
 	gardenClient           kubernetes.Interface
 	certificatesAPIVersion string
 }
 
 func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	var (
-		csrLogger = logger.NewFieldLogger(logger.Logger, "csr", request.Name)
+		log = logf.FromContext(ctx)
 
 		cert               []byte
 		finalState         bool
@@ -89,11 +87,10 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 		csrV1 := &certificatesv1.CertificateSigningRequest{}
 		if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, csrV1); err != nil {
 			if apierrors.IsNotFound(err) {
-				r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+				log.Info("Object is gone, stop reconciling")
 				return reconcile.Result{}, nil
 			}
-			r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
-			return reconcile.Result{}, err
+			return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 		}
 
 		for _, c := range csrV1.Status.Conditions {
@@ -125,11 +122,10 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 		csrV1beta1 := &certificatesv1beta1.CertificateSigningRequest{}
 		if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, csrV1beta1); err != nil {
 			if apierrors.IsNotFound(err) {
-				r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+				log.Info("Object is gone, stop reconciling")
 				return reconcile.Result{}, nil
 			}
-			r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
-			return reconcile.Result{}, err
+			return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 		}
 
 		for _, c := range csrV1beta1.Status.Conditions {
@@ -158,36 +154,35 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 	}
 
 	if len(cert) != 0 || finalState {
+		log.Info("ignoring CSR, as it is already approved/denied")
 		return reconcile.Result{}, nil
 	}
 
 	x509cr, err := utils.DecodeCertificateRequest(req)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("unable to parse csr %q: %w", request.Name, err)
+		return reconcile.Result{}, fmt.Errorf("unable to parse csr: %w", err)
 	}
 
-	if !gutil.IsSeedClientCert(x509cr, usages) {
+	if ok, reason := gutil.IsSeedClientCert(x509cr, usages); !ok {
+		log.Info("ignoring CSR, as it does not match the requirements for a seed client: " + reason)
 		return reconcile.Result{}, nil
 	}
 
-	csrLogger.Infof("[CSR APPROVER] %s", request.Name)
-
-	approved, err := authorize(ctx, r.gardenClient.Client(), username, uid, groups, extra, authorizationv1.ResourceAttributes{Group: "certificates.k8s.io", Resource: "certificatesigningrequests", Verb: "create", Subresource: "seedclient"})
+	log.Info("checking if creating user has authorization for seedclient subresource", "username", username, "groups", groups, "extra", extra)
+	sarStatus, err := authorize(ctx, r.gardenClient.Client(), username, uid, groups, extra, authorizationv1.ResourceAttributes{Group: "certificates.k8s.io", Resource: "certificatesigningrequests", Verb: "create", Subresource: "seedclient"})
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if approved {
-		csrLogger.Infof("[CSR APPROVER] Auto-approving %s", request.Name)
+	if sarStatus.Allowed {
+		log.Info("auto-approving CSR")
 		return reconcile.Result{}, updateConditionsFn()
 	}
 
-	message := fmt.Sprintf("recognized csr %q but subject access review was not approved", request.Name)
-	csrLogger.Errorf("[CSR APPROVER] %s", message)
-	return reconcile.Result{}, fmt.Errorf(message)
+	return reconcile.Result{}, fmt.Errorf("recognized CSR but SubjectAccessReview was not allowed: %s", sarStatus.Reason)
 }
 
-func authorize(ctx context.Context, c client.Client, username, uid string, groups []string, extra map[string]authorizationv1.ExtraValue, resourceAttributes authorizationv1.ResourceAttributes) (bool, error) {
+func authorize(ctx context.Context, c client.Client, username, uid string, groups []string, extra map[string]authorizationv1.ExtraValue, resourceAttributes authorizationv1.ResourceAttributes) (authorizationv1.SubjectAccessReviewStatus, error) {
 	sar := &authorizationv1.SubjectAccessReview{
 		Spec: authorizationv1.SubjectAccessReviewSpec{
 			User:               username,
@@ -198,8 +193,5 @@ func authorize(ctx context.Context, c client.Client, username, uid string, group
 		},
 	}
 
-	if err := c.Create(ctx, sar); err != nil {
-		return false, err
-	}
-	return sar.Status.Allowed, nil
+	return sar.Status, c.Create(ctx, sar)
 }

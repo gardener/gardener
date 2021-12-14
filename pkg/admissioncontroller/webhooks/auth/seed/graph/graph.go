@@ -40,6 +40,8 @@ import (
 type Interface interface {
 	// Setup registers the event handler functions for the various resource types.
 	Setup(ctx context.Context, c cache.Cache) error
+	// HasVertex returns true when the given vertex exists in the graph.
+	HasVertex(vertexType VertexType, vertexNamespace, vertexName string) bool
 	// HasPathFrom returns true when there is a path from <from> to <to>.
 	HasPathFrom(fromType VertexType, fromNamespace, fromName string, toType VertexType, toNamespace, toName string) bool
 }
@@ -102,6 +104,11 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 	}
 
 	return nil
+}
+
+func (g *graph) HasVertex(vertexType VertexType, vertexNamespace, vertexName string) bool {
+	_, ok := g.getVertex(vertexType, vertexNamespace, vertexName)
+	return ok
 }
 
 func (g *graph) HasPathFrom(fromType VertexType, fromNamespace, fromName string, toType VertexType, toNamespace, toName string) bool {

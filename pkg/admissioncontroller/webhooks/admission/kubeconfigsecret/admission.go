@@ -30,7 +30,6 @@ import (
 	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 const (
@@ -78,11 +77,7 @@ func (h *handler) Handle(_ context.Context, request admission.Request) admission
 		return acadmission.Allowed("subresources on secrets are not handled")
 	}
 
-	requestID, err := utils.GenerateRandomString(8)
-	if err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
-	}
-	requestLogger := h.logger.WithValues(logger.IDFieldName, requestID)
+	requestLogger := logger.NewIDLogger(h.logger)
 
 	secret := &corev1.Secret{}
 	if err := h.decoder.Decode(request, secret); err != nil {

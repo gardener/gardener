@@ -37,6 +37,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -65,7 +66,7 @@ var _ = Describe("ResourceManager", func() {
 		replicas        int32 = 1
 		healthPort      int32 = 8081
 		metricsPort     int32 = 8080
-		serverPort            = 9449
+		serverPort            = 10250
 
 		// optional configuration
 		clusterIdentity                      = "foo"
@@ -98,6 +99,8 @@ var _ = Describe("ResourceManager", func() {
 		matchPolicy                                = admissionregistrationv1.Exact
 		sideEffect                                 = admissionregistrationv1.SideEffectClassNone
 		caBundle                                   = []byte("ca-bundle")
+		networkPolicyProtocol                      = corev1.ProtocolTCP
+		networkPolicyPort                          = intstr.FromInt(serverPort)
 
 		allowAll                     []rbacv1.PolicyRule
 		allowManagedResources        []rbacv1.PolicyRule
@@ -118,6 +121,7 @@ var _ = Describe("ResourceManager", func() {
 		mutatingWebhookConfiguration *admissionregistrationv1.MutatingWebhookConfiguration
 		managedResourceSecret        *corev1.Secret
 		managedResource              *resourcesv1alpha1.ManagedResource
+		networkPolicy                *networkingv1.NetworkPolicy
 	)
 
 	BeforeEach(func() {
@@ -264,6 +268,12 @@ var _ = Describe("ResourceManager", func() {
 			TargetDiffersFromSourceCluster:       true,
 			TargetDisableCache:                   &targetDisableCache,
 			WatchedNamespace:                     &watchedNamespace,
+			VPA: &VPAConfig{
+				MinAllowed: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("20m"),
+					corev1.ResourceMemory: resource.MustParse("30Mi"),
+				},
+			},
 		}
 		resourceManager = New(c, deployNamespace, image, replicas, cfg)
 		resourceManager.SetSecrets(secrets)
@@ -352,6 +362,7 @@ var _ = Describe("ResourceManager", func() {
 							"networking.gardener.cloud/to-dns":                    "allowed",
 							"networking.gardener.cloud/to-seed-apiserver":         "allowed",
 							"networking.gardener.cloud/to-shoot-apiserver":        "allowed",
+							"networking.gardener.cloud/from-shoot-apiserver":      "allowed",
 							v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleControlPlane,
 							v1beta1constants.LabelApp:                             "gardener-resource-manager",
 						},
@@ -513,6 +524,17 @@ var _ = Describe("ResourceManager", func() {
 				},
 				UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
 					UpdateMode: &updateMode,
+				},
+				ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
+					ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+						{
+							ContainerName: autoscalingv1beta2.DefaultContainerResourcePolicy,
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("20m"),
+								corev1.ResourceMemory: resource.MustParse("30Mi"),
+							},
+						},
+					},
 				},
 			},
 		}
@@ -717,6 +739,41 @@ webhooks:
 				KeepObjects:  pointer.Bool(false),
 			},
 		}
+		networkPolicy = &networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "allow-kube-apiserver-to-gardener-resource-manager",
+				Namespace: deployNamespace,
+				Labels:    defaultLabels,
+				Annotations: map[string]string{
+					v1beta1constants.GardenerDescription: "Allows Egress from shoot's kube-apiserver pods to gardener-resource-manager pods.",
+				},
+			},
+			Spec: networkingv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
+						v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
+						v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+					},
+				},
+				Egress: []networkingv1.NetworkPolicyEgressRule{{
+					To: []networkingv1.NetworkPolicyPeer{{
+						PodSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								v1beta1constants.LabelApp: "gardener-resource-manager",
+							},
+						},
+					}},
+					Ports: []networkingv1.NetworkPolicyPort{{
+						Protocol: &networkPolicyProtocol,
+						Port:     &networkPolicyPort,
+					}},
+				}},
+				PolicyTypes: []networkingv1.PolicyType{
+					networkingv1.PolicyTypeEgress,
+				},
+			},
+		}
 	})
 
 	AfterEach(func() {
@@ -780,6 +837,11 @@ webhooks:
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "allow-kube-apiserver-to-gardener-resource-manager"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(networkPolicy))
+						}),
 				)
 				Expect(resourceManager.Deploy(ctx)).To(Succeed())
 			})
@@ -1034,6 +1096,11 @@ webhooks:
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "allow-kube-apiserver-to-gardener-resource-manager"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(networkPolicy))
+						}),
 				)
 				Expect(resourceManager.Deploy(ctx)).To(Succeed())
 			})
@@ -1087,6 +1154,7 @@ webhooks:
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-dns")
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-seed-apiserver")
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-shoot-apiserver")
+				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/from-shoot-apiserver")
 
 				secrets.Kubeconfig.Name, secrets.Kubeconfig.Checksum = "", ""
 				cfg.TargetDiffersFromSourceCluster = false

@@ -21,6 +21,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -28,6 +29,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -156,6 +158,22 @@ func (r *secretBindingReconciler) Reconcile(ctx context.Context, request reconci
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
 			secretBindingLogger.Errorf("Could not add finalizer to Secret referenced in SecretBinding: %s", err.Error())
 			return reconcile.Result{}, err
+		}
+	}
+
+	if secretBinding.Provider != nil {
+		types := gardencorev1beta1helper.GetSecretBindingTypes(secretBinding)
+		for _, t := range types {
+			labelKey := v1beta1constants.LabelShootProviderPrefix + t
+
+			if !metav1.HasLabel(secret.ObjectMeta, labelKey) {
+				patch := client.MergeFrom(secret.DeepCopy())
+				metav1.SetMetaDataLabel(&secret.ObjectMeta, labelKey, "true")
+				if err := r.gardenClient.Patch(ctx, secret, patch); err != nil {
+					secretBindingLogger.Errorf("Could not add provider type label to Secret referenced in SecretBinding: %s", err.Error())
+					return reconcile.Result{}, err
+				}
+			}
 		}
 	}
 

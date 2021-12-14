@@ -68,7 +68,7 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
-  name: tcp-stats-filter-1.9
+  name: tcp-stats-filter-1.12
   namespace: {{ .Release.Namespace }}
 spec:
   configPatches:
@@ -76,7 +76,7 @@ spec:
     match:
       context: GATEWAY
       proxy:
-        proxyVersion: '^1\.9.*'
+        proxyVersion: '^1\.12.*'
       listener:
         filterChain:
           filter:
@@ -95,6 +95,8 @@ spec:
                 "@type": type.googleapis.com/google.protobuf.StringValue
                 value: |
                   {
+                    "debug": "false",
+                    "stat_prefix": "istio"
                   }
               vm_config:
                 vm_id: tcp_stats_outbound
@@ -102,32 +104,6 @@ spec:
                 code:
                   local:
                     inline_string: "envoy.wasm.stats"
-
----
-
-apiVersion: networking.istio.io/v1alpha3
-kind: EnvoyFilter
-metadata:
-  name: tcp-metadata-exchange-1.9
-  namespace: {{ .Release.Namespace }}
-spec:
-  configPatches:
-  - applyTo: CLUSTER
-    match:
-      context: GATEWAY
-      proxy:
-        proxyVersion: '^1\.9.*'
-      cluster: {}
-    patch:
-      operation: MERGE
-      value:
-        filters:
-        - name: istio.metadata_exchange
-          typed_config:
-            "@type": type.googleapis.com/udpa.type.v1.TypedStruct
-            type_url: type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
-            value:
-              protocol: istio-peer-exchange
 
 ---
 
@@ -160,8 +136,6 @@ spec:
                 "@type": type.googleapis.com/google.protobuf.StringValue
                 value: |
                   {
-                    "debug": "false",
-                    "stat_prefix": "istio"
                   }
               root_id: stats_outbound
               vm_config:
@@ -176,26 +150,87 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
-  name: tcp-metadata-exchange-1.10
+  name: stats-filter-1.12
   namespace: {{ .Release.Namespace }}
 spec:
   configPatches:
-  - applyTo: CLUSTER
-    match:
-      context: GATEWAY
-      proxy:
-        proxyVersion: '^1\.10.*'
-      cluster: {}
-    patch:
-      operation: MERGE
-      value:
-        filters:
-        - name: istio.metadata_exchange
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        proxy:
+          proxyVersion: '^1\.12.*'
+        listener:
+          filterChain:
+            filter:
+              name: "envoy.filters.network.http_connection_manager"
+              subFilter:
+                name: "envoy.filters.http.router"
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: istio.stats
           typed_config:
             "@type": type.googleapis.com/udpa.type.v1.TypedStruct
-            type_url: type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+            type_url: type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
             value:
-              protocol: istio-peer-exchange
+              config:
+                root_id: stats_outbound
+                configuration:
+                  "@type": "type.googleapis.com/google.protobuf.StringValue"
+                  value: |
+                    {
+                      "debug": "false",
+                      "stat_prefix": "istio",
+                      "disable_host_header_fallback": true
+                    }
+                vm_config:
+                  vm_id: stats_outbound
+                  runtime: envoy.wasm.runtime.null
+                  code:
+                    local:
+                      inline_string: envoy.wasm.stats
+
+---
+
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: stats-filter-1.10
+  namespace: {{ .Release.Namespace }}
+spec:
+  configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        proxy:
+          proxyVersion: '^1\.10.*'
+        listener:
+          filterChain:
+            filter:
+              name: "envoy.filters.network.http_connection_manager"
+              subFilter:
+                name: "envoy.filters.http.router"
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: istio.stats
+          typed_config:
+            "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+            type_url: type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+            value:
+              config:
+                root_id: stats_outbound
+                configuration:
+                  "@type": "type.googleapis.com/google.protobuf.StringValue"
+                  value: |
+                    {
+                    }
+                vm_config:
+                  vm_id: stats_outbound
+                  runtime: envoy.wasm.runtime.null
+                  code:
+                    local:
+                      inline_string: envoy.wasm.stats
 
 ---
 
@@ -293,3 +328,45 @@ spec:
     labels:
 {{ .Values.labels | toYaml | indent 6 }}
 
+---
+
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: access-log
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ .Values.labels | toYaml | indent 4 }}
+spec:
+  workloadSelector:
+    labels:
+{{ .Values.labels | toYaml | indent 6 }}
+  configPatches:
+  - applyTo: NETWORK_FILTER
+    match:
+      context: ANY
+      listener:
+        filterChain:
+          filter:
+            name: envoy.filters.network.tcp_proxy
+    patch:
+      operation: MERGE
+      value:
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+          access_log:
+          - name: envoy.access_loggers.stdout
+  - applyTo: NETWORK_FILTER
+    match:
+      context: ANY
+      listener:
+        filterChain:
+          filter:
+            name: envoy.filters.network.http_connection_manager
+    patch:
+      operation: MERGE
+      value:
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          access_log:
+          - name: envoy.access_loggers.stdout

@@ -1,20 +1,9 @@
+# TODO(shafeeqes): Delete this Helm chart in a future version.
+---
 apiVersion: {{ include "networkpolicyversion" . }}
 kind: NetworkPolicy
 metadata:
-  annotations:
-    gardener.cloud/description: |
-      Allows the VPN to communicate with shoot components and makes the VPN
-      reachable from the seed.
   name: gardener.cloud--allow-vpn
   namespace: {{ .Release.Namespace }}
-spec:
-  egress:
-  - {}
-  ingress:
-  - {}
-  podSelector:
-    matchLabels:
-      app: vpn-shoot
-  policyTypes:
-  - Egress
-  - Ingress
+  annotations:
+    resources.gardener.cloud/mode: Ignore

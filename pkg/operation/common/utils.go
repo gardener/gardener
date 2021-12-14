@@ -25,7 +25,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -166,11 +166,15 @@ func DeleteVpa(ctx context.Context, c client.Client, namespace string, isShoot b
 
 	if isShoot {
 		resources = append(resources,
+			gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameVPAAdmissionController, namespace).Secret,
+			gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameVPARecommender, namespace).Secret,
+			gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameVPAUpdater, namespace).Secret,
+			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: VPASecretName, Namespace: namespace}},
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-vpa-admission-controller", Namespace: namespace}},
+			// TODO(rfranzke): Remove in a future release.
 			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-admission-controller", Namespace: namespace}},
 			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-recommender", Namespace: namespace}},
-			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: VPASecretName, Namespace: namespace}},
 			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-updater", Namespace: namespace}},
-			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-vpa-admission-controller", Namespace: namespace}},
 		)
 	} else {
 		resources = append(resources,
@@ -201,15 +205,6 @@ func DeleteVpa(ctx context.Context, c client.Client, namespace string, isShoot b
 	return nil
 }
 
-// DeleteShootLoggingStack deletes all shoot resource of the logging stack in the given namespace.
-func DeleteShootLoggingStack(ctx context.Context, k8sClient client.Client, namespace string) error {
-	if err := DeleteLoki(ctx, k8sClient, namespace); err != nil {
-		return err
-	}
-
-	return DeleteShootNodeLoggingStack(ctx, k8sClient, namespace)
-}
-
 // DeleteLoki  deletes all resources of the Loki in a given namespace.
 func DeleteLoki(ctx context.Context, k8sClient client.Client, namespace string) error {
 	resources := []client.Object{
@@ -218,24 +213,10 @@ func DeleteLoki(ctx context.Context, k8sClient client.Client, namespace string) 
 		&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "loki-config", Namespace: namespace}},
 		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
-		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
 		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
 		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: namespace}},
 	}
 
-	return kutil.DeleteObjects(ctx, k8sClient, resources...)
-}
-
-// DeleteShootNodeLoggingStack deletes all shoot resource of the shoot-node logging stack in the given namespace.
-func DeleteShootNodeLoggingStack(ctx context.Context, k8sClient client.Client, namespace string) error {
-	resources := []client.Object{
-		&extensionsv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
-		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: logging.SecretNameLokiKubeRBACProxyKubeconfig, Namespace: namespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: LokiTLS, Namespace: namespace}},
-		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-prometheus-to-loki-telegraf", Namespace: namespace}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: namespace}},
-	}
 	return kutil.DeleteObjects(ctx, k8sClient, resources...)
 }
 

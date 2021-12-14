@@ -69,8 +69,8 @@ var _ = Describe("handler", func() {
 		request admission.Request
 		encoder runtime.Encoder
 
-		seedName                string
-		seedUser, ambiguousUser authenticationv1.UserInfo
+		seedName string
+		seedUser authenticationv1.UserInfo
 
 		responseAllowed = admission.Response{
 			AdmissionResponse: admissionv1.AdmissionResponse{
@@ -104,10 +104,6 @@ var _ = Describe("handler", func() {
 		seedName = "seed"
 		seedUser = authenticationv1.UserInfo{
 			Username: fmt.Sprintf("%s%s", v1beta1constants.SeedUserNamePrefix, seedName),
-			Groups:   []string{v1beta1constants.SeedsGroup},
-		}
-		ambiguousUser = authenticationv1.UserInfo{
-			Username: fmt.Sprintf("%s%s", v1beta1constants.SeedUserNamePrefix, v1beta1constants.SeedUserNameSuffixAmbiguous),
 			Groups:   []string{v1beta1constants.SeedsGroup},
 		}
 	})
@@ -227,28 +223,6 @@ var _ = Describe("handler", func() {
 
 					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 				})
-
-				It("should allow the request because seed name is ambiguous (spec)", func() {
-					request.UserInfo = ambiguousUser
-
-					mockCache.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
-						(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: pointer.String("some-different-seed")}}).DeepCopyInto(obj)
-						return nil
-					})
-
-					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-				})
-
-				It("should allow the request because seed name is ambiguous (status)", func() {
-					request.UserInfo = ambiguousUser
-
-					mockCache.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
-						(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{SeedName: pointer.String("some-different-seed")}}).DeepCopyInto(obj)
-						return nil
-					})
-
-					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-				})
 			})
 		})
 
@@ -340,20 +314,6 @@ var _ = Describe("handler", func() {
 
 					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 				})
-
-				It("should allow the request because seed name is ambiguous", func() {
-					request.UserInfo = ambiguousUser
-
-					objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupBucket{
-						Spec: gardencorev1beta1.BackupBucketSpec{
-							SeedName: pointer.String("some-different-seed"),
-						},
-					})
-					Expect(err).NotTo(HaveOccurred())
-					request.Object.Raw = objData
-
-					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-				})
 			})
 
 			Context("when operation is delete", func() {
@@ -398,17 +358,6 @@ var _ = Describe("handler", func() {
 
 					mockCache.EXPECT().Get(ctx, kutil.Key(seedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
 						(&gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{UID: types.UID(uid)}}).DeepCopyInto(obj)
-						return nil
-					})
-
-					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-				})
-
-				It("should allow the request because seed name is ambiguous", func() {
-					request.UserInfo = ambiguousUser
-
-					mockCache.EXPECT().Get(ctx, kutil.Key(seedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
-						(&gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{UID: "1234"}}).DeepCopyInto(obj)
 						return nil
 					})
 
@@ -525,33 +474,6 @@ var _ = Describe("handler", func() {
 
 					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 				})
-
-				DescribeTable("should allow the request because seed name is ambiguous",
-					func(seedNameInBackupEntry, seedNameInBackupBucket *string) {
-						request.UserInfo = ambiguousUser
-
-						objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupEntry{
-							Spec: gardencorev1beta1.BackupEntrySpec{
-								BucketName: bucketName,
-								SeedName:   seedNameInBackupEntry,
-							},
-						})
-						Expect(err).NotTo(HaveOccurred())
-						request.Object.Raw = objData
-
-						mockCache.EXPECT().Get(ctx, kutil.Key(bucketName), gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupBucket) error {
-							(&gardencorev1beta1.BackupBucket{Spec: gardencorev1beta1.BackupBucketSpec{SeedName: seedNameInBackupBucket}}).DeepCopyInto(obj)
-							return nil
-						})
-
-						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-					},
-
-					Entry("seed name nil", nil, nil),
-					Entry("seed name is different", pointer.String("some-different-seed"), nil),
-					Entry("seed name is equal but bucket's seed name is nil", &seedName, nil),
-					Entry("seed name is equal but bucket's seed name is different", &seedName, pointer.String("some-different-seed")),
-				)
 			})
 		})
 
@@ -612,20 +534,6 @@ var _ = Describe("handler", func() {
 					objData, err := runtime.Encode(encoder, &gardenoperationsv1alpha1.Bastion{
 						Spec: gardenoperationsv1alpha1.BastionSpec{
 							SeedName: &seedName,
-						},
-					})
-					Expect(err).NotTo(HaveOccurred())
-					request.Object.Raw = objData
-
-					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-				})
-
-				It("should allow the request because seed name is ambiguous", func() {
-					request.UserInfo = ambiguousUser
-
-					objData, err := runtime.Encode(encoder, &gardenoperationsv1alpha1.Bastion{
-						Spec: gardenoperationsv1alpha1.BastionSpec{
-							SeedName: pointer.String("some-different-seed"),
 						},
 					})
 					Expect(err).NotTo(HaveOccurred())
@@ -706,14 +614,6 @@ var _ = Describe("handler", func() {
 
 					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 				})
-
-				It("should allow the request because seed name is ambiguous", func() {
-					request.Name = "some-different-seed"
-					request.Namespace = "gardener-system-seed-lease"
-					request.UserInfo = ambiguousUser
-
-					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-				})
 			})
 		})
 
@@ -757,13 +657,6 @@ var _ = Describe("handler", func() {
 
 					It("should allow the request because seed name matches", func() {
 						request.Name = seedName
-
-						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-					})
-
-					It("should allow the request because seed name is ambiguous", func() {
-						request.UserInfo = ambiguousUser
-						request.Name = "some-different-seed"
 
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
@@ -1055,7 +948,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 								Allowed: false,
 								Result: &metav1.Status{
 									Code:    int32(http.StatusForbidden),
-									Message: "can only create CSRs for seed clusters",
+									Message: "can only create CSRs for seed clusters: key usages are not set to [key encipherment digital signature client auth]",
 								},
 							},
 						}))
@@ -1137,44 +1030,6 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 						})
 						Expect(err).NotTo(HaveOccurred())
 						request.Object.Raw = objData
-
-						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-					})
-
-					It("should allow the request because seed name is ambiguous", func() {
-						objData, err := runtime.Encode(encoder, &certificatesv1beta1.CertificateSigningRequest{
-							TypeMeta: metav1.TypeMeta{
-								APIVersion: certificatesv1beta1.SchemeGroupVersion.String(),
-								Kind:       "CertificateSigningRequest",
-							},
-							Spec: certificatesv1beta1.CertificateSigningRequestSpec{
-								Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
-MIIClzCCAX8CAQAwUjEkMCIGA1UEChMbZ2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNl
-ZWRzMSowKAYDVQQDEyFnYXJkZW5lci5jbG91ZDpzeXN0ZW06c2VlZDpteXNlZWQw
-ggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCzNgJWhogJrCSzAhKKmHkJ
-FuooKAbxpWRGDOe5DiB8jPdgCoRCkZYnF7D9x9cDzliljA9IeBad3P3E9oegtSV/
-sXFJYqb+lRuhJQ5oo2eBC6WRg+Oxglp+n7o7xt0bO7JHS977mqNrqsJ1d1FnJHTB
-MPHPxqoqkgIbdW4t219ckSA20aWzC3PU7I7+Z9OD+YfuuYgzkWG541XyBBKVSD2w
-Ix2yGu6zrslqZ1eVBZ4IoxpWrQNmLSMFQVnABThyEUi0U1eVtW0vPNwSnBf0mufX
-Z0PpqAIPVjr64Z4s3HHml2GSu64iOxaG5wwb9qIPcdyFaQCep/sFh7kq1KjNI1Ql
-AgMBAAGgADANBgkqhkiG9w0BAQsFAAOCAQEAb+meLvm7dgHpzhu0XQ39w41FgpTv
-S7p78ABFwzDNcP1NwfrEUft0T/rUwPiMlN9zve2rRicaZX5Z7Bol/newejsu8H5z
-OdotvtKjE7zBCMzwnXZwO/0pA0cuUFcAy50DPcr35gdGjGlzV9ogO+HPKPTieS3n
-TRVg+MWlcLqCjALr9Y4N39DOzf4/SJts8AZJJ+lyyxnY3XIPXx7SdADwNWC8BX0U
-OK8CwMwN3iiBQ4redVeMK7LU1unV899q/PWB+NXFcKVr+Grm/Kom5VxuhXSzcHEp
-yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
------END CERTIFICATE REQUEST-----`),
-								Usages: []certificatesv1beta1.KeyUsage{
-									certificatesv1beta1.UsageKeyEncipherment,
-									certificatesv1beta1.UsageDigitalSignature,
-									certificatesv1beta1.UsageClientAuth,
-								},
-							},
-						})
-						Expect(err).NotTo(HaveOccurred())
-						request.Object.Raw = objData
-
-						request.UserInfo = ambiguousUser
 
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
@@ -1222,7 +1077,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 								Allowed: false,
 								Result: &metav1.Status{
 									Code:    int32(http.StatusForbidden),
-									Message: "can only create CSRs for seed clusters",
+									Message: "can only create CSRs for seed clusters: key usages are not set to [key encipherment digital signature client auth]",
 								},
 							},
 						}))
@@ -1304,44 +1159,6 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 						})
 						Expect(err).NotTo(HaveOccurred())
 						request.Object.Raw = objData
-
-						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-					})
-
-					It("should allow the request because seed name is ambiguous", func() {
-						objData, err := runtime.Encode(encoder, &certificatesv1.CertificateSigningRequest{
-							TypeMeta: metav1.TypeMeta{
-								APIVersion: certificatesv1.SchemeGroupVersion.String(),
-								Kind:       "CertificateSigningRequest",
-							},
-							Spec: certificatesv1.CertificateSigningRequestSpec{
-								Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
-MIIClzCCAX8CAQAwUjEkMCIGA1UEChMbZ2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNl
-ZWRzMSowKAYDVQQDEyFnYXJkZW5lci5jbG91ZDpzeXN0ZW06c2VlZDpteXNlZWQw
-ggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCzNgJWhogJrCSzAhKKmHkJ
-FuooKAbxpWRGDOe5DiB8jPdgCoRCkZYnF7D9x9cDzliljA9IeBad3P3E9oegtSV/
-sXFJYqb+lRuhJQ5oo2eBC6WRg+Oxglp+n7o7xt0bO7JHS977mqNrqsJ1d1FnJHTB
-MPHPxqoqkgIbdW4t219ckSA20aWzC3PU7I7+Z9OD+YfuuYgzkWG541XyBBKVSD2w
-Ix2yGu6zrslqZ1eVBZ4IoxpWrQNmLSMFQVnABThyEUi0U1eVtW0vPNwSnBf0mufX
-Z0PpqAIPVjr64Z4s3HHml2GSu64iOxaG5wwb9qIPcdyFaQCep/sFh7kq1KjNI1Ql
-AgMBAAGgADANBgkqhkiG9w0BAQsFAAOCAQEAb+meLvm7dgHpzhu0XQ39w41FgpTv
-S7p78ABFwzDNcP1NwfrEUft0T/rUwPiMlN9zve2rRicaZX5Z7Bol/newejsu8H5z
-OdotvtKjE7zBCMzwnXZwO/0pA0cuUFcAy50DPcr35gdGjGlzV9ogO+HPKPTieS3n
-TRVg+MWlcLqCjALr9Y4N39DOzf4/SJts8AZJJ+lyyxnY3XIPXx7SdADwNWC8BX0U
-OK8CwMwN3iiBQ4redVeMK7LU1unV899q/PWB+NXFcKVr+Grm/Kom5VxuhXSzcHEp
-yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
------END CERTIFICATE REQUEST-----`),
-								Usages: []certificatesv1.KeyUsage{
-									certificatesv1.UsageKeyEncipherment,
-									certificatesv1.UsageDigitalSignature,
-									certificatesv1.UsageClientAuth,
-								},
-							},
-						})
-						Expect(err).NotTo(HaveOccurred())
-						request.Object.Raw = objData
-
-						request.UserInfo = ambiguousUser
 
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
@@ -1461,17 +1278,6 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
-
-					It("should allow because the user is ambiguous", func() {
-						request.UserInfo = ambiguousUser
-
-						mockCache.EXPECT().Get(ctx, kutil.Key(name), gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupBucket) error {
-							(&gardencorev1beta1.BackupBucket{Spec: gardencorev1beta1.BackupBucketSpec{SeedName: pointer.String("some-different-seed")}}).DeepCopyInto(obj)
-							return nil
-						})
-
-						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-					})
 				})
 
 				Context("shoot-related project secret", func() {
@@ -1528,17 +1334,6 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 						It("should allow because the related shoot does belong to gardenlet's seed", func() {
 							mockCache.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
 								(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &seedName}}).DeepCopyInto(obj)
-								return nil
-							})
-
-							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-						})
-
-						It("should allow because the user is ambiguous", func() {
-							request.UserInfo = ambiguousUser
-
-							mockCache.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
-								(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: pointer.String("some-different-seed")}}).DeepCopyInto(obj)
 								return nil
 							})
 
@@ -1805,44 +1600,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
 
-					It("should allow if the seed does not yet exist (ambiguous case)", func() {
-						request.UserInfo = ambiguousUser
-						shoot.Spec.SeedName = pointer.String("some-other-seed")
-
-						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
-							managedSeed.DeepCopyInto(obj)
-							return nil
-						})
-						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
-							shoot.DeepCopyInto(obj)
-							return nil
-						})
-						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-
-						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-					})
-
 					It("should allow if the seed does exist but client cert is expired", func() {
-						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
-							managedSeed.DeepCopyInto(obj)
-							return nil
-						})
-						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
-							shoot.DeepCopyInto(obj)
-							return nil
-						})
-						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
-							(&gardencorev1beta1.Seed{Status: gardencorev1beta1.SeedStatus{ClientCertificateExpirationTimestamp: &metav1.Time{Time: time.Now().Add(-time.Hour)}}}).DeepCopyInto(obj)
-							return nil
-						})
-
-						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-					})
-
-					It("should allow if the seed does exist but client cert is expired (ambiguous case)", func() {
-						request.UserInfo = ambiguousUser
-						shoot.Spec.SeedName = pointer.String("some-other-seed")
-
 						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
 							managedSeed.DeepCopyInto(obj)
 							return nil
@@ -2094,72 +1852,6 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 						})
 
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-					})
-
-					Context("ambiguous user", func() {
-						BeforeEach(func() {
-							request.UserInfo = ambiguousUser
-						})
-
-						It("should allow because the secret is referenced in a managedseed's `.seedTemplate.spec.secretRef`", func() {
-							var (
-								secretName      = "secret-foo"
-								secretNamespace = "secret-bar"
-							)
-
-							request.Namespace = secretNamespace
-							request.Name = secretName
-							managedSeeds[0].Spec.SeedTemplate.Spec.SecretRef = &corev1.SecretReference{
-								Name:      secretName,
-								Namespace: secretNamespace,
-							}
-
-							mockCache.EXPECT().List(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedList{})).DoAndReturn(func(ctx context.Context, list *seedmanagementv1alpha1.ManagedSeedList, opts ...client.ListOption) error {
-								(&seedmanagementv1alpha1.ManagedSeedList{Items: managedSeeds}).DeepCopyInto(list)
-								return nil
-							})
-							mockCache.EXPECT().Get(ctx, kutil.Key(managedSeed1Namespace, shoot1.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
-								shoot1.DeepCopyInto(obj)
-								return nil
-							})
-							mockCache.EXPECT().Get(ctx, kutil.Key(managedSeed1Namespace, shoot2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
-								shoot2.DeepCopyInto(obj)
-								return nil
-							})
-
-							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-						})
-
-						It("should allow because the secret is referenced in a managedseed's `.seedTemplate.spec.backup.secretRef`", func() {
-							var (
-								secretName      = "secret-bar"
-								secretNamespace = "secret-foo"
-							)
-
-							request.Namespace = secretNamespace
-							request.Name = secretName
-							managedSeeds[0].Spec.SeedTemplate.Spec.Backup = &gardencorev1beta1.SeedBackup{
-								SecretRef: corev1.SecretReference{
-									Name:      secretName,
-									Namespace: secretNamespace,
-								},
-							}
-
-							mockCache.EXPECT().List(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedList{})).DoAndReturn(func(ctx context.Context, list *seedmanagementv1alpha1.ManagedSeedList, opts ...client.ListOption) error {
-								(&seedmanagementv1alpha1.ManagedSeedList{Items: managedSeeds}).DeepCopyInto(list)
-								return nil
-							})
-							mockCache.EXPECT().Get(ctx, kutil.Key(managedSeed1Namespace, shoot1.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
-								shoot1.DeepCopyInto(obj)
-								return nil
-							})
-							mockCache.EXPECT().Get(ctx, kutil.Key(managedSeed1Namespace, shoot2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
-								shoot2.DeepCopyInto(obj)
-								return nil
-							})
-
-							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-						})
 					})
 				})
 			})
@@ -2421,44 +2113,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 						})
 
-						It("should allow if the seed does not yet exist (ambiguous case)", func() {
-							request.UserInfo = ambiguousUser
-							shoot.Spec.SeedName = pointer.String("some-other-seed")
-
-							mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
-								managedSeed.DeepCopyInto(obj)
-								return nil
-							})
-							mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
-								shoot.DeepCopyInto(obj)
-								return nil
-							})
-							mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-
-							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-						})
-
 						It("should allow if the seed does exist but client cert is expired", func() {
-							mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
-								managedSeed.DeepCopyInto(obj)
-								return nil
-							})
-							mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
-								shoot.DeepCopyInto(obj)
-								return nil
-							})
-							mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
-								(&gardencorev1beta1.Seed{Status: gardencorev1beta1.SeedStatus{ClientCertificateExpirationTimestamp: &metav1.Time{Time: time.Now().Add(-time.Hour)}}}).DeepCopyInto(obj)
-								return nil
-							})
-
-							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-						})
-
-						It("should allow if the seed does exist but client cert is expired (ambiguous case)", func() {
-							request.UserInfo = ambiguousUser
-							shoot.Spec.SeedName = pointer.String("some-other-seed")
-
 							mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
 								managedSeed.DeepCopyInto(obj)
 								return nil
@@ -2690,44 +2345,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
 
-					It("should allow if the seed does not yet exist (ambiguous case)", func() {
-						request.UserInfo = ambiguousUser
-						shoot.Spec.SeedName = pointer.String("some-other-seed")
-
-						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
-							managedSeed.DeepCopyInto(obj)
-							return nil
-						})
-						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
-							shoot.DeepCopyInto(obj)
-							return nil
-						})
-						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-
-						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-					})
-
 					It("should allow if the seed does exist but client cert is expired", func() {
-						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
-							managedSeed.DeepCopyInto(obj)
-							return nil
-						})
-						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
-							shoot.DeepCopyInto(obj)
-							return nil
-						})
-						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
-							(&gardencorev1beta1.Seed{Status: gardencorev1beta1.SeedStatus{ClientCertificateExpirationTimestamp: &metav1.Time{Time: time.Now().Add(-time.Hour)}}}).DeepCopyInto(obj)
-							return nil
-						})
-
-						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-					})
-
-					It("should allow if the seed does exist but client cert is expired (ambiguous case)", func() {
-						request.UserInfo = ambiguousUser
-						shoot.Spec.SeedName = pointer.String("some-other-seed")
-
 						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
 							managedSeed.DeepCopyInto(obj)
 							return nil

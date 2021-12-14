@@ -43,7 +43,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
-	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
@@ -53,8 +52,8 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
+	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	certificatesv1 "k8s.io/api/certificates/v1"
@@ -222,7 +221,7 @@ type Gardenlet struct {
 	Identity                             *gardencorev1beta1.Gardener
 	GardenClusterIdentity                string
 	ClientMap                            clientmap.ClientMap
-	Logger                               *logrus.Logger
+	Log                                  logr.Logger
 	Recorder                             record.EventRecorder
 	LeaderElection                       *leaderelection.LeaderElectionConfig
 	HealthManager                        healthz.Manager
@@ -236,11 +235,16 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		return nil, errors.New("config is required")
 	}
 
-	// Initialize logger
-	logger := logger.NewLogger(*cfg.LogLevel, *cfg.LogFormat)
-	logger.Info("Starting Gardenlet...")
-	logger.Infof("Version: %+v", version.Get())
-	logger.Infof("Feature Gates: %s", gardenletfeatures.FeatureGate.String())
+	// Initialize logrus and zap logger (for the migration period, we will use both in parallel)
+	logrusLogger := logger.NewLogger(*cfg.LogLevel, *cfg.LogFormat)
+
+	log, err := logger.NewZapLogger(*cfg.LogLevel, *cfg.LogFormat)
+	if err != nil {
+		return nil, fmt.Errorf("error instantiating zap logger: %w", err)
+	}
+
+	log.Info("Starting gardenlet...", "version", version.Get())
+	log.Info("Feature Gates", "featureGates", gardenletfeatures.FeatureGate.String())
 
 	if flag := flag.Lookup("v"); flag != nil {
 		if err := flag.Value.Set(fmt.Sprintf("%d", cfg.KubernetesLogLevel)); err != nil {
@@ -262,7 +266,6 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		kubeconfigFromBootstrap              []byte
 		csrName                              string
 		seedName                             string
-		err                                  error
 	)
 
 	// constructs a seed client for `SeedClientConnection.kubeconfig` or if not set,
@@ -279,28 +282,28 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	}
 
 	if cfg.GardenClientConnection.KubeconfigSecret != nil {
-		kubeconfigFromBootstrap, csrName, seedName, err = bootstrapKubeconfig(ctx, logger, seedClient.Client(), cfg)
+		kubeconfigFromBootstrap, csrName, seedName, err = bootstrapKubeconfig(ctx, logrusLogger, seedClient.Client(), cfg)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		logger.Info("No kubeconfig secret given in the configuration under `.gardenClientConnection.kubeconfigSecret`. Skipping the kubeconfig bootstrap process and certificate rotation.")
+		log.Info("No kubeconfig secret given in the configuration under `.gardenClientConnection.kubeconfigSecret`. Skipping the kubeconfig bootstrap process and certificate rotation.")
 	}
 
 	if kubeconfigFromBootstrap == nil {
-		logger.Info("Falling back to the kubeconfig specified in the configuration under `.gardenClientConnection.kubeconfig`")
+		log.Info("Falling back to the kubeconfig specified in the configuration under `.gardenClientConnection.kubeconfig`")
 		if len(cfg.GardenClientConnection.Kubeconfig) == 0 {
 			return nil, fmt.Errorf("the configuration file needs to either specify a Garden API Server kubeconfig under `.gardenClientConnection.kubeconfig` or provide bootstrapping information. " +
 				"To configure the Gardenlet for bootstrapping, provide the secret containing the bootstrap kubeconfig under `.gardenClientConnection.kubeconfigSecret` and also the secret name where the created kubeconfig should be stored for further use via`.gardenClientConnection.kubeconfigSecret`")
 		}
 	} else {
-		gardenClientCertificate, err := certificate.GetCurrentCertificate(logger, kubeconfigFromBootstrap, cfg.GardenClientConnection)
+		gardenClientCertificate, err := certificate.GetCurrentCertificate(logrusLogger, kubeconfigFromBootstrap, cfg.GardenClientConnection)
 		if err != nil {
 			return nil, err
 		}
 
 		clientCertificateExpirationTimestamp = &metav1.Time{Time: gardenClientCertificate.Leaf.NotAfter}
-		logger.Infof("The client certificate used to communicate with the garden cluster has expiration date %s", gardenClientCertificate.Leaf.NotAfter)
+		log.Info("The client certificate used to communicate with the garden cluster has expiration date", "expirationDate", gardenClientCertificate.Leaf.NotAfter)
 	}
 
 	restCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.GardenClientConnection.ClientConnectionConfiguration, kubeconfigFromBootstrap)
@@ -338,7 +341,6 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		WithGardenClientMapBuilder(gardenClientMapBuilder).
 		WithSeedClientMapBuilder(seedClientMapBuilder).
 		WithShootClientMapBuilder(shootClientMapBuilder).
-		WithLogger(logger).
 		Build()
 	if err != nil {
 		return nil, fmt.Errorf("failed to build ClientMap: %w", err)
@@ -351,7 +353,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 
 	// Delete bootstrap auth data if certificate was newly acquired
 	if len(csrName) > 0 && len(seedName) > 0 {
-		logger.Infof("Deleting bootstrap authentication data used to request a certificate")
+		log.Info("Deleting bootstrap authentication data used to request a certificate")
 		if err := bootstrap.DeleteBootstrapAuth(ctx, k8sGardenClient.Client(), k8sGardenClient.Client(), csrName, seedName); err != nil {
 			return nil, err
 		}
@@ -408,7 +410,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		Identity:                             identity,
 		GardenClusterIdentity:                clusterIdentity,
 		Config:                               cfg,
-		Logger:                               logger,
+		Log:                                  log,
 		Recorder:                             recorder,
 		ClientMap:                            clientMap,
 		LeaderElection:                       leaderElectionConfig,
@@ -423,7 +425,8 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 	defer controllerCancel()
 
 	// Initialize /healthz manager.
-	g.HealthManager = healthz.NewPeriodicHealthz(clock.RealClock{}, seedcontroller.LeaseResyncGracePeriodSeconds*time.Second)
+	healthGracePeriod := time.Duration((*g.Config.Controllers.Seed.LeaseResyncSeconds)*(*g.Config.Controllers.Seed.LeaseResyncMissThreshold)) * time.Second
+	g.HealthManager = healthz.NewPeriodicHealthz(clock.RealClock{}, healthGracePeriod)
 
 	if g.CertificateManager != nil {
 		g.CertificateManager.ScheduleCertificateRotation(controllerCtx, controllerCancel, g.Recorder)
@@ -431,7 +434,7 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 
 	// Start HTTPS server.
 	if g.Config.Server.HTTPS.TLS == nil {
-		g.Logger.Info("No TLS server certificates provided... self-generating them now...")
+		g.Log.Info("No TLS server certificates provided... self-generating them now...")
 
 		_, _, tempDir, err := secrets.SelfGenerateTLSServerCertificate("gardenlet", []string{
 			"gardenlet",
@@ -447,7 +450,7 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 			ServerKeyPath:  filepath.Join(tempDir, secrets.DataKeyPrivateKey),
 		}
 
-		g.Logger.Info("TLS server certificates successfully self-generated.")
+		g.Log.Info("TLS server certificates successfully self-generated.")
 	}
 
 	g.startServer(ctx)
@@ -464,14 +467,14 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 	if g.LeaderElection != nil {
 		g.LeaderElection.Callbacks = leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(_ context.Context) {
-				g.Logger.Info("Acquired leadership, starting controllers.")
+				g.Log.Info("Acquired leadership, starting controllers")
 				if err := run(controllerCtx); err != nil {
-					g.Logger.Errorf("failed to run gardenlet controllers: %v", err)
+					g.Log.Error(err, "failed to run controllers")
 				}
 				leaderElectionCancel()
 			},
 			OnStoppedLeading: func() {
-				g.Logger.Info("Lost leadership, terminating.")
+				g.Log.Info("Lost leadership, terminating")
 				controllerCancel()
 			},
 		}
@@ -485,11 +488,7 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 
 	// Leader election is disabled, thus run directly until done.
 	leaderElectionCancel()
-	err := run(controllerCtx)
-	if err != nil {
-		g.Logger.Errorf("failed to run gardenlet controllers: %v", err)
-	}
-	return err
+	return run(controllerCtx)
 }
 
 func (g *Gardenlet) startServer(ctx context.Context) {

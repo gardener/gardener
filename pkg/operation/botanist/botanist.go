@@ -107,6 +107,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 
 	// control plane components
+	o.Shoot.Components.ControlPlane.EtcdCopyBackupsTask = b.DefaultEtcdCopyBackupsTask()
 	o.Shoot.Components.ControlPlane.EtcdMain, err = b.DefaultEtcd(v1beta1constants.ETCDRoleMain, etcd.ClassImportant)
 	if err != nil {
 		return nil, err
@@ -154,19 +155,25 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
+	o.Shoot.Components.SystemComponents.VPNShoot, err = b.DefaultVPNShoot()
+	if err != nil {
+		return nil, err
+	}
 
 	// other components
+	o.Shoot.Components.SourceBackupEntry = b.SourceBackupEntry()
 	o.Shoot.Components.BackupEntry = b.DefaultCoreBackupEntry()
+	o.Shoot.Components.DependencyWatchdogAccess = b.DefaultDependencyWatchdogAccess()
+	o.Shoot.Components.GardenerAccess = b.DefaultGardenerAccess()
 	o.Shoot.Components.NetworkPolicies, err = b.DefaultNetworkPolicies(sniPhase)
 	if err != nil {
 		return nil, err
 	}
 
 	// Logging
-	o.Shoot.Components.Logging.ShootRBACProxy, err = logging.NewKubeRBACProxy(&logging.KubeRBACProxyOptions{
-		Client:                    b.K8sSeedClient.Client(),
-		Namespace:                 b.Shoot.SeedNamespace,
-		IsShootNodeLoggingEnabled: b.isShootNodeLoggingEnabled(),
+	o.Shoot.Components.Logging.ShootRBACProxy, err = logging.NewKubeRBACProxy(&logging.Values{
+		Client:    b.K8sSeedClient.Client(),
+		Namespace: b.Shoot.SeedNamespace,
 	})
 	if err != nil {
 		return nil, err

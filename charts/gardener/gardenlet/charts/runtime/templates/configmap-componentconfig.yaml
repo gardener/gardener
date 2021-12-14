@@ -95,6 +95,12 @@ data:
       seed:
         concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.seed.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.seed.concurrentSyncs }}
         syncPeriod: {{ required ".Values.global.gardenlet.config.controllers.seed.syncPeriod is required" .Values.global.gardenlet.config.controllers.seed.syncPeriod }}
+        {{- if .Values.global.gardenlet.config.controllers.seed.leaseResyncSeconds }}
+        leaseResyncSeconds: {{ .Values.global.gardenlet.config.controllers.seed.leaseResyncSeconds }}
+        {{- end }}
+        {{- if .Values.global.gardenlet.config.controllers.seed.leaseResyncMissThreshold }}
+        leaseResyncMissThreshold: {{ .Values.global.gardenlet.config.controllers.seed.leaseResyncMissThreshold }}
+        {{- end }}
       {{- end }}
       shoot:
         concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.shoot.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.shoot.concurrentSyncs }}
@@ -181,11 +187,18 @@ data:
     logging:
 {{ toYaml .Values.global.gardenlet.config.logging | indent 6 }}
     {{- end }}
+    {{- if .Values.global.gardenlet.config.monitoring }}
+    monitoring:
+{{ toYaml .Values.global.gardenlet.config.monitoring | indent 6 }}
+    {{- end }}
     {{- if .Values.global.gardenlet.config.sni }}
     sni:
 {{ toYaml .Values.global.gardenlet.config.sni | trim | indent 6 }}
     {{- end }}
-
+    {{- if .Values.global.gardenlet.config.etcdConfig }}
+    etcdConfig:
+{{ toYaml .Values.global.gardenlet.config.etcdConfig | indent 6}}
+    {{- end}}
     {{- if .Values.global.gardenlet.config.exposureClassHandlers }}
     exposureClassHandlers:
 {{ toYaml .Values.global.gardenlet.config.exposureClassHandlers | indent 4 }}

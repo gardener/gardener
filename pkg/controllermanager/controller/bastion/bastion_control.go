@@ -19,23 +19,22 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	"github.com/gardener/gardener/pkg/logger"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
-	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 func (c *Controller) bastionAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
 	c.bastionQueue.Add(key)
@@ -48,7 +47,7 @@ func (c *Controller) bastionUpdate(_, newObj interface{}) {
 func (c *Controller) bastionDelete(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
 	c.bastionQueue.Add(key)
@@ -66,11 +65,12 @@ func (c *Controller) shootAdd(ctx context.Context, obj interface{}) {
 	}
 
 	// list all bastions that reference this shoot
+	// TODO: this should be done via a field-selector
 	bastionList := operationsv1alpha1.BastionList{}
-	listOptions := client.ListOptions{Namespace: shoot.Namespace, Limit: int64(1)}
+	listOptions := client.ListOptions{Namespace: shoot.Namespace, Limit: 1}
 
 	if err := c.gardenClient.List(ctx, &bastionList, &listOptions); err != nil {
-		logger.Logger.Errorf("Failed to list Bastions: %v", err)
+		c.log.Error(err, "Failed to list Bastions")
 		return
 	}
 
@@ -94,43 +94,37 @@ func (c *Controller) shootDelete(ctx context.Context, obj interface{}) {
 }
 
 // NewBastionReconciler creates a new instance of a reconciler which reconciles Bastions.
-func NewBastionReconciler(
-	logger logrus.FieldLogger,
-	gardenClient client.Client,
-	maxLifetime time.Duration,
-) reconcile.Reconciler {
+func NewBastionReconciler(gardenClient client.Client, maxLifetime time.Duration) reconcile.Reconciler {
 	return &reconciler{
-		logger:       logger,
 		gardenClient: gardenClient,
 		maxLifetime:  maxLifetime,
 	}
 }
 
 type reconciler struct {
-	logger       logrus.FieldLogger
 	gardenClient client.Client
 	maxLifetime  time.Duration
 }
 
 // Reconcile reacts to updates on Bastion resources and cleans up expired Bastions.
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	logger := r.logger.WithField("bastion", request)
+	log := logf.FromContext(ctx)
 
 	bastion := &operationsv1alpha1.Bastion{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, bastion); err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Info("Object is gone, stop reconciling")
+			log.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-
-		logger.Infof("Unable to retrieve object from store: %v", err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	// do not reconcile anymore once the object is marked for deletion
 	if bastion.DeletionTimestamp != nil {
 		return reconcile.Result{}, nil
 	}
+
+	log = log.WithValues("shootName", bastion.Spec.ShootRef.Name)
 
 	// fetch associated Shoot
 	shoot := gardencorev1beta1.Shoot{}
@@ -140,7 +134,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		// are removed. This is required because once a Shoot is gone, the Cluster resource
 		// is gone as well and without that, cleanly destroying a Bastion is not possible.
 		if apierrors.IsNotFound(err) {
-			logger.WithField("shoot", shoot.Name).Warn("Deleting bastion because target shoot is gone")
+			log.Info("Deleting bastion because target shoot is gone")
 			return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))
 		}
 
@@ -149,7 +143,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	// delete the bastion if the shoot is marked for deletion
 	if shoot.DeletionTimestamp != nil {
-		logger.WithField("shoot", shoot.Name).Info("Deleting bastion because target shoot is in deletion")
+		log.Info("Deleting bastion because target shoot is in deletion")
 		return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))
 	}
 
@@ -161,7 +155,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// under normal operations, shoots cannot be migrated to another seed while there are still
 	// bastions for it, so this check here is just a safety measure.
 	if !equality.Semantic.DeepEqual(shoot.Spec.SeedName, bastion.Spec.SeedName) {
-		logger.WithField("bastion-seed", *bastion.Spec.SeedName).Info("Deleting bastion because the referenced Shoot has been migrated to another Seed")
+		log.Info("Deleting bastion because the referenced Shoot has been migrated to another Seed", "newSeed", shoot.Spec.SeedName)
 		return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))
 	}
 
@@ -169,13 +163,13 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	// delete the bastion once it has expired
 	if bastion.Status.ExpirationTimestamp != nil && now.After(bastion.Status.ExpirationTimestamp.Time) {
-		logger.WithField("expired", bastion.Status.ExpirationTimestamp.Time).Info("Deleting expired bastion")
+		log.Info("Deleting expired bastion", "expirationTimestamp", bastion.Status.ExpirationTimestamp.Time)
 		return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))
 	}
 
 	// delete the bastion once it has reached its maximum lifetime
 	if time.Since(bastion.CreationTimestamp.Time) > r.maxLifetime {
-		logger.WithField("created", bastion.CreationTimestamp.Time).Info("Deleting bastion because it reached its maximum lifetime")
+		log.Info("Deleting bastion because it reached its maximum lifetime", "creationTimestamp", bastion.CreationTimestamp.Time, "maxLifetime", r.maxLifetime)
 		return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))
 	}
 

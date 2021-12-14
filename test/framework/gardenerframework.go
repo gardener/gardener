@@ -19,11 +19,12 @@ import (
 	"flag"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 var gardenerCfg *GardenerConfig
@@ -33,6 +34,7 @@ type GardenerConfig struct {
 	CommonConfig       *CommonConfig
 	GardenerKubeconfig string
 	ProjectNamespace   string
+	SkipAccessingShoot bool
 }
 
 // GardenerFramework is the gardener test framework that includes functions for working with a gardener instance
@@ -90,6 +92,7 @@ func (f *GardenerFramework) BeforeEach() {
 		client.Options{
 			Scheme: kubernetes.GardenScheme,
 		}),
+		kubernetes.WithAllowedUserFields([]string{kubernetes.AuthTokenFile}),
 	)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	f.GardenClient = gardenClient
@@ -128,6 +131,9 @@ func mergeGardenerConfig(base, overwrite *GardenerConfig) *GardenerConfig {
 	if StringSet(overwrite.GardenerKubeconfig) {
 		base.GardenerKubeconfig = overwrite.GardenerKubeconfig
 	}
+	if overwrite.SkipAccessingShoot {
+		base.SkipAccessingShoot = overwrite.SkipAccessingShoot
+	}
 
 	return base
 }
@@ -140,6 +146,7 @@ func RegisterGardenerFrameworkFlags() *GardenerConfig {
 
 	flag.StringVar(&newCfg.GardenerKubeconfig, "kubecfg", "", "the path to the kubeconfig  of the garden cluster that will be used for integration tests")
 	flag.StringVar(&newCfg.ProjectNamespace, "project-namespace", "", "specify the gardener project namespace to run tests")
+	flag.BoolVar(&newCfg.SkipAccessingShoot, "skip-accessing-shoot", false, "if set to true then the test does not try to access the shoot via its kubeconfig")
 
 	gardenerCfg = newCfg
 	return gardenerCfg

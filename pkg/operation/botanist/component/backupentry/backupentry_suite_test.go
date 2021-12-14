@@ -17,11 +17,13 @@ package backupentry_test
 import (
 	"testing"
 
+	"github.com/gardener/gardener/pkg/gardenlet/features"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 func TestBackupEntry(t *testing.T) {
+	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Botanist Component BackupEntry Suite")
 }

@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -36,9 +35,10 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -88,11 +88,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 			ScanInterval:                  configScanInterval,
 		}
 
-		secretNameKubeconfig     = "kubeconfig-secret"
-		secretChecksumKubeconfig = "1234"
-		secrets                  = Secrets{Kubeconfig: component.Secret{Name: secretNameKubeconfig, Checksum: secretChecksumKubeconfig}}
-
 		serviceAccountName        = "cluster-autoscaler"
+		secretName                = "shoot-access-cluster-autoscaler"
 		clusterRoleBindingName    = "cluster-autoscaler-" + namespace
 		vpaName                   = "cluster-autoscaler-vpa"
 		serviceName               = "cluster-autoscaler"
@@ -179,6 +176,20 @@ var _ = Describe("ClusterAutoscaler", func() {
 				},
 			},
 		}
+		secret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      secretName,
+				Namespace: namespace,
+				Annotations: map[string]string{
+					"serviceaccount.resources.gardener.cloud/name":      "cluster-autoscaler",
+					"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
+				},
+				Labels: map[string]string{
+					"resources.gardener.cloud/purpose": "token-requestor",
+				},
+			},
+			Type: corev1.SecretTypeOpaque,
+		}
 		deploymentFor = func(withConfig bool) *appsv1.Deployment {
 			var commandConfigFlags []string
 			if !withConfig {
@@ -210,7 +221,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			command := append([]string{
 				"./cluster-autoscaler",
 				"--address=:8085",
-				"--kubeconfig=/var/lib/cluster-autoscaler/kubeconfig",
+				"--kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 				"--cloud-provider=mcm",
 				"--stderrthreshold=info",
 				"--skip-nodes-with-system-pods=false",
@@ -224,7 +235,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				fmt.Sprintf("--nodes=%d:%d:%s.%s", machineDeployment2Min, machineDeployment2Max, namespace, machineDeployment2Name),
 			)
 
-			return &appsv1.Deployment{
+			deploy := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      deploymentName,
 					Namespace: namespace,
@@ -245,9 +256,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
-							Annotations: map[string]string{
-								"checksum/secret-" + secretNameKubeconfig: secretChecksumKubeconfig,
-							},
 							Labels: map[string]string{
 								"app":                              "kubernetes",
 								"role":                             "cluster-autoscaler",
@@ -281,7 +289,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 										},
 										{
 											Name:  "TARGET_KUBECONFIG",
-											Value: "/var/lib/cluster-autoscaler/kubeconfig",
+											Value: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 										},
 									},
 									Resources: corev1.ResourceRequirements{
@@ -294,36 +302,22 @@ var _ = Describe("ClusterAutoscaler", func() {
 											corev1.ResourceMemory: resource.MustParse("3000Mi"),
 										},
 									},
-									VolumeMounts: []corev1.VolumeMount{
-										{
-											Name:      secretNameKubeconfig,
-											MountPath: "/var/lib/cluster-autoscaler",
-											ReadOnly:  true,
-										},
-									},
-								},
-							},
-							Volumes: []corev1.Volume{
-								{
-									Name: secretNameKubeconfig,
-									VolumeSource: corev1.VolumeSource{
-										Secret: &corev1.SecretVolumeSource{
-											SecretName: secretNameKubeconfig,
-										},
-									},
 								},
 							},
 						},
 					},
 				},
 			}
+
+			Expect(gutil.InjectGenericKubeconfig(deploy, secret.Name)).To(Succeed())
+			return deploy
 		}
 
 		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: system:cluster-autoscaler-shoot
+  name: gardener.cloud:target:cluster-autoscaler
 rules:
 - apiGroups:
   - ""
@@ -452,14 +446,15 @@ rules:
 kind: ClusterRoleBinding
 metadata:
   creationTimestamp: null
-  name: system:cluster-autoscaler-shoot
+  name: gardener.cloud:target:cluster-autoscaler
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:cluster-autoscaler-shoot
+  name: gardener.cloud:target:cluster-autoscaler
 subjects:
-- kind: User
-  name: system:cluster-autoscaler
+- kind: ServiceAccount
+  name: cluster-autoscaler
+  namespace: kube-system
 `
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -468,8 +463,8 @@ subjects:
 			},
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{
-				"clusterrole____system_cluster-autoscaler-shoot.yaml":        []byte(clusterRoleYAML),
-				"clusterrolebinding____system_cluster-autoscaler-shoot.yaml": []byte(clusterRoleBindingYAML),
+				"clusterrole____gardener.cloud_target_cluster-autoscaler.yaml":        []byte(clusterRoleYAML),
+				"clusterrolebinding____gardener.cloud_target_cluster-autoscaler.yaml": []byte(clusterRoleBindingYAML),
 			},
 		}
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -502,167 +497,205 @@ subjects:
 	})
 
 	Describe("#Deploy", func() {
-		Context("missing secret information", func() {
-			It("should return an error because the kubeconfig secret information is not provided", func() {
-				Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(ContainSubstring("missing kubeconfig secret information")))
-			})
+		It("should fail because the service account cannot be created", func() {
+			gomock.InOrder(
+				c.EXPECT().Create(ctx, serviceAccount).Return(fakeErr),
+			)
+
+			Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
 		})
 
-		Context("secret information available", func() {
-			BeforeEach(func() {
-				clusterAutoscaler.SetSecrets(secrets)
-			})
+		It("should fail because the cluster role binding cannot be updated", func() {
+			gomock.InOrder(
+				c.EXPECT().Create(ctx, serviceAccount),
+				c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()).Return(fakeErr),
+			)
 
-			It("should fail because the service account cannot be created", func() {
-				gomock.InOrder(
-					c.EXPECT().Create(ctx, serviceAccount).Return(fakeErr),
-				)
+			Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
+		})
 
-				Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
-			})
+		It("should fail because the service cannot be updated", func() {
+			gomock.InOrder(
+				c.EXPECT().Create(ctx, serviceAccount),
+				c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).Return(fakeErr),
+			)
 
-			It("should fail because the cluster role binding cannot be updated", func() {
-				gomock.InOrder(
-					c.EXPECT().Create(ctx, serviceAccount),
-					c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()).Return(fakeErr),
-				)
+			Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
+		})
 
-				Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
-			})
+		It("should fail because the secret cannot be updated", func() {
+			gomock.InOrder(
+				c.EXPECT().Create(ctx, serviceAccount),
+				c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Return(fakeErr),
+			)
 
-			It("should fail because the service cannot be updated", func() {
-				gomock.InOrder(
-					c.EXPECT().Create(ctx, serviceAccount),
-					c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).Return(fakeErr),
-				)
+			Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
+		})
 
-				Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
-			})
+		It("should fail because the deployment cannot be updated", func() {
+			gomock.InOrder(
+				c.EXPECT().Create(ctx, serviceAccount),
+				c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).Return(fakeErr),
+			)
 
-			It("should fail because the deployment cannot be updated", func() {
-				gomock.InOrder(
-					c.EXPECT().Create(ctx, serviceAccount),
-					c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).Return(fakeErr),
-				)
+			Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
+		})
 
-				Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
-			})
+		It("should fail because the vpa cannot be updated", func() {
+			gomock.InOrder(
+				c.EXPECT().Create(ctx, serviceAccount),
+				c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{}), gomock.Any()).Return(fakeErr),
+			)
 
-			It("should fail because the vpa cannot be updated", func() {
-				gomock.InOrder(
-					c.EXPECT().Create(ctx, serviceAccount),
-					c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{}), gomock.Any()).Return(fakeErr),
-				)
+			Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
+		})
 
-				Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
-			})
+		It("should fail because the managed resource secret cannot be updated", func() {
+			gomock.InOrder(
+				c.EXPECT().Create(ctx, serviceAccount),
+				c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
+			)
 
-			It("should fail because the managed resource secret cannot be updated", func() {
-				gomock.InOrder(
-					c.EXPECT().Create(ctx, serviceAccount),
-					c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
-				)
+			Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
+		})
 
-				Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
-			})
+		It("should fail because the managed resource cannot be updated", func() {
+			gomock.InOrder(
+				c.EXPECT().Create(ctx, serviceAccount),
+				c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
+			)
 
-			It("should fail because the managed resource cannot be updated", func() {
-				gomock.InOrder(
-					c.EXPECT().Create(ctx, serviceAccount),
-					c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
-				)
+			Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
+		})
 
-				Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
-			})
+		It("should fail because the legacy secret cannot be deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Create(ctx, serviceAccount),
+				c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{}), gomock.Any()),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "cluster-autoscaler"}}).Return(fakeErr),
+			)
 
-			Context("should successfully deploy all the resources", func() {
-				test := func(withConfig bool) {
-					var config *gardencorev1beta1.ClusterAutoscaler
-					if withConfig {
-						config = configFull
-					}
+			Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
+		})
 
-					clusterAutoscaler = New(c, namespace, image, replicas, config)
-					clusterAutoscaler.SetNamespaceUID(namespaceUID)
-					clusterAutoscaler.SetMachineDeployments(machineDeployments)
-					clusterAutoscaler.SetSecrets(secrets)
-
-					gomock.InOrder(
-						c.EXPECT().Create(ctx, serviceAccount),
-						c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()).
-							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-								Expect(obj).To(DeepEqual(clusterRoleBinding))
-							}),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
-							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-								Expect(obj).To(DeepEqual(service))
-							}),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
-							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-								Expect(obj).To(DeepEqual(deploymentFor(withConfig)))
-							}),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{}), gomock.Any()).
-							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-								Expect(obj).To(DeepEqual(vpa))
-							}),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).
-							Do(func(ctx context.Context, obj client.Object, _ ...client.UpdateOption) {
-								Expect(obj).To(DeepEqual(managedResourceSecret))
-							}),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
-							Do(func(ctx context.Context, obj client.Object, _ ...client.UpdateOption) {
-								Expect(obj).To(DeepEqual(managedResource))
-							}),
-					)
-
-					Expect(clusterAutoscaler.Deploy(ctx)).To(Succeed())
+		Context("should successfully deploy all the resources", func() {
+			test := func(withConfig bool) {
+				var config *gardencorev1beta1.ClusterAutoscaler
+				if withConfig {
+					config = configFull
 				}
 
-				It("w/o config", func() { test(false) })
-				It("w/ config", func() { test(true) })
-			})
+				clusterAutoscaler = New(c, namespace, image, replicas, config)
+				clusterAutoscaler.SetNamespaceUID(namespaceUID)
+				clusterAutoscaler.SetMachineDeployments(machineDeployments)
+
+				gomock.InOrder(
+					c.EXPECT().Create(ctx, serviceAccount),
+					c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(clusterRoleBinding))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(service))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(secret))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(deploymentFor(withConfig)))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(vpa))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).
+						Do(func(ctx context.Context, obj client.Object, _ ...client.UpdateOption) {
+							Expect(obj).To(DeepEqual(managedResourceSecret))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
+						Do(func(ctx context.Context, obj client.Object, _ ...client.UpdateOption) {
+							Expect(obj).To(DeepEqual(managedResource))
+						}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler", Namespace: namespace}}),
+				)
+
+				Expect(clusterAutoscaler.Deploy(ctx)).To(Succeed())
+			}
+
+			It("w/o config", func() { test(false) })
+			It("w/ config", func() { test(true) })
 		})
 	})
 
@@ -717,6 +750,19 @@ subjects:
 			Expect(clusterAutoscaler.Destroy(ctx)).To(MatchError(fakeErr))
 		})
 
+		It("should fail because the secret cannot be deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceName}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceSecretName}}),
+				c.EXPECT().Delete(ctx, &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: vpaName}}),
+				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}),
+				c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBindingName}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: secretName}}).Return(fakeErr),
+			)
+
+			Expect(clusterAutoscaler.Destroy(ctx)).To(MatchError(fakeErr))
+		})
+
 		It("should fail because the service cannot be deleted", func() {
 			gomock.InOrder(
 				c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceName}}),
@@ -724,6 +770,7 @@ subjects:
 				c.EXPECT().Delete(ctx, &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: vpaName}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}),
 				c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBindingName}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: secretName}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceName}}).Return(fakeErr),
 			)
 
@@ -737,6 +784,7 @@ subjects:
 				c.EXPECT().Delete(ctx, &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: vpaName}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}),
 				c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBindingName}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: secretName}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceName}}),
 				c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceAccountName}}).Return(fakeErr),
 			)
@@ -751,6 +799,7 @@ subjects:
 				c.EXPECT().Delete(ctx, &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: vpaName}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: deploymentName}}),
 				c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleBindingName}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: secretName}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceName}}),
 				c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: serviceAccountName}}),
 			)

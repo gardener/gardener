@@ -12,27 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package api
+package exports
 
 // Exports defines the structure for the exported data which might be consumed by other components.
 type Exports struct {
-	GardenerIdentity        string `json:"gardenerIdentity" yaml:"gardenerIdentity"`
-	OpenVPNDiffieHellmanKey string `json:"openVPNDiffieHellmanKey" yaml:"openVPNDiffieHellmanKey"`
-
-	GardenerAPIServerCACrt string `json:"gardenerAPIServerCACrt" yaml:"gardenerAPIServerCACrt"`
-	GardenerAPIServerCAKey string `json:"gardenerAPIServerCAKey" yaml:"gardenerAPIServerCAKey"`
-
-	GardenerAPIServerTLSServingCrt string `json:"gardenerAPIServerTLSServingCrt" yaml:"gardenerAPIServerTLSServingCrt"`
-	GardenerAPIServerTLSServingKey string `json:"gardenerAPIServerTLSServingKey" yaml:"gardenerAPIServerTLSServingKey"`
-
+	GardenerIdentity                         string `json:"gardenerIdentity" yaml:"gardenerIdentity"`
 	GardenerAPIServerEncryptionConfiguration string `json:"gardenerAPIServerEncryptionConfiguration" yaml:"gardenerAPIServerEncryptionConfiguration"`
+	OpenVPNDiffieHellmanKey                  string `json:"openVPNDiffieHellmanKey" yaml:"openVPNDiffieHellmanKey"`
 
-	GardenerAdmissionControllerCACrt string `json:"gardenerAdmissionControllerCACrt,omitempty" yaml:"gardenerAdmissionControllerCACrt,omitempty"`
-	GardenerAdmissionControllerCAKey string `json:"gardenerAdmissionControllerCAKey,omitempty" yaml:"gardenerAdmissionControllerCAKey,omitempty"`
+	GardenerAPIServerCA           Certificate  `json:"gardenerAPIServerCA" yaml:"gardenerAPIServerCA"`
+	GardenerAdmissionControllerCA *Certificate `json:"gardenerAdmissionControllerCA,omitempty" yaml:"gardenerAdmissionControllerCA,omitempty"`
 
-	GardenerControllerManagerTLSServingCrt string `json:"gardenerControllerManagerTLSServingCrt" yaml:"gardenerControllerManagerTLSServingCrt"`
-	GardenerControllerManagerTLSServingKey string `json:"gardenerControllerManagerTLSServingKey" yaml:"gardenerControllerManagerTLSServingKey"`
+	GardenerAPIServerTLSServing           Certificate  `json:"gardenerAPIServerTLSServing" yaml:"gardenerAPIServerTLSServing"`
+	GardenerControllerManagerTLSServing   Certificate  `json:"gardenerControllerManagerTLSServing" yaml:"gardenerControllerManagerTLSServing"`
+	GardenerAdmissionControllerTLSServing *Certificate `json:"gardenerAdmissionControllerTLSServing,omitempty" yaml:"gardenerAdmissionControllerTLSServing,omitempty"`
+}
 
-	GardenerAdmissionControllerTLSServingCrt string `json:"gardenerAdmissionControllerTLSServingCrt,omitempty" yaml:"gardenerAdmissionControllerTLSServingCrt,omitempty"`
-	GardenerAdmissionControllerTLSServingKey string `json:"gardenerAdmissionControllerTLSServingKey,omitempty" yaml:"gardenerAdmissionControllerTLSServingKey,omitempty"`
+type Certificate struct {
+	Rotated bool   `json:"rotated" yaml:"rotated"`
+	Crt     string `json:"crt" yaml:"crt"`
+	Key     string `json:"key" yaml:"key"`
 }

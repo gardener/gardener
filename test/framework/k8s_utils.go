@@ -310,6 +310,10 @@ func ShootCreationCompleted(newShoot *gardencorev1beta1.Shoot) (bool, string) {
 
 	for _, condition := range newShoot.Status.Conditions {
 		if condition.Status != gardencorev1beta1.ConditionTrue {
+			hibernation := newShoot.Spec.Hibernation
+			if condition.Type == gardencorev1beta1.SeedGardenletReady && hibernation != nil && hibernation.Enabled != nil && *hibernation.Enabled {
+				continue
+			}
 			return false, fmt.Sprintf("condition type %s is not true yet, had message %s with reason %s", condition.Type, condition.Message, condition.Reason)
 		}
 	}

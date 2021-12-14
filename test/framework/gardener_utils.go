@@ -61,6 +61,11 @@ func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string) (*gard
 	}
 
 	seedSecretRef := seed.Spec.SecretRef
+	if seedSecretRef == nil {
+		f.Logger.Info("seed does not have secretRef set, skip constructing seed client")
+		return seed, nil, nil
+	}
+
 	seedClient, err := kubernetes.NewClientFromSecret(ctx, f.GardenClient.Client(), seedSecretRef.Namespace, seedSecretRef.Name, kubernetes.WithClientOptions(client.Options{
 		Scheme: kubernetes.SeedScheme,
 	}))
