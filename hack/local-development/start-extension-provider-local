@@ -40,4 +40,5 @@ $SUDO go run \
   --webhook-config-mode=url \
   --webhook-config-server-host=0.0.0.0 \
   --webhook-config-server-port=8444 \
-  --webhook-config-url=$(get_host_address):8444
+  --webhook-config-url=$(get_host_address):8444 \
+  --gardener-version="$(cat "$(dirname $0)/../../VERSION")"

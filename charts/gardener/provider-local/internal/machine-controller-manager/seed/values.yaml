@@ -5,10 +5,12 @@ images:
 replicas: 1
 
 podAnnotations: {}
-
 podLabels: {}
 
 providerName: provider-foo
+
+useTokenRequestor: false
+useProjectedTokenMount: false
 
 namespace:
   uid: uuid-of-namespace

@@ -77,6 +77,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			WebhookServerPort:          443,
 			WebhookCertDir:             "/tmp/gardener-extensions-cert",
 		}
+		generalOpts = &controllercmd.GeneralOptions{}
 
 		// options for the health care controller
 		healthCheckCtrlOpts = &controllercmd.ControllerOptions{
@@ -147,6 +148,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 		aggOption = controllercmd.NewOptionAggregator(
 			restOpts,
 			mgrOpts,
+			generalOpts,
 			controllercmd.PrefixOption("controlplane-", controlPlaneCtrlOpts),
 			controllercmd.PrefixOption("dnsprovider-", dnsProviderCtrlOpts),
 			controllercmd.PrefixOption("dnsrecord-", dnsRecordCtrlOpts),
@@ -200,6 +202,18 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			}
 			// add common meta types to schema for controller-runtime to use v1.ListOptions
 			metav1.AddToGroupVersion(scheme, machinev1alpha1.SchemeGroupVersion)
+
+			useTokenRequestor, err := controller.UseTokenRequestor(generalOpts.Completed().GardenerVersion)
+			if err != nil {
+				controllercmd.LogErrAndExit(err, "Could not determine whether token requestor should be used")
+			}
+			localworker.DefaultAddOptions.UseTokenRequestor = useTokenRequestor
+
+			useProjectedTokenMount, err := controller.UseServiceAccountTokenVolumeProjection(generalOpts.Completed().GardenerVersion)
+			if err != nil {
+				controllercmd.LogErrAndExit(err, "Could not determine whether service account token volume projection should be used")
+			}
+			localworker.DefaultAddOptions.UseProjectedTokenMount = useProjectedTokenMount
 
 			controlPlaneCtrlOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.Controller)
 			dnsProviderCtrlOpts.Completed().Apply(&localdnsprovider.DefaultAddOptions.Controller)
