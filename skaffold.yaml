@@ -108,13 +108,8 @@ deploy:
       chartPath: charts/gardener/provider-local/registration
       namespace: garden
       artifactOverrides:
-        global:
-          provider-local:
-            image: eu.gcr.io/gardener-project/gardener/extensions/provider-local
-      setValueTemplates:
         values:
-          image:
-            tag: "{{.IMAGE_TAG5}}"
+          image: eu.gcr.io/gardener-project/gardener/extensions/provider-local
       imageStrategy:
         helm: {}
 
