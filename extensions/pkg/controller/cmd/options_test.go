@@ -678,4 +678,55 @@ var _ = Describe("Options", func() {
 			})
 		})
 	})
+
+	Context("GeneralOptions", func() {
+		const (
+			name            = "foo"
+			gardenerVersion = "v1.2.3"
+		)
+
+		command := test.NewCommandBuilder(name).
+			Flags(
+				test.StringFlag(GardenerVersionFlag, gardenerVersion),
+			).
+			Command().
+			Slice()
+
+		Describe("#AddFlags", func() {
+			It("should add all flags", func() {
+				fs := pflag.NewFlagSet(name, pflag.ExitOnError)
+				opts := GeneralOptions{}
+
+				opts.AddFlags(fs)
+
+				Expect(fs.Parse(command)).NotTo(HaveOccurred())
+				Expect(opts).To(Equal(GeneralOptions{
+					GardenerVersion: gardenerVersion,
+				}))
+			})
+		})
+
+		Describe("#Complete", func() {
+			It("should complete without error calling BuildConfigFromFlags", func() {
+				opts := GeneralOptions{
+					GardenerVersion: gardenerVersion,
+				}
+
+				Expect(opts.Complete()).NotTo(HaveOccurred())
+			})
+		})
+
+		Describe("#Completed", func() {
+			It("should yield the expected result", func() {
+				opts := GeneralOptions{
+					GardenerVersion: gardenerVersion,
+				}
+
+				Expect(opts.Complete()).NotTo(HaveOccurred())
+				Expect(opts.Completed()).To(Equal(&GeneralConfig{
+					GardenerVersion: gardenerVersion,
+				}))
+			})
+		})
+	})
 })
