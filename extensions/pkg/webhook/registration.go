@@ -146,9 +146,9 @@ func buildRule(mgr manager.Manager, t Type) (*admissionregistrationv1.RuleWithOp
 		return nil, fmt.Errorf("could not get REST mapping from GroupVersionKind '%s': %w", gvk.String(), err)
 	}
 
-	resources := []string{mapping.Resource.Resource}
-	for _, subresource := range t.Subresources {
-		resources = append(resources, fmt.Sprintf("%s/%s", mapping.Resource.Resource, subresource))
+	resource := mapping.Resource.Resource
+	if t.Subresource != nil {
+		resource += fmt.Sprintf("/%s", *t.Subresource)
 	}
 
 	// Create and return RuleWithOperations
@@ -160,7 +160,7 @@ func buildRule(mgr manager.Manager, t Type) (*admissionregistrationv1.RuleWithOp
 		Rule: admissionregistrationv1.Rule{
 			APIGroups:   []string{gvk.Group},
 			APIVersions: []string{gvk.Version},
-			Resources:   resources,
+			Resources:   []string{resource},
 		},
 	}, nil
 }

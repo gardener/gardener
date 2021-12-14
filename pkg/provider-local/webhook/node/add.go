@@ -49,7 +49,7 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) (*extensionsw
 		name          = "node"
 		kind          = controlplane.KindSeed
 		provider      = local.Type
-		types         = []extensionswebhook.Type{{Obj: &corev1.Node{}, Subresources: []string{"status"}}}
+		types         = []extensionswebhook.Type{{Obj: &corev1.Node{}, Subresource: pointer.String("status")}}
 		failurePolicy = admissionregistrationv1.Fail
 	)
 

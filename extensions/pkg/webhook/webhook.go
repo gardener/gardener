@@ -56,8 +56,8 @@ type Webhook struct {
 
 // Type contains information about the Kubernetes object types and subresources the webhook acts upon.
 type Type struct {
-	Obj          client.Object
-	Subresources []string
+	Obj         client.Object
+	Subresource *string
 }
 
 // Args contains Webhook creation arguments.

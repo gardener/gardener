@@ -18,8 +18,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/provider-local/local"
+
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -32,8 +33,8 @@ func (m *mutator) Mutate(_ context.Context, newObj, _ client.Object) error {
 	}
 
 	for _, resourceList := range []corev1.ResourceList{node.Status.Allocatable, node.Status.Capacity} {
-		resourceList[corev1.ResourceCPU] = resource.MustParse("100")
-		resourceList[corev1.ResourceMemory] = resource.MustParse("100Gi")
+		resourceList[corev1.ResourceCPU] = local.NodeResourceCPU
+		resourceList[corev1.ResourceMemory] = local.NodeResourceMemory
 	}
 
 	return nil

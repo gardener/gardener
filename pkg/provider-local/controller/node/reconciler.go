@@ -17,9 +17,10 @@ package node
 import (
 	"context"
 
+	"github.com/gardener/gardener/pkg/provider-local/local"
+
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -43,16 +44,6 @@ func (r *reconciler) InjectClient(client client.Client) error {
 	return nil
 }
 
-var (
-	cpu    resource.Quantity
-	memory resource.Quantity
-)
-
-func init() {
-	cpu = resource.MustParse("100")
-	memory = resource.MustParse("100Gi")
-}
-
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	node := &corev1.Node{}
 	if err := r.client.Get(ctx, request.NamespacedName, node); err != nil {
@@ -60,7 +51,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	for _, resourceList := range []corev1.ResourceList{node.Status.Allocatable, node.Status.Capacity} {
-		if !resourceList[corev1.ResourceCPU].Equal(cpu) || !resourceList[corev1.ResourceMemory].Equal(memory) {
+		if !resourceList[corev1.ResourceCPU].Equal(local.NodeResourceCPU) || !resourceList[corev1.ResourceMemory].Equal(local.NodeResourceMemory) {
 			// submit empty patch to trigger 'node' webhook which will update these values
 			return reconcile.Result{}, r.client.Status().Patch(ctx, node, client.RawPatch(types.StrategicMergePatchType, []byte("{}")))
 		}
