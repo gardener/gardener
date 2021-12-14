@@ -37,6 +37,7 @@ const CAChecksumAnnotation = "checksum/ca"
 // GetOrCreateShootKubeconfig gets or creates a Kubeconfig for a Shoot cluster which has a running control plane in the given `namespace`.
 // If the CA of an existing Kubeconfig has changed, it creates a new Kubeconfig.
 // Newly generated Kubeconfigs are applied with the given `client` to the given `namespace`.
+// Deprecated: Use gutil.NewShootAccessSecret instead.
 func GetOrCreateShootKubeconfig(ctx context.Context, c client.Client, certificateConfig secrets.CertificateSecretConfig, namespace string) (*corev1.Secret, error) {
 	caSecret, ca, err := secrets.LoadCAFromSecret(ctx, c, namespace, v1beta1constants.SecretNameCACluster)
 	if err != nil {
