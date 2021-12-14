@@ -52,7 +52,18 @@ type Controller struct {
 }
 
 // NewController instantiates a new ControllerInstallation controller.
-func NewController(ctx context.Context, clientMap clientmap.ClientMap, config *config.GardenletConfiguration, recorder record.EventRecorder, gardenNamespace *corev1.Namespace, gardenClusterIdentity string) (*Controller, error) {
+func NewController(
+	ctx context.Context,
+	clientMap clientmap.ClientMap,
+	config *config.GardenletConfiguration,
+	recorder record.EventRecorder,
+	identity *gardencorev1beta1.Gardener,
+	gardenNamespace *corev1.Namespace,
+	gardenClusterIdentity string,
+) (
+	*Controller,
+	error,
+) {
 	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return nil, err
@@ -64,7 +75,7 @@ func NewController(ctx context.Context, clientMap clientmap.ClientMap, config *c
 	}
 
 	controller := &Controller{
-		reconciler:     newReconciler(clientMap, recorder, logger.Logger, gardenNamespace, gardenClusterIdentity),
+		reconciler:     newReconciler(clientMap, recorder, logger.Logger, identity, gardenNamespace, gardenClusterIdentity),
 		careReconciler: newCareReconciler(clientMap, logger.Logger, config.Controllers.ControllerInstallationCare),
 
 		controllerInstallationQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation"),
