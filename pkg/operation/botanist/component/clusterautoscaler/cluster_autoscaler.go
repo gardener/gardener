@@ -105,7 +105,10 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		command       = c.computeCommand()
 	)
 
-	if err := c.client.Create(ctx, serviceAccount); kutil.IgnoreAlreadyExists(err) != nil {
+	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c.client, serviceAccount, func() error {
+		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+		return nil
+	}); err != nil {
 		return err
 	}
 
@@ -164,6 +167,10 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					// TODO(rfranzke): Remove in a future release.
+					"security.gardener.cloud/trigger": "rollout",
+				},
 				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 					v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleControlPlane,
 					v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
