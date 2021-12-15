@@ -268,6 +268,7 @@ func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
 				Namespace: metav1.NamespaceSystem,
 				Labels:    getLabels(),
 			},
+			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 
 		networkPolicy = &networkingv1.NetworkPolicy{
@@ -375,6 +376,10 @@ func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							// TODO(rfranzke): Remove in a future release.
+							"security.gardener.cloud/trigger": "rollout",
+						},
 						Labels: map[string]string{
 							v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
 							v1beta1constants.LabelApp:       labelValue,

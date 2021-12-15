@@ -148,6 +148,7 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 				Name:      serviceAccountName,
 				Namespace: metav1.NamespaceSystem,
 			},
+			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 
 		clusterRole = &rbacv1.ClusterRole{
@@ -276,6 +277,10 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							// TODO(rfranzke): Remove in a future release.
+							"security.gardener.cloud/trigger": "rollout",
+						},
 						Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 							managedresources.LabelKeyOrigin:                     managedresources.LabelValueGardener,
 							v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleSystemComponent,

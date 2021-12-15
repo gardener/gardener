@@ -29,6 +29,8 @@ spec:
 {{ include "node-local-dns.daemonset.annotations" . | indent 8 }}
         prometheus.io/port: "{{ .Values.prometheus.port }}"
         prometheus.io/scrape: "{{ .Values.prometheus.scrape }}"
+        # TODO(rfranzke): Remove in a future release.
+        security.gardener.cloud/trigger: rollout
     spec:
       priorityClassName: system-node-critical
       serviceAccountName: node-local-dns

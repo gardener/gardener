@@ -23,6 +23,8 @@ spec:
         origin: gardener
       annotations:
         seccomp.security.alpha.kubernetes.io/pod: 'runtime/default'
+        # TODO(rfranzke): Remove in a future release.
+        security.gardener.cloud/trigger: rollout
     spec:
       containers:
       - name: dashboard-metrics-scraper

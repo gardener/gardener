@@ -25,9 +25,8 @@ spec:
         origin: gardener
         networking.gardener.cloud/to-apiserver: allowed
         networking.gardener.cloud/to-dns: allowed
-      annotations:
-        scheduler.alpha.kubernetes.io/critical-pod: ''
 {{- if .Values.annotations }}
+      annotations:
 {{ toYaml .Values.annotations | indent 8 }}
 {{- end }}
     spec:

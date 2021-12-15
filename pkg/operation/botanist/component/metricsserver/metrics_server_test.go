@@ -196,6 +196,7 @@ subjects:
   namespace: kube-system
 `
 		serviceAccountYAML = `apiVersion: v1
+automountServiceAccountToken: false
 kind: ServiceAccount
 metadata:
   creationTimestamp: null
@@ -227,6 +228,7 @@ spec:
     metadata:
       annotations:
         ` + references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName + `
+        security.gardener.cloud/trigger: rollout
       creationTimestamp: null
       labels:
         gardener.cloud/role: system-component
@@ -318,6 +320,7 @@ spec:
     metadata:
       annotations:
         ` + references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName + `
+        security.gardener.cloud/trigger: rollout
       creationTimestamp: null
       labels:
         gardener.cloud/role: system-component

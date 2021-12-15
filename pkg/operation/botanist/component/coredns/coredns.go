@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -161,6 +160,7 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 				Name:      "coredns",
 				Namespace: metav1.NamespaceSystem,
 			},
+			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 
 		clusterRole = &rbacv1.ClusterRole{
@@ -344,10 +344,8 @@ import custom/*.server
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Annotations: utils.MergeStringMaps(c.values.PodAnnotations, map[string]string{
-							"scheduler.alpha.kubernetes.io/critical-pod": "",
-						}),
-						Labels: getLabels(),
+						Annotations: c.values.PodAnnotations,
+						Labels:      getLabels(),
 					},
 					Spec: corev1.PodSpec{
 						Affinity: &corev1.Affinity{

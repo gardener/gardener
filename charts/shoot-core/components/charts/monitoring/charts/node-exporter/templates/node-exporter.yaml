@@ -5,6 +5,7 @@ metadata:
   namespace: kube-system
   labels:
     component: node-exporter
+automountServiceAccountToken: false
 ---
 apiVersion: v1
 kind: Service

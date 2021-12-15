@@ -28,6 +28,8 @@ spec:
       {{- if .Values.controller.podAnnotations }}
 {{ toYaml .Values.controller.podAnnotations | indent 8}}
       {{- end }}
+        # TODO(rfranzke): Remove in a future release.
+        security.gardener.cloud/trigger: rollout
       labels:
         origin: gardener
         gardener.cloud/role: optional-addon
