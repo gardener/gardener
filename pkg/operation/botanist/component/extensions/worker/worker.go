@@ -207,12 +207,11 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			workerPoolKubernetesVersion = *workerPool.Kubernetes.Version
 		}
 
-		nodeTemplate, _ := w.findExistingNodeTemplateByName(ctx, obj, workerPool.Name)
+		nodeTemplate := w.findExistingNodeTemplateByName(ctx, obj, workerPool.Name)
 
 		if nodeTemplate == nil {
 			// initializing nodeTemplate by fetching details from cloudprofile, if present there
-			machineDetails := gardencorev1beta1helper.FindMachineTypeByName(w.values.MachineTypes, workerPool.Machine.Type)
-			if machineDetails != nil {
+			if machineDetails := gardencorev1beta1helper.FindMachineTypeByName(w.values.MachineTypes, workerPool.Machine.Type); machineDetails != nil {
 				nodeTemplate = &extensionsv1alpha1.NodeTemplate{
 					Capacity: corev1.ResourceList{
 						corev1.ResourceCPU:    machineDetails.CPU,
@@ -368,11 +367,11 @@ func (w *worker) MachineDeployments() []extensionsv1alpha1.MachineDeployment {
 	return w.machineDeployments
 }
 
-func (w *worker) findExistingNodeTemplateByName(ctx context.Context, obj *extensionsv1alpha1.Worker, poolName string) (*extensionsv1alpha1.NodeTemplate, error) {
+func (w *worker) findExistingNodeTemplateByName(ctx context.Context, obj *extensionsv1alpha1.Worker, poolName string) *extensionsv1alpha1.NodeTemplate {
 	for _, pool := range obj.Spec.Pools {
-		if pool.Name == poolName && pool.NodeTemplate != nil {
-			return pool.NodeTemplate, nil
+		if pool.Name == poolName {
+			return pool.NodeTemplate
 		}
 	}
-	return nil, nil
+	return nil
 }
