@@ -96,6 +96,12 @@ const (
 	ProjectedTokenExpirationSeconds = "projected-token-mount.resources.gardener.cloud/expiration-seconds"
 )
 
+// +kubebuilder:resource:shortName="mr"
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Class",type=date,JSONPath=`.spec.class`,description="The class identifies which resource manager is responsible for this ManagedResource."
+// +kubebuilder:printcolumn:name="Applied",type=string,JSONPath=`.status.conditions[?(@.type=="ResourcesApplied")].status`,description=" Indicates whether all resources have been applied."
+// +kubebuilder:printcolumn:name="Healthy",type=string,JSONPath=`.status.conditions[?(@.type=="ResourcesHealthy")].status`,description="Indicates whether all resources are healthy."
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="creation timestamp"
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ManagedResource describes a list of managed resources.
