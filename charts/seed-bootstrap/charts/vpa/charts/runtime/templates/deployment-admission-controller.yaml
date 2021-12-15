@@ -20,9 +20,15 @@ spec:
       app: vpa-admission-controller
   template:
     metadata:
-{{- if .Values.admissionController.podAnnotations }}
+  {{- if or .Values.admissionController.podAnnotations .Values.admissionController.createServiceAccount }}
       annotations:
+  {{- if .Values.admissionController.createServiceAccount }}
+        # TODO(rfranzke): Remove in a future release.
+        security.gardener.cloud/trigger: rollout
+{{- end }}
+{{- if .Values.admissionController.podAnnotations }}
 {{ toYaml .Values.admissionController.podAnnotations | indent 8 }}
+{{- end }}
 {{- end }}
       labels:
         app: vpa-admission-controller

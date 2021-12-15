@@ -94,6 +94,7 @@ var _ = Describe("Etcd", func() {
 			configMapName = "etcd-druid-imagevector-overwrite-4475dd36"
 
 			serviceAccountYAML = `apiVersion: v1
+automountServiceAccountToken: false
 kind: ServiceAccount
 metadata:
   creationTimestamp: null
@@ -317,6 +318,8 @@ spec:
   strategy: {}
   template:
     metadata:
+      annotations:
+        security.gardener.cloud/trigger: rollout
       creationTimestamp: null
       labels:
         gardener.cloud/role: etcd-druid
@@ -368,6 +371,7 @@ spec:
     metadata:
       annotations:
         ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
+        security.gardener.cloud/trigger: rollout
       creationTimestamp: null
       labels:
         gardener.cloud/role: etcd-druid

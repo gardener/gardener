@@ -112,6 +112,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 				Namespace: g.namespace,
 				Labels:    getLabels(),
 			},
+			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 
 		clusterRole = &rbacv1.ClusterRole{
@@ -206,7 +207,13 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 				},
 				Selector: &metav1.LabelSelector{MatchLabels: getLabels()},
 				Template: corev1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{Labels: getLabels()},
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							// TODO(rfranzke): Remove in a future release.
+							"security.gardener.cloud/trigger": "rollout",
+						},
+						Labels: getLabels(),
+					},
 					Spec: corev1.PodSpec{
 						Affinity: &corev1.Affinity{
 							PodAntiAffinity: &corev1.PodAntiAffinity{

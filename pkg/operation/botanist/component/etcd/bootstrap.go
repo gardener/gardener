@@ -95,6 +95,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				Namespace: b.namespace,
 				Labels:    labels(),
 			},
+			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 
 		clusterRole = &rbacv1.ClusterRole{
@@ -235,6 +236,10 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							// TODO(rfranzke): Remove in a future release.
+							"security.gardener.cloud/trigger": "rollout",
+						},
 						Labels: labels(),
 					},
 					Spec: corev1.PodSpec{

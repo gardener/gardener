@@ -16,6 +16,9 @@ spec:
   serviceName: seed-prometheus
   template:
     metadata:
+      annotations:
+        # TODO(rfranzke): Remove in a future release.
+        security.gardener.cloud/trigger: rollout
       labels:
         app: seed-prometheus
         role: monitoring
