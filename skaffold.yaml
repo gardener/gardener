@@ -15,7 +15,7 @@ deploy:
       - host:
           command:
           - bash
-          - -c
+          - -ec
           - |
             echo "Wait until etcd is ready"
             kubectl wait --for=condition=ready pod -l app=etcd -n garden --timeout=2m
@@ -152,18 +152,10 @@ deploy:
       - host:
           command:
           - bash
-          - -c
+          - -ec
           - |
-            for i in $(seq 1 30) ; do
-              if kubectl get vpa &>/dev/null ; then
-                exit 0
-              fi
-              echo "Waiting until VerticalPodAutoscaler is discoverable"
-              sleep 2
-            done
             echo "Wait until seed is ready"
             kubectl wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local --timeout=5m
-            exit 1
     releases:
     - name: gardener-gardenlet
       chartPath: charts/gardener/gardenlet
