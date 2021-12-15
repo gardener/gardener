@@ -13,10 +13,30 @@ spec:
     kind: ManagedResource
     listKind: ManagedResourceList
     plural: managedresources
+    shortNames:
+    - mr
     singular: managedresource
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: The class identifies which resource manager is responsible for
+        this ManagedResource.
+      jsonPath: .spec.class
+      name: Class
+      type: date
+    - description: ' Indicates whether all resources have been applied.'
+      jsonPath: .status.conditions[?(@.type=="ResourcesApplied")].status
+      name: Applied
+      type: string
+    - description: Indicates whether all resources are healthy.
+      jsonPath: .status.conditions[?(@.type=="ResourcesHealthy")].status
+      name: Healthy
+      type: string
+    - description: creation timestamp
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: ManagedResource describes a list of managed resources.
@@ -205,6 +225,8 @@ spec:
         type: object
     served: true
     storage: true
+    subresources:
+      status: {}
 status:
   acceptedNames:
     kind: ""
