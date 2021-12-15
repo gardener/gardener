@@ -77,9 +77,6 @@ apiVersion: skaffold/v2beta25
 kind: Config
 metadata:
   name: provider-local
-requires:
-- configs:
-  - controlplane
 build:
   local:
     useBuildkit: true
@@ -108,10 +105,6 @@ apiVersion: skaffold/v2beta25
 kind: Config
 metadata:
   name: local-env
-requires:
-- configs:
-  - controlplane
-  - provider-local
 deploy:
   kubectl:
     manifests:
@@ -125,9 +118,6 @@ apiVersion: skaffold/v2beta25
 kind: Config
 metadata:
   name: gardenlet
-requires:
-- configs:
-  - local-env
 build:
   local:
     useBuildkit: true

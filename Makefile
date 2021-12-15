@@ -265,8 +265,17 @@ gardener-up: $(SKAFFOLD) $(HELM)
 	$(SKAFFOLD) run
 
 gardener-down: $(SKAFFOLD) $(HELM)
-	kubectl --kubeconfig=$(REPO_ROOT)/example/gardener-local/kind/kubeconfig delete validatingwebhookconfiguration/validate-namespace-deletion --ignore-not-found
-	$(SKAFFOLD) delete
+	@# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
+	kubectl delete seed local --ignore-not-found --wait --timeout 5m
+	$(SKAFFOLD) delete -m provider-local,gardenlet
+	kubectl delete validatingwebhookconfiguration/validate-namespace-deletion --ignore-not-found
+	kubectl annotate project local confirmation.gardener.cloud/deletion=true
+	$(SKAFFOLD) delete -m local-env
+	$(SKAFFOLD) delete -m etcd,controlplane
+	@# workaround for https://github.com/gardener/gardener/issues/5164
+	kubectl delete ns seed-local --ignore-not-found
+	@# cleanup namespaces that don't get deleted automatically
+	kubectl delete ns gardener-system-seed-lease istio-ingress istio-system --ignore-not-found
 
 register-local-env:
 	kubectl apply -k $(REPO_ROOT)/example/provider-local/overlays/local
