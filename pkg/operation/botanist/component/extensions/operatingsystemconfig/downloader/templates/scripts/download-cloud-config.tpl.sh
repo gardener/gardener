@@ -54,17 +54,21 @@ else
 fi
 
 TOKEN="$(extractDataKeyFromSecret "$SECRET" "{{ .dataKeyToken }}")"
+if [[ -z "$TOKEN" ]]; then
+  echo "Token in shoot access secret $TOKEN_SECRET_NAME is empty"
+  exit 1
+fi
 echo "$TOKEN" > "$PATH_CLOUDCONFIG_DOWNLOADER_TOKEN"
-
-# delete legacy credentials from disk
-# TODO(rfranzke): Delete in future release.
-rm -f "$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_CERT" "$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_KEY"
 
 # download and run the cloud config execution script
 if ! SECRET="$(readSecretWithToken "$SECRET_NAME" "$TOKEN")"; then
   echo "Could not retrieve the cloud config script in secret with name $SECRET_NAME"
   exit 1
 fi
+
+# delete legacy credentials from disk
+# TODO(rfranzke): Delete in future release.
+rm -f "$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_CERT" "$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_KEY"
 
 CHECKSUM="$(echo "$SECRET" | sed -rn 's/    {{ .annotationChecksum | replace "/" "\\/" }}: (.*)/\1/p' | sed -e 's/^"//' -e 's/"$//')"
 echo "$CHECKSUM" > "{{ .pathDownloadedChecksum }}"
