@@ -210,11 +210,8 @@ func mergeJob(scheme *runtime.Scheme, oldObj, newObj runtime.Object, preserveRes
 		return err
 	}
 
-	// Do not overwrite a Job's '.spec.selector' if the new Jobs's '.spec.selector'
-	// field is unset.
-	if newJob.Spec.Selector == nil && oldJob.Spec.Selector != nil {
-		newJob.Spec.Selector = oldJob.Spec.Selector
-	}
+	// Do not overwrite a Job's '.spec.selector' since it is immutable.
+	newJob.Spec.Selector = oldJob.Spec.Selector
 
 	// Do not overwrite Job managed labels as 'controller-uid' and 'job-name'. '.spec.template' is immutable.
 	newJob.Spec.Template.Labels = labels.Merge(oldJob.Spec.Template.Labels, newJob.Spec.Template.Labels)
