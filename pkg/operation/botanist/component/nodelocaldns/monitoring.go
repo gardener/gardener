@@ -79,7 +79,7 @@ var (
  - source_labels: [ __meta_kubernetes_pod_name ]
    target_label: pod
  - target_label: __address__
-   replacement: kube-apiserver:443
+   replacement: ` + v1beta1constants.DeploymentNameKubeAPIServer + `:` + strconv.Itoa(kubeapiserver.Port) + `
  - source_labels: [__meta_kubernetes_pod_name,__meta_kubernetes_pod_container_port_number]
    regex: (.+);(.+)
    target_label: __metrics_path__

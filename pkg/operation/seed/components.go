@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -159,7 +160,7 @@ func defaultNetworkPolicies(c client.Client, seed *gardencorev1beta1.Seed, sniEn
 		SNIEnabled:           sniEnabled,
 		DenyAllTraffic:       false,
 		PrivateNetworkPeers:  privateNetworkPeers,
-		NodeLocalIPVSAddress: pointer.String(common.NodeLocalIPVSAddress),
+		NodeLocalIPVSAddress: pointer.String(nodelocaldns.NodeLocalIPVSAddress),
 		DNSServerAddress:     pointer.String(seedDNSServerAddress.String()),
 	}), nil
 }

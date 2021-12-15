@@ -1,8 +1,0 @@
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: node-local-dns-configDataHash
-  namespace: kube-system
-  annotations:
-    resources.gardener.cloud/mode: Ignore

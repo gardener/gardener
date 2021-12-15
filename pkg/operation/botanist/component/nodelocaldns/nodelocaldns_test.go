@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -63,10 +62,13 @@ var _ = Describe("NodeLocalDNS", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		nodeLocal        = common.NodeLocalIPVSAddress
-		prometheusPort   = 9253
-		prometheusScrape = true
-		configMapHash    string
+		nodeLocal         = "169.254.20.10"
+		labelKey          = "k8s-app"
+		labelValue        = "node-local-dns"
+		prometheusPort    = 9253
+		prometheusScrape  = true
+		livenessProbePort = 8080
+		configMapHash     string
 	)
 
 	BeforeEach(func() {
@@ -92,6 +94,7 @@ var _ = Describe("NodeLocalDNS", func() {
 	Describe("#Deploy", func() {
 		var (
 			serviceAccountYAML = `apiVersion: v1
+automountServiceAccountToken: false
 kind: ServiceAccount
 metadata:
   creationTimestamp: null
@@ -183,8 +186,8 @@ data:
               ` + forceTcpToClusterDNS(values) + `
       }
       prometheus :` + strconv.Itoa(prometheusPort) + `
-      health ` + nodeLocal + `:8080
-      }
+      health ` + nodeLocal + `:` + strconv.Itoa(livenessProbePort) + `
+    }
     in-addr.arpa:53 {
       errors
       cache 30
@@ -195,7 +198,7 @@ data:
               ` + forceTcpToClusterDNS(values) + `
       }
       prometheus :` + strconv.Itoa(prometheusPort) + `
-      }
+    }
     ip6.arpa:53 {
       errors
       cache 30
@@ -206,7 +209,7 @@ data:
               ` + forceTcpToClusterDNS(values) + `
       }
       prometheus :` + strconv.Itoa(prometheusPort) + `
-      }
+    }
     .:53 {
       errors
       cache 30
@@ -217,7 +220,7 @@ data:
               ` + forceTcpToUpstreamDNS(values) + `
       }
       prometheus :` + strconv.Itoa(prometheusPort) + `
-      }
+    }
 immutable: true
 kind: ConfigMap
 metadata:
@@ -237,8 +240,6 @@ metadata:
   creationTimestamp: null
   labels:
     k8s-app: kube-dns-upstream
-    kubernetes.io/cluster-service: "true"
-    kubernetes.io/name: NodeLocalDNS
   name: kube-dns-upstream
   namespace: kube-system
 spec:
@@ -256,8 +257,9 @@ spec:
 status:
   loadBalancer: {}
 `
+			maxUnavailable       = intstr.FromString("10%")
 			hostPathFileOrCreate = corev1.HostPathFileOrCreate
-			daemonsetYAMLFor     = func() *appsv1.DaemonSet {
+			daemonSetYAMLFor     = func() *appsv1.DaemonSet {
 				daemonset := &appsv1.DaemonSet{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: appsv1.SchemeGroupVersion.String(),
@@ -267,7 +269,7 @@ status:
 						Name:      "node-local-dns",
 						Namespace: metav1.NamespaceSystem,
 						Labels: map[string]string{
-							LabelKey:                        LabelValue,
+							labelKey:                        labelValue,
 							v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
 							managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 						},
@@ -275,23 +277,25 @@ status:
 					Spec: appsv1.DaemonSetSpec{
 						UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
 							RollingUpdate: &appsv1.RollingUpdateDaemonSet{
-								MaxUnavailable: &intstr.IntOrString{IntVal: 10},
+								MaxUnavailable: &maxUnavailable,
 							},
 						},
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
-								LabelKey: LabelValue,
+								labelKey: labelValue,
 							},
 						},
 						Template: corev1.PodTemplateSpec{
 							ObjectMeta: metav1.ObjectMeta{
 								Labels: map[string]string{
-									LabelKey:                                 LabelValue,
+									labelKey:                                 labelValue,
 									v1beta1constants.LabelNetworkPolicyToDNS: "allowed",
 								},
 								Annotations: map[string]string{
 									"prometheus.io/port":   strconv.Itoa(prometheusPort),
 									"prometheus.io/scrape": strconv.FormatBool(prometheusScrape),
+									// TODO(rfranzke): Remove in a future release.
+									"security.gardener.cloud/trigger": "rollout",
 								},
 							},
 							Spec: corev1.PodSpec{
@@ -360,7 +364,7 @@ status:
 												HTTPGet: &corev1.HTTPGetAction{
 													Host: nodeLocal,
 													Path: "/health",
-													Port: intstr.FromInt(8080),
+													Port: intstr.FromInt(livenessProbePort),
 												},
 											},
 											InitialDelaySeconds: int32(60),
@@ -508,8 +512,8 @@ status: {}
           ` + forceTcpToClusterDNS(values) + `
   }
   prometheus :` + strconv.Itoa(prometheusPort) + `
-  health ` + nodeLocal + `:8080
-  }
+  health ` + nodeLocal + `:` + strconv.Itoa(livenessProbePort) + `
+}
 in-addr.arpa:53 {
   errors
   cache 30
@@ -520,7 +524,7 @@ in-addr.arpa:53 {
           ` + forceTcpToClusterDNS(values) + `
   }
   prometheus :` + strconv.Itoa(prometheusPort) + `
-  }
+}
 ip6.arpa:53 {
   errors
   cache 30
@@ -531,7 +535,7 @@ ip6.arpa:53 {
           ` + forceTcpToClusterDNS(values) + `
   }
   prometheus :` + strconv.Itoa(prometheusPort) + `
-  }
+}
 .:53 {
   errors
   cache 30
@@ -542,7 +546,7 @@ ip6.arpa:53 {
           ` + forceTcpToUpstreamDNS(values) + `
   }
   prometheus :` + strconv.Itoa(prometheusPort) + `
-  }
+}
 `,
 					}
 					configMapHash = utils.ComputeConfigMapChecksum(configMapData)[:8]
@@ -562,7 +566,7 @@ ip6.arpa:53 {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
-							daemonset := daemonsetYAMLFor()
+							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
 
@@ -579,7 +583,7 @@ ip6.arpa:53 {
 							Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-local-dns.yaml"])).To(Equal(vpaYAML))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
-							daemonset := daemonsetYAMLFor()
+							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
 						})
@@ -599,7 +603,7 @@ ip6.arpa:53 {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
-							daemonset := daemonsetYAMLFor()
+							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
 						})
@@ -615,7 +619,7 @@ ip6.arpa:53 {
 							Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-local-dns.yaml"])).To(Equal(vpaYAML))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
-							daemonset := daemonsetYAMLFor()
+							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
 						})
@@ -635,7 +639,7 @@ ip6.arpa:53 {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
-							daemonset := daemonsetYAMLFor()
+							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
 						})
@@ -651,7 +655,7 @@ ip6.arpa:53 {
 							Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-local-dns.yaml"])).To(Equal(vpaYAML))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
-							daemonset := daemonsetYAMLFor()
+							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
 						})
@@ -671,7 +675,7 @@ ip6.arpa:53 {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
-							daemonset := daemonsetYAMLFor()
+							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
 						})
@@ -687,7 +691,7 @@ ip6.arpa:53 {
 							Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-local-dns.yaml"])).To(Equal(vpaYAML))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
-							daemonset := daemonsetYAMLFor()
+							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
 						})
@@ -718,8 +722,8 @@ ip6.arpa:53 {
           ` + forceTcpToClusterDNS(values) + `
   }
   prometheus :` + strconv.Itoa(prometheusPort) + `
-  health ` + nodeLocal + `:8080
-  }
+  health ` + nodeLocal + `:` + strconv.Itoa(livenessProbePort) + `
+}
 in-addr.arpa:53 {
   errors
   cache 30
@@ -730,7 +734,7 @@ in-addr.arpa:53 {
           ` + forceTcpToClusterDNS(values) + `
   }
   prometheus :` + strconv.Itoa(prometheusPort) + `
-  }
+}
 ip6.arpa:53 {
   errors
   cache 30
@@ -741,7 +745,7 @@ ip6.arpa:53 {
           ` + forceTcpToClusterDNS(values) + `
   }
   prometheus :` + strconv.Itoa(prometheusPort) + `
-  }
+}
 .:53 {
   errors
   cache 30
@@ -752,7 +756,7 @@ ip6.arpa:53 {
           ` + forceTcpToUpstreamDNS(values) + `
   }
   prometheus :` + strconv.Itoa(prometheusPort) + `
-  }
+}
 `,
 					}
 					configMapHash = utils.ComputeConfigMapChecksum(configMapData)[:8]
@@ -771,7 +775,7 @@ ip6.arpa:53 {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
-							daemonset := daemonsetYAMLFor()
+							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
 						})
@@ -787,7 +791,7 @@ ip6.arpa:53 {
 							Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-local-dns.yaml"])).To(Equal(vpaYAML))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
-							daemonset := daemonsetYAMLFor()
+							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
 						})
@@ -808,7 +812,7 @@ ip6.arpa:53 {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
-							daemonset := daemonsetYAMLFor()
+							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
 						})
@@ -824,7 +828,7 @@ ip6.arpa:53 {
 							Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-local-dns.yaml"])).To(Equal(vpaYAML))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
-							daemonset := daemonsetYAMLFor()
+							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
 						})
@@ -844,7 +848,7 @@ ip6.arpa:53 {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
-							daemonset := daemonsetYAMLFor()
+							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
 						})
@@ -860,7 +864,7 @@ ip6.arpa:53 {
 							Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-local-dns.yaml"])).To(Equal(vpaYAML))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
-							daemonset := daemonsetYAMLFor()
+							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
 						})
@@ -880,7 +884,7 @@ ip6.arpa:53 {
 							Expect(string(managedResourceSecret.Data["configmap__kube-system__node-local-dns-"+configMapHash+".yaml"])).To(Equal(configMapYAMLFor()))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
-							daemonset := daemonsetYAMLFor()
+							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
 						})
@@ -896,7 +900,7 @@ ip6.arpa:53 {
 							Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-local-dns.yaml"])).To(Equal(vpaYAML))
 							managedResourceDaemonset, _, err := kubernetes.ShootCodec.UniversalDecoder().Decode(managedResourceSecret.Data["daemonset__kube-system__node-local-dns.yaml"], nil, &appsv1.DaemonSet{})
 							Expect(err).ToNot(HaveOccurred())
-							daemonset := daemonsetYAMLFor()
+							daemonset := daemonSetYAMLFor()
 							utilruntime.Must(references.InjectAnnotations(daemonset))
 							Expect(daemonset).To(DeepEqual(managedResourceDaemonset))
 						})
@@ -1021,22 +1025,25 @@ ip6.arpa:53 {
 
 func bindIP(values Values) string {
 	if values.DNSServer != "" {
-		return common.NodeLocalIPVSAddress + " " + values.DNSServer
+		return NodeLocalIPVSAddress + " " + values.DNSServer
 	}
-	return common.NodeLocalIPVSAddress
+	return NodeLocalIPVSAddress
 }
+
 func containerArg(values Values) string {
 	if values.DNSServer != "" {
-		return common.NodeLocalIPVSAddress + "," + values.DNSServer
+		return NodeLocalIPVSAddress + "," + values.DNSServer
 	}
-	return common.NodeLocalIPVSAddress
+	return NodeLocalIPVSAddress
 }
+
 func forceTcpToClusterDNS(values Values) string {
 	if values.ForceTcpToClusterDNS {
 		return "force_tcp"
 	}
 	return "prefer_udp"
 }
+
 func forceTcpToUpstreamDNS(values Values) string {
 	if values.ForceTcpToUpstreamDNS {
 		return "force_tcp"

@@ -24,7 +24,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -44,25 +43,25 @@ import (
 )
 
 const (
-	// LabelKey is the key of a label used for the identification of node-local-dns pods.
-	LabelKey = "k8s-app"
-	// LabelValue is the value of a label used for the identification of node-local-dns pods.
-	LabelValue = "node-local-dns"
-	// PortServiceServer is the service port used for the DNS server.
-	PortServiceServer = 53
-	// PortServer is the target port used for the DNS server.
-	PortServer = 8053
+	// NodeLocalIPVSAddress is the IPv4 address used by node local dns when IPVS is used.
+	NodeLocalIPVSAddress = "169.254.20.10"
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 	ManagedResourceName = "shoot-core-node-local-dns"
 
+	labelKey   = "k8s-app"
+	labelValue = "node-local-dns"
+	// portServiceServer is the service port used for the DNS server.
+	portServiceServer = 53
+	// portServer is the target port used for the DNS server.
+	portServer = 8053
 	// prometheus configuration for node-local-dns
 	prometheusPort   = 9253
 	prometheusScrape = true
 
-	nodeLocal     = common.NodeLocalIPVSAddress
-	domain        = gardencorev1beta1.DefaultDomain
-	serviceName   = "kube-dns-upstream"
-	configDataKey = "Corefile"
+	domain            = gardencorev1beta1.DefaultDomain
+	serviceName       = "kube-dns-upstream"
+	livenessProbePort = 8080
+	configDataKey     = "Corefile"
 )
 
 // Interface contains functions for a node-local-dns deployer.
@@ -138,21 +137,21 @@ func (c *nodeLocalDNS) WaitCleanup(ctx context.Context) error {
 
 func (c *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
 	var (
-		hostPathFileOrCreate = corev1.HostPathFileOrCreate
-		registry             = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "node-local-dns",
 				Namespace: metav1.NamespaceSystem,
 			},
+			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 
 		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.kube-system.node-local-dns",
 				Labels: map[string]string{
-					v1beta1constants.LabelApp: LabelValue,
+					v1beta1constants.LabelApp: labelValue,
 				},
 			},
 			Spec: policyv1beta1.PodSecurityPolicySpec{
@@ -197,13 +196,13 @@ func (c *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener.cloud:psp:kube-system:node-local-dns",
 				Labels: map[string]string{
-					v1beta1constants.LabelApp: LabelValue,
+					v1beta1constants.LabelApp: labelValue,
 				},
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
 					APIGroups:     []string{"policy", "extensions"},
-					ResourceNames: []string{"gardener.kube-system.node-local-dns"},
+					ResourceNames: []string{podSecurityPolicy.Name},
 					Resources:     []string{"podsecuritypolicies"},
 					Verbs:         []string{"use"},
 				},
@@ -215,7 +214,7 @@ func (c *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
 				Name:      "gardener.cloud:psp:node-local-dns",
 				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
-					v1beta1constants.LabelApp: LabelValue,
+					v1beta1constants.LabelApp: labelValue,
 				},
 				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
 			},
@@ -250,8 +249,8 @@ func (c *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
           ` + c.forceTcpToClusterDNS() + `
   }
   prometheus :` + strconv.Itoa(prometheusPort) + `
-  health ` + nodeLocal + `:8080
-  }
+  health ` + NodeLocalIPVSAddress + `:` + strconv.Itoa(livenessProbePort) + `
+}
 in-addr.arpa:53 {
   errors
   cache 30
@@ -262,7 +261,7 @@ in-addr.arpa:53 {
           ` + c.forceTcpToClusterDNS() + `
   }
   prometheus :` + strconv.Itoa(prometheusPort) + `
-  }
+}
 ip6.arpa:53 {
   errors
   cache 30
@@ -273,7 +272,7 @@ ip6.arpa:53 {
           ` + c.forceTcpToClusterDNS() + `
   }
   prometheus :` + strconv.Itoa(prometheusPort) + `
-  }
+}
 .:53 {
   errors
   cache 30
@@ -284,7 +283,7 @@ ip6.arpa:53 {
           ` + c.forceTcpToUpstreamDNS() + `
   }
   prometheus :` + strconv.Itoa(prometheusPort) + `
-  }
+}
 `,
 			},
 		}
@@ -297,9 +296,7 @@ ip6.arpa:53 {
 				Name:      serviceName,
 				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
-					"k8s-app":                       "kube-dns-upstream",
-					"kubernetes.io/cluster-service": "true",
-					"kubernetes.io/name":            "NodeLocalDNS",
+					"k8s-app": "kube-dns-upstream",
 				},
 			},
 			Spec: corev1.ServiceSpec{
@@ -307,26 +304,28 @@ ip6.arpa:53 {
 				Ports: []corev1.ServicePort{
 					{
 						Name:       "dns",
-						Port:       int32(PortServiceServer),
-						TargetPort: intstr.FromInt(PortServer),
+						Port:       int32(portServiceServer),
+						TargetPort: intstr.FromInt(portServer),
 						Protocol:   corev1.ProtocolUDP,
 					},
 					{
 						Name:       "dns-tcp",
-						Port:       int32(PortServiceServer),
-						TargetPort: intstr.FromInt(PortServer),
+						Port:       int32(portServiceServer),
+						TargetPort: intstr.FromInt(portServer),
 						Protocol:   corev1.ProtocolTCP,
 					},
 				},
 			},
 		}
 
-		daemonset = &appsv1.DaemonSet{
+		maxUnavailable       = intstr.FromString("10%")
+		hostPathFileOrCreate = corev1.HostPathFileOrCreate
+		daemonSet            = &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "node-local-dns",
 				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
-					LabelKey:                        LabelValue,
+					labelKey:                        labelValue,
 					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
 					managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 				},
@@ -334,23 +333,25 @@ ip6.arpa:53 {
 			Spec: appsv1.DaemonSetSpec{
 				UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
 					RollingUpdate: &appsv1.RollingUpdateDaemonSet{
-						MaxUnavailable: &intstr.IntOrString{IntVal: 10},
+						MaxUnavailable: &maxUnavailable,
 					},
 				},
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						LabelKey: LabelValue,
+						labelKey: labelValue,
 					},
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
-							LabelKey:                                 LabelValue,
+							labelKey:                                 labelValue,
 							v1beta1constants.LabelNetworkPolicyToDNS: "allowed",
 						},
 						Annotations: map[string]string{
 							"prometheus.io/port":   strconv.Itoa(prometheusPort),
 							"prometheus.io/scrape": strconv.FormatBool(prometheusScrape),
+							// TODO(rfranzke): Remove in a future release.
+							"security.gardener.cloud/trigger": "rollout",
 						},
 					},
 					Spec: corev1.PodSpec{
@@ -377,13 +378,13 @@ ip6.arpa:53 {
 								Name:  "node-cache",
 								Image: c.values.Image,
 								Resources: corev1.ResourceRequirements{
-									Limits: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("100m"),
-										corev1.ResourceMemory: resource.MustParse("100Mi"),
-									},
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("25m"),
 										corev1.ResourceMemory: resource.MustParse("25Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("100m"),
+										corev1.ResourceMemory: resource.MustParse("100Mi"),
 									},
 								},
 								Args: []string{
@@ -392,7 +393,7 @@ ip6.arpa:53 {
 									"-conf",
 									"/etc/Corefile",
 									"-upstreamsvc",
-									"kube-dns-upstream",
+									serviceName,
 								},
 								SecurityContext: &corev1.SecurityContext{
 									Privileged: pointer.Bool(true),
@@ -417,9 +418,9 @@ ip6.arpa:53 {
 								LivenessProbe: &corev1.Probe{
 									Handler: corev1.Handler{
 										HTTPGet: &corev1.HTTPGetAction{
-											Host: nodeLocal,
+											Host: NodeLocalIPVSAddress,
 											Path: "/health",
-											Port: intstr.FromInt(8080),
+											Port: intstr.FromInt(livenessProbePort),
 										},
 									},
 									InitialDelaySeconds: int32(60),
@@ -486,7 +487,7 @@ ip6.arpa:53 {
 		}
 		vpa *autoscalingv1beta2.VerticalPodAutoscaler
 	)
-	utilruntime.Must(references.InjectAnnotations(daemonset))
+	utilruntime.Must(references.InjectAnnotations(daemonSet))
 
 	if c.values.VPAEnabled {
 		vpaUpdateMode := autoscalingv1beta2.UpdateModeAuto
@@ -499,7 +500,7 @@ ip6.arpa:53 {
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 					Kind:       "DaemonSet",
-					Name:       daemonset.Name,
+					Name:       daemonSet.Name,
 				},
 				UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
 					UpdateMode: &vpaUpdateMode,
@@ -526,29 +527,32 @@ ip6.arpa:53 {
 		roleBinding,
 		configMap,
 		service,
-		daemonset,
+		daemonSet,
 		vpa,
 	)
 }
 
 func (c *nodeLocalDNS) bindIP() string {
 	if c.values.DNSServer != "" {
-		return nodeLocal + " " + c.values.DNSServer
+		return NodeLocalIPVSAddress + " " + c.values.DNSServer
 	}
-	return nodeLocal
+	return NodeLocalIPVSAddress
 }
+
 func (c *nodeLocalDNS) containerArg() string {
 	if c.values.DNSServer != "" {
-		return nodeLocal + "," + c.values.DNSServer
+		return NodeLocalIPVSAddress + "," + c.values.DNSServer
 	}
-	return nodeLocal
+	return NodeLocalIPVSAddress
 }
+
 func (c *nodeLocalDNS) forceTcpToClusterDNS() string {
 	if c.values.ForceTcpToClusterDNS {
 		return "force_tcp"
 	}
 	return "prefer_udp"
 }
+
 func (c *nodeLocalDNS) forceTcpToUpstreamDNS() string {
 	if c.values.ForceTcpToUpstreamDNS {
 		return "force_tcp"

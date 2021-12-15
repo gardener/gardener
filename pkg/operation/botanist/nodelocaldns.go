@@ -22,9 +22,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DefaultNodeLocalDNS returns a deployer for the node-local-dns.
@@ -54,27 +51,24 @@ func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 		nodeLocalDNSForceTcpToUpstreamDNS = forceTcp
 	}
 
-	values := nodelocaldns.Values{
-		Image:                 image.String(),
-		VPAEnabled:            b.Shoot.WantsVerticalPodAutoscaler,
-		ForceTcpToClusterDNS:  nodeLocalDNSForceTcpToClusterDNS,
-		ForceTcpToUpstreamDNS: nodeLocalDNSForceTcpToUpstreamDNS,
-		ClusterDNS:            clusterDNS,
-		DNSServer:             dnsServer,
-	}
 	return nodelocaldns.New(
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
-		values,
+		nodelocaldns.Values{
+			Image:                 image.String(),
+			VPAEnabled:            b.Shoot.WantsVerticalPodAutoscaler,
+			ForceTcpToClusterDNS:  nodeLocalDNSForceTcpToClusterDNS,
+			ForceTcpToUpstreamDNS: nodeLocalDNSForceTcpToUpstreamDNS,
+			ClusterDNS:            clusterDNS,
+			DNSServer:             dnsServer,
+		},
 	), nil
 }
 
-// DeployNodeLocalDNS deploys the node-local-dns system component.
-func (b *Botanist) DeployNodeLocalDNS(ctx context.Context) error {
-	return b.Shoot.Components.SystemComponents.NodeLocalDNS.Deploy(ctx)
-}
-
-// DestroyNodeLocalDNS deletes the managed resource node-local-dns.
-func (b *Botanist) DestroyNodeLocalDNS(ctx context.Context) error {
-	return client.IgnoreNotFound(managedresources.Delete(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, "shoot-core-node-local-dns", false))
+// ReconcileNodeLocalDNS deploys or destroys the node-local-dns component depending on whether it is enabled for the Shoot.
+func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
+	if b.Shoot.NodeLocalDNSEnabled {
+		return b.Shoot.Components.SystemComponents.NodeLocalDNS.Deploy(ctx)
+	}
+	return b.Shoot.Components.SystemComponents.NodeLocalDNS.Destroy(ctx)
 }
