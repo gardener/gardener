@@ -415,7 +415,7 @@ func cleanCollectionAction(
 }
 
 type cleanerOps struct {
-	Cleaner
+	cleaners []Cleaner
 	GoneEnsurer
 }
 
@@ -425,19 +425,21 @@ func (o *cleanerOps) CleanAndEnsureGone(ctx context.Context, c client.Client, ob
 	cleanOptions := &CleanOptions{}
 	cleanOptions.ApplyOptions(opts)
 
-	if err := o.Clean(ctx, c, obj, opts...); err != nil {
-		return err
+	for _, cle := range o.cleaners {
+		if err := cle.Clean(ctx, c, obj, opts...); err != nil {
+			return err
+		}
 	}
 
 	return o.EnsureGone(ctx, c, obj, cleanOptions.ListOptions...)
 }
 
 // NewCleanOps instantiates new CleanOps with the given Cleaner and GoneEnsurer.
-func NewCleanOps(cleaner Cleaner, ensurer GoneEnsurer) CleanOps {
+func NewCleanOps(ensurer GoneEnsurer, cleaner ...Cleaner) CleanOps {
 	return &cleanerOps{cleaner, ensurer}
 }
 
-var defaultCleanerOps = NewCleanOps(DefaultCleaner(), DefaultGoneEnsurer())
+var defaultCleanerOps = NewCleanOps(DefaultGoneEnsurer(), DefaultCleaner())
 
 // DefaultCleanOps are the default CleanOps.
 func DefaultCleanOps() CleanOps {

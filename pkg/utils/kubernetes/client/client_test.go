@@ -581,7 +581,7 @@ var _ = Describe("Cleaner", func() {
 		BeforeEach(func() {
 			cleaner = mockutilclient.NewMockCleaner(ctrl)
 			ensurer = mockutilclient.NewMockGoneEnsurer(ctrl)
-			o = NewCleanOps(cleaner, ensurer)
+			o = NewCleanOps(ensurer, cleaner)
 		})
 
 		Describe("CleanAndEnsureGone", func() {

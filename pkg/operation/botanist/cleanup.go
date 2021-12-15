@@ -186,7 +186,7 @@ func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 	var (
 		c       = b.K8sShootClient.Client()
 		ensurer = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
-		ops     = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
+		ops     = utilclient.NewCleanOps(ensurer, utilclient.DefaultCleaner())
 	)
 
 	cleanOptions, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupWebhooksFinalizeGracePeriodSeconds, 1)
@@ -212,7 +212,7 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 	var (
 		c       = b.K8sShootClient.Client()
 		ensurer = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
-		ops     = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
+		ops     = utilclient.NewCleanOps(ensurer, utilclient.DefaultCleaner())
 	)
 
 	cleanOptions, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterOneHour, v1beta1constants.AnnotationShootCleanupExtendedAPIsFinalizeGracePeriodSeconds, 0.1)
@@ -240,8 +240,9 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 	var (
 		c                  = b.K8sShootClient.Client()
 		ensurer            = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
-		ops                = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
-		snapshotContentOps = utilclient.NewCleanOps(utilclient.NewVolumeSnapshotContentCleaner(), ensurer)
+		cleaner            = utilclient.DefaultCleaner()
+		ops                = utilclient.NewCleanOps(ensurer, cleaner)
+		snapshotContentOps = utilclient.NewCleanOps(ensurer, cleaner, utilclient.DefaultVolumeSnapshotContentCleaner())
 	)
 
 	cleanOptions, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds, 1)
@@ -249,7 +250,7 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		return err
 	}
 
-	snapshotCleanOptions, err := b.getCleanOptions(ZeroGracePeriod, FinalizeAfterOneHour, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds, 1)
+	snapshotCleanOptions, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterOneHour, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds, 0.5)
 	if err != nil {
 		return err
 	}
@@ -293,7 +294,7 @@ func (b *Botanist) CleanShootNamespaces(ctx context.Context) error {
 	var (
 		c                 = b.K8sShootClient.Client()
 		namespaceCleaner  = utilclient.NewNamespaceCleaner(b.K8sShootClient.Kubernetes().CoreV1().Namespaces())
-		namespaceCleanOps = utilclient.NewCleanOps(namespaceCleaner, utilclient.DefaultGoneEnsurer())
+		namespaceCleanOps = utilclient.NewCleanOps(utilclient.DefaultGoneEnsurer(), namespaceCleaner)
 	)
 
 	cleanOptions, err := b.getCleanOptions(ZeroGracePeriod, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupNamespaceResourcesFinalizeGracePeriodSeconds, 0)
