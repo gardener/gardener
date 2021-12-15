@@ -15,6 +15,7 @@
 package validation
 
 import (
+	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -88,6 +89,13 @@ func ValidateWorkerPools(pools []extensionsv1alpha1.WorkerPool, fldPath *field.P
 		if pool.UserData == nil {
 			allErrs = append(allErrs, field.Required(idxPath.Child("userData"), "field is required"))
 		}
+
+		if pool.NodeTemplate != nil {
+			for resourceName, value := range pool.NodeTemplate.Capacity {
+				allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue(string(resourceName), value, idxPath.Child("nodeTemplate", "capacity", string(resourceName)))...)
+			}
+		}
+
 	}
 
 	return allErrs

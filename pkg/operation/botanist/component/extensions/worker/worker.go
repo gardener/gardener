@@ -33,6 +33,7 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -75,6 +76,8 @@ type Values struct {
 	Workers []gardencorev1beta1.Worker
 	// KubernetesVersion is the Kubernetes version of the cluster for which the worker nodes shall be created.
 	KubernetesVersion *semver.Version
+	// MachineTypes is the list of machine types present in the CloudProfile referenced by the shoot
+	MachineTypes []gardencorev1beta1.MachineType
 	// SSHPublicKey is the public SSH key that shall be installed on the worker nodes.
 	SSHPublicKey []byte
 	// InfrastructureProviderStatus is the provider status of the Infrastructure resource which might be relevant for
@@ -130,6 +133,13 @@ func (w *worker) Deploy(ctx context.Context) error {
 
 func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
 	var pools []extensionsv1alpha1.WorkerPool
+
+	obj := &extensionsv1alpha1.Worker{}
+	if err := w.client.Get(ctx, client.ObjectKey{Name: w.worker.Name, Namespace: w.worker.Namespace}, obj); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return nil, err
+		}
+	}
 
 	for _, workerPool := range w.values.Workers {
 		var volume *extensionsv1alpha1.Volume
@@ -197,6 +207,21 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			workerPoolKubernetesVersion = *workerPool.Kubernetes.Version
 		}
 
+		nodeTemplate := w.findExistingNodeTemplateByName(ctx, obj, workerPool.Name)
+
+		if nodeTemplate == nil {
+			// initializing nodeTemplate by fetching details from cloudprofile, if present there
+			if machineDetails := gardencorev1beta1helper.FindMachineTypeByName(w.values.MachineTypes, workerPool.Machine.Type); machineDetails != nil {
+				nodeTemplate = &extensionsv1alpha1.NodeTemplate{
+					Capacity: corev1.ResourceList{
+						corev1.ResourceCPU:    machineDetails.CPU,
+						"gpu":                 machineDetails.GPU,
+						corev1.ResourceMemory: machineDetails.Memory,
+					},
+				}
+			}
+		}
+
 		pools = append(pools, extensionsv1alpha1.WorkerPool{
 			Name:           workerPool.Name,
 			Minimum:        workerPool.Minimum,
@@ -211,6 +236,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 				Name:    workerPool.Machine.Image.Name,
 				Version: *workerPool.Machine.Image.Version,
 			},
+			NodeTemplate:                     nodeTemplate,
 			ProviderConfig:                   pConfig,
 			UserData:                         userData,
 			Volume:                           volume,
@@ -339,4 +365,13 @@ func (w *worker) SetWorkerNameToOperatingSystemConfigsMap(maps map[string]*opera
 // MachineDeployments returns the generated machine deployments of the Worker.
 func (w *worker) MachineDeployments() []extensionsv1alpha1.MachineDeployment {
 	return w.machineDeployments
+}
+
+func (w *worker) findExistingNodeTemplateByName(ctx context.Context, obj *extensionsv1alpha1.Worker, poolName string) *extensionsv1alpha1.NodeTemplate {
+	for _, pool := range obj.Spec.Pools {
+		if pool.Name == poolName {
+			return pool.NodeTemplate
+		}
+	}
+	return nil
 }
