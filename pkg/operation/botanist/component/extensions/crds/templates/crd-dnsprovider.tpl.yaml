@@ -76,6 +76,19 @@ spec:
                   description: optional additional provider specific configuration values
                   type: object
                   x-kubernetes-preserve-unknown-fields: true
+                rateLimit:
+                  description: rate limit for create/update operations on DNSEntries assigned to this provider
+                  properties:
+                    burst:
+                      description: Burst allows bursts of up to 'burst' to exceed the rate defined by 'RequestsPerDay', while still maintaining a smoothed rate of 'RequestsPerDay'
+                      type: integer
+                    requestsPerDay:
+                      description: RequestsPerDay is create/update request rate per DNS entry given by requests per day
+                      type: integer
+                  required:
+                    - burst
+                    - requestsPerDay
+                  type: object
                 secretRef:
                   description: access credential for the external DNS system of the given type
                   properties:
@@ -134,6 +147,19 @@ spec:
                 observedGeneration:
                   format: int64
                   type: integer
+                rateLimit:
+                  description: actually used rate limit for create/update operations on DNSEntries assigned to this provider
+                  properties:
+                    burst:
+                      description: Burst allows bursts of up to 'burst' to exceed the rate defined by 'RequestsPerDay', while still maintaining a smoothed rate of 'RequestsPerDay'
+                      type: integer
+                    requestsPerDay:
+                      description: RequestsPerDay is create/update request rate per DNS entry given by requests per day
+                      type: integer
+                  required:
+                    - burst
+                    - requestsPerDay
+                  type: object
                 state:
                   description: state of the provider
                   type: string
