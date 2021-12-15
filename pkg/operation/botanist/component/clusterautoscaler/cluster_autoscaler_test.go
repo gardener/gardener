@@ -150,6 +150,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				Name:      serviceAccountName,
 				Namespace: namespace,
 			},
+			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -256,6 +257,9 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
+							Annotations: map[string]string{
+								"security.gardener.cloud/trigger": "rollout",
+							},
 							Labels: map[string]string{
 								"app":                              "kubernetes",
 								"role":                             "cluster-autoscaler",
@@ -499,7 +503,8 @@ subjects:
 	Describe("#Deploy", func() {
 		It("should fail because the service account cannot be created", func() {
 			gomock.InOrder(
-				c.EXPECT().Create(ctx, serviceAccount).Return(fakeErr),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceAccountName), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()).Return(fakeErr),
 			)
 
 			Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
@@ -507,7 +512,8 @@ subjects:
 
 		It("should fail because the cluster role binding cannot be updated", func() {
 			gomock.InOrder(
-				c.EXPECT().Create(ctx, serviceAccount),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceAccountName), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()).Return(fakeErr),
 			)
@@ -517,7 +523,8 @@ subjects:
 
 		It("should fail because the service cannot be updated", func() {
 			gomock.InOrder(
-				c.EXPECT().Create(ctx, serviceAccount),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceAccountName), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
@@ -529,7 +536,8 @@ subjects:
 
 		It("should fail because the secret cannot be updated", func() {
 			gomock.InOrder(
-				c.EXPECT().Create(ctx, serviceAccount),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceAccountName), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
@@ -543,7 +551,8 @@ subjects:
 
 		It("should fail because the deployment cannot be updated", func() {
 			gomock.InOrder(
-				c.EXPECT().Create(ctx, serviceAccount),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceAccountName), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
@@ -559,7 +568,8 @@ subjects:
 
 		It("should fail because the vpa cannot be updated", func() {
 			gomock.InOrder(
-				c.EXPECT().Create(ctx, serviceAccount),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceAccountName), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
@@ -577,7 +587,8 @@ subjects:
 
 		It("should fail because the managed resource secret cannot be updated", func() {
 			gomock.InOrder(
-				c.EXPECT().Create(ctx, serviceAccount),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceAccountName), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
@@ -597,7 +608,8 @@ subjects:
 
 		It("should fail because the managed resource cannot be updated", func() {
 			gomock.InOrder(
-				c.EXPECT().Create(ctx, serviceAccount),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceAccountName), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
@@ -619,7 +631,8 @@ subjects:
 
 		It("should fail because the legacy secret cannot be deleted", func() {
 			gomock.InOrder(
-				c.EXPECT().Create(ctx, serviceAccount),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceAccountName), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
@@ -652,7 +665,11 @@ subjects:
 				clusterAutoscaler.SetMachineDeployments(machineDeployments)
 
 				gomock.InOrder(
-					c.EXPECT().Create(ctx, serviceAccount),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceAccountName), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(serviceAccount))
+						}),
 					c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
