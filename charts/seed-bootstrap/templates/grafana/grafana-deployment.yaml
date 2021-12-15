@@ -32,6 +32,7 @@ spec:
         networking.gardener.cloud/to-loki: allowed
         component: grafana
     spec:
+      automountServiceAccountToken: false
       containers:
       - name: grafana
         image: {{ index .Values.global.images "grafana" }}

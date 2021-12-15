@@ -111,7 +111,6 @@ spec:
           mountPath: /fluent-bit/plugins
       serviceAccount: fluent-bit
       serviceAccountName: fluent-bit
-      automountServiceAccountToken: true
       terminationGracePeriodSeconds: 10
       tolerations:
       - key: node-role.kubernetes.io/master
