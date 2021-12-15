@@ -19,7 +19,7 @@ spec:
         - jsonPath: .spec.ownerId
           name: OwnerId
           type: string
-        - jsonPath: .spec.active
+        - jsonPath: .status.active
           name: Active
           type: boolean
         - jsonPath: .status.entries.amount
