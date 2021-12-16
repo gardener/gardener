@@ -72,7 +72,7 @@ func (s *Server) Start(ctx context.Context) {
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Error(err, "error shutting down server")
+		log.Error(err, "Error shutting down server")
 	}
 	log.Info("Server stopped")
 }

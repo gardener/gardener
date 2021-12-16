@@ -469,7 +469,7 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 			OnStartedLeading: func(_ context.Context) {
 				g.Log.Info("Acquired leadership, starting controllers")
 				if err := run(controllerCtx); err != nil {
-					g.Log.Error(err, "failed to run controllers")
+					g.Log.Error(err, "Failed to run controllers")
 				}
 				leaderElectionCancel()
 			},

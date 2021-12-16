@@ -109,7 +109,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			secret.Finalizers = secretFinalizers.UnsortedList()
 			return nil
 		}); client.IgnoreNotFound(err) != nil {
-			r.log.Error(err, "failed to update finalizers of Secret")
+			r.log.Error(err, "Failed to update finalizers of Secret")
 			// dont' run into exponential backoff for adding/removing finalizers
 			return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
 		}

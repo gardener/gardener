@@ -102,9 +102,9 @@ func worker(ctx context.Context, queue workqueue.RateLimitingInterface, resource
 			req, err := requestFromKey(key)
 			if err != nil {
 				if controllerLogger != nil {
-					controllerLogger.Error(err, "cannot obtain request from key")
+					controllerLogger.Error(err, "Cannot obtain request from key")
 				} else {
-					logger.Logger.WithError(err).Error("cannot obtain request from key")
+					logger.Logger.WithError(err).Error("Cannot obtain request from key")
 				}
 				queue.Forget(key)
 				return false
@@ -124,7 +124,7 @@ func worker(ctx context.Context, queue workqueue.RateLimitingInterface, resource
 				if reconcileLogger != nil {
 					// resource type is not added to logger here. Ideally, each controller sets WithName and it is clear from
 					// which controller the error log comes.
-					reconcileLogger.Error(err, "error reconciling request")
+					reconcileLogger.Error(err, "Error reconciling request")
 				} else {
 					logger.Logger.Infof("Error syncing %s %v: %v", resourceType, key, err)
 				}

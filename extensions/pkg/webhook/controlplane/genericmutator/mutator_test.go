@@ -247,7 +247,7 @@ var _ = Describe("Mutator", func() {
 			ensurer.EXPECT().EnsureETCD(context.TODO(), gomock.Any(), new, old).Return(nil).Do(func(ctx context.Context, gctx gcontext.GardenContext, new, old *druidv1alpha1.Etcd) {
 				_, err := gctx.GetCluster(ctx)
 				if err != nil {
-					logger.Error(err, "failed to get cluster object")
+					logger.Error(err, "Failed to get cluster object")
 				}
 			})
 

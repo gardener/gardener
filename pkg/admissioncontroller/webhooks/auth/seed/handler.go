@@ -74,14 +74,14 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	// Verify that body is non-empty
 	if r.Body == nil {
 		err = errors.New("request body is empty")
-		h.logger.Error(err, "bad request")
+		h.logger.Error(err, "Bad request")
 		h.writeResponse(w, nil, Errored(http.StatusBadRequest, err))
 		return
 	}
 
 	// Read body
 	if body, err = io.ReadAll(r.Body); err != nil {
-		h.logger.Error(err, "unable to read the body from the incoming request")
+		h.logger.Error(err, "Unable to read the body from the incoming request")
 		h.writeResponse(w, nil, Errored(http.StatusBadRequest, err))
 		return
 	}
@@ -90,7 +90,7 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 	if contentType != "application/json" {
 		err = fmt.Errorf("contentType=%s, expected application/json", contentType)
-		h.logger.Error(err, "unable to process a request with an unknown content type", "content type", contentType)
+		h.logger.Error(err, "Unable to process a request with an unknown content type", "content type", contentType)
 		h.writeResponse(w, nil, Errored(http.StatusBadRequest, err))
 		return
 	}
@@ -98,7 +98,7 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	// Decode request body into authorizationv1beta1.SubjectAccessReviewSpec structure
 	sarSpec, gvk, err := h.decodeRequestBody(body)
 	if err != nil {
-		h.logger.Error(err, "unable to decode the request")
+		h.logger.Error(err, "Unable to decode the request")
 		h.writeResponse(w, nil, Errored(http.StatusBadRequest, err))
 		return
 	}
@@ -116,7 +116,7 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	// Consult authorizer for result and write the response
 	decision, reason, err := h.authorizer.Authorize(ctx, AuthorizationAttributesFrom(*sarSpec))
 	if err != nil {
-		h.logger.Error(err, "error when consulting authorizer for opinion")
+		h.logger.Error(err, "Error when consulting authorizer for opinion")
 		h.writeResponse(w, gvk, Errored(http.StatusInternalServerError, err))
 		return
 	}
@@ -149,7 +149,7 @@ func (h *handler) writeResponse(w io.Writer, gvk *schema.GroupVersionKind, statu
 	}
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		h.logger.Error(err, "unable to encode the response")
+		h.logger.Error(err, "Unable to encode the response")
 		h.writeResponse(w, gvk, Errored(http.StatusInternalServerError, err))
 		return
 	}

@@ -22,10 +22,10 @@ import (
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	druidvalidation "github.com/gardener/etcd-druid/api/validation"
+
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/extensions/validation"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -34,6 +34,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -230,7 +232,7 @@ type artifact struct {
 func (h handler) handleValidation(request admission.Request, newObject newObjectFunc, validate validateFunc) admission.Response {
 	obj := newObject()
 	if err := h.decoder.DecodeRaw(request.Object, obj); err != nil {
-		h.logger.Error(err, "could not decode object", "object", request.Object)
+		h.logger.Error(err, "Could not decode object", "object", request.Object)
 		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("could not decode object %v: %w", request.Object, err))
 	}
 
@@ -240,7 +242,7 @@ func (h handler) handleValidation(request admission.Request, newObject newObject
 	if len(request.OldObject.Raw) != 0 {
 		oldObj = newObject()
 		if err := h.decoder.DecodeRaw(request.OldObject, oldObj); err != nil {
-			h.logger.Error(err, "could not decode old object", "old object", oldObj)
+			h.logger.Error(err, "Could not decode old object", "old object", oldObj)
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("could not decode old object %v: %v", oldObj, err))
 		}
 	}

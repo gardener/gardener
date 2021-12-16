@@ -233,7 +233,7 @@ func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration
 	if _, err := maxprocs.Set(maxprocs.Logger(func(s string, i ...interface{}) {
 		log.Info(fmt.Sprintf(s, i...))
 	})); err != nil {
-		log.Error(err, "failed to set GOMAXPROCS")
+		log.Error(err, "Failed to set GOMAXPROCS")
 	}
 
 	// Prepare a Kubernetes client object for the Garden cluster which contains all the Clientsets
@@ -314,7 +314,7 @@ func (g *Gardener) Run(ctx context.Context) error {
 			OnStartedLeading: func(_ context.Context) {
 				g.Log.Info("Acquired leadership, starting controllers")
 				if err := run(controllerCtx); err != nil {
-					g.Log.Error(err, "failed to run controllers")
+					g.Log.Error(err, "Failed to run controllers")
 				}
 				leaderElectionCancel()
 			},

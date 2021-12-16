@@ -32,7 +32,7 @@ func main() {
 
 	ctx := signals.SetupSignalHandler()
 	if err := app.NewResourceManagerCommand().ExecuteContext(ctx); err != nil {
-		runtimelog.Log.Error(err, "error executing the main controller command")
+		runtimelog.Log.Error(err, "Error executing the main controller command")
 		os.Exit(1)
 	}
 }

@@ -16,7 +16,6 @@ package health
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -124,7 +123,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		} else {
 			var ok bool
 			if obj, ok = runtimeObject.(client.Object); !ok {
-				log.Error(errors.New("could not execute health check because object type is unsupported"), "GroupVersionKind", ref.GroupVersionKind().String())
+				err := fmt.Errorf("expected client.Object but got %T", obj)
+				log.Error(err, "Could not execute health check", "GroupVersionKind", ref.GroupVersionKind().String())
 				// do not requeue because there anyway will be another update event to fix the problem
 				return ctrl.Result{}, nil
 			}

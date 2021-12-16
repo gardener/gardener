@@ -108,7 +108,7 @@ func (t *terraformer) IsStateEmpty(ctx context.Context) bool {
 	} {
 		resourceName := obj.GetName()
 		if err := t.client.Get(ctx, kutil.Key(t.namespace, resourceName), obj); client.IgnoreNotFound(err) != nil {
-			t.logger.Error(err, "failed to get resource", "name", resourceName)
+			t.logger.Error(err, "Failed to get resource", "name", resourceName)
 			return false
 		}
 

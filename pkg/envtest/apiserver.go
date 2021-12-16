@@ -303,7 +303,7 @@ func (g *GardenerAPIServer) waitUntilHealthy(ctx context.Context) error {
 	})
 	if err != nil {
 		if stopErr := g.Stop(); stopErr != nil {
-			log.Error(stopErr, "failed stopping gardener-apiserver")
+			log.Error(stopErr, "Failed stopping gardener-apiserver")
 		}
 	}
 	return err
