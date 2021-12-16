@@ -124,11 +124,11 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	log = log.WithValues("shootName", bastion.Spec.ShootRef.Name)
+	shootKey := kutil.Key(bastion.Namespace, bastion.Spec.ShootRef.Name)
+	log = log.WithValues("shoot", shootKey)
 
 	// fetch associated Shoot
 	shoot := gardencorev1beta1.Shoot{}
-	shootKey := kutil.Key(bastion.Namespace, bastion.Spec.ShootRef.Name)
 	if err := r.gardenClient.Get(ctx, shootKey, &shoot); err != nil {
 		// This should never happen, as the shoot deletion is stopped unless all Bastions
 		// are removed. This is required because once a Shoot is gone, the Cluster resource
@@ -155,7 +155,8 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// under normal operations, shoots cannot be migrated to another seed while there are still
 	// bastions for it, so this check here is just a safety measure.
 	if !equality.Semantic.DeepEqual(shoot.Spec.SeedName, bastion.Spec.SeedName) {
-		log.Info("Deleting bastion because the referenced Shoot has been migrated to another Seed", "newSeed", shoot.Spec.SeedName)
+		log.Info("Deleting bastion because the referenced Shoot has been migrated to another Seed",
+			"oldSeed", bastion.Spec.SeedName, "newSeed", shoot.Spec.SeedName)
 		return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))
 	}
 

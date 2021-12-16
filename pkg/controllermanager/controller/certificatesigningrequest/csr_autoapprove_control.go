@@ -72,7 +72,8 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 		log = logf.FromContext(ctx)
 
 		cert               []byte
-		finalState         bool
+		isInFinalState     bool
+		finalState         string
 		req                []byte
 		usages             []certificatesv1.KeyUsage
 		extra              = make(map[string]authorizationv1.ExtraValue)
@@ -95,7 +96,8 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 
 		for _, c := range csrV1.Status.Conditions {
 			if c.Type == certificatesv1.CertificateApproved || c.Type == certificatesv1.CertificateDenied {
-				finalState = true
+				isInFinalState = true
+				finalState = string(c.Type)
 			}
 		}
 		for k, v := range csrV1.Spec.Extra {
@@ -130,7 +132,8 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 
 		for _, c := range csrV1beta1.Status.Conditions {
 			if c.Type == certificatesv1beta1.CertificateApproved || c.Type == certificatesv1beta1.CertificateDenied {
-				finalState = true
+				isInFinalState = true
+				finalState = string(c.Type)
 			}
 		}
 		for k, v := range csrV1beta1.Spec.Extra {
@@ -153,8 +156,8 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 		}
 	}
 
-	if len(cert) != 0 || finalState {
-		log.Info("ignoring CSR, as it is already approved/denied")
+	if len(cert) != 0 || isInFinalState {
+		log.Info("ignoring CSR, as it is in final state", "finalState", finalState)
 		return reconcile.Result{}, nil
 	}
 
@@ -164,7 +167,7 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 	}
 
 	if ok, reason := gutil.IsSeedClientCert(x509cr, usages); !ok {
-		log.Info("ignoring CSR, as it does not match the requirements for a seed client: " + reason)
+		log.Info("ignoring CSR, as it does not match the requirements for a seed client", "reason", reason)
 		return reconcile.Result{}, nil
 	}
 

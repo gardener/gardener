@@ -24,7 +24,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-var log = logf.Log.WithName("gardener.test-env")
+var log = logf.Log.WithName("gardener").WithName("test-env")
 
 // GardenerTestEnvironment wraps envtest.Environment and additionally starts, registers and stops an instance of
 // gardener-apiserver in order to work with gardener resources in the test.
