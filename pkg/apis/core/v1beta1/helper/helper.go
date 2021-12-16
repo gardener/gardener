@@ -1472,3 +1472,21 @@ func AddTypeToSecretBinding(secretBinding *gardencorev1beta1.SecretBinding, prov
 	}
 	secretBinding.Provider.Type = strings.Join(types, ",")
 }
+
+// IsCoreDNSAutoscalingModeUsed indicates whether the specified autoscaling mode of CoreDNS is enabled or not.
+func IsCoreDNSAutoscalingModeUsed(systemComponents *gardencorev1beta1.SystemComponents, autoscalingMode gardencorev1beta1.CoreDNSAutoscalingMode) bool {
+	isDefaultMode := autoscalingMode == gardencorev1beta1.CoreDNSAutoscalingModeHorizontal
+	if systemComponents == nil {
+		return isDefaultMode
+	}
+
+	if systemComponents.CoreDNS == nil {
+		return isDefaultMode
+	}
+
+	if systemComponents.CoreDNS.Autoscaling == nil {
+		return isDefaultMode
+	}
+
+	return systemComponents.CoreDNS.Autoscaling.Mode == autoscalingMode
+}

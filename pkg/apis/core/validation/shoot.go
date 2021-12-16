@@ -78,6 +78,10 @@ var (
 		string(core.ClusterAutoscalerExpanderPriority),
 		string(core.ClusterAutoscalerExpanderRandom),
 	)
+	availableCoreDNSAutoscalingModes = sets.NewString(
+		string(core.CoreDNSAutoscalingModeClusterProportional),
+		string(core.CoreDNSAutoscalingModeHorizontal),
+	)
 
 	// assymetric algorithms from https://datatracker.ietf.org/doc/html/rfc7518#section-3.1
 	availableOIDCSigningAlgs = sets.NewString(
@@ -208,6 +212,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 		}
 	}
 	allErrs = append(allErrs, ValidateTolerations(spec.Tolerations, fldPath.Child("tolerations"))...)
+	allErrs = append(allErrs, ValidateSystemComponents(spec.SystemComponents, fldPath.Child("systemComponents"))...)
 
 	return allErrs
 }
@@ -1605,6 +1610,34 @@ func ValidateContainerRuntimes(containerRuntime []core.ContainerRuntime, fldPath
 			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("type"), fmt.Sprintf("must specify different type, %s already exist", cr.Type)))
 		}
 		crSet[cr.Type] = true
+	}
+
+	return allErrs
+}
+
+// ValidateSystemComponents validates the given system components.
+func ValidateSystemComponents(systemComponents *core.SystemComponents, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if systemComponents == nil {
+		return allErrs
+	}
+
+	allErrs = append(allErrs, validateCoreDNS(systemComponents.CoreDNS, fldPath.Child("coreDNS"))...)
+
+	return allErrs
+}
+
+// validateCoreDNS validates the given Core DNS settings.
+func validateCoreDNS(coreDNS *core.CoreDNS, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if coreDNS == nil {
+		return allErrs
+	}
+
+	if coreDNS.Autoscaling != nil && !availableCoreDNSAutoscalingModes.Has(string(coreDNS.Autoscaling.Mode)) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("autoscaling").Child("mode"), coreDNS.Autoscaling.Mode, availableCoreDNSAutoscalingModes.List()))
 	}
 
 	return allErrs

@@ -278,6 +278,19 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 		obj.Spec.Provider.Workers[i].CRI = &CRI{Name: CRINameContainerD}
 	}
+
+	if obj.Spec.SystemComponents == nil {
+		obj.Spec.SystemComponents = &SystemComponents{}
+	}
+	if obj.Spec.SystemComponents.CoreDNS == nil {
+		obj.Spec.SystemComponents.CoreDNS = &CoreDNS{}
+	}
+	if obj.Spec.SystemComponents.CoreDNS.Autoscaling == nil {
+		obj.Spec.SystemComponents.CoreDNS.Autoscaling = &CoreDNSAutoscaling{}
+	}
+	if obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode != CoreDNSAutoscalingModeHorizontal && obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode != CoreDNSAutoscalingModeClusterProportional {
+		obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode = CoreDNSAutoscalingModeHorizontal
+	}
 }
 
 // SetDefaults_Maintenance sets default values for Maintenance objects.

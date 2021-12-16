@@ -103,6 +103,8 @@ type ShootSpec struct {
 	// ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
 	// This field is immutable.
 	ExposureClassName *string
+	// SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
+	SystemComponents *SystemComponents
 }
 
 // GetProviderType gets the type of the provider.
@@ -983,6 +985,39 @@ var (
 	DefaultWorkerMaxSurge = intstr.FromInt(1)
 	// DefaultWorkerMaxUnavailable is the default value for Worker MaxUnavailable.
 	DefaultWorkerMaxUnavailable = intstr.FromInt(0)
+)
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// System components relevant types                                                             //
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
+type SystemComponents struct {
+	// CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.
+	CoreDNS *CoreDNS
+}
+
+// CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.
+type CoreDNS struct {
+	// Autoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
+	Autoscaling *CoreDNSAutoscaling
+}
+
+// CoreDNSAutoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
+type CoreDNSAutoscaling struct {
+	// The mode of the autoscaling to be used for the Core DNS components running in the data plane of the Shoot cluster.
+	// Supported values are `horizontal` and `cluster-proportional`.
+	Mode CoreDNSAutoscalingMode
+}
+
+// CoreDNSAutoscalingMode is a type alias for the Core DNS autoscaling mode string.
+type CoreDNSAutoscalingMode string
+
+const (
+	// CoreDNSAutoscalingModeHorizontal is a constant for horizontal Core DNS autoscaling mode.
+	CoreDNSAutoscalingModeHorizontal CoreDNSAutoscalingMode = "horizontal"
+	// CoreDNSAutoscalingModeClusterProportional is a constant for cluster-proportional Core DNS autoscaling mode.
+	CoreDNSAutoscalingModeClusterProportional CoreDNSAutoscalingMode = "cluster-proportional"
 )
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

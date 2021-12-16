@@ -72,6 +72,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerRegistrationList":             schema_pkg_apis_core_v1alpha1_ControllerRegistrationList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerRegistrationSpec":             schema_pkg_apis_core_v1alpha1_ControllerRegistrationSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerResource":                     schema_pkg_apis_core_v1alpha1_ControllerResource(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNS":                                schema_pkg_apis_core_v1alpha1_CoreDNS(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNSAutoscaling":                     schema_pkg_apis_core_v1alpha1_CoreDNSAutoscaling(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNS":                                    schema_pkg_apis_core_v1alpha1_DNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude":                      schema_pkg_apis_core_v1alpha1_DNSIncludeExclude(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSProvider":                            schema_pkg_apis_core_v1alpha1_DNSProvider(ref),
@@ -180,6 +182,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootStateList":                         schema_pkg_apis_core_v1alpha1_ShootStateList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootStateSpec":                         schema_pkg_apis_core_v1alpha1_ShootStateSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootStatus":                            schema_pkg_apis_core_v1alpha1_ShootStatus(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SystemComponents":                       schema_pkg_apis_core_v1alpha1_SystemComponents(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Toleration":                             schema_pkg_apis_core_v1alpha1_Toleration(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.VerticalPodAutoscaler":                  schema_pkg_apis_core_v1alpha1_VerticalPodAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Volume":                                 schema_pkg_apis_core_v1alpha1_Volume(ref),
@@ -224,6 +227,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistrationList":              schema_pkg_apis_core_v1beta1_ControllerRegistrationList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistrationSpec":              schema_pkg_apis_core_v1beta1_ControllerRegistrationSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerResource":                      schema_pkg_apis_core_v1beta1_ControllerResource(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNS":                                 schema_pkg_apis_core_v1beta1_CoreDNS(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSAutoscaling":                      schema_pkg_apis_core_v1beta1_CoreDNSAutoscaling(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS":                                     schema_pkg_apis_core_v1beta1_DNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude":                       schema_pkg_apis_core_v1beta1_DNSIncludeExclude(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSProvider":                             schema_pkg_apis_core_v1beta1_DNSProvider(ref),
@@ -322,6 +327,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSpec":                               schema_pkg_apis_core_v1beta1_ShootSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStatus":                             schema_pkg_apis_core_v1beta1_ShootStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootTemplate":                           schema_pkg_apis_core_v1beta1_ShootTemplate(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SystemComponents":                        schema_pkg_apis_core_v1beta1_SystemComponents(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration":                              schema_pkg_apis_core_v1beta1_Toleration(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler":                   schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume":                                  schema_pkg_apis_core_v1beta1_Volume(ref),
@@ -2398,6 +2404,50 @@ func schema_pkg_apis_core_v1alpha1_ControllerResource(ref common.ReferenceCallba
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_CoreDNS(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"autoscaling": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Autoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNSAutoscaling"),
+						},
+					},
+				},
+				Required: []string{"autoscaling"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNSAutoscaling"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_CoreDNSAutoscaling(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CoreDNSAutoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"mode": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The mode of the autoscaling to be used for the Core DNS components running in the data plane of the Shoot cluster. Supported values are `horizontal` and `cluster-proportional`.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"mode"},
+			},
+		},
 	}
 }
 
@@ -7185,12 +7235,18 @@ func schema_pkg_apis_core_v1alpha1_ShootSpec(ref common.ReferenceCallback) commo
 							Format:      "",
 						},
 					},
+					"systemComponents": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SystemComponents"),
+						},
+					},
 				},
 				Required: []string{"cloudProfileName", "kubernetes", "networking", "provider", "region", "secretBindingName"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Toleration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SystemComponents", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Toleration"},
 	}
 }
 
@@ -7514,6 +7570,27 @@ func schema_pkg_apis_core_v1alpha1_ShootStatus(ref common.ReferenceCallback) com
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootAdvertisedAddress", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SystemComponents(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"coreDNS": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNS"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNS"},
 	}
 }
 
@@ -9591,6 +9668,50 @@ func schema_pkg_apis_core_v1beta1_ControllerResource(ref common.ReferenceCallbac
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_CoreDNS(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"autoscaling": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Autoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSAutoscaling"),
+						},
+					},
+				},
+				Required: []string{"autoscaling"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNSAutoscaling"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_CoreDNSAutoscaling(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CoreDNSAutoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"mode": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The mode of the autoscaling to be used for the Core DNS components running in the data plane of the Shoot cluster. Supported values are `horizontal` and `cluster-proportional`.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"mode"},
+			},
+		},
 	}
 }
 
@@ -14005,12 +14126,18 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 							Format:      "",
 						},
 					},
+					"systemComponents": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SystemComponents"),
+						},
+					},
 				},
 				Required: []string{"cloudProfileName", "kubernetes", "networking", "provider", "region", "secretBindingName"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SystemComponents", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"},
 	}
 }
 
@@ -14200,6 +14327,27 @@ func schema_pkg_apis_core_v1beta1_ShootTemplate(ref common.ReferenceCallback) co
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_SystemComponents(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"coreDNS": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNS"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNS"},
 	}
 }
 

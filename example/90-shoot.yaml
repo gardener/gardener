@@ -344,3 +344,7 @@ spec:
 #     kind: Secret
 #     name: my-foobar-secret
 # exposureClassName: <exposure-class-name>
+# systemComponents:
+#   coreDNS:
+#     autoscaling:
+#       mode: horizontal # {horizontal,cluster-proportional}

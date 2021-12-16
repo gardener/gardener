@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	mockcoredns "github.com/gardener/gardener/pkg/operation/botanist/component/coredns/mock"
+	"github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -89,6 +90,43 @@ var _ = Describe("CoreDNS", func() {
 			coreDNS, err := botanist.DefaultCoreDNS()
 			Expect(coreDNS).To(BeNil())
 			Expect(err).To(HaveOccurred())
+		})
+
+		Describe("#WithClusterProportionalAutoscaler", func() {
+			BeforeEach(func() {
+				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						SystemComponents: &gardencorev1beta1.SystemComponents{
+							CoreDNS: &gardencorev1beta1.CoreDNS{
+								Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{
+									Mode: gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional,
+								},
+							},
+						},
+					},
+				})
+			})
+
+			It("should successfully create a coredns interface with cluster-proportional autoscaling enabled", func() {
+				defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.APIServerSNI, false)()
+
+				kubernetesClient.EXPECT().Client()
+				botanist.ImageVector = imagevector.ImageVector{{Name: "coredns"}, {Name: "cluster-proportional-autoscaler"}}
+
+				coreDNS, err := botanist.DefaultCoreDNS()
+				Expect(coreDNS).NotTo(BeNil())
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should return an error because the cluster-proportional autoscaler image cannot be found", func() {
+				botanist.ImageVector = imagevector.ImageVector{{Name: "coredns"}}
+				botanist.APIServerAddress = "coredns-test"
+				botanist.Garden = &garden.Garden{}
+
+				coreDNS, err := botanist.DefaultCoreDNS()
+				Expect(coreDNS).To(BeNil())
+				Expect(err).To(HaveOccurred())
+			})
 		})
 	})
 
