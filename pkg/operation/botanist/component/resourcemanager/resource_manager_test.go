@@ -575,7 +575,7 @@ var _ = Describe("ResourceManager", func() {
 						MatchExpressions: []metav1.LabelSelectorRequirement{{
 							Key:      "gardener.cloud/purpose",
 							Operator: metav1.LabelSelectorOpNotIn,
-							Values:   []string{"kube-system"},
+							Values:   []string{"kube-system", "kubernetes-dashboard"},
 						}},
 					},
 					ObjectSelector: &metav1.LabelSelector{
@@ -609,7 +609,7 @@ var _ = Describe("ResourceManager", func() {
 						MatchExpressions: []metav1.LabelSelectorRequirement{{
 							Key:      "gardener.cloud/purpose",
 							Operator: metav1.LabelSelectorOpNotIn,
-							Values:   []string{"kube-system"},
+							Values:   []string{"kube-system", "kubernetes-dashboard"},
 						}},
 					},
 					ObjectSelector: &metav1.LabelSelector{
@@ -665,6 +665,7 @@ webhooks:
       operator: In
       values:
       - kube-system
+      - kubernetes-dashboard
   objectSelector:
     matchLabels:
       resources.gardener.cloud/purpose: token-invalidator
@@ -695,6 +696,7 @@ webhooks:
       operator: In
       values:
       - kube-system
+      - kubernetes-dashboard
   objectSelector:
     matchExpressions:
     - key: projected-token-mount.resources.gardener.cloud/skip

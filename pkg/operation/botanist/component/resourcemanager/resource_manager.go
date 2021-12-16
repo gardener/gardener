@@ -948,7 +948,7 @@ func (r *resourceManager) buildWebhookNamespaceSelector() *metav1.LabelSelector 
 		MatchExpressions: []metav1.LabelSelectorRequirement{{
 			Key:      v1beta1constants.GardenerPurpose,
 			Operator: namespaceSelectorOperator,
-			Values:   []string{metav1.NamespaceSystem},
+			Values:   []string{metav1.NamespaceSystem, "kubernetes-dashboard"},
 		}},
 	}
 }
