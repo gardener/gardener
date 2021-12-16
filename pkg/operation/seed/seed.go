@@ -460,6 +460,33 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
+	// Deploy certificates and secrets for seed components
+	existingSecrets := &corev1.SecretList{}
+	if err = seedClient.List(ctx, existingSecrets, client.InNamespace(v1beta1constants.GardenNamespace)); err != nil {
+		return err
+	}
+
+	existingSecretsMap := map[string]*corev1.Secret{}
+	for _, secret := range existingSecrets.Items {
+		secretObj := secret
+		existingSecretsMap[secret.ObjectMeta.Name] = &secretObj
+	}
+
+	deployedSecretsMap, err := deployCertificates(ctx, seed, seedClient, existingSecretsMap)
+	if err != nil {
+		return err
+	}
+
+	// Deploy gardener-resource-manager first since it serves central functionality (e.g., projected token mount webhook)
+	// which is required for all other components to start-up.
+	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, imageVector, deployedSecretsMap[caSeed], deployedSecretsMap[resourcemanager.SecretNameServer])
+	if err != nil {
+		return err
+	}
+	if err := component.OpWaiter(gardenerResourceManager).Deploy(ctx); err != nil {
+		return err
+	}
+
 	// Fetch component-specific central monitoring configuration
 	var (
 		centralScrapeConfigs                            = strings.Builder{}
@@ -484,7 +511,6 @@ func RunReconcileSeedFlow(
 	// Logging feature gate
 	var (
 		loggingEnabled                    = gardenletfeatures.FeatureGate.Enabled(features.Logging)
-		existingSecretsMap                = map[string]*corev1.Secret{}
 		filters                           = strings.Builder{}
 		parsers                           = strings.Builder{}
 		fluentBitConfigurationsOverwrites = map[string]interface{}{}
@@ -702,20 +728,6 @@ func RunReconcileSeedFlow(
 		}
 	}
 
-	existingSecrets := &corev1.SecretList{}
-	if err = seedClient.List(ctx, existingSecrets, client.InNamespace(v1beta1constants.GardenNamespace)); err != nil {
-		return err
-	}
-
-	for _, secret := range existingSecrets.Items {
-		secretObj := secret
-		existingSecretsMap[secret.ObjectMeta.Name] = &secretObj
-	}
-
-	deployedSecretsMap, err := deployCertificates(ctx, seed, seedClient, existingSecretsMap)
-	if err != nil {
-		return err
-	}
 	jsonString, err := json.Marshal(deployedSecretsMap[common.VPASecretName].Data)
 	if err != nil {
 		return err
@@ -1044,7 +1056,7 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	return runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, imageVector, imageVectorOverwrites, seed, conf, log, anySNI, deployedSecretsMap)
+	return runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, imageVector, imageVectorOverwrites, seed, conf, log, anySNI)
 }
 
 func runCreateSeedFlow(
@@ -1058,7 +1070,6 @@ func runCreateSeedFlow(
 	conf *config.GardenletConfiguration,
 	log logrus.FieldLogger,
 	anySNI bool,
-	deployedSecretsMap map[string]*corev1.Secret,
 ) error {
 	secretData, err := getDNSProviderSecretData(ctx, gardenClient, seed)
 	if err != nil {
@@ -1082,10 +1093,6 @@ func runCreateSeedFlow(
 	dnsRecord := getManagedIngressDNSRecord(seedClient, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress, log)
 
 	networkPolicies, err := defaultNetworkPolicies(seedClient, seed.GetInfo(), anySNI)
-	if err != nil {
-		return err
-	}
-	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, imageVector, deployedSecretsMap[caSeed], deployedSecretsMap[resourcemanager.SecretNameServer])
 	if err != nil {
 		return err
 	}
@@ -1128,49 +1135,37 @@ func runCreateSeedFlow(
 				return destroyDNSResources(ctx, dnsEntry, dnsOwner, dnsRecord, destroyDNSProviderTask(seedClient))
 			}).DoIf(!managedIngress(seed)),
 		})
-		deployResourceManager = g.Add(flow.Task{
-			Name: "Deploying gardener-resource-manager",
-			Fn:   component.OpWaiter(gardenerResourceManager).Deploy,
+		_ = g.Add(flow.Task{
+			Name: "Deploying cluster-identity",
+			Fn:   clusteridentity.NewForSeed(seedClient, v1beta1constants.GardenNamespace, *seed.GetInfo().Status.ClusterIdentity).Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying cluster-identity",
-			Fn:           clusteridentity.NewForSeed(seedClient, v1beta1constants.GardenNamespace, *seed.GetInfo().Status.ClusterIdentity).Deploy,
-			Dependencies: flow.NewTaskIDs(deployResourceManager),
+			Name: "Deploying cluster-autoscaler",
+			Fn:   clusterautoscaler.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace).Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying cluster-autoscaler",
-			Fn:           clusterautoscaler.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace).Deploy,
-			Dependencies: flow.NewTaskIDs(deployResourceManager),
+			Name: "Deploying etcd-druid",
+			Fn:   etcdDruid.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying etcd-druid",
-			Fn:           etcdDruid.Deploy,
-			Dependencies: flow.NewTaskIDs(deployResourceManager),
+			Name: "Deploying gardener-seed-admission-controller",
+			Fn:   gardenerSeedAdmissionController.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying gardener-seed-admission-controller",
-			Fn:           gardenerSeedAdmissionController.Deploy,
-			Dependencies: flow.NewTaskIDs(deployResourceManager),
+			Name: "Deploying kube-scheduler for shoot control plane pods",
+			Fn:   kubeScheduler.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying kube-scheduler for shoot control plane pods",
-			Fn:           kubeScheduler.Deploy,
-			Dependencies: flow.NewTaskIDs(deployResourceManager),
+			Name: "Deploying dependency-watchdog-endpoint",
+			Fn:   dwdEndpoint.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying dependency-watchdog-endpoint",
-			Fn:           dwdEndpoint.Deploy,
-			Dependencies: flow.NewTaskIDs(deployResourceManager),
+			Name: "Deploying dependency-watchdog-probe",
+			Fn:   dwdProbe.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying dependency-watchdog-probe",
-			Fn:           dwdProbe.Deploy,
-			Dependencies: flow.NewTaskIDs(deployResourceManager),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying external authz server",
-			Fn:           extAuthzServer.Deploy,
-			Dependencies: flow.NewTaskIDs(deployResourceManager),
+			Name: "Deploying external authz server",
+			Fn:   extAuthzServer.Deploy,
 		})
 	)
 
