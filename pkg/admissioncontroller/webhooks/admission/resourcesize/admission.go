@@ -109,12 +109,12 @@ func (h *handler) admitRequestSize(request admission.Request, requestLogger logr
 	objectSize := len(request.Object.Raw)
 	if limit.CmpInt64(int64(objectSize)) == -1 {
 		if h.config.OperationMode == nil || *h.config.OperationMode == apisconfig.AdmissionModeBlock {
-			requestLogger.Info("maximum resource size exceeded, rejected request",
+			requestLogger.Info("Maximum resource size exceeded, rejected request",
 				"requestObjectSize", objectSize, "limit", limit)
 
-			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("Maximum resource size exceeded! Size in request: %d bytes. Max allowed: %s", objectSize, limit))
+			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("maximum resource size exceeded! Size in request: %d bytes, max allowed: %s", objectSize, limit))
 		}
-		requestLogger.Info("maximum resource size exceeded, request will be denied in blocking mode",
+		requestLogger.Info("Maximum resource size exceeded, request will be denied in blocking mode",
 			"requestObjectSize", objectSize, "limit", limit)
 	}
 

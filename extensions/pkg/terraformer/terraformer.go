@@ -200,7 +200,7 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 			deployNewPod = false
 		} else {
 			// delete still existing pod and wait until it's gone
-			logger.Info(fmt.Sprintf("still existing Terraform pod with command %q found - ensuring the cleanup before starting a new Terraform pod with command %q", cmd, command))
+			logger.Info(fmt.Sprintf("Still existing Terraform pod with command %q found - ensuring the cleanup before starting a new Terraform pod with command %q", cmd, command))
 			if err := t.EnsureCleanedUp(ctx); err != nil {
 				return err
 			}

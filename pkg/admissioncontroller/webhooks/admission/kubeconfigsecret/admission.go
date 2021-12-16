@@ -88,7 +88,7 @@ func (h *handler) Handle(_ context.Context, request admission.Request) admission
 	if !response.Allowed && response.Result != nil {
 		response.Result.Reason = statusReasonInvalidKubeconfig
 
-		requestLogger.Info("rejected secret", "reason", response.Result.Reason,
+		requestLogger.Info("Rejected secret", "reason", response.Result.Reason,
 			"message", response.Result.Message, "operation", request.Operation,
 			"namespace", request.Namespace, "name", request.Name, "username", request.UserInfo.Username)
 

@@ -61,7 +61,7 @@ func (e *GardenerTestEnvironment) Start() (*rest.Config, error) {
 	}
 
 	// start kube control plane
-	log.V(1).Info("starting envtest control plane")
+	log.V(1).Info("Starting envtest control plane")
 	adminRestConfig, err := e.Environment.Start()
 	if err != nil {
 		return nil, err
@@ -117,14 +117,14 @@ func (e *GardenerTestEnvironment) Start() (*rest.Config, error) {
 func (e *GardenerTestEnvironment) Stop() error {
 	var errList []error
 
-	log.V(1).Info("stopping gardener-apiserver")
+	log.V(1).Info("Stopping gardener-apiserver")
 	if e.GardenerAPIServer != nil {
 		if err := e.GardenerAPIServer.Stop(); err != nil {
 			errList = append(errList, err)
 		}
 	}
 
-	log.V(1).Info("stopping envtest control plane")
+	log.V(1).Info("Stopping envtest control plane")
 	if e.Environment != nil {
 		if err := e.Environment.Stop(); err != nil {
 			errList = append(errList, err)

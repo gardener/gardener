@@ -97,7 +97,7 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 	// Now that all checks have been passed we can actually validate the admission request.
 	reviewResponse := h.admitNamespace(ctx, request)
 	if !reviewResponse.Allowed && reviewResponse.Result != nil {
-		requestLogger.Info("rejected namespace deletion", "user", request.UserInfo.Username, "message", reviewResponse.Result.Message)
+		requestLogger.Info("Rejected namespace deletion", "user", request.UserInfo.Username, "message", reviewResponse.Result.Message)
 	}
 	return reviewResponse
 }

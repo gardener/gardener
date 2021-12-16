@@ -114,7 +114,7 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 	migrationHappened := migrateMachineImageVersionCRISupport(cloudProfile)
 
 	if migrationHappened {
-		log.Info("migrated Machine Image Versions to explicitly contain `docker` as supported CRI")
+		log.Info("Migrated Machine Image Versions to explicitly contain `docker` as supported CRI")
 		if err := r.gardenClient.Update(ctx, cloudProfile); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to update Cloud Profile spec for machine image CRI migration: %w", err)
 		}

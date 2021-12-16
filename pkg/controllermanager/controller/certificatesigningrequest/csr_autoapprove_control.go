@@ -157,7 +157,7 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 	}
 
 	if len(cert) != 0 || isInFinalState {
-		log.Info("ignoring CSR, as it is in final state", "finalState", finalState)
+		log.Info("Ignoring CSR, as it is in final state", "finalState", finalState)
 		return reconcile.Result{}, nil
 	}
 
@@ -167,18 +167,18 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 	}
 
 	if ok, reason := gutil.IsSeedClientCert(x509cr, usages); !ok {
-		log.Info("ignoring CSR, as it does not match the requirements for a seed client", "reason", reason)
+		log.Info("Ignoring CSR, as it does not match the requirements for a seed client", "reason", reason)
 		return reconcile.Result{}, nil
 	}
 
-	log.Info("checking if creating user has authorization for seedclient subresource", "username", username, "groups", groups, "extra", extra)
+	log.Info("Checking if creating user has authorization for seedclient subresource", "username", username, "groups", groups, "extra", extra)
 	sarStatus, err := authorize(ctx, r.gardenClient.Client(), username, uid, groups, extra, authorizationv1.ResourceAttributes{Group: "certificates.k8s.io", Resource: "certificatesigningrequests", Verb: "create", Subresource: "seedclient"})
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if sarStatus.Allowed {
-		log.Info("auto-approving CSR")
+		log.Info("Auto-approving CSR")
 		return reconcile.Result{}, updateConditionsFn()
 	}
 

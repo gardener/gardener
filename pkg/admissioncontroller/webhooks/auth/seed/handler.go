@@ -111,7 +111,7 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	if sarSpec.NonResourceAttributes != nil {
 		keysAndValues = append(keysAndValues, "nonResourceAttributes", sarSpec.NonResourceAttributes.String())
 	}
-	h.logger.V(1).Info("received request", keysAndValues...)
+	h.logger.V(1).Info("Received request", keysAndValues...)
 
 	// Consult authorizer for result and write the response
 	decision, reason, err := h.authorizer.Authorize(ctx, AuthorizationAttributesFrom(*sarSpec))
@@ -133,7 +133,7 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 		status = Errored(http.StatusInternalServerError, fmt.Errorf("unexpected decision: %d", decision))
 	}
 
-	h.logger.V(1).Info("responding to request", append([]interface{}{"decision", decision, "reason", reason}, keysAndValues...))
+	h.logger.V(1).Info("Responding to request", append([]interface{}{"decision", decision, "reason", reason}, keysAndValues...))
 	h.writeResponse(w, gvk, status)
 }
 
@@ -161,7 +161,7 @@ func (h *handler) writeResponse(w io.Writer, gvk *schema.GroupVersionKind, statu
 			"reason", status.Reason,
 			"error", status.EvaluationError,
 		)
-		log.V(1).Info("wrote response")
+		log.V(1).Info("Wrote response")
 	}
 }
 
