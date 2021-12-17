@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -47,6 +48,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,12 +63,10 @@ const (
 	SecretName = "gardener-resource-manager"
 	// SecretNameServer is the name of the gardener-resource-manager server certificate secret.
 	SecretNameServer = "gardener-resource-manager-server"
+	// SecretNameShootAccess is the name of the shoot access secret for the gardener-resource-manager.
+	SecretNameShootAccess = gutil.SecretNamePrefixShootAccess + v1beta1constants.DeploymentNameGardenerResourceManager
 	// LabelValue is a constant for the value of the 'app' label on Kubernetes resources.
 	LabelValue = "gardener-resource-manager"
-
-	// UserName is the name that should be used for the secret that the gardener resource manager uses to
-	// authenticate itself with the kube-apiserver (e.g., the common name in its client certificate).
-	UserName = "gardener.cloud:system:gardener-resource-manager"
 
 	clusterRoleName    = "gardener-resource-manager-seed"
 	containerName      = v1beta1constants.DeploymentNameGardenerResourceManager
@@ -77,10 +77,9 @@ const (
 	roleName           = "gardener-resource-manager"
 	serviceAccountName = "gardener-resource-manager"
 
-	volumeNameKubeconfig           = "gardener-resource-manager"
+	volumeNameBootstrapKubeconfig  = "kubeconfig-bootstrap"
 	volumeNameCerts                = "tls"
 	volumeNameAPIServerAccess      = "kube-api-access-gardener"
-	volumeMountPathKubeconfig      = "/etc/gardener-resource-manager"
 	volumeMountPathCerts           = "/etc/gardener-resource-manager-tls"
 	volumeMountPathAPIServerAccess = "/var/run/secrets/kubernetes.io/serviceaccount"
 
@@ -215,6 +214,13 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 		return fmt.Errorf("missing server secret information")
 	}
 
+	if r.values.TargetDiffersFromSourceCluster {
+		r.secrets.shootAccess = r.newShootAccessSecret()
+		if err := r.secrets.shootAccess.WithTokenExpirationDuration("24h").Reconcile(ctx, r.client); err != nil {
+			return err
+		}
+	}
+
 	fns := []func(context.Context) error{
 		r.ensureServiceAccount,
 		r.ensureRBAC,
@@ -235,6 +241,11 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 		if err := fn(ctx); err != nil {
 			return err
 		}
+	}
+
+	// TODO(rfranzke): Remove in a future release.
+	if r.values.TargetDiffersFromSourceCluster {
+		return kutil.DeleteObject(ctx, r.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: r.namespace}})
 	}
 
 	return nil
@@ -262,6 +273,8 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 		if err := managedresources.WaitUntilDeleted(timeoutCtx, r.client, r.namespace, ManagedResourceName); err != nil {
 			return err
 		}
+
+		objectsToDelete = append(objectsToDelete, r.newShootAccessSecret().Secret)
 	} else {
 		objectsToDelete = append(objectsToDelete, r.emptyMutatingWebhookConfiguration())
 	}
@@ -607,22 +620,26 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 			})
 		}
 
-		if r.secrets.Kubeconfig.Name != "" {
-			metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum/secret-"+r.secrets.Kubeconfig.Name, r.secrets.Kubeconfig.Checksum)
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-				Name: volumeNameKubeconfig,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName:  r.secrets.Kubeconfig.Name,
-						DefaultMode: pointer.Int32(420),
+		if r.values.TargetDiffersFromSourceCluster {
+			if r.secrets.BootstrapKubeconfig != nil {
+				metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum/secret-"+r.secrets.BootstrapKubeconfig.Name, r.secrets.BootstrapKubeconfig.Checksum)
+				deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+					Name: volumeNameBootstrapKubeconfig,
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName:  r.secrets.BootstrapKubeconfig.Name,
+							DefaultMode: pointer.Int32(420),
+						},
 					},
-				},
-			})
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-				MountPath: volumeMountPathKubeconfig,
-				Name:      volumeNameKubeconfig,
-				ReadOnly:  true,
-			})
+				})
+				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+					MountPath: gutil.VolumeMountPathGenericKubeconfig,
+					Name:      volumeNameBootstrapKubeconfig,
+					ReadOnly:  true,
+				})
+			} else if r.secrets.shootAccess != nil {
+				utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, r.secrets.shootAccess.Secret.Name))
+			}
 		}
 
 		if r.secrets.RootCA != nil {
@@ -719,8 +736,8 @@ func (r *resourceManager) computeCommand() []string {
 	if r.secrets.Server.Name != "" {
 		cmd = append(cmd, fmt.Sprintf("--tls-cert-dir=%s", volumeMountPathCerts))
 	}
-	if r.secrets.Kubeconfig.Name != "" {
-		cmd = append(cmd, fmt.Sprintf("--target-kubeconfig=%s/%s", volumeMountPathKubeconfig, secrets.DataKeyKubeconfig))
+	if r.values.TargetDiffersFromSourceCluster {
+		cmd = append(cmd, "--target-kubeconfig="+gutil.PathGenericKubeconfig)
 	}
 	return cmd
 }
@@ -815,12 +832,32 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
 		mutatingWebhookConfiguration = r.emptyMutatingWebhookConfiguration()
+
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "gardener.cloud:target:resource-manager",
+				Annotations: map[string]string{resourcesv1alpha1.KeepObject: "true"},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "cluster-admin",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      r.secrets.shootAccess.ServiceAccountName,
+				Namespace: metav1.NamespaceSystem,
+			}},
+		}
 	)
 
 	mutatingWebhookConfiguration.Labels = appLabel()
 	mutatingWebhookConfiguration.Webhooks = GetMutatingWebhookConfigurationWebhooks(r.buildWebhookNamespaceSelector(), r.buildWebhookClientConfig)
 
-	data, err := registry.AddAllAndSerialize(mutatingWebhookConfiguration)
+	data, err := registry.AddAllAndSerialize(
+		mutatingWebhookConfiguration,
+		clusterRoleBinding,
+	)
 	if err != nil {
 		return err
 	}
@@ -868,6 +905,10 @@ func (r *resourceManager) ensureNetworkPolicy(ctx context.Context) error {
 
 func (r *resourceManager) emptyNetworkPolicy() *networkingv1.NetworkPolicy {
 	return &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-gardener-resource-manager", Namespace: r.namespace}}
+}
+
+func (r *resourceManager) newShootAccessSecret() *gutil.ShootAccessSecret {
+	return gutil.NewShootAccessSecret(SecretNameShootAccess, r.namespace)
 }
 
 // GetMutatingWebhookConfigurationWebhooks returns the MutatingWebhooks for the resourcemanager component for reuse
@@ -1045,9 +1086,9 @@ func (r *resourceManager) SetSecrets(s Secrets) { r.secrets = s }
 
 // Secrets is collection of secrets for the gardener-resource-manager.
 type Secrets struct {
-	// Kubeconfig enables the gardener-resource-manager to deploy resources into a different cluster than the one it is
-	// running in.
-	Kubeconfig component.Secret
+	// BootstrapKubeconfig is the kubeconfig of the gardener-resource-manager used during the bootstrapping process. Its
+	// token requestor controller will request a JWT token for itself with this kubeconfig.
+	BootstrapKubeconfig *component.Secret
 	// ServerCA is a secret containing a CA certificate which was used to sign the server certificate provided in the
 	// 'Server' secret.
 	ServerCA component.Secret
@@ -1056,4 +1097,6 @@ type Secrets struct {
 	Server component.Secret
 	// RootCA is a secret containing the root CA secret of the target cluster.
 	RootCA *component.Secret
+
+	shootAccess *gutil.ShootAccessSecret
 }
