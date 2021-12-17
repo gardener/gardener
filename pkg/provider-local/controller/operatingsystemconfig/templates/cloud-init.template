@@ -1,0 +1,42 @@
+{{- define "put-content" -}}
+cat << EOF | base64 -d > '{{ .Path }}'
+{{ .Content }}
+EOF
+{{- end -}}
+
+{{- define "put-content-raw" -}}
+cat << EOF > '{{ .Path }}'
+{{ .Content }}
+EOF
+{{- end -}}
+
+#!/bin/bash
+
+{{ range $_, $file := .Files -}}
+mkdir -p '{{ $file.Dirname }}'
+{{ if $file.TransmitUnencoded -}}
+{{ template "put-content-raw" $file }}
+{{- else -}}
+{{ template "put-content" $file }}
+{{- end }}
+{{ if $file.Permissions -}}
+chmod '{{ $file.Permissions }}' '{{ $file.Path }}'
+{{ end }}
+{{ end }}
+
+{{ range $_, $unit := .Units -}}
+{{ if $unit.Content -}}
+{{ template "put-content" $unit }}
+{{- end }}
+{{ if $unit.DropIns }}
+mkdir -p '{{ $unit.DropIns.Path }}'
+{{ range $_, $dropIn := $unit.DropIns.Items -}}
+{{ template "put-content" $dropIn }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{- if .Bootstrap }}
+systemctl daemon-reload
+systemctl enable cloud-config-downloader && systemctl restart cloud-config-downloader
+{{- end }}

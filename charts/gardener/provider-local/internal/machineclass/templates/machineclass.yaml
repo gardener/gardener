@@ -1,0 +1,30 @@
+{{- range $index, $machineClass := .Values.machineClasses }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $machineClass.name }}
+  namespace: {{ $.Release.Namespace }}
+{{- if $machineClass.secret.labels }}
+  labels:
+{{ toYaml $machineClass.secret.labels | indent 4 }}
+{{- end }}
+type: Opaque
+data:
+  userData: {{ $machineClass.secret.cloudConfig | b64enc }}
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineClass
+metadata:
+  name: {{ $machineClass.name }}
+  namespace: {{ $.Release.Namespace }}
+provider: "local"
+providerSpec:
+  image: {{ $machineClass.image }}
+secretRef:
+  name: {{ $machineClass.name }}
+  namespace: {{ $.Release.Namespace }}
+credentialsSecretRef:
+  name: {{ $machineClass.credentialsSecretRef.name }}
+  namespace: {{ $machineClass.credentialsSecretRef.namespace }}
+{{- end }}

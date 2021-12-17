@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "name" . }}
+  namespace: {{ .Release.Namespace }}
+{{-  if .Values.ignoreResources }}
+  annotations:
+    resources.gardener.cloud/ignore: "true"
+{{- end }}
+  labels:
+{{ include "labels" . | indent 4 }}
+spec:
+  revisionHistoryLimit: 5
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+{{ include "labels" . | indent 6 }}
+  strategy:
+    rollingUpdate:
+      maxUnavailable: {{ .Values.maxUnavailable }}
+      maxSurge: {{ .Values.maxSurge }}
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.imageVectorOverwrite }}
+        checksum/configmap-imagevector-overwrite: {{ include (print $.Template.BasePath "/configmap-imagevector-overwrite.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if and .Values.metrics.enableScraping }}
+        prometheus.io/scrape: "true"
+        # default metrics endpoint in controller-runtime
+        prometheus.io/port: "8080"
+        {{- end }}
+      labels:
+{{ include "labels" . | indent 8 }}
+    spec:
+      priorityClassName: {{ include "name" . }}
+      serviceAccountName: {{ include "name" . }}
+      containers:
+      - name: {{ include "name" . }}
+        image: {{ include "image" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command:
+        - /gardener-extension-provider-local
+        - --leader-election-resource-lock={{ .Values.leaderElection.resourceLock }}
+        - --controlplane-max-concurrent-reconciles={{ .Values.controllers.controlplane.concurrentSyncs }}
+        - --dnsprovider-max-concurrent-reconciles={{ .Values.controllers.dnsprovider.concurrentSyncs }}
+        - --dnsrecord-max-concurrent-reconciles={{ .Values.controllers.dnsrecord.concurrentSyncs }}
+        - --healthcheck-max-concurrent-reconciles={{ .Values.controllers.healthcheck.concurrentSyncs }}
+        - --infrastructure-max-concurrent-reconciles={{ .Values.controllers.infrastructure.concurrentSyncs }}
+        - --ignore-operation-annotation={{ .Values.controllers.ignoreOperationAnnotation }}
+        - --worker-max-concurrent-reconciles={{ .Values.controllers.worker.concurrentSyncs }}
+        - --operatingsystemconfig-max-concurrent-reconciles={{ .Values.controllers.operatingsystemconfig.concurrentSyncs }}
+        - --network-max-concurrent-reconciles={{ .Values.controllers.network.concurrentSyncs }}
+        - --node-max-concurrent-reconciles={{ .Values.controllers.node.concurrentSyncs }}
+        - --service-max-concurrent-reconciles={{ .Values.controllers.service.concurrentSyncs }}
+        - --service-host-ip={{ .Values.controllers.service.hostIP }}
+        - --service-apiserver-sni-enabled={{ .Values.controllers.service.apiServerSNIEnabled }}
+        - --webhook-config-namespace={{ .Release.Namespace }}
+        - --webhook-config-service-port={{ .Values.webhookConfig.servicePort }}
+        - --webhook-config-server-port={{ .Values.webhookConfig.serverPort }}
+        - --disable-controllers={{ .Values.disableControllers | join "," }}
+        - --disable-webhooks={{ .Values.disableWebhooks | join "," }}
+        env:
+        - name: LEADER_ELECTION_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        {{- if .Values.imageVectorOverwrite }}
+        - name: IMAGEVECTOR_OVERWRITE
+          value: /charts_overwrite/images_overwrite.yaml
+        {{- end }}
+        ports:
+        - name: webhook-server
+          containerPort: {{ .Values.webhookConfig.serverPort }}
+          protocol: TCP
+{{- if .Values.resources }}
+        resources:
+{{ toYaml .Values.resources | nindent 10 }}
+{{- end }}
+        {{- if .Values.imageVectorOverwrite }}
+        volumeMounts:
+        - name: imagevector-overwrite
+          mountPath: /charts_overwrite/
+          readOnly: true
+        {{- end }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: {{ include "labels.app.key" . }}
+                operator: In
+                values:
+                - {{ include "labels.app.value" . }}
+            topologyKey: "kubernetes.io/hostname"
+      {{- if .Values.imageVectorOverwrite }}
+      volumes:
+      - name: imagevector-overwrite
+        configMap:
+          name: {{ include "name" . }}-imagevector-overwrite
+          defaultMode: 420
+      {{- end }}

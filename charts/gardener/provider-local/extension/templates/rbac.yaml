@@ -1,0 +1,123 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "name" . }}
+  labels:
+{{ include "labels" . | indent 4 }}
+rules:
+- apiGroups:
+  - extensions.gardener.cloud
+  resources:
+  - clusters
+  - controlplanes
+  - controlplanes/status
+  - dnsrecords
+  - dnsrecords/status
+  - infrastructures
+  - infrastructures/status
+  - networks
+  - networks/status
+  - operatingsystemconfigs
+  - operatingsystemconfigs/status
+  - workers
+  - workers/status
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - dns.gardener.cloud
+  resources:
+  - dnsproviders
+  - dnsproviders/status
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - resources.gardener.cloud
+  resources:
+  - managedresources
+  verbs:
+  - "*"
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  resourceNames:
+  - provider-local-leader-election
+  verbs:
+  - get
+  - watch
+  - update
+- apiGroups:
+  - ""
+  - apps
+  - batch
+  - rbac.authorization.k8s.io
+  - admissionregistration.k8s.io
+  - apiextensions.k8s.io
+  - networking.k8s.io
+  resources:
+  - namespaces
+  - namespaces/finalizers
+  - events
+  - secrets
+  - configmaps
+  - endpoints
+  - deployments
+  - services
+  - services/status
+  - nodes
+  - nodes/status
+  - serviceaccounts
+  - clusterroles
+  - clusterrolebindings
+  - roles
+  - rolebindings
+  - jobs
+  - pods
+  - pods/log
+  - mutatingwebhookconfigurations
+  - customresourcedefinitions
+  - networkpolicies
+  verbs:
+  - "*"
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - "*"
+  verbs:
+  - "*"
+- apiGroups:
+  - autoscaling.k8s.io
+  resources:
+  - verticalpodautoscalers
+  verbs:
+  - "*"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "name" . }}
+  labels:
+{{ include "labels" . | indent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "name" . }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "name" . }}
+  namespace: {{ .Release.Namespace }}

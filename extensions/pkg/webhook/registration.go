@@ -25,7 +25,6 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -42,8 +41,6 @@ const (
 // RegisterWebhooks registers the given webhooks in the Kubernetes cluster targeted by the provided manager.
 func RegisterWebhooks(ctx context.Context, mgr manager.Manager, namespace, providerName string, servicePort int, mode, url string, caBundle []byte, webhooks []*Webhook) (webhooksToRegisterSeed []admissionregistrationv1.MutatingWebhook, webhooksToRegisterShoot []admissionregistrationv1.MutatingWebhook, err error) {
 	var (
-		fail                             = admissionregistrationv1.Fail
-		ignore                           = admissionregistrationv1.Ignore
 		exact                            = admissionregistrationv1.Exact
 		mutatingWebhookConfigurationSeed = &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: NamePrefix + providerName}}
 	)
@@ -72,20 +69,30 @@ func RegisterWebhooks(ctx context.Context, mgr manager.Manager, namespace, provi
 			TimeoutSeconds:          pointer.Int32(10),
 		}
 
+		if webhook.TimeoutSeconds != nil {
+			webhookToRegister.TimeoutSeconds = webhook.TimeoutSeconds
+		}
+
+		shootMode := ModeURLWithServiceName
+		if mode == ModeURL {
+			shootMode = ModeURL
+		}
+
 		switch webhook.Target {
 		case TargetSeed:
-			webhookToRegister.FailurePolicy = &fail
+			webhookToRegister.FailurePolicy = getFailurePolicy(admissionregistrationv1.Fail, webhook.FailurePolicy)
 			webhookToRegister.MatchPolicy = &exact
 			webhookToRegister.ClientConfig = buildClientConfigFor(webhook, namespace, providerName, servicePort, mode, url, caBundle)
 			webhooksToRegisterSeed = append(webhooksToRegisterSeed, webhookToRegister)
 		case TargetShoot:
-			webhookToRegister.FailurePolicy = &ignore
+			webhookToRegister.FailurePolicy = getFailurePolicy(admissionregistrationv1.Ignore, webhook.FailurePolicy)
 			webhookToRegister.MatchPolicy = &exact
-			webhookToRegister.ClientConfig = buildClientConfigFor(webhook, namespace, providerName, servicePort, ModeURLWithServiceName, url, caBundle)
+			webhookToRegister.ClientConfig = buildClientConfigFor(webhook, namespace, providerName, servicePort, shootMode, url, caBundle)
 			webhooksToRegisterShoot = append(webhooksToRegisterShoot, webhookToRegister)
 		default:
 			return nil, nil, fmt.Errorf("invalid webhook target: %s", webhook.Target)
 		}
+
 	}
 
 	if len(webhooksToRegisterSeed) > 0 {
@@ -118,18 +125,30 @@ func RegisterWebhooks(ctx context.Context, mgr manager.Manager, namespace, provi
 	return webhooksToRegisterSeed, webhooksToRegisterShoot, nil
 }
 
+func getFailurePolicy(def admissionregistrationv1.FailurePolicyType, overwrite *admissionregistrationv1.FailurePolicyType) *admissionregistrationv1.FailurePolicyType {
+	if overwrite != nil {
+		return overwrite
+	}
+	return &def
+}
+
 // buildRule creates and returns a RuleWithOperations for the given object type.
-func buildRule(mgr manager.Manager, t runtime.Object) (*admissionregistrationv1.RuleWithOperations, error) {
+func buildRule(mgr manager.Manager, t Type) (*admissionregistrationv1.RuleWithOperations, error) {
 	// Get GVK from the type
-	gvk, err := apiutil.GVKForObject(t, mgr.GetScheme())
+	gvk, err := apiutil.GVKForObject(t.Obj, mgr.GetScheme())
 	if err != nil {
-		return nil, fmt.Errorf("could not get GroupVersionKind from object %v: %w", t, err)
+		return nil, fmt.Errorf("could not get GroupVersionKind from object %v: %w", t.Obj, err)
 	}
 
 	// Get REST mapping from GVK
 	mapping, err := mgr.GetRESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
 	if err != nil {
 		return nil, fmt.Errorf("could not get REST mapping from GroupVersionKind '%s': %w", gvk.String(), err)
+	}
+
+	resource := mapping.Resource.Resource
+	if t.Subresource != nil {
+		resource += fmt.Sprintf("/%s", *t.Subresource)
 	}
 
 	// Create and return RuleWithOperations
@@ -141,7 +160,7 @@ func buildRule(mgr manager.Manager, t runtime.Object) (*admissionregistrationv1.
 		Rule: admissionregistrationv1.Rule{
 			APIGroups:   []string{gvk.Group},
 			APIVersions: []string{gvk.Version},
-			Resources:   []string{mapping.Resource.Resource},
+			Resources:   []string{resource},
 		},
 	}, nil
 }

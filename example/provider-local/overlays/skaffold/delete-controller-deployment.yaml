@@ -1,0 +1,5 @@
+$patch: delete
+apiVersion: core.gardener.cloud/v1beta1
+kind: ControllerDeployment
+metadata:
+  name: provider-local

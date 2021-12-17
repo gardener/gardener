@@ -33,12 +33,14 @@ OPENAPI_GEN                := $(TOOLS_BIN_DIR)/openapi-gen
 PROMTOOL                   := $(TOOLS_BIN_DIR)/promtool
 PROTOC_GEN_GOGO            := $(TOOLS_BIN_DIR)/protoc-gen-gogo
 SETUP_ENVTEST              := $(TOOLS_BIN_DIR)/setup-envtest
+SKAFFOLD                   := $(TOOLS_BIN_DIR)/skaffold
 YAML2JSON                  := $(TOOLS_BIN_DIR)/yaml2json
 YQ                         := $(TOOLS_BIN_DIR)/yq
 
 # default tool versions
 GOLANGCI_LINT_VERSION ?= v1.42.1
 HELM_VERSION ?= v3.5.4
+SKAFFOLD_VERSION ?= v1.35.0
 YQ_VERSION ?= v4.9.6
 DOCFORGE_VERSION ?= v0.21.0
 
@@ -100,11 +102,15 @@ $(OPENAPI_GEN): go.mod
 $(PROMTOOL): $(HACK_PKG_PATH)/tools/install-promtool.sh
 	@$(HACK_PKG_PATH)/tools/install-promtool.sh
 
+$(PROTOC_GEN_GOGO): go.mod
+	go build -o $(PROTOC_GEN_GOGO) k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo
+
 $(SETUP_ENVTEST): go.mod
 	go build -o $(SETUP_ENVTEST) sigs.k8s.io/controller-runtime/tools/setup-envtest
 
-$(PROTOC_GEN_GOGO): go.mod
-	go build -o $(PROTOC_GEN_GOGO) k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo
+$(SKAFFOLD): $(call tool_version_file,$(SKAFFOLD),$(SKAFFOLD_VERSION))
+	curl -Lo $(SKAFFOLD) https://storage.googleapis.com/skaffold/releases/$(SKAFFOLD_VERSION)/skaffold-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed 's/x86_64/amd64/')
+	chmod +x $(SKAFFOLD)
 
 $(YAML2JSON): go.mod
 	go build -o $(YAML2JSON) github.com/bronze1man/yaml2json

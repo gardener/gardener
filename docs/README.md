@@ -137,6 +137,7 @@
     * [`ContainerRuntime` resource](extensions/containerruntime.md)
   * Generic (non-essential) extensions
     * [`Extension` resource](extensions/extension.md)
+* [Provider Local](extensions/provider-local.md)
 * [Extending project roles](extensions/project-roles.md)
 * [Referenced resources](extensions/referenced-resources.md)
 * [Control plane migration](extensions/migration.md)
@@ -147,6 +148,7 @@
 
 ## Deployment
 
+* [Getting started locally](deployment/getting_started_locally.md)
 * [Setup Gardener on a Kubernetes cluster](deployment/setup_gardener.md)
 * [Version Skew Policy](deployment/version_skew_policy.md)
 * [Deploying Gardenlets](deployment/deploy_gardenlet.md)

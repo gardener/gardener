@@ -35,9 +35,9 @@ import (
 )
 
 // NewHandlerWithShootClient creates a new handler for the given types, using the given mutator, and logger.
-func NewHandlerWithShootClient(mgr manager.Manager, types []client.Object, mutator MutatorWithShootClient, logger logr.Logger) (http.Handler, error) {
+func NewHandlerWithShootClient(mgr manager.Manager, types []Type, mutator MutatorWithShootClient, logger logr.Logger) (http.Handler, error) {
 	// Build a map of the given types keyed by their GVKs
-	typesMap, err := buildTypesMap(mgr.GetScheme(), types)
+	typesMap, err := buildTypesMap(mgr.GetScheme(), objectsFromTypes(types))
 	if err != nil {
 		return nil, err
 	}

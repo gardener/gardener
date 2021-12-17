@@ -48,7 +48,7 @@ var _ = Describe("Handler", func() {
 		ctrl *gomock.Controller
 		mgr  *mockmanager.MockManager
 
-		objTypes = []client.Object{&corev1.Service{}}
+		objTypes = []Type{{Obj: &corev1.Service{}}}
 		svc      = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
 		}

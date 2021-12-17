@@ -1,0 +1,30 @@
+{{- if .Values.coredns.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns
+  namespace: gardener-extension-provider-local-coredns
+data:
+  Corefile: |
+    .:9053 {
+        errors
+        health {
+           lameduck 5s
+        }
+        ready
+    {{- if .Values.controllers.service.apiServerSNIEnabled }}
+        rewrite name regex api\.(.*)\.(.*)\.(.*)\.local\.gardener\.cloud istio-ingressgateway.istio-ingress.svc.cluster.local
+    {{- else }}
+        rewrite name regex api\.(.*)\.(.*)\.(.*)\.local\.gardener\.cloud kube-apiserver.shoot--{2}--{1}.svc.cluster.local
+    {{- end }}
+        prometheus :9153
+        forward . /etc/resolv.conf {
+           max_concurrent 1000
+        }
+        cache 30
+        loop
+        log
+        reload
+        loadbalance
+    }
+{{- end -}}

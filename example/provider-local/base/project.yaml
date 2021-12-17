@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: garden-local
+  labels:
+    gardener.cloud/role: project
+    project.gardener.cloud/name: local
+---
+apiVersion: core.gardener.cloud/v1beta1
+kind: Project
+metadata:
+  name: local
+spec:
+  namespace: garden-local
+  tolerations:
+    whitelist:
+    - key: test.gardener.cloud/test-run

@@ -17,7 +17,7 @@ require (
 	github.com/gardener/external-dns-management v0.7.18
 	github.com/gardener/hvpa-controller v0.3.1
 	github.com/gardener/landscaper/apis v0.7.0
-	github.com/gardener/machine-controller-manager v0.33.0
+	github.com/gardener/machine-controller-manager v0.41.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.4.0
 	github.com/gogo/protobuf v1.3.2
@@ -43,9 +43,7 @@ require (
 	go.uber.org/automaxprocs v1.4.0
 	go.uber.org/goleak v1.1.10
 	go.uber.org/zap v1.19.0
-	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
-	golang.org/x/mod v0.5.1 // indirect
-	golang.org/x/sys v0.0.0-20211015200801-69063c4bb744 // indirect
+	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
 	golang.org/x/tools v0.1.7
 	gomodules.xyz/jsonpatch/v2 v2.2.0
@@ -68,6 +66,7 @@ require (
 	k8s.io/klog/v2 v2.9.0
 	k8s.io/kube-aggregator v0.22.2
 	k8s.io/kube-openapi v0.0.0-20210421082810-95288971da7e
+	k8s.io/kube-proxy v0.22.2
 	k8s.io/kubelet v0.22.2
 	k8s.io/metrics v0.22.2
 	k8s.io/utils v0.0.0-20210819203725-bdf08cb9a70a
@@ -93,4 +92,5 @@ replace (
 	k8s.io/component-base => k8s.io/component-base v0.22.2
 	k8s.io/helm => k8s.io/helm v2.13.1+incompatible
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.22.2
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.22.2
 )

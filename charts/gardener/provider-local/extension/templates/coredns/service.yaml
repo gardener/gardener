@@ -1,0 +1,22 @@
+{{- if .Values.coredns.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: coredns
+  name: coredns
+  namespace: gardener-extension-provider-local-coredns
+spec:
+  type: ClusterIP
+  selector:
+    app: coredns
+  ports:
+  - name: tcp
+    port: 53
+    protocol: TCP
+    targetPort: 9053
+  - name: udp
+    port: 53
+    protocol: UDP
+    targetPort: 9053
+{{- end -}}

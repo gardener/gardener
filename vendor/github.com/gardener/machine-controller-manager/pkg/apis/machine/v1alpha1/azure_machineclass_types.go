@@ -32,6 +32,17 @@ const (
 	AzureSubscriptionID string = "azureSubscriptionId"
 	// AzureTenantID is a constant for a key name that is part of the Azure cloud credentials.
 	AzureTenantID string = "azureTenantId"
+
+	// AzureAlternativeClientID is a constant for a key name of a secret containing the Azure credentials (client id).
+	AzureAlternativeClientID = "clientID"
+	// AzureAlternativeClientSecret is a constant for a key name of a secret containing the Azure credentials (client
+	// secret).
+	AzureAlternativeClientSecret = "clientSecret"
+	// AzureAlternativeSubscriptionID is a constant for a key name of a secret containing the Azure credentials
+	// (subscription id).
+	AzureAlternativeSubscriptionID = "subscriptionID"
+	// AzureAlternativeTenantID is a constant for a key name of a secret containing the Azure credentials (tenant id).
+	AzureAlternativeTenantID = "tenantID"
 )
 
 // +genclient
@@ -70,23 +81,25 @@ type AzureMachineClassList struct {
 
 // AzureMachineClassSpec is the specification of a AzureMachineClass.
 type AzureMachineClassSpec struct {
-	Location      string                        `json:"location,omitempty"`
-	Tags          map[string]string             `json:"tags,omitempty"`
-	Properties    AzureVirtualMachineProperties `json:"properties,omitempty"`
-	ResourceGroup string                        `json:"resourceGroup,omitempty"`
-	SubnetInfo    AzureSubnetInfo               `json:"subnetInfo,omitempty"`
-	SecretRef     *corev1.SecretReference       `json:"secretRef,omitempty"`
+	Location             string                        `json:"location,omitempty"`
+	Tags                 map[string]string             `json:"tags,omitempty"`
+	Properties           AzureVirtualMachineProperties `json:"properties,omitempty"`
+	ResourceGroup        string                        `json:"resourceGroup,omitempty"`
+	SubnetInfo           AzureSubnetInfo               `json:"subnetInfo,omitempty"`
+	SecretRef            *corev1.SecretReference       `json:"secretRef,omitempty"`
+	CredentialsSecretRef *corev1.SecretReference       `json:"credentialsSecretRef,omitempty"`
 }
 
 // AzureVirtualMachineProperties is describes the properties of a Virtual Machine.
 type AzureVirtualMachineProperties struct {
-	HardwareProfile AzureHardwareProfile `json:"hardwareProfile,omitempty"`
-	StorageProfile  AzureStorageProfile  `json:"storageProfile,omitempty"`
-	OsProfile       AzureOSProfile       `json:"osProfile,omitempty"`
-	NetworkProfile  AzureNetworkProfile  `json:"networkProfile,omitempty"`
-	AvailabilitySet *AzureSubResource    `json:"availabilitySet,omitempty"`
-	IdentityID      *string              `json:"identityID,omitempty"`
-	Zone            *int                 `json:"zone,omitempty"`
+	HardwareProfile AzureHardwareProfile   `json:"hardwareProfile,omitempty"`
+	StorageProfile  AzureStorageProfile    `json:"storageProfile,omitempty"`
+	OsProfile       AzureOSProfile         `json:"osProfile,omitempty"`
+	NetworkProfile  AzureNetworkProfile    `json:"networkProfile,omitempty"`
+	AvailabilitySet *AzureSubResource      `json:"availabilitySet,omitempty"`
+	IdentityID      *string                `json:"identityID,omitempty"`
+	Zone            *int                   `json:"zone,omitempty"`
+	MachineSet      *AzureMachineSetConfig `json:"machineSet,omitempty"`
 }
 
 // AzureHardwareProfile is specifies the hardware settings for the virtual machine.
@@ -195,3 +208,16 @@ type AzureSubnetInfo struct {
 	VnetResourceGroup *string `json:"vnetResourceGroup,omitempty"`
 	SubnetName        string  `json:"subnetName,omitempty"`
 }
+
+// AzureMachineSetConfig contains the information about the machine set
+type AzureMachineSetConfig struct {
+	ID   string `json:"id"`
+	Kind string `json:"kind"`
+}
+
+const (
+	// MachineSetKindAvailabilitySet is the machine set kind for AvailabilitySet
+	MachineSetKindAvailabilitySet string = "availabilityset"
+	// MachineSetKindVMO is the machine set kind for VirtualMachineScaleSet Orchestration Mode VM (VMO)
+	MachineSetKindVMO string = "vmo"
+)

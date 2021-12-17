@@ -1,0 +1,7 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: ControllerRegistration
+metadata:
+  name: provider-local
+spec:
+  deployment:
+    policy: Always

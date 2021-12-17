@@ -23,11 +23,9 @@ EXAMPLE_DIR=$REPO_ROOT/example
 
 kubeconfig="$KUBECONFIG"
 
-if [[ $(k8s_env) == "$NODELESS" ]]; then
-  # generate seed-specific client certificate for gardenlet
-  if [[ ! -f "$(dirname $0)/local-garden/kubeconfigs/gardenlet-$SEED_NAME.conf" ]]; then
-    tmp_dir="$(mktemp -d)"
-    cat > "$tmp_dir/csr.conf" << EOF
+function generate_seed_specific_client_cert() {
+  tmp_cert_dir="$(mktemp -d)"
+  cat <<EOF > "$tmp_cert_dir/csr.conf"
 [req]
 req_extensions = v3_req
 distinguished_name = req_distinguished_name
@@ -38,39 +36,39 @@ keyUsage = nonRepudiation, digitalSignature, keyEncipherment
 extendedKeyUsage = clientAuth
 EOF
 
-    openssl req -new -key "$(dirname $0)/local-garden/certificates/keys/gardenlet.key" -out "$tmp_dir/gardenlet-$SEEDNAME.csr" -subj "/CN=gardener.cloud:system:seed:$SEED_NAME/O=gardener.cloud:system:seeds" -config "$tmp_dir/csr.conf"
-    openssl x509 -req -in "$tmp_dir/gardenlet-$SEEDNAME.csr" -CA "$(dirname $0)/local-garden/certificates/certs/ca.crt" -CAkey "$(dirname $0)/local-garden/certificates/keys/ca.key" -set_serial 01 -out "$(dirname $0)/local-garden/certificates/certs/gardenlet-$SEED_NAME.crt" -days 100000 -extensions v3_req -extfile "$tmp_dir/csr.conf"
+  openssl genrsa -out "$tmp_cert_dir/tls.key" 2048
+  openssl req -new -key "$tmp_cert_dir/tls.key" -out "$tmp_cert_dir/tls.csr" -subj "/CN=gardener.cloud:system:seed:$SEED_NAME/O=gardener.cloud:system:seeds" -config "$tmp_cert_dir/csr.conf"
 
-    cat > "$(dirname $0)/local-garden/kubeconfigs/gardenlet-$SEED_NAME.conf" <<EOF
----
-apiVersion: v1
-kind: Config
-current-context: local-garden
-clusters:
-- name: local-garden
-  cluster:
-    certificate-authority-data: "$(base64 -w0 $(dirname $0)/local-garden/certificates/certs/ca.crt)"
-    server: https://localhost:2443
-contexts:
-- name: local-garden
-  context:
-    cluster: local-garden
-    user: local-garden
-users:
-- name: local-garden
-  user:
-    client-certificate-data: "$(base64 -w0 $(dirname $0)/local-garden/certificates/certs/gardenlet-$SEED_NAME.crt)"
-    client-key-data: "$(base64 -w0 $(dirname $0)/local-garden/certificates/keys/gardenlet.key)"
+  cat <<EOF | kubectl apply -f -
+apiVersion: certificates.k8s.io/v1
+kind: CertificateSigningRequest
+metadata:
+  name: local-gardenlet-$SEED_NAME
+spec:
+  request: $(base64 -w0 "$tmp_cert_dir/tls.csr")
+  signerName: kubernetes.io/kube-apiserver-client
+  usages:
+  - client auth
+  - key encipherment
+  - digital signature
 EOF
-  fi
+  kubectl certificate approve "local-gardenlet-$SEED_NAME"
+  kubectl get csr "local-gardenlet-$SEED_NAME" -o jsonpath={.status.certificate} | base64 -d > "$tmp_cert_dir/tls.crt"
+  kubectl delete csr "local-gardenlet-$SEED_NAME" --ignore-not-found
 
-  kubeconfig="$(dirname $0)/local-garden/kubeconfigs/gardenlet-$SEED_NAME.conf"
+  mktemp_kubeconfig
+  kubectl --kubeconfig="$__tmp_kubeconfig" config set-credentials "$(kubectl config view --flatten --minify -o jsonpath={.contexts[0].context.user})" --client-key="$tmp_cert_dir/tls.key" --client-certificate="$tmp_cert_dir/tls.crt" --embed-certs=true
+  rm -rf "$tmp_cert_dir"
+}
+
+if [[ $(k8s_env) == "$NODELESS" ]] || [[ $(k8s_env) == "$KIND" ]]; then
+  generate_seed_specific_client_cert
 else
   mktemp_kubeconfig
-  kubeconfig="$__tmp_kubeconfig"
-  trap cleanup_kubeconfig EXIT
 fi
 
+kubeconfig="$__tmp_kubeconfig"
+trap cleanup_kubeconfig EXIT
 GARDEN_KUBECONFIG="${GARDEN_KUBECONFIG:-$kubeconfig}"
 
 # determine the seed to manage; if multiple seeds exist on the
@@ -127,16 +125,14 @@ if [ -z "${SEED_KUBECONFIG:-}" ]; then
   seedKubeconfigNamespace="$(yq eval '.spec.secretRef.namespace' "$tmpFile")"
   SEED_KUBECONFIG="$DEV_DIR/gardenlet-seed-$SEED_NAME.conf"
 
-  if [ -z "$seedKubeconfigName" ] || [ -z "$seedKubeconfigNamespace" ]; then
-    echo "Seed $SEED_NAME does not have a .spec.secretRef with name and namespace set, pointing to a Secret"
-    echo "containing the kubeconfig for that seed. Please either update your seed (see docs/development/local_setup.md)"
-    echo "or provide the kubeconfig explicitly via the SEED_KUBECONFIG environment variable."
-    exit 1
+  if [ "$seedKubeconfigName" == "null" ] || [ "$seedKubeconfigNamespace" == "null" ]; then
+    echo "Seed does not have .spec.secretRef, hence, SEED_KUBECONFIG is set to the same value as GARDEN_KUBECONFIG."
+    SEED_KUBECONFIG="$GARDEN_KUBECONFIG"
+  else
+    kubectl --kubeconfig="$GARDEN_KUBECONFIG" --namespace "$seedKubeconfigNamespace" get secret "$seedKubeconfigName" -o yaml |
+      yq eval '.data.kubeconfig' - |
+      base64 -d > "$SEED_KUBECONFIG"
   fi
-
-  kubectl --kubeconfig="$GARDEN_KUBECONFIG" --namespace "$seedKubeconfigNamespace" get secret "$seedKubeconfigName" -o yaml |
-    yq eval '.data.kubeconfig' - |
-    base64 -d > "$SEED_KUBECONFIG"
 fi
 
 # generate temporary chart values

@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "name" . }}-logging-config
+  namespace: garden
+  labels:
+    extensions.gardener.cloud/configuration: logging
+data:
+  filter-kubernetes.conf: |
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*machine-controller-manager*local-machine-controller-manager*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*machine-controller-manager*machine-controller-manager-provider-local*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                modify
+        Match               kubernetes.*
+        Condition           Key_value_matches tag ^kubernetes\.var\.log\.containers\.machine-controller-manager-.+?_.+?_(local-machine-controller-manager|machine-controller-manager-provider-local)
+        Add                 __gardener_multitenant_id__ operator;user

@@ -1,0 +1,82 @@
+image:
+  repository: eu.gcr.io/gardener-project/gardener/extensions/provider-local
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+maxUnavailable: 1
+maxSurge: 50%
+
+resources: {}
+vpa:
+  enabled: true
+  resourcePolicy:
+    minAllowed:
+      cpu: 50m
+      memory: 64Mi
+  updatePolicy:
+    updateMode: "Auto"
+
+controllers:
+  controlplane:
+    concurrentSyncs: 5
+  dnsprovider:
+    concurrentSyncs: 1
+  dnsrecord:
+    concurrentSyncs: 5
+  infrastructure:
+    concurrentSyncs: 5
+  worker:
+    concurrentSyncs: 5
+  operatingsystemconfig:
+    concurrentSyncs: 5
+  network:
+    concurrentSyncs: 5
+  node:
+    concurrentSyncs: 1
+  service:
+    concurrentSyncs: 5
+    hostIP: "127.0.0.1"
+    apiServerSNIEnabled: true
+  healthcheck:
+    concurrentSyncs: 5
+  ignoreOperationAnnotation: false
+
+disableControllers: []
+disableWebhooks: []
+ignoreResources: false
+
+# imageVectorOverwrite: |
+#   images:
+#   - name: pause-container
+#     sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
+#     repository: gcr.io/google_containers/pause-amd64
+#     tag: "3.0"
+#     version: 1.11.x
+#   - name: pause-container
+#     sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
+#     repository: gcr.io/google_containers/pause-amd64
+#     tag: "3.1"
+#     version: ">= 1.12"
+#   ...
+
+webhookConfig:
+  servicePort: 443
+  serverPort: 10250
+
+leaderElection:
+  resourceLock: leases
+
+## settings for metrics, e.g. scraping by seed-prometheus
+##
+metrics:
+  ## enable metrics scraping
+  ##
+  enableScraping: true
+
+coredns:
+  enabled: true
+
+gardener:
+  seed:
+    provider: local

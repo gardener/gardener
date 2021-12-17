@@ -1,0 +1,181 @@
+---
+apiVersion: skaffold/v2beta25
+kind: Config
+metadata:
+  name: etcd
+deploy:
+  kubectl:
+    manifests:
+    - example/00-namespace-garden.yaml
+  kustomize:
+    paths:
+    - example/gardener-local/etcd
+    hooks:
+      after:
+      - host:
+          command:
+          - bash
+          - -ec
+          - |
+            echo "Wait until etcd is ready"
+            kubectl wait --for=condition=ready pod -l app=etcd -n garden --timeout=2m
+
+---
+apiVersion: skaffold/v2beta25
+kind: Config
+metadata:
+  name: controlplane
+requires:
+- configs:
+  - etcd
+build:
+  local:
+    useBuildkit: true
+    concurrency: 3
+  artifacts:
+  - image: eu.gcr.io/gardener-project/gardener/apiserver
+    docker:
+      dockerfile: Dockerfile.local
+      target: apiserver
+  - image: eu.gcr.io/gardener-project/gardener/controller-manager
+    docker:
+      dockerfile: Dockerfile.local
+      target: controller-manager
+  - image: eu.gcr.io/gardener-project/gardener/scheduler
+    docker:
+      dockerfile: Dockerfile.local
+      target: scheduler
+  - image: eu.gcr.io/gardener-project/gardener/admission-controller
+    docker:
+      dockerfile: Dockerfile.local
+      target: admission-controller
+deploy:
+  helm:
+    releases:
+    - name: gardener-controlplane
+      chartPath: charts/gardener/controlplane
+      namespace: garden
+      createNamespace: true
+      wait: true
+      artifactOverrides:
+        global:
+          apiserver:
+            image: eu.gcr.io/gardener-project/gardener/apiserver
+          controller:
+            image: eu.gcr.io/gardener-project/gardener/controller-manager
+          scheduler:
+            image: eu.gcr.io/gardener-project/gardener/scheduler
+          admission-controller:
+            image: eu.gcr.io/gardener-project/gardener/admission-controller
+      imageStrategy:
+        helm: {}
+      valuesFiles:
+      - example/gardener-local/controlplane/values.yaml
+
+---
+apiVersion: skaffold/v2beta25
+kind: Config
+metadata:
+  name: provider-local
+build:
+  local:
+    useBuildkit: true
+  artifacts:
+  - image: eu.gcr.io/gardener-project/gardener/extensions/provider-local
+    docker:
+      dockerfile: Dockerfile.local
+      target: extension-provider-local
+    sync:
+      infer:
+      - charts/gardener/provider-local/internal
+deploy:
+  helm:
+    releases:
+    - name: gardener-extension-provider-local-registration
+      chartPath: charts/gardener/provider-local/registration
+      namespace: garden
+      artifactOverrides:
+        values:
+          image: eu.gcr.io/gardener-project/gardener/extensions/provider-local
+      imageStrategy:
+        helm: {}
+
+---
+apiVersion: skaffold/v2beta25
+kind: Config
+metadata:
+  name: local-env
+deploy:
+  kubectl:
+    manifests:
+    - example/gardener-local/gardenlet/secret-bootstrap-token.yaml
+  kustomize:
+    paths:
+    - example/provider-local/overlays/skaffold
+
+---
+apiVersion: skaffold/v2beta25
+kind: Config
+metadata:
+  name: gardenlet
+build:
+  local:
+    useBuildkit: true
+    concurrency: 3
+  artifacts:
+  - image: eu.gcr.io/gardener-project/gardener/gardenlet
+    docker:
+      dockerfile: Dockerfile.local
+      target: gardenlet
+  - image: eu.gcr.io/gardener-project/gardener/resource-manager
+    docker:
+      dockerfile: Dockerfile.local
+      target: resource-manager
+  - image: eu.gcr.io/gardener-project/gardener/seed-admission-controller
+    docker:
+      dockerfile: Dockerfile.local
+      target: seed-admission-controller
+deploy:
+  helm:
+    hooks:
+      after:
+      - host:
+          command:
+          - bash
+          - -ec
+          - |
+            echo "Wait until seed is ready"
+            kubectl wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local --timeout=5m
+    releases:
+    - name: gardener-gardenlet
+      chartPath: charts/gardener/gardenlet
+      namespace: garden
+      createNamespace: true
+      wait: true
+      artifactOverrides:
+        global:
+          gardenlet:
+            image: eu.gcr.io/gardener-project/gardener/gardenlet
+          # dummy artifact overrides to make skaffold load images into cluster
+          resource-manager:
+            image: eu.gcr.io/gardener-project/gardener/resource-manager
+          seed-admission-controller:
+            image: eu.gcr.io/gardener-project/gardener/seed-admission-controller
+      setValueTemplates:
+        global:
+          gardenlet:
+            # on a local cluster, skaffold uses a local immutable tag for artifacts,
+            # overwrite our image vector to use the image that was just built
+            # see https://skaffold.dev/docs/pipeline-stages/taggers/#how-tagging-works
+            imageVectorOverwrite: |
+              images:
+              - name: gardener-resource-manager
+                repository: eu.gcr.io/gardener-project/gardener/resource-manager
+                tag: "{{.IMAGE_TAG7}}"
+              - name: gardener-seed-admission-controller
+                repository: eu.gcr.io/gardener-project/gardener/seed-admission-controller
+                tag: "{{.IMAGE_TAG8}}"
+      imageStrategy:
+        helm: {}
+      valuesFiles:
+      - example/gardener-local/gardenlet/values.yaml

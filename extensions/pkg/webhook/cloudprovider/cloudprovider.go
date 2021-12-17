@@ -17,7 +17,6 @@ package cloudprovider
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -45,7 +44,7 @@ type Args struct {
 func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 	logger := logger.WithValues("cloud-provider", args.Provider)
 
-	types := []client.Object{&corev1.Secret{}}
+	types := []extensionswebhook.Type{{Obj: &corev1.Secret{}}}
 	handler, err := extensionswebhook.NewBuilder(mgr, logger).WithMutator(args.Mutator, types...).Build()
 	if err != nil {
 		return nil, err

@@ -21,6 +21,12 @@ mkdir -p /go/src/github.com/gardener/gardener
 cp -r . /go/src/github.com/gardener/gardener
 cd /go/src/github.com/gardener/gardener
 
+# workaround for https://github.com/gardener/cc-utils/issues/431 / https://github.com/gardener/gardener/pull/5115#issuecomment-993258391
+# We need to keep `inject_effective_version=true` to inject the correct version information into our binaries during container image builds.
+# However, we cannot disable it for individual steps, hence we simply reset the VERSION file to the committed version.
+# In the next steps (e.g. image builds) the pipeline will overwrite the VERSION file again with the effective version.
+git restore VERSION
+
 if [ $use_cache = yes ] ; then
   make hack/tools/bin/golangci-lint
 

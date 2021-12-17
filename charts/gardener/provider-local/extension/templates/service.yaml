@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "name" . }}
+  namespace: {{ .Release.Namespace }}
+{{-  if .Values.ignoreResources }}
+  annotations:
+    resources.gardener.cloud/ignore: "true"
+{{- end }}
+  labels:
+{{ include "labels" . | indent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+{{ include "labels" . | indent 6 }}
+  ports:
+  - port: {{ .Values.webhookConfig.servicePort }}
+    protocol: TCP
+    targetPort: {{ .Values.webhookConfig.serverPort }}

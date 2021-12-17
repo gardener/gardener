@@ -20,7 +20,7 @@ When they are not enabled then the `kube-apiserver` is internally authorizing th
 
 When enabling the plugins, there is one additional step for each before the `gardener-apiserver` responds to the request.
 
-![Flow Diagram](gardenlet_api_access_flow.png)
+![Flow Diagram](content/gardenlet_api_access_flow.png)
 
 Please note that the example shows a request to an object (`Shoot`) residing in one of the API groups served by `gardener-apiserver`.
 However, the `gardenlet` is also interacting with objects in API groups served by the `kube-apiserver` (e.g., `Secret`,`ConfigMap`, etc.).
@@ -134,7 +134,7 @@ Internally, the `SeedAuthorizer` uses a directed, acyclic graph data structure i
 For example, a `Shoot` refers to a `Seed`, a `CloudProfile`, a `SecretBinding`, etc., so it has an outgoing edge to the `Seed` (1) and incoming edges from the `CloudProfile` and `SecretBinding` vertices (2).
 However, there might also be a `ShootState` or a `BackupEntry` resource strictly associated with this `Shoot`, hence, it has incoming edges from these vertices (3).
 
-![Resource Dependency Graph](gardenlet_api_access_graph.png)
+![Resource Dependency Graph](content/gardenlet_api_access_graph.png)
 
 In above picture the resources that are actively watched have are shaded.
 Gardener resources are green while Kubernetes resources are blue.

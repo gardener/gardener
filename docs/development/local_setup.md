@@ -154,6 +154,10 @@ cd gardener
 
 ## Start the Gardener
 
+ℹ️ In the following guide, you have to define the configuration (`CloudProfile`s, `SecretBinding`s, `Seed`s, etc.) manually for the infrastructure environment you want to develop against.
+Additionally, you have to register the respective Gardener extensions manually.
+If you are rather looking for a quick start guide to develop entirely locally on your machine (no real cloud provider or infrastructure involved) then you should rather follow [this guide](getting_started_locally.md).
+
 ### Start a local kubernetes cluster
 
 For the development of Gardener you need a Kubernetes API server on which you can register Gardener's own Extension API Server as `APIService`. This cluster doesn't need any worker nodes to run pods, though, therefore, you can use the "nodeless Garden cluster setup" residing in `hack/local-garden`. This will start all minimally required components of a Kubernetes cluster (`etcd`, `kube-apiserver`, `kube-controller-manager`)

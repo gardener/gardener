@@ -1,0 +1,20 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: extensions.gardener.cloud:{{ .Values.providerName }}:{{ .Release.Namespace }}:machine-controller-manager
+  ownerReferences:
+  - apiVersion: v1
+    kind: Namespace
+    name: {{ .Release.Namespace }}
+    uid: {{ .Values.namespace.uid }}
+    controller: true
+    blockOwnerDeletion: true
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: extensions.gardener.cloud:{{ .Values.providerName }}:{{ .Release.Namespace }}:machine-controller-manager
+subjects:
+- kind: ServiceAccount
+  name: machine-controller-manager
+  namespace: {{ .Release.Namespace }}

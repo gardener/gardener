@@ -1,0 +1,32 @@
+apiVersion: kind.x-k8s.io/v1alpha4
+kind: Cluster
+nodes:
+- role: control-plane
+  image: kindest/node:v1.21.1
+  extraPortMappings:
+  - containerPort: 30443
+    hostPort: 443
+  - containerPort: 32379
+    hostPort: 32379
+  extraMounts:
+  - hostPath: example/gardener-local/controlplane
+    containerPath: /etc/gardener/controlplane
+    readOnly: true
+  kubeadmConfigPatches:
+  - |
+    kind: ClusterConfiguration
+    apiServer:
+      extraArgs:
+        authorization-mode: RBAC,Node,Webhook
+        authorization-webhook-config-file: /etc/gardener/controlplane/auth-webhook-kubeconfig-skaffold.yaml
+        authorization-webhook-cache-authorized-ttl: "0"
+        authorization-webhook-cache-unauthorized-ttl: "0"
+      extraVolumes:
+      - name: gardener
+        hostPath: /etc/gardener/controlplane/auth-webhook-kubeconfig-skaffold.yaml
+        mountPath: /etc/gardener/controlplane/auth-webhook-kubeconfig-skaffold.yaml
+        readOnly: true
+        pathType: File
+networking:
+  podSubnet: 10.1.0.0/16
+  serviceSubnet: 10.2.0.0/16
