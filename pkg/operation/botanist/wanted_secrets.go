@@ -122,6 +122,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			fmt.Sprintf("%s.%s", v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.SeedNamespace),
 			fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.SeedNamespace),
 			gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+			b.Shoot.GetInfo().Status.TechnicalID,
 		}, kubernetes.DNSNamesForService("kubernetes", metav1.NamespaceDefault)...)
 
 		kubeControllerManagerCertDNSNames   = kubernetes.DNSNamesForService(kubecontrollermanager.ServiceName, b.Shoot.SeedNamespace)
