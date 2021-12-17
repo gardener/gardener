@@ -160,7 +160,7 @@ func defaultNetworkPolicies(c client.Client, seed *gardencorev1beta1.Seed, sniEn
 		SNIEnabled:           sniEnabled,
 		DenyAllTraffic:       false,
 		PrivateNetworkPeers:  privateNetworkPeers,
-		NodeLocalIPVSAddress: pointer.String(nodelocaldns.NodeLocalIPVSAddress),
+		NodeLocalIPVSAddress: pointer.String(nodelocaldns.IPVSAddress),
 		DNSServerAddress:     pointer.String(seedDNSServerAddress.String()),
 	}), nil
 }

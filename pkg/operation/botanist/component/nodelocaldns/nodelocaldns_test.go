@@ -62,7 +62,7 @@ var _ = Describe("NodeLocalDNS", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		nodeLocal         = "169.254.20.10"
+		ipvsAddress       = "169.254.20.10"
 		labelKey          = "k8s-app"
 		labelValue        = "node-local-dns"
 		prometheusPort    = 9253
@@ -186,7 +186,7 @@ data:
               ` + forceTcpToClusterDNS(values) + `
       }
       prometheus :` + strconv.Itoa(prometheusPort) + `
-      health ` + nodeLocal + `:` + strconv.Itoa(livenessProbePort) + `
+      health ` + ipvsAddress + `:` + strconv.Itoa(livenessProbePort) + `
     }
     in-addr.arpa:53 {
       errors
@@ -362,7 +362,7 @@ status:
 										LivenessProbe: &corev1.Probe{
 											Handler: corev1.Handler{
 												HTTPGet: &corev1.HTTPGetAction{
-													Host: nodeLocal,
+													Host: ipvsAddress,
 													Path: "/health",
 													Port: intstr.FromInt(livenessProbePort),
 												},
@@ -512,7 +512,7 @@ status: {}
           ` + forceTcpToClusterDNS(values) + `
   }
   prometheus :` + strconv.Itoa(prometheusPort) + `
-  health ` + nodeLocal + `:` + strconv.Itoa(livenessProbePort) + `
+  health ` + ipvsAddress + `:` + strconv.Itoa(livenessProbePort) + `
 }
 in-addr.arpa:53 {
   errors
@@ -722,7 +722,7 @@ ip6.arpa:53 {
           ` + forceTcpToClusterDNS(values) + `
   }
   prometheus :` + strconv.Itoa(prometheusPort) + `
-  health ` + nodeLocal + `:` + strconv.Itoa(livenessProbePort) + `
+  health ` + ipvsAddress + `:` + strconv.Itoa(livenessProbePort) + `
 }
 in-addr.arpa:53 {
   errors
@@ -1025,16 +1025,16 @@ ip6.arpa:53 {
 
 func bindIP(values Values) string {
 	if values.DNSServer != "" {
-		return NodeLocalIPVSAddress + " " + values.DNSServer
+		return IPVSAddress + " " + values.DNSServer
 	}
-	return NodeLocalIPVSAddress
+	return IPVSAddress
 }
 
 func containerArg(values Values) string {
 	if values.DNSServer != "" {
-		return NodeLocalIPVSAddress + "," + values.DNSServer
+		return IPVSAddress + "," + values.DNSServer
 	}
-	return NodeLocalIPVSAddress
+	return IPVSAddress
 }
 
 func forceTcpToClusterDNS(values Values) string {

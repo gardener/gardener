@@ -54,7 +54,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 		// If IPVS is enabled then instruct the kubelet to create pods resolving DNS to the `nodelocaldns` network
 		// interface link-local ip address. For more information checkout the usage documentation under
 		// https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/.
-		clusterDNSAddress = nodelocaldns.NodeLocalIPVSAddress
+		clusterDNSAddress = nodelocaldns.IPVSAddress
 	}
 
 	return operatingsystemconfig.New(

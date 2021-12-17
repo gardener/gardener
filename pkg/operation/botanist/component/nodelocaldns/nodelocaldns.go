@@ -43,8 +43,8 @@ import (
 )
 
 const (
-	// NodeLocalIPVSAddress is the IPv4 address used by node local dns when IPVS is used.
-	NodeLocalIPVSAddress = "169.254.20.10"
+	// IPVSAddress is the IPv4 address used by node local dns when IPVS is used.
+	IPVSAddress = "169.254.20.10"
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 	ManagedResourceName = "shoot-core-node-local-dns"
 
@@ -249,7 +249,7 @@ func (c *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
           ` + c.forceTcpToClusterDNS() + `
   }
   prometheus :` + strconv.Itoa(prometheusPort) + `
-  health ` + NodeLocalIPVSAddress + `:` + strconv.Itoa(livenessProbePort) + `
+  health ` + IPVSAddress + `:` + strconv.Itoa(livenessProbePort) + `
 }
 in-addr.arpa:53 {
   errors
@@ -418,7 +418,7 @@ ip6.arpa:53 {
 								LivenessProbe: &corev1.Probe{
 									Handler: corev1.Handler{
 										HTTPGet: &corev1.HTTPGetAction{
-											Host: NodeLocalIPVSAddress,
+											Host: IPVSAddress,
 											Path: "/health",
 											Port: intstr.FromInt(livenessProbePort),
 										},
@@ -534,16 +534,16 @@ ip6.arpa:53 {
 
 func (c *nodeLocalDNS) bindIP() string {
 	if c.values.DNSServer != "" {
-		return NodeLocalIPVSAddress + " " + c.values.DNSServer
+		return IPVSAddress + " " + c.values.DNSServer
 	}
-	return NodeLocalIPVSAddress
+	return IPVSAddress
 }
 
 func (c *nodeLocalDNS) containerArg() string {
 	if c.values.DNSServer != "" {
-		return NodeLocalIPVSAddress + "," + c.values.DNSServer
+		return IPVSAddress + "," + c.values.DNSServer
 	}
-	return NodeLocalIPVSAddress
+	return IPVSAddress
 }
 
 func (c *nodeLocalDNS) forceTcpToClusterDNS() string {
