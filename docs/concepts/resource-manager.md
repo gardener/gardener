@@ -378,6 +378,9 @@ Any attempt to regenerate the token or creating a new such secret will again mak
 
 In order to enable the _TokenInvalidator_ you have to set `--token-invalidator-max-concurrent-workers` to a value larger than `0`.
 
+Below graphic shows an overview of the Token Invalidator for Service account secrets in the Shoot cluster.
+![image](images/resource-manager-token-invalidator.jpg)
+
 ### TokenRequestor
 
 This controller provides the service to create and auto-renew tokens via the [`TokenRequest` API](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/).
@@ -449,6 +452,12 @@ token-requestor.resources.gardener.cloud/target-secret-name: "foo"
 token-requestor.resources.gardener.cloud/target-secret-namespace: "bar"
 ```
 
+Overall, the TokenRequestor controller provides credentials with limited lifetime (JWT tokens) used by Shoot control plane components running in the Seed
+to talk to the Shoot API Server. 
+Please see the graphic below:
+
+![image](images/resource-manager-projected-token-controlplane-to-shoot-apiserver.jpg)
+
 ## Webhooks
 
 ### Auto-Mounting Projected `ServiceAccount` Tokens
@@ -489,3 +498,9 @@ spec:
 
 The volume will be mounted into all containers specified in the `Pod` to the path `/var/run/secrets/kubernetes.io/serviceaccount`.
 This is the default location where client libraries expect to find the tokens and mimics the [upstream `ServiceAccount` admission plugin](https://github.com/kubernetes/kubernetes/tree/v1.22.2/plugin/pkg/admission/serviceaccount), see [this document](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/#serviceaccount-admission-controller) for more information.
+
+Overall, this webhook is used to inject projected service account tokens into pods running in the Shoot and the Seed cluster.
+Hence, it is served from the Seed GRM and each Shoot GRM.
+Please find an overview below for pods deployed in the Shoot cluster:
+
+![image](images/resource-manager-projected-token-shoot-to-shoot-apiserver.jpg)
