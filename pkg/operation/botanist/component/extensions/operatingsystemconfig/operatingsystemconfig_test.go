@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -46,6 +47,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/pointer"
@@ -289,6 +291,23 @@ var _ = Describe("OperatingSystemConfig", func() {
 		})
 
 		Describe("#Deploy", func() {
+			It("should successfully deploy the shoot access secret for the cloud config downloader", func() {
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				secret := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKey{Name: "shoot-access-cloud-config-downloader", Namespace: namespace}, secret)).To(Succeed())
+				Expect(secret.Labels).To(Equal(map[string]string{
+					"resources.gardener.cloud/purpose": "token-requestor",
+				}))
+				Expect(secret.Annotations).To(Equal(map[string]string{
+					"serviceaccount.resources.gardener.cloud/name":                      "cloud-config-downloader",
+					"serviceaccount.resources.gardener.cloud/namespace":                 "kube-system",
+					"serviceaccount.resources.gardener.cloud/token-expiration-duration": "2160h",
+					"token-requestor.resources.gardener.cloud/target-secret-name":       "cloud-config-downloader",
+					"token-requestor.resources.gardener.cloud/target-secret-namespace":  "kube-system",
+				}))
+			})
+
 			It("should successfully deploy all extensions resources", func() {
 				defer test.WithVars(
 					&TimeNow, mockNow.Do,
@@ -347,6 +366,15 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Expect(actual).To(Equal(obj))
 				}
 			})
+
+			It("should delete the legacy downloader secret", func() {
+				secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-downloader", Namespace: namespace}}
+				Expect(c.Create(ctx, secret)).To(Succeed())
+
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(BeNotFoundError())
+			})
 		})
 
 		Describe("#Restore", func() {
@@ -399,6 +427,25 @@ var _ = Describe("OperatingSystemConfig", func() {
 				mc := mockclient.NewMockClient(ctrl)
 				mc.EXPECT().Status().Return(mc).AnyTimes()
 
+				mc.EXPECT().Get(ctx, kutil.Key(namespace, "shoot-access-cloud-config-downloader"), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+				mc.EXPECT().Create(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "shoot-access-cloud-config-downloader",
+						Namespace: namespace,
+						Annotations: map[string]string{
+							"serviceaccount.resources.gardener.cloud/name":                      "cloud-config-downloader",
+							"serviceaccount.resources.gardener.cloud/namespace":                 "kube-system",
+							"serviceaccount.resources.gardener.cloud/token-expiration-duration": "2160h",
+							"token-requestor.resources.gardener.cloud/target-secret-name":       "cloud-config-downloader",
+							"token-requestor.resources.gardener.cloud/target-secret-namespace":  "kube-system",
+						},
+						Labels: map[string]string{
+							"resources.gardener.cloud/purpose": "token-requestor",
+						},
+					},
+					Type: corev1.SecretTypeOpaque,
+				})
+
 				for i := range expected {
 					var state []byte
 					if strings.HasSuffix(expected[i].Name, "downloader") {
@@ -433,6 +480,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 					metav1.SetMetaDataAnnotation(&expectedWithRestore.ObjectMeta, "gardener.cloud/operation", "restore")
 					test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
 				}
+
+				mc.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-downloader", Namespace: namespace}})
 
 				defaultDepWaiter = New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 				Expect(defaultDepWaiter.Restore(ctx, shootState)).To(Succeed())

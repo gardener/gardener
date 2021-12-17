@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -195,30 +196,44 @@ type Data struct {
 
 // Deploy uses the client to create or update the OperatingSystemConfig custom resources.
 func (o *operatingSystemConfig) Deploy(ctx context.Context) error {
-	fns := o.forEachWorkerPoolAndPurposeTaskFn(func(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
-		d, err := o.newDeployer(osc, worker, purpose)
-		if err != nil {
-			return err
-		}
-		_, err = d.deploy(ctx, v1beta1constants.GardenerOperationReconcile)
+	return o.reconcile(ctx, func(d deployer) error {
+		_, err := d.deploy(ctx, v1beta1constants.GardenerOperationReconcile)
 		return err
 	})
-
-	return flow.Parallel(fns...)(ctx)
 }
 
 // Restore uses the seed client and the ShootState to create the OperatingSystemConfig custom resources in the Shoot
 // namespace in the Seed and restore its state.
 func (o *operatingSystemConfig) Restore(ctx context.Context, shootState *v1alpha1.ShootState) error {
+	return o.reconcile(ctx, func(d deployer) error {
+		return extensions.RestoreExtensionWithDeployFunction(ctx, o.client, shootState, extensionsv1alpha1.OperatingSystemConfigResource, d.deploy)
+	})
+}
+
+func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(deployer) error) error {
+	if err := gutil.
+		NewShootAccessSecret(downloader.SecretName, o.values.Namespace).
+		WithTargetSecret(downloader.SecretName, metav1.NamespaceSystem).
+		WithTokenExpirationDuration("2160h").
+		Reconcile(ctx, o.client); err != nil {
+		return err
+	}
+
 	fns := o.forEachWorkerPoolAndPurposeTaskFn(func(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
 		d, err := o.newDeployer(osc, worker, purpose)
 		if err != nil {
 			return err
 		}
-		return extensions.RestoreExtensionWithDeployFunction(ctx, o.client, shootState, extensionsv1alpha1.OperatingSystemConfigResource, d.deploy)
+
+		return reconcileFn(d)
 	})
 
-	return flow.Parallel(fns...)(ctx)
+	if err := flow.Parallel(fns...)(ctx); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove in a future release.
+	return kutil.DeleteObject(ctx, o.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-downloader", Namespace: o.values.Namespace}})
 }
 
 // Wait waits until the OperatingSystemConfig CRD is ready (deployed or restored). It also reads the produced secret

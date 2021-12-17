@@ -20,7 +20,9 @@ import (
 	"strconv"
 	"text/template"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/utils"
@@ -58,7 +60,7 @@ const (
 	Name = "cloud-config-downloader"
 	// UnitName is the name of the cloud-config-downloader service.
 	UnitName = Name + ".service"
-	// SecretName is a constant for the secret name for the cloud-config-downloader's kubeconfig secret.
+	// SecretName is a constant for the secret name for the cloud-config-downloader's shoot access secret.
 	SecretName = Name
 	// UnitRestartSeconds is the number of seconds after which the cloud-config-downloader unit will be restarted.
 	UnitRestartSeconds = 30
@@ -94,7 +96,9 @@ const (
 	// PathCredentialsClientKey is a constant for a path containing the 'client private key' credentials part for the
 	// download.
 	PathCredentialsClientKey = PathCredentialsDirectory + "/client.key"
-	// PathBootstrapToken is the path of a file on the shoot worker nodes in which the the bootstrap token for the kubelet
+	// PathCredentialsToken is a constant for a path containing the shoot access 'token' for the cloud-config-downloader.
+	PathCredentialsToken = PathCredentialsDirectory + "/token"
+	// PathBootstrapToken is the path of a file on the shoot worker nodes in which the bootstrap token for the kubelet
 	// bootstrap is stored.
 	PathBootstrapToken = PathCredentialsDirectory + "/bootstrap-token"
 	// BootstrapTokenPlaceholder is the token that is expected to be replaced by the worker controller with the actual token
@@ -118,13 +122,17 @@ func Config(cloudConfigUserDataSecretName, apiServerURL string) ([]extensionsv1a
 	var ccdScript bytes.Buffer
 	if err := tpl.Execute(&ccdScript, map[string]string{
 		"secretName":                cloudConfigUserDataSecretName,
+		"tokenSecretName":           Name,
 		"pathCredentialsServer":     PathCredentialsServer,
 		"pathCredentialsCACert":     PathCredentialsCACert,
 		"pathCredentialsClientCert": PathCredentialsClientCert,
 		"pathCredentialsClientKey":  PathCredentialsClientKey,
+		"pathCredentialsToken":      PathCredentialsToken,
+		"pathBootstrapToken":        PathBootstrapToken,
 		"pathDownloadedChecksum":    PathDownloadedCloudConfigChecksum,
 		"annotationChecksum":        AnnotationKeyChecksum,
 		"dataKeyScript":             DataKeyScript,
+		"dataKeyToken":              resourcesv1alpha1.DataKeyToken,
 	}); err != nil {
 		return nil, nil, err
 	}
@@ -165,28 +173,8 @@ WantedBy=multi-user.target`),
 			Permissions: pointer.Int32(0644),
 			Content: extensionsv1alpha1.FileContent{
 				SecretRef: &extensionsv1alpha1.FileContentSecretRef{
-					Name:    SecretName,
+					Name:    v1beta1constants.SecretNameCACluster,
 					DataKey: secrets.DataKeyCertificateCA,
-				},
-			},
-		},
-		{
-			Path:        PathCredentialsClientCert,
-			Permissions: pointer.Int32(0644),
-			Content: extensionsv1alpha1.FileContent{
-				SecretRef: &extensionsv1alpha1.FileContentSecretRef{
-					Name:    SecretName,
-					DataKey: secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretName),
-				},
-			},
-		},
-		{
-			Path:        PathCredentialsClientKey,
-			Permissions: pointer.Int32(0644),
-			Content: extensionsv1alpha1.FileContent{
-				SecretRef: &extensionsv1alpha1.FileContentSecretRef{
-					Name:    SecretName,
-					DataKey: secrets.ControlPlaneSecretDataKeyPrivateKey(SecretName),
 				},
 			},
 		},
@@ -229,7 +217,7 @@ func GenerateRBACResourcesData(secretNames []string) (map[string][]byte, error) 
 				{
 					APIGroups:     []string{""},
 					Resources:     []string{"secrets"},
-					ResourceNames: secretNames,
+					ResourceNames: append(secretNames, Name),
 					Verbs:         []string{"get"},
 				},
 			},
@@ -245,10 +233,22 @@ func GenerateRBACResourcesData(secretNames []string) (map[string][]byte, error) 
 				Kind:     "Role",
 				Name:     role.Name,
 			},
-			Subjects: []rbacv1.Subject{{
-				Kind: rbacv1.UserKind,
-				Name: SecretName,
-			}},
+			Subjects: []rbacv1.Subject{
+				// TODO(rfranzke): Delete this subject in a future release.
+				{
+					Kind: rbacv1.UserKind,
+					Name: "cloud-config-downloader",
+				},
+				{
+					Kind: rbacv1.GroupKind,
+					Name: bootstraptokenapi.BootstrapDefaultGroup,
+				},
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Name:      Name,
+					Namespace: metav1.NamespaceSystem,
+				},
+			},
 		}
 
 		clusterRoleBindingNodeBootstrapper = &rbacv1.ClusterRoleBinding{

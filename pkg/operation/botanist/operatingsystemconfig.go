@@ -86,14 +86,10 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetCABundle(b.getOperatingSystemConfigCABundle())
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetKubeletCACertificate(string(b.LoadSecret(v1beta1constants.SecretNameCAKubelet).Data[secrets.DataKeyCertificateCA]))
 
-	publicKeys := []string{
-		string(b.LoadSecret(v1beta1constants.SecretNameSSHKeyPair).Data[secrets.DataKeySSHAuthorizedKeys]),
-	}
-
+	publicKeys := []string{string(b.LoadSecret(v1beta1constants.SecretNameSSHKeyPair).Data[secrets.DataKeySSHAuthorizedKeys])}
 	if secret := b.LoadSecret(v1beta1constants.SecretNameOldSSHKeyPair); secret != nil {
 		publicKeys = append(publicKeys, string(secret.Data[secrets.DataKeySSHAuthorizedKeys]))
 	}
-
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetSSHPublicKeys(publicKeys)
 
 	if b.isShootNodeLoggingEnabled() {
