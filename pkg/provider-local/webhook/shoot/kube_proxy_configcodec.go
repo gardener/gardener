@@ -65,7 +65,7 @@ type kubeProxyConfigCodec struct {
 func (c *kubeProxyConfigCodec) Encode(kubeProxyConfig *kubeproxyconfigv1alpha1.KubeProxyConfiguration) (string, error) {
 	data, err := runtime.Encode(c.codec, kubeProxyConfig)
 	if err != nil {
-		return "", fmt.Errorf("could not encode kubelet configuration to YAML: %w", err)
+		return "", fmt.Errorf("could not encode kube-proxy configuration to YAML: %w", err)
 	}
 
 	return string(data), nil
