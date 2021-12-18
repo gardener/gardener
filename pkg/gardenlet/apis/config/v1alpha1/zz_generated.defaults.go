@@ -90,6 +90,9 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 		if in.Controllers.ManagedSeed != nil {
 			SetDefaults_ManagedSeedControllerConfiguration(in.Controllers.ManagedSeed)
 		}
+		if in.Controllers.ShootLeftover != nil {
+			SetDefaults_ShootLeftoverControllerConfiguration(in.Controllers.ShootLeftover)
+		}
 	}
 	if in.LeaderElection != nil {
 		SetDefaults_LeaderElectionConfiguration(in.LeaderElection)

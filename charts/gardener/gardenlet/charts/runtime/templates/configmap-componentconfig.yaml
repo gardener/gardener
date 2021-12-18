@@ -154,6 +154,8 @@ data:
         syncPeriod: {{ required ".Values.global.gardenlet.config.controllers.backupEntryMigration.syncPeriod is required" .Values.global.gardenlet.config.controllers.backupEntryMigration.syncPeriod }}
         gracePeriod: {{ required ".Values.global.gardenlet.config.controllers.backupEntryMigration.gracePeriod is required" .Values.global.gardenlet.config.controllers.backupEntryMigration.gracePeriod }}
         lastOperationStaleDuration: {{ required ".Values.global.gardenlet.config.controllers.backupEntryMigration.lastOperationStaleDuration is required" .Values.global.gardenlet.config.controllers.backupEntryMigration.lastOperationStaleDuration }}
+      shootLeftover:
+        concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.shootLeftover.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.shootLeftover.concurrentSyncs }}
     resources:
       capacity:
         shoots: {{ required ".Values.global.gardenlet.config.resources.capacity.shoots is required" .Values.global.gardenlet.config.resources.capacity.shoots }}

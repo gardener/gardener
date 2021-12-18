@@ -175,6 +175,9 @@ type GardenletControllerConfiguration struct {
 	// ManagedSeedControllerConfiguration the configuration of the ManagedSeed controller.
 	// +optional
 	ManagedSeed *ManagedSeedControllerConfiguration `json:"managedSeed,omitempty"`
+	// ShootLeftover defines the configuration of the ShootLeftover controller.
+	// +optional
+	ShootLeftover *ShootLeftoverControllerConfiguration `json:"shootLeftover,omitempty"`
 }
 
 // BackupBucketControllerConfiguration defines the configuration of the BackupBucket
@@ -408,6 +411,14 @@ type ManagedSeedControllerConfiguration struct {
 	// duration between 0 and the configured value. It is defaulted to 5m.
 	// +optional
 	SyncJitterPeriod *metav1.Duration `json:"syncJitterPeriod,omitempty"`
+}
+
+// ShootLeftoverControllerConfiguration defines the configuration of the ShootLeftover controller.
+type ShootLeftoverControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
 // ResourcesConfiguration defines the total capacity for seed resources and the amount reserved for use by Gardener.

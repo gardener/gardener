@@ -85,6 +85,7 @@ var (
 	serviceAccountResource            = corev1.Resource("serviceaccounts")
 	shootResource                     = gardencorev1beta1.Resource("shoots")
 	shootStateResource                = gardencorev1alpha1.Resource("shootstates")
+	shootLeftoverResource             = gardencorev1alpha1.Resource("shootleftovers")
 	exposureClassResource             = gardencorev1alpha1.Resource("exposureclasses")
 )
 
@@ -182,6 +183,12 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				[]string{"get", "update", "patch", "delete"},
 				[]string{"create"},
 				nil,
+			)
+		case shootLeftoverResource:
+			return a.authorize(seedName, graph.VertexTypeShootLeftover, attrs,
+				[]string{"update", "patch"},
+				[]string{"get", "list", "watch"},
+				[]string{"status"},
 			)
 		case exposureClassResource:
 			return a.authorizeRead(seedName, graph.VertexTypeExposureClass, attrs)

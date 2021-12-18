@@ -80,6 +80,8 @@ controllers:
     syncPeriod: 1m
     gracePeriod: 10m
     lastOperationStaleDuration: 2m
+  shootLeftover:
+    concurrentSyncs: 5
 resources:
   capacity:
     shoots: 200

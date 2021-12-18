@@ -93,6 +93,9 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 	if obj.Controllers.ManagedSeed == nil {
 		obj.Controllers.ManagedSeed = &ManagedSeedControllerConfiguration{}
 	}
+	if obj.Controllers.ShootLeftover == nil {
+		obj.Controllers.ShootLeftover = &ShootLeftoverControllerConfiguration{}
+	}
 
 	if obj.LeaderElection == nil {
 		obj.LeaderElection = &componentbaseconfigv1alpha1.LeaderElectionConfiguration{}
@@ -408,6 +411,14 @@ func SetDefaults_ManagedSeedControllerConfiguration(obj *ManagedSeedControllerCo
 	if obj.SyncJitterPeriod == nil {
 		v := metav1.Duration{Duration: 5 * time.Minute}
 		obj.SyncJitterPeriod = &v
+	}
+}
+
+// SetDefaults_ShootLeftoverControllerConfiguration sets defaults for the shoot leftover controller.
+func SetDefaults_ShootLeftoverControllerConfiguration(obj *ShootLeftoverControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		v := 5
+		obj.ConcurrentSyncs = &v
 	}
 }
 

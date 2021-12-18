@@ -17,6 +17,7 @@ package controllerutils
 import (
 	"context"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -231,5 +232,17 @@ func SeedOfManagedSeedFilterFunc(ctx context.Context, c client.Reader, seedName 
 			return false
 		}
 		return ManagedSeedFilterFunc(ctx, c, seedName)(managedSeed)
+	}
+}
+
+// ShootLeftoverFilterFunc returns a filtering func for ShootLeftover resources.
+func ShootLeftoverFilterFunc(seedName string) func(obj interface{}) bool {
+	return func(obj interface{}) bool {
+		shootLeftover, ok := obj.(*gardencorev1alpha1.ShootLeftover)
+		if !ok {
+			return false
+		}
+
+		return shootLeftover.Spec.SeedName == seedName
 	}
 }

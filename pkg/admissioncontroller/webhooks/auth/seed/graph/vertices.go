@@ -60,6 +60,8 @@ const (
 	VertexTypeShoot
 	// VertexTypeShootState is a constant for a 'ShootState' vertex.
 	VertexTypeShootState
+	// VertexTypeShootLeftover is a constant for a 'ShootLeftover' vertex.
+	VertexTypeShootLeftover
 )
 
 var vertexTypes = map[VertexType]string{
@@ -84,6 +86,7 @@ var vertexTypes = map[VertexType]string{
 	VertexTypeServiceAccount:            "ServiceAccount",
 	VertexTypeShoot:                     "Shoot",
 	VertexTypeShootState:                "ShootState",
+	VertexTypeShootLeftover:             "ShootLeftover",
 }
 
 type vertex struct {

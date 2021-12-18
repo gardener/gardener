@@ -138,6 +138,8 @@ type GardenletControllerConfiguration struct {
 	SeedAPIServerNetworkPolicy *SeedAPIServerNetworkPolicyControllerConfiguration
 	// ManagedSeedControllerConfiguration the configuration of the ManagedSeed controller.
 	ManagedSeed *ManagedSeedControllerConfiguration
+	// ShootLeftover defines the configuration of the ShootLeftover controller.
+	ShootLeftover *ShootLeftoverControllerConfiguration
 }
 
 // BackupBucketControllerConfiguration defines the configuration of the BackupBucket
@@ -331,6 +333,13 @@ type ManagedSeedControllerConfiguration struct {
 	// If its value is greater than 0 then the managed seeds will not be enqueued immediately but only after a random
 	// duration between 0 and the configured value. It is defaulted to 5m.
 	SyncJitterPeriod *metav1.Duration
+}
+
+// ShootLeftoverControllerConfiguration defines the configuration of the ShootLeftover controller.
+type ShootLeftoverControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs *int
 }
 
 // ResourcesConfiguration defines the total capacity for seed resources and the amount reserved for use by Gardener.

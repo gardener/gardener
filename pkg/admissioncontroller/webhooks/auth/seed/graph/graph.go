@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -81,6 +82,7 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 		{&gardencorev1beta1.Seed{}, g.setupSeedWatch},
 		{&corev1.ServiceAccount{}, g.setupServiceAccountWatch},
 		{&gardencorev1beta1.Shoot{}, g.setupShootWatch},
+		{&gardencorev1alpha1.ShootLeftover{}, g.setupShootLeftoverWatch},
 	} {
 		informer, err := c.GetInformer(ctx, resource.obj)
 		if err != nil {

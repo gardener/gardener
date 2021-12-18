@@ -57,6 +57,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.ShootMigration).NotTo(BeNil())
 			Expect(obj.Controllers.ShootStateSync).NotTo(BeNil())
 			Expect(obj.Controllers.ManagedSeed).NotTo(BeNil())
+			Expect(obj.Controllers.ShootLeftover).NotTo(BeNil())
 			Expect(obj.LeaderElection).NotTo(BeNil())
 			Expect(obj.LogLevel).To(PointTo(Equal(logger.InfoLevel)))
 			Expect(obj.LogFormat).To(PointTo(Equal(logger.FormatJSON)))
@@ -283,6 +284,20 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_BastionControllerConfiguration(obj)
 
 			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(20)))
+		})
+	})
+
+	Describe("#SetDefaults_ShootLeftoverControllerConfiguration", func() {
+		var obj *ShootLeftoverControllerConfiguration
+
+		BeforeEach(func() {
+			obj = &ShootLeftoverControllerConfiguration{}
+		})
+
+		It("should default the configuration", func() {
+			SetDefaults_ShootLeftoverControllerConfiguration(obj)
+
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
 		})
 	})
 })

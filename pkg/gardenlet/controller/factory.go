@@ -41,6 +41,7 @@ import (
 	networkpolicycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
+	shootleftovercontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shootleftover"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -174,6 +175,11 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Shoot controller: %w", err)
 	}
 
+	shootLeftoverController, err := shootleftovercontroller.NewShootLeftoverController(ctx, f.clientMap, f.cfg, f.recorder, logger.Logger)
+	if err != nil {
+		return fmt.Errorf("failed initializing ShootLeftover controller: %w", err)
+	}
+
 	controllerCtx, cancel := context.WithCancel(ctx)
 
 	go backupBucketController.Run(controllerCtx, *f.cfg.Controllers.BackupBucket.ConcurrentSyncs)
@@ -184,6 +190,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	go networkPolicyController.Run(controllerCtx, *f.cfg.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
 	go seedController.Run(controllerCtx, *f.cfg.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(controllerCtx, *f.cfg.Controllers.Shoot.ConcurrentSyncs, *f.cfg.Controllers.ShootCare.ConcurrentSyncs, *f.cfg.Controllers.ShootMigration.ConcurrentSyncs)
+	go shootLeftoverController.Run(controllerCtx, *f.cfg.Controllers.ShootLeftover.ConcurrentSyncs)
 
 	// TODO(timebertt): this can be removed once we have refactored gardenlet to native controller-runtime controllers,
 	// with https://github.com/kubernetes-sigs/controller-runtime/pull/1678 source.Kind already retries getting

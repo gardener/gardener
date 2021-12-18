@@ -278,7 +278,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			{
 				APIGroups: []string{"druid.gardener.cloud"},
 				Resources: []string{"etcds", "etcdcopybackupstasks"},
-				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
+				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 			},
 			{
 				APIGroups: []string{"extensions.gardener.cloud"},
@@ -760,6 +760,9 @@ func ComputeExpectedGardenletConfiguration(
 			},
 			SeedAPIServerNetworkPolicy: &gardenletconfigv1alpha1.SeedAPIServerNetworkPolicyControllerConfiguration{
 				ConcurrentSyncs: &three,
+			},
+			ShootLeftover: &gardenletconfigv1alpha1.ShootLeftoverControllerConfiguration{
+				ConcurrentSyncs: &five,
 			},
 		},
 		LeaderElection: &baseconfigv1alpha1.LeaderElectionConfiguration{
