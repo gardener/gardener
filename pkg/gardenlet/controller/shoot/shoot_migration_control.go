@@ -108,12 +108,14 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 		return reconcile.Result{}, err
 	}
 
-	// If the shoot is being deleted or no longer being migrated to this seed, clear migration start time and don't requeue
+	// If the shoot is being deleted or no longer being migrated to this seed, clear the migration start time
 	if shoot.DeletionTimestamp != nil || !controllerutils.ShootIsBeingMigratedToSeed(ctx, gardenClient.Cache(), shoot, confighelper.SeedNameFromSeedConfig(r.config.SeedConfig)) {
 		log.Debugf("[SHOOT MIGRATION] Clearing migration start time")
 		if err := setMigrationStartTime(ctx, gardenClient.Client(), shoot, nil); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not clear migration start time: %w", err)
 		}
+
+		// Return without requeue as the shoot is no longer being migrated (we should not force restore)
 		return reconcile.Result{}, nil
 	}
 
@@ -142,10 +144,12 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 			}
 		}
 
+		// Return without requeue as the shoot is no longer being migrated (we just forced the restoration)
 		return reconcile.Result{}, nil
 	}
 
-	// Requeue after the configured sync period
+	// Requeue after the configured sync period as the shoot is still being migrated,
+	// so we might need to force the restoration
 	return reconcile.Result{RequeueAfter: r.config.Controllers.ShootMigration.SyncPeriod.Duration}, nil
 }
 
@@ -163,7 +167,7 @@ func (r *migrationReconciler) isMigrationInProgress(shoot *gardencorev1beta1.Sho
 }
 
 func setMigrationStartTime(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot, migrationStartTime *metav1.Time) error {
-	patch := client.StrategicMergeFrom(shoot.DeepCopy())
+	patch := client.MergeFrom(shoot.DeepCopy())
 	shoot.Status.MigrationStartTime = migrationStartTime
 	return c.Status().Patch(ctx, shoot, patch)
 }

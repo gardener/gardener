@@ -215,7 +215,7 @@ var _ = Describe("Defaults", func() {
 		It("should default the configuration", func() {
 			SetDefaults_ShootMigrationControllerConfiguration(obj)
 
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(20)))
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
 			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
 			Expect(obj.GracePeriod).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Hour})))
 			Expect(obj.LastOperationStaleDuration).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
@@ -248,7 +248,7 @@ var _ = Describe("Defaults", func() {
 		It("should default the configuration", func() {
 			SetDefaults_BackupEntryMigrationControllerConfiguration(obj)
 
-			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(20)))
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
 			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
 			Expect(obj.GracePeriod).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
 			Expect(obj.LastOperationStaleDuration).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Minute})))

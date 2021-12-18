@@ -109,12 +109,14 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 		return reconcile.Result{}, err
 	}
 
-	// If the backup entry is being deleted or no longer being migrated to this seed, clear migration start time and don't requeue
+	// If the backup entry is being deleted or no longer being migrated to this seed, clear the migration start time
 	if backupEntry.DeletionTimestamp != nil || !controllerutils.BackupEntryIsBeingMigratedToSeed(ctx, gardenClient.Cache(), backupEntry, confighelper.SeedNameFromSeedConfig(r.config.SeedConfig)) {
 		log.Debugf("[BACKUPENTRY MIGRATION] Clearing migration start time")
 		if err := setMigrationStartTime(ctx, gardenClient.Client(), backupEntry, nil); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not clear migration start time: %w", err)
 		}
+
+		// Return without requeue as the backup entry is no longer being migrated (we should not force restore)
 		return reconcile.Result{}, nil
 	}
 
@@ -126,7 +128,7 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 		}
 	}
 
-	// If the restore annotation is set or the grace period is elapsed and migration is not currently in progress,
+	// If the force-restore annotation is set or the grace period is elapsed and migration is not currently in progress,
 	// update the backup entry status to force the restoration (fallback to the "bad case" scenario)
 	log.Debugf("[BACKUPENTRY MIGRATION] Checking if the backup entry should be forcefully restored")
 	if hasForceRestoreAnnotation(backupEntry) || r.isGracePeriodElapsed(backupEntry) && !r.isMigrationInProgress(backupEntry) {
@@ -143,16 +145,16 @@ func (r *migrationReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 			}
 		}
 
+		// Return without requeue as the backup entry is no longer being migrated (we just forced the restoration)
 		return reconcile.Result{}, nil
 	}
 
-	// Requeue after the configured sync period
+	// Requeue after the configured sync period as the backup entry is still being migrated,
+	// so we might need to force the restoration
 	return reconcile.Result{RequeueAfter: r.config.Controllers.BackupEntryMigration.SyncPeriod.Duration}, nil
 }
 
 func (r *migrationReconciler) isGracePeriodElapsed(backupEntry *gardencorev1beta1.BackupEntry) bool {
-	r.logger.Infof("%+v", backupEntry.Status)
-	r.logger.Infof("%+v", r.config.Controllers.BackupEntryMigration)
 	return time.Now().UTC().After(backupEntry.Status.MigrationStartTime.Add(r.config.Controllers.BackupEntryMigration.GracePeriod.Duration))
 }
 
@@ -166,7 +168,7 @@ func (r *migrationReconciler) isMigrationInProgress(backupEntry *gardencorev1bet
 }
 
 func setMigrationStartTime(ctx context.Context, c client.Client, backupEntry *gardencorev1beta1.BackupEntry, migrationStartTime *metav1.Time) error {
-	patch := client.StrategicMergeFrom(backupEntry.DeepCopy())
+	patch := client.MergeFrom(backupEntry.DeepCopy())
 	backupEntry.Status.MigrationStartTime = migrationStartTime
 	return c.Status().Patch(ctx, backupEntry, patch)
 }

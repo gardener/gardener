@@ -167,6 +167,7 @@ type BackupEntryMigrationControllerConfiguration struct {
 	// events.
 	ConcurrentSyncs *int
 	// SyncPeriod is the duration how often the existing resources are reconciled.
+	// It is only relevant for backup entries that are currently being migrated.
 	SyncPeriod *metav1.Duration
 	// GracePeriod is the period to wait before forcing the restoration after the migration has started.
 	GracePeriod *metav1.Duration
@@ -267,6 +268,7 @@ type ShootMigrationControllerConfiguration struct {
 	// events.
 	ConcurrentSyncs *int
 	// SyncPeriod is the duration how often the existing resources are reconciled.
+	// It is only relevant for shoots that are currently being migrated.
 	SyncPeriod *metav1.Duration
 	// GracePeriod is the period to wait before forcing the restoration after the migration has started.
 	GracePeriod *metav1.Duration

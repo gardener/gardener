@@ -203,7 +203,7 @@ func SetDefaults_BackupEntryControllerConfiguration(obj *BackupEntryControllerCo
 // SetDefaults_BackupEntryMigrationControllerConfiguration sets defaults for the backup entry migration controller.
 func SetDefaults_BackupEntryMigrationControllerConfiguration(obj *BackupEntryMigrationControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		v := DefaultControllerConcurrentSyncs
+		v := 5
 		obj.ConcurrentSyncs = &v
 	}
 
@@ -328,7 +328,7 @@ func SetDefaults_ShootCareControllerConfiguration(obj *ShootCareControllerConfig
 // SetDefaults_ShootMigrationControllerConfiguration sets defaults for the shoot migration controller.
 func SetDefaults_ShootMigrationControllerConfiguration(obj *ShootMigrationControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		v := DefaultControllerConcurrentSyncs
+		v := 5
 		obj.ConcurrentSyncs = &v
 	}
 

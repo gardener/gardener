@@ -79,7 +79,8 @@ func ShootIsManagedByThisGardenlet(shoot *gardencorev1beta1.Shoot, gc *config.Ga
 	return shoot.Spec.SeedName != nil && *shoot.Spec.SeedName == seedName
 }
 
-// ShootIsBeingMigratedToSeed checks if the given shoot is currently being migrated to the seed with the given name.
+// ShootIsBeingMigratedToSeed checks if the given shoot is currently being migrated to the seed with the given name,
+// and the source seed has ownerChecks enabled (as it is a prerequisite to successfully force restore a shoot to a different seed).
 func ShootIsBeingMigratedToSeed(ctx context.Context, c client.Reader, shoot *gardencorev1beta1.Shoot, seedName string) bool {
 	if shoot.Spec.SeedName != nil && shoot.Status.SeedName != nil && *shoot.Spec.SeedName != *shoot.Status.SeedName && *shoot.Spec.SeedName == seedName {
 		seed := &gardencorev1beta1.Seed{}
@@ -156,7 +157,8 @@ func BackupEntryIsManagedByThisGardenlet(backupEntry *gardencorev1beta1.BackupEn
 	return backupEntry.Spec.SeedName != nil && *backupEntry.Spec.SeedName == seedName
 }
 
-// BackupEntryIsBeingMigratedToSeed checks if the given BackupEntry is currently being migrated to the seed with the given name.
+// BackupEntryIsBeingMigratedToSeed checks if the given BackupEntry is currently being migrated to the seed with the given name,
+// and the source seed has ownerChecks enabled (as it is a prerequisite to successfully force restore a shoot to a different seed).
 func BackupEntryIsBeingMigratedToSeed(ctx context.Context, c client.Reader, backupEntry *gardencorev1beta1.BackupEntry, seedName string) bool {
 	if backupEntry.Spec.SeedName != nil && backupEntry.Status.SeedName != nil && *backupEntry.Spec.SeedName != *backupEntry.Status.SeedName && *backupEntry.Spec.SeedName == seedName {
 		seed := &gardencorev1beta1.Seed{}

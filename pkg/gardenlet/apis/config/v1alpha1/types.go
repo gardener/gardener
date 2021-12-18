@@ -209,6 +209,7 @@ type BackupEntryMigrationControllerConfiguration struct {
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled.
+	// It is only relevant for backup entries that are currently being migrated.
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 	// GracePeriod is the period to wait before forcing the restoration after the migration has started.
@@ -334,6 +335,7 @@ type ShootMigrationControllerConfiguration struct {
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 	// GracePeriod is the period to wait before forcing the restoration after the migration has started.
+	// It is only relevant for shoots that are currently being migrated.
 	// +optional
 	GracePeriod *metav1.Duration `json:"gracePeriod,omitempty"`
 	// LastOperationStaleDuration is the duration to consider the last operation stale after it was last updated.
