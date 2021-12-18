@@ -41,17 +41,11 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 	var (
 		isRestoring             = operationType == gardencorev1beta1.LastOperationTypeRestore
 		botanist                *botanistpkg.Botanist
-		tasksWithErrors         []string
 		isCopyOfBackupsRequired bool
 		err                     error
 	)
 
-	for _, lastError := range o.Shoot.GetInfo().Status.LastErrors {
-		if lastError.TaskID != nil {
-			tasksWithErrors = append(tasksWithErrors, *lastError.TaskID)
-		}
-	}
-
+	tasksWithErrors := gardencorev1beta1helper.GetTaskIDs(o.Shoot.GetInfo().Status.LastErrors)
 	errorContext := errors.NewErrorContext(fmt.Sprintf("Shoot cluster %s", utils.IifString(isRestoring, "restoration", "reconciliation")), tasksWithErrors)
 
 	err = errors.HandleErrors(errorContext,

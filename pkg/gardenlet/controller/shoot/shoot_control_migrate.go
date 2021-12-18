@@ -91,17 +91,11 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 	var (
 		botanist                     *botanistpkg.Botanist
 		err                          error
-		tasksWithErrors              []string
 		kubeAPIServerDeploymentFound = true
 		etcdSnapshotRequired         bool
 	)
 
-	for _, lastError := range o.Shoot.GetInfo().Status.LastErrors {
-		if lastError.TaskID != nil {
-			tasksWithErrors = append(tasksWithErrors, *lastError.TaskID)
-		}
-	}
-
+	tasksWithErrors := gardencorev1beta1helper.GetTaskIDs(o.Shoot.GetInfo().Status.LastErrors)
 	errorContext := utilerrors.NewErrorContext("Shoot cluster preparation for migration", tasksWithErrors)
 
 	err = utilerrors.HandleErrors(errorContext,

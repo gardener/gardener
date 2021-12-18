@@ -144,9 +144,7 @@ func (e *etcdCopyBackupsTask) Destroy(ctx context.Context) error {
 
 // WaitCleanup waits until the EtcdCopyBackupsTask is deleted.
 func (e *etcdCopyBackupsTask) WaitCleanup(ctx context.Context) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, e.waitTimeout)
-	defer cancel()
-	return kutil.WaitUntilResourceDeleted(timeoutCtx, e.client, e.task, e.waitInterval)
+	return kutil.WaitUntilResourceDeletedWithTimeout(ctx, e.client, e.task, e.waitInterval, e.waitTimeout)
 }
 
 // SetSourceStore sets the specifications for the object store provider from which backups will be copied.

@@ -217,21 +217,21 @@ type WrappedLastErrors struct {
 	LastErrors  []gardencorev1beta1.LastError
 }
 
-// NewWrappedLastErrors returns an error
+// NewWrappedLastErrors creates a WrappedLastErrors instance from the given description and error.
 func NewWrappedLastErrors(description string, err error) *WrappedLastErrors {
-	var lastErrors []gardencorev1beta1.LastError
-
-	for _, partError := range utilerrors.Errors(err) {
-		lastErrors = append(lastErrors, *LastErrorWithTaskID(
-			partError.Error(),
-			utilerrors.GetID(partError),
-			DetermineErrorCodes(utilerrors.Unwrap(partError))...))
-	}
-
 	return &WrappedLastErrors{
 		Description: description,
-		LastErrors:  lastErrors,
+		LastErrors:  LastErrors(err),
 	}
+}
+
+// LastErrors creates a list of LastError instances from the given error.
+func LastErrors(err error) []gardencorev1beta1.LastError {
+	var lastErrors []gardencorev1beta1.LastError
+	for _, e := range utilerrors.Errors(err) {
+		lastErrors = append(lastErrors, *LastErrorWithTaskID(e.Error(), utilerrors.GetID(e), DetermineErrorCodes(utilerrors.Unwrap(e))...))
+	}
+	return lastErrors
 }
 
 // LastError creates a new LastError with the given description, optional codes and sets timestamp when the error is lastly observed.
@@ -287,4 +287,15 @@ func HasErrorCode(lastErrors []gardencorev1beta1.LastError, code gardencorev1bet
 	}
 
 	return false
+}
+
+// GetTaskIDs returns the taskIDs of the given list of LastError instances.
+func GetTaskIDs(lastErrors []gardencorev1beta1.LastError) []string {
+	var taskIDs []string
+	for _, lastError := range lastErrors {
+		if lastError.TaskID != nil {
+			taskIDs = append(taskIDs, *lastError.TaskID)
+		}
+	}
+	return taskIDs
 }

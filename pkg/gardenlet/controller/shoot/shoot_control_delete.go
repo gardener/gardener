@@ -55,16 +55,10 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		infrastructure                       *extensionsv1alpha1.Infrastructure
 		controlPlaneDeploymentNeeded         bool
 		additionalDNSProviders               map[string]component.DeployWaiter
-		tasksWithErrors                      []string
 		err                                  error
 	)
 
-	for _, lastError := range o.Shoot.GetInfo().Status.LastErrors {
-		if lastError.TaskID != nil {
-			tasksWithErrors = append(tasksWithErrors, *lastError.TaskID)
-		}
-	}
-
+	tasksWithErrors := gardencorev1beta1helper.GetTaskIDs(o.Shoot.GetInfo().Status.LastErrors)
 	errorContext := errors.NewErrorContext("Shoot cluster deletion", tasksWithErrors)
 
 	err = errors.HandleErrors(errorContext,
