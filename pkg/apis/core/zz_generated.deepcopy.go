@@ -646,6 +646,11 @@ func (in *ClusterAutoscaler) DeepCopyInto(out *ClusterAutoscaler) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.IgnoreTaints != nil {
+		in, out := &in.IgnoreTaints, &out.IgnoreTaints
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

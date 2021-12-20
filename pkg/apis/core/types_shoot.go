@@ -337,6 +337,8 @@ type ClusterAutoscaler struct {
 	MaxNodeProvisionTime *metav1.Duration
 	// MaxGracefulTerminationSeconds is the number of seconds CA waits for pod termination when trying to scale down a node (default: 600).
 	MaxGracefulTerminationSeconds *int32
+	// IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+	IgnoreTaints []string
 }
 
 // ExpanderMode is type used for Expander values

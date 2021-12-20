@@ -76,6 +76,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		configScaleDownUnneededTime               = &metav1.Duration{Duration: time.Second}
 		configScaleDownUtilizationThreshold       = pointer.Float64(1.2345)
 		configScanInterval                        = &metav1.Duration{Duration: time.Second}
+		configIgnoreTaints                        = []string{"taint-1", "taint-2"}
 		configFull                                = &gardencorev1beta1.ClusterAutoscaler{
 			Expander:                      &configExpander,
 			MaxGracefulTerminationSeconds: &configMaxGracefulTerminationSeconds,
@@ -86,6 +87,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			ScaleDownUnneededTime:         configScaleDownUnneededTime,
 			ScaleDownUtilizationThreshold: configScaleDownUtilizationThreshold,
 			ScanInterval:                  configScanInterval,
+			IgnoreTaints:                  configIgnoreTaints,
 		}
 
 		serviceAccountName        = "cluster-autoscaler"
@@ -216,6 +218,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 					fmt.Sprintf("--scale-down-delay-after-delete=%s", configScaleDownDelayAfterDelete.Duration),
 					fmt.Sprintf("--scale-down-delay-after-failure=%s", configScaleDownDelayAfterFailure.Duration),
 					fmt.Sprintf("--scan-interval=%s", configScanInterval.Duration),
+					fmt.Sprintf("--ignore-taint=%s", configIgnoreTaints[0]),
+					fmt.Sprintf("--ignore-taint=%s", configIgnoreTaints[1]),
 				)
 			}
 

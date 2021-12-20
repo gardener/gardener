@@ -790,7 +790,7 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured bool, fldPa
 	}
 
 	if clusterAutoscaler := kubernetes.ClusterAutoscaler; clusterAutoscaler != nil {
-		allErrs = append(allErrs, ValidateClusterAutoscaler(*clusterAutoscaler, fldPath.Child("clusterAutoscaler"))...)
+		allErrs = append(allErrs, ValidateClusterAutoscaler(*clusterAutoscaler, kubernetes.Version, fldPath.Child("clusterAutoscaler"))...)
 	}
 	if verticalPodAutoscaler := kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
 		allErrs = append(allErrs, ValidateVerticalPodAutoscaler(*verticalPodAutoscaler, fldPath.Child("verticalPodAutoscaler"))...)
@@ -857,7 +857,7 @@ func ValidateWatchCacheSizes(sizes *core.WatchCacheSizes, fldPath *field.Path) f
 }
 
 // ValidateClusterAutoscaler validates the given ClusterAutoscaler fields.
-func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, fldPath *field.Path) field.ErrorList {
+func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, k8sVersion string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if threshold := autoScaler.ScaleDownUtilizationThreshold; threshold != nil {
 		if *threshold < 0.0 {
@@ -876,6 +876,16 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, fldPath *field
 
 	if expander := autoScaler.Expander; expander != nil && !availableClusterAutoscalerExpanderModes.Has(string(*expander)) {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("expander"), *expander, availableClusterAutoscalerExpanderModes.List()))
+	}
+
+	if ignoreTaints := autoScaler.IgnoreTaints; ignoreTaints != nil {
+		k8sVersionIs116OrGreater, _ := versionutils.CompareVersions(k8sVersion, ">=", "1.16")
+
+		if k8sVersionIs116OrGreater {
+			allErrs = append(allErrs, validateClusterAutoscalerIgnoreTaints(ignoreTaints, fldPath.Child("ignoreTaints"))...)
+		} else {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("ignoreTaints"), autoScaler.IgnoreTaints, "ignoreTaints cannot be specified for kubernetes version < 1.16"))
+		}
 	}
 
 	return allErrs
@@ -1286,6 +1296,24 @@ func validateKubeletConfigReserved(reserved *core.KubeletConfigReserved, fldPath
 	}
 	if reserved.PID != nil {
 		allErrs = append(allErrs, ValidateResourceQuantityValue("pid", *reserved.PID, fldPath.Child("pid"))...)
+	}
+	return allErrs
+}
+
+func validateClusterAutoscalerIgnoreTaints(ignoredTaints []string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	taintKeySet := make(map[string]struct{})
+
+	for index, taint := range ignoredTaints {
+		// validate the taint key
+		allErrs = append(allErrs, metav1validation.ValidateLabelName(taint, fldPath.Index(index))...)
+
+		// validate if taint key is duplicate
+		if _, ok := taintKeySet[taint]; ok {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Index(index), taint))
+			continue
+		}
+		taintKeySet[taint] = struct{}{}
 	}
 	return allErrs
 }
