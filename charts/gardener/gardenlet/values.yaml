@@ -109,6 +109,16 @@ global:
           syncPeriod: 1h
           waitSyncPeriod: 15s
           syncJitterPeriod: 5m
+        shootMigration:
+          concurrentSyncs: 5
+          syncPeriod: 1m
+          gracePeriod: 2h
+          lastOperationStaleDuration: 10m
+        backupEntryMigration:
+          concurrentSyncs: 5
+          syncPeriod: 1m
+          gracePeriod: 10m
+          lastOperationStaleDuration: 2m
       resources:
         capacity:
           shoots: 250

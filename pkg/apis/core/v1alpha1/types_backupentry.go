@@ -76,4 +76,7 @@ type BackupEntryStatus struct {
 	// at the beginning of a create/reconcile operation. It is used when moving the BackupEntry between seeds.
 	// +optional
 	SeedName *string `json:"seedName,omitempty" protobuf:"bytes,4,opt,name=seedName"`
+	// MigrationStartTime is the time when a migration to a different seed was initiated.
+	// +optional
+	MigrationStartTime *metav1.Time `json:"migrationStartTime,omitempty" protobuf:"bytes,5,opt,name=migrationStartTime"`
 }

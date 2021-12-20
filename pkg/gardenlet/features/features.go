@@ -36,6 +36,7 @@ var (
 		features.UseDNSRecords:                              {Default: false, PreRelease: featuregate.Alpha},
 		features.DenyInvalidExtensionResources:              {Default: false, PreRelease: featuregate.Alpha},
 		features.CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
+		features.ForceRestore:                               {Default: false, PreRelease: featuregate.Alpha},
 	}
 )
 

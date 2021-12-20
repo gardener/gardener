@@ -163,7 +163,7 @@ func (shootStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtim
 	newShoot.Spec = oldShoot.Spec
 
 	if lastOperation := newShoot.Status.LastOperation; lastOperation != nil && lastOperation.Type == core.LastOperationTypeMigrate &&
-		lastOperation.State == core.LastOperationStateSucceeded {
+		(lastOperation.State == core.LastOperationStateSucceeded || lastOperation.State == core.LastOperationStateAborted) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
 }

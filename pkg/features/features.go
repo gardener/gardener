@@ -120,4 +120,11 @@ const (
 	// owner: @ialidzhikov
 	// alpha: v1.38.0
 	SecretBindingProviderValidation featuregate.Feature = "SecretBindingProviderValidation"
+
+	// ForceRestore enables forcing the shoot's restoration to the destination seed during control plane migration
+	// if the preparation for migration in the source seed is not finished after a certain grace period
+	// and is considered unlikely to succeed ("bad case" scenario).
+	// owner: @stoyanr
+	// alpha: v1.38.0
+	ForceRestore featuregate.Feature = "ForceRestore"
 )

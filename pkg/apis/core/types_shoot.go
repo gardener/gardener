@@ -139,6 +139,8 @@ type ShootStatus struct {
 	ClusterIdentity *string
 	// List of addresses on which the Kube API server can be reached.
 	AdvertisedAddresses []ShootAdvertisedAddress
+	// MigrationStartTime is the time when a migration to a different seed was initiated.
+	MigrationStartTime *metav1.Time
 }
 
 // ShootAdvertisedAddress contains information for the shoot's Kube API server.

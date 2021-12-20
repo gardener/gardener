@@ -445,6 +445,17 @@ var _ = Describe("helper", func() {
 		Entry("shoot dns 'enabled' is true", &core.SeedSettings{ShootDNS: &core.SeedSettingShootDNS{Enabled: true}}, true),
 	)
 
+	DescribeTable("#SeedSettingOwnerChecksEnabled",
+		func(settings *core.SeedSettings, expected bool) {
+			Expect(SeedSettingOwnerChecksEnabled(settings)).To(Equal(expected))
+		},
+
+		Entry("no settings", nil, true),
+		Entry("no owner checks setting", &core.SeedSettings{}, true),
+		Entry("owner checks enabled", &core.SeedSettings{OwnerChecks: &core.SeedSettingOwnerChecks{Enabled: true}}, true),
+		Entry("owner checks disabled", &core.SeedSettings{OwnerChecks: &core.SeedSettingOwnerChecks{Enabled: false}}, false),
+	)
+
 	classificationPreview := core.ClassificationPreview
 	classificationDeprecated := core.ClassificationDeprecated
 	classificationSupported := core.ClassificationSupported

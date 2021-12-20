@@ -221,6 +221,10 @@ message BackupEntryStatus {
   // at the beginning of a create/reconcile operation. It is used when moving the BackupEntry between seeds.
   // +optional
   optional string seedName = 4;
+
+  // MigrationStartTime is the time when a migration to a different seed was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time migrationStartTime = 5;
 }
 
 // CRI contains information about the Container Runtimes.
@@ -2267,6 +2271,10 @@ message ShootStatus {
   // +patchMergeKey=name
   // +patchStrategy=merge
   repeated ShootAdvertisedAddress advertisedAddresses = 13;
+
+  // MigrationStartTime is the time when a migration to a different seed was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time migrationStartTime = 14;
 }
 
 // ShootTemplate is a template for creating a Shoot object.

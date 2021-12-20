@@ -68,4 +68,6 @@ type BackupEntryStatus struct {
 	// SeedName is the name of the seed to which this BackupEntry is currently scheduled. This field is populated
 	// at the beginning of a create/reconcile operation. It is used when moving the BackupEntry between seeds.
 	SeedName *string
+	// MigrationStartTime is the time when a migration to a different seed was initiated.
+	MigrationStartTime *metav1.Time
 }

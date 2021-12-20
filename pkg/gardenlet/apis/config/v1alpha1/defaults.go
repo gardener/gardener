@@ -57,6 +57,9 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 	if obj.Controllers.BackupEntry == nil {
 		obj.Controllers.BackupEntry = &BackupEntryControllerConfiguration{}
 	}
+	if obj.Controllers.BackupEntryMigration == nil {
+		obj.Controllers.BackupEntryMigration = &BackupEntryMigrationControllerConfiguration{}
+	}
 	if obj.Controllers.Bastion == nil {
 		obj.Controllers.Bastion = &BastionControllerConfiguration{}
 	}
@@ -77,6 +80,9 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 	}
 	if obj.Controllers.ShootCare == nil {
 		obj.Controllers.ShootCare = &ShootCareControllerConfiguration{}
+	}
+	if obj.Controllers.ShootMigration == nil {
+		obj.Controllers.ShootMigration = &ShootMigrationControllerConfiguration{}
 	}
 	if obj.Controllers.ShootStateSync == nil {
 		obj.Controllers.ShootStateSync = &ShootStateSyncControllerConfiguration{}
@@ -194,6 +200,29 @@ func SetDefaults_BackupEntryControllerConfiguration(obj *BackupEntryControllerCo
 	}
 }
 
+// SetDefaults_BackupEntryMigrationControllerConfiguration sets defaults for the backup entry migration controller.
+func SetDefaults_BackupEntryMigrationControllerConfiguration(obj *BackupEntryMigrationControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		v := 5
+		obj.ConcurrentSyncs = &v
+	}
+
+	if obj.SyncPeriod == nil {
+		v := metav1.Duration{Duration: time.Minute}
+		obj.SyncPeriod = &v
+	}
+
+	if obj.GracePeriod == nil {
+		v := metav1.Duration{Duration: 10 * time.Minute}
+		obj.GracePeriod = &v
+	}
+
+	if obj.LastOperationStaleDuration == nil {
+		v := metav1.Duration{Duration: 2 * time.Minute}
+		obj.LastOperationStaleDuration = &v
+	}
+}
+
 // SetDefaults_BastionControllerConfiguration sets defaults for the backup bucket controller.
 func SetDefaults_BastionControllerConfiguration(obj *BastionControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
@@ -301,6 +330,29 @@ func SetDefaults_ShootCareControllerConfiguration(obj *ShootCareControllerConfig
 	if obj.StaleExtensionHealthChecks == nil {
 		v := StaleExtensionHealthChecks{Enabled: true}
 		obj.StaleExtensionHealthChecks = &v
+	}
+}
+
+// SetDefaults_ShootMigrationControllerConfiguration sets defaults for the shoot migration controller.
+func SetDefaults_ShootMigrationControllerConfiguration(obj *ShootMigrationControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		v := 5
+		obj.ConcurrentSyncs = &v
+	}
+
+	if obj.SyncPeriod == nil {
+		v := metav1.Duration{Duration: time.Minute}
+		obj.SyncPeriod = &v
+	}
+
+	if obj.GracePeriod == nil {
+		v := metav1.Duration{Duration: 2 * time.Hour}
+		obj.GracePeriod = &v
+	}
+
+	if obj.LastOperationStaleDuration == nil {
+		v := metav1.Duration{Duration: 10 * time.Minute}
+		obj.LastOperationStaleDuration = &v
 	}
 }
 
