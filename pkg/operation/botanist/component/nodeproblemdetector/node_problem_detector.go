@@ -26,7 +26,9 @@ import (
 
 const (
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
-	ManagedResourceName = "shoot-core-node-problem-detector"
+	ManagedResourceName                    = "shoot-core-node-problem-detector"
+	deploymentName                         = "node-problem-detector"
+	containerName                          = "node-problem-detector"
 )
 
 // Interface contains functions for a node-problem-detector deployer.
