@@ -43,7 +43,7 @@ import (
 )
 
 const (
-	// IPVSAddress is the IPv4 address used by node local dns when IPVS is used.
+	// IPVSAddress is the IPv4 address used by node-local-dns when IPVS is used.
 	IPVSAddress = "169.254.20.10"
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 	ManagedResourceName = "shoot-core-node-local-dns"
@@ -237,53 +237,53 @@ func (c *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
 			},
 			Data: map[string]string{
 				configDataKey: domain + `:53 {
-  errors
-  cache {
-          success 9984 30
-          denial 9984 5
-  }
-  reload
-  loop
-  bind ` + c.bindIP() + `
-  forward . ` + c.values.ClusterDNS + ` {
-          ` + c.forceTcpToClusterDNS() + `
-  }
-  prometheus :` + strconv.Itoa(prometheusPort) + `
-  health ` + IPVSAddress + `:` + strconv.Itoa(livenessProbePort) + `
-}
+    errors
+    cache {
+            success 9984 30
+            denial 9984 5
+    }
+    reload
+    loop
+    bind ` + c.bindIP() + `
+    forward . ` + c.values.ClusterDNS + ` {
+            ` + c.forceTcpToClusterDNS() + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    health ` + IPVSAddress + `:` + strconv.Itoa(livenessProbePort) + `
+    }
 in-addr.arpa:53 {
-  errors
-  cache 30
-  reload
-  loop
-  bind ` + c.bindIP() + `
-  forward . ` + c.values.ClusterDNS + ` {
-          ` + c.forceTcpToClusterDNS() + `
-  }
-  prometheus :` + strconv.Itoa(prometheusPort) + `
-}
+    errors
+    cache 30
+    reload
+    loop
+    bind ` + c.bindIP() + `
+    forward . ` + c.values.ClusterDNS + ` {
+            ` + c.forceTcpToClusterDNS() + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    }
 ip6.arpa:53 {
-  errors
-  cache 30
-  reload
-  loop
-  bind ` + c.bindIP() + `
-  forward . ` + c.values.ClusterDNS + ` {
-          ` + c.forceTcpToClusterDNS() + `
-  }
-  prometheus :` + strconv.Itoa(prometheusPort) + `
-}
+    errors
+    cache 30
+    reload
+    loop
+    bind ` + c.bindIP() + `
+    forward . ` + c.values.ClusterDNS + ` {
+            ` + c.forceTcpToClusterDNS() + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    }
 .:53 {
-  errors
-  cache 30
-  reload
-  loop
-  bind ` + c.bindIP() + `
-  forward . __PILLAR__UPSTREAM__SERVERS__ {
-          ` + c.forceTcpToUpstreamDNS() + `
-  }
-  prometheus :` + strconv.Itoa(prometheusPort) + `
-}
+    errors
+    cache 30
+    reload
+    loop
+    bind ` + c.bindIP() + `
+    forward . __PILLAR__UPSTREAM__SERVERS__ {
+            ` + c.forceTcpToUpstreamDNS() + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    }
 `,
 			},
 		}
@@ -510,8 +510,8 @@ ip6.arpa:53 {
 						{
 							ContainerName: autoscalingv1beta2.DefaultContainerResourcePolicy,
 							MinAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("50m"),
-								corev1.ResourceMemory: resource.MustParse("150Mi"),
+								corev1.ResourceCPU:    resource.MustParse("10m"),
+								corev1.ResourceMemory: resource.MustParse("20Mi"),
 							},
 						},
 					},

@@ -174,53 +174,53 @@ subjects:
 data:
   Corefile: |
     cluster.local:53 {
-      errors
-      cache {
-              success 9984 30
-              denial 9984 5
-      }
-      reload
-      loop
-      bind ` + bindIP(values) + `
-      forward . ` + values.ClusterDNS + ` {
-              ` + forceTcpToClusterDNS(values) + `
-      }
-      prometheus :` + strconv.Itoa(prometheusPort) + `
-      health ` + ipvsAddress + `:` + strconv.Itoa(livenessProbePort) + `
-    }
+        errors
+        cache {
+                success 9984 30
+                denial 9984 5
+        }
+        reload
+        loop
+        bind ` + bindIP(values) + `
+        forward . ` + values.ClusterDNS + ` {
+                ` + forceTcpToClusterDNS(values) + `
+        }
+        prometheus :` + strconv.Itoa(prometheusPort) + `
+        health ` + ipvsAddress + `:` + strconv.Itoa(livenessProbePort) + `
+        }
     in-addr.arpa:53 {
-      errors
-      cache 30
-      reload
-      loop
-      bind ` + bindIP(values) + `
-      forward . ` + values.ClusterDNS + ` {
-              ` + forceTcpToClusterDNS(values) + `
-      }
-      prometheus :` + strconv.Itoa(prometheusPort) + `
-    }
+        errors
+        cache 30
+        reload
+        loop
+        bind ` + bindIP(values) + `
+        forward . ` + values.ClusterDNS + ` {
+                ` + forceTcpToClusterDNS(values) + `
+        }
+        prometheus :` + strconv.Itoa(prometheusPort) + `
+        }
     ip6.arpa:53 {
-      errors
-      cache 30
-      reload
-      loop
-      bind ` + bindIP(values) + `
-      forward . ` + values.ClusterDNS + ` {
-              ` + forceTcpToClusterDNS(values) + `
-      }
-      prometheus :` + strconv.Itoa(prometheusPort) + `
-    }
+        errors
+        cache 30
+        reload
+        loop
+        bind ` + bindIP(values) + `
+        forward . ` + values.ClusterDNS + ` {
+                ` + forceTcpToClusterDNS(values) + `
+        }
+        prometheus :` + strconv.Itoa(prometheusPort) + `
+        }
     .:53 {
-      errors
-      cache 30
-      reload
-      loop
-      bind ` + bindIP(values) + `
-      forward . __PILLAR__UPSTREAM__SERVERS__ {
-              ` + forceTcpToUpstreamDNS(values) + `
-      }
-      prometheus :` + strconv.Itoa(prometheusPort) + `
-    }
+        errors
+        cache 30
+        reload
+        loop
+        bind ` + bindIP(values) + `
+        forward . __PILLAR__UPSTREAM__SERVERS__ {
+                ` + forceTcpToUpstreamDNS(values) + `
+        }
+        prometheus :` + strconv.Itoa(prometheusPort) + `
+        }
 immutable: true
 kind: ConfigMap
 metadata:
@@ -442,8 +442,8 @@ spec:
     containerPolicies:
     - containerName: '*'
       minAllowed:
-        cpu: 50m
-        memory: 150Mi
+        cpu: 10m
+        memory: 20Mi
   targetRef:
     apiVersion: apps/v1
     kind: DaemonSet
@@ -500,53 +500,53 @@ status: {}
 				JustBeforeEach(func() {
 					configMapData := map[string]string{
 						"Corefile": `cluster.local:53 {
-  errors
-  cache {
-          success 9984 30
-          denial 9984 5
-  }
-  reload
-  loop
-  bind ` + bindIP(values) + `
-  forward . ` + values.ClusterDNS + ` {
-          ` + forceTcpToClusterDNS(values) + `
-  }
-  prometheus :` + strconv.Itoa(prometheusPort) + `
-  health ` + ipvsAddress + `:` + strconv.Itoa(livenessProbePort) + `
-}
+    errors
+    cache {
+            success 9984 30
+            denial 9984 5
+    }
+    reload
+    loop
+    bind ` + bindIP(values) + `
+    forward . ` + values.ClusterDNS + ` {
+            ` + forceTcpToClusterDNS(values) + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    health ` + ipvsAddress + `:` + strconv.Itoa(livenessProbePort) + `
+    }
 in-addr.arpa:53 {
-  errors
-  cache 30
-  reload
-  loop
-  bind ` + bindIP(values) + `
-  forward . ` + values.ClusterDNS + ` {
-          ` + forceTcpToClusterDNS(values) + `
-  }
-  prometheus :` + strconv.Itoa(prometheusPort) + `
-}
+    errors
+    cache 30
+    reload
+    loop
+    bind ` + bindIP(values) + `
+    forward . ` + values.ClusterDNS + ` {
+            ` + forceTcpToClusterDNS(values) + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    }
 ip6.arpa:53 {
-  errors
-  cache 30
-  reload
-  loop
-  bind ` + bindIP(values) + `
-  forward . ` + values.ClusterDNS + ` {
-          ` + forceTcpToClusterDNS(values) + `
-  }
-  prometheus :` + strconv.Itoa(prometheusPort) + `
-}
+    errors
+    cache 30
+    reload
+    loop
+    bind ` + bindIP(values) + `
+    forward . ` + values.ClusterDNS + ` {
+            ` + forceTcpToClusterDNS(values) + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    }
 .:53 {
-  errors
-  cache 30
-  reload
-  loop
-  bind ` + bindIP(values) + `
-  forward . __PILLAR__UPSTREAM__SERVERS__ {
-          ` + forceTcpToUpstreamDNS(values) + `
-  }
-  prometheus :` + strconv.Itoa(prometheusPort) + `
-}
+    errors
+    cache 30
+    reload
+    loop
+    bind ` + bindIP(values) + `
+    forward . __PILLAR__UPSTREAM__SERVERS__ {
+            ` + forceTcpToUpstreamDNS(values) + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    }
 `,
 					}
 					configMapHash = utils.ComputeConfigMapChecksum(configMapData)[:8]
@@ -710,53 +710,53 @@ ip6.arpa:53 {
 				JustBeforeEach(func() {
 					configMapData := map[string]string{
 						"Corefile": `cluster.local:53 {
-  errors
-  cache {
-          success 9984 30
-          denial 9984 5
-  }
-  reload
-  loop
-  bind ` + bindIP(values) + `
-  forward . ` + values.ClusterDNS + ` {
-          ` + forceTcpToClusterDNS(values) + `
-  }
-  prometheus :` + strconv.Itoa(prometheusPort) + `
-  health ` + ipvsAddress + `:` + strconv.Itoa(livenessProbePort) + `
-}
+    errors
+    cache {
+            success 9984 30
+            denial 9984 5
+    }
+    reload
+    loop
+    bind ` + bindIP(values) + `
+    forward . ` + values.ClusterDNS + ` {
+            ` + forceTcpToClusterDNS(values) + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    health ` + ipvsAddress + `:` + strconv.Itoa(livenessProbePort) + `
+    }
 in-addr.arpa:53 {
-  errors
-  cache 30
-  reload
-  loop
-  bind ` + bindIP(values) + `
-  forward . ` + values.ClusterDNS + ` {
-          ` + forceTcpToClusterDNS(values) + `
-  }
-  prometheus :` + strconv.Itoa(prometheusPort) + `
-}
+    errors
+    cache 30
+    reload
+    loop
+    bind ` + bindIP(values) + `
+    forward . ` + values.ClusterDNS + ` {
+            ` + forceTcpToClusterDNS(values) + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    }
 ip6.arpa:53 {
-  errors
-  cache 30
-  reload
-  loop
-  bind ` + bindIP(values) + `
-  forward . ` + values.ClusterDNS + ` {
-          ` + forceTcpToClusterDNS(values) + `
-  }
-  prometheus :` + strconv.Itoa(prometheusPort) + `
-}
+    errors
+    cache 30
+    reload
+    loop
+    bind ` + bindIP(values) + `
+    forward . ` + values.ClusterDNS + ` {
+            ` + forceTcpToClusterDNS(values) + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    }
 .:53 {
-  errors
-  cache 30
-  reload
-  loop
-  bind ` + bindIP(values) + `
-  forward . __PILLAR__UPSTREAM__SERVERS__ {
-          ` + forceTcpToUpstreamDNS(values) + `
-  }
-  prometheus :` + strconv.Itoa(prometheusPort) + `
-}
+    errors
+    cache 30
+    reload
+    loop
+    bind ` + bindIP(values) + `
+    forward . __PILLAR__UPSTREAM__SERVERS__ {
+            ` + forceTcpToUpstreamDNS(values) + `
+    }
+    prometheus :` + strconv.Itoa(prometheusPort) + `
+    }
 `,
 					}
 					configMapHash = utils.ComputeConfigMapChecksum(configMapData)[:8]

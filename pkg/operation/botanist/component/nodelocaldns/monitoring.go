@@ -61,34 +61,34 @@ var (
 
 	// TODO: Replace below hard-coded paths to Prometheus certificates once its deployment has been refactored.
 	monitoringScrapeConfig = `job_name: ` + monitoringPrometheusJobName + `
- scheme: https
- honor_labels: false
- kubernetes_sd_configs:
- - role: pod
-   api_server: https://` + v1beta1constants.DeploymentNameKubeAPIServer + `:` + strconv.Itoa(kubeapiserver.Port) + `
- relabel_configs:
- - source_labels:
-   - __meta_kubernetes_pod_name
-   action: keep
-   regex: node-local.*
- - source_labels:
-   - __meta_kubernetes_pod_container_name
-   - __meta_kubernetes_pod_container_port_name
-   action: keep
-   regex: node-cache;metrics
- - source_labels: [ __meta_kubernetes_pod_name ]
-   target_label: pod
- - target_label: __address__
-   replacement: ` + v1beta1constants.DeploymentNameKubeAPIServer + `:` + strconv.Itoa(kubeapiserver.Port) + `
- - source_labels: [__meta_kubernetes_pod_name,__meta_kubernetes_pod_container_port_number]
-   regex: (.+);(.+)
-   target_label: __metrics_path__
-   replacement: /api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics
- metric_relabel_configs:
- - source_labels: [ __name__ ]
-   action: keep
-   regex: ^(` + strings.Join(monitoringAllowedMetrics, "|") + `)$
- `
+scheme: https
+honor_labels: false
+kubernetes_sd_configs:
+- role: pod
+  api_server: https://` + v1beta1constants.DeploymentNameKubeAPIServer + `:` + strconv.Itoa(kubeapiserver.Port) + `
+relabel_configs:
+- source_labels:
+  - __meta_kubernetes_pod_name
+  action: keep
+  regex: node-local.*
+- source_labels:
+  - __meta_kubernetes_pod_container_name
+  - __meta_kubernetes_pod_container_port_name
+  action: keep
+  regex: node-cache;metrics
+- source_labels: [ __meta_kubernetes_pod_name ]
+  target_label: pod
+- target_label: __address__
+  replacement: ` + v1beta1constants.DeploymentNameKubeAPIServer + `:` + strconv.Itoa(kubeapiserver.Port) + `
+- source_labels: [__meta_kubernetes_pod_name,__meta_kubernetes_pod_container_port_number]
+  regex: (.+);(.+)
+  target_label: __metrics_path__
+  replacement: /api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics
+metric_relabel_configs:
+- source_labels: [ __name__ ]
+  action: keep
+  regex: ^(` + strings.Join(monitoringAllowedMetrics, "|") + `)$
+`
 )
 
 // ScrapeConfigs returns the scrape configurations for Prometheus.
