@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/version"
 
+	volumesnapshotv1beta1 "github.com/kubernetes-csi/external-snapshotter/v2/pkg/apis/volumesnapshot/v1beta1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -156,6 +157,12 @@ var (
 	// PersistentVolumeClaimCleanOption is the delete selector for PersistentVolumeClaims.
 	PersistentVolumeClaimCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
 
+	// VolumeSnapshotCleanOption is the delete selector for VolumeSnapshots.
+	VolumeSnapshotCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
+
+	// VolumeSnapshotContentCleanOption is the delete selector for VolumeSnapshotContents.
+	VolumeSnapshotContentCleanOption = utilclient.ListWith{&NoCleanupPreventionListOption}
+
 	// NamespaceErrorToleration are the errors to be tolerated during deletion.
 	NamespaceErrorToleration = utilclient.TolerateErrors{apierrors.IsConflict}
 )
@@ -179,7 +186,7 @@ func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 	var (
 		c       = b.K8sShootClient.Client()
 		ensurer = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
-		ops     = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
+		ops     = utilclient.NewCleanOps(ensurer, utilclient.DefaultCleaner())
 	)
 
 	cleanOptions, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupWebhooksFinalizeGracePeriodSeconds, 1)
@@ -203,10 +210,9 @@ func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 // CleanExtendedAPIs removes API extensions like CRDs and API services from the Shoot cluster.
 func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 	var (
-		c           = b.K8sShootClient.Client()
-		ensurer     = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
-		defaultOps  = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
-		crdCleanOps = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
+		c       = b.K8sShootClient.Client()
+		ensurer = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
+		ops     = utilclient.NewCleanOps(ensurer, utilclient.DefaultCleaner())
 	)
 
 	cleanOptions, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterOneHour, v1beta1constants.AnnotationShootCleanupExtendedAPIsFinalizeGracePeriodSeconds, 0.1)
@@ -221,8 +227,8 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 	}
 
 	return flow.Parallel(
-		cleanResourceFn(defaultOps, c, &apiregistrationv1.APIServiceList{}, APIServiceCleanOption, cleanOptions),
-		cleanResourceFn(crdCleanOps, c, crdList, CustomResourceDefinitionCleanOption, cleanOptions),
+		cleanResourceFn(ops, c, &apiregistrationv1.APIServiceList{}, APIServiceCleanOption, cleanOptions),
+		cleanResourceFn(ops, c, crdList, CustomResourceDefinitionCleanOption, cleanOptions),
 	)(ctx)
 }
 
@@ -232,12 +238,19 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 // It will return an error in case it has not finished yet, and nil if all resources are gone.
 func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 	var (
-		c       = b.K8sShootClient.Client()
-		ensurer = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
-		ops     = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
+		c                  = b.K8sShootClient.Client()
+		ensurer            = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
+		cleaner            = utilclient.DefaultCleaner()
+		ops                = utilclient.NewCleanOps(ensurer, cleaner)
+		snapshotContentOps = utilclient.NewCleanOps(ensurer, cleaner, utilclient.DefaultVolumeSnapshotContentCleaner())
 	)
 
 	cleanOptions, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds, 1)
+	if err != nil {
+		return err
+	}
+
+	snapshotCleanOptions, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterOneHour, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds, 0.5)
 	if err != nil {
 		return err
 	}
@@ -246,6 +259,8 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		return flow.Parallel(
 			cleanResourceFn(ops, c, &corev1.ServiceList{}, ServiceCleanOption, cleanOptions),
 			cleanResourceFn(ops, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, cleanOptions),
+			cleanResourceFn(ops, c, &volumesnapshotv1beta1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, cleanOptions),
+			cleanResourceFn(ops, c, &volumesnapshotv1beta1.VolumeSnapshotContentList{}, VolumeSnapshotContentCleanOption, cleanOptions),
 		)(ctx)
 	}
 
@@ -266,6 +281,10 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		cleanResourceFn(ops, c, &corev1.ServiceList{}, ServiceCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &appsv1.StatefulSetList{}, StatefulSetCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, cleanOptions),
+		// Cleaning up VolumeSnapshots can take a longer time if many snapshots were taken.
+		// Hence, we only finalize these objects after 1h.
+		cleanResourceFn(ops, c, &volumesnapshotv1beta1.VolumeSnapshotList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
+		cleanResourceFn(snapshotContentOps, c, &volumesnapshotv1beta1.VolumeSnapshotContentList{}, VolumeSnapshotContentCleanOption, snapshotCleanOptions),
 	)(ctx)
 }
 
@@ -275,7 +294,7 @@ func (b *Botanist) CleanShootNamespaces(ctx context.Context) error {
 	var (
 		c                 = b.K8sShootClient.Client()
 		namespaceCleaner  = utilclient.NewNamespaceCleaner(b.K8sShootClient.Kubernetes().CoreV1().Namespaces())
-		namespaceCleanOps = utilclient.NewCleanOps(namespaceCleaner, utilclient.DefaultGoneEnsurer())
+		namespaceCleanOps = utilclient.NewCleanOps(utilclient.DefaultGoneEnsurer(), namespaceCleaner)
 	)
 
 	cleanOptions, err := b.getCleanOptions(ZeroGracePeriod, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupNamespaceResourcesFinalizeGracePeriodSeconds, 0)

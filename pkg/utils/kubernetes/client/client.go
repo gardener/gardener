@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -163,9 +164,9 @@ func (cl *cleaner) Clean(ctx context.Context, c client.Client, obj runtime.Objec
 
 	switch o := obj.(type) {
 	case client.ObjectList:
-		return cl.cleanCollection(ctx, c, o, cleanOptions)
+		return cleanCollectionAction(ctx, c, o, cleanOptions, cl.doClean)
 	case client.Object:
-		return cl.clean(ctx, c, o, cleanOptions)
+		return cleanAction(ctx, c, o, cleanOptions, cl.doClean)
 	}
 	return fmt.Errorf("type %T does neither implement client.Object nor client.ObjectList", obj)
 }
@@ -187,9 +188,14 @@ func (cl *cleaner) doClean(ctx context.Context, c client.Client, obj client.Obje
 		}
 	}
 
-	// Ref: https://github.com/kubernetes/kubernetes/issues/83771
 	if obj.GetDeletionTimestamp().IsZero() {
 		if err := c.Delete(ctx, obj, cleanOptions.DeleteOptions...); err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil
+			}
+			if meta.IsNoMatchError(err) {
+				return nil
+			}
 			for _, tolerate := range cleanOptions.ErrorToleration {
 				if tolerate(err) {
 					return nil
@@ -199,6 +205,89 @@ func (cl *cleaner) doClean(ctx context.Context, c client.Client, obj client.Obje
 		}
 	}
 	return nil
+}
+
+var _ Cleaner = (*volumeSnapshotContentCleaner)(nil)
+
+type volumeSnapshotContentCleaner struct {
+	time utiltime.Ops
+}
+
+// Clean annotates the VolumeSnapshotContents so that they are cleaned up by the CSI snapshot controller.
+func (v *volumeSnapshotContentCleaner) Clean(ctx context.Context, c client.Client, obj runtime.Object, opts ...CleanOption) error {
+	cleanOptions := &CleanOptions{}
+	cleanOptions.ApplyOptions(opts)
+
+	switch o := obj.(type) {
+	case client.ObjectList:
+		return cleanCollectionAction(ctx, c, o, cleanOptions, v.triggerVolumeSnapshotDeletion)
+	case client.Object:
+		return cleanAction(ctx, c, o, cleanOptions, v.triggerVolumeSnapshotDeletion)
+	}
+	return fmt.Errorf("type %T does neither implement client.Object nor client.ObjectList", obj)
+}
+
+func gracePeriodIsPassed(obj client.Object, ops *CleanOptions, t utiltime.Ops) bool {
+	if obj.GetDeletionTimestamp().IsZero() {
+		return false
+	}
+
+	deleteOp := &client.DeleteOptions{}
+	for _, op := range ops.DeleteOptions {
+		op.ApplyToDelete(deleteOp)
+	}
+
+	gracePeriod := time.Second * time.Duration(pointer.Int64PtrDerefOr(deleteOp.GracePeriodSeconds, 0))
+	return obj.GetDeletionTimestamp().Time.Add(gracePeriod).Before(t.Now())
+}
+
+const (
+	annVolumeSnapshotBeingDeleted = "snapshot.storage.kubernetes.io/volumesnapshot-being-deleted"
+	annVolumeSnapshotBeingCreated = "snapshot.storage.kubernetes.io/volumesnapshot-being-created"
+)
+
+func (v *volumeSnapshotContentCleaner) triggerVolumeSnapshotDeletion(ctx context.Context, c client.Client, obj client.Object, ops *CleanOptions) error {
+	if !gracePeriodIsPassed(obj, ops, v.time) {
+		return nil
+	}
+
+	_, annDeleted := obj.GetAnnotations()[annVolumeSnapshotBeingDeleted]
+	_, annCreated := obj.GetAnnotations()[annVolumeSnapshotBeingCreated]
+
+	if annDeleted && !annCreated {
+		return nil
+	}
+
+	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
+
+	if obj.GetAnnotations() == nil {
+		obj.SetAnnotations(make(map[string]string))
+	}
+
+	// annVolumeSnapshotBeingDeleted triggers the CSI sidecar to delete the snapshot on the infrastructure.
+	// annVolumeSnapshotBeingCreated must not exist if we want the controller to delete the snapshot.
+	// See https://github.com/kubernetes-csi/external-snapshotter/blob/138d310e5d2d102fcf90df96d7a8aaf6690ce76e/pkg/sidecar-controller/snapshot_controller.go#L563
+	obj.GetAnnotations()[annVolumeSnapshotBeingDeleted] = "yes"
+	delete(obj.GetAnnotations(), annVolumeSnapshotBeingCreated)
+
+	return client.IgnoreNotFound(c.Patch(ctx, obj, patch))
+}
+
+// NewVolumeSnapshotContentCleaner instantiates a new Cleaner with ability to clean VolumeSnapshotContents
+// **after** they got deleted and the given deletion grace period is passed.
+func NewVolumeSnapshotContentCleaner(time utiltime.Ops) Cleaner {
+	return &volumeSnapshotContentCleaner{
+		time: time,
+	}
+}
+
+var defaultVolumeSnapshotContentCleaner = NewVolumeSnapshotContentCleaner(utiltime.DefaultOps())
+
+// DefaultVolumeSnapshotContentCleaner is the default cleaner for VolumeSnapshotContents.
+// The VolumeSnapshotCleaner initiates the deletion of VolumeSnapshots **after** they got deleted
+// and the given deletion grace period is passed.
+func DefaultVolumeSnapshotContentCleaner() Cleaner {
+	return defaultVolumeSnapshotContentCleaner
 }
 
 var defaultGoneEnsurer = GoneEnsurerFunc(EnsureGone)
@@ -263,13 +352,16 @@ func ensureGone(ctx context.Context, c client.Client, obj client.Object) error {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
+		if meta.IsNoMatchError(err) {
+			return nil
+		}
 		return err
 	}
 	return NewObjectsRemaining(obj)
 }
 
 func ensureCollectionGone(ctx context.Context, c client.Client, list client.ObjectList, opts ...client.ListOption) error {
-	if err := c.List(ctx, list, opts...); err != nil {
+	if err := c.List(ctx, list, opts...); err != nil && !meta.IsNoMatchError(err) {
 		return err
 	}
 
@@ -279,28 +371,40 @@ func ensureCollectionGone(ctx context.Context, c client.Client, list client.Obje
 	return nil
 }
 
-func (cl *cleaner) clean(ctx context.Context, c client.Client, obj client.Object, cleanOptions *CleanOptions) error {
+type actionFunc func(ctx context.Context, c client.Client, obj client.Object, cleanOptions *CleanOptions) error
+
+func cleanAction(
+	ctx context.Context,
+	c client.Client,
+	obj client.Object,
+	cleanOptions *CleanOptions,
+	action actionFunc,
+) error {
 	if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
-	return client.IgnoreNotFound(cl.doClean(ctx, c, obj, cleanOptions))
+	return action(ctx, c, obj, cleanOptions)
 }
 
-func (cl *cleaner) cleanCollection(
+func cleanCollectionAction(
 	ctx context.Context,
 	c client.Client,
 	list client.ObjectList,
 	cleanOptions *CleanOptions,
+	action actionFunc,
 ) error {
 	if err := c.List(ctx, list, cleanOptions.ListOptions...); err != nil {
+		if meta.IsNoMatchError(err) {
+			return nil
+		}
 		return err
 	}
 
 	tasks := make([]flow.TaskFn, 0, meta.LenList(list))
 	if err := meta.EachListItem(list, func(obj runtime.Object) error {
 		tasks = append(tasks, func(ctx context.Context) error {
-			return client.IgnoreNotFound(cl.doClean(ctx, c, obj.(client.Object), cleanOptions))
+			return action(ctx, c, obj.(client.Object), cleanOptions)
 		})
 		return nil
 	}); err != nil {
@@ -311,7 +415,7 @@ func (cl *cleaner) cleanCollection(
 }
 
 type cleanerOps struct {
-	Cleaner
+	cleaners []Cleaner
 	GoneEnsurer
 }
 
@@ -321,19 +425,21 @@ func (o *cleanerOps) CleanAndEnsureGone(ctx context.Context, c client.Client, ob
 	cleanOptions := &CleanOptions{}
 	cleanOptions.ApplyOptions(opts)
 
-	if err := o.Clean(ctx, c, obj, opts...); err != nil {
-		return err
+	for _, cle := range o.cleaners {
+		if err := cle.Clean(ctx, c, obj, opts...); err != nil {
+			return err
+		}
 	}
 
 	return o.EnsureGone(ctx, c, obj, cleanOptions.ListOptions...)
 }
 
 // NewCleanOps instantiates new CleanOps with the given Cleaner and GoneEnsurer.
-func NewCleanOps(cleaner Cleaner, ensurer GoneEnsurer) CleanOps {
+func NewCleanOps(ensurer GoneEnsurer, cleaner ...Cleaner) CleanOps {
 	return &cleanerOps{cleaner, ensurer}
 }
 
-var defaultCleanerOps = NewCleanOps(DefaultCleaner(), DefaultGoneEnsurer())
+var defaultCleanerOps = NewCleanOps(DefaultGoneEnsurer(), DefaultCleaner())
 
 // DefaultCleanOps are the default CleanOps.
 func DefaultCleanOps() CleanOps {
