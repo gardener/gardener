@@ -264,7 +264,7 @@ func (v *volumeSnapshotContentCleaner) triggerVolumeSnapshotDeletion(ctx context
 		obj.SetAnnotations(make(map[string]string))
 	}
 
-	// annVolumeSnapshotBeingDeleted triggers the CSI side-care to delete the snapshot on the infrastructure.
+	// annVolumeSnapshotBeingDeleted triggers the CSI sidecar to delete the snapshot on the infrastructure.
 	// annVolumeSnapshotBeingCreated must not exist if we want the controller to delete the snapshot.
 	// See https://github.com/kubernetes-csi/external-snapshotter/blob/138d310e5d2d102fcf90df96d7a8aaf6690ce76e/pkg/sidecar-controller/snapshot_controller.go#L563
 	obj.GetAnnotations()[annVolumeSnapshotBeingDeleted] = "yes"
