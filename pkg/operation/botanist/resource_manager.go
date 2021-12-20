@@ -169,7 +169,12 @@ func (b *Botanist) mustBootstrapGardenerResourceManager(ctx context.Context) (bo
 		return true, nil // Shoot access secret does not yet exist.
 	}
 
-	renewTime, err2 := time.Parse(time.RFC3339, shootAccessSecret.Secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp])
+	renewTimestamp, ok := shootAccessSecret.Secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
+	if !ok {
+		return true, nil // Shoot access secret was never reconciled yet
+	}
+
+	renewTime, err2 := time.Parse(time.RFC3339, renewTimestamp)
 	if err2 != nil {
 		return false, fmt.Errorf("could not parse renew timestamp: %w", err2)
 	}
