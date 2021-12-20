@@ -18,14 +18,16 @@ import (
 	"context"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/nodeproblemdetector"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
-	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -71,12 +73,23 @@ var _ = Describe("NodeProblemDetector", func() {
 	})
 
 	Describe("#Deploy", func() {
-		It("should successfully deploy all resources", func() {
+		var (
+			serviceAccountYAML = `apiVersion: v1
+kind: ServiceAccount
+metadata:
+  creationTimestamp: null
+  labels:
+    app.kubernetes.io/instance: shoot-core
+    app.kubernetes.io/name: node-problem-detector
+  name: node-problem-detector
+  namespace: kube-system
+`
+		)
+
+		JustBeforeEach(func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
-
 			Expect(component.Deploy(ctx)).To(Succeed())
-
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
 				TypeMeta: metav1.TypeMeta{
@@ -100,7 +113,7 @@ var _ = Describe("NodeProblemDetector", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(0))
+			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-problem-detector.yaml"])).To(Equal(serviceAccountYAML))
 		})
 	})
 
@@ -120,6 +133,22 @@ var _ = Describe("NodeProblemDetector", func() {
 	})
 
 	Context("waiting functions", func() {
+		var (
+			fakeOps   *retryfake.Ops
+			resetVars func()
+		)
+
+		BeforeEach(func() {
+			fakeOps = &retryfake.Ops{MaxAttempts: 1}
+			resetVars = test.WithVars(
+				&retry.Until, fakeOps.Until,
+				&retry.UntilTimeout, fakeOps.UntilTimeout,
+			)
+		})
+
+		AfterEach(func() {
+			resetVars()
+		})
 		Describe("#Wait", func() {
 			It("should fail because reading the ManagedResource fails", func() {
 				Expect(component.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
@@ -138,14 +167,14 @@ var _ = Describe("NodeProblemDetector", func() {
 					},
 					Status: resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 1,
-						Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+						Conditions: []gardencorev1beta1.Condition{
 							{
 								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: resourcesv1alpha1.ConditionFalse,
+								Status: gardencorev1beta1.ConditionFalse,
 							},
 							{
 								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: resourcesv1alpha1.ConditionFalse,
+								Status: gardencorev1beta1.ConditionFalse,
 							},
 						},
 					},
@@ -155,9 +184,7 @@ var _ = Describe("NodeProblemDetector", func() {
 			})
 
 			It("should successfully wait for the managed resource to become healthy", func() {
-				oldTimeout := TimeoutWaitForManagedResource
-				defer func() { TimeoutWaitForManagedResource = oldTimeout }()
-				TimeoutWaitForManagedResource = time.Millisecond
+				fakeOps.MaxAttempts = 2
 
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
@@ -167,14 +194,14 @@ var _ = Describe("NodeProblemDetector", func() {
 					},
 					Status: resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 1,
-						Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+						Conditions: []gardencorev1beta1.Condition{
 							{
 								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: resourcesv1alpha1.ConditionTrue,
+								Status: gardencorev1beta1.ConditionTrue,
 							},
 							{
 								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: resourcesv1alpha1.ConditionTrue,
+								Status: gardencorev1beta1.ConditionTrue,
 							},
 						},
 					},
@@ -185,42 +212,15 @@ var _ = Describe("NodeProblemDetector", func() {
 		})
 
 		Describe("#WaitCleanup", func() {
-			timeNowFunc := func() time.Time { return time.Time{} }
 
 			It("should fail when the wait for the managed resource deletion times out", func() {
-				oldTimeNow := gutil.TimeNow
-				defer func() { gutil.TimeNow = oldTimeNow }()
-				gutil.TimeNow = timeNowFunc
-
-				oldTimeout := TimeoutWaitForManagedResource
-				defer func() { TimeoutWaitForManagedResource = oldTimeout }()
-				TimeoutWaitForManagedResource = time.Millisecond
+				fakeOps.MaxAttempts = 2
 
 				Expect(c.Create(ctx, managedResource)).To(Succeed())
 
 				Expect(component.WaitCleanup(ctx)).To(MatchError(ContainSubstring("still exists")))
 			})
-
-			It("should successfully wait for the deletion", func() {
-				oldTimeNow := gutil.TimeNow
-				defer func() { gutil.TimeNow = oldTimeNow }()
-				gutil.TimeNow = timeNowFunc
-
-				oldTimeout := TimeoutWaitForManagedResource
-				defer func() { TimeoutWaitForManagedResource = oldTimeout }()
-				TimeoutWaitForManagedResource = time.Second
-
-				interval := time.Millisecond
-				oldIntervalWait := managedresources.IntervalWait
-				defer func() { managedresources.IntervalWait = oldIntervalWait }()
-				managedresources.IntervalWait = interval
-
-				go func() {
-					Expect(c.Create(ctx, managedResource)).To(Succeed())
-					time.Sleep(10 * interval)
-					Expect(c.Delete(ctx, managedResource)).To(Succeed())
-				}()
-
+			It("should not return an error when it's already removed", func() {
 				Expect(component.WaitCleanup(ctx)).To(Succeed())
 			})
 		})

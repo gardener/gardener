@@ -21,12 +21,15 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 	ManagedResourceName                    = "shoot-core-node-problem-detector"
+	serviceAccountName                     = "node-problem-detector"
 	deploymentName                         = "node-problem-detector"
 	containerName                          = "node-problem-detector"
 )
@@ -88,8 +91,26 @@ func (c *nodeProblemDetector) WaitCleanup(ctx context.Context) error {
 
 func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) {
 	var (
-		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+		registry             = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+		hostPathFileOrCreate = corev1.HostPathFileOrCreate
+		serviceAccount       = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      serviceAccountName,
+				Namespace: metav1.NamespaceSystem,
+				Labels:    getLabels(),
+			},
+		}
 	)
 
-	return registry.AddAllAndSerialize()
+	return registry.AddAllAndSerialize(
+		serviceAccount,
+	)
+}
+
+
+func getLabels() map[string]string {
+	return map[string]string{
+		"app.kubernetes.io/name":     labelValue,
+		"app.kubernetes.io/instance": "shoot-core",
+	}
 }
