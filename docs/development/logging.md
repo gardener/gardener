@@ -68,7 +68,7 @@ Gardener components can be configured to either log in `json` (default) or `text
 Components can be set to one of the following log levels (with increasing verbosity): `error`, `info` (default), `debug`.
 
 > ℹ️ Note: some Gardener components don't feature a configurable log level and format yet.
-> In this case they log at `info` in `json` format.
+> In this case, they log at `info` in `json` format.
 > We might add configuration options via command line flags that can be used in all components in the future though.
 
 ## Log Levels
@@ -100,7 +100,7 @@ results in
 ```
 Logger names are hierarchical. You can make use of it, where controllers are composed of multiple "subcontrollers", e.g., `controller.shoot.hibernation` or `controller.shoot.maintenance`.
 
-Using the global logger `logf.Log` directly is discouraged and should be rather exceptional, because it makes correlating logs with code harder.
+Using the global logger `logf.Log` directly is discouraged and should be rather exceptional because it makes correlating logs with code harder.
 Preferably, all parts of the code should use some named logger.
 
 ### Reconciler Loggers
