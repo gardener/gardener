@@ -1,20 +1,6 @@
-{{- if .Values.rbac.pspEnabled }}
 kind: ClusterRole
 apiVersion: {{ include "rbacversion" . }}
 metadata:
   name: node-problem-detector-psp
-  labels:
-    app.kubernetes.io/name: {{ include "node-problem-detector.name" . }}
-    helm.sh/chart: {{ include "node-problem-detector.chart" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
-rules:
-- apiGroups:
-  - extensions
-  - policy
-  resources:
-  - podsecuritypolicies
-  verbs:
-  - use
-  resourceNames:
-  - node-problem-detector
-{{- end }}
+  annotations:
+    resources.gardener.cloud/mode: Ignore

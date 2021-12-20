@@ -133,6 +133,76 @@ subjects:
   name: node-problem-detector
   namespace: kube-system
 `
+			clusterRolePSPYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    app.kubernetes.io/instance: shoot-core
+    app.kubernetes.io/name: node-problem-detector
+  name: node-problem-detector-psp
+rules:
+- apiGroups:
+  - extensions
+  - policy
+  resourceNames:
+  - node-problem-detector
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use
+`
+			clusterRoleBindingPSPYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+  creationTimestamp: null
+  labels:
+    app.kubernetes.io/instance: shoot-core
+    app.kubernetes.io/name: node-problem-detector
+  name: node-problem-detector-psp
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: node-problem-detector-psp
+subjects:
+- kind: ServiceAccount
+  name: node-problem-detector
+  namespace: kube-system
+`
+			podSecurityPolicyYAML = `apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  creationTimestamp: null
+  labels:
+    app.kubernetes.io/instance: shoot-core
+    app.kubernetes.io/name: node-problem-detector
+  name: node-problem-detector
+spec:
+  allowPrivilegeEscalation: true
+  allowedCapabilities:
+  - '*'
+  allowedHostPaths:
+  - pathPrefix: /etc/localtime
+  - pathPrefix: /var/log
+  - pathPrefix: /dev/kmsg
+  fsGroup:
+    rule: RunAsAny
+  privileged: true
+  runAsUser:
+    rule: RunAsAny
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  volumes:
+  - configMap
+  - emptyDir
+  - projected
+  - secret
+  - downwardAPI
+  - hostPath
 `
 		)
 
@@ -166,6 +236,9 @@ subjects:
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__node-problem-detector.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____node-problem-detector.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____node-problem-detector.yaml"])).To(Equal(clusterRoleBindingYAML))
+			Expect(string(managedResourceSecret.Data["clusterrole____node-problem-detector-psp.yaml"])).To(Equal(clusterRolePSPYAML))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____node-problem-detector-psp.yaml"])).To(Equal(clusterRoleBindingPSPYAML))
+			Expect(string(managedResourceSecret.Data["podsecuritypolicy____node-problem-detector.yaml"])).To(Equal(podSecurityPolicyYAML))
 		})
 
 		})
