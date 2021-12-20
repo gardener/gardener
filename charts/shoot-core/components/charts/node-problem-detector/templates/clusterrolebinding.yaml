@@ -1,20 +1,6 @@
-{{- if .Values.rbac.create -}}
 kind: ClusterRoleBinding
 apiVersion: {{ include "rbacversion" . }}
 metadata:
   name: node-problem-detector
-  labels:
-    app.kubernetes.io/name: {{ include "node-problem-detector.name" . }}
-    helm.sh/chart: {{ include "node-problem-detector.chart" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
   annotations:
-    resources.gardener.cloud/delete-on-invalid-update: "true"
-subjects:
-- kind: ServiceAccount
-  name: node-problem-detector
-  namespace: kube-system
-roleRef:
-  kind: ClusterRole
-  name: node-problem-detector
-  apiGroup: rbac.authorization.k8s.io
-{{- end -}}
+    resources.gardener.cloud/mode: Ignore
