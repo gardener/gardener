@@ -211,6 +211,10 @@ func (r *reconciler) reconcile(ctx context.Context, logger logr.Logger, worker *
 }
 
 func (r *reconciler) restore(ctx context.Context, logger logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
+	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, worker, FinalizerName); err != nil {
+		return reconcile.Result{}, err
+	}
+
 	if err := r.statusUpdater.Processing(ctx, worker, gardencorev1beta1.LastOperationTypeRestore, "Restoring the worker"); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -229,7 +233,6 @@ func (r *reconciler) restore(ctx context.Context, logger logr.Logger, worker *ex
 		return reconcile.Result{}, fmt.Errorf("error removing annotation from worker: %+v", err)
 	}
 
-	// requeue to trigger reconciliation
 	return reconcile.Result{}, nil
 }
 
