@@ -24,7 +24,7 @@ Hence, we are migrating our component logging from logrus to logr (backed by zap
 > ℹ️ Don't use zap loggers directly, always use the logr interface in order to avoid tight coupling to a specific logging implementation.
 
 gardener-apiserver differs from the other components as it is based on the [apiserver library](https://github.com/kubernetes/apiserver) and therefore uses [klog](https://github.com/kubernetes/klog) – just like kube-apiserver.
-As gardener-apiserver writes (almost) no logs in our coding (outside of the apiserver library), there is currently no plan for switching the logging implementation.
+As gardener-apiserver writes (almost) no logs in our coding (outside the apiserver library), there is currently no plan for switching the logging implementation.
 Hence, the following sections focus on logging in the controller and admission components only.
 
 ## Structured Logging
@@ -42,14 +42,14 @@ Note: some parts in this guideline differ slightly from controller-runtime's doc
 ❌ stop using `printf`-style logging:
 ```go
 var logger *logrus.Logger
-logger.Infof("scaling deployment %s/%s to %d replicas", deployment.Namespace, deployment.Name, replicaCount)
+logger.Infof("Scaling deployment %s/%s to %d replicas", deployment.Namespace, deployment.Name, replicaCount)
 ```
 
 ✅ instead, write static log messages and enrich them with additional structured information in form of key-value pairs:
 
 ```go
 var logger logr.Logger
-logger.Info("scaling deployment", "deployment", client.ObjectKeyFromObject(deployment), "replicas", replicaCount)
+logger.Info("Scaling deployment", "deployment", client.ObjectKeyFromObject(deployment), "replicas", replicaCount)
 ```
 
 ## Log Configuration
@@ -59,24 +59,24 @@ Gardener components can be configured to either log in `json` (default) or `text
 
 ```text
 # json
-{"level":"info","ts":"2021-12-16T08:32:21.059+0100","msg":"hello botanist","garden":"eden"}
+{"level":"info","ts":"2021-12-16T08:32:21.059+0100","msg":"Hello botanist","garden":"eden"}
 
 # text
-2021-12-16T08:32:21.059+0100    INFO    hello botanist  {"garden": "eden"}
+2021-12-16T08:32:21.059+0100    INFO    Hello botanist  {"garden": "eden"}
 ```
 
 Components can be set to one of the following log levels (with increasing verbosity): `error`, `info` (default), `debug`.
 
 > ℹ️ Note: some Gardener components don't feature a configurable log level and format yet.
 > In this case, they log at `info` in `json` format.
-> We might add configuration options via command line flags that can be used in all components in the future though.
+> We might add configuration options via command line flags that can be used in all components in the future though (see [gardener/gardener#5191](https://github.com/gardener/gardener/issues/5191)).
 
 ## Log Levels
 
 logr uses [V-levels](https://github.com/go-logr/logr#why-v-levels) (numbered log levels), higher V-level means higher verbosity.
-V-levels are relative (in contrast to `klog`'s absolute V-levels), i.e., `V(1)` creates a logger, that is one level more verbose than its parent loggger.
+V-levels are relative (in contrast to `klog`'s absolute V-levels), i.e., `V(1)` creates a logger, that is one level more verbose than its parent logger.
 
-In Gardener components, `V(0)` of the root logger maps to `info` level, `V(1)` means `debug` level.
+In Gardener components, `V(0)` of the root logger maps to `info` level in the respective component configuration, `V(1)` maps to `debug`.
 
 There is no `warning` level (see [Dave Cheney's post](https://dave.cheney.net/2015/11/05/lets-talk-about-logging)).
 If there is an error condition (e.g., unexpected error received from a called function), the error should either be handled or logged at `error` if it is neither handled nor returned.
@@ -146,8 +146,8 @@ See [Dave Cheney's post](https://dave.cheney.net/2015/11/05/lets-talk-about-logg
   // ...
   ```
 
-  Note: `WithValues` bypasses controller-runtime's special Zap encoder that nicely encodes `ObjectKey`/`NamespacedName` and `runtime.Object` values, see [kubernetes-sigs/controller-runtime#1290](https://github.com/kubernetes-sigs/controller-runtime/issues/1290).
-  Thus, the end result might look different depending on the value and its `Stringer` implementation
+  Note: `WithValues` bypasses controller-runtime's special zap encoder that nicely encodes `ObjectKey`/`NamespacedName` and `runtime.Object` values, see [kubernetes-sigs/controller-runtime#1290](https://github.com/kubernetes-sigs/controller-runtime/issues/1290).
+  Thus, the end result might look different depending on the value and its `Stringer` implementation.
 
 - Use [lowerCamelCase](https://en.wiktionary.org/wiki/lowerCamelCase) for keys. Don't put spaces in keys, as it will make log processing with simple tools like `jq` harder.
 - Keys should be constant, human-readable, consistent across the codebase and naturally match parts of the log message, see [logr guideline](https://github.com/go-logr/logr#how-do-i-choose-my-keys).
