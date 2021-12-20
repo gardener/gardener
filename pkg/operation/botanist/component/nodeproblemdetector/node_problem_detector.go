@@ -15,6 +15,7 @@ package nodeproblemdetector
 // limitations under the License.
 import (
 	"context"
+	"strconv"
 	"time"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -22,10 +23,14 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
+	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -36,11 +41,18 @@ const (
 	serviceAccountName                     = "node-problem-detector"
 	deploymentName                         = "node-problem-detector"
 	containerName                          = "node-problem-detector"
+	daemonSetName                          = "node-problem-detector"
 	clusterRoleName                        = "node-problem-detector"
 	clusterRoleBindingName                 = "node-problem-detector"
 	clusterRolePSPName                     = "node-problem-detector-psp"
 	clusterRoleBindingPSPName              = "node-problem-detector-psp"
+	daemonSetTerminationGracePeriodSeconds = 30
+	daemonSetPrometheusPort                = 20257
+	daemonSetPrometheusAddress             = "0.0.0.0"
+	daemonSetHostNetwork                   = false
+	daemonSetChartName                     = "node-problem-detector"
 	podSecurityPolicyName                  = "node-problem-detector"
+	labelValue                             = "node-problem-detector"
 )
 
 // Interface contains functions for a node-problem-detector deployer.
@@ -48,23 +60,33 @@ type Interface interface {
 	component.DeployWaiter
 }
 
-// New creates a new instance of DeployWaiter for nodeProblemDetector.
+// Values is a set of configuration values for the node problem detector component.
+type Values struct {
+	// APIServerHost is the host of the kube-apiserver.
+	APIServerHost *string
+	// Image is the container image used for NodeProblemDetector.
+	Image string
+	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
+	VPAEnabled bool
+}
+
+// New creates a new instance of DeployWaiter for node problem detector.
 func New(
 	client client.Client,
 	namespace string,
-	image string,
+	values Values,
 ) component.DeployWaiter {
 	return &nodeProblemDetector{
 		client:    client,
 		namespace: namespace,
-		image:     image,
+		values:    values,
 	}
 }
 
 type nodeProblemDetector struct {
 	client    client.Client
 	namespace string
-	image     string
+	values    Values
 }
 
 func (c *nodeProblemDetector) Deploy(ctx context.Context) error {
@@ -226,8 +248,174 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 				},
 			},
 		}
+
+		daemonSet = &appsv1.DaemonSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      daemonSetName,
+				Namespace: metav1.NamespaceSystem,
+				Labels: map[string]string{
+					"app.kubernetes.io/instance": "shoot-core",
+					"app.kubernetes.io/name":     "node-problem-detector",
+					"origin":                     "gardener",
+					"gardener.cloud/role":        "system-component",
+				},
+			},
+			Spec: appsv1.DaemonSetSpec{
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app":                        "node-problem-detector",
+						"app.kubernetes.io/instance": "shoot-core",
+						"app.kubernetes.io/name":     "node-problem-detector",
+					},
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"app":                                    "node-problem-detector",
+							"app.kubernetes.io/instance":             "shoot-core",
+							"app.kubernetes.io/name":                 "node-problem-detector",
+							"gardener.cloud/role":                    "system-component",
+							"networking.gardener.cloud/to-apiserver": "allowed",
+							"networking.gardener.cloud/to-dns":       "allowed",
+							"origin":                                 "gardener",
+						},
+						Annotations: map[string]string{
+							"scheduler.alpha.kubernetes.io/critical-pod": "",
+						},
+					},
+					Spec: corev1.PodSpec{
+						DNSPolicy:                     corev1.DNSDefault,
+						ServiceAccountName:            serviceAccountName,
+						HostNetwork:                   daemonSetHostNetwork,
+						TerminationGracePeriodSeconds: pointer.Int64(daemonSetTerminationGracePeriodSeconds),
+						PriorityClassName:             "system-cluster-critical",
+						Containers: []corev1.Container{
+							{
+								Name:            daemonSetChartName,
+								Image:           c.values.Image,
+								ImagePullPolicy: corev1.PullIfNotPresent,
+								Command: []string{
+									"/bin/sh",
+									"-c",
+									"exec /node-problem-detector --logtostderr --config.system-log-monitor=/config/kernel-monitor.json,/config/docker-monitor.json,/config/systemd-monitor.json .. --config.custom-plugin-monitor=/config/kernel-monitor-counter.json,/config/systemd-monitor-counter.json .. --config.system-stats-monitor=/config/system-stats-monitor.json --prometheus-address=" + daemonSetPrometheusAddress + " --prometheus-port=" + strconv.Itoa(daemonSetPrometheusPort),
+								},
+								SecurityContext: &corev1.SecurityContext{
+									Privileged: pointer.Bool(true),
+								},
+								Env: []corev1.EnvVar{
+									{
+										Name: "NODE_NAME",
+										ValueFrom: &corev1.EnvVarSource{
+											FieldRef: &corev1.ObjectFieldSelector{
+												FieldPath: "spec.nodeName",
+											},
+										},
+									},
+								},
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										Name:      "log",
+										MountPath: "/var/log",
+									},
+									{
+										Name:      "localtime",
+										MountPath: "/etc/localtime",
+										ReadOnly:  true,
+									},
+									{
+										Name:      "kmsg",
+										MountPath: "/dev/kmsg",
+										ReadOnly:  true,
+									},
+								},
+								Ports: []corev1.ContainerPort{
+									{
+										Name:          "exporter",
+										ContainerPort: int32(daemonSetPrometheusPort),
+									},
+								},
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("20m"),
+										corev1.ResourceMemory: resource.MustParse("20Mi"),
+									},
+									Limits: c.getResourceLimits(),
+								},
+							},
+						},
+						Tolerations: []corev1.Toleration{
+							{
+								Effect:   corev1.TaintEffectNoSchedule,
+								Operator: corev1.TolerationOpExists,
+							},
+							{
+								Key:      "CriticalAddonsOnly",
+								Operator: corev1.TolerationOpExists,
+							},
+							{
+								Effect:   corev1.TaintEffectNoExecute,
+								Operator: corev1.TolerationOpExists,
+							},
+						},
+						Volumes: []corev1.Volume{
+							{
+								Name: "log",
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/var/log/",
+									},
+								},
+							},
+							{
+								Name: "localtime",
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/etc/localtime",
+										Type: &hostPathFileOrCreate,
+									},
+								},
+							},
+							{
+								Name: "kmsg",
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/dev/kmsg",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		vpa *autoscalingv1beta2.VerticalPodAutoscaler
 	)
 
+	if c.values.VPAEnabled {
+		updateMode := autoscalingv1beta2.UpdateModeAuto
+		vpa = &autoscalingv1beta2.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "node-problem-detector",
+				Namespace: metav1.NamespaceSystem,
+			},
+			Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
+				TargetRef: &v1.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "DaemonSet",
+					Name:       daemonSet.Name,
+				},
+				UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
+					UpdateMode: &updateMode,
+				},
+			},
+		}
+	}
+	if c.values.APIServerHost != nil {
+		daemonSet.Spec.Template.Spec.Containers[0].Env = append(daemonSet.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+			Name:  "KUBERNETES_SERVICE_HOST",
+			Value: *c.values.APIServerHost,
+		})
+	}
 	return registry.AddAllAndSerialize(
 		serviceAccount,
 		clusterRole,
@@ -235,9 +423,23 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 		clusterRolePSP,
 		clusterRoleBindingPSP,
 		podSecurityPolicy,
+		daemonSet,
+		vpa,
 	)
 }
 
+func (c *nodeProblemDetector) getResourceLimits() corev1.ResourceList {
+	if c.values.VPAEnabled {
+		return corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("80m"),
+			corev1.ResourceMemory: resource.MustParse("80Mi"),
+		}
+	}
+	return corev1.ResourceList{
+		corev1.ResourceCPU:    resource.MustParse("200m"),
+		corev1.ResourceMemory: resource.MustParse("100Mi"),
+	}
+}
 
 func getLabels() map[string]string {
 	return map[string]string{

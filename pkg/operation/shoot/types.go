@@ -43,7 +43,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
@@ -153,7 +152,7 @@ type SystemComponents struct {
 	NodeLocalDNS        nodelocaldns.Interface
 	MetricsServer       metricsserver.Interface
 	VPNShoot            vpnshoot.Interface
-	NodeProblemDetector nodeproblemdetector.Interface
+	NodeProblemDetector component.DeployWaiter
 }
 
 // DNS contains references to internal and external DNSProvider and DNSEntry deployers.

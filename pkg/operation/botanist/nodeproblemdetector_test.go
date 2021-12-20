@@ -15,12 +15,16 @@
 package botanist_test
 
 import (
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -36,6 +40,8 @@ var _ = Describe("NodeProblemDetector", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		botanist = &Botanist{Operation: &operation.Operation{}}
+		botanist.Shoot = &shootpkg.Shoot{}
+		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 	})
 
 	AfterEach(func() {
@@ -49,13 +55,12 @@ var _ = Describe("NodeProblemDetector", func() {
 			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
 
 			botanist.K8sSeedClient = kubernetesClient
-			botanist.Shoot = &shootpkg.Shoot{}
-			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})
 
 		It("should successfully create a nodeproblemdetector interface", func() {
+			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.APIServerSNI, false)()
 			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: "nodeproblemdetector"}}
+			botanist.ImageVector = imagevector.ImageVector{{Name: charts.ImageNameNodeProblemDetector}}
 
 			nodeProblemDetector, err := botanist.DefaultNodeProblemDetector()
 			Expect(nodeProblemDetector).NotTo(BeNil())

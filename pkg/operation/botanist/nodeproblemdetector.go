@@ -19,6 +19,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"k8s.io/utils/pointer"
 )
 
 // DefaultNodeProblemDetector returns a deployer for the NodeProblemDetector.
@@ -28,9 +29,18 @@ func (b *Botanist) DefaultNodeProblemDetector() (component.DeployWaiter, error) 
 		return nil, err
 	}
 
+	values := nodeproblemdetector.Values{
+		Image:      image.String(),
+		VPAEnabled: b.Shoot.WantsVerticalPodAutoscaler,
+	}
+
+	if b.APIServerSNIEnabled() {
+		values.APIServerHost = pointer.String(b.outOfClusterAPIServerFQDN())
+	}
+
 	return nodeproblemdetector.New(
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
-		image.String(),
+		values,
 	), nil
 }

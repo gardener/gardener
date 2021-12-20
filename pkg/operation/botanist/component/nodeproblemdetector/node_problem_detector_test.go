@@ -16,6 +16,7 @@ package nodeproblemdetector_test
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -47,16 +48,22 @@ var _ = Describe("NodeProblemDetector", func() {
 		namespace           = "some-namespace"
 		image               = "some-image:some-tag"
 
-		c         client.Client
-		component component.DeployWaiter
-
-		managedResource       *resourcesv1alpha1.ManagedResource
-		managedResourceSecret *corev1.Secret
+		c                          client.Client
+		component                  component.DeployWaiter
+		daemonSetPrometheusPort    = 20257
+		daemonSetPrometheusAddress = "0.0.0.0"
+		managedResource            *resourcesv1alpha1.ManagedResource
+		managedResourceSecret      *corev1.Secret
+		values                     Values
 	)
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		component = New(c, namespace, image)
+		values = Values{
+			Image:      image,
+			VPAEnabled: false,
+		}
+		component = New(c, namespace, values)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -204,6 +211,138 @@ spec:
   - downwardAPI
   - hostPath
 `
+			hostPathFileOrCreate = corev1.HostPathFileOrCreate
+
+			daemonsetYAMLFor = func(apiserverHost string, vpaEnabled bool) string {
+				out := `apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  creationTimestamp: null
+  labels:
+    app.kubernetes.io/instance: shoot-core
+    app.kubernetes.io/name: node-problem-detector
+    gardener.cloud/role: system-component
+    origin: gardener
+  name: node-problem-detector
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: node-problem-detector
+      app.kubernetes.io/instance: shoot-core
+      app.kubernetes.io/name: node-problem-detector
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+      creationTimestamp: null
+      labels:
+        app: node-problem-detector
+        app.kubernetes.io/instance: shoot-core
+        app.kubernetes.io/name: node-problem-detector
+        gardener.cloud/role: system-component
+        networking.gardener.cloud/to-apiserver: allowed
+        networking.gardener.cloud/to-dns: allowed
+        origin: gardener
+    spec:
+      containers:
+      - command:
+        - /bin/sh
+        - -c
+        - exec /node-problem-detector --logtostderr --config.system-log-monitor=/config/kernel-monitor.json,/config/docker-monitor.json,/config/systemd-monitor.json
+          .. --config.custom-plugin-monitor=/config/kernel-monitor-counter.json,/config/systemd-monitor-counter.json
+          .. --config.system-stats-monitor=/config/system-stats-monitor.json --prometheus-address=` + daemonSetPrometheusAddress + `
+          --prometheus-port=` + strconv.Itoa(daemonSetPrometheusPort) + `
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName`
+				if apiserverHost != "" {
+					out += `
+        - name: KUBERNETES_SERVICE_HOST
+          value: ` + apiserverHost + ``
+				}
+				out += `
+        image: ` + image + `
+        imagePullPolicy: IfNotPresent
+        name: node-problem-detector
+        ports:
+        - containerPort: 20257
+          name: exporter
+        resources:`
+				if vpaEnabled {
+					out += `
+          limits:
+            cpu: 80m
+            memory: 80Mi`
+				} else {
+					out += `
+          limits:
+            cpu: 200m
+            memory: 100Mi`
+				}
+				out += `
+          requests:
+            cpu: 20m
+            memory: 20Mi
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /var/log
+          name: log
+        - mountPath: /etc/localtime
+          name: localtime
+          readOnly: true
+        - mountPath: /dev/kmsg
+          name: kmsg
+          readOnly: true
+      dnsPolicy: Default
+      priorityClassName: system-cluster-critical
+      serviceAccountName: node-problem-detector
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - effect: NoSchedule
+        operator: Exists
+      - key: CriticalAddonsOnly
+        operator: Exists
+      - effect: NoExecute
+        operator: Exists
+      volumes:
+      - hostPath:
+          path: /var/log/
+        name: log
+      - hostPath:
+          path: /etc/localtime
+          type: ` + string(hostPathFileOrCreate) + `
+        name: localtime
+      - hostPath:
+          path: /dev/kmsg
+        name: kmsg
+  updateStrategy: {}
+status:
+  currentNumberScheduled: 0
+  desiredNumberScheduled: 0
+  numberMisscheduled: 0
+  numberReady: 0
+`
+				return out
+			}
+			vpaYAML = `apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  creationTimestamp: null
+  name: node-problem-detector
+  namespace: kube-system
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: DaemonSet
+    name: node-problem-detector
+  updatePolicy:
+    updateMode: Auto
+status: {}
+`
 		)
 
 		JustBeforeEach(func() {
@@ -241,6 +380,28 @@ spec:
 			Expect(string(managedResourceSecret.Data["podsecuritypolicy____node-problem-detector.yaml"])).To(Equal(podSecurityPolicyYAML))
 		})
 
+		Context("w/o apiserver host, w/o vpaEnables", func() {
+			It("should successfully deploy all resources", func() {
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor("", false)))
+			})
+		})
+
+		Context("w/ apiserver host,w/ vpaEnables", func() {
+			var (
+				apiserverHost = "apiserver.host"
+				vpaEnabled    = true
+			)
+
+			BeforeEach(func() {
+				values.APIServerHost = &apiserverHost
+				values.VPAEnabled = vpaEnabled
+				component = New(c, namespace, values)
+			})
+
+			It("should successfully deploy all resources", func() {
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__node-problem-detector.yaml"])).To(Equal(vpaYAML))
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__node-problem-detector.yaml"])).To(Equal(daemonsetYAMLFor(apiserverHost, vpaEnabled)))
+			})
 		})
 	})
 
