@@ -125,6 +125,6 @@ const (
 	// if the preparation for migration in the source seed is not finished after a certain grace period
 	// and is considered unlikely to succeed ("bad case" scenario).
 	// owner: @stoyanr
-	// alpha: v1.38.0
+	// alpha: v1.39.0
 	ForceRestore featuregate.Feature = "ForceRestore"
 )
