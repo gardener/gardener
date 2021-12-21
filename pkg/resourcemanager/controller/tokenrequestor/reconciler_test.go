@@ -254,7 +254,7 @@ var _ = Describe("Reconciler", func() {
 			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
 		})
 
-		Context("(token missing but renew timestamp present)", func() {
+		Context("token missing but renew timestamp present", func() {
 			BeforeEach(func() {
 				metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(time.Hour).Format(time.RFC3339))
 			})
@@ -294,6 +294,27 @@ var _ = Describe("Reconciler", func() {
 				Expect(secret.Data).NotTo(HaveKey("token"))
 				Expect(secret.Data).To(HaveKeyWithValue("kubeconfig", newKubeconfigRaw(token)))
 				Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
+			})
+
+			It("should requeue when token is present in the target cluster", func() {
+				targetSecretName, targetSecretNamespace := "foo", "bar"
+				secret.Annotations["token-requestor.resources.gardener.cloud/target-secret-name"] = targetSecretName
+				secret.Annotations["token-requestor.resources.gardener.cloud/target-secret-namespace"] = targetSecretNamespace
+
+				targetSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      targetSecretName,
+						Namespace: targetSecretNamespace,
+					},
+					Data: map[string][]byte{"token": []byte("token")},
+				}
+
+				Expect(targetClient.Create(ctx, targetSecret)).To(Succeed())
+				Expect(sourceClient.Create(ctx, secret)).To(Succeed())
+
+				result, err := ctrl.Reconcile(ctx, request)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: time.Hour}))
 			})
 		})
 

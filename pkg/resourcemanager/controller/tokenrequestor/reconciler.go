@@ -191,7 +191,10 @@ func (r *reconciler) createServiceAccountToken(ctx context.Context, sa *corev1.S
 }
 
 func (r *reconciler) requeue(ctx context.Context, secret *corev1.Secret) (bool, time.Duration, error) {
-	renewTimestamp := secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
+	var (
+		secretContainingToken = secret // token is expected in source secret by default
+		renewTimestamp        = secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
+	)
 
 	if len(renewTimestamp) == 0 {
 		return false, 0, nil
@@ -205,9 +208,11 @@ func (r *reconciler) requeue(ctx context.Context, secret *corev1.Secret) (bool, 
 			// target secret is not found, so do not requeue to make sure it gets created
 			return false, 0, nil
 		}
+
+		secretContainingToken = targetSecret // token is expected in target secret
 	}
 
-	tokenExists, err := tokenExistsInSecretData(secret.Data)
+	tokenExists, err := tokenExistsInSecretData(secretContainingToken.Data)
 	if err != nil {
 		return false, 0, fmt.Errorf("could not check whether token exists in secret data: %w", err)
 	}
