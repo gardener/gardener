@@ -278,6 +278,9 @@ spec:
   #     - zone-id-1
   #     exclude:
   #     - zone-id-2
+  #   rateLimit:
+  #     requestsPerDay: 120 # equally distributed over 24h
+  #     burst: 10           # must be > 0
   extensions:
   - type: foobar
   # providerConfig:

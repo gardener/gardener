@@ -14,7 +14,7 @@ require (
 	github.com/gardener/component-spec/bindings-go v0.0.33
 	github.com/gardener/dependency-watchdog v0.6.1-0.20210623112844-96f73d5dc311
 	github.com/gardener/etcd-druid v0.7.0
-	github.com/gardener/external-dns-management v0.7.18
+	github.com/gardener/external-dns-management v0.11.3
 	github.com/gardener/hvpa-controller v0.3.1
 	github.com/gardener/landscaper/apis v0.7.0
 	github.com/gardener/machine-controller-manager v0.41.0
@@ -43,7 +43,7 @@ require (
 	go.uber.org/automaxprocs v1.4.0
 	go.uber.org/goleak v1.1.10
 	go.uber.org/zap v1.19.0
-	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
 	golang.org/x/tools v0.1.7
 	gomodules.xyz/jsonpatch/v2 v2.2.0

@@ -103,7 +103,7 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 		if err := h.decoder.Decode(request, secret); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
-		if _, _, _, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations); err != nil {
+		if _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations); err != nil {
 			return admission.Errored(http.StatusUnprocessableEntity, err)
 		}
 
@@ -118,16 +118,16 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 
-		_, oldDomain, _, _, _, err := gutil.GetDomainInfoFromAnnotations(oldSecret.Annotations)
+		oldDomainInfo, err := gutil.GetDomainInfoFromAnnotations(oldSecret.Annotations)
 		if err != nil {
 			return admission.Errored(http.StatusUnprocessableEntity, err)
 		}
-		_, newDomain, _, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
+		newDomainInfo, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 		if err != nil {
 			return admission.Errored(http.StatusUnprocessableEntity, err)
 		}
 
-		if oldDomain != newDomain {
+		if oldDomainInfo.Domain != newDomainInfo.Domain {
 			atLeastOneShoot, err := h.atLeastOneShootExists(ctx, seedName)
 			if err != nil {
 				return admission.Errored(http.StatusInternalServerError, err)

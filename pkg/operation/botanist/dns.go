@@ -110,6 +110,13 @@ func (b *Botanist) enableDNSProviderForShootDNSEntries() map[string]string {
 // enabled and if not DeployWaiter which removes the external DNSProvider.
 func (b *Botanist) DefaultExternalDNSProvider() component.DeployWaiter {
 	if b.NeedsExternalDNS() {
+		var rateLimit *dns.RateLimit
+		if b.Shoot.ExternalDomain.RateLimit != nil {
+			rateLimit = &dns.RateLimit{
+				RequestsPerDay: b.Shoot.ExternalDomain.RateLimit.RequestsPerDay,
+				Burst:          b.Shoot.ExternalDomain.RateLimit.Burst,
+			}
+		}
 		return dns.NewProvider(
 			b.Logger,
 			b.K8sSeedClient.Client(),
@@ -127,6 +134,7 @@ func (b *Botanist) DefaultExternalDNSProvider() component.DeployWaiter {
 					Include: b.Shoot.ExternalDomain.IncludeZones,
 					Exclude: b.Shoot.ExternalDomain.ExcludeZones,
 				},
+				RateLimit:   rateLimit,
 				Annotations: b.enableDNSProviderForShootDNSEntries(),
 			},
 		)
@@ -251,6 +259,14 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context) (map[string]compo
 				excludeZones = zones.Exclude
 			}
 
+			var rateLimit *dns.RateLimit
+			if rl := p.RateLimit; rl != nil {
+				rateLimit = &dns.RateLimit{
+					RequestsPerDay: int(rl.RequestsPerDay),
+					Burst:          int(rl.Burst),
+				}
+			}
+
 			providerType := p.Type
 			if providerType == nil {
 				return nil, fmt.Errorf("dns provider[%d] doesn't specify a type", i)
@@ -295,6 +311,7 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context) (map[string]compo
 						Exclude: excludeZones,
 					},
 					Annotations: b.enableDNSProviderForShootDNSEntries(),
+					RateLimit:   rateLimit,
 				},
 			)
 		}

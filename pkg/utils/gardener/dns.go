@@ -16,6 +16,7 @@ package gardener
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -35,6 +36,12 @@ const (
 	// DNSExcludeZones is the key for an annotation on a Kubernetes Secret object whose value must point to a list
 	// of zones that shall be excluded.
 	DNSExcludeZones = "dns.gardener.cloud/exclude-zones"
+	// DNSRateLimitRequestsPerDay is the key for an annotation on a Kubernetes Secret object whose value must point to
+	// the requestsPerDays value of the optional rate limit
+	DNSRateLimitRequestsPerDay = "dns.gardener.cloud/rate-limit-requests-per-day"
+	// DNSRateLimitBurst is the key for an annotation on a Kubernetes Secret object whose value must point to
+	// the burst value of the optional rate limit
+	DNSRateLimitBurst = "dns.gardener.cloud/rate-limit-burst"
 
 	// APIServerFQDNPrefix is the part of a FQDN which will be used to construct the domain name for the kube-apiserver of
 	// a Shoot cluster. For example, when a Shoot specifies domain 'cluster.example.com', the apiserver domain would be
@@ -54,39 +61,74 @@ const (
 	InternalDomainKey = "internal"
 )
 
+// DomainInfo contains values from domain annotations
+type DomainInfo struct {
+	Provider     string
+	Domain       string
+	Zone         string
+	IncludeZones []string
+	ExcludeZones []string
+
+	RateLimitRequestsPerDay int
+	RateLimitBurst          int
+}
+
 // GetDomainInfoFromAnnotations returns the provider, domain, and zones that are specified in the given annotations.
-func GetDomainInfoFromAnnotations(annotations map[string]string) (provider string, domain string, zone string, includeZones, excludeZones []string, err error) {
+func GetDomainInfoFromAnnotations(annotations map[string]string) (*DomainInfo, error) {
 	if annotations == nil {
-		return "", "", "", nil, nil, fmt.Errorf("domain secret has no annotations")
+		return nil, fmt.Errorf("domain secret has no annotations")
 	}
 
+	var err error
+	var info DomainInfo
 	if providerAnnotation, ok := annotations[DNSProvider]; ok {
-		provider = providerAnnotation
+		info.Provider = providerAnnotation
 	}
 
 	if domainAnnotation, ok := annotations[DNSDomain]; ok {
-		domain = domainAnnotation
+		info.Domain = domainAnnotation
 	}
 
 	if zoneAnnotation, ok := annotations[DNSZone]; ok {
-		zone = zoneAnnotation
+		info.Zone = zoneAnnotation
 	}
 
 	if includeZonesAnnotation, ok := annotations[DNSIncludeZones]; ok {
-		includeZones = strings.Split(includeZonesAnnotation, ",")
+		info.IncludeZones = strings.Split(includeZonesAnnotation, ",")
 	}
 	if excludeZonesAnnotation, ok := annotations[DNSExcludeZones]; ok {
-		excludeZones = strings.Split(excludeZonesAnnotation, ",")
+		info.ExcludeZones = strings.Split(excludeZonesAnnotation, ",")
+	}
+	if requestsPerDayStr, ok := annotations[DNSRateLimitRequestsPerDay]; ok {
+		info.RateLimitRequestsPerDay, err = strconv.Atoi(requestsPerDayStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value %s for %s", requestsPerDayStr, DNSRateLimitRequestsPerDay)
+		}
 	}
 
-	if len(domain) == 0 {
-		return "", "", "", nil, nil, fmt.Errorf("missing dns domain annotation on domain secret")
-	}
-	if len(provider) == 0 {
-		return "", "", "", nil, nil, fmt.Errorf("missing dns provider annotation on domain secret")
+	if burstStr, ok := annotations[DNSRateLimitBurst]; ok {
+		info.RateLimitBurst, err = strconv.Atoi(burstStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid value %s for %s", burstStr, DNSRateLimitBurst)
+		}
 	}
 
-	return
+	if len(info.Domain) == 0 {
+		return nil, fmt.Errorf("missing dns domain annotation on domain secret")
+	}
+	if len(info.Provider) == 0 {
+		return nil, fmt.Errorf("missing dns provider annotation on domain secret")
+	}
+	if info.RateLimitRequestsPerDay != 0 {
+		if info.RateLimitRequestsPerDay < 0 {
+			return nil, fmt.Errorf("invalid value %d for %s (must be >= 0)", info.RateLimitRequestsPerDay, DNSRateLimitRequestsPerDay)
+		}
+		if info.RateLimitBurst <= 0 {
+			return nil, fmt.Errorf("invalid value %d for %s (must be > 0)", info.RateLimitBurst, DNSRateLimitBurst)
+		}
+	}
+
+	return &info, nil
 }
 
 // GetAPIServerDomain returns the fully qualified domain name for the api-server of the Shoot cluster. The

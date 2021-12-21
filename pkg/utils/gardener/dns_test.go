@@ -25,30 +25,49 @@ import (
 
 var _ = Describe("Dns", func() {
 	DescribeTable("#GetDomainInfoFromAnnotations",
-		func(annotations map[string]string, expectedProvider, expectedDomain, expectedZone, expectedIncludeZones, expectedExcludeZones, expectedErr gomegatypes.GomegaMatcher) {
-			provider, domain, zone, includeZones, excludeZones, err := GetDomainInfoFromAnnotations(annotations)
-			Expect(provider).To(expectedProvider)
-			Expect(domain).To(expectedDomain)
-			Expect(zone).To(expectedZone)
-			Expect(includeZones).To(expectedIncludeZones)
-			Expect(excludeZones).To(expectedExcludeZones)
+		func(annotations map[string]string, expectedDomainInfo, expectedErr gomegatypes.GomegaMatcher) {
+			domainInfo, err := GetDomainInfoFromAnnotations(annotations)
+			Expect(domainInfo).To(expectedDomainInfo)
 			Expect(err).To(expectedErr)
 		},
 
-		Entry("no annotations", nil, BeEmpty(), BeEmpty(), BeEmpty(), BeEmpty(), BeEmpty(), HaveOccurred()),
+		Entry("no annotations", nil, BeNil(), HaveOccurred()),
 		Entry("no domain", map[string]string{
 			DNSProvider: "bar",
-		}, BeEmpty(), BeEmpty(), BeEmpty(), BeEmpty(), BeEmpty(), HaveOccurred()),
+		}, BeNil(), HaveOccurred()),
 		Entry("no provider", map[string]string{
 			DNSDomain: "foo",
-		}, BeEmpty(), BeEmpty(), BeEmpty(), BeEmpty(), BeEmpty(), HaveOccurred()),
-		Entry("all present", map[string]string{
+		}, BeNil(), HaveOccurred()),
+		Entry("all present w/o rateLimit", map[string]string{
 			DNSProvider:     "bar",
 			DNSDomain:       "foo",
 			DNSZone:         "zoo",
 			DNSIncludeZones: "a,b,c",
 			DNSExcludeZones: "d,e,f",
-		}, Equal("bar"), Equal("foo"), Equal("zoo"), Equal([]string{"a", "b", "c"}), Equal([]string{"d", "e", "f"}), Not(HaveOccurred())),
+		}, Equal(&DomainInfo{
+			Provider:     "bar",
+			Domain:       "foo",
+			Zone:         "zoo",
+			IncludeZones: []string{"a", "b", "c"},
+			ExcludeZones: []string{"d", "e", "f"},
+		}), Not(HaveOccurred())),
+		Entry("all present with rateLimit", map[string]string{
+			DNSProvider:                "bar",
+			DNSDomain:                  "foo",
+			DNSZone:                    "zoo",
+			DNSIncludeZones:            "a,b,c",
+			DNSExcludeZones:            "d,e,f",
+			DNSRateLimitRequestsPerDay: "120",
+			DNSRateLimitBurst:          "10",
+		}, Equal(&DomainInfo{
+			Provider:                "bar",
+			Domain:                  "foo",
+			Zone:                    "zoo",
+			IncludeZones:            []string{"a", "b", "c"},
+			ExcludeZones:            []string{"d", "e", "f"},
+			RateLimitRequestsPerDay: 120,
+			RateLimitBurst:          10,
+		}), Not(HaveOccurred())),
 	)
 
 	DescribeTable("#GenerateDNSProviderName",

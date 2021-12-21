@@ -226,6 +226,8 @@ type DNSProvider struct {
 	Type *string
 	// Zones contains information about which hosted zones shall be included/excluded for this provider.
 	Zones *DNSIncludeExclude
+	// RateLimit contains information about rate limits for creating or updating DNS records through DNSEntries
+	RateLimit *DNSRateLimit
 }
 
 // DNSIncludeExclude contains information about which domains shall be included/excluded.
@@ -234,6 +236,15 @@ type DNSIncludeExclude struct {
 	Include []string
 	// Exclude is a list of domains that shall be excluded.
 	Exclude []string
+}
+
+// DNSRateLimit is the provider specific quota for create/update requests for DNS entries
+type DNSRateLimit struct {
+	// RequestsPerDay is the request rate per creating or updating DNS entries given in "requests/24h"
+	RequestsPerDay int32 `json:"requestsPerDay" protobuf:"varint,1,opt,name=requestsPerDay"`
+	// Burst allows bursts of up to 'burst' to exceed the rate defined by 'RequestsPerDay', while still maintaining a
+	// smoothed rate of 'RequestsPerDay'
+	Burst int32 `json:"burst" protobuf:"varint,2,opt,name=burst"`
 }
 
 // DefaultDomain is the default value in the Shoot's '.spec.dns.domain' when '.spec.dns.provider' is 'unmanaged'

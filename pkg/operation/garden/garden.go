@@ -141,18 +141,26 @@ func GetInternalDomain(secrets map[string]*corev1.Secret) (*Domain, error) {
 }
 
 func constructDomainFromSecret(secret *corev1.Secret) (*Domain, error) {
-	provider, domain, zone, includeZones, excludeZones, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
+	domainInfo, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 	if err != nil {
 		return nil, err
 	}
 
+	var rateLimit *RateLimit
+	if domainInfo.RateLimitRequestsPerDay > 0 {
+		rateLimit = &RateLimit{
+			RequestsPerDay: domainInfo.RateLimitRequestsPerDay,
+			Burst:          domainInfo.RateLimitBurst,
+		}
+	}
 	return &Domain{
-		Domain:       domain,
-		Provider:     provider,
-		Zone:         zone,
+		Domain:       domainInfo.Domain,
+		Provider:     domainInfo.Provider,
+		Zone:         domainInfo.Zone,
 		SecretData:   secret.Data,
-		IncludeZones: includeZones,
-		ExcludeZones: excludeZones,
+		IncludeZones: domainInfo.IncludeZones,
+		ExcludeZones: domainInfo.ExcludeZones,
+		RateLimit:    rateLimit,
 	}, nil
 }
 
@@ -188,27 +196,27 @@ func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string, l
 		// Retrieving default domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role default-domain.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleDefaultDomain {
-			_, domain, _, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
+			domainInfo, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				log.Warnf("error getting information out of default domain secret %s: %+v", secret.Name, err)
 				continue
 			}
 			defaultDomainSecret := secret
-			secretsMap[fmt.Sprintf("%s-%s", v1beta1constants.GardenRoleDefaultDomain, domain)] = &defaultDomainSecret
-			logInfo = append(logInfo, fmt.Sprintf("default domain secret %q for domain %q", secret.Name, domain))
+			secretsMap[fmt.Sprintf("%s-%s", v1beta1constants.GardenRoleDefaultDomain, domainInfo.Domain)] = &defaultDomainSecret
+			logInfo = append(logInfo, fmt.Sprintf("default domain secret %q for domain %q", secret.Name, domainInfo.Domain))
 		}
 
 		// Retrieving internal domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role internal-domain.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleInternalDomain {
-			_, domain, _, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
+			domainInfo, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				log.Warnf("error getting information out of internal domain secret %s: %+v", secret.Name, err)
 				continue
 			}
 			internalDomainSecret := secret
 			secretsMap[v1beta1constants.GardenRoleInternalDomain] = &internalDomainSecret
-			logInfo = append(logInfo, fmt.Sprintf("internal domain secret %q for domain %q", secret.Name, domain))
+			logInfo = append(logInfo, fmt.Sprintf("internal domain secret %q for domain %q", secret.Name, domainInfo.Domain))
 			numberOfInternalDomainSecrets++
 		}
 

@@ -44,4 +44,11 @@ type Domain struct {
 	ExcludeDomains []string
 	IncludeZones   []string
 	ExcludeZones   []string
+	RateLimit      *RateLimit
+}
+
+// RateLimit is the provider specific quota for create/update requests for DNS entries
+type RateLimit struct {
+	RequestsPerDay int
+	Burst          int
 }

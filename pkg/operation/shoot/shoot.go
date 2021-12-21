@@ -523,6 +523,7 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 		externalDomain.ExcludeDomains = defaultDomain.ExcludeDomains
 		externalDomain.IncludeZones = defaultDomain.IncludeZones
 		externalDomain.ExcludeZones = defaultDomain.ExcludeZones
+		externalDomain.RateLimit = defaultDomain.RateLimit
 
 	case primaryProvider != nil:
 		if primaryProvider.SecretName != nil {
@@ -546,6 +547,12 @@ func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *garden
 			externalDomain.ExcludeZones = zones.Exclude
 			if len(zones.Include) == 1 {
 				externalDomain.Zone = zones.Include[0]
+			}
+		}
+		if rateLimit := primaryProvider.RateLimit; rateLimit != nil {
+			externalDomain.RateLimit = &garden.RateLimit{
+				RequestsPerDay: int(rateLimit.RequestsPerDay),
+				Burst:          int(rateLimit.Burst),
 			}
 		}
 

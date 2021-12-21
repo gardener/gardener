@@ -22,99 +22,66 @@ import (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type DNSEntryList struct {
+type DNSLockList struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard list metadata
 	// More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#metadata
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []DNSEntry `json:"items"`
+	Items           []DNSLock `json:"items"`
 }
 
 // +kubebuilder:storageversion
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Namespaced,path=dnsentries,shortName=dnse,singular=dnsentry
+// +kubebuilder:resource:scope=Namespaced,path=dnslocks,shortName=dnsl,singular=dnslock
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name=DNS,description="FQDN of DNS Entry",JSONPath=".spec.dnsName",type=string
 // +kubebuilder:printcolumn:name=TYPE,JSONPath=".status.providerType",type=string,description="provider type"
 // +kubebuilder:printcolumn:name=PROVIDER,JSONPath=".status.provider",type=string,description="assigned provider (namespace/name)"
 // +kubebuilder:printcolumn:name=STATUS,JSONPath=".status.state",type=string,description="entry status"
 // +kubebuilder:printcolumn:name=AGE,JSONPath=".metadata.creationTimestamp",type=date,description="entry creation timestamp"
-// +kubebuilder:printcolumn:name=TARGETS,JSONPath=".status.targets",type=string,description="effective targets"
-// +kubebuilder:printcolumn:name=OWNERID,JSONPath=".spec.ownerId",type=string,description="owner id used to tag entries in external DNS system"
+// +kubebuilder:printcolumn:name=OWNERID,JSONPath=".spec.ownerGroupId",type=string,description="owner group id used to tag entries in external DNS system"
 // +kubebuilder:printcolumn:name=TTL,JSONPath=".status.ttl",type=integer,priority=2000,description="time to live"
 // +kubebuilder:printcolumn:name=ZONE,JSONPath=".status.zone",type=string,priority=2000,description="zone id"
 // +kubebuilder:printcolumn:name=MESSAGE,JSONPath=".status.message",type=string,priority=2000,description="message describing the reason for the state"
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type DNSEntry struct {
+type DNSLock struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              DNSEntrySpec `json:"spec"`
+	Spec              DNSLockSpec `json:"spec"`
 	// +optional
-	Status DNSEntryStatus `json:"status,omitempty"`
+	Status DNSLockStatus `json:"status,omitempty"`
 }
 
-type DNSEntrySpec struct {
+type DNSLockSpec struct {
 	// full qualified domain name
 	DNSName string `json:"dnsName"`
-	// reference to base entry used to inherit attributes from
+	// owner group for collaboration of multiple controller
 	// +optional
-	Reference *EntryReference `json:"reference,omitempty"`
-	// owner id used to tag entries in external DNS system
-	// +optional
-	OwnerId *string `json:"ownerId,omitempty"`
+	LockId *string `json:"lockId,omitempty"`
 	// time to live for records in external DNS system
+	TTL int64 `json:"ttl"`
+	// Activation time stamp
+	Timestamp metav1.Time `json:"timestamp"`
+	// attribute values (must be compatible with DNS TXT records)
 	// +optional
-	TTL *int64 `json:"ttl,omitempty"`
-	// lookup interval for CNAMEs that must be resolved to IP addresses
-	// +optional
-	CNameLookupInterval *int64 `json:"cnameLookupInterval,omitempty"`
-	// text records, either text or targets must be specified
-	// +optional
-	Text []string `json:"text,omitempty"`
-	// target records (CNAME or A records), either text or targets must be specified
-	// +optional
-	Targets []string `json:"targets,omitempty"`
+	Attributes map[string]string `json:"attributes,omitempty"`
 }
 
-type DNSEntryStatus struct {
+type DNSLockStatus struct {
 	DNSBaseStatus `json:",inline"`
-	// effective targets generated for the entry
+	// Activation time stamp found in DNS
 	// +optional
-	Targets []string `json:"targets,omitempty"`
-}
+	Timestamp *metav1.Time `json:"timestamp,omitempty"`
+	// owner group for collaboration of multiple controller found in DNS
+	// +optional
+	LockId *string `json:"lockId,omitempty"`
+	// attribute values found in DNS
+	// +optional
+	Attributes map[string]string `json:"attributes,omitempty"`
 
-type DNSBaseStatus struct {
+	// First failed DNS looup
 	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-	// entry state
-	// +optional
-	State string `json:"state"`
-	// message describing the reason for the state
-	// +optional
-	Message *string `json:"message,omitempty"`
-	// lastUpdateTime contains the timestamp of the last status update
-	// +optional
-	LastUptimeTime *metav1.Time `json:"lastUpdateTime,omitempty"`
-	// provider type used for the entry
-	// +optional
-	ProviderType *string `json:"providerType,omitempty"`
-	// assigned provider
-	// +optional
-	Provider *string `json:"provider,omitempty"`
-	// zone used for the entry
-	// +optional
-	Zone *string `json:"zone,omitempty"`
-	// time to live used for the entry
-	// +optional
-	TTL *int64 `json:"ttl,omitempty"`
-}
-
-type EntryReference struct {
-	// name of the referenced DNSEntry object
-	Name string `json:"name"`
-	// namespace of the referenced DNSEntry object
-	// +optional
-	Namespace string `json:"namespace,omitempty"`
+	FirstFailedDNSLookup *metav1.Time `json:"firstFailedDNSLookup,omitempty"`
 }

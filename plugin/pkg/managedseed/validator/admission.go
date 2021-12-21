@@ -417,28 +417,28 @@ func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencore.Shoot
 
 	// Search for a default domain secret that matches the shoot domain
 	for _, secret := range defaultDomainSecrets {
-		provider, domain, _, includeZones, excludeZones, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
+		domainInfo, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 		if err != nil {
 			return nil, apierrors.NewInternalError(fmt.Errorf("could not get domain info from domain secret annotations: %v", err))
 		}
 
-		if strings.HasSuffix(*shoot.Spec.DNS.Domain, domain) {
+		if strings.HasSuffix(*shoot.Spec.DNS.Domain, domainInfo.Domain) {
 			var zones *gardencore.DNSIncludeExclude
-			if includeZones != nil || excludeZones != nil {
+			if domainInfo.IncludeZones != nil || domainInfo.ExcludeZones != nil {
 				zones = &gardencore.DNSIncludeExclude{
-					Include: includeZones,
-					Exclude: excludeZones,
+					Include: domainInfo.IncludeZones,
+					Exclude: domainInfo.ExcludeZones,
 				}
 			}
 
 			return &gardencore.SeedDNSProvider{
-				Type: provider,
+				Type: domainInfo.Provider,
 				SecretRef: corev1.SecretReference{
 					Name:      secret.Name,
 					Namespace: secret.Namespace,
 				},
 				Domains: &gardencore.DNSIncludeExclude{
-					Include: []string{domain},
+					Include: []string{domainInfo.Domain},
 				},
 				Zones: zones,
 			}, nil

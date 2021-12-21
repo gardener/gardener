@@ -591,6 +591,20 @@ message DNSProvider {
   // Zones contains information about which hosted zones shall be included/excluded for this provider.
   // +optional
   optional DNSIncludeExclude zones = 5;
+
+  // RateLimit contains information about rate limits for creating or updating DNS records through DNSEntries
+  // +optional
+  optional DNSRateLimit rateLimit = 6;
+}
+
+// DNSRateLimit is the provider specific quota for create/update requests for DNS entries
+message DNSRateLimit {
+  // RequestsPerDay is the request rate per creating or updating DNS entries given in "requests/24h"
+  optional int32 requestsPerDay = 1;
+
+  // Burst allows bursts of up to 'burst' to exceed the rate defined by 'RequestsPerDay', while still maintaining a
+  // smoothed rate of 'RequestsPerDay'
+  optional int32 burst = 2;
 }
 
 // DataVolume contains information about a data volume.

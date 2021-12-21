@@ -377,11 +377,11 @@ func getDefaultDomains(secretLister kubecorev1listers.SecretLister) ([]string, e
 
 	var defaultDomains []string
 	for _, domainSecret := range domainSecrets {
-		_, domain, _, _, _, err := gutil.GetDomainInfoFromAnnotations(domainSecret.GetAnnotations())
+		domainInfo, err := gutil.GetDomainInfoFromAnnotations(domainSecret.GetAnnotations())
 		if err != nil {
 			return nil, err
 		}
-		defaultDomains = append(defaultDomains, domain)
+		defaultDomains = append(defaultDomains, domainInfo.Domain)
 	}
 	return defaultDomains, nil
 }

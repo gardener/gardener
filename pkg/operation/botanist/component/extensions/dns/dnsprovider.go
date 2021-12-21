@@ -41,6 +41,13 @@ type ProviderValues struct {
 	SecretData  map[string][]byte
 	Domains     *IncludeExclude
 	Zones       *IncludeExclude
+	RateLimit   *RateLimit
+}
+
+// RateLimit is the provider specific quota for create/update requests for DNS entries
+type RateLimit struct {
+	RequestsPerDay int
+	Burst          int
 }
 
 // IncludeExclude contain slices of excluded and included domains/zones.
@@ -118,6 +125,13 @@ func (p *provider) Deploy(ctx context.Context) error {
 			p.dnsProvider.Spec.Zones = &dnsv1alpha1.DNSSelection{
 				Include: p.values.Zones.Include,
 				Exclude: p.values.Zones.Exclude,
+			}
+		}
+
+		if p.values.RateLimit != nil {
+			p.dnsProvider.Spec.RateLimit = &dnsv1alpha1.RateLimit{
+				RequestsPerDay: p.values.RateLimit.RequestsPerDay,
+				Burst:          p.values.RateLimit.Burst,
 			}
 		}
 

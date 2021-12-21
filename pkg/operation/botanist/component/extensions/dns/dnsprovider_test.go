@@ -175,6 +175,10 @@ var _ = Describe("#DNSProvider", func() {
 				vals.Zones = nil
 				expected.Spec.Zones = nil
 			}),
+			Entry("with no rate limit", func() {
+				vals.RateLimit = nil
+				expected.Spec.RateLimit = nil
+			}),
 			Entry("with custom labels", func() {
 				vals.Labels = map[string]string{"foo": "bar"}
 				expected.ObjectMeta.Labels = map[string]string{"foo": "bar"}
@@ -187,9 +191,19 @@ var _ = Describe("#DNSProvider", func() {
 				vals.Zones.Exclude = nil
 				expected.Spec.Zones.Exclude = nil
 			}),
-			Entry("with internal prupose", func() {
+			Entry("with internal purpose", func() {
 				vals.Purpose = "internal"
 				expected.Annotations = nil
+			}),
+			Entry("with rate limit", func() {
+				vals.RateLimit = &RateLimit{
+					RequestsPerDay: 240,
+					Burst:          10,
+				}
+				expected.Spec.RateLimit = &dnsv1alpha1.RateLimit{
+					RequestsPerDay: 240,
+					Burst:          10,
+				}
 			}),
 		)
 

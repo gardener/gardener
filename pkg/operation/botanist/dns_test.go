@@ -372,6 +372,10 @@ var _ = Describe("dns", func() {
 							Include: []string{"zone-1-include"},
 							Exclude: []string{"zone-1-exclude"},
 						},
+						RateLimit: &gardencorev1beta1.DNSRateLimit{
+							RequestsPerDay: 121,
+							Burst:          11,
+						},
 					},
 					{
 						Type:       pointer.String("provider-two"),
@@ -434,6 +438,10 @@ var _ = Describe("dns", func() {
 			Expect(providerOne.Spec.Zones).To(Equal(&dnsv1alpha1.DNSSelection{
 				Include: []string{"zone-1-include"},
 				Exclude: []string{"zone-1-exclude"},
+			}))
+			Expect(providerOne.Spec.RateLimit).To(Equal(&dnsv1alpha1.RateLimit{
+				RequestsPerDay: 121,
+				Burst:          11,
 			}))
 
 			Expect(seedClient.Get(

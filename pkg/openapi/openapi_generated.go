@@ -75,6 +75,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNS":                                    schema_pkg_apis_core_v1alpha1_DNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude":                      schema_pkg_apis_core_v1alpha1_DNSIncludeExclude(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSProvider":                            schema_pkg_apis_core_v1alpha1_DNSProvider(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSRateLimit":                           schema_pkg_apis_core_v1alpha1_DNSRateLimit(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DataVolume":                             schema_pkg_apis_core_v1alpha1_DataVolume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DeploymentRef":                          schema_pkg_apis_core_v1alpha1_DeploymentRef(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Endpoint":                               schema_pkg_apis_core_v1alpha1_Endpoint(ref),
@@ -227,6 +228,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS":                                     schema_pkg_apis_core_v1beta1_DNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude":                       schema_pkg_apis_core_v1beta1_DNSIncludeExclude(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSProvider":                             schema_pkg_apis_core_v1beta1_DNSProvider(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSRateLimit":                            schema_pkg_apis_core_v1beta1_DNSRateLimit(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume":                              schema_pkg_apis_core_v1beta1_DataVolume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DeploymentRef":                           schema_pkg_apis_core_v1beta1_DeploymentRef(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Endpoint":                                schema_pkg_apis_core_v1beta1_Endpoint(ref),
@@ -2511,11 +2513,47 @@ func schema_pkg_apis_core_v1alpha1_DNSProvider(ref common.ReferenceCallback) com
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude"),
 						},
 					},
+					"rateLimit": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RateLimit contains information about rate limits for creating or updating DNS records through DNSEntries",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSRateLimit"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSRateLimit"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_DNSRateLimit(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "DNSRateLimit is the provider specific quota for create/update requests for DNS entries",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"requestsPerDay": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RequestsPerDay is the request rate per creating or updating DNS entries given in \"requests/24h\"",
+							Default:     0,
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"burst": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Burst allows bursts of up to 'burst' to exceed the rate defined by 'RequestsPerDay', while still maintaining a smoothed rate of 'RequestsPerDay'",
+							Default:     0,
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+				Required: []string{"requestsPerDay", "burst"},
+			},
+		},
 	}
 }
 
@@ -9689,11 +9727,47 @@ func schema_pkg_apis_core_v1beta1_DNSProvider(ref common.ReferenceCallback) comm
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
 						},
 					},
+					"rateLimit": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RateLimit contains information about rate limits for creating or updating DNS records through DNSEntries",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSRateLimit"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSRateLimit"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_DNSRateLimit(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "DNSRateLimit is the provider specific quota for create/update requests for DNS entries",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"requestsPerDay": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RequestsPerDay is the request rate per creating or updating DNS entries given in \"requests/24h\"",
+							Default:     0,
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"burst": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Burst allows bursts of up to 'burst' to exceed the rate defined by 'RequestsPerDay', while still maintaining a smoothed rate of 'RequestsPerDay'",
+							Default:     0,
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+				Required: []string{"requestsPerDay", "burst"},
+			},
+		},
 	}
 }
 

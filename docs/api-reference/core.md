@@ -3418,6 +3418,62 @@ DNSIncludeExclude
 <p>Zones contains information about which hosted zones shall be included/excluded for this provider.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>rateLimit</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.DNSRateLimit">
+DNSRateLimit
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RateLimit contains information about rate limits for creating or updating DNS records through DNSEntries</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.DNSRateLimit">DNSRateLimit
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.DNSProvider">DNSProvider</a>)
+</p>
+<p>
+<p>DNSRateLimit is the provider specific quota for create/update requests for DNS entries</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>requestsPerDay</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>RequestsPerDay is the request rate per creating or updating DNS entries given in &ldquo;requests/24h&rdquo;</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>burst</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>Burst allows bursts of up to &lsquo;burst&rsquo; to exceed the rate defined by &lsquo;RequestsPerDay&rsquo;, while still maintaining a
+smoothed rate of &lsquo;RequestsPerDay&rsquo;</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.DataVolume">DataVolume
