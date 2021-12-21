@@ -76,7 +76,16 @@ Components can be set to one of the following log levels (with increasing verbos
 logr uses [V-levels](https://github.com/go-logr/logr#why-v-levels) (numbered log levels), higher V-level means higher verbosity.
 V-levels are relative (in contrast to `klog`'s absolute V-levels), i.e., `V(1)` creates a logger, that is one level more verbose than its parent logger.
 
-In Gardener components, `V(0)` of the root logger maps to `info` level in the respective component configuration, `V(1)` maps to `debug`.
+In Gardener components, the mentioned log levels in the component config (`error`, `info`, `debug`) map to the zap levels with the same names (see [here](https://github.com/gardener/gardener/blob/770fc01a34b70f6cb77b8cfe929d9daef0026d1c/pkg/logger/zap.go#L43-L55)).
+Hence, our loggers follow the same mapping from numerical logr levels to named zap levels like described in [zapr](https://github.com/go-logr/zapr/tree/v1.1.0#increasing-verbosity), i.e.:
+
+- component config specifies `debug` ➡️ both `V(0)` and `V(1)` are enabled
+- component config specifies `info` ➡️ `V(0)` is enabled, `V(1)` will not be shown
+- component config specifies `error` ➡️ neither `V(0)` nor `V(1)` will be shown
+- `Error()` logs will always be shown
+
+This mapping applies to the components' root loggers (the ones that are not "derived" from any other logger; constructed on component startup).
+If you derive a new logger with e.g. `V(1)`, the mapping will shift by one. For example, `V(0)` will then log at zap's `debug` level.
 
 There is no `warning` level (see [Dave Cheney's post](https://dave.cheney.net/2015/11/05/lets-talk-about-logging)).
 If there is an error condition (e.g., unexpected error received from a called function), the error should either be handled or logged at `error` if it is neither handled nor returned.
@@ -123,7 +132,7 @@ results in
 
 The logger is injected by controller-runtime's `Controller` implementation and our `controllerutils.CreateWorker` alike (if a logger is passed using `controllerutils.WithLogger`). The logger returned by `logf.FromContext` is never `nil`. If the context doesn't carry a logger, it falls back to the global logger (`logf.Log`), which might discard logs if not configured, but is also never `nil`.
 
-The controller implementation (controller-runtime / `CreateWorker`) itself takes care about logging the error returned by reconcilers.
+The controller implementation (controller-runtime / `CreateWorker`) itself takes care of logging the error returned by reconcilers.
 Hence, don't log an error that you are returning.
 Generally, functions should not return an error, if they already logged it, because that means the error is already handled and not an error anymore.
 See [Dave Cheney's post](https://dave.cheney.net/2015/11/05/lets-talk-about-logging) for more on this.
