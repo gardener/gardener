@@ -238,6 +238,7 @@ var _ = Describe("Etcd", func() {
 						"networking.gardener.cloud/to-dns": "allowed",
 						"networking.gardener.cloud/to-public-networks":  "allowed",
 						"networking.gardener.cloud/to-private-networks": "allowed",
+						"networking.gardener.cloud/to-seed-apiserver":   "allowed",
 					},
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
