@@ -24,7 +24,7 @@ generate-controller-registration <name> <chart-dir> <dest> <kind-and-type> [kind
 
     <name>            Name of the controller registration to generate.
     <chart-dir>       Location of the chart directory.
-    <version-file>    Location of the VERSION file. If empty then "v0.0.0" and tag "latest" will be used.
+    <version>         Version to use for the Helm chart and the tag in the ControllerDeployment.
     <dest>            The destination file to write the registration YAML to.
     <kind-and-type>   A tuple of kind and type of the controller registration to generate.
                       Separated by ':'.
@@ -41,18 +41,11 @@ if [ "$1" == "--optional" ]; then
 fi
 NAME="$1"
 CHART_DIR="$2"
-VERSION_FILE="$3"
+VERSION="$3"
 DEST="$4"
 KIND_AND_TYPE="$5"
 
 ( [[ -z "$NAME" ]] || [[ -z "$CHART_DIR" ]] || [[ -z "$DEST" ]] || [[ -z "$KIND_AND_TYPE" ]]) && usage
-
-VERSION="v0.0.0"
-TAG="latest"
-if [[ -f "$VERSION_FILE" ]]; then
-  VERSION="$(cat "$VERSION_FILE")"
-  TAG="$VERSION"
-fi
 
 KINDS_AND_TYPES=("$KIND_AND_TYPE" "${@:6}")
 
@@ -89,7 +82,7 @@ providerConfig:
   chart: $chart
   values:
     image:
-      tag: $TAG
+      tag: $VERSION
 ---
 apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerRegistration
