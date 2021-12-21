@@ -151,6 +151,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
+	o.Shoot.Components.SystemComponents.NodeLocalDNS, err = b.DefaultNodeLocalDNS()
+	if err != nil {
+		return nil, err
+	}
 	o.Shoot.Components.SystemComponents.MetricsServer, err = b.DefaultMetricsServer()
 	if err != nil {
 		return nil, err

@@ -20,6 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/common"
 
 	"k8s.io/utils/pointer"
@@ -82,7 +83,7 @@ func (b *Botanist) DefaultNetworkPolicies(sniPhase component.Phase) (component.D
 				BlockedAddresses:     b.Seed.GetInfo().Spec.Networks.BlockCIDRs,
 				PrivateNetworkPeers:  privateNetworkPeers,
 				DenyAllTraffic:       true,
-				NodeLocalIPVSAddress: pointer.String(common.NodeLocalIPVSAddress),
+				NodeLocalIPVSAddress: pointer.String(nodelocaldns.IPVSAddress),
 				DNSServerAddress:     pointer.String(seedDNSServerAddress.String()),
 			},
 		},

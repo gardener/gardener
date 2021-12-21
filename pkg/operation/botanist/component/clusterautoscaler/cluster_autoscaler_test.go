@@ -258,6 +258,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Annotations: map[string]string{
+								// TODO(rfranzke): Remove in a future release.
 								"security.gardener.cloud/trigger": "rollout",
 							},
 							Labels: map[string]string{

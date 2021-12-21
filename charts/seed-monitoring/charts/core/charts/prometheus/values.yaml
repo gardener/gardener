@@ -21,9 +21,6 @@ ingress:
 
 kubernetesVersion: 1.15.1
 
-nodeLocalDNS:
-  enabled: false
-
 reversedVPN:
   enabled: false
 
@@ -56,21 +53,6 @@ allowedMetrics:
   - container_memory_working_set_bytes
   - container_network_receive_bytes_total
   - container_network_transmit_bytes_total
-  nodeLocalDNS:
-  - coredns_build_info
-  - coredns_cache_entries
-  - coredns_cache_hits_total
-  - coredns_cache_misses_total
-  - coredns_dns_request_duration_seconds_bucket
-  - coredns_dns_request_duration_seconds_count
-  - coredns_dns_responses_total
-  - coredns_forward_requests_total
-  - coredns_forward_responses_total
-  - coredns_kubernetes_dns_programming_duration_seconds_bucket
-  - coredns_kubernetes_dns_programming_duration_seconds_count
-  - coredns_kubernetes_dns_programming_duration_seconds_sum
-  - process_max_fds
-  - process_open_fds
   cloudControllerManager:
   - rest_client_requests_total
   - process_max_fds

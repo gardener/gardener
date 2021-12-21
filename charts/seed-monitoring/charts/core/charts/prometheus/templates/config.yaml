@@ -301,37 +301,6 @@ data:
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.prometheus | indent 6 }}
 
-{{- if .Values.nodeLocalDNS.enabled }}
-    - job_name: node-local-dns
-      honor_labels: false
-      scheme: https
-{{ include "prometheus.kube-auth" . | indent 6 }}
-      kubernetes_sd_configs:
-      - role: pod
-        api_server: https://kube-apiserver:443
-{{ include "prometheus.kube-auth" . | indent 8 }}
-      relabel_configs:
-      - source_labels:
-        - __meta_kubernetes_pod_name
-        action: keep
-        regex: node-local.*
-      - source_labels:
-        - __meta_kubernetes_pod_container_name
-        - __meta_kubernetes_pod_container_port_name
-        action: keep
-        regex: node-cache;metrics
-      - source_labels: [ __meta_kubernetes_pod_name ]
-        target_label: pod
-      - target_label: __address__
-        replacement: kube-apiserver:443
-      - source_labels: [__meta_kubernetes_pod_name,__meta_kubernetes_pod_container_port_number]
-        regex: (.+);(.+)
-        target_label: __metrics_path__
-        replacement: /api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics
-      metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.nodeLocalDNS | indent 6 }}
-{{- end }}
-
     - job_name: node-exporter
       honor_labels: false
       scrape_timeout: 30s
