@@ -30,12 +30,12 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // Actuator acts upon ShootLeftover resources.
@@ -50,15 +50,13 @@ type Actuator interface {
 type actuator struct {
 	gardenClient kubernetes.Interface
 	clientMap    clientmap.ClientMap
-	logger       logrus.FieldLogger
 }
 
 // newActuator creates a new Actuator with the given clients and logger.
-func newActuator(gardenClient kubernetes.Interface, clientMap clientmap.ClientMap, logger logrus.FieldLogger) Actuator {
+func newActuator(gardenClient kubernetes.Interface, clientMap clientmap.ClientMap) Actuator {
 	return &actuator{
 		gardenClient: gardenClient,
 		clientMap:    clientMap,
-		logger:       logger,
 	}
 }
 
@@ -79,7 +77,7 @@ func (a *actuator) Reconcile(ctx context.Context, slo *gardencorev1alpha1.ShootL
 		defaultInterval = 5 * time.Second
 		defaultTimeout  = 30 * time.Second
 
-		cleaner = newCleaner(seedClient.Client(), *slo.Spec.TechnicalID, string(*slo.Spec.UID), a.getLogger(slo))
+		cleaner = newCleaner(seedClient.Client(), *slo.Spec.TechnicalID, string(*slo.Spec.UID), logf.FromContext(ctx), a.getFieldLogger(slo))
 
 		errorContext = utilerrors.NewErrorContext("Shoot leftover resources reconciliation", gardencorev1beta1helper.GetTaskIDs(slo.Status.LastErrors))
 
@@ -122,7 +120,7 @@ func (a *actuator) Reconcile(ctx context.Context, slo *gardencorev1alpha1.ShootL
 	)
 
 	err = f.Run(ctx, flow.Opts{
-		Logger:           a.getLogger(slo),
+		Logger:           a.getFieldLogger(slo),
 		ProgressReporter: flow.NewImmediateProgressReporter(a.getProgressReporterFunc(slo)),
 		ErrorCleaner:     a.getErrorCleanerFunc(slo),
 		ErrorContext:     errorContext,
@@ -143,7 +141,7 @@ func (a *actuator) Delete(ctx context.Context, slo *gardencorev1alpha1.ShootLeft
 		defaultInterval = 5 * time.Second
 		defaultTimeout  = 5 * time.Minute
 
-		cleaner = newCleaner(seedClient.Client(), *slo.Spec.TechnicalID, string(*slo.Spec.UID), a.getLogger(slo))
+		cleaner = newCleaner(seedClient.Client(), *slo.Spec.TechnicalID, string(*slo.Spec.UID), logf.FromContext(ctx), a.getFieldLogger(slo))
 
 		errorContext = utilerrors.NewErrorContext("Shoot leftover resources deletion", gardencorev1beta1helper.GetTaskIDs(slo.Status.LastErrors))
 
@@ -274,7 +272,7 @@ func (a *actuator) Delete(ctx context.Context, slo *gardencorev1alpha1.ShootLeft
 	)
 
 	err = f.Run(ctx, flow.Opts{
-		Logger:           a.getLogger(slo),
+		Logger:           a.getFieldLogger(slo),
 		ProgressReporter: flow.NewImmediateProgressReporter(a.getProgressReporterFunc(slo)),
 		ErrorCleaner:     a.getErrorCleanerFunc(slo),
 		ErrorContext:     errorContext,
@@ -283,8 +281,11 @@ func (a *actuator) Delete(ctx context.Context, slo *gardencorev1alpha1.ShootLeft
 	return err != nil, err
 }
 
-func (a *actuator) getLogger(slo *gardencorev1alpha1.ShootLeftover) *logrus.Entry {
-	return logger.NewFieldLogger(a.logger, "shootLeftover", kutil.ObjectName(slo))
+// getFieldLogger returns a logrus.FieldLogger for the given ShootLeftover object with exactly the same fields
+// as the configured logr.Logger.
+// TODO Remove when logrus loggers are no longer used by flow and other library packages
+func (a *actuator) getFieldLogger(slo *gardencorev1alpha1.ShootLeftover) logrus.FieldLogger {
+	return logger.Logger.WithFields(logrus.Fields{"logger": "controller." + ControllerName, "name": slo.Name, "namespace": slo.Namespace})
 }
 
 func (a *actuator) getProgressReporterFunc(slo *gardencorev1alpha1.ShootLeftover) func(ctx context.Context, stats *flow.Stats) {
@@ -296,7 +297,7 @@ func (a *actuator) getProgressReporterFunc(slo *gardencorev1alpha1.ShootLeftover
 		slo.Status.LastOperation.LastUpdateTime = metav1.Now()
 
 		if err := a.gardenClient.Client().Status().Patch(ctx, slo, patch); err != nil {
-			a.getLogger(slo).Warnf("Could not report progress: %v", err)
+			logf.FromContext(ctx).Error(err, "Could not report progress")
 		}
 	}
 }
@@ -308,7 +309,7 @@ func (a *actuator) getErrorCleanerFunc(slo *gardencorev1alpha1.ShootLeftover) fu
 		slo.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(slo.Status.LastErrors, taskID)
 
 		if err := a.gardenClient.Client().Status().Patch(ctx, slo, patch); err != nil {
-			a.getLogger(slo).Warnf("Could not update last errors: %v", err)
+			logf.FromContext(ctx).Error(err, "Could not update last errors")
 		}
 	}
 }

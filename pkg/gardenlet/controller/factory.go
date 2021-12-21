@@ -58,6 +58,7 @@ import (
 	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // DefaultImageVector is a constant for the path to the default image vector file.
@@ -97,6 +98,8 @@ func NewGardenletControllerFactory(
 
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
 func (f *GardenletControllerFactory) Run(ctx context.Context) error {
+	log := logf.Log.WithName("controller")
+
 	gardenClientSet, err := f.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return fmt.Errorf("failed to get garden client: %+v", err)
@@ -175,7 +178,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Shoot controller: %w", err)
 	}
 
-	shootLeftoverController, err := shootleftovercontroller.NewShootLeftoverController(ctx, f.clientMap, f.cfg, f.recorder, logger.Logger)
+	shootLeftoverController, err := shootleftovercontroller.NewShootLeftoverController(ctx, f.clientMap, f.cfg, f.recorder, log)
 	if err != nil {
 		return fmt.Errorf("failed initializing ShootLeftover controller: %w", err)
 	}

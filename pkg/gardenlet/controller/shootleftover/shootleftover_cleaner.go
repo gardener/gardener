@@ -31,6 +31,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
+	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -114,16 +115,19 @@ type cleaner struct {
 	client          client.Client
 	namespace       string
 	backupEntryName string
-	logger          logrus.FieldLogger
+	logger          logr.Logger
+	// TODO Remove when field loggers are no longer used by the extensions package
+	fieldLogger logrus.FieldLogger
 }
 
 // newCleaner creates a new Cleaner with the given client and logger, for a shoot with the given technicalID and uid.
-func newCleaner(client client.Client, technicalID, uid string, logger logrus.FieldLogger) Cleaner {
+func newCleaner(client client.Client, technicalID, uid string, logger logr.Logger, fieldLogger logrus.FieldLogger) Cleaner {
 	return &cleaner{
 		client:          client,
 		namespace:       technicalID,
 		backupEntryName: technicalID + "--" + uid,
 		logger:          logger,
+		fieldLogger:     fieldLogger,
 	}
 }
 
@@ -173,7 +177,7 @@ func (c *cleaner) GetDNSOwners(ctx context.Context) ([]dnsv1alpha1.DNSOwner, err
 func (c *cleaner) MigrateExtensionObjects(ctx context.Context) error {
 	return applyToExtensionObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
 		return func(ctx context.Context) error {
-			c.logger.Infof("Migrating all %s resources...", kind)
+			c.logger.Info("Migrating all extension resources", "kind", kind)
 			return extensions.MigrateExtensionObjects(ctx, c.client, objectList, c.namespace)
 		}
 	})
@@ -192,7 +196,7 @@ func (c *cleaner) WaitUntilExtensionObjectsMigrated(ctx context.Context) error {
 func (c *cleaner) DeleteExtensionObjects(ctx context.Context) error {
 	return applyToExtensionObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
 		return func(ctx context.Context) error {
-			c.logger.Infof("Deleting all %s resources...", kind)
+			c.logger.Info("Deleting all extension resources", "kind", kind)
 			return extensions.DeleteExtensionObjects(ctx, c.client, objectList, c.namespace, nil)
 		}
 	})
@@ -202,14 +206,14 @@ func (c *cleaner) DeleteExtensionObjects(ctx context.Context) error {
 func (c *cleaner) WaitUntilExtensionObjectsDeleted(ctx context.Context) error {
 	return applyToExtensionObjectKinds(ctx, func(kind string, objectList client.ObjectList) flow.TaskFn {
 		return func(ctx context.Context) error {
-			return extensions.WaitUntilExtensionObjectsDeleted(ctx, c.client, c.logger, objectList, kind, c.namespace, defaultInterval, defaultTimeout, nil)
+			return extensions.WaitUntilExtensionObjectsDeleted(ctx, c.client, c.fieldLogger, objectList, kind, c.namespace, defaultInterval, defaultTimeout, nil)
 		}
 	})
 }
 
 // MigrateBackupEntry migrates the shoot BackupEntry resource.
 func (c *cleaner) MigrateBackupEntry(ctx context.Context) error {
-	c.logger.Infof("Migrating BackupEntry resource %s...", c.backupEntryName)
+	c.logger.Info("Migrating BackupEntry resource", "backupentry", c.backupEntryName)
 	return extensions.MigrateExtensionObject(ctx, c.client, c.getEmptyBackupEntry())
 }
 
@@ -220,13 +224,13 @@ func (c *cleaner) WaitUntilBackupEntryMigrated(ctx context.Context) error {
 
 // DeleteBackupEntry deletes the shoot BackupEntry resource in the seed cluster.
 func (c *cleaner) DeleteBackupEntry(ctx context.Context) error {
-	c.logger.Infof("Deleting BackupEntry resource %s...", c.backupEntryName)
+	c.logger.Info("Deleting BackupEntry resource", "backupentry", c.backupEntryName)
 	return extensions.DeleteExtensionObject(ctx, c.client, c.getEmptyBackupEntry())
 }
 
 // WaitUntilBackupEntryDeleted waits until the shoot BackupEntry resource in the seed cluster has been deleted.
 func (c *cleaner) WaitUntilBackupEntryDeleted(ctx context.Context) error {
-	return extensions.WaitUntilExtensionObjectDeleted(ctx, c.client, c.logger, c.getEmptyBackupEntry(), extensionsv1alpha1.BackupEntryResource, defaultInterval, defaultTimeout)
+	return extensions.WaitUntilExtensionObjectDeleted(ctx, c.client, c.fieldLogger, c.getEmptyBackupEntry(), extensionsv1alpha1.BackupEntryResource, defaultInterval, defaultTimeout)
 }
 
 // DeleteEtcds deletes all Etcd resources in the shoot namespace.
@@ -234,7 +238,7 @@ func (c *cleaner) DeleteEtcds(ctx context.Context) error {
 	if err := c.confirmObjectsDeletion(ctx, &druidv1alpha1.EtcdList{}); err != nil {
 		return err
 	}
-	c.logger.Infof("Deleting all Etcd resources in namespace %s...", c.namespace)
+	c.logger.Info("Deleting all Etcd resources in namespace", "namespace", c.namespace)
 	return c.client.DeleteAllOf(ctx, &druidv1alpha1.Etcd{}, client.InNamespace(c.namespace))
 }
 
@@ -246,7 +250,7 @@ func (c *cleaner) WaitUntilEtcdsDeleted(ctx context.Context) error {
 // SetKeepObjectsForManagedResources sets keepObjects to true for all ManagedResource resources in the shoot namespace.
 func (c *cleaner) SetKeepObjectsForManagedResources(ctx context.Context) error {
 	return c.applyToObjects(ctx, &resourcesv1alpha1.ManagedResourceList{}, func(ctx context.Context, object client.Object) error {
-		c.logger.Infof("Setting keepObjects to true for ManagedResource %s...", kutil.ObjectName(object))
+		c.logger.Info("Setting keepObjects to true for ManagedResource", "managedresource", client.ObjectKeyFromObject(object))
 		return managedresources.SetKeepObjects(ctx, c.client, object.GetNamespace(), object.GetName(), true)
 	})
 }
@@ -256,7 +260,7 @@ func (c *cleaner) DeleteManagedResources(ctx context.Context) error {
 	if err := c.removeFinalizersFromObjects(ctx, &resourcesv1alpha1.ManagedResourceList{}); err != nil {
 		return err
 	}
-	c.logger.Infof("Deleting all ManagedResource resources in namespace %s...", c.namespace)
+	c.logger.Info("Deleting all ManagedResource resources in namespace", "namespace", c.namespace)
 	return c.client.DeleteAllOf(ctx, &resourcesv1alpha1.ManagedResource{}, client.InNamespace(c.namespace))
 }
 
@@ -272,7 +276,7 @@ func (c *cleaner) DeleteDNSOwners(ctx context.Context) error {
 		return err
 	}
 	return applyToObjects(ctx, dnsOwnerList, func(ctx context.Context, object client.Object) error {
-		c.logger.Infof("Deleting DNSOwner resource %s...", kutil.ObjectName(object))
+		c.logger.Info("Deleting DNSOwner resource", "dnsowner", client.ObjectKeyFromObject(object))
 		if strings.HasPrefix(object.GetName(), c.namespace+"-") {
 			return client.IgnoreNotFound(c.client.Delete(ctx, object))
 		}
@@ -296,7 +300,7 @@ func (c *cleaner) WaitUntilDNSOwnersDeleted(ctx context.Context) error {
 
 // DeleteDNSEntries deletes all DNSEntry resources in the shoot namespace.
 func (c *cleaner) DeleteDNSEntries(ctx context.Context) error {
-	c.logger.Infof("Deleting all DNSEntry resources in namespace %s...", c.namespace)
+	c.logger.Info("Deleting all DNSEntry resources in namespace", "namespace", c.namespace)
 	return c.client.DeleteAllOf(ctx, &dnsv1alpha1.DNSEntry{}, client.InNamespace(c.namespace))
 }
 
@@ -307,7 +311,7 @@ func (c *cleaner) WaitUntilDNSEntriesDeleted(ctx context.Context) error {
 
 // DeleteDNSProviders deletes all DNSProvider resources in the shoot namespace.
 func (c *cleaner) DeleteDNSProviders(ctx context.Context) error {
-	c.logger.Infof("Deleting all DNSProvider resources in namespace %s...", c.namespace)
+	c.logger.Info("Deleting all DNSProvider resources in namespace", "namespace", c.namespace)
 	return c.client.DeleteAllOf(ctx, &dnsv1alpha1.DNSProvider{}, client.InNamespace(c.namespace))
 }
 
@@ -321,13 +325,13 @@ func (c *cleaner) DeleteSecrets(ctx context.Context) error {
 	if err := c.removeFinalizersFromObjects(ctx, &corev1.SecretList{}); err != nil {
 		return err
 	}
-	c.logger.Infof("Deleting all secrets in namespace %s...", c.namespace)
+	c.logger.Info("Deleting all secrets in namespace", "namespace", c.namespace)
 	return c.client.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(c.namespace))
 }
 
 // DeleteNamespace deletes the shoot namespace in the seed cluster.
 func (c *cleaner) DeleteNamespace(ctx context.Context) error {
-	c.logger.Infof("Deleting namespace %s...", c.namespace)
+	c.logger.Info("Deleting namespace", "namespace", c.namespace)
 	return client.IgnoreNotFound(c.client.Delete(ctx, c.getEmptyNamespace()))
 }
 
@@ -338,7 +342,7 @@ func (c *cleaner) WaitUntilNamespaceDeleted(ctx context.Context) error {
 
 // DeleteCluster deletes the shoot Cluster resource in the seed cluster.
 func (c *cleaner) DeleteCluster(ctx context.Context) error {
-	c.logger.Infof("Deleting Cluster resource %s...", c.namespace)
+	c.logger.Info("Deleting Cluster resource", "cluster", c.namespace)
 	return client.IgnoreNotFound(c.client.Delete(ctx, c.getEmptyCluster()))
 }
 
@@ -361,7 +365,7 @@ func (c *cleaner) getEmptyBackupEntry() *extensionsv1alpha1.BackupEntry {
 
 func (c *cleaner) confirmObjectsDeletion(ctx context.Context, objectList client.ObjectList) error {
 	return c.applyToObjects(ctx, objectList, func(ctx context.Context, object client.Object) error {
-		c.logger.Infof("Confirming deletion of %s resource %s...", object.GetObjectKind().GroupVersionKind().Kind, kutil.ObjectName(object))
+		c.logger.Info("Confirming deletion", "kind", object.GetObjectKind().GroupVersionKind().Kind, "object", client.ObjectKeyFromObject(object))
 		return client.IgnoreNotFound(gutil.ConfirmDeletion(ctx, c.client, object))
 	})
 }
@@ -369,7 +373,7 @@ func (c *cleaner) confirmObjectsDeletion(ctx context.Context, objectList client.
 func (c *cleaner) removeFinalizersFromObjects(ctx context.Context, objectList client.ObjectList) error {
 	return c.applyToObjects(ctx, objectList, func(ctx context.Context, object client.Object) error {
 		if len(object.GetFinalizers()) > 0 {
-			c.logger.Infof("Removing finalizers from %s resource %s...", object.GetObjectKind().GroupVersionKind().Kind, kutil.ObjectName(object))
+			c.logger.Info("Removing finalizers", "kind", object.GetObjectKind().GroupVersionKind().Kind, "object", client.ObjectKeyFromObject(object))
 			return controllerutils.RemoveAllFinalizers(ctx, c.client, c.client, object)
 		}
 		return nil
