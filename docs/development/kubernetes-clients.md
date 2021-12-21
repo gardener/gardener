@@ -76,7 +76,7 @@ err := c.Update(ctx, deployment)
 err = c.Update(ctx, shoot)
 ```
 
-A brief introduction to the controller-runtime and its basic constructs can be found [here](https://pkg.go.dev/sigs.k8s.io/controller-runtime)
+A brief introduction to controller-runtime and its basic constructs can be found [here](https://pkg.go.dev/sigs.k8s.io/controller-runtime).
 
 _Important characteristics of controller-runtime clients:_
 
