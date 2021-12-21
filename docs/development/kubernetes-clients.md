@@ -12,6 +12,7 @@ Please familiarize yourself with the following basic Kubernetes API concepts fir
 - [Extending the Kubernetes API](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/) (including Custom Resources and aggregation layer / extension API servers)
 - [Extend the Kubernetes API with CustomResourceDefinitions](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/)
 - [Working with Kubernetes Objects](https://kubernetes.io/docs/concepts/overview/working-with-objects/)
+- [Sample Controller](https://github.com/kubernetes/sample-controller/blob/master/docs/controller-client-go.md) (the diagram helps to build an understanding of an controller's basic structure)
 
 ## Client Types: Client-Go, Generated, Controller-Runtime
 
@@ -74,6 +75,8 @@ err := c.Update(ctx, deployment)
 // or
 err = c.Update(ctx, shoot)
 ```
+
+A brief introduction to the controller-runtime and its basic constructs can be found [here](https://pkg.go.dev/sigs.k8s.io/controller-runtime)
 
 _Important characteristics of controller-runtime clients:_
 
