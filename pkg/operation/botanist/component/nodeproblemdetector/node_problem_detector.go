@@ -130,6 +130,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 				Namespace: metav1.NamespaceSystem,
 				Labels:    getLabels(),
 			},
+			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 
 		clusterRole = &rbacv1.ClusterRole{

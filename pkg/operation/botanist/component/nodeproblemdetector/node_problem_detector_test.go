@@ -82,6 +82,7 @@ var _ = Describe("NodeProblemDetector", func() {
 	Describe("#Deploy", func() {
 		var (
 			serviceAccountYAML = `apiVersion: v1
+automountServiceAccountToken: false
 kind: ServiceAccount
 metadata:
   creationTimestamp: null
