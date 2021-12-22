@@ -101,13 +101,13 @@ func (c *aggregator) Start(ctx context.Context) error {
 		go func(gvk schema.GroupVersionKind, cache runtimecache.Cache) {
 			err := cache.Start(ctx)
 			if err != nil {
-				logf.Log.Error(err, "cache failed to start", "gvk", gvk.String())
+				logf.Log.Error(err, "Cache failed to start", "gvk", gvk.String())
 			}
 		}(gvk, cache)
 	}
 	go func() {
 		if err := c.fallbackCache.Start(ctx); err != nil {
-			logf.Log.Error(err, "fallback cache failed to start")
+			logf.Log.Error(err, "Fallback cache failed to start")
 		}
 	}()
 	<-ctx.Done()

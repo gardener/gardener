@@ -76,6 +76,7 @@ func NewLogger(logLevel string, format string) *logrus.Logger {
 }
 
 // NewNopLogger instantiates a new logger that logs to ioutil.Discard.
+// Deprecated: use logr for new code!
 func NewNopLogger() *logrus.Logger {
 	logger := logrus.New()
 	logger.Out = io.Discard
@@ -83,6 +84,7 @@ func NewNopLogger() *logrus.Logger {
 }
 
 // AddWriter returns a logger that uses the tests writer (e.g., GingkoWriter) as output channel
+// Deprecated: use logr for new code!
 func AddWriter(logger *logrus.Logger, writer io.Writer) *logrus.Logger {
 	logger.Out = writer
 	return logger
@@ -92,12 +94,14 @@ func AddWriter(logger *logrus.Logger, writer io.Writer) *logrus.Logger {
 // and the project in the Garden cluster to the output. If an <operationID> is provided it will be printed for every
 // log message.
 // Example output: time="2017-06-08T13:00:49+02:00" level=info msg="Creating namespace in seed cluster" shoot=core/crazy-botany.
+// Deprecated: use logr for new code!
 func NewShootLogger(logger logrus.FieldLogger, shoot, project string) *logrus.Entry {
 	return logger.WithField("shoot", fmt.Sprintf("%s/%s", project, shoot))
 }
 
 // NewFieldLogger extends an existing logrus logger and adds the provided additional field.
 // Example output: time="2017-06-08T13:00:49+02:00" level=info msg="something" <fieldKey>=<fieldValue>.
+// Deprecated: use logr for new code!
 func NewFieldLogger(logger logrus.FieldLogger, fieldKey, fieldValue string) *logrus.Entry {
 	return logger.WithField(fieldKey, fieldValue)
 }

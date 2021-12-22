@@ -147,7 +147,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 		// check if the machine controller manager is stuck
 		isStuck, msg, err2 := a.IsMachineControllerStuck(ctx, worker)
 		if err2 != nil {
-			logger.Error(err2, "failed to check if the machine controller manager pod is stuck after unsuccessfully waiting for all machine deployments to be ready")
+			logger.Error(err2, "Failed to check if the machine controller manager pod is stuck after unsuccessfully waiting for all machine deployments to be ready")
 			// continue in order to return `err` and determine error codes
 		}
 

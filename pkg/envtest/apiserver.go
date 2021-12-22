@@ -129,7 +129,7 @@ func (g *GardenerAPIServer) Start() error {
 		return fmt.Errorf("gardener-apiserver didn't get healthy: %w", err)
 	}
 
-	log.V(1).Info("registering Gardener APIs")
+	log.V(1).Info("Registering Gardener APIs")
 	if err := g.registerGardenerAPIs(startCtx); err != nil {
 		return fmt.Errorf("failed registering Gardener APIs: %w", err)
 	}
@@ -137,7 +137,7 @@ func (g *GardenerAPIServer) Start() error {
 }
 
 func (g *GardenerAPIServer) runAPIServerBinary() error {
-	log.V(1).Info("starting gardener-apiserver", "path", g.Path, "args", g.Args)
+	log.V(1).Info("Starting gardener-apiserver", "path", g.Path, "args", g.Args)
 	command := exec.Command(g.Path, g.Args...)
 	session, err := gexec.Start(command, g.Out, g.Err)
 	if err != nil {
@@ -180,7 +180,7 @@ func (g *GardenerAPIServer) runAPIServerInProcess() error {
 	g.Args = append(g.Args, "--logtostderr=false")
 	klog.SetOutput(g.Err)
 
-	log.V(1).Info("starting gardener-apiserver", "args", g.Args)
+	log.V(1).Info("Starting gardener-apiserver", "args", g.Args)
 	if err := pflagSet.Parse(g.Args); err != nil {
 		return err
 	}
@@ -224,7 +224,7 @@ func (g *GardenerAPIServer) defaultSettings() error {
 		if err != nil {
 			return fmt.Errorf("failed checking for gardener-apiserver binary under %q: %w", g.Path, err)
 		}
-		log.V(1).Info("using pre-built gardener-apiserver test binary", "path", g.Path)
+		log.V(1).Info("Using pre-built gardener-apiserver test binary", "path", g.Path)
 	}
 
 	if g.SecurePort == 0 {
@@ -303,7 +303,7 @@ func (g *GardenerAPIServer) waitUntilHealthy(ctx context.Context) error {
 	})
 	if err != nil {
 		if stopErr := g.Stop(); stopErr != nil {
-			log.Error(stopErr, "failed stopping gardener-apiserver")
+			log.Error(stopErr, "Failed stopping gardener-apiserver")
 		}
 	}
 	return err
@@ -351,7 +351,7 @@ func (g *GardenerAPIServer) registerGardenerAPIs(ctx context.Context) error {
 				return retry.MinorError(err)
 			}
 		}
-		log.V(1).Info("all Gardener APIServices available")
+		log.V(1).Info("All Gardener APIServices available")
 		return retry.Ok()
 	}); err != nil {
 		return err
@@ -385,7 +385,7 @@ func (g *GardenerAPIServer) registerGardenerAPIs(ctx context.Context) error {
 		if undiscoverableGardenerAPIGroups.Len() > 0 {
 			return retry.MinorError(fmt.Errorf("the following Gardener API GroupVersions are not discoverable: %v", undiscoverableGardenerAPIGroups.List()))
 		}
-		log.V(1).Info("all Gardener APIs discoverable")
+		log.V(1).Info("All Gardener APIs discoverable")
 		return retry.Ok()
 	})
 }

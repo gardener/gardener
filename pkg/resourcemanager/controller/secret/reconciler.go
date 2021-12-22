@@ -90,11 +90,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	addFinalizer, removeFinalizer := false, false
 	if secretIsReferenced && !secretFinalizers.Has(controllerFinalizer) {
 		addFinalizer = true
-		log.Info("adding finalizer to secret because it is referenced by a ManagedResource",
+		log.Info("Adding finalizer to secret because it is referenced by a ManagedResource",
 			"finalizer", controllerFinalizer)
 	} else if !secretIsReferenced && secretFinalizers.Has(controllerFinalizer) {
 		removeFinalizer = true
-		log.Info("removing finalizer from secret because it is not referenced by a ManagedResource of this class",
+		log.Info("Removing finalizer from secret because it is not referenced by a ManagedResource of this class",
 			"finalizer", controllerFinalizer)
 	}
 
@@ -109,7 +109,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			secret.Finalizers = secretFinalizers.UnsortedList()
 			return nil
 		}); client.IgnoreNotFound(err) != nil {
-			r.log.Error(err, "failed to update finalizers of Secret")
+			r.log.Error(err, "Failed to update finalizers of Secret")
 			// dont' run into exponential backoff for adding/removing finalizers
 			return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
 		}

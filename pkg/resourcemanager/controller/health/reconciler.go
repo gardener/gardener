@@ -16,7 +16,6 @@ package health
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -113,7 +112,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		// objects, so we create a new object of the object's type to use the caching client
 		runtimeObject, err := r.targetScheme.New(ref.GroupVersionKind())
 		if err != nil {
-			log.Info("could not create new object of kind for health checks (probably not registered in the used scheme), falling back to unstructured request",
+			log.Info("Could not create new object of kind for health checks (probably not registered in the used scheme), falling back to unstructured request",
 				"GroupVersionKind", ref.GroupVersionKind().String(), "error", err.Error())
 
 			// fallback to unstructured requests if the object's type is not registered in the scheme
@@ -124,7 +123,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		} else {
 			var ok bool
 			if obj, ok = runtimeObject.(client.Object); !ok {
-				log.Error(errors.New("could not execute health check because object type is unsupported"), "GroupVersionKind", ref.GroupVersionKind().String())
+				err := fmt.Errorf("expected client.Object but got %T", obj)
+				log.Error(err, "Could not execute health check", "GroupVersionKind", ref.GroupVersionKind().String())
 				// do not requeue because there anyway will be another update event to fix the problem
 				return ctrl.Result{}, nil
 			}

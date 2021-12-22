@@ -71,7 +71,7 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, be *extensionsv1a
 			a.logger.Info("SeedNamespace for shoot not found. Avoiding etcd backup secret deployment")
 			return nil
 		}
-		a.logger.Error(err, "failed to get seed namespace")
+		a.logger.Error(err, "Failed to get seed namespace")
 		return err
 	}
 	if namespace.DeletionTimestamp != nil {
@@ -81,7 +81,7 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, be *extensionsv1a
 
 	backupSecret, err := kutil.GetSecretByReference(ctx, a.client, &be.Spec.SecretRef)
 	if err != nil {
-		a.logger.Error(err, "failed to read backup extension secret")
+		a.logger.Error(err, "Failed to read backup extension secret")
 		return err
 	}
 

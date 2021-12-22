@@ -88,8 +88,7 @@ func (r *stateReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 		return errorutils.ReconcileErr(err)
 	}
 
-	msg := "Successfully updated worker state"
-	logger.Info(msg)
+	logger.Info("Successfully updated worker state")
 
 	return reconcile.Result{}, nil
 }

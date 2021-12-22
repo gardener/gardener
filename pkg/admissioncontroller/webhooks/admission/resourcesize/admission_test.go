@@ -283,7 +283,7 @@ var _ = Describe("handler", func() {
 
 	It("should fail because size is not in range for v1alpha1 shoot and mode is nil", func() {
 		test(shootv1alpha1, "", restrictedUser, false, "resource size exceeded")
-		Eventually(logBuffer).Should(gbytes.Say("maximum resource size exceeded"))
+		Eventually(logBuffer).Should(gbytes.Say("Maximum resource size exceeded"))
 	})
 
 	It("should fail because size is not in range for v1alpha1 shoot and mode is block", func() {
@@ -293,7 +293,7 @@ var _ = Describe("handler", func() {
 		handler = New(logger, cfg)
 
 		test(shootv1alpha1, "", restrictedUser, false, "resource size exceeded")
-		Eventually(logBuffer).Should(gbytes.Say("maximum resource size exceeded"))
+		Eventually(logBuffer).Should(gbytes.Say("Maximum resource size exceeded"))
 	})
 
 	It("should pass but log because size is not in range for v1alpha1 shoot and mode is log", func() {
@@ -303,7 +303,7 @@ var _ = Describe("handler", func() {
 		handler = New(logger, cfg)
 
 		test(shootv1alpha1, "", restrictedUser, true, "resource size ok")
-		Eventually(logBuffer).Should(gbytes.Say("maximum resource size exceeded"))
+		Eventually(logBuffer).Should(gbytes.Say("Maximum resource size exceeded"))
 	})
 
 	It("should pass because request is for status subresource of v1alpha1 shoot", func() {

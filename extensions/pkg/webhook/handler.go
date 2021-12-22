@@ -161,7 +161,7 @@ func handle(ctx context.Context, req admission.Request, m Mutator, t client.Obje
 	obj := t.DeepCopyObject().(client.Object)
 	_, _, err := decoder.Decode(req.Object.Raw, nil, obj)
 	if err != nil {
-		logger.Error(err, "could not decode request", "request", ar)
+		logger.Error(err, "Could not decode request", "request", ar)
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("could not decode request %v: %w", ar, err))
 	}
 
@@ -171,7 +171,7 @@ func handle(ctx context.Context, req admission.Request, m Mutator, t client.Obje
 	if len(req.OldObject.Raw) != 0 {
 		oldObj = t.DeepCopyObject().(client.Object)
 		if _, _, err := decoder.Decode(ar.OldObject.Raw, nil, oldObj); err != nil {
-			logger.Error(err, "could not decode old object", "object", oldObj)
+			logger.Error(err, "Could not decode old object", "object", oldObj)
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("could not decode old object %v: %v", oldObj, err))
 		}
 	}
@@ -184,7 +184,7 @@ func handle(ctx context.Context, req admission.Request, m Mutator, t client.Obje
 	// Process the resource
 	newObj := obj.DeepCopyObject().(client.Object)
 	if err = m.Mutate(ctx, newObj, oldObj); err != nil {
-		logger.Error(fmt.Errorf("could not process: %w", err), "admission denied", "kind", ar.Kind.Kind, "namespace", obj.GetNamespace(), "name", obj.GetName())
+		logger.Error(fmt.Errorf("could not process: %w", err), "Admission denied", "kind", ar.Kind.Kind, "namespace", obj.GetNamespace(), "name", obj.GetName())
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 

@@ -25,10 +25,10 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/coreos/go-systemd/v22/unit"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -361,7 +361,7 @@ func (m *mutator) ensureKubernetesGeneralConfiguration(ctx context.Context, gctx
 
 	if len(s) == 0 {
 		// File entries with empty content are not valid, so we do not add them to the OperatingSystemConfig resource.
-		m.logger.Info("skipping modification of kubernetes general configuration file entry because the new content is empty", "operatingsystemconfig", objectName)
+		m.logger.Info("Skipping modification of kubernetes general configuration file entry because the new content is empty", "operatingsystemconfig", objectName)
 		return nil
 	}
 
@@ -389,7 +389,7 @@ func (m *mutator) ensureKubeletCloudProviderConfig(ctx context.Context, gctx gco
 
 	if len(s) == 0 {
 		// File entries with empty content are not valid, so we do not add them to the OperatingSystemConfig resource.
-		m.logger.Info("skipping addition of kubelet cloud provider config file entry because its content is empty", "operatingsystemconfig", kutil.ObjectName(osc))
+		m.logger.Info("Skipping addition of kubelet cloud provider config file entry because its content is empty", "operatingsystemconfig", kutil.ObjectName(osc))
 		return nil
 	}
 

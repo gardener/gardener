@@ -459,7 +459,7 @@ func (r *Reconciler) applyNewResources(ctx context.Context, origin string, newRe
 					return merge(origin, obj.obj, current, obj.forceOverwriteLabels, obj.oldInformation.Labels, obj.forceOverwriteAnnotations, obj.oldInformation.Annotations, scaledHorizontally, scaledVertically)
 				}); err != nil {
 					if apierrors.IsConflict(err) {
-						r.log.Info(fmt.Sprintf("conflict during apply of object %q: %s", resource, err))
+						r.log.Info("Conflict while applying object", "object", resource, "err", err)
 						// return conflict error directly, so that the update will be retried
 						return err
 					}

@@ -164,7 +164,7 @@ func (g *graph) createVertex(vertexType VertexType, namespace, name string) *ver
 
 	g.graph.AddNode(v)
 	g.logger.Info(
-		"added",
+		"Added",
 		"vertex", fmt.Sprintf("%s (%d)", v, v.ID()),
 	)
 
@@ -214,7 +214,7 @@ func (g *graph) removeVertex(v *vertex) {
 		delete(g.vertices[v.vertexType], v.namespace)
 	}
 	g.logger.Info(
-		"removed (with all associated edges)",
+		"Removed (with all associated edges)",
 		"vertex", fmt.Sprintf("%s (%d)", v, v.ID()),
 	)
 }
@@ -222,7 +222,7 @@ func (g *graph) removeVertex(v *vertex) {
 func (g *graph) addEdge(from, to *vertex) {
 	g.graph.SetEdge(g.graph.NewEdge(from, to))
 	g.logger.Info(
-		"added edge",
+		"Added edge",
 		"from", fmt.Sprintf("%s (%d)", from, from.ID()),
 		"to", fmt.Sprintf("%s (%d)", to, to.ID()),
 	)
@@ -313,7 +313,7 @@ func (g *graph) deleteAllOutgoingEdges(fromVertexType VertexType, fromNamespace,
 func (g *graph) removeEdge(edge gonumgraph.Edge) {
 	g.graph.RemoveEdge(edge.From().ID(), edge.To().ID())
 	g.logger.Info(
-		"removed edge",
+		"Removed edge",
 		"from", fmt.Sprintf("%s (%d)", edge.From(), edge.From().ID()),
 		"to", fmt.Sprintf("%s (%d)", edge.To(), edge.To().ID()),
 	)

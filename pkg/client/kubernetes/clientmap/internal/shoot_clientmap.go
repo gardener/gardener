@@ -115,7 +115,7 @@ func (f *ShootClientSetFactory) secretName(seedNamespace string) string {
 	// load balancer of the shoot API server.
 	addr, err := LookupHost(fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, seedNamespace))
 	if err != nil {
-		f.log.Info("service DNS name lookup of kube-apiserver failed, falling back to external kubeconfig", "error", err)
+		f.log.Info("Service DNS name lookup of kube-apiserver failed, falling back to external kubeconfig", "error", err)
 	} else if len(addr) > 0 {
 		secretName = v1beta1constants.SecretNameGardenerInternal
 	}

@@ -187,7 +187,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeRead(seedName, graph.VertexTypeExposureClass, attrs)
 		default:
 			a.logger.Info(
-				"unhandled resource request",
+				"Unhandled resource request",
 				"seed", seedName,
 				"group", attrs.GetAPIGroup(),
 				"version", attrs.GetAPIVersion(),

@@ -96,6 +96,7 @@
 * [Setting up a local development environment](development/local_setup.md)
 * [Unit Testing and Dependency Management](development/testing_and_dependencies.md)
 * [Kubernetes Clients in Gardener](development/kubernetes-clients.md)
+* [Logging in Gardener Components](development/logging.md)
 * [Changing the API](development/changing-the-api.md)
 * [Releases, Features, Hotfixes](development/process.md)
 * [Adding New Cloud Providers](development/new-cloud-provider.md)
