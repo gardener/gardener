@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate ../../../../hack/generate-controller-registration.sh provider-local . ../../../../VERSION ../../../../example/provider-local/base/controller-registration.yaml DNSProvider:local DNSRecord:local ControlPlane:local Infrastructure:local Network:local OperatingSystemConfig:local Worker:local
+//go:generate ../../../../hack/generate-controller-registration.sh provider-local . v0.0.0 ../../../../example/provider-local/base/controller-registration.yaml DNSProvider:local DNSRecord:local ControlPlane:local Infrastructure:local Network:local OperatingSystemConfig:local Worker:local
 //go:generate cp ../../../../example/provider-local/base/controller-registration.yaml ../../../../charts/gardener/provider-local/registration/templates/controller-registration.yaml
 //go:generate sh -c "sed -i 's/    image:/{{ toYaml .Values.values | indent 4 }}/g' ../../../../charts/gardener/provider-local/registration/templates/controller-registration.yaml"
 //go:generate sh -c "sed -i 's/      tag: .*//g' ../../../../charts/gardener/provider-local/registration/templates/controller-registration.yaml"

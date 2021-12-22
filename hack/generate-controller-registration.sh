@@ -24,7 +24,7 @@ generate-controller-registration <name> <chart-dir> <dest> <kind-and-type> [kind
 
     <name>            Name of the controller registration to generate.
     <chart-dir>       Location of the chart directory.
-    <version-file>    Location of the VERSION file.
+    <version>         Version to use for the Helm chart and the tag in the ControllerDeployment.
     <dest>            The destination file to write the registration YAML to.
     <kind-and-type>   A tuple of kind and type of the controller registration to generate.
                       Separated by ':'.
@@ -41,13 +41,11 @@ if [ "$1" == "--optional" ]; then
 fi
 NAME="$1"
 CHART_DIR="$2"
-VERSION_FILE="$3"
+VERSION="$3"
 DEST="$4"
 KIND_AND_TYPE="$5"
 
 ( [[ -z "$NAME" ]] || [[ -z "$CHART_DIR" ]] || [[ -z "$DEST" ]] || [[ -z "$KIND_AND_TYPE" ]]) && usage
-
-VERSION="$(cat "$VERSION_FILE")"
 
 KINDS_AND_TYPES=("$KIND_AND_TYPE" "${@:6}")
 
