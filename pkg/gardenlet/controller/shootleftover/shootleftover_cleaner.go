@@ -110,6 +110,20 @@ type Cleaner interface {
 	WaitUntilClusterDeleted(ctx context.Context) error
 }
 
+// CleanerFactory creates Cleaner instances.
+type CleanerFactory interface {
+	// NewCleaner creates a new Cleaner with the given client and logger, for a shoot with the given technicalID and uid.
+	NewCleaner(client client.Client, technicalID, uid string, logger logr.Logger, fieldLogger logrus.FieldLogger) Cleaner
+}
+
+// CleanerFactoryFunc is a function type that implements CleanerFactory.
+type CleanerFactoryFunc func(client client.Client, technicalID, uid string, logger logr.Logger, fieldLogger logrus.FieldLogger) Cleaner
+
+// NewCleaner creates a new Cleaner with the given client and logger, for a shoot with the given technicalID and uid.
+func (f CleanerFactoryFunc) NewCleaner(client client.Client, technicalID, uid string, logger logr.Logger, fieldLogger logrus.FieldLogger) Cleaner {
+	return f(client, technicalID, uid, logger, fieldLogger)
+}
+
 // cleaner is a concrete implementation of Cleaner
 type cleaner struct {
 	client          client.Client
@@ -120,8 +134,8 @@ type cleaner struct {
 	fieldLogger logrus.FieldLogger
 }
 
-// newCleaner creates a new Cleaner with the given client and logger, for a shoot with the given technicalID and uid.
-func newCleaner(client client.Client, technicalID, uid string, logger logr.Logger, fieldLogger logrus.FieldLogger) Cleaner {
+// NewCleaner creates a new Cleaner with the given client and logger, for a shoot with the given technicalID and uid.
+func NewCleaner(client client.Client, technicalID, uid string, logger logr.Logger, fieldLogger logrus.FieldLogger) Cleaner {
 	return &cleaner{
 		client:          client,
 		namespace:       technicalID,

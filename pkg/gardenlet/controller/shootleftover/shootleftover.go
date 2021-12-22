@@ -70,8 +70,8 @@ func NewShootLeftoverController(ctx context.Context, clientMap clientmap.ClientM
 		return nil, fmt.Errorf("could not get ShootLeftover informer: %w", err)
 	}
 
-	actuator := newActuator(gardenClient, clientMap)
-	reconciler := newReconciler(gardenClient, actuator, config.Controllers.ShootLeftover, recorder)
+	actuator := NewActuator(gardenClient, clientMap, CleanerFactoryFunc(NewCleaner), 5*time.Second, 30*time.Second, 5*time.Minute)
+	reconciler := NewReconciler(gardenClient, actuator, recorder)
 
 	return &Controller{
 		gardenClient:          gardenClient,

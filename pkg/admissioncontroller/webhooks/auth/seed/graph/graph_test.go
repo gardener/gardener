@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -62,6 +63,7 @@ var _ = Describe("graph", func() {
 		fakeInformerManagedSeed               *controllertest.FakeInformer
 		fakeInformerCertificateSigningRequest *controllertest.FakeInformer
 		fakeInformerServiceAccount            *controllertest.FakeInformer
+		fakeInformerShootLeftover             *controllertest.FakeInformer
 		fakeInformers                         *informertest.FakeInformers
 
 		logger logr.Logger
@@ -112,6 +114,8 @@ var _ = Describe("graph", func() {
 		serviceAccount1Secret1 = "sa1secret1"
 		serviceAccount1Secret2 = "sa1secret2"
 		serviceAccount1        *corev1.ServiceAccount
+
+		shootLeftover1 *gardencorev1alpha1.ShootLeftover
 	)
 
 	BeforeEach(func() {
@@ -130,6 +134,7 @@ var _ = Describe("graph", func() {
 		fakeInformerManagedSeed = &controllertest.FakeInformer{}
 		fakeInformerCertificateSigningRequest = &controllertest.FakeInformer{}
 		fakeInformerServiceAccount = &controllertest.FakeInformer{}
+		fakeInformerShootLeftover = &controllertest.FakeInformer{}
 
 		fakeInformers = &informertest.FakeInformers{
 			Scheme: scheme,
@@ -145,6 +150,7 @@ var _ = Describe("graph", func() {
 				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed"):       fakeInformerManagedSeed,
 				certificatesv1.SchemeGroupVersion.WithKind("CertificateSigningRequest"): fakeInformerCertificateSigningRequest,
 				corev1.SchemeGroupVersion.WithKind("ServiceAccount"):                    fakeInformerServiceAccount,
+				gardencorev1alpha1.SchemeGroupVersion.WithKind("ShootLeftover"):         fakeInformerShootLeftover,
 			},
 		}
 
@@ -296,6 +302,14 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			Secrets: []corev1.ObjectReference{
 				{Name: serviceAccount1Secret1},
 				{Name: serviceAccount1Secret2},
+			},
+		}
+
+		shootLeftover1 = &gardencorev1alpha1.ShootLeftover{
+			ObjectMeta: metav1.ObjectMeta{Name: "shootleftover1", Namespace: "namespace1"},
+			Spec: gardencorev1alpha1.ShootLeftoverSpec{
+				SeedName:  seed1.Name,
+				ShootName: shoot1.Name,
 			},
 		}
 	})
@@ -1059,6 +1073,51 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.graph.Edges().Len()).To(BeZero())
 		Expect(graph.HasPathFrom(VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1Secret1, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1Secret2, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name)).To(BeFalse())
+	})
+
+	It("should behave as expected for gardencorev1alpha1.ShootLeftover", func() {
+		By("add")
+		fakeInformerShootLeftover.Add(shootLeftover1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeShootLeftover, shootLeftover1.Namespace, shootLeftover1.Name, VertexTypeSeed, "", shootLeftover1.Spec.SeedName)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeShootLeftover, shootLeftover1.Namespace, shootLeftover1.Name, VertexTypeShoot, shootLeftover1.Namespace, shootLeftover1.Spec.ShootName)).To(BeTrue())
+
+		By("update (irrelevant change)")
+		shootLeftover1Copy := shootLeftover1.DeepCopy()
+		shootLeftover1.Spec.TechnicalID = pointer.String("foo")
+		fakeInformerShootLeftover.Update(shootLeftover1Copy, shootLeftover1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeShootLeftover, shootLeftover1.Namespace, shootLeftover1.Name, VertexTypeSeed, "", shootLeftover1.Spec.SeedName)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeShootLeftover, shootLeftover1.Namespace, shootLeftover1.Name, VertexTypeShoot, shootLeftover1.Namespace, shootLeftover1.Spec.ShootName)).To(BeTrue())
+
+		By("update (seed name)")
+		shootLeftover1Copy = shootLeftover1.DeepCopy()
+		shootLeftover1.Spec.SeedName = "newseed"
+		fakeInformerShootLeftover.Update(shootLeftover1Copy, shootLeftover1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeShootLeftover, shootLeftover1.Namespace, shootLeftover1.Name, VertexTypeSeed, "", shootLeftover1Copy.Spec.SeedName)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeShootLeftover, shootLeftover1.Namespace, shootLeftover1.Name, VertexTypeSeed, "", shootLeftover1.Spec.SeedName)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeShootLeftover, shootLeftover1.Namespace, shootLeftover1.Name, VertexTypeShoot, shootLeftover1.Namespace, shootLeftover1.Spec.ShootName)).To(BeTrue())
+
+		By("update (shoot name)")
+		shootLeftover1Copy = shootLeftover1.DeepCopy()
+		shootLeftover1.Spec.ShootName = "newshoot"
+		fakeInformerShootLeftover.Update(shootLeftover1Copy, shootLeftover1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeShootLeftover, shootLeftover1.Namespace, shootLeftover1.Name, VertexTypeSeed, "", shootLeftover1.Spec.SeedName)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeShootLeftover, shootLeftover1.Namespace, shootLeftover1.Name, VertexTypeShoot, shootLeftover1.Namespace, shootLeftover1Copy.Spec.ShootName)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeShootLeftover, shootLeftover1.Namespace, shootLeftover1.Name, VertexTypeShoot, shootLeftover1.Namespace, shootLeftover1.Spec.ShootName)).To(BeTrue())
+
+		By("delete")
+		fakeInformerShootLeftover.Delete(shootLeftover1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeShootLeftover, shootLeftover1.Namespace, shootLeftover1.Name, VertexTypeSeed, "", shootLeftover1.Spec.SeedName)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeShootLeftover, shootLeftover1.Namespace, shootLeftover1.Name, VertexTypeShoot, shootLeftover1.Namespace, shootLeftover1.Spec.ShootName)).To(BeFalse())
 	})
 
 	It("should behave as expected with more objects modified in parallel", func() {

@@ -22,6 +22,7 @@ import (
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -48,15 +49,30 @@ type Actuator interface {
 
 // actuator is a concrete implementation of Actuator.
 type actuator struct {
-	gardenClient kubernetes.Interface
-	clientMap    clientmap.ClientMap
+	gardenClient     kubernetes.Interface
+	clientMap        clientmap.ClientMap
+	cleanerFactory   CleanerFactory
+	interval         time.Duration
+	reconcileTimeout time.Duration
+	deleteTimeout    time.Duration
 }
 
-// newActuator creates a new Actuator with the given clients and logger.
-func newActuator(gardenClient kubernetes.Interface, clientMap clientmap.ClientMap) Actuator {
+// NewActuator creates a new Actuator with the given clients, logger, and timeouts.
+func NewActuator(
+	gardenClient kubernetes.Interface,
+	clientMap clientmap.ClientMap,
+	cleanerFactory CleanerFactory,
+	interval time.Duration,
+	reconcileTimeout time.Duration,
+	deleteTimeout time.Duration,
+) Actuator {
 	return &actuator{
-		gardenClient: gardenClient,
-		clientMap:    clientMap,
+		gardenClient:     gardenClient,
+		clientMap:        clientMap,
+		cleanerFactory:   cleanerFactory,
+		interval:         interval,
+		reconcileTimeout: reconcileTimeout,
+		deleteTimeout:    deleteTimeout,
 	}
 }
 
@@ -74,10 +90,7 @@ func (a *actuator) Reconcile(ctx context.Context, slo *gardencorev1alpha1.ShootL
 		backupEntry *extensionsv1alpha1.BackupEntry
 		dnsOwners   []dnsv1alpha1.DNSOwner
 
-		defaultInterval = 5 * time.Second
-		defaultTimeout  = 30 * time.Second
-
-		cleaner = newCleaner(seedClient.Client(), *slo.Spec.TechnicalID, string(*slo.Spec.UID), logf.FromContext(ctx), a.getFieldLogger(slo))
+		cleaner = a.cleanerFactory.NewCleaner(seedClient.Client(), *slo.Spec.TechnicalID, string(*slo.Spec.UID), logf.FromContext(ctx), a.getFieldLogger(slo))
 
 		errorContext = utilerrors.NewErrorContext("Shoot leftover resources reconciliation", gardencorev1beta1helper.GetTaskIDs(slo.Status.LastErrors))
 
@@ -89,7 +102,7 @@ func (a *actuator) Reconcile(ctx context.Context, slo *gardencorev1alpha1.ShootL
 				var err error
 				namespace, err = cleaner.GetNamespace(ctx)
 				return err
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			}).RetryUntilTimeout(a.interval, a.reconcileTimeout),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Checking if Cluster resource exists",
@@ -97,7 +110,7 @@ func (a *actuator) Reconcile(ctx context.Context, slo *gardencorev1alpha1.ShootL
 				var err error
 				cluster, err = cleaner.GetCluster(ctx)
 				return err
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			}).RetryUntilTimeout(a.interval, a.reconcileTimeout),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Checking if BackupEntry resource exists",
@@ -105,7 +118,7 @@ func (a *actuator) Reconcile(ctx context.Context, slo *gardencorev1alpha1.ShootL
 				var err error
 				backupEntry, err = cleaner.GetBackupEntry(ctx)
 				return err
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			}).RetryUntilTimeout(a.interval, a.reconcileTimeout),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Checking if DNSOwner resources exists",
@@ -113,7 +126,7 @@ func (a *actuator) Reconcile(ctx context.Context, slo *gardencorev1alpha1.ShootL
 				var err error
 				dnsOwners, err = cleaner.GetDNSOwners(ctx)
 				return err
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			}).RetryUntilTimeout(a.interval, a.reconcileTimeout),
 		})
 
 		f = g.Compile()
@@ -138,10 +151,7 @@ func (a *actuator) Delete(ctx context.Context, slo *gardencorev1alpha1.ShootLeft
 	}
 
 	var (
-		defaultInterval = 5 * time.Second
-		defaultTimeout  = 5 * time.Minute
-
-		cleaner = newCleaner(seedClient.Client(), *slo.Spec.TechnicalID, string(*slo.Spec.UID), logf.FromContext(ctx), a.getFieldLogger(slo))
+		cleaner = a.cleanerFactory.NewCleaner(seedClient.Client(), *slo.Spec.TechnicalID, string(*slo.Spec.UID), logf.FromContext(ctx), a.getFieldLogger(slo))
 
 		errorContext = utilerrors.NewErrorContext("Shoot leftover resources deletion", gardencorev1beta1helper.GetTaskIDs(slo.Status.LastErrors))
 
@@ -149,7 +159,7 @@ func (a *actuator) Delete(ctx context.Context, slo *gardencorev1alpha1.ShootLeft
 
 		migrateExtensionObjects = g.Add(flow.Task{
 			Name:         "Migrating extension resources",
-			Fn:           flow.TaskFn(cleaner.MigrateExtensionObjects).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(cleaner.MigrateExtensionObjects).RetryUntilTimeout(a.interval, a.deleteTimeout),
 			Dependencies: flow.NewTaskIDs(),
 		})
 		waitUntilExtensionObjectsMigrated = g.Add(flow.Task{
@@ -159,7 +169,7 @@ func (a *actuator) Delete(ctx context.Context, slo *gardencorev1alpha1.ShootLeft
 		})
 		deleteExtensionObjects = g.Add(flow.Task{
 			Name:         "Deleting extension resources",
-			Fn:           flow.TaskFn(cleaner.DeleteExtensionObjects).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(cleaner.DeleteExtensionObjects).RetryUntilTimeout(a.interval, a.deleteTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsMigrated),
 		})
 		waitUntilExtensionObjectsDeleted = g.Add(flow.Task{
@@ -169,7 +179,7 @@ func (a *actuator) Delete(ctx context.Context, slo *gardencorev1alpha1.ShootLeft
 		})
 		migrateBackupEntry = g.Add(flow.Task{
 			Name:         "Migrating BackupEntry resource",
-			Fn:           flow.TaskFn(cleaner.MigrateBackupEntry).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(cleaner.MigrateBackupEntry).RetryUntilTimeout(a.interval, a.deleteTimeout),
 			Dependencies: flow.NewTaskIDs(),
 		})
 		waitUntilBackupEntryMigrated = g.Add(flow.Task{
@@ -179,7 +189,7 @@ func (a *actuator) Delete(ctx context.Context, slo *gardencorev1alpha1.ShootLeft
 		})
 		deleteBackupEntry = g.Add(flow.Task{
 			Name:         "Deleting BackupEntry resource",
-			Fn:           flow.TaskFn(cleaner.DeleteBackupEntry).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(cleaner.DeleteBackupEntry).RetryUntilTimeout(a.interval, a.deleteTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilBackupEntryMigrated),
 		})
 		waitUntilBackupEntryDeleted = g.Add(flow.Task{
@@ -189,7 +199,7 @@ func (a *actuator) Delete(ctx context.Context, slo *gardencorev1alpha1.ShootLeft
 		})
 		deleteCluster = g.Add(flow.Task{
 			Name:         "Deleting Cluster resource",
-			Fn:           flow.TaskFn(cleaner.DeleteCluster).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(cleaner.DeleteCluster).RetryUntilTimeout(a.interval, a.deleteTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted, waitUntilBackupEntryDeleted),
 		})
 		_ = g.Add(flow.Task{
@@ -199,7 +209,7 @@ func (a *actuator) Delete(ctx context.Context, slo *gardencorev1alpha1.ShootLeft
 		})
 		deleteEtcds = g.Add(flow.Task{
 			Name:         "Deleting Etcd resources",
-			Fn:           flow.TaskFn(cleaner.DeleteEtcds).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(cleaner.DeleteEtcds).RetryUntilTimeout(a.interval, a.deleteTimeout),
 			Dependencies: flow.NewTaskIDs(),
 		})
 		waitUntilEtcdsDeleted = g.Add(flow.Task{
@@ -209,12 +219,12 @@ func (a *actuator) Delete(ctx context.Context, slo *gardencorev1alpha1.ShootLeft
 		})
 		setKeepObjectsForManagedResources = g.Add(flow.Task{
 			Name:         "Configuring managed resources to keep their objects when deleted",
-			Fn:           flow.TaskFn(cleaner.SetKeepObjectsForManagedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(cleaner.SetKeepObjectsForManagedResources).RetryUntilTimeout(a.interval, a.deleteTimeout),
 			Dependencies: flow.NewTaskIDs(),
 		})
 		deleteManagedResources = g.Add(flow.Task{
 			Name:         "Deleting managed resources",
-			Fn:           flow.TaskFn(cleaner.DeleteManagedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(cleaner.DeleteManagedResources).RetryUntilTimeout(a.interval, a.deleteTimeout),
 			Dependencies: flow.NewTaskIDs(setKeepObjectsForManagedResources),
 		})
 		waitUntilManagedResourcesDeleted = g.Add(flow.Task{
@@ -224,7 +234,7 @@ func (a *actuator) Delete(ctx context.Context, slo *gardencorev1alpha1.ShootLeft
 		})
 		deleteDNSOwners = g.Add(flow.Task{
 			Name:         "Deleting DNSOwner resources",
-			Fn:           flow.TaskFn(cleaner.DeleteDNSOwners).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(cleaner.DeleteDNSOwners).RetryUntilTimeout(a.interval, a.deleteTimeout),
 			Dependencies: flow.NewTaskIDs(),
 		})
 		waitUntilDNSOwnersDeleted = g.Add(flow.Task{
@@ -234,7 +244,7 @@ func (a *actuator) Delete(ctx context.Context, slo *gardencorev1alpha1.ShootLeft
 		})
 		deleteDNSEntries = g.Add(flow.Task{
 			Name:         "Deleting DNSEntry resources",
-			Fn:           flow.TaskFn(cleaner.DeleteDNSEntries).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(cleaner.DeleteDNSEntries).RetryUntilTimeout(a.interval, a.deleteTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilDNSOwnersDeleted),
 		})
 		waitUntilDNSEntriesDeleted = g.Add(flow.Task{
@@ -244,7 +254,7 @@ func (a *actuator) Delete(ctx context.Context, slo *gardencorev1alpha1.ShootLeft
 		})
 		deleteDNSProviders = g.Add(flow.Task{
 			Name:         "Deleting DNSProvider resources",
-			Fn:           flow.TaskFn(cleaner.DeleteDNSProviders).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(cleaner.DeleteDNSProviders).RetryUntilTimeout(a.interval, a.deleteTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilDNSEntriesDeleted),
 		})
 		waitUntilDNSProvidersDeleted = g.Add(flow.Task{
@@ -254,12 +264,12 @@ func (a *actuator) Delete(ctx context.Context, slo *gardencorev1alpha1.ShootLeft
 		})
 		deleteSecrets = g.Add(flow.Task{
 			Name:         "Deleting secrets",
-			Fn:           flow.TaskFn(cleaner.DeleteSecrets).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(cleaner.DeleteSecrets).RetryUntilTimeout(a.interval, a.deleteTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted, waitUntilEtcdsDeleted, waitUntilManagedResourcesDeleted, waitUntilDNSEntriesDeleted, waitUntilDNSProvidersDeleted),
 		})
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting shoot namespace",
-			Fn:           flow.TaskFn(cleaner.DeleteNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(cleaner.DeleteNamespace).RetryUntilTimeout(a.interval, a.deleteTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilExtensionObjectsDeleted, waitUntilEtcdsDeleted, waitUntilManagedResourcesDeleted, waitUntilDNSEntriesDeleted, waitUntilDNSProvidersDeleted, deleteSecrets),
 		})
 		_ = g.Add(flow.Task{
@@ -292,6 +302,9 @@ func (a *actuator) getProgressReporterFunc(slo *gardencorev1alpha1.ShootLeftover
 	return func(ctx context.Context, stats *flow.Stats) {
 		patch := client.StrategicMergeFrom(slo.DeepCopy())
 
+		if slo.Status.LastOperation == nil {
+			slo.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+		}
 		slo.Status.LastOperation.Description = strings.Join(stats.Running.StringList(), ", ")
 		slo.Status.LastOperation.Progress = stats.ProgressPercent()
 		slo.Status.LastOperation.LastUpdateTime = metav1.Now()

@@ -18,6 +18,7 @@ import (
 	"context"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -273,6 +274,33 @@ var _ = Describe("seedfilter", func() {
 				Entry("BackupEntry is not managed by this seed", otherSeed, BeFalse()),
 				Entry("BackupEntry is managed by this seed", seedName, BeTrue()),
 			)
+		})
+	})
+
+	Describe("#ShootLeftoverFilterFunc", func() {
+		var shootLeftover *gardencorev1alpha1.ShootLeftover
+
+		BeforeEach(func() {
+			shootLeftover = &gardencorev1alpha1.ShootLeftover{
+				Spec: gardencorev1alpha1.ShootLeftoverSpec{
+					SeedName: seedName,
+				},
+			}
+		})
+
+		It("should return false if the specified object is not a ShootLeftover", func() {
+			f := controllerutils.ShootLeftoverFilterFunc(seedName)
+			Expect(f(shoot)).To(BeFalse())
+		})
+
+		It("should return true if spec.seedName equals the specified seed name", func() {
+			f := controllerutils.ShootLeftoverFilterFunc(seedName)
+			Expect(f(shootLeftover)).To(BeTrue())
+		})
+
+		It("should return false if spec.seedName doesn't equal the specified seed name", func() {
+			f := controllerutils.ShootLeftoverFilterFunc(otherSeed)
+			Expect(f(shootLeftover)).To(BeFalse())
 		})
 	})
 })

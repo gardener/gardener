@@ -24,7 +24,6 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 
@@ -43,16 +42,14 @@ import (
 type reconciler struct {
 	gardenClient kubernetes.Interface
 	actuator     Actuator
-	cfg          *config.ShootLeftoverControllerConfiguration
 	recorder     record.EventRecorder
 }
 
-// newReconciler creates a new ShootLeftover reconciler with the given parameters.
-func newReconciler(gardenClient kubernetes.Interface, actuator Actuator, cfg *config.ShootLeftoverControllerConfiguration, recorder record.EventRecorder) reconcile.Reconciler {
+// NewReconciler creates a new ShootLeftover reconciler with the given parameters.
+func NewReconciler(gardenClient kubernetes.Interface, actuator Actuator, recorder record.EventRecorder) reconcile.Reconciler {
 	return &reconciler{
 		gardenClient: gardenClient,
 		actuator:     actuator,
-		cfg:          cfg,
 		recorder:     recorder,
 	}
 }
@@ -271,7 +268,7 @@ func (r *reconciler) patchStatusOperationError(ctx context.Context, slo *gardenc
 
 func (r *reconciler) normalEvent(slo *gardencorev1alpha1.ShootLeftover, reason string, message string, logger logr.Logger) {
 	logger.Info(message)
-	r.recorder.Eventf(slo, corev1.EventTypeNormal, reason, message)
+	r.recorder.Event(slo, corev1.EventTypeNormal, reason, message)
 }
 
 func (r *reconciler) warningEvent(slo *gardencorev1alpha1.ShootLeftover, reason string, message string, err error, logger logr.Logger) {
