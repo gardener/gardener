@@ -160,7 +160,22 @@ See [Dave Cheney's post](https://dave.cheney.net/2015/11/05/lets-talk-about-logg
 
 - Use [lowerCamelCase](https://en.wiktionary.org/wiki/lowerCamelCase) for keys. Don't put spaces in keys, as it will make log processing with simple tools like `jq` harder.
 - Keys should be constant, human-readable, consistent across the codebase and naturally match parts of the log message, see [logr guideline](https://github.com/go-logr/logr#how-do-i-choose-my-keys).
-- When logging object keys (name and namespace), use the object's type as the log key (e.g. `pod`) and a `client.ObjectKey`/`types.NamespacedName` value as value (will be encoded into `{"namespace": "foo", "name": "bar"}`).
+
+- When logging object keys (name and namespace), use the object's type as the log key and a `client.ObjectKey`/`types.NamespacedName` value as value, e.g.:
+
+  ```go
+  var deployment *appsv1.Deployment
+  log.Info("Creating Deployment", "deployment", client.ObjectKeyFromObject(deployment))
+  ```
+  
+  which results in
+
+  ```text
+  {"level":"info","ts":"2021-12-16T08:32:21.059+0100","msg":"Creating Deployment","deployment":{"name": "bar", "namespace": "foo"}}
+  ```
+
+  Earlier, we often used `kutil.ObjectName()` for logging object keys, which encodes them into a flat string like `foo/bar`. However, this flat string cannot be processed so easily by logging stacks (or `jq`) like a structured log. Hence, the use of `kutil.ObjectName()` for logging object keys is discouraged. Existing usages should be refactored to use `client.ObjectKeyFromObject()` instead.
+
 - When handling generic `client.Object` values (e.g. in helper funcs), use `object` as key.
 - When adding timestamps to key-value pairs, use `time.Time` values. By this, they will be encoded in the same format as the log entry's timestamp.  
   Don't use `metav1.Time` values, as they will be encoded in a different format by their `Stringer` implementation. Pass `<someTimestamp>.Time` to loggers in case you have a `metav1.Time` value at hand.
