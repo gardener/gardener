@@ -303,6 +303,12 @@ func (b *Botanist) deployOrRestoreControlPlane(ctx context.Context, controlPlane
 	return controlPlane.Deploy(ctx)
 }
 
+// RestoreControlPlane restores the ControlPlane custom resource (purpose normal)
+func (b *Botanist) RestoreControlPlane(ctx context.Context) error {
+	b.Shoot.Components.Extensions.ControlPlane.SetInfrastructureProviderStatus(b.Shoot.Components.Extensions.Infrastructure.ProviderStatus())
+	return b.Shoot.Components.Extensions.ControlPlane.Restore(ctx, b.GetShootState())
+}
+
 // RestartControlPlanePods restarts (deletes) pods of the shoot control plane.
 func (b *Botanist) RestartControlPlanePods(ctx context.Context) error {
 	return b.K8sSeedClient.Client().DeleteAllOf(

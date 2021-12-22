@@ -38,19 +38,14 @@ func (b *Botanist) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
 	return b.waitUntilManagedResourceAreDeleted(ctx, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener})
 }
 
-// WaitUntilAllManagedResourcesDeleted waits until all managed resources are gone or the context is cancelled.
-func (b *Botanist) WaitUntilAllManagedResourcesDeleted(ctx context.Context) error {
-	return b.waitUntilManagedResourceAreDeleted(ctx, client.InNamespace(b.Shoot.SeedNamespace))
-}
-
 func (b *Botanist) waitUntilManagedResourceAreDeleted(ctx context.Context, listOpt ...client.ListOption) error {
 	return managedresources.WaitUntilListDeleted(ctx, b.K8sSeedClient.Client(), &resourcesv1alpha1.ManagedResourceList{}, listOpt...)
 }
 
-// KeepObjectsForAllManagedResources sets ManagedResource.Spec.KeepObjects to true.
-func (b *Botanist) KeepObjectsForAllManagedResources(ctx context.Context) error {
+// KeepObjectsForManagedResources sets ManagedResource.Spec.KeepObjects to true.
+func (b *Botanist) KeepObjectsForManagedResources(ctx context.Context) error {
 	managedResources := &resourcesv1alpha1.ManagedResourceList{}
-	if err := b.K8sSeedClient.Client().List(ctx, managedResources, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
+	if err := b.K8sSeedClient.Client().List(ctx, managedResources, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener}); err != nil {
 		return fmt.Errorf("failed to list all managed resource, %w", err)
 	}
 
@@ -61,13 +56,4 @@ func (b *Botanist) KeepObjectsForAllManagedResources(ctx context.Context) error 
 	}
 
 	return nil
-}
-
-// DeleteAllManagedResourcesObjects deletes all managed resources from the Shoot namespace in the Seed.
-func (b *Botanist) DeleteAllManagedResourcesObjects(ctx context.Context) error {
-	return b.K8sSeedClient.Client().DeleteAllOf(
-		ctx,
-		&resourcesv1alpha1.ManagedResource{},
-		client.InNamespace(b.Shoot.SeedNamespace),
-	)
 }
