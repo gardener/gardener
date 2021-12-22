@@ -246,6 +246,7 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, request type
 					details.WriteString(fmt.Sprintf("%d) %s ", index+1, ensureTrailingDot(check.detail)))
 				}
 
+				// take only the lowest threshold per condition type to not hide any failed checks
 				if check.threshold != nil && (threshold == nil || *threshold > *check.threshold) {
 					threshold = check.threshold
 				}

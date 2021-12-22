@@ -31,6 +31,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
+// defaultScaleDownProgressingThreshold is the default grace period in which a failing node health check is considered progressing
+// and not failed.
+// Only used if no machine defines a custom MachineDrainTimeout.
+var defaultScaleDownProgressingThreshold = 15 * time.Minute
+
 // DefaultHealthChecker all the information for the Worker HealthCheck.
 // This check assumes that the MachineControllerManager (https://github.com/gardener/machine-controller-manager) has been
 // deployed by the Worker extension controller.
@@ -40,21 +45,27 @@ type DefaultHealthChecker struct {
 	seedClient client.Client
 	// make sure shoot client is instantiated
 	shootClient client.Client
-	// scaleUpProgressingThreshold is the progressing threshold when the health check detects a scale-up situation.
+	// scaleUpProgressingThreshold is the absolute threshold after which the health check during a scale-up situation fails.
+	// Before the threshold is reached, the health check is marked as "Progressing"
 	scaleUpProgressingThreshold *time.Duration
-	// scaleDownProgressingThreshold is the progressing threshold when the health check detects a scale-down situation.
-	scaleDownProgressingThreshold *time.Duration
+	// machineDrainTimeoutThreshold is the threshold in percent of the machines "MachineDrainTimeout" (can be adjusted in the Shoot configuration per worker-pool)
+	// after which a machine fails the health check if it is not drained yet.
+	// Before the threshold is reached, the health check is marked as "Progressing"
+	machineDrainTimeoutThreshold *int
 }
 
 // NewNodesChecker is a health check function which performs certain checks about the nodes registered in the cluster.
 // It implements the healthcheck.HealthCheck interface.
 func NewNodesChecker() *DefaultHealthChecker {
-	scaleUpProgressingThreshold := 5 * time.Minute
-	scaleDownProgressingThreshold := 15 * time.Minute
+	scaleUpProgressingThreshold := 8 * time.Minute
+	// After 80 percent of the "MachineDrainTimeout" has elapsed, the health check is marked as failed.
+	// This is to both hide expected long drains, but at the same time to notify the stakeholder if only 20% of the expected drain time is left (might need to investigate the reason for the not-yet completed drain).
+	// After the "MachineDrainTimeout" is passed, the machine is forcefully terminated by the MCM.
+	machineDrainTimeoutThreshold := 80
 
 	return &DefaultHealthChecker{
-		scaleUpProgressingThreshold:   &scaleUpProgressingThreshold,
-		scaleDownProgressingThreshold: &scaleDownProgressingThreshold,
+		scaleUpProgressingThreshold:  &scaleUpProgressingThreshold,
+		machineDrainTimeoutThreshold: &machineDrainTimeoutThreshold,
 	}
 }
 
@@ -65,8 +76,8 @@ func (h *DefaultHealthChecker) WithScaleUpProgressingThreshold(d time.Duration) 
 }
 
 // WithScaleDownProgressingThreshold sets the scaleDownProgressingThreshold property.
-func (h *DefaultHealthChecker) WithScaleDownProgressingThreshold(d time.Duration) *DefaultHealthChecker {
-	h.scaleDownProgressingThreshold = &d
+func (h *DefaultHealthChecker) WithScaleDownProgressingThreshold(d *int) *DefaultHealthChecker {
+	h.machineDrainTimeoutThreshold = d
 	return h
 }
 
@@ -159,6 +170,12 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 		}
 	}
 
+	// case: new worker pool added and not all nodes of that worker pool joined yet
+	// Machinedeployment status condition type "Available" already advertises status: "True", although the node has not joined yet & machine is pending
+	if registeredNodes < desiredMachines {
+		checkScaleUp = true
+	}
+
 	if checkScaleUp {
 		if status, err := checkNodesScalingUp(machineList, readyNodes, desiredMachines); status != gardencorev1beta1.ConditionTrue {
 			h.logger.Error(err, "Health check failed")
@@ -171,22 +188,23 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 		}
 	}
 
+	if status, scaleDownProgressingThreshold, err := checkNodesScalingDown(machineList, nodeList, registeredNodes, desiredMachines, h.machineDrainTimeoutThreshold); status != gardencorev1beta1.ConditionTrue {
+		h.logger.Error(err, "Health check failed")
+		return &healthcheck.SingleCheckResult{
+			Status:               status,
+			Detail:               err.Error(),
+			Codes:                gardencorev1beta1helper.DetermineErrorCodes(err),
+			ProgressingThreshold: scaleDownProgressingThreshold,
+		}, nil
+	}
+
+	// after the scale down check, to not hide a failing drain operation when a machine deployment is deleted
 	if isHealthy, err := checkMachineDeploymentsHealthy(machineDeploymentList.Items); !isHealthy {
 		h.logger.Error(err, "Health check failed")
 		return &healthcheck.SingleCheckResult{
 			Status: gardencorev1beta1.ConditionFalse,
 			Detail: err.Error(),
 			Codes:  gardencorev1beta1helper.DetermineErrorCodes(err),
-		}, nil
-	}
-
-	if status, err := checkNodesScalingDown(machineList, nodeList, registeredNodes, desiredMachines); status != gardencorev1beta1.ConditionTrue {
-		h.logger.Error(err, "Health check failed")
-		return &healthcheck.SingleCheckResult{
-			Status:               status,
-			Detail:               err.Error(),
-			Codes:                gardencorev1beta1helper.DetermineErrorCodes(err),
-			ProgressingThreshold: h.scaleDownProgressingThreshold,
 		}, nil
 	}
 

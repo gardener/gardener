@@ -15,8 +15,12 @@
 package worker
 
 import (
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"fmt"
+	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils/test"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -217,6 +221,28 @@ var _ = Describe("health", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
+		It("should not return an error when there are pending and also terminating machines (rolling update)", func() {
+			machineList := &machinev1alpha1.MachineList{
+				Items: []machinev1alpha1.Machine{
+					{
+						Status: machinev1alpha1.MachineStatus{
+							CurrentStatus: machinev1alpha1.CurrentStatus{Phase: machinev1alpha1.MachineTerminating},
+						},
+					},
+					{
+						Status: machinev1alpha1.MachineStatus{
+							CurrentStatus: machinev1alpha1.CurrentStatus{Phase: machinev1alpha1.MachinePending},
+						},
+					},
+				},
+			}
+
+			status, err := checkNodesScalingUp(machineList, 0, 1)
+
+			Expect(status).To(Equal(gardencorev1beta1.ConditionProgressing))
+			Expect(err).To(HaveOccurred())
+		})
+
 		It("should return an error when not detecting erroneous machines", func() {
 			machineList := &machinev1alpha1.MachineList{
 				Items: []machinev1alpha1.Machine{
@@ -267,7 +293,7 @@ var _ = Describe("health", func() {
 
 	Describe("#checkNodesScalingDown", func() {
 		It("should return true if number of registered nodes equal number of desired machines", func() {
-			status, err := checkNodesScalingDown(nil, nil, 1, 1)
+			status, _, err := checkNodesScalingDown(nil, nil, 1, 1, nil)
 
 			Expect(status).To(Equal(gardencorev1beta1.ConditionTrue))
 			Expect(err).ToNot(HaveOccurred())
@@ -280,7 +306,7 @@ var _ = Describe("health", func() {
 				},
 			}
 
-			status, err := checkNodesScalingDown(&machinev1alpha1.MachineList{}, nodeList, 2, 1)
+			status, _, err := checkNodesScalingDown(&machinev1alpha1.MachineList{}, nodeList, 2, 1, nil)
 
 			Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
 			Expect(err).To(HaveOccurred())
@@ -305,17 +331,45 @@ var _ = Describe("health", func() {
 				}
 			)
 
-			status, err := checkNodesScalingDown(machineList, nodeList, 2, 1)
+			status, _, err := checkNodesScalingDown(machineList, nodeList, 2, 1, nil)
 
 			Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("should return an error if there are more nodes then machines", func() {
-			status, err := checkNodesScalingDown(&machinev1alpha1.MachineList{}, &corev1.NodeList{Items: []corev1.Node{{}}}, 2, 1)
+			status, _, err := checkNodesScalingDown(&machinev1alpha1.MachineList{}, &corev1.NodeList{Items: []corev1.Node{{}}}, 2, 1, nil)
 
 			Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
 			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("too many worker nodes are registered. Exceeding maximum desired machine count (2/1)"))
+		})
+
+		It("should return an error if there are more nodes then machines and some machines are draining", func() {
+			var (
+				nodeName          = "foo"
+				deletionTimestamp = metav1.Now()
+
+				machineList = &machinev1alpha1.MachineList{
+					Items: []machinev1alpha1.Machine{
+						{ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &deletionTimestamp, Labels: map[string]string{"node": nodeName}}},
+					},
+				}
+				nodeList = &corev1.NodeList{
+					Items: []corev1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{Name: nodeName},
+							Spec:       corev1.NodeSpec{Unschedulable: true},
+						},
+					},
+				}
+			)
+
+			status, _, err := checkNodesScalingDown(machineList, nodeList, 3, 1, nil)
+
+			Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("too many worker nodes are registered. Exceeding maximum desired machine count (3/1). Additionally, 1 node is waiting to be completely drained from pods"))
 		})
 
 		It("should return progressing for a regular scale down", func() {
@@ -338,10 +392,218 @@ var _ = Describe("health", func() {
 				}
 			)
 
-			status, err := checkNodesScalingDown(machineList, nodeList, 2, 1)
+			status, scaleDownProgressingThreshold, err := checkNodesScalingDown(machineList, nodeList, 2, 1, nil)
 
 			Expect(status).To(Equal(gardencorev1beta1.ConditionProgressing))
+			Expect(scaleDownProgressingThreshold).To(Equal(&defaultScaleDownProgressingThreshold))
 			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("1 node is waiting to be drained from pods. If this persists, check your"))
+		})
+
+		Describe("With machines having a custom machineDrainTimout", func() {
+			It("should return a progressing status if there are cordoned nodes but which do not exceed their drain timeout threshold", func() {
+				var (
+					nodeName                              = "foo"
+					workerPoolName                        = "worker-one"
+					deletionTimestamp                     = metav1.Now()
+					drainTimeout                          = 30 * time.Minute
+					jumpToFuture                          = 15 * time.Minute
+					threshold                             = 60
+					expectedScaledownProgressingThreshold = 18 * time.Minute // 60% of 30 min
+
+					machineList = &machinev1alpha1.MachineList{
+						Items: []machinev1alpha1.Machine{
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									DeletionTimestamp: &deletionTimestamp,
+									Labels: map[string]string{
+										"node": nodeName,
+									},
+								},
+								Spec: machinev1alpha1.MachineSpec{
+									MachineConfiguration: &machinev1alpha1.MachineConfiguration{
+										MachineDrainTimeout: &metav1.Duration{Duration: drainTimeout},
+									},
+									NodeTemplateSpec: machinev1alpha1.NodeTemplateSpec{
+										ObjectMeta: metav1.ObjectMeta{
+											Labels: map[string]string{
+												gardencorev1beta1constants.LabelWorkerPool: workerPoolName,
+											},
+										},
+									},
+								},
+							},
+						},
+					}
+					nodeList = &corev1.NodeList{
+						Items: []corev1.Node{
+							{
+								ObjectMeta: metav1.ObjectMeta{Name: nodeName},
+								Spec:       corev1.NodeSpec{Unschedulable: true},
+							},
+						},
+					}
+				)
+
+				nowFunc := func() time.Time {
+					return time.Now().Add(jumpToFuture)
+				}
+
+				defer test.WithVar(&NowFunc, nowFunc)()
+
+				status, scaleDownProgressingThreshold, err := checkNodesScalingDown(machineList, nodeList, 2, 1, &threshold)
+
+				Expect(status).To(Equal(gardencorev1beta1.ConditionProgressing))
+				Expect(err).To(HaveOccurred())
+				Expect(scaleDownProgressingThreshold).To(Equal(&expectedScaledownProgressingThreshold))
+				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("1 node is waiting to be drained from pods. The node is within the regular drain window. The Shoot's next drain window targets worker pool %q and ends", workerPoolName)))
+			})
+
+			It("should return an error if there are cordoned nodes of which some exceed and some do not exceed their drain timeout threshold", func() {
+				var (
+					nodeNameFoo       = "foo"
+					nodeNameBar       = "bar"
+					workerPoolName    = "worker-one"
+					deletionTimestamp = metav1.Now()
+
+					drainTimeout = 10 * time.Minute
+					// it is already expired, because we are only 2 minutes of total 7 minutes from expiration which is > 60% of its total lifetime of 7 minutes (4.3 min is the absolute threshold in this case).
+					drainTimeoutAlreadyExpired = 7 * time.Minute
+					jumpToFuture               = 5 * time.Minute
+					threshold                  = 60
+
+					machineList = &machinev1alpha1.MachineList{
+						Items: []machinev1alpha1.Machine{
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									DeletionTimestamp: &deletionTimestamp,
+									Labels:            map[string]string{"node": nodeNameFoo},
+								},
+								Spec: machinev1alpha1.MachineSpec{
+									MachineConfiguration: &machinev1alpha1.MachineConfiguration{
+										MachineDrainTimeout: &metav1.Duration{Duration: drainTimeout},
+									},
+								},
+							},
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									DeletionTimestamp: &deletionTimestamp,
+									Labels:            map[string]string{"node": nodeNameBar},
+								},
+								Spec: machinev1alpha1.MachineSpec{
+									MachineConfiguration: &machinev1alpha1.MachineConfiguration{
+										MachineDrainTimeout: &metav1.Duration{Duration: drainTimeoutAlreadyExpired},
+									},
+									NodeTemplateSpec: machinev1alpha1.NodeTemplateSpec{
+										ObjectMeta: metav1.ObjectMeta{
+											Labels: map[string]string{
+												gardencorev1beta1constants.LabelWorkerPool: workerPoolName,
+											},
+										},
+									},
+								},
+							},
+						},
+					}
+					nodeList = &corev1.NodeList{
+						Items: []corev1.Node{
+							{
+								ObjectMeta: metav1.ObjectMeta{Name: nodeNameFoo},
+								Spec:       corev1.NodeSpec{Unschedulable: true},
+							},
+							{
+								ObjectMeta: metav1.ObjectMeta{Name: nodeNameBar},
+								Spec:       corev1.NodeSpec{Unschedulable: true},
+							},
+						},
+					}
+				)
+
+				nowFunc := func() time.Time {
+					return time.Now().Add(jumpToFuture)
+				}
+
+				defer test.WithVar(&NowFunc, nowFunc)()
+
+				status, scaleDownProgressingThreshold, err := checkNodesScalingDown(machineList, nodeList, 2, 1, &threshold)
+
+				Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
+				Expect(err).To(HaveOccurred())
+				Expect(scaleDownProgressingThreshold).To(BeNil())
+				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("1 node failed to be drained from pods within the regular drain window. Please note, that nodes of worker pool %q are forcefully terminated at", workerPoolName)))
+			})
+
+			It("should return an error if all cordoned nodes exceed their drain timeout threshold", func() {
+				var (
+					nodeNameFoo                = "foo"
+					nodeNameBar                = "bar"
+					deletionTimestamp          = metav1.Now()
+					drainTimeout               = 10 * time.Minute
+					drainTimeoutAlreadyExpired = 7 * time.Minute
+					jumpToFuture               = 9 * time.Minute
+					threshold                  = 60
+					workerPoolName             = "worker-one"
+
+					machineList = &machinev1alpha1.MachineList{
+						Items: []machinev1alpha1.Machine{
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									DeletionTimestamp: &deletionTimestamp,
+									Labels:            map[string]string{"node": nodeNameFoo},
+								},
+								Spec: machinev1alpha1.MachineSpec{
+									MachineConfiguration: &machinev1alpha1.MachineConfiguration{
+										MachineDrainTimeout: &metav1.Duration{Duration: drainTimeout},
+									},
+								},
+							},
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									DeletionTimestamp: &deletionTimestamp,
+									Labels:            map[string]string{"node": nodeNameBar},
+								},
+								Spec: machinev1alpha1.MachineSpec{
+									MachineConfiguration: &machinev1alpha1.MachineConfiguration{
+										MachineDrainTimeout: &metav1.Duration{Duration: drainTimeoutAlreadyExpired},
+									},
+									NodeTemplateSpec: machinev1alpha1.NodeTemplateSpec{
+										ObjectMeta: metav1.ObjectMeta{
+											Labels: map[string]string{
+												gardencorev1beta1constants.LabelWorkerPool: workerPoolName,
+											},
+										},
+									},
+								},
+							},
+						},
+					}
+
+					nodeList = &corev1.NodeList{
+						Items: []corev1.Node{
+							{
+								ObjectMeta: metav1.ObjectMeta{Name: nodeNameFoo},
+								Spec:       corev1.NodeSpec{Unschedulable: true},
+							},
+							{
+								ObjectMeta: metav1.ObjectMeta{Name: nodeNameBar},
+								Spec:       corev1.NodeSpec{Unschedulable: true},
+							},
+						},
+					}
+				)
+
+				nowFunc := func() time.Time {
+					return time.Now().Add(jumpToFuture)
+				}
+
+				defer test.WithVar(&NowFunc, nowFunc)()
+
+				status, scaleDownProgressingThreshold, err := checkNodesScalingDown(machineList, nodeList, 2, 1, &threshold)
+
+				Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
+				Expect(scaleDownProgressingThreshold).To(BeNil())
+				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("2 nodes failed to be drained from pods within the regular drain window. Please note, that nodes of worker pool %q are forcefully terminated at", workerPoolName)))
+			})
 		})
 	})
 
