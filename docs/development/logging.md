@@ -19,7 +19,7 @@ Instead, it needs to be backed by a logging implementation like [zapr](https://g
 controller-runtime already provides a [set of helpers](https://github.com/kubernetes-sigs/controller-runtime/tree/v0.11.0/pkg/log/zap) for constructing zapr loggers, i.e., logr loggers backed by [zap](https://github.com/uber-go/zap), which is a popular logging library in the go community.
 Hence, we are migrating our component logging from logrus to logr (backed by zap) as part of [gardener/gardener#4251](https://github.com/gardener/gardener/issues/4251).
 
-> ⚠️ `logger.Logger` (logrus logger) is deprecated in Gardener and shall not be used in new code – use logr loggers when writing new code!
+> ⚠️ `logger.Logger` (logrus logger) is deprecated in Gardener and shall not be used in new code – use logr loggers when writing new code! (also see [Migration from logrus to logr](#migration-from-logrus-to-logr))
 > 
 > ℹ️ Don't use zap loggers directly, always use the logr interface in order to avoid tight coupling to a specific logging implementation.
 
@@ -187,3 +187,23 @@ See [Dave Cheney's post](https://dave.cheney.net/2015/11/05/lets-talk-about-logg
 - Pass `logzap.New(logzap.WriteTo(GinkgoWriter))` in tests where you want to see the logs on test failure but not on success.
 - `logf.Log` is safe to use in tests and will not cause a nil pointer deref, even if it's not initialized via `logf.SetLogger`.
   It is initially set to a `NullLogger` by default, which means all logs are discarded, unless `logf.SetLogger` is called in the first 30 seconds of execution.
+
+## Migration from logrus to logr
+
+These points might be helpful when refactoring existing code during the migration period:
+
+- For migrating an existing controller to logr:
+  - Create a named logger ([example](https://github.com/gardener/gardener/blob/ce9d741798eac2df8c470190ab483aa4c5818ebf/pkg/controllermanager/controller/cloudprofile/cloudprofile.go#L63)).
+  - Pass `controllerutils.WithLogger` to `CreateWorker` ([example](https://github.com/gardener/gardener/blob/ce9d741798eac2df8c470190ab483aa4c5818ebf/pkg/controllermanager/controller/cloudprofile/cloudprofile.go#L113)). This allows `logf.FromContext` to be used in reconcilers.
+  - Use `logf.FromContext` in `Reconcile` to retrieve the logr logger and use it from there on ([example](https://github.com/gardener/gardener/blob/ce9d741798eac2df8c470190ab483aa4c5818ebf/pkg/controllermanager/controller/cloudprofile/cloudprofile_control.go#L72)).
+  - Make sure to follow the other guidelines mentioned above as well (see [Logging in Controllers](#logging-in-controllers)).
+- Libraries might expect a different logging implementation than the component which uses it. E.g., a controller that already uses logr might want to use the `flow` package which still uses logrus. In such cases:
+  - You can consider refactoring the library along with the component itself, if feasible.
+  - It is acceptable for the migration period to use a logger derived from the respective global logger (`logger.Logger` or `logf.Log`) and pass it to the library.
+    However, please add a `TODO` for cleaning it up later on, once the migration is completed. E.g.:
+    ```go
+    // TODO: switch to logr once flow package is migrated
+    err := shootFlow.Run(flow.Opts{
+      Logger: logger.Logger.WithFields(logrus.Fields{"logger": "controller." + ControllerName, "name": shoot.Name, "namespace": shoot.Namespace})
+    })
+    ```
