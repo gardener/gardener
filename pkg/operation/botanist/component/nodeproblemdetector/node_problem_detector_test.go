@@ -234,8 +234,6 @@ spec:
       app.kubernetes.io/name: node-problem-detector
   template:
     metadata:
-      annotations:
-        scheduler.alpha.kubernetes.io/critical-pod: ""
       creationTimestamp: null
       labels:
         app: node-problem-detector
@@ -336,6 +334,12 @@ metadata:
   name: node-problem-detector
   namespace: kube-system
 spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      minAllowed:
+        cpu: 10m
+        memory: 20Mi
   targetRef:
     apiVersion: apps/v1
     kind: DaemonSet

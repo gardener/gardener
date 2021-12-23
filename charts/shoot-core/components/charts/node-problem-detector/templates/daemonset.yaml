@@ -1,7 +1,9 @@
+# TODO(ary92): Delete this Helm chart in a future version.
+---
 apiVersion: {{ include "daemonsetversion" . }}
 kind: DaemonSet
 metadata:
   name: node-problem-detector
   namespace: kube-system
   annotations:
-     resources.gardener.cloud/mode: Ignore
+    resources.gardener.cloud/mode: Ignore

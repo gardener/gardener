@@ -444,7 +444,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, deployKubeScheduler, deployVpnSeedServer, waitUntilKubeAPIServerIsReady),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying NodeProblemDetector system component",
+			Name:         "Deploying node-problem-detector system component",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.SystemComponents.NodeProblemDetector.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, waitUntilOperatingSystemConfigReady),
 		})

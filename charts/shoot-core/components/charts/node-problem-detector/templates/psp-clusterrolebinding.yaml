@@ -1,3 +1,5 @@
+# TODO(ary92): Delete this Helm chart in a future version.
+---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:

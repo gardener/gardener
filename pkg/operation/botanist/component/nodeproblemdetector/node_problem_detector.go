@@ -1,5 +1,3 @@
-package nodeproblemdetector
-
 // Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,11 +11,15 @@ package nodeproblemdetector
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+package nodeproblemdetector
+
 import (
 	"context"
 	"strconv"
 	"time"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -46,31 +48,25 @@ const (
 	clusterRoleBindingName                 = "node-problem-detector"
 	clusterRolePSPName                     = "node-problem-detector-psp"
 	clusterRoleBindingPSPName              = "node-problem-detector-psp"
+	vpaName                                = "node-problem-detector"
 	daemonSetTerminationGracePeriodSeconds = 30
 	daemonSetPrometheusPort                = 20257
 	daemonSetPrometheusAddress             = "0.0.0.0"
-	daemonSetHostNetwork                   = false
-	daemonSetChartName                     = "node-problem-detector"
 	podSecurityPolicyName                  = "node-problem-detector"
 	labelValue                             = "node-problem-detector"
 )
 
-// Interface contains functions for a node-problem-detector deployer.
-type Interface interface {
-	component.DeployWaiter
-}
-
-// Values is a set of configuration values for the node problem detector component.
+// Values is a set of configuration values for the node-problem-detector component.
 type Values struct {
 	// APIServerHost is the host of the kube-apiserver.
 	APIServerHost *string
-	// Image is the container image used for NodeProblemDetector.
+	// Image is the container image used for node-problem-detector.
 	Image string
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
 	VPAEnabled bool
 }
 
-// New creates a new instance of DeployWaiter for node problem detector.
+// New creates a new instance of DeployWaiter for node-problem-detector.
 func New(
 	client client.Client,
 	namespace string,
@@ -255,44 +251,41 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 				Name:      daemonSetName,
 				Namespace: metav1.NamespaceSystem,
 				Labels: map[string]string{
-					"app.kubernetes.io/instance": "shoot-core",
-					"app.kubernetes.io/name":     "node-problem-detector",
-					"origin":                     "gardener",
-					"gardener.cloud/role":        "system-component",
+					"app.kubernetes.io/instance":    "shoot-core",
+					"app.kubernetes.io/name":        labelValue,
+					managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
+					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
 				},
 			},
 			Spec: appsv1.DaemonSetSpec{
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						"app":                        "node-problem-detector",
+						v1beta1constants.LabelApp:    labelValue,
 						"app.kubernetes.io/instance": "shoot-core",
-						"app.kubernetes.io/name":     "node-problem-detector",
+						"app.kubernetes.io/name":     labelValue,
 					},
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
-							"app":                                    "node-problem-detector",
-							"app.kubernetes.io/instance":             "shoot-core",
-							"app.kubernetes.io/name":                 "node-problem-detector",
-							"gardener.cloud/role":                    "system-component",
-							"networking.gardener.cloud/to-apiserver": "allowed",
-							"networking.gardener.cloud/to-dns":       "allowed",
-							"origin":                                 "gardener",
-						},
-						Annotations: map[string]string{
-							"scheduler.alpha.kubernetes.io/critical-pod": "",
+							v1beta1constants.LabelApp:                           labelValue,
+							"app.kubernetes.io/instance":                        "shoot-core",
+							"app.kubernetes.io/name":                            labelValue,
+							v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleSystemComponent,
+							v1beta1constants.LabelNetworkPolicyShootToAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+							v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
+							managedresources.LabelKeyOrigin:                     managedresources.LabelValueGardener,
 						},
 					},
 					Spec: corev1.PodSpec{
-						DNSPolicy:                     corev1.DNSDefault,
-						ServiceAccountName:            serviceAccountName,
-						HostNetwork:                   daemonSetHostNetwork,
+						DNSPolicy:                     corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
+						ServiceAccountName:            serviceAccount.Name,
+						HostNetwork:                   false,
 						TerminationGracePeriodSeconds: pointer.Int64(daemonSetTerminationGracePeriodSeconds),
 						PriorityClassName:             "system-cluster-critical",
 						Containers: []corev1.Container{
 							{
-								Name:            daemonSetChartName,
+								Name:            daemonSetName,
 								Image:           c.values.Image,
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Command: []string{
@@ -396,7 +389,7 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 		updateMode := autoscalingv1beta2.UpdateModeAuto
 		vpa = &autoscalingv1beta2.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "node-problem-detector",
+				Name:      vpaName,
 				Namespace: metav1.NamespaceSystem,
 			},
 			Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
@@ -408,15 +401,28 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 				UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
 					UpdateMode: &updateMode,
 				},
+				ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
+					ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+						{
+							ContainerName: autoscalingv1beta2.DefaultContainerResourcePolicy,
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("10m"),
+								corev1.ResourceMemory: resource.MustParse("20Mi"),
+							},
+						},
+					},
+				},
 			},
 		}
 	}
+
 	if c.values.APIServerHost != nil {
 		daemonSet.Spec.Template.Spec.Containers[0].Env = append(daemonSet.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
 			Name:  "KUBERNETES_SERVICE_HOST",
 			Value: *c.values.APIServerHost,
 		})
 	}
+
 	return registry.AddAllAndSerialize(
 		serviceAccount,
 		clusterRole,
@@ -436,6 +442,7 @@ func (c *nodeProblemDetector) getResourceLimits() corev1.ResourceList {
 			corev1.ResourceMemory: resource.MustParse("80Mi"),
 		}
 	}
+
 	return corev1.ResourceList{
 		corev1.ResourceCPU:    resource.MustParse("200m"),
 		corev1.ResourceMemory: resource.MustParse("100Mi"),

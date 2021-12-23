@@ -15,7 +15,6 @@
 package botanist_test
 
 import (
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/features"
@@ -60,7 +59,7 @@ var _ = Describe("NodeProblemDetector", func() {
 		It("should successfully create a nodeproblemdetector interface", func() {
 			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.APIServerSNI, false)()
 			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: charts.ImageNameNodeProblemDetector}}
+			botanist.ImageVector = imagevector.ImageVector{{Name: "node-problem-detector"}}
 
 			nodeProblemDetector, err := botanist.DefaultNodeProblemDetector()
 			Expect(nodeProblemDetector).NotTo(BeNil())
