@@ -17,6 +17,9 @@ package kubernetes_test
 import (
 	"context"
 
+	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	. "github.com/gardener/gardener/pkg/client/kubernetes"
+
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,8 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	. "github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 var _ = Describe("scale", func() {
@@ -82,6 +83,7 @@ var _ = Describe("scale", func() {
 			updated := &druidv1alpha1.Etcd{}
 			Expect(c.Get(ctx, key, updated)).NotTo(HaveOccurred(), "could get the updated resource")
 
+			Expect(updated.Annotations).To(HaveKeyWithValue(gardencorev1beta1constants.GardenerOperation, gardencorev1beta1constants.GardenerOperationReconcile))
 			Expect(updated.Spec.Replicas).To(BeEquivalentTo(2), "updated replica")
 		})
 	})
