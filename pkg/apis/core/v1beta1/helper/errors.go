@@ -52,10 +52,9 @@ func (e *ErrorWithCodes) Error() string {
 }
 
 var (
-	unauthorizedRegexp                  = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|InvalidAuthenticationTokenTenant|SignatureDoesNotMatch|Authentication failed|AuthFailure|AuthorizationFailed|invalid character|invalid_grant|invalid_client|Authorization Profile was not found|cannot fetch token|no active subscriptions|InvalidAccessKeyId|InvalidSecretAccessKey|query returned no results|UnauthorizedOperation|not authorized|InvalidSubscriptionId)`)
+	unauthorizedRegexp                  = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|InvalidAuthenticationTokenTenant|SignatureDoesNotMatch|Authentication failed|AuthFailure|AuthorizationFailed|invalid character|invalid_grant|invalid_client|Authorization Profile was not found|cannot fetch token|no active subscriptions|InvalidAccessKeyId|InvalidSecretAccessKey|query returned no results|UnauthorizedOperation|not authorized|InvalidSubscriptionId|AccessDenied|OperationNotAllowed|Error 403)`)
 	quotaExceededRegexp                 = regexp.MustCompile(`(?i)((?:^|[^t]|(?:[^s]|^)t|(?:[^e]|^)st|(?:[^u]|^)est|(?:[^q]|^)uest|(?:[^e]|^)quest|(?:[^r]|^)equest)LimitExceeded|Quotas|Quota.*exceeded|exceeded quota|Quota has been met|QUOTA_EXCEEDED|Maximum number of ports exceeded|ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS|VolumeSizeExceedsAvailableQuota)`)
 	rateLimitsExceededRegexp            = regexp.MustCompile(`(?i)(RequestLimitExceeded|Throttling|Too many requests)`)
-	insufficientPrivilegesRegexp        = regexp.MustCompile(`(?i)(AccessDenied|OperationNotAllowed|Error 403)`)
 	dependenciesRegexp                  = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired|DeleteConflict|Conflict|inactive billing state|ReadOnlyDisabledSubscription|is already being used|InUseSubnetCannotBeDeleted|VnetInUse|InUseRouteTableCannotBeDeleted|timeout while waiting for state to become|InvalidCidrBlock|already busy for|InsufficientFreeAddressesInSubnet|InternalServerError|internalerror|internal server error|A resource with the ID|VnetAddressSpaceCannotChangeDueToPeerings|InternalBillingError|There are not enough hosts available)`)
 	retryableDependenciesRegexp         = regexp.MustCompile(`(?i)(RetryableError)`)
 	resourcesDepletedRegexp             = regexp.MustCompile(`(?i)(not available in the current hardware cluster|InsufficientInstanceCapacity|SkuNotAvailable|ZonalAllocationFailed|out of stock)`)
@@ -95,7 +94,6 @@ func DetermineErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 			gardencorev1beta1.ErrorInfraUnauthorized:             unauthorizedRegexp.MatchString,
 			gardencorev1beta1.ErrorInfraQuotaExceeded:            quotaExceededRegexp.MatchString,
 			gardencorev1beta1.ErrorInfraRateLimitsExceeded:       rateLimitsExceededRegexp.MatchString,
-			gardencorev1beta1.ErrorInfraInsufficientPrivileges:   insufficientPrivilegesRegexp.MatchString,
 			gardencorev1beta1.ErrorInfraDependencies:             dependenciesRegexp.MatchString,
 			gardencorev1beta1.ErrorRetryableInfraDependencies:    retryableDependenciesRegexp.MatchString,
 			gardencorev1beta1.ErrorInfraResourcesDepleted:        resourcesDepletedRegexp.MatchString,
@@ -263,7 +261,6 @@ func HasNonRetryableErrorCode(lastErrors ...gardencorev1beta1.LastError) bool {
 	for _, lastError := range lastErrors {
 		for _, code := range lastError.Codes {
 			if code == gardencorev1beta1.ErrorInfraUnauthorized ||
-				code == gardencorev1beta1.ErrorInfraInsufficientPrivileges ||
 				code == gardencorev1beta1.ErrorInfraDependencies ||
 				code == gardencorev1beta1.ErrorInfraQuotaExceeded ||
 				code == gardencorev1beta1.ErrorInfraRateLimitsExceeded ||

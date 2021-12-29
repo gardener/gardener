@@ -96,7 +96,6 @@ The Shoot status also contains information about the last occurred error(s) (if 
 Known error codes are:
 
 - `ERR_INFRA_UNAUTHORIZED` - indicates that the last error occurred due to invalid infrastructure credentials. It is classified as a non-retryable error code.
-- `ERR_INFRA_INSUFFICIENT_PRIVILEGES` - indicates that the last error occurred due to insufficient infrastructure privileges. It is classified as a non-retryable error code.
 - `ERR_INFRA_QUOTA_EXCEEDED` - indicates that the last error occurred due to infrastructure quota limits. It is classified as a non-retryable error code.
 - `ERR_INFRA_RATE_LIMITS_EXCEEDED` - indicates that the last error occurred due to exceeded infrastructure request rate limits.
 - `ERR_INFRA_DEPENDENCIES` - indicates that the last error occurred due to dependent objects on the infrastructure level. It is classified as a non-retryable error code.
