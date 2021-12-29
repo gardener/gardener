@@ -52,7 +52,8 @@ func (e *ErrorWithCodes) Error() string {
 }
 
 var (
-	unauthorizedRegexp                  = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|InvalidAuthenticationTokenTenant|SignatureDoesNotMatch|Authentication failed|AuthFailure|AuthorizationFailed|invalid character|invalid_grant|invalid_client|Authorization Profile was not found|cannot fetch token|no active subscriptions|InvalidAccessKeyId|InvalidSecretAccessKey|query returned no results|UnauthorizedOperation|not authorized|InvalidSubscriptionId|AccessDenied|OperationNotAllowed|Error 403)`)
+	unauthenticatedRegexp               = regexp.MustCompile(`(?i)(InvalidAuthenticationTokenTenant|Authentication failed|AuthFailure|invalid character|invalid_client|query returned no results|InvalidAccessKeyId)`)
+	unauthorizedRegexp                  = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|SignatureDoesNotMatch|AuthorizationFailed|invalid_grant|Authorization Profile was not found|cannot fetch token|no active subscriptions|InvalidSecretAccessKey|UnauthorizedOperation|not authorized|InvalidSubscriptionId|AccessDenied|OperationNotAllowed|Error 403)`)
 	quotaExceededRegexp                 = regexp.MustCompile(`(?i)((?:^|[^t]|(?:[^s]|^)t|(?:[^e]|^)st|(?:[^u]|^)est|(?:[^q]|^)uest|(?:[^e]|^)quest|(?:[^r]|^)equest)LimitExceeded|Quotas|Quota.*exceeded|exceeded quota|Quota has been met|QUOTA_EXCEEDED|Maximum number of ports exceeded|ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS|VolumeSizeExceedsAvailableQuota)`)
 	rateLimitsExceededRegexp            = regexp.MustCompile(`(?i)(RequestLimitExceeded|Throttling|Too many requests)`)
 	dependenciesRegexp                  = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired|DeleteConflict|Conflict|inactive billing state|ReadOnlyDisabledSubscription|is already being used|InUseSubnetCannotBeDeleted|VnetInUse|InUseRouteTableCannotBeDeleted|timeout while waiting for state to become|InvalidCidrBlock|already busy for|InsufficientFreeAddressesInSubnet|InternalServerError|internalerror|internal server error|A resource with the ID|VnetAddressSpaceCannotChangeDueToPeerings|InternalBillingError|There are not enough hosts available)`)
@@ -91,6 +92,7 @@ func DetermineErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 		codes   = sets.NewString()
 
 		knownCodes = map[gardencorev1beta1.ErrorCode]func(string) bool{
+			gardencorev1beta1.ErrorInfraUnauthenticated:          unauthenticatedRegexp.MatchString,
 			gardencorev1beta1.ErrorInfraUnauthorized:             unauthorizedRegexp.MatchString,
 			gardencorev1beta1.ErrorInfraQuotaExceeded:            quotaExceededRegexp.MatchString,
 			gardencorev1beta1.ErrorInfraRateLimitsExceeded:       rateLimitsExceededRegexp.MatchString,
@@ -260,7 +262,8 @@ func LastErrorWithTaskID(description string, taskID string, codes ...gardencorev
 func HasNonRetryableErrorCode(lastErrors ...gardencorev1beta1.LastError) bool {
 	for _, lastError := range lastErrors {
 		for _, code := range lastError.Codes {
-			if code == gardencorev1beta1.ErrorInfraUnauthorized ||
+			if code == gardencorev1beta1.ErrorInfraUnauthenticated ||
+				code == gardencorev1beta1.ErrorInfraUnauthorized ||
 				code == gardencorev1beta1.ErrorInfraDependencies ||
 				code == gardencorev1beta1.ErrorInfraQuotaExceeded ||
 				code == gardencorev1beta1.ErrorInfraRateLimitsExceeded ||

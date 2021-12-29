@@ -20,7 +20,10 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 type ErrorCode string
 
 const (
-	// ErrorInfraUnauthorized indicates that the last error occurred due to infrastructure credentials lacking proper authorization.
+	// ErrorInfraUnauthenticated indicates that the last error occurred due to client request not being completed because it lacks valid authentication credentials for the requested resource.
+	// It is classified as a non-retryable error code.
+	ErrorInfraUnauthenticated ErrorCode = "ERR_INFRA_UNAUTHENTICATED"
+	// ErrorInfraUnauthorized indicates that the last error occurred due to the server understanding the request but refusing to authorize it.
 	// It is classified as a non-retryable error code.
 	ErrorInfraUnauthorized ErrorCode = "ERR_INFRA_UNAUTHORIZED"
 	// ErrorInfraQuotaExceeded indicates that the last error occurred due to infrastructure quota limits.
