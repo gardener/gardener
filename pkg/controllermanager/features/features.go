@@ -26,7 +26,7 @@ var (
 	FeatureGate  = featuregate.NewFeatureGate()
 	featureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 		features.CachedRuntimeClients:          {Default: true, PreRelease: featuregate.Beta},
-		features.UseDNSRecords:                 {Default: false, PreRelease: featuregate.Alpha},
+		features.UseDNSRecords:                 {Default: true, PreRelease: featuregate.Beta},
 		features.RotateSSHKeypairOnMaintenance: {Default: false, PreRelease: featuregate.Alpha},
 	}
 )
