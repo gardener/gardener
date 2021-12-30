@@ -127,7 +127,7 @@ If this feature gate is enabled, all three DNS records mentioned above (internal
 These providers can be used for `DNSEntry` resources needed by workloads deployed on the shoot cluster.
 
 If the feature gate is disabled, Gardener will not create any `DNSRecord` resources and use `DNSProvider` / `DNSEntry` resources for its DNS records. 
-Currently, the feature gate is still in `Alpha` stage and is therefore disabled by default.
+The feature gate is enabled by default starting from `v1.39`.
 
 In order to successfully reconcile a shoot with the feature gate enabled, extension controllers for `DNSRecord` resources for types used in the default, internal and custom domain secrets should be registered via `ControllerRegistration` resources.
 
