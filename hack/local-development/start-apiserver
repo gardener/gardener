@@ -57,7 +57,6 @@ apiserver_flags="
   --tls-cert-file $TLS_CERT_FILE \
   --tls-private-key-file $TLS_KEY_FILE \
   --feature-gates SeedChange=true \
-  --feature-gates AdminKubeconfigRequest=true \
   --feature-gates UseDNSRecords=true \
   --feature-gates WorkerPoolKubernetesVersion=true \
   --shoot-admin-kubeconfig-max-expiration=1h \
