@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -374,6 +376,30 @@ func getDefaultDomains(secretLister kubecorev1listers.SecretLister) ([]string, e
 	if err != nil {
 		return nil, apierrors.NewInternalError(err)
 	}
+
+	// sort domainSecrets with DNSDefaultDomainPriority to get the domain with the highest priority in first place
+	sort.SliceStable(domainSecrets, func(i, j int) bool {
+		iAnnotations := domainSecrets[i].GetAnnotations()
+		jAnnotations := domainSecrets[j].GetAnnotations()
+		var iPriority, jPriority int
+		if iAnnotations != nil {
+			if domainPriority, ok := iAnnotations[gutil.DNSDefaultDomainPriority]; ok {
+				iPriority, err = strconv.Atoi(domainPriority)
+				if err != nil {
+					iPriority = 0
+				}
+			}
+		}
+		if jAnnotations != nil {
+			if domainPriority, ok := jAnnotations[gutil.DNSDefaultDomainPriority]; ok {
+				jPriority, err = strconv.Atoi(domainPriority)
+				if err != nil {
+					jPriority = 0
+				}
+			}
+		}
+		return iPriority > jPriority
+	})
 
 	var defaultDomains []string
 	for _, domainSecret := range domainSecrets {

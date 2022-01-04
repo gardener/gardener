@@ -60,6 +60,7 @@ When the `gardenlet` starts it scans the `garden` namespace of the garden cluste
 * **Default domain secrets** (optional), contain the DNS provider credentials (having appropriate privileges) which will be used to create/delete DNS records for a default domain for shoots (e.g., `example.com`), please see [this](../../example/10-secret-default-domain.yaml) for an example.
   * Not every end-user/stakeholder/customer has its own domain, however, Gardener needs to create a DNS record for every shoot cluster.
   * As landscape operator you might want to define a default domain owned and controlled by you that is used for all shoot clusters that don't specify their own domain.
+  * If you have multiple default domain secrets defined you can add a priority as an annotation (`dns.gardener.cloud/domain-default-priority`) to select which domain should be used for new shoots while creation. The domain with the highest priority is selected while shoot creation. If there is no annotation defined the default priority is `0`, also all non integer values are considered as priority `0`.
 
 :warning: Please note that the mentioned domain secrets are only needed if you have at least one seed cluster that is not specifing `.spec.settings.shootDNS.enabled=false`.
 Seeds with this taint don't create any DNS records for shoots scheduled on it, hence, if you only have such seeds, you don't need to create the domain secrets.
