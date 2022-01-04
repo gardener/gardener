@@ -22,6 +22,7 @@ The `Shoot` API allows to configure a few flags of the `cluster-autoscaler`:
 * `.spec.kubernetes.clusterAutoscaler.ScaleDownUnneededTime` defines how long a node should be unneeded before it is eligible for scale down (default: `30m`).
 * `.spec.kubernetes.clusterAutoscaler.ScaleDownUtilizationThreshold` defines the threshold under which a node is being removed (default: `0.5`).
 * `.spec.kubernetes.clusterAutoscaler.ScanInterval` defines how often cluster is reevaluated for scale up or down (default: `10s`). 
+* `.spec.kubernetes.clusterAutoscaler.IgnoreTaints` specifies a list of taint keys to ignore in node templates when considering to scale a node group (default: `nil`). 
 
 ## Vertical Pod Auto-Scaling
 

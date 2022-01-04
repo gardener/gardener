@@ -250,6 +250,9 @@ spec:
   #   scaleDownDelayAfterFailure: 3m
   #   scaleDownDelayAfterDelete: 0s
   #   scanInterval: 10s
+  #   ignoreTaints: 
+  #     - "node.kubernetes.io/memory-pressure"
+  #     - "node.kubernetes.io/disk-pressure"
   # verticalPodAutoscaler:
   #   enabled: true
   #   evictAfterOOMThreshold: 10m0s

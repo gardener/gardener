@@ -2716,6 +2716,18 @@ int32
 <p>MaxGracefulTerminationSeconds is the number of seconds CA waits for pod termination when trying to scale down a node (default: 600).</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>ignoreTaints</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ClusterInfo">ClusterInfo

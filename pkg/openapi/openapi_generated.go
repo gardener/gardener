@@ -1737,6 +1737,21 @@ func schema_pkg_apis_core_v1alpha1_ClusterAutoscaler(ref common.ReferenceCallbac
 							Format:      "int32",
 						},
 					},
+					"ignoreTaints": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -8913,6 +8928,21 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 							Description: "MaxGracefulTerminationSeconds is the number of seconds CA waits for pod termination when trying to scale down a node (default: 600).",
 							Type:        []string{"integer"},
 							Format:      "int32",
+						},
+					},
+					"ignoreTaints": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
 						},
 					},
 				},

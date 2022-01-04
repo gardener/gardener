@@ -402,6 +402,9 @@ type ClusterAutoscaler struct {
 	// MaxGracefulTerminationSeconds is the number of seconds CA waits for pod termination when trying to scale down a node (default: 600).
 	// +optional
 	MaxGracefulTerminationSeconds *int32 `json:"maxGracefulTerminationSeconds,omitempty" protobuf:"varint,9,opt,name=maxGracefulTerminationSeconds"`
+	// IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+	// +optional
+	IgnoreTaints []string `json:"ignoreTaints,omitempty" protobuf:"bytes,10,opt,name=ignoreTaints"`
 }
 
 // ExpanderMode is type used for Expander values

@@ -359,6 +359,10 @@ func (c *clusterAutoscaler) computeCommand() []string {
 		fmt.Sprintf("--scan-interval=%s", c.config.ScanInterval.Duration),
 	)
 
+	for _, taint := range c.config.IgnoreTaints {
+		command = append(command, fmt.Sprintf("--ignore-taint=%s", taint))
+	}
+
 	for _, machineDeployment := range c.machineDeployments {
 		command = append(command, fmt.Sprintf("--nodes=%d:%d:%s.%s", machineDeployment.Minimum, machineDeployment.Maximum, c.namespace, machineDeployment.Name))
 	}
