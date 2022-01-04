@@ -236,7 +236,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"$targetName-(.+)\"}[$__rate_interval])) by (container)",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"$targetName-(.+)\"}[$__rate_interval])) by (container) * 1000",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ container }} actual usage",
