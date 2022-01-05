@@ -22,6 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	"github.com/gardener/gardener/pkg/features"
 	. "github.com/gardener/gardener/plugin/pkg/global/extensionvalidation"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
@@ -29,6 +30,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 )
 
@@ -185,24 +187,31 @@ var _ = Describe("ExtensionValidator", func() {
 	})
 
 	Context("Seed", func() {
-		var seed = &core.Seed{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "seed",
-			},
-			Spec: core.SeedSpec{
-				Provider: core.SeedProvider{
-					Type: "foo",
+		var (
+			seed = &core.Seed{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "seed",
 				},
-				Backup: &core.SeedBackup{
-					Provider: "bar",
-				},
-				Ingress: &core.Ingress{},
-				DNS: core.SeedDNS{
-					Provider: &core.SeedDNSProvider{
-						Type: "baz",
+				Spec: core.SeedSpec{
+					Provider: core.SeedProvider{
+						Type: "foo",
+					},
+					Backup: &core.SeedBackup{
+						Provider: "bar",
+					},
+					Ingress: &core.Ingress{},
+					DNS: core.SeedDNS{
+						Provider: &core.SeedDNSProvider{
+							Type: "baz",
+						},
 					},
 				},
-			},
+			}
+			DNSExtension = dnsv1alpha1.DNSProviderKind
+		)
+
+		if utilfeature.DefaultFeatureGate.Enabled(features.UseDNSRecords) {
+			DNSExtension = extensionsv1alpha1.DNSRecordResource
 		}
 
 		var (
@@ -212,7 +221,7 @@ var _ = Describe("ExtensionValidator", func() {
 				{extensionsv1alpha1.ControlPlaneResource, seed.Spec.Provider.Type},
 				{extensionsv1alpha1.BackupBucketResource, seed.Spec.Backup.Provider},
 				{extensionsv1alpha1.BackupEntryResource, seed.Spec.Backup.Provider},
-				{dnsv1alpha1.DNSProviderKind, seed.Spec.DNS.Provider.Type},
+				{DNSExtension, seed.Spec.DNS.Provider.Type},
 			}
 			registerAllExtensions = func() {
 				for _, registration := range kindToTypes {
