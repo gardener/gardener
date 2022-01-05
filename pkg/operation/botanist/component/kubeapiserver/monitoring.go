@@ -165,7 +165,7 @@ const (
     expr: histogram_quantile(0.99, sum without (instance, pod) (rate(` + monitoringMetricApiserverRequestDurationSecondsBucket + `[5m])))
     labels:
       quantile: "0.99"
-  - record: apiserver_latency:quantile
+  - record: ` + monitoringMetricApiserverLatencySeconds + `:quantile
     expr: histogram_quantile(0.9, sum without (instance, pod) (rate(` + monitoringMetricApiserverRequestDurationSecondsBucket + `[5m])))
     labels:
       quantile: "0.9"

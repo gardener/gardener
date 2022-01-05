@@ -176,7 +176,7 @@ metric_relabel_configs:
     expr: histogram_quantile(0.99, sum without (instance, pod) (rate(apiserver_request_duration_seconds_bucket[5m])))
     labels:
       quantile: "0.99"
-  - record: apiserver_latency:quantile
+  - record: apiserver_latency_seconds:quantile
     expr: histogram_quantile(0.9, sum without (instance, pod) (rate(apiserver_request_duration_seconds_bucket[5m])))
     labels:
       quantile: "0.9"
