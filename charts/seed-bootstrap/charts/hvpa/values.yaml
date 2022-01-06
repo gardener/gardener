@@ -6,3 +6,5 @@ enabled: false
 podAnnotations: {}
 labels:
   gardener.cloud/role: hvpa
+
+readyForProjectedServiceAccountTokens: false
