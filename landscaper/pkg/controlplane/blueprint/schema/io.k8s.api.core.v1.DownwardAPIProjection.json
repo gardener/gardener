@@ -1,0 +1,1 @@
+{"description":"Represents downward API info for projecting into a projected volume. Note that this is identical to a downwardAPI volume source without the default mode.","type":"object","properties":{"items":{"description":"Items is a list of DownwardAPIVolume file","type":"array","items":{"default":{},"$ref":"blueprint://schema/io.k8s.api.core.v1.DownwardAPIVolumeFile.json"}}}}

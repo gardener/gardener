@@ -1,0 +1,1 @@
+{"description":"Rbac configures common RBAC configuration","type":"object","properties":{"seedAuthorizer":{"description":"SeedAuthorizer configures RBAC for the SeedAuthorizer","$ref":"blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.SeedAuthorizer.json"}}}
