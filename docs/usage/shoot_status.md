@@ -95,7 +95,7 @@ The Shoot status also contains information about the last occurred error(s) (if 
 
 Known error codes are:
 
-- `ERR_INFRA_UNAUTHENTICATED` - indicates that the last error occurred due to client request not being completed because it lacks valid authentication credentials for the requested resource. It is classified as a non-retryable error code.
+- `ERR_INFRA_UNAUTHENTICATED` - indicates that the last error occurred due to the client request not being completed because it lacks valid authentication credentials for the requested resource. It is classified as a non-retryable error code.
 - `ERR_INFRA_UNAUTHORIZED` - indicates that the last error occurred due to the server understanding the request but refusing to authorize it. It is classified as a non-retryable error code.
 - `ERR_INFRA_QUOTA_EXCEEDED` - indicates that the last error occurred due to infrastructure quota limits. It is classified as a non-retryable error code.
 - `ERR_INFRA_RATE_LIMITS_EXCEEDED` - indicates that the last error occurred due to exceeded infrastructure request rate limits.
