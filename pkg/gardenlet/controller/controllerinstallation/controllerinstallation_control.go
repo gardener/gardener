@@ -86,12 +86,14 @@ func newReconciler(
 	clientMap clientmap.ClientMap,
 	recorder record.EventRecorder,
 	l logrus.FieldLogger,
+	identity *gardencorev1beta1.Gardener,
 	gardenNamespace *corev1.Namespace,
 	gardenClusterIdentity string,
 ) reconcile.Reconciler {
 	return &reconciler{
 		clientMap:             clientMap,
 		recorder:              recorder,
+		identity:              identity,
 		logger:                l,
 		gardenNamespace:       gardenNamespace,
 		gardenClusterIdentity: gardenClusterIdentity,
@@ -102,6 +104,7 @@ type reconciler struct {
 	clientMap             clientmap.ClientMap
 	recorder              record.EventRecorder
 	logger                logrus.FieldLogger
+	identity              *gardencorev1beta1.Gardener
 	gardenNamespace       *corev1.Namespace
 	gardenClusterIdentity string
 }
@@ -228,6 +231,7 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 	// Mix-in some standard values for garden and seed.
 	gardenerValues := map[string]interface{}{
 		"gardener": map[string]interface{}{
+			"version": r.identity.Version,
 			"garden": map[string]interface{}{
 				"identity":        r.gardenNamespace.UID, // 'identity' value is deprecated to be replaced by 'clusterIdentity'. Should be removed in a future version.
 				"clusterIdentity": r.gardenClusterIdentity,

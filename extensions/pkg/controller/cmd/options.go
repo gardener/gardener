@@ -59,6 +59,9 @@ const (
 
 	// DisableFlag is the name of the command line flag to disable individual controllers.
 	DisableFlag = "disable-controllers"
+
+	// GardenerVersionFlag is the name of the command line flag containing the Gardener version.
+	GardenerVersionFlag = "gardener-version"
 )
 
 // LeaderElectionNameID returns a leader election ID for the given name.
@@ -425,4 +428,34 @@ func (d *SwitchOptions) Completed() *SwitchConfig {
 // SwitchConfig is the completed configuration of SwitchOptions.
 type SwitchConfig struct {
 	AddToManager func(manager.Manager) error
+}
+
+// GeneralOptions are command line options that can be set for general configuration.
+type GeneralOptions struct {
+	// GardenerVersion string
+	GardenerVersion string
+
+	config *GeneralConfig
+}
+
+// GeneralConfig is a completed general configuration.
+type GeneralConfig struct {
+	// GardenerVersion string
+	GardenerVersion string
+}
+
+// Complete implements Complete.
+func (r *GeneralOptions) Complete() error {
+	r.config = &GeneralConfig{r.GardenerVersion}
+	return nil
+}
+
+// Completed returns the completed GeneralConfig. Only call this if `Complete` was successful.
+func (r *GeneralOptions) Completed() *GeneralConfig {
+	return r.config
+}
+
+// AddFlags implements Flagger.AddFlags.
+func (r *GeneralOptions) AddFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&r.GardenerVersion, GardenerVersionFlag, "", "Version of the gardenlet.")
 }

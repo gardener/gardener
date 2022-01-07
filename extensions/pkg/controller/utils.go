@@ -18,14 +18,16 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/Masterminds/semver"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -167,4 +169,59 @@ func ShouldSkipOperation(operationType gardencorev1beta1.LastOperationType, obj 
 // If the object kind doesn't match the given reference kind this will result in an error.
 func GetObjectByReference(ctx context.Context, c client.Client, ref *autoscalingv1.CrossVersionObjectReference, namespace string, obj client.Object) error {
 	return c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: v1beta1constants.ReferencedResourcesPrefix + ref.Name}, obj)
+}
+
+var (
+	versionConstraintGreaterEqual136 *semver.Constraints
+	versionConstraintGreaterEqual137 *semver.Constraints
+)
+
+func init() {
+	var err error
+
+	versionConstraintGreaterEqual136, err = semver.NewConstraint(">= 1.36")
+	utilruntime.Must(err)
+	versionConstraintGreaterEqual137, err = semver.NewConstraint(">= 1.37")
+	utilruntime.Must(err)
+}
+
+func parseGardenerVersion(version string) (*semver.Version, error) {
+	v := version
+	if idx := strings.Index(v, "-"); idx >= 0 {
+		v = version[:idx]
+	}
+
+	return semver.NewVersion(v)
+}
+
+// UseTokenRequestor returns true when the provided Gardener version is large enough for supporting acquiring tokens
+// for shoot cluster control plane components running in the seed based on the TokenRequestor controller of
+// gardener-resource-manager (https://github.com/gardener/gardener/blob/master/docs/concepts/resource-manager.md#tokenrequestor).
+func UseTokenRequestor(gardenerVersion string) (bool, error) {
+	if gardenerVersion == "" {
+		return false, nil
+	}
+
+	gv, err := parseGardenerVersion(gardenerVersion)
+	if err != nil {
+		return false, fmt.Errorf("could not parse Gardener version: %w", err)
+	}
+
+	return versionConstraintGreaterEqual136.Check(gv), nil
+}
+
+// UseServiceAccountTokenVolumeProjection returns true when the provided Gardener version is large enough for supporting
+// automatic token volume projection for components running in the seed and shoot clusters based on the respective
+// webhook part of gardener-resource-manager (https://github.com/gardener/gardener/blob/master/docs/concepts/resource-manager.md#auto-mounting-projected-serviceaccount-tokens).
+func UseServiceAccountTokenVolumeProjection(gardenerVersion string) (bool, error) {
+	if gardenerVersion == "" {
+		return false, nil
+	}
+
+	gv, err := parseGardenerVersion(gardenerVersion)
+	if err != nil {
+		return false, fmt.Errorf("could not parse Gardener version: %w", err)
+	}
+
+	return versionConstraintGreaterEqual137.Check(gv), nil
 }
