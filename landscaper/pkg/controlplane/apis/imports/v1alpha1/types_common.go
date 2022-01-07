@@ -17,7 +17,6 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // CommonDeploymentConfiguration contains common deployment configurations for multiple Gardener components
@@ -42,13 +41,6 @@ type CommonDeploymentConfiguration struct {
 	// Default: false.
 	// +optional
 	VPA *bool `json:"vpa,omitempty"`
-}
-
-// Configuration is a wrapper around the component configuration
-type Configuration struct {
-	// ComponentConfiguration is the component configuration for a component of the Gardener control plane
-	// +optional
-	ComponentConfiguration runtime.RawExtension `json:"config,omitempty"`
 }
 
 // TLSServer configures the TLS serving endpoints of a component

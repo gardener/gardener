@@ -67,10 +67,6 @@ type APIServerDeploymentConfiguration struct {
 
 // APIServerComponentConfiguration contains configurations for the Gardener Extension API server
 type APIServerComponentConfiguration struct {
-	// ClusterIdentity is a unique identity per Gardener installation.
-	// Can be any string that uniquely identifies the landscape
-	// If not provided, is defaulted to a random identity
-	ClusterIdentity *string
 	// Encryption configures an optional encryption configuration
 	// Defaults:
 	// - resources (secrets, controllerregistrations.core.gardener.cloud, controllerdeployments.core.gardener.cloud, shootstates.core.gardener.cloud)

@@ -112,7 +112,6 @@ var _ = Describe("ValidateAPIServer", func() {
 				},
 			},
 			ComponentConfiguration: imports.APIServerComponentConfiguration{
-				ClusterIdentity: pointer.String("identity"),
 				Encryption:      nil,
 				Etcd: imports.APIServerEtcdConfiguration{
 					Url:        "etcd-virtual-garden:2237",

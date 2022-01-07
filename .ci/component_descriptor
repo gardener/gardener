@@ -2,11 +2,11 @@
 
 repo_root_dir="$(dirname $0)"/..
 # Env variables provided by pipeline:
-# - BASE_DEFINITION_PATH: path to the basis component descriptor provided by the CI (contains only OCI images build by CI).
+# - BASE_DEFINITION_PATH: path to the base component descriptor provided by the CI (contains only OCI images build by CI).
 # - CTF_PATH: pipeline will check for existing CTF archive and if exists, push the archive to a private repository.
 # - COMPONENT_DESCRIPTOR_PATH:
 #   - Filepath where the CI expects only the component-descriptor.yaml.
-#   - Cannot be used if with referenced resources in the component descriptor (like the Gardenlet blueprint).
+#   - Cannot be used with referenced resources in the component descriptor (like the Gardenlet blueprint).
 
 # call common hack script to enrich the base component descriptor
 "${repo_root_dir}"/hack/.ci/component_descriptor "${repo_root_dir}"

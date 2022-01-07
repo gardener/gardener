@@ -214,7 +214,6 @@ config:
 				},
 			},
 			ComponentConfiguration: importsv1alpha1.APIServerComponentConfiguration{
-				ClusterIdentity: &clusterIdentity,
 				Encryption: &apiserverconfigv1.EncryptionConfiguration{
 					Resources: []apiserverconfigv1.ResourceConfiguration{
 						{

@@ -72,11 +72,6 @@ type APIServerDeploymentConfiguration struct {
 
 // APIServerComponentConfiguration contains configurations for the Gardener Extension API server
 type APIServerComponentConfiguration struct {
-	// ClusterIdentity is a unique identity per Gardener installation.
-	// Can be any string that uniquely identifies the landscape
-	// If not provided, is defaulted to a random identity
-	// +optional
-	ClusterIdentity *string `json:"clusterIdentity,omitempty"`
 	// Encryption configures an optional encryption configuration
 	// Defaults:
 	// - resources (secrets, controllerregistrations.core.gardener.cloud, controllerdeployments.core.gardener.cloud, shootstates.core.gardener.cloud)
@@ -291,7 +286,7 @@ type APIServerAuditConfiguration struct {
 // assumed to be a form of the Kubernetes API, including means of authentication.
 // For more information, please see here: https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#webhook-backend
 type APIServerAuditWebhookBackend struct {
-	APIServerAuditCommonBackendConfiguration
+	APIServerAuditCommonBackendConfiguration `json:",inline"`
 	// Kubeconfig is the kubeconfig for the external audit log backend
 	Kubeconfig landscaperv1alpha1.Target `json:"kubeconfig"`
 	// InitialBackoff specifies the amount of time to wait after the first failed request before retrying.
