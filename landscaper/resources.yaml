@@ -4,6 +4,15 @@ name: gardenlet-blueprint
 relation: local
 input:
   type: "dir"
-  path: "./pkg/gardenlet"
+  path: "./pkg/gardenlet/blueprint"
+  compress: true
+  mediaType: "application/vnd.gardener.landscaper.blueprint.v1+tar+gzip"
+---
+type: landscaper.gardener.cloud/blueprint
+name: controlplane-blueprint
+relation: local
+input:
+  type: "dir"
+  path: "./pkg/controlplane/blueprint"
   compress: true
   mediaType: "application/vnd.gardener.landscaper.blueprint.v1+tar+gzip"
