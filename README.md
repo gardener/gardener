@@ -50,7 +50,7 @@ Continuous conformance test results of the latest stable Gardener release are up
 
 [1] Conformance tests are still executed and validated, unfortunately [no longer shown in TestGrid](https://github.com/kubernetes/test-infra/pull/18509#issuecomment-668204180).
 
-Besides the conformance tests, over 400 additional e2e tests are executed on a daily basis. Get an overview of the test results at [testgrid](https://testgrid.k8s.io/gardener-all).
+Get an overview of the test results at [testgrid](https://testgrid.k8s.io/gardener-all).
 
 ## Start using or developing the Gardener locally
 
