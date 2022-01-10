@@ -88,7 +88,7 @@ func defaultKubeScheduler(c client.Client, imageVector imagevector.ImageVector, 
 	return scheduler, nil
 }
 
-func defaultNginxIngress(c client.Client, imageVector imagevector.ImageVector, kubernetesVersion *semver.Version) (component.DeployWaiter, error) {
+func defaultNginxIngress(c client.Client, imageVector imagevector.ImageVector, kubernetesVersion *semver.Version, ingressClass string, config map[string]interface{}) (component.DeployWaiter, error) {
 	imageController, err := imageVector.FindImage(charts.ImageNameNginxIngressControllerSeed, imagevector.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
 		return nil, err
@@ -102,6 +102,8 @@ func defaultNginxIngress(c client.Client, imageVector imagevector.ImageVector, k
 		ImageController:     imageController.String(),
 		ImageDefaultBackend: imageDefaultBackend.String(),
 		KubernetesVersion:   kubernetesVersion,
+		IngressClass:        ingressClass,
+		ConfigData:          config,
 	}
 
 	return nginxingress.New(c, v1beta1constants.GardenNamespace, values), nil

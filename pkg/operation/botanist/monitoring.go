@@ -405,10 +405,11 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 	return b.deployGrafanaCharts(ctx, common.GrafanaUsersRole, usersDashboards.String(), basicAuthUsers, common.GrafanaUsersPrefix)
 }
 
+//TODO(shafeeqes): Reuse seed.ComputeIngressClass
 func getIngressClass(seed *gardencorev1beta1.Seed) (string, error) {
 	managedIngress := seed.Spec.Ingress != nil && seed.Spec.Ingress.Controller.Kind == v1beta1constants.IngressKindNginx
 	if !managedIngress {
-		return v1beta1constants.ShootNginxIngressClass, nil
+		return v1beta1constants.NginxIngressClass, nil
 	}
 
 	if seed.Status.KubernetesVersion == nil {

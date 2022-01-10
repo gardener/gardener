@@ -16,28 +16,97 @@ package seed
 
 import (
 	"context"
+	"encoding/json"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Masterminds/semver"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const annotationSeedIngressClass = "seed.gardener.cloud/ingress-class"
+
+func managedIngress(seed *Seed) bool {
+	return seed.GetInfo().Spec.DNS.Provider != nil && seed.GetInfo().Spec.Ingress != nil
+}
+
+func getManagedIngressDNSEntry(c client.Client, seedFQDN string, seedClusterIdentity, loadBalancerAddress string, log logrus.FieldLogger) component.DeployWaiter {
+	values := &dns.EntryValues{
+		Name:    "ingress",
+		DNSName: seedFQDN,
+		OwnerID: seedClusterIdentity + "-ingress",
+	}
+	if loadBalancerAddress != "" {
+		values.Targets = []string{loadBalancerAddress}
+	}
+
+	return dns.NewEntry(
+		log,
+		c,
+		v1beta1constants.GardenNamespace,
+		values,
+	)
+}
+
+func getManagedIngressDNSOwner(k8sSeedClient client.Client, seedClusterIdentity string) component.DeployWaiter {
+	values := &dns.OwnerValues{
+		Name:    "ingress",
+		OwnerID: seedClusterIdentity + "-ingress",
+		Active:  pointer.Bool(true),
+	}
+
+	return dns.NewOwner(
+		k8sSeedClient,
+		v1beta1constants.GardenNamespace,
+		values,
+	)
+}
+
+func getManagedIngressDNSRecord(seedClient client.Client, dnsConfig gardencorev1beta1.SeedDNS, secretData map[string][]byte, seedFQDN string, loadBalancerAddress string, log logrus.FieldLogger) component.DeployMigrateWaiter {
+	values := &dnsrecord.Values{
+		Name:       "seed-ingress",
+		SecretName: "seed-ingress",
+		Namespace:  v1beta1constants.GardenNamespace,
+		SecretData: secretData,
+		DNSName:    seedFQDN,
+		RecordType: extensionsv1alpha1helper.GetDNSRecordType(loadBalancerAddress),
+	}
+	if dnsConfig.Provider != nil {
+		values.Type = dnsConfig.Provider.Type
+		if dnsConfig.Provider.Zones != nil && len(dnsConfig.Provider.Zones.Include) == 1 {
+			values.Zone = &dnsConfig.Provider.Zones.Include[0]
+		}
+	}
+	if loadBalancerAddress != "" {
+		values.Values = []string{loadBalancerAddress}
+	}
+
+	return dnsrecord.New(
+		log,
+		seedClient,
+		values,
+		dnsrecord.DefaultInterval,
+		dnsrecord.DefaultSevereThreshold,
+		dnsrecord.DefaultTimeout,
+	)
+}
 
 func migrateIngressClassForShootIngresses(ctx context.Context, gardenClient, seedClient client.Client, seed *Seed, newClass string, kubernetesVersion *semver.Version) error {
 	if oldClass, ok := seed.GetInfo().Annotations[annotationSeedIngressClass]; ok && oldClass == newClass {
@@ -120,16 +189,21 @@ func switchIngressClass(ctx context.Context, seedClient client.Client, ingressKe
 	return seedClient.Update(ctx, ingress)
 }
 
-func computeNginxIngress(seed *Seed) map[string]interface{} {
-	values := map[string]interface{}{
-		"enabled": managedIngress(seed),
-	}
-
+func getConfig(seed *Seed) (map[string]interface{}, error) {
+	var (
+		defaultConfig = map[string]interface{}{
+			"server-name-hash-bucket-size": "256",
+			"use-proxy-protocol":           "false",
+			"worker-processes":             "2",
+		}
+		providerConfig = map[string]interface{}{}
+		err            error
+	)
 	if seed.GetInfo().Spec.Ingress != nil && seed.GetInfo().Spec.Ingress.Controller.ProviderConfig != nil {
-		values["config"] = seed.GetInfo().Spec.Ingress.Controller.ProviderConfig
+		err = json.Unmarshal(seed.GetInfo().Spec.Ingress.Controller.ProviderConfig.Raw, &providerConfig)
 	}
 
-	return values
+	return utils.MergeMaps(defaultConfig, providerConfig), err
 }
 
 func computeNginxIngressClass(seed *Seed, kubernetesVersion *semver.Version) (string, error) {
@@ -149,24 +223,5 @@ func computeNginxIngressClass(seed *Seed, kubernetesVersion *semver.Version) (st
 	if managed {
 		return v1beta1constants.SeedNginxIngressClass, nil
 	}
-	return v1beta1constants.ShootNginxIngressClass, nil
-}
-
-func deleteIngressController(ctx context.Context, c client.Client) error {
-	return kutil.DeleteObjects(
-		ctx,
-		c,
-		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:seed:nginx-ingress"}},
-		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:seed:nginx-ingress"}},
-		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress", Namespace: v1beta1constants.GardenNamespace}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-controller", Namespace: v1beta1constants.GardenNamespace}},
-		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-controller", Namespace: v1beta1constants.GardenNamespace}},
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-controller", Namespace: v1beta1constants.GardenNamespace}},
-		&policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-controller", Namespace: v1beta1constants.GardenNamespace}},
-		&autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-controller", Namespace: v1beta1constants.GardenNamespace}},
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-k8s-backend", Namespace: v1beta1constants.GardenNamespace}},
-		&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress", Namespace: v1beta1constants.GardenNamespace}},
-		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress", Namespace: v1beta1constants.GardenNamespace}},
-		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-k8s-backend", Namespace: v1beta1constants.GardenNamespace}},
-	)
+	return v1beta1constants.NginxIngressClass, nil
 }

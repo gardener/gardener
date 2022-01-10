@@ -16,6 +16,7 @@ package nginxingress
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -71,10 +72,6 @@ const (
 	containerPortBackend int32 = 8080
 )
 
-var (
-	ingressClassName = v1beta1constants.SeedNginxIngressClass122
-)
-
 // Values is a set of configuration values for the nginx-ingress component.
 type Values struct {
 	// ImageController is the container image used for nginx-ingress controller.
@@ -83,6 +80,10 @@ type Values struct {
 	ImageDefaultBackend string
 	// KubernetesVersion is the version of kubernetes for the seed cluster.
 	KubernetesVersion *semver.Version
+	// IngressClass is the ingress class for the seed nginx-ingress controller
+	IngressClass string
+	// ConfigData contains the configuration details for the nginx-ingress controller
+	ConfigData map[string]interface{}
 }
 
 // New creates a new instance of DeployWaiter for nginx-ingress
@@ -135,21 +136,13 @@ func (n *nginxIngress) WaitCleanup(ctx context.Context) error {
 }
 
 func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
-	if !version.ConstraintK8sGreaterEqual122.Check(n.values.KubernetesVersion) {
-		ingressClassName = v1beta1constants.SeedNginxIngressClass
-	}
-
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      controllerName,
 			Labels:    getLabels(labelValueController, ""),
 			Namespace: n.namespace,
 		},
-		Data: map[string]string{
-			"server-name-hash-bucket-size": "256",
-			"use-proxy-protocol":           "false",
-			"worker-processes":             "2",
-		},
+		Data: InterfaceMapToStringMap(n.values.ConfigData),
 	}
 
 	utilruntime.Must(kutil.MakeUnique(configMap))
@@ -558,11 +551,11 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 	if version.ConstraintK8sGreaterEqual122.Check(n.values.KubernetesVersion) {
 		ingressClass = &networkingv1.IngressClass{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   ingressClassName,
+				Name:   n.values.IngressClass,
 				Labels: getLabels(labelValueController, ""),
 			},
 			Spec: networkingv1.IngressClassSpec{
-				Controller: "k8s.io/" + ingressClassName,
+				Controller: "k8s.io/" + n.values.IngressClass,
 			},
 		}
 	}
@@ -605,10 +598,19 @@ func (n *nginxIngress) getArgs(configMap *corev1.ConfigMap) []string {
 		"--update-status=true",
 		"--annotations-prefix=nginx.ingress.kubernetes.io",
 		"--configmap=" + n.namespace + "/" + configMap.Name,
-		"--ingress-class=" + ingressClassName,
+		"--ingress-class=" + n.values.IngressClass,
 	}
 	if version.ConstraintK8sGreaterEqual122.Check(n.values.KubernetesVersion) {
-		out = append(out, "--controller-class=k8s.io/"+ingressClassName)
+		out = append(out, "--controller-class=k8s.io/"+n.values.IngressClass)
 	}
 	return out
+}
+
+// InterfaceMapToStringMap converts a map[string]interface{} to map[string]string
+func InterfaceMapToStringMap(in map[string]interface{}) map[string]string {
+	m := make(map[string]string, len(in))
+	for k, v := range in {
+		m[k] = fmt.Sprint(v)
+	}
+	return m
 }

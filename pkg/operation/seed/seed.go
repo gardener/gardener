@@ -27,7 +27,6 @@ import (
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
@@ -40,8 +39,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/crds"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
@@ -82,7 +79,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -202,15 +198,17 @@ const (
 	caSeed = "ca-seed"
 )
 
-var wantedCertificateAuthorities = map[string]*secretsutils.CertificateSecretConfig{
-	caSeed: {
-		Name:       caSeed,
-		CommonName: "kubernetes",
-		CertType:   secretsutils.CACert,
-	},
-}
-
-var rewriteTagRegex = regexp.MustCompile(`\$tag\s+(.+?)\s+user-exposed\.\$TAG\s+true`)
+var (
+	wantedCertificateAuthorities = map[string]*secretsutils.CertificateSecretConfig{
+		caSeed: {
+			Name:       caSeed,
+			CommonName: "kubernetes",
+			CertType:   secretsutils.CACert,
+		},
+	}
+	rewriteTagRegex = regexp.MustCompile(`\$tag\s+(.+?)\s+user-exposed\.\$TAG\s+true`)
+	ingressClass    string
+)
 
 const (
 	grafanaPrefix = "g-seed"
@@ -944,11 +942,6 @@ func RunReconcileSeedFlow(
 		}
 	}
 
-	ingressClass, err := computeNginxIngressClass(seed, kubernetesVersion)
-	if err != nil {
-		return err
-	}
-
 	values := kubernetes.Values(map[string]interface{}{
 		"priorityClassName": v1beta1constants.PriorityClassNameShootControlPlane,
 		"global": map[string]interface{}{
@@ -1001,7 +994,6 @@ func RunReconcileSeedFlow(
 				},
 			},
 		},
-		"nginx-ingress": computeNginxIngress(seed),
 		"hvpa": map[string]interface{}{
 			"enabled": hvpaEnabled,
 		},
@@ -1031,9 +1023,16 @@ func RunReconcileSeedFlow(
 	}
 
 	if !managedIngress(seed) {
-		if err := deleteIngressController(ctx, seedClient); err != nil {
+		nginxIngress := nginxingress.New(seedClient, v1beta1constants.GardenNamespace, nginxingress.Values{})
+
+		if err := component.OpDestroyAndWait(nginxIngress).Destroy(ctx); err != nil {
 			return err
 		}
+	}
+
+	ingressClass, err = computeNginxIngressClass(seed, kubernetesVersion)
+	if err != nil {
+		return err
 	}
 
 	if err := migrateIngressClassForShootIngresses(ctx, gardenClient, seedClient, seed, ingressClass, kubernetesVersion); err != nil {
@@ -1066,6 +1065,19 @@ func runCreateSeedFlow(
 	// setup for flow graph
 	var ingressLoadBalancerAddress string
 	if managedIngress(seed) {
+		providerConfig, err := getConfig(seed)
+		if err != nil {
+			return err
+		}
+		nginxIngress, err := defaultNginxIngress(seedClient, imageVector, kubernetesVersion, ingressClass, providerConfig)
+		if err != nil {
+			return err
+		}
+
+		if err = component.OpWaiter(nginxIngress).Deploy(ctx); err != nil {
+			return err
+		}
+
 		ingressLoadBalancerAddress, err = kutil.WaitUntilLoadBalancerIsReady(ctx, seedClient, v1beta1constants.GardenNamespace, "nginx-ingress-controller", time.Minute, log)
 		if err != nil {
 			return err
@@ -1088,10 +1100,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	nginxIngress, err := defaultNginxIngress(seedClient, imageVector, kubernetesVersion)
-	if err != nil {
-		return err
-	}
+
 	kubeScheduler, err := defaultKubeScheduler(seedClient, imageVector, kubernetesVersion)
 	if err != nil {
 		return err
@@ -1155,10 +1164,6 @@ func runCreateSeedFlow(
 			Name: "Deploying VPN authorization server",
 			Fn:   vpnAuthzServer.Deploy,
 		})
-		_ = g.Add(flow.Task{
-			Name: "Deploying nginx-ingress",
-			Fn:   nginxIngress.Deploy,
-		})
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{Logger: log}); err != nil {
@@ -1199,7 +1204,7 @@ func RunDeleteSeedFlow(
 		autoscaler      = clusterautoscaler.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace)
 		gsac            = seedadmissioncontroller.New(seedClient, v1beta1constants.GardenNamespace, "")
 		resourceManager = resourcemanager.New(seedClient, v1beta1constants.GardenNamespace, "", resourcemanager.Values{})
-		nginxIngress    = nginxingress.New(seedClient, v1beta1constants.GardenNamespace, nginxingress.Values{KubernetesVersion: kubernetesVersion})
+		nginxIngress    = nginxingress.New(seedClient, v1beta1constants.GardenNamespace, nginxingress.Values{})
 		etcdDruid       = etcd.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, conf, "", nil)
 		networkPolicies = networkpolicies.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, networkpolicies.GlobalValues{})
 		clusterIdentity = clusteridentity.NewForSeed(seedClient, v1beta1constants.GardenNamespace, "")
@@ -1459,71 +1464,6 @@ func getDNSProviderSecretData(ctx context.Context, gardenClient client.Client, s
 		return secret.Data, nil
 	}
 	return nil, nil
-}
-
-func managedIngress(seed *Seed) bool {
-	return seed.GetInfo().Spec.DNS.Provider != nil && seed.GetInfo().Spec.Ingress != nil
-}
-
-func getManagedIngressDNSEntry(c client.Client, seedFQDN string, seedClusterIdentity, loadBalancerAddress string, log logrus.FieldLogger) component.DeployWaiter {
-	values := &dns.EntryValues{
-		Name:    "ingress",
-		DNSName: seedFQDN,
-		OwnerID: seedClusterIdentity + "-ingress",
-	}
-	if loadBalancerAddress != "" {
-		values.Targets = []string{loadBalancerAddress}
-	}
-
-	return dns.NewEntry(
-		log,
-		c,
-		v1beta1constants.GardenNamespace,
-		values,
-	)
-}
-
-func getManagedIngressDNSOwner(k8sSeedClient client.Client, seedClusterIdentity string) component.DeployWaiter {
-	values := &dns.OwnerValues{
-		Name:    "ingress",
-		OwnerID: seedClusterIdentity + "-ingress",
-		Active:  pointer.Bool(true),
-	}
-
-	return dns.NewOwner(
-		k8sSeedClient,
-		v1beta1constants.GardenNamespace,
-		values,
-	)
-}
-
-func getManagedIngressDNSRecord(seedClient client.Client, dnsConfig gardencorev1beta1.SeedDNS, secretData map[string][]byte, seedFQDN string, loadBalancerAddress string, log logrus.FieldLogger) component.DeployMigrateWaiter {
-	values := &dnsrecord.Values{
-		Name:       "seed-ingress",
-		SecretName: "seed-ingress",
-		Namespace:  v1beta1constants.GardenNamespace,
-		SecretData: secretData,
-		DNSName:    seedFQDN,
-		RecordType: extensionsv1alpha1helper.GetDNSRecordType(loadBalancerAddress),
-	}
-	if dnsConfig.Provider != nil {
-		values.Type = dnsConfig.Provider.Type
-		if dnsConfig.Provider.Zones != nil && len(dnsConfig.Provider.Zones.Include) == 1 {
-			values.Zone = &dnsConfig.Provider.Zones.Include[0]
-		}
-	}
-	if loadBalancerAddress != "" {
-		values.Values = []string{loadBalancerAddress}
-	}
-
-	return dnsrecord.New(
-		log,
-		seedClient,
-		values,
-		dnsrecord.DefaultInterval,
-		dnsrecord.DefaultSevereThreshold,
-		dnsrecord.DefaultTimeout,
-	)
 }
 
 // desiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes

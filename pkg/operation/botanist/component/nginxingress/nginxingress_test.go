@@ -584,6 +584,7 @@ status: {}
 		Context("Kubernetes version >= 1.22", func() {
 			BeforeEach(func() {
 				values.KubernetesVersion, _ = semver.NewVersion("1.24")
+				values.IngressClass = "nginx-ingress-gardener"
 			})
 
 			It("should successfully deploy all resources", func() {
@@ -595,6 +596,7 @@ status: {}
 		Context("Kubernetes version < 1.22", func() {
 			BeforeEach(func() {
 				values.KubernetesVersion, _ = semver.NewVersion("1.18")
+				values.IngressClass = "nginx-gardener"
 			})
 
 			It("should successfully deploy all resources", func() {
