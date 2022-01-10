@@ -20,7 +20,7 @@ import (
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -41,6 +41,9 @@ func ScaleStatefulSet(ctx context.Context, c client.Client, key client.ObjectKey
 	return scaleResource(ctx, c, statefulset, replicas)
 }
 
+// TimeNow returns the current time. Exposed for testing.
+var TimeNow = time.Now
+
 // ScaleEtcd scales an Etcd resource.
 func ScaleEtcd(ctx context.Context, c client.Client, key client.ObjectKey, replicas int) error {
 	etcd := &druidv1alpha1.Etcd{
@@ -59,7 +62,8 @@ func ScaleEtcd(ctx context.Context, c client.Client, key client.ObjectKey, repli
 		etcd.SetAnnotations(make(map[string]string))
 	}
 
-	etcd.Annotations[gardencorev1beta1constants.GardenerOperation] = gardencorev1beta1constants.GardenerOperationReconcile
+	etcd.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationReconcile
+	etcd.Annotations[v1beta1constants.GardenerTimestamp] = TimeNow().UTC().String()
 	etcd.Spec.Replicas = replicas
 
 	return c.Patch(ctx, etcd, patch)

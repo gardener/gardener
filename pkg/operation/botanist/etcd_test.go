@@ -17,6 +17,7 @@ package botanist_test
 import (
 	"context"
 	"fmt"
+	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -506,6 +507,12 @@ var _ = Describe("Etcd", func() {
 			})
 
 			It("should scale both etcds to 0", func() {
+				now := time.Date(100, 1, 1, 0, 0, 0, 0, time.UTC)
+				nowFunc := func() time.Time {
+					return now
+				}
+				defer test.WithVar(&kubernetes.TimeNow, nowFunc)()
+
 				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdMain), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
 					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
 						*etcd = *etcdMain
@@ -520,7 +527,7 @@ var _ = Describe("Etcd", func() {
 					func(_ context.Context, etcd *druidv1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
 						data, err := patch.Data(etcd)
 						Expect(err).ToNot(HaveOccurred())
-						Expect(string(data)).To(Equal(`{"metadata":{"annotations":{"gardener.cloud/operation":"reconcile"}},"spec":{"replicas":0}}`))
+						Expect(string(data)).To(Equal(`{"metadata":{"annotations":{"gardener.cloud/operation":"reconcile","gardener.cloud/timestamp":"0100-01-01 00:00:00 +0000 UTC"}},"spec":{"replicas":0}}`))
 						return nil
 					}).Times(2)
 
@@ -583,6 +590,12 @@ var _ = Describe("Etcd", func() {
 			})
 
 			It("should scale both etcds to 1", func() {
+				now := time.Date(100, 1, 1, 0, 0, 0, 0, time.UTC)
+				nowFunc := func() time.Time {
+					return now
+				}
+				defer test.WithVar(&kubernetes.TimeNow, nowFunc)()
+
 				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdMain), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
 					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
 						*etcd = *etcdMain
@@ -597,7 +610,7 @@ var _ = Describe("Etcd", func() {
 					func(_ context.Context, etcd *druidv1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
 						data, err := patch.Data(etcd)
 						Expect(err).ToNot(HaveOccurred())
-						Expect(string(data)).To(Equal(`{"metadata":{"annotations":{"gardener.cloud/operation":"reconcile"}},"spec":{"replicas":1}}`))
+						Expect(string(data)).To(Equal(`{"metadata":{"annotations":{"gardener.cloud/operation":"reconcile","gardener.cloud/timestamp":"0100-01-01 00:00:00 +0000 UTC"}},"spec":{"replicas":1}}`))
 						return nil
 					}).Times(2)
 
