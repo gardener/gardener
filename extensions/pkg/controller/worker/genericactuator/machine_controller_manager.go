@@ -118,7 +118,11 @@ func (a *genericActuator) deleteMachineControllerManager(ctx context.Context, lo
 		return fmt.Errorf("cleaning up machine-controller-manager resources in seed failed: %w", err)
 	}
 
-	return nil
+	return kutil.DeleteObjects(ctx, a.client,
+		// TODO(rfranzke/BeckerMax): Remove in a future release.
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-" + a.mcmName, Namespace: workerObj.Namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: a.mcmName, Namespace: workerObj.Namespace}},
+	)
 }
 
 func (a *genericActuator) waitUntilMachineControllerManagerIsDeleted(ctx context.Context, logger logr.Logger, namespace string) error {
