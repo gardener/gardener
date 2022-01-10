@@ -447,31 +447,22 @@ spec:
           preferredDuringSchedulingIgnoredDuringExecution:
           - podAffinityTerm:
               labelSelector:
-                matchExpressions:
-                - key: app
-                  operator: In
-                  values:
-                  - nginx-ingress
-                - key: component
-                  operator: In
-                  values:
-                  - controller
-                - key: release
-                  operator: In
-                  values:
-                  - addons
+                matchLabels:
+                  app: nginx-ingress
+                  component: controller
+                  release: addons
               topologyKey: kubernetes.io/hostname
             weight: 100
       containers:
       - args:
         - /nginx-ingress-controller
-        - --default-backend-service=garden/nginx-ingress-k8s-backend
+        - --default-backend-service=` + namespace + `/nginx-ingress-k8s-backend
         - --enable-ssl-passthrough=true
-        - --publish-service=garden/nginx-ingress-controller
+        - --publish-service=` + namespace + `/nginx-ingress-controller
         - --election-id=ingress-controller-seed-leader
         - --update-status=true
         - --annotations-prefix=nginx.ingress.kubernetes.io
-        - --configmap=garden/` + configMapName + ``
+        - --configmap=` + namespace + `/` + configMapName + ``
 
 				if version.ConstraintK8sGreaterEqual122.Check(kubernetesVersion) {
 					out += `

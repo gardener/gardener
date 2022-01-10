@@ -75,17 +75,17 @@ var (
 	ingressClassName = v1beta1constants.SeedNginxIngressClass122
 )
 
-// Values is a set of configuration values for the nginxIngress component.
+// Values is a set of configuration values for the nginx-ingress component.
 type Values struct {
-	// ImageController is the container image used for nginxIngress Controller.
+	// ImageController is the container image used for nginx-ingress controller.
 	ImageController string
-	// ImageDefaultBackend is the container image used for Default Ingress backend.
+	// ImageDefaultBackend is the container image used for default ingress backend.
 	ImageDefaultBackend string
 	// KubernetesVersion is the version of kubernetes for the seed cluster.
 	KubernetesVersion *semver.Version
 }
 
-// New creates a new instance of DeployWaiter for nginxIngress
+// New creates a new instance of DeployWaiter for nginx-ingress
 func New(
 	client client.Client,
 	namespace string,
@@ -141,11 +141,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: controllerName,
-			Labels: map[string]string{
-				v1beta1constants.LabelApp: labelAppValue,
-				labelKeyComponent:         labelValueController,
-			},
+			Name:      controllerName,
+			Labels:    getLabels(labelValueController, ""),
 			Namespace: n.namespace,
 		},
 		Data: map[string]string{
@@ -158,10 +155,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 	utilruntime.Must(kutil.MakeUnique(configMap))
 
 	var (
-		intStrOne                              = intstr.FromInt(1)
-		uIDPodSecurityContextBackend     int64 = 65534
-		fsGroupPodSecurityContextBackend int64 = 65534
-		uIDPodSecurityContextController  int64 = 101
+		intStrOne       = intstr.FromInt(1)
+		healthProbePort = intstr.FromInt(10254)
 
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
@@ -178,10 +173,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceNameController,
 				Namespace: n.namespace,
-				Labels: map[string]string{
-					v1beta1constants.LabelApp: labelAppValue,
-					labelKeyComponent:         labelValueController,
-				},
+				Labels:    getLabels(labelValueController, ""),
 			},
 			Spec: corev1.ServiceSpec{
 				Type: corev1.ServiceTypeLoadBalancer,
@@ -199,7 +191,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 						TargetPort: intstr.FromInt(int(containerPortControllerHttps)),
 					},
 				},
-				Selector: getLabels("controller"),
+				Selector: getLabels(labelValueController, labelValueAddons),
 			},
 		}
 
@@ -215,7 +207,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					Port:       servicePortBackend,
 					TargetPort: intstr.FromInt(int(containerPortBackend)),
 				}},
-				Selector: getLabels("backend"),
+				Selector: getLabels(labelValueBackend, labelValueAddons),
 			},
 		}
 
@@ -223,15 +215,12 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      controllerName,
 				Namespace: n.namespace,
-				Labels: map[string]string{
-					v1beta1constants.LabelApp: labelAppValue,
-					labelKeyComponent:         labelValueController,
-				},
+				Labels:    getLabels(labelValueController, ""),
 			},
 			Spec: policyv1beta1.PodDisruptionBudgetSpec{
 				MinAvailable: &intStrOne,
 				Selector: &metav1.LabelSelector{
-					MatchLabels: getLabels("controller"),
+					MatchLabels: getLabels(labelValueController, labelValueAddons),
 				},
 			},
 		}
@@ -356,17 +345,17 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				RevisionHistoryLimit: pointer.Int32(2),
 				Replicas:             pointer.Int32(1),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: getLabels("backend"),
+					MatchLabels: getLabels(labelValueBackend, labelValueAddons),
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: getLabels("backend"),
+						Labels: getLabels(labelValueBackend, labelValueAddons),
 					},
 					Spec: corev1.PodSpec{
 						PriorityClassName: v1beta1constants.PriorityClassNameShootControlPlane,
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsUser: &uIDPodSecurityContextBackend,
-							FSGroup:   &fsGroupPodSecurityContextBackend,
+							RunAsUser: pointer.Int64(65534),
+							FSGroup:   pointer.Int64(65534),
 						},
 						Containers: []corev1.Container{{
 							Name:            containerNameBackend,
@@ -388,13 +377,13 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 								Protocol:      corev1.ProtocolTCP,
 							}},
 							Resources: corev1.ResourceRequirements{
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
-									corev1.ResourceMemory: resource.MustParse("100Mi"),
-								},
 								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("20m"),
 									corev1.ResourceMemory: resource.MustParse("20Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("100m"),
+									corev1.ResourceMemory: resource.MustParse("100Mi"),
 								},
 							},
 						}},
@@ -408,10 +397,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      depoloymentNameController,
 				Namespace: n.namespace,
-				Labels: map[string]string{
-					v1beta1constants.LabelApp: labelAppValue,
-					labelKeyComponent:         labelValueController,
-				},
+				Labels:    getLabels(labelValueController, ""),
 				Annotations: map[string]string{
 					references.AnnotationKey(references.KindConfigMap, configMap.Name): configMap.Name,
 				},
@@ -420,14 +406,16 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Replicas:             pointer.Int32(3),
 				RevisionHistoryLimit: pointer.Int32(2),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: getLabels("controller"),
+					MatchLabels: getLabels(labelValueController, labelValueAddons),
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: getLabels("controller"),
+						Labels: getLabels(labelValueController, labelValueAddons),
 						Annotations: map[string]string{
 							// TODO(rfranzke): Remove in a future release.
-							"security.gardener.cloud/trigger":                                  "rollout",
+							"security.gardener.cloud/trigger": "rollout",
+							// InjectAnnotations function is not used here since the ConfigMap is not mounted as
+							// volume and hence using the function won't have any effect.
 							references.AnnotationKey(references.KindConfigMap, configMap.Name): configMap.Name,
 						},
 					},
@@ -440,23 +428,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 									PodAffinityTerm: corev1.PodAffinityTerm{
 										TopologyKey: corev1.LabelHostname,
 										LabelSelector: &metav1.LabelSelector{
-											MatchExpressions: []metav1.LabelSelectorRequirement{
-												{
-													Key:      v1beta1constants.LabelApp,
-													Operator: metav1.LabelSelectorOpIn,
-													Values:   []string{labelAppValue},
-												},
-												{
-													Key:      labelKeyComponent,
-													Operator: metav1.LabelSelectorOpIn,
-													Values:   []string{labelValueController},
-												},
-												{
-													Key:      labelKeyRelease,
-													Operator: metav1.LabelSelectorOpIn,
-													Values:   []string{labelValueAddons},
-												},
-											},
+											MatchLabels: getLabels(labelValueController, labelValueAddons),
 										},
 									}},
 								},
@@ -472,7 +444,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 									Drop: []corev1.Capability{"ALL"},
 									Add:  []corev1.Capability{"NET_BIND_SERVICE"},
 								},
-								RunAsUser:                &uIDPodSecurityContextController,
+								RunAsUser:                pointer.Int64(101),
 								AllowPrivilegeEscalation: pointer.Bool(true),
 							},
 							Env: []corev1.EnvVar{
@@ -498,7 +470,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 								Handler: corev1.Handler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/healthz",
-										Port:   intstr.FromInt(10254),
+										Port:   healthProbePort,
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},
@@ -525,7 +497,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 								Handler: corev1.Handler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/healthz",
-										Port:   intstr.FromInt(10254),
+										Port:   healthProbePort,
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},
@@ -586,11 +558,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 	if version.ConstraintK8sGreaterEqual122.Check(n.values.KubernetesVersion) {
 		ingressClass = &networkingv1.IngressClass{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: ingressClassName,
-				Labels: map[string]string{
-					v1beta1constants.LabelApp: labelAppValue,
-					labelKeyComponent:         labelValueController,
-				},
+				Name:   ingressClassName,
+				Labels: getLabels(labelValueController, ""),
 			},
 			Spec: networkingv1.IngressClassSpec{
 				Controller: "k8s.io/" + ingressClassName,
@@ -615,30 +584,27 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 	)
 }
 
-func getLabels(resourceType string) map[string]string {
+func getLabels(componentLabelValue string, releaseLabelValue string) map[string]string {
 	labels := map[string]string{
 		v1beta1constants.LabelApp: labelAppValue,
-		labelKeyRelease:           labelValueAddons,
+		labelKeyComponent:         componentLabelValue,
 	}
-	if resourceType == "controller" {
-		labels[labelKeyComponent] = labelValueController
-	} else {
-		labels[labelKeyComponent] = labelValueBackend
+	if releaseLabelValue != "" {
+		labels[labelKeyRelease] = releaseLabelValue
 	}
-
 	return labels
 }
 
 func (n *nginxIngress) getArgs(configMap *corev1.ConfigMap) []string {
 	out := []string{
 		"/nginx-ingress-controller",
-		"--default-backend-service=garden/nginx-ingress-k8s-backend",
+		"--default-backend-service=" + n.namespace + "/" + serviceNameBackend,
 		"--enable-ssl-passthrough=true",
-		"--publish-service=garden/nginx-ingress-controller",
+		"--publish-service=" + n.namespace + "/" + serviceNameController,
 		"--election-id=ingress-controller-seed-leader",
 		"--update-status=true",
 		"--annotations-prefix=nginx.ingress.kubernetes.io",
-		"--configmap=garden/" + configMap.Name,
+		"--configmap=" + n.namespace + "/" + configMap.Name,
 		"--ingress-class=" + ingressClassName,
 	}
 	if version.ConstraintK8sGreaterEqual122.Check(n.values.KubernetesVersion) {
