@@ -21,6 +21,7 @@ SEED_ADMISSION_IMAGE_REPOSITORY            := $(REGISTRY)/seed-admission-control
 RESOURCE_MANAGER_IMAGE_REPOSITORY          := $(REGISTRY)/resource-manager
 GARDENLET_IMAGE_REPOSITORY                 := $(REGISTRY)/gardenlet
 LANDSCAPER_GARDENLET_IMAGE_REPOSITORY      := $(REGISTRY)/landscaper-gardenlet
+LANDSCAPER_CONTROL_PLANE_IMAGE_REPOSITORY  := $(REGISTRY)/landscaper-control-plane
 EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY  := $(REGISTRY)/extensions/provider-local
 PUSH_LATEST_TAG                            := false
 VERSION                                    := $(shell cat VERSION)
@@ -104,9 +105,14 @@ start-gardenlet: $(HELM) $(YAML2JSON) $(YQ)
 start-landscaper-gardenlet:
 	@./hack/local-development/start-landscaper-gardenlet $(OPERATION)
 
+.PHONY: start-landscaper-controlplane
+start-landscaper-controlplane:
+	@./hack/local-development/start-landscaper-controlplane $(OPERATION)
+
 .PHONY: start-extension-provider-local
 start-extension-provider-local:
 	@./hack/local-development/start-extension-provider-local
+
 
 #################################################################
 # Rules related to binary build, Docker image build and release #
@@ -127,6 +133,7 @@ docker-images:
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(RESOURCE_MANAGER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)         -t $(RESOURCE_MANAGER_IMAGE_REPOSITORY):latest         -f Dockerfile --target resource-manager .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(GARDENLET_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                -t $(GARDENLET_IMAGE_REPOSITORY):latest                -f Dockerfile --target gardenlet .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(LANDSCAPER_GARDENLET_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)     -t $(LANDSCAPER_GARDENLET_IMAGE_REPOSITORY):latest     -f Dockerfile --target landscaper-gardenlet .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(LANDSCAPER_CONTROL_PLANE_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION) -t $(LANDSCAPER_CONTROL_PLANE_IMAGE_REPOSITORY):latest -f Dockerfile --target landscaper-controlplane .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION) -t $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):latest -f Dockerfile --target gardener-extension-provider-local .
 
 .PHONY: docker-images-ppc
@@ -140,6 +147,7 @@ docker-images-ppc:
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(RESOURCE_MANAGER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)         -t $(RESOURCE_MANAGER_IMAGE_REPOSITORY):latest         -f Dockerfile --target resource-manager .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(GARDENLET_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)                -t $(GARDENLET_IMAGE_REPOSITORY):latest                -f Dockerfile --target gardenlet .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(LANDSCAPER_GARDENLET_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)     -t $(LANDSCAPER_GARDENLET_IMAGE_REPOSITORY):latest     -f Dockerfile --target landscaper-gardenlet .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(LANDSCAPER_CONTROL_PLANE_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)  -t $(LANDSCAPER_CONTROL_PLANE_IMAGE_REPOSITORY):latest -f Dockerfile --target landscaper-controlplane .
 	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION) -t $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):latest -f Dockerfile --target gardener-extension-provider-local .
 
 .PHONY: docker-push
@@ -152,6 +160,7 @@ docker-push:
 	@if ! docker images $(RESOURCE_MANAGER_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(EFFECTIVE_VERSION); then echo "$(RESOURCE_MANAGER_IMAGE_REPOSITORY) version $(EFFECTIVE_VERSION) is not yet built. Please run 'make docker-images'"; false; fi
 	@if ! docker images $(GARDENLET_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(EFFECTIVE_VERSION); then echo "$(GARDENLET_IMAGE_REPOSITORY) version $(EFFECTIVE_VERSION) is not yet built. Please run 'make docker-images'"; false; fi
 	@if ! docker images $(LANDSCAPER_GARDENLET_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(EFFECTIVE_VERSION); then echo "$(LANDSCAPER_GARDENLET_IMAGE_REPOSITORY) version $(EFFECTIVE_VERSION) is not yet built. Please run 'make docker-images'"; false; fi
+	@if ! docker images $(LANDSCAPER_CONTROL_PLANE_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(EFFECTIVE_VERSION); then echo "$(LANDSCAPER_CONTROL_PLANE_IMAGE_REPOSITORY) version $(EFFECTIVE_VERSION) is not yet built. Please run 'make docker-images'"; false; fi
 	@if ! docker images $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(EFFECTIVE_VERSION); then echo "$(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY) version $(EFFECTIVE_VERSION) is not yet built. Please run 'make docker-images'"; false; fi
 	@docker push $(APISERVER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)
 	@if [[ "$(PUSH_LATEST_TAG)" == "true" ]]; then docker push $(APISERVER_IMAGE_REPOSITORY):latest; fi
@@ -169,6 +178,8 @@ docker-push:
 	@if [[ "$(PUSH_LATEST_TAG)" == "true" ]]; then docker push $(GARDENLET_IMAGE_REPOSITORY):latest; fi
 	@docker push $(LANDSCAPER_GARDENLET_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)
 	@if [[ "$(PUSH_LATEST_TAG)" == "true" ]]; then docker push $(LANDSCAPER_GARDENLET_IMAGE_REPOSITORY):latest; fi
+	@docker push $(LANDSCAPER_CONTROL_PLANE_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)
+	@if [[ "$(PUSH_LATEST_TAG)" == "true" ]]; then docker push $(LANDSCAPER_CONTROL_PLANE_IMAGE_REPOSITORY):latest; fi
 	@docker push $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)
 	@if [[ "$(PUSH_LATEST_TAG)" == "true" ]]; then docker push $(EXTENSION_PROVIDER_LOCAL_IMAGE_REPOSITORY):latest; fi
 

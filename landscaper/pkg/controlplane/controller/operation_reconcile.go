@@ -43,7 +43,7 @@ func (o *operation) Reconcile(ctx context.Context) (*exports.Exports, bool, bool
 
 		getIdentity = graph.Add(flow.Task{
 			Name: "Getting Gardener Identity",
-			Fn:   flow.TaskFn(o.GetIdentity).DoIf(o.imports.Identity == nil),
+			Fn:   flow.TaskFn(o.GetOrGenerateIdentity).DoIf(o.imports.Identity == nil),
 		})
 
 		prepareGardenNamespace = graph.Add(flow.Task{
@@ -82,7 +82,7 @@ func (o *operation) Reconcile(ctx context.Context) (*exports.Exports, bool, bool
 		})
 
 		generateEtcdEncryption = graph.Add(flow.Task{
-			Name:         "Generating etcd encryption configuration",
+			Name:         "Get or generate etcd encryption configuration",
 			Fn:           flow.TaskFn(o.GenerateEncryptionConfiguration).DoIf(o.imports.GardenerAPIServer.ComponentConfiguration.Encryption == nil),
 			Dependencies: flow.NewTaskIDs(syncExistingInstallation),
 		})
@@ -221,7 +221,9 @@ func (o *operation) Reconcile(ctx context.Context) (*exports.Exports, bool, bool
 		deployRuntimeChart = graph.Add(flow.Task{
 			Name: "Deploying the runtime chart",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				// TODO
+				if err := o.DeployRuntimeChart(ctx); err != nil {
+					return err
+				}
 
 				o.successfullyDeployedRuntimeChart = true
 				return nil
@@ -252,23 +254,42 @@ func (o *operation) Reconcile(ctx context.Context) (*exports.Exports, bool, bool
 
 // getExports sets the exports based on the import configuration that contains pre-configured and generated certificates
 func (o *operation) getExports() *exports.Exports {
-	// required certificates
-	o.exports.GardenerIdentity = *o.imports.Identity
-	o.exports.OpenVPNDiffieHellmanKey = *o.imports.OpenVPNDiffieHellmanKey
-
-	encryption, err := etcdencryption.Write(o.imports.GardenerAPIServer.ComponentConfiguration.Encryption)
-	if err != nil {
-		o.log.Warnf("failed to marshal encryption configuration. Will not be exported. However, it is deployed as a secret %s%s in the runtime cluster", gardencorev1beta1constants.GardenNamespace, secretNameGardenerEncryptionConfig)
-	} else {
-		o.exports.GardenerAPIServerEncryptionConfiguration = string(encryption)
+	if o.imports.Identity != nil {
+		o.exports.GardenerIdentity = *o.imports.Identity
 	}
 
-	o.exports.GardenerAPIServerCA.Crt = *o.imports.GardenerAPIServer.ComponentConfiguration.CA.Crt
-	o.exports.GardenerAPIServerTLSServing.Crt = *o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Crt
-	o.exports.GardenerAPIServerTLSServing.Key = *o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Key
+	if o.imports.OpenVPNDiffieHellmanKey != nil {
+		o.exports.OpenVPNDiffieHellmanKey = *o.imports.OpenVPNDiffieHellmanKey
+	}
 
-	o.exports.GardenerControllerManagerTLSServing.Crt = *o.imports.GardenerControllerManager.ComponentConfiguration.TLS.Crt
-	o.exports.GardenerControllerManagerTLSServing.Key = *o.imports.GardenerControllerManager.ComponentConfiguration.TLS.Key
+	if o.imports.GardenerAPIServer.ComponentConfiguration.Encryption != nil {
+		encryption, err := etcdencryption.Write(o.imports.GardenerAPIServer.ComponentConfiguration.Encryption)
+		if err != nil {
+			o.log.Warnf("failed to marshal encryption configuration. Will not be exported. However, it is deployed as a secret %s%s in the runtime cluster", gardencorev1beta1constants.GardenNamespace, secretNameGardenerEncryptionConfig)
+		} else {
+			o.exports.GardenerAPIServerEncryptionConfiguration = string(encryption)
+		}
+	}
+
+	if o.imports.GardenerAPIServer.ComponentConfiguration.CA.Crt != nil {
+		o.exports.GardenerAPIServerCA.Crt = *o.imports.GardenerAPIServer.ComponentConfiguration.CA.Crt
+	}
+
+	if o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Crt != nil {
+		o.exports.GardenerAPIServerTLSServing.Crt = *o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Crt
+	}
+
+	if o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Key != nil {
+		o.exports.GardenerAPIServerTLSServing.Key = *o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Key
+	}
+
+	if o.imports.GardenerControllerManager.ComponentConfiguration.TLS.Crt != nil {
+		o.exports.GardenerControllerManagerTLSServing.Crt = *o.imports.GardenerControllerManager.ComponentConfiguration.TLS.Crt
+	}
+
+	if o.imports.GardenerControllerManager.ComponentConfiguration.TLS.Key != nil {
+		o.exports.GardenerControllerManagerTLSServing.Key = *o.imports.GardenerControllerManager.ComponentConfiguration.TLS.Key
+	}
 
 	// optional
 	if o.imports.GardenerAPIServer.ComponentConfiguration.CA.Key != nil {
@@ -276,15 +297,20 @@ func (o *operation) getExports() *exports.Exports {
 	}
 
 	if o.imports.GardenerAdmissionController != nil && o.imports.GardenerAdmissionController.Enabled {
-		// safely dereference, because the CA must have been either provided or generated during the reconciliation
-		o.exports.GardenerAdmissionControllerCA.Crt = *o.imports.GardenerAdmissionController.ComponentConfiguration.CA.Crt
+		if o.imports.GardenerAdmissionController.ComponentConfiguration.CA.Crt != nil {
+			o.exports.GardenerAdmissionControllerCA.Crt = *o.imports.GardenerAdmissionController.ComponentConfiguration.CA.Crt
+		}
 
 		if o.imports.GardenerAdmissionController.ComponentConfiguration.CA.Key != nil {
 			o.exports.GardenerAdmissionControllerCA.Key = *o.imports.GardenerAdmissionController.ComponentConfiguration.CA.Key
 		}
 
-		o.exports.GardenerAdmissionControllerTLSServing.Crt = *o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.Crt
-		o.exports.GardenerAdmissionControllerTLSServing.Key = *o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.Key
+		if o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.Crt != nil {
+			o.exports.GardenerAdmissionControllerTLSServing.Crt = *o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.Crt
+		}
+		if o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.Key != nil {
+			o.exports.GardenerAdmissionControllerTLSServing.Key = *o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.Key
+		}
 	}
 
 	return &o.exports

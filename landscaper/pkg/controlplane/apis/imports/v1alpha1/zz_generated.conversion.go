@@ -617,7 +617,7 @@ func autoConvert_v1alpha1_APIServerComponentConfiguration_To_imports_APIServerCo
 	}
 	out.CA = (*imports.CA)(unsafe.Pointer(in.CA))
 	out.TLS = (*imports.TLSServer)(unsafe.Pointer(in.TLS))
-	out.FeatureGates = *(*[]string)(unsafe.Pointer(&in.FeatureGates))
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	out.Admission = (*imports.APIServerAdmissionConfiguration)(unsafe.Pointer(in.Admission))
 	out.GoAwayChance = (*float32)(unsafe.Pointer(in.GoAwayChance))
 	out.Http2MaxStreamsPerConnection = (*int32)(unsafe.Pointer(in.Http2MaxStreamsPerConnection))
@@ -641,7 +641,7 @@ func autoConvert_imports_APIServerComponentConfiguration_To_v1alpha1_APIServerCo
 	}
 	out.CA = (*CA)(unsafe.Pointer(in.CA))
 	out.TLS = (*TLSServer)(unsafe.Pointer(in.TLS))
-	out.FeatureGates = *(*[]string)(unsafe.Pointer(&in.FeatureGates))
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	out.Admission = (*APIServerAdmissionConfiguration)(unsafe.Pointer(in.Admission))
 	out.GoAwayChance = (*float32)(unsafe.Pointer(in.GoAwayChance))
 	out.Http2MaxStreamsPerConnection = (*int32)(unsafe.Pointer(in.Http2MaxStreamsPerConnection))

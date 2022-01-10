@@ -28,7 +28,7 @@ var NowFunc = time.Now
 // CertificateNeedsRenewal returns true in case the certificate is not (yet) valid or in case the given validityThresholdPercentage is exceeded.
 // A validityThresholdPercentage lower than 1 (100%) should be given in case the certificate should be renewed well in advance before the certificate expires.
 // Based on: https://github.com/gardener/gardenlogin-controller-manager/tree/master/.landscaper/container/internal/util
-func CertificateNeedsRenewal(certificate *x509.Certificate, validityThresholdPercentage float64) bool {
+func CertificateNeedsRenewal(certificate *x509.Certificate, validityThresholdPercentage float64) (bool, time.Duration) {
 	notBefore := certificate.NotBefore.UTC()
 	notAfter := certificate.NotAfter.UTC()
 
@@ -37,7 +37,7 @@ func CertificateNeedsRenewal(certificate *x509.Certificate, validityThresholdPer
 
 	isValid := validNotBefore && validNotAfter
 	if !isValid {
-		return true
+		return true, 0
 	}
 
 	validityTimespan := notAfter.Sub(notBefore).Seconds()
@@ -45,7 +45,7 @@ func CertificateNeedsRenewal(certificate *x509.Certificate, validityThresholdPer
 
 	validityThreshold := validityTimespan * validityThresholdPercentage
 
-	return elapsedValidity > validityThreshold
+	return elapsedValidity > validityThreshold, time.Duration(validityThreshold-elapsedValidity) * time.Second
 }
 
 // ParseX509Certificate parses a given input string as a x509 certificate

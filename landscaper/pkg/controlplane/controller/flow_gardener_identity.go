@@ -26,8 +26,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/rand"
 )
 
-// GetIdentity creates a new random Gardener identity or reuses an existing one
-func (o *operation) GetIdentity(ctx context.Context) error {
+// GetOrGenerateIdentity reuses an existing or creates a new random Gardener identity
+func (o *operation) GetOrGenerateIdentity(ctx context.Context) error {
 	// check for existing identity
 	cm := &corev1.ConfigMap{}
 	if err := o.getGardenClient().Client().Get(ctx, kutil.Key(metav1.NamespaceSystem, cmNameClusterIdentity), cm); err != nil {

@@ -169,6 +169,10 @@ type Rbac struct {
 type SeedAuthorizer struct {
 	// Enabled configures whether the Seed Authorizer is enabled
 	// The Seed Authorizer must be configured on the to-be extendet API server (runtime cluster or virtual-garden)
+	// This configuration removes the Gardenlet's ClusterAdmin RBAC cluster role and binding and instead
+	// uses the SeedAuthorizer authorisation webhook served by the Gardener Admission Controller seed restriction webhook
+	// For more information, please see: https://kubernetes.io/docs/reference/access-authn-authz/webhook/
+	// +optional
 	Enabled *bool
 }
 

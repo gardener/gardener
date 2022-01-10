@@ -52,7 +52,8 @@ var _ = Describe("Utils", func() {
 				defer test.WithVar(&NowFunc, nowFunc)()
 
 				cert := generateClientCert(caCert, notBefore, validity).Certificate
-				Expect(CertificateNeedsRenewal(cert, validityPercentage)).To(BeFalse())
+				needsRenewal, _ := CertificateNeedsRenewal(cert, validityPercentage)
+				Expect(needsRenewal).To(BeFalse())
 			})
 
 			It("should not require certificate renewal - 100% validity threshold", func() {
@@ -65,7 +66,8 @@ var _ = Describe("Utils", func() {
 				defer test.WithVar(&NowFunc, nowFunc)()
 
 				cert := generateClientCert(caCert, notBefore, validity).Certificate
-				Expect(CertificateNeedsRenewal(cert, validityPercentage)).To(BeFalse())
+				needsRenewal, _ := CertificateNeedsRenewal(cert, validityPercentage)
+				Expect(needsRenewal).To(BeFalse())
 			})
 		})
 
@@ -79,7 +81,8 @@ var _ = Describe("Utils", func() {
 				defer test.WithVar(&NowFunc, nowFunc)()
 
 				cert := generateClientCert(caCert, notBefore, validity).Certificate
-				Expect(CertificateNeedsRenewal(cert, validityPercentage)).To(BeTrue())
+				needsRenewal, _ := CertificateNeedsRenewal(cert, validityPercentage)
+				Expect(needsRenewal).To(BeTrue())
 
 			})
 		})
@@ -94,7 +97,8 @@ var _ = Describe("Utils", func() {
 				defer test.WithVar(&NowFunc, nowFunc)()
 
 				cert := generateClientCert(caCert, notBefore, validity).Certificate
-				Expect(CertificateNeedsRenewal(cert, validityPercentage)).To(BeTrue())
+				needsRenewal, _ := CertificateNeedsRenewal(cert, validityPercentage)
+				Expect(needsRenewal).To(BeTrue())
 			})
 
 			It("should require certificate renewal for not yet valid certificate", func() {
@@ -108,7 +112,8 @@ var _ = Describe("Utils", func() {
 				defer test.WithVar(&NowFunc, nowFunc)()
 
 				cert := generateClientCert(caCert, notBefore, validity).Certificate
-				Expect(CertificateNeedsRenewal(cert, validityPercentage)).To(BeTrue())
+				needsRenewal, _ := CertificateNeedsRenewal(cert, validityPercentage)
+				Expect(needsRenewal).To(BeTrue())
 			})
 		})
 	})

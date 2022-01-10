@@ -46,22 +46,11 @@ func (o *operation) GenerateCACertificates(ctx context.Context) error {
 		// However, we need to export the private key in any case
 		o.imports.GardenerAPIServer.ComponentConfiguration.CA.Key = pointer.String(string(privateKeyBytes))
 
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      secretNameLandscaperGardenerAPIServerKey,
-				Namespace: v1beta1constants.GardenNamespace,
-			},
-		}
-
-		// store the generated private key for future TLS certificate rotation (there is no resource in the Gardener
-		// controlplane helm chart that holds the CA private key)
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, o.runtimeClient.Client(), secret, func() error {
-			secret.Data = map[string][]byte{
-				secretDataKeyCAKey: privateKeyBytes,
-			}
-			return nil
-		}); err != nil {
-			return fmt.Errorf("could not create or patch secret in the runtime cluster (%s/%s) with the generated Gardener API Server CA private key: %w", v1beta1constants.GardenNamespace, secretNameLandscaperGardenerAPIServerKey, err)
+		// in addition to exporting the CA private key, store it in a secret in the runtime cluster for future TLS certificate rotations
+		// Reason: there is no resource in the Gardener control plane helm chart containing the CA private key.
+		err = o.deployCAPrivateKeyInCluster(ctx, secretNameLandscaperGardenerAPIServerKey, privateKeyBytes)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -79,7 +68,7 @@ func (o *operation) GenerateCACertificates(ctx context.Context) error {
 
 		// in addition to exporting the CA private key, store it in a secret in the runtime cluster for future TLS certificate rotations
 		// Reason: there is no resource in the Gardener control plane helm chart containing the CA private key.
-		err = o.deployCAPrivateKeyInCluster(ctx, privateKeyBytes)
+		err = o.deployCAPrivateKeyInCluster(ctx, secretNameLandscaperGardenerAdmissionControllerKey, privateKeyBytes)
 		if err != nil {
 			return err
 		}
@@ -88,10 +77,10 @@ func (o *operation) GenerateCACertificates(ctx context.Context) error {
 	return nil
 }
 
-func (o *operation) deployCAPrivateKeyInCluster(ctx context.Context, privateKeyBytes []byte) error {
+func (o *operation) deployCAPrivateKeyInCluster(ctx context.Context, secretName string, privateKeyBytes []byte) error {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretNameLandscaperGardenerAdmissionControllerKey,
+			Name:      secretName,
 			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
@@ -102,7 +91,7 @@ func (o *operation) deployCAPrivateKeyInCluster(ctx context.Context, privateKeyB
 		}
 		return nil
 	}); err != nil {
-		return fmt.Errorf("could not create or patch secret in the runtime cluster (%s/%s) with the generated Admission Controller CA private key: %w", v1beta1constants.GardenNamespace, secretNameLandscaperGardenerAdmissionControllerKey, err)
+		return fmt.Errorf("could not create or patch secret in the runtime cluster (%s/%s) with the generated Admission Controller CA private key: %w", v1beta1constants.GardenNamespace, secretName, err)
 	}
 	return nil
 }

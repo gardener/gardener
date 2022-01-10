@@ -32,7 +32,7 @@ func (o *operation) GenerateVirtualGardenKubeconfig(ctx context.Context, service
 		return nil, err
 	}
 
-	return o.generateKubeconfig(*tokenAPIServer, *o.imports.GardenerAPIServer.ComponentConfiguration.CA.Crt)
+	return o.generateKubeconfig(*tokenAPIServer, string(o.virtualGardenCA))
 }
 
 // getServiceAccountToken gets the service account token for the provided service account in the garden namespace

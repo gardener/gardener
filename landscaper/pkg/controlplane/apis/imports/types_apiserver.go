@@ -73,8 +73,10 @@ type APIServerComponentConfiguration struct {
 	ClusterIdentity *string
 	// Encryption configures an optional encryption configuration
 	// Defaults:
-	// - resources (controllerregistrations.core.gardener.cloud, shootstates.core.gardener.cloud)
-	//   providers: (identity: {})
+	// - resources (secrets, controllerregistrations.core.gardener.cloud, controllerdeployments.core.gardener.cloud, shootstates.core.gardener.cloud)
+	//   providers:
+	//    - aescbc with a randomly generated key
+	//    - identity: {}
 	Encryption *apiserverconfigv1.EncryptionConfiguration
 	// Etcd contains configuration for the etcd of the Gardener API server
 	Etcd APIServerEtcdConfiguration
@@ -94,7 +96,7 @@ type APIServerComponentConfiguration struct {
 	// If left empty, generates certificates signed by the provided CA bundle.
 	TLS *TLSServer
 	// FeatureGates are optional feature gates that shall be activated on the Gardener API server
-	FeatureGates []string
+	FeatureGates map[string]bool
 	// Admission contains admission configuration for the Gardener API server
 	Admission *APIServerAdmissionConfiguration
 	// GoAwayChance sets the fraction of requests that will be sent a GOAWAY.

@@ -20,6 +20,7 @@ import (
 
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,6 +42,9 @@ func (o *operation) GetVirtualGardenClusterEndpoint(ctx context.Context) error {
 	if err := o.runtimeClient.Client().List(ctx, serviceList,
 		client.InNamespace(gardencorev1beta1constants.GardenNamespace),
 		client.MatchingLabelsSelector{Selector: selector}); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to retrieve virtual garden service from the runtime cluster: %v", err)
+		}
 		return fmt.Errorf("missing virtual garden service in the runtime cluster: %w", err)
 	}
 

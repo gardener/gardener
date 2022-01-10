@@ -1,5 +1,6 @@
 # Component descriptor used by the control plane component
 # to obtain the OCI image reference for all the control plane deployments.
+# You only need to adjust this file if you want to deploy a specific image version of the Gardener controlplane
 meta:
   schemaVersion: 'v2'
 components:

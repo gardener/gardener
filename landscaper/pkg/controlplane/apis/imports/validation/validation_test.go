@@ -326,6 +326,20 @@ var _ = Describe("ValidateImports", func() {
 			errorList := ValidateLandscaperImports(landscaperImport)
 			Expect(errorList).To(HaveLen(1))
 		})
+
+		It("validate that the seed restriction is enabled when the seed authorizer option is enabled", func() {
+			landscaperImport.Rbac = &imports.Rbac{SeedAuthorizer: &imports.SeedAuthorizer{
+				Enabled: pointer.Bool(true),
+			}}
+
+			landscaperImport.GardenerAdmissionController = &imports.GardenerAdmissionController{
+				Enabled:         true,
+				SeedRestriction: &imports.SeedRestriction{Enabled: false},
+			}
+
+			errorList := ValidateLandscaperImports(landscaperImport)
+			Expect(errorList).To(HaveLen(1))
+		})
 	})
 
 })

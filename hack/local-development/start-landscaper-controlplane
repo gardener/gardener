@@ -15,17 +15,18 @@
 # limitations under the License.
 
 if [ "$1" != "RECONCILE" ] && [ "$1" != "DELETE" ]; then
-  echo "Please set the argument \"OPERATION\" to either \"RECONCILE\" or \"DELETE\" (\"make start-landscaper-gardenlet OPERATION=RECONCILE\")"
+  echo "Please set the argument \"OPERATION\" to either \"RECONCILE\" or \"DELETE\" (\"make start-landscaper-controlplane OPERATION=RECONCILE\")"
   exit 1
 fi
 
-printf "Using import values from 'dev/landscaper/landscaper-gardenlet-imports.yaml'. \n \n"
+printf "Using import values from 'dev/landscaper/landscaper-controlplane-imports.yaml'. \n \n"
 
 GO111MODULE=on \
 OPERATION="$1" \
-IMPORTS_PATH=dev/landscaper/landscaper-gardenlet-imports.yaml \
-COMPONENT_DESCRIPTOR_PATH=dev/landscaper/landscaper-gardenlet-component-descriptor-list.yaml \
+IMPORTS_PATH=dev/landscaper/landscaper-controlplane-imports.yaml \
+EXPORTS_PATH=dev/landscaper/landscaper-controlplane-exports.yaml \
+COMPONENT_DESCRIPTOR_PATH=dev/landscaper/landscaper-controlplane-component-descriptor-list.yaml \
     go run \
       -mod=vendor \
       -ldflags "$(./hack/get-build-ld-flags.sh)" \
-      "$(dirname $0)"/../../landscaper/cmd/landscaper-gardenlet/main.go
+      "$(dirname $0)"/../../landscaper/cmd/landscaper-controlplane/main.go

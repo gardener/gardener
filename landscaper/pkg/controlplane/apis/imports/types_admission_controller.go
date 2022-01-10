@@ -50,10 +50,11 @@ type AdmissionControllerComponentConfiguration struct {
 
 // SeedRestriction configures the SeedRestriction admission plugin
 type SeedRestriction struct {
-	// Enabled configures whether the SeedRestriction admission plugin should be enabled.
+	// Enabled configures whether the SeedRestriction admission plugin should be used.
 	// Sets up the ValidatingWebhookConfiguration pointing to the webhook server in the Gardener Admission Controller
 	// serving the SeedRestriction webhook
-	// If the Seed Authorizer is enabled already, the Seed Restriction Plugin will be enabled per default.
+	// Must be enabled when the Seed Authorizer option is enabled (field .rbac.seedAuthorizer).
 	// Default: false
+	// +optional
 	Enabled bool
 }

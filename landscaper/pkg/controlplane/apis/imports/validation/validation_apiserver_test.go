@@ -15,6 +15,7 @@
 package validation_test
 
 import (
+	"encoding/json"
 	"time"
 
 	testutils "github.com/gardener/gardener/landscaper/common/test-utils"
@@ -588,7 +589,9 @@ var _ = Describe("ValidateAPIServer", func() {
 					DynamicConfiguration: pointer.Bool(true),
 				}
 
-				gardenerAPIServer.ComponentConfiguration.FeatureGates = append(gardenerAPIServer.ComponentConfiguration.FeatureGates, "DynamicAuditing=false")
+				gardenerAPIServer.ComponentConfiguration.FeatureGates = map[string]bool{
+					"DynamicAuditing": false,
+				}
 
 				errorList := ValidateAPIServer(gardenerAPIServer, path)
 				Expect(errorList).To(ConsistOf(
@@ -605,7 +608,9 @@ var _ = Describe("ValidateAPIServer", func() {
 					DynamicConfiguration: pointer.Bool(true),
 				}
 
-				gardenerAPIServer.ComponentConfiguration.FeatureGates = append(gardenerAPIServer.ComponentConfiguration.FeatureGates, "DynamicAuditing=true")
+				gardenerAPIServer.ComponentConfiguration.FeatureGates = map[string]bool{
+					"DynamicAuditing": true,
+				}
 
 				errorList := ValidateAPIServer(gardenerAPIServer, path)
 				Expect(errorList).To(BeEmpty())
@@ -925,13 +930,50 @@ var _ = Describe("ValidateAPIServer", func() {
 			})
 
 			Context("Webhook backend", func() {
+				var (
+					testTargetConfigBytes []byte
+					err                   error
+				)
+				BeforeEach(func() {
+					testTargetConfig := &landscaperv1alpha1.KubernetesClusterTargetConfig{
+						Kubeconfig: `apiVersion: landscaper.gardener.cloud/v1alpha1
+kind: Target
+spec:
+type: landscaper.gardener.cloud/kubernetes-cluster
+config:
+  kubeconfig: |
+	---
+	apiVersion: v1
+	clusters:
+	  - cluster:
+		  certificate-authority-data: fff
+		  server: https://m
+		name: sdf
+	contexts:
+	  - context:
+		  cluster: v
+		  user: d
+		name: b
+	current-context: shoot--garden-ls
+	kind: Config
+	preferences: {}
+	users:
+	  - name: abc
+		user:
+		  token: abc`,
+					}
+
+					testTargetConfigBytes, err = json.Marshal(testTargetConfig)
+					Expect(err).ToNot(HaveOccurred())
+				})
+
 				It("Should validate the webhook configuration successfully", func() {
 					gardenerAPIServer.ComponentConfiguration.Audit = &imports.APIServerAuditConfiguration{
 						Webhook: &imports.APIServerAuditWebhookBackend{
 							Kubeconfig: landscaperv1alpha1.Target{
 								Spec: landscaperv1alpha1.TargetSpec{
 									Configuration: landscaperv1alpha1.AnyJSON{
-										RawMessage: []byte("awesome kubeconfig"),
+										RawMessage: testTargetConfigBytes,
 									},
 								},
 							},
@@ -945,7 +987,7 @@ var _ = Describe("ValidateAPIServer", func() {
 					Expect(errorList).To(BeEmpty())
 				})
 
-				It("Should validate the webhook configuration - invalid kubeconfig", func() {
+				It("Should validate the webhook configuration - empty kubeconfig", func() {
 					gardenerAPIServer.ComponentConfiguration.Audit = &imports.APIServerAuditConfiguration{
 						Webhook: &imports.APIServerAuditWebhookBackend{
 							Kubeconfig: landscaperv1alpha1.Target{},
@@ -962,6 +1004,11 @@ var _ = Describe("ValidateAPIServer", func() {
 							"Field":  Equal("apiserver.componentConfiguration.audit.webhook.kubeconfig"),
 							"Detail": ContainSubstring("The kubeconfig for the external audit log backend must be set"),
 						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("apiserver.componentConfiguration.audit.webhook.kubeconfig"),
+							"Detail": ContainSubstring("The kubeconfig for the external audit log backend could not be parsed"),
+						})),
 					))
 				})
 
@@ -971,7 +1018,33 @@ var _ = Describe("ValidateAPIServer", func() {
 							Kubeconfig: landscaperv1alpha1.Target{
 								Spec: landscaperv1alpha1.TargetSpec{
 									Configuration: landscaperv1alpha1.AnyJSON{
-										RawMessage: []byte("awesome kubeconfig"),
+										RawMessage: []byte("invalid"),
+									},
+								},
+							},
+							InitialBackoff: &metav1.Duration{
+								Duration: 1 * time.Second,
+							},
+						},
+					}
+
+					errorList := ValidateAPIServer(gardenerAPIServer, path)
+					Expect(errorList).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("apiserver.componentConfiguration.audit.webhook.kubeconfig"),
+							"Detail": ContainSubstring("The kubeconfig for the external audit log backend could not be parsed"),
+						})),
+					))
+				})
+
+				It("Should validate the webhook configuration - invalid backoff", func() {
+					gardenerAPIServer.ComponentConfiguration.Audit = &imports.APIServerAuditConfiguration{
+						Webhook: &imports.APIServerAuditWebhookBackend{
+							Kubeconfig: landscaperv1alpha1.Target{
+								Spec: landscaperv1alpha1.TargetSpec{
+									Configuration: landscaperv1alpha1.AnyJSON{
+										RawMessage: testTargetConfigBytes,
 									},
 								},
 							},

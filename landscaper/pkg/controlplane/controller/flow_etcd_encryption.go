@@ -24,7 +24,7 @@ import (
 )
 
 // GenerateEncryptionConfiguration generates a missing etcd encryption configuration for the Gardener API server
-func (o *operation) GenerateEncryptionConfiguration(ctx context.Context) error {
+func (o *operation) GenerateEncryptionConfiguration(_ context.Context) error {
 	if o.imports.GardenerAPIServer.ComponentConfiguration.Encryption == nil {
 		config, err := generateEncryptionConfiguration()
 		if err != nil {

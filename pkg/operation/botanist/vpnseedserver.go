@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	// DefaultDiffieHellmanKey is the default diffie-hellmann
+	// DefaultDiffieHellmanKey is the default diffie-hellmann key
 	DefaultDiffieHellmanKey = `-----BEGIN DH PARAMETERS-----
 MIIBCAKCAQEA7cBXxG9an6KRz/sB5uiSOTf7Eg+uWVkhXO4peKDTARzMYa8b7WR8
 B/Aw+AyUXtB3tXtrzeC5M3IHnuhFwMo3K4oSOkFJxatLlYKeY15r+Kt5vnOOT3BW
