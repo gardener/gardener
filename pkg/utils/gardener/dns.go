@@ -26,6 +26,9 @@ const (
 	// DNSDomain is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
 	// domain name.
 	DNSDomain = "dns.gardener.cloud/domain"
+	// DNSDefaultDomainPriority is the priority of the default domain. In case of multiple default domains
+	// the default domain with the highest priority is selected per default for new shoots.
+	DNSDefaultDomainPriority = "dns.gardener.cloud/domain-default-priority"
 	// DNSZone is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
 	// DNS hosted zone id.
 	DNSZone = "dns.gardener.cloud/zone"
