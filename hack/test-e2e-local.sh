@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 create_failed=yes
+delete_failed=yes
+
 trap shoot_deletion EXIT
 
 function shoot_deletion {
@@ -11,7 +13,11 @@ function shoot_deletion {
     -shoot-name=e2e-local \
     -skip-accessing-shoot=${SKIP_ACCESSING_SHOOT:-true}
 
-  if [ $create_failed = yes ] ; then
+  if [ $? = 0 ] ; then
+    delete_failed=no
+  fi
+
+  if [ $create_failed = yes ] || [ $delete_failed = yes ] ; then
     exit 1
   fi
 }
