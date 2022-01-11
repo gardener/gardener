@@ -17,9 +17,11 @@ package dnsrecord
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -39,13 +41,15 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
+const createdConditionType = "created"
+
 type reconciler struct {
 	logger   logr.Logger
 	actuator Actuator
 
 	client        client.Client
 	reader        client.Reader
-	statusUpdater extensionscontroller.StatusUpdater
+	statusUpdater extensionscontroller.StatusUpdaterCustom
 }
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
@@ -133,26 +137,21 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *reconciler) reconcile(ctx context.Context, dns *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := r.statusUpdater.Processing(ctx, dns, operationType, "Reconciling the dnsrecord"); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, dns, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	hadFinalizer := controllerutil.ContainsFinalizer(dns, FinalizerName)
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, dns, FinalizerName); err != nil {
+	if err := r.statusUpdater.ProcessingCustom(ctx, dns, operationType, "Reconciling the dnsrecord", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	r.logger.Info("Starting the reconciliation of dnsrecord", "dnsrecord", kutil.ObjectName(dns))
 	if err := r.actuator.Reconcile(ctx, dns, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, dns, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling dnsrecord")
-		if !hadFinalizer {
-			// remove just added finalizer to allow deletion if not applied at least once
-			_ = controllerutils.RemoveFinalizer(ctx, r.reader, r.client, dns, FinalizerName)
-		}
+		_ = r.statusUpdater.ErrorCustom(ctx, dns, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling dnsrecord", addCreatedConditionFalse)
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, dns, operationType, "Successfully reconciled dnsrecord"); err != nil {
+	if err := r.statusUpdater.SuccessCustom(ctx, dns, operationType, "Successfully reconciled dnsrecord", addCreatedConditionTrue); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -160,25 +159,21 @@ func (r *reconciler) reconcile(ctx context.Context, dns *extensionsv1alpha1.DNSR
 }
 
 func (r *reconciler) restore(ctx context.Context, dns *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	if err := r.statusUpdater.Processing(ctx, dns, gardencorev1beta1.LastOperationTypeRestore, "Restoring the dnsrecord"); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, dns, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	hadFinalizer := controllerutil.ContainsFinalizer(dns, FinalizerName)
-	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, dns, FinalizerName); err != nil {
+	if err := r.statusUpdater.ProcessingCustom(ctx, dns, gardencorev1beta1.LastOperationTypeRestore, "Restoring the dnsrecord", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	r.logger.Info("Starting the restoration of dnsrecord", "dnsrecord", kutil.ObjectName(dns))
 	if err := r.actuator.Restore(ctx, dns, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, dns, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring dnsrecord")
-		if !hadFinalizer {
-			_ = controllerutils.RemoveFinalizer(ctx, r.reader, r.client, dns, FinalizerName)
-		}
+		_ = r.statusUpdater.ErrorCustom(ctx, dns, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring dnsrecord", addCreatedConditionFalse)
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, dns, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored dnsrecord"); err != nil {
+	if err := r.statusUpdater.SuccessCustom(ctx, dns, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored dnsrecord", addCreatedConditionTrue); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -190,17 +185,17 @@ func (r *reconciler) restore(ctx context.Context, dns *extensionsv1alpha1.DNSRec
 }
 
 func (r *reconciler) migrate(ctx context.Context, dns *extensionsv1alpha1.DNSRecord, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	if err := r.statusUpdater.Processing(ctx, dns, gardencorev1beta1.LastOperationTypeMigrate, "Migrating the dnsrecord"); err != nil {
+	if err := r.statusUpdater.ProcessingCustom(ctx, dns, gardencorev1beta1.LastOperationTypeMigrate, "Migrating the dnsrecord", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	r.logger.Info("Starting the migration of dnsrecord", "dnsrecord", kutil.ObjectName(dns))
 	if err := r.actuator.Migrate(ctx, dns, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, dns, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating dnsrecord")
+		_ = r.statusUpdater.ErrorCustom(ctx, dns, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating dnsrecord", nil)
 		return reconcilerutils.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, dns, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated dnsrecord"); err != nil {
+	if err := r.statusUpdater.SuccessCustom(ctx, dns, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated dnsrecord", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -222,19 +217,23 @@ func (r *reconciler) delete(ctx context.Context, dns *extensionsv1alpha1.DNSReco
 		return reconcile.Result{}, nil
 	}
 
-	operationType := gardencorev1beta1helper.ComputeOperationType(dns.ObjectMeta, dns.Status.LastOperation)
-	if err := r.statusUpdater.Processing(ctx, dns, operationType, "Deleting the dnsrecord"); err != nil {
-		return reconcile.Result{}, err
-	}
+	if !hasCreatedConditionFalse(dns.GetExtensionStatus()) {
+		operationType := gardencorev1beta1helper.ComputeOperationType(dns.ObjectMeta, dns.Status.LastOperation)
+		if err := r.statusUpdater.ProcessingCustom(ctx, dns, operationType, "Deleting the dnsrecord", nil); err != nil {
+			return reconcile.Result{}, err
+		}
 
-	r.logger.Info("Starting the deletion of dnsrecord", "dnsrecord", kutil.ObjectName(dns))
-	if err := r.actuator.Delete(ctx, dns, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, dns, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting dnsrecord")
-		return reconcilerutils.ReconcileErr(err)
-	}
+		r.logger.Info("Starting the deletion of dnsrecord", "dnsrecord", kutil.ObjectName(dns))
+		if err := r.actuator.Delete(ctx, dns, cluster); err != nil {
+			_ = r.statusUpdater.ErrorCustom(ctx, dns, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting dnsrecord", nil)
+			return reconcilerutils.ReconcileErr(err)
+		}
 
-	if err := r.statusUpdater.Success(ctx, dns, operationType, "Successfully deleted dnsrecord"); err != nil {
-		return reconcile.Result{}, err
+		if err := r.statusUpdater.SuccessCustom(ctx, dns, operationType, "Successfully deleted dnsrecord", nil); err != nil {
+			return reconcile.Result{}, err
+		}
+	} else {
+		r.logger.Info("Deleting dnsrecord is no-op as not created", "dnsrecord", kutil.ObjectName(dns))
 	}
 
 	r.logger.Info("Removing finalizer", "dnsrecord", kutil.ObjectName(dns))
@@ -243,4 +242,48 @@ func (r *reconciler) delete(ctx context.Context, dns *extensionsv1alpha1.DNSReco
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func updateCreatedCondition(status extensionsv1alpha1.Status, conditionStatus gardencorev1beta1.ConditionStatus, reason string, updateIfExisting bool) error {
+	conditions := status.GetConditions()
+	index := len(conditions)
+	for i, c := range conditions {
+		if c.Type == createdConditionType {
+			if !updateIfExisting {
+				return nil
+			}
+			index = i
+			break
+		}
+	}
+	if index == len(conditions) {
+		conditions = append(conditions, gardencorev1beta1.Condition{Type: createdConditionType})
+	}
+	c := &conditions[index]
+	if c.Status == conditionStatus {
+		return nil
+	}
+	c.Status = conditionStatus
+	c.LastTransitionTime = metav1.Time{Time: time.Now()}
+	c.LastUpdateTime = metav1.Time{Time: time.Now()}
+	c.Reason = reason
+	status.SetConditions(conditions)
+	return nil
+}
+
+func hasCreatedConditionFalse(status extensionsv1alpha1.Status) bool {
+	for _, c := range status.GetConditions() {
+		if c.Type == createdConditionType {
+			return c.Status == gardencorev1beta1.ConditionFalse
+		}
+	}
+	return false
+}
+
+func addCreatedConditionFalse(status extensionsv1alpha1.Status) error {
+	return updateCreatedCondition(status, gardencorev1beta1.ConditionFalse, "error", false)
+}
+
+func addCreatedConditionTrue(status extensionsv1alpha1.Status) error {
+	return updateCreatedCondition(status, gardencorev1beta1.ConditionTrue, "success", true)
 }
