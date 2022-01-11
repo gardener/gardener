@@ -114,8 +114,8 @@ type Interface interface {
 	Get(context.Context) (*druidv1alpha1.Etcd, error)
 	// SetOwnerCheckConfig sets the owner check configuration.
 	SetOwnerCheckConfig(config *OwnerCheckConfig)
-	// ScaleETCD scales the etcd resource to the given replica count.
-	ScaleETCD(context.Context, int) error
+	// Scale scales the etcd resource to the given replica count.
+	Scale(context.Context, int) error
 }
 
 // New creates a new instance of DeployWaiter for the Etcd.
@@ -619,7 +619,7 @@ func (e *etcd) SetOwnerCheckConfig(ownerCheckConfig *OwnerCheckConfig) {
 	e.ownerCheckConfig = ownerCheckConfig
 }
 
-func (e *etcd) ScaleETCD(ctx context.Context, replicas int) error {
+func (e *etcd) Scale(ctx context.Context, replicas int) error {
 	etcdObj := &druidv1alpha1.Etcd{}
 	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), etcdObj); err != nil {
 		return err
