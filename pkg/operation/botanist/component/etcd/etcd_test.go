@@ -1270,7 +1270,7 @@ var _ = Describe("Etcd", func() {
 		})
 	})
 
-	Describe("#ScaleETCD", func() {
+	Describe("#Scale", func() {
 		var etcdObj *druidv1alpha1.Etcd
 
 		BeforeEach(func() {
@@ -1305,7 +1305,7 @@ var _ = Describe("Etcd", func() {
 					return nil
 				})
 
-			Expect(etcd.ScaleETCD(ctx, 1)).To(Succeed())
+			Expect(etcd.Scale(ctx, 1)).To(Succeed())
 		})
 
 		It("should set operation annotation when replica count is unchanged", func() {
@@ -1331,7 +1331,7 @@ var _ = Describe("Etcd", func() {
 					return nil
 				})
 
-			Expect(etcd.ScaleETCD(ctx, 1)).To(Succeed())
+			Expect(etcd.Scale(ctx, 1)).To(Succeed())
 		})
 
 		It("should fail if GardenerTimestamp is unexpected", func() {
@@ -1359,8 +1359,8 @@ var _ = Describe("Etcd", func() {
 				),
 			)
 
-			Expect(etcd.ScaleETCD(ctx, 1)).To(Succeed())
-			Expect(etcd.ScaleETCD(ctx, 1)).Should(MatchError(`object's "gardener.cloud/timestamp" annotation is not "0001-01-01 00:00:00 +0000 UTC" but "foo"`))
+			Expect(etcd.Scale(ctx, 1)).To(Succeed())
+			Expect(etcd.Scale(ctx, 1)).Should(MatchError(`object's "gardener.cloud/timestamp" annotation is not "0001-01-01 00:00:00 +0000 UTC" but "foo"`))
 		})
 
 		It("should fail because operation annotation is set", func() {
@@ -1374,7 +1374,7 @@ var _ = Describe("Etcd", func() {
 				},
 			)
 
-			Expect(etcd.ScaleETCD(ctx, 1)).Should(MatchError(`etcd object still has operation annotation set`))
+			Expect(etcd.Scale(ctx, 1)).Should(MatchError(`etcd object still has operation annotation set`))
 		})
 	})
 })

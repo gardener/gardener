@@ -164,10 +164,10 @@ func (b *Botanist) ScaleETCDToOne(ctx context.Context) error {
 }
 
 func (b *Botanist) scaleETCD(ctx context.Context, replicas int) error {
-	if err := b.Shoot.Components.ControlPlane.EtcdMain.ScaleETCD(ctx, replicas); err != nil {
+	if err := b.Shoot.Components.ControlPlane.EtcdMain.Scale(ctx, replicas); err != nil {
 		return err
 	}
-	return b.Shoot.Components.ControlPlane.EtcdEvents.ScaleETCD(ctx, replicas)
+	return b.Shoot.Components.ControlPlane.EtcdEvents.Scale(ctx, replicas)
 }
 
 func determineBackupSchedule(shoot *gardencorev1beta1.Shoot) (string, error) {
