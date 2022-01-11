@@ -62,14 +62,14 @@ type BlueprintSchema struct {
 // the `rootOpenAPIDefinitionKey` identifies the key in the OpenAPI definitions that identifies the root
 // definition (import configuration of the landscaper component)
 // Please note that the function `getOpenAPIDefinitions` must be generated using the `openapi-gen` binary
-func RenderBlueprint(blueprintTemplate *template.Template, 
-	scheme *runtime.Scheme, 
+func RenderBlueprint(blueprintTemplate *template.Template,
+	scheme *runtime.Scheme,
 	rootOpenAPIDefinitionKey string,
 	getOpenAPIDefinitions func(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition,
 	blueprintDirectory string,
-	) error {
+) error {
 	namer := openapinamer.NewDefinitionNamer(scheme)
-	
+
 	openAPIDefinitions := getOpenAPIDefinitions(func(name string) openapispec.Ref {
 		// construct the references so that they can be resolved in the blueprint virtual filesystem
 		// For example: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.VirtualGarden.json
@@ -132,7 +132,7 @@ func renderBlueprint(definition common.OpenAPIDefinition, blueprintTemplate *tem
 
 	// use an alphabetical order for writing the blueprint top-level imports to avoid diffs on re-generation
 	keys := sets.NewString()
-	for key, _:= range definition.Schema.SchemaProps.Properties {
+	for key, _ := range definition.Schema.SchemaProps.Properties {
 		keys.Insert(key)
 	}
 	sort.Strings(keys.List())
@@ -157,7 +157,7 @@ func renderBlueprint(definition common.OpenAPIDefinition, blueprintTemplate *tem
 
 		fieldType := strings.ReplaceAll(string(typeBytes), "\"", "")
 
-		if  fieldType == "array" {
+		if fieldType == "array" {
 			if schema.SchemaProps.Items == nil {
 				return fmt.Errorf("array type misdefined for key %q", key)
 			}
@@ -175,7 +175,7 @@ func renderBlueprint(definition common.OpenAPIDefinition, blueprintTemplate *tem
 			topLevelFields = append(topLevelFields, BlueprintImport{
 				Name:     key,
 				Required: requiredFields.Has(key),
-				Schema:   BlueprintSchema{
+				Schema: BlueprintSchema{
 					Type: pointer.String("array"),
 					Items: []BlueprintSchema{
 						{Ref: pointer.String(reference.String())},
@@ -192,8 +192,8 @@ func renderBlueprint(definition common.OpenAPIDefinition, blueprintTemplate *tem
 			topLevelFields = append(topLevelFields, BlueprintImport{
 				Name:     key,
 				Required: requiredFields.Has(key),
-				Schema:   BlueprintSchema{
-					Type: &fieldType,
+				Schema: BlueprintSchema{
+					Type:        &fieldType,
 					Description: &description,
 				},
 			})
@@ -203,7 +203,7 @@ func renderBlueprint(definition common.OpenAPIDefinition, blueprintTemplate *tem
 		topLevelFields = append(topLevelFields, BlueprintImport{
 			Name:     key,
 			Required: requiredFields.Has(key),
-			Schema:   BlueprintSchema{
+			Schema: BlueprintSchema{
 				Ref: pointer.String(reference.String()),
 			},
 		})
@@ -221,7 +221,7 @@ func renderBlueprint(definition common.OpenAPIDefinition, blueprintTemplate *tem
 
 	var ccdScript bytes.Buffer
 	if err := blueprintTemplate.Execute(&ccdScript, map[string]string{
-		"imports":  string(yamlOut),
+		"imports": string(yamlOut),
 	}); err != nil {
 		return err
 	}
@@ -238,14 +238,19 @@ func writeJsonSchemaFile(filename string, blueprintDirectory string, definition 
 		return err
 	}
 
-	return ioutil.WriteFile(fmt.Sprintf("%s/%s", blueprintDirectory, filename), importsJson, 0640)
+	yamlOut, err := yaml.JSONToYAML(importsJson)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(fmt.Sprintf("%s/%s", blueprintDirectory, filename), yamlOut, 0640)
 }
 
 // getBlueprintFilepathForJSONSchemaReference returns the filepath in the blueprint filesystem for a given schema name
 func getBlueprintFilepathForJSONSchemaReference(name string, namer *openapinamer.DefinitionNamer) string {
 	defName, _ := namer.GetDefinitionName(name)
 	schemaName := common.EscapeJsonPointer(defName)
-	filepath := fmt.Sprintf("schema/%s.json", common.EscapeJsonPointer(schemaName))
+	filepath := fmt.Sprintf("schema/%s.yaml", common.EscapeJsonPointer(schemaName))
 	return filepath
 }
 
@@ -276,7 +281,7 @@ func writeSchemaDependency(allOpenAPIDefinitions map[string]common.OpenAPIDefini
 		if err != nil {
 			return 0, err
 		}
-		totalFilesToWrite+= writtenFiles
+		totalFilesToWrite += writtenFiles
 
 		filepath := getBlueprintFilepathForJSONSchemaReference(schemaDependency, namer)
 

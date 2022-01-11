@@ -54,7 +54,7 @@ func main() {
 		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.Imports",
 		openapi.GetOpenAPIDefinitions,
 		"landscaper/pkg/controlplane/blueprint",
-		); err != nil {
+	); err != nil {
 		panic(err)
 	}
 }
