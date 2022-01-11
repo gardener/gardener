@@ -17,10 +17,8 @@ package botanist_test
 import (
 	"context"
 	"fmt"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -37,7 +35,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"
@@ -46,7 +43,6 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -469,202 +465,6 @@ var _ = Describe("Etcd", func() {
 			etcdEvents.EXPECT().Destroy(ctx)
 
 			Expect(botanist.DestroyEtcd(ctx)).To(Succeed())
-		})
-	})
-
-	Describe("#ScaleETCDTo*", func() {
-		var (
-			etcdMain, etcdEvents *druidv1alpha1.Etcd
-			replicas             int
-		)
-
-		JustBeforeEach(func() {
-			etcdEvents = &druidv1alpha1.Etcd{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "etcd-events",
-					Namespace: namespace,
-				},
-				Spec: druidv1alpha1.EtcdSpec{
-					Replicas: replicas,
-				},
-			}
-			etcdMain = &druidv1alpha1.Etcd{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "etcd-main",
-					Namespace: namespace,
-				},
-				Spec: druidv1alpha1.EtcdSpec{
-					Replicas: replicas,
-				},
-			}
-			botanist.K8sSeedClient = kubernetesClient
-			botanist.Shoot = &shootpkg.Shoot{SeedNamespace: namespace}
-		})
-
-		Describe("#ScaleETCDToZero", func() {
-			BeforeEach(func() {
-				replicas = 1
-			})
-
-			It("should scale both etcds to 0", func() {
-				now := time.Date(100, 1, 1, 0, 0, 0, 0, time.UTC)
-				nowFunc := func() time.Time {
-					return now
-				}
-				defer test.WithVar(&kubernetes.TimeNow, nowFunc)()
-
-				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdMain), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
-						*etcd = *etcdMain
-						return nil
-					})
-				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdEvents), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
-						*etcd = *etcdEvents
-						return nil
-					})
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).DoAndReturn(
-					func(_ context.Context, etcd *druidv1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
-						data, err := patch.Data(etcd)
-						Expect(err).ToNot(HaveOccurred())
-						Expect(string(data)).To(Equal(`{"metadata":{"annotations":{"gardener.cloud/operation":"reconcile","gardener.cloud/timestamp":"0100-01-01 00:00:00 +0000 UTC"}},"spec":{"replicas":0}}`))
-						return nil
-					}).Times(2)
-
-				Expect(botanist.ScaleETCDToZero(ctx)).To(Succeed())
-			})
-
-			It("should return the error when scaling etcd-events fails", func() {
-				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdEvents), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
-						*etcd = *etcdEvents
-						return nil
-					})
-
-				etcdEvents.Annotations = map[string]string{
-					gardencorev1beta1constants.GardenerOperation: gardencorev1beta1constants.GardenerOperationReconcile,
-				}
-				etcdEvents.Spec.Replicas = 0
-				c.EXPECT().Patch(ctx, etcdEvents, gomock.Any()).Return(fakeErr)
-
-				Expect(botanist.ScaleETCDToZero(ctx)).To(MatchError(fakeErr))
-			})
-
-			It("should return the error when scaling etcd-main fails", func() {
-				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdEvents), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
-						*etcd = *etcdEvents
-						return nil
-					})
-
-				etcdEvents.Annotations = map[string]string{
-					gardencorev1beta1constants.GardenerOperation: gardencorev1beta1constants.GardenerOperationReconcile,
-				}
-				etcdEvents.Spec.Replicas = 0
-				c.EXPECT().Patch(ctx, etcdEvents, gomock.Any())
-
-				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdMain), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
-						*etcd = druidv1alpha1.Etcd{
-							ObjectMeta: etcdMain.ObjectMeta,
-							Spec: druidv1alpha1.EtcdSpec{
-								Replicas: 1,
-							},
-						}
-						return nil
-					})
-
-				etcdMain.Annotations = map[string]string{
-					gardencorev1beta1constants.GardenerOperation: gardencorev1beta1constants.GardenerOperationReconcile,
-				}
-				etcdMain.Spec.Replicas = 0
-				c.EXPECT().Patch(ctx, etcdMain, gomock.Any()).Return(fakeErr)
-
-				Expect(botanist.ScaleETCDToZero(ctx)).To(MatchError(fakeErr))
-			})
-		})
-
-		Describe("#ScaleETCDToOne", func() {
-			BeforeEach(func() {
-				replicas = 0
-			})
-
-			It("should scale both etcds to 1", func() {
-				now := time.Date(100, 1, 1, 0, 0, 0, 0, time.UTC)
-				nowFunc := func() time.Time {
-					return now
-				}
-				defer test.WithVar(&kubernetes.TimeNow, nowFunc)()
-
-				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdMain), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
-						*etcd = *etcdMain
-						return nil
-					})
-				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdEvents), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
-						*etcd = *etcdEvents
-						return nil
-					})
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).DoAndReturn(
-					func(_ context.Context, etcd *druidv1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
-						data, err := patch.Data(etcd)
-						Expect(err).ToNot(HaveOccurred())
-						Expect(string(data)).To(Equal(`{"metadata":{"annotations":{"gardener.cloud/operation":"reconcile","gardener.cloud/timestamp":"0100-01-01 00:00:00 +0000 UTC"}},"spec":{"replicas":1}}`))
-						return nil
-					}).Times(2)
-
-				Expect(botanist.ScaleETCDToOne(ctx)).To(Succeed())
-			})
-
-			It("should return the error when scaling etcd-events fails", func() {
-				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdEvents), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
-						*etcd = *etcdEvents
-						return nil
-					})
-
-				etcdEvents.Annotations = map[string]string{
-					gardencorev1beta1constants.GardenerOperation: gardencorev1beta1constants.GardenerOperationReconcile,
-				}
-				etcdEvents.Spec.Replicas = 1
-				c.EXPECT().Patch(ctx, etcdEvents, gomock.Any()).Return(fakeErr)
-
-				Expect(botanist.ScaleETCDToOne(ctx)).To(MatchError(fakeErr))
-			})
-
-			It("should return the error when scaling etcd-main fails", func() {
-				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdEvents), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
-						*etcd = *etcdEvents
-						return nil
-					})
-
-				etcdEvents.Annotations = map[string]string{
-					gardencorev1beta1constants.GardenerOperation: gardencorev1beta1constants.GardenerOperationReconcile,
-				}
-				etcdEvents.Spec.Replicas = 1
-				c.EXPECT().Patch(ctx, etcdEvents, gomock.Any())
-
-				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdMain), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
-						*etcd = druidv1alpha1.Etcd{
-							ObjectMeta: etcdMain.ObjectMeta,
-							Spec: druidv1alpha1.EtcdSpec{
-								Replicas: 1,
-							},
-						}
-						return nil
-					})
-
-				etcdMain.Annotations = map[string]string{
-					gardencorev1beta1constants.GardenerOperation: gardencorev1beta1constants.GardenerOperationReconcile,
-				}
-				etcdMain.Spec.Replicas = 1
-				c.EXPECT().Patch(ctx, etcdMain, gomock.Any()).Return(fakeErr)
-
-				Expect(botanist.ScaleETCDToOne(ctx)).To(MatchError(fakeErr))
-			})
 		})
 	})
 })
