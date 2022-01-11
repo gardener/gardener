@@ -95,6 +95,20 @@ func (mr *MockInterfaceMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInterface)(nil).Get), arg0)
 }
 
+// ScaleETCD mocks base method.
+func (m *MockInterface) ScaleETCD(arg0 context.Context, arg1 int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ScaleETCD", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ScaleETCD indicates an expected call of ScaleETCD.
+func (mr *MockInterfaceMockRecorder) ScaleETCD(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScaleETCD", reflect.TypeOf((*MockInterface)(nil).ScaleETCD), arg0, arg1)
+}
+
 // ScrapeConfigs mocks base method.
 func (m *MockInterface) ScrapeConfigs() ([]string, error) {
 	m.ctrl.T.Helper()
