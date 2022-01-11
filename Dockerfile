@@ -107,7 +107,7 @@ ENTRYPOINT ["/landscaper-controlplane"]
 ############# gardener-extension-provider-local #############
 FROM base AS gardener-extension-provider-local
 
-COPY --from=builder /gardener-extension-provider-local /gardener-extension-provider-local
+COPY --from=builder /go/bin/gardener-extension-provider-local /gardener-extension-provider-local
 COPY charts/gardener/provider-local /charts/gardener/provider-local
 
 WORKDIR /
