@@ -161,6 +161,10 @@ func (b *Botanist) ScaleGardenerResourceManagerToOne(ctx context.Context) error 
 }
 
 func (b *Botanist) mustBootstrapGardenerResourceManager(ctx context.Context) (bool, error) {
+	if b.Shoot.HibernationEnabled && b.Shoot.GetInfo().Status.IsHibernated {
+		return false, nil // Shoot is already hibernated
+	}
+
 	shootAccessSecret := gutil.NewShootAccessSecret(resourcemanager.SecretNameShootAccess, b.Shoot.SeedNamespace)
 	if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret.Secret), shootAccessSecret.Secret); err != nil {
 		if !apierrors.IsNotFound(err) {

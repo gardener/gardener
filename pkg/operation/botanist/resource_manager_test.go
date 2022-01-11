@@ -181,15 +181,11 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 		})
 
 		Context("w/o bootstrapping", func() {
-			BeforeEach(func() {
-				gomock.InOrder(
-					// ensure bootstrapping prerequisites are not met
-					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
-						obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(time.Hour).Format(time.RFC3339)}
-						return nil
-					}),
-					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+			It("should not bootstrap when the shoot is hibernated", func() {
+				botanist.Shoot.HibernationEnabled = true
+				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{IsHibernated: true}})
 
+				gomock.InOrder(
 					// always delete bootstrap kubeconfig
 					c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, opts ...client.DeleteOption) error {
 						Expect(obj.Name).To(Equal(bootstrapKubeconfigSecret.Name))
@@ -200,16 +196,42 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 					// set secrets
 					resourceManager.EXPECT().SetSecrets(secrets),
 				)
-			})
 
-			It("should delete the bootstrap kubeconfig secret (if exists), set the secrets and deploy", func() {
 				resourceManager.EXPECT().Deploy(ctx)
 				Expect(botanist.DeployGardenerResourceManager(ctx)).To(Succeed())
 			})
 
-			It("should fail when the deploy function fails", func() {
-				resourceManager.EXPECT().Deploy(ctx).Return(fakeErr)
-				Expect(botanist.DeployGardenerResourceManager(ctx)).To(MatchError(fakeErr))
+			Context("shoot is not hibernated", func() {
+				BeforeEach(func() {
+					gomock.InOrder(
+						// ensure bootstrapping prerequisites are not met
+						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
+							obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(time.Hour).Format(time.RFC3339)}
+							return nil
+						}),
+						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+
+						// always delete bootstrap kubeconfig
+						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, opts ...client.DeleteOption) error {
+							Expect(obj.Name).To(Equal(bootstrapKubeconfigSecret.Name))
+							Expect(obj.Namespace).To(Equal(bootstrapKubeconfigSecret.Namespace))
+							return nil
+						}),
+
+						// set secrets
+						resourceManager.EXPECT().SetSecrets(secrets),
+					)
+				})
+
+				It("should delete the bootstrap kubeconfig secret (if exists), set the secrets and deploy", func() {
+					resourceManager.EXPECT().Deploy(ctx)
+					Expect(botanist.DeployGardenerResourceManager(ctx)).To(Succeed())
+				})
+
+				It("should fail when the deploy function fails", func() {
+					resourceManager.EXPECT().Deploy(ctx).Return(fakeErr)
+					Expect(botanist.DeployGardenerResourceManager(ctx)).To(MatchError(fakeErr))
+				})
 			})
 		})
 
