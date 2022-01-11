@@ -10,7 +10,7 @@ imports:
     required: false
     schema:
       items:
-      - ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.Alerting.json
+      - ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.Alerting.yaml
       type: array
   - name: apiVersion
     required: false
@@ -22,29 +22,29 @@ imports:
   - name: certificateRotation
     required: false
     schema:
-      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.CertificateRotation.json
+      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.CertificateRotation.yaml
   - name: defaultDomains
     required: false
     schema:
       items:
-      - ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.DNS.json
+      - ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.DNS.yaml
       type: array
   - name: gardenerAPIServer
     required: true
     schema:
-      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.GardenerAPIServer.json
+      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.GardenerAPIServer.yaml
   - name: gardenerAdmissionController
     required: false
     schema:
-      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.GardenerAdmissionController.json
+      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.GardenerAdmissionController.yaml
   - name: gardenerControllerManager
     required: false
     schema:
-      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.GardenerControllerManager.json
+      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.GardenerControllerManager.yaml
   - name: gardenerScheduler
     required: false
     schema:
-      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.GardenerScheduler.json
+      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.GardenerScheduler.yaml
   - name: identity
     required: false
     schema:
@@ -55,7 +55,7 @@ imports:
   - name: internalDomain
     required: true
     schema:
-      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.DNS.json
+      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.DNS.yaml
   - name: openVPNDiffieHellmanKey
     required: false
     schema:
@@ -70,15 +70,15 @@ imports:
   - name: rbac
     required: false
     schema:
-      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.Rbac.json
+      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.Rbac.yaml
   - name: runtimeCluster
     required: true
     schema:
-      ref: blueprint://schema/com.github.gardener.landscaper.apis.core.v1alpha1.Target.json
+      ref: blueprint://schema/com.github.gardener.landscaper.apis.core.v1alpha1.Target.yaml
   - name: virtualGarden
     required: false
     schema:
-      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.VirtualGarden.json
+      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.VirtualGarden.yaml
   
 
 # For what can be referenced in the deployExecutions, please see:

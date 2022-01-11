@@ -1,0 +1,14 @@
+description: TargetSpec contains the definition of a target.
+properties:
+  config:
+    $ref: blueprint://schema/com.github.gardener.landscaper.apis.core.v1alpha1.AnyJSON.yaml
+    default: {}
+    description: Configuration contains the target type specific configuration.
+  type:
+    default: ""
+    description: Type is the type of the target that defines its data structure. The
+      actual schema may be defined by a target type crd in the future.
+    type: string
+required:
+- type
+type: object

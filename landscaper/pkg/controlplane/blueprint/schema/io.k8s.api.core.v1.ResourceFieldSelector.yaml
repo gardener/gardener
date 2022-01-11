@@ -1,0 +1,19 @@
+description: ResourceFieldSelector represents container resources (cpu, memory) and
+  their output format
+properties:
+  containerName:
+    description: 'Container name: required for volumes, optional for env vars'
+    type: string
+  divisor:
+    $ref: blueprint://schema/io.k8s.apimachinery.pkg.api.resource.Quantity.yaml
+    default: {}
+    description: Specifies the output format of the exposed resources, defaults to
+      "1"
+  resource:
+    default: ""
+    description: 'Required: resource to select'
+    type: string
+required:
+- resource
+type: object
+x-kubernetes-map-type: atomic

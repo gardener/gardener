@@ -1,0 +1,36 @@
+description: APIServerEtcdConfiguration contains configuration for the etcd of the
+  Gardener API server etcd is a required as a prerequisite
+properties:
+  caBundle:
+    description: CABundle is a PEM encoded CA bundle which will be used by the Gardener
+      API server to verify that the TLS serving certificate presented by etcd is signed
+      by this CA configures the flag --etcd-cafile on the Gardener API server Optional.
+      if not set, the Gardener API server will not validate etcd's TLS serving certificate
+    type: string
+  clientCert:
+    description: |-
+      ClientCert contains a client certificate which will be used by the Gardener API server to communicate with etcd via TLS. Configures the flags --etcd-certfile on the Gardener API server. On the etcd make sure that
+       - client authentication is enabled via the flag --client-cert-auth
+       - the client credentials have been signed by the CA provided to etcd via the flag --trusted-ca-file
+      Optional. Etcd does not have to enforce client authentication.
+    type: string
+  clientKey:
+    description: ClientKey is the key matching the configured client certificate.
+      Configures the flags --etcd-keyfile on the Gardener API server. Optional. Etcd
+      does not have to enforce client authentication.
+    type: string
+  secretRef:
+    $ref: blueprint://schema/io.k8s.api.core.v1.SecretReference.yaml
+    description: 'SecretRef is an optional reference to a secret in the runtime cluster
+      that contains the etcd''s CABundle Client certificate and key Expects the following
+      keys - ca.crt:  CABundle - tls.crt: ClientCert - tls.key: ClientKey'
+  url:
+    default: ""
+    description: Url is the 'url:port' of the etcd of the Gardener API server If the
+      etcd is deployed in-cluster, should be of the form 'k8s-service-name:port' if
+      the etcd serves TLS (configurable via flag --cert-file on etcd), this URL can
+      use the HTTPS schema.
+    type: string
+required:
+- url
+type: object

@@ -1,0 +1,76 @@
+description: APIServerComponentConfiguration contains configurations for the Gardener
+  Extension API server
+properties:
+  admission:
+    $ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.APIServerAdmissionConfiguration.yaml
+    description: Admission contains admission configuration for the Gardener API server
+  audit:
+    $ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.APIServerAuditConfiguration.yaml
+    description: Audit contains optional audit logging configuration. Can be used
+      to override the Gardener default audit logging policy or disable audit logging
+      altogether.
+  ca:
+    $ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.CA.yaml
+    description: 'CA contains a PEM encoded CA public key which will be used by the
+      Kubernetes API server (either the RuntimeCluster or the VirtualGarden cluster)
+      to validate the Gardener Extension API server''s TLS serving certificate. It
+      is put into the APIService resources for the Gardener resource groups The TLS
+      serving certificate of the Gardener Extension API server has to be signed by
+      this CA. For more information, please see: https://kubernetes.io/docs/tasks/extend-kubernetes/configure-aggregation-layer/#contacting-the-extension-apiserver
+      If the TLS serving certificate of the Gardener Extension API server is not provided,
+      then must contain the private key of the CA to generate missing TLS serving
+      certificate. If left empty, generates a new CA or reuses the CA of an existing
+      APIService registration.'
+  encryption:
+    $ref: blueprint://schema/io.k8s.apiserver.pkg.apis.config.v1.EncryptionConfiguration.yaml
+    description: |-
+      Encryption configures an optional encryption configuration Defaults: - resources (secrets, controllerregistrations.core.gardener.cloud, controllerdeployments.core.gardener.cloud, shootstates.core.gardener.cloud)
+        providers:
+         - aescbc with a randomly generated key
+         - identity: {}
+  etcd:
+    $ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.APIServerEtcdConfiguration.yaml
+    default: {}
+    description: Etcd contains configuration for the etcd of the Gardener API server
+  featureGates:
+    additionalProperties:
+      default: false
+      type: boolean
+    description: FeatureGates are optional feature gates that shall be activated on
+      the Gardener API server
+    type: object
+  goAwayChance:
+    description: GoAwayChance sets the fraction of requests that will be sent a GOAWAY.
+      Clusters with single apiservers, or which don't use a load balancer, should
+      NOT enable this. Min is 0 (off), Max is .02 (1/50 requests); .001 (1/1000) is
+      a recommended starting point.
+    format: float
+    type: number
+  http2MaxStreamsPerConnection:
+    description: Http2MaxStreamsPerConnection is the limit that the server gives to
+      clients for the maximum number of streams in an HTTP/2 connection. Zero means
+      to use golang's default
+    format: int32
+    type: integer
+  requests:
+    $ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.APIServerRequests.yaml
+    description: Requests are optional request related configuration of the Gardener
+      API Server
+  shutdownDelayDuration:
+    $ref: blueprint://schema/io.k8s.apimachinery.pkg.apis.meta.v1.Duration.yaml
+    description: ShutdownDelayDuration is the time to delay the termination. During
+      that time the server keeps serving requests normally. The endpoints /healthz
+      and /livez will return success, but /readyz immediately returns failure. Graceful
+      termination starts after this delay has elapsed. This can be used to allow load
+      balancer to stop sending traffic to this server.
+  tls:
+    $ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.TLSServer.yaml
+    description: TLS contains the TLS serving certificate & key of the Gardener Extension
+      API server If left empty, generates certificates signed by the provided CA bundle.
+  watchCacheSize:
+    $ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.APIServerWatchCacheConfiguration.yaml
+    description: WatchCacheSize optionally configures the watch cache size for resources
+      watched by the Gardener API Server
+required:
+- etcd
+type: object

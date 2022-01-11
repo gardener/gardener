@@ -1,0 +1,145 @@
+description: Volume represents a named volume in a pod that may be accessed by any
+  container in the pod.
+properties:
+  awsElasticBlockStore:
+    $ref: blueprint://schema/io.k8s.api.core.v1.AWSElasticBlockStoreVolumeSource.yaml
+    description: 'AWSElasticBlockStore represents an AWS Disk resource that is attached
+      to a kubelet''s host machine and then exposed to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore'
+  azureDisk:
+    $ref: blueprint://schema/io.k8s.api.core.v1.AzureDiskVolumeSource.yaml
+    description: AzureDisk represents an Azure Data Disk mount on the host and bind
+      mount to the pod.
+  azureFile:
+    $ref: blueprint://schema/io.k8s.api.core.v1.AzureFileVolumeSource.yaml
+    description: AzureFile represents an Azure File Service mount on the host and
+      bind mount to the pod.
+  cephfs:
+    $ref: blueprint://schema/io.k8s.api.core.v1.CephFSVolumeSource.yaml
+    description: CephFS represents a Ceph FS mount on the host that shares a pod's
+      lifetime
+  cinder:
+    $ref: blueprint://schema/io.k8s.api.core.v1.CinderVolumeSource.yaml
+    description: 'Cinder represents a cinder volume attached and mounted on kubelets
+      host machine. More info: https://examples.k8s.io/mysql-cinder-pd/README.md'
+  configMap:
+    $ref: blueprint://schema/io.k8s.api.core.v1.ConfigMapVolumeSource.yaml
+    description: ConfigMap represents a configMap that should populate this volume
+  csi:
+    $ref: blueprint://schema/io.k8s.api.core.v1.CSIVolumeSource.yaml
+    description: CSI (Container Storage Interface) represents ephemeral storage that
+      is handled by certain external CSI drivers (Beta feature).
+  downwardAPI:
+    $ref: blueprint://schema/io.k8s.api.core.v1.DownwardAPIVolumeSource.yaml
+    description: DownwardAPI represents downward API about the pod that should populate
+      this volume
+  emptyDir:
+    $ref: blueprint://schema/io.k8s.api.core.v1.EmptyDirVolumeSource.yaml
+    description: 'EmptyDir represents a temporary directory that shares a pod''s lifetime.
+      More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir'
+  ephemeral:
+    $ref: blueprint://schema/io.k8s.api.core.v1.EphemeralVolumeSource.yaml
+    description: |-
+      Ephemeral represents a volume that is handled by a cluster storage driver. The volume's lifecycle is tied to the pod that defines it - it will be created before the pod starts, and deleted when the pod is removed.
+
+      Use this if: a) the volume is only needed while the pod runs, b) features of normal volumes like restoring from snapshot or capacity
+         tracking are needed,
+      c) the storage driver is specified through a storage class, and d) the storage driver supports dynamic volume provisioning through
+         a PersistentVolumeClaim (see EphemeralVolumeSource for more
+         information on the connection between this volume type
+         and PersistentVolumeClaim).
+
+      Use PersistentVolumeClaim or one of the vendor-specific APIs for volumes that persist for longer than the lifecycle of an individual pod.
+
+      Use CSI for light-weight local ephemeral volumes if the CSI driver is meant to be used that way - see the documentation of the driver for more information.
+
+      A pod can use both types of ephemeral volumes and persistent volumes at the same time.
+
+      This is a beta feature and only available when the GenericEphemeralVolume feature gate is enabled.
+  fc:
+    $ref: blueprint://schema/io.k8s.api.core.v1.FCVolumeSource.yaml
+    description: FC represents a Fibre Channel resource that is attached to a kubelet's
+      host machine and then exposed to the pod.
+  flexVolume:
+    $ref: blueprint://schema/io.k8s.api.core.v1.FlexVolumeSource.yaml
+    description: FlexVolume represents a generic volume resource that is provisioned/attached
+      using an exec based plugin.
+  flocker:
+    $ref: blueprint://schema/io.k8s.api.core.v1.FlockerVolumeSource.yaml
+    description: Flocker represents a Flocker volume attached to a kubelet's host
+      machine. This depends on the Flocker control service being running
+  gcePersistentDisk:
+    $ref: blueprint://schema/io.k8s.api.core.v1.GCEPersistentDiskVolumeSource.yaml
+    description: 'GCEPersistentDisk represents a GCE Disk resource that is attached
+      to a kubelet''s host machine and then exposed to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk'
+  gitRepo:
+    $ref: blueprint://schema/io.k8s.api.core.v1.GitRepoVolumeSource.yaml
+    description: 'GitRepo represents a git repository at a particular revision. DEPRECATED:
+      GitRepo is deprecated. To provision a container with a git repo, mount an EmptyDir
+      into an InitContainer that clones the repo using git, then mount the EmptyDir
+      into the Pod''s container.'
+  glusterfs:
+    $ref: blueprint://schema/io.k8s.api.core.v1.GlusterfsVolumeSource.yaml
+    description: 'Glusterfs represents a Glusterfs mount on the host that shares a
+      pod''s lifetime. More info: https://examples.k8s.io/volumes/glusterfs/README.md'
+  hostPath:
+    $ref: blueprint://schema/io.k8s.api.core.v1.HostPathVolumeSource.yaml
+    description: 'HostPath represents a pre-existing file or directory on the host
+      machine that is directly exposed to the container. This is generally used for
+      system agents or other privileged things that are allowed to see the host machine.
+      Most containers will NOT need this. More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath'
+  iscsi:
+    $ref: blueprint://schema/io.k8s.api.core.v1.ISCSIVolumeSource.yaml
+    description: 'ISCSI represents an ISCSI Disk resource that is attached to a kubelet''s
+      host machine and then exposed to the pod. More info: https://examples.k8s.io/volumes/iscsi/README.md'
+  name:
+    default: ""
+    description: 'Volume''s name. Must be a DNS_LABEL and unique within the pod. More
+      info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+    type: string
+  nfs:
+    $ref: blueprint://schema/io.k8s.api.core.v1.NFSVolumeSource.yaml
+    description: 'NFS represents an NFS mount on the host that shares a pod''s lifetime
+      More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs'
+  persistentVolumeClaim:
+    $ref: blueprint://schema/io.k8s.api.core.v1.PersistentVolumeClaimVolumeSource.yaml
+    description: 'PersistentVolumeClaimVolumeSource represents a reference to a PersistentVolumeClaim
+      in the same namespace. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims'
+  photonPersistentDisk:
+    $ref: blueprint://schema/io.k8s.api.core.v1.PhotonPersistentDiskVolumeSource.yaml
+    description: PhotonPersistentDisk represents a PhotonController persistent disk
+      attached and mounted on kubelets host machine
+  portworxVolume:
+    $ref: blueprint://schema/io.k8s.api.core.v1.PortworxVolumeSource.yaml
+    description: PortworxVolume represents a portworx volume attached and mounted
+      on kubelets host machine
+  projected:
+    $ref: blueprint://schema/io.k8s.api.core.v1.ProjectedVolumeSource.yaml
+    description: Items for all in one resources secrets, configmaps, and downward
+      API
+  quobyte:
+    $ref: blueprint://schema/io.k8s.api.core.v1.QuobyteVolumeSource.yaml
+    description: Quobyte represents a Quobyte mount on the host that shares a pod's
+      lifetime
+  rbd:
+    $ref: blueprint://schema/io.k8s.api.core.v1.RBDVolumeSource.yaml
+    description: 'RBD represents a Rados Block Device mount on the host that shares
+      a pod''s lifetime. More info: https://examples.k8s.io/volumes/rbd/README.md'
+  scaleIO:
+    $ref: blueprint://schema/io.k8s.api.core.v1.ScaleIOVolumeSource.yaml
+    description: ScaleIO represents a ScaleIO persistent volume attached and mounted
+      on Kubernetes nodes.
+  secret:
+    $ref: blueprint://schema/io.k8s.api.core.v1.SecretVolumeSource.yaml
+    description: 'Secret represents a secret that should populate this volume. More
+      info: https://kubernetes.io/docs/concepts/storage/volumes#secret'
+  storageos:
+    $ref: blueprint://schema/io.k8s.api.core.v1.StorageOSVolumeSource.yaml
+    description: StorageOS represents a StorageOS volume attached and mounted on Kubernetes
+      nodes.
+  vsphereVolume:
+    $ref: blueprint://schema/io.k8s.api.core.v1.VsphereVirtualDiskVolumeSource.yaml
+    description: VsphereVolume represents a vSphere volume attached and mounted on
+      kubelets host machine
+required:
+- name
+type: object

@@ -1,0 +1,46 @@
+description: HVPAConfigurationVPA contains VPA related configuration for the HVPA
+  of the Gardener Extension API server
+properties:
+  limitsRequestsGapScaleParams:
+    $ref: blueprint://schema/com.github.gardener.hvpa-controller.api.v1alpha1.ScaleParams.yaml
+    description: |-
+      LimitsRequestsGapScaleParams is the scaling thresholds for limits Defaults:
+       cpu:
+         value: "1"
+         percentage: 70
+       memory:
+         value: "1G"
+         percentage: 70
+  scaleDownMode:
+    description: 'ScaleDownMode controls when the VPA component of HVPA scales down
+      Possible values: "Auto", "Off", "MaintenanceWindow" Defaults to: "Auto"'
+    type: string
+  scaleDownStabilization:
+    $ref: blueprint://schema/com.github.gardener.hvpa-controller.api.v1alpha1.ScaleType.yaml
+    description: |-
+      ScaleDownStabilization defines parameters for the VPA component of HVPA for scale down Defaults:
+       stabilizationDuration: "15m"
+       minChange:
+         cpu:
+           value: 600m
+           percentage: 80
+         memory:
+           value: 600M
+           percentage: 80
+  scaleUpMode:
+    description: 'ScaleUpMode controls when the VPA component of HVPA scales up Possible
+      values: "Auto", "Off", "MaintenanceWindow" Defaults to: "Auto"'
+    type: string
+  scaleUpStabilization:
+    $ref: blueprint://schema/com.github.gardener.hvpa-controller.api.v1alpha1.ScaleType.yaml
+    description: |-
+      ScaleUpStabilization defines parameters for the VPA component of HVPA for scale up Defaults:
+       stabilizationDuration: "3m"
+         minChange:
+           cpu:
+             value: 300m
+             percentage: 80
+           memory:
+             value: 200M
+             percentage: 80
+type: object

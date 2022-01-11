@@ -1,0 +1,51 @@
+description: 'Alerting configures the Gardener installation with alerting please see
+  the docs for more details: https://github.com/gardener/gardener/blob/master/docs/monitoring/alerting.md#alerting-for-operators'
+properties:
+  authIdentity:
+    description: AuthUsername is the identity used for authentication when using SMTP
+    type: string
+  authPassword:
+    description: AuthUsername is the password used for authentication when using SMTP
+    type: string
+  authType:
+    description: 'AuthType is the authentication type to use allowed values: smtp,
+      none, basic, certificate'
+    type: string
+  authUsername:
+    description: AuthUsername is the username used for authentication when using SMTP
+    type: string
+  caCert:
+    description: Certificate Auth CaCert is the CA certificate the TLS certificate
+      presented at the url endpoint of the external (non-Gardener managed) alert manager
+      needs to be signed with
+    type: string
+  fromEmailAddress:
+    description: FromEmailAddress is the email address to send alerts from
+    type: string
+  password:
+    description: Password is the password to use for basic authentication with the
+      external (non-Gardener managed) alert manager
+    type: string
+  smarthost:
+    description: Smarthost is the smtp host used for sending
+    type: string
+  tlsCert:
+    description: TlsCert is the TLS certificate to use for authentication with the
+      external (non-Gardener managed) alert manager
+    type: string
+  tlsKey:
+    description: TlsCert is the TLS key to use for authentication with the external
+      (non-Gardener managed) alert manager
+    type: string
+  toEmailAddress:
+    description: SMTP Auth ToEmailAddress is the email address to send alerts to
+    type: string
+  url:
+    description: Url is the URL to post alerts to only required for authentication
+      types none, basic and certificate
+    type: string
+  username:
+    description: Basic Auth Username is the username to use for basic authentication
+      with the external (non-Gardener managed) alert manager
+    type: string
+type: object
