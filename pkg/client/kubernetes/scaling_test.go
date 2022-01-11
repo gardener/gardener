@@ -16,11 +16,8 @@ package kubernetes_test
 
 import (
 	"context"
-	"time"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/test"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
@@ -75,25 +72,6 @@ var _ = Describe("scale", func() {
 			Expect(c.Get(ctx, key, updated)).NotTo(HaveOccurred(), "could get the updated resource")
 
 			Expect(updated.Spec.Replicas).To(PointTo(BeEquivalentTo(2)), "updated replica")
-		})
-	})
-
-	Context("ScaleEtcd", func() {
-		It("sets scale to 2", func() {
-			now := time.Date(100, 1, 1, 0, 0, 0, 0, time.UTC)
-			nowFunc := func() time.Time {
-				return now
-			}
-			defer test.WithVar(&TimeNow, nowFunc)()
-
-			Expect(ScaleEtcd(ctx, c, key, 2)).NotTo(HaveOccurred(), "scale succeeds")
-
-			updated := &druidv1alpha1.Etcd{}
-			Expect(c.Get(ctx, key, updated)).NotTo(HaveOccurred(), "could get the updated resource")
-
-			Expect(updated.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile))
-			Expect(updated.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerTimestamp, now.String()))
-			Expect(updated.Spec.Replicas).To(BeEquivalentTo(2), "updated replica")
 		})
 	})
 })

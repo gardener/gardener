@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -39,34 +37,6 @@ func ScaleStatefulSet(ctx context.Context, c client.Client, key client.ObjectKey
 	}
 
 	return scaleResource(ctx, c, statefulset, replicas)
-}
-
-// TimeNow returns the current time. Exposed for testing.
-var TimeNow = time.Now
-
-// ScaleEtcd scales an Etcd resource.
-func ScaleEtcd(ctx context.Context, c client.Client, key client.ObjectKey, replicas int) error {
-	etcd := &druidv1alpha1.Etcd{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      key.Name,
-			Namespace: key.Namespace,
-		},
-	}
-
-	if err := c.Get(ctx, key, etcd); err != nil {
-		return err
-	}
-
-	patch := client.MergeFrom(etcd.DeepCopy())
-	if etcd.Annotations == nil {
-		etcd.SetAnnotations(make(map[string]string))
-	}
-
-	etcd.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationReconcile
-	etcd.Annotations[v1beta1constants.GardenerTimestamp] = TimeNow().UTC().String()
-	etcd.Spec.Replicas = replicas
-
-	return c.Patch(ctx, etcd, patch)
 }
 
 // ScaleDeployment scales a Deployment.
