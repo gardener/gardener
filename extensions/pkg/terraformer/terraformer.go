@@ -23,7 +23,6 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -295,15 +294,15 @@ const (
 
 func (t *terraformer) ensureServiceAccount(ctx context.Context) error {
 	serviceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: name}}
-	if err := t.client.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
+	_, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, t.client, serviceAccount, func() error {
+		if t.useProjectedTokenMount {
+			serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+		} else {
+			serviceAccount.AutomountServiceAccountToken = nil
 		}
-		if err := t.client.Create(ctx, serviceAccount); err != nil {
-			return err
-		}
-	}
-	return nil
+		return nil
+	})
+	return err
 }
 
 func (t *terraformer) ensureRole(ctx context.Context) error {

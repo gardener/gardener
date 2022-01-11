@@ -33,6 +33,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -57,12 +58,20 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, lo
 		return err
 	}
 
-	// Generate MCM kubeconfig and inject its checksum into the MCM values.
-	mcmKubeconfigSecret, err := createKubeconfigForMachineControllerManager(ctx, a.client, workerObj.Namespace, a.mcmName)
-	if err != nil {
-		return err
+	mcmValues["useTokenRequestor"] = a.useTokenRequestor
+	mcmValues["useProjectedTokenMount"] = a.useProjectedTokenMount
+
+	if a.useTokenRequestor {
+		if err := gutil.NewShootAccessSecret(a.mcmName, workerObj.Namespace).Reconcile(ctx, a.client); err != nil {
+			return err
+		}
+	} else {
+		mcmKubeconfigSecret, err := createKubeconfigForMachineControllerManager(ctx, a.client, workerObj.Namespace, a.mcmName)
+		if err != nil {
+			return err
+		}
+		injectPodAnnotation(mcmValues, "checksum/secret-machine-controller-manager", utils.ComputeChecksum(mcmKubeconfigSecret.Data))
 	}
-	injectPodAnnotation(mcmValues, "checksum/secret-machine-controller-manager", utils.ComputeChecksum(mcmKubeconfigSecret.Data))
 
 	replicaCount, err := replicas()
 	if err != nil {
@@ -84,7 +93,12 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, lo
 		return fmt.Errorf("waiting until deployment/%s is updated: %w", McmDeploymentName, err)
 	}
 
-	return nil
+	// TODO(rfranzke/BeckerMax): Remove in a future release.
+	secretName := a.mcmName
+	if !a.useTokenRequestor {
+		secretName = "shoot-access-" + a.mcmName
+	}
+	return kutil.DeleteObject(ctx, a.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: workerObj.Namespace}})
 }
 
 func (a *genericActuator) deleteMachineControllerManager(ctx context.Context, logger logr.Logger, workerObj *extensionsv1alpha1.Worker) error {
@@ -104,7 +118,11 @@ func (a *genericActuator) deleteMachineControllerManager(ctx context.Context, lo
 		return fmt.Errorf("cleaning up machine-controller-manager resources in seed failed: %w", err)
 	}
 
-	return nil
+	return kutil.DeleteObjects(ctx, a.client,
+		// TODO(rfranzke/BeckerMax): Remove in a future release.
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-" + a.mcmName, Namespace: workerObj.Namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: a.mcmName, Namespace: workerObj.Namespace}},
+	)
 }
 
 func (a *genericActuator) waitUntilMachineControllerManagerIsDeleted(ctx context.Context, logger logr.Logger, namespace string) error {
@@ -139,6 +157,8 @@ func (a *genericActuator) applyMachineControllerManagerShootChart(ctx context.Co
 	if err != nil {
 		return err
 	}
+
+	values["useTokenRequestor"] = a.useTokenRequestor
 
 	if err := managedresources.RenderChartAndCreate(ctx, workerObj.Namespace, McmShootResourceName, false, a.client, chartRenderer, a.mcmShootChart, values, a.imageVector, metav1.NamespaceSystem, cluster.Shoot.Spec.Kubernetes.Version, true, false); err != nil {
 		return fmt.Errorf("could not apply control plane shoot chart for worker '%s': %w", kutil.ObjectName(workerObj), err)

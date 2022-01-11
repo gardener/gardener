@@ -73,6 +73,9 @@ type terraformer struct {
 	deadlineCleaning    time.Duration
 	deadlinePod         time.Duration
 	deadlinePodCreation time.Duration
+
+	// TODO(rfranzke/BeckerMax): Remove these flags when all provider extensions enable the projected token mount.
+	useProjectedTokenMount bool
 }
 
 // RawState represent the terraformer state's raw data
@@ -119,6 +122,7 @@ type Terraformer interface {
 	SetDeadlinePod(time.Duration) Terraformer
 	SetDeadlinePodCreation(time.Duration) Terraformer
 	SetOwnerRef(*metav1.OwnerReference) Terraformer
+	UseProjectedTokenMount(bool) Terraformer
 	InitializeWith(ctx context.Context, initializer Initializer) Terraformer
 	Apply(ctx context.Context) error
 	Destroy(ctx context.Context) error
