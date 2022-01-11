@@ -288,6 +288,7 @@ var _ = Describe("ExtensionValidator", func() {
 					Providers: []core.DNSProvider{
 						{Type: pointer.String("foo-1")},
 						{Type: pointer.String("foo0")},
+						{Type: pointer.String("unmanaged")},
 					},
 				},
 				Extensions: []core.Extension{

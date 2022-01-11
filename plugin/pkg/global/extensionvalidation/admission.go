@@ -295,7 +295,7 @@ func (e *ExtensionValidator) validateShoot(kindToTypesMap map[string]sets.String
 
 	if spec.DNS != nil {
 		for i, provider := range spec.DNS.Providers {
-			if provider.Type == nil {
+			if provider.Type == nil || *provider.Type == core.DNSUnmanaged {
 				continue
 			}
 
