@@ -19,6 +19,8 @@ set -e
 usage() {
   echo "Usage:"
   echo "> compare-k8s-feature-gates.sh [ -h | <old version> <new version> ]"
+  echo
+  echo ">> For example: compare-k8s-feature-gates.sh 1.22 1.23"
 
   exit 0
 }
