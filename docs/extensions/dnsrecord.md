@@ -131,6 +131,16 @@ The feature gate is enabled by default starting from `v1.39`.
 
 In order to successfully reconcile a shoot with the feature gate enabled, extension controllers for `DNSRecord` resources for types used in the default, internal and custom domain secrets should be registered via `ControllerRegistration` resources.
 
+### List of first versions of extensions that supports `DNSRecord`
+
+| Extension                                    | Version  |
+| -------------------------------------------- | -------- |
+| provider-aws                                 | `v1.27.0`|
+| provider-gcp                                 | `v1.18.0`|
+| provider-azure                               | `v1.21.0`|
+| provider-alicloud                            | `v1.26.0`|
+| provider-openstack                           | `v1.21.0`|
+
 ## References and additional resources
 
 * [`DNSRecord` API (Golang specification)](../../pkg/apis/extensions/v1alpha1/types_dnsrecord.go)
