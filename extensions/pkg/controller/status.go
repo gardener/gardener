@@ -71,7 +71,7 @@ type StatusUpdater interface {
 	Success(context.Context, extensionsv1alpha1.Object, gardencorev1beta1.LastOperationType, string) error
 }
 
-// UpdaterFunc is a function to perform additional updates of the status
+// UpdaterFunc is a function to perform additional updates of the status.
 type UpdaterFunc func(extensionsv1alpha1.Status) error
 
 // StatusUpdaterCustom contains functions for customized updating statuses of extension resources after a controller operation.

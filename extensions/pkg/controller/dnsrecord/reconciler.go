@@ -41,7 +41,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-const createdConditionType = "created"
+const createdConditionType = "Created"
 
 type reconciler struct {
 	logger   logr.Logger
@@ -217,7 +217,8 @@ func (r *reconciler) delete(ctx context.Context, dns *extensionsv1alpha1.DNSReco
 		return reconcile.Result{}, nil
 	}
 
-	if !hasCreatedConditionFalse(dns.GetExtensionStatus()) {
+	switch getCreatedConditionStatus(dns.GetExtensionStatus()) {
+	case gardencorev1beta1.ConditionTrue, gardencorev1beta1.ConditionUnknown:
 		operationType := gardencorev1beta1helper.ComputeOperationType(dns.ObjectMeta, dns.Status.LastOperation)
 		if err := r.statusUpdater.ProcessingCustom(ctx, dns, operationType, "Deleting the dnsrecord", nil); err != nil {
 			return reconcile.Result{}, err
@@ -232,7 +233,7 @@ func (r *reconciler) delete(ctx context.Context, dns *extensionsv1alpha1.DNSReco
 		if err := r.statusUpdater.SuccessCustom(ctx, dns, operationType, "Successfully deleted dnsrecord", nil); err != nil {
 			return reconcile.Result{}, err
 		}
-	} else {
+	case gardencorev1beta1.ConditionFalse:
 		r.logger.Info("Deleting dnsrecord is no-op as not created", "dnsrecord", kutil.ObjectName(dns))
 	}
 
@@ -271,13 +272,13 @@ func updateCreatedCondition(status extensionsv1alpha1.Status, conditionStatus ga
 	return nil
 }
 
-func hasCreatedConditionFalse(status extensionsv1alpha1.Status) bool {
+func getCreatedConditionStatus(status extensionsv1alpha1.Status) gardencorev1beta1.ConditionStatus {
 	for _, c := range status.GetConditions() {
 		if c.Type == createdConditionType {
-			return c.Status == gardencorev1beta1.ConditionFalse
+			return c.Status
 		}
 	}
-	return false
+	return gardencorev1beta1.ConditionUnknown
 }
 
 func addCreatedConditionFalse(status extensionsv1alpha1.Status) error {
