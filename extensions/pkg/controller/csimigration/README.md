@@ -26,6 +26,13 @@ Also, the `kube-apiserver` enables the `PersistentVolumeLabel` admission plugin,
 As part of the CSI migration, the `CSIMigration<Provider>Complete` feature gate may only be enabled if all nodes have been drained, and all `kubelet`s have been updated with the feature gate flags.
 
 As provider extensions usually perform a rolling update of worker machines when the Kubernetes minor version is upgraded, it is recommended to start the CSI migration during such a Kubernetes version upgrade.
+
+> ⚠️ As of [gardener/gardener#4971](https://github.com/gardener/gardener/pull/4971), the Kubernetes version used for specific worker pools can differ from the control plane's Kubernetes version. Hence, not all worker nodes might be rolled out when the Kubernetes version is updated. However, it is required to roll out all nodes when performing CSI migration.
+>
+> Consequently, it is highly recommended that extensions validate `Shoot` resources to ensure worker pool Kubernetes versions may only differ from control plane Kubernetes version when CSI migration version is reached.
+>
+> For example, when CSI migration is performed with `1.18` (i.e, during the `Shoot` upgrade from `1.17` to `1.18`) then it shall not be possible to specify `.spec.provider.workers[].kubernetes.version` if `.spec.kubernetes.version` is less than `1.18`.
+
 Consequently, the migration can now happen by executing with the following steps:
 
 1. The `CSIMigration` and `CSIMigrationAWS` feature gates must be enabled on all master components, i.e., `kube-apiserver`, `kube-controller-manager`, and `kube-scheduler`.
