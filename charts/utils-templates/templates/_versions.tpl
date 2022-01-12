@@ -43,7 +43,11 @@ batch/v1beta1
 {{- end -}}
 
 {{- define "hpaversion" -}}
+{{- if semverCompare "<= 1.22.x" .Capabilities.KubeVersion.GitVersion -}}
 autoscaling/v2beta1
+{{- else -}}
+autoscaling/v2
+{{- end -}}
 {{- end -}}
 
 {{- define "webhookadmissionregistration" -}}

@@ -248,7 +248,7 @@ var _ = Describe("ingress", func() {
 })
 
 func makeIngressGateway(c client.Client, namespace string, annotations, labels map[string]string) component.DeployWaiter {
-	renderer := cr.NewWithServerVersion(&version.Info{})
+	renderer := cr.NewWithServerVersion(&version.Info{GitVersion: "1.22.2"})
 	ca := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
 	Expect(ca).NotTo(BeNil(), "should return chart applier")
 
