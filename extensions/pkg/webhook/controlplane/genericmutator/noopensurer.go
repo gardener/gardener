@@ -17,6 +17,7 @@ package genericmutator
 import (
 	"context"
 
+	"github.com/Masterminds/semver"
 	"github.com/coreos/go-systemd/v22/unit"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
@@ -62,27 +63,27 @@ func (e *NoopEnsurer) EnsureVPNSeedServerDeployment(ctx context.Context, gctx gc
 }
 
 // EnsureKubeletServiceUnitOptions ensures that the kubelet.service unit options conform to the provider requirements.
-func (e *NoopEnsurer) EnsureKubeletServiceUnitOptions(ctx context.Context, gctx gcontext.GardenContext, new, old []*unit.UnitOption) ([]*unit.UnitOption, error) {
+func (e *NoopEnsurer) EnsureKubeletServiceUnitOptions(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, new, old []*unit.UnitOption) ([]*unit.UnitOption, error) {
 	return new, nil
 }
 
 // EnsureKubeletConfiguration ensures that the kubelet configuration conforms to the provider requirements.
-func (e *NoopEnsurer) EnsureKubeletConfiguration(ctx context.Context, gctx gcontext.GardenContext, new, old *kubeletconfigv1beta1.KubeletConfiguration) error {
+func (e *NoopEnsurer) EnsureKubeletConfiguration(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, new, old *kubeletconfigv1beta1.KubeletConfiguration) error {
+	return nil
+}
+
+// ShouldProvisionKubeletCloudProviderConfig returns if the cloud provider config file should be added to the kubelet configuration.
+func (e *NoopEnsurer) ShouldProvisionKubeletCloudProviderConfig(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version) bool {
+	return false
+}
+
+// EnsureKubeletCloudProviderConfig ensures that the cloud provider config file conforms to the provider requirements.
+func (e *NoopEnsurer) EnsureKubeletCloudProviderConfig(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, configContent *string, namespace string) error {
 	return nil
 }
 
 // EnsureKubernetesGeneralConfiguration ensures that the kubernetes general configuration conforms to the provider requirements.
 func (e *NoopEnsurer) EnsureKubernetesGeneralConfiguration(ctx context.Context, gctx gcontext.GardenContext, new, old *string) error {
-	return nil
-}
-
-// ShouldProvisionKubeletCloudProviderConfig returns if the cloud provider config file should be added to the kubelet configuration.
-func (e *NoopEnsurer) ShouldProvisionKubeletCloudProviderConfig(context.Context, gcontext.GardenContext) bool {
-	return false
-}
-
-// EnsureKubeletCloudProviderConfig ensures that the cloud provider config file conforms to the provider requirements.
-func (e *NoopEnsurer) EnsureKubeletCloudProviderConfig(context.Context, gcontext.GardenContext, *string, string) error {
 	return nil
 }
 

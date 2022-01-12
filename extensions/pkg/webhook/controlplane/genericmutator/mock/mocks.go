@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	semver "github.com/Masterminds/semver"
 	unit "github.com/coreos/go-systemd/v22/unit"
 	v1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	context0 "github.com/gardener/gardener/extensions/pkg/webhook/context"
@@ -140,46 +141,46 @@ func (mr *MockEnsurerMockRecorder) EnsureKubeSchedulerDeployment(arg0, arg1, arg
 }
 
 // EnsureKubeletCloudProviderConfig mocks base method.
-func (m *MockEnsurer) EnsureKubeletCloudProviderConfig(arg0 context.Context, arg1 context0.GardenContext, arg2 *string, arg3 string) error {
+func (m *MockEnsurer) EnsureKubeletCloudProviderConfig(arg0 context.Context, arg1 context0.GardenContext, arg2 *semver.Version, arg3 *string, arg4 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureKubeletCloudProviderConfig", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "EnsureKubeletCloudProviderConfig", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureKubeletCloudProviderConfig indicates an expected call of EnsureKubeletCloudProviderConfig.
-func (mr *MockEnsurerMockRecorder) EnsureKubeletCloudProviderConfig(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureKubeletCloudProviderConfig(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubeletCloudProviderConfig", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubeletCloudProviderConfig), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubeletCloudProviderConfig", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubeletCloudProviderConfig), arg0, arg1, arg2, arg3, arg4)
 }
 
 // EnsureKubeletConfiguration mocks base method.
-func (m *MockEnsurer) EnsureKubeletConfiguration(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *v1beta1.KubeletConfiguration) error {
+func (m *MockEnsurer) EnsureKubeletConfiguration(arg0 context.Context, arg1 context0.GardenContext, arg2 *semver.Version, arg3, arg4 *v1beta1.KubeletConfiguration) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureKubeletConfiguration", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "EnsureKubeletConfiguration", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // EnsureKubeletConfiguration indicates an expected call of EnsureKubeletConfiguration.
-func (mr *MockEnsurerMockRecorder) EnsureKubeletConfiguration(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureKubeletConfiguration(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubeletConfiguration", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubeletConfiguration), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubeletConfiguration", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubeletConfiguration), arg0, arg1, arg2, arg3, arg4)
 }
 
 // EnsureKubeletServiceUnitOptions mocks base method.
-func (m *MockEnsurer) EnsureKubeletServiceUnitOptions(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 []*unit.UnitOption) ([]*unit.UnitOption, error) {
+func (m *MockEnsurer) EnsureKubeletServiceUnitOptions(arg0 context.Context, arg1 context0.GardenContext, arg2 *semver.Version, arg3, arg4 []*unit.UnitOption) ([]*unit.UnitOption, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureKubeletServiceUnitOptions", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "EnsureKubeletServiceUnitOptions", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].([]*unit.UnitOption)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // EnsureKubeletServiceUnitOptions indicates an expected call of EnsureKubeletServiceUnitOptions.
-func (mr *MockEnsurerMockRecorder) EnsureKubeletServiceUnitOptions(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) EnsureKubeletServiceUnitOptions(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubeletServiceUnitOptions", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubeletServiceUnitOptions), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubeletServiceUnitOptions", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubeletServiceUnitOptions), arg0, arg1, arg2, arg3, arg4)
 }
 
 // EnsureKubernetesGeneralConfiguration mocks base method.
@@ -211,15 +212,15 @@ func (mr *MockEnsurerMockRecorder) EnsureVPNSeedServerDeployment(arg0, arg1, arg
 }
 
 // ShouldProvisionKubeletCloudProviderConfig mocks base method.
-func (m *MockEnsurer) ShouldProvisionKubeletCloudProviderConfig(arg0 context.Context, arg1 context0.GardenContext) bool {
+func (m *MockEnsurer) ShouldProvisionKubeletCloudProviderConfig(arg0 context.Context, arg1 context0.GardenContext, arg2 *semver.Version) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ShouldProvisionKubeletCloudProviderConfig", arg0, arg1)
+	ret := m.ctrl.Call(m, "ShouldProvisionKubeletCloudProviderConfig", arg0, arg1, arg2)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // ShouldProvisionKubeletCloudProviderConfig indicates an expected call of ShouldProvisionKubeletCloudProviderConfig.
-func (mr *MockEnsurerMockRecorder) ShouldProvisionKubeletCloudProviderConfig(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockEnsurerMockRecorder) ShouldProvisionKubeletCloudProviderConfig(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShouldProvisionKubeletCloudProviderConfig", reflect.TypeOf((*MockEnsurer)(nil).ShouldProvisionKubeletCloudProviderConfig), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShouldProvisionKubeletCloudProviderConfig", reflect.TypeOf((*MockEnsurer)(nil).ShouldProvisionKubeletCloudProviderConfig), arg0, arg1, arg2)
 }

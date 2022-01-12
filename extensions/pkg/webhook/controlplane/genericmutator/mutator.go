@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"github.com/Masterminds/semver"
 	"github.com/coreos/go-systemd/v22/unit"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/go-logr/logr"
@@ -61,21 +62,21 @@ type Ensurer interface {
 	// if the gardenlet's ReversedVPN feature gate is enabeld.
 	EnsureVPNSeedServerDeployment(ctx context.Context, gctx gcontext.GardenContext, new, old *appsv1.Deployment) error
 	// EnsureKubeletServiceUnitOptions ensures that the kubelet.service unit options conform to the provider requirements.
-	EnsureKubeletServiceUnitOptions(ctx context.Context, gctx gcontext.GardenContext, new, old []*unit.UnitOption) ([]*unit.UnitOption, error)
+	EnsureKubeletServiceUnitOptions(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, new, old []*unit.UnitOption) ([]*unit.UnitOption, error)
 	// EnsureKubeletConfiguration ensures that the kubelet configuration conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureKubeletConfiguration(ctx context.Context, gctx gcontext.GardenContext, new, old *kubeletconfigv1beta1.KubeletConfiguration) error
+	EnsureKubeletConfiguration(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, new, old *kubeletconfigv1beta1.KubeletConfiguration) error
+	// ShouldProvisionKubeletCloudProviderConfig returns true if the cloud provider config file should be added to the kubelet configuration.
+	ShouldProvisionKubeletCloudProviderConfig(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version) bool
+	// EnsureKubeletCloudProviderConfig ensures that the cloud provider config file content conforms to the provider requirements.
+	EnsureKubeletCloudProviderConfig(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, configContent *string, namespace string) error
 	// EnsureKubernetesGeneralConfiguration ensures that the kubernetes general configuration conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
 	EnsureKubernetesGeneralConfiguration(ctx context.Context, gctx gcontext.GardenContext, new, old *string) error
-	// ShouldProvisionKubeletCloudProviderConfig returns true if the cloud provider config file should be added to the kubelet configuration.
-	ShouldProvisionKubeletCloudProviderConfig(ctx context.Context, gctx gcontext.GardenContext) bool
-	// EnsureKubeletCloudProviderConfig ensures that the cloud provider config file content conforms to the provider requirements.
-	EnsureKubeletCloudProviderConfig(context.Context, gcontext.GardenContext, *string, string) error
 	// EnsureAdditionalUnits ensures additional systemd units
 	// "old" might be "nil" and must always be checked.
 	EnsureAdditionalUnits(ctx context.Context, gctx gcontext.GardenContext, new, old *[]extensionsv1alpha1.Unit) error
-	// EnsureAdditionalFile ensures additional systemd files
+	// EnsureAdditionalFiles ensures additional systemd files
 	// "old" might be "nil" and must always be checked.
 	EnsureAdditionalFiles(ctx context.Context, gctx gcontext.GardenContext, new, old *[]extensionsv1alpha1.File) error
 }
