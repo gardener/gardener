@@ -51,7 +51,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 				CacheUnauthorizedTTL: metav1.Duration{Duration: 30 * time.Second},
 			},
 		},
-		CgroupDriver:                     "cgroupfs",
+		CgroupDriver:                     "systemd",
 		CgroupRoot:                       "/",
 		CgroupsPerQOS:                    pointer.Bool(true),
 		ClusterDNS:                       []string{clusterDNSAddress},
@@ -101,6 +101,10 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 
 	if !version.ConstraintK8sLess119.Check(kubernetesVersion) {
 		config.VolumePluginDir = pathVolumePluginDirectory
+	}
+
+	if version.ConstraintK8sLessEqual122.Check(kubernetesVersion) {
+		config.CgroupDriver = "cgroupfs"
 	}
 
 	return config
