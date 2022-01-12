@@ -20,6 +20,7 @@ import (
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
 
+	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
@@ -37,7 +38,7 @@ type ensurer struct {
 	logger logr.Logger
 }
 
-func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ gcontext.GardenContext, newObj, _ *kubeletconfigv1beta1.KubeletConfiguration) error {
+func (e *ensurer) EnsureKubeletConfiguration(_ context.Context, _ gcontext.GardenContext, _ *semver.Version, newObj, _ *kubeletconfigv1beta1.KubeletConfiguration) error {
 	newObj.FailSwapOn = pointer.Bool(false)
 	return nil
 }
