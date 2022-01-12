@@ -605,8 +605,11 @@ func commandForKubernetesVersion(version string, port int32, featureGateFlags ..
 		"--tls-cert-file=/var/lib/kube-scheduler-server/kube-scheduler-server.crt",
 		"--tls-private-key-file=/var/lib/kube-scheduler-server/kube-scheduler-server.key",
 		"--secure-port="+strconv.Itoa(int(port)),
-		"--port=0",
 	)
+
+	if k8sVersionLessThan123, _ := versionutils.CompareVersions(version, "<", "1.23"); k8sVersionLessThan123 {
+		command = append(command, "--port=0")
+	}
 
 	command = append(command, featureGateFlags...)
 	command = append(command, "--v=2")

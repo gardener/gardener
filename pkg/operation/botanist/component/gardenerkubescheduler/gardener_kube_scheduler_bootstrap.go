@@ -130,6 +130,7 @@ func Bootstrap(
 		c,
 		Name,
 		image,
+		seedVersion,
 		config,
 		&admissionregistrationv1.WebhookClientConfig{
 			Service: &admissionregistrationv1.ServiceReference{

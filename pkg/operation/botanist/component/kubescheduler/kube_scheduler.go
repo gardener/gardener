@@ -426,8 +426,11 @@ func (k *kubeScheduler) computeCommand(port int32) []string {
 		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameServer)),
 		fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameServer)),
 		fmt.Sprintf("--secure-port=%d", port),
-		"--port=0",
 	)
+
+	if version.ConstraintK8sLessEqual122.Check(k.version) {
+		command = append(command, "--port=0")
+	}
 
 	if k.config != nil {
 		command = append(command, kutil.FeatureGatesToCommandLineParameter(k.config.FeatureGates))
