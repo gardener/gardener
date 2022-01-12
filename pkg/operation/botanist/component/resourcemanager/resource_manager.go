@@ -244,7 +244,7 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 	}
 
 	// TODO(rfranzke): Remove in a future release.
-	if r.values.TargetDiffersFromSourceCluster {
+	if r.values.TargetDiffersFromSourceCluster && r.replicas > 0 {
 		return kutil.DeleteObject(ctx, r.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: r.namespace}})
 	}
 
