@@ -37,7 +37,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // NewEtcd is a function exposed for testing.
@@ -165,12 +164,10 @@ func (b *Botanist) ScaleETCDToOne(ctx context.Context) error {
 }
 
 func (b *Botanist) scaleETCD(ctx context.Context, replicas int) error {
-	for _, etcd := range []string{v1beta1constants.ETCDEvents, v1beta1constants.ETCDMain} {
-		if err := kubernetes.ScaleEtcd(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, etcd), replicas); client.IgnoreNotFound(err) != nil {
-			return err
-		}
+	if err := b.Shoot.Components.ControlPlane.EtcdMain.Scale(ctx, replicas); err != nil {
+		return err
 	}
-	return nil
+	return b.Shoot.Components.ControlPlane.EtcdEvents.Scale(ctx, replicas)
 }
 
 func determineBackupSchedule(shoot *gardencorev1beta1.Shoot) (string, error) {
