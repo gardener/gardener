@@ -73,7 +73,7 @@ var _ = Describe("Component", func() {
 					Command: pointer.String("start"),
 					Enable:  pointer.Bool(true),
 					Content: pointer.String(`[Unit]
-Description=kubelet daemon
+Description=kubelet daemon ` + ctx.KubernetesVersion.String() + `
 Documentation=https://kubernetes.io/docs/admin/kubelet
 ` + unitConfigAfterCRI(criName) + `
 [Install]
