@@ -16,7 +16,6 @@ package controller_test
 
 import (
 	"context"
-	"fmt"
 
 	. "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -34,7 +33,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -56,95 +54,6 @@ var _ = Describe("Utils", func() {
 	Describe("UnsafeGuessKind", func() {
 		It("should guess the kind correctly", func() {
 			Expect(UnsafeGuessKind(&extensionsv1alpha1.Infrastructure{})).To(Equal("Infrastructure"))
-		})
-	})
-
-	Describe("#DeleteAllFinalizers", func() {
-		It("should delete all finalizers", func() {
-			creationTimestamp := metav1.Now()
-			deletionTimestamp := metav1.Now()
-			labels := make(map[string]string)
-			labels["test-label-key"] = "test-label-value"
-			annotation := make(map[string]string)
-			annotation["test-annotation-key"] = "test-annotation-value"
-			owner := []metav1.OwnerReference{
-				{
-					APIVersion:         "test-api",
-					Kind:               "test-owner-kind",
-					Name:               "test-owner",
-					UID:                types.UID("test-owner-UID"),
-					Controller:         pointer.Bool(true),
-					BlockOwnerDeletion: pointer.Bool(true),
-				},
-			}
-
-			testFinalizer1 := "test-finalizer1"
-			testFinalizer2 := "test-finalizer2"
-			testFinalizer3 := "test-finalizer4"
-
-			finalizers := []string{
-				testFinalizer1,
-				testFinalizer2,
-				testFinalizer3,
-			}
-
-			secretRef := corev1.SecretReference{
-				Name:      "test-secret",
-				Namespace: "test-namespace",
-			}
-
-			worker := &extensionsv1alpha1.Worker{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Worker",
-					APIVersion: "TestApi",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:                       "test-worker",
-					Namespace:                  "test-namespace",
-					GenerateName:               "test-generate-name",
-					SelfLink:                   "test-self-link",
-					UID:                        types.UID("test-UID"),
-					ResourceVersion:            "test-resource-version",
-					Generation:                 int64(1),
-					CreationTimestamp:          creationTimestamp,
-					DeletionTimestamp:          &deletionTimestamp,
-					DeletionGracePeriodSeconds: pointer.Int64(10),
-					Labels:                     labels,
-					Annotations:                annotation,
-					OwnerReferences:            owner,
-					Finalizers:                 finalizers,
-					ClusterName:                "test-cluster-name",
-				},
-				Spec: extensionsv1alpha1.WorkerSpec{
-					DefaultSpec: extensionsv1alpha1.DefaultSpec{
-						Type: "",
-					},
-					Region:    "test-region",
-					SecretRef: secretRef,
-				},
-			}
-			ctx := context.TODO()
-
-			gomock.InOrder(
-				c.EXPECT().
-					Get(ctx, client.ObjectKeyFromObject(worker), worker).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, worker *extensionsv1alpha1.Worker) error {
-						if len(worker.Finalizers) < 1 {
-							return fmt.Errorf("Worker %s has no finalizers", worker.Name)
-						}
-						for _, finalizer := range worker.Finalizers {
-							if finalizer != testFinalizer1 && finalizer != testFinalizer2 && finalizer != testFinalizer3 {
-								return fmt.Errorf("Finalizer %s not found for worker %s", finalizer, worker.Name)
-							}
-						}
-						return nil
-					}),
-
-				c.EXPECT().Update(ctx, worker),
-			)
-
-			Expect(DeleteAllFinalizers(ctx, c, worker)).To(Succeed())
-			Expect(len(worker.Finalizers)).To(Equal(0))
 		})
 	})
 

@@ -196,7 +196,7 @@ func (r *reconciler) migrate(ctx context.Context, dns *extensionsv1alpha1.DNSRec
 	}
 
 	r.logger.Info("Removing all finalizers", "dnsrecord", kutil.ObjectName(dns))
-	if err := extensionscontroller.DeleteAllFinalizers(ctx, r.client, dns); err != nil {
+	if err := controllerutils.RemoveAllFinalizers(ctx, r.client, r.client, dns); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizers from dnsrecord: %+v", err)
 	}
 

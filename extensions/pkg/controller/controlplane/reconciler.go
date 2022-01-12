@@ -203,7 +203,7 @@ func (r *reconciler) migrate(ctx context.Context, cp *extensionsv1alpha1.Control
 	}
 
 	r.logger.Info("Removing all finalizers.", "controlplane", kutil.ObjectName(cp))
-	if err := extensionscontroller.DeleteAllFinalizers(ctx, r.client, cp); err != nil {
+	if err := controllerutils.RemoveAllFinalizers(ctx, r.client, r.client, cp); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizers from controlplane: %+v", err)
 	}
 

@@ -22,14 +22,12 @@ import (
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	workercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -129,16 +127,19 @@ func (a *genericActuator) restoreMachineSetsAndMachines(ctx context.Context, log
 		for _, machine := range wantedMachineDeployment.State.Machines {
 			newMachine := (&machine).DeepCopy()
 			newMachine.Status = machinev1alpha1.MachineStatus{}
-			if err := a.client.Create(ctx, newMachine); kutil.IgnoreAlreadyExists(err) != nil {
-				return err
+			if err := a.client.Create(ctx, newMachine); err != nil {
+				if !apierrors.IsAlreadyExists(err) {
+					return err
+				}
+
+				// machine already exists, get the current object and update the status
+				if err := a.client.Get(ctx, client.ObjectKeyFromObject(newMachine), newMachine); err != nil {
+					return err
+				}
 			}
 
-			if err := controllerutils.TryPatchStatus(ctx, retry.DefaultBackoff, a.client, newMachine, func() error {
-				newMachine.Status = machine.Status
-				return nil
-			}); err != nil {
-				return err
-			}
+			newMachine.Status = machine.Status
+			return a.client.Status().Update(ctx, newMachine)
 		}
 	}
 

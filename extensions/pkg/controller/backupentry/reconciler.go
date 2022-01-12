@@ -265,7 +265,7 @@ func (r *reconciler) migrate(ctx context.Context, be *extensionsv1alpha1.BackupE
 	}
 
 	r.logger.Info("Removing all finalizers", "backupentry", kutil.ObjectName(be))
-	if err := extensionscontroller.DeleteAllFinalizers(ctx, r.client, be); err != nil {
+	if err := controllerutils.RemoveAllFinalizers(ctx, r.client, r.client, be); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing all finalizers from backupentry: %+v", err)
 	}
 
