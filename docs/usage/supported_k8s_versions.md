@@ -16,6 +16,6 @@ It also enables the Gardener code base to leverage more advanced Kubernetes feat
 
 ## Shoot cluster versions
 
-Gardener itself is capable of spinning up clusters with Kubernetes versions **`1.15`** up to **`1.22`**.
+Gardener itself is capable of spinning up clusters with Kubernetes versions **`1.15`** up to **`1.23`**.
 However, the concrete versions that can be used for shoot clusters depend on the installed provider extension.
 Consequently, please consult the documentation of your provider extension to see which Kubernetes versions are supported for shoot clusters.
