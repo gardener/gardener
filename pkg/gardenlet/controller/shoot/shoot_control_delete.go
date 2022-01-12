@@ -255,15 +255,15 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, deployOwnerDomainDNSRecord),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Scale up etcd main and event",
+		scaleETCD = g.Add(flow.Task{
+			Name:         "Scaling up etcd main and event",
 			Fn:           flow.TaskFn(botanist.ScaleETCDToOne).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",
 			Fn:           flow.TaskFn(botanist.WaitUntilEtcdsReady).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(deployETCD),
+			Dependencies: flow.NewTaskIDs(scaleETCD),
 		})
 		// Redeploy the control plane to make sure all components that depend on the cloud provider secret are restarted
 		// in case it has changed. Also, it's needed for other control plane components like the kube-apiserver or kube-

@@ -20,6 +20,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -1266,6 +1267,114 @@ var _ = Describe("Etcd", func() {
 
 				Expect(etcd.Snapshot(ctx, podExecutor)).To(MatchError(fakeErr))
 			})
+		})
+	})
+
+	Describe("#Scale", func() {
+		var etcdObj *druidv1alpha1.Etcd
+
+		BeforeEach(func() {
+			etcdObj = &druidv1alpha1.Etcd{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "etcd-test",
+					Namespace: testNamespace,
+				},
+			}
+		})
+
+		It("should scale ETCD from 0 to 1", func() {
+			etcdObj.Spec.Replicas = 0
+
+			nowFunc := func() time.Time {
+				return now
+			}
+			defer test.WithVar(&TimeNow, nowFunc)()
+
+			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
+					*etcd = *etcdObj
+					return nil
+				},
+			)
+
+			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, etcd *druidv1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
+					data, err := patch.Data(etcd)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(data)).To(Equal(fmt.Sprintf(`{"metadata":{"annotations":{"gardener.cloud/operation":"reconcile","gardener.cloud/timestamp":"%s"}},"spec":{"replicas":1}}`, now.String())))
+					return nil
+				})
+
+			Expect(etcd.Scale(ctx, 1)).To(Succeed())
+		})
+
+		It("should set operation annotation when replica count is unchanged", func() {
+			etcdObj.Spec.Replicas = 1
+
+			nowFunc := func() time.Time {
+				return now
+			}
+			defer test.WithVar(&TimeNow, nowFunc)()
+
+			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
+					*etcd = *etcdObj
+					return nil
+				},
+			)
+
+			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, etcd *druidv1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
+					data, err := patch.Data(etcd)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(data)).To(Equal(fmt.Sprintf(`{"metadata":{"annotations":{"gardener.cloud/operation":"reconcile","gardener.cloud/timestamp":"%s"}}}`, now.String())))
+					return nil
+				})
+
+			Expect(etcd.Scale(ctx, 1)).To(Succeed())
+		})
+
+		It("should fail if GardenerTimestamp is unexpected", func() {
+			nowFunc := func() time.Time {
+				return now
+			}
+			defer test.WithVar(&TimeNow, nowFunc)()
+
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
+					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
+						*etcd = *etcdObj
+						return nil
+					},
+				),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()),
+				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
+					func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
+						etcdObj.Annotations = map[string]string{
+							v1beta1constants.GardenerTimestamp: "foo",
+						}
+						*etcd = *etcdObj
+						return nil
+					},
+				),
+			)
+
+			Expect(etcd.Scale(ctx, 1)).To(Succeed())
+			Expect(etcd.Scale(ctx, 1)).Should(MatchError(`object's "gardener.cloud/timestamp" annotation is not "0001-01-01 00:00:00 +0000 UTC" but "foo"`))
+		})
+
+		It("should fail because operation annotation is set", func() {
+			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdObj), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, etcd *druidv1alpha1.Etcd) error {
+					etcdObj.Annotations = map[string]string{
+						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
+					}
+					*etcd = *etcdObj
+					return nil
+				},
+			)
+
+			Expect(etcd.Scale(ctx, 1)).Should(MatchError(`etcd object still has operation annotation set`))
 		})
 	})
 })

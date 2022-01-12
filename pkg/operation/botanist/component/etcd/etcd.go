@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 
 	"github.com/sirupsen/logrus"
@@ -113,6 +114,8 @@ type Interface interface {
 	Get(context.Context) (*druidv1alpha1.Etcd, error)
 	// SetOwnerCheckConfig sets the owner check configuration.
 	SetOwnerCheckConfig(config *OwnerCheckConfig)
+	// Scale scales the etcd resource to the given replica count.
+	Scale(context.Context, int) error
 }
 
 // New creates a new instance of DeployWaiter for the Etcd.
@@ -614,6 +617,36 @@ func (e *etcd) SetBackupConfig(backupConfig *BackupConfig) { e.backupConfig = ba
 func (e *etcd) SetHVPAConfig(hvpaConfig *HVPAConfig)       { e.hvpaConfig = hvpaConfig }
 func (e *etcd) SetOwnerCheckConfig(ownerCheckConfig *OwnerCheckConfig) {
 	e.ownerCheckConfig = ownerCheckConfig
+}
+
+func (e *etcd) Scale(ctx context.Context, replicas int) error {
+	etcdObj := &druidv1alpha1.Etcd{}
+	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), etcdObj); err != nil {
+		return err
+	}
+
+	if expectedTimestamp, ok := e.etcd.Annotations[v1beta1constants.GardenerTimestamp]; ok {
+		if err := health.ObjectHasAnnotationWithValue(v1beta1constants.GardenerTimestamp, expectedTimestamp)(etcdObj); err != nil {
+			return err
+		}
+	}
+
+	if _, ok := etcdObj.Annotations[v1beta1constants.GardenerOperation]; ok {
+		return fmt.Errorf("etcd object still has operation annotation set")
+	}
+
+	patch := client.MergeFrom(etcdObj.DeepCopy())
+	if e.etcd.Annotations == nil {
+		etcdObj.SetAnnotations(make(map[string]string))
+	}
+
+	etcdObj.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationReconcile
+	etcdObj.Annotations[v1beta1constants.GardenerTimestamp] = TimeNow().UTC().String()
+	etcdObj.Spec.Replicas = replicas
+
+	e.etcd = etcdObj
+
+	return e.client.Patch(ctx, etcdObj, patch)
 }
 
 func (e *etcd) podLabelSelector() labels.Selector {
