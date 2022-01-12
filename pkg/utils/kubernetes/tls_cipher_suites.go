@@ -22,10 +22,18 @@ import (
 
 // TLSCipherSuites returns the wanted and acceptable cipher suits depending on the passed Kubernetes version.
 func TLSCipherSuites(k8sVersion *semver.Version) []string {
-	commonSuites := []string{
-		"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-		"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
-	}
+	var (
+		commonSuites = []string{
+			"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+			"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+		}
+		tlsV13Suites = append(commonSuites,
+			"TLS_AES_128_GCM_SHA256",
+			"TLS_AES_256_GCM_SHA384",
+			"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+			"TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+		)
+	)
 
 	if version.ConstraintK8sLessEqual121.Check(k8sVersion) {
 		return append(commonSuites,
@@ -36,12 +44,17 @@ func TLSCipherSuites(k8sVersion *semver.Version) []string {
 		)
 	}
 
-	// For Kubernetes >= 1.22 Gardener only allows suites permissible for TLS 1.3
+	// For Kubernetes 1.22 Gardener only allows suites permissible for TLS 1.3
 	// see https://github.com/gardener/gardener/issues/4300#issuecomment-885498872
-	return append(commonSuites,
-		"TLS_AES_128_GCM_SHA256",
-		"TLS_AES_256_GCM_SHA384",
-		"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
-		"TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+	if version.ConstraintK8sLessEqual122.Check(k8sVersion) {
+		return tlsV13Suites
+	}
+
+	// For Kubernetes >= 1.23 the Cipher list was again adapted as described in
+	// https://github.com/gardener/gardener/issues/4823#issue-1022865330
+	return append(tlsV13Suites,
+		"TLS_CHACHA20_POLY1305_SHA256",
+		"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305",
+		"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305",
 	)
 }
