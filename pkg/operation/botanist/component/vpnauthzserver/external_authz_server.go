@@ -41,15 +41,11 @@ import (
 )
 
 const (
-	// AuthServerPort is the port exposed by the external authorization server
-	AuthServerPort = 9001
-	// DeploymentName is the name of the external authorization server deployment.
-	DeploymentName = "reversed-vpn-auth-server"
-	// ServiceName is the name of the external authorization server service.
-	ServiceName = DeploymentName
+	serverPort = 9001
+	name       = "reversed-vpn-auth-server"
 )
 
-// New creates a new instance of DeployWaiter for the auth-server.
+// New creates a new instance of DeployWaiter for the ReversedVPN authorization server.
 func New(
 	client client.Client,
 	namespace string,
@@ -96,15 +92,11 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, deployment, func() error {
 		maxSurge := intstr.FromInt(100)
 		maxUnavailable := intstr.FromInt(0)
-		deployment.Labels = map[string]string{
-			v1beta1constants.LabelApp: DeploymentName,
-		}
+		deployment.Labels = getLabels()
 		deployment.Spec = appsv1.DeploymentSpec{
 			Replicas:             pointer.Int32(a.replicas),
 			RevisionHistoryLimit: pointer.Int32(1),
-			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
-				v1beta1constants.LabelApp: DeploymentName,
-			}},
+			Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 			Strategy: appsv1.DeploymentStrategy{
 				RollingUpdate: &appsv1.RollingUpdateDeployment{
 					MaxUnavailable: &maxUnavailable,
@@ -114,9 +106,7 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						v1beta1constants.LabelApp: DeploymentName,
-					},
+					Labels: getLabels(),
 				},
 				Spec: corev1.PodSpec{
 					Affinity: &corev1.Affinity{
@@ -139,7 +129,7 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 					DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 					Containers: []corev1.Container{
 						{
-							Name:            DeploymentName,
+							Name:            name,
 							Image:           a.imageExtAuthzServer,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Ports: []corev1.ContainerPort{
@@ -172,7 +162,7 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, destinationRule, func() error {
 		destinationRule.Spec = istionetworkingv1beta1.DestinationRule{
 			ExportTo: []string{"*"},
-			Host:     fmt.Sprintf("%s.%s.svc.%s", DeploymentName, a.namespace, gardencorev1beta1.DefaultDomain),
+			Host:     fmt.Sprintf("%s.%s.svc.%s", name, a.namespace, gardencorev1beta1.DefaultDomain),
 			TrafficPolicy: &istionetworkingv1beta1.TrafficPolicy{
 				ConnectionPool: &istionetworkingv1beta1.ConnectionPoolSettings{
 					Tcp: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
@@ -205,14 +195,12 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 		service.Spec.Ports = []corev1.ServicePort{
 			{
 				Name:       "grpc-authz",
-				Port:       AuthServerPort,
-				TargetPort: intstr.FromInt(AuthServerPort),
+				Port:       serverPort,
+				TargetPort: intstr.FromInt(serverPort),
 				Protocol:   corev1.ProtocolTCP,
 			},
 		}
-		service.Spec.Selector = map[string]string{
-			v1beta1constants.LabelApp: DeploymentName,
-		}
+		service.Spec.Selector = getLabels()
 		return nil
 	}); err != nil {
 		return err
@@ -221,12 +209,12 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, virtualService, func() error {
 		virtualService.Spec = istionetworkingv1beta1.VirtualService{
 			ExportTo: []string{"*"},
-			Hosts:    []string{fmt.Sprintf("%s.%s.svc.%s", DeploymentName, a.namespace, gardencorev1beta1.DefaultDomain)},
+			Hosts:    []string{fmt.Sprintf("%s.%s.svc.%s", name, a.namespace, gardencorev1beta1.DefaultDomain)},
 			Http: []*istionetworkingv1beta1.HTTPRoute{{
 				Route: []*istionetworkingv1beta1.HTTPRouteDestination{{
 					Destination: &istionetworkingv1beta1.Destination{
-						Host: DeploymentName,
-						Port: &istionetworkingv1beta1.PortSelector{Number: AuthServerPort},
+						Host: name,
+						Port: &istionetworkingv1beta1.PortSelector{Number: serverPort},
 					},
 				}},
 			}},
@@ -240,7 +228,7 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 		vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 			Kind:       "Deployment",
-			Name:       DeploymentName,
+			Name:       name,
 		}
 		vpa.Spec.UpdatePolicy = &autoscalingv1beta2.PodUpdatePolicy{
 			UpdateMode: &vpaUpdateMode,
@@ -248,7 +236,7 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 		vpa.Spec.ResourcePolicy = &autoscalingv1beta2.PodResourcePolicy{
 			ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
 				{
-					ContainerName: DeploymentName,
+					ContainerName: name,
 					MinAllowed: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse("100m"),
 						corev1.ResourceMemory: resource.MustParse("100Mi"),
@@ -294,35 +282,35 @@ func (a *authzServer) Wait(_ context.Context) error        { return nil }
 func (a *authzServer) WaitCleanup(_ context.Context) error { return nil }
 
 func (a *authzServer) emptyDeployment() *appsv1.Deployment {
-	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: a.namespace}}
+	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: a.namespace}}
 }
 
 func (a *authzServer) emptyDestinationRule() *networkingv1beta1.DestinationRule {
-	return &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: a.namespace}}
+	return &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: a.namespace}}
 }
 
 func (a *authzServer) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ServiceName, Namespace: a.namespace}}
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: a.namespace}}
 }
 
 func (a *authzServer) emptyVirtualService() *networkingv1beta1.VirtualService {
-	return &networkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: a.namespace}}
+	return &networkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: a.namespace}}
 }
 
 func (a *authzServer) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
-	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName + "-vpa", Namespace: a.namespace}}
+	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: name + "-vpa", Namespace: a.namespace}}
 }
 
 func (a *authzServer) emptyPDB() *policyv1beta1.PodDisruptionBudget {
-	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName + "-pdb", Namespace: a.namespace}}
+	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: name + "-pdb", Namespace: a.namespace}}
 }
 
 func (a *authzServer) emptyPC() *schedulingv1.PriorityClass {
-	return &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName}}
+	return &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: name}}
 }
 
 func getLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp: DeploymentName,
+		v1beta1constants.LabelApp: name,
 	}
 }
