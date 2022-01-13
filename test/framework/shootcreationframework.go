@@ -337,6 +337,10 @@ func RegisterShootCreationFrameworkFlags() *ShootCreationConfig {
 	flag.StringVar(&newCfg.startHibernatedFlag, "start-hibernated", "", "the spec.hibernation.enabled to use for this shoot. Optional.")
 	flag.StringVar(&newCfg.allowPrivilegedContainersFlag, "allow-privileged-containers", "", "the spec.kubernetes.allowPrivilegedContainers to use for this shoot. Optional, defaults to true.")
 
+	if newCfg.networkingType == "" {
+		newCfg.networkingType = "calico"
+	}
+
 	newCfg.startHibernated = false
 
 	// ProviderConfigs flags
