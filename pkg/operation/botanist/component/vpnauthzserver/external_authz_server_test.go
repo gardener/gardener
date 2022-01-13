@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package extauthzserver
+package vpnauthzserver
 
 import (
 	"context"
@@ -317,7 +317,7 @@ var _ = Describe("ExtAuthzServer", func() {
 	}
 
 	JustBeforeEach(func() {
-		defaultDepWaiter = NewExtAuthServer(c, namespace, image, replicas)
+		defaultDepWaiter = New(c, namespace, image, replicas)
 	})
 
 	Describe("#Deploy", func() {

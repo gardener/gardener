@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package extauthzserver
+package vpnauthzserver
 
 import (
 	"context"
@@ -49,14 +49,14 @@ const (
 	ServiceName = DeploymentName
 )
 
-// NewExtAuthServer creates a new instance of DeployWaiter for the auth-server.
-func NewExtAuthServer(
+// New creates a new instance of DeployWaiter for the auth-server.
+func New(
 	client client.Client,
 	namespace string,
 	imageExtAuthzServer string,
 	replicas int32,
 ) component.DeployWaiter {
-	return &authServer{
+	return &authzServer{
 		client:              client,
 		namespace:           namespace,
 		imageExtAuthzServer: imageExtAuthzServer,
@@ -64,14 +64,14 @@ func NewExtAuthServer(
 	}
 }
 
-type authServer struct {
+type authzServer struct {
 	client              client.Client
 	namespace           string
 	imageExtAuthzServer string
 	replicas            int32
 }
 
-func (a *authServer) Deploy(ctx context.Context) error {
+func (a *authzServer) Deploy(ctx context.Context) error {
 	var (
 		deployment      = a.emptyDeployment()
 		destinationRule = a.emptyDestinationRule()
@@ -279,7 +279,7 @@ func (a *authServer) Deploy(ctx context.Context) error {
 	return nil
 }
 
-func (a *authServer) Destroy(ctx context.Context) error {
+func (a *authzServer) Destroy(ctx context.Context) error {
 	return kutil.DeleteObjects(
 		ctx,
 		a.client,
@@ -293,34 +293,34 @@ func (a *authServer) Destroy(ctx context.Context) error {
 	)
 }
 
-func (a *authServer) Wait(_ context.Context) error        { return nil }
-func (a *authServer) WaitCleanup(_ context.Context) error { return nil }
+func (a *authzServer) Wait(_ context.Context) error        { return nil }
+func (a *authzServer) WaitCleanup(_ context.Context) error { return nil }
 
-func (a *authServer) emptyDeployment() *appsv1.Deployment {
+func (a *authzServer) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: a.namespace}}
 }
 
-func (a *authServer) emptyDestinationRule() *networkingv1beta1.DestinationRule {
+func (a *authzServer) emptyDestinationRule() *networkingv1beta1.DestinationRule {
 	return &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: a.namespace}}
 }
 
-func (a *authServer) emptyService() *corev1.Service {
+func (a *authzServer) emptyService() *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ServiceName, Namespace: a.namespace}}
 }
 
-func (a *authServer) emptyVirtualService() *networkingv1beta1.VirtualService {
+func (a *authzServer) emptyVirtualService() *networkingv1beta1.VirtualService {
 	return &networkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: a.namespace}}
 }
 
-func (a *authServer) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
+func (a *authzServer) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
 	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName + "-vpa", Namespace: a.namespace}}
 }
 
-func (a *authServer) emptyPDB() *policyv1beta1.PodDisruptionBudget {
+func (a *authzServer) emptyPDB() *policyv1beta1.PodDisruptionBudget {
 	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName + "-pdb", Namespace: a.namespace}}
 }
 
-func (a *authServer) emptyPC() *schedulingv1.PriorityClass {
+func (a *authzServer) emptyPC() *schedulingv1.PriorityClass {
 	return &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName}}
 }
 

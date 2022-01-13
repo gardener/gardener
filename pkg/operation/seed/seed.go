@@ -39,7 +39,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/crds"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
@@ -54,6 +53,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -1114,7 +1114,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	extAuthzServer, err := defaultExternalAuthzServer(ctx, seedClient, kubernetesVersion.String(), imageVector)
+	vpnAuthzServer, err := defaultExternalAuthzServer(ctx, seedClient, kubernetesVersion.String(), imageVector)
 	if err != nil {
 		return err
 	}
@@ -1166,8 +1166,8 @@ func runCreateSeedFlow(
 			Fn:   dwdProbe.Deploy,
 		})
 		_ = g.Add(flow.Task{
-			Name: "Deploying external authz server",
-			Fn:   extAuthzServer.Deploy,
+			Name: "Deploying VPN authorization server",
+			Fn:   vpnAuthzServer.Deploy,
 		})
 	)
 
@@ -1214,7 +1214,7 @@ func RunDeleteSeedFlow(
 		clusterIdentity = clusteridentity.NewForSeed(seedClient, v1beta1constants.GardenNamespace, "")
 		dwdEndpoint     = dependencywatchdog.New(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.Values{Role: dependencywatchdog.RoleEndpoint})
 		dwdProbe        = dependencywatchdog.New(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.Values{Role: dependencywatchdog.RoleProbe})
-		extAuthzServer  = extauthzserver.NewExtAuthServer(seedClient, v1beta1constants.GardenNamespace, "", 1)
+		vpnAuthzServer  = vpnauthzserver.New(seedClient, v1beta1constants.GardenNamespace, "", 1)
 	)
 	scheduler, err := gardenerkubescheduler.Bootstrap(seedClient, v1beta1constants.GardenNamespace, nil, kubernetesVersion)
 	if err != nil {
@@ -1267,8 +1267,8 @@ func RunDeleteSeedFlow(
 			Fn:   component.OpDestroyAndWait(dwdProbe).Destroy,
 		})
 		destroyExtAuthzServer = g.Add(flow.Task{
-			Name: "Destroy external authz server",
-			Fn:   component.OpDestroyAndWait(extAuthzServer).Destroy,
+			Name: "Destroy VPN authorization server",
+			Fn:   component.OpDestroyAndWait(vpnAuthzServer).Destroy,
 		})
 		_ = g.Add(flow.Task{
 			Name: "Destroying gardener-resource-manager",
