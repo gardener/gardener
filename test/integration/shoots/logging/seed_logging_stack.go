@@ -75,17 +75,15 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		fluentBitPriorityClass      = &schedulingv1.PriorityClass{}
 		clusterCRD                  = &apiextensionsv1.CustomResourceDefinition{}
 
-		gardenLokiSts            = &appsv1.StatefulSet{}
-		gardenLokiServiceAccount = &corev1.ServiceAccount{}
-		gardenLokiService        = &corev1.Service{}
-		gardenLokiConfMap        = &corev1.ConfigMap{}
-		gardenLokiPriorityClass  = &schedulingv1.PriorityClass{}
+		gardenLokiSts           = &appsv1.StatefulSet{}
+		gardenLokiService       = &corev1.Service{}
+		gardenLokiConfMap       = &corev1.ConfigMap{}
+		gardenLokiPriorityClass = &schedulingv1.PriorityClass{}
 
-		shootLokiService        = &corev1.Service{}
-		shootLokiServiceAccount = &corev1.ServiceAccount{}
-		shootLokiSts            = &appsv1.StatefulSet{}
-		shootLokiPriorityClass  = &schedulingv1.PriorityClass{}
-		shootLokiConfMap        = &corev1.ConfigMap{}
+		shootLokiService       = &corev1.Service{}
+		shootLokiSts           = &appsv1.StatefulSet{}
+		shootLokiPriorityClass = &schedulingv1.PriorityClass{}
+		shootLokiConfMap       = &corev1.ConfigMap{}
 
 		grafanaOperatorsIngress client.Object = &networkingv1.Ingress{}
 		grafanaUsersIngress     client.Object = &networkingv1.Ingress{}
@@ -117,14 +115,12 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitName}, fluentBitPriorityClass))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: "", Name: "clusters.extensions.gardener.cloud"}, clusterCRD))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiName}, gardenLokiSts))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiName}, gardenLokiServiceAccount))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiName}, gardenLokiService))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: getConfigMapName(gardenLokiSts.Spec.Template.Spec.Volumes, lokiConfigDiskName)}, gardenLokiConfMap))
 		lokiPriorityClassName := gardenLokiSts.Spec.Template.Spec.PriorityClassName
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiPriorityClassName}, gardenLokiPriorityClass))
 		//Get the shoot logging components from the shoot running the integration test
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: lokiName}, shootLokiService))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: lokiName}, shootLokiServiceAccount))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: lokiName}, shootLokiSts))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: getConfigMapName(shootLokiSts.Spec.Template.Spec.Volumes, lokiConfigDiskName)}, shootLokiConfMap))
 		shootLokiPriorityClassName := shootLokiSts.Spec.Template.Spec.PriorityClassName
@@ -169,7 +165,6 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), newGardenNamespace(v1beta1constants.GardenNamespace)))
 
 		ginkgo.By("Deploy the Loki StatefulSet for Garden namespace")
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), gardenLokiServiceAccount))
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), gardenLokiConfMap))
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareGardenLokiService(gardenLokiService)))
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), gardenLokiPriorityClass))
@@ -177,10 +172,9 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 
 		ginkgo.By("Deploy the Loki StatefulSet for Shoot namespaces")
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareShootLokiService(shootLokiService, shootLokiName, shootLokiLabels)))
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareShootLokiServiceAccount(shootLokiServiceAccount, shootLokiName)))
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), shootLokiPriorityClass))
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareShootLokiConfigMap(shootLokiConfMap)))
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareShootLokiStatefulSet(shootLokiSts, gardenLokiSts, shootLokiName, shootLokiConfMap.Name, shootLokiServiceAccount.Name, lokiPersistentVolumeName, emptyDirSize, shootLokiLabels, gardenLokiLabels)))
+		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareShootLokiStatefulSet(shootLokiSts, gardenLokiSts, shootLokiName, shootLokiConfMap.Name, lokiPersistentVolumeName, emptyDirSize, shootLokiLabels, gardenLokiLabels)))
 
 		ginkgo.By("Wait until Loki StatefulSet for Garden namespace is ready")
 		framework.ExpectNoError(f.WaitUntilStatefulSetIsRunning(ctx, gardenLokiSts.Name, v1beta1constants.GardenNamespace, f.ShootClient))
@@ -192,7 +186,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		framework.ExpectNoError(create(ctx, shootClient.Client(), prepareClusterCRD(clusterCRD)))
 
 		ginkgo.By("Deploy the fluent-bit RBAC")
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), fluentBitServiceAccount))
+		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareFluentBitServiceAccount(fluentBitServiceAccount)))
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), fluentBitPriorityClass))
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), fluentBitClusterRole))
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), fluentBitClusterRoleBinding))
@@ -311,12 +305,10 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			fluentBitPriorityClass,
 			clusterCRD,
 			gardenLokiSts,
-			gardenLokiServiceAccount,
 			gardenLokiService,
 			gardenLokiConfMap,
 			gardenLokiPriorityClass,
 			shootLokiService,
-			shootLokiServiceAccount,
 			shootLokiSts,
 			shootLokiPriorityClass,
 			shootLokiConfMap,
@@ -352,18 +344,12 @@ func prepareShootLokiService(shootLokiService *corev1.Service, name string, sele
 	return shootLokiService
 }
 
-func prepareShootLokiServiceAccount(serviceAccount *corev1.ServiceAccount, name string) *corev1.ServiceAccount {
-	serviceAccount.Name = name
-	serviceAccount.Namespace = v1beta1constants.GardenNamespace
-	return serviceAccount
-}
-
 func prepareShootLokiConfigMap(confMap *corev1.ConfigMap) *corev1.ConfigMap {
 	confMap.Namespace = v1beta1constants.GardenNamespace
 	return confMap
 }
 
-func prepareShootLokiStatefulSet(shootLokiSts, gardenLokiSts *appsv1.StatefulSet, name, configMapNAme, serviceAccountName, lokiPersistentVolumeName, emptyDirSize string, newLabels, antiAffinityLabels map[string]string) *appsv1.StatefulSet {
+func prepareShootLokiStatefulSet(shootLokiSts, gardenLokiSts *appsv1.StatefulSet, name, configMapNAme, lokiPersistentVolumeName, emptyDirSize string, newLabels, antiAffinityLabels map[string]string) *appsv1.StatefulSet {
 	// Extract the containers related only to the seed logging stack
 	var containers []corev1.Container
 	for _, gardenCon := range gardenLokiSts.Spec.Template.Spec.Containers {
@@ -405,7 +391,6 @@ func prepareShootLokiStatefulSet(shootLokiSts, gardenLokiSts *appsv1.StatefulSet
 	shootLokiSts.Spec.Template.Labels = newLabels
 	// Move the shoot Loki in the garden namespace
 	shootLokiSts.Namespace = v1beta1constants.GardenNamespace
-	shootLokiSts.Spec.Template.Spec.ServiceAccountName = serviceAccountName
 	return shootLokiSts
 }
 
@@ -415,4 +400,9 @@ func prepareClusterCRD(crd *apiextensionsv1.CustomResourceDefinition) *apiextens
 		crd.Spec.Versions[version].Schema.OpenAPIV3Schema.XPreserveUnknownFields = pointer.Bool(true)
 	}
 	return crd
+}
+
+func prepareFluentBitServiceAccount(serviceAccount *corev1.ServiceAccount) *corev1.ServiceAccount {
+	serviceAccount.AutomountServiceAccountToken = pointer.BoolPtr(true)
+	return serviceAccount
 }
