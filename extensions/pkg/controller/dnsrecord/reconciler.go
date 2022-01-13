@@ -17,11 +17,9 @@ package dnsrecord
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -40,8 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
-
-const createdConditionType = "Created"
 
 type reconciler struct {
 	logger   logr.Logger
@@ -247,34 +243,30 @@ func (r *reconciler) delete(ctx context.Context, dns *extensionsv1alpha1.DNSReco
 
 func updateCreatedCondition(status extensionsv1alpha1.Status, conditionStatus gardencorev1beta1.ConditionStatus, reason string, updateIfExisting bool) error {
 	conditions := status.GetConditions()
-	index := len(conditions)
-	for i, c := range conditions {
-		if c.Type == createdConditionType {
-			if !updateIfExisting {
-				return nil
-			}
-			index = i
-			break
-		}
-	}
-	if index == len(conditions) {
-		conditions = append(conditions, gardencorev1beta1.Condition{Type: createdConditionType})
-	}
-	c := &conditions[index]
-	if c.Status == conditionStatus {
+	c := gardencorev1beta1helper.GetCondition(conditions, extensionsv1alpha1.ConditionTypeCreated)
+	if c != nil && !updateIfExisting {
 		return nil
 	}
-	c.Status = conditionStatus
-	c.LastTransitionTime = metav1.Time{Time: time.Now()}
-	c.LastUpdateTime = metav1.Time{Time: time.Now()}
-	c.Reason = reason
+	if c != nil && c.Status == conditionStatus {
+		return nil
+	}
+	if c == nil {
+		conditions = append(conditions, gardencorev1beta1helper.InitCondition(extensionsv1alpha1.ConditionTypeCreated))
+		c = &conditions[len(conditions)-1]
+	}
+
+	builder, err := gardencorev1beta1helper.NewConditionBuilder(extensionsv1alpha1.ConditionTypeCreated)
+	if err != nil {
+		return err
+	}
+	*c, _ = builder.WithStatus(conditionStatus).WithReason(reason).WithMessage("").Build()
 	status.SetConditions(conditions)
 	return nil
 }
 
 func getCreatedConditionStatus(status extensionsv1alpha1.Status) gardencorev1beta1.ConditionStatus {
 	for _, c := range status.GetConditions() {
-		if c.Type == createdConditionType {
+		if c.Type == extensionsv1alpha1.ConditionTypeCreated {
 			return c.Status
 		}
 	}

@@ -97,6 +97,7 @@ type statusUpdater struct {
 }
 
 var _ = StatusUpdater(&statusUpdater{})
+var _ = StatusUpdaterCustom(&statusUpdater{})
 
 func (s *statusUpdater) InjectClient(c client.Client) {
 	s.client = c

@@ -110,3 +110,9 @@ const (
 	// DNSRecordTypeTXT specifies that the DNSRecord is of type TXT.
 	DNSRecordTypeTXT DNSRecordType = "TXT"
 )
+
+const (
+	// ConditionTypeCreated specifies the condition type "Created" used as marker if record creation
+	// on infrastructure was performed successfully at least once.
+	ConditionTypeCreated = "Created"
+)
