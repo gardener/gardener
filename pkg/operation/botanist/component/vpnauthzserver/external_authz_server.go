@@ -121,18 +121,15 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 				Spec: corev1.PodSpec{
 					Affinity: &corev1.Affinity{
 						PodAntiAffinity: &corev1.PodAntiAffinity{
-							RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+							PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
 								{
-									LabelSelector: &metav1.LabelSelector{
-										MatchExpressions: []metav1.LabelSelectorRequirement{
-											{
-												Key:      "app",
-												Operator: "In",
-												Values:   []string{DeploymentName},
-											},
+									Weight: 100,
+									PodAffinityTerm: corev1.PodAffinityTerm{
+										TopologyKey: corev1.LabelHostname,
+										LabelSelector: &metav1.LabelSelector{
+											MatchLabels: getLabels(),
 										},
 									},
-									TopologyKey: "kubernetes.io/hostname",
 								},
 							},
 						},

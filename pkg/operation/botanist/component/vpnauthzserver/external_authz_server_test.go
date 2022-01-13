@@ -138,18 +138,17 @@ var _ = Describe("ExtAuthzServer", func() {
 					Spec: corev1.PodSpec{
 						Affinity: &corev1.Affinity{
 							PodAntiAffinity: &corev1.PodAntiAffinity{
-								RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+								PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
 									{
-										LabelSelector: &metav1.LabelSelector{
-											MatchExpressions: []metav1.LabelSelectorRequirement{
-												{
-													Key:      "app",
-													Operator: "In",
-													Values:   []string{DeploymentName},
+										Weight: 100,
+										PodAffinityTerm: corev1.PodAffinityTerm{
+											TopologyKey: "kubernetes.io/hostname",
+											LabelSelector: &metav1.LabelSelector{
+												MatchLabels: map[string]string{
+													"app": "reversed-vpn-auth-server",
 												},
 											},
 										},
-										TopologyKey: "kubernetes.io/hostname",
 									},
 								},
 							},
