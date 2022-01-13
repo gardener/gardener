@@ -14,6 +14,9 @@ The Gardener components, however, will be run as regular processes on your machi
 
 - Make sure your Docker daemon is up-to-date, up and running and has enough resources (at least `4` CPUs and `4Gi` memory; see [here](https://docs.docker.com/desktop/mac/#resources) how to configure the resources for Docker for Mac).
   > Please note that 4 CPU / 4Gi memory might not be enough for more than one `Shoot` cluster, i.e., you might need to increase these values if you want to run additional `Shoot`s.
+
+  Additionally, please configure at least `120Gi` of disk size for the Docker daemon.
+  > Tip: With `docker system df` and `docker system prune -a` you can cleanup unused data.
 - Make sure that you increase the maximum number of open files on your host:
   - On Mac, run `sudo launchctl limit maxfiles 65536 200000`
   - On Linux, extend the `/etc/security/limits.conf` file with
