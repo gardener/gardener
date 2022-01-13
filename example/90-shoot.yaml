@@ -17,7 +17,7 @@ spec:
       # https://github.com/gardener/gardener-extension-provider-azure/blob/master/example/30-infrastructure.yaml#L63-L75
       # https://github.com/gardener/gardener-extension-provider-gcp/blob/master/example/30-infrastructure.yaml#L51-L65
       # https://github.com/gardener/gardener-extension-provider-openstack/blob/master/example/30-infrastructure.yaml#L59-L65
-      # https://github.com/gardener/gardener-extension-provider-packet/blob/master/example/30-infrastructure.yaml#L48-L49
+      # https://github.com/gardener/gardener-extension-provider-equinix-metal/blob/master/example/30-infrastructure.yaml#L48-L49
     controlPlaneConfig:
       <some-provider-specific-controlplane-config>
       # https://github.com/gardener/gardener-extension-provider-alicloud/blob/master/example/30-controlplane.yaml#L58-L63
@@ -25,7 +25,7 @@ spec:
       # https://github.com/gardener/gardener-extension-provider-azure/blob/master/example/30-controlplane.yaml#L60-L64
       # https://github.com/gardener/gardener-extension-provider-gcp/blob/master/example/30-controlplane.yaml#L57-L62
       # https://github.com/gardener/gardener-extension-provider-openstack/blob/master/example/30-controlplane.yaml#L66-L72
-      # https://github.com/gardener/gardener-extension-provider-packet/blob/master/example/30-controlplane.yaml#L58-L59
+      # https://github.com/gardener/gardener-extension-provider-equinix-metal/blob/master/example/30-controlplane.yaml#L57-L58
     workers:
     - name: cpu-worker
     # cri:
