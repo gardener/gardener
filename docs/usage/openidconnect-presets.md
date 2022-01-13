@@ -89,7 +89,7 @@ metadata:
 spec:
   kubernetes:
     allowPrivilegedContainers: true
-    version: 1.15.2
+    version: 1.20.2
 ```
 
 Create the Shoot:
@@ -131,7 +131,7 @@ spec:
         - RS256
         usernameClaim: username-claim
         usernamePrefix: username-prefix
-    version: 1.15.2
+    version: 1.20.2
 ```
 
 ### Disable OpenIDConnectPreset
@@ -232,7 +232,7 @@ metadata:
 spec:
   kubernetes:
     allowPrivilegedContainers: true
-    version: 1.15.2
+    version: 1.20.2
 ```
 
 Create the Shoot:
@@ -274,7 +274,7 @@ spec:
         - RS256
         usernameClaim: username-claim
         usernamePrefix: username-prefix
-    version: 1.15.2
+    version: 1.20.2
 ```
 
 ### Disable ClusterOpenIDConnectPreset

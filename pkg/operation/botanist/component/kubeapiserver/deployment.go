@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -192,7 +191,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 						LivenessProbe: &corev1.Probe{
 							Handler: corev1.Handler{
 								HTTPGet: &corev1.HTTPGetAction{
-									Path:   k.probeEndpoint("/livez"),
+									Path:   "/livez",
 									Scheme: corev1.URISchemeHTTPS,
 									Port:   intstr.FromInt(Port),
 									HTTPHeaders: []corev1.HTTPHeader{{
@@ -210,7 +209,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 						ReadinessProbe: &corev1.Probe{
 							Handler: corev1.Handler{
 								HTTPGet: &corev1.HTTPGetAction{
-									Path:   k.probeEndpoint("/readyz"),
+									Path:   "/readyz",
 									Scheme: corev1.URISchemeHTTPS,
 									Port:   intstr.FromInt(Port),
 									HTTPHeaders: []corev1.HTTPHeader{{
@@ -410,22 +409,10 @@ func (k *kubeAPIServer) computePodAnnotations() map[string]string {
 	return out
 }
 
-func (k *kubeAPIServer) probeEndpoint(path string) string {
-	if versionutils.ConstraintK8sGreaterEqual116.Check(k.values.Version) {
-		return path
-	}
-	return "/healthz"
-}
-
 func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	var out []string
 
-	if versionutils.ConstraintK8sGreaterEqual117.Check(k.values.Version) {
-		out = append(out, "/usr/local/bin/kube-apiserver")
-	} else {
-		out = append(out, "/hyperkube", "kube-apiserver")
-	}
-
+	out = append(out, "/usr/local/bin/kube-apiserver")
 	out = append(out, "--enable-admission-plugins="+strings.Join(k.admissionPluginNames(), ","))
 	out = append(out, fmt.Sprintf("--admission-control-config-file=%s/%s", volumeMountPathAdmissionConfiguration, configMapAdmissionDataKey))
 	out = append(out, "--allow-privileged=true")
@@ -539,10 +526,6 @@ func (k *kubeAPIServer) admissionPluginNames() []string {
 }
 
 func (k *kubeAPIServer) handleHostCertVolumes(deployment *appsv1.Deployment) {
-	if !versionutils.ConstraintK8sGreaterEqual117.Check(k.values.Version) {
-		return
-	}
-
 	directoryOrCreate := corev1.HostPathDirectoryOrCreate
 
 	// locations are taken from
@@ -644,18 +627,8 @@ func (k *kubeAPIServer) handleSNISettings(deployment *appsv1.Deployment) {
 }
 
 func (k *kubeAPIServer) handleLifecycleSettings(deployment *appsv1.Deployment) {
-	if versionutils.ConstraintK8sLess116.Check(k.values.Version) {
-		deployment.Spec.Template.Spec.Containers[0].Lifecycle = &corev1.Lifecycle{
-			PreStop: &corev1.Handler{
-				Exec: &corev1.ExecAction{
-					Command: []string{"sh", "-c", "sleep 5"},
-				},
-			},
-		}
-	} else {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--livez-grace-period=1m")
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--shutdown-delay-duration=15s")
-	}
+	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--livez-grace-period=1m")
+	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--shutdown-delay-duration=15s")
 }
 
 func (k *kubeAPIServer) handleVPNSettings(deployment *appsv1.Deployment, configMapEgressSelector *corev1.ConfigMap) {

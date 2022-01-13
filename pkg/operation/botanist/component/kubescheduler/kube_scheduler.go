@@ -411,15 +411,9 @@ func (k *kubeScheduler) computeComponentConfig() (string, error) {
 func (k *kubeScheduler) computeCommand(port int32) []string {
 	var command []string
 
-	if version.ConstraintK8sGreaterEqual117.Check(k.version) {
-		command = append(command, "/usr/local/bin/kube-scheduler")
-	} else {
-		command = append(command, "/hyperkube", "kube-scheduler")
-	}
-
-	command = append(command, fmt.Sprintf("--config=%s/%s", volumeMountPathConfig, dataKeyComponentConfig))
-
 	command = append(command,
+		"/usr/local/bin/kube-scheduler",
+		fmt.Sprintf("--config=%s/%s", volumeMountPathConfig, dataKeyComponentConfig),
 		"--authentication-kubeconfig="+gutil.PathGenericKubeconfig,
 		"--authorization-kubeconfig="+gutil.PathGenericKubeconfig,
 		fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificateCA),

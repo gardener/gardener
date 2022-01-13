@@ -45,11 +45,11 @@ This information is programmatically available in the `CloudProfiles` of the Gar
 Due to its short early age, there is a higher probability of undiscovered issues and is therefore not yet recommended for production usage.
 A Shoot does not update (neither `auto-update` or `force-update`) to  a `preview` version during the maintenance time.
 Also `preview` versions are not considered for the defaulting to the highest available version when deliberately omitting the patch version during Shoot creation.
-Typically, after a fresh release of a new Kubernetes (e.g. v1.17.0) or Machine image version (e.g. coreos-2023.5), the operator tags it as `preview` until he has gained sufficient experience and regards this version to be reliable.
+Typically, after a fresh release of a new Kubernetes (e.g. v1.23.0) or Machine image version (e.g. coreos-2023.5), the operator tags it as `preview` until he has gained sufficient experience and regards this version to be reliable.
 After the operator gained sufficient trust, the version can be manually promoted to `supported`.
 
 - **supported:** A `supported` version is the recommended version for new and existing Shoot clusters. New Shoot clusters should use and existing clusters should update to this version.
-Typically for Kubernetes versions, the latest Kubernetes patch versions of the actual (if not still in `preview`) and the last 3 minor Kubernetes versions are maintained by the community. An operator could define these versions as being `supported` (e.g. v1.16.1, v1.15.4, v1.14.9 and v1.13.12).
+Typically for Kubernetes versions, the latest Kubernetes patch versions of the actual (if not still in `preview`) and the last 3 minor Kubernetes versions are maintained by the community. An operator could define these versions as being `supported` (e.g. v1.22.1, v1.21.4, v1.20.9 and v1.19.12).
 
 - **deprecated:** A `deprecated` version is a version that approaches the end of its lifecycle and can contain issues which are probably resolved in a supported version.
 New Shoots should not use this version any more.

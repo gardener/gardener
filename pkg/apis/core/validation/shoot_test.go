@@ -180,7 +180,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Domain: &domain,
 					},
 					Kubernetes: core.Kubernetes{
-						Version: "1.15.2",
+						Version: "1.20.2",
 						KubeAPIServer: &core.KubeAPIServerConfig{
 							OIDCConfig: &core.OIDCConfig{
 								CABundle:       pointer.String("-----BEGIN CERTIFICATE-----\nMIICRzCCAfGgAwIBAgIJALMb7ecMIk3MMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\nBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNVBAcMBkxvbmRvbjEYMBYGA1UE\nCgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MRswGQYD\nVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwIBcNMTcwNDI2MjMyNjUyWhgPMjExNzA0\nMDIyMzI2NTJaMH4xCzAJBgNVBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNV\nBAcMBkxvbmRvbjEYMBYGA1UECgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1J\nVCBEZXBhcnRtZW50MRswGQYDVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwXDANBgkq\nhkiG9w0BAQEFAANLADBIAkEAtBMa7NWpv3BVlKTCPGO/LEsguKqWHBtKzweMY2CV\ntAL1rQm913huhxF9w+ai76KQ3MHK5IVnLJjYYA5MzP2H5QIDAQABo1AwTjAdBgNV\nHQ4EFgQU22iy8aWkNSxv0nBxFxerfsvnZVMwHwYDVR0jBBgwFoAU22iy8aWkNSxv\n0nBxFxerfsvnZVMwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAEOefGbV\nNcHxklaW06w6OBYJPwpIhCVozC1qdxGX1dg8VkEKzjOzjgqVD30m59OFmSlBmHsl\nnkVA6wyOSDYBf3o=\n-----END CERTIFICATE-----"),
@@ -210,7 +210,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 									},
 								},
 							},
-							EnableBasicAuthentication: pointer.Bool(true),
+							EnableBasicAuthentication: pointer.Bool(false),
 						},
 						KubeControllerManager: &core.KubeControllerManagerConfig{
 							NodeCIDRMaskSize: pointer.Int32(22),
@@ -508,6 +508,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		It("should allow using basic auth mode for kubernetes dashboard when it's enabled in kube-apiserver config", func() {
+			shoot.Spec.Kubernetes.Version = "1.18.9"
 			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = pointer.String(core.KubernetesDashboardAuthModeBasic)
 			shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(true)
 
@@ -1608,6 +1609,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should not allow too specify the 'extend' flag if kubernetes is lower than 1.19", func() {
+				shoot.Spec.Kubernetes.Version = "1.18.9"
 				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
 					ExtendTokenExpiration: pointer.Bool(true),
 				}
@@ -1816,7 +1818,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should fail when using kubernetes version 1.15 and proxy mode is changed", func() {
+			It("should be successful when proxy mode is changed", func() {
 				mode := core.ProxyMode("IPVS")
 				kubernetesConfig := core.KubernetesConfig{}
 				config := core.KubeProxyConfig{
@@ -1824,35 +1826,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Mode:             &mode,
 				}
 				shoot.Spec.Kubernetes.KubeProxy = &config
-				shoot.Spec.Kubernetes.Version = "1.15.2"
-				oldMode := core.ProxyMode("IPTables")
-				oldConfig := core.KubeProxyConfig{
-					KubernetesConfig: kubernetesConfig,
-					Mode:             &oldMode,
-				}
-				shoot.Spec.Kubernetes.KubeProxy.Mode = &mode
-				oldShoot := shoot.DeepCopy()
-				oldShoot.Spec.Kubernetes.KubeProxy = &oldConfig
-
-				errorList := ValidateShootSpecUpdate(&shoot.Spec, &oldShoot.Spec, metav1.ObjectMeta{}, field.NewPath("spec"))
-
-				Expect(errorList).ToNot(BeEmpty())
-				Expect(errorList).To(ConsistOfFields(Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.kubernetes.kubeProxy.mode"),
-					"Detail": Equal(`field is immutable`),
-				}))
-			})
-
-			It("should be successful when using kubernetes version 1.16.1 and proxy mode is changed", func() {
-				mode := core.ProxyMode("IPVS")
-				kubernetesConfig := core.KubernetesConfig{}
-				config := core.KubeProxyConfig{
-					KubernetesConfig: kubernetesConfig,
-					Mode:             &mode,
-				}
-				shoot.Spec.Kubernetes.KubeProxy = &config
-				shoot.Spec.Kubernetes.Version = "1.16.1"
+				shoot.Spec.Kubernetes.Version = "1.20.1"
 				oldMode := core.ProxyMode("IPTables")
 				oldConfig := core.KubeProxyConfig{
 					KubernetesConfig: kubernetesConfig,
@@ -1889,18 +1863,17 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		var (
-			negativeDuration                        = metav1.Duration{Duration: -time.Second}
-			negativeInteger                   int32 = -100
-			positiveInteger                   int32 = 100
-			expanderLeastWaste                      = core.ClusterAutoscalerExpanderLeastWaste
-			expanderMostPods                        = core.ClusterAutoscalerExpanderMostPods
-			expanderPriority                        = core.ClusterAutoscalerExpanderPriority
-			expanderRandom                          = core.ClusterAutoscalerExpanderRandom
-			ignoreTaintsUnique                      = []string{"taint-1", "taint-2"}
-			ignoreTaintsDuplicate                   = []string{"taint-1", "taint-1"}
-			ignoreTaintsInvalid                     = []string{"taint 1", "taint-1"}
-			supportedVersionForIgnoreTaints         = "1.18"
-			unsupportedVersionForIgnoreTaints       = "1.15"
+			negativeDuration            = metav1.Duration{Duration: -time.Second}
+			negativeInteger       int32 = -100
+			positiveInteger       int32 = 100
+			expanderLeastWaste          = core.ClusterAutoscalerExpanderLeastWaste
+			expanderMostPods            = core.ClusterAutoscalerExpanderMostPods
+			expanderPriority            = core.ClusterAutoscalerExpanderPriority
+			expanderRandom              = core.ClusterAutoscalerExpanderRandom
+			ignoreTaintsUnique          = []string{"taint-1", "taint-2"}
+			ignoreTaintsDuplicate       = []string{"taint-1", "taint-1"}
+			ignoreTaintsInvalid         = []string{"taint 1", "taint-1"}
+			version                     = "1.20"
 		)
 
 		Context("ClusterAutoscaler validation", func() {
@@ -1908,59 +1881,56 @@ var _ = Describe("Shoot Validation Tests", func() {
 				func(clusterAutoscaler core.ClusterAutoscaler, supportedVersionForIgnoreTaints string, matcher gomegatypes.GomegaMatcher) {
 					Expect(ValidateClusterAutoscaler(clusterAutoscaler, supportedVersionForIgnoreTaints, nil)).To(matcher)
 				},
-				Entry("valid", core.ClusterAutoscaler{}, supportedVersionForIgnoreTaints, BeEmpty()),
+				Entry("valid", core.ClusterAutoscaler{}, version, BeEmpty()),
 				Entry("valid with threshold", core.ClusterAutoscaler{
 					ScaleDownUtilizationThreshold: pointer.Float64(0.5),
-				}, supportedVersionForIgnoreTaints, BeEmpty()),
+				}, version, BeEmpty()),
 				Entry("invalid negative threshold", core.ClusterAutoscaler{
 					ScaleDownUtilizationThreshold: pointer.Float64(-0.5),
-				}, supportedVersionForIgnoreTaints, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), -0.5, "can not be negative"))),
+				}, version, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), -0.5, "can not be negative"))),
 				Entry("invalid > 1 threshold", core.ClusterAutoscaler{
 					ScaleDownUtilizationThreshold: pointer.Float64(1.5),
-				}, supportedVersionForIgnoreTaints, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
+				}, version, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
 				Entry("valid with maxNodeProvisionTime", core.ClusterAutoscaler{
 					MaxNodeProvisionTime: &metav1.Duration{Duration: time.Minute},
-				}, supportedVersionForIgnoreTaints, BeEmpty()),
+				}, version, BeEmpty()),
 				Entry("invalid with negative maxNodeProvisionTime", core.ClusterAutoscaler{
 					MaxNodeProvisionTime: &negativeDuration,
-				}, supportedVersionForIgnoreTaints, ConsistOf(field.Invalid(field.NewPath("maxNodeProvisionTime"), negativeDuration, "can not be negative"))),
+				}, version, ConsistOf(field.Invalid(field.NewPath("maxNodeProvisionTime"), negativeDuration, "can not be negative"))),
 				Entry("valid with maxGracefulTerminationSeconds", core.ClusterAutoscaler{
 					MaxGracefulTerminationSeconds: &positiveInteger,
-				}, supportedVersionForIgnoreTaints, BeEmpty()),
+				}, version, BeEmpty()),
 				Entry("invalid with negative maxGracefulTerminationSeconds", core.ClusterAutoscaler{
 					MaxGracefulTerminationSeconds: &negativeInteger,
-				}, supportedVersionForIgnoreTaints, ConsistOf(field.Invalid(field.NewPath("maxGracefulTerminationSeconds"), negativeInteger, "can not be negative"))),
+				}, version, ConsistOf(field.Invalid(field.NewPath("maxGracefulTerminationSeconds"), negativeInteger, "can not be negative"))),
 				Entry("valid with expander least waste", core.ClusterAutoscaler{
 					Expander: &expanderLeastWaste,
-				}, supportedVersionForIgnoreTaints, BeEmpty()),
+				}, version, BeEmpty()),
 				Entry("valid with expander most pods", core.ClusterAutoscaler{
 					Expander: &expanderMostPods,
-				}, supportedVersionForIgnoreTaints, BeEmpty()),
+				}, version, BeEmpty()),
 				Entry("valid with expander priority", core.ClusterAutoscaler{
 					Expander: &expanderPriority,
-				}, supportedVersionForIgnoreTaints, BeEmpty()),
+				}, version, BeEmpty()),
 				Entry("valid with expander random", core.ClusterAutoscaler{
 					Expander: &expanderRandom,
-				}, supportedVersionForIgnoreTaints, BeEmpty()),
+				}, version, BeEmpty()),
 				Entry("valid with ignore taint", core.ClusterAutoscaler{
 					IgnoreTaints: ignoreTaintsUnique,
-				}, supportedVersionForIgnoreTaints, BeEmpty()),
+				}, version, BeEmpty()),
 				Entry("duplicate ignore taint", core.ClusterAutoscaler{
 					IgnoreTaints: ignoreTaintsDuplicate,
-				}, supportedVersionForIgnoreTaints, ConsistOf(field.Duplicate(field.NewPath("ignoreTaints").Index(1), ignoreTaintsDuplicate[1]))),
+				}, version, ConsistOf(field.Duplicate(field.NewPath("ignoreTaints").Index(1), ignoreTaintsDuplicate[1]))),
 				Entry("invalid with ignore taint",
 					core.ClusterAutoscaler{
 						IgnoreTaints: ignoreTaintsInvalid,
 					},
-					supportedVersionForIgnoreTaints,
+					version,
 					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("ignoreTaints[0]"),
 					}))),
 				),
-				Entry("unsupported k8s version with valid ignore taint", core.ClusterAutoscaler{
-					IgnoreTaints: ignoreTaintsUnique,
-				}, unsupportedVersionForIgnoreTaints, ConsistOf(field.Invalid(field.NewPath("ignoreTaints"), ignoreTaintsUnique, "ignoreTaints cannot be specified for kubernetes version < 1.16"))),
 			)
 		})
 
@@ -2133,7 +2103,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		It("should forbid kubernetes version upgrades skipping a minor version", func() {
 			newShoot := prepareShootForUpdate(shoot)
-			newShoot.Spec.Kubernetes.Version = "1.17.1"
+			newShoot.Spec.Kubernetes.Version = "1.22.1"
 
 			Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -2167,7 +2137,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.WorkerPoolKubernetesVersion, true)()
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.16.0")}
+				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.21.0")}
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
@@ -2180,7 +2150,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.WorkerPoolKubernetesVersion, true)()
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.15.2")}
+				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.20.2")}
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 			})
@@ -2188,10 +2158,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should work to set worker pool kubernetes version lower one minor than control plane version", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.WorkerPoolKubernetesVersion, true)()
 
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.15.2")}
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.20.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.Version = "1.16.0"
+				newShoot.Spec.Kubernetes.Version = "1.21.0"
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 			})
@@ -2199,11 +2169,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should work to set worker pool kubernetes version lower two minor than control plane version", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.WorkerPoolKubernetesVersion, true)()
 
-				shoot.Spec.Kubernetes.Version = "1.16.0"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.15.2")}
+				shoot.Spec.Kubernetes.Version = "1.21.0"
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.20.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.Version = "1.17.0"
+				newShoot.Spec.Kubernetes.Version = "1.22.0"
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
 			})
@@ -2211,11 +2181,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("forbid to set worker pool kubernetes version lower three minor than control plane version", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.WorkerPoolKubernetesVersion, true)()
 
-				shoot.Spec.Kubernetes.Version = "1.17.0"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.15.2")}
+				shoot.Spec.Kubernetes.Version = "1.22.0"
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.20.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.Version = "1.18.0"
+				newShoot.Spec.Kubernetes.Version = "1.23.0"
 
 				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeForbidden),
@@ -2227,8 +2197,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should work to set worker pool kubernetes version to nil with one minor difference", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.WorkerPoolKubernetesVersion, true)()
 
-				shoot.Spec.Kubernetes.Version = "1.16.0"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.15.2")}
+				shoot.Spec.Kubernetes.Version = "1.21.0"
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.20.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: nil}
@@ -2239,8 +2209,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("forbid to set worker pool kubernetes version to nil with two minor difference", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.WorkerPoolKubernetesVersion, true)()
 
-				shoot.Spec.Kubernetes.Version = "1.17.0"
-				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.15.2")}
+				shoot.Spec.Kubernetes.Version = "1.21.0"
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.19.2")}
 
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: nil}

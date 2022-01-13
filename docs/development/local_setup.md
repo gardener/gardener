@@ -471,7 +471,7 @@ The Gardenlet will now reconcile the Seed. Check the progess from time to time u
 ```bash
 kubectl get seed
 NAME       STATUS    PROVIDER    REGION      AGE    VERSION       K8S VERSION
-seed-aws   Ready     aws         eu-west-1   4m     v1.11.0-dev   v1.17.12
+seed-aws   Ready     aws         eu-west-1   4m     v1.11.0-dev   v1.18.12
 ```
 
 #### 7. Create a Shoot

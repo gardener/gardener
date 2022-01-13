@@ -1,4 +1,3 @@
-{{- if semverCompare ">= 1.16" .Capabilities.KubeVersion.GitVersion }}
 ---
 apiVersion: v1
 kind: Service
@@ -13,4 +12,3 @@ spec:
       targetPort: 8000
   selector:
     k8s-app: dashboard-metrics-scraper
-{{- end }}

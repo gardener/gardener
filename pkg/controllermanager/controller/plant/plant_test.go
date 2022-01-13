@@ -83,7 +83,7 @@ var _ = Describe("Plant", func() {
 		const (
 			labelZoneRegion = corev1.LabelZoneRegion
 			unKnown         = "<unknown>"
-			k8sVersion      = "1.15.1"
+			k8sVersion      = "1.20.1"
 			region          = "eu-west-1"
 		)
 		DescribeTable("should fetch cloud Info", func(mockNode corev1.Node, errMatcher types.GomegaMatcher, expectedInfo *plant.StatusCloudInfo) {
@@ -99,7 +99,7 @@ var _ = Describe("Plant", func() {
 				return nil
 			})
 
-			discoveryMockclient.EXPECT().ServerVersion().Return(&version.Info{GitVersion: "1.15.1"}, nil).AnyTimes()
+			discoveryMockclient.EXPECT().ServerVersion().Return(&version.Info{GitVersion: "1.20.1"}, nil).AnyTimes()
 
 			statusInfo, err := plant.FetchCloudInfo(context.TODO(), runtimeClient, discoveryMockclient, testLogger)
 			Expect(err).To(errMatcher)

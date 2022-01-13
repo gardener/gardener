@@ -709,6 +709,33 @@ subjects:
 					Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
 				},
 
+				Entry("kubernetes 1.22 w/o config", "1.22.0", emptyConfig, hvpaConfigDisabled),
+				Entry("kubernetes 1.22 with HVPA", "1.22.0", emptyConfig, hvpaConfigEnabled),
+				Entry("kubernetes 1.22 with HVPA and custom scale-down update mode", "1.22.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
+				Entry("kubernetes 1.22 with non-default autoscaler config", "1.22.0", configWithAutoscalerConfig, hvpaConfigDisabled),
+				Entry("kubernetes 1.22 with feature flags", "1.22.0", configWithFeatureFlags, hvpaConfigDisabled),
+				Entry("kubernetes 1.22 with NodeCIDRMaskSize", "1.22.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
+				Entry("kubernetes 1.22 with PodEvictionTimeout", "1.22.0", configWithPodEvictionTimeout, hvpaConfigDisabled),
+				Entry("kubernetes 1.22 with NodeMonitorGradePeriod", "1.22.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
+
+				Entry("kubernetes 1.21 w/o config", "1.21.0", emptyConfig, hvpaConfigDisabled),
+				Entry("kubernetes 1.21 with HVPA", "1.21.0", emptyConfig, hvpaConfigEnabled),
+				Entry("kubernetes 1.21 with HVPA and custom scale-down update mode", "1.21.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
+				Entry("kubernetes 1.21 with non-default autoscaler config", "1.21.0", configWithAutoscalerConfig, hvpaConfigDisabled),
+				Entry("kubernetes 1.21 with feature flags", "1.21.0", configWithFeatureFlags, hvpaConfigDisabled),
+				Entry("kubernetes 1.21 with NodeCIDRMaskSize", "1.21.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
+				Entry("kubernetes 1.21 with PodEvictionTimeout", "1.21.0", configWithPodEvictionTimeout, hvpaConfigDisabled),
+				Entry("kubernetes 1.21 with NodeMonitorGradePeriod", "1.21.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
+
+				Entry("kubernetes 1.20 w/o config", "1.20.0", emptyConfig, hvpaConfigDisabled),
+				Entry("kubernetes 1.20 with HVPA", "1.20.0", emptyConfig, hvpaConfigEnabled),
+				Entry("kubernetes 1.20 with HVPA and custom scale-down update mode", "1.20.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
+				Entry("kubernetes 1.20 with non-default autoscaler config", "1.20.0", configWithAutoscalerConfig, hvpaConfigDisabled),
+				Entry("kubernetes 1.20 with feature flags", "1.20.0", configWithFeatureFlags, hvpaConfigDisabled),
+				Entry("kubernetes 1.20 with NodeCIDRMaskSize", "1.20.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
+				Entry("kubernetes 1.20 with PodEvictionTimeout", "1.20.0", configWithPodEvictionTimeout, hvpaConfigDisabled),
+				Entry("kubernetes 1.20 with NodeMonitorGradePeriod", "1.20.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
+
 				Entry("kubernetes 1.19 w/o config", "1.19.0", emptyConfig, hvpaConfigDisabled),
 				Entry("kubernetes 1.19 with HVPA", "1.19.0", emptyConfig, hvpaConfigEnabled),
 				Entry("kubernetes 1.19 with HVPA and custom scale-down update mode", "1.19.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
@@ -735,24 +762,6 @@ subjects:
 				Entry("kubernetes 1.17 with NodeCIDRMaskSize", "1.17.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
 				Entry("kubernetes 1.17 with PodEvictionTimeout", "1.17.0", configWithPodEvictionTimeout, hvpaConfigDisabled),
 				Entry("kubernetes 1.17 with NodeMonitorGradePeriod", "1.17.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
-
-				Entry("kubernetes 1.16 w/o config", "1.16.0", emptyConfig, hvpaConfigDisabled),
-				Entry("kubernetes 1.16 with HVPA", "1.16.0", emptyConfig, hvpaConfigEnabled),
-				Entry("kubernetes 1.16 with HVPA and custom scale-down update mode", "1.16.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
-				Entry("kubernetes 1.16 with non-default autoscaler config", "1.16.0", configWithAutoscalerConfig, hvpaConfigDisabled),
-				Entry("kubernetes 1.16 with feature flags", "1.16.0", configWithFeatureFlags, hvpaConfigDisabled),
-				Entry("kubernetes 1.16 with NodeCIDRMaskSize", "1.16.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
-				Entry("kubernetes 1.16 with PodEvictionTimeout", "1.16.0", configWithPodEvictionTimeout, hvpaConfigDisabled),
-				Entry("kubernetes 1.16 with NodeMonitorGradePeriod", "1.16.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
-
-				Entry("kubernetes 1.15 w/o config", "1.15.0", emptyConfig, hvpaConfigDisabled),
-				Entry("kubernetes 1.15 with HVPA", "1.15.0", emptyConfig, hvpaConfigEnabled),
-				Entry("kubernetes 1.15 with HVPA and custom scale-down update mode", "1.15.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
-				Entry("kubernetes 1.15 with non-default autoscaler config", "1.15.0", configWithAutoscalerConfig, hvpaConfigDisabled),
-				Entry("kubernetes 1.15 with feature flags", "1.15.0", configWithFeatureFlags, hvpaConfigDisabled),
-				Entry("kubernetes 1.15 with NodeCIDRMaskSize", "1.15.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
-				Entry("kubernetes 1.15 with PodEvictionTimeout", "1.15.0", configWithPodEvictionTimeout, hvpaConfigDisabled),
-				Entry("kubernetes 1.15 with NodeMonitorGradePeriod", "1.15.0", configWithNodeMonitorGracePeriod, hvpaConfigDisabled),
 			)
 		})
 	})
@@ -791,13 +800,8 @@ func commandForKubernetesVersion(
 ) []string {
 	var command []string
 
-	if k8sVersionGreaterEqual117, _ := versionutils.CompareVersions(version, ">=", "1.17"); k8sVersionGreaterEqual117 {
-		command = append(command, "/usr/local/bin/kube-controller-manager")
-	} else {
-		command = append(command, "/hyperkube", "kube-controller-manager")
-	}
-
 	command = append(command,
+		"/usr/local/bin/kube-controller-manager",
 		"--allocate-node-cidrs=true",
 		"--attach-detach-reconcile-sync-period=1m0s",
 		"--controllers=*,bootstrapsigner,tokencleaner",
@@ -830,16 +834,10 @@ func commandForKubernetesVersion(
 		"--concurrent-namespace-syncs=50",
 		"--concurrent-replicaset-syncs=50",
 		"--concurrent-resource-quota-syncs=15",
+		"--concurrent-service-endpoint-syncs=15",
+		"--concurrent-statefulset-syncs=15",
+		"--concurrent-serviceaccount-token-syncs=15",
 	)
-
-	if k8sVersionGreaterEqual116, _ := versionutils.CompareVersions(version, ">=", "1.16"); k8sVersionGreaterEqual116 {
-		command = append(command,
-			"--concurrent-service-endpoint-syncs=15",
-			"--concurrent-statefulset-syncs=15",
-		)
-	}
-
-	command = append(command, "--concurrent-serviceaccount-token-syncs=15")
 
 	if len(featureGateFlags) > 0 {
 		command = append(command, featureGateFlags)
@@ -871,7 +869,15 @@ func commandForKubernetesVersion(
 		fmt.Sprintf("--horizontal-pod-autoscaler-cpu-initialization-period=%s", horizontalPodAutoscalerConfig.CPUInitializationPeriod.Duration.String()),
 		"--tls-cert-file=/var/lib/kube-controller-manager-server/kube-controller-manager-server.crt",
 		"--tls-private-key-file=/var/lib/kube-controller-manager-server/kube-controller-manager-server.key",
-		"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+	)
+
+	if k8sVersionGreaterEqual122, _ := versionutils.CompareVersions(version, ">=", "1.22"); k8sVersionGreaterEqual122 {
+		command = append(command, "--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384")
+	} else {
+		command = append(command, "--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA")
+	}
+
+	command = append(command,
 		"--use-service-account-credentials=true",
 		"--v=2",
 	)

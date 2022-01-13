@@ -36,11 +36,12 @@ var _ = Describe("Monitoring", func() {
 			test.ScrapeConfigs(kubeScheduler, expectedScrapeConfig)
 		},
 
-		Entry("kubernetes 1.15", "1.15.5", expectedScrapeConfig),
-		Entry("kubernetes 1.16", "1.16.6", expectedScrapeConfig),
 		Entry("kubernetes 1.17", "1.17.7", expectedScrapeConfig),
 		Entry("kubernetes 1.18", "1.18.8", expectedScrapeConfig),
 		Entry("kubernetes 1.19", "1.19.9", expectedScrapeConfig),
+		Entry("kubernetes 1.20", "1.20.1", expectedScrapeConfig),
+		Entry("kubernetes 1.21", "1.21.2", expectedScrapeConfig),
+		Entry("kubernetes 1.22", "1.22.3", expectedScrapeConfig),
 	)
 
 	It("should successfully test the alerting rules", func() {

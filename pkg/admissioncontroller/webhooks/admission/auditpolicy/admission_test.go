@@ -468,7 +468,7 @@ rules:
 				})
 
 				It("should allow if the auditPolicy is changed to something valid", func() {
-					shootv1beta1.Spec.Kubernetes.Version = "1.15"
+					shootv1beta1.Spec.Kubernetes.Version = "1.20"
 					newCm := cm.DeepCopy()
 					newCm.Data["policy"] = anotherValidAuditPolicy
 

@@ -1931,15 +1931,6 @@ rules:
 						))
 					})
 
-					It("should use the hyperkube binary if k8s < 1.17", func() {
-						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: semver.MustParse("1.16.9")})
-						kapi.SetSecrets(secrets)
-						deployAndRead()
-
-						Expect(deployment.Spec.Template.Spec.Containers[0].Command[0]).To(Equal("/hyperkube"))
-						Expect(deployment.Spec.Template.Spec.Containers[0].Command[1]).To(Equal("kube-apiserver"))
-					})
-
 					It("should properly set the anonymous auth flag if enabled", func() {
 						kapi = New(kubernetesInterface, namespace, Values{AnonymousAuthenticationEnabled: true, Images: images, Version: version})
 						kapi.SetSecrets(secrets)
@@ -2008,17 +1999,6 @@ rules:
 						deployAndRead()
 
 						Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--feature-gates=")))
-					})
-
-					It("should not have the flags for improved start-up/shut-down behaviour if k8s < 1.16", func() {
-						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: semver.MustParse("1.15.8")})
-						kapi.SetSecrets(secrets)
-						deployAndRead()
-
-						Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElements(
-							ContainSubstring("--livez-grace-period="),
-							ContainSubstring("--shutdown-delay-duration="),
-						))
 					})
 
 					It("should configure the request settings if provided", func() {
@@ -2092,7 +2072,7 @@ rules:
 						))
 					})
 
-					It("should mount the host pki directories if k8s >= 1.17", func() {
+					It("should mount the host pki directories", func() {
 						directoryOrCreate := corev1.HostPathDirectoryOrCreate
 
 						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: version})
@@ -2160,17 +2140,6 @@ rules:
 								},
 							},
 						))
-					})
-
-					It("should not mount the host pki directories if k8s < 1.17", func() {
-						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: semver.MustParse("1.16.9")})
-						kapi.SetSecrets(secrets)
-						deployAndRead()
-
-						for _, name := range []string{"fedora-rhel6-openelec-cabundle", "centos-rhel7-cabundle", "etc-ssl", "usr-share-cacerts"} {
-							Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal(name)})))
-							Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal(name)})))
-						}
 					})
 
 					It("should properly configure the settings related to the basic auth secret if enabled", func() {
@@ -2343,10 +2312,10 @@ rules:
 						Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-oidc-cabundle")})))
 					})
 
-					It("should have the proper probes for k8s >= 1.16", func() {
+					It("should have the proper probes", func() {
 						probeToken := "1234"
 
-						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: semver.MustParse("1.16.9"), ProbeToken: probeToken})
+						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: semver.MustParse("1.20.9"), ProbeToken: probeToken})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 
@@ -2388,69 +2357,10 @@ rules:
 						}))
 					})
 
-					It("should have the proper probes for k8s < 1.16", func() {
-						probeToken := "1234"
-
-						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: semver.MustParse("1.15.9"), ProbeToken: probeToken})
-						kapi.SetSecrets(secrets)
-						deployAndRead()
-
-						Expect(deployment.Spec.Template.Spec.Containers[0].LivenessProbe).To(Equal(&corev1.Probe{
-							Handler: corev1.Handler{
-								HTTPGet: &corev1.HTTPGetAction{
-									Path:   "/healthz",
-									Scheme: corev1.URISchemeHTTPS,
-									Port:   intstr.FromInt(Port),
-									HTTPHeaders: []corev1.HTTPHeader{{
-										Name:  "Authorization",
-										Value: "Bearer " + probeToken,
-									}},
-								},
-							},
-							SuccessThreshold:    1,
-							FailureThreshold:    3,
-							InitialDelaySeconds: 15,
-							PeriodSeconds:       10,
-							TimeoutSeconds:      15,
-						}))
-						Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe).To(Equal(&corev1.Probe{
-							Handler: corev1.Handler{
-								HTTPGet: &corev1.HTTPGetAction{
-									Path:   "/healthz",
-									Scheme: corev1.URISchemeHTTPS,
-									Port:   intstr.FromInt(Port),
-									HTTPHeaders: []corev1.HTTPHeader{{
-										Name:  "Authorization",
-										Value: "Bearer " + probeToken,
-									}},
-								},
-							},
-							SuccessThreshold:    1,
-							FailureThreshold:    3,
-							InitialDelaySeconds: 10,
-							PeriodSeconds:       10,
-							TimeoutSeconds:      15,
-						}))
-					})
-
-					It("should have no lifecycle settings if k8s >= 1.16", func() {
+					It("should have no lifecycle settings", func() {
 						deployAndRead()
 
 						Expect(deployment.Spec.Template.Spec.Containers[0].Lifecycle).To(BeNil())
-					})
-
-					It("should have no lifecycle settings if k8s < 1.16", func() {
-						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: semver.MustParse("1.15.9")})
-						kapi.SetSecrets(secrets)
-						deployAndRead()
-
-						Expect(deployment.Spec.Template.Spec.Containers[0].Lifecycle).To(Equal(&corev1.Lifecycle{
-							PreStop: &corev1.Handler{
-								Exec: &corev1.ExecAction{
-									Command: []string{"sh", "-c", "sleep 5"},
-								},
-							},
-						}))
 					})
 				})
 			})

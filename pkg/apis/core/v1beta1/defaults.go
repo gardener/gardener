@@ -141,10 +141,6 @@ func SetDefaults_SeedSettingDependencyWatchdog(obj *SeedSettingDependencyWatchdo
 
 // SetDefaults_Shoot sets default values for Shoot objects.
 func SetDefaults_Shoot(obj *Shoot) {
-	k8sVersionLessThan116, _ := versionutils.CompareVersions(obj.Spec.Kubernetes.Version, "<", "1.16")
-	// Error is ignored here because we cannot do anything meaningful with it.
-	// k8sVersionLessThan116 will default to `false`.
-
 	if obj.Spec.Kubernetes.AllowPrivilegedContainers == nil {
 		obj.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
 	}
@@ -153,11 +149,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 		obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{}
 	}
 	if obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication == nil {
-		if k8sVersionLessThan116 {
-			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(true)
-		} else {
-			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(false)
-		}
+		obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(false)
 	}
 	if obj.Spec.Kubernetes.KubeAPIServer.Requests == nil {
 		obj.Spec.Kubernetes.KubeAPIServer.Requests = &KubeAPIServerRequests{}

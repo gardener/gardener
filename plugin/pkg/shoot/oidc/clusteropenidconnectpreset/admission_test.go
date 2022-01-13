@@ -55,7 +55,7 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				},
 				Spec: core.ShootSpec{
 					Kubernetes: core.Kubernetes{
-						Version: "1.15",
+						Version: "1.20",
 					},
 				},
 			}

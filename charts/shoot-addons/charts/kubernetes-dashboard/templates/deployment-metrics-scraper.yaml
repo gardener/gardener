@@ -1,4 +1,3 @@
-{{- if semverCompare ">= 1.16" .Capabilities.KubeVersion.GitVersion }}
 ---
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
@@ -60,4 +59,3 @@ spec:
       volumes:
       - name: tmp-volume
         emptyDir: {}
-{{- end }}

@@ -38,11 +38,11 @@ var (
 		{Name: "ValidatingAdmissionWebhook"},
 	}
 
-	lowestSupportedKubernetesVersionMajorMinor = "1.15"
+	lowestSupportedKubernetesVersionMajorMinor = "1.17"
 	lowestSupportedKubernetesVersion, _        = semver.NewVersion(lowestSupportedKubernetesVersionMajorMinor)
 
 	admissionPlugins = map[string][]gardencorev1beta1.AdmissionPlugin{
-		"1.15": defaultPlugins,
+		"1.17": defaultPlugins,
 	}
 )
 

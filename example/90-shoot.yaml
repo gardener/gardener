@@ -129,7 +129,7 @@ spec:
     #   - KernelDeadlock
     #   - DiskPressure
   kubernetes:
-    version: 1.15.1
+    version: 1.20.1
   # allowPrivilegedContainers: true # 'true' means that all authenticated users can use the "gardener.privileged" PodSecurityPolicy, allowing full unrestricted access to Pod features.
   # kubeAPIServer:
   #   eventTTL: 1h

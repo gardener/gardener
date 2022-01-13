@@ -37,7 +37,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -504,14 +503,9 @@ func (b *Botanist) generateOptionalAddonsChart(_ context.Context) (*chartrendere
 	if err != nil {
 		return nil, err
 	}
-	kubernetesDashboardImagesToInject := []string{charts.ImageNameKubernetesDashboard}
-
-	k8sVersionLessThan116, err := versionutils.CompareVersions(b.Shoot.GetInfo().Spec.Kubernetes.Version, "<", "1.16")
-	if err != nil {
-		return nil, err
-	}
-	if !k8sVersionLessThan116 {
-		kubernetesDashboardImagesToInject = append(kubernetesDashboardImagesToInject, charts.ImageNameKubernetesDashboardMetricsScraper)
+	kubernetesDashboardImagesToInject := []string{
+		charts.ImageNameKubernetesDashboard,
+		charts.ImageNameKubernetesDashboardMetricsScraper,
 	}
 
 	kubernetesDashboard, err := b.InjectShootShootImages(kubernetesDashboardConfig, kubernetesDashboardImagesToInject...)

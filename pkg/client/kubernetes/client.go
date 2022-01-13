@@ -239,8 +239,6 @@ func ValidateConfigWithAllowList(config clientcmdapi.Config, allowedFields []str
 }
 
 var supportedKubernetesVersions = []string{
-	"1.15",
-	"1.16",
 	"1.17",
 	"1.18",
 	"1.19",

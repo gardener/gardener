@@ -445,13 +445,8 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		defaultHorizontalPodAutoscalerConfig = k.getHorizontalPodAutoscalerConfig()
 	)
 
-	if version.ConstraintK8sGreaterEqual117.Check(k.version) {
-		command = append(command, "/usr/local/bin/kube-controller-manager")
-	} else {
-		command = append(command, "/hyperkube", "kube-controller-manager")
-	}
-
 	command = append(command,
+		"/usr/local/bin/kube-controller-manager",
 		"--allocate-node-cidrs=true",
 		"--attach-detach-reconcile-sync-period=1m0s",
 		"--controllers=*,bootstrapsigner,tokencleaner",
@@ -484,16 +479,10 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		"--concurrent-namespace-syncs=50",
 		"--concurrent-replicaset-syncs=50",
 		"--concurrent-resource-quota-syncs=15",
+		"--concurrent-service-endpoint-syncs=15",
+		"--concurrent-statefulset-syncs=15",
+		"--concurrent-serviceaccount-token-syncs=15",
 	)
-
-	if version.ConstraintK8sGreaterEqual116.Check(k.version) {
-		command = append(command,
-			"--concurrent-service-endpoint-syncs=15",
-			"--concurrent-statefulset-syncs=15",
-		)
-	}
-
-	command = append(command, "--concurrent-serviceaccount-token-syncs=15")
 
 	if len(k.config.FeatureGates) > 0 {
 		command = append(command, kutil.FeatureGatesToCommandLineParameter(k.config.FeatureGates))

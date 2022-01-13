@@ -15,14 +15,14 @@ ports:
 
 workerPools:
 - name: ""
-  kubernetesVersion: 1.15.0
+  kubernetesVersion: 1.20.0
   kubeProxyImage: image-repository:image-tag
 - name: cpu-worker
-  kubernetesVersion: 1.15.2
+  kubernetesVersion: 1.20.2
   kubeProxyImage: image-repository:image-tag
 - name: cpu-worker
-  kubernetesVersion: 1.15.1
+  kubernetesVersion: 1.20.1
   kubeProxyImage: image-repository:image-tag
 - name: cpu-worker2
-  kubernetesVersion: 1.14.8
+  kubernetesVersion: 1.19.8
   kubeProxyImage: image-repository:image-tag

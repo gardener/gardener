@@ -47,11 +47,8 @@ cleanup.sh: |
     echo "Nothing to cleanup - the mode didn't change."
     exit 0
   fi
-  {{- if semverCompare "< 1.17" .kubernetesVersion }}
-  /hyperkube kube-proxy
-  {{- else }}
-  /usr/local/bin/kube-proxy
-  {{- end }} --v=2 --cleanup --config=/var/lib/kube-proxy-config/config.yaml --proxy-mode="${OLD_KUBE_PROXY_MODE}"
+
+  /usr/local/bin/kube-proxy --v=2 --cleanup --config=/var/lib/kube-proxy-config/config.yaml --proxy-mode="${OLD_KUBE_PROXY_MODE}"
   echo "${KUBE_PROXY_MODE}" >"$1"
 {{- end -}}
 

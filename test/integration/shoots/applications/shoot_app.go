@@ -35,12 +35,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils/version"
-	"github.com/gardener/gardener/test/framework"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/applications"
 
 	"github.com/onsi/ginkgo"
@@ -87,15 +84,8 @@ var _ = ginkgo.Describe("Shoot application testing", func() {
 		if !shoot.Spec.Addons.KubernetesDashboard.Enabled {
 			ginkgo.Fail("The test requires .spec.addons.kubernetesDashboard.enabled to be be true")
 		}
-		k8sVersionLessThan116, err := version.CompareVersions(f.Shoot.Spec.Kubernetes.Version, "<", "1.16")
-		framework.ExpectNoError(err)
 
-		k8sDashboardNamespace := metav1.NamespaceSystem
-		if !k8sVersionLessThan116 {
-			k8sDashboardNamespace = "kubernetes-dashboard"
-		}
-
-		url := fmt.Sprintf("https://api.%s/api/v1/namespaces/%s/services/https:kubernetes-dashboard:/proxy", *f.Shoot.Spec.DNS.Domain, k8sDashboardNamespace)
+		url := fmt.Sprintf("https://api.%s/api/v1/namespaces/%s/services/https:kubernetes-dashboard:/proxy", *f.Shoot.Spec.DNS.Domain, "kubernetes-dashboard")
 		dashboardToken, err := framework.GetObjectFromSecret(ctx, f.SeedClient, f.ShootSeedNamespace(), common.KubecfgSecretName, "token")
 		framework.ExpectNoError(err)
 
