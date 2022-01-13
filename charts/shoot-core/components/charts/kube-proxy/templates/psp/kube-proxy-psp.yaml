@@ -8,6 +8,7 @@ spec:
   - hostPath
   - secret
   - configMap
+  - projected
   hostNetwork: true
   hostPorts:
   - min: {{ .Values.ports.metrics }}
