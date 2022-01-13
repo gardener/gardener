@@ -59,9 +59,9 @@ if [ $use_cache = yes ] ; then
 else
   if [ "${TEST_COV+yes}" = yes ] ; then
     # supposed to be run in release jobs
-    make verify-extended
+    make verify-extended check-docforge
   else
     # run test instead of test-cov to speed-up jobs, as coverage slows down tests significantly
-    make check-generate verify
+    make check-generate verify check-docforge
   fi
 fi
