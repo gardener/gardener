@@ -44,7 +44,7 @@ const (
 	PreserveReplicas = "resources.gardener.cloud/preserve-replicas"
 	// PreserveResources is a constant for an annotation on a resource managed by a ManagedResource. If set to
 	// true then the controller will keep the resource requests and limits in Pod templates (e.g. in a
-	// DeploymentSpec) during updates to the resource.
+	// DeploymentSpec) during updates to the resource. This applies for all containers.
 	PreserveResources = "resources.gardener.cloud/preserve-resources"
 
 	// StaticTokenSkip is a constant for a label on a ServiceAccount which indicates that this ServiceAccount should not

@@ -167,6 +167,16 @@ In some cases it is not desirable to update or re-apply some of the cluster comp
 For these resources, the annotation "resources.gardener.cloud/ignore" needs to be set to "true" or a truthy value (Truthy values are "1", "t", "T", "true", "TRUE", "True") in the corresponding managed resource secrets,
 this can be done from the components that create the managed resource secrets, for example Gardener extensions or Gardener. Once this is done, the resource will be initially created and later ignored during reconciliation.
 
+#### Preserving `replicas` or `resources` in Workload Resources
+
+The objects which are part of the `ManagedResource` can be annotated with
+
+- `resources.gardener.cloud/preserve-replicas=true` in case the `.spec.replicas` field of workload resources like `Deployment`s, `StatefulSet`s, etc. shall be preserved during updates.
+- `resources.gardener.cloud/preserve-resources=true` in case the `.spec.containers[*].resources` fields of all containers of workload resources like `Deployment`s, `StatefulSet`s, etc. shall be preserved during updates.
+
+> This can be useful if there are non-standard horizontal/vertical auto-scaling mechanisms in place.
+Standard mechanisms like `HorizontalPodAutoscaler` or `VerticalPodAutoscaler` will be auto-recognized by `gardener-resource-manager`, i.e., in such cases the annotations are not needed.
+
 #### Origin
 
 All the objects managed by the resource manager get a dedicated annotation
