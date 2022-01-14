@@ -16,7 +16,7 @@ spec:
   - type: Resource
     resource:
       name: cpu
-      {{- if semverCompare "<= 1.22.x" .Capabilities.KubeVersion.GitVersion }}
+      {{- if semverCompare "<= 1.22-0" .Capabilities.KubeVersion.GitVersion }}
       targetAverageUtilization: 80
       {{- else }}
       target:

@@ -43,7 +43,7 @@ batch/v1beta1
 {{- end -}}
 
 {{- define "hpaversion" -}}
-{{- if semverCompare "<= 1.22.x" .Capabilities.KubeVersion.GitVersion -}}
+{{- if semverCompare "<= 1.22-0" .Capabilities.KubeVersion.GitVersion -}}
 autoscaling/v2beta1
 {{- else -}}
 autoscaling/v2
@@ -51,7 +51,7 @@ autoscaling/v2
 {{- end -}}
 
 {{- define "webhookadmissionregistration" -}}
-{{- if semverCompare "<= 1.15.x" .Capabilities.KubeVersion.GitVersion -}}
+{{- if semverCompare "<= 1.15-0" .Capabilities.KubeVersion.GitVersion -}}
 admissionregistration.k8s.io/v1beta1
 {{- else -}}
 admissionregistration.k8s.io/v1
