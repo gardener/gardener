@@ -21,12 +21,15 @@ import (
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"github.com/Masterminds/semver"
 	"github.com/coreos/go-systemd/v22/unit"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/go-logr/logr"
@@ -61,21 +64,21 @@ type Ensurer interface {
 	// if the gardenlet's ReversedVPN feature gate is enabeld.
 	EnsureVPNSeedServerDeployment(ctx context.Context, gctx gcontext.GardenContext, new, old *appsv1.Deployment) error
 	// EnsureKubeletServiceUnitOptions ensures that the kubelet.service unit options conform to the provider requirements.
-	EnsureKubeletServiceUnitOptions(ctx context.Context, gctx gcontext.GardenContext, new, old []*unit.UnitOption) ([]*unit.UnitOption, error)
+	EnsureKubeletServiceUnitOptions(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, new, old []*unit.UnitOption) ([]*unit.UnitOption, error)
 	// EnsureKubeletConfiguration ensures that the kubelet configuration conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
-	EnsureKubeletConfiguration(ctx context.Context, gctx gcontext.GardenContext, new, old *kubeletconfigv1beta1.KubeletConfiguration) error
+	EnsureKubeletConfiguration(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, new, old *kubeletconfigv1beta1.KubeletConfiguration) error
+	// ShouldProvisionKubeletCloudProviderConfig returns true if the cloud provider config file should be added to the kubelet configuration.
+	ShouldProvisionKubeletCloudProviderConfig(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version) bool
+	// EnsureKubeletCloudProviderConfig ensures that the cloud provider config file content conforms to the provider requirements.
+	EnsureKubeletCloudProviderConfig(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, configContent *string, namespace string) error
 	// EnsureKubernetesGeneralConfiguration ensures that the kubernetes general configuration conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
 	EnsureKubernetesGeneralConfiguration(ctx context.Context, gctx gcontext.GardenContext, new, old *string) error
-	// ShouldProvisionKubeletCloudProviderConfig returns true if the cloud provider config file should be added to the kubelet configuration.
-	ShouldProvisionKubeletCloudProviderConfig(ctx context.Context, gctx gcontext.GardenContext) bool
-	// EnsureKubeletCloudProviderConfig ensures that the cloud provider config file content conforms to the provider requirements.
-	EnsureKubeletCloudProviderConfig(context.Context, gcontext.GardenContext, *string, string) error
 	// EnsureAdditionalUnits ensures additional systemd units
 	// "old" might be "nil" and must always be checked.
 	EnsureAdditionalUnits(ctx context.Context, gctx gcontext.GardenContext, new, old *[]extensionsv1alpha1.Unit) error
-	// EnsureAdditionalFile ensures additional systemd files
+	// EnsureAdditionalFiles ensures additional systemd files
 	// "old" might be "nil" and must always be checked.
 	EnsureAdditionalFiles(ctx context.Context, gctx gcontext.GardenContext, new, old *[]extensionsv1alpha1.File) error
 }
@@ -228,16 +231,42 @@ func findFileWithPath(osc *extensionsv1alpha1.OperatingSystemConfig, path string
 }
 
 func (m *mutator) mutateOperatingSystemConfig(ctx context.Context, gctx gcontext.GardenContext, osc, oldOSC *extensionsv1alpha1.OperatingSystemConfig) error {
+	cluster, err := gctx.GetCluster(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Calculate effective kubelet version for the worker pool this OperatingSystemConfig belongs to
+	controlPlaneVersion, err := semver.NewVersion(cluster.Shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return err
+	}
+
+	var workerKubernetes *gardencorev1beta1.WorkerKubernetes
+	if poolName, ok := osc.Labels[v1beta1constants.LabelWorkerPool]; ok {
+		for _, worker := range cluster.Shoot.Spec.Provider.Workers {
+			if worker.Name == poolName {
+				workerKubernetes = worker.Kubernetes
+				break
+			}
+		}
+	}
+
+	kubeletVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(controlPlaneVersion, workerKubernetes)
+	if err != nil {
+		return err
+	}
+
 	// Mutate kubelet.service unit, if present
 	if content := getKubeletService(osc); content != nil {
-		if err := m.ensureKubeletServiceUnitContent(ctx, gctx, content, getKubeletService(oldOSC)); err != nil {
+		if err := m.ensureKubeletServiceUnitContent(ctx, gctx, kubeletVersion, content, getKubeletService(oldOSC)); err != nil {
 			return err
 		}
 	}
 
 	// Mutate kubelet configuration file, if present
 	if content := getKubeletConfigFile(osc); content != nil {
-		if err := m.ensureKubeletConfigFileContent(ctx, gctx, content, getKubeletConfigFile(oldOSC)); err != nil {
+		if err := m.ensureKubeletConfigFileContent(ctx, gctx, kubeletVersion, content, getKubeletConfigFile(oldOSC)); err != nil {
 			return err
 		}
 	}
@@ -250,8 +279,8 @@ func (m *mutator) mutateOperatingSystemConfig(ctx context.Context, gctx gcontext
 	}
 
 	// Check if cloud provider config needs to be ensured
-	if m.ensurer.ShouldProvisionKubeletCloudProviderConfig(ctx, gctx) {
-		if err := m.ensureKubeletCloudProviderConfig(ctx, gctx, osc); err != nil {
+	if m.ensurer.ShouldProvisionKubeletCloudProviderConfig(ctx, gctx, kubeletVersion) {
+		if err := m.ensureKubeletCloudProviderConfig(ctx, gctx, kubeletVersion, osc); err != nil {
 			return err
 		}
 	}
@@ -273,7 +302,7 @@ func (m *mutator) mutateOperatingSystemConfig(ctx context.Context, gctx gcontext
 	return m.ensurer.EnsureAdditionalUnits(ctx, gctx, &osc.Spec.Units, oldUnits)
 }
 
-func (m *mutator) ensureKubeletServiceUnitContent(ctx context.Context, gctx gcontext.GardenContext, content, oldContent *string) error {
+func (m *mutator) ensureKubeletServiceUnitContent(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, content, oldContent *string) error {
 	var (
 		opts, oldOpts []*unit.UnitOption
 		err           error
@@ -291,7 +320,7 @@ func (m *mutator) ensureKubeletServiceUnitContent(ctx context.Context, gctx gcon
 		}
 	}
 
-	if opts, err = m.ensurer.EnsureKubeletServiceUnitOptions(ctx, gctx, opts, oldOpts); err != nil {
+	if opts, err = m.ensurer.EnsureKubeletServiceUnitOptions(ctx, gctx, kubeletVersion, opts, oldOpts); err != nil {
 		return err
 	}
 
@@ -303,7 +332,7 @@ func (m *mutator) ensureKubeletServiceUnitContent(ctx context.Context, gctx gcon
 	return nil
 }
 
-func (m *mutator) ensureKubeletConfigFileContent(ctx context.Context, gctx gcontext.GardenContext, fci, oldFCI *extensionsv1alpha1.FileContentInline) error {
+func (m *mutator) ensureKubeletConfigFileContent(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, fci, oldFCI *extensionsv1alpha1.FileContentInline) error {
 	var (
 		kubeletConfig, oldKubeletConfig *kubeletconfigv1beta1.KubeletConfiguration
 		err                             error
@@ -321,7 +350,7 @@ func (m *mutator) ensureKubeletConfigFileContent(ctx context.Context, gctx gcont
 		}
 	}
 
-	if err = m.ensurer.EnsureKubeletConfiguration(ctx, gctx, kubeletConfig, oldKubeletConfig); err != nil {
+	if err = m.ensurer.EnsureKubeletConfiguration(ctx, gctx, kubeletVersion, kubeletConfig, oldKubeletConfig); err != nil {
 		return err
 	}
 
@@ -378,12 +407,12 @@ func (m *mutator) ensureKubernetesGeneralConfiguration(ctx context.Context, gctx
 // CloudProviderConfigPath is the path to the cloudprovider.conf kubelet configuration file.
 const CloudProviderConfigPath = "/var/lib/kubelet/cloudprovider.conf"
 
-func (m *mutator) ensureKubeletCloudProviderConfig(ctx context.Context, gctx gcontext.GardenContext, osc *extensionsv1alpha1.OperatingSystemConfig) error {
+func (m *mutator) ensureKubeletCloudProviderConfig(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, osc *extensionsv1alpha1.OperatingSystemConfig) error {
 	var err error
 
 	// Ensure kubelet cloud provider config
 	var s string
-	if err = m.ensurer.EnsureKubeletCloudProviderConfig(ctx, gctx, &s, osc.Namespace); err != nil {
+	if err = m.ensurer.EnsureKubeletCloudProviderConfig(ctx, gctx, kubeletVersion, &s, osc.Namespace); err != nil {
 		return err
 	}
 
