@@ -113,7 +113,7 @@ const (
   # Some verbs excluded because they are expected to be long-lasting:
   # WATCHLIST is long-poll, CONNECT is "kubectl exec".
   - alert: KubeApiServerLatency
-    expr: histogram_quantile(0.99, sum without (instance,resource) (rate(` + monitoringMetricApiserverRequestDurationSecondsBucket + `{subresource!="log",verb!~"CONNECT|WATCHLIST|WATCH|PROXY proxy"}[5m]))) > 3
+    expr: histogram_quantile(0.99, sum without (instance,resource) (rate(` + monitoringMetricApiserverRequestDurationSecondsBucket + `{subresource!~"log|portforward|exec",verb!~"CONNECT|WATCHLIST|WATCH|PROXY proxy"}[5m]))) > 3
     for: 30m
     labels:
       service: ` + v1beta1constants.DeploymentNameKubeAPIServer + `

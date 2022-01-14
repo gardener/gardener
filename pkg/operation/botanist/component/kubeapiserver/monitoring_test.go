@@ -124,7 +124,7 @@ metric_relabel_configs:
   # Some verbs excluded because they are expected to be long-lasting:
   # WATCHLIST is long-poll, CONNECT is "kubectl exec".
   - alert: KubeApiServerLatency
-    expr: histogram_quantile(0.99, sum without (instance,resource) (rate(apiserver_request_duration_seconds_bucket{subresource!="log",verb!~"CONNECT|WATCHLIST|WATCH|PROXY proxy"}[5m]))) > 3
+    expr: histogram_quantile(0.99, sum without (instance,resource) (rate(apiserver_request_duration_seconds_bucket{subresource!~"log|portforward|exec",verb!~"CONNECT|WATCHLIST|WATCH|PROXY proxy"}[5m]))) > 3
     for: 30m
     labels:
       service: kube-apiserver
