@@ -61,6 +61,36 @@ spec:
             type: string
           metadata:
             type: object
+          nodeTemplate:
+            description: NodeTemplate contains subfields to track all node resources
+              and other node info required to scale nodegroup from zero
+            properties:
+              capacity:
+                additionalProperties:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
+                description: Capacity contains subfields to track all node resources
+                  required to scale nodegroup from zero
+                type: object
+              instanceType:
+                description: Instance type of the node belonging to nodeGroup
+                type: string
+              region:
+                description: Region of the expected node belonging to nodeGroup
+                type: string
+              zone:
+                description: Zone of the expected node belonging to nodeGroup
+                type: string
+            required:
+            - capacity
+            - instanceType
+            - region
+            - zone
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
           provider:
             description: Provider is the combination of name and location of cloud-specific
               drivers.
