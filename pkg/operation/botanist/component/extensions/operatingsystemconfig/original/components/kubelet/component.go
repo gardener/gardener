@@ -108,7 +108,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 				Command: pointer.String("start"),
 				Enable:  pointer.Bool(true),
 				Content: pointer.String(`[Unit]
-Description=kubelet daemon ` + ctx.KubernetesVersion.String() + `
+Description=kubelet daemon
 Documentation=https://kubernetes.io/docs/admin/kubelet
 ` + unitConfigAfterCRI(ctx.CRIName) + `
 [Install]
