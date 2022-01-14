@@ -236,6 +236,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 							v1beta1constants.GardenerTimestamp: now.UTC().String(),
 						},
+						Labels: map[string]string{
+							"worker.gardener.cloud/pool": worker.Name,
+						},
 					},
 					Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
 						DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -256,6 +259,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Annotations: map[string]string{
 							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 							v1beta1constants.GardenerTimestamp: now.UTC().String(),
+						},
+						Labels: map[string]string{
+							"worker.gardener.cloud/pool": worker.Name,
 						},
 					},
 					Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
