@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Controller", func() {
+var _ = Describe("BackupEntry", func() {
 	var (
 		queue *fakeQueue
 		c     *Controller
@@ -32,7 +32,7 @@ var _ = Describe("Controller", func() {
 	BeforeEach(func() {
 		queue = &fakeQueue{}
 		c = &Controller{
-			controllerRegistrationSeedQueue: queue,
+			seedQueue: queue,
 		}
 	})
 

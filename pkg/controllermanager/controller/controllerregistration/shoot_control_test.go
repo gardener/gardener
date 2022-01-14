@@ -32,7 +32,7 @@ var _ = Describe("Controller", func() {
 	BeforeEach(func() {
 		queue = &fakeQueue{}
 		c = &Controller{
-			controllerRegistrationSeedQueue: queue,
+			seedQueue: queue,
 		}
 	})
 

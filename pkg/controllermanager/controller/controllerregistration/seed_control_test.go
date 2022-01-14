@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -31,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -50,8 +50,9 @@ var _ = Describe("Controller", func() {
 		seedQueue = &fakeQueue{}
 		controllerRegQueue = &fakeQueue{}
 		c = &Controller{
-			seedQueue:                       seedQueue,
-			controllerRegistrationSeedQueue: controllerRegQueue,
+			log:                logr.Discard(),
+			seedFinalizerQueue: seedQueue,
+			seedQueue:          controllerRegQueue,
 		}
 
 		obj = &gardencorev1beta1.Seed{
@@ -181,7 +182,7 @@ var _ = Describe("Controller", func() {
 	})
 })
 
-var _ = Describe("seedReconciler", func() {
+var _ = Describe("seedFinalizerReconciler", func() {
 	const finalizerName = "core.gardener.cloud/controllerregistration"
 
 	var (
@@ -200,7 +201,7 @@ var _ = Describe("seedReconciler", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 
-		reconciler = NewSeedReconciler(logger.NewNopLogger(), c)
+		reconciler = NewSeedFinalizerReconciler(c)
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            seedName,

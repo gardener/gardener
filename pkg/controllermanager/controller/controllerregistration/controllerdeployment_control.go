@@ -18,7 +18,6 @@ import (
 	"context"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/logger"
 )
 
 func (c *Controller) controllerDeploymentAdd(ctx context.Context, obj interface{}) {
@@ -29,7 +28,7 @@ func (c *Controller) controllerDeploymentAdd(ctx context.Context, obj interface{
 
 	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
 	if err := c.gardenClient.List(ctx, controllerRegistrationList); err != nil {
-		logger.Logger.Errorf("error listing controllerregistrations: %+v", err)
+		c.log.Error(err, "Error listing ControllerRegistrations")
 		return
 	}
 

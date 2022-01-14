@@ -95,7 +95,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing CloudProfile controller: %w", err)
 	}
 
-	controllerRegistrationController, err := controllerregistrationcontroller.NewController(ctx, f.clientMap)
+	controllerRegistrationController, err := controllerregistrationcontroller.NewController(ctx, log, f.clientMap)
 	if err != nil {
 		return fmt.Errorf("failed initializing ControllerRegistration controller: %w", err)
 	}

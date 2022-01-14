@@ -21,24 +21,27 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 
-	"github.com/sirupsen/logrus"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+const seedFinalizerReconcilerName = "seed-finalizer"
 
 func (c *Controller) seedAdd(obj interface{}, addToControllerRegistrationQueue bool) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
 
-	c.seedQueue.Add(key)
+	c.seedFinalizerQueue.Add(key)
 	if addToControllerRegistrationQueue {
-		c.controllerRegistrationSeedQueue.Add(key)
+		c.seedQueue.Add(key)
 	}
 }
 
@@ -62,34 +65,37 @@ func (c *Controller) seedUpdate(oldObj, newObj interface{}) {
 func (c *Controller) seedDelete(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
+	c.seedFinalizerQueue.Add(key)
 	c.seedQueue.Add(key)
-	c.controllerRegistrationSeedQueue.Add(key)
 }
 
-// NewSeedReconciler creates a new instance of a reconciler which reconciles Seeds.
-func NewSeedReconciler(logger logrus.FieldLogger, gardenClient client.Client) reconcile.Reconciler {
+// NewSeedFinalizerReconciler creates a new reconciler that manages the finalizer on Seed objects depending on whether
+// ControllerInstallation objects exist in the system.
+// It basically protects Seeds from being deleted, if there are still ControllerInstallations referencing it, to make
+// sure we are able to cleanup ControllerInstallation objects of terminating Seeds.
+func NewSeedFinalizerReconciler(gardenClient client.Client) reconcile.Reconciler {
 	return &seedReconciler{
-		logger:       logger,
 		gardenClient: gardenClient,
 	}
 }
 
 type seedReconciler struct {
-	logger       logrus.FieldLogger
 	gardenClient client.Client
 }
 
 func (r *seedReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
 	seed := &gardencorev1beta1.Seed{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			log.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	if seed.DeletionTimestamp != nil {

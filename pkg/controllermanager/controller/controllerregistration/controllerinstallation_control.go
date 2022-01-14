@@ -25,7 +25,7 @@ func (c *Controller) controllerInstallationAdd(obj interface{}) {
 		return
 	}
 
-	c.controllerRegistrationSeedQueue.Add(controllerInstallation.Spec.SeedRef.Name)
+	c.seedQueue.Add(controllerInstallation.Spec.SeedRef.Name)
 }
 
 func (c *Controller) controllerInstallationUpdate(oldObj, newObj interface{}) {

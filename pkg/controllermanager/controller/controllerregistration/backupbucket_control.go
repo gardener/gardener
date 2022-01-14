@@ -30,7 +30,7 @@ func (c *Controller) backupBucketAdd(obj interface{}) {
 		return
 	}
 
-	c.controllerRegistrationSeedQueue.Add(*backupBucket.Spec.SeedName)
+	c.seedQueue.Add(*backupBucket.Spec.SeedName)
 }
 
 func (c *Controller) backupBucketUpdate(oldObj, newObj interface{}) {
