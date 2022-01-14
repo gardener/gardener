@@ -18,12 +18,12 @@ Check out these repositories for implementations of the Gardener Extension contr
 - [Alicloud](https://github.com/gardener/gardener-extension-provider-alicloud)
 - [AWS](https://github.com/gardener/gardener-extension-provider-aws)
 - [Azure](https://github.com/gardener/gardener-extension-provider-azure)
+- [Equinix Metal](https://github.com/gardener/gardener-extension-provider-equinix-metal)
 - [GCP](https://github.com/gardener/gardener-extension-provider-gcp)
+- [Kubevirt](https://github.com/gardener/gardener-extension-provider-kubevirt)
 - [MetalStack](https://github.com/metal-stack/gardener-extension-provider-metal)
 - [OpenStack](https://github.com/gardener/gardener-extension-provider-openstack)
-- [Packet](https://github.com/gardener/gardener-extension-provider-packet)
 - [vSphere](https://github.com/gardener/gardener-extension-provider-vsphere)
-- [Kubevirt](https://github.com/gardener/gardener-extension-provider-kubevirt)
 
 ### DNS Provider
 
