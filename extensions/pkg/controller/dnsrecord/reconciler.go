@@ -241,7 +241,7 @@ func (r *reconciler) delete(ctx context.Context, dns *extensionsv1alpha1.DNSReco
 	return reconcile.Result{}, nil
 }
 
-func updateCreatedCondition(status extensionsv1alpha1.Status, conditionStatus gardencorev1beta1.ConditionStatus, reason string, updateIfExisting bool) error {
+func updateCreatedCondition(status extensionsv1alpha1.Status, conditionStatus gardencorev1beta1.ConditionStatus, reason, message string, updateIfExisting bool) error {
 	conditions := status.GetConditions()
 	c := gardencorev1beta1helper.GetCondition(conditions, extensionsv1alpha1.ConditionTypeCreated)
 	if c != nil && !updateIfExisting {
@@ -259,7 +259,8 @@ func updateCreatedCondition(status extensionsv1alpha1.Status, conditionStatus ga
 	if err != nil {
 		return err
 	}
-	*c, _ = builder.WithStatus(conditionStatus).WithReason(reason).WithMessage("").Build()
+
+	*c, _ = builder.WithOldCondition(*c).WithStatus(conditionStatus).WithReason(reason).WithMessage(message).Build()
 	status.SetConditions(conditions)
 	return nil
 }
@@ -274,9 +275,11 @@ func getCreatedConditionStatus(status extensionsv1alpha1.Status) gardencorev1bet
 }
 
 func addCreatedConditionFalse(status extensionsv1alpha1.Status) error {
-	return updateCreatedCondition(status, gardencorev1beta1.ConditionFalse, "error", false)
+	message := "error on initial record creation in infrastructure"
+	return updateCreatedCondition(status, gardencorev1beta1.ConditionFalse, "error", message, false)
 }
 
 func addCreatedConditionTrue(status extensionsv1alpha1.Status) error {
-	return updateCreatedCondition(status, gardencorev1beta1.ConditionTrue, "success", true)
+	message := "record was created successfully in infrastructure at least once"
+	return updateCreatedCondition(status, gardencorev1beta1.ConditionTrue, "success", message, true)
 }
