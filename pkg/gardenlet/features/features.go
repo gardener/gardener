@@ -33,7 +33,7 @@ var (
 		features.CachedRuntimeClients:                       {Default: true, PreRelease: featuregate.Beta},
 		features.SeedKubeScheduler:                          {Default: false, PreRelease: featuregate.Alpha},
 		features.ReversedVPN:                                {Default: false, PreRelease: featuregate.Alpha},
-		features.UseDNSRecords:                              {Default: false, PreRelease: featuregate.Alpha},
+		features.UseDNSRecords:                              {Default: true, PreRelease: featuregate.Beta},
 		features.DenyInvalidExtensionResources:              {Default: false, PreRelease: featuregate.Alpha},
 		features.CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
 		features.ForceRestore:                               {Default: false, PreRelease: featuregate.Alpha},

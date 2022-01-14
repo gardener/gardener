@@ -91,6 +91,7 @@ const (
 	// UseDNSRecords enables using DNSRecords resources for Gardener DNS records instead of DNSProvider and DNSEntry resources.
 	// owner: @stoyanr
 	// alpha: v1.27.0
+	// beta: v1.39.0
 	UseDNSRecords featuregate.Feature = "UseDNSRecords"
 
 	// RotateSSHKeypairOnMaintenance enables SSH keypair rotation in the maintenance controller of the gardener-controller-manager.
