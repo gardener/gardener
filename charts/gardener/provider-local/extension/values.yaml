@@ -78,5 +78,6 @@ coredns:
   enabled: true
 
 gardener:
+  version: ""
   seed:
     provider: local

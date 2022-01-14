@@ -21,6 +21,10 @@ spec:
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
+        {{- if .Values.useProjectedTokenMount }}
+        # TODO(rfranzke): Remove in a future release.
+        security.gardener.cloud/trigger: rollout
+        {{- end }}
       labels:
         gardener.cloud/role: controlplane
         app: kubernetes
@@ -49,7 +53,11 @@ spec:
         - --machine-health-timeout=10m
         - --namespace={{ .Release.Namespace }}
         - --port={{ .Values.metricsPortLocal }}
+        {{- if .Values.useTokenRequestor }}
+        - --target-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
+        {{- else }}
         - --target-kubeconfig=/var/lib/machine-controller-manager/kubeconfig
+        {{- end }}
         - --v=3
         livenessProbe:
           failureThreshold: 3
@@ -64,9 +72,15 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
+        {{- if .Values.useTokenRequestor }}
+        - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
+          name: kubeconfig
+          readOnly: true
+        {{- else }}
         - mountPath: /var/lib/machine-controller-manager
           name: machine-controller-manager
           readOnly: true
+        {{- end }}
       - name: local-machine-controller-manager
         image: {{ index .Values.images "machine-controller-manager" }}
         imagePullPolicy: IfNotPresent
@@ -82,7 +96,11 @@ spec:
         - --port={{ .Values.metricsPort }}
         - --safety-up=2
         - --safety-down=1
+        {{- if .Values.useTokenRequestor }}
+        - --target-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
+        {{- else }}
         - --target-kubeconfig=/var/lib/machine-controller-manager/kubeconfig
+        {{- end }}
         - --v=3
         livenessProbe:
           failureThreshold: 3
@@ -106,10 +124,35 @@ spec:
             cpu: 350m
             memory: 256Mi
         volumeMounts:
+        {{- if .Values.useTokenRequestor }}
+        - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
+          name: kubeconfig
+          readOnly: true
+        {{- else }}
         - mountPath: /var/lib/machine-controller-manager
           name: machine-controller-manager
           readOnly: true
+        {{- end }}
       volumes:
+      {{- if .Values.useTokenRequestor }}
+      - name: kubeconfig
+        projected:
+          defaultMode: 420
+          sources:
+          - secret:
+              items:
+              - key: kubeconfig
+                path: kubeconfig
+              name: generic-token-kubeconfig
+              optional: false
+          - secret:
+              items:
+              - key: token
+                path: token
+              name: shoot-access-machine-controller-manager
+              optional: false
+      {{- else }}
       - name: machine-controller-manager
         secret:
           secretName: machine-controller-manager
+      {{- end }}
