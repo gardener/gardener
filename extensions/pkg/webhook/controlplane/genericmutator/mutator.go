@@ -18,11 +18,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils"
@@ -235,30 +236,30 @@ func (m *mutator) mutateOperatingSystemConfig(ctx context.Context, gctx gcontext
 		return err
 	}
 
-	kubeletVersion, err := semver.NewVersion(cluster.Shoot.Spec.Kubernetes.Version)
+	// Calculate effective kubelet version for the worker pool this OperatingSystemConfig belongs to
+	controlPlaneVersion, err := semver.NewVersion(cluster.Shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return err
+	}
+
+	var workerKubernetes *gardencorev1beta1.WorkerKubernetes
+	if poolName, ok := osc.Labels[v1beta1constants.LabelWorkerPool]; ok {
+		for _, worker := range cluster.Shoot.Spec.Provider.Workers {
+			if worker.Name == poolName {
+				workerKubernetes = worker.Kubernetes
+				break
+			}
+		}
+	}
+
+	kubeletVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(controlPlaneVersion, workerKubernetes)
 	if err != nil {
 		return err
 	}
 
 	// Mutate kubelet.service unit, if present
 	if content := getKubeletService(osc); content != nil {
-		// Deserialize unit options
-		opts, err := m.unitSerializer.Deserialize(*content)
-		if err != nil {
-			return fmt.Errorf("could not deserialize kubelet.service unit content: %w", err)
-		}
-
-		// Parse kubelet version from unit description if present
-		if opt := extensionswebhook.UnitOptionWithSectionAndName(opts, "Unit", "Description"); opt != nil {
-			if split := strings.Split(opt.Value, " "); len(split) == 3 {
-				kubeletVersion, err = semver.NewVersion(split[2])
-				if err != nil {
-					return err
-				}
-			}
-		}
-
-		if err := m.ensureKubeletServiceUnitContent(ctx, gctx, kubeletVersion, opts, content, getKubeletService(oldOSC)); err != nil {
+		if err := m.ensureKubeletServiceUnitContent(ctx, gctx, kubeletVersion, content, getKubeletService(oldOSC)); err != nil {
 			return err
 		}
 	}
@@ -301,11 +302,16 @@ func (m *mutator) mutateOperatingSystemConfig(ctx context.Context, gctx gcontext
 	return m.ensurer.EnsureAdditionalUnits(ctx, gctx, &osc.Spec.Units, oldUnits)
 }
 
-func (m *mutator) ensureKubeletServiceUnitContent(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, opts []*unit.UnitOption, content, oldContent *string) error {
+func (m *mutator) ensureKubeletServiceUnitContent(ctx context.Context, gctx gcontext.GardenContext, kubeletVersion *semver.Version, content, oldContent *string) error {
 	var (
-		oldOpts []*unit.UnitOption
-		err     error
+		opts, oldOpts []*unit.UnitOption
+		err           error
 	)
+
+	// Deserialize unit options
+	if opts, err = m.unitSerializer.Deserialize(*content); err != nil {
+		return fmt.Errorf("could not deserialize kubelet.service unit content: %w", err)
+	}
 
 	if oldContent != nil {
 		// Deserialize old unit options
