@@ -20,6 +20,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -250,18 +251,15 @@ func updateCreatedCondition(status extensionsv1alpha1.Status, conditionStatus ga
 	if c != nil && c.Status == conditionStatus {
 		return nil
 	}
-	if c == nil {
-		conditions = append(conditions, gardencorev1beta1helper.InitCondition(extensionsv1alpha1.ConditionTypeCreated))
-		c = &conditions[len(conditions)-1]
-	}
 
 	builder, err := gardencorev1beta1helper.NewConditionBuilder(extensionsv1alpha1.ConditionTypeCreated)
-	if err != nil {
-		return err
+	utilruntime.Must(err)
+	if c != nil {
+		builder = builder.WithOldCondition(*c)
 	}
 
-	*c, _ = builder.WithOldCondition(*c).WithStatus(conditionStatus).WithReason(reason).WithMessage(message).Build()
-	status.SetConditions(conditions)
+	new, _ := builder.WithStatus(conditionStatus).WithReason(reason).WithMessage(message).Build()
+	status.SetConditions(gardencorev1beta1helper.MergeConditions(conditions, new))
 	return nil
 }
 
