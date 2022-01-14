@@ -133,6 +133,10 @@ var (
 // Interface contains functions for a gardener-resource-manager deployer.
 type Interface interface {
 	component.DeployWaiter
+	// GetReplicas gets the Replicas field in the Values.
+	GetReplicas() int32
+	// SetReplicas sets the Replicas field in the Values.
+	SetReplicas(int32)
 	// SetSecrets sets the secrets.
 	SetSecrets(Secrets)
 }
@@ -142,14 +146,12 @@ func New(
 	client client.Client,
 	namespace string,
 	image string,
-	replicas int32,
 	values Values,
 ) Interface {
 	return &resourceManager{
 		client:    client,
 		image:     image,
 		namespace: namespace,
-		replicas:  replicas,
 		values:    values,
 	}
 }
@@ -158,7 +160,6 @@ type resourceManager struct {
 	client    client.Client
 	namespace string
 	image     string
-	replicas  int32
 	values    Values
 	secrets   Secrets
 }
@@ -183,6 +184,8 @@ type Values struct {
 	MaxConcurrentTokenRequestorWorkers *int32
 	// MaxConcurrentRootCAPublisherWorkers configures the number of worker threads for concurrent root ca publishing reconciliations
 	MaxConcurrentRootCAPublisherWorkers *int32
+	// Replicas is the number of replicas for the gardener-resource-manager deployment.
+	Replicas int32
 	// RenewDeadline configures the renew deadline for leader election
 	RenewDeadline *time.Duration
 	// ResourceClass is used to filter resource resources
@@ -244,7 +247,7 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 	}
 
 	// TODO(rfranzke): Remove in a future release.
-	if r.values.TargetDiffersFromSourceCluster && r.replicas > 0 {
+	if r.values.TargetDiffersFromSourceCluster && r.values.Replicas > 0 {
 		return kutil.DeleteObject(ctx, r.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: r.namespace}})
 	}
 
@@ -487,7 +490,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, deployment, func() error {
 		deployment.Labels = r.getLabels()
 
-		deployment.Spec.Replicas = &r.replicas
+		deployment.Spec.Replicas = &r.values.Replicas
 		deployment.Spec.RevisionHistoryLimit = pointer.Int32(1)
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: appLabel()}
 
@@ -1080,6 +1083,12 @@ func (r *resourceManager) Wait(ctx context.Context) error {
 
 // WaitCleanup for destruction to finish and component to be fully removed. Gardener-Resource-manager does not need to wait for cleanup.
 func (r *resourceManager) WaitCleanup(_ context.Context) error { return nil }
+
+// GetReplicas returns Replicas field in the Values.
+func (r *resourceManager) GetReplicas() int32 { return r.values.Replicas }
+
+// SetReplicas sets the Replicas field in the Values.
+func (r *resourceManager) SetReplicas(replicas int32) { r.values.Replicas = replicas }
 
 // SetSecrets sets the secrets for the gardener-resource-manager.
 func (r *resourceManager) SetSecrets(s Secrets) { r.secrets = s }
