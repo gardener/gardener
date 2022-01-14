@@ -114,11 +114,12 @@ func defaultGardenerResourceManager(c client.Client, imageVector imagevector.Ima
 	}
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
-	gardenerResourceManager := resourcemanager.New(c, v1beta1constants.GardenNamespace, image.String(), 3, resourcemanager.Values{
+	gardenerResourceManager := resourcemanager.New(c, v1beta1constants.GardenNamespace, image.String(), resourcemanager.Values{
 		ConcurrentSyncs:                      pointer.Int32(20),
 		MaxConcurrentTokenInvalidatorWorkers: pointer.Int32(5),
 		MaxConcurrentRootCAPublisherWorkers:  pointer.Int32(5),
 		HealthSyncPeriod:                     utils.DurationPtr(time.Minute),
+		Replicas:                             int32(3),
 		ResourceClass:                        pointer.String(v1beta1constants.SeedResourceManagerClass),
 		SyncPeriod:                           utils.DurationPtr(time.Hour),
 		VPA: &resourcemanager.VPAConfig{

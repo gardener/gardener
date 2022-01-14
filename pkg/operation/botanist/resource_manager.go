@@ -69,8 +69,9 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		MaxConcurrentTokenInvalidatorWorkers: pointer.Int32(5),
 		MaxConcurrentTokenRequestorWorkers:   pointer.Int32(5),
 		MaxConcurrentRootCAPublisherWorkers:  pointer.Int32(5),
-		TargetDiffersFromSourceCluster:       true,
+		Replicas:                             int32(3),
 		SyncPeriod:                           utils.DurationPtr(time.Minute),
+		TargetDiffersFromSourceCluster:       true,
 		TargetDisableCache:                   pointer.Bool(true),
 		WatchedNamespace:                     pointer.String(b.Shoot.SeedNamespace),
 		VPA: &resourcemanager.VPAConfig{
@@ -85,16 +86,14 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 	// MRs (e.g. caused by extension upgrades) that are necessary for completing the hibernation flow.
 	// grm is scaled down later on as part of the HibernateControlPlane step, so we only specify replicas=0 if
 	// the shoot is already hibernated.
-	replicas := int32(3)
 	if b.Shoot.HibernationEnabled && b.Shoot.GetInfo().Status.IsHibernated {
-		replicas = 0
+		cfg.Replicas = 0
 	}
 
 	return resourcemanager.New(
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		image.String(),
-		replicas,
 		cfg,
 	), nil
 }
