@@ -312,20 +312,23 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServer.Wait).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer, scaleUpKubeAPIServer),
 		})
+		setGardenerResourceManagerReplicas = g.Add(flow.Task{
+			Name: "Setting gardener-resource-manager replicas to 3",
+			Fn: flow.TaskFn(func(_ context.Context) error {
+				botanist.Shoot.Components.ControlPlane.ResourceManager.SetReplicas(3)
+				return nil
+			}).DoIf(cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
+		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying gardener-resource-manager",
 			Fn:           flow.TaskFn(botanist.DeployGardenerResourceManager).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
-		})
-		scalingUpGardenerResourceManager = g.Add(flow.Task{
-			Name:         "Scaling up gardener-resource-manager",
-			Fn:           flow.TaskFn(botanist.ScaleGardenerResourceManagerToOne).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+			Dependencies: flow.NewTaskIDs(setGardenerResourceManagerReplicas),
 		})
 		waitUntilGardenerResourceManagerReady = g.Add(flow.Task{
 			Name:         "Waiting until gardener-resource-manager reports readiness",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.ResourceManager.Wait).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(scalingUpGardenerResourceManager),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		deployGardenerAccess = g.Add(flow.Task{
 			Name:         "Deploying Gardener shoot access resources",
