@@ -20,33 +20,21 @@ fi
 
 if [ -z "$PROJECT_ROOT" ]; then
     PROJECT_ROOT="$(realpath ${CURRENT_DIR}/../../../..)"
+else
+    # if sourced from another script that sets the PROJECT_ROOT variable, makes sure it is a relative path
+    PROJECT_ROOT=./${PROJECT_ROOT}
 fi
-
-echo $PROJECT_ROOT
 
 rm -Rf ${PROJECT_ROOT}/landscaper/pkg/controlplane/generate/openapi/openapi_generated.go
 
-# Packages have to include the tag +k8s:openapi-gen=true for the types to be included in the generation
-# However, this is not done by all dependencies. In such cases, no OpenAPI is generated & the blueprint
+# For the given package and its transitive dependencies, generate OpenAPI producing go-code for types annotated
+# with +k8s:openapi-gen=true
+# This tag however does not exist for all dependencies.
+# In such cases, no OpenAPI is generated & the blueprint
 # generation (./generate.go) uses a placeholder for the missing JSONSchema.
-openapi-gen \
-  --v 1 \
-  --logtostderr \
-  --input-dirs=github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1 \
-  --input-dirs=github.com/gardener/landscaper/apis/core/v1alpha1 \
-  --input-dirs=github.com/gardener/hvpa-controller/api/v1alpha1 \
-  --input-dirs=k8s.io/api/core/v1 \
-  --input-dirs=k8s.io/api/rbac/v1 \
-  --input-dirs=k8s.io/api/autoscaling/v1 \
-  --input-dirs=k8s.io/api/networking/v1 \
-  --input-dirs=k8s.io/apimachinery/pkg/apis/meta/v1 \
-  --input-dirs=k8s.io/apimachinery/pkg/api/resource \
-  --input-dirs=k8s.io/apimachinery/pkg/types \
-  --input-dirs=k8s.io/apimachinery/pkg/version \
-  --input-dirs=k8s.io/apimachinery/pkg/runtime \
-  --input-dirs=k8s.io/apimachinery/pkg/util/intstr \
-  --input-dirs=k8s.io/apiserver/pkg/apis/audit/v1 \
-  --report-filename=${PROJECT_ROOT}/landscaper/pkg/controlplane/generate/openapi/api_violations.report \
-  --output-package=openapi \
-  --output-base=${PROJECT_ROOT}/landscaper/pkg/controlplane/generate \
-  -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+go run ${PROJECT_ROOT}/landscaper/common/generate/openapi \
+  --root-directory ${PROJECT_ROOT} \
+  --input-directory ${PROJECT_ROOT}/landscaper/pkg/controlplane/apis/imports/v1alpha1 \
+  --output-path ${PROJECT_ROOT}/landscaper/pkg/controlplane/generate \
+  --package github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1 \
+  --verbosity 1

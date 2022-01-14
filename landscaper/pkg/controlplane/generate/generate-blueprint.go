@@ -1,4 +1,4 @@
-// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig"
-	"github.com/gardener/gardener/landscaper/common/generate"
+	generate "github.com/gardener/gardener/landscaper/common/generate/blueprint"
 	importsv1alpha1 "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1"
 	"github.com/gardener/gardener/landscaper/pkg/controlplane/generate/openapi"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -49,7 +49,8 @@ func main() {
 		panic(err)
 	}
 
-	if err := generate.RenderBlueprint(tpl,
+	if err := generate.RenderBlueprint(
+		tpl,
 		scheme,
 		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.Imports",
 		openapi.GetOpenAPIDefinitions,
