@@ -160,8 +160,8 @@ func (b *Botanist) ScaleGardenerResourceManagerToOne(ctx context.Context) error 
 }
 
 func (b *Botanist) mustBootstrapGardenerResourceManager(ctx context.Context) (bool, error) {
-	if b.Shoot.HibernationEnabled && b.Shoot.GetInfo().Status.IsHibernated {
-		return false, nil // Shoot is already hibernated
+	if b.Shoot.HibernationEnabled && b.Shoot.GetInfo().Status.IsHibernated && b.Shoot.Components.ControlPlane.ResourceManager.GetReplicas() == 0 {
+		return false, nil // Shoot is already hibernated and GRM should not be scaled up
 	}
 
 	shootAccessSecret := gutil.NewShootAccessSecret(resourcemanager.SecretNameShootAccess, b.Shoot.SeedNamespace)

@@ -181,11 +181,14 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 		})
 
 		Context("w/o bootstrapping", func() {
-			It("should not bootstrap when the shoot is hibernated", func() {
+			It("should not bootstrap when the shoot is hibernated and GRM should not be scaled up", func() {
 				botanist.Shoot.HibernationEnabled = true
 				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{IsHibernated: true}})
 
 				gomock.InOrder(
+					// replicas are set to 0, i.e., GRM should not be scaled up
+					resourceManager.EXPECT().GetReplicas().Return(int32(0)),
+
 					// always delete bootstrap kubeconfig
 					c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, opts ...client.DeleteOption) error {
 						Expect(obj.Name).To(Equal(bootstrapKubeconfigSecret.Name))
@@ -286,42 +289,71 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 					Expect(botanist.DeployGardenerResourceManager(ctx)).To(Succeed())
 				})
 
-				It("bootstraps because the shoot access secret was not found", func() {
-					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+				tests := func() {
+					It("bootstraps because the shoot access secret was not found", func() {
+						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+					})
+
+					It("bootstraps because the shoot access secret was never reconciled", func() {
+						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{}))
+					})
+
+					It("bootstraps because the shoot access secret was not renewed", func() {
+						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
+							obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(-time.Hour).Format(time.RFC3339)}
+							return nil
+						})
+					})
+
+					It("bootstraps because the managed resource was not found", func() {
+						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
+							obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(time.Hour).Format(time.RFC3339)}
+							return nil
+						})
+						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+					})
+
+					It("bootstraps because the managed resource indicates that the shoot access token lost access", func() {
+						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
+							obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(time.Hour).Format(time.RFC3339)}
+							return nil
+						})
+						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *resourcesv1alpha1.ManagedResource) error {
+							obj.Status.ObservedGeneration = obj.Generation
+							obj.Status.Conditions = []gardencorev1beta1.Condition{
+								{Type: "ResourcesApplied", Status: gardencorev1beta1.ConditionFalse, Message: `forbidden: User "system:serviceaccount:kube-system:gardener-resource-manager" cannot do anything`},
+								{Type: "ResourcesHealthy", Status: gardencorev1beta1.ConditionTrue},
+							}
+							return nil
+						})
+					})
+				}
+
+				Context("shoot is not hibernated", func() {
+					BeforeEach(func() {
+						botanist.Shoot.HibernationEnabled = false
+					})
+
+					tests()
 				})
 
-				It("bootstraps because the shoot access secret was never reconciled", func() {
-					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{}))
+				Context("shoot is in the process of being hibernated", func() {
+					BeforeEach(func() {
+						botanist.Shoot.HibernationEnabled = false
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{IsHibernated: true}})
+					})
+
+					tests()
 				})
 
-				It("bootstraps because the shoot access secret was not renewed", func() {
-					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
-						obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(-time.Hour).Format(time.RFC3339)}
-						return nil
+				Context("shoot is hibernated but GRM should be scaled up", func() {
+					BeforeEach(func() {
+						botanist.Shoot.HibernationEnabled = true
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{IsHibernated: true}})
+						resourceManager.EXPECT().GetReplicas().Return(int32(3))
 					})
-				})
 
-				It("bootstraps because the managed resource was not found", func() {
-					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
-						obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(time.Hour).Format(time.RFC3339)}
-						return nil
-					})
-					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-				})
-
-				It("bootstraps because the managed resource indicates that the shoot access token lost access", func() {
-					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
-						obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(time.Hour).Format(time.RFC3339)}
-						return nil
-					})
-					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *resourcesv1alpha1.ManagedResource) error {
-						obj.Status.ObservedGeneration = obj.Generation
-						obj.Status.Conditions = []gardencorev1beta1.Condition{
-							{Type: "ResourcesApplied", Status: gardencorev1beta1.ConditionFalse, Message: `forbidden: User "system:serviceaccount:kube-system:gardener-resource-manager" cannot do anything`},
-							{Type: "ResourcesHealthy", Status: gardencorev1beta1.ConditionTrue},
-						}
-						return nil
-					})
+					tests()
 				})
 			})
 
