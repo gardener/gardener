@@ -30,7 +30,7 @@ func (c *Controller) shootAdd(obj interface{}) {
 		return
 	}
 
-	c.controllerRegistrationSeedQueue.Add(*shoot.Spec.SeedName)
+	c.seedQueue.Add(*shoot.Spec.SeedName)
 }
 
 func (c *Controller) shootUpdate(oldObj, newObj interface{}) {

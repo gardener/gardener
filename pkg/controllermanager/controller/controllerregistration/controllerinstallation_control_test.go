@@ -22,7 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var _ = Describe("Controller", func() {
+var _ = Describe("ControllerInstallation", func() {
 	var (
 		queue *fakeQueue
 		c     *Controller
@@ -33,7 +33,7 @@ var _ = Describe("Controller", func() {
 	BeforeEach(func() {
 		queue = &fakeQueue{}
 		c = &Controller{
-			controllerRegistrationSeedQueue: queue,
+			seedQueue: queue,
 		}
 	})
 

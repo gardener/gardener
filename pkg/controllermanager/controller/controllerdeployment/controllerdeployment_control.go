@@ -18,11 +18,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -33,6 +33,7 @@ import (
 func (c *Controller) controllerDeploymentAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
 	c.controllerDeploymentQueue.Add(key)
@@ -43,26 +44,26 @@ func (c *Controller) controllerDeploymentUpdate(_, newObj interface{}) {
 }
 
 // NewReconciler creates a new instance of a reconciler which reconciles ControllerDeployments.
-func NewReconciler(l logrus.FieldLogger, gardenClient client.Client) reconcile.Reconciler {
+func NewReconciler(gardenClient client.Client) reconcile.Reconciler {
 	return &controllerDeploymentReconciler{
-		logger:       l,
 		gardenClient: gardenClient,
 	}
 }
 
 type controllerDeploymentReconciler struct {
-	logger       logrus.FieldLogger
 	gardenClient client.Client
 }
 
 func (c *controllerDeploymentReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
 	controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
 	if err := c.gardenClient.Get(ctx, kutil.Key(req.Name), controllerDeployment); err != nil {
 		if apierrors.IsNotFound(err) {
-			c.logger.Debugf("[CONTROLLERDEPLOYMENT RECONCILE] %s - skipping because ControllerDeployment has been deleted", req.Name)
+			log.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	if controllerDeployment.DeletionTimestamp != nil {

@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -31,16 +32,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-var _ = Describe("Controller", func() {
+var _ = Describe("ControllerRegistration", func() {
 	var (
 		ctx     = context.TODO()
 		fakeErr = fmt.Errorf("fake err")
-		log     = logger.NewNopLogger()
 
 		ctrl *gomock.Controller
 		c    *mockclient.MockClient
@@ -57,7 +56,7 @@ var _ = Describe("Controller", func() {
 		ctrl.Finish()
 	})
 
-	Describe("controller", func() {
+	Describe("handlers", func() {
 		var (
 			queue                           *fakeQueue
 			controllerRegistrationSeedQueue *fakeQueue
@@ -68,9 +67,11 @@ var _ = Describe("Controller", func() {
 			queue = &fakeQueue{}
 			controllerRegistrationSeedQueue = &fakeQueue{}
 			controller = &Controller{
-				gardenClient:                    c,
-				controllerRegistrationQueue:     queue,
-				controllerRegistrationSeedQueue: controllerRegistrationSeedQueue,
+				gardenClient: c,
+				log:          logr.Discard(),
+
+				controllerRegistrationFinalizerQueue: queue,
+				seedQueue:                            controllerRegistrationSeedQueue,
 			}
 		})
 
@@ -204,7 +205,7 @@ var _ = Describe("Controller", func() {
 		})
 	})
 
-	Describe("controllerRegistrationReconciler", func() {
+	Describe("controllerRegistrationFinalizerReconciler", func() {
 		const finalizerName = "core.gardener.cloud/controllerregistration"
 
 		var (
@@ -213,7 +214,7 @@ var _ = Describe("Controller", func() {
 		)
 
 		BeforeEach(func() {
-			reconciler = NewControllerRegistrationReconciler(log, c)
+			reconciler = NewControllerRegistrationFinalizerReconciler(c)
 			controllerRegistration = &gardencorev1beta1.ControllerRegistration{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            controllerRegistrationName,

@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -35,7 +36,6 @@ import (
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/logger"
 	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -75,7 +75,7 @@ var _ = Describe("Controller", func() {
 			)
 
 			var err error
-			controller, err = New(ctx, fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(), fakeclientset.NewClientSetBuilder().WithCache(clientCache).Build()).Build(), logger.NewNopLogger())
+			controller, err = New(ctx, logr.Discard(), fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(), fakeclientset.NewClientSetBuilder().WithCache(clientCache).Build()).Build())
 			Expect(err).To(Not(HaveOccurred()))
 
 			controllerDeploymentName = "controller-deployment"
@@ -155,7 +155,7 @@ var _ = Describe("Controller", func() {
 		BeforeEach(func() {
 			controllerDeploymentName = "controllerDeployment"
 			fakeErr = fmt.Errorf("fake err")
-			reconciler = NewReconciler(logger.NewNopLogger(), c)
+			reconciler = NewReconciler(c)
 			controllerDeployment = &gardencorev1beta1.ControllerDeployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            controllerDeploymentName,

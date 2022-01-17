@@ -20,7 +20,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -31,28 +32,32 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
-// FinalizerName is the finalizer used by this controller.
-const FinalizerName = "core.gardener.cloud/controllerdeployment"
+const (
+	// FinalizerName is the finalizer used by this controller.
+	FinalizerName = "core.gardener.cloud/controllerdeployment"
+	// ControllerName is the name of this controller.
+	ControllerName = "controllerdeployment"
+)
 
 // Controller controls ManagedSeedSets.
 type Controller struct {
 	controllerDeploymentReconciler reconcile.Reconciler
-	hasSyncedFuncs                 []cache.InformerSynced
+	controllerDeploymentQueue      workqueue.RateLimitingInterface
 
-	controllerDeploymentQueue workqueue.RateLimitingInterface
-
+	log                    logr.Logger
+	hasSyncedFuncs         []cache.InformerSynced
 	numberOfRunningWorkers int
 	workerCh               chan int
-
-	logger *logrus.Logger
 }
 
 // New creates a new Gardener controller for ControllerDeployments.
 func New(
 	ctx context.Context,
+	log logr.Logger,
 	clientMap clientmap.ClientMap,
-	logger *logrus.Logger,
 ) (*Controller, error) {
+	log = log.WithName(ControllerName)
+
 	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return nil, fmt.Errorf("could not get garden client: %w", err)
@@ -64,10 +69,10 @@ func New(
 	}
 
 	controller := &Controller{
-		controllerDeploymentReconciler: NewReconciler(logger, gardenClient.Client()),
+		controllerDeploymentReconciler: NewReconciler(gardenClient.Client()),
 		controllerDeploymentQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ManagedSeedSet"),
+		log:                            log,
 		workerCh:                       make(chan int),
-		logger:                         logger,
 	}
 
 	controllerDeploymentInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -87,7 +92,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
-		c.logger.Error("Timed out waiting for caches to sync")
+		c.log.Error(wait.ErrWaitTimeout, "Timed out waiting for caches to sync")
 		return
 	}
 
@@ -95,14 +100,13 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	go func() {
 		for res := range c.workerCh {
 			c.numberOfRunningWorkers += res
-			c.logger.Debugf("Current number of running ControllerDeployment workers is %d", c.numberOfRunningWorkers)
 		}
 	}()
 
-	c.logger.Info("ControllerDeployment controller initialized.")
+	c.log.Info("ControllerDeployment controller initialized")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.controllerDeploymentQueue, "ControllerDeployment", c.controllerDeploymentReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.controllerDeploymentQueue, "ControllerDeployment", c.controllerDeploymentReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log))
 	}
 
 	// Shutdown handling
@@ -111,10 +115,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for {
 		if c.controllerDeploymentQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			c.logger.Debug("No running ControllerDeployment worker and no items left in the queues. Terminated ControllerDeployment controller...")
+			c.log.V(1).Info("No running ControllerDeployment worker and no items left in the queues. Terminating ControllerDeployment controller...")
 			break
 		}
-		c.logger.Debugf("Waiting for %d ControllerDeployment worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.controllerDeploymentQueue.Len())
+		c.log.V(1).Info("Waiting for ControllerDeployment workers to finish...", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.controllerDeploymentQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

@@ -95,7 +95,12 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing CloudProfile controller: %w", err)
 	}
 
-	controllerRegistrationController, err := controllerregistrationcontroller.NewController(ctx, f.clientMap)
+	controllerDeploymentController, err := controllerdeploymentcontroller.New(ctx, log, f.clientMap)
+	if err != nil {
+		return fmt.Errorf("failed initializing ControllerDeployment controller: %w", err)
+	}
+
+	controllerRegistrationController, err := controllerregistrationcontroller.NewController(ctx, log, f.clientMap)
 	if err != nil {
 		return fmt.Errorf("failed initializing ControllerRegistration controller: %w", err)
 	}
@@ -133,11 +138,6 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	seedController, err := seedcontroller.NewSeedController(ctx, f.clientMap, f.cfg)
 	if err != nil {
 		return fmt.Errorf("failed initializing Seed controller: %w", err)
-	}
-
-	controllerDeploymentController, err := controllerdeploymentcontroller.New(ctx, f.clientMap, logger.Logger)
-	if err != nil {
-		return fmt.Errorf("failed initializing ControllerDeployment controller: %w", err)
 	}
 
 	shootController, err := shootcontroller.NewShootController(ctx, f.clientMap, f.cfg, f.recorder)
