@@ -44,7 +44,6 @@ import (
 	secretbindingcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/secretbinding"
 	seedcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/garden"
 )
 
@@ -115,6 +114,11 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing ExposureClass controller: %w", err)
 	}
 
+	managedSeedSetController, err := managedseedsetcontroller.NewManagedSeedSetController(ctx, log, f.clientMap, f.cfg, f.recorder)
+	if err != nil {
+		return fmt.Errorf("failed initializing ManagedSeedSet controller: %w", err)
+	}
+
 	plantController, err := plantcontroller.NewController(ctx, log, f.clientMap, f.cfg)
 	if err != nil {
 		return fmt.Errorf("failed initializing Plant controller: %w", err)
@@ -143,11 +147,6 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	shootController, err := shootcontroller.NewShootController(ctx, f.clientMap, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Shoot controller: %w", err)
-	}
-
-	managedSeedSetController, err := managedseedsetcontroller.NewManagedSeedSetController(ctx, f.clientMap, f.cfg, f.recorder, logger.Logger)
-	if err != nil {
-		return fmt.Errorf("failed initializing ManagedSeedSet controller: %w", err)
 	}
 
 	go bastionController.Run(ctx, f.cfg.Controllers.Bastion.ConcurrentSyncs)

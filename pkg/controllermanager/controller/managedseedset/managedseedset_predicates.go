@@ -22,7 +22,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 func (c *Controller) filterShoot(obj, oldObj, controller client.Object, deleted bool) bool {
@@ -42,7 +41,7 @@ func (c *Controller) filterShoot(obj, oldObj, controller client.Object, deleted 
 			return false
 		}
 		if !reflect.DeepEqual(shoot.DeletionTimestamp, oldShoot.DeletionTimestamp) || shootHealthStatus(shoot) != shootHealthStatus(oldShoot) {
-			c.logger.Debugf("Shoot %s was deleted or its health status changed", kutil.ObjectName(shoot))
+			c.log.V(1).Info("Shoot was deleted or its health status changed", "shoot", client.ObjectKeyFromObject(shoot))
 			return true
 		}
 	}
@@ -85,7 +84,7 @@ func (c *Controller) filterManagedSeed(obj, oldObj, controller client.Object, de
 			return false
 		}
 		if !reflect.DeepEqual(managedSeed.DeletionTimestamp, oldManagedSeed.DeletionTimestamp) {
-			c.logger.Debugf("Managed seed %s was deleted", kutil.ObjectName(managedSeed))
+			c.log.V(1).Info("ManagedSeed was deleted", "managedSeed", client.ObjectKeyFromObject(managedSeed))
 			return true
 		}
 	}
@@ -122,7 +121,7 @@ func (c *Controller) filterSeed(obj, oldObj, controller client.Object, _ bool) b
 			return false
 		}
 		if seedReady(seed) != seedReady(oldSeed) {
-			c.logger.Debugf("Seed %s readiness changed", kutil.ObjectName(seed))
+			c.log.V(1).Info("Seed readiness changed", "seed", client.ObjectKeyFromObject(seed))
 			return true
 		}
 	}

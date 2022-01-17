@@ -90,6 +90,8 @@ type Replica interface {
 	GetName() string
 	// GetFullName returns this replica's full name.
 	GetFullName() string
+	// GetObjectKey returns this replica's ObjectKey.
+	GetObjectKey() client.ObjectKey
 	// GetOrdinal returns this replica's ordinal. If the replica has no ordinal, -1 is returned.
 	GetOrdinal() int
 	// GetStatus returns this replica's status. If the replica's managed seed doesn't exist,
@@ -176,6 +178,14 @@ func (r *replica) GetFullName() string {
 		return ""
 	}
 	return kutil.ObjectName(r.shoot)
+}
+
+// GetObjectKey returns this replica's ObjectKey. This is the namespace/name of the shoot and managed seed of this replica.
+func (r *replica) GetObjectKey() client.ObjectKey {
+	if r.shoot == nil {
+		return client.ObjectKey{}
+	}
+	return client.ObjectKeyFromObject(r.shoot)
 }
 
 // GetOrdinal returns this replica's ordinal. If the replica has no ordinal, -1 is returned.

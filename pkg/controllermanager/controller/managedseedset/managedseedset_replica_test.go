@@ -218,6 +218,15 @@ var _ = Describe("Replica", func() {
 		Entry("should return the shoot full name", shoot(nil, "", "", "", false), namespace+"/"+replicaName),
 	)
 
+	DescribeTable("#GetObjectKey",
+		func(shoot *gardencorev1beta1.Shoot, expected client.ObjectKey) {
+			replica := NewReplica(set, shoot, nil, nil, false)
+			Expect(replica.GetObjectKey()).To(Equal(expected))
+		},
+		Entry("should return an empty key", nil, client.ObjectKey{}),
+		Entry("should return the shoot's key", shoot(nil, "", "", "", false), client.ObjectKey{Namespace: namespace, Name: replicaName}),
+	)
+
 	DescribeTable("#GetOrdinal",
 		func(shoot *gardencorev1beta1.Shoot, ordinal int) {
 			replica := NewReplica(set, shoot, nil, nil, false)

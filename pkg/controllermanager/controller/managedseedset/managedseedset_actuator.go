@@ -20,25 +20,24 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/logger"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Actuator acts upon ManagedSeedSet resources.
 type Actuator interface {
 	// Reconcile reconciles ManagedSeedSet creation, update, or deletion.
-	Reconcile(context.Context, *seedmanagementv1alpha1.ManagedSeedSet) (*seedmanagementv1alpha1.ManagedSeedSetStatus, bool, error)
+	Reconcile(context.Context, logr.Logger, *seedmanagementv1alpha1.ManagedSeedSet) (*seedmanagementv1alpha1.ManagedSeedSetStatus, bool, error)
 }
 
 // actuator is a concrete implementation of Actuator.
@@ -48,7 +47,6 @@ type actuator struct {
 	replicaFactory ReplicaFactory
 	cfg            *config.ManagedSeedSetControllerConfiguration
 	recorder       record.EventRecorder
-	logger         *logrus.Logger
 }
 
 // NewActuator creates and returns a new Actuator with the given parameters.
@@ -58,7 +56,6 @@ func NewActuator(
 	replicaFactory ReplicaFactory,
 	cfg *config.ManagedSeedSetControllerConfiguration,
 	recorder record.EventRecorder,
-	logger *logrus.Logger,
 ) Actuator {
 	return &actuator{
 		gardenClient:   gardenClient,
@@ -66,7 +63,6 @@ func NewActuator(
 		replicaGetter:  replicaGetter,
 		cfg:            cfg,
 		recorder:       recorder,
-		logger:         logger,
 	}
 }
 
@@ -74,7 +70,7 @@ func NewActuator(
 var Now = metav1.Now
 
 // Reconcile reconciles ManagedSeedSet creation or update.
-func (a *actuator) Reconcile(ctx context.Context, set *seedmanagementv1alpha1.ManagedSeedSet) (status *seedmanagementv1alpha1.ManagedSeedSetStatus, removeFinalizer bool, err error) {
+func (a *actuator) Reconcile(ctx context.Context, log logr.Logger, set *seedmanagementv1alpha1.ManagedSeedSet) (status *seedmanagementv1alpha1.ManagedSeedSetStatus, removeFinalizer bool, err error) {
 	// Initialize status
 	status = set.Status.DeepCopy()
 	status.ObservedGeneration = set.Generation
@@ -99,7 +95,6 @@ func (a *actuator) Reconcile(ctx context.Context, set *seedmanagementv1alpha1.Ma
 
 	// Determine ready, postponed, and deletable replicas
 	var readyReplicas, postponedReplicas, deletableReplicas []Replica
-	var debug []string
 	for _, r := range replicas {
 		if replicaIsReady(r) {
 			readyReplicas = append(readyReplicas, r)
@@ -109,9 +104,9 @@ func (a *actuator) Reconcile(ctx context.Context, set *seedmanagementv1alpha1.Ma
 		if r.IsDeletable() {
 			deletableReplicas = append(deletableReplicas, r)
 		}
-		debug = append(debug, replicaDebugString(r))
+		debugReplica(r, log.V(1))
 	}
-	a.getLogger(set).Debugf("Replicas: %s", debug)
+	log.V(1).Info("Current replicas of ManagedSeedSet", "readyReplicas", readyReplicas, "postponedReplicas", postponedReplicas, "deletableReplicas", deletableReplicas)
 
 	// Update replicas and readyReplicas in status
 	status.Replicas = int32(len(replicas))
@@ -129,7 +124,7 @@ func (a *actuator) Reconcile(ctx context.Context, set *seedmanagementv1alpha1.Ma
 
 	// Reconcile the pending replica, if any
 	if pendingReplica != nil {
-		if pending, err := a.reconcileReplica(ctx, set, status, pendingReplica, scalingIn); err != nil || pending {
+		if pending, err := a.reconcileReplica(ctx, log, set, status, pendingReplica, scalingIn); err != nil || pending {
 			return status, false, err
 		}
 	}
@@ -138,7 +133,7 @@ func (a *actuator) Reconcile(ctx context.Context, set *seedmanagementv1alpha1.Ma
 	case scalingOut:
 		// Initialize a new replica and create its shoot
 		ordinal := getNextOrdinal(replicas, status)
-		if err := a.createReplica(ctx, set, status, ordinal); err != nil {
+		if err := a.createReplica(ctx, log, set, status, ordinal); err != nil {
 			return status, false, err
 		}
 
@@ -158,7 +153,7 @@ func (a *actuator) Reconcile(ctx context.Context, set *seedmanagementv1alpha1.Ma
 		r := deletableReplicas[0]
 
 		// Delete the replica's managed seed (if it exists), or its shoot (if not)
-		if err := a.deleteReplica(ctx, set, status, r); err != nil {
+		if err := a.deleteReplica(ctx, log, set, status, r); err != nil {
 			return status, false, err
 		}
 
@@ -172,12 +167,12 @@ func (a *actuator) Reconcile(ctx context.Context, set *seedmanagementv1alpha1.Ma
 
 	// Reconcile postponed replicas
 	for _, r := range postponedReplicas {
-		if pending, err := a.reconcileReplica(ctx, set, status, r, scalingIn); err != nil || pending {
+		if pending, err := a.reconcileReplica(ctx, log, set, status, r, scalingIn); err != nil || pending {
 			return status, false, err
 		}
 	}
 
-	a.getLogger(set).Debugf("Nothing to do")
+	log.V(1).Info("Nothing to do")
 	status.PendingReplica = nil
 	return status, true, nil
 }
@@ -202,25 +197,29 @@ const (
 
 func (a *actuator) reconcileReplica(
 	ctx context.Context,
+	log logr.Logger,
 	set *seedmanagementv1alpha1.ManagedSeedSet,
 	status *seedmanagementv1alpha1.ManagedSeedSetStatus,
 	r Replica,
 	scalingIn bool,
 ) (bool, error) {
 	replicaStatus := r.GetStatus()
+	log = log.WithValues("replica", r.GetObjectKey())
 
 	switch {
 	case replicaStatus == StatusShootReconcileFailed && !scalingIn:
 		// This replica's shoot reconciliation has failed, retry it if max retries is not yet reached
 		retries := getPendingReplicaRetries(status, r.GetName(), seedmanagementv1alpha1.ShootReconcilingReason)
 		if int(retries) < *a.cfg.MaxShootRetries {
-			a.infoEventf(set, EventRetryingShootReconciliation, "Retrying shoot %s reconciliation", r.GetFullName())
+			log.Info("Retrying Shoot reconciliation")
+			a.infoEventf(set, EventRetryingShootReconciliation, "Retrying Shoot %s reconciliation", r.GetFullName())
 			if err := r.RetryShoot(ctx, a.gardenClient.Client()); err != nil {
 				return false, err
 			}
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootReconcilingReason, pointer.Int32(retries+1))
 		} else {
-			a.infoEventf(set, EventNotRetryingShootReconciliation, "Not retrying shoot %s reconciliation since max retries has been reached", r.GetFullName())
+			log.Info("Not retrying Shoot reconciliation since max retries have been reached", "maxRetries", *a.cfg.MaxShootRetries)
+			a.infoEventf(set, EventNotRetryingShootReconciliation, "Not retrying Shoot %s reconciliation since max retries have been reached", r.GetFullName())
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootReconcileFailedReason, &retries)
 		}
 		return true, nil
@@ -229,26 +228,30 @@ func (a *actuator) reconcileReplica(
 		// This replica's shoot deletion has failed, retry it if max retries is not yet reached
 		retries := getPendingReplicaRetries(status, r.GetName(), seedmanagementv1alpha1.ShootDeletingReason)
 		if int(retries) < *a.cfg.MaxShootRetries {
-			a.infoEventf(set, EventRetryingShootDeletion, "Retrying shoot %s deletion", r.GetFullName())
+			log.Info("Retrying Shoot deletion")
+			a.infoEventf(set, EventRetryingShootDeletion, "Retrying Shoot %s deletion", r.GetFullName())
 			if err := r.RetryShoot(ctx, a.gardenClient.Client()); err != nil {
 				return false, err
 			}
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeletingReason, pointer.Int32(retries+1))
 		} else {
-			a.infoEventf(set, EventNotRetryingShootDeletion, "Not retrying shoot %s deletion since max retries has been reached", r.GetFullName())
+			log.Info("Not retrying Shoot deletion since max retries have been reached", "maxRetries", *a.cfg.MaxShootRetries)
+			a.infoEventf(set, EventNotRetryingShootDeletion, "Not retrying Shoot %s deletion since max retries have been reached", r.GetFullName())
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeleteFailedReason, &retries)
 		}
 		return true, nil
 
 	case replicaStatus == StatusShootReconciling && !scalingIn:
 		// This replica's shoot is reconciling, wait for it to be reconciled before moving to the next replica
-		a.infoEventf(set, EventWaitingForShootReconciled, "Waiting for shoot %s to be reconciled", r.GetFullName())
+		log.Info("Waiting for Shoot to be reconciled")
+		a.infoEventf(set, EventWaitingForShootReconciled, "Waiting for Shoot %s to be reconciled", r.GetFullName())
 		updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootReconcilingReason, nil)
 		return true, nil
 
 	case replicaStatus == StatusShootDeleting:
 		// This replica's shoot is deleting, wait for it to be deleted before moving to the next replica
-		a.infoEventf(set, EventWaitingForShootDeleted, "Waiting for shoot %s to be deleted", r.GetFullName())
+		log.Info("Waiting for Shoot to be deleted")
+		a.infoEventf(set, EventWaitingForShootDeleted, "Waiting for Shoot %s to be deleted", r.GetFullName())
 		updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeletingReason, nil)
 		return true, nil
 
@@ -256,13 +259,15 @@ func (a *actuator) reconcileReplica(
 		// This replica's shoot is fully reconciled and its managed seed doesn't exist
 		// If not scaling in, create its managed seed, otherwise delete its shoot
 		if !scalingIn {
-			a.infoEventf(set, EventCreatingManagedSeed, "Creating managed seed %s", r.GetFullName())
+			log.Info("Creating ManagedSeed")
+			a.infoEventf(set, EventCreatingManagedSeed, "Creating ManagedSeed %s", r.GetFullName())
 			if err := r.CreateManagedSeed(ctx, a.gardenClient.Client()); err != nil {
 				return false, err
 			}
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ManagedSeedPreparingReason, nil)
 		} else {
-			a.infoEventf(set, EventDeletingShoot, "Deleting shoot %s", r.GetFullName())
+			log.Info("Deleting Shoot")
+			a.infoEventf(set, EventDeletingShoot, "Deleting Shoot %s", r.GetFullName())
 			if err := r.DeleteShoot(ctx, a.gardenClient.Client()); err != nil {
 				return false, err
 			}
@@ -272,25 +277,29 @@ func (a *actuator) reconcileReplica(
 
 	case replicaStatus == StatusManagedSeedPreparing && !scalingIn:
 		// This replica's managed seed is preparing, wait for the it to be registered before moving to the next replica
-		a.infoEventf(set, EventWaitingForManagedSeedRegistered, "Waiting for managed seed %s to be registered", r.GetFullName())
+		log.Info("Waiting for ManagedSeed to be registered")
+		a.infoEventf(set, EventWaitingForManagedSeedRegistered, "Waiting for ManagedSeed %s to be registered", r.GetFullName())
 		updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ManagedSeedPreparingReason, nil)
 		return true, nil
 
 	case replicaStatus == StatusManagedSeedDeleting:
 		// This replica's managed seed is deleting, wait for it to be deleted before moving to the next replica
-		a.infoEventf(set, EventWaitingForManagedSeedDeleted, "Waiting for managed seed %s to be deleted", r.GetFullName())
+		log.Info("Waiting for ManagedSeed to be deleted")
+		a.infoEventf(set, EventWaitingForManagedSeedDeleted, "Waiting for ManagedSeed %s to be deleted", r.GetFullName())
 		updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ManagedSeedDeletingReason, nil)
 		return true, nil
 
 	case !r.IsSeedReady() && !scalingIn:
 		// This replica's seed is not ready, wait for it to be ready before moving to the next replica
-		a.infoEventf(set, EventWaitingForSeedReady, "Waiting for seed %s to be ready", r.GetName())
+		log.Info("Waiting for Seed to be ready")
+		a.infoEventf(set, EventWaitingForSeedReady, "Waiting for Seed %s to be ready", r.GetName())
 		updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.SeedNotReadyReason, nil)
 		return true, nil
 
 	case r.GetShootHealthStatus() != operationshoot.StatusHealthy && !scalingIn:
 		// This replica's shoot is not healthy, wait for it to be healthy before moving to the next replica
-		a.infoEventf(set, EventWaitingForShootHealthy, "Waiting for shoot %s to be healthy", r.GetFullName())
+		log.Info("Waiting for Shoot to be healthy")
+		a.infoEventf(set, EventWaitingForShootHealthy, "Waiting for Shoot %s to be healthy", r.GetFullName())
 		updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootNotHealthyReason, nil)
 		return true, nil
 	}
@@ -300,12 +309,16 @@ func (a *actuator) reconcileReplica(
 
 func (a *actuator) createReplica(
 	ctx context.Context,
+	log logr.Logger,
 	set *seedmanagementv1alpha1.ManagedSeedSet,
 	status *seedmanagementv1alpha1.ManagedSeedSetStatus,
 	ordinal int,
 ) error {
 	r := a.replicaFactory.NewReplica(set, nil, nil, nil, false)
-	a.infoEventf(set, EventCreatingShoot, "Creating shoot %s", getFullName(set, ordinal))
+
+	fullName := getFullName(set, ordinal)
+	log.Info("Creating Shoot", "replica", client.ObjectKey{Namespace: set.Namespace, Name: fullName})
+	a.infoEventf(set, EventCreatingShoot, "Creating Shoot %s", fullName)
 	if err := r.CreateShoot(ctx, a.gardenClient.Client(), ordinal); err != nil {
 		return err
 	}
@@ -315,18 +328,23 @@ func (a *actuator) createReplica(
 
 func (a *actuator) deleteReplica(
 	ctx context.Context,
+	log logr.Logger,
 	set *seedmanagementv1alpha1.ManagedSeedSet,
 	status *seedmanagementv1alpha1.ManagedSeedSetStatus,
 	r Replica,
 ) error {
+	log = log.WithValues("replica", r.GetObjectKey())
+
 	if replicaManagedSeedExists(r.GetStatus()) {
-		a.infoEventf(set, EventDeletingManagedSeed, "Deleting managed seed %s", r.GetFullName())
+		log.Info("Deleting ManagedSeed")
+		a.infoEventf(set, EventDeletingManagedSeed, "Deleting ManagedSeed %s", r.GetFullName())
 		if err := r.DeleteManagedSeed(ctx, a.gardenClient.Client()); err != nil {
 			return err
 		}
 		updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ManagedSeedDeletingReason, nil)
 	} else {
-		a.infoEventf(set, EventDeletingShoot, "Deleting shoot %s", r.GetFullName())
+		log.Info("Deleting Shoot")
+		a.infoEventf(set, EventDeletingShoot, "Deleting Shoot %s", r.GetFullName())
 		if err := r.DeleteShoot(ctx, a.gardenClient.Client()); err != nil {
 			return err
 		}
@@ -337,16 +355,10 @@ func (a *actuator) deleteReplica(
 
 func (a *actuator) infoEventf(set *seedmanagementv1alpha1.ManagedSeedSet, reason, fmt string, args ...interface{}) {
 	a.recorder.Eventf(set, corev1.EventTypeNormal, reason, fmt, args...)
-	a.getLogger(set).Infof(fmt, args...)
 }
 
 func (a *actuator) errorEventf(set *seedmanagementv1alpha1.ManagedSeedSet, reason, fmt string, args ...interface{}) {
 	a.recorder.Eventf(set, corev1.EventTypeWarning, reason, fmt, args...)
-	a.getLogger(set).Errorf(fmt, args...)
-}
-
-func (a *actuator) getLogger(set *seedmanagementv1alpha1.ManagedSeedSet) *logrus.Entry {
-	return logger.NewFieldLogger(a.logger, "managedSeedSet", kutil.ObjectName(set))
 }
 
 func getPendingReplica(replicas []Replica, status *seedmanagementv1alpha1.ManagedSeedSetStatus) Replica {
@@ -393,8 +405,8 @@ func replicaIsReady(r Replica) bool {
 	return r.GetStatus() == StatusManagedSeedRegistered && r.IsSeedReady() && r.GetShootHealthStatus() == operationshoot.StatusHealthy
 }
 
-func replicaDebugString(r Replica) string {
-	return fmt.Sprintf("%s:%s,%t,%s", r.GetFullName(), r.GetStatus().String(), r.IsSeedReady(), r.GetShootHealthStatus())
+func debugReplica(r Replica, log logr.Logger) {
+	log.Info("Replica", "objectKey", r.GetObjectKey(), "status", r.GetStatus().String(), "seedReady", r.IsSeedReady(), "shootHealthStatus", r.GetShootHealthStatus())
 }
 
 func replicaManagedSeedExists(status ReplicaStatus) bool {

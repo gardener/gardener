@@ -12,7 +12,9 @@ import (
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	managedseedset "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	shoot "github.com/gardener/gardener/pkg/operation/shoot"
+	logr "github.com/go-logr/logr"
 	gomock "github.com/golang/mock/gomock"
+	types "k8s.io/apimachinery/pkg/types"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -40,9 +42,9 @@ func (m *MockActuator) EXPECT() *MockActuatorMockRecorder {
 }
 
 // Reconcile mocks base method.
-func (m *MockActuator) Reconcile(arg0 context.Context, arg1 *v1alpha1.ManagedSeedSet) (*v1alpha1.ManagedSeedSetStatus, bool, error) {
+func (m *MockActuator) Reconcile(arg0 context.Context, arg1 logr.Logger, arg2 *v1alpha1.ManagedSeedSet) (*v1alpha1.ManagedSeedSetStatus, bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Reconcile", arg0, arg1)
+	ret := m.ctrl.Call(m, "Reconcile", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*v1alpha1.ManagedSeedSetStatus)
 	ret1, _ := ret[1].(bool)
 	ret2, _ := ret[2].(error)
@@ -50,9 +52,9 @@ func (m *MockActuator) Reconcile(arg0 context.Context, arg1 *v1alpha1.ManagedSee
 }
 
 // Reconcile indicates an expected call of Reconcile.
-func (mr *MockActuatorMockRecorder) Reconcile(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockActuatorMockRecorder) Reconcile(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reconcile", reflect.TypeOf((*MockActuator)(nil).Reconcile), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reconcile", reflect.TypeOf((*MockActuator)(nil).Reconcile), arg0, arg1, arg2)
 }
 
 // MockReplica is a mock of Replica interface.
@@ -160,6 +162,20 @@ func (m *MockReplica) GetName() string {
 func (mr *MockReplicaMockRecorder) GetName() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetName", reflect.TypeOf((*MockReplica)(nil).GetName))
+}
+
+// GetObjectKey mocks base method.
+func (m *MockReplica) GetObjectKey() types.NamespacedName {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetObjectKey")
+	ret0, _ := ret[0].(types.NamespacedName)
+	return ret0
+}
+
+// GetObjectKey indicates an expected call of GetObjectKey.
+func (mr *MockReplicaMockRecorder) GetObjectKey() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetObjectKey", reflect.TypeOf((*MockReplica)(nil).GetObjectKey))
 }
 
 // GetOrdinal mocks base method.
