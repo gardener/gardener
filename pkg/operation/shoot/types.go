@@ -146,12 +146,13 @@ type Extensions struct {
 
 // SystemComponents contains references to system components.
 type SystemComponents struct {
-	ClusterIdentity clusteridentity.Interface
-	Namespaces      component.DeployWaiter
-	CoreDNS         coredns.Interface
-	NodeLocalDNS    nodelocaldns.Interface
-	MetricsServer   metricsserver.Interface
-	VPNShoot        vpnshoot.Interface
+	ClusterIdentity     clusteridentity.Interface
+	Namespaces          component.DeployWaiter
+	CoreDNS             coredns.Interface
+	NodeLocalDNS        nodelocaldns.Interface
+	MetricsServer       metricsserver.Interface
+	VPNShoot            vpnshoot.Interface
+	NodeProblemDetector component.DeployWaiter
 }
 
 // DNS contains references to internal and external DNSProvider and DNSEntry deployers.

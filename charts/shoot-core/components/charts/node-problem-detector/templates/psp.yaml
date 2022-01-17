@@ -1,37 +1,8 @@
-{{- if .Values.rbac.pspEnabled }}
+# TODO(ary92): Delete this Helm chart in a future version.
+---
 apiVersion: {{ include "podsecuritypolicyversion" .}}
 kind: PodSecurityPolicy
 metadata:
   name: node-problem-detector
-  labels:
-    app.kubernetes.io/name: {{ include "node-problem-detector.name" . }}
-    helm.sh/chart: {{ include "node-problem-detector.chart" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
-spec:
-  privileged: true
-  allowPrivilegeEscalation: true
-  allowedCapabilities:
-  - '*'
-  volumes:
-  - 'configMap'
-  - 'emptyDir'
-  - 'projected'
-  - 'secret'
-  - 'downwardAPI'
-  - 'hostPath'
-  hostNetwork: false
-  hostIPC: false
-  hostPID: false
-  allowedHostPaths:
-  - pathPrefix: /etc/localtime
-  - pathPrefix: /var/log
-  - pathPrefix: /dev/kmsg
-  runAsUser:
-    rule: 'RunAsAny'
-  seLinux:
-    rule: 'RunAsAny'
-  supplementalGroups:
-    rule: 'RunAsAny'
-  fsGroup:
-    rule: 'RunAsAny'
-{{- end }}
+  annotations:
+    resources.gardener.cloud/mode: Ignore

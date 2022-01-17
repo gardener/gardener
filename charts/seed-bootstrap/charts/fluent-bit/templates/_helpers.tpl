@@ -95,13 +95,6 @@ filter-kubernetes.conf: |-
       Parser              nodeexporterParser
       Reserve_Data        True
 
-  [FILTER]
-      Name                parser
-      Match               kubernetes.*node-problem-detector*node-problem-detector*
-      Key_Name            log
-      Parser              kubeapiserverParser
-      Reserve_Data        True
-
   # Garden filters
   [FILTER]
       Name                parser

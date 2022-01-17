@@ -163,7 +163,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	o.Shoot.Components.SystemComponents.NodeProblemDetector, err = b.DefaultNodeProblemDetector()
+	if err != nil {
+		return nil, err
+	}
 	// other components
 	o.Shoot.Components.SourceBackupEntry = b.SourceBackupEntry()
 	o.Shoot.Components.BackupEntry = b.DefaultCoreBackupEntry()

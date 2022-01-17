@@ -1,20 +1,8 @@
-{{- if .Values.rbac.pspEnabled }}
+# TODO(ary92): Delete this Helm chart in a future version.
+---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: node-problem-detector-psp
-  labels:
-    app.kubernetes.io/name: {{ include "node-problem-detector.name" . }}
-    helm.sh/chart: {{ include "node-problem-detector.chart" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
   annotations:
-    resources.gardener.cloud/delete-on-invalid-update: "true"
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: node-problem-detector-psp
-subjects:
-- kind: ServiceAccount
-  name: node-problem-detector
-  namespace: kube-system
-{{- end }}
+    resources.gardener.cloud/mode: Ignore

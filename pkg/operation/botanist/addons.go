@@ -333,10 +333,9 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"maintenanceBegin":  b.Shoot.GetInfo().Spec.Maintenance.TimeWindow.Begin,
 			"maintenanceEnd":    b.Shoot.GetInfo().Spec.Maintenance.TimeWindow.End,
 		}
-		nodeExporterConfig        = map[string]interface{}{}
-		blackboxExporterConfig    = map[string]interface{}{}
-		nodeProblemDetectorConfig = map[string]interface{}{}
-		networkPolicyConfig       = netpol.ShootNetworkPolicyValues{
+		nodeExporterConfig     = map[string]interface{}{}
+		blackboxExporterConfig = map[string]interface{}{}
+		networkPolicyConfig    = netpol.ShootNetworkPolicyValues{
 			Enabled: true,
 			NodeLocalDNS: netpol.NodeLocalDNSValues{
 				Enabled:          b.Shoot.NodeLocalDNSEnabled,
@@ -349,15 +348,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 
 	if b.Shoot.IPVSEnabled() {
 		networkPolicyConfig.NodeLocalDNS.KubeDNSClusterIP = nodelocaldns.IPVSAddress
-	}
-
-	if b.APIServerSNIEnabled() {
-		nodeProblemDetectorConfig["env"] = []interface{}{
-			map[string]interface{}{
-				"name":  "KUBERNETES_SERVICE_HOST",
-				"value": kasFQDN,
-			},
-		}
 	}
 
 	if vpaSecret := b.LoadSecret(common.VPASecretName); vpaSecret != nil {
@@ -445,11 +435,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	}
 	shootInfo["extensions"] = strings.Join(extensions, ",")
 
-	nodeProblemDetector, err := b.InjectShootShootImages(nodeProblemDetectorConfig, charts.ImageNameNodeProblemDetector)
-	if err != nil {
-		return nil, err
-	}
-
 	kubeProxy, err := b.InjectShootShootImages(kubeProxyConfig, charts.ImageNameAlpine)
 	if err != nil {
 		return nil, err
@@ -498,7 +483,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"blackbox-exporter": blackboxExporter,
 		}, b.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting),
 		"network-policies":        networkPolicyConfig,
-		"node-problem-detector":   common.GenerateAddonConfig(nodeProblemDetector, true),
+		"node-problem-detector":   common.GenerateAddonConfig(nil, true),
 		"podsecuritypolicies":     common.GenerateAddonConfig(podSecurityPolicies, true),
 		"shoot-info":              common.GenerateAddonConfig(shootInfo, true),
 		"vertical-pod-autoscaler": common.GenerateAddonConfig(verticalPodAutoscaler, b.Shoot.WantsVerticalPodAutoscaler),
