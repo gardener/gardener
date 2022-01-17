@@ -54,20 +54,22 @@ var _ = Describe("Nginx Ingress", func() {
 		c            client.Client
 		nginxIngress component.DeployWaiter
 
-		values = Values{
-			ImageController:     imageController,
-			ImageDefaultBackend: imageDefaultBackend,
-		}
-
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		configMapData = map[string]string{
-			"server-name-hash-bucket-size": "256",
-			"use-proxy-protocol":           "false",
-			"worker-processes":             "2",
+		configMapData = map[string]interface{}{
+			"foo":  "bar",
+			"dot":  "3",
+			"dash": "false",
 		}
-		configMapName = "nginx-ingress-controller-" + utils.ComputeConfigMapChecksum(configMapData)[:8]
+
+		values = Values{
+			ImageController:     imageController,
+			ImageDefaultBackend: imageDefaultBackend,
+			ConfigData:          configMapData,
+		}
+
+		configMapName = "nginx-ingress-controller-" + utils.ComputeConfigMapChecksum(InterfaceMapToStringMap(configMapData))[:8]
 	)
 
 	BeforeEach(func() {
@@ -91,9 +93,9 @@ var _ = Describe("Nginx Ingress", func() {
 		var (
 			configMapYAML = `apiVersion: v1
 data:
-  server-name-hash-bucket-size: "256"
-  use-proxy-protocol: "false"
-  worker-processes: "2"
+  dash: "false"
+  dot: "3"
+  foo: bar
 immutable: true
 kind: ConfigMap
 metadata:
