@@ -504,6 +504,8 @@ import custom/*.server
 			},
 		}
 
+		// TODO: Switch to autoscaling/v2 for v1.23+ clusters as soon as we have revendored the k8s.io/* libraries with
+		//  v0.23.0 or above.
 		horizontalPodAutoscaler = &autoscalingv2beta1.HorizontalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "coredns",

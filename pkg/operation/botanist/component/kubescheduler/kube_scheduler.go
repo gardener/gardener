@@ -388,7 +388,9 @@ func (k *kubeScheduler) computeEnvironmentVariables() []corev1.EnvVar {
 
 func (k *kubeScheduler) computeComponentConfig() (string, error) {
 	var apiVersion string
-	if version.ConstraintK8sGreaterEqual122.Check(k.version) {
+	if version.ConstraintK8sGreaterEqual123.Check(k.version) {
+		apiVersion = "kubescheduler.config.k8s.io/v1beta3"
+	} else if version.ConstraintK8sGreaterEqual122.Check(k.version) {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta2"
 	} else if version.ConstraintK8sGreaterEqual119.Check(k.version) {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta1"
@@ -424,8 +426,11 @@ func (k *kubeScheduler) computeCommand(port int32) []string {
 		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameServer)),
 		fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameServer)),
 		fmt.Sprintf("--secure-port=%d", port),
-		"--port=0",
 	)
+
+	if version.ConstraintK8sLessEqual122.Check(k.version) {
+		command = append(command, "--port=0")
+	}
 
 	if k.config != nil {
 		command = append(command, kutil.FeatureGatesToCommandLineParameter(k.config.FeatureGates))

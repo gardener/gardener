@@ -539,6 +539,8 @@ subjects:
 				Entry("kubernetes 1.21 w/ full config", "1.21.3", configFull),
 				Entry("kubernetes 1.22 w/o config", "1.22.1", configEmpty),
 				Entry("kubernetes 1.22 w/ full config", "1.22.1", configFull),
+				Entry("kubernetes 1.23 w/o config", "1.23.1", configEmpty),
+				Entry("kubernetes 1.23 w/ full config", "1.23.1", configFull),
 			)
 		})
 	})
@@ -564,7 +566,9 @@ subjects:
 
 func componentConfigYAMLForKubernetesVersion(version string) string {
 	var apiVersion string
-	if k8sVersionGreaterEqual122, _ := versionutils.CompareVersions(version, ">=", "1.22"); k8sVersionGreaterEqual122 {
+	if k8sVersionGreaterEqual123, _ := versionutils.CompareVersions(version, ">=", "1.23"); k8sVersionGreaterEqual123 {
+		apiVersion = "kubescheduler.config.k8s.io/v1beta3"
+	} else if k8sVersionGreaterEqual122, _ := versionutils.CompareVersions(version, ">=", "1.22"); k8sVersionGreaterEqual122 {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta2"
 	} else if k8sVersionGreaterEqual119, _ := versionutils.CompareVersions(version, ">=", "1.19"); k8sVersionGreaterEqual119 {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta1"
@@ -601,8 +605,11 @@ func commandForKubernetesVersion(version string, port int32, featureGateFlags ..
 		"--tls-cert-file=/var/lib/kube-scheduler-server/kube-scheduler-server.crt",
 		"--tls-private-key-file=/var/lib/kube-scheduler-server/kube-scheduler-server.key",
 		"--secure-port="+strconv.Itoa(int(port)),
-		"--port=0",
 	)
+
+	if k8sVersionLessThan123, _ := versionutils.CompareVersions(version, "<", "1.23"); k8sVersionLessThan123 {
+		command = append(command, "--port=0")
+	}
 
 	command = append(command, featureGateFlags...)
 	command = append(command, "--v=2")

@@ -19,7 +19,14 @@ import (
 	"fmt"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+
+	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -40,12 +47,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
-	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("New", func() {
@@ -59,11 +60,13 @@ var _ = Describe("New", func() {
 		expectedLabels                                   map[string]string
 		codec                                            serializer.CodecFactory
 		image                                            *imagevector.Image
+		version                                          *semver.Version
 	)
 
 	BeforeEach(func() {
 		ctx = context.TODO()
 		image = &imagevector.Image{Repository: "foo"}
+		version = semver.MustParse("v1.22.1")
 		webhookClientConfig = &admissionregistrationv1.WebhookClientConfig{}
 		expectedWebhookClientConfig = webhookClientConfig.DeepCopy()
 
@@ -86,15 +89,15 @@ var _ = Describe("New", func() {
 		var err error
 
 		It("when client is nil", func() {
-			sched, err = New(nil, "foo", nil, nil, nil)
+			sched, err = New(nil, "foo", nil, version, nil, nil)
 		})
 
 		It("when namespace is empty", func() {
-			sched, err = New(c, "", nil, nil, nil)
+			sched, err = New(c, "", nil, version, nil, nil)
 		})
 
 		It("when namespace is garden", func() {
-			sched, err = New(c, "garden", nil, nil, nil)
+			sched, err = New(c, "garden", nil, version, nil, nil)
 		})
 
 		AfterEach(func() {
@@ -115,7 +118,7 @@ var _ = Describe("New", func() {
 		})
 
 		JustBeforeEach(func() {
-			s, err := New(c, deployNS, image, &dummyConfigurator{}, webhookClientConfig)
+			s, err := New(c, deployNS, image, version, &dummyConfigurator{}, webhookClientConfig)
 			Expect(err).NotTo(HaveOccurred(), "New succeeds")
 
 			sched = s
@@ -123,35 +126,35 @@ var _ = Describe("New", func() {
 
 		Context("Deploy fails", func() {
 			It("cannot accept nil configurator", func() {
-				s, err := New(c, deployNS, image, nil, webhookClientConfig)
+				s, err := New(c, deployNS, image, version, nil, webhookClientConfig)
 				Expect(err).To(Succeed(), "New succeeds")
 
 				Expect(s.Deploy(ctx)).NotTo(Succeed(), "deploy should fail")
 			})
 
 			It("cannot accept configurator that returns error", func() {
-				s, err := New(c, deployNS, image, &dummyConfigurator{err: fmt.Errorf("foo")}, webhookClientConfig)
+				s, err := New(c, deployNS, image, version, &dummyConfigurator{err: fmt.Errorf("foo")}, webhookClientConfig)
 				Expect(err).To(Succeed(), "New succeeds")
 
 				Expect(s.Deploy(ctx)).NotTo(Succeed(), "deploy should fail")
 			})
 
 			It("cannot accept nil image", func() {
-				s, err := New(c, deployNS, nil, &dummyConfigurator{}, webhookClientConfig)
+				s, err := New(c, deployNS, nil, version, &dummyConfigurator{}, webhookClientConfig)
 				Expect(err).To(Succeed(), "New succeeds")
 
 				Expect(s.Deploy(ctx)).NotTo(Succeed(), "deploy should fail")
 			})
 
 			It("cannot accept empty image", func() {
-				s, err := New(c, deployNS, &imagevector.Image{}, &dummyConfigurator{}, webhookClientConfig)
+				s, err := New(c, deployNS, &imagevector.Image{}, version, &dummyConfigurator{}, webhookClientConfig)
 				Expect(err).To(Succeed(), "New succeeds")
 
 				Expect(s.Deploy(ctx)).NotTo(Succeed(), "deploy should fail")
 			})
 
 			It("cannot accept nil webhookClientConfig", func() {
-				s, err := New(c, deployNS, image, &dummyConfigurator{}, nil)
+				s, err := New(c, deployNS, image, version, &dummyConfigurator{}, nil)
 				Expect(err).To(Succeed(), "New succeeds")
 
 				Expect(s.Deploy(ctx)).NotTo(Succeed(), "deploy should fail")
@@ -412,6 +415,10 @@ var _ = Describe("New", func() {
 				const key = "deployment__test-namespace__gardener-kube-scheduler.yaml"
 				actual := &appsv1.Deployment{}
 				expected := &appsv1.Deployment{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "apps/v1",
+						Kind:       "Deployment",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "gardener-kube-scheduler",
 						Namespace: deployNS,
@@ -424,7 +431,7 @@ var _ = Describe("New", func() {
 						Template: corev1.PodTemplateSpec{
 							ObjectMeta: metav1.ObjectMeta{
 								Labels:      expectedLabels,
-								Annotations: map[string]string{},
+								Annotations: map[string]string{"security.gardener.cloud/trigger": "rollout"},
 							},
 							Spec: corev1.PodSpec{
 								Affinity: &corev1.Affinity{
@@ -448,8 +455,8 @@ var _ = Describe("New", func() {
 											"/usr/local/bin/kube-scheduler",
 											"--config=/var/lib/kube-scheduler-config/config.yaml",
 											"--secure-port=10259",
-											"--port=0",
 											"--v=2",
+											"--port=0",
 										},
 										LivenessProbe: &corev1.Probe{
 											Handler: corev1.Handler{
@@ -594,6 +601,129 @@ var _ = Describe("New", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(actual).To(DeepDerivativeEqual(expected))
+			})
+		})
+
+		Context("kubernetes 1.23", func() {
+			It("deployment is created correctly", func() {
+				var err error
+				sched, err = New(c, deployNS, image, semver.MustParse("1.23.3"), &dummyConfigurator{}, webhookClientConfig)
+				Expect(err).NotTo(HaveOccurred(), "New succeeds")
+
+				Expect(sched.Deploy(ctx)).To(Succeed(), "deploy succeeds")
+
+				Expect(c.Get(ctx, types.NamespacedName{
+					Name:      "managedresource-gardener-kube-scheduler",
+					Namespace: deployNS,
+				}, managedResourceSecret)).NotTo(HaveOccurred(), "can get managed resource's secret")
+
+				const key = "deployment__test-namespace__gardener-kube-scheduler.yaml"
+				actual := &appsv1.Deployment{}
+				expected := &appsv1.Deployment{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "apps/v1",
+						Kind:       "Deployment",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gardener-kube-scheduler",
+						Namespace: deployNS,
+						Labels:    expectedLabels,
+					},
+					Spec: appsv1.DeploymentSpec{
+						Replicas:             pointer.Int32(2),
+						RevisionHistoryLimit: pointer.Int32(1),
+						Selector:             &metav1.LabelSelector{MatchLabels: expectedLabels},
+						Template: corev1.PodTemplateSpec{
+							ObjectMeta: metav1.ObjectMeta{
+								Labels:      expectedLabels,
+								Annotations: map[string]string{"security.gardener.cloud/trigger": "rollout"},
+							},
+							Spec: corev1.PodSpec{
+								Affinity: &corev1.Affinity{
+									PodAntiAffinity: &corev1.PodAntiAffinity{
+										PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
+											Weight: 100,
+											PodAffinityTerm: corev1.PodAffinityTerm{
+												TopologyKey:   corev1.LabelHostname,
+												LabelSelector: &metav1.LabelSelector{MatchLabels: expectedLabels},
+											},
+										}},
+									},
+								},
+								ServiceAccountName: "gardener-kube-scheduler",
+								Containers: []corev1.Container{
+									{
+										Name:            "kube-scheduler",
+										Image:           image.String(),
+										ImagePullPolicy: corev1.PullIfNotPresent,
+										Command: []string{
+											"/usr/local/bin/kube-scheduler",
+											"--config=/var/lib/kube-scheduler-config/config.yaml",
+											"--secure-port=10259",
+											"--v=2",
+										},
+										LivenessProbe: &corev1.Probe{
+											Handler: corev1.Handler{
+												HTTPGet: &corev1.HTTPGetAction{
+													Path:   "/healthz",
+													Scheme: corev1.URISchemeHTTPS,
+													Port:   intstr.FromInt(10259),
+												},
+											},
+											SuccessThreshold:    1,
+											FailureThreshold:    2,
+											InitialDelaySeconds: 15,
+											PeriodSeconds:       10,
+											TimeoutSeconds:      15,
+										},
+										Ports: []corev1.ContainerPort{
+											{
+												Name:          "metrics",
+												ContainerPort: 10259,
+												Protocol:      corev1.ProtocolTCP,
+											},
+										},
+										Resources: corev1.ResourceRequirements{
+											Requests: corev1.ResourceList{
+												corev1.ResourceCPU:    resource.MustParse("23m"),
+												corev1.ResourceMemory: resource.MustParse("64Mi"),
+											},
+											Limits: corev1.ResourceList{
+												corev1.ResourceCPU:    resource.MustParse("400m"),
+												corev1.ResourceMemory: resource.MustParse("512Mi"),
+											},
+										},
+										VolumeMounts: []corev1.VolumeMount{
+											{
+												Name:      "config",
+												MountPath: "/var/lib/kube-scheduler-config",
+											},
+										},
+									},
+								},
+								Volumes: []corev1.Volume{
+									{
+										Name: "config",
+										VolumeSource: corev1.VolumeSource{
+											ConfigMap: &corev1.ConfigMapVolumeSource{
+												LocalObjectReference: corev1.LocalObjectReference{
+													Name: configMapName,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+				Expect(references.InjectAnnotations(expected)).To(Succeed())
+
+				Expect(managedResourceSecret.Data).To(HaveKey(key))
+				_, _, err = codec.UniversalDecoder().Decode(managedResourceSecret.Data[key], nil, actual)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(actual).To(DeepEqual(expected))
 			})
 		})
 

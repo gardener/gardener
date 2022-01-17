@@ -33,6 +33,8 @@ const (
 	hpaTargetAverageUtilizationMemory int32 = 80
 )
 
+// TODO: Switch to autoscaling/v2 for v1.23+ clusters as soon as we have revendored the k8s.io/* libraries with
+//  v0.23.0 or above.
 func (k *kubeAPIServer) emptyHorizontalPodAutoscaler() *autoscalingv2beta1.HorizontalPodAutoscaler {
 	return &autoscalingv2beta1.HorizontalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: k.namespace}}
 }

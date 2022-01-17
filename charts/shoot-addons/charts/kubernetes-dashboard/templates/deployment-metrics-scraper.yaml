@@ -22,7 +22,9 @@ spec:
         k8s-app: dashboard-metrics-scraper
         origin: gardener
       annotations:
+        {{- if semverCompare "<= 1.22.x" .Capabilities.KubeVersion.GitVersion }}
         seccomp.security.alpha.kubernetes.io/pod: 'runtime/default'
+        {{- end }}
         # TODO(rfranzke): Remove in a future release.
         security.gardener.cloud/trigger: rollout
     spec:
@@ -47,6 +49,11 @@ spec:
           readOnlyRootFilesystem: true
           runAsUser: 1001
           runAsGroup: 2001
+      {{- if semverCompare "> 1.22.x" .Capabilities.KubeVersion.GitVersion }}
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      {{- end }}
       serviceAccountName: kubernetes-dashboard
       nodeSelector:
         worker.gardener.cloud/system-components: "true"

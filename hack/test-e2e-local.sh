@@ -28,7 +28,7 @@ go test -mod=vendor -timeout=15m ./test/system/shoot_creation \
   -project-namespace=garden-local \
   -shoot-name=e2e-local \
   -annotations=shoot.gardener.cloud/infrastructure-cleanup-wait-period-seconds=0 \
-  -k8s-version=1.21.0 \
+  -k8s-version=1.23.1 \
   -cloud-profile=local \
   -seed=local \
   -region=local \

@@ -20,7 +20,19 @@ import (
 	"fmt"
 	"time"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/configurator"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/version"
+
+	"github.com/Masterminds/semver"
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -37,16 +49,6 @@ import (
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/configurator"
-	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 const (
@@ -69,6 +71,7 @@ func New(
 	client client.Client,
 	namespace string,
 	image *imagevector.Image,
+	version *semver.Version,
 	config configurator.Configurator,
 	webhookClientConfig *admissionregistrationv1.WebhookClientConfig,
 ) (
@@ -88,10 +91,10 @@ func New(
 	}
 
 	s := &kubeScheduler{
-		client:    client,
-		namespace: namespace,
-		image:     image,
-
+		client:              client,
+		namespace:           namespace,
+		image:               image,
+		version:             version,
 		config:              config,
 		webhookClientConfig: webhookClientConfig,
 	}
@@ -103,6 +106,7 @@ type kubeScheduler struct {
 	client              client.Client
 	namespace           string
 	image               *imagevector.Image
+	version             *semver.Version
 	config              configurator.Configurator
 	webhookClientConfig *admissionregistrationv1.WebhookClientConfig
 }
@@ -468,11 +472,16 @@ func (k *kubeScheduler) WaitCleanup(ctx context.Context) error {
 }
 
 func (k *kubeScheduler) command(port int32) []string {
-	return []string{
+	command := []string{
 		"/usr/local/bin/kube-scheduler",
 		fmt.Sprintf("--config=%s/%s", volumeMountPathConfig, dataKeyComponentConfig),
 		fmt.Sprintf("--secure-port=%d", port),
-		"--port=0",
 		"--v=2",
 	}
+
+	if version.ConstraintK8sLessEqual122.Check(k.version) {
+		command = append(command, "--port=0")
+	}
+
+	return command
 }

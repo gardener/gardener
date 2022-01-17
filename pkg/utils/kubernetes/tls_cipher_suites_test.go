@@ -36,8 +36,7 @@ var _ = Describe("TLS Cipher Suites", func() {
 			})
 
 			It("should return the expected TLS cipher suites", func() {
-				tlsCipherSuites := TLSCipherSuites(version)
-				Expect(tlsCipherSuites).To(ConsistOf(
+				Expect(TLSCipherSuites(version)).To(ConsistOf(
 					"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
 					"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
 					"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305",
@@ -55,8 +54,7 @@ var _ = Describe("TLS Cipher Suites", func() {
 			})
 
 			It("should return the expected TLS cipher suites", func() {
-				tlsCipherSuites := TLSCipherSuites(version)
-				Expect(tlsCipherSuites).To(ConsistOf(
+				Expect(TLSCipherSuites(version)).To(ConsistOf(
 					"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
 					"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
 					"TLS_AES_128_GCM_SHA256",
@@ -67,5 +65,25 @@ var _ = Describe("TLS Cipher Suites", func() {
 			})
 		})
 
+		Context("when Kubernetes version is >= 1.23", func() {
+			BeforeEach(func() {
+				version, err = semver.NewVersion("1.23.1")
+				Expect(err).To(BeNil())
+			})
+
+			It("should return the expected TLS cipher suites", func() {
+				Expect(TLSCipherSuites(version)).To(ConsistOf(
+					"TLS_AES_128_GCM_SHA256",
+					"TLS_AES_256_GCM_SHA384",
+					"TLS_CHACHA20_POLY1305_SHA256",
+					"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+					"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+					"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305",
+					"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+					"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305",
+					"TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+				))
+			})
+		})
 	})
 })
