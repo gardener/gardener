@@ -165,7 +165,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	go managedSeedSetController.Run(ctx, f.cfg.Controllers.ManagedSeedSet.ConcurrentSyncs)
 
 	if eventControllerConfig := f.cfg.Controllers.Event; eventControllerConfig != nil {
-		eventController, err := eventcontroller.NewController(ctx, f.clientMap, eventControllerConfig)
+		eventController, err := eventcontroller.NewController(ctx, log, f.clientMap, eventControllerConfig)
 		if err != nil {
 			return fmt.Errorf("failed initializing Event controller: %w", err)
 		}

@@ -18,8 +18,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/go-logr/logr"
+
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 
 	"github.com/golang/mock/gomock"
@@ -58,8 +59,6 @@ var _ = Describe("eventReconciler", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
 
-		logger.Logger = logger.NewNopLogger()
-
 		shootEvent = &corev1.Event{
 			LastTimestamp:  metav1.Time{Time: time.Date(0, 0, 0, 0, 0, 0, 0, time.UTC)},
 			InvolvedObject: corev1.ObjectReference{Kind: "Shoot", APIVersion: "core.gardener.cloud/v1beta1"},
@@ -84,7 +83,7 @@ var _ = Describe("eventReconciler", func() {
 			TTLNonShootEvents: ttl,
 		}
 
-		reconciler = NewEventReconciler(logger.NewNopLogger(), k8sGardenRuntimeClient, cfg)
+		reconciler = NewEventReconciler(k8sGardenRuntimeClient, cfg)
 	})
 
 	AfterEach(func() {
@@ -168,9 +167,9 @@ var _ = Describe("#enqueueEvent", func() {
 	)
 
 	BeforeEach(func() {
-		logger.Logger = logger.NewNopLogger()
 		queue = &fakeQueue{}
 		c = &Controller{
+			log:        logr.Discard(),
 			eventQueue: queue,
 		}
 	})
