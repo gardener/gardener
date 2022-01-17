@@ -1,4 +1,4 @@
-// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,13 +27,16 @@ import (
 
 var _ = Describe("reconciler", func() {
 	DescribeTable("#updateCreatedCondition", func(old v1beta1.ConditionStatus, f controller.UpdaterFunc, expected v1beta1.ConditionStatus) {
+		var err error
 		status := &extensionsv1alpha1.DefaultStatus{}
 		switch old {
 		case v1beta1.ConditionUnknown:
 		case v1beta1.ConditionTrue:
-			addCreatedConditionTrue(status)
+			err = addCreatedConditionTrue(status)
+			Expect(err).To(BeNil())
 		case v1beta1.ConditionFalse:
-			addCreatedConditionFalse(status)
+			err = addCreatedConditionFalse(status)
+			Expect(err).To(BeNil())
 		}
 		oldTime := time.Now().Add(-1 * time.Second)
 		if len(status.Conditions) > 0 {
@@ -41,7 +44,8 @@ var _ = Describe("reconciler", func() {
 			status.Conditions[0].LastUpdateTime.Time = oldTime
 		}
 
-		f(status)
+		err = f(status)
+		Expect(err).To(BeNil())
 		Expect(len(status.Conditions)).To(Equal(1))
 		Expect(status.Conditions[0].Status).To(Equal(expected))
 		if old != expected {

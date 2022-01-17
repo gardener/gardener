@@ -20,7 +20,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -253,7 +252,9 @@ func updateCreatedCondition(status extensionsv1alpha1.Status, conditionStatus ga
 	}
 
 	builder, err := gardencorev1beta1helper.NewConditionBuilder(extensionsv1alpha1.ConditionTypeCreated)
-	utilruntime.Must(err)
+	if err != nil {
+		return err
+	}
 	if c != nil {
 		builder = builder.WithOldCondition(*c)
 	}
