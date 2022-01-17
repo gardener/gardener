@@ -71,6 +71,21 @@ type StatusUpdater interface {
 	Success(context.Context, extensionsv1alpha1.Object, gardencorev1beta1.LastOperationType, string) error
 }
 
+// UpdaterFunc is a function to perform additional updates of the status.
+type UpdaterFunc func(extensionsv1alpha1.Status) error
+
+// StatusUpdaterCustom contains functions for customized updating statuses of extension resources after a controller operation.
+type StatusUpdaterCustom interface {
+	//  InjectClient injects the client into the status updater.
+	InjectClient(client.Client)
+	// Processing updates the last operation of an extension resource when an operation is started.
+	ProcessingCustom(context.Context, extensionsv1alpha1.Object, gardencorev1beta1.LastOperationType, string, UpdaterFunc) error
+	// Error updates the last operation of an extension resource when an operation was erroneous.
+	ErrorCustom(context.Context, extensionsv1alpha1.Object, error, gardencorev1beta1.LastOperationType, string, UpdaterFunc) error
+	// Success updates the last operation of an extension resource when an operation was successful.
+	SuccessCustom(context.Context, extensionsv1alpha1.Object, gardencorev1beta1.LastOperationType, string, UpdaterFunc) error
+}
+
 // NewStatusUpdater returns a new status updater.
 func NewStatusUpdater(logger logr.Logger) *statusUpdater {
 	return &statusUpdater{logger: logger}
@@ -82,12 +97,17 @@ type statusUpdater struct {
 }
 
 var _ = StatusUpdater(&statusUpdater{})
+var _ = StatusUpdaterCustom(&statusUpdater{})
 
 func (s *statusUpdater) InjectClient(c client.Client) {
 	s.client = c
 }
 
 func (s *statusUpdater) Processing(ctx context.Context, obj extensionsv1alpha1.Object, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
+	return s.ProcessingCustom(ctx, obj, lastOperationType, description, nil)
+}
+
+func (s *statusUpdater) ProcessingCustom(ctx context.Context, obj extensionsv1alpha1.Object, lastOperationType gardencorev1beta1.LastOperationType, description string, updater UpdaterFunc) error {
 	if s.client == nil {
 		return fmt.Errorf("client is not set. Call InjectClient() first")
 	}
@@ -97,10 +117,20 @@ func (s *statusUpdater) Processing(ctx context.Context, obj extensionsv1alpha1.O
 	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
 	lastOp := LastOperation(lastOperationType, gardencorev1beta1.LastOperationStateProcessing, 1, description)
 	obj.GetExtensionStatus().SetLastOperation(lastOp)
+	if updater != nil {
+		err := updater(obj.GetExtensionStatus())
+		if err != nil {
+			return err
+		}
+	}
 	return s.client.Status().Patch(ctx, obj, patch)
 }
 
 func (s *statusUpdater) Error(ctx context.Context, obj extensionsv1alpha1.Object, err error, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
+	return s.ErrorCustom(ctx, obj, err, lastOperationType, description, nil)
+}
+
+func (s *statusUpdater) ErrorCustom(ctx context.Context, obj extensionsv1alpha1.Object, err error, lastOperationType gardencorev1beta1.LastOperationType, description string, updater UpdaterFunc) error {
 	if s.client == nil {
 		return fmt.Errorf("client is not set. Call InjectClient() first")
 	}
@@ -114,10 +144,20 @@ func (s *statusUpdater) Error(ctx context.Context, obj extensionsv1alpha1.Object
 	obj.GetExtensionStatus().SetObservedGeneration(obj.GetGeneration())
 	obj.GetExtensionStatus().SetLastOperation(lastOp)
 	obj.GetExtensionStatus().SetLastError(lastErr)
+	if updater != nil {
+		err := updater(obj.GetExtensionStatus())
+		if err != nil {
+			return err
+		}
+	}
 	return s.client.Status().Patch(ctx, obj, patch)
 }
 
 func (s *statusUpdater) Success(ctx context.Context, obj extensionsv1alpha1.Object, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
+	return s.SuccessCustom(ctx, obj, lastOperationType, description, nil)
+}
+
+func (s *statusUpdater) SuccessCustom(ctx context.Context, obj extensionsv1alpha1.Object, lastOperationType gardencorev1beta1.LastOperationType, description string, updater UpdaterFunc) error {
 	if s.client == nil {
 		return fmt.Errorf("client is not set. Call InjectClient() first")
 	}
@@ -129,6 +169,12 @@ func (s *statusUpdater) Success(ctx context.Context, obj extensionsv1alpha1.Obje
 	obj.GetExtensionStatus().SetObservedGeneration(obj.GetGeneration())
 	obj.GetExtensionStatus().SetLastOperation(lastOp)
 	obj.GetExtensionStatus().SetLastError(lastErr)
+	if updater != nil {
+		err := updater(obj.GetExtensionStatus())
+		if err != nil {
+			return err
+		}
+	}
 	return s.client.Status().Patch(ctx, obj, patch)
 }
 
