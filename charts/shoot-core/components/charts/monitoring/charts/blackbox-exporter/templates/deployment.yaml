@@ -30,7 +30,6 @@ spec:
         networking.gardener.cloud/from-seed: allowed
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-public-networks: allowed
-        networking.gardener.cloud/to-apiserver: allowed
     spec:
       tolerations:
       - effect: NoSchedule
