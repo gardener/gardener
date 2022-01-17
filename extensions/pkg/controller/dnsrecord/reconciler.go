@@ -275,10 +275,10 @@ func getCreatedConditionStatus(status extensionsv1alpha1.Status) gardencorev1bet
 
 func addCreatedConditionFalse(status extensionsv1alpha1.Status) error {
 	message := "Error on initial record creation in infrastructure"
-	return updateCreatedCondition(status, gardencorev1beta1.ConditionFalse, "error", message, false)
+	return updateCreatedCondition(status, gardencorev1beta1.ConditionFalse, "Error", message, false)
 }
 
 func addCreatedConditionTrue(status extensionsv1alpha1.Status) error {
 	message := "Record was created successfully in infrastructure at least once"
-	return updateCreatedCondition(status, gardencorev1beta1.ConditionTrue, "success", message, true)
+	return updateCreatedCondition(status, gardencorev1beta1.ConditionTrue, "Success", message, true)
 }
