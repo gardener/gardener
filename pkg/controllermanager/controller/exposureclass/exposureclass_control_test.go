@@ -15,11 +15,11 @@
 package exposureclass
 
 import (
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	"github.com/gardener/gardener/pkg/logger"
-
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -31,9 +31,9 @@ var _ = Describe("Controller", func() {
 	)
 
 	BeforeEach(func() {
-		logger.Logger = logger.NewNopLogger()
 		queue = &fakeQueue{}
 		c = &Controller{
+			log:                logr.Discard(),
 			exposureClassQueue: queue,
 		}
 	})

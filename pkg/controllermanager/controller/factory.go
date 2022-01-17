@@ -110,7 +110,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing CSR controller: %w", err)
 	}
 
-	exposureClassController, err := exposureclasscontroller.NewExposureClassController(ctx, f.clientMap, f.recorder)
+	exposureClassController, err := exposureclasscontroller.NewExposureClassController(ctx, log, f.clientMap, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing ExposureClass controller: %w", err)
 	}
