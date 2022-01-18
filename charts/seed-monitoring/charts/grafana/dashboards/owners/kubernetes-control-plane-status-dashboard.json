@@ -485,7 +485,7 @@
       },
       "id": 54,
       "options": {
-        "content": "# Connectivity\n\n## Shoot\n\nShoot connectivity checks if the API Server is available from the shoot cluster. This is done via the blackbox exporter running in the shoot.\n\n## Seed\n\nSeed connectivity checks if the API Server is available from the seed. Prometheus tries to access the API Server via loadbalancer.\n\nFor more information check the [documentation](https://github.com/gardener/gardener/blob/master/docs/monitoring/connectivity.md)",
+        "content": "# Connectivity\n\n## Shoot\n\nShoot connectivity checks if the API Server is available from the shoot cluster. This is done via the blackbox exporter running in the shoot.\n\n## Seed\n\nSeed connectivity checks if the API Server is available from the seed. Prometheus tries to access the API Server via the external fully qualified domain name of the API server. \n\nFor more information check the [documentation](https://github.com/gardener/gardener/blob/master/docs/monitoring/connectivity.md)",
         "mode": "markdown"
       },
       "pluginVersion": "7.5.7",
