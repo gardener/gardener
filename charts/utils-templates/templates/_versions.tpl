@@ -43,10 +43,10 @@ batch/v1beta1
 {{- end -}}
 
 {{- define "hpaversion" -}}
-{{- if semverCompare "<= 1.22-0" .Capabilities.KubeVersion.GitVersion -}}
-autoscaling/v2beta1
-{{- else -}}
+{{- if semverCompare ">= 1.23-0" .Capabilities.KubeVersion.GitVersion -}}
 autoscaling/v2
+{{- else -}}
+autoscaling/v2beta1
 {{- end -}}
 {{- end -}}
 
