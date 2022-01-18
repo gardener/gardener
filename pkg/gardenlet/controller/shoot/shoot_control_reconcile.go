@@ -360,11 +360,6 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Fn:           flow.TaskFn(botanist.DeployKubeScheduler).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, waitUntilGardenerResourceManagerReady),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying dependency-watchdog shoot access resources",
-			Fn:           flow.TaskFn(botanist.DeployDependencyWatchdogAccess).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, waitUntilGardenerResourceManagerReady),
-		})
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes controller manager",
 			Fn:           flow.TaskFn(botanist.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
