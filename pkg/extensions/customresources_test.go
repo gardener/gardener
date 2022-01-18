@@ -241,7 +241,7 @@ var _ = Describe("extensions", func() {
 
 		It("should return error if ready func returns error", func() {
 			fakeError := &specialWrappingError{
-				error: gardencorev1beta1helper.NewErrorWithCodes("foo", gardencorev1beta1.ErrorInfraUnauthorized),
+				error: gardencorev1beta1helper.NewErrorWithCodes("foo", gardencorev1beta1.ErrorInfraInsufficientPrivileges, gardencorev1beta1.ErrorInfraUnauthorized),
 			}
 
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating worker succeeds")
@@ -261,7 +261,7 @@ var _ = Describe("extensions", func() {
 				Special()
 			}
 			Expect(errors.As(err, &specialError)).To(BeTrue(), "should properly wrap the error returned by the health func")
-			Expect(gardencorev1beta1helper.ExtractErrorCodes(err)).To(ConsistOf(gardencorev1beta1.ErrorInfraUnauthorized), "should be able to extract error codes from wrapped error")
+			Expect(gardencorev1beta1helper.ExtractErrorCodes(err)).To(ConsistOf(gardencorev1beta1.ErrorInfraInsufficientPrivileges, gardencorev1beta1.ErrorInfraUnauthorized), "should be able to extract error codes from wrapped error")
 		})
 
 		It("should return error if client has not observed latest timestamp annotation", func() {
@@ -517,7 +517,7 @@ var _ = Describe("extensions", func() {
 			expected.ObjectMeta.DeletionTimestamp = &deletionTimestamp
 			expected.Status.LastError = &gardencorev1beta1.LastError{
 				Description: "invalid credentials",
-				Codes:       []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraUnauthorized},
+				Codes:       []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraInsufficientPrivileges, gardencorev1beta1.ErrorInfraUnauthorized},
 			}
 
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing worker succeeds")
@@ -528,7 +528,7 @@ var _ = Describe("extensions", func() {
 			Expect(err).To(HaveOccurred())
 
 			// ensure, that errors are properly wrapped
-			Expect(gardencorev1beta1helper.ExtractErrorCodes(err)).To(ConsistOf(gardencorev1beta1.ErrorInfraUnauthorized), "should be able to extract error codes from wrapped error")
+			Expect(gardencorev1beta1helper.ExtractErrorCodes(err)).To(ConsistOf(gardencorev1beta1.ErrorInfraInsufficientPrivileges, gardencorev1beta1.ErrorInfraUnauthorized), "should be able to extract error codes from wrapped error")
 		})
 
 		It("should return success if extensions CRs gets deleted", func() {
