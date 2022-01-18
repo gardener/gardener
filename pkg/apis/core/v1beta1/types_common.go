@@ -28,6 +28,7 @@ const (
 	ErrorInfraUnauthorized ErrorCode = "ERR_INFRA_UNAUTHORIZED"
 	// ErrorInfraInsufficientPrivileges indicates that the last error occurred due to insufficient infrastructure privileges.
 	// It is classified as a non-retryable error code.
+	// This error code is deprecated in favor of ERR_INFRA_UNAUTHORIZED and will be removed in a future version.
 	ErrorInfraInsufficientPrivileges ErrorCode = "ERR_INFRA_INSUFFICIENT_PRIVILEGES"
 	// ErrorInfraQuotaExceeded indicates that the last error occurred due to infrastructure quota limits.
 	// It is classified as a non-retryable error code.
