@@ -67,8 +67,6 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			// TODO(rfranzke): Uncomment this in a future release once all monitoring configurations of extensions have been
 			// adapted.
 			// "prometheus",
-			"dependency-watchdog-internal-probe",
-			"dependency-watchdog-external-probe",
 		} {
 			gardenerResourceDataList.Delete(name)
 		}
@@ -113,6 +111,12 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 					vpnshoot.SecretNameVPNShootClient,
 					vpnseedserver.VpnSeedServerTLSAuth,
 				); err != nil {
+					return err
+				}
+			}
+
+			if !gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(b.Seed.GetInfo().Spec.Settings) {
+				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList, kubeapiserver.DependencyWatchdogInternalProbeSecretName, kubeapiserver.DependencyWatchdogExternalProbeSecretName); err != nil {
 					return err
 				}
 			}
