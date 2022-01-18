@@ -45,10 +45,10 @@ var _ = Describe("errors", func() {
 		Entry("no code to extract", errors.New("foo"), "", errors.New("foo")),
 		Entry("unauthenticated", errors.New("authentication failed"), "", NewErrorWithCodes("authentication failed", gardencorev1beta1.ErrorInfraUnauthenticated)),
 		Entry("unauthenticated", errors.New("invalidauthenticationtokentenant"), "", NewErrorWithCodes("invalidauthenticationtokentenant", gardencorev1beta1.ErrorInfraUnauthenticated)),
-		Entry("unauthorized", errors.New("unauthorized"), "", NewErrorWithCodes("unauthorized", gardencorev1beta1.ErrorInfraUnauthorized)),
-		Entry("unauthorized with coder", NewErrorWithCodes("", gardencorev1beta1.ErrorInfraUnauthorized), "", NewErrorWithCodes("", gardencorev1beta1.ErrorInfraUnauthorized)),
-		Entry("insufficient privileges", errors.New("accessdenied"), "", NewErrorWithCodes("accessdenied", gardencorev1beta1.ErrorInfraUnauthorized)),
-		Entry("insufficient privileges with coder", NewErrorWithCodes("accessdenied", gardencorev1beta1.ErrorInfraUnauthorized), "", NewErrorWithCodes("accessdenied", gardencorev1beta1.ErrorInfraUnauthorized)),
+		Entry("unauthorized", errors.New("unauthorized"), "", NewErrorWithCodes("unauthorized", gardencorev1beta1.ErrorInfraInsufficientPrivileges, gardencorev1beta1.ErrorInfraUnauthorized)),
+		Entry("unauthorized with coder", NewErrorWithCodes("", gardencorev1beta1.ErrorInfraInsufficientPrivileges, gardencorev1beta1.ErrorInfraUnauthorized), "", NewErrorWithCodes("", gardencorev1beta1.ErrorInfraInsufficientPrivileges, gardencorev1beta1.ErrorInfraUnauthorized)),
+		Entry("insufficient privileges", errors.New("accessdenied"), "", NewErrorWithCodes("accessdenied", gardencorev1beta1.ErrorInfraInsufficientPrivileges, gardencorev1beta1.ErrorInfraUnauthorized)),
+		Entry("insufficient privileges with coder", NewErrorWithCodes("accessdenied", gardencorev1beta1.ErrorInfraInsufficientPrivileges, gardencorev1beta1.ErrorInfraUnauthorized), "", NewErrorWithCodes("accessdenied", gardencorev1beta1.ErrorInfraInsufficientPrivileges, gardencorev1beta1.ErrorInfraUnauthorized)),
 		Entry("quota exceeded", errors.New("limitexceeded"), "", NewErrorWithCodes("limitexceeded", gardencorev1beta1.ErrorInfraQuotaExceeded)),
 		Entry("quota exceeded", errors.New("foolimitexceeded"), "", NewErrorWithCodes("foolimitexceeded", gardencorev1beta1.ErrorInfraQuotaExceeded)),
 		Entry("quota exceeded", errors.New("equestlimitexceeded"), "", NewErrorWithCodes("equestlimitexceeded", gardencorev1beta1.ErrorInfraQuotaExceeded)),
@@ -148,15 +148,16 @@ var _ = Describe("errors", func() {
 	})
 
 	var (
-		unauthenticatedError         = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraUnauthenticated}}
-		unauthorizedError            = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraUnauthorized}}
-		configurationProblemError    = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorConfigurationProblem}}
-		infraQuotaExceededError      = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraQuotaExceeded}}
-		infraRateLimitsExceededError = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraRateLimitsExceeded}}
-		infraDependenciesError       = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraDependencies}}
-		infraResourcesDepletedError  = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraResourcesDepleted}}
-		cleanupClusterResourcesError = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorCleanupClusterResources}}
-		errorWithoutCodes            = gardencorev1beta1.LastError{}
+		unauthenticatedError             = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraUnauthenticated}}
+		unauthorizedError                = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraUnauthorized}}
+		infraInsufficientPrivilegesError = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraInsufficientPrivileges}}
+		configurationProblemError        = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorConfigurationProblem}}
+		infraQuotaExceededError          = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraQuotaExceeded}}
+		infraRateLimitsExceededError     = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraRateLimitsExceeded}}
+		infraDependenciesError           = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraDependencies}}
+		infraResourcesDepletedError      = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraResourcesDepleted}}
+		cleanupClusterResourcesError     = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorCleanupClusterResources}}
+		errorWithoutCodes                = gardencorev1beta1.LastError{}
 	)
 
 	DescribeTable("#HasNonRetryableErrorCode",
@@ -165,9 +166,9 @@ var _ = Describe("errors", func() {
 		},
 
 		Entry("no error given", nil, BeFalse()),
-		Entry("only errors with non-retryable error codes", []gardencorev1beta1.LastError{unauthenticatedError, unauthorizedError, infraQuotaExceededError, infraDependenciesError, configurationProblemError}, BeTrue()),
+		Entry("only errors with non-retryable error codes", []gardencorev1beta1.LastError{unauthenticatedError, unauthorizedError, infraInsufficientPrivilegesError, infraQuotaExceededError, infraDependenciesError, configurationProblemError}, BeTrue()),
 		Entry("only errors with retryable error codes", []gardencorev1beta1.LastError{infraResourcesDepletedError, cleanupClusterResourcesError}, BeFalse()),
-		Entry("errors with both retryable and not retryable error codes", []gardencorev1beta1.LastError{unauthorizedError, unauthenticatedError, configurationProblemError, infraQuotaExceededError, infraRateLimitsExceededError, infraDependenciesError, infraResourcesDepletedError, cleanupClusterResourcesError}, BeTrue()),
+		Entry("errors with both retryable and not retryable error codes", []gardencorev1beta1.LastError{unauthorizedError, unauthenticatedError, infraInsufficientPrivilegesError, configurationProblemError, infraQuotaExceededError, infraRateLimitsExceededError, infraDependenciesError, infraResourcesDepletedError, cleanupClusterResourcesError}, BeTrue()),
 		Entry("errors without error codes", []gardencorev1beta1.LastError{errorWithoutCodes}, BeFalse()),
 	)
 

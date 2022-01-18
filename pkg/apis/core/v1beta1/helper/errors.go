@@ -94,6 +94,7 @@ func DetermineErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 		knownCodes = map[gardencorev1beta1.ErrorCode]func(string) bool{
 			gardencorev1beta1.ErrorInfraUnauthenticated:          unauthenticatedRegexp.MatchString,
 			gardencorev1beta1.ErrorInfraUnauthorized:             unauthorizedRegexp.MatchString,
+			gardencorev1beta1.ErrorInfraInsufficientPrivileges:   unauthorizedRegexp.MatchString,
 			gardencorev1beta1.ErrorInfraQuotaExceeded:            quotaExceededRegexp.MatchString,
 			gardencorev1beta1.ErrorInfraRateLimitsExceeded:       rateLimitsExceededRegexp.MatchString,
 			gardencorev1beta1.ErrorInfraDependencies:             dependenciesRegexp.MatchString,
@@ -264,6 +265,7 @@ func HasNonRetryableErrorCode(lastErrors ...gardencorev1beta1.LastError) bool {
 		for _, code := range lastError.Codes {
 			if code == gardencorev1beta1.ErrorInfraUnauthenticated ||
 				code == gardencorev1beta1.ErrorInfraUnauthorized ||
+				code == gardencorev1beta1.ErrorInfraInsufficientPrivileges ||
 				code == gardencorev1beta1.ErrorInfraDependencies ||
 				code == gardencorev1beta1.ErrorInfraQuotaExceeded ||
 				code == gardencorev1beta1.ErrorInfraRateLimitsExceeded ||
