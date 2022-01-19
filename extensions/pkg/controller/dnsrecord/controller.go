@@ -24,7 +24,6 @@ import (
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 const (
@@ -55,23 +54,16 @@ type AddArgs struct {
 
 // DefaultPredicates returns the default predicates for a dnsrecord reconciler.
 func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
-	if ignoreOperationAnnotation {
-		return []predicate.Predicate{
-			predicate.GenerationChangedPredicate{},
-		}
-	}
-
-	return []predicate.Predicate{
+	return extensionspredicate.DefaultControllerPredicates(ignoreOperationAnnotation,
+		// Special case for preconditions for the DNSRecord controller: Some DNSRecord resources are created in the
+		// 'garden' namespace and don't belong to a Shoot. Most other DNSRecord resources are created in regular shoot
+		// namespaces (in such cases we want to check whether the respective Shoot is failed). Consequently, we add both
+		// preconditions and ensure at least one of them applies.
 		predicate.Or(
-			predicateutils.HasOperationAnnotation(),
-			extensionspredicate.LastOperationNotSuccessful(),
-			predicate.And(
-				predicate.GenerationChangedPredicate{},
-				extensionspredicate.IsDeleting(),
-			),
+			extensionspredicate.IsInGardenNamespacePredicate,
+			extensionspredicate.ShootNotFailedPredicate(),
 		),
-		extensionspredicate.ShootNotFailed(),
-	}
+	)
 }
 
 // Add creates a new dnsrecord controller and adds it to the given Manager.

@@ -18,7 +18,6 @@ import (
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -55,23 +54,7 @@ type AddArgs struct {
 
 // DefaultPredicates returns the default predicates for a Network reconciler.
 func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
-	if ignoreOperationAnnotation {
-		return []predicate.Predicate{
-			predicate.GenerationChangedPredicate{},
-		}
-	}
-
-	return []predicate.Predicate{
-		predicate.Or(
-			predicateutils.HasOperationAnnotation(),
-			extensionspredicate.LastOperationNotSuccessful(),
-			predicate.And(
-				predicate.GenerationChangedPredicate{},
-				extensionspredicate.IsDeleting(),
-			),
-		),
-		extensionspredicate.ShootNotFailed(),
-	}
+	return extensionspredicate.DefaultControllerPredicates(ignoreOperationAnnotation, extensionspredicate.ShootNotFailedPredicate())
 }
 
 // Add creates a new network Controller and adds it to the Manager.
