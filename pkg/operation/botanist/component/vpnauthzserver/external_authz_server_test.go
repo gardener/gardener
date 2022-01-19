@@ -12,11 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package extauthzserver
+package vpnauthzserver_test
 
 import (
 	"context"
 	"fmt"
+
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	protobuftypes "github.com/gogo/protobuf/types"
 	. "github.com/onsi/ginkgo"
@@ -27,6 +32,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,12 +42,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 )
 
 var _ = Describe("ExtAuthzServer", func() {
@@ -52,7 +52,7 @@ var _ = Describe("ExtAuthzServer", func() {
 		defaultDepWaiter component.DeployWaiter
 		namespace        = "shoot--foo--bar"
 
-		image                      = "eu.gcr.io/gardener-project/gardener/ext-authz-server:0.1.0"
+		image                      = "some-image"
 		replicas             int32 = 1
 		revisionHistoryLimit int32 = 1
 		maxSurge                   = intstr.FromInt(100)
@@ -60,9 +60,9 @@ var _ = Describe("ExtAuthzServer", func() {
 		maxUnavailablePDB          = intstr.FromInt(1)
 		vpaUpdateMode              = autoscalingv1beta2.UpdateModeAuto
 
-		deploymentName = DeploymentName
-		serviceName    = DeploymentName
-		vpaName        = fmt.Sprintf("%s-vpa", DeploymentName)
+		deploymentName = "reversed-vpn-auth-server"
+		serviceName    = "reversed-vpn-auth-server"
+		vpaName        = fmt.Sprintf("%s-vpa", "reversed-vpn-auth-server")
 
 		expectedDeployment          *appsv1.Deployment
 		expectedDestinationRule     *istionetworkingv1beta1.DestinationRule
@@ -108,7 +108,7 @@ var _ = Describe("ExtAuthzServer", func() {
 				Name:      deploymentName,
 				Namespace: namespace,
 				Labels: map[string]string{
-					"app": DeploymentName,
+					"app": "reversed-vpn-auth-server",
 				},
 				ResourceVersion: "1",
 			},
@@ -120,7 +120,7 @@ var _ = Describe("ExtAuthzServer", func() {
 				Replicas:             &replicas,
 				RevisionHistoryLimit: &revisionHistoryLimit,
 				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
-					v1beta1constants.LabelApp: DeploymentName,
+					"app": "reversed-vpn-auth-server",
 				}},
 				Strategy: appsv1.DeploymentStrategy{
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -132,34 +132,33 @@ var _ = Describe("ExtAuthzServer", func() {
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
-							v1beta1constants.LabelApp: DeploymentName,
+							"app": "reversed-vpn-auth-server",
 						},
 					},
 					Spec: corev1.PodSpec{
 						Affinity: &corev1.Affinity{
 							PodAntiAffinity: &corev1.PodAntiAffinity{
-								RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+								PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
 									{
-										LabelSelector: &metav1.LabelSelector{
-											MatchExpressions: []metav1.LabelSelectorRequirement{
-												{
-													Key:      "app",
-													Operator: "In",
-													Values:   []string{DeploymentName},
+										Weight: 100,
+										PodAffinityTerm: corev1.PodAffinityTerm{
+											TopologyKey: "kubernetes.io/hostname",
+											LabelSelector: &metav1.LabelSelector{
+												MatchLabels: map[string]string{
+													"app": "reversed-vpn-auth-server",
 												},
 											},
 										},
-										TopologyKey: "kubernetes.io/hostname",
 									},
 								},
 							},
 						},
 						AutomountServiceAccountToken: pointer.Bool(false),
-						PriorityClassName:            DeploymentName,
+						PriorityClassName:            "reversed-vpn-auth-server",
 						DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 						Containers: []corev1.Container{
 							{
-								Name:            DeploymentName,
+								Name:            "reversed-vpn-auth-server",
 								Image:           image,
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Ports: []corev1.ContainerPort{
@@ -198,7 +197,7 @@ var _ = Describe("ExtAuthzServer", func() {
 			},
 			Spec: istioapinetworkingv1beta1.DestinationRule{
 				ExportTo: []string{"*"},
-				Host:     fmt.Sprintf("%s.%s.svc.cluster.local", DeploymentName, namespace),
+				Host:     fmt.Sprintf("%s.%s.svc.cluster.local", "reversed-vpn-auth-server", namespace),
 				TrafficPolicy: &istioapinetworkingv1beta1.TrafficPolicy{
 					ConnectionPool: &istioapinetworkingv1beta1.ConnectionPoolSettings{
 						Tcp: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
@@ -241,8 +240,8 @@ var _ = Describe("ExtAuthzServer", func() {
 				Ports: []corev1.ServicePort{
 					{
 						Name:       "grpc-authz",
-						Port:       AuthServerPort,
-						TargetPort: intstr.FromInt(AuthServerPort),
+						Port:       9001,
+						TargetPort: intstr.FromInt(9001),
 						Protocol:   corev1.ProtocolTCP,
 					},
 				},
@@ -261,12 +260,12 @@ var _ = Describe("ExtAuthzServer", func() {
 			},
 			Spec: istioapinetworkingv1beta1.VirtualService{
 				ExportTo: []string{"*"},
-				Hosts:    []string{fmt.Sprintf("%s.%s.svc.cluster.local", DeploymentName, namespace)},
+				Hosts:    []string{fmt.Sprintf("%s.%s.svc.cluster.local", "reversed-vpn-auth-server", namespace)},
 				Http: []*istioapinetworkingv1beta1.HTTPRoute{{
 					Route: []*istioapinetworkingv1beta1.HTTPRouteDestination{{
 						Destination: &istioapinetworkingv1beta1.Destination{
-							Host: DeploymentName,
-							Port: &istioapinetworkingv1beta1.PortSelector{Number: AuthServerPort},
+							Host: "reversed-vpn-auth-server",
+							Port: &istioapinetworkingv1beta1.PortSelector{Number: 9001},
 						},
 					}},
 				}},
@@ -280,7 +279,7 @@ var _ = Describe("ExtAuthzServer", func() {
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 					Kind:       "Deployment",
-					Name:       DeploymentName,
+					Name:       "reversed-vpn-auth-server",
 				},
 				UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
 					UpdateMode: &vpaUpdateMode,
@@ -288,7 +287,7 @@ var _ = Describe("ExtAuthzServer", func() {
 				ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
 					ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
 						{
-							ContainerName: DeploymentName,
+							ContainerName: "reversed-vpn-auth-server",
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("100m"),
 								corev1.ResourceMemory: resource.MustParse("100Mi"),
@@ -305,19 +304,23 @@ var _ = Describe("ExtAuthzServer", func() {
 			Name:            deploymentName + "-pdb",
 			Namespace:       namespace,
 			ResourceVersion: "1",
-			Labels:          getLabels(),
+			Labels: map[string]string{
+				"app": deploymentName,
+			},
 		},
 		TypeMeta: metav1.TypeMeta{Kind: "PodDisruptionBudget", APIVersion: "policy/v1beta1"},
 		Spec: policyv1beta1.PodDisruptionBudgetSpec{
 			MaxUnavailable: &maxUnavailablePDB,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: getLabels(),
+				MatchLabels: map[string]string{
+					"app": deploymentName,
+				},
 			},
 		},
 	}
 
 	JustBeforeEach(func() {
-		defaultDepWaiter = NewExtAuthServer(c, namespace, image, replicas)
+		defaultDepWaiter = New(c, namespace, image, replicas)
 	})
 
 	Describe("#Deploy", func() {

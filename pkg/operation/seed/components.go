@@ -30,13 +30,13 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -257,7 +257,7 @@ func defaultExternalAuthzServer(
 		return nil, err
 	}
 
-	extAuthServer := extauthzserver.NewExtAuthServer(
+	vpnAuthzServer := vpnauthzserver.New(
 		c,
 		v1beta1constants.GardenNamespace,
 		image.String(),
@@ -265,7 +265,7 @@ func defaultExternalAuthzServer(
 	)
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
-		return extAuthServer, nil
+		return vpnAuthzServer, nil
 	}
 
 	vpnSeedDeployments := &metav1.PartialObjectMetadataList{}
@@ -281,5 +281,5 @@ func defaultExternalAuthzServer(
 		return component.NoOp(), nil
 	}
 
-	return component.OpDestroy(extAuthServer), nil
+	return component.OpDestroy(vpnAuthzServer), nil
 }

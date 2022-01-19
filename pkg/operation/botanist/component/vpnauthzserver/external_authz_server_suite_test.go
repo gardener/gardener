@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package extauthzserver_test
+package vpnauthzserver_test
 
 import (
 	"testing"
@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestExtAuthzServer(t *testing.T) {
+func TestVpnAuthzServer(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component ExtAuthzServer Suite")
+	RunSpecs(t, "Botanist Component VpnAuthzServer Suite")
 }
