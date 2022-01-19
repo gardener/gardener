@@ -29,13 +29,17 @@ import (
 // is ignored then the only returned predicate is the 'GenerationChangedPredicate'.
 func DefaultControllerPredicates(ignoreOperationAnnotation bool, preconditions ...predicate.Predicate) []predicate.Predicate {
 	if ignoreOperationAnnotation {
-		return append(preconditions, &predicate.GenerationChangedPredicate{})
+		return append(preconditions, predicate.GenerationChangedPredicate{})
 	}
 	return append(preconditions, defaultControllerPredicate)
 }
 
 var defaultControllerPredicate = predicate.Funcs{
 	CreateFunc: func(e event.CreateEvent) bool {
+		if e.Object == nil {
+			return false
+		}
+
 		// If a relevant operation annotation is present then we admit reconciliation.
 		if hasOperationAnnotation(e.Object) {
 			return true

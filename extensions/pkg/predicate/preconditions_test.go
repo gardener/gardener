@@ -20,14 +20,13 @@ import (
 	. "github.com/gardener/gardener/extensions/pkg/predicate"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
@@ -47,7 +46,7 @@ var _ = Describe("Preconditions", func() {
 		})
 
 		Describe("#Create, #Update, #Delete, #Generic", func() {
-			tests := func(run func(client.Object) interface{}) {
+			tests := func(run func(client.Object) bool) {
 				It("should return false because obj is nil", func() {
 					Expect(run(nil)).To(BeFalse())
 				})
@@ -63,10 +62,10 @@ var _ = Describe("Preconditions", func() {
 				})
 			}
 
-			tests(func(obj client.Object) interface{} { return pred.Create(event.CreateEvent{Object: obj}) })
-			tests(func(obj client.Object) interface{} { return pred.Update(event.UpdateEvent{ObjectNew: obj}) })
-			tests(func(obj client.Object) interface{} { return pred.Delete(event.DeleteEvent{Object: obj}) })
-			tests(func(obj client.Object) interface{} { return pred.Generic(event.GenericEvent{Object: obj}) })
+			tests(func(obj client.Object) bool { return pred.Create(event.CreateEvent{Object: obj}) })
+			tests(func(obj client.Object) bool { return pred.Update(event.UpdateEvent{ObjectNew: obj}) })
+			tests(func(obj client.Object) bool { return pred.Delete(event.DeleteEvent{Object: obj}) })
+			tests(func(obj client.Object) bool { return pred.Generic(event.GenericEvent{Object: obj}) })
 		})
 	})
 
@@ -74,89 +73,69 @@ var _ = Describe("Preconditions", func() {
 		var (
 			ctx = context.TODO()
 
-			ctrl  *gomock.Controller
-			cache *mockcache.MockCache
-
-			pred     predicate.Predicate
-			injector = func(predicate interface{}) {
-				Expect(inject.InjectorInto(func(into interface{}) error {
-					Expect(inject.StopChannelInto(ctx.Done(), into)).To(BeTrue())
-					Expect(inject.CacheInto(cache, into)).To(BeTrue())
-					return nil
-				}, predicate)).To(BeTrue())
-			}
+			fakeClient client.Client
+			pred       predicate.Predicate
 
 			obj       *extensionsv1alpha1.Infrastructure
 			namespace = "shoot--foo--bar"
 		)
 
 		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
-			cache = mockcache.NewMockCache(ctrl)
+			fakeClient = fakeclient.NewClientBuilder().
+				WithScheme(kubernetes.SeedScheme).
+				Build()
 
 			pred = ShootNotFailedPredicate()
-			injector(pred)
+			Expect(inject.StopChannelInto(ctx.Done(), pred)).To(BeTrue())
+			Expect(inject.ClientInto(fakeClient, pred)).To(BeTrue())
 
 			obj = &extensionsv1alpha1.Infrastructure{ObjectMeta: metav1.ObjectMeta{Namespace: namespace}}
 		})
 
-		AfterEach(func() {
-			ctrl.Finish()
-		})
-
 		Describe("#Create, #Update", func() {
-			tests := func(run func() interface{}) {
+			tests := func(run func() bool) {
 				It("should return true because shoot has no last operation", func() {
-					cache.EXPECT().Get(gomock.Any(), kutil.Key(namespace), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *extensionsv1alpha1.Cluster) error {
-						computeClusterWithShoot(
-							namespace,
-							nil,
-							nil,
-							&gardencorev1beta1.ShootStatus{},
-						).DeepCopyInto(actual)
-						return nil
-					})
+					Expect(fakeClient.Create(ctx, computeClusterWithShoot(
+						namespace,
+						nil,
+						nil,
+						&gardencorev1beta1.ShootStatus{},
+					))).To(Succeed())
 
 					Expect(run()).To(BeTrue())
 				})
 
 				It("should return true because shoot last operation state is not failed", func() {
-					cache.EXPECT().Get(gomock.Any(), kutil.Key(namespace), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *extensionsv1alpha1.Cluster) error {
-						computeClusterWithShoot(
-							namespace,
-							nil,
-							nil,
-							&gardencorev1beta1.ShootStatus{
-								LastOperation: &gardencorev1beta1.LastOperation{},
-							},
-						).DeepCopyInto(actual)
-						return nil
-					})
+					Expect(fakeClient.Create(ctx, computeClusterWithShoot(
+						namespace,
+						nil,
+						nil,
+						&gardencorev1beta1.ShootStatus{
+							LastOperation: &gardencorev1beta1.LastOperation{},
+						},
+					))).To(Succeed())
 
 					Expect(run()).To(BeTrue())
 				})
 
 				It("should return false because shoot is failed", func() {
-					cache.EXPECT().Get(gomock.Any(), kutil.Key(namespace), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *extensionsv1alpha1.Cluster) error {
-						computeClusterWithShoot(
-							namespace,
-							nil,
-							nil,
-							&gardencorev1beta1.ShootStatus{
-								LastOperation: &gardencorev1beta1.LastOperation{
-									State: gardencorev1beta1.LastOperationStateFailed,
-								},
+					Expect(fakeClient.Create(ctx, computeClusterWithShoot(
+						namespace,
+						nil,
+						nil,
+						&gardencorev1beta1.ShootStatus{
+							LastOperation: &gardencorev1beta1.LastOperation{
+								State: gardencorev1beta1.LastOperationStateFailed,
 							},
-						).DeepCopyInto(actual)
-						return nil
-					})
+						},
+					))).To(Succeed())
 
 					Expect(run()).To(BeFalse())
 				})
 			}
 
-			tests(func() interface{} { return pred.Create(event.CreateEvent{Object: obj}) })
-			tests(func() interface{} { return pred.Update(event.UpdateEvent{ObjectNew: obj}) })
+			tests(func() bool { return pred.Create(event.CreateEvent{Object: obj}) })
+			tests(func() bool { return pred.Update(event.UpdateEvent{ObjectNew: obj}) })
 		})
 
 		Describe("#Delete", func() {

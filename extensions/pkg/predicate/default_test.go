@@ -45,6 +45,10 @@ var _ = Describe("Default", func() {
 			})
 
 			Describe("#Create", func() {
+				It("should return false when object is nil", func() {
+					Expect(pred.Create(event.CreateEvent{})).To(BeFalse())
+				})
+
 				DescribeTable("return true when operation annotation is set",
 					func(operation string) {
 						obj.SetAnnotations(map[string]string{"gardener.cloud/operation": operation})

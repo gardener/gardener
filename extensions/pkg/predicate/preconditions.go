@@ -21,11 +21,9 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	contextutil "github.com/gardener/gardener/pkg/utils/context"
 
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 // IsInGardenNamespacePredicate is a predicate which returns true when the provided object is in the 'garden' namespace.
@@ -40,12 +38,8 @@ func ShootNotFailedPredicate() predicate.Predicate {
 }
 
 type shootNotFailedPredicate struct {
-	ctx   context.Context
-	cache cache.Cache
-}
-
-func (p *shootNotFailedPredicate) InjectFunc(f inject.Func) error {
-	return f(p)
+	ctx    context.Context
+	reader client.Reader
 }
 
 func (p *shootNotFailedPredicate) InjectStopChannel(stopChan <-chan struct{}) error {
@@ -53,8 +47,8 @@ func (p *shootNotFailedPredicate) InjectStopChannel(stopChan <-chan struct{}) er
 	return nil
 }
 
-func (p *shootNotFailedPredicate) InjectCache(cache cache.Cache) error {
-	p.cache = cache
+func (p *shootNotFailedPredicate) InjectClient(client client.Client) error {
+	p.reader = client
 	return nil
 }
 
@@ -63,7 +57,7 @@ func (p *shootNotFailedPredicate) Create(e event.CreateEvent) bool {
 		return false
 	}
 
-	cluster, err := extensionscontroller.GetCluster(p.ctx, p.cache, e.Object.GetNamespace())
+	cluster, err := extensionscontroller.GetCluster(p.ctx, p.reader, e.Object.GetNamespace())
 	if err != nil {
 		logger.Error(err, "Could not check if shoot is failed")
 		return false
