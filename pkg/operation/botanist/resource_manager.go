@@ -110,6 +110,14 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 		}
 	)
 
+	if b.Shoot.Components.ControlPlane.ResourceManager.GetReplicas() == nil {
+		replicaCount, err := b.determineControllerReplicas(ctx, v1beta1constants.DeploymentNameGardenerResourceManager, 3)
+		if err != nil {
+			return err
+		}
+		b.Shoot.Components.ControlPlane.ResourceManager.SetReplicas(&replicaCount)
+	}
+
 	mustBootstrap, err := b.mustBootstrapGardenerResourceManager(ctx)
 	if err != nil {
 		return err
@@ -151,8 +159,8 @@ func (b *Botanist) ScaleGardenerResourceManagerToOne(ctx context.Context) error 
 }
 
 func (b *Botanist) mustBootstrapGardenerResourceManager(ctx context.Context) (bool, error) {
-	if b.Shoot.HibernationEnabled && b.Shoot.GetInfo().Status.IsHibernated && b.Shoot.Components.ControlPlane.ResourceManager.GetReplicas() == 0 {
-		return false, nil // Shoot is already hibernated and GRM should not be scaled up
+	if pointer.Int32Deref(b.Shoot.Components.ControlPlane.ResourceManager.GetReplicas(), 0) == 0 {
+		return false, nil // GRM should not be scaled up, hence no need to bootstrap.
 	}
 
 	shootAccessSecret := gutil.NewShootAccessSecret(resourcemanager.SecretNameShootAccess, b.Shoot.SeedNamespace)
