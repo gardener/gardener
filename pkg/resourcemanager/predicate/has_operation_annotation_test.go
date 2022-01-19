@@ -15,11 +15,11 @@
 package predicate_test
 
 import (
-	. "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	. "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
-	"github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
@@ -62,10 +62,10 @@ var _ = Describe("Predicate", func() {
 
 				predicate := HasOperationAnnotation()
 
-				gomega.Expect(predicate.Create(createEvent)).To(gomega.BeTrue())
-				gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeTrue())
-				gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeTrue())
-				gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeTrue())
+				Expect(predicate.Create(createEvent)).To(BeTrue())
+				Expect(predicate.Update(updateEvent)).To(BeTrue())
+				Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+				Expect(predicate.Generic(genericEvent)).To(BeTrue())
 			},
 
 			Entry("reconcile", "reconcile"),
@@ -76,10 +76,10 @@ var _ = Describe("Predicate", func() {
 		It("should not match", func() {
 			predicate := HasOperationAnnotation()
 
-			gomega.Expect(predicate.Create(createEvent)).To(gomega.BeFalse())
-			gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeFalse())
-			gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeTrue())
-			gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeFalse())
+			Expect(predicate.Create(createEvent)).To(BeFalse())
+			Expect(predicate.Update(updateEvent)).To(BeFalse())
+			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+			Expect(predicate.Generic(genericEvent)).To(BeFalse())
 		})
 	})
 })
