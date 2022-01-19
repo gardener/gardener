@@ -515,6 +515,14 @@ func (c *validationContext) validateShootNetworks() field.ErrorList {
 			}
 		}
 
+		// validate network disjointedness within shoot network
+		allErrs = append(allErrs, cidrvalidation.ValidateShootNetworkDisjointedness(
+			path,
+			c.shoot.Spec.Networking.Nodes,
+			c.shoot.Spec.Networking.Pods,
+			c.shoot.Spec.Networking.Services,
+		)...)
+
 		// validate network disjointedness with seed networks if shoot is being (re)scheduled
 		if !apiequality.Semantic.DeepEqual(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName) {
 			allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
