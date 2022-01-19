@@ -33,7 +33,6 @@ import (
 )
 
 var _ = Describe("Preconditions", func() {
-
 	Describe("IsInGardenNamespacePredicate", func() {
 		var (
 			pred predicate.Predicate

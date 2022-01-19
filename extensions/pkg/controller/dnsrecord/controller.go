@@ -24,6 +24,7 @@ import (
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 const (
@@ -59,7 +60,7 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 		// 'garden' namespace and don't belong to a Shoot. Most other DNSRecord resources are created in regular shoot
 		// namespaces (in such cases we want to check whether the respective Shoot is failed). Consequently, we add both
 		// preconditions and ensure at least one of them applies.
-		predicate.Or(
+		predicateutils.Or(
 			extensionspredicate.IsInGardenNamespacePredicate,
 			extensionspredicate.ShootNotFailedPredicate(),
 		),
