@@ -427,7 +427,7 @@ func deployNeededInstallations(
 			continue
 		}
 
-		registrationLog.Info("Deploying wanted ControllerInstallation for ControllerRegistration", registrationName)
+		registrationLog.Info("Deploying wanted ControllerInstallation for ControllerRegistration")
 
 		var (
 			controllerDeployment   *gardencorev1beta1.ControllerDeployment
