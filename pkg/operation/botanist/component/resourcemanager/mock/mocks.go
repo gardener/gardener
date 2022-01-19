@@ -64,10 +64,10 @@ func (mr *MockInterfaceMockRecorder) Destroy(arg0 interface{}) *gomock.Call {
 }
 
 // GetReplicas mocks base method.
-func (m *MockInterface) GetReplicas() int32 {
+func (m *MockInterface) GetReplicas() *int32 {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetReplicas")
-	ret0, _ := ret[0].(int32)
+	ret0, _ := ret[0].(*int32)
 	return ret0
 }
 
@@ -78,7 +78,7 @@ func (mr *MockInterfaceMockRecorder) GetReplicas() *gomock.Call {
 }
 
 // SetReplicas mocks base method.
-func (m *MockInterface) SetReplicas(arg0 int32) {
+func (m *MockInterface) SetReplicas(arg0 *int32) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetReplicas", arg0)
 }

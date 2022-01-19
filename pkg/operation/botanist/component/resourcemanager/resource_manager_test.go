@@ -32,6 +32,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -274,7 +275,7 @@ var _ = Describe("ResourceManager", func() {
 			MaxConcurrentTokenRequestorWorkers:   &maxConcurrentTokenRequestorWorkers,
 			MaxConcurrentRootCAPublisherWorkers:  &maxConcurrentRootCAPublisherWorkers,
 			RenewDeadline:                        &renewDeadline,
-			Replicas:                             replicas,
+			Replicas:                             &replicas,
 			ResourceClass:                        &resourceClass,
 			RetryPeriod:                          &retryPeriod,
 			SyncPeriod:                           &syncPeriod,
@@ -1679,8 +1680,8 @@ subjects:
 			resourceManager = New(nil, "", "", Values{})
 			Expect(resourceManager.GetReplicas()).To(BeZero())
 
-			resourceManager.SetReplicas(replicas)
-			Expect(resourceManager.GetReplicas()).To(Equal(replicas))
+			resourceManager.SetReplicas(&replicas)
+			Expect(resourceManager.GetReplicas()).To(PointTo(Equal(replicas)))
 		})
 	})
 })

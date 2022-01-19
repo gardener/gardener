@@ -69,7 +69,6 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		MaxConcurrentTokenInvalidatorWorkers: pointer.Int32(5),
 		MaxConcurrentTokenRequestorWorkers:   pointer.Int32(5),
 		MaxConcurrentRootCAPublisherWorkers:  pointer.Int32(5),
-		Replicas:                             int32(3),
 		SyncPeriod:                           utils.DurationPtr(time.Minute),
 		TargetDiffersFromSourceCluster:       true,
 		TargetDisableCache:                   pointer.Bool(true),
@@ -80,14 +79,6 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 				corev1.ResourceMemory: resource.MustParse("30Mi"),
 			},
 		},
-	}
-
-	// ensure grm is present during hibernation (if the cluster is not hibernated yet) to reconcile any changes to
-	// MRs (e.g. caused by extension upgrades) that are necessary for completing the hibernation flow.
-	// grm is scaled down later on as part of the HibernateControlPlane step, so we only specify replicas=0 if
-	// the shoot is already hibernated.
-	if b.Shoot.HibernationEnabled && b.Shoot.GetInfo().Status.IsHibernated {
-		cfg.Replicas = 0
 	}
 
 	return resourcemanager.New(

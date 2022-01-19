@@ -134,9 +134,9 @@ var (
 type Interface interface {
 	component.DeployWaiter
 	// GetReplicas gets the Replicas field in the Values.
-	GetReplicas() int32
+	GetReplicas() *int32
 	// SetReplicas sets the Replicas field in the Values.
-	SetReplicas(int32)
+	SetReplicas(*int32)
 	// SetSecrets sets the secrets.
 	SetSecrets(Secrets)
 }
@@ -185,7 +185,7 @@ type Values struct {
 	// MaxConcurrentRootCAPublisherWorkers configures the number of worker threads for concurrent root ca publishing reconciliations
 	MaxConcurrentRootCAPublisherWorkers *int32
 	// Replicas is the number of replicas for the gardener-resource-manager deployment.
-	Replicas int32
+	Replicas *int32
 	// RenewDeadline configures the renew deadline for leader election
 	RenewDeadline *time.Duration
 	// ResourceClass is used to filter resource resources
@@ -247,7 +247,7 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 	}
 
 	// TODO(rfranzke): Remove in a future release.
-	if r.values.TargetDiffersFromSourceCluster && r.values.Replicas > 0 {
+	if r.values.TargetDiffersFromSourceCluster && pointer.Int32Deref(r.values.Replicas, 0) > 0 {
 		return kutil.DeleteObject(ctx, r.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: r.namespace}})
 	}
 
@@ -490,7 +490,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, deployment, func() error {
 		deployment.Labels = r.getLabels()
 
-		deployment.Spec.Replicas = &r.values.Replicas
+		deployment.Spec.Replicas = r.values.Replicas
 		deployment.Spec.RevisionHistoryLimit = pointer.Int32(1)
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: appLabel()}
 
@@ -1085,10 +1085,10 @@ func (r *resourceManager) Wait(ctx context.Context) error {
 func (r *resourceManager) WaitCleanup(_ context.Context) error { return nil }
 
 // GetReplicas returns Replicas field in the Values.
-func (r *resourceManager) GetReplicas() int32 { return r.values.Replicas }
+func (r *resourceManager) GetReplicas() *int32 { return r.values.Replicas }
 
 // SetReplicas sets the Replicas field in the Values.
-func (r *resourceManager) SetReplicas(replicas int32) { r.values.Replicas = replicas }
+func (r *resourceManager) SetReplicas(replicas *int32) { r.values.Replicas = replicas }
 
 // SetSecrets sets the secrets for the gardener-resource-manager.
 func (r *resourceManager) SetSecrets(s Secrets) { r.secrets = s }
