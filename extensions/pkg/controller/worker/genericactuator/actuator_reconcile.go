@@ -23,9 +23,7 @@ import (
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -58,13 +56,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 	// all remaining worker nodes. Hence, we cannot set the replicas=0 here (otherwise it would be offline and not able to delete the nodes).
 	var replicaFunc = func() (int32, error) {
 		if extensionscontroller.IsHibernated(cluster) {
-			deployment := &appsv1.Deployment{}
-			if err := a.client.Get(ctx, kutil.Key(worker.Namespace, a.mcmName), deployment); err != nil && !apierrors.IsNotFound(err) {
-				return 0, err
-			}
-			if replicas := deployment.Spec.Replicas; replicas != nil {
-				return *replicas, nil
-			}
+			return kutil.CurrentReplicaCountForDeployment(ctx, a.client, worker.Namespace, a.mcmName)
 		}
 		return 1, nil
 	}

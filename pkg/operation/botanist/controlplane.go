@@ -152,6 +152,24 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 	)
 }
 
+func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentName string, defaultReplicas int32) (int32, error) {
+	isCreateOrRestoreOperation := b.Shoot.GetInfo().Status.LastOperation != nil &&
+		(b.Shoot.GetInfo().Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate ||
+			b.Shoot.GetInfo().Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore)
+
+	if (isCreateOrRestoreOperation && b.Shoot.HibernationEnabled) ||
+		(!isCreateOrRestoreOperation && b.Shoot.HibernationEnabled == b.Shoot.GetInfo().Status.IsHibernated) {
+		// Shoot is being created or restored with .spec.hibernation.enabled=true or
+		// shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated,
+		// so keep the replicas which are already available.
+		return kutil.CurrentReplicaCountForDeployment(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, deploymentName)
+	}
+
+	// Shoot is being reconciled with .spec.hibernation.enabled!=.status.isHibernated, so deploy the controller.
+	// In case the shoot is being hibernated then it will be scaled down to zero later after all machines are gone.
+	return defaultReplicas, nil
+}
+
 // HibernateControlPlane hibernates the entire control plane if the shoot shall be hibernated.
 func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	if b.K8sShootClient != nil {

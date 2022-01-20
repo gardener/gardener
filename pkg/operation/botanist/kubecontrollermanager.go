@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/charts"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
@@ -67,7 +66,7 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 
 // DeployKubeControllerManager deploys the Kubernetes Controller Manager.
 func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
-	replicaCount, err := b.determineKubeControllerManagerReplicas(ctx)
+	replicaCount, err := b.determineControllerReplicas(ctx, v1beta1constants.DeploymentNameKubeControllerManager, 1)
 	if err != nil {
 		return err
 	}
@@ -92,22 +91,4 @@ func (b *Botanist) WaitForKubeControllerManagerToBeActive(ctx context.Context) e
 // ScaleKubeControllerManagerToOne scales kube-controller-manager replicas to one.
 func (b *Botanist) ScaleKubeControllerManagerToOne(ctx context.Context) error {
 	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager), 1)
-}
-
-func (b *Botanist) determineKubeControllerManagerReplicas(ctx context.Context) (int32, error) {
-	isCreateOrRestoreOperation := b.Shoot.GetInfo().Status.LastOperation != nil &&
-		(b.Shoot.GetInfo().Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate ||
-			b.Shoot.GetInfo().Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore)
-
-	if isCreateOrRestoreOperation && b.Shoot.HibernationEnabled ||
-		!isCreateOrRestoreOperation && b.Shoot.HibernationEnabled == b.Shoot.GetInfo().Status.IsHibernated {
-		// shoot is being created or restored with .spec.hibernation.enabled=true or
-		// shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated,
-		// so keep the replicas which are already available.
-		return kutil.CurrentReplicaCountForDeployment(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager)
-	}
-
-	// shoot is being reconciled with .spec.hibernation.enabled!=.status.isHibernated, so deploy KCM. in case the
-	// shoot is being hibernated then it will be scaled down to zero later after all machines are gone
-	return 1, nil
 }

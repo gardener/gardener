@@ -69,7 +69,6 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		MaxConcurrentTokenInvalidatorWorkers: pointer.Int32(5),
 		MaxConcurrentTokenRequestorWorkers:   pointer.Int32(5),
 		MaxConcurrentRootCAPublisherWorkers:  pointer.Int32(5),
-		Replicas:                             int32(3),
 		SyncPeriod:                           utils.DurationPtr(time.Minute),
 		TargetDiffersFromSourceCluster:       true,
 		TargetDisableCache:                   pointer.Bool(true),
@@ -80,14 +79,6 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 				corev1.ResourceMemory: resource.MustParse("30Mi"),
 			},
 		},
-	}
-
-	// ensure grm is present during hibernation (if the cluster is not hibernated yet) to reconcile any changes to
-	// MRs (e.g. caused by extension upgrades) that are necessary for completing the hibernation flow.
-	// grm is scaled down later on as part of the HibernateControlPlane step, so we only specify replicas=0 if
-	// the shoot is already hibernated.
-	if b.Shoot.HibernationEnabled && b.Shoot.GetInfo().Status.IsHibernated {
-		cfg.Replicas = 0
 	}
 
 	return resourcemanager.New(
@@ -118,6 +109,14 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 			RootCA:   &component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
 		}
 	)
+
+	if b.Shoot.Components.ControlPlane.ResourceManager.GetReplicas() == nil {
+		replicaCount, err := b.determineControllerReplicas(ctx, v1beta1constants.DeploymentNameGardenerResourceManager, 3)
+		if err != nil {
+			return err
+		}
+		b.Shoot.Components.ControlPlane.ResourceManager.SetReplicas(&replicaCount)
+	}
 
 	mustBootstrap, err := b.mustBootstrapGardenerResourceManager(ctx)
 	if err != nil {
@@ -160,8 +159,8 @@ func (b *Botanist) ScaleGardenerResourceManagerToOne(ctx context.Context) error 
 }
 
 func (b *Botanist) mustBootstrapGardenerResourceManager(ctx context.Context) (bool, error) {
-	if b.Shoot.HibernationEnabled && b.Shoot.GetInfo().Status.IsHibernated && b.Shoot.Components.ControlPlane.ResourceManager.GetReplicas() == 0 {
-		return false, nil // Shoot is already hibernated and GRM should not be scaled up
+	if pointer.Int32Deref(b.Shoot.Components.ControlPlane.ResourceManager.GetReplicas(), 0) == 0 {
+		return false, nil // GRM should not be scaled up, hence no need to bootstrap.
 	}
 
 	shootAccessSecret := gutil.NewShootAccessSecret(resourcemanager.SecretNameShootAccess, b.Shoot.SeedNamespace)

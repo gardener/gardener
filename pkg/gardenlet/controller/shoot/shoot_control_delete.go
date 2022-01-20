@@ -41,6 +41,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -315,7 +316,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		setGardenerResourceManagerReplicas = g.Add(flow.Task{
 			Name: "Setting gardener-resource-manager replicas to 3",
 			Fn: flow.TaskFn(func(_ context.Context) error {
-				botanist.Shoot.Components.ControlPlane.ResourceManager.SetReplicas(3)
+				botanist.Shoot.Components.ControlPlane.ResourceManager.SetReplicas(pointer.Int32(3))
 				return nil
 			}).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),

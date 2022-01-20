@@ -30,16 +30,19 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	mockresourcemanager "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -150,6 +153,13 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 				},
 				SeedNamespace: seedNamespace,
 			}
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Status: gardencorev1beta1.ShootStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						Type: gardencorev1beta1.LastOperationTypeReconcile,
+					},
+				},
+			})
 
 			secrets = resourcemanager.Secrets{
 				ServerCA: component.Secret{Name: secretNameCA, Checksum: secretChecksumCA, Data: secretDataServerCA},
@@ -181,32 +191,121 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 		})
 
 		Context("w/o bootstrapping", func() {
-			It("should not bootstrap when the shoot is hibernated and GRM should not be scaled up", func() {
-				botanist.Shoot.HibernationEnabled = true
-				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{IsHibernated: true}})
+			Context("when GRM should not be scaled up", func() {
+				AfterEach(func() {
+					gomock.InOrder(
+						// replicas are set to 0, i.e., GRM should not be scaled up
+						resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(0)),
 
-				gomock.InOrder(
-					// replicas are set to 0, i.e., GRM should not be scaled up
-					resourceManager.EXPECT().GetReplicas().Return(int32(0)),
+						// always delete bootstrap kubeconfig
+						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, opts ...client.DeleteOption) error {
+							Expect(obj.Name).To(Equal(bootstrapKubeconfigSecret.Name))
+							Expect(obj.Namespace).To(Equal(bootstrapKubeconfigSecret.Namespace))
+							return nil
+						}),
 
-					// always delete bootstrap kubeconfig
-					c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, opts ...client.DeleteOption) error {
-						Expect(obj.Name).To(Equal(bootstrapKubeconfigSecret.Name))
-						Expect(obj.Namespace).To(Equal(bootstrapKubeconfigSecret.Namespace))
-						return nil
-					}),
+						// set secrets
+						resourceManager.EXPECT().SetSecrets(secrets),
+					)
 
-					// set secrets
-					resourceManager.EXPECT().SetSecrets(secrets),
-				)
+					resourceManager.EXPECT().Deploy(ctx)
+					Expect(botanist.DeployGardenerResourceManager(ctx)).To(Succeed())
+				})
 
-				resourceManager.EXPECT().Deploy(ctx)
-				Expect(botanist.DeployGardenerResourceManager(ctx)).To(Succeed())
+				It("due to shoot reconciling and hibernated", func() {
+					botanist.Shoot.HibernationEnabled = true
+					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							Hibernation: &gardencorev1beta1.Hibernation{
+								Enabled: pointer.Bool(true),
+							},
+						},
+						Status: gardencorev1beta1.ShootStatus{
+							LastOperation: &gardencorev1beta1.LastOperation{
+								Type: gardencorev1beta1.LastOperationTypeReconcile,
+							},
+							IsHibernated: true,
+						},
+					})
+
+					gomock.InOrder(
+						resourceManager.EXPECT().GetReplicas(),
+						c.EXPECT().Get(ctx, kutil.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
+					)
+				})
+
+				It("due to shoot reconciling and not hibernated but deployment replicas are 0", func() {
+					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+						Status: gardencorev1beta1.ShootStatus{
+							LastOperation: &gardencorev1beta1.LastOperation{
+								Type: gardencorev1beta1.LastOperationTypeReconcile,
+							},
+						},
+					})
+
+					gomock.InOrder(
+						resourceManager.EXPECT().GetReplicas(),
+						c.EXPECT().Get(ctx, kutil.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
+					)
+				})
+
+				It("due to shoot creation and hibernated", func() {
+					botanist.Shoot.HibernationEnabled = true
+					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							Hibernation: &gardencorev1beta1.Hibernation{
+								Enabled: pointer.Bool(true),
+							},
+						},
+						Status: gardencorev1beta1.ShootStatus{
+							LastOperation: &gardencorev1beta1.LastOperation{
+								Type: gardencorev1beta1.LastOperationTypeCreate,
+							},
+							IsHibernated: true,
+						},
+					})
+
+					gomock.InOrder(
+						resourceManager.EXPECT().GetReplicas(),
+						c.EXPECT().Get(ctx, kutil.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
+					)
+				})
+
+				It("due to shoot restoration and hibernated", func() {
+					botanist.Shoot.HibernationEnabled = true
+					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							Hibernation: &gardencorev1beta1.Hibernation{
+								Enabled: pointer.Bool(true),
+							},
+						},
+						Status: gardencorev1beta1.ShootStatus{
+							LastOperation: &gardencorev1beta1.LastOperation{
+								Type: gardencorev1beta1.LastOperationTypeRestore,
+							},
+							IsHibernated: true,
+						},
+					})
+
+					gomock.InOrder(
+						resourceManager.EXPECT().GetReplicas(),
+						c.EXPECT().Get(ctx, kutil.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
+					)
+				})
 			})
 
 			Context("shoot is not hibernated", func() {
 				BeforeEach(func() {
 					gomock.InOrder(
+						resourceManager.EXPECT().GetReplicas(),
+						c.EXPECT().Get(ctx, kutil.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
+						resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(3)),
+
 						// ensure bootstrapping prerequisites are not met
 						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
 							obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(time.Hour).Format(time.RFC3339)}
@@ -332,15 +431,28 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 				Context("shoot is not hibernated", func() {
 					BeforeEach(func() {
 						botanist.Shoot.HibernationEnabled = false
+
+						gomock.InOrder(
+							resourceManager.EXPECT().GetReplicas(),
+							c.EXPECT().Get(ctx, kutil.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+							resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
+							resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(3)),
+						)
 					})
 
 					tests()
 				})
 
-				Context("shoot is in the process of being hibernated", func() {
+				Context("shoot is in the process of being woken-up", func() {
 					BeforeEach(func() {
 						botanist.Shoot.HibernationEnabled = false
 						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{IsHibernated: true}})
+
+						gomock.InOrder(
+							resourceManager.EXPECT().GetReplicas(),
+							resourceManager.EXPECT().SetReplicas(pointer.Int32(3)),
+							resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(3)),
+						)
 					})
 
 					tests()
@@ -350,7 +462,7 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 					BeforeEach(func() {
 						botanist.Shoot.HibernationEnabled = true
 						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{IsHibernated: true}})
-						resourceManager.EXPECT().GetReplicas().Return(int32(3))
+						resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(3)).Times(2)
 					})
 
 					tests()
@@ -360,6 +472,7 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 			Context("with failure", func() {
 				BeforeEach(func() {
 					// ensure bootstrapping preconditions are met
+					resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(3)).Times(2)
 					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 				})
 

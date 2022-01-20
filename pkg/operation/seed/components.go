@@ -119,7 +119,7 @@ func defaultGardenerResourceManager(c client.Client, imageVector imagevector.Ima
 		MaxConcurrentTokenInvalidatorWorkers: pointer.Int32(5),
 		MaxConcurrentRootCAPublisherWorkers:  pointer.Int32(5),
 		HealthSyncPeriod:                     utils.DurationPtr(time.Minute),
-		Replicas:                             int32(3),
+		Replicas:                             pointer.Int32(3),
 		ResourceClass:                        pointer.String(v1beta1constants.SeedResourceManagerClass),
 		SyncPeriod:                           utils.DurationPtr(time.Hour),
 		VPA: &resourcemanager.VPAConfig{
