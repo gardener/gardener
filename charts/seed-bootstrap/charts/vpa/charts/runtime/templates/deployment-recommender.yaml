@@ -54,6 +54,8 @@ spec:
         - --pod-recommendation-min-memory-mb=10
         - --recommendation-margin-fraction={{ .Values.recommender.recommendationMarginFraction }}
         - --recommender-interval={{ .Values.recommender.interval }}
+        - --kube-api-qps={{ .Values.recommender.kubeApiQps }}
+        - --kube-api-burst={{ .Values.recommender.kubeApiBurst }}
 {{- if not .Values.recommender.createServiceAccount }}
         env:
         - name: KUBERNETES_SERVICE_HOST

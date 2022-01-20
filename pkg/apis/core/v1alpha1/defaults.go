@@ -341,6 +341,14 @@ func SetDefaults_VerticalPodAutoscaler(obj *VerticalPodAutoscaler) {
 		v := DefaultRecommenderInterval
 		obj.RecommenderInterval = &v
 	}
+	if obj.KubeApiQps == nil {
+		v := DefaultKubeApiQps
+		obj.KubeApiQps = &v
+	}
+	if obj.KubeApiBurst == nil {
+		v := DefaultKubeApiBurst
+		obj.KubeApiBurst = &v
+	}
 }
 
 // SetDefaults_Worker sets default values for Worker objects.

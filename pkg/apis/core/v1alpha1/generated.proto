@@ -2509,6 +2509,14 @@ message VerticalPodAutoscaler {
   // RecommenderInterval is the interval how often metrics should be fetched (default: 1m0s).
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration recommenderInterval = 8;
+
+  // KubeApiQps is the QPS limit when making requests to Kubernetes apiserver
+  // +optional
+  optional double kubeApiQps = 9;
+
+  // KubeApiBurst is the QPS burst limit when making requests to Kubernetes apiserver
+  // +optional
+  optional double kubeApiBurst = 10;
 }
 
 // Volume contains information about the volume type and size.

@@ -4111,6 +4111,16 @@ func (in *VerticalPodAutoscaler) DeepCopyInto(out *VerticalPodAutoscaler) {
 		*out = new(metav1.Duration)
 		**out = **in
 	}
+	if in.KubeApiQps != nil {
+		in, out := &in.KubeApiQps, &out.KubeApiQps
+		*out = new(float64)
+		**out = **in
+	}
+	if in.KubeApiBurst != nil {
+		in, out := &in.KubeApiBurst, &out.KubeApiBurst
+		*out = new(float64)
+		**out = **in
+	}
 	return
 }
 

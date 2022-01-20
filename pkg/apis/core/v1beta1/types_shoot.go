@@ -476,6 +476,12 @@ type VerticalPodAutoscaler struct {
 	// RecommenderInterval is the interval how often metrics should be fetched (default: 1m0s).
 	// +optional
 	RecommenderInterval *metav1.Duration `json:"recommenderInterval,omitempty" protobuf:"bytes,8,opt,name=recommenderInterval"`
+	// KubeApiQps is the QPS limit when making requests to Kubernetes apiserver
+	// +optional
+	KubeApiQps *float64 `json:"kubeApiQps,omitempty" protobuf:"fixed64,9,opt,name=kubeApiQps"`
+	// KubeApiBurst is the QPS burst limit when making requests to Kubernetes apiserver
+	// +optional
+	KubeApiBurst *float64 `json:"kubeApiBurst,omitempty" protobuf:"fixed64,10,opt,name=kubeApiBurst"`
 }
 
 const (
@@ -487,6 +493,10 @@ const (
 	DefaultEvictionTolerance = 0.5
 	// DefaultRecommendationMarginFraction is the default value for the RecommendationMarginFraction field in the VPA configuration.
 	DefaultRecommendationMarginFraction = 0.15
+	// DefaultKubeApiQps is the default value for the KubeApiQps in the VPA configuration
+	DefaultKubeApiQps = 5.0
+	// DefaultKubeApiBurst is the default value for the KubeApiBurst in the VPA configuration
+	DefaultKubeApiBurst = 10.0
 )
 
 var (

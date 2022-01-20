@@ -9922,6 +9922,30 @@ Kubernetes meta/v1.Duration
 <p>RecommenderInterval is the interval how often metrics should be fetched (default: 1m0s).</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>kubeApiQps</code></br>
+<em>
+float64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeApiQps is the QPS limit when making requests to Kubernetes apiserver</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeApiBurst</code></br>
+<em>
+float64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeApiBurst is the QPS burst limit when making requests to Kubernetes apiserver</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.Volume">Volume

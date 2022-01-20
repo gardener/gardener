@@ -86,6 +86,8 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 			"createServiceAccount":         false,
 			"recommendationMarginFraction": gardencorev1beta1.DefaultRecommendationMarginFraction,
 			"interval":                     gardencorev1beta1.DefaultRecommenderInterval,
+			"kubeApiQps":                   gardencorev1beta1.DefaultKubeApiQps,
+			"kubeApiBurst":                 gardencorev1beta1.DefaultKubeApiBurst,
 		}
 		updater = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),
@@ -133,6 +135,12 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 		}
 		if val := verticalPodAutoscaler.RecommenderInterval; val != nil {
 			recommender["interval"] = *val
+		}
+		if val := verticalPodAutoscaler.KubeApiQps; val != nil {
+			recommender["kubeApiQps"] = *val
+		}
+		if val := verticalPodAutoscaler.KubeApiBurst; val != nil {
+			recommender["kubeApiBurst"] = *val
 		}
 	}
 

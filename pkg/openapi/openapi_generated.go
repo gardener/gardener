@@ -7687,6 +7687,20 @@ func schema_pkg_apis_core_v1alpha1_VerticalPodAutoscaler(ref common.ReferenceCal
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"kubeApiQps": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubeApiQps is the QPS limit when making requests to Kubernetes apiserver",
+							Type:        []string{"number"},
+							Format:      "double",
+						},
+					},
+					"kubeApiBurst": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubeApiBurst is the QPS burst limit when making requests to Kubernetes apiserver",
+							Type:        []string{"number"},
+							Format:      "double",
+						},
+					},
 				},
 				Required: []string{"enabled"},
 			},
@@ -14442,6 +14456,20 @@ func schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref common.ReferenceCall
 						SchemaProps: spec.SchemaProps{
 							Description: "RecommenderInterval is the interval how often metrics should be fetched (default: 1m0s).",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"kubeApiQps": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubeApiQps is the QPS limit when making requests to Kubernetes apiserver",
+							Type:        []string{"number"},
+							Format:      "double",
+						},
+					},
+					"kubeApiBurst": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubeApiBurst is the QPS burst limit when making requests to Kubernetes apiserver",
+							Type:        []string{"number"},
+							Format:      "double",
 						},
 					},
 				},

@@ -390,6 +390,10 @@ type VerticalPodAutoscaler struct {
 	UpdaterInterval *metav1.Duration
 	// RecommenderInterval is the interval how often metrics should be fetched (default: 1m0s).
 	RecommenderInterval *metav1.Duration
+	// KubeApiQps is the QPS limit when making requests to Kubernetes apiserver
+	KubeApiQps *float64
+	// KubeApiBurst is the QPS burst limit when making requests to Kubernetes apiserver
+	KubeApiBurst *float64
 }
 
 // KubernetesConfig contains common configuration fields for the control plane components.

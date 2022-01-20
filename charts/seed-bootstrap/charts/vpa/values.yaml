@@ -29,6 +29,8 @@ recommender:
   createServiceAccount: true
   interval: 1m0s
   recommendationMarginFraction: 0.05
+  kubeApiQps: 6.0
+  kubeApiBurst: 11.0
 
 updater:
   replicas: 1
