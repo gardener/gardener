@@ -156,7 +156,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// bastions for it, so this check here is just a safety measure.
 	if !equality.Semantic.DeepEqual(shoot.Spec.SeedName, bastion.Spec.SeedName) {
 		log.Info("Deleting bastion because the referenced Shoot has been migrated to another Seed",
-			"oldSeedNew", bastion.Spec.SeedName, "newSeedName", shoot.Spec.SeedName)
+			"oldSeedName", bastion.Spec.SeedName, "newSeedName", shoot.Spec.SeedName)
 		return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))
 	}
 

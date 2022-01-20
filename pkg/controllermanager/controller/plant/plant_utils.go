@@ -95,6 +95,6 @@ func getRegionNameForNode(node corev1.Node) string {
 	return Unknown
 }
 
-func isPlantSecret(plant gardencorev1beta1.Plant, secretKey client.ObjectKey) bool {
+func isPlantSecret(plant *gardencorev1beta1.Plant, secretKey client.ObjectKey) bool {
 	return plant.Spec.SecretRef.Name == secretKey.Name && plant.Namespace == secretKey.Namespace
 }

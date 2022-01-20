@@ -50,14 +50,15 @@ func (c *Controller) reconcilePlantForMatchingSecret(ctx context.Context, obj in
 		return
 	}
 
-	for _, plant := range plantList.Items {
+	for _, p := range plantList.Items {
+		plant := &p
 		if isPlantSecret(plant, kutil.Key(secret.Namespace, secret.Name)) {
-			key, err := cache.MetaNamespaceKeyFunc(&plant)
+			key, err := cache.MetaNamespaceKeyFunc(plant)
 			if err != nil {
-				c.log.Error(err, "Couldn't get key for object", "object", obj)
+				c.log.Error(err, "Couldn't get key for Plant", "plant", plant)
 				return
 			}
-			c.log.Info("Enqueuing Plant after secret change", "plant", client.ObjectKeyFromObject(&plant), "secret", client.ObjectKeyFromObject(secret))
+			c.log.Info("Enqueuing Plant after secret change", "plant", client.ObjectKeyFromObject(plant), "secret", client.ObjectKeyFromObject(secret))
 			c.plantQueue.Add(key)
 			return
 		}
