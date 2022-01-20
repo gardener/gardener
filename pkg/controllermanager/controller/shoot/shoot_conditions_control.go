@@ -38,26 +38,30 @@ func (c *Controller) shootConditionsAdd(obj interface{}) {
 	c.shootConditionsQueue.Add(key)
 }
 
-func (c *Controller) filterSeedForShootConditions(obj, oldObj, _ client.Object, deleted bool) bool {
+func (c *Controller) filterSeedForShootConditions(obj, oldObj, _ client.Object, _ bool) bool {
 	seed, ok := obj.(*gardencorev1beta1.Seed)
 	if !ok {
 		return false
 	}
 
-	if oldObj != nil {
-		oldSeed, ok := oldObj.(*gardencorev1beta1.Seed)
-		if !ok {
-			return false
-		}
-
-		if !apiequality.Semantic.DeepEqual(seed.Status.Conditions, oldSeed.Status.Conditions) {
-			logger.Logger.Debugf("Seed %s conditions changed", seed.Name)
-			return true
-		}
+	// We want to enqueue in case of deletion events to remove conditions.
+	// We want to enqueue in case of add events as they can indicate restarts or reflector relists.
+	if oldObj == nil {
+		return true
 	}
 
-	if deleted {
-		logger.Logger.Debugf("Seed %s deleted", seed.Name)
+	oldSeed, ok := oldObj.(*gardencorev1beta1.Seed)
+	if !ok {
+		return false
+	}
+
+	if !apiequality.Semantic.DeepEqual(seed.Status.Conditions, oldSeed.Status.Conditions) {
+		logger.Logger.Debugf("Seed %s conditions changed", seed.Name)
+		return true
+	}
+
+	// We want to enqueue on periodic cache resync events to catch up if we missed updates.
+	if seed.ResourceVersion == oldSeed.ResourceVersion {
 		return true
 	}
 
