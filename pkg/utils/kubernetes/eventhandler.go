@@ -87,7 +87,7 @@ type ControlledResourceEventHandler struct {
 	// Scheme is used to resolve types to their GroupKinds.
 	Scheme *runtime.Scheme
 	// Logger is used to log messages.
-	Logger *logrus.Logger
+	Logger logrus.FieldLogger
 }
 
 // ControllerType contains information about a controller type.

@@ -176,10 +176,43 @@ See [Dave Cheney's post](https://dave.cheney.net/2015/11/05/lets-talk-about-logg
 
   Earlier, we often used `kutil.ObjectName()` for logging object keys, which encodes them into a flat string like `foo/bar`. However, this flat string cannot be processed so easily by logging stacks (or `jq`) like a structured log. Hence, the use of `kutil.ObjectName()` for logging object keys is discouraged. Existing usages should be refactored to use `client.ObjectKeyFromObject()` instead.
 
+- There are cases where you don't have the full object key or the object itself at hand, e.g., if an object references another object (in the same namespace) by name (think `secretRef` or similar). 
+  In such a cases, either construct the full object key including the implied namespace or log the object name under a key ending in `Name`, e.g.:
+  
+  ```go
+  var (
+    // object to reconcile
+    shoot *gardencorev1beta1.Shoot
+    // retrieved via logf.FromContext, preconfigured by controller with namespace and name of reconciliation request
+    log logr.Logger
+  )
+  
+  // option a: full object key, manually constructed
+  log.Info("Shoot uses SecretBinding", "secretBinding", client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Spec.SecretBindingName})
+  // option b: only name under respective *Name log key
+  log.Info("Shoot uses SecretBinding", "secretBindingName", shoot.Spec.SecretBindingName)
+  ```
+  
+  Both options result in well-structured logs, that are easy to interpret and process:
+
+  ```text
+  {"level":"info","ts":"2022-01-18T18:00:56.672+0100","msg":"Shoot uses SecretBinding","name":"my-shoot","namespace":"garden-project","secretBinding":{"namespace":"garden-project","name":"aws"}}
+  {"level":"info","ts":"2022-01-18T18:00:56.673+0100","msg":"Shoot uses SecretBinding","name":"my-shoot","namespace":"garden-project","secretBindingName":"aws"}
+  ```
+
 - When handling generic `client.Object` values (e.g. in helper funcs), use `object` as key.
 - When adding timestamps to key-value pairs, use `time.Time` values. By this, they will be encoded in the same format as the log entry's timestamp.  
   Don't use `metav1.Time` values, as they will be encoded in a different format by their `Stringer` implementation. Pass `<someTimestamp>.Time` to loggers in case you have a `metav1.Time` value at hand.
 - Same applies to durations. Use `time.Duration` values instead of `*metav1.Duration`. Durations can be handled specially by zap just like timestamps.
+- Event recorders not only create `Event` objects but also log them.
+  However, both Gardener's manually instantiated event recorders and the ones that controller-runtime provides log to `debug` level and use generic formats, that are not very easy to interpret or process (no structured logs).
+  Hence, don't use event recorders as replacements for well-structured logs.
+  If a controller records an event for a completed action or important information, it should probably log it as well, e.g.:
+  
+  ```go
+  log.Info("Creating ManagedSeed", "replica", r.GetObjectKey())
+  a.recorder.Eventf(managedSeedSet, corev1.EventTypeNormal, EventCreatingManagedSeed, "Creating ManagedSeed %s", r.GetFullName())
+  ```
 
 ## Logging in Test Code
 

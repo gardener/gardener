@@ -20,7 +20,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,8 +29,8 @@ import (
 const Unknown = "<unknown>"
 
 // FetchCloudInfo deduces the cloud info from the plant cluster
-func FetchCloudInfo(ctx context.Context, plantClient client.Client, discoveryClient discovery.DiscoveryInterface, logger logrus.FieldLogger) (*StatusCloudInfo, error) {
-	cloudInfo, err := getClusterInfo(ctx, plantClient, logger)
+func FetchCloudInfo(ctx context.Context, plantClient client.Client, discoveryClient discovery.DiscoveryInterface) (*StatusCloudInfo, error) {
+	cloudInfo, err := getClusterInfo(ctx, plantClient)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +45,7 @@ func FetchCloudInfo(ctx context.Context, plantClient client.Client, discoveryCli
 }
 
 // getClusterInfo gets the kubernetes cluster zones and Region by inspecting labels on nodes in the cluster.
-func getClusterInfo(ctx context.Context, cl client.Client, logger logrus.FieldLogger) (*StatusCloudInfo, error) {
+func getClusterInfo(ctx context.Context, cl client.Client) (*StatusCloudInfo, error) {
 	nodes := &corev1.NodeList{}
 	if err := cl.List(ctx, nodes, client.Limit(1)); err != nil {
 		return nil, err
@@ -96,6 +95,6 @@ func getRegionNameForNode(node corev1.Node) string {
 	return Unknown
 }
 
-func isPlantSecret(plant gardencorev1beta1.Plant, secretKey client.ObjectKey) bool {
+func isPlantSecret(plant *gardencorev1beta1.Plant, secretKey client.ObjectKey) bool {
 	return plant.Spec.SecretRef.Name == secretKey.Name && plant.Namespace == secretKey.Namespace
 }

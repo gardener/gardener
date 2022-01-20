@@ -24,7 +24,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/plant"
-	"github.com/gardener/gardener/pkg/logger"
 	mockdiscovery "github.com/gardener/gardener/pkg/mock/client-go/discovery"
 	mockrest "github.com/gardener/gardener/pkg/mock/client-go/rest"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -90,7 +89,6 @@ var _ = Describe("Plant", func() {
 			var (
 				discoveryMockclient = mockdiscovery.NewMockDiscoveryInterface(ctrl)
 				runtimeClient       = mockclient.NewMockClient(ctrl)
-				testLogger          = logger.NewFieldLogger(logger.NewLogger("info", ""), "test", "test-plant")
 			)
 
 			runtimeClient.EXPECT().List(context.TODO(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
@@ -101,7 +99,7 @@ var _ = Describe("Plant", func() {
 
 			discoveryMockclient.EXPECT().ServerVersion().Return(&version.Info{GitVersion: "1.15.1"}, nil).AnyTimes()
 
-			statusInfo, err := plant.FetchCloudInfo(context.TODO(), runtimeClient, discoveryMockclient, testLogger)
+			statusInfo, err := plant.FetchCloudInfo(context.TODO(), runtimeClient, discoveryMockclient)
 			Expect(err).To(errMatcher)
 			Expect(statusInfo).To(Equal(expectedInfo))
 		},

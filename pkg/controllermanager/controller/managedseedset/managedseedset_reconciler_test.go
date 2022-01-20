@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	mockmanagedseedset "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset/mock"
-	gardenerlogger "github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -75,7 +74,7 @@ var _ = Describe("Reconciler", func() {
 			SyncPeriod: metav1.Duration{Duration: syncPeriod},
 		}
 
-		reconciler = NewReconciler(gardenClient, actuator, cfg, gardenerlogger.NewNopLogger())
+		reconciler = NewReconciler(gardenClient, actuator, cfg)
 
 		ctx = context.TODO()
 		request = reconcile.Request{NamespacedName: kutil.Key(namespace, name)}
@@ -132,7 +131,7 @@ var _ = Describe("Reconciler", func() {
 				expectPatchManagedSeedSet(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(mss.Finalizers).To(Equal([]string{gardencorev1beta1.GardenerName}))
 				})
-				actuator.EXPECT().Reconcile(ctx, set).Return(status, false, nil)
+				actuator.EXPECT().Reconcile(ctx, gomock.Any(), set).Return(status, false, nil)
 				expectPatchManagedSeedSetStatus(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(&mss.Status).To(Equal(status))
 				})
@@ -152,7 +151,7 @@ var _ = Describe("Reconciler", func() {
 
 			It("should reconcile the ManagedSeedSet deletion and update the status", func() {
 				expectGetManagedSeedSet()
-				actuator.EXPECT().Reconcile(ctx, set).Return(status, false, nil)
+				actuator.EXPECT().Reconcile(ctx, gomock.Any(), set).Return(status, false, nil)
 				expectPatchManagedSeedSetStatus(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(&mss.Status).To(Equal(status))
 				})
@@ -164,7 +163,7 @@ var _ = Describe("Reconciler", func() {
 
 			It("should reconcile the ManagedSeedSet deletion, remove the finalizer, and not update the status", func() {
 				expectGetManagedSeedSet()
-				actuator.EXPECT().Reconcile(ctx, set).Return(status, true, nil)
+				actuator.EXPECT().Reconcile(ctx, gomock.Any(), set).Return(status, true, nil)
 				expectPatchManagedSeedSet(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(mss.Finalizers).To(BeEmpty())
 				})
