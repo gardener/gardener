@@ -15,83 +15,19 @@
 package predicate
 
 import (
-	"context"
-	"errors"
-
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencore "github.com/gardener/gardener/pkg/api/core"
 	"github.com/gardener/gardener/pkg/api/extensions"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
 	"github.com/gardener/gardener/pkg/utils/version"
-
-	"github.com/go-logr/logr"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-// Log is the logger for predicates.
-var Log logr.Logger = log.Log
-
-type shootNotFailedMapper struct {
-	ctx    context.Context
-	log    logr.Logger
-	client client.Client
-	cache  cache.Cache
-}
-
-func (s *shootNotFailedMapper) InjectClient(c client.Client) error {
-	s.client = c
-	return nil
-}
-
-func (s *shootNotFailedMapper) InjectStopChannel(stopChan <-chan struct{}) error {
-	s.ctx = contextutil.FromStopChannel(stopChan)
-	return nil
-}
-
-func (s *shootNotFailedMapper) InjectCache(cache cache.Cache) error {
-	s.cache = cache
-	return nil
-}
-
-func (s *shootNotFailedMapper) Map(e event.GenericEvent) bool {
-	// Return true for resources in the garden namespace, as they are not associated with a shoot
-	if e.Object.GetNamespace() == v1beta1constants.GardenNamespace {
-		return true
-	}
-
-	// Wait for cache sync because of backing client cache.
-	if !s.cache.WaitForCacheSync(s.ctx) {
-		err := errors.New("failed to wait for caches to sync")
-		s.log.Error(err, "Could not wait for Cache to sync", "predicate", "ShootNotFailed")
-		return false
-	}
-
-	cluster, err := extensionscontroller.GetCluster(s.ctx, s.client, e.Object.GetNamespace())
-	if err != nil {
-		s.log.Error(err, "Could not retrieve corresponding cluster")
-		return false
-	}
-
-	if extensionscontroller.IsFailed(cluster) {
-		return cluster.Shoot.Generation != cluster.Shoot.Status.ObservedGeneration
-	}
-
-	return true
-}
-
-// ShootNotFailed is a predicate for failed shoots.
-func ShootNotFailed() predicate.Predicate {
-	return predicateutils.FromMapper(&shootNotFailedMapper{log: Log.WithName("shoot-not-failed")},
-		predicateutils.CreateTrigger, predicateutils.UpdateNewTrigger, predicateutils.DeleteTrigger, predicateutils.GenericTrigger)
-}
+var logger = log.Log.WithName("predicate")
 
 // HasType filters the incoming OperatingSystemConfigs for ones that have the same type
 // as the given type.
@@ -105,38 +41,6 @@ func HasType(typeName string) predicate.Predicate {
 		return acc.GetExtensionSpec().GetExtensionType() == typeName
 	}), predicateutils.CreateTrigger, predicateutils.UpdateNewTrigger, predicateutils.DeleteTrigger, predicateutils.GenericTrigger)
 }
-
-// LastOperationNotSuccessful is a predicate for unsuccessful last operations **only** for creation events.
-func LastOperationNotSuccessful() predicate.Predicate {
-	operationNotSucceeded := func(obj client.Object) bool {
-		acc, err := extensions.Accessor(obj)
-		if err != nil {
-			return false
-		}
-
-		lastOp := acc.GetExtensionStatus().GetLastOperation()
-		return lastOp == nil ||
-			lastOp.State != gardencorev1beta1.LastOperationStateSucceeded
-	}
-
-	return predicate.Funcs{
-		CreateFunc: func(event event.CreateEvent) bool {
-			return operationNotSucceeded(event.Object)
-		},
-		UpdateFunc: func(event event.UpdateEvent) bool {
-			return false
-		},
-		GenericFunc: func(event event.GenericEvent) bool {
-			return false
-		},
-		DeleteFunc: func(event event.DeleteEvent) bool {
-			return false
-		},
-	}
-}
-
-// IsDeleting is an alias for a predicate which checks if the passed object has a deletion timestamp.
-var IsDeleting = predicateutils.IsDeleting
 
 // AddTypePredicate returns a new slice which contains a type predicate and the given `predicates`.
 // if more than one extensionTypes is given all given types are or combined

@@ -55,23 +55,16 @@ type AddArgs struct {
 
 // DefaultPredicates returns the default predicates for a dnsrecord reconciler.
 func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
-	if ignoreOperationAnnotation {
-		return []predicate.Predicate{
-			predicate.GenerationChangedPredicate{},
-		}
-	}
-
-	return []predicate.Predicate{
-		predicate.Or(
-			predicateutils.HasOperationAnnotation(),
-			extensionspredicate.LastOperationNotSuccessful(),
-			predicate.And(
-				predicate.GenerationChangedPredicate{},
-				extensionspredicate.IsDeleting(),
-			),
+	return extensionspredicate.DefaultControllerPredicates(ignoreOperationAnnotation,
+		// Special case for preconditions for the DNSRecord controller: Some DNSRecord resources are created in the
+		// 'garden' namespace and don't belong to a Shoot. Most other DNSRecord resources are created in regular shoot
+		// namespaces (in such cases we want to check whether the respective Shoot is failed). Consequently, we add both
+		// preconditions and ensure at least one of them applies.
+		predicateutils.Or(
+			extensionspredicate.IsInGardenNamespacePredicate,
+			extensionspredicate.ShootNotFailedPredicate(),
 		),
-		extensionspredicate.ShootNotFailed(),
-	}
+	)
 }
 
 // Add creates a new dnsrecord controller and adds it to the given Manager.

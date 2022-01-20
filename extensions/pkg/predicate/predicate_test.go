@@ -12,60 +12,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package predicate
+package predicate_test
 
 import (
-	"context"
 	"encoding/json"
 
+	. "github.com/gardener/gardener/extensions/pkg/predicate"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
-	"github.com/onsi/gomega"
+	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 var _ = Describe("Predicate", func() {
 	var (
-		ctrl  *gomock.Controller
-		c     *mockclient.MockClient
-		cache *mockcache.MockCache
+		extensionType = "extension-type"
+		version       = "1.18"
 	)
-
-	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
-		cache = mockcache.NewMockCache(ctrl)
-	})
-
-	AfterEach(func() {
-		ctrl.Finish()
-	})
 
 	Describe("#HasType", func() {
 		var (
-			extensionType string
-			object        client.Object
-			createEvent   event.CreateEvent
-			updateEvent   event.UpdateEvent
-			deleteEvent   event.DeleteEvent
-			genericEvent  event.GenericEvent
+			object       client.Object
+			createEvent  event.CreateEvent
+			updateEvent  event.UpdateEvent
+			deleteEvent  event.DeleteEvent
+			genericEvent event.GenericEvent
 		)
 
 		BeforeEach(func() {
-			extensionType = "extension-type"
 			object = &extensionsv1alpha1.Extension{
 				Spec: extensionsv1alpha1.ExtensionSpec{
 					DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -91,26 +71,21 @@ var _ = Describe("Predicate", func() {
 		It("should match the type", func() {
 			predicate := HasType(extensionType)
 
-			gomega.Expect(predicate.Create(createEvent)).To(gomega.BeTrue())
-			gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeTrue())
-			gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeTrue())
-			gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeTrue())
+			Expect(predicate.Create(createEvent)).To(BeTrue())
+			Expect(predicate.Update(updateEvent)).To(BeTrue())
+			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+			Expect(predicate.Generic(genericEvent)).To(BeTrue())
 		})
 
 		It("should not match the type", func() {
 			predicate := HasType("anotherType")
 
-			gomega.Expect(predicate.Create(createEvent)).To(gomega.BeFalse())
-			gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeFalse())
-			gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeFalse())
-			gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeFalse())
+			Expect(predicate.Create(createEvent)).To(BeFalse())
+			Expect(predicate.Update(updateEvent)).To(BeFalse())
+			Expect(predicate.Delete(deleteEvent)).To(BeFalse())
+			Expect(predicate.Generic(genericEvent)).To(BeFalse())
 		})
 	})
-
-	const (
-		extensionType = "extension-type"
-		version       = "1.18"
-	)
 
 	Describe("#ClusterShootProviderType", func() {
 		It("should match the type", func() {
@@ -119,10 +94,10 @@ var _ = Describe("Predicate", func() {
 				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, version, nil)
 			)
 
-			gomega.Expect(predicate.Create(createEvent)).To(gomega.BeTrue())
-			gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeTrue())
-			gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeTrue())
-			gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeTrue())
+			Expect(predicate.Create(createEvent)).To(BeTrue())
+			Expect(predicate.Update(updateEvent)).To(BeTrue())
+			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+			Expect(predicate.Generic(genericEvent)).To(BeTrue())
 		})
 
 		It("should not match the type", func() {
@@ -131,10 +106,10 @@ var _ = Describe("Predicate", func() {
 				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents("other-extension-type", version, nil)
 			)
 
-			gomega.Expect(predicate.Create(createEvent)).To(gomega.BeFalse())
-			gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeFalse())
-			gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeFalse())
-			gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeFalse())
+			Expect(predicate.Create(createEvent)).To(BeFalse())
+			Expect(predicate.Update(updateEvent)).To(BeFalse())
+			Expect(predicate.Delete(deleteEvent)).To(BeFalse())
+			Expect(predicate.Generic(genericEvent)).To(BeFalse())
 		})
 	})
 
@@ -145,10 +120,10 @@ var _ = Describe("Predicate", func() {
 				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, version, nil)
 			)
 
-			gomega.Expect(predicate.Create(createEvent)).To(gomega.BeTrue())
-			gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeTrue())
-			gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeTrue())
-			gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeTrue())
+			Expect(predicate.Create(createEvent)).To(BeTrue())
+			Expect(predicate.Update(updateEvent)).To(BeTrue())
+			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+			Expect(predicate.Generic(genericEvent)).To(BeTrue())
 		})
 
 		It("should not match the minimum kubernetes version", func() {
@@ -157,10 +132,10 @@ var _ = Describe("Predicate", func() {
 				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, "1.17", nil)
 			)
 
-			gomega.Expect(predicate.Create(createEvent)).To(gomega.BeFalse())
-			gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeFalse())
-			gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeFalse())
-			gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeFalse())
+			Expect(predicate.Create(createEvent)).To(BeFalse())
+			Expect(predicate.Update(updateEvent)).To(BeFalse())
+			Expect(predicate.Delete(deleteEvent)).To(BeFalse())
+			Expect(predicate.Generic(genericEvent)).To(BeFalse())
 		})
 
 		It("should not match minimum kubernetes version due to overwrite", func() {
@@ -169,117 +144,20 @@ var _ = Describe("Predicate", func() {
 				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, "1.17", pointer.String("1.17"))
 			)
 
-			gomega.Expect(predicate.Create(createEvent)).To(gomega.BeTrue())
-			gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeTrue())
-			gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeTrue())
-			gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeTrue())
-		})
-	})
-
-	Describe("#ShootNotFailed", func() {
-		const name = "shoot--foo--bar"
-
-		var (
-			ctx            = contextutil.FromStopChannel(context.TODO().Done())
-			mapper         *shootNotFailedMapper
-			infrastructure *extensionsv1alpha1.Infrastructure
-			e              event.GenericEvent
-		)
-
-		BeforeEach(func() {
-			mapper = &shootNotFailedMapper{log: Log.WithName("shoot-not-failed")}
-			gomega.Expect(inject.StopChannelInto(context.TODO().Done(), mapper)).To(gomega.BeTrue())
-			gomega.Expect(inject.CacheInto(cache, mapper)).To(gomega.BeTrue())
-			gomega.Expect(inject.ClientInto(c, mapper)).To(gomega.BeTrue())
-
-			infrastructure = &extensionsv1alpha1.Infrastructure{ObjectMeta: metav1.ObjectMeta{Namespace: name}}
-			e = event.GenericEvent{
-				Object: infrastructure,
-			}
-		})
-
-		It("should return true because shoot has no last operation", func() {
-			cache.EXPECT().WaitForCacheSync(gomock.Any()).Return(true)
-
-			meta := &metav1.ObjectMeta{Generation: 1}
-			status := &gardencorev1beta1.ShootStatus{
-				ObservedGeneration: 1,
-			}
-
-			cluster := computeClusterWithShoot(name, meta, nil, status)
-			c.EXPECT().Get(gomock.AssignableToTypeOf(ctx), kutil.Key(name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *extensionsv1alpha1.Cluster) error {
-				cluster.DeepCopyInto(actual)
-				return nil
-			})
-
-			gomega.Expect(mapper.Map(e)).To(gomega.BeTrue())
-		})
-
-		It("should return true because shoot last operation state is not failed", func() {
-			cache.EXPECT().WaitForCacheSync(gomock.Any()).Return(true)
-
-			meta := &metav1.ObjectMeta{Generation: 1}
-			status := &gardencorev1beta1.ShootStatus{
-				ObservedGeneration: 1,
-				LastOperation:      &gardencorev1beta1.LastOperation{},
-			}
-
-			cluster := computeClusterWithShoot(name, meta, nil, status)
-			c.EXPECT().Get(gomock.AssignableToTypeOf(ctx), kutil.Key(name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *extensionsv1alpha1.Cluster) error {
-				cluster.DeepCopyInto(actual)
-				return nil
-			})
-
-			gomega.Expect(mapper.Map(e)).To(gomega.BeTrue())
-		})
-
-		It("should return false because shoot is failed", func() {
-			cache.EXPECT().WaitForCacheSync(gomock.Any()).Return(true)
-
-			meta := &metav1.ObjectMeta{Generation: 1}
-			status := &gardencorev1beta1.ShootStatus{
-				ObservedGeneration: 1,
-				LastOperation:      &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateFailed},
-			}
-
-			cluster := computeClusterWithShoot(name, meta, nil, status)
-			c.EXPECT().Get(gomock.AssignableToTypeOf(ctx), kutil.Key(name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *extensionsv1alpha1.Cluster) error {
-				cluster.DeepCopyInto(actual)
-				return nil
-			})
-
-			gomega.Expect(mapper.Map(e)).To(gomega.BeFalse())
-		})
-
-		It("should return true because shoot is failed but observed generation is outdated", func() {
-			cache.EXPECT().WaitForCacheSync(gomock.Any()).Return(true)
-
-			meta := &metav1.ObjectMeta{Generation: 2}
-			status := &gardencorev1beta1.ShootStatus{
-				ObservedGeneration: 1,
-				LastOperation:      &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateFailed},
-			}
-
-			cluster := computeClusterWithShoot(name, meta, nil, status)
-			c.EXPECT().Get(gomock.AssignableToTypeOf(ctx), kutil.Key(name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *extensionsv1alpha1.Cluster) error {
-				cluster.DeepCopyInto(actual)
-				return nil
-			})
-
-			gomega.Expect(mapper.Map(e)).To(gomega.BeTrue())
-		})
-
-		It("should return true because the resource is in the garden namespace", func() {
-			e = event.GenericEvent{
-				Object: &extensionsv1alpha1.Infrastructure{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace}},
-			}
-
-			gomega.Expect(mapper.Map(e)).To(gomega.BeTrue())
+			Expect(predicate.Create(createEvent)).To(BeTrue())
+			Expect(predicate.Update(updateEvent)).To(BeTrue())
+			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+			Expect(predicate.Generic(genericEvent)).To(BeTrue())
 		})
 	})
 })
 
-func computeClusterWithShoot(name string, shootMeta *metav1.ObjectMeta, shootSpec *gardencorev1beta1.ShootSpec, shootStatus *gardencorev1beta1.ShootStatus) *extensionsv1alpha1.Cluster {
+func computeClusterWithShoot(
+	name string,
+	shootMeta *metav1.ObjectMeta,
+	shootSpec *gardencorev1beta1.ShootSpec,
+	shootStatus *gardencorev1beta1.ShootStatus,
+) *extensionsv1alpha1.Cluster {
 	shoot := &gardencorev1beta1.Shoot{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
@@ -298,7 +176,7 @@ func computeClusterWithShoot(name string, shootMeta *metav1.ObjectMeta, shootSpe
 	}
 
 	shootJSON, err := json.Marshal(shoot)
-	gomega.Expect(err).To(gomega.Succeed())
+	Expect(err).To(Succeed())
 
 	return &extensionsv1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -310,7 +188,16 @@ func computeClusterWithShoot(name string, shootMeta *metav1.ObjectMeta, shootSpe
 	}
 }
 
-func computeEvents(extensionType, kubernetesVersion string, kubernetesVersionOverwriteAnnotation *string) (event.CreateEvent, event.UpdateEvent, event.DeleteEvent, event.GenericEvent) {
+func computeEvents(
+	extensionType string,
+	kubernetesVersion string,
+	kubernetesVersionOverwriteAnnotation *string,
+) (
+	event.CreateEvent,
+	event.UpdateEvent,
+	event.DeleteEvent,
+	event.GenericEvent,
+) {
 	spec := gardencorev1beta1.ShootSpec{
 		Provider: gardencorev1beta1.Provider{
 			Type: extensionType,

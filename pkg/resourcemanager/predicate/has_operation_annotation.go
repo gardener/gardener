@@ -16,6 +16,7 @@ package predicate
 
 import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -23,9 +24,9 @@ import (
 
 // HasOperationAnnotation is a predicate for the operation annotation.
 func HasOperationAnnotation() predicate.Predicate {
-	return FromMapper(MapperFunc(func(e event.GenericEvent) bool {
+	return predicateutils.FromMapper(predicateutils.MapperFunc(func(e event.GenericEvent) bool {
 		return e.Object.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationReconcile ||
 			e.Object.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore ||
 			e.Object.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationMigrate
-	}), CreateTrigger, UpdateNewTrigger, GenericTrigger)
+	}), predicateutils.CreateTrigger, predicateutils.UpdateNewTrigger, predicateutils.GenericTrigger)
 }

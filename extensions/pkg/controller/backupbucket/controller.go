@@ -18,7 +18,6 @@ import (
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -57,22 +56,7 @@ type AddArgs struct {
 
 // DefaultPredicates returns the default predicates for a BackupBucket reconciler.
 func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
-	if ignoreOperationAnnotation {
-		return []predicate.Predicate{
-			predicate.GenerationChangedPredicate{},
-		}
-	}
-
-	return []predicate.Predicate{
-		predicate.Or(
-			predicateutils.HasOperationAnnotation(),
-			extensionspredicate.LastOperationNotSuccessful(),
-			predicate.And(
-				predicate.GenerationChangedPredicate{},
-				extensionspredicate.IsDeleting(),
-			),
-		),
-	}
+	return extensionspredicate.DefaultControllerPredicates(ignoreOperationAnnotation)
 }
 
 // Add creates a new BackupBucket Controller and adds it to the Manager.
