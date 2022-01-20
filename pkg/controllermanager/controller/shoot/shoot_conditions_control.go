@@ -95,7 +95,7 @@ func (r *shootConditionsReconciler) Reconcile(ctx context.Context, request recon
 	}
 
 	// Build new shoot conditions
-	// First remove all existing seed conditions and then then add the current seed conditions
+	// First remove all existing seed conditions and then add the current seed conditions
 	// if the shoot is still registered as seed
 	seedConditionTypes := []gardencorev1beta1.ConditionType{
 		gardencorev1beta1.SeedBackupBucketsReady,
