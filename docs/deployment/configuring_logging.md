@@ -80,3 +80,23 @@ logging:
   loki:
     enabled: false
 ```
+
+# Configuring central Loki storage capacity
+
+By default, the central Loki has 100Gi of storage capacity.
+To overwrite the current central Loki storage capacity, the `logging.loki.garden.storage` setting in the gardenlet's component configuration should be altered.
+If you need to increase it you can do so without loosing the current data by specifying higher capacity. Doing so, the Loki's `PersistentVolume` capacity will be increased instead of deleting the current PV.
+However, if you specify less capacity then the `PersistentVolume` will be delete and with it the logs, too.
+
+```yaml
+featureGates:
+  Logging: true
+logging:
+  fluentBit:
+    output: |-
+      [Output]
+          ...
+  loki:
+    garden:
+      storage: "200Gi"
+```
