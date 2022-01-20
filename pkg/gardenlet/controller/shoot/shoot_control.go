@@ -30,7 +30,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -908,4 +910,8 @@ func (t *reconciliationDueTracker) tracked(key string) bool {
 	defer t.lock.Unlock()
 	v, ok := t.tracker[key]
 	return ok && v
+}
+
+func disabledDNSProviderMgmt() bool {
+	return gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords) && gardenletfeatures.FeatureGate.Enabled(features.DisableDNSProviderMgmt)
 }

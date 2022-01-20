@@ -129,4 +129,11 @@ const (
 	// owner: @stoyanr
 	// alpha: v1.39.0
 	ForceRestore featuregate.Feature = "ForceRestore"
+
+	// DisableDNSProviderMgmt disables management of DNSProviders for moving this responsibility to the shoot-dns-service.
+	// Only supported if feature `UseDNSRecords` is set to true.
+	// owner: @martinweindel @timuthy
+	// alpha: ?
+	// beta: ?
+	DisableDNSProviderMgmt featuregate.Feature = "DisableDNSProviderMgmt"
 )

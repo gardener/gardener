@@ -42,6 +42,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` |        |
 | SecretBindingProviderValidation              | `false` | `Alpha` | `1.38` |        |
 | ForceRestore                                 | `false` | `Alpha` | `1.39` |        |
+| DisableDNSProviderMgmt                       | `false` | `Alpha` |        |        |
 
 ## Feature gates for graduated or deprecated features
 

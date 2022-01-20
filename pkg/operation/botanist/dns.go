@@ -24,6 +24,8 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -423,6 +425,9 @@ func (b *Botanist) DestroyInternalDNS(ctx context.Context) error {
 
 // DestroyExternalDNS destroys the external DNSEntry, DNSOwner, and DNSProvider resources.
 func (b *Botanist) DestroyExternalDNS(ctx context.Context) error {
+	if disabledDNSProviderMgmt() {
+		return nil
+	}
 	return component.OpDestroyAndWait(
 		b.Shoot.Components.Extensions.DNS.ExternalEntry,
 		b.Shoot.Components.Extensions.DNS.ExternalProvider,
@@ -452,6 +457,9 @@ func (b *Botanist) MigrateExternalDNS(ctx context.Context, keepProvider bool) er
 			return err
 		}
 
+		if disabledDNSProviderMgmt() {
+			return nil
+		}
 		// Deploy the DNSProvider resource
 		return component.OpWaiter(b.Shoot.Components.Extensions.DNS.ExternalProvider).Deploy(ctx)
 	}
@@ -569,4 +577,8 @@ func (b *Botanist) newDNSComponentsTargetingAPIServerAddress() {
 		b.Shoot.Components.Extensions.ExternalDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(b.APIServerAddress))
 		b.Shoot.Components.Extensions.ExternalDNSRecord.SetValues([]string{b.APIServerAddress})
 	}
+}
+
+func disabledDNSProviderMgmt() bool {
+	return gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords) && gardenletfeatures.FeatureGate.Enabled(features.DisableDNSProviderMgmt)
 }
