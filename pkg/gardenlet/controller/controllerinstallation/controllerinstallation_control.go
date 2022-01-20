@@ -199,8 +199,8 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 
 	namespace := getNamespaceForControllerInstallation(controllerInstallation)
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient.Client(), namespace, func() error {
-		kutil.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleExtension)
-		kutil.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelControllerRegistrationName, controllerRegistration.Name)
+		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleExtension)
+		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelControllerRegistrationName, controllerRegistration.Name)
 		return nil
 	}); err != nil {
 		return reconcile.Result{}, err

@@ -363,7 +363,7 @@ func RunReconcileSeedFlow(
 
 	// create + label garden namespace
 	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, seedClient, gardenNamespace, func() error {
-		kutil.SetMetaDataLabel(&gardenNamespace.ObjectMeta, "role", v1beta1constants.GardenNamespace)
+		metav1.SetMetaDataLabel(&gardenNamespace.ObjectMeta, "role", v1beta1constants.GardenNamespace)
 		return nil
 	}); err != nil {
 		return err
@@ -372,7 +372,7 @@ func RunReconcileSeedFlow(
 	// label kube-system namespace
 	namespaceKubeSystem := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: metav1.NamespaceSystem}}
 	patch := client.MergeFrom(namespaceKubeSystem.DeepCopy())
-	kutil.SetMetaDataLabel(&namespaceKubeSystem.ObjectMeta, "role", metav1.NamespaceSystem)
+	metav1.SetMetaDataLabel(&namespaceKubeSystem.ObjectMeta, "role", metav1.NamespaceSystem)
 	if err := seedClient.Patch(ctx, namespaceKubeSystem, patch); err != nil {
 		return err
 	}
