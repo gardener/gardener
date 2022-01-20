@@ -111,7 +111,10 @@ func (r *shootConditionsReconciler) Reconcile(ctx context.Context, request recon
 	// Update the shoot conditions if needed
 	if gardencorev1beta1helper.ConditionsNeedUpdate(shoot.Status.Conditions, conditions) {
 		r.logger.Debugf("Updating shoot %s conditions", kutil.ObjectName(shoot))
-		if err := r.updateShootConditions(ctx, shoot, conditions); err != nil {
+		shoot.Status.Conditions = conditions
+		// We are using Update here to ensure that we act upon an up-to-date version of the shoot.
+		// An outdated cache together with a strategic merge patch can lead to incomplete patches if conditions change quickly.
+		if err := r.gardenClient.Status().Update(ctx, shoot); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -132,10 +135,4 @@ func (r *shootConditionsReconciler) getShootSeed(ctx context.Context, shoot *gar
 		return nil, client.IgnoreNotFound(err)
 	}
 	return seed, nil
-}
-
-func (r *shootConditionsReconciler) updateShootConditions(ctx context.Context, shoot *gardencorev1beta1.Shoot, conditions []gardencorev1beta1.Condition) error {
-	patch := client.StrategicMergeFrom(shoot.DeepCopy())
-	shoot.Status.Conditions = conditions
-	return r.gardenClient.Status().Patch(ctx, shoot, patch)
 }
