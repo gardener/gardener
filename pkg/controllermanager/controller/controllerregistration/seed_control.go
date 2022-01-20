@@ -489,14 +489,14 @@ func deployNeededInstallation(
 			return err
 		}
 		seedSpecHash := utils.HashForMap(seedSpecMap)[:16]
-		kutil.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.SeedSpecHash, seedSpecHash)
+		metav1.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.SeedSpecHash, seedSpecHash)
 
 		registrationSpecMap, err := convertObjToMap(controllerRegistration.Spec)
 		if err != nil {
 			return err
 		}
 		registrationSpecHash := utils.HashForMap(registrationSpecMap)[:16]
-		kutil.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.RegistrationSpecHash, registrationSpecHash)
+		metav1.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.RegistrationSpecHash, registrationSpecHash)
 
 		if controllerDeployment != nil {
 			// Add all fields that are relevant for the hash calculation as `ControllerDeployment`s don't have a `spec` field.
@@ -510,7 +510,7 @@ func deployNeededInstallation(
 				return err
 			}
 			deploymentSpecHash := utils.HashForMap(deploymentMap)[:16]
-			kutil.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.ControllerDeploymentHash, deploymentSpecHash)
+			metav1.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.ControllerDeploymentHash, deploymentSpecHash)
 		}
 		controllerInstallation.Spec = installationSpec
 		return nil

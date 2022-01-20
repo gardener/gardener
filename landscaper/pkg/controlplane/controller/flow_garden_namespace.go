@@ -19,7 +19,6 @@ import (
 
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -36,9 +35,9 @@ func (o *operation) PrepareGardenNamespace(ctx context.Context) error {
 
 	// create + label garden namespace
 	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, client, gardenNamespace, func() error {
-		kutil.SetMetaDataLabel(&gardenNamespace.ObjectMeta, gardencorev1beta1constants.GardenRole, gardencorev1beta1constants.GardenRoleProject)
-		kutil.SetMetaDataLabel(&gardenNamespace.ObjectMeta, gardencorev1beta1constants.ProjectName, gardencorev1beta1constants.GardenRoleProject)
-		kutil.SetMetaDataLabel(&gardenNamespace.ObjectMeta, gardencorev1beta1constants.LabelApp, "gardener")
+		metav1.SetMetaDataLabel(&gardenNamespace.ObjectMeta, gardencorev1beta1constants.GardenRole, gardencorev1beta1constants.GardenRoleProject)
+		metav1.SetMetaDataLabel(&gardenNamespace.ObjectMeta, gardencorev1beta1constants.ProjectName, gardencorev1beta1constants.GardenRoleProject)
+		metav1.SetMetaDataLabel(&gardenNamespace.ObjectMeta, gardencorev1beta1constants.LabelApp, "gardener")
 		return nil
 	}); err != nil {
 		return err
