@@ -128,10 +128,6 @@ var _ = Describe("ingress", func() {
 
 		Expect(c.Get(ctx, client.ObjectKey{Name: "istio-ingressgateway", Namespace: deployNS}, svc)).To(Succeed())
 		Expect(svc.Annotations).To(HaveKeyWithValue("foo", "bar"))
-
-		// TODO (mvladev): remove the deprecated annotations in v1.17.0
-		Expect(svc.Annotations).To(HaveKeyWithValue("service.alpha.kubernetes.io/aws-load-balancer-type", "nlb"), "DEPRECATED - SHOULD BE REMOVED IN 1.17.0")
-		Expect(svc.Annotations).To(HaveKeyWithValue("service.beta.kubernetes.io/aws-load-balancer-type", "nlb"), "DEPRECATED - SHOULD BE REMOVED IN 1.17.0")
 	})
 
 	Context("ExposureClass handlers", func() {
@@ -159,23 +155,6 @@ var _ = Describe("ingress", func() {
 			Expect(actualNS.Labels).To(HaveKeyWithValue("istio-injection", "disabled"))
 			Expect(actualNS.Labels).To(HaveKeyWithValue(v1alpha1constants.GardenRole, v1alpha1constants.GardenRoleExposureClassHandler))
 			Expect(actualNS.Labels).To(HaveKeyWithValue(v1alpha1constants.LabelExposureClassHandlerName, exposureClassHandlerName))
-		})
-	})
-
-	Context("DEPRECATED aws loadbalancer annotations", func() {
-		BeforeEach(func() {
-			igwAnnotations = map[string]string{
-				"service.alpha.kubernetes.io/aws-load-balancer-type": "not-nlb",
-				"service.beta.kubernetes.io/aws-load-balancer-type":  "not-nlb",
-			}
-		})
-
-		It("should be overwritten", func() {
-			svc := &corev1.Service{}
-
-			Expect(c.Get(ctx, client.ObjectKey{Name: "istio-ingressgateway", Namespace: deployNS}, svc)).To(Succeed())
-			Expect(svc.Annotations).To(HaveKeyWithValue("service.alpha.kubernetes.io/aws-load-balancer-type", "not-nlb"))
-			Expect(svc.Annotations).To(HaveKeyWithValue("service.beta.kubernetes.io/aws-load-balancer-type", "not-nlb"))
 		})
 	})
 
