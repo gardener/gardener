@@ -38,36 +38,6 @@ func (c *Controller) shootConditionsAdd(obj interface{}) {
 	c.shootConditionsQueue.Add(key)
 }
 
-func (c *Controller) filterSeedForShootConditions(obj, oldObj, _ client.Object, _ bool) bool {
-	seed, ok := obj.(*gardencorev1beta1.Seed)
-	if !ok {
-		return false
-	}
-
-	// We want to enqueue in case of deletion events to remove conditions.
-	// We want to enqueue in case of add events as they can indicate restarts or reflector relists.
-	if oldObj == nil {
-		return true
-	}
-
-	oldSeed, ok := oldObj.(*gardencorev1beta1.Seed)
-	if !ok {
-		return false
-	}
-
-	if !apiequality.Semantic.DeepEqual(seed.Status.Conditions, oldSeed.Status.Conditions) {
-		logger.Logger.Debugf("Seed %s conditions changed", seed.Name)
-		return true
-	}
-
-	// We want to enqueue on periodic cache resync events to catch up if we missed updates.
-	if seed.ResourceVersion == oldSeed.ResourceVersion {
-		return true
-	}
-
-	return false
-}
-
 // NewShootConditionsReconciler creates a reconcile.Reconciler that updates the conditions of a shoot that is registered as seed.
 func NewShootConditionsReconciler(logger logrus.FieldLogger, gardenClient client.Client) reconcile.Reconciler {
 	return &shootConditionsReconciler{
@@ -139,4 +109,35 @@ func (r *shootConditionsReconciler) getShootSeed(ctx context.Context, shoot *gar
 		return nil, client.IgnoreNotFound(err)
 	}
 	return seed, nil
+}
+
+// FilterSeedForShootConditions is used as a ControllerPredicateFactoryFunc to ensure that Shoots are only enqueued when Seed conditions changed.
+func FilterSeedForShootConditions(obj, oldObj, _ client.Object, _ bool) bool {
+	seed, ok := obj.(*gardencorev1beta1.Seed)
+	if !ok {
+		return false
+	}
+
+	// We want to enqueue in case of deletion events to remove conditions.
+	// We want to enqueue in case of add events as they can indicate restarts or reflector relists.
+	if oldObj == nil {
+		return true
+	}
+
+	oldSeed, ok := oldObj.(*gardencorev1beta1.Seed)
+	if !ok {
+		return false
+	}
+
+	if !apiequality.Semantic.DeepEqual(seed.Status.Conditions, oldSeed.Status.Conditions) {
+		logger.Logger.Debugf("Seed %s conditions changed", seed.Name)
+		return true
+	}
+
+	// We want to enqueue on periodic cache resync events to catch up if we missed updates.
+	if seed.ResourceVersion == oldSeed.ResourceVersion {
+		return true
+	}
+
+	return false
 }
