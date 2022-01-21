@@ -87,89 +87,105 @@ var _ = Describe("resolver", func() {
 		}
 	})
 
-	It("should return correct subset", func(done Done) {
-		Expect(r.HasSynced()).To(BeFalse(), "HasSync should be false before starting")
+	It("should return correct subset", func() {
+		done := make(chan interface{})
+		go func() {
+			Expect(r.HasSynced()).To(BeFalse(), "HasSync should be false before starting")
 
-		go r.Start(ctx)
+			go r.Start(ctx)
 
-		Eventually(func() bool { //nolint:unlambda
-			return r.HasSynced()
-		}).Should(BeTrue(), "HasSync should be true after start")
-		Eventually(func() uint8 { //nolint:unlambda
-			return updateCount
-		}).Should(BeEquivalentTo(1), "update should be called once")
+			Eventually(func() bool { //nolint:unlambda
+				return r.HasSynced()
+			}).Should(BeTrue(), "HasSync should be true after start")
+			Eventually(func() uint8 { //nolint:unlambda
+				return updateCount
+			}).Should(BeEquivalentTo(1), "update should be called once")
 
-		Expect(r.Subset()).To(ConsistOf(corev1.EndpointSubset{
-			Addresses: []corev1.EndpointAddress{
-				{IP: "1.2.3.4"}, {IP: "5.6.7.8"},
-			},
-			Ports: []corev1.EndpointPort{{Protocol: corev1.ProtocolTCP, Port: 1234}},
-		}))
+			Expect(r.Subset()).To(ConsistOf(corev1.EndpointSubset{
+				Addresses: []corev1.EndpointAddress{
+					{IP: "1.2.3.4"}, {IP: "5.6.7.8"},
+				},
+				Ports: []corev1.EndpointPort{{Protocol: corev1.ProtocolTCP, Port: 1234}},
+			}))
 
-		cancelFunc()
-		close(done)
+			cancelFunc()
+			close(done)
+		}()
+		Eventually(done).Should(BeClosed())
 	})
 
-	It("should not return that it has synced because it was not started", func(done Done) {
-		Expect(updateCount).To(BeEquivalentTo(0), "update should not be called")
-		Expect(r.HasSynced()).To(BeFalse(), "HasSync should be false")
+	It("should not return that it has synced because it was not started", func() {
+		done := make(chan interface{})
+		go func() {
+			Expect(updateCount).To(BeEquivalentTo(0), "update should not be called")
+			Expect(r.HasSynced()).To(BeFalse(), "HasSync should be false")
 
-		cancelFunc()
-		close(done)
+			cancelFunc()
+			close(done)
+		}()
+		Eventually(done).Should(BeClosed())
 	})
 
-	It("should not return that it has synced if error occurs", func(done Done) {
-		f.setAddrs(nil)
-		f.setErr(errors.New("some-error"))
+	It("should not return that it has synced if error occurs", func() {
+		done := make(chan interface{})
+		go func() {
+			f.setAddrs(nil)
+			f.setErr(errors.New("some-error"))
 
-		go r.Start(ctx)
-		cancelFunc()
+			go r.Start(ctx)
+			cancelFunc()
 
-		Eventually(func() bool { //nolint:unlambda
-			return r.HasSynced()
-		}).Should(BeFalse(), "HasSync should always be false")
-		Eventually(func() uint8 { //nolint:unlambda
-			return updateCount
-		}).Should(BeZero(), "update should never be called")
+			Eventually(func() bool { //nolint:unlambda
+				return r.HasSynced()
+			}).Should(BeFalse(), "HasSync should always be false")
+			Eventually(func() uint8 { //nolint:unlambda
+				return updateCount
+			}).Should(BeZero(), "update should never be called")
 
-		close(done)
+			close(done)
+		}()
+		Eventually(done).Should(BeClosed())
 	})
 
-	It("should return correct subset after resync", func(done Done) {
-		Expect(r.HasSynced()).To(BeFalse(), "HasSync should be false before starting")
+	It("should return correct subset after resync", func() {
+		done := make(chan interface{})
+		go func() {
+			Expect(r.HasSynced()).To(BeFalse(), "HasSync should be false before starting")
 
-		go r.Start(ctx)
+			go r.Start(ctx)
 
-		Eventually(func() bool { //nolint:unlambda
-			return r.HasSynced()
-		}).Should(BeTrue(), "HasSync should be true after start")
+			Eventually(func() bool { //nolint:unlambda
+				return r.HasSynced()
+			}).Should(BeTrue(), "HasSync should be true after start")
 
-		Eventually(func() uint8 { //nolint:unlambda
-			return updateCount
-		}).Should(BeEquivalentTo(1), "update should be called")
+			Eventually(func() uint8 { //nolint:unlambda
+				return updateCount
+			}).Should(BeEquivalentTo(1), "update should be called")
 
-		Consistently(func() []corev1.EndpointSubset { //nolint:unlambda
-			return r.Subset()
-		}).Should(ConsistOf(corev1.EndpointSubset{
-			Addresses: []corev1.EndpointAddress{
-				{IP: "1.2.3.4"}, {IP: "5.6.7.8"},
-			},
-			Ports: []corev1.EndpointPort{{Protocol: corev1.ProtocolTCP, Port: 1234}},
-		}))
+			Consistently(func() []corev1.EndpointSubset { //nolint:unlambda
+				return r.Subset()
+			}).Should(ConsistOf(corev1.EndpointSubset{
+				Addresses: []corev1.EndpointAddress{
+					{IP: "1.2.3.4"}, {IP: "5.6.7.8"},
+				},
+				Ports: []corev1.EndpointPort{{Protocol: corev1.ProtocolTCP, Port: 1234}},
+			}))
 
-		f.setAddrs([]string{"5.6.7.8"})
+			f.setAddrs([]string{"5.6.7.8"})
 
-		Eventually(func() []corev1.EndpointSubset { //nolint:unlambda
-			return r.Subset()
-		}).Should(ConsistOf(corev1.EndpointSubset{
-			Addresses: []corev1.EndpointAddress{{IP: "5.6.7.8"}},
-			Ports:     []corev1.EndpointPort{{Protocol: corev1.ProtocolTCP, Port: 1234}},
-		}))
+			Eventually(func() []corev1.EndpointSubset { //nolint:unlambda
+				return r.Subset()
+			}).Should(ConsistOf(corev1.EndpointSubset{
+				Addresses: []corev1.EndpointAddress{{IP: "5.6.7.8"}},
+				Ports:     []corev1.EndpointPort{{Protocol: corev1.ProtocolTCP, Port: 1234}},
+			}))
 
-		Expect(updateCount).To(BeEquivalentTo(2), "update should be called twice")
+			Expect(updateCount).To(BeEquivalentTo(2), "update should be called twice")
 
-		cancelFunc()
-		close(done)
+			cancelFunc()
+			close(done)
+		}()
+		Eventually(done).Should(BeClosed())
 	})
 })
 
