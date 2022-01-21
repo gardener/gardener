@@ -63,8 +63,6 @@ func NewSeedAdmissionControllerCommand() *cobra.Command {
 				return err
 			}
 
-			cmd.SilenceUsage = true
-
 			log.Info("Starting "+Name+"...", "version", version.Get())
 			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value))
@@ -72,6 +70,7 @@ func NewSeedAdmissionControllerCommand() *cobra.Command {
 
 			return opts.Run(cmd.Context())
 		},
+		SilenceUsage: true,
 	}
 
 	flags := cmd.Flags()

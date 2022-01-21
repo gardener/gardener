@@ -163,6 +163,7 @@ func NewResourceManagerCommand() *cobra.Command {
 					return nil
 				}
 			},
+			SilenceUsage: true,
 		}
 	)
 
