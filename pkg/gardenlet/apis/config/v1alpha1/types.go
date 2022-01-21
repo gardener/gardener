@@ -20,7 +20,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/klog"
@@ -458,11 +457,7 @@ type Loki struct {
 // GardenLoki contains configuration for the Loki in garden namespace.
 type GardenLoki struct {
 	// Priority is the priority value for the Loki
-	// +optional
 	Priority *int `json:"priority,omitempty" yaml:"priority,omitempty"`
-	// Storage is the disk storage capacity of the central Loki
-	// +optional
-	Storage *resource.Quantity `json:"storage,omitempty" yaml:"storage,omitempty"`
 }
 
 // ShootNodeLogging contains configuration for the shoot node logging.
