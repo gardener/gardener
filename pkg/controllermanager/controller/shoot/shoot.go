@@ -177,7 +177,7 @@ func NewShootController(
 		},
 		Ctx:                        ctx,
 		Reader:                     gardenClient.Cache(),
-		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(shootController.filterSeedForShootConditions),
+		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(FilterSeedForShootConditions),
 		Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { shootController.shootConditionsAdd(obj) }),
 		Scheme:                     kubernetes.GardenScheme,
 		Logger:                     logger.Logger,
