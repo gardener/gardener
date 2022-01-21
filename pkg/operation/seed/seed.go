@@ -516,7 +516,6 @@ func RunReconcileSeedFlow(
 		parsers                           = strings.Builder{}
 		fluentBitConfigurationsOverwrites = map[string]interface{}{}
 		lokiValues                        = map[string]interface{}{}
-		centralLokiStorage                = resource.MustParse("100Gi")
 	)
 
 	lokiValues["enabled"] = loggingEnabled
@@ -528,95 +527,79 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
+	// check if loki disabled in gardenlet config
+	if loggingConfig != nil &&
+		loggingConfig.Loki != nil &&
+		loggingConfig.Loki.Enabled != nil &&
+		!*loggingConfig.Loki.Enabled {
+		lokiValues["enabled"] = false
+		if err := common.DeleteLoki(ctx, seedClient, gardenNamespace.Name); err != nil {
+			return err
+		}
+	}
+
 	if loggingEnabled {
+		lokiValues["authEnabled"] = false
+
 		lokiVpa := &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "loki-vpa", Namespace: v1beta1constants.GardenNamespace}}
 		if err := seedClient.Delete(ctx, lokiVpa); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
 			return err
 		}
 
-		// check if loki disabled in gardenlet config
-		if loggingConfig != nil &&
-			loggingConfig.Loki != nil &&
-			loggingConfig.Loki.Enabled != nil &&
-			!*loggingConfig.Loki.Enabled {
-			lokiValues["enabled"] = false
-			if err := common.DeleteLoki(ctx, seedClient, gardenNamespace.Name); err != nil {
+		if conf.Logging != nil && conf.Logging.Loki != nil && conf.Logging.Loki.Garden != nil &&
+			conf.Logging.Loki.Garden.Priority != nil {
+			priority := *conf.Logging.Loki.Garden.Priority
+			if err := deletePriorityClassIfValueNotTheSame(ctx, seedClient, common.GardenLokiPriorityClassName, priority); err != nil {
 				return err
+			}
+			lokiValues["priorityClass"] = map[string]interface{}{
+				"value": priority,
+				"name":  common.GardenLokiPriorityClassName,
 			}
 		} else {
-			lokiValues["authEnabled"] = false
-			if loggingConfig != nil && loggingConfig.Loki != nil && loggingConfig.Loki.Garden != nil && loggingConfig.Loki.Garden.Storage != nil {
-				centralLokiStorage = *loggingConfig.Loki.Garden.Storage
-			}
-			lokiValues["storage"] = centralLokiStorage
-
-			update, err := updatePVCIfStorageNotTheSame(ctx, seedClient, "loki-loki-0", centralLokiStorage)
-			if err != nil {
+			pc := &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: common.GardenLokiPriorityClassName}}
+			if err := seedClient.Delete(ctx, pc); client.IgnoreNotFound(err) != nil {
 				return err
 			}
-			// Only if there was an updated PVC we have to delete the current loki StatefulSet
-			if update {
-				lokiSts := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.StatefulSetNameLoki, Namespace: v1beta1constants.GardenNamespace}}
-				if err := client.IgnoreNotFound(seedClient.Delete(ctx, lokiSts)); err != nil {
+		}
+
+		if hvpaEnabled {
+			shootInfo := &corev1.ConfigMap{}
+			maintenanceBegin := "220000-0000"
+			maintenanceEnd := "230000-0000"
+			if err := seedClient.Get(ctx, kutil.Key(metav1.NamespaceSystem, "shoot-info"), shootInfo); err != nil {
+				if !apierrors.IsNotFound(err) {
 					return err
 				}
-			}
-
-			if hvpaEnabled {
-				shootInfo := &corev1.ConfigMap{}
-				maintenanceBegin := "220000-0000"
-				maintenanceEnd := "230000-0000"
-				if err := seedClient.Get(ctx, kutil.Key(metav1.NamespaceSystem, "shoot-info"), shootInfo); err != nil {
-					if !apierrors.IsNotFound(err) {
-						return err
-					}
-				} else {
-					shootMaintenanceBegin, err := utils.ParseMaintenanceTime(shootInfo.Data["maintenanceBegin"])
-					if err != nil {
-						return err
-					}
-					maintenanceBegin = shootMaintenanceBegin.Add(1, 0, 0).Formatted()
-
-					shootMaintenanceEnd, err := utils.ParseMaintenanceTime(shootInfo.Data["maintenanceEnd"])
-					if err != nil {
-						return err
-					}
-					maintenanceEnd = shootMaintenanceEnd.Add(1, 0, 0).Formatted()
-				}
-
-				lokiValues["hvpa"] = map[string]interface{}{
-					"enabled": true,
-					"maintenanceTimeWindow": map[string]interface{}{
-						"begin": maintenanceBegin,
-						"end":   maintenanceEnd,
-					},
-				}
-
-				currentResources, err := kutil.GetContainerResourcesInStatefulSet(ctx, seedClient, kutil.Key(v1beta1constants.GardenNamespace, v1beta1constants.StatefulSetNameLoki))
+			} else {
+				shootMaintenanceBegin, err := utils.ParseMaintenanceTime(shootInfo.Data["maintenanceBegin"])
 				if err != nil {
 					return err
 				}
-				if len(currentResources) != 0 && currentResources[v1beta1constants.StatefulSetNameLoki] != nil {
-					lokiValues["resources"] = map[string]interface{}{
-						v1beta1constants.StatefulSetNameLoki: currentResources[v1beta1constants.StatefulSetNameLoki],
-					}
+				maintenanceBegin = shootMaintenanceBegin.Add(1, 0, 0).Formatted()
+
+				shootMaintenanceEnd, err := utils.ParseMaintenanceTime(shootInfo.Data["maintenanceEnd"])
+				if err != nil {
+					return err
 				}
+				maintenanceEnd = shootMaintenanceEnd.Add(1, 0, 0).Formatted()
 			}
 
-			if conf.Logging != nil && conf.Logging.Loki != nil && conf.Logging.Loki.Garden != nil &&
-				conf.Logging.Loki.Garden.Priority != nil {
-				priority := *conf.Logging.Loki.Garden.Priority
-				if err := deletePriorityClassIfValueNotTheSame(ctx, seedClient, common.GardenLokiPriorityClassName, priority); err != nil {
-					return err
-				}
-				lokiValues["priorityClass"] = map[string]interface{}{
-					"value": priority,
-					"name":  common.GardenLokiPriorityClassName,
-				}
-			} else {
-				pc := &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: common.GardenLokiPriorityClassName}}
-				if err := seedClient.Delete(ctx, pc); client.IgnoreNotFound(err) != nil {
-					return err
+			lokiValues["hvpa"] = map[string]interface{}{
+				"enabled": true,
+				"maintenanceTimeWindow": map[string]interface{}{
+					"begin": maintenanceBegin,
+					"end":   maintenanceEnd,
+				},
+			}
+
+			currentResources, err := kutil.GetContainerResourcesInStatefulSet(ctx, seedClient, kutil.Key(v1beta1constants.GardenNamespace, "loki"))
+			if err != nil {
+				return err
+			}
+			if len(currentResources) != 0 && currentResources["loki"] != nil {
+				lokiValues["resources"] = map[string]interface{}{
+					"loki": currentResources["loki"],
 				}
 			}
 		}
@@ -1867,37 +1850,4 @@ func cleanupOrphanExposureClassHandlerResources(ctx context.Context, c client.Cl
 	}
 
 	return nil
-}
-
-// updatePVCIfStorageNotTheSame updates the PVC if passed storage value is not the same as the current one.
-// If there was a successful update it will retun true as result.
-// Caution: If the passed storage capacity is less than the current one the existing PVC and its PV will be deleted.
-func updatePVCIfStorageNotTheSame(ctx context.Context, k8sClient client.Client, pvcName string, quantityToCompare resource.Quantity) (bool, error) {
-	pvc := &corev1.PersistentVolumeClaim{}
-	if err := k8sClient.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, pvcName), pvc); err != nil {
-		return false, client.IgnoreNotFound(err)
-	}
-
-	switch quantityToCompare.Cmp(*pvc.Spec.Resources.Requests.Storage()) {
-	case 0:
-		return false, nil
-	case 1:
-		// json merge patch
-		patch := client.MergeFrom(pvc.DeepCopy())
-		pvc.Spec.Resources.Requests = corev1.ResourceList{
-			corev1.ResourceStorage: quantityToCompare,
-		}
-		if err := k8sClient.Patch(ctx, pvc, patch); err != nil {
-			return false, err
-		}
-		return true, nil
-	case -1:
-		if err := k8sClient.Delete(ctx, pvc); err != nil {
-			return false, client.IgnoreNotFound(err)
-		}
-		return true, nil
-	default:
-		// This should never happen
-		return false, fmt.Errorf("Unknow result comparing PVC %s storage value %v with %v", pvcName, pvc.Spec.Resources.Requests.Storage(), quantityToCompare)
-	}
 }

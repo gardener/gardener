@@ -431,11 +431,6 @@ func (in *GardenLoki) DeepCopyInto(out *GardenLoki) {
 		*out = new(int)
 		**out = **in
 	}
-	if in.Storage != nil {
-		in, out := &in.Storage, &out.Storage
-		x := (*in).DeepCopy()
-		*out = &x
-	}
 	return
 }
 
