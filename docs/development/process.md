@@ -23,9 +23,9 @@ v1.42   | Week 09-10  | February 28, 2022      | March 13, 2022     | [@voelzmo]
 v1.43   | Week 11-12  | March 14, 2022         | March 27, 2022     | [@kris94](https://github.com/kris94)                                                   |
 v1.44   | Week 13-14  | March 28, 2022         | April 10, 2022     | [@timebertt](https://github.com/timebertt)                                             |
 v1.45   | Week 15-16  | April 11, 2022         | April 24, 2022     | [@danielfoehrKn](https://github.com/danielfoehrKn)                                     |
-v1.46   | Week 17-18  | April 25, 2022         | May 8, 2022        | [@rfranzke](https://github.com/rfranzke)                                               |
+v1.46   | Week 17-18  | April 25, 2022         | May 8, 2022        | [@ialidzhikov](https://github.com/ialidzhikov)                                         |
 v1.47   | Week 19-20  | May 9, 2022            | May 22, 2022       | [@stoyanr](https://github.com/stoyanr)                                                 |
-v1.48   | Week 21-22  | May 23, 2022           | June 5, 2022       | [@ialidzhikov](https://github.com/ialidzhikov)                                         |
+v1.48   | Week 21-22  | May 23, 2022           | June 5, 2022       | [@rfranzke](https://github.com/rfranzke)                                               |
 v1.49   | Week 23-24  | June 6, 2022           | June 19, 2022      | [@timuthy](https://github.com/timuthy)                                                 |
 v1.50   | Week 25-26  | June 20, 2022          | July 3, 2022       | [@shafeeqes](https://github.com/shafeeqes)                                             |
 v1.51   | Week 27-28  | July 4, 2022           | June 17, 2022      | [@acumino](https://github.com/acumino)                                                 |
