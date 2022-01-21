@@ -82,6 +82,7 @@ func NewCommandStartGardenerScheduler() *cobra.Command {
 
 			return runCommand(cmd.Context(), opts)
 		},
+		SilenceUsage: true,
 	}
 
 	flags := cmd.Flags()

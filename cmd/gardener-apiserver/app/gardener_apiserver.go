@@ -97,6 +97,7 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 			}
 			return opts.Run(c.Context())
 		},
+		SilenceUsage: true,
 	}
 
 	flags := cmd.Flags()
