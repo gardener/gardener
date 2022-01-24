@@ -29,7 +29,6 @@ require (
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/nwaples/rardecode v1.1.2 // indirect
-	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/ginkgo/v2 v2.1.0
 	github.com/onsi/gomega v1.18.0
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
