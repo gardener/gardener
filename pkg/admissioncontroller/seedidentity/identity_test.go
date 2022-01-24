@@ -20,7 +20,6 @@ import (
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
 
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	authenticationv1 "k8s.io/api/authentication/v1"

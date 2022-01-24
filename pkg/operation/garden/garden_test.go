@@ -22,7 +22,6 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/garden"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"

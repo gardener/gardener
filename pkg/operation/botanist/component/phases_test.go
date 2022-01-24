@@ -17,7 +17,6 @@ package component_test
 import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

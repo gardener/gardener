@@ -22,7 +22,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/crds"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
