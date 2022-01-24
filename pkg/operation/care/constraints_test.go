@@ -131,26 +131,25 @@ var _ = Describe("#IsProblematicWebhook", func() {
 					testCase.gvr = gvr
 					Expect(care.IsProblematicWebhook(testCase.build())).To(BeTrue(), "expected webhook to be problematic")
 				},
-				append([]TableEntry{
-					Entry("CREATE", webhookTestCase{
-						failurePolicy:  &failurePolicyFail,
-						timeoutSeconds: &timeoutSecondsProblematic,
-						operationType:  &operationCreate,
-					}),
-					Entry("CREATE with nil failurePolicy and nil timeoutSeconds", webhookTestCase{operationType: &operationCreate}),
-					Entry("CREATE with nil failurePolicy and timeoutSeconds too high",
-						webhookTestCase{operationType: &operationCreate, timeoutSeconds: &timeoutSecondsProblematic}),
-					Entry("CREATE with failurePolicy 'Ignore' and nil timeoutSeconds",
-						webhookTestCase{failurePolicy: &failurePolicyIgnore, operationType: &operationCreate}),
-					Entry("CREATE with failurePolicy 'Ignore' and timeoutSeconds too high",
-						webhookTestCase{failurePolicy: &failurePolicyIgnore, operationType: &operationCreate, timeoutSeconds: &timeoutSecondsProblematic}),
-					Entry("CREATE with failurePolicy 'Fail' and nil timeoutSeconds",
-						webhookTestCase{failurePolicy: &failurePolicyFail, operationType: &operationCreate}),
-					Entry("CREATE with failurePolicy 'Fail' and timeoutSeconds ok",
-						webhookTestCase{failurePolicy: &failurePolicyFail, operationType: &operationCreate, timeoutSeconds: &timeoutSecondsNotProblematic}),
-					Entry("UPDATE", webhookTestCase{operationType: &operationUpdate}),
-					Entry("*", webhookTestCase{operationType: &operationAll}),
-				}, problematic...)...,
+				Entry("CREATE", webhookTestCase{
+					failurePolicy:  &failurePolicyFail,
+					timeoutSeconds: &timeoutSecondsProblematic,
+					operationType:  &operationCreate,
+				}),
+				Entry("CREATE with nil failurePolicy and nil timeoutSeconds", webhookTestCase{operationType: &operationCreate}),
+				Entry("CREATE with nil failurePolicy and timeoutSeconds too high",
+					webhookTestCase{operationType: &operationCreate, timeoutSeconds: &timeoutSecondsProblematic}),
+				Entry("CREATE with failurePolicy 'Ignore' and nil timeoutSeconds",
+					webhookTestCase{failurePolicy: &failurePolicyIgnore, operationType: &operationCreate}),
+				Entry("CREATE with failurePolicy 'Ignore' and timeoutSeconds too high",
+					webhookTestCase{failurePolicy: &failurePolicyIgnore, operationType: &operationCreate, timeoutSeconds: &timeoutSecondsProblematic}),
+				Entry("CREATE with failurePolicy 'Fail' and nil timeoutSeconds",
+					webhookTestCase{failurePolicy: &failurePolicyFail, operationType: &operationCreate}),
+				Entry("CREATE with failurePolicy 'Fail' and timeoutSeconds ok",
+					webhookTestCase{failurePolicy: &failurePolicyFail, operationType: &operationCreate, timeoutSeconds: &timeoutSecondsNotProblematic}),
+				Entry("UPDATE", webhookTestCase{operationType: &operationUpdate}),
+				Entry("*", webhookTestCase{operationType: &operationAll}),
+				problematic,
 			)
 
 			DescribeTable(fmt.Sprintf("not problematic webhook for %s", gvr.String()),
@@ -158,10 +157,9 @@ var _ = Describe("#IsProblematicWebhook", func() {
 					testCase.gvr = gvr
 					Expect(care.IsProblematicWebhook(testCase.build())).To(BeFalse(), "expected webhook not to be problematic")
 				},
-				append([]TableEntry{
-					Entry("failurePolicy 'Ignore' and timeoutSeconds ok", webhookTestCase{failurePolicy: &failurePolicyIgnore, timeoutSeconds: &timeoutSecondsNotProblematic}),
-					Entry("operationType 'DELETE'", webhookTestCase{operationType: &operationDelete}),
-				}, notProblematic...)...,
+				Entry("failurePolicy 'Ignore' and timeoutSeconds ok", webhookTestCase{failurePolicy: &failurePolicyIgnore, timeoutSeconds: &timeoutSecondsNotProblematic}),
+				Entry("operationType 'DELETE'", webhookTestCase{operationType: &operationDelete}),
+				notProblematic,
 			)
 		}
 
