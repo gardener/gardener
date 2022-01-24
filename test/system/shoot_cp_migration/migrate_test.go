@@ -27,14 +27,15 @@ import (
 	"strings"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	. "github.com/gardener/gardener/test/framework"
-	"github.com/gardener/gardener/test/framework/applications"
 	"github.com/onsi/ginkgo/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	. "github.com/gardener/gardener/test/framework"
+	"github.com/gardener/gardener/test/framework/applications"
 )
 
 const (
@@ -206,7 +207,7 @@ func beforeMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp *a
 }
 
 func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp applications.GuestBookTest, testSecret *corev1.Secret, testServiceAccount *corev1.ServiceAccount) error {
-	if ginkgo.CurrentGinkgoTestDescription().Failed {
+	if ginkgo.CurrentSpecReport().Failed() {
 		t.GardenerFramework.DumpState(ctx)
 	}
 

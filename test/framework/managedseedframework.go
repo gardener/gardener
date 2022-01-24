@@ -85,7 +85,7 @@ func (f *ManagedSeedFramework) BeforeEach(ctx context.Context) {
 // AfterEach should be called in ginkgo's AfterEach.
 // It dumps the managed seed framework state if the test failed.
 func (f *ManagedSeedFramework) AfterEach(ctx context.Context) {
-	if ginkgo.CurrentGinkgoTestDescription().Failed {
+	if ginkgo.CurrentSpecReport().Failed() {
 		f.DumpState(ctx)
 	}
 }

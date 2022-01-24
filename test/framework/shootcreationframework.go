@@ -107,7 +107,7 @@ func (f *ShootCreationFramework) BeforeEach() {
 // AfterEach should be called in ginkgo's AfterEach.
 // Cleans up resources and dumps the shoot state if the test failed
 func (f *ShootCreationFramework) AfterEach(ctx context.Context) {
-	if ginkgo.CurrentGinkgoTestDescription().Failed {
+	if ginkgo.CurrentSpecReport().Failed() {
 		f.DumpState(ctx)
 	}
 }

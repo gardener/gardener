@@ -61,7 +61,7 @@ func NewGardenerFramework(cfg *GardenerConfig) *GardenerFramework {
 	}
 	ginkgo.BeforeEach(f.BeforeEach)
 	CAfterEach(func(ctx context.Context) {
-		if !ginkgo.CurrentGinkgoTestDescription().Failed {
+		if !ginkgo.CurrentSpecReport().Failed() {
 			return
 		}
 		f.DumpState(ctx)
