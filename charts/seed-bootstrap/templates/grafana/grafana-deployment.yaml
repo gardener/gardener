@@ -50,6 +50,8 @@ spec:
           value: "false"
         - name: GF_ALERTING_ENABLED
           value: "false"
+        - name: GF_DATE_FORMATS_DEFAULT_TIMEZONE
+          value: "UTC"
         volumeMounts:
         - name: grafana-storage
           mountPath: /var/grafana-storage
