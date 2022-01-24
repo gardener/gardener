@@ -4,9 +4,6 @@ metadata:
   name: istio-ingressgateway
   namespace: {{ .Release.Namespace }}
   annotations:
-    # Deprecated: These AWS-specific annotation are deprecated. You need to apply them via
-    # the '.spec.settings.loadBalancerServices.annotations' field of the Seed.
-    # TODO (mvladev): remove the annotations in v1.17.0
     service.alpha.kubernetes.io/aws-load-balancer-type: "nlb"
     service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 {{- if .Values.annotations }}
