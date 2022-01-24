@@ -16,7 +16,7 @@ package flow_test
 
 import (
 	"github.com/gardener/gardener/pkg/utils/flow"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

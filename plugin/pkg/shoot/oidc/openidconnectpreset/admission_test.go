@@ -22,8 +22,8 @@ import (
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
 
-	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

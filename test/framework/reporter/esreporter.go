@@ -23,9 +23,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	ginkgotypes "github.com/onsi/ginkgo/types"
+	"github.com/onsi/ginkgo/v2"
 )
 
 // TestSuiteMetadata describes the metadata of a whole test suite with all tests.

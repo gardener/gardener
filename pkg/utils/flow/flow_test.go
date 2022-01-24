@@ -24,7 +24,7 @@ import (
 	mockflow "github.com/gardener/gardener/pkg/utils/flow/mock"
 
 	"github.com/golang/mock/gomock"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/goleak"
 )

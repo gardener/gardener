@@ -19,7 +19,7 @@ import (
 	"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports"
 	"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports"
 	"github.com/gardener/gardener/pkg/logger"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	"github.com/sirupsen/logrus"
 
 	. "github.com/onsi/gomega"

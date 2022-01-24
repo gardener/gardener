@@ -17,7 +17,7 @@ package kubecontrollermanager_test
 import (
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

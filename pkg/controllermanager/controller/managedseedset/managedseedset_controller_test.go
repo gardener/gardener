@@ -20,7 +20,7 @@ import (
 	mockworkqueue "github.com/gardener/gardener/pkg/mock/client-go/util/workqueue"
 
 	"github.com/golang/mock/gomock"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 )

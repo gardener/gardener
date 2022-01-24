@@ -22,7 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/envtest"
 	"github.com/gardener/gardener/test/framework"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"

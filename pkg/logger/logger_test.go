@@ -17,7 +17,7 @@ package logger_test
 import (
 	. "github.com/gardener/gardener/pkg/logger"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"

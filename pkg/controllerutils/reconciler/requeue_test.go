@@ -19,8 +19,8 @@ import (
 	"time"
 
 	. "github.com/gardener/gardener/pkg/controllerutils/reconciler"
-	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/test/framework"
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 )
 
 // CIt  contextifies Gingko's It

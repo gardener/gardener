@@ -22,7 +22,7 @@ import (
 	landscaperv1alpha1 "github.com/gardener/landscaper/apis/core/v1alpha1"
 	"k8s.io/utils/pointer"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

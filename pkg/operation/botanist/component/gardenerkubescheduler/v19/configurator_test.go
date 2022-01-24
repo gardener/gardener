@@ -20,7 +20,7 @@ import (
 	v19 "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/v19"
 	"github.com/gardener/gardener/third_party/kube-scheduler/v19/v1beta1"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
 )

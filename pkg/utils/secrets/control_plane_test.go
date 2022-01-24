@@ -17,7 +17,7 @@ package secrets_test
 import (
 	. "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/ghodss/yaml"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 )
