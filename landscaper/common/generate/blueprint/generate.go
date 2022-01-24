@@ -35,14 +35,23 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+const (
+	// targetType is the identifier for the target of type Kubernetes cluster
+	targetType = "landscaper.gardener.cloud/kubernetes-cluster"
+	// targetSchema is the identifier for a JSONSchema which should be replaced by a target type
+	targetSchema = "com.github.gardener.landscaper.apis.core.v1alpha1.Target.yaml"
+)
+
 // BlueprintImport is an import field in the rendered blueprint
 type BlueprintImport struct {
 	// Name is the name of the import field
 	Name string `json:"name"`
+	// TargetType is the name of the target import
+	TargetType string `json:"targetType,omitempty"`
 	// Required refines if this import is required
 	Required bool `json:"required"`
 	// Schema is the JSONSchema of the import field
-	Schema BlueprintSchema `json:"schema"`
+	Schema *BlueprintSchema `json:"schema,omitempty"`
 }
 
 // BlueprintSchema is a JSON schema field in the import field
@@ -175,7 +184,7 @@ func renderBlueprint(definition common.OpenAPIDefinition, blueprintTemplate *tem
 			topLevelFields = append(topLevelFields, BlueprintImport{
 				Name:     key,
 				Required: requiredFields.Has(key),
-				Schema: BlueprintSchema{
+				Schema: &BlueprintSchema{
 					Type: pointer.String("array"),
 					Items: []BlueprintSchema{
 						{Ref: pointer.String(reference.String())},
@@ -192,7 +201,7 @@ func renderBlueprint(definition common.OpenAPIDefinition, blueprintTemplate *tem
 			topLevelFields = append(topLevelFields, BlueprintImport{
 				Name:     key,
 				Required: requiredFields.Has(key),
-				Schema: BlueprintSchema{
+				Schema: &BlueprintSchema{
 					Type:        &fieldType,
 					Description: &description,
 				},
@@ -200,10 +209,19 @@ func renderBlueprint(definition common.OpenAPIDefinition, blueprintTemplate *tem
 			continue
 		}
 
+		if strings.Contains(reference.String(), targetSchema) {
+			topLevelFields = append(topLevelFields, BlueprintImport{
+				Name:       key,
+				Required:   requiredFields.Has(key),
+				TargetType: targetType,
+			})
+			continue
+		}
+
 		topLevelFields = append(topLevelFields, BlueprintImport{
 			Name:     key,
 			Required: requiredFields.Has(key),
-			Schema: BlueprintSchema{
+			Schema: &BlueprintSchema{
 				Ref: pointer.String(reference.String()),
 			},
 		})

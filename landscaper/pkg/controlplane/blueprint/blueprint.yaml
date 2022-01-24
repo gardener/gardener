@@ -73,8 +73,7 @@ imports:
       ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.Rbac.yaml
   - name: runtimeCluster
     required: true
-    schema:
-      ref: blueprint://schema/com.github.gardener.landscaper.apis.core.v1alpha1.Target.yaml
+    targetType: landscaper.gardener.cloud/kubernetes-cluster
   - name: virtualGarden
     required: false
     schema:
