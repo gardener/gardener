@@ -43,7 +43,6 @@ var _ = Describe("ProjectStaleControl", func() {
 		var (
 			ctx = context.TODO()
 
-			ctrl                   *gomock.Controller
 			k8sGardenRuntimeClient *mockclient.MockClient
 
 			projectName       = "foo"
@@ -76,7 +75,7 @@ var _ = Describe("ProjectStaleControl", func() {
 		)
 
 		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
+			ctrl := gomock.NewController(GinkgoT())
 			k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
 
 			logger.Logger = logger.NewNopLogger()
@@ -137,7 +136,7 @@ var _ = Describe("ProjectStaleControl", func() {
 				k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace) error {
 					*obj = *namespace
 					return nil
-				})
+				}).AnyTimes()
 			})
 
 			It("should mark the project as 'not stale' because the namespace has the skip-stale-check annotation", func() {
