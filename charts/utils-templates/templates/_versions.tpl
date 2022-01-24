@@ -51,11 +51,7 @@ autoscaling/v2beta1
 {{- end -}}
 
 {{- define "webhookadmissionregistration" -}}
-{{- if semverCompare "<= 1.15-0" .Capabilities.KubeVersion.GitVersion -}}
-admissionregistration.k8s.io/v1beta1
-{{- else -}}
 admissionregistration.k8s.io/v1
-{{- end -}}
 {{- end -}}
 
 {{- define "poddisruptionbudgetversion" -}}

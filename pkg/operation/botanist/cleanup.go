@@ -29,7 +29,6 @@ import (
 
 	volumesnapshotv1beta1 "github.com/kubernetes-csi/external-snapshotter/v2/pkg/apis/volumesnapshot/v1beta1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
@@ -38,7 +37,6 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -194,13 +192,6 @@ func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 		return err
 	}
 
-	if version.ConstraintK8sLessEqual115.Check(b.Shoot.KubernetesVersion) {
-		return flow.Parallel(
-			cleanResourceFn(ops, c, &admissionregistrationv1beta1.MutatingWebhookConfigurationList{}, MutatingWebhookConfigurationCleanOption, cleanOptions),
-			cleanResourceFn(ops, c, &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}, ValidatingWebhookConfigurationCleanOption, cleanOptions),
-		)(ctx)
-	}
-
 	return flow.Parallel(
 		cleanResourceFn(ops, c, &admissionregistrationv1.MutatingWebhookConfigurationList{}, MutatingWebhookConfigurationCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &admissionregistrationv1.ValidatingWebhookConfigurationList{}, ValidatingWebhookConfigurationCleanOption, cleanOptions),
@@ -220,15 +211,9 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 		return err
 	}
 
-	var crdList client.ObjectList = &apiextensionsv1.CustomResourceDefinitionList{}
-
-	if version.ConstraintK8sLessEqual115.Check(b.Shoot.KubernetesVersion) {
-		crdList = &apiextensionsv1beta1.CustomResourceDefinitionList{}
-	}
-
 	return flow.Parallel(
 		cleanResourceFn(ops, c, &apiregistrationv1.APIServiceList{}, APIServiceCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, crdList, CustomResourceDefinitionCleanOption, cleanOptions),
+		cleanResourceFn(ops, c, &apiextensionsv1.CustomResourceDefinitionList{}, CustomResourceDefinitionCleanOption, cleanOptions),
 	)(ctx)
 }
 

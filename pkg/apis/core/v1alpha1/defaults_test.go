@@ -486,14 +486,8 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Maintenance).To(Equal(&Maintenance{}))
 		})
 
-		It("should enable basic auth for k8s < 1.16", func() {
-			obj.Spec.Kubernetes.Version = "1.15.1"
-			SetDefaults_Shoot(obj)
-			Expect(obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication).To(PointTo(BeTrue()))
-		})
-
-		It("should disable basic auth for k8s >= 1.16", func() {
-			obj.Spec.Kubernetes.Version = "1.16.1"
+		It("should disable basic auth", func() {
+			obj.Spec.Kubernetes.Version = "1.20.1"
 			SetDefaults_Shoot(obj)
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication).To(PointTo(BeFalse()))
 		})

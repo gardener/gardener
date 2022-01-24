@@ -21,23 +21,17 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/matchers"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	"github.com/sirupsen/logrus"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -146,39 +140,6 @@ func (c *Constraint) constraintsChecks(
 }
 
 func getValidatingWebhookConfigurations(ctx context.Context, client client.Client, k8sVersion *semver.Version) ([]admissionregistrationv1.ValidatingWebhookConfiguration, error) {
-	if version.ConstraintK8sLessEqual115.Check(k8sVersion) {
-		l := &unstructured.UnstructuredList{
-			Object: map[string]interface{}{
-				"apiVersion": admissionregistrationv1beta1.SchemeGroupVersion.String(),
-				"kind":       "ValidatingWebhookConfigurationList",
-			},
-		}
-
-		if err := client.List(ctx, l); err != nil && !meta.IsNoMatchError(err) {
-			return nil, err
-		}
-
-		var webhookConfigs []admissionregistrationv1.ValidatingWebhookConfiguration
-		if err := meta.EachListItem(l, func(obj runtime.Object) error {
-			u, _ := obj.(*unstructured.Unstructured)
-			// Set APIVersion to v1 as the target version. We can transform v1beta1 directly to v1 because both APIs are identical.
-			u.SetGroupVersionKind(admissionregistrationv1.SchemeGroupVersion.WithKind("ValidatingWebhookConfiguration"))
-
-			webhookConfig := &admissionregistrationv1.ValidatingWebhookConfiguration{}
-			if err := kubernetes.ShootScheme.Convert(u, webhookConfig, nil); err != nil {
-				return err
-			}
-
-			webhookConfigs = append(webhookConfigs, *webhookConfig)
-
-			return nil
-		}); err != nil {
-			return nil, err
-		}
-
-		return webhookConfigs, nil
-	}
-
 	validatingWebhookConfigs := &admissionregistrationv1.ValidatingWebhookConfigurationList{}
 	if err := client.List(ctx, validatingWebhookConfigs); err != nil {
 		return nil, err
@@ -192,38 +153,6 @@ var (
 )
 
 func getMutatingWebhookConfigurations(ctx context.Context, c client.Client, k8sVersion *semver.Version) ([]admissionregistrationv1.MutatingWebhookConfiguration, error) {
-	if version.ConstraintK8sLessEqual115.Check(k8sVersion) {
-		l := &unstructured.UnstructuredList{
-			Object: map[string]interface{}{
-				"apiVersion": admissionregistrationv1beta1.SchemeGroupVersion.String(),
-				"kind":       "MutatingWebhookConfigurationList",
-			},
-		}
-
-		if err := c.List(ctx, l, client.MatchingLabelsSelector{Selector: labelSelectorNotResourceManager}); err != nil && !meta.IsNoMatchError(err) {
-			return nil, err
-		}
-
-		var webhookConfigs []admissionregistrationv1.MutatingWebhookConfiguration
-		if err := meta.EachListItem(l, func(obj runtime.Object) error {
-			u, _ := obj.(*unstructured.Unstructured)
-			// Set APIVersion to v1 as the target version. We can transform v1beta1 directly to v1 because both APIs are identical.
-			u.SetGroupVersionKind(admissionregistrationv1.SchemeGroupVersion.WithKind("MutatingWebhookConfiguration"))
-
-			webhookConfig := &admissionregistrationv1.MutatingWebhookConfiguration{}
-			if err := kubernetes.ShootScheme.Convert(u, webhookConfig, nil); err != nil {
-				return err
-			}
-
-			webhookConfigs = append(webhookConfigs, *webhookConfig)
-
-			return nil
-		}); err != nil {
-			return nil, err
-		}
-		return webhookConfigs, nil
-	}
-
 	mutatingWebhookConfigs := &admissionregistrationv1.MutatingWebhookConfigurationList{}
 	if err := c.List(ctx, mutatingWebhookConfigs, client.MatchingLabelsSelector{Selector: labelSelectorNotResourceManager}); err != nil {
 		return nil, err

@@ -48,46 +48,20 @@ images:
   targetVersion: ">= 1.19"
 - name: kube-apiserver
   sourceRepository: github.com/kubernetes/kubernetes
-  repository: k8s.gcr.io/hyperkube
-  targetVersion: "< 1.17"
-- name: kube-apiserver
-  sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/kube-apiserver
-  targetVersion: ">= 1.17"
-- name: kube-controller-manager
-  sourceRepository: github.com/kubernetes/kubernetes
-  repository: k8s.gcr.io/hyperkube
-  targetVersion: "< 1.17"
 - name: kube-controller-manager
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/kube-controller-manager
-  targetVersion: ">= 1.17"
-- name: kube-scheduler
-  sourceRepository: github.com/kubernetes/kubernetes
-  repository: k8s.gcr.io/hyperkube
-  targetVersion: "< 1.17"
 - name: kube-scheduler
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/kube-scheduler
-  targetVersion: ">= 1.17"
-- name: kube-proxy
-  sourceRepository: github.com/kubernetes/kubernetes
-  repository: k8s.gcr.io/hyperkube
-  targetVersion: "< 1.17"
 - name: kube-proxy
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/kube-proxy
-  targetVersion: ">= 1.17"
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
   tag: "v0.19.0"
-  targetVersion: ">= 1.16"
-- name: cluster-autoscaler
-  sourceRepository: github.com/gardener/autoscaler
-  repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
-  targetVersion: "< 1.16"
-  tag: "v0.10.2"
 - name: vpn-seed
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed
@@ -156,14 +130,9 @@ images:
 # Shoot optional addons
 - name: kubernetes-dashboard
   sourceRepository: github.com/kubernetes/dashboard
-  repository: k8s.gcr.io/kubernetes-dashboard-amd64
-  tag: v1.10.1
-  targetVersion: "< 1.16"
-- name: kubernetes-dashboard
-  sourceRepository: github.com/kubernetes/dashboard
   repository: kubernetesui/dashboard
   tag: v2.0.3
-  targetVersion: ">= 1.16, < 1.19"
+  targetVersion: "< 1.19"
 - name: kubernetes-dashboard
   sourceRepository: github.com/kubernetes/dashboard
   repository: kubernetesui/dashboard
@@ -173,7 +142,6 @@ images:
   sourceRepository: github.com/kubernetes/dashboard
   repository: kubernetesui/metrics-scraper
   tag: v1.0.4
-  targetVersion: ">= 1.16"
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: quay.io/kubernetes-ingress-controller/nginx-ingress-controller

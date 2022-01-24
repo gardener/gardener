@@ -66,12 +66,6 @@ var _ = Describe("Executor", func() {
 				Expect(string(script)).To(Equal(testScript))
 			},
 
-			Entry("k8s 1.15, w/o kubelet data volume", "1.15.1", copyKubernetesBinariesFromHyperkubeImageForVersionsLess117, nil, nil),
-			Entry("k8s 1.15, w/ kubelet data volume", "1.15.1", copyKubernetesBinariesFromHyperkubeImageForVersionsLess117, defaultKubeletDataVolume, defaultKubeletDataVolumeSize),
-
-			Entry("k8s 1.16, w/o kubelet data volume", "1.16.2", copyKubernetesBinariesFromHyperkubeImageForVersionsLess117, nil, nil),
-			Entry("k8s 1.16, w/ kubelet data volume", "1.16.2", copyKubernetesBinariesFromHyperkubeImageForVersionsLess117, defaultKubeletDataVolume, defaultKubeletDataVolumeSize),
-
 			Entry("k8s 1.17, w/o kubelet data volume", "1.17.3", copyKubernetesBinariesFromHyperkubeImageForVersionsLess119, nil, nil),
 			Entry("k8s 1.17, w/ kubelet data volume", "1.17.3", copyKubernetesBinariesFromHyperkubeImageForVersionsLess119, defaultKubeletDataVolume, defaultKubeletDataVolumeSize),
 
@@ -86,6 +80,9 @@ var _ = Describe("Executor", func() {
 
 			Entry("k8s 1.21, w/o kubelet data volume", "1.21.7", copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119, nil, nil),
 			Entry("k8s 1.21, w/ kubelet data volume", "1.21.7", copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119, defaultKubeletDataVolume, defaultKubeletDataVolumeSize),
+
+			Entry("k8s 1.22, w/o kubelet data volume", "1.22.8", copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119, nil, nil),
+			Entry("k8s 1.22, w/ kubelet data volume", "1.22.8", copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119, defaultKubeletDataVolume, defaultKubeletDataVolumeSize),
 		)
 
 		It("should return an error because the data volume size cannot be parsed", func() {
@@ -397,12 +394,6 @@ date +%s > "$PATH_EXECUTION_LAST_DATE"
 `
 
 	return headerPart + kubeletDataVolumePart + imagesPreloadingPart + footerPart
-}
-
-func copyKubernetesBinariesFromHyperkubeImageForVersionsLess117(hyperkubeImage *imagevector.Image) string {
-	return `
-  /usr/bin/docker run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "` + hyperkubeImage.String() + `" /bin/sh -c "cp /usr/local/bin/kubelet $PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA"
-  /usr/bin/docker run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "` + hyperkubeImage.String() + `" /bin/sh -c "cp /usr/local/bin/kubectl $PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA"`
 }
 
 func copyKubernetesBinariesFromHyperkubeImageForVersionsLess119(hyperkubeImage *imagevector.Image) string {

@@ -95,10 +95,7 @@ if [[ "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" != "{{ .hyperkubeImage }}" ]]; then
 
   echo "Starting temporary hyperkube container to copy binaries to host"
 
-{{- if semverCompare "< 1.17" .kubernetesVersion }}
-  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "{{ .hyperkubeImage }}" /bin/sh -c "cp /usr/local/bin/kubelet $PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA"
-  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "{{ .hyperkubeImage }}" /bin/sh -c "cp /usr/local/bin/kubectl $PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA"
-{{- else if semverCompare "< 1.19" .kubernetesVersion }}
+{{- if semverCompare "< 1.19" .kubernetesVersion }}
   {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw --entrypoint /bin/sh "{{ .hyperkubeImage }}" -c "cp /usr/local/bin/kubelet $PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA"
   {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw --entrypoint /bin/sh "{{ .hyperkubeImage }}" -c "cp /usr/local/bin/kubectl $PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA"
 {{- else }}

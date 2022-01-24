@@ -31,15 +31,10 @@ spec:
       nodeSelector:
         worker.gardener.cloud/system-components: "true"
       securityContext:
-        {{- if semverCompare ">= 1.16" .Capabilities.KubeVersion.GitVersion }}
         allowPrivilegeEscalation: false
         readOnlyRootFilesystem: true
         runAsUser: 1001
         runAsGroup: 2001
-        {{- else }}
-        runAsUser: 65534
-        fsGroup: 65534
-        {{- end }}
       containers:
       - name: kubernetes-dashboard
         image: {{ index .Values.images "kubernetes-dashboard" }}
@@ -47,9 +42,7 @@ spec:
         args:
         - --auto-generate-certificates
         - --authentication-mode={{ .Values.authenticationMode }}
-        {{- if semverCompare ">= 1.16" .Capabilities.KubeVersion.GitVersion }}
         - --namespace={{ include "kubernetes-dashboard.namespace" . }}
-        {{- end }}
         {{- if .Values.kubeAPIServerHost }}
         env:
         - name: KUBERNETES_SERVICE_HOST

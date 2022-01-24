@@ -19,7 +19,7 @@ ingress:
   # admin : admin base64 encoded
   basicAuthSecret: YWRtaW46JGFwcjEkSWRSaVM5c3MkR3U1MHMxaGUwL2Z6Tzh2elE4S1BEMQ==
 
-kubernetesVersion: 1.15.1
+kubernetesVersion: 1.20.1
 
 reversedVPN:
   enabled: false

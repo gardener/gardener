@@ -7,7 +7,6 @@ metadata:
   labels:
     k8s-app: kubernetes-dashboard
 rules:
-{{- if semverCompare ">= 1.16" .Capabilities.KubeVersion.GitVersion }}
 # Allow Dashboard to get, update and delete Dashboard exclusive secrets.
 - apiGroups: [""]
   resources: ["secrets"]
@@ -27,38 +26,6 @@ rules:
   resources: ["services/proxy"]
   resourceNames: ["heapster", "http:heapster:", "https:heapster:", "dashboard-metrics-scraper", "http:dashboard-metrics-scraper"]
   verbs: ["get"]
-{{- else }}
-# Allow Dashboard to create 'kubernetes-dashboard-key-holder' secret.
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - create
-# Allow Dashboard to create,get,update 'kubernetes-dashboard-settings' config map.
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  resourceNames:
-  - kubernetes-dashboard-settings
-  verbs:
-  - create
-  - get
-  - update
-# Allow Dashboard to get, update and delete Dashboard exclusive secrets.
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  resourceNames:
-  - kubernetes-dashboard-key-holder
-  - kubernetes-dashboard
-  verbs:
-  - get
-  - update
-  - delete
-{{- end }}
 
 ---
 apiVersion: {{ include "rbacversion" . }}
@@ -79,7 +46,6 @@ subjects:
   name: kubernetes-dashboard
   namespace: {{ include "kubernetes-dashboard.namespace" . }}
 
-{{- if semverCompare ">= 1.16" .Capabilities.KubeVersion.GitVersion }}
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
@@ -108,4 +74,3 @@ subjects:
 - kind: ServiceAccount
   name: kubernetes-dashboard
   namespace: {{ include "kubernetes-dashboard.namespace" . }}
-{{- end }}

@@ -1,5 +1,5 @@
 global:
-  kubernetesVersion: 1.15.1
+  kubernetesVersion: 1.20.1
   podNetwork: 100.96.0.0/11
   vpaEnabled: false
 apiserver-proxy:
@@ -42,7 +42,7 @@ shoot-info:
   shootName: crazy-botany
   provider: aws
   region: eu-west-1
-  kubernetesVersion: 1.15.1
+  kubernetesVersion: 1.20.1
   domain: crazy-botany.core.my-custom-domain.com
   podNetwork: 100.96.0.0/11
   serviceNetwork: 100.64.0.0/13

@@ -58,7 +58,6 @@ spec:
         worker.gardener.cloud/pool: {{ $pool.name }}
         worker.gardener.cloud/kubernetes-version: {{ $pool.kubernetesVersion }}
 {{- end }}
-{{- if (semverCompare ">= 1.16" $pool.kubernetesVersion) }}
       initContainers:
       - name: cleanup
         image: {{ $pool.kubeProxyImage }}
@@ -85,7 +84,6 @@ spec:
           mountPath: /var/lib/kube-proxy-kubeconfig
         - name: kube-proxy-config
           mountPath: /var/lib/kube-proxy-config
-{{- end }}
       priorityClassName: system-cluster-critical
       tolerations:
       - effect: NoSchedule
@@ -101,12 +99,7 @@ spec:
         image: {{ $pool.kubeProxyImage }}
         imagePullPolicy: IfNotPresent
         command:
-        {{- if semverCompare "< 1.17" $pool.kubernetesVersion }}
-        - /hyperkube
-        - kube-proxy
-        {{- else }}
         - /usr/local/bin/kube-proxy
-        {{- end }}
         - --config=/var/lib/kube-proxy-config/config.yaml
         - --v=2
         securityContext:

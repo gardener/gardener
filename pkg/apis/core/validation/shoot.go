@@ -243,7 +243,6 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	allErrs = append(allErrs, validateAddonsUpdate(newSpec.Addons, oldSpec.Addons, metav1.HasAnnotation(newObjectMeta, v1beta1constants.AnnotationShootUseAsSeed), fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, seedGotAssigned, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
-	allErrs = append(allErrs, validateKubeProxyUpdate(newSpec.Kubernetes.KubeProxy, oldSpec.Kubernetes.KubeProxy, newSpec.Kubernetes.Version, fldPath.Child("kubernetes", "kubeProxy"))...)
 	allErrs = append(allErrs, validateKubeControllerManagerUpdate(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
 	allErrs = append(allErrs, ValidateProviderUpdate(&newSpec.Provider, &oldSpec.Provider, fldPath.Child("provider"))...)
 
@@ -422,22 +421,6 @@ func validateKubeControllerManagerUpdate(newConfig, oldConfig *core.KubeControll
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(nodeCIDRMaskNew, nodeCIDRMaskOld, fldPath.Child("nodeCIDRMaskSize"))...)
 
-	return allErrs
-}
-
-func validateKubeProxyUpdate(newConfig, oldConfig *core.KubeProxyConfig, version string, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	newMode := core.ProxyModeIPTables
-	oldMode := core.ProxyModeIPTables
-	if newConfig != nil && newConfig.Mode != nil {
-		newMode = *newConfig.Mode
-	}
-	if oldConfig != nil && oldConfig.Mode != nil {
-		oldMode = *oldConfig.Mode
-	}
-	if ok, _ := versionutils.CheckVersionMeetsConstraint(version, "< 1.16"); ok {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newMode, oldMode, fldPath.Child("mode"))...)
-	}
 	return allErrs
 }
 
@@ -879,13 +862,7 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, k8sVersion str
 	}
 
 	if ignoreTaints := autoScaler.IgnoreTaints; ignoreTaints != nil {
-		k8sVersionIs116OrGreater, _ := versionutils.CompareVersions(k8sVersion, ">=", "1.16")
-
-		if k8sVersionIs116OrGreater {
-			allErrs = append(allErrs, validateClusterAutoscalerIgnoreTaints(ignoreTaints, fldPath.Child("ignoreTaints"))...)
-		} else {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("ignoreTaints"), autoScaler.IgnoreTaints, "ignoreTaints cannot be specified for kubernetes version < 1.16"))
-		}
+		allErrs = append(allErrs, validateClusterAutoscalerIgnoreTaints(ignoreTaints, fldPath.Child("ignoreTaints"))...)
 	}
 
 	return allErrs

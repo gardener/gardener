@@ -1,4 +1,3 @@
-{{- if semverCompare ">= 1.16" .Capabilities.KubeVersion.GitVersion }}
 ---
 kind: ConfigMap
 apiVersion: v1
@@ -7,4 +6,3 @@ metadata:
   namespace: kubernetes-dashboard
   labels:
     k8s-app: kubernetes-dashboard
-{{- end }}

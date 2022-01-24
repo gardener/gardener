@@ -138,32 +138,6 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 		},
 
 		Entry(
-			"kubernetes 1.15, w/ docker",
-			"1.15.1",
-			extensionsv1alpha1.CRINameDocker,
-			kubeletConfig(true, false),
-		),
-		Entry(
-			"kubernetes 1.15, w/ containerd",
-			"1.15.1",
-			extensionsv1alpha1.CRINameContainerD,
-			kubeletConfig(true, false),
-		),
-
-		Entry(
-			"kubernetes 1.16, w/ docker",
-			"1.16.1",
-			extensionsv1alpha1.CRINameDocker,
-			kubeletConfig(true, false),
-		),
-		Entry(
-			"kubernetes 1.16, w/ containerd",
-			"1.16.1",
-			extensionsv1alpha1.CRINameContainerD,
-			kubeletConfig(true, false),
-		),
-
-		Entry(
 			"kubernetes 1.17, w/ docker",
 			"1.17.1",
 			extensionsv1alpha1.CRINameDocker,
@@ -211,6 +185,32 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 		Entry(
 			"kubernetes 1.20, w/ containerd",
 			"1.20.1",
+			extensionsv1alpha1.CRINameContainerD,
+			kubeletConfig(true, true),
+		),
+
+		Entry(
+			"kubernetes 1.21, w/ docker",
+			"1.21.1",
+			extensionsv1alpha1.CRINameDocker,
+			kubeletConfig(true, true),
+		),
+		Entry(
+			"kubernetes 1.21, w/ containerd",
+			"1.21.1",
+			extensionsv1alpha1.CRINameContainerD,
+			kubeletConfig(true, true),
+		),
+
+		Entry(
+			"kubernetes 1.22, w/ docker",
+			"1.22.1",
+			extensionsv1alpha1.CRINameDocker,
+			kubeletConfig(true, true),
+		),
+		Entry(
+			"kubernetes 1.22, w/ containerd",
+			"1.22.1",
 			extensionsv1alpha1.CRINameContainerD,
 			kubeletConfig(true, true),
 		),

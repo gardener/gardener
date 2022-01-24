@@ -523,10 +523,6 @@ subjects:
 					Expect(kubeScheduler.Deploy(ctx)).To(Succeed())
 				},
 
-				Entry("kubernetes 1.15 w/o config", "1.15.5", configEmpty),
-				Entry("kubernetes 1.15 w/ full config", "1.15.5", configFull),
-				Entry("kubernetes 1.16 w/o config", "1.16.6", configEmpty),
-				Entry("kubernetes 1.16 w/ full config", "1.16.6", configFull),
 				Entry("kubernetes 1.17 w/o config", "1.17.7", configEmpty),
 				Entry("kubernetes 1.17 w/ full config", "1.17.7", configFull),
 				Entry("kubernetes 1.18 w/o config", "1.18.8", configEmpty),
@@ -589,16 +585,9 @@ leaderElection:
 func commandForKubernetesVersion(version string, port int32, featureGateFlags ...string) []string {
 	var command []string
 
-	if k8sVersionLessThan117, _ := versionutils.CompareVersions(version, "<", "1.17"); k8sVersionLessThan117 {
-		command = append(command, "/hyperkube", "kube-scheduler")
-	} else {
-		command = append(command, "/usr/local/bin/kube-scheduler")
-	}
-
-	command = append(command, "--config=/var/lib/kube-scheduler-config/config.yaml")
-
-	command = append(
-		command,
+	command = append(command,
+		"/usr/local/bin/kube-scheduler",
+		"--config=/var/lib/kube-scheduler-config/config.yaml",
 		"--authentication-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 		"--authorization-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 		"--client-ca-file=/var/lib/kube-scheduler-server/ca.crt",

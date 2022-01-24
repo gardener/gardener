@@ -12,16 +12,16 @@ images:
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
   repository: gcr.io/google_containers/pause-amd64
   tag: "3.0"
-  version: 1.15.x
+  version: 1.17.x
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
   repository: gcr.io/google_containers/pause-amd64
   tag: "3.1"
-  version: ">= 1.16"
+  version: ">= 1.18"
 ...
 ```
 
-That means that the Gardenlet will use the `pause-container` in with tag `3.0` for all seed/shoot clusters with Kubernetes version `1.15.x`, and tag `3.1` for all clusters with Kubernetes `>= 1.16`.
+That means that the Gardenlet will use the `pause-container` in with tag `3.0` for all seed/shoot clusters with Kubernetes version `1.17.x`, and tag `3.1` for all clusters with Kubernetes `>= 1.18`.
 
 ## Overwrite image vector
 
@@ -39,12 +39,12 @@ images:
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
   repository: my-custom-image-registry/pause-amd64
   tag: "3.0"
-  version: 1.15.x
+  version: 1.17.x
 - name: pause-container
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
   repository: my-custom-image-registry/pause-amd64
   tag: "3.1"
-  version: ">= 1.16"
+  version: ">= 1.18"
 ...
 ```
 

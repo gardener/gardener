@@ -36,7 +36,6 @@ import (
 	mocksecretsutil "github.com/gardener/gardener/pkg/utils/secrets/mock"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
-	"github.com/Masterminds/semver"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/golang/mock/gomock"
@@ -62,9 +61,8 @@ const (
 	chartName               = "chartName"
 	renderedContent         = "renderedContent"
 
-	seedVersion     = "1.15.0"
-	shootVersion115 = "1.15.0"
-	shootVersion116 = "1.16.0"
+	seedVersion  = "1.20.0"
+	shootVersion = "1.20.0"
 )
 
 var (
@@ -79,8 +77,7 @@ func TestControlplane(t *testing.T) {
 
 var _ = Describe("Actuator", func() {
 	var (
-		ctrl                                   *gomock.Controller
-		shootK8sVersion115, shootK8sVersion116 *semver.Version
+		ctrl *gomock.Controller
 
 		ctx               = context.TODO()
 		providerName      = "provider-test"
@@ -99,7 +96,7 @@ var _ = Describe("Actuator", func() {
 			Shoot: &gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Kubernetes: gardencorev1beta1.Kubernetes{
-						Version: shootVersion116,
+						Version: shootVersion,
 					},
 				},
 			},
@@ -274,12 +271,6 @@ var _ = Describe("Actuator", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
-		var err error
-		shootK8sVersion115, err = semver.NewVersion(shootVersion115)
-		Expect(err).To(Not(HaveOccurred()))
-		shootK8sVersion116, err = semver.NewVersion(shootVersion116)
-		Expect(err).To(Not(HaveOccurred()))
-
 		cp = &extensionsv1alpha1.ControlPlane{
 			ObjectMeta: metav1.ObjectMeta{Name: "control-plane", Namespace: namespace},
 			Spec:       extensionsv1alpha1.ControlPlaneSpec{},
@@ -304,7 +295,7 @@ var _ = Describe("Actuator", func() {
 				c.EXPECT().Get(ctx, resourceKeyShootWebhooksNetworkPolicy, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(errNotFound)
 				c.EXPECT().Create(ctx, createdNetworkPolicyForShootWebhooks).Return(nil)
 
-				data, _ := marshalWebhooks(webhooks, providerName, shootK8sVersion116)
+				data, _ := marshalWebhooks(webhooks, providerName)
 				createdMRSecretForShootWebhooks := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: namespace},
 					Data:       map[string][]byte{"mutatingwebhookconfiguration.yaml": data},
@@ -346,7 +337,7 @@ var _ = Describe("Actuator", func() {
 			// Create mock chart renderer and factory
 			chartRenderer := mockchartrenderer.NewMockInterface(ctrl)
 			crf := mockextensionscontroller.NewMockChartRendererFactory(ctrl)
-			crf.EXPECT().NewChartRendererForShoot(shootVersion116).Return(chartRenderer, nil)
+			crf.EXPECT().NewChartRendererForShoot(shootVersion).Return(chartRenderer, nil)
 
 			// Create mock secrets and charts
 			secrets := mocksecretsutil.NewMockInterface(ctrl)
@@ -358,17 +349,17 @@ var _ = Describe("Actuator", func() {
 				configChart = configChartMock
 			}
 			ccmChart := mockchartutil.NewMockInterface(ctrl)
-			ccmChart.EXPECT().Apply(ctx, chartApplier, namespace, imageVector, seedVersion, shootVersion116, controlPlaneChartValues).Return(nil)
+			ccmChart.EXPECT().Apply(ctx, chartApplier, namespace, imageVector, seedVersion, shootVersion, controlPlaneChartValues).Return(nil)
 			ccmShootChart := mockchartutil.NewMockInterface(ctrl)
-			ccmShootChart.EXPECT().Render(chartRenderer, metav1.NamespaceSystem, imageVector, shootVersion116, shootVersion116, controlPlaneShootChartValues).Return(chartName, []byte(renderedContent), nil)
+			ccmShootChart.EXPECT().Render(chartRenderer, metav1.NamespaceSystem, imageVector, shootVersion, shootVersion, controlPlaneShootChartValues).Return(chartName, []byte(renderedContent), nil)
 			var cpShootCRDsChart chart.Interface
 			if withShootCRDsChart {
 				cpShootCRDsChartMock := mockchartutil.NewMockInterface(ctrl)
-				cpShootCRDsChartMock.EXPECT().Render(chartRenderer, metav1.NamespaceSystem, imageVector, shootVersion116, shootVersion116, controlPlaneShootCRDsChartValues).Return(chartName, []byte(renderedContent), nil)
+				cpShootCRDsChartMock.EXPECT().Render(chartRenderer, metav1.NamespaceSystem, imageVector, shootVersion, shootVersion, controlPlaneShootCRDsChartValues).Return(chartName, []byte(renderedContent), nil)
 				cpShootCRDsChart = cpShootCRDsChartMock
 			}
 			storageClassesChart := mockchartutil.NewMockInterface(ctrl)
-			storageClassesChart.EXPECT().Render(chartRenderer, metav1.NamespaceSystem, imageVector, shootVersion116, shootVersion116, storageClassesChartValues).Return(chartName, []byte(renderedContent), nil)
+			storageClassesChart.EXPECT().Render(chartRenderer, metav1.NamespaceSystem, imageVector, shootVersion, shootVersion, storageClassesChartValues).Return(chartName, []byte(renderedContent), nil)
 
 			// Create mock values provider
 			vp := mockgenericactuator.NewMockValuesProvider(ctrl)
@@ -493,7 +484,7 @@ var _ = Describe("Actuator", func() {
 			exposureSecrets := mocksecretsutil.NewMockInterface(ctrl)
 			exposureSecrets.EXPECT().Deploy(ctx, gomock.Any(), gardenerClientset, namespace).Return(deployedExposureSecrets, nil)
 			cpExposureChart := mockchartutil.NewMockInterface(ctrl)
-			cpExposureChart.EXPECT().Apply(ctx, chartApplier, namespace, imageVector, seedVersion, shootVersion116, controlPlaneExposureChartValues).Return(nil)
+			cpExposureChart.EXPECT().Apply(ctx, chartApplier, namespace, imageVector, seedVersion, shootVersion, controlPlaneExposureChartValues).Return(nil)
 
 			// Create mock values provider
 			vp := mockgenericactuator.NewMockValuesProvider(ctrl)
@@ -574,7 +565,7 @@ var _ = Describe("Actuator", func() {
 		It("should behave correctly", func() {
 			c := mockclient.NewMockClient(ctrl)
 
-			v1beta1WebhookData, err := marshalWebhooks(shootWebhooks, providerName, shootK8sVersion115)
+			v1beta1WebhookData, err := marshalWebhooks(shootWebhooks, providerName)
 			Expect(err).NotTo(HaveOccurred())
 
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.NamespaceList{}), labelSelector).DoAndReturn(func(_ context.Context, list *corev1.NamespaceList, _ ...client.ListOption) error {
@@ -609,14 +600,14 @@ var _ = Describe("Actuator", func() {
 				func(_ context.Context, _ client.ObjectKey, testCluster *extensionsv1alpha1.Cluster) error {
 					*testCluster = computeClusterWithShoot("namespace1", gardencorev1beta1.ShootSpec{
 						Kubernetes: gardencorev1beta1.Kubernetes{
-							Version: shootVersion115,
+							Version: shootVersion,
 						},
 					})
 					return nil
 				},
 			)
 
-			v1WebhookData, err := marshalWebhooks(shootWebhooks, providerName, shootK8sVersion116)
+			v1WebhookData, err := marshalWebhooks(shootWebhooks, providerName)
 			Expect(err).NotTo(HaveOccurred())
 
 			createdMRSecretForShootWebhooksNS3 := &corev1.Secret{
@@ -639,7 +630,7 @@ var _ = Describe("Actuator", func() {
 				func(_ context.Context, _ client.ObjectKey, testCluster *extensionsv1alpha1.Cluster) error {
 					*testCluster = computeClusterWithShoot("namespace3", gardencorev1beta1.ShootSpec{
 						Kubernetes: gardencorev1beta1.Kubernetes{
-							Version: shootVersion116,
+							Version: shootVersion,
 						},
 					})
 					return nil
