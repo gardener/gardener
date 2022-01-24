@@ -27,7 +27,7 @@ import (
 var _ = Describe("Conversion", func() {
 	var scheme *runtime.Scheme
 
-	BeforeSuite(func() {
+	BeforeEach(func() {
 		scheme = runtime.NewScheme()
 		Expect(SchemeBuilder.AddToScheme(scheme)).ToNot(HaveOccurred())
 	})

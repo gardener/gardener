@@ -46,8 +46,6 @@ var _ = Describe("ProjectStaleControl", func() {
 			ctrl                   *gomock.Controller
 			k8sGardenRuntimeClient *mockclient.MockClient
 
-			oldTimenowFunc func() time.Time
-
 			projectName       = "foo"
 			namespaceName     = "garden-foo"
 			secretName        = "secret"
@@ -76,14 +74,6 @@ var _ = Describe("ProjectStaleControl", func() {
 
 			reconciler reconcile.Reconciler
 		)
-
-		BeforeSuite(func() {
-			oldTimenowFunc = gutil.TimeNow
-		})
-
-		AfterSuite(func() {
-			gutil.TimeNow = oldTimenowFunc
-		})
 
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
@@ -480,9 +470,9 @@ var _ = Describe("ProjectStaleControl", func() {
 
 						expectStaleMarking(k8sGardenRuntimeClient, project, &staleSinceTimestamp, &staleAutoDeleteTimestamp, nowFunc)
 
-						gutil.TimeNow = func() time.Time {
+						defer test.WithVar(&gutil.TimeNow, func() time.Time {
 							return time.Date(1, 1, minimumLifetimeDays+1, 1, 0, 0, 0, time.UTC)
-						}
+						})()
 
 						projectCopy := project.DeepCopy()
 						projectCopy.Annotations = map[string]string{
