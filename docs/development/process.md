@@ -16,15 +16,20 @@ Hotfixes are usually maintained for the latest three minor releases, though, the
 
 Version | Week No     | Begin Validation Phase | Due Date           | Release Responsible |
 ------- | ----------- | ---------------------- | -------------------| ------------------- |
-v1.35   | Week 43-44  | October 25, 2021       | November 7, 2021   | [@kris94](https://github.com/kris94)               |
-v1.36   | Week 45-46  | November 8, 2021       | November 21, 2021  | [@timebertt](https://github.com/timebertt)         |
-v1.37   | Week 47-48  | November 22, 2021      | December 5, 2021   | [@danielfoehrKn](https://github.com/danielfoehrKn) |
-v1.38   | Week 49-50  | December 6, 2021       | December 19, 2021  | [@rfranzke](https://github.com/rfranzke)           |
-v1.39   | Week 01-02  | January 3, 2022        | January 16, 2022   | [@ialidzhikov](https://github.com/ialidzhikov)     |
-v1.39   | Week 03-04  | January 17, 2022       | January 30, 2022   | [@timuthy](https://github.com/timuthy)             |
-v1.40   | Week 05-06  | January 31, 2022       | February 13, 2022  | [@BeckerMax](https://github.com/BeckerMax)         |
-v1.41   | Week 06-07  | February 14, 2022      | February 27, 2022  | [@stoyanr](https://github.com/stoyanr)             |
-v1.42   | Week 08-09  | February 28, 2022      | March 13, 2022     | [@voelzmo](https://github.com/voelzmo)             |
+v1.39   | Week 01-04  | January 3, 2022        | January 30, 2022   | [@ialidzhikov](https://github.com/ialidzhikov), [@timuthy](https://github.com/timuthy) |
+v1.40   | Week 05-06  | January 31, 2022       | February 13, 2022  | [@BeckerMax](https://github.com/BeckerMax)                                             |
+v1.41   | Week 07-08  | February 14, 2022      | February 27, 2022  | [@plkokanov](https://github.com/plkokanov)                                             |
+v1.42   | Week 09-10  | February 28, 2022      | March 13, 2022     | [@voelzmo](https://github.com/voelzmo)                                                 |
+v1.43   | Week 11-12  | March 14, 2022         | March 27, 2022     | [@kris94](https://github.com/kris94)                                                   |
+v1.44   | Week 13-14  | March 28, 2022         | April 10, 2022     | [@timebertt](https://github.com/timebertt)                                             |
+v1.45   | Week 15-16  | April 11, 2022         | April 24, 2022     | [@danielfoehrKn](https://github.com/danielfoehrKn)                                     |
+v1.46   | Week 17-18  | April 25, 2022         | May 8, 2022        | [@ialidzhikov](https://github.com/ialidzhikov)                                         |
+v1.47   | Week 19-20  | May 9, 2022            | May 22, 2022       | [@stoyanr](https://github.com/stoyanr)                                                 |
+v1.48   | Week 21-22  | May 23, 2022           | June 5, 2022       | [@rfranzke](https://github.com/rfranzke)                                               |
+v1.49   | Week 23-24  | June 6, 2022           | June 19, 2022      | [@timuthy](https://github.com/timuthy)                                                 |
+v1.50   | Week 25-26  | June 20, 2022          | July 3, 2022       | [@acumino](https://github.com/acumino)                                                 |
+v1.51   | Week 27-28  | July 4, 2022           | July 17, 2022      | [@shafeeqes](https://github.com/shafeeqes)                                             |
+v1.52   | Week 29-30  | July 18, 2022          | July 31, 2022      | [@ary1992](https://github.com/ary1992)                                                 |
 
 Apart from the release of the next version, the release responsible is also taking care of potential hotfix releases of the last three minor versions.
 The release responsible is the main contact person for coordinating new feature PRs for the next minor versions or cherry-pick PRs for the last three minor versions.
@@ -52,6 +57,10 @@ The release responsible is the main contact person for coordinating new feature 
   v1.32   | Week 37-38  | September 13, 2021     | September 26, 2021 | [@vpnachev](https://github.com/vpnachev)           |
   v1.33   | Week 39-40  | September 27, 2021     | October 10, 2021   | [@voelzmo](https://github.com/voelzmo)             |
   v1.34   | Week 41-42  | October 11, 2021       | October 24, 2021   | [@plkokanov](https://github.com/plkokanov)         |
+  v1.35   | Week 43-44  | October 25, 2021       | November 7, 2021   | [@kris94](https://github.com/kris94)               |
+  v1.36   | Week 45-46  | November 8, 2021       | November 21, 2021  | [@timebertt](https://github.com/timebertt)         |
+  v1.37   | Week 47-48  | November 22, 2021      | December 5, 2021   | [@danielfoehrKn](https://github.com/danielfoehrKn) |
+  v1.38   | Week 49-50  | December 6, 2021       | December 19, 2021  | [@rfranzke](https://github.com/rfranzke)           |
 </details>
 
 ### Release Validation
