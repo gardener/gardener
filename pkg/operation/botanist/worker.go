@@ -59,6 +59,7 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 	b.Shoot.Components.Extensions.Worker.SetSSHPublicKey(b.LoadSecret(v1beta1constants.SecretNameSSHKeyPair).Data[secrets.DataKeySSHAuthorizedKeys])
 	b.Shoot.Components.Extensions.Worker.SetInfrastructureProviderStatus(b.Shoot.Components.Extensions.Infrastructure.ProviderStatus())
 	b.Shoot.Components.Extensions.Worker.SetWorkerNameToOperatingSystemConfigsMap(b.Shoot.Components.Extensions.OperatingSystemConfig.WorkerNameToOperatingSystemConfigsMap())
+	b.Shoot.Components.Extensions.Worker.SetCloudConfigSecretChecksum(b.Shoot.Components.Extensions.OperatingSystemConfig.GetCloudConfigSecretChecksum())
 
 	if b.isRestorePhase() {
 		return b.Shoot.Components.Extensions.Worker.Restore(ctx, b.GetShootState())

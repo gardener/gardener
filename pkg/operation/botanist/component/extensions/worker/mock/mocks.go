@@ -108,6 +108,18 @@ func (mr *MockInterfaceMockRecorder) Restore(arg0, arg1 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restore", reflect.TypeOf((*MockInterface)(nil).Restore), arg0, arg1)
 }
 
+// SetCloudConfigSecretChecksum mocks base method.
+func (m *MockInterface) SetCloudConfigSecretChecksum(arg0 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetCloudConfigSecretChecksum", arg0)
+}
+
+// SetCloudConfigSecretChecksum indicates an expected call of SetCloudConfigSecretChecksum.
+func (mr *MockInterfaceMockRecorder) SetCloudConfigSecretChecksum(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCloudConfigSecretChecksum", reflect.TypeOf((*MockInterface)(nil).SetCloudConfigSecretChecksum), arg0)
+}
+
 // SetInfrastructureProviderStatus mocks base method.
 func (m *MockInterface) SetInfrastructureProviderStatus(arg0 *runtime.RawExtension) {
 	m.ctrl.T.Helper()

@@ -60,6 +60,7 @@ type Interface interface {
 	SetInfrastructureProviderStatus(*runtime.RawExtension)
 	SetWorkerNameToOperatingSystemConfigsMap(map[string]*operatingsystemconfig.OperatingSystemConfigs)
 	MachineDeployments() []extensionsv1alpha1.MachineDeployment
+	SetCloudConfigSecretChecksum(string)
 }
 
 // Values contains the values used to create a Worker resources.
@@ -85,6 +86,8 @@ type Values struct {
 	InfrastructureProviderStatus *runtime.RawExtension
 	// WorkerNameToOperatingSystemConfigsMap contains the operating system configurations for the worker pools.
 	WorkerNameToOperatingSystemConfigsMap map[string]*operatingsystemconfig.OperatingSystemConfigs
+	// CloudConfigSecretChecksum contains the cloud-config secret's checksum.
+	CloudConfigSecretChecksum string
 }
 
 // New creates a new instance of Interface.
@@ -222,13 +225,19 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			}
 		}
 
+		annotations := make(map[string]string)
+		if workerPool.Annotations != nil {
+			annotations = workerPool.Annotations
+		}
+		annotations[v1beta1constants.GardenerCloudConfigSecretChecksum] = w.values.CloudConfigSecretChecksum
+
 		pools = append(pools, extensionsv1alpha1.WorkerPool{
 			Name:           workerPool.Name,
 			Minimum:        workerPool.Minimum,
 			Maximum:        workerPool.Maximum,
 			MaxSurge:       *workerPool.MaxSurge,
 			MaxUnavailable: *workerPool.MaxUnavailable,
-			Annotations:    workerPool.Annotations,
+			Annotations:    annotations,
 			Labels:         labels,
 			Taints:         workerPool.Taints,
 			MachineType:    workerPool.Machine.Type,
@@ -360,6 +369,10 @@ func (w *worker) SetInfrastructureProviderStatus(status *runtime.RawExtension) {
 // SetWorkerNameToOperatingSystemConfigsMap sets the operating system config maps in the values.
 func (w *worker) SetWorkerNameToOperatingSystemConfigsMap(maps map[string]*operatingsystemconfig.OperatingSystemConfigs) {
 	w.values.WorkerNameToOperatingSystemConfigsMap = maps
+}
+
+func (w *worker) SetCloudConfigSecretChecksum(c string) {
+	w.values.CloudConfigSecretChecksum = c
 }
 
 // MachineDeployments returns the generated machine deployments of the Worker.

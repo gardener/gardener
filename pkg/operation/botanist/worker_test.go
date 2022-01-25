@@ -58,6 +58,7 @@ var _ = Describe("Worker", func() {
 		infrastructureProviderStatus          = &runtime.RawExtension{Raw: []byte("infrastatus")}
 		workerNameToOperatingSystemConfigMaps = map[string]*operatingsystemconfig.OperatingSystemConfigs{"foo": {}}
 		labelSelectorCloudConfigRole          = client.MatchingLabels{"gardener.cloud/role": "cloud-config"}
+		cloudConfigSecretChecksum             = "cloudConfigSecretChecksum"
 	)
 
 	BeforeEach(func() {
@@ -90,10 +91,12 @@ var _ = Describe("Worker", func() {
 		BeforeEach(func() {
 			infrastructure.EXPECT().ProviderStatus().Return(infrastructureProviderStatus)
 			operatingSystemConfig.EXPECT().WorkerNameToOperatingSystemConfigsMap().Return(workerNameToOperatingSystemConfigMaps)
+			operatingSystemConfig.EXPECT().GetCloudConfigSecretChecksum().Return(cloudConfigSecretChecksum)
 
 			worker.EXPECT().SetSSHPublicKey(sshPublicKey)
 			worker.EXPECT().SetInfrastructureProviderStatus(infrastructureProviderStatus)
 			worker.EXPECT().SetWorkerNameToOperatingSystemConfigsMap(workerNameToOperatingSystemConfigMaps)
+			worker.EXPECT().SetCloudConfigSecretChecksum(cloudConfigSecretChecksum)
 		})
 
 		Context("deploy", func() {

@@ -78,6 +78,20 @@ func (mr *MockInterfaceMockRecorder) Destroy(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
 }
 
+// GetCloudConfigSecretChecksum mocks base method.
+func (m *MockInterface) GetCloudConfigSecretChecksum() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCloudConfigSecretChecksum")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetCloudConfigSecretChecksum indicates an expected call of GetCloudConfigSecretChecksum.
+func (mr *MockInterfaceMockRecorder) GetCloudConfigSecretChecksum() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCloudConfigSecretChecksum", reflect.TypeOf((*MockInterface)(nil).GetCloudConfigSecretChecksum))
+}
+
 // Migrate mocks base method.
 func (m *MockInterface) Migrate(arg0 context.Context) error {
 	m.ctrl.T.Helper()
@@ -128,6 +142,18 @@ func (m *MockInterface) SetCABundle(arg0 *string) {
 func (mr *MockInterfaceMockRecorder) SetCABundle(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCABundle", reflect.TypeOf((*MockInterface)(nil).SetCABundle), arg0)
+}
+
+// SetCloudConfigSecretChecksum mocks base method.
+func (m *MockInterface) SetCloudConfigSecretChecksum(arg0 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetCloudConfigSecretChecksum", arg0)
+}
+
+// SetCloudConfigSecretChecksum indicates an expected call of SetCloudConfigSecretChecksum.
+func (mr *MockInterfaceMockRecorder) SetCloudConfigSecretChecksum(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCloudConfigSecretChecksum", reflect.TypeOf((*MockInterface)(nil).SetCloudConfigSecretChecksum), arg0)
 }
 
 // SetKubeletCACertificate mocks base method.

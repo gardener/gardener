@@ -79,6 +79,10 @@ type Interface interface {
 	// WorkerNameToOperatingSystemConfigsMap returns a map whose key is a worker name and whose value is a structure
 	// containing both the downloader and the original operating system config data.
 	WorkerNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs
+	// GetCloudConfigSecretChecksum gets the cloud-config's secret checksum
+	GetCloudConfigSecretChecksum() string
+	// SetCloudConfigSecretChecksum sets the cloud-config's secret checksum
+	SetCloudConfigSecretChecksum(string)
 }
 
 // Values contains the values used to create an OperatingSystemConfig resource.
@@ -166,9 +170,10 @@ type operatingSystemConfig struct {
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
 
-	lock             sync.Mutex
-	workerNameToOSCs map[string]*OperatingSystemConfigs
-	oscs             map[string]*extensionsv1alpha1.OperatingSystemConfig
+	lock                      sync.Mutex
+	workerNameToOSCs          map[string]*OperatingSystemConfigs
+	oscs                      map[string]*extensionsv1alpha1.OperatingSystemConfig
+	cloudConfigSecretChecksum string
 }
 
 // OperatingSystemConfigs contains operating system configs for the downloader script as well as for the original cloud
@@ -458,6 +463,16 @@ func (o *operatingSystemConfig) SetSSHPublicKeys(keys []string) {
 // containing both the downloader as well as the original operating system config data.
 func (o *operatingSystemConfig) WorkerNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs {
 	return o.workerNameToOSCs
+}
+
+// GetCloudConfigSecretChecksum gets the cloud-config secret's checksum
+func (o *operatingSystemConfig) GetCloudConfigSecretChecksum() string {
+	return o.cloudConfigSecretChecksum
+}
+
+// SetCloudConfigSecretChecksum sets the cloud-config secret's checksum
+func (o *operatingSystemConfig) SetCloudConfigSecretChecksum(c string) {
+	o.cloudConfigSecretChecksum = c
 }
 
 func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) (deployer, error) {

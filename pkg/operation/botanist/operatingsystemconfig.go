@@ -17,7 +17,6 @@ package botanist
 import (
 	"context"
 	"fmt"
-
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -170,10 +169,12 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 			return err
 		}
 
-		secretName, data, err := b.generateCloudConfigExecutorResourcesForWorker(worker, oscData.Original, hyperkubeImage)
+		secretName, data, checksum, err := b.generateCloudConfigExecutorResourcesForWorker(worker, oscData.Original, hyperkubeImage)
 		if err != nil {
 			return err
 		}
+
+		b.Shoot.Components.Extensions.OperatingSystemConfig.SetCloudConfigSecretChecksum(checksum)
 
 		cloudConfigExecutorSecretNames = append(cloudConfigExecutorSecretNames, secretName)
 		managedResourceSecretNameToData[fmt.Sprintf("shoot-cloud-config-execution-%s", worker.Name)] = data
@@ -204,6 +205,7 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 		})
 	}
 
+	// TODO: (voelzmo) below the secrets are reconciled with their new content. Anything we do needs to happen above
 	if err := flow.Parallel(fns...)(ctx); err != nil {
 		return err
 	}
@@ -234,11 +236,12 @@ func (b *Botanist) generateCloudConfigExecutorResourcesForWorker(
 ) (
 	string,
 	map[string][]byte,
+	string,
 	error,
 ) {
 	kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(b.Shoot.KubernetesVersion, worker.Kubernetes)
 	if err != nil {
-		return "", nil, err
+		return "", nil, "", err
 	}
 	var (
 		registry   = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
@@ -258,13 +261,14 @@ func (b *Botanist) generateCloudConfigExecutorResourcesForWorker(
 
 	executorScript, err := ExecutorScriptFn([]byte(oscDataOriginal.Content), hyperkubeImage, kubernetesVersion.String(), kubeletDataVolume, *oscDataOriginal.Command, oscDataOriginal.Units)
 	if err != nil {
-		return "", nil, err
+		return "", nil, "", err
 	}
 
-	resources, err := registry.AddAllAndSerialize(executor.Secret(secretName, metav1.NamespaceSystem, worker.Name, executorScript))
+	secret, checksum := executor.Secret(secretName, metav1.NamespaceSystem, worker.Name, executorScript)
+	resources, err := registry.AddAllAndSerialize(secret)
 	if err != nil {
-		return "", nil, err
+		return "", nil, "", err
 	}
 
-	return secretName, resources, nil
+	return secretName, resources, checksum, nil
 }

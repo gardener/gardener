@@ -155,6 +155,9 @@ const (
 	// GardenerOperationKeepalive is a constant for the value of the operation annotation describing an
 	// operation that extends the lifetime of the object having the operation annotation.
 	GardenerOperationKeepalive = "keepalive"
+	// GardenerCloudConfigSecretChecksum is a constant for an annotation on a node which contains the checksum of the
+	// cloud-config secret that is to be applied on that node.
+	GardenerCloudConfigSecretChecksum = "gardener.cloud/cloud-config-secret-checksum"
 
 	// DeprecatedGardenRole is the key for an annotation on a Kubernetes object indicating what it is used for.
 	//

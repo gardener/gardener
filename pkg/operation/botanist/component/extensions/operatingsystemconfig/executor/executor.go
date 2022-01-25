@@ -193,15 +193,16 @@ func getKubeletDataVolumeConfig(volume *gardencorev1beta1.DataVolume) (map[strin
 }
 
 // Secret returns a Kubernetes secret object containing the cloud-config user-data executor script.
-func Secret(name, namespace, poolName string, script []byte) *corev1.Secret {
+func Secret(name, namespace, poolName string, script []byte) (*corev1.Secret, string) {
 	data := map[string][]byte{downloader.DataKeyScript: script}
+	checksum := utils.ComputeSecretChecksum(data)
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 			Annotations: map[string]string{
-				downloader.AnnotationKeyChecksum: utils.ComputeSecretChecksum(data),
+				downloader.AnnotationKeyChecksum: checksum,
 			},
 			Labels: map[string]string{
 				v1beta1constants.GardenRole:      v1beta1constants.GardenRoleCloudConfig,
@@ -209,5 +210,5 @@ func Secret(name, namespace, poolName string, script []byte) *corev1.Secret {
 			},
 		},
 		Data: data,
-	}
+	}, checksum
 }
