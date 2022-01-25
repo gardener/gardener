@@ -90,21 +90,21 @@ func ValidateShootNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPo
 			allErrs = append(allErrs, field.Invalid(pathServices, *shootServices, "shoot pod network intersects with shoot service network"))
 		}
 		if shootNodes != nil && NetworksIntersect(*shootPods, *shootNodes) {
-			allErrs = append(allErrs, field.Invalid(pathPods, *shootServices, "shoot pod network intersects with shoot node network"))
+			allErrs = append(allErrs, field.Invalid(pathPods, *shootPods, "shoot pod network intersects with shoot node network"))
 		}
 		if shootNodes != nil && NetworksIntersect(*shootServices, *shootNodes) {
 			allErrs = append(allErrs, field.Invalid(pathServices, *shootServices, "shoot service network intersects with shoot node network"))
 		}
 	} else if shootPods != nil {
 		if shootNodes != nil && NetworksIntersect(*shootPods, *shootNodes) {
-			allErrs = append(allErrs, field.Invalid(pathPods, *shootServices, "shoot pod network intersects with shoot node network"))
+			allErrs = append(allErrs, field.Invalid(pathPods, *shootPods, "shoot pod network intersects with shoot node network"))
 		}
-		allErrs = append(allErrs, field.Required(pathServices, "services is required"))
+		allErrs = append(allErrs, field.Required(pathServices, "shoot service network is required"))
 	} else if shootServices != nil {
 		if shootNodes != nil && NetworksIntersect(*shootServices, *shootNodes) {
 			allErrs = append(allErrs, field.Invalid(pathServices, *shootServices, "shoot service network intersects with shoot node network"))
 		}
-		allErrs = append(allErrs, field.Required(pathPods, "pods is required"))
+		allErrs = append(allErrs, field.Required(pathPods, "shoot pod network is required"))
 	} else {
 		allErrs = append(allErrs, field.Required(pathServices, "shoot service network is required"))
 		allErrs = append(allErrs, field.Required(pathPods, "shoot pod network is required"))
