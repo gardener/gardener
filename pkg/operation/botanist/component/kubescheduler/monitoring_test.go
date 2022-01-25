@@ -83,7 +83,7 @@ relabel_configs:
 metric_relabel_configs:
 - source_labels: [ __name__ ]
   action: keep
-  regex: ^(scheduler_binding_latency_microseconds_bucket|scheduler_e2e_scheduling_latency_microseconds_bucket|scheduler_scheduling_algorithm_latency_microseconds_bucket|rest_client_requests_total|process_max_fds|process_open_fds)$
+  regex: ^(scheduler_binding_duration_seconds_bucket|scheduler_e2e_scheduling_duration_seconds_bucket|scheduler_scheduling_algorithm_duration_seconds_bucket|rest_client_requests_total|process_max_fds|process_open_fds)$
 `
 
 	expectedAlertingRule = `groups:
@@ -101,41 +101,41 @@ metric_relabel_configs:
       description: New pods are not being assigned to nodes.
       summary: Kube Scheduler is down.
 
-  ### Scheduling latency ###
-  - record: cluster:scheduler_e2e_scheduling_latency_seconds:quantile
-    expr: histogram_quantile(0.99, sum(scheduler_e2e_scheduling_latency_microseconds_bucket) BY (le, cluster)) / 1e+06
+  ### Scheduling duration ###
+  - record: cluster:scheduler_e2e_scheduling_duration_seconds:quantile
+    expr: histogram_quantile(0.99, sum(scheduler_e2e_scheduling_duration_seconds_bucket) BY (le, cluster))
     labels:
       quantile: "0.99"
-  - record: cluster:scheduler_e2e_scheduling_latency_seconds:quantile
-    expr: histogram_quantile(0.9, sum(scheduler_e2e_scheduling_latency_microseconds_bucket) BY (le, cluster)) / 1e+06
+  - record: cluster:scheduler_e2e_scheduling_duration_seconds:quantile
+    expr: histogram_quantile(0.9, sum(scheduler_e2e_scheduling_duration_seconds_bucket) BY (le, cluster))
     labels:
       quantile: "0.9"
-  - record: cluster:scheduler_e2e_scheduling_latency_seconds:quantile
-    expr: histogram_quantile(0.5, sum(scheduler_e2e_scheduling_latency_microseconds_bucket) BY (le, cluster)) / 1e+06
+  - record: cluster:scheduler_e2e_scheduling_duration_seconds:quantile
+    expr: histogram_quantile(0.5, sum(scheduler_e2e_scheduling_duration_seconds_bucket) BY (le, cluster))
     labels:
       quantile: "0.5"
-  - record: cluster:scheduler_scheduling_algorithm_latency_seconds:quantile
-    expr: histogram_quantile(0.99, sum(scheduler_scheduling_algorithm_latency_microseconds_bucket) BY (le, cluster)) / 1e+06
+  - record: cluster:scheduler_scheduling_algorithm_duration_seconds:quantile
+    expr: histogram_quantile(0.99, sum(scheduler_scheduling_algorithm_duration_seconds_bucket) BY (le, cluster))
     labels:
       quantile: "0.99"
-  - record: cluster:scheduler_scheduling_algorithm_latency_seconds:quantile
-    expr: histogram_quantile(0.9, sum(scheduler_scheduling_algorithm_latency_microseconds_bucket) BY (le, cluster)) / 1e+06
+  - record: cluster:scheduler_scheduling_algorithm_duration_seconds:quantile
+    expr: histogram_quantile(0.9, sum(scheduler_scheduling_algorithm_duration_seconds_bucket) BY (le, cluster))
     labels:
       quantile: "0.9"
-  - record: cluster:scheduler_scheduling_algorithm_latency_seconds:quantile
-    expr: histogram_quantile(0.5, sum(scheduler_scheduling_algorithm_latency_microseconds_bucket) BY (le, cluster)) / 1e+06
+  - record: cluster:scheduler_scheduling_algorithm_duration_seconds:quantile
+    expr: histogram_quantile(0.5, sum(scheduler_scheduling_algorithm_duration_seconds_bucket) BY (le, cluster))
     labels:
       quantile: "0.5"
-  - record: cluster:scheduler_binding_latency_seconds:quantile
-    expr: histogram_quantile(0.99, sum(scheduler_binding_latency_microseconds_bucket) BY (le, cluster)) / 1e+06
+  - record: cluster:scheduler_binding_duration_seconds:quantile
+    expr: histogram_quantile(0.99, sum(scheduler_binding_duration_seconds_bucket) BY (le, cluster))
     labels:
       quantile: "0.99"
-  - record: cluster:scheduler_binding_latency_seconds:quantile
-    expr: histogram_quantile(0.9, sum(scheduler_binding_latency_microseconds_bucket) BY (le, cluster)) / 1e+06
+  - record: cluster:scheduler_binding_duration_seconds:quantile
+    expr: histogram_quantile(0.9, sum(scheduler_binding_duration_seconds_bucket) BY (le, cluster))
     labels:
       quantile: "0.9"
-  - record: cluster:scheduler_binding_latency_seconds:quantile
-    expr: histogram_quantile(0.5, sum(scheduler_binding_latency_microseconds_bucket) BY (le, cluster)) / 1e+06
+  - record: cluster:scheduler_binding_duration_seconds:quantile
+    expr: histogram_quantile(0.5, sum(scheduler_binding_duration_seconds_bucket) BY (le, cluster))
     labels:
       quantile: "0.5"
 `

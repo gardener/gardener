@@ -1943,7 +1943,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "cluster:scheduler_e2e_scheduling_latency_seconds:quantile",
+              "expr": "cluster:scheduler_e2e_scheduling_duration_seconds:quantile",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "{{quantile}}",
