@@ -1,0 +1,31 @@
+description: FlexVolume represents a generic volume resource that is provisioned/attached
+  using an exec based plugin.
+properties:
+  driver:
+    default: ""
+    description: Driver is the name of the driver to use for this volume.
+    type: string
+  fsType:
+    description: Filesystem type to mount. Must be a filesystem type supported by
+      the host operating system. Ex. "ext4", "xfs", "ntfs". The default filesystem
+      depends on FlexVolume script.
+    type: string
+  options:
+    additionalProperties:
+      default: ""
+      type: string
+    description: 'Optional: Extra command options if any.'
+    type: object
+  readOnly:
+    description: 'Optional: Defaults to false (read/write). ReadOnly here will force
+      the ReadOnly setting in VolumeMounts.'
+    type: boolean
+  secretRef:
+    $ref: blueprint://schema/io.k8s.api.core.v1.LocalObjectReference.yaml
+    description: 'Optional: SecretRef is reference to the secret object containing
+      sensitive information to pass to the plugin scripts. This may be empty if no
+      secret object is specified. If the secret object contains more than one secret,
+      all secrets are passed to the plugin scripts.'
+required:
+- driver
+type: object

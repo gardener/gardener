@@ -29,7 +29,7 @@ type Imports struct {
 	// Identity is the id that uniquely identifies this Gardener installation
 	// If not set, uses the existing identity of the installation or generates a default identity ("landscape-").
 	// +optional
-	Identity *string `json:"identity"`
+	Identity *string `json:"identity,omitempty"`
 	// RuntimeCluster contains the kubeconfig for the cluster where the Gardener
 	// control plane pods will run.
 	// if you do NOT configure a "virtual Garden" installation, the API server of this cluster will

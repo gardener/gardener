@@ -1,0 +1,19 @@
+description: CA contains the x509 CA public cert and optionally a private key
+properties:
+  crt:
+    description: Crt is the public part of the X509 CA certificate
+    type: string
+  key:
+    description: Crt is the private part of the X509 CA certificate The private key
+      is required for signing
+    type: string
+  secretRef:
+    $ref: blueprint://schema/io.k8s.api.core.v1.SecretReference.yaml
+    description: 'SecretRef is an optional reference to a secret in the runtime cluster
+      that contains the CA certificate and key Expects the following optional keys
+      - ca.crt:  Crt - ca.key:  Key'
+  validity:
+    $ref: blueprint://schema/io.k8s.apimachinery.pkg.apis.meta.v1.Duration.yaml
+    description: Validity specifies the lifetime of a generated CA certificates (ignored
+      for existing certificates)
+type: object

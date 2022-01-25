@@ -1,0 +1,34 @@
+description: VirtualGarden contains configuration for the "Virtual Garden" setup option
+  of Gardener
+properties:
+  clusterIP:
+    description: |-
+      ClusterIP is an arbitrary private ipV4 IP that is used to enable the virtual Garden API server running as a pod in the runtime cluster to talk to the Gardener Extension API server pod also running as a pod in the runtime cluster This IP
+       - In the Virtual Garden cluster: is written into the endpoints resource of the "gardener-apiserver" service.
+         This service is used by the APIService resources to register Gardener resource groups.
+       - In the runtime cluster: is the ClusterIP of the "gardener-apiserver" service selecting the Gardener Extension
+         API server pods.
+
+      Exposed to accommodate existing Gardener installation defaults to 10.0.1.0
+    type: string
+  enabled:
+    default: false
+    description: Enabled configures whether to setup Gardener with the "Virtual Garden"
+      setup option of Gardener Please note that as a prerequisite, the API server
+      pods of the "Virtual Garden" already need to be deployed to the runtime cluster
+      (this should be done automatically by a preceding component when using the standard
+      installation via the landscaper) and must be able to communicate with the Gardener
+      Extension API server pod that will be deployed to the Garden namespace
+    type: boolean
+  kubeconfig:
+    $ref: blueprint://schema/com.github.gardener.landscaper.apis.core.v1alpha1.Target.yaml
+    description: |-
+      Kubeconfig is the landscaper target containing the kubeconfig to an existing "Virtual Garden" API server deployed in the runtime cluster. This is the kubeconfig of the Cluster
+       - that will be aggregated by the Gardener Extension API server with Gardener resource groups
+       - where the Gardener configuration is created (garden namespace, default & internal domain secrets, Gardener webhooks)
+       - essentially, this helm chart will be applied: charts/gardener/controlplane/charts/application
+
+      The Gardener control plane (Gardener Controller Manager, Gardener Scheduler, ...) will in turn run in the runtime cluster, but use kubeconfigs with credentials to this API server.
+required:
+- enabled
+type: object

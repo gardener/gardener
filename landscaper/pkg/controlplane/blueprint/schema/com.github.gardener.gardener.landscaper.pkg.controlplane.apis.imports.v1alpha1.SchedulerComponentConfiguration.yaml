@@ -1,0 +1,10 @@
+description: SchedulerComponentConfiguration contains the component configuration
+  of the Gardener Scheduler
+properties:
+  config:
+    $ref: blueprint://schema/io.k8s.apimachinery.pkg.runtime.RawExtension.yaml
+    default: {}
+    description: Config specifies values for the Gardener Scheduler component configuration
+      Please see example/20-componentconfig-gardener-scheduler.yaml for what can be
+      configured here
+type: object

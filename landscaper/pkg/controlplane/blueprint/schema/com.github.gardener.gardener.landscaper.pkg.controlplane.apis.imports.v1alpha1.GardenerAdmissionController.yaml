@@ -1,0 +1,19 @@
+description: GardenerAdmissionController contains the configuration of the Gardener
+  Admission Controller
+properties:
+  componentConfiguration:
+    $ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.AdmissionControllerComponentConfiguration.yaml
+    description: ComponentConfiguration contains the component configuration of the
+      Gardener API Server
+  deploymentConfiguration:
+    $ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.CommonDeploymentConfiguration.yaml
+    description: DeploymentConfiguration contains optional configurations for the
+      deployment of the Gardener Admission Controller
+  enabled:
+    description: Enabled configures whether the Gardener Admission Controller should
+      be deployed
+    type: boolean
+  seedRestriction:
+    $ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.SeedRestriction.yaml
+    description: SeedRestriction configures the SeedRestriction admission plugin
+type: object

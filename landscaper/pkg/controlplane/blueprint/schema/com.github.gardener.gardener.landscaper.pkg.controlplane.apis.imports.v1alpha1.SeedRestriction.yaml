@@ -1,0 +1,10 @@
+description: SeedRestriction configures the SeedRestriction admission plugin
+properties:
+  enabled:
+    description: 'Enabled configures whether the SeedRestriction admission plugin
+      should be used. Sets up the ValidatingWebhookConfiguration pointing to the webhook
+      server in the Gardener Admission Controller serving the SeedRestriction webhook
+      Must be enabled when the Seed Authorizer option is enabled (field .rbac.seedAuthorizer).
+      Default: false'
+    type: boolean
+type: object

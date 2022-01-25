@@ -1,0 +1,34 @@
+description: APIServerAdmissionConfiguration contains admission configuration for
+  the Gardener API server
+properties:
+  disableAdmissionPlugins:
+    description: DisableAdmissionPlugins are a list of names of admission plugins
+      that should be disabled although they are in the default enabled plugins list.
+    items:
+      default: ""
+      type: string
+    type: array
+  enableAdmissionPlugins:
+    description: EnableAdmissionPlugins is a list of names of admission plugins to
+      be enabled in addition to default enabled ones
+    items:
+      default: ""
+      type: string
+    type: array
+  mutatingWebhook:
+    $ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.APIServerAdmissionWebhookCredentials.yaml
+    description: MutatingWebhook configures client-credentials to authenticate against
+      validating webhooks
+  plugins:
+    description: 'Plugins contains the name and configuration of admission plugins
+      of the Gardener API server Mutating and Validating admission plugins must not
+      be added. For more information, see here: https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#authenticate-apiservers#'
+    items:
+      $ref: blueprint://schema/io.k8s.apiserver.pkg.apis.apiserver.v1.AdmissionPluginConfiguration.yaml
+      default: {}
+    type: array
+  validatingWebhook:
+    $ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.APIServerAdmissionWebhookCredentials.yaml
+    description: ValidatingWebhook configures client-credentials to authenticate against
+      validating webhooks
+type: object
