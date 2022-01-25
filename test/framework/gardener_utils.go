@@ -106,14 +106,6 @@ func (f *GardenerFramework) GetShootProject(ctx context.Context, shootNamespace 
 
 // createShootResource creates a shoot from a shoot Object
 func (f *GardenerFramework) createShootResource(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-	err := f.GetShoot(ctx, shoot)
-	if err == nil {
-		return shoot, apierrors.NewAlreadyExists(gardencorev1beta1.Resource("shoots"), shoot.Namespace+"/"+shoot.Name)
-	}
-	if !apierrors.IsNotFound(err) {
-		return nil, err
-	}
-
 	if err := f.GardenClient.Client().Create(ctx, shoot); err != nil {
 		return nil, err
 	}
@@ -129,7 +121,7 @@ func (f *GardenerFramework) CreateShoot(ctx context.Context, shoot *gardencorev1
 			return retry.SevereError(err)
 		}
 		if err != nil {
-			f.Logger.Debugf("unable to create shoot %s: %s", shoot.Name, err.Error())
+			f.Logger.Infof("unable to create shoot %s: %s", shoot.Name, err.Error())
 			return retry.MinorError(err)
 		}
 		return retry.Ok()
@@ -149,7 +141,18 @@ func (f *GardenerFramework) CreateShoot(ctx context.Context, shoot *gardencorev1
 }
 
 // DeleteShootAndWaitForDeletion deletes the test shoot and waits until it cannot be found any more
-func (f *GardenerFramework) DeleteShootAndWaitForDeletion(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
+func (f *GardenerFramework) DeleteShootAndWaitForDeletion(ctx context.Context, shoot *gardencorev1beta1.Shoot) (rErr error) {
+	defer func() {
+		if rErr != nil {
+			shootFramework, err := f.NewShootFramework(ctx, shoot)
+			if err != nil {
+				f.Logger.Errorf("Cannot dump shoot state %s: %v", shoot.GetName(), err)
+			} else {
+				shootFramework.DumpState(ctx)
+			}
+		}
+	}()
+
 	err := f.DeleteShoot(ctx, shoot)
 	if err != nil {
 		return err
@@ -169,6 +172,9 @@ func (f *GardenerFramework) DeleteShoot(ctx context.Context, shoot *gardencorev1
 	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
 		err = f.RemoveShootAnnotation(ctx, shoot, v1beta1constants.ShootIgnore)
 		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return retry.Ok()
+			}
 			return retry.MinorError(err)
 		}
 
