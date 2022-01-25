@@ -704,6 +704,8 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.RecommendationMarginFraction).To(PointTo(Equal(0.15)))
 			Expect(obj.UpdaterInterval).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
 			Expect(obj.RecommenderInterval).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
+			Expect(obj.KubeApiQps).To(PointTo(Equal(5.0)))
+			Expect(obj.KubeApiBurst).To(PointTo(Equal(10.0)))
 		})
 	})
 })

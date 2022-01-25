@@ -1941,17 +1941,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		var (
-			negativeDuration            = metav1.Duration{Duration: -time.Second}
-			negativeInteger       int32 = -100
-			positiveInteger       int32 = 100
-			expanderLeastWaste          = core.ClusterAutoscalerExpanderLeastWaste
-			expanderMostPods            = core.ClusterAutoscalerExpanderMostPods
-			expanderPriority            = core.ClusterAutoscalerExpanderPriority
-			expanderRandom              = core.ClusterAutoscalerExpanderRandom
-			ignoreTaintsUnique          = []string{"taint-1", "taint-2"}
-			ignoreTaintsDuplicate       = []string{"taint-1", "taint-1"}
-			ignoreTaintsInvalid         = []string{"taint 1", "taint-1"}
-			version                     = "1.20"
+			negativeDuration              = metav1.Duration{Duration: -time.Second}
+			negativeInteger       int32   = -100
+			positiveInteger       int32   = 100
+			negativeFloat         float64 = -100.0
+			expanderLeastWaste            = core.ClusterAutoscalerExpanderLeastWaste
+			expanderMostPods              = core.ClusterAutoscalerExpanderMostPods
+			expanderPriority              = core.ClusterAutoscalerExpanderPriority
+			expanderRandom                = core.ClusterAutoscalerExpanderRandom
+			ignoreTaintsUnique            = []string{"taint-1", "taint-2"}
+			ignoreTaintsDuplicate         = []string{"taint-1", "taint-1"}
+			ignoreTaintsInvalid           = []string{"taint 1", "taint-1"}
+			version                       = "1.20"
 		)
 
 		Context("ClusterAutoscaler validation", func() {
@@ -2022,10 +2023,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 					EvictAfterOOMThreshold: &negativeDuration,
 					UpdaterInterval:        &negativeDuration,
 					RecommenderInterval:    &negativeDuration,
+					KubeApiQps:             &negativeFloat,
+					KubeApiBurst:           &negativeFloat,
 				}, ConsistOf(
 					field.Invalid(field.NewPath("evictAfterOOMThreshold"), negativeDuration, "can not be negative"),
 					field.Invalid(field.NewPath("updaterInterval"), negativeDuration, "can not be negative"),
 					field.Invalid(field.NewPath("recommenderInterval"), negativeDuration, "can not be negative"),
+					field.Invalid(field.NewPath("kubeApiQps"), negativeFloat, "can not be negative"),
+					field.Invalid(field.NewPath("kubeApiBurst"), negativeFloat, "can not be negative or zero"),
 				)),
 			)
 		})

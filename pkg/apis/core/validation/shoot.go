@@ -929,6 +929,12 @@ func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, fldPat
 	if interval := autoScaler.RecommenderInterval; interval != nil && interval.Duration < 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("recommenderInterval"), *interval, "can not be negative"))
 	}
+	if qps := autoScaler.KubeApiQps; qps != nil && *qps < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeApiQps"), *qps, "can not be negative"))
+	}
+	if burst := autoScaler.KubeApiBurst; burst != nil && *burst <= 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeApiBurst"), *burst, "can not be negative or zero"))
+	}
 
 	return allErrs
 }
