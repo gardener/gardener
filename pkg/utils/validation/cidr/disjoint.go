@@ -106,8 +106,8 @@ func ValidateShootNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPo
 		}
 		allErrs = append(allErrs, field.Required(pathPods, "pods is required"))
 	} else {
-		allErrs = append(allErrs, field.Required(pathServices, "services is required"))
-		allErrs = append(allErrs, field.Required(pathPods, "pods is required"))
+		allErrs = append(allErrs, field.Required(pathServices, "shoot service network is required"))
+		allErrs = append(allErrs, field.Required(pathPods, "shoot pod network is required"))
 	}
 
 	return allErrs
