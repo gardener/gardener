@@ -28,7 +28,7 @@ v1.47   | Week 19-20  | May 9, 2022            | May 22, 2022       | [@stoyanr]
 v1.48   | Week 21-22  | May 23, 2022           | June 5, 2022       | [@rfranzke](https://github.com/rfranzke)                                               |
 v1.49   | Week 23-24  | June 6, 2022           | June 19, 2022      | [@timuthy](https://github.com/timuthy)                                                 |
 v1.50   | Week 25-26  | June 20, 2022          | July 3, 2022       | [@shafeeqes](https://github.com/shafeeqes)                                             |
-v1.51   | Week 27-28  | July 4, 2022           | June 17, 2022      | [@acumino](https://github.com/acumino)                                                 |
+v1.51   | Week 27-28  | July 4, 2022           | July 17, 2022      | [@acumino](https://github.com/acumino)                                                 |
 v1.52   | Week 29-30  | July 18, 2022          | July 31, 2022      | [@ary1992](https://github.com/ary1992)                                                 |
 
 Apart from the release of the next version, the release responsible is also taking care of potential hotfix releases of the last three minor versions.
