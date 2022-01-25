@@ -74,10 +74,10 @@ NAME    CLOUDPROFILE   PROVIDER   REGION   K8S VERSION   HIBERNATION   LAST OPER
 local   local          local      local    1.21.0        Awake         Create Processing (43%)   healthy   94s
 ```
 
-(Optional): You could also execute the e2e tests by running
+(Optional): You could also execute a simple e2e test (creating and deleting a shoot) by running
 
 ```shell
-make test-e2e-local KUBECONFIG="$PWD/example/gardener-local/kind/kubeconfig"
+make test-e2e-local-fast KUBECONFIG="$PWD/example/gardener-local/kind/kubeconfig"
 ```
 
 ⚠️ Please note that in this setup shoot clusters are not accessible by default when you download the kubeconfig and try to communicate with them.
