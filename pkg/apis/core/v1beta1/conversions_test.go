@@ -18,7 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -27,7 +27,7 @@ import (
 var _ = Describe("Conversion", func() {
 	var scheme *runtime.Scheme
 
-	BeforeSuite(func() {
+	BeforeEach(func() {
 		scheme = runtime.NewScheme()
 		Expect(SchemeBuilder.AddToScheme(scheme)).ToNot(HaveOccurred())
 	})

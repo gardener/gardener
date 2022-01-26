@@ -17,7 +17,7 @@ package builder
 import (
 	"context"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"

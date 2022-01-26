@@ -28,7 +28,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -85,7 +85,7 @@ func (f *ManagedSeedFramework) BeforeEach(ctx context.Context) {
 // AfterEach should be called in ginkgo's AfterEach.
 // It dumps the managed seed framework state if the test failed.
 func (f *ManagedSeedFramework) AfterEach(ctx context.Context) {
-	if ginkgo.CurrentGinkgoTestDescription().Failed {
+	if ginkgo.CurrentSpecReport().Failed() {
 		f.DumpState(ctx)
 	}
 }

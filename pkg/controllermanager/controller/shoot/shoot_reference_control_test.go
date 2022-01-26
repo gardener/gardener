@@ -29,7 +29,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/golang/mock/gomock"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
@@ -82,11 +82,6 @@ var _ = Describe("Shoot References", func() {
 	})
 
 	Context("Common controller tests", func() {
-		BeforeEach(func() {
-			cache.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector)
-			cache.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace))
-		})
-
 		It("should do nothing because shoot in request cannot be found", func() {
 			cl.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(apierrors.NewNotFound(gardencorev1beta1.SchemeGroupVersion.WithResource("shoots").GroupResource(), namespacedName.Name))
 
@@ -150,7 +145,6 @@ var _ = Describe("Shoot References", func() {
 					list.Items = append(list.Items, secrets...)
 					return nil
 				})
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace))
 
 			cl.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
 				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot) error {
@@ -185,7 +179,6 @@ var _ = Describe("Shoot References", func() {
 					list.Items = append(list.Items, secrets...)
 					return nil
 				})
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace))
 
 			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(shootNamespace)).DoAndReturn(
 				func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
@@ -222,14 +215,13 @@ var _ = Describe("Shoot References", func() {
 				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot) error {
 					*s = shoot
 					return nil
-				}).Times(2)
+				})
 
 			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
 				func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 					list.Items = append(list.Items, secrets...)
 					return nil
 				})
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace))
 
 			var (
 				m              sync.Mutex
@@ -315,20 +307,14 @@ var _ = Describe("Shoot References", func() {
 					list.Items = append(list.Items, secrets...)
 					return nil
 				})
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace))
 
 			cl.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
 				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot) error {
 					*s = shoot
 					return nil
-				}).Times(2)
+				})
 
 			var updatedSecret *corev1.Secret
-			cl.EXPECT().Get(gomock.Any(), kutil.Key(secrets[0].Namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ types.NamespacedName, s *corev1.Secret) error {
-					*s = secrets[0]
-					return nil
-				})
 			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).DoAndReturn(
 				func(_ context.Context, secret *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
 					updatedSecret = secret
@@ -390,13 +376,12 @@ var _ = Describe("Shoot References", func() {
 					list.Items = append(list.Items, secrets...)
 					return nil
 				})
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace))
 
 			cl.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
 				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot) error {
 					*s = shoot
 					return nil
-				}).Times(2)
+				})
 
 			var updatedShoot *gardencorev1beta1.Shoot
 			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
@@ -439,13 +424,12 @@ var _ = Describe("Shoot References", func() {
 					list.Items = append(list.Items, secrets...)
 					return nil
 				})
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace))
 
 			cl.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
 				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot) error {
 					*s = shoot
 					return nil
-				}).Times(2)
+				})
 
 			cl.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ types.NamespacedName, s *corev1.Secret) error {
@@ -550,7 +534,7 @@ var _ = Describe("Shoot References", func() {
 				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot) error {
 					*s = shoot
 					return nil
-				}).Times(2)
+				})
 
 			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace)).DoAndReturn(
 				func(_ context.Context, list *corev1.ConfigMapList, _ ...client.ListOption) error {
@@ -628,14 +612,9 @@ var _ = Describe("Shoot References", func() {
 				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot) error {
 					*s = shoot
 					return nil
-				}).Times(2)
+				})
 
 			var updatedConfigMap *corev1.ConfigMap
-			cl.EXPECT().Get(gomock.Any(), kutil.Key(configMaps[0].Namespace, configMapName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ types.NamespacedName, cm *corev1.ConfigMap) error {
-					*cm = configMaps[0]
-					return nil
-				})
 			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()).DoAndReturn(
 				func(_ context.Context, cm *corev1.ConfigMap, _ client.Patch, _ ...client.PatchOption) error {
 					updatedConfigMap = cm
@@ -707,7 +686,7 @@ var _ = Describe("Shoot References", func() {
 				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot) error {
 					*s = shoot
 					return nil
-				}).Times(2)
+				})
 
 			var updatedShoot *gardencorev1beta1.Shoot
 			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
@@ -758,7 +737,7 @@ var _ = Describe("Shoot References", func() {
 				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot) error {
 					*s = shoot
 					return nil
-				}).Times(2)
+				})
 
 			cl.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(
 				func(_ context.Context, _ types.NamespacedName, cm *corev1.ConfigMap) error {

@@ -15,7 +15,7 @@
 package v1alpha1_test
 
 import (
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	rbacv1 "k8s.io/api/rbac/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"

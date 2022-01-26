@@ -22,7 +22,7 @@ import (
 	. "github.com/gardener/gardener/plugin/pkg/global/customverbauthorizer"
 
 	"github.com/golang/mock/gomock"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,13 +33,10 @@ import (
 )
 
 var _ = Describe("customverbauthorizer", func() {
-	var (
-		ctrl *gomock.Controller
-		auth *mockauthorizer.MockAuthorizer
-	)
+	var auth *mockauthorizer.MockAuthorizer
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
+		ctrl := gomock.NewController(GinkgoT())
 		auth = mockauthorizer.NewMockAuthorizer(ctrl)
 	})
 
@@ -228,7 +225,7 @@ var _ = Describe("customverbauthorizer", func() {
 
 				Describe("permissions granted", func() {
 					BeforeEach(func() {
-						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionAllow, "", nil)
+						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionAllow, "", nil).AnyTimes()
 					})
 
 					Context("CREATE", func() {
@@ -277,7 +274,7 @@ var _ = Describe("customverbauthorizer", func() {
 
 				Describe("permissions not granted", func() {
 					BeforeEach(func() {
-						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionDeny, "", nil)
+						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionDeny, "", nil).AnyTimes()
 					})
 
 					Context("CREATE", func() {

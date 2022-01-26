@@ -18,15 +18,17 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/v2/reporters"
+	. "github.com/onsi/gomega"
 
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/config"
 	"github.com/gardener/gardener/test/framework/reporter"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 
-	"testing"
-
+	// imported test specs
 	_ "github.com/gardener/gardener/test/integration/gardener/security"
 )
 
@@ -55,5 +57,9 @@ func TestMain(m *testing.M) {
 }
 
 func TestGardenerSuite(t *testing.T) {
-	RunSpecsWithDefaultAndCustomReporters(t, "Gardener Test Suite", []Reporter{reporter.NewGardenerESReporter(*reportFilePath, *esIndex)})
+	RunSpecs(t, "Gardener Test Suite")
 }
+
+var _ = ReportAfterSuite("Report to Elasticsearch", func(report Report) {
+	reporters.ReportViaDeprecatedReporter(reporter.NewDeprecatedGardenerESReporter(*reportFilePath, *esIndex), report)
+})

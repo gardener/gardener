@@ -17,7 +17,7 @@ package kubernetes_test
 import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

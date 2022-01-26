@@ -18,7 +18,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 )
 
 // CIt  contextifies Gingko's It
@@ -33,7 +33,7 @@ func FCIt(text string, body func(context.Context), timeout time.Duration) {
 
 // CAfterSuite contextifies Gingko's FIt
 func CAfterSuite(body func(context.Context), timeout time.Duration) {
-	ginkgo.AfterSuite(contextify(body, timeout), timeout.Seconds())
+	ginkgo.AfterSuite(contextify(body, timeout))
 }
 
 // CAfterEach contextifies Gingko's AfterEach
@@ -43,7 +43,7 @@ func CAfterEach(body func(context.Context), timeout time.Duration) {
 
 // CBeforeSuite contextifies Gingko's FIt
 func CBeforeSuite(body func(context.Context), timeout time.Duration) {
-	ginkgo.BeforeSuite(contextify(body, timeout), timeout.Seconds())
+	ginkgo.BeforeSuite(contextify(body, timeout))
 }
 
 // CBeforeEach contextifies Gingko's BeforeEach

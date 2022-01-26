@@ -23,9 +23,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/config"
-	ginkgotypes "github.com/onsi/ginkgo/types"
+	"github.com/onsi/ginkgo/v2/config"
+	"github.com/onsi/ginkgo/v2/reporters"
+	"github.com/onsi/ginkgo/v2/types"
 )
 
 // TestSuiteMetadata describes the metadata of a whole test suite with all tests.
@@ -68,8 +68,8 @@ const (
 	SpecPhaseSucceeded ESSpecPhase = "Succeeded"
 	// SpecPhaseFailed is a failed test
 	SpecPhaseFailed ESSpecPhase = "Failed"
-	// SpecPhaseTimeout is a test which execution time was longer than the specified timeout
-	SpecPhaseTimeout ESSpecPhase = "Timeout"
+	// SpecPhaseInterrupted is a test which execution time was longer than the specified timeout
+	SpecPhaseInterrupted ESSpecPhase = "Interrupted"
 )
 
 // GardenerESReporter is a custom ginkgo exporter for gardener integration tests that write a summary of the tests in a
@@ -85,9 +85,14 @@ type GardenerESReporter struct {
 
 var matchLabel, _ = regexp.Compile(`\\[(.*?)\\]`)
 
-// NewGardenerESReporter creates a new Gardener elasticsearch reporter.
+// NewDeprecatedGardenerESReporter creates a new Gardener elasticsearch reporter.
 // The json bulk will be stored in the passed filename in the given es index.
-func NewGardenerESReporter(filename, index string) ginkgo.Reporter {
+// It can be used with reporters.ReportViaDeprecatedReporter in ginkgo v2 to get the same reporting as in ginkgo v1.
+// However, it must be invoked in ReportAfterSuite instead of passed to RunSpecsWithDefaultAndCustomReporters, hence
+// it was renamed to force dependent repositories to adapt.
+// Deprecated: this needs to be reworked to ginkgo's new reporting infrastructure, ReportViaDeprecatedReporter will be
+// removed in a future version of ginkgo v2, see https://onsi.github.io/ginkgo/MIGRATING_TO_V2#removed-custom-reporters
+func NewDeprecatedGardenerESReporter(filename, index string) reporters.DeprecatedReporter {
 	reporter := &GardenerESReporter{
 		filename:  filename,
 		testCases: []TestCase{},
@@ -99,9 +104,9 @@ func NewGardenerESReporter(filename, index string) ginkgo.Reporter {
 	return reporter
 }
 
-// SpecSuiteWillBegin is the first function that is invoked by ginkgo when a test suites starts.
+// SuiteWillBegin is the first function that is invoked by ginkgo when a test suites starts.
 // It is used to setup metadata information about the suite
-func (reporter *GardenerESReporter) SpecSuiteWillBegin(config config.GinkgoConfigType, summary *ginkgotypes.SuiteSummary) {
+func (reporter *GardenerESReporter) SuiteWillBegin(config config.GinkgoConfigType, summary *types.SuiteSummary) {
 	reporter.suite = &TestSuiteMetadata{
 		Name:  summary.SuiteDescription,
 		Phase: SpecPhaseSucceeded,
@@ -110,9 +115,9 @@ func (reporter *GardenerESReporter) SpecSuiteWillBegin(config config.GinkgoConfi
 }
 
 // SpecDidComplete analysis the completed test and creates new es entry
-func (reporter *GardenerESReporter) SpecDidComplete(specSummary *ginkgotypes.SpecSummary) {
+func (reporter *GardenerESReporter) SpecDidComplete(specSummary *types.SpecSummary) {
 	// do not report skipped tests
-	if specSummary.State == ginkgotypes.SpecStateSkipped || specSummary.State == ginkgotypes.SpecStatePending {
+	if specSummary.State == types.SpecStateSkipped || specSummary.State == types.SpecStatePending {
 		return
 	}
 
@@ -123,7 +128,7 @@ func (reporter *GardenerESReporter) SpecDidComplete(specSummary *ginkgotypes.Spe
 		Phase:     PhaseForState(specSummary.State),
 		Labels:    parseLabels(strings.Join(specSummary.ComponentTexts[1:], " ")),
 	}
-	if specSummary.State == ginkgotypes.SpecStateFailed || specSummary.State == ginkgotypes.SpecStateTimedOut || specSummary.State == ginkgotypes.SpecStatePanicked {
+	if specSummary.State == types.SpecStateFailed || specSummary.State == types.SpecStateInterrupted || specSummary.State == types.SpecStatePanicked {
 		testCase.FailureMessage = &FailureMessage{
 			Type:    PhaseForState(specSummary.State),
 			Message: failureMessage(specSummary.Failure),
@@ -135,9 +140,9 @@ func (reporter *GardenerESReporter) SpecDidComplete(specSummary *ginkgotypes.Spe
 	reporter.testCases = append(reporter.testCases, testCase)
 }
 
-// SpecSuiteDidEnd collects the metadata for the whole test suite and writes the results
+// SuiteDidEnd collects the metadata for the whole test suite and writes the results
 // as elasticsearch json bulk to the specified location.
-func (reporter *GardenerESReporter) SpecSuiteDidEnd(summary *ginkgotypes.SuiteSummary) {
+func (reporter *GardenerESReporter) SuiteDidEnd(summary *types.SuiteSummary) {
 	reporter.suite.Tests = summary.NumberOfSpecsThatWillBeRun
 	reporter.suite.Duration = math.Trunc(summary.RunTime.Seconds()*1000) / 1000
 	reporter.suite.Failures = summary.NumberOfFailedSpecs
@@ -183,15 +188,15 @@ func (reporter *GardenerESReporter) SpecSuiteDidEnd(summary *ginkgotypes.SuiteSu
 }
 
 // SpecWillRun is implemented as a noop to satisfy the reporter interface for ginkgo.
-func (reporter *GardenerESReporter) SpecWillRun(specSummary *ginkgotypes.SpecSummary) {}
+func (reporter *GardenerESReporter) SpecWillRun(specSummary *types.SpecSummary) {}
 
 // BeforeSuiteDidRun is implemented as a noop to satisfy the reporter interface for ginkgo.
-func (reporter *GardenerESReporter) BeforeSuiteDidRun(setupSummary *ginkgotypes.SetupSummary) {}
+func (reporter *GardenerESReporter) BeforeSuiteDidRun(setupSummary *types.SetupSummary) {}
 
 // AfterSuiteDidRun is implemented as a noop to satisfy the reporter interface for ginkgo.
-func (reporter *GardenerESReporter) AfterSuiteDidRun(setupSummary *ginkgotypes.SetupSummary) {}
+func (reporter *GardenerESReporter) AfterSuiteDidRun(setupSummary *types.SetupSummary) {}
 
-func failureMessage(failure ginkgotypes.SpecFailure) string {
+func failureMessage(failure types.SpecFailure) string {
 	return fmt.Sprintf("%s\n%s\n%s", failure.ComponentCodeLocation.String(), failure.Message, failure.Location.String())
 }
 
@@ -217,17 +222,17 @@ func getESIndexString(index string) string {
 }
 
 // PhaseForState maps ginkgo spec states to internal elasticsearch used phases
-func PhaseForState(state ginkgotypes.SpecState) ESSpecPhase {
+func PhaseForState(state types.SpecState) ESSpecPhase {
 	switch state {
-	case ginkgotypes.SpecStatePending:
+	case types.SpecStatePending:
 		return SpecPhasePending
-	case ginkgotypes.SpecStatePassed:
+	case types.SpecStatePassed:
 		return SpecPhaseSucceeded
-	case ginkgotypes.SpecStateFailed:
+	case types.SpecStateFailed:
 		return SpecPhaseFailed
-	case ginkgotypes.SpecStateTimedOut:
-		return SpecPhaseTimeout
-	case ginkgotypes.SpecStatePanicked:
+	case types.SpecStateInterrupted:
+		return SpecPhaseInterrupted
+	case types.SpecStatePanicked:
 		return SpecPhaseFailed
 	default:
 		return SpecPhaseUnknown

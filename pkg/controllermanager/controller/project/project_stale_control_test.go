@@ -29,7 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,10 +43,7 @@ var _ = Describe("ProjectStaleControl", func() {
 		var (
 			ctx = context.TODO()
 
-			ctrl                   *gomock.Controller
 			k8sGardenRuntimeClient *mockclient.MockClient
-
-			oldTimenowFunc func() time.Time
 
 			projectName       = "foo"
 			namespaceName     = "garden-foo"
@@ -77,16 +74,8 @@ var _ = Describe("ProjectStaleControl", func() {
 			reconciler reconcile.Reconciler
 		)
 
-		BeforeSuite(func() {
-			oldTimenowFunc = gutil.TimeNow
-		})
-
-		AfterSuite(func() {
-			gutil.TimeNow = oldTimenowFunc
-		})
-
 		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
+			ctrl := gomock.NewController(GinkgoT())
 			k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
 
 			logger.Logger = logger.NewNopLogger()
@@ -147,7 +136,7 @@ var _ = Describe("ProjectStaleControl", func() {
 				k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace) error {
 					*obj = *namespace
 					return nil
-				})
+				}).AnyTimes()
 			})
 
 			It("should mark the project as 'not stale' because the namespace has the skip-stale-check annotation", func() {
@@ -480,9 +469,9 @@ var _ = Describe("ProjectStaleControl", func() {
 
 						expectStaleMarking(k8sGardenRuntimeClient, project, &staleSinceTimestamp, &staleAutoDeleteTimestamp, nowFunc)
 
-						gutil.TimeNow = func() time.Time {
+						defer test.WithVar(&gutil.TimeNow, func() time.Time {
 							return time.Date(1, 1, minimumLifetimeDays+1, 1, 0, 0, 0, time.UTC)
-						}
+						})()
 
 						projectCopy := project.DeepCopy()
 						projectCopy.Annotations = map[string]string{

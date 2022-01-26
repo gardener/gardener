@@ -17,7 +17,7 @@ package worker_test
 import (
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )

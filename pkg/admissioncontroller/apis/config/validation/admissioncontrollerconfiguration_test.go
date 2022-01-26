@@ -18,8 +18,7 @@ import (
 	apisconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	. "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"

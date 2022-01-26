@@ -28,7 +28,7 @@ import (
 	"github.com/gardener/gardener/test/framework/resources/templates"
 
 	"github.com/Masterminds/semver"
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

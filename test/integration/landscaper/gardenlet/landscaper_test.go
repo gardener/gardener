@@ -29,7 +29,7 @@ import (
 	"github.com/gardener/gardener/test/framework"
 	landscaperframework "github.com/gardener/gardener/test/framework/landscaper"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 )
 
 const (

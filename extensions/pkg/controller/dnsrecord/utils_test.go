@@ -17,8 +17,7 @@ package dnsrecord_test
 import (
 	. "github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

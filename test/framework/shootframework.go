@@ -29,7 +29,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -124,7 +124,7 @@ func (f *ShootFramework) BeforeEach(ctx context.Context) {
 // AfterEach should be called in ginkgo's AfterEach.
 // Cleans up resources and dumps the shoot state if the test failed
 func (f *ShootFramework) AfterEach(ctx context.Context) {
-	if ginkgo.CurrentGinkgoTestDescription().Failed {
+	if ginkgo.CurrentSpecReport().Failed() {
 		f.DumpState(ctx)
 	}
 	if !f.Config.DisableTestNamespaceCleanup && f.Namespace != "" {

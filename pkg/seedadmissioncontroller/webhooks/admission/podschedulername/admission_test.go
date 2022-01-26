@@ -17,7 +17,7 @@ package podschedulername_test
 import (
 	"context"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	"gomodules.xyz/jsonpatch/v2"

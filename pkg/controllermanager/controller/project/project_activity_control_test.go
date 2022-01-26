@@ -26,7 +26,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/golang/mock/gomock"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,7 +52,6 @@ var _ = Describe("Project Activity Reconcile", func() {
 
 		request reconcile.Request
 
-		ctrl                   *gomock.Controller
 		k8sGardenRuntimeClient *mockclient.MockClient
 		ctx                    = context.TODO()
 	)
@@ -97,7 +96,7 @@ var _ = Describe("Project Activity Reconcile", func() {
 		}
 
 		logger.Logger = logger.NewLogger("info", "")
-		ctrl = gomock.NewController(GinkgoT())
+		ctrl := gomock.NewController(GinkgoT())
 		k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
 		reconciler = NewActivityReconciler(logger.NewNopLogger(), k8sGardenRuntimeClient)
 		request = reconcile.Request{NamespacedName: types.NamespacedName{Name: shoot.Name, Namespace: shoot.Namespace}}
@@ -112,7 +111,7 @@ var _ = Describe("Project Activity Reconcile", func() {
 			logger.Logger.Infof("Project %s not found returning empty", opts[core.ProjectNamespace])
 			*obj = gardencorev1beta1.ProjectList{}
 			return nil
-		})
+		}).AnyTimes()
 
 		k8sGardenRuntimeClient.EXPECT().Get(ctx, gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, namespacedName client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
 			for _, s := range []gardencorev1beta1.Shoot{*shoot, *shootWithoutProject, *errorShoot} {

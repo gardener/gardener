@@ -24,7 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 
 	"github.com/mholt/archiver"
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	"k8s.io/helm/pkg/downloader"
 	"k8s.io/helm/pkg/getter"
 	"k8s.io/helm/pkg/helm/environment"

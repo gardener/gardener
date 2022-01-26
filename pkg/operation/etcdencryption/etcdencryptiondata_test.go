@@ -17,7 +17,7 @@ package etcdencryption_test
 import (
 	. "github.com/gardener/gardener/pkg/operation/etcdencryption"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

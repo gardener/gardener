@@ -18,7 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

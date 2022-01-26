@@ -17,7 +17,7 @@ package resourcemanager_test
 import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

@@ -37,7 +37,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 )
 
@@ -217,7 +217,7 @@ func (t *GuestBookTest) Test(ctx context.Context) {
 // Dump logs the current state of all components of the guestbook test
 // if the test has failed
 func (t *GuestBookTest) dump(ctx context.Context) {
-	if !ginkgo.CurrentGinkgoTestDescription().Failed {
+	if !ginkgo.CurrentSpecReport().Failed() {
 		return
 	}
 

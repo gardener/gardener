@@ -31,7 +31,7 @@ import (
 	"github.com/gardener/gardener/landscaper/pkg/gardenlet/apis/imports"
 	. "github.com/gardener/gardener/landscaper/pkg/gardenlet/apis/imports/validation"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 )

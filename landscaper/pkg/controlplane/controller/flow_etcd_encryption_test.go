@@ -17,7 +17,7 @@ package controller
 import (
 	"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports"
 	"github.com/gardener/gardener/pkg/logger"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
