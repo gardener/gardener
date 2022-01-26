@@ -7,6 +7,9 @@ jsonSchema: "http://json-schema.org/draft-04/schema"
 imports:
   {{ .imports | nindent 2 }}
 
+exports:
+  {{ .exports | nindent 2 }}
+
 # For what can be referenced in the deployExecutions, please see:
 # https://github.com/gardener/landscaper/blob/master/docs/usage/Blueprints.md#deployexecutions
 deployExecutions:

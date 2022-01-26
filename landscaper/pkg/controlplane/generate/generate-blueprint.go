@@ -23,6 +23,7 @@ import (
 	importsv1alpha1 "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1"
 	"github.com/gardener/gardener/landscaper/pkg/controlplane/generate/openapi"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 )
 
 var (
@@ -53,6 +54,7 @@ func main() {
 		tpl,
 		scheme,
 		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.Imports",
+		pointer.String("github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports.Exports"),
 		openapi.GetOpenAPIDefinitions,
 		"landscaper/pkg/controlplane/blueprint",
 	); err != nil {

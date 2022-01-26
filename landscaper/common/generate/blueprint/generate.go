@@ -42,11 +42,11 @@ const (
 	targetSchema = "com.github.gardener.landscaper.apis.core.v1alpha1.Target.yaml"
 )
 
-// BlueprintImport is an import field in the rendered blueprint
-type BlueprintImport struct {
+// BlueprintField is a field (import or export) in the rendered blueprint
+type BlueprintField struct {
 	// Name is the name of the import field
 	Name string `json:"name"`
-	// TargetType is the name of the target import
+	// TargetType is the name of the target import/export
 	TargetType string `json:"targetType,omitempty"`
 	// Required refines if this import is required
 	Required bool `json:"required"`
@@ -54,9 +54,9 @@ type BlueprintImport struct {
 	Schema *BlueprintSchema `json:"schema,omitempty"`
 }
 
-// BlueprintSchema is a JSON schema field in the import field
+// BlueprintSchema is a JSON schema field in the field
 type BlueprintSchema struct {
-	// Type is the type according to JSONSchema of the filed
+	// Type is the type according to JSONSchema of the field
 	Type *string `json:"type,omitempty"`
 	// Ref is a reference to the JSONSchema of the field
 	// the schemas for fields are written as json files into the /schema directory in the blueprint filesystem
@@ -70,10 +70,13 @@ type BlueprintSchema struct {
 // RenderBlueprint renders a blueprint filesystem (writes the blueprint + the schema files)
 // the `rootOpenAPIDefinitionKey` identifies the key in the OpenAPI definitions that identifies the root
 // definition (import configuration of the landscaper component)
-// Please note that the function `getOpenAPIDefinitions` must be generated using the `openapi-gen` binary
+// Please note
+//  - the function `getOpenAPIDefinitions` must be generated using the `openapi-gen` binary
+//  - exportExecutions and therefore exporting targets is currently not supported by the generator
 func RenderBlueprint(blueprintTemplate *template.Template,
 	scheme *runtime.Scheme,
-	rootOpenAPIDefinitionKey string,
+	rootImportOpenAPIDefinitionKey string,
+	rootExportOpenAPIDefinitionKey *string,
 	getOpenAPIDefinitions func(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition,
 	blueprintDirectory string,
 ) error {
@@ -89,9 +92,18 @@ func RenderBlueprint(blueprintTemplate *template.Template,
 		return openapispec.MustCreateRef(fmt.Sprintf("blueprint://%s", filepath))
 	})
 
-	rootOpenAPIDefinition := openAPIDefinitions[rootOpenAPIDefinitionKey]
+	rootImportOpenAPIDefinition := openAPIDefinitions[rootImportOpenAPIDefinitionKey]
 
-	if err := renderBlueprint(rootOpenAPIDefinition, blueprintTemplate, blueprintDirectory); err != nil {
+	var rootExportOpenAPIDefinition *common.OpenAPIDefinition
+	if rootExportOpenAPIDefinitionKey != nil {
+		definiton, ok := openAPIDefinitions[*rootExportOpenAPIDefinitionKey]
+		if !ok {
+			return fmt.Errorf("openAPI definition for export type %q not found", *rootExportOpenAPIDefinitionKey)
+		}
+		rootExportOpenAPIDefinition = &definiton
+	}
+
+	if err := renderBlueprint(rootImportOpenAPIDefinition, rootExportOpenAPIDefinition, blueprintTemplate, blueprintDirectory); err != nil {
 		return err
 	}
 
@@ -105,10 +117,19 @@ func RenderBlueprint(blueprintTemplate *template.Template,
 		return err
 	}
 
-	// recursively write the blueprint filesystem
-	totalFilesWritten, err := writeSchemaDependency(openAPIDefinitions, rootOpenAPIDefinition, namer, blueprintDirectory)
+	// recursively write the blueprint filesystem for schemas used in imports
+	totalFilesWritten, err := writeSchemaDependency(openAPIDefinitions, rootImportOpenAPIDefinition, namer, blueprintDirectory)
 	if err != nil {
 		return err
+	}
+
+	// recursively write the blueprint filesystem for schemas used in exports
+	if rootExportOpenAPIDefinition != nil {
+		totalFilesWrittenExports, err := writeSchemaDependency(openAPIDefinitions, *rootExportOpenAPIDefinition, namer, blueprintDirectory)
+		if err != nil {
+			return err
+		}
+		totalFilesWritten += totalFilesWrittenExports
 	}
 
 	fmt.Printf("Done writing the blueprint filesystem. Wrote %d files. \n", totalFilesWritten)
@@ -135,13 +156,39 @@ func cleanDirectory(directory string) error {
 // renderBlueprint creates the blueprint.yaml in the blueprint directory based on the `blueprintTemplate`
 // The blueprint resource must contain fields defining its import fields. Only using a `ref` to a JSONSchema file is not possible.
 // Hence, this function takes the properties of the root schema and renders them as top-level import fields to the blueprint.
-func renderBlueprint(definition common.OpenAPIDefinition, blueprintTemplate *template.Template, blueprintDirectory string) error {
-	var topLevelFields []BlueprintImport
-	requiredFields := sets.NewString(definition.Schema.SchemaProps.Required...)
+func renderBlueprint(importDefinition common.OpenAPIDefinition, exportDefinition *common.OpenAPIDefinition, blueprintTemplate *template.Template, blueprintDirectory string) error {
+	importsFields, err2 := getTopLevelFields(importDefinition)
+	if err2 != nil {
+		return err2
+	}
+
+	data := map[string]string{
+		"imports": string(importsFields),
+	}
+
+	if exportDefinition != nil {
+		exportsFields, err2 := getTopLevelFields(*exportDefinition)
+		if err2 != nil {
+			return err2
+		}
+		data["exports"] = string(exportsFields)
+	}
+
+	var ccdScript bytes.Buffer
+	if err := blueprintTemplate.Execute(&ccdScript, data); err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(fmt.Sprintf("%s/blueprint.yaml", blueprintDirectory), ccdScript.Bytes(), 0640)
+}
+
+func getTopLevelFields(importDefinition common.OpenAPIDefinition) ([]byte, error) {
+	var topLevelFields []BlueprintField
+	requiredFields := sets.NewString(importDefinition.Schema.SchemaProps.Required...)
 
 	// use an alphabetical order for writing the blueprint top-level imports to avoid diffs on re-generation
 	keys := sets.NewString()
-	for key, _ := range definition.Schema.SchemaProps.Properties {
+	for key, _ := range importDefinition.Schema.SchemaProps.Properties {
 		keys.Insert(key)
 	}
 	sort.Strings(keys.List())
@@ -153,7 +200,7 @@ func renderBlueprint(definition common.OpenAPIDefinition, blueprintTemplate *tem
 			continue
 		}
 
-		schema := definition.Schema.SchemaProps.Properties[key]
+		schema := importDefinition.Schema.SchemaProps.Properties[key]
 
 		// all object types have a ref directly
 		// array types have items which again have refs (default domains, alerting, ...)
@@ -161,27 +208,27 @@ func renderBlueprint(definition common.OpenAPIDefinition, blueprintTemplate *tem
 
 		typeBytes, err := schema.SchemaProps.Type.MarshalJSON()
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		fieldType := strings.ReplaceAll(string(typeBytes), "\"", "")
 
 		if fieldType == "array" {
 			if schema.SchemaProps.Items == nil {
-				return fmt.Errorf("array type misdefined for key %q", key)
+				return nil, fmt.Errorf("array type misdefined for key %q", key)
 			}
 
 			if schema.SchemaProps.Items.Schema == nil {
-				return fmt.Errorf("array type misdefined. No schema defined for key %q", key)
+				return nil, fmt.Errorf("array type misdefined. No schema defined for key %q", key)
 			}
 
 			// we expect that the items of the array are defined as a JSONSchema reference (not inline).
 			reference := schema.SchemaProps.Items.Schema.Ref.Ref.GetURL()
 			if reference == nil {
-				return fmt.Errorf("items of the array type %q muat be defined as a JSONSchema reference (not inline)", key)
+				return nil, fmt.Errorf("items of the array type %q muat be defined as a JSONSchema reference (not inline)", key)
 			}
 
-			topLevelFields = append(topLevelFields, BlueprintImport{
+			topLevelFields = append(topLevelFields, BlueprintField{
 				Name:     key,
 				Required: requiredFields.Has(key),
 				Schema: &BlueprintSchema{
@@ -198,7 +245,7 @@ func renderBlueprint(definition common.OpenAPIDefinition, blueprintTemplate *tem
 		// this is a simple field (no schema reference)
 		if reference == nil {
 			description := strings.ReplaceAll(schema.SchemaProps.Description, "'", "")
-			topLevelFields = append(topLevelFields, BlueprintImport{
+			topLevelFields = append(topLevelFields, BlueprintField{
 				Name:     key,
 				Required: requiredFields.Has(key),
 				Schema: &BlueprintSchema{
@@ -210,7 +257,7 @@ func renderBlueprint(definition common.OpenAPIDefinition, blueprintTemplate *tem
 		}
 
 		if strings.Contains(reference.String(), targetSchema) {
-			topLevelFields = append(topLevelFields, BlueprintImport{
+			topLevelFields = append(topLevelFields, BlueprintField{
 				Name:       key,
 				Required:   requiredFields.Has(key),
 				TargetType: targetType,
@@ -218,7 +265,7 @@ func renderBlueprint(definition common.OpenAPIDefinition, blueprintTemplate *tem
 			continue
 		}
 
-		topLevelFields = append(topLevelFields, BlueprintImport{
+		topLevelFields = append(topLevelFields, BlueprintField{
 			Name:     key,
 			Required: requiredFields.Has(key),
 			Schema: &BlueprintSchema{
@@ -229,22 +276,14 @@ func renderBlueprint(definition common.OpenAPIDefinition, blueprintTemplate *tem
 
 	jsonBytes, err := json.Marshal(topLevelFields)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	yamlOut, err := yaml.JSONToYAML(jsonBytes)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	var ccdScript bytes.Buffer
-	if err := blueprintTemplate.Execute(&ccdScript, map[string]string{
-		"imports": string(yamlOut),
-	}); err != nil {
-		return err
-	}
-
-	return ioutil.WriteFile(fmt.Sprintf("%s/blueprint.yaml", blueprintDirectory), ccdScript.Bytes(), 0640)
+	return yamlOut, nil
 }
 
 // writeJsonSchemaFile writes a JSONSchema formatted file to the blueprint directory
