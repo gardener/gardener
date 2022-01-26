@@ -99,7 +99,7 @@ const (
 
 FILE=/etc/containerd/config.toml
 if [ ! -s "$FILE" ]; then
-  mkdir -p /etc/containerd
+  mkdir -p $(dirname $FILE)
   containerd config default > "$FILE"
 fi
 
