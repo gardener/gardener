@@ -27,12 +27,12 @@ import (
 const (
 	monitoringPrometheusJobName = "kube-scheduler"
 
-	monitoringMetricSchedulerBindingLatencyMicrosecondsBucket             = "scheduler_binding_latency_microseconds_bucket"
-	monitoringMetricSchedulerE2ESchedulingLatencyMicrosecondsBucket       = "scheduler_e2e_scheduling_latency_microseconds_bucket"
-	monitoringMetricSchedulerSchedulingAlgorithmLatencyMicrosecondsBucket = "scheduler_scheduling_algorithm_latency_microseconds_bucket"
-	monitoringMetricRestClientRequestsTotal                               = "rest_client_requests_total"
-	monitoringMetricProcessMaxFds                                         = "process_max_fds"
-	monitoringMetricProcessOpenFds                                        = "process_open_fds"
+	monitoringMetricSchedulerBindingDurationSecondsBucket             = "scheduler_binding_duration_seconds_bucket"
+	monitoringMetricSchedulerE2ESchedulingDurationSecondsBucket       = "scheduler_e2e_scheduling_duration_seconds_bucket"
+	monitoringMetricSchedulerSchedulingAlgorithmDurationSecondsBucket = "scheduler_scheduling_algorithm_duration_seconds_bucket"
+	monitoringMetricRestClientRequestsTotal                           = "rest_client_requests_total"
+	monitoringMetricProcessMaxFds                                     = "process_max_fds"
+	monitoringMetricProcessOpenFds                                    = "process_open_fds"
 
 	monitoringAlertingRules = `groups:
 - name: kube-scheduler.rules
@@ -49,41 +49,41 @@ const (
       description: New pods are not being assigned to nodes.
       summary: Kube Scheduler is down.
 
-  ### Scheduling latency ###
-  - record: cluster:scheduler_e2e_scheduling_latency_seconds:quantile
-    expr: histogram_quantile(0.99, sum(` + monitoringMetricSchedulerE2ESchedulingLatencyMicrosecondsBucket + `) BY (le, cluster)) / 1e+06
+  ### Scheduling duration ###
+  - record: cluster:scheduler_e2e_scheduling_duration_seconds:quantile
+    expr: histogram_quantile(0.99, sum(` + monitoringMetricSchedulerE2ESchedulingDurationSecondsBucket + `) BY (le, cluster))
     labels:
       quantile: "0.99"
-  - record: cluster:scheduler_e2e_scheduling_latency_seconds:quantile
-    expr: histogram_quantile(0.9, sum(` + monitoringMetricSchedulerE2ESchedulingLatencyMicrosecondsBucket + `) BY (le, cluster)) / 1e+06
+  - record: cluster:scheduler_e2e_scheduling_duration_seconds:quantile
+    expr: histogram_quantile(0.9, sum(` + monitoringMetricSchedulerE2ESchedulingDurationSecondsBucket + `) BY (le, cluster))
     labels:
       quantile: "0.9"
-  - record: cluster:scheduler_e2e_scheduling_latency_seconds:quantile
-    expr: histogram_quantile(0.5, sum(` + monitoringMetricSchedulerE2ESchedulingLatencyMicrosecondsBucket + `) BY (le, cluster)) / 1e+06
+  - record: cluster:scheduler_e2e_scheduling_duration_seconds:quantile
+    expr: histogram_quantile(0.5, sum(` + monitoringMetricSchedulerE2ESchedulingDurationSecondsBucket + `) BY (le, cluster))
     labels:
       quantile: "0.5"
-  - record: cluster:scheduler_scheduling_algorithm_latency_seconds:quantile
-    expr: histogram_quantile(0.99, sum(` + monitoringMetricSchedulerSchedulingAlgorithmLatencyMicrosecondsBucket + `) BY (le, cluster)) / 1e+06
+  - record: cluster:scheduler_scheduling_algorithm_duration_seconds:quantile
+    expr: histogram_quantile(0.99, sum(` + monitoringMetricSchedulerSchedulingAlgorithmDurationSecondsBucket + `) BY (le, cluster))
     labels:
       quantile: "0.99"
-  - record: cluster:scheduler_scheduling_algorithm_latency_seconds:quantile
-    expr: histogram_quantile(0.9, sum(` + monitoringMetricSchedulerSchedulingAlgorithmLatencyMicrosecondsBucket + `) BY (le, cluster)) / 1e+06
+  - record: cluster:scheduler_scheduling_algorithm_duration_seconds:quantile
+    expr: histogram_quantile(0.9, sum(` + monitoringMetricSchedulerSchedulingAlgorithmDurationSecondsBucket + `) BY (le, cluster))
     labels:
       quantile: "0.9"
-  - record: cluster:scheduler_scheduling_algorithm_latency_seconds:quantile
-    expr: histogram_quantile(0.5, sum(` + monitoringMetricSchedulerSchedulingAlgorithmLatencyMicrosecondsBucket + `) BY (le, cluster)) / 1e+06
+  - record: cluster:scheduler_scheduling_algorithm_duration_seconds:quantile
+    expr: histogram_quantile(0.5, sum(` + monitoringMetricSchedulerSchedulingAlgorithmDurationSecondsBucket + `) BY (le, cluster))
     labels:
       quantile: "0.5"
-  - record: cluster:scheduler_binding_latency_seconds:quantile
-    expr: histogram_quantile(0.99, sum(` + monitoringMetricSchedulerBindingLatencyMicrosecondsBucket + `) BY (le, cluster)) / 1e+06
+  - record: cluster:scheduler_binding_duration_seconds:quantile
+    expr: histogram_quantile(0.99, sum(` + monitoringMetricSchedulerBindingDurationSecondsBucket + `) BY (le, cluster))
     labels:
       quantile: "0.99"
-  - record: cluster:scheduler_binding_latency_seconds:quantile
-    expr: histogram_quantile(0.9, sum(` + monitoringMetricSchedulerBindingLatencyMicrosecondsBucket + `) BY (le, cluster)) / 1e+06
+  - record: cluster:scheduler_binding_duration_seconds:quantile
+    expr: histogram_quantile(0.9, sum(` + monitoringMetricSchedulerBindingDurationSecondsBucket + `) BY (le, cluster))
     labels:
       quantile: "0.9"
-  - record: cluster:scheduler_binding_latency_seconds:quantile
-    expr: histogram_quantile(0.5, sum(` + monitoringMetricSchedulerBindingLatencyMicrosecondsBucket + `) BY (le, cluster)) / 1e+06
+  - record: cluster:scheduler_binding_duration_seconds:quantile
+    expr: histogram_quantile(0.5, sum(` + monitoringMetricSchedulerBindingDurationSecondsBucket + `) BY (le, cluster))
     labels:
       quantile: "0.5"
 `
@@ -91,9 +91,9 @@ const (
 
 var (
 	monitoringAllowedMetrics = []string{
-		monitoringMetricSchedulerBindingLatencyMicrosecondsBucket,
-		monitoringMetricSchedulerE2ESchedulingLatencyMicrosecondsBucket,
-		monitoringMetricSchedulerSchedulingAlgorithmLatencyMicrosecondsBucket,
+		monitoringMetricSchedulerBindingDurationSecondsBucket,
+		monitoringMetricSchedulerE2ESchedulingDurationSecondsBucket,
+		monitoringMetricSchedulerSchedulingAlgorithmDurationSecondsBucket,
 		monitoringMetricRestClientRequestsTotal,
 		monitoringMetricProcessMaxFds,
 		monitoringMetricProcessOpenFds,
