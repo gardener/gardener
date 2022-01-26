@@ -323,6 +323,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 func prepareGardenLokiService(service *corev1.Service) *corev1.Service {
 	// Remove the cluster IP because it could be already in use
 	service.Spec.ClusterIP = ""
+	service.Spec.ClusterIPs = nil
 	return service
 }
 
@@ -341,6 +342,7 @@ func prepareShootLokiService(shootLokiService *corev1.Service, name string, sele
 	shootLokiService.Namespace = v1beta1constants.GardenNamespace
 	shootLokiService.Spec.Selector = selector
 	shootLokiService.Spec.ClusterIP = ""
+	shootLokiService.Spec.ClusterIPs = nil
 	return shootLokiService
 }
 
