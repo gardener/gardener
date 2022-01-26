@@ -17,8 +17,10 @@ package v1alpha1_test
 import (
 	"fmt"
 
+	configv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	landscaperv1alpha1 "github.com/gardener/landscaper/apis/core/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 
 	. "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1"
@@ -84,6 +86,11 @@ var _ = Describe("Defaults", func() {
 						},
 					},
 				},
+				GardenerScheduler: &GardenerScheduler{
+					ComponentConfiguration: &SchedulerComponentConfiguration{Config: runtime.RawExtension{Object: &configv1alpha1.SchedulerConfiguration{Schedulers: configv1alpha1.SchedulerControllerConfiguration{
+						Shoot: &configv1alpha1.ShootSchedulerConfiguration{Strategy: "MinimalDistance"},
+					}}}},
+				},
 			}))
 		})
 
@@ -138,6 +145,11 @@ var _ = Describe("Defaults", func() {
 						},
 					},
 				},
+				GardenerScheduler: &GardenerScheduler{
+					ComponentConfiguration: &SchedulerComponentConfiguration{Config: runtime.RawExtension{Object: &configv1alpha1.SchedulerConfiguration{Schedulers: configv1alpha1.SchedulerControllerConfiguration{
+						Shoot: &configv1alpha1.ShootSchedulerConfiguration{Strategy: "MinimalDistance"},
+					}}}},
+				},
 			}))
 		})
 
@@ -191,6 +203,11 @@ var _ = Describe("Defaults", func() {
 							},
 						},
 					},
+				},
+				GardenerScheduler: &GardenerScheduler{
+					ComponentConfiguration: &SchedulerComponentConfiguration{Config: runtime.RawExtension{Object: &configv1alpha1.SchedulerConfiguration{Schedulers: configv1alpha1.SchedulerControllerConfiguration{
+						Shoot: &configv1alpha1.ShootSchedulerConfiguration{Strategy: "MinimalDistance"},
+					}}}},
 				},
 			}))
 		})

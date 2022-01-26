@@ -48,6 +48,7 @@ func SetDefaults_Imports(obj *Imports) {
 		obj.GardenerAdmissionController.SeedRestriction = &SeedRestriction{Enabled: true}
 	}
 
+	// GAPI defaults
 	if obj.GardenerAPIServer.ComponentConfiguration.CA == nil {
 		obj.GardenerAPIServer.ComponentConfiguration.CA = &CA{}
 	}
@@ -64,6 +65,7 @@ func SetDefaults_Imports(obj *Imports) {
 		obj.GardenerAPIServer.ComponentConfiguration.TLS.Validity = &defaultValidityTLSCertificates
 	}
 
+	// GAC  defaults
 	if obj.GardenerAdmissionController == nil {
 		obj.GardenerAdmissionController = &GardenerAdmissionController{}
 	}
@@ -118,6 +120,7 @@ func SetDefaults_Imports(obj *Imports) {
 		}
 	}
 
+	// GCM defaults
 	if obj.GardenerControllerManager == nil {
 		obj.GardenerControllerManager = &GardenerControllerManager{}
 	}
@@ -133,6 +136,28 @@ func SetDefaults_Imports(obj *Imports) {
 	if obj.GardenerControllerManager.ComponentConfiguration.TLS.Validity == nil {
 		obj.GardenerControllerManager.ComponentConfiguration.TLS.Validity = &defaultValidityTLSCertificates
 	}
+
+	// Scheduler defaults
+	if obj.GardenerScheduler == nil {
+		obj.GardenerScheduler = &GardenerScheduler{}
+	}
+
+	if obj.GardenerScheduler.ComponentConfiguration == nil || obj.GardenerScheduler.ComponentConfiguration.Config.Object == nil && len(obj.GardenerScheduler.ComponentConfiguration.Config.Raw) == 0 {
+		obj.GardenerScheduler.ComponentConfiguration = &SchedulerComponentConfiguration{
+			Config: runtime.RawExtension{
+				Object: &schedulerconfigv1alpha1.SchedulerConfiguration{},
+			},
+		}
+	}
+
+	schedulerConfig, err := encoding.DecodeSchedulerConfiguration(&obj.GardenerScheduler.ComponentConfiguration.Config, false)
+	if err != nil {
+		return
+	}
+
+	SetDefaultsSchedulerComponentConfiguration(schedulerConfig)
+
+	obj.GardenerScheduler.ComponentConfiguration.Config = runtime.RawExtension{Object: schedulerConfig}
 }
 
 func getVolumeProjectionKubeconfig(name string) string {
@@ -146,29 +171,7 @@ user:
   tokenFile: /var/run/secrets/admission-tokens/%s-webhook-token`, name)
 }
 
-// SetDefaults_GardenerScheduler sets the default values for the Gardener scheduler configuration
-// in order to pass the validation
-func SetDefaults_GardenerScheduler(obj *GardenerScheduler) {
-	if obj.ComponentConfiguration == nil || obj.ComponentConfiguration.Config.Object == nil && len(obj.ComponentConfiguration.Config.Raw) == 0 {
-		obj.ComponentConfiguration = &SchedulerComponentConfiguration{
-			Config: runtime.RawExtension{
-				Object: &schedulerconfigv1alpha1.SchedulerConfiguration{},
-			},
-		}
-	}
-
-	schedulerConfig, err := encoding.DecodeSchedulerConfiguration(&obj.ComponentConfiguration.Config, false)
-	if err != nil {
-		return
-	}
-
-	SetDefaultsSchedulerComponentConfiguration(schedulerConfig)
-
-	obj.ComponentConfiguration.Config = runtime.RawExtension{Object: schedulerConfig}
-}
-
 // SetDefaultsSchedulerComponentConfiguration sets defaults for the Scheduler component configuration for the Landscaper imports
-// we can safely assume that the configuration is not nil, as the encoding made that sure
 func SetDefaultsSchedulerComponentConfiguration(config *schedulerconfigv1alpha1.SchedulerConfiguration) {
 	// setup the scheduler with the minimal distance strategy
 	if config.Schedulers.Shoot == nil {

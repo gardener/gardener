@@ -36,7 +36,7 @@ func ValidateLandscaperImports(imports *imports.Imports) field.ErrorList {
 		allErrs = append(allErrs, field.Required(field.NewPath("gardenCluster"), "the runtime cluster kubeconfig has to be provided."))
 	}
 
-	if imports.VirtualGarden != nil && imports.VirtualGarden.Enabled && len(imports.VirtualGarden.Kubeconfig.Spec.Configuration.RawMessage) == 0 {
+	if imports.VirtualGarden != nil && imports.VirtualGarden.Enabled && (imports.VirtualGarden.Kubeconfig == nil || len(imports.VirtualGarden.Kubeconfig.Spec.Configuration.RawMessage) == 0) {
 		allErrs = append(allErrs, field.Required(field.NewPath("seedCluster"), "the virtual Garden cluster kubeconfig has to be provided when the virtual Garden setup option is enabled."))
 	}
 

@@ -310,9 +310,11 @@ func (v runtimeValuesHelper) GetRuntimeChartValues() (map[string]interface{}, er
 		return nil, err
 	}
 
-	values, err = utils.SetToValuesMap(values, schedulerComponentValues, "scheduler", "config")
-	if err != nil {
-		return nil, err
+	if schedulerComponentValues != nil {
+		values, err = utils.SetToValuesMap(values, schedulerComponentValues, "scheduler", "config")
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if v.VirtualGardenKubeconfigGardenerScheduler != nil {
@@ -730,11 +732,13 @@ func (v runtimeValuesHelper) getAdmissionControllerComponentValues() (map[string
 		err    error
 	)
 
-	values, err = utils.ToValuesMapWithOptions(*v.ComponentConfigAdmissionController, utils.Options{
-		RemoveZeroEntries: true,
-	})
-	if err != nil {
-		return nil, err
+	if v.ComponentConfigAdmissionController != nil {
+		values, err = utils.ToValuesMapWithOptions(*v.ComponentConfigAdmissionController, utils.Options{
+			RemoveZeroEntries: true,
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// if a secret reference is specified, also use the secret reference name in the chart

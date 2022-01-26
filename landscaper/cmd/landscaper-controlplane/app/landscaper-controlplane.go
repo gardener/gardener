@@ -168,12 +168,17 @@ func run(ctx context.Context, opts *Options, log *logrus.Logger) error {
 			}
 		}
 
-		// if the reconciliation fails after successful deployment, we need to guarantee that the exports are written
-		// this is relevant for certificate rotation  - new certificates are already applied to
-		// the (virtual) garden cluster, but the control plane in the runtime cluster still uses the old certs.
+		// if the reconciliation fails after successful deployment, and a certiicate rotation happened, then we are screwed.
+		// The new certificates are already applied to the (virtual) garden cluster, but the control plane in the runtime cluster still uses the old certs.
+		// This is not an atomic operation!
+		// Two choices:
+		//  - just log the error and export the new certificates --> Successful installation
+		//  - return an error and lose the certificates in the export
+		// Decided to return an error so that operators are aware of the failed deployment!
+		// The certificates are all anyways separately stored in Kubernetes resources in the cluster.
 		if successfullyDeployedApplicationChart && !successfullyDeployedRuntimeChart {
 			// there is nothing we can do besides logging it. Should be a scary message, so operators really check.
-			log.Warnf("The runtime chart failed after the application chart already successfully deployed. This can be a problem when a certificate rotation happened during the execution. Please verify that the applied certificates in the garden cluster (Gardener API Server public CA certificate in APIService 'v1beta1.core.gardener.cloud', Gardener Admission Controller public CA certificate in the validating webhook 'validate-namespace-deletion', Gardener Admission Controller public CA certificate in the mutating webhook 'gardener-admission-controller') match what is deployed in the runtime cluster for the Gardener control plane components. A mismatch will break your Gardener installation.")
+			return fmt.Errorf("the runtime chart failed after the application chart already successfully deployed. This can be a problem when a certificate rotation happened during the execution. Please verify that the applied certificates in the garden cluster (Gardener API Server public CA certificate in APIService 'v1beta1.core.gardener.cloud', Gardener Admission Controller public CA certificate in the validating webhook 'validate-namespace-deletion', Gardener Admission Controller public CA certificate in the mutating webhook 'gardener-admission-controller') match what is deployed in the runtime cluster for the Gardener control plane components. A mismatch will break your Gardener installation")
 		}
 
 		if err != nil {

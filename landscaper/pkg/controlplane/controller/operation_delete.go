@@ -71,8 +71,6 @@ func (o *operation) Delete(ctx context.Context) error {
 
 				o.imports.GardenerAPIServer.ComponentConfiguration.CA.Crt = pointer.String(fillTheVoid)
 				o.imports.GardenerAPIServer.ComponentConfiguration.CA.Key = pointer.String(fillTheVoid)
-				o.imports.GardenerAdmissionController.ComponentConfiguration.CA.Crt = pointer.String(fillTheVoid)
-				o.imports.GardenerAdmissionController.ComponentConfiguration.CA.Key = pointer.String(fillTheVoid)
 
 				o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Crt = pointer.String(fillTheVoid)
 				o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Key = pointer.String(fillTheVoid)
@@ -80,6 +78,8 @@ func (o *operation) Delete(ctx context.Context) error {
 				o.imports.GardenerControllerManager.ComponentConfiguration.TLS.Key = pointer.String(fillTheVoid)
 
 				if o.imports.GardenerAdmissionController.Enabled {
+					o.imports.GardenerAdmissionController.ComponentConfiguration.CA.Crt = pointer.String(fillTheVoid)
+					o.imports.GardenerAdmissionController.ComponentConfiguration.CA.Key = pointer.String(fillTheVoid)
 					o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.Crt = pointer.String(fillTheVoid)
 					o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.Key = pointer.String(fillTheVoid)
 				}

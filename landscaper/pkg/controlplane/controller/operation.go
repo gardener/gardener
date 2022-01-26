@@ -150,7 +150,7 @@ func NewOperation(runtimeCLient kubernetes.Interface, virtualGardenClient *kuber
 
 	var err error
 	if imports.GardenerAdmissionController.Enabled &&
-		imports.GardenerAdmissionController.ComponentConfiguration != nil {
+		imports.GardenerAdmissionController.ComponentConfiguration != nil && imports.GardenerAdmissionController.ComponentConfiguration.Config != nil {
 
 		op.admissionControllerConfig, err = admissionconfighelper.ConvertAdmissionControllerConfigurationExternal(imports.GardenerAdmissionController.ComponentConfiguration.Config)
 		if err != nil {
