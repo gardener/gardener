@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	mockkubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/mock"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	mockkubecontrollermanager "github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
@@ -96,6 +97,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 	Describe("#DeployKubeControllerManager", func() {
 		var (
+			kubeAPIServer         *mockkubeapiserver.MockInterface
 			kubeControllerManager *mockkubecontrollermanager.MockInterface
 
 			secretNameServer            = "kube-controller-manager-server"
@@ -112,6 +114,7 @@ var _ = Describe("KubeControllerManager", func() {
 		)
 
 		BeforeEach(func() {
+			kubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
 			kubeControllerManager = mockkubecontrollermanager.NewMockInterface(ctrl)
 
 			botanist.K8sSeedClient = kubernetesClient
@@ -121,6 +124,7 @@ var _ = Describe("KubeControllerManager", func() {
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					ControlPlane: &shootpkg.ControlPlane{
+						KubeAPIServer:         kubeAPIServer,
 						KubeControllerManager: kubeControllerManager,
 					},
 				},
@@ -135,8 +139,25 @@ var _ = Describe("KubeControllerManager", func() {
 				kubeControllerManager.EXPECT().Deploy(ctx)
 			})
 
+			Context("kube-apiserver is already scaled down", func() {
+				BeforeEach(func() {
+					kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(0))
+					botanist.Shoot.GetInfo().Status.LastOperation = nil
+				})
+
+				It("hibernation status unequal (true/false) and Kube-Apiserver is already scaled down", func() {
+					botanist.Shoot.HibernationEnabled = true
+					botanist.Shoot.GetInfo().Status.IsHibernated = false
+
+					kubeControllerManager.EXPECT().SetReplicaCount(int32(0))
+
+					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
+				})
+			})
+
 			Context("last operation is nil or neither of type 'create' nor 'restore'", func() {
 				BeforeEach(func() {
+					kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(1)).AnyTimes()
 					botanist.Shoot.GetInfo().Status.LastOperation = nil
 				})
 
@@ -228,6 +249,7 @@ var _ = Describe("KubeControllerManager", func() {
 				})
 
 				It("hibernation disabled", func() {
+					kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(1))
 					botanist.Shoot.HibernationEnabled = false
 
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(1))
@@ -275,6 +297,7 @@ var _ = Describe("KubeControllerManager", func() {
 				})
 
 				It("hibernation disabled", func() {
+					kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(1))
 					botanist.Shoot.HibernationEnabled = false
 
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(1))

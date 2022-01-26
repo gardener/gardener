@@ -53,6 +53,8 @@ const (
 type Interface interface {
 	component.DeployWaiter
 	component.MonitoringComponent
+	// GetAutoscalingReplicas gets the Replicas field in the AutoscalingConfig of the Values of the deployer.
+	GetAutoscalingReplicas() *int32
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
 	// SetSecrets sets the secrets.
@@ -401,6 +403,10 @@ func (k *kubeAPIServer) GetValues() Values {
 
 func (k *kubeAPIServer) SetAutoscalingAPIServerResources(resources corev1.ResourceRequirements) {
 	k.values.Autoscaling.APIServerResources = resources
+}
+
+func (k *kubeAPIServer) GetAutoscalingReplicas() *int32 {
+	return k.values.Autoscaling.Replicas
 }
 
 func (k *kubeAPIServer) SetAutoscalingReplicas(replicas *int32) {
