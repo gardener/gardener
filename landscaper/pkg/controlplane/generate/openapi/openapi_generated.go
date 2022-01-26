@@ -46,6 +46,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/component-spec/bindings-go/apis/v2.Source":                                                                      schema_component_spec_bindings_go_apis_v2_Source(ref),
 		"github.com/gardener/component-spec/bindings-go/apis/v2.SourceRef":                                                                   schema_component_spec_bindings_go_apis_v2_SourceRef(ref),
 		"github.com/gardener/component-spec/bindings-go/apis/v2.UnstructuredAccessType":                                                      schema_component_spec_bindings_go_apis_v2_UnstructuredAccessType(ref),
+		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports.Certificate":                                                  schema_pkg_controlplane_apis_exports_Certificate(ref),
+		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports.Exports":                                                      schema_pkg_controlplane_apis_exports_Exports(ref),
 		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerAdmissionConfiguration":                     schema_controlplane_apis_imports_v1alpha1_APIServerAdmissionConfiguration(ref),
 		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerAdmissionWebhookCredentials":                schema_controlplane_apis_imports_v1alpha1_APIServerAdmissionWebhookCredentials(ref),
 		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerAdmissionWebhookCredentialsTokenProjection": schema_controlplane_apis_imports_v1alpha1_APIServerAdmissionWebhookCredentialsTokenProjection(ref),
@@ -1128,6 +1130,117 @@ func schema_component_spec_bindings_go_apis_v2_UnstructuredAccessType(ref common
 				Required: []string{"type", "object"},
 			},
 		},
+	}
+}
+
+func schema_pkg_controlplane_apis_exports_Certificate(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Certificate represents an  exported certificate",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"rotated": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Rotated defines if the certificate has been rotated due to expiration during execution",
+							Default:     false,
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"crt": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Crt is the x509 certificate",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"key": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Key is the RSA private key",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"rotated", "crt", "key"},
+			},
+		},
+	}
+}
+
+func schema_pkg_controlplane_apis_exports_Exports(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Exports defines the structure for the exported data which might be consumed by other components.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"gardenerIdentity": {
+						SchemaProps: spec.SchemaProps{
+							Description: "GardenerIdentity is the identity of the Gardener installation",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"gardenerAPIServerEncryptionConfiguration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "GardenerAPIServerEncryptionConfiguration is the encryption configuration of the Gardener API Server",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"openVPNDiffieHellmanKey": {
+						SchemaProps: spec.SchemaProps{
+							Description: "OpenVPNDiffieHellmanKey is the Diffie-Hellman-Key used for the Shoot<->Seed VPN",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"gardenerAPIServerCA": {
+						SchemaProps: spec.SchemaProps{
+							Description: "GardenerAPIServerCA is the PEM encoded CA certificate of the Gardener API Server",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports.Certificate"),
+						},
+					},
+					"gardenerAdmissionControllerCA": {
+						SchemaProps: spec.SchemaProps{
+							Description: "GardenerAPIServerCA is the PEM encoded CA certificate of the Gardener Admission Controller",
+							Ref:         ref("github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports.Certificate"),
+						},
+					},
+					"gardenerAPIServerTLSServing": {
+						SchemaProps: spec.SchemaProps{
+							Description: "GardenerAPIServerTLSServing is the TLS serving certificate of the Gardener API Server",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports.Certificate"),
+						},
+					},
+					"gardenerControllerManagerTLSServing": {
+						SchemaProps: spec.SchemaProps{
+							Description: "GardenerControllerManagerTLSServing is the TLS serving certificate of the Gardener Controller Manager",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports.Certificate"),
+						},
+					},
+					"gardenerAdmissionControllerTLSServing": {
+						SchemaProps: spec.SchemaProps{
+							Description: "GardenerAdmissionControllerTLSServing is the TLS serving certificate of the Gardener Admission Controller",
+							Ref:         ref("github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports.Certificate"),
+						},
+					},
+				},
+				Required: []string{"gardenerIdentity", "gardenerAPIServerEncryptionConfiguration", "openVPNDiffieHellmanKey", "gardenerAPIServerCA", "gardenerAPIServerTLSServing", "gardenerControllerManagerTLSServing"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports.Certificate"},
 	}
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,20 +16,32 @@ package exports
 
 // Exports defines the structure for the exported data which might be consumed by other components.
 type Exports struct {
-	GardenerIdentity                         string `json:"gardenerIdentity" yaml:"gardenerIdentity"`
-	GardenerAPIServerEncryptionConfiguration string `json:"gardenerAPIServerEncryptionConfiguration" yaml:"gardenerAPIServerEncryptionConfiguration"`
-	OpenVPNDiffieHellmanKey                  string `json:"openVPNDiffieHellmanKey" yaml:"openVPNDiffieHellmanKey"`
+	// GardenerIdentity is the identity of the Gardener installation
+	GardenerIdentity string `json:"gardenerIdentity"`
+	// GardenerAPIServerEncryptionConfiguration is the encryption configuration of the Gardener API Server
+	GardenerAPIServerEncryptionConfiguration string `json:"gardenerAPIServerEncryptionConfiguration"`
+	// OpenVPNDiffieHellmanKey is the Diffie-Hellman-Key used for the Shoot<->Seed VPN
+	OpenVPNDiffieHellmanKey string `json:"openVPNDiffieHellmanKey"`
 
-	GardenerAPIServerCA           Certificate  `json:"gardenerAPIServerCA" yaml:"gardenerAPIServerCA"`
-	GardenerAdmissionControllerCA *Certificate `json:"gardenerAdmissionControllerCA,omitempty" yaml:"gardenerAdmissionControllerCA,omitempty"`
+	// GardenerAPIServerCA is the PEM encoded CA certificate of the Gardener API Server
+	GardenerAPIServerCA Certificate `json:"gardenerAPIServerCA" yaml:"gardenerAPIServerCA"`
+	// GardenerAPIServerCA is the PEM encoded CA certificate of the Gardener Admission Controller
+	GardenerAdmissionControllerCA *Certificate `json:"gardenerAdmissionControllerCA,omitempty"`
 
-	GardenerAPIServerTLSServing           Certificate  `json:"gardenerAPIServerTLSServing" yaml:"gardenerAPIServerTLSServing"`
-	GardenerControllerManagerTLSServing   Certificate  `json:"gardenerControllerManagerTLSServing" yaml:"gardenerControllerManagerTLSServing"`
-	GardenerAdmissionControllerTLSServing *Certificate `json:"gardenerAdmissionControllerTLSServing,omitempty" yaml:"gardenerAdmissionControllerTLSServing,omitempty"`
+	// GardenerAPIServerTLSServing is the TLS serving certificate of the Gardener API Server
+	GardenerAPIServerTLSServing Certificate `json:"gardenerAPIServerTLSServing"`
+	// GardenerControllerManagerTLSServing is the TLS serving certificate of the Gardener Controller Manager
+	GardenerControllerManagerTLSServing Certificate `json:"gardenerControllerManagerTLSServing"`
+	// GardenerAdmissionControllerTLSServing is the TLS serving certificate of the Gardener Admission Controller
+	GardenerAdmissionControllerTLSServing *Certificate `json:"gardenerAdmissionControllerTLSServing,omitempty"`
 }
 
+// Certificate represents an  exported certificate
 type Certificate struct {
-	Rotated bool   `json:"rotated" yaml:"rotated"`
-	Crt     string `json:"crt" yaml:"crt"`
-	Key     string `json:"key" yaml:"key"`
+	// Rotated defines if the certificate has been rotated due to expiration during execution
+	Rotated bool `json:"rotated"`
+	// Crt is the x509 certificate
+	Crt string `json:"crt"`
+	// Key is the RSA private key
+	Key string `json:"key"`
 }

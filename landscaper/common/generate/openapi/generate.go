@@ -34,7 +34,7 @@ const filterPackagesDelimiter = ";"
 
 var (
 	// flags
-	outputDirectory, inputDirectory, rootDirectory, rootPackage, licensePath, verbosity, filterPackages string
+	outputDirectory, inputDirectories, rootDirectory, rootPackages, licensePath, verbosity, filterPackages string
 
 	rootCommand = &cobra.Command{
 		Use:  "generate-openapi",
@@ -56,10 +56,10 @@ func init() {
 		"the output path for the generated OpenAPI code")
 
 	rootCommand.Flags().StringVar(
-		&inputDirectory,
-		"input-directory",
+		&inputDirectories,
+		"input-directories",
 		"",
-		"the absolute input directory which should contain the go types to generate OpenAPI code for. Example: /Users/<superuser>/go/src/github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1")
+		"the absolute input directories (colon-seperated) which should contain the go types to generate OpenAPI code for. Example: `/Users/<superuser>/go/src/github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1,other-directory`")
 
 	rootCommand.Flags().StringVar(
 		&rootDirectory,
@@ -68,10 +68,10 @@ func init() {
 		"the absolute vendor directory to parse dependent packages")
 
 	rootCommand.Flags().StringVar(
-		&rootPackage,
-		"package",
+		&rootPackages,
+		"packages",
 		"",
-		"the root golang package to generate OpenAPI code for. Example: github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1")
+		"the root golang packages (colon-seperated) to generate OpenAPI code for. Example: `github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1,other-package`")
 
 	rootCommand.Flags().StringVar(
 		&licensePath,
@@ -109,11 +109,11 @@ func execute() error {
 		return fmt.Errorf("an output path has to be specified")
 	}
 
-	if len(rootPackage) == 0 {
+	if len(rootPackages) == 0 {
 		return fmt.Errorf("a package has to be specified")
 	}
 
-	if len(inputDirectory) == 0 {
+	if len(inputDirectories) == 0 {
 		return fmt.Errorf("an import directory has to be specified")
 	}
 
@@ -121,28 +121,35 @@ func execute() error {
 		return fmt.Errorf("the project's root directory has to be specified")
 	}
 
-	fp, err := filepath.Abs(inputDirectory)
-	if err != nil {
-		return err
-	}
-	info, err := os.Stat(fp)
-	if err != nil {
-		return err
-	}
-	if !info.IsDir() {
-		return fmt.Errorf("import path is not a directory")
-	}
+	directories := strings.Split(inputDirectories, ",")
+	parsedRootPackages := strings.Split(rootPackages, ",")
+
+	// generate OpenAPI for the root packages
+	inputPackages := parsedRootPackages
+
+	for _, inputDir := range directories {
+		fp, err := filepath.Abs(inputDir)
+		if err != nil {
+			return err
+		}
+		info, err := os.Stat(fp)
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			return fmt.Errorf("import path is not a directory")
+		}
 
 	filter := sets.NewString(strings.Split(filterPackages, filterPackagesDelimiter)...)
-	inputPackages, err := parseImportPackages(inputDirectory, rootDirectory, sets.NewString(rootPackage), filter)
+	discoveredPackages, err := parseImportPackages(inputDir, rootDirectory, sets.NewString(rootPackage), filter)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Found %d packages for openapi-gen \n", len(inputPackages))
+		inputPackages = append(inputPackages, discoveredPackages...)
 
-	// add the root package containing the landscaper component's import types
-	inputPackages = append(inputPackages, rootPackage)
+		fmt.Printf("Found %d packages for openapi-gen for root package %q \n", len(discoveredPackages), inputDir)
+	}
 
 	binaryPath, err := exec.LookPath("openapi-gen")
 	if err != nil {
@@ -210,7 +217,7 @@ func executeOpenAPIGen(executablePath string, outputDirectory string, licensePat
 	return nil
 }
 
-// parseImportPackages recursively parses the import packages of a given inputDirectory
+// parseImportPackages recursively parses the import packages of a given inputDirectories
 // returns the union of all found packages or an error
 func parseImportPackages(inputDirectory string, rootDirectory string, alreadyParsedPackages sets.String, filterPackages sets.String) ([]string, error) {
 	fset := token.NewFileSet()

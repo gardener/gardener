@@ -34,7 +34,7 @@ rm -Rf ${PROJECT_ROOT}/landscaper/pkg/controlplane/generate/openapi/openapi_gene
 # generation (./generate.go) uses a placeholder for the missing JSONSchema.
 go run ${PROJECT_ROOT}/landscaper/common/generate/openapi \
   --root-directory ${PROJECT_ROOT} \
-  --input-directory ${PROJECT_ROOT}/landscaper/pkg/controlplane/apis/imports/v1alpha1 \
+  --input-directories ${PROJECT_ROOT}/landscaper/pkg/controlplane/apis/imports/v1alpha1,${PROJECT_ROOT}/landscaper/pkg/controlplane/apis/exports \
   --output-path ${PROJECT_ROOT}/landscaper/pkg/controlplane/generate \
-  --package github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1 \
+  --packages github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1,github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports \
   --verbosity 1
