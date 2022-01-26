@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: landscaper-controlplane-config
+  namespace: ls-system
+data:
+  # import configuration file.
+  # Please see landscaper/pkg/controlplane/example/example_landscaper-controlplane-imports.yaml to see what can be configured here.
+  virtualGarden: |
+    clusterIP: "100.64.10.10"
+
+  internalDomain: |
+    provider: aws-route53
+    domain: my.test.domain
+
+  rbac: |
+    seedAuthorizer:
+      enabled: true
+
+  gardenerAdmissionController: |
+    enabled: true
+    seedRestriction:
+      enabled: true
+
+  gardenerAPIServer: |
+    deploymentConfiguration:
+      replicaCount: 2
+    componentConfiguration:
+      featureGates:
+        SeedChange: true
+        UseDNSRecords: true
+        AdminKubeconfigRequest: true
+
+  gardenerControllerManager: |
+    deploymentConfiguration:
+      replicaCount: 1
