@@ -313,3 +313,15 @@ test-e2e-local-fast: $(GINKGO)
 test-e2e-local: $(GINKGO)
 	@# run at maximum 5 tests in parallel for now until we have better experience of how much load a single prow pod can take
 	./hack/test-e2e-local.sh --procs=5
+
+#####################################################################
+# Rules for landscaper component development                        #
+#####################################################################
+
+.PHONY: push-component-descriptor
+push-component-descriptors: $(COMPONENT_CLI)
+	@./landscaper/hack/generate-cd.sh --component-name github.com/gardener/gardener --version $(EFFECTIVE_VERSION)
+
+.PHONY: create-landscaper-installations
+create-landscaper-installations:
+	@./landscaper/pkg/controlplane/generate/generate-installation.sh --export-dir $(REPO_ROOT)/dev/landscaper --version $(EFFECTIVE_VERSION)

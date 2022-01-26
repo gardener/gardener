@@ -45,6 +45,7 @@ SETUP_ENVTEST              := $(TOOLS_BIN_DIR)/setup-envtest
 SKAFFOLD                   := $(TOOLS_BIN_DIR)/skaffold
 YAML2JSON                  := $(TOOLS_BIN_DIR)/yaml2json
 YQ                         := $(TOOLS_BIN_DIR)/yq
+COMPONENT_CLI              := $(TOOLS_BIN_DIR)/component-cli
 
 # default tool versions
 DOCFORGE_VERSION ?= v0.21.0
@@ -152,3 +153,9 @@ $(YAML2JSON): go.mod
 $(YQ): $(call tool_version_file,$(YQ),$(YQ_VERSION))
 	curl -L -o $(YQ) https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_$(shell uname -s | tr '[:upper:]' '[:lower:]')_$(shell uname -m | sed 's/x86_64/amd64/')
 	chmod +x $(YQ)
+
+$(COMPONENT_CLI): go.mod
+    # download compiled release to avoid pulling in too many dependencies
+	curl -L -o $(COMPONENT_CLI).gz https://github.com/gardener/component-cli/releases/download/$(COMPONENT_CLI_VERSION)/componentcli-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed 's/x86_64/amd64/').gz
+	gzip -d $(COMPONENT_CLI).gz
+	chmod +x $(COMPONENT_CLI)
