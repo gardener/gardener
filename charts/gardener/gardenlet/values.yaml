@@ -5,6 +5,7 @@ global:
     replicaCount: 1
     revisionHistoryLimit: 10
     serviceAccountName: gardenlet
+    invalidateServiceAccountToken: true
     image:
       repository: eu.gcr.io/gardener-project/gardener/gardenlet
       tag: latest

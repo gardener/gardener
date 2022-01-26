@@ -143,7 +143,8 @@ gardenletChartValues="$DEV_DIR/gardenlet-charts-values.yaml"
 yq eval 'del(.apiVersion, .kind)' "$configFile" |
   yq eval '{"config": .}' - > "$tmpConfig"
 yq eval-all 'select(fi==0).global.gardenlet * select(fi==1)' "$GARDENLET_CHARTS_DIR/values.yaml" "$tmpConfig" |
-  yq eval '{"global": {"gardenlet": . }}' - > "$gardenletChartValues"
+  yq eval '{"global": {"gardenlet": . }}' - |
+  yq eval '.global.gardenlet.invalidateServiceAccountToken=false' - > "$gardenletChartValues"
 rm -f "$tmpConfig"
 
 # garden namespace is required for the gardenlet leader election, service account, roles and role bindings.
