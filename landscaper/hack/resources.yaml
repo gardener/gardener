@@ -1,0 +1,42 @@
+---
+type: ociImage
+name: landscaper-controlplane
+relation: local
+access:
+  type: ociRegistry
+  imageReference: eu.gcr.io/gardener-project/gardener/landscaper-control-plane:${EFFECTIVE_VERSION}
+---
+type: ociImage
+name: landscaper-gardenlet
+relation: local
+access:
+  type: ociRegistry
+  imageReference: eu.gcr.io/gardener-project/gardener/landscaper-control-plane:${EFFECTIVE_VERSION}
+---
+type: ociImage
+name: apiserver
+relation: local
+access:
+  type: ociRegistry
+  imageReference: eu.gcr.io/gardener-project/gardener/apiserver:${EFFECTIVE_VERSION}
+---
+type: ociImage
+name: controller-manager
+relation: local
+access:
+  type: ociRegistry
+  imageReference: eu.gcr.io/gardener-project/gardener/controller-manager:${EFFECTIVE_VERSION}
+---
+type: ociImage
+name: admission-controller
+relation: local
+access:
+  type: ociRegistry
+  imageReference: eu.gcr.io/gardener-project/gardener/admission-controller:${EFFECTIVE_VERSION}
+---
+type: ociImage
+name: scheduler
+relation: local
+access:
+  type: ociRegistry
+  imageReference: eu.gcr.io/gardener-project/gardener/scheduler:${EFFECTIVE_VERSION}
