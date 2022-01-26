@@ -5,9 +5,7 @@ metadata:
   namespace: garden
   labels:
 {{ toYaml .Values.labels | indent 4 }}
-{{- if .Values.readyForProjectedServiceAccountTokens }}
 automountServiceAccountToken: false
-{{- end }}
 ---
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
@@ -26,11 +24,9 @@ spec:
 {{ toYaml .Values.labels | indent 6 }}
   template:
     metadata:
-{{- if .Values.readyForProjectedServiceAccountTokens }}
       annotations:
         # TODO(rfranzke): Remove in a future release.
         security.gardener.cloud/trigger: rollout
-{{- end }}
       labels:
         app: hvpa-controller
 {{ toYaml .Values.labels | indent 8 }}
