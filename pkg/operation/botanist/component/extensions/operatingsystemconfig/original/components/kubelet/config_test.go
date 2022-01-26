@@ -371,56 +371,6 @@ var _ = Describe("Config", func() {
 		),
 
 		Entry(
-			"kubernetes 1.21 w/o defaults",
-			"1.21.1",
-			clusterDNSAddress,
-			clusterDomain,
-			components.ConfigurableKubeletConfigParameters{},
-			kubeletConfigWithDefaults,
-			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.RotateCertificates = true
-				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-			},
-		),
-		Entry(
-			"kubernetes 1.21 w/ defaults",
-			"1.21.1",
-			clusterDNSAddress,
-			clusterDomain,
-			params,
-			kubeletConfigWithParams,
-			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.RotateCertificates = true
-				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-			},
-		),
-
-		Entry(
-			"kubernetes 1.22 w/o defaults",
-			"1.22.1",
-			clusterDNSAddress,
-			clusterDomain,
-			components.ConfigurableKubeletConfigParameters{},
-			kubeletConfigWithDefaults,
-			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.RotateCertificates = true
-				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-			},
-		),
-		Entry(
-			"kubernetes 1.22 w/ defaults",
-			"1.22.1",
-			clusterDNSAddress,
-			clusterDomain,
-			params,
-			kubeletConfigWithParams,
-			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.RotateCertificates = true
-				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
-			},
-		),
-
-		Entry(
 			"kubernetes 1.23 w/o defaults",
 			"1.23.1",
 			clusterDNSAddress,
@@ -428,7 +378,6 @@ var _ = Describe("Config", func() {
 			components.ConfigurableKubeletConfigParameters{},
 			kubeletConfigWithDefaults,
 			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.CgroupDriver = "systemd"
 				cfg.RotateCertificates = true
 				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
 			},
@@ -441,7 +390,6 @@ var _ = Describe("Config", func() {
 			params,
 			kubeletConfigWithParams,
 			func(cfg *kubeletconfigv1beta1.KubeletConfiguration) {
-				cfg.CgroupDriver = "systemd"
 				cfg.RotateCertificates = true
 				cfg.VolumePluginDir = "/var/lib/kubelet/volumeplugins"
 			},
