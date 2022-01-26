@@ -111,7 +111,7 @@ func RenderBlueprint(blueprintTemplate *template.Template,
 		return err
 	}
 
-	fmt.Printf("Done writing the blueprint filesystem. Wrote %d files.", totalFilesWritten)
+	fmt.Printf("Done writing the blueprint filesystem. Wrote %d files. \n", totalFilesWritten)
 
 	return nil
 }
