@@ -80,6 +80,47 @@ imports:
       ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.VirtualGarden.yaml
   
 
+exports:
+  
+  - name: gardenerAPIServerCA
+    required: true
+    schema:
+      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.exports.Certificate.yaml
+  - name: gardenerAPIServerEncryptionConfiguration
+    required: true
+    schema:
+      description: GardenerAPIServerEncryptionConfiguration is the encryption configuration
+        of the Gardener API Server
+      type: string
+  - name: gardenerAPIServerTLSServing
+    required: true
+    schema:
+      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.exports.Certificate.yaml
+  - name: gardenerAdmissionControllerCA
+    required: false
+    schema:
+      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.exports.Certificate.yaml
+  - name: gardenerAdmissionControllerTLSServing
+    required: false
+    schema:
+      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.exports.Certificate.yaml
+  - name: gardenerControllerManagerTLSServing
+    required: true
+    schema:
+      ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.exports.Certificate.yaml
+  - name: gardenerIdentity
+    required: true
+    schema:
+      description: GardenerIdentity is the identity of the Gardener installation
+      type: string
+  - name: openVPNDiffieHellmanKey
+    required: true
+    schema:
+      description: OpenVPNDiffieHellmanKey is the Diffie-Hellman-Key used for the Shoot<->Seed
+        VPN
+      type: string
+  
+
 # For what can be referenced in the deployExecutions, please see:
 # https://github.com/gardener/landscaper/blob/master/docs/usage/Blueprints.md#deployexecutions
 deployExecutions:

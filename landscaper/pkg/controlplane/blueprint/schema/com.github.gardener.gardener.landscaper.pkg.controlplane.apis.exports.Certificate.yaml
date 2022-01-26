@@ -1,0 +1,20 @@
+description: Certificate represents an  exported certificate
+properties:
+  crt:
+    default: ""
+    description: Crt is the x509 certificate
+    type: string
+  key:
+    default: ""
+    description: Key is the RSA private key
+    type: string
+  rotated:
+    default: false
+    description: Rotated defines if the certificate has been rotated due to expiration
+      during execution
+    type: boolean
+required:
+- rotated
+- crt
+- key
+type: object
