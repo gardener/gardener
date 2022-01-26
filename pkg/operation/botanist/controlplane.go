@@ -36,6 +36,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -163,6 +164,12 @@ func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentNa
 		// shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated,
 		// so keep the replicas which are already available.
 		return kutil.CurrentReplicaCountForDeployment(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, deploymentName)
+	}
+
+	// If Kube-Apiserver is set to 0 replicas then we also want to return 0 here
+	// since the controller is most likely not able to run w/o communicating to the Apiserver.
+	if pointer.Int32Deref(b.Shoot.Components.ControlPlane.KubeAPIServer.GetAutoscalingReplicas(), 0) == 0 {
+		return 0, nil
 	}
 
 	// Shoot is being reconciled with .spec.hibernation.enabled!=.status.isHibernated, so deploy the controller.

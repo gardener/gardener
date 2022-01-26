@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	mockkubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/mock"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	mockresourcemanager "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
@@ -63,6 +64,7 @@ var _ = Describe("ResourceManager", func() {
 
 	Describe("#DeployGardenerResourceManager", func() {
 		var (
+			kubeAPIServer   *mockkubeapiserver.MockInterface
 			resourceManager *mockresourcemanager.MockInterface
 
 			ctx     = context.TODO()
@@ -135,6 +137,7 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 		)
 
 		BeforeEach(func() {
+			kubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
 			resourceManager = mockresourcemanager.NewMockInterface(ctrl)
 
 			c = mockclient.NewMockClient(ctrl)
@@ -148,6 +151,7 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					ControlPlane: &shootpkg.ControlPlane{
+						KubeAPIServer:   kubeAPIServer,
 						ResourceManager: resourceManager,
 					},
 				},
@@ -445,6 +449,8 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 
 				Context("shoot is in the process of being woken-up", func() {
 					BeforeEach(func() {
+						kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(1)).AnyTimes()
+
 						botanist.Shoot.HibernationEnabled = false
 						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{IsHibernated: true}})
 
