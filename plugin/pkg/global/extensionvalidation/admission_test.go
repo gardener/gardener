@@ -49,7 +49,7 @@ var _ = Describe("ExtensionValidator", func() {
 	})
 
 	It("should do nothing because the resource is not BackupBucket, BackupEntry, Seed, or Shoot", func() {
-		attrs := admission.NewAttributesRecord(nil, nil, core.Kind("Foo").WithVersion("version"), "", "", core.Resource("foos").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
+		attrs := admission.NewAttributesRecord(nil, nil, core.Kind("Foo").WithVersion("version"), "", "", core.Resource("foos").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 		err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -72,7 +72,7 @@ var _ = Describe("ExtensionValidator", func() {
 			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type, true)
 			Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 
-			attrs := admission.NewAttributesRecord(backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupbuckets").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupbuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -83,7 +83,7 @@ var _ = Describe("ExtensionValidator", func() {
 			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type, false)
 			Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 
-			attrs := admission.NewAttributesRecord(backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupbuckets").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupbuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -94,7 +94,7 @@ var _ = Describe("ExtensionValidator", func() {
 			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupBucketResource, "some-other-type", true)
 			Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 
-			attrs := admission.NewAttributesRecord(backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupbuckets").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupbuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -102,7 +102,7 @@ var _ = Describe("ExtensionValidator", func() {
 		})
 
 		It("should prevent the object from being created because extension type is not registered", func() {
-			attrs := admission.NewAttributesRecord(backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupbuckets").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(backupBucket, nil, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupbuckets").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -110,7 +110,7 @@ var _ = Describe("ExtensionValidator", func() {
 		})
 
 		It("should do nothing because the spec has not changed", func() {
-			attrs := admission.NewAttributesRecord(backupBucket, backupBucket, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupbuckets").WithVersion("version"), "", admission.Update, &metav1.DeleteOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(backupBucket, backupBucket, core.Kind("BackupBucket").WithVersion("version"), backupBucket.Namespace, backupBucket.Name, core.Resource("backupbuckets").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 			Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 		})
 	})
@@ -142,7 +142,7 @@ var _ = Describe("ExtensionValidator", func() {
 			Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 			Expect(gardenExternalCoreInformerFactory.Core().V1beta1().BackupBuckets().Informer().GetStore().Add(backupBucket)).To(Succeed())
 
-			attrs := admission.NewAttributesRecord(backupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupentries").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(backupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupentries").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -154,7 +154,7 @@ var _ = Describe("ExtensionValidator", func() {
 			Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 			Expect(gardenExternalCoreInformerFactory.Core().V1beta1().BackupBuckets().Informer().GetStore().Add(backupBucket)).To(Succeed())
 
-			attrs := admission.NewAttributesRecord(backupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupentries").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(backupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupentries").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -165,7 +165,7 @@ var _ = Describe("ExtensionValidator", func() {
 			controllerRegistration := createControllerRegistrationForKindType(extensionsv1alpha1.BackupEntryResource, "some-other-type", true)
 			Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Add(controllerRegistration)).To(Succeed())
 
-			attrs := admission.NewAttributesRecord(backupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupentries").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(backupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupentries").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -173,7 +173,7 @@ var _ = Describe("ExtensionValidator", func() {
 		})
 
 		It("should prevent the object from being created because extension type is not registered", func() {
-			attrs := admission.NewAttributesRecord(backupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupentries").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(backupEntry, nil, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupentries").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -181,7 +181,7 @@ var _ = Describe("ExtensionValidator", func() {
 		})
 
 		It("should do nothing because the spec has not changed", func() {
-			attrs := admission.NewAttributesRecord(backupEntry, backupEntry, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupentries").WithVersion("version"), "", admission.Update, &metav1.DeleteOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(backupEntry, backupEntry, core.Kind("BackupEntry").WithVersion("version"), backupEntry.Namespace, backupEntry.Name, core.Resource("backupentries").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 			Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 		})
 	})
@@ -234,7 +234,7 @@ var _ = Describe("ExtensionValidator", func() {
 		It("should allow to create the object", func() {
 			registerAllExtensions()
 
-			attrs := admission.NewAttributesRecord(seed, nil, core.Kind("Seed").WithVersion("version"), seed.Namespace, seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(seed, nil, core.Kind("Seed").WithVersion("version"), seed.Namespace, seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -248,7 +248,7 @@ var _ = Describe("ExtensionValidator", func() {
 				controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true)
 				Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Delete(controllerRegistration)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(seed, nil, core.Kind("Seed").WithVersion("version"), seed.Namespace, seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
+				attrs := admission.NewAttributesRecord(seed, nil, core.Kind("Seed").WithVersion("version"), seed.Namespace, seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -264,7 +264,7 @@ var _ = Describe("ExtensionValidator", func() {
 				controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, false)
 				Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Update(controllerRegistration)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(seed, nil, core.Kind("Seed").WithVersion("version"), seed.Namespace, seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
+				attrs := admission.NewAttributesRecord(seed, nil, core.Kind("Seed").WithVersion("version"), seed.Namespace, seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -274,7 +274,7 @@ var _ = Describe("ExtensionValidator", func() {
 		})
 
 		It("should prevent the object from being created because no extension type is registered", func() {
-			attrs := admission.NewAttributesRecord(seed, nil, core.Kind("Seed").WithVersion("version"), seed.Namespace, seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(seed, nil, core.Kind("Seed").WithVersion("version"), seed.Namespace, seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -282,7 +282,7 @@ var _ = Describe("ExtensionValidator", func() {
 		})
 
 		It("should do nothing because the spec has not changed", func() {
-			attrs := admission.NewAttributesRecord(seed, seed, core.Kind("Seed").WithVersion("version"), seed.Namespace, seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.DeleteOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(seed, seed, core.Kind("Seed").WithVersion("version"), seed.Namespace, seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 			Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 		})
 	})
@@ -359,7 +359,7 @@ var _ = Describe("ExtensionValidator", func() {
 		It("should allow to create the object", func() {
 			registerAllExtensions()
 
-			attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -373,7 +373,7 @@ var _ = Describe("ExtensionValidator", func() {
 				controllerRegistration := createControllerRegistrationForKindType(registration.extensionKind, registration.extensionType, true)
 				Expect(gardenExternalCoreInformerFactory.Core().V1beta1().ControllerRegistrations().Informer().GetStore().Delete(controllerRegistration)).To(Succeed())
 
-				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
+				attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -383,7 +383,7 @@ var _ = Describe("ExtensionValidator", func() {
 		})
 
 		It("should prevent the object from being created because no extension type is registered", func() {
-			attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.DeleteOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
@@ -391,7 +391,7 @@ var _ = Describe("ExtensionValidator", func() {
 		})
 
 		It("should do nothing because the spec has not changed", func() {
-			attrs := admission.NewAttributesRecord(shoot, shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.DeleteOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(shoot, shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 			Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 		})
 	})
