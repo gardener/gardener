@@ -118,10 +118,10 @@ NAME    CLOUDPROFILE   PROVIDER   REGION   K8S VERSION   HIBERNATION   LAST OPER
 local   local          local      local    1.21.0        Awake         Create Processing (43%)   healthy   94s
 ```
 
-(Optional): You could also execute the e2e tests by running
+(Optional): You could also execute a simple e2e test (creating and deleting a shoot) by running
 
 ```shell
-make test-e2e-local KUBECONFIG="$PWD/example/gardener-local/kind/kubeconfig" SKIP_ACCESSING_SHOOT=false
+make test-e2e-local-fast KUBECONFIG="$PWD/example/gardener-local/kind/kubeconfig"
 ```
 
 When the shoot got successfully created you can access it as follows:

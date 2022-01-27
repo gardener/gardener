@@ -24,6 +24,7 @@ TOOLS_BIN_DIR              := $(TOOLS_DIR)/bin
 CONTROLLER_GEN             := $(TOOLS_BIN_DIR)/controller-gen
 DOCFORGE                   := $(TOOLS_BIN_DIR)/docforge
 GEN_CRD_API_REFERENCE_DOCS := $(TOOLS_BIN_DIR)/gen-crd-api-reference-docs
+GINKGO                     := $(TOOLS_BIN_DIR)/ginkgo
 GOIMPORTS                  := $(TOOLS_BIN_DIR)/goimports
 GOLANGCI_LINT              := $(TOOLS_BIN_DIR)/golangci-lint
 GO_TO_PROTOBUF             := $(TOOLS_BIN_DIR)/go-to-protobuf
@@ -86,6 +87,9 @@ $(DOCFORGE): $(call tool_version_file,$(DOCFORGE),$(DOCFORGE_VERSION))
 
 $(GEN_CRD_API_REFERENCE_DOCS): go.mod
 	go build -o $(GEN_CRD_API_REFERENCE_DOCS) github.com/ahmetb/gen-crd-api-reference-docs
+
+$(GINKGO):
+	go build -o $(GINKGO) github.com/onsi/ginkgo/v2/ginkgo
 
 $(GOIMPORTS): go.mod
 	go build -o $(GOIMPORTS) golang.org/x/tools/cmd/goimports

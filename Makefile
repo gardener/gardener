@@ -295,5 +295,9 @@ tear-down-local-env:
 	kubectl annotate project local confirmation.gardener.cloud/deletion=true
 	kubectl delete -k $(REPO_ROOT)/example/provider-local/overlays/local
 
-test-e2e-local:
-	./hack/test-e2e-local.sh
+test-e2e-local-fast: $(GINKGO)
+	./hack/test-e2e-local.sh --label-filter "Shoot && fast"
+
+test-e2e-local: $(GINKGO)
+	@# run at maximum 5 tests in parallel for now until we have better experience of how much load a single prow pod can take
+	./hack/test-e2e-local.sh --procs=5

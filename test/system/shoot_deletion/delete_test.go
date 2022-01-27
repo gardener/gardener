@@ -25,8 +25,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/gardener/gardener/test/framework"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/test/framework"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
@@ -72,11 +73,6 @@ var _ = Describe("Shoot deletion testing", func() {
 			}
 		}
 
-		if err := f.DeleteShootAndWaitForDeletion(ctx, shoot); err != nil && !apierrors.IsNotFound(err) {
-			if shootFramework, err := f.NewShootFramework(ctx, shoot); err == nil {
-				shootFramework.DumpState(ctx)
-			}
-			f.Logger.Fatalf("Cannot delete shoot %s: %s", *shootName, err.Error())
-		}
+		Expect(f.DeleteShootAndWaitForDeletion(ctx, shoot)).To(Succeed())
 	}, 1*time.Hour)
 })
