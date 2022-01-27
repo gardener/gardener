@@ -8,6 +8,6 @@ We measure the connectivity from the shoot to the API Server. This is done via t
 
 ## Seed Connectivity
 
-In addition to the shoot connectivity, we also measure the seed connectivity. This means trying to reach the API Server from the seed via its load balancer. The connectivity is also displayed in the above panel as the `seed` line. Both `seed` and `shoot` connectivity are shown below.
+In addition to the shoot connectivity, we also measure the seed connectivity. This means trying to reach the API Server from the seed via the external fully qualified domain name of the API server. The connectivity is also displayed in the above panel as the `seed` line. Both `seed` and `shoot` connectivity are shown below.
 
 ![image](images/connectivity.png)
