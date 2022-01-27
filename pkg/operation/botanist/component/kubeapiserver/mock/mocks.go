@@ -79,6 +79,20 @@ func (mr *MockInterfaceMockRecorder) Destroy(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
 }
 
+// GetAutoscalingReplicas mocks base method.
+func (m *MockInterface) GetAutoscalingReplicas() *int32 {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAutoscalingReplicas")
+	ret0, _ := ret[0].(*int32)
+	return ret0
+}
+
+// GetAutoscalingReplicas indicates an expected call of GetAutoscalingReplicas.
+func (mr *MockInterfaceMockRecorder) GetAutoscalingReplicas() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAutoscalingReplicas", reflect.TypeOf((*MockInterface)(nil).GetAutoscalingReplicas))
+}
+
 // GetValues mocks base method.
 func (m *MockInterface) GetValues() kubeapiserver.Values {
 	m.ctrl.T.Helper()
