@@ -73,8 +73,8 @@ type ValuesProvider interface {
 // the values provided by the given values provider.
 func NewActuator(
 	providerName string,
-	secrets secretutil.Interface, shootAccessSecrets []*gutil.ShootAccessSecret, legacySecretNamesToCleanup []string,
-	exposureSecrets secretutil.Interface, exposureShootAccessSecrets []*gutil.ShootAccessSecret, legacyExposureSecretNamesToCleanup []string,
+	secrets secretutil.Interface, shootAccessSecrets func(namespace string) []*gutil.ShootAccessSecret, legacySecretNamesToCleanup []string,
+	exposureSecrets secretutil.Interface, exposureShootAccessSecrets func(namespace string) []*gutil.ShootAccessSecret, legacyExposureSecretNamesToCleanup []string,
 	configChart, controlPlaneChart, controlPlaneShootChart, controlPlaneShootCRDsChart, storageClassesChart, controlPlaneExposureChart chart.Interface,
 	vp ValuesProvider,
 	chartRendererFactory extensionscontroller.ChartRendererFactory,
@@ -88,11 +88,11 @@ func NewActuator(
 		providerName: providerName,
 
 		secrets:                    secrets,
-		shootAccessSecrets:         shootAccessSecrets,
+		shootAccessSecretsFunc:     shootAccessSecrets,
 		legacySecretNamesToCleanup: legacySecretNamesToCleanup,
 
 		exposureSecrets:                    exposureSecrets,
-		exposureShootAccessSecrets:         exposureShootAccessSecrets,
+		exposureShootAccessSecretsFunc:     exposureShootAccessSecrets,
 		legacyExposureSecretNamesToCleanup: legacyExposureSecretNamesToCleanup,
 
 		configChart:                configChart,
@@ -115,14 +115,14 @@ func NewActuator(
 type actuator struct {
 	providerName string
 
-	// Deprecated: Use 'shootAccessSecrets' instead.
+	// Deprecated: Use 'shootAccessSecretsFunc' instead.
 	secrets                    secretutil.Interface
-	shootAccessSecrets         []*gutil.ShootAccessSecret
+	shootAccessSecretsFunc     func(namespace string) []*gutil.ShootAccessSecret
 	legacySecretNamesToCleanup []string
 
-	// Deprecated: Use 'exposureShootAccessSecrets' instead.
+	// Deprecated: Use 'exposureShootAccessSecretsFunc' instead.
 	exposureSecrets                    secretutil.Interface
-	exposureShootAccessSecrets         []*gutil.ShootAccessSecret
+	exposureShootAccessSecretsFunc     func(namespace string) []*gutil.ShootAccessSecret
 	legacyExposureSecretNamesToCleanup []string
 
 	configChart                chart.Interface
@@ -221,9 +221,11 @@ func (a *actuator) reconcileControlPlaneExposure(
 		checksums = controlplane.ComputeChecksums(deployedSecrets, nil)
 	}
 
-	for _, shootAccessSecret := range a.exposureShootAccessSecrets {
-		if err := shootAccessSecret.WithNamespaceOverride(cp.Namespace).Reconcile(ctx, a.client); err != nil {
-			return false, fmt.Errorf("could not reconcile control plane exposure shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kutil.ObjectName(cp), err)
+	if a.exposureShootAccessSecretsFunc != nil {
+		for _, shootAccessSecret := range a.exposureShootAccessSecretsFunc(cp.Namespace) {
+			if err := shootAccessSecret.Reconcile(ctx, a.client); err != nil {
+				return false, fmt.Errorf("could not reconcile control plane exposure shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kutil.ObjectName(cp), err)
+			}
 		}
 	}
 
@@ -279,9 +281,11 @@ func (a *actuator) reconcileControlPlane(
 		}
 	}
 
-	for _, shootAccessSecret := range a.shootAccessSecrets {
-		if err := shootAccessSecret.WithNamespaceOverride(cp.Namespace).Reconcile(ctx, a.client); err != nil {
-			return false, fmt.Errorf("could not reconcile shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kutil.ObjectName(cp), err)
+	if a.shootAccessSecretsFunc != nil {
+		for _, shootAccessSecret := range a.shootAccessSecretsFunc(cp.Namespace) {
+			if err := shootAccessSecret.Reconcile(ctx, a.client); err != nil {
+				return false, fmt.Errorf("could not reconcile shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kutil.ObjectName(cp), err)
+			}
 		}
 	}
 
@@ -432,9 +436,11 @@ func (a *actuator) deleteControlPlaneExposure(
 		}
 	}
 
-	for _, shootAccessSecret := range a.exposureShootAccessSecrets {
-		if err := kutil.DeleteObject(ctx, a.client, shootAccessSecret.WithNamespaceOverride(cp.Namespace).Secret); err != nil {
-			return fmt.Errorf("could not delete control plane exposure shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kutil.ObjectName(cp), err)
+	if a.exposureShootAccessSecretsFunc != nil {
+		for _, shootAccessSecret := range a.exposureShootAccessSecretsFunc(cp.Namespace) {
+			if err := kutil.DeleteObject(ctx, a.client, shootAccessSecret.Secret); err != nil {
+				return fmt.Errorf("could not delete control plane exposure shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kutil.ObjectName(cp), err)
+			}
 		}
 	}
 
@@ -510,9 +516,11 @@ func (a *actuator) deleteControlPlane(
 		}
 	}
 
-	for _, shootAccessSecret := range a.shootAccessSecrets {
-		if err := kutil.DeleteObject(ctx, a.client, shootAccessSecret.WithNamespaceOverride(cp.Namespace).Secret); err != nil {
-			return fmt.Errorf("could not delete shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kutil.ObjectName(cp), err)
+	if a.shootAccessSecretsFunc != nil {
+		for _, shootAccessSecret := range a.shootAccessSecretsFunc(cp.Namespace) {
+			if err := kutil.DeleteObject(ctx, a.client, shootAccessSecret.Secret); err != nil {
+				return fmt.Errorf("could not delete shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kutil.ObjectName(cp), err)
+			}
 		}
 	}
 
