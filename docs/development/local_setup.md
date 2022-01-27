@@ -306,12 +306,6 @@ apiservice.apiregistration.k8s.io/v1alpha1.seedmanagement.gardener.cloud created
 apiservice.apiregistration.k8s.io/v1alpha1.settings.gardener.cloud created
 ```
 
-Optionally, you can switch off the `Logging` feature gate of Gardenlet to save resources:
-
-```bash
-sed -i -e 's/Logging: true/Logging: false/g' dev/20-componentconfig-gardenlet.yaml
-```
-
 The Gardener exposes the API servers of Shoot clusters via Kubernetes services of type `LoadBalancer`.
 In order to establish stable endpoints (robust against changes of the load balancer address), it creates DNS records pointing to these load balancer addresses. They are used internally and by all cluster components to communicate.
 You need to have control over a domain (or subdomain) for which these records will be created.

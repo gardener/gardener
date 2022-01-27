@@ -504,12 +504,17 @@ func RunReconcileSeedFlow(
 
 	// Logging feature gate
 	var (
-		loggingEnabled                    = gardenletfeatures.FeatureGate.Enabled(features.Logging)
+		loggingEnabled                    = false
 		filters                           = strings.Builder{}
 		parsers                           = strings.Builder{}
 		fluentBitConfigurationsOverwrites = map[string]interface{}{}
 		lokiValues                        = map[string]interface{}{}
 	)
+
+	if loggingConfig != nil &&
+		loggingConfig.Enabled != nil {
+		loggingEnabled = *loggingConfig.Enabled
+	}
 
 	lokiValues["enabled"] = loggingEnabled
 

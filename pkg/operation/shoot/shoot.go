@@ -454,7 +454,7 @@ func (s *Shoot) IPVSEnabled() bool {
 
 // IsLoggingEnabled return true if the Shoot controlplane logging is enabled
 func (s *Shoot) IsLoggingEnabled() bool {
-	return s.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenletfeatures.FeatureGate.Enabled(features.Logging)
+	return s.Purpose != gardencorev1beta1.ShootPurposeTesting
 }
 
 // TechnicalIDPrefix is a prefix used for a shoot's technical id.

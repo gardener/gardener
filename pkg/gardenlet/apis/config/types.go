@@ -383,6 +383,8 @@ type ShootNodeLogging struct {
 
 // Logging contains configuration for the logging stack.
 type Logging struct {
+	// Enabled is used to enable or disable logging stack for clusters.
+	Enabled *bool
 	// FluentBit contains configurations for the fluent-bit
 	FluentBit *FluentBit
 	// Loki contains configuration for the Loki

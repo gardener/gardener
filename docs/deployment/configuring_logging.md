@@ -2,12 +2,10 @@
 
 # Enable the Logging
 
-Logging feature gate must be enabled in order to install the Gardener Logging stack.
-
 In the Gardenlet configuration add:
 ```yaml
-featureGates:
-  Logging: true
+logging:
+  enabled: true
 ```
 
 From now on each Seed is going to have a logging stack which will collect logs from all pods and some systemd services. Logs related to Shoots with `testing` purpose are dropped in the `fluent-bit` output plugin. Shoots with a purpose different than `testing` have the same type of log aggregator (but different instance) as the Seed. The logs can be viewed in the Grafana in the `garden` namespace for the Seed components and in the respective shoot control plane namespaces.
@@ -16,9 +14,8 @@ From now on each Seed is going to have a logging stack which will collect logs f
 
 The logs from the systemd services on each node can be retrieved by enabling the `logging.shootNodeLogging` option in the Gardenlet configuration:
 ```yaml
-featureGates:
-  Logging: true
 logging:
+  enabled: true
   shootNodeLogging:
     shootPurposes:
     - "evaluation"
@@ -37,9 +34,8 @@ Under `logging.fluentBit` there is three optional sections.
  - `service`: This overwrite the service configuration of the fluent-bit log processor.
 
 ```yaml
-featureGates:
-  Logging: true
 logging:
+  enabled: true
   fluentBit:
     output: |-
       [Output]
@@ -57,9 +53,8 @@ logging:
 The central Loki, which is in the `garden` namespace, contains all the logs from the most important seed components. When the central Loki `PriorityClass` is with low value then its pods can be preempted and often moved from one node to another while Kubernetes tries to free space for more important pods. The persistent volume will be detached/attached again as well. Based on the performance of the underlying infrastructure, this leads to great central Loki downtime. To give greater priority of the seed Loki you can use the `logging.loki.garden.priority` option.
 
 ```yaml
-featureGates:
-  Logging: true
 logging:
+  enabled: true
   loki:
     garden:
       priority: 100
@@ -70,9 +65,8 @@ logging:
 For central logging, the output configuration of the fluent-bit log processor can be overwritten (`logging.fluentBit.output`) and the Loki instances deployments in Garden and Shoot namespace can be enabled/disabled (`logging.loki.enabled`), by default Loki is enabled.
 
 ```yaml
-featureGates:
-  Logging: true
 logging:
+  enabled: true
   fluentBit:
     output: |-
       [Output]

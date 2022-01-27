@@ -232,3 +232,13 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 
 	return nil
 }
+
+// IsLoggingEnabled return true if the logging stack for clusters is enabled.
+func (b *Botanist) IsLoggingEnabled() bool {
+	if b != nil && b.Config != nil &&
+		b.Config.Logging != nil &&
+		b.Config.Logging.Enabled != nil {
+		return *b.Config.Logging.Enabled
+	}
+	return false
+}

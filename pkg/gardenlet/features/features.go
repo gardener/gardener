@@ -25,7 +25,6 @@ var (
 	// FeatureGate is a shared global FeatureGate for Gardenlet flags.
 	FeatureGate  = featuregate.NewFeatureGate()
 	featureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-		features.Logging:                                    {Default: false, PreRelease: featuregate.Alpha},
 		features.HVPA:                                       {Default: false, PreRelease: featuregate.Alpha},
 		features.HVPAForShootedSeed:                         {Default: false, PreRelease: featuregate.Alpha},
 		features.ManagedIstio:                               {Default: true, PreRelease: featuregate.Beta},

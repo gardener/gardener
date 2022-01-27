@@ -110,8 +110,7 @@ var _ = Describe("ValuesHelper", func() {
 				},
 			},
 			FeatureGates: map[string]bool{
-				string(features.Logging): true,
-				string(features.HVPA):    true,
+				string(features.HVPA): true,
 			},
 			SeedConfig: &config.SeedConfig{
 				SeedTemplate: gardencore.SeedTemplate{
@@ -148,7 +147,6 @@ var _ = Describe("ValuesHelper", func() {
 				Kind:       "GardenletConfiguration",
 			},
 			FeatureGates: map[string]bool{
-				string(features.Logging):              false,
 				string(features.CachedRuntimeClients): true,
 			},
 		}
@@ -229,7 +227,6 @@ var _ = Describe("ValuesHelper", func() {
 					},
 				},
 				FeatureGates: map[string]bool{
-					string(features.Logging):              false,
 					string(features.HVPA):                 true,
 					string(features.CachedRuntimeClients): true,
 				},
@@ -286,7 +283,6 @@ var _ = Describe("ValuesHelper", func() {
 								},
 							},
 							"featureGates": map[string]interface{}{
-								"Logging":              false,
 								"HVPA":                 true,
 								"CachedRuntimeClients": true,
 							},

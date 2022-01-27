@@ -106,7 +106,6 @@ debugging:
   enableProfiling: false
   enableContentionProfiling: false
 featureGates:
-  Logging: true
   HVPA: true
   HVPAForShootedSeed: true
   ManagedIstio: true
@@ -124,6 +123,7 @@ featureGates:
 #   spec:
 #     <Check out the `spec` in the `50-seed.yaml` file to see what's possible to configure here>
 # logging:
+#   enabled: false
 #   fluentBit:
 #     output: |-
 #       [Output]

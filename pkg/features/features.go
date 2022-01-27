@@ -26,11 +26,6 @@ const (
 	// // alpha: v5.X
 	// MyFeature featuregate.Feature = "MyFeature"
 
-	// Logging enables logging stack for clusters.
-	// owner @vlvasilev
-	// alpha: v0.13.0
-	Logging featuregate.Feature = "Logging"
-
 	// HVPA enables simultaneous horizontal and vertical scaling in Seed Clusters.
 	// owner @shreyas-s-rao @voelzmo
 	// alpha: v0.31.0

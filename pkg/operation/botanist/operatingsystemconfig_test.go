@@ -25,9 +25,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
@@ -161,12 +159,12 @@ var _ = Describe("operatingsystemconfig", func() {
 				botanist.Shoot.Purpose = "development"
 				botanist.Config = &config.GardenletConfiguration{
 					Logging: &config.Logging{
+						Enabled: pointer.Bool(true),
 						ShootNodeLogging: &config.ShootNodeLogging{
 							ShootPurposes: []gardencore.ShootPurpose{"evaluation", "development"},
 						},
 					},
 				}
-				Expect(gardenletfeatures.FeatureGate.SetFromMap(map[string]bool{string(features.Logging): true})).To(Succeed())
 				operatingSystemConfig.EXPECT().SetCABundle(pointer.StringPtr("\n" + string(ca)))
 
 				operatingSystemConfig.EXPECT().Deploy(ctx)
