@@ -77,14 +77,14 @@ func ValidateInfrastructureSpecUpdate(new, old *extensionsv1alpha1.Infrastructur
 }
 
 // ValidateInfrastructureStatus validates the status of a Infrastructure object.
-func ValidateInfrastructureStatus(spec *extensionsv1alpha1.InfrastructureStatus, fldPath *field.Path) field.ErrorList {
+func ValidateInfrastructureStatus(status *extensionsv1alpha1.InfrastructureStatus, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs
 }
 
-// ValidateInfrastructureStatusUpdate validates the status field of a Infrastructure object.
-func ValidateInfrastructureStatusUpdate(newStatus, oldStatus extensionsv1alpha1.InfrastructureStatus) field.ErrorList {
+// ValidateInfrastructureStatusUpdate validates the status field of a Infrastructure object before an update.
+func ValidateInfrastructureStatusUpdate(newStatus, oldStatus *extensionsv1alpha1.InfrastructureStatus, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs

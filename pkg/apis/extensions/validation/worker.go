@@ -117,14 +117,14 @@ func ValidateWorkerSpecUpdate(new, old *extensionsv1alpha1.WorkerSpec, deletionT
 }
 
 // ValidateWorkerStatus validates the status of a Worker object.
-func ValidateWorkerStatus(spec *extensionsv1alpha1.WorkerStatus, fldPath *field.Path) field.ErrorList {
+func ValidateWorkerStatus(status *extensionsv1alpha1.WorkerStatus, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs
 }
 
-// ValidateWorkerStatusUpdate validates the status field of a Worker object.
-func ValidateWorkerStatusUpdate(newStatus, oldStatus extensionsv1alpha1.WorkerStatus) field.ErrorList {
+// ValidateWorkerStatusUpdate validates the status field of a Worker object before an update.
+func ValidateWorkerStatusUpdate(newStatus, oldStatus *extensionsv1alpha1.WorkerStatus, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs

@@ -99,6 +99,15 @@ var (
 			APIVersion: apiversion,
 		},
 		ObjectMeta: objectMeta,
+		Spec: extensionsv1alpha1.ContainerRuntimeSpec{
+			DefaultSpec: extensionsv1alpha1.DefaultSpec{
+				Type: "gvisor",
+			},
+			BinaryPath: "/var/bin/path",
+			WorkerPool: extensionsv1alpha1.ContainerRuntimeWorkerPool{
+				Name: "worker-test-1",
+			},
+		},
 	}
 
 	controlPlane = &extensionsv1alpha1.ControlPlane{
@@ -299,8 +308,7 @@ var _ = Describe("handler", func() {
 				Entry("for backupbuckets", "backupbuckets", newBackupBucket("2", "backupbucket-external", ""), newBackupBucket("2", "backupbucket-external-2", ""), newExtensionsRequest),
 				Entry("for backupentries", "backupentries", newBackupEntry("2", "backupentry-external-2", ""), newBackupEntry("1", "", ""), newExtensionsRequest),
 				Entry("for bastions", "bastions", newBastion("2", "1.1.1.1/16", ""), newBastion("1", "", ""), newExtensionsRequest),
-				// TODO: Fix this with #4561
-				Entry("for containerruntime", "containerruntimes", newContainerRuntime("2"), newContainerRuntime("1"), newExtensionsRequest),
+				Entry("for containerruntimes", "containerruntimes", newContainerRuntime("2", "", "/var/bin/anotherPath", ""), newContainerRuntime("1", "", "", ""), newExtensionsRequest),
 				Entry("for controlplanes", "controlplanes", newControlPlane("2", "cloudprovider", ""), newControlPlane("1", "", ""), newExtensionsRequest),
 				Entry("for dnsrecords", "dnsrecords", newDNSRecord("2", "dnsrecord-external", ""), newDNSRecord("1", "", ""), newExtensionsRequest),
 				Entry("for etcds", "etcds", newEtcd("2", "", "new-service-name"), newEtcd("1", "", "service-name"), newDruidRequest),
@@ -319,7 +327,7 @@ var _ = Describe("handler", func() {
 				Entry("for backupbuckets", "backupbuckets", newBackupBucket("2", "backupbucket-external", "azure"), newBackupBucket("1", "", ""), newExtensionsRequest),
 				Entry("for backupentries", "backupentries", newBackupEntry("2", "backupentry-external", "azure"), newBackupEntry("1", "", ""), newExtensionsRequest),
 				Entry("for bastions", "bastions", newBastion("2", "1.1.1.1/16", "azure"), newBastion("1", "", ""), newExtensionsRequest),
-				// TODO: Introduce entry for ContainerRuntime with #4561
+				Entry("for containerruntimes", "containerruntimes", newContainerRuntime("2", "kata", "", "worker-test-2"), newContainerRuntime("1", "", "", ""), newExtensionsRequest),
 				Entry("for controlplanes", "controlplanes", newControlPlane("2", "cloudprovider", "azure"), newControlPlane("1", "", ""), newExtensionsRequest),
 				Entry("for dnsrecords", "dnsrecords", newDNSRecord("2", "dnsrecord-external", "TXT"), newDNSRecord("1", "", ""), newExtensionsRequest),
 				Entry("for etcds", "etcds", newEtcd("2", "new-prefix", "new-service-name"), newEtcd("1", "", "service-name"), newDruidRequest),
@@ -445,11 +453,20 @@ func newBastion(resourcesVersion, cidr, specType string) runtime.Object {
 	return b
 }
 
-func newContainerRuntime(resourcesVersion string) runtime.Object {
+func newContainerRuntime(resourcesVersion, specType, binaryPath, workerPoolName string) runtime.Object {
 	c := containerRuntime.DeepCopy()
 
 	if resourcesVersion != "" {
 		c.ResourceVersion = resourcesVersion
+	}
+	if specType != "" {
+		c.Spec.Type = specType
+	}
+	if binaryPath != "" {
+		c.Spec.BinaryPath = binaryPath
+	}
+	if workerPoolName != "" {
+		c.Spec.WorkerPool.Name = workerPoolName
 	}
 
 	return c
