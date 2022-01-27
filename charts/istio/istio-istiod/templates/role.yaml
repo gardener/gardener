@@ -6,6 +6,16 @@ metadata:
   labels:
 {{ .Values.labels | toYaml | indent 4 }}
 rules:
+# permissions to verify the webhook is ready and rejecting
+# invalid config. We use --server-dry-run so no config is persisted.
+- apiGroups:
+  - networking.istio.io
+  verbs:
+  - create
+  resources:
+  - gateways
+
+# For storing CA secret
 - apiGroups:
   - ''
   resources:
