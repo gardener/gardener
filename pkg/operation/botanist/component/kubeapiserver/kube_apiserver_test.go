@@ -2635,6 +2635,14 @@ rules:
 		})
 	})
 
+	Describe("#GetAutoscalingReplicas", func() {
+		It("should properly get the field", func() {
+			v := pointer.Int32(2)
+			kapi.SetAutoscalingReplicas(v)
+			Expect(kapi.GetAutoscalingReplicas()).To(Equal(v))
+		})
+	})
+
 	Describe("#SetAutoscalingReplicas", func() {
 		It("should properly set the field", func() {
 			v := pointer.Int32(2)
