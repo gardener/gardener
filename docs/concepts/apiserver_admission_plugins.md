@@ -54,6 +54,12 @@ This admission controller reacts on `CREATE` and `UPDATE` operations for `Backup
 For all the various extension types in the specifications of these objects, it validates whether there exists a `ControllerRegistration` in the system that is primarily responsible for the stated extension type(s).
 This prevents misconfigurations that would otherwise allow users to create such resources with extension types that don't exist in the cluster, effectively leading to failing reconciliation loops.
 
+## `ExtensionLabels`
+
+_(enabled by default)_
+
+This admission controller reacts on `CREATE` and `UPDATE` operations for  `BackupBucket`s, `BackupEntry`s, `CloudProfile`s, `Seed`s and `Shoot`s. For all the various extension types in the specifications of these objects, it adds a corresponding label in the resource. This would allow the extension admission webhooks to filter out the resources they are responsible for and ignore all others.
+
 ## `PlantValidator`
 
 _(enabled by default)_

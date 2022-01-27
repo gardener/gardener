@@ -287,6 +287,19 @@ const (
 	// LabelMonitoring is a constant for a label for monitoring stack configurations
 	LabelMonitoring = "monitoring"
 
+	// LabelExtensionTypePrefix is used to prefix extension label for extension types.
+	LabelExtensionTypePrefix = "extensions.extensions.gardener.cloud/"
+	// LabelExtensionProviderPrefix is used to prefix extension label for cloud provider types.
+	LabelExtensionProviderPrefix = "provider.extensions.gardener.cloud/"
+	// LabelExtensionDNSRecordPrefix is used to prefix extension label for DNS types.
+	LabelExtensionDNSRecordPrefix = "dnsrecord.extensions.gardener.cloud/"
+	// LabelExtensionNetworkingPrefix is used to prefix extension label for networking plugin types.
+	LabelExtensionNetworkingPrefix = "networking.extensions.gardener.cloud/"
+	// LabelExtensionOperatingSystemConfigPrefix is used to prefix extension label for OperatingSystemConfig types.
+	LabelExtensionOperatingSystemConfigPrefix = "operatingsystemconfig.extensions.gardener.cloud/"
+	// LabelExtensionContainerRuntimePrefix is used to prefix extension label for ContainerRuntime types.
+	LabelExtensionContainerRuntimePrefix = "containerruntime.extensions.gardener.cloud/"
+
 	// LabelNetworkPolicyToBlockedCIDRs allows Egress from pods labeled with 'networking.gardener.cloud/to-blocked-cidrs=allowed'.
 	LabelNetworkPolicyToBlockedCIDRs = "networking.gardener.cloud/to-blocked-cidrs"
 	// LabelNetworkPolicyToDNS allows Egress from pods labeled with 'networking.gardener.cloud/to-dns=allowed' to DNS running in 'kube-system'.
