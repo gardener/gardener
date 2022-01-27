@@ -2,7 +2,7 @@
 
 # Enable the Logging
 
-To enable logging in the Gardenlet configuration add:
+To enable logging, in the Gardenlet configuration add:
 ```yaml
 logging:
   enabled: true

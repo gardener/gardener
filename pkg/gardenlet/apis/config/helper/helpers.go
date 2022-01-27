@@ -91,3 +91,12 @@ func ConvertGardenletConfigurationExternal(obj runtime.Object) (*configv1alpha1.
 	}
 	return result, nil
 }
+
+// IsLoggingEnabled return true if the logging stack for clusters is enabled.
+func IsLoggingEnabled(c *config.GardenletConfiguration) bool {
+	if c != nil && c.Logging != nil &&
+		c.Logging.Enabled != nil {
+		return *c.Logging.Enabled
+	}
+	return false
+}

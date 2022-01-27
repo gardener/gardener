@@ -23,6 +23,7 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
+	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed"
@@ -46,7 +47,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		lokiEnabled = *b.Config.Logging.Loki.Enabled
 	}
 
-	if !b.Shoot.IsLoggingEnabled() || !b.IsLoggingEnabled() || !lokiEnabled {
+	if !b.Shoot.IsLoggingEnabled() || gardenlethelper.IsLoggingEnabled(b.Config) || !lokiEnabled {
 		return b.destroyShootLoggingStack(ctx)
 	}
 
@@ -152,8 +153,9 @@ func (b *Botanist) destroyShootNodeLogging(ctx context.Context) error {
 }
 
 func (b *Botanist) isShootNodeLoggingEnabled() bool {
-	if b.Shoot != nil && b.Shoot.IsLoggingEnabled() &&
-		b.IsLoggingEnabled() && b.Config.Logging.ShootNodeLogging != nil {
+	if b.Shoot != nil && b.Shoot.IsLoggingEnabled() && b.Config != nil &&
+		b.Config.Logging != nil && gardenlethelper.IsLoggingEnabled(b.Config) &&
+		b.Config.Logging.ShootNodeLogging != nil {
 
 		for _, purpose := range b.Config.Logging.ShootNodeLogging.ShootPurposes {
 			if gardencore.ShootPurpose(b.Shoot.Purpose) == purpose {

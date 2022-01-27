@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("helper", func() {
@@ -117,6 +118,34 @@ var _ = Describe("helper", func() {
 					Kind:       "GardenletConfiguration",
 				},
 			}))
+		})
+	})
+
+	Describe("#LoggingConfiguration", func() {
+		It("should return false when the logging is nil", func() {
+			gardenletConfig := &config.GardenletConfiguration{}
+
+			Expect(IsLoggingEnabled(gardenletConfig)).To(BeFalse())
+		})
+
+		It("should return false when the logging is not enabled", func() {
+			gardenletConfig := &config.GardenletConfiguration{
+				Logging: &config.Logging{
+					Enabled: pointer.Bool(false),
+				},
+			}
+
+			Expect(IsLoggingEnabled(gardenletConfig)).To(BeFalse())
+		})
+
+		It("should return true when the logging is enabled", func() {
+			gardenletConfig := &config.GardenletConfiguration{
+				Logging: &config.Logging{
+					Enabled: pointer.Bool(true),
+				},
+			}
+
+			Expect(IsLoggingEnabled(gardenletConfig)).To(BeTrue())
 		})
 	})
 })
