@@ -258,9 +258,9 @@ var _ = Describe("Actuator", func() {
 			"replicas": 1,
 		}
 
-		shootAccessSecrets                 []*gutil.ShootAccessSecret
+		shootAccessSecretsFunc             func(string) []*gutil.ShootAccessSecret
 		legacySecretNamesToCleanup         []string
-		exposureShootAccessSecrets         []*gutil.ShootAccessSecret
+		exposureShootAccessSecretsFunc     func(string) []*gutil.ShootAccessSecret
 		legacyExposureSecretNamesToCleanup []string
 
 		errNotFound = &apierrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}}
@@ -275,9 +275,13 @@ var _ = Describe("Actuator", func() {
 			Spec:       extensionsv1alpha1.ControlPlaneSpec{},
 		}
 
-		shootAccessSecrets = []*gutil.ShootAccessSecret{gutil.NewShootAccessSecret("new-cp", "")}
+		shootAccessSecretsFunc = func(namespace string) []*gutil.ShootAccessSecret {
+			return []*gutil.ShootAccessSecret{gutil.NewShootAccessSecret("new-cp", namespace)}
+		}
 		legacySecretNamesToCleanup = []string{"legacy-cp"}
-		exposureShootAccessSecrets = []*gutil.ShootAccessSecret{gutil.NewShootAccessSecret("new-cp-exposure", "")}
+		exposureShootAccessSecretsFunc = func(namespace string) []*gutil.ShootAccessSecret {
+			return []*gutil.ShootAccessSecret{gutil.NewShootAccessSecret("new-cp-exposure", namespace)}
+		}
 		legacyExposureSecretNamesToCleanup = []string{"legacy-cp-exposure"}
 	})
 
@@ -373,15 +377,15 @@ var _ = Describe("Actuator", func() {
 			vp.EXPECT().GetStorageClassesChartValues(ctx, cp, cluster).Return(storageClassesChartValues, nil)
 
 			// Handle shoot access secrets and legacy secret cleanup
-			c.EXPECT().Get(ctx, kutil.Key(namespace, shootAccessSecrets[0].Secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
+			c.EXPECT().Get(ctx, kutil.Key(namespace, shootAccessSecretsFunc(namespace)[0].Secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
 			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
 				Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      shootAccessSecrets[0].Secret.Name,
+							Name:      shootAccessSecretsFunc(namespace)[0].Secret.Name,
 							Namespace: namespace,
 							Annotations: map[string]string{
-								"serviceaccount.resources.gardener.cloud/name":      shootAccessSecrets[0].ServiceAccountName,
+								"serviceaccount.resources.gardener.cloud/name":      shootAccessSecretsFunc(namespace)[0].ServiceAccountName,
 								"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
 							},
 							Labels: map[string]string{
@@ -394,7 +398,7 @@ var _ = Describe("Actuator", func() {
 			c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: legacySecretNamesToCleanup[0], Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(providerName, secrets, shootAccessSecrets, legacySecretNamesToCleanup, nil, nil, nil, configChart, ccmChart, ccmShootChart, cpShootCRDsChart, storageClassesChart, nil, vp, crf, imageVector, configName, webhooks, webhookServerPort, logger)
+			a := NewActuator(providerName, secrets, shootAccessSecretsFunc, legacySecretNamesToCleanup, nil, nil, nil, configChart, ccmChart, ccmShootChart, cpShootCRDsChart, storageClassesChart, nil, vp, crf, imageVector, configName, webhooks, webhookServerPort, logger)
 			err := a.(inject.Client).InjectClient(c)
 			Expect(err).NotTo(HaveOccurred())
 			a.(*actuator).gardenerClientset = gardenerClientset
@@ -453,11 +457,11 @@ var _ = Describe("Actuator", func() {
 			}
 
 			// Handle shoot access secrets and legacy secret cleanup
-			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecrets[0].Secret.Name, Namespace: namespace}})
+			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
 			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: legacySecretNamesToCleanup[0], Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(providerName, secrets, shootAccessSecrets, legacySecretNamesToCleanup, nil, nil, nil, configChart, ccmChart, nil, cpShootCRDsChart, nil, nil, nil, nil, nil, configName, webhooks, webhookServerPort, logger)
+			a := NewActuator(providerName, secrets, shootAccessSecretsFunc, legacySecretNamesToCleanup, nil, nil, nil, configChart, ccmChart, nil, cpShootCRDsChart, nil, nil, nil, nil, nil, configName, webhooks, webhookServerPort, logger)
 			Expect(a.(inject.Client).InjectClient(client)).To(Succeed())
 
 			// Call Delete method and check the result
@@ -490,15 +494,15 @@ var _ = Describe("Actuator", func() {
 			vp.EXPECT().GetControlPlaneExposureChartValues(ctx, cpExposure, cluster, exposureChecksums).Return(controlPlaneExposureChartValues, nil)
 
 			// Handle shoot access secrets and legacy secret cleanup
-			c.EXPECT().Get(ctx, kutil.Key(namespace, exposureShootAccessSecrets[0].Secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
+			c.EXPECT().Get(ctx, kutil.Key(namespace, exposureShootAccessSecretsFunc(namespace)[0].Secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
 			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
 				Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 					Expect(obj).To(DeepEqual(&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      exposureShootAccessSecrets[0].Secret.Name,
+							Name:      exposureShootAccessSecretsFunc(namespace)[0].Secret.Name,
 							Namespace: namespace,
 							Annotations: map[string]string{
-								"serviceaccount.resources.gardener.cloud/name":      exposureShootAccessSecrets[0].ServiceAccountName,
+								"serviceaccount.resources.gardener.cloud/name":      exposureShootAccessSecretsFunc(namespace)[0].ServiceAccountName,
 								"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
 							},
 							Labels: map[string]string{
@@ -511,7 +515,7 @@ var _ = Describe("Actuator", func() {
 			c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: legacyExposureSecretNamesToCleanup[0], Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(providerName, nil, nil, nil, exposureSecrets, exposureShootAccessSecrets, legacyExposureSecretNamesToCleanup, nil, nil, nil, nil, nil, cpExposureChart, vp, nil, imageVector, "", nil, 0, logger)
+			a := NewActuator(providerName, nil, nil, nil, exposureSecrets, exposureShootAccessSecretsFunc, legacyExposureSecretNamesToCleanup, nil, nil, nil, nil, nil, cpExposureChart, vp, nil, imageVector, "", nil, 0, logger)
 			Expect(a.(inject.Client).InjectClient(c)).To(Succeed())
 			a.(*actuator).gardenerClientset = gardenerClientset
 			a.(*actuator).chartApplier = chartApplier
@@ -537,11 +541,11 @@ var _ = Describe("Actuator", func() {
 			cpExposureChart.EXPECT().Delete(ctx, client, namespace).Return(nil)
 
 			// Handle shoot access secrets and legacy secret cleanup
-			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: exposureShootAccessSecrets[0].Secret.Name, Namespace: namespace}})
+			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: exposureShootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
 			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: legacyExposureSecretNamesToCleanup[0], Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(providerName, nil, nil, nil, exposureSecrets, exposureShootAccessSecrets, legacyExposureSecretNamesToCleanup, nil, nil, nil, nil, nil, cpExposureChart, nil, nil, nil, "", nil, 0, logger)
+			a := NewActuator(providerName, nil, nil, nil, exposureSecrets, exposureShootAccessSecretsFunc, legacyExposureSecretNamesToCleanup, nil, nil, nil, nil, nil, cpExposureChart, nil, nil, nil, "", nil, 0, logger)
 			Expect(a.(inject.Client).InjectClient(client)).To(Succeed())
 
 			// Call Delete method and check the result
