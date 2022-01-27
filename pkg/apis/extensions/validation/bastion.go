@@ -77,14 +77,14 @@ func ValidateBastionSpecUpdate(new, old *extensionsv1alpha1.BastionSpec, deletio
 }
 
 // ValidateBastionStatus validates the status of a Bastion object.
-func ValidateBastionStatus(spec *extensionsv1alpha1.BastionStatus, fldPath *field.Path) field.ErrorList {
+func ValidateBastionStatus(status *extensionsv1alpha1.BastionStatus, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs
 }
 
-// ValidateBastionStatusUpdate validates the status field of a Bastion object.
-func ValidateBastionStatusUpdate(newStatus, oldStatus extensionsv1alpha1.BastionStatus) field.ErrorList {
+// ValidateBastionStatusUpdate validates the status field of a Bastion object before an update.
+func ValidateBastionStatusUpdate(newStatus, oldStatus *extensionsv1alpha1.BastionStatus, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs

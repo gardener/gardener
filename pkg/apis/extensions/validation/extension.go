@@ -68,14 +68,14 @@ func ValidateExtensionSpecUpdate(new, old *extensionsv1alpha1.ExtensionSpec, del
 }
 
 // ValidateExtensionStatus validates the status of a Extension object.
-func ValidateExtensionStatus(spec *extensionsv1alpha1.ExtensionStatus, fldPath *field.Path) field.ErrorList {
+func ValidateExtensionStatus(status *extensionsv1alpha1.ExtensionStatus, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs
 }
 
-// ValidateExtensionStatusUpdate validates the status field of a Extension object.
-func ValidateExtensionStatusUpdate(newStatus, oldStatus extensionsv1alpha1.ExtensionStatus) field.ErrorList {
+// ValidateExtensionStatusUpdate validates the status field of a Extension object before an update.
+func ValidateExtensionStatusUpdate(newStatus, oldStatus *extensionsv1alpha1.ExtensionStatus, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs

@@ -88,14 +88,14 @@ func ValidateNetworkSpecUpdate(new, old *extensionsv1alpha1.NetworkSpec, deletio
 }
 
 // ValidateNetworkStatus validates the status of a Network object.
-func ValidateNetworkStatus(spec *extensionsv1alpha1.NetworkStatus, fldPath *field.Path) field.ErrorList {
+func ValidateNetworkStatus(status *extensionsv1alpha1.NetworkStatus, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs
 }
 
-// ValidateNetworkStatusUpdate validates the status field of a Network object.
-func ValidateNetworkStatusUpdate(newStatus, oldStatus extensionsv1alpha1.NetworkStatus) field.ErrorList {
+// ValidateNetworkStatusUpdate validates the status field of a Network object before an update.
+func ValidateNetworkStatusUpdate(newStatus, oldStatus *extensionsv1alpha1.NetworkStatus, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs

@@ -153,14 +153,14 @@ func ValidateOperatingSystemConfigSpecUpdate(new, old *extensionsv1alpha1.Operat
 }
 
 // ValidateOperatingSystemConfigStatus validates the status of a OperatingSystemConfig object.
-func ValidateOperatingSystemConfigStatus(spec *extensionsv1alpha1.OperatingSystemConfigStatus, fldPath *field.Path) field.ErrorList {
+func ValidateOperatingSystemConfigStatus(status *extensionsv1alpha1.OperatingSystemConfigStatus, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs
 }
 
-// ValidateOperatingSystemConfigStatusUpdate validates the status field of a OperatingSystemConfig object.
-func ValidateOperatingSystemConfigStatusUpdate(newStatus, oldStatus extensionsv1alpha1.OperatingSystemConfigStatus) field.ErrorList {
+// ValidateOperatingSystemConfigStatusUpdate validates the status field of a OperatingSystemConfig object before an update.
+func ValidateOperatingSystemConfigStatusUpdate(newStatus, oldStatus *extensionsv1alpha1.OperatingSystemConfigStatus, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs

@@ -77,14 +77,14 @@ func ValidateBackupBucketSpecUpdate(new, old *extensionsv1alpha1.BackupBucketSpe
 }
 
 // ValidateBackupBucketStatus validates the status of a BackupBucket object.
-func ValidateBackupBucketStatus(spec *extensionsv1alpha1.BackupBucketStatus, fldPath *field.Path) field.ErrorList {
+func ValidateBackupBucketStatus(status *extensionsv1alpha1.BackupBucketStatus, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs
 }
 
-// ValidateBackupBucketStatusUpdate validates the status field of a BackupBucket object.
-func ValidateBackupBucketStatusUpdate(newStatus, oldStatus extensionsv1alpha1.BackupBucketStatus) field.ErrorList {
+// ValidateBackupBucketStatusUpdate validates the status field of a BackupBucket object before an update.
+func ValidateBackupBucketStatusUpdate(newStatus, oldStatus *extensionsv1alpha1.BackupBucketStatus, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	return allErrs
