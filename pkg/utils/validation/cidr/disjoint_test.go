@@ -199,6 +199,33 @@ var _ = Describe("utils", func() {
 				"Field": Equal("[].nodes"),
 			}))))
 		})
+
+		It("should fail due to range overlap of seed node netwok and shoot pod and service network", func() {
+			var (
+				podsCIDR     = seedNodesCIDR
+				servicesCIDR = seedNodesCIDR
+				nodesCIDR    = "10.241.0.0/16"
+			)
+
+			errorList := ValidateNetworkDisjointedness(
+				field.NewPath(""),
+				&nodesCIDR,
+				&podsCIDR,
+				&servicesCIDR,
+				&seedNodesCIDR,
+				seedPodsCIDR,
+				seedServicesCIDR,
+			)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].pods"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].services"),
+			})),
+			))
+		})
 	})
 
 	Describe("#ValidateNetworkDisjointedness IPv6", func() {
@@ -281,6 +308,163 @@ var _ = Describe("utils", func() {
 				"Field": Equal("[].pods"),
 			}))),
 			)
+		})
+
+		It("should fail due to range overlap of seed node netwok and shoot pod and service network", func() {
+			var (
+				podsCIDR     = seedNodesCIDRIPv6
+				servicesCIDR = seedNodesCIDRIPv6
+				nodesCIDR    = "2001:0db8:65a3::/113"
+			)
+
+			errorList := ValidateNetworkDisjointedness(
+				field.NewPath(""),
+				&nodesCIDR,
+				&podsCIDR,
+				&servicesCIDR,
+				&seedNodesCIDRIPv6,
+				seedPodsCIDRIPv6,
+				seedServicesCIDRIPv6,
+			)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].pods"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].services"),
+			})),
+			))
+		})
+	})
+
+	Describe("#ValidateShootNetworkDisjointedness IPv4", func() {
+
+		It("should pass the validation", func() {
+			var (
+				podsCIDR     = "10.242.128.0/17"
+				servicesCIDR = "10.242.0.0/17"
+				nodesCIDR    = "10.241.0.0/16"
+			)
+
+			errorList := ValidateShootNetworkDisjointedness(
+				field.NewPath(""),
+				&nodesCIDR,
+				&podsCIDR,
+				&servicesCIDR,
+			)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should fail due to missing fields", func() {
+			errorList := ValidateShootNetworkDisjointedness(
+				field.NewPath(""),
+				nil,
+				nil,
+				nil,
+			)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("[].services"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("[].pods"),
+			})),
+			))
+		})
+
+		It("should fail due to disjointedness of node, service and pod networks", func() {
+			var (
+				nodesCIDR    = "10.241.0.0/16"
+				podsCIDR     = nodesCIDR
+				servicesCIDR = nodesCIDR
+			)
+
+			errorList := ValidateShootNetworkDisjointedness(
+				field.NewPath(""),
+				&nodesCIDR,
+				&podsCIDR,
+				&servicesCIDR,
+			)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].services"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].pods"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].services"),
+			})),
+			))
+		})
+	})
+
+	Describe("#ValidateShootNetworkDisjointedness IPv6", func() {
+
+		It("should pass the validation", func() {
+			var (
+				podsCIDR     = "2001:0db8:35a3::/113"
+				servicesCIDR = "2001:0db8:45a3::/113"
+				nodesCIDR    = "2001:0db8:55a3::/112"
+			)
+
+			errorList := ValidateShootNetworkDisjointedness(
+				field.NewPath(""),
+				&nodesCIDR,
+				&podsCIDR,
+				&servicesCIDR,
+			)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should fail due to missing fields", func() {
+			errorList := ValidateShootNetworkDisjointedness(
+				field.NewPath(""),
+				nil,
+				nil,
+				nil,
+			)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("[].services"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("[].pods"),
+			})),
+			))
+		})
+
+		It("should fail due to disjointedness of node, service and pod networks", func() {
+			var (
+				nodesCIDR    = "2001:0db8:55a3::/112"
+				podsCIDR     = nodesCIDR
+				servicesCIDR = nodesCIDR
+			)
+
+			errorList := ValidateShootNetworkDisjointedness(
+				field.NewPath(""),
+				&nodesCIDR,
+				&podsCIDR,
+				&servicesCIDR,
+			)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].services"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].pods"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].services"),
+			})),
+			))
 		})
 	})
 })
