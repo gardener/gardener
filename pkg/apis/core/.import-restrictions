@@ -1,0 +1,5 @@
+rules:
+- selectorRegexp: github[.]com/gardener/gardener/pkg/apis
+  allowedPrefixes:
+  # core should be self-contained and must not import any other gardener API packages
+  - github.com/gardener/gardener/pkg/apis/core
