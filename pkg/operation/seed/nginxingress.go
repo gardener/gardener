@@ -48,7 +48,7 @@ import (
 const annotationSeedIngressClass = "seed.gardener.cloud/ingress-class"
 
 func managedIngress(seed *Seed) bool {
-	return seed.GetInfo().Spec.DNS.Provider != nil && seed.GetInfo().Spec.Ingress != nil
+	return seed.GetInfo().Spec.DNS.Provider != nil && seed.GetInfo().Spec.Ingress != nil && seed.GetInfo().Spec.Ingress.Controller.Kind == v1beta1constants.IngressKindNginx
 }
 
 func defaultNginxIngress(c client.Client, imageVector imagevector.ImageVector, kubernetesVersion *semver.Version, ingressClass string, config map[string]string) (component.DeployWaiter, error) {
@@ -232,13 +232,17 @@ func getConfig(seed *Seed) (map[string]string, error) {
 	return interfaceMapToStringMap(utils.MergeMaps(defaultConfig, providerConfig)), nil
 }
 
-func computeNginxIngressClass(seed *Seed, kubernetesVersion *semver.Version) (string, error) {
+// ComputeNginxIngressClass returns the IngressClass for the Nginx Ingress controller
+func ComputeNginxIngressClass(seed *Seed, kubernetesVersion *string) (string, error) {
 	managed := managedIngress(seed)
 
+	if kubernetesVersion == nil {
+		return "", fmt.Errorf("kubernetes version is missing in status for seed %q", seed.GetInfo().Name)
+	}
 	// We need to use `versionutils.CompareVersions` because this function normalizes the seed version first.
 	// This is especially necessary if the seed cluster is a non Gardener managed cluster and thus might have some
 	// custom version suffix.
-	greaterEqual122, err := versionutils.CompareVersions(kubernetesVersion.String(), ">=", "1.22")
+	greaterEqual122, err := versionutils.CompareVersions(*kubernetesVersion, ">=", "1.22")
 	if err != nil {
 		return "", err
 	}

@@ -79,6 +79,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -1030,7 +1031,7 @@ func RunReconcileSeedFlow(
 		}
 	}
 
-	ingressClass, err = computeNginxIngressClass(seed, kubernetesVersion)
+	ingressClass, err = ComputeNginxIngressClass(seed, pointer.String(kubernetesVersion.String()))
 	if err != nil {
 		return err
 	}
