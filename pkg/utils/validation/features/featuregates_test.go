@@ -12,13 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubernetes_test
+package features_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 
-	. "github.com/gardener/gardener/pkg/utils/kubernetes"
+	. "github.com/gardener/gardener/pkg/utils/validation/features"
 )
 
 var _ = Describe("featuregates", func() {
@@ -82,6 +85,29 @@ var _ = Describe("featuregates", func() {
 			Entry("[1.0, 1.3) doesn't contain 0.1.2", &FeatureGateVersionRange{AddedInVersion: "1.0", RemovedInVersion: "1.3"}, "0.1.2", false, true),
 			Entry("[1.0, 1.3) doesn't contain 1.3.5", &FeatureGateVersionRange{AddedInVersion: "1.0", RemovedInVersion: "1.3"}, "1.3.5", false, true),
 			Entry("[1.0, 1.3) fails with foo", &FeatureGateVersionRange{AddedInVersion: "1.0", RemovedInVersion: "1.3"}, "foo", false, false),
+		)
+	})
+
+	Describe("#ValidateFeatureGates", func() {
+		DescribeTable("validate feature gates",
+			func(featureGates map[string]bool, version string, matcher gomegatypes.GomegaMatcher) {
+				errList := ValidateFeatureGates(featureGates, version, nil)
+				Expect(errList).To(matcher)
+			},
+
+			Entry("empty list", nil, "1.18.14", BeEmpty()),
+			Entry("supported feature gate", map[string]bool{"AnyVolumeDataSource": true}, "1.18.14", BeEmpty()),
+			Entry("unsupported feature gate", map[string]bool{"CustomResourceValidation": true}, "1.18.14", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal(field.NewPath("CustomResourceValidation").String()),
+				"Detail": Equal("not supported in Kubernetes version 1.18.14"),
+			})))),
+			Entry("unknown feature gate", map[string]bool{"Foo": true}, "1.18.14", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal(field.NewPath("Foo").String()),
+				"BadValue": Equal("Foo"),
+				"Detail":   Equal("unknown feature gate Foo"),
+			})))),
 		)
 	})
 })

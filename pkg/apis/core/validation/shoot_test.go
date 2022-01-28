@@ -3717,29 +3717,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				)),
 		)
 	})
-
-	Describe("#ValidateFeatureGates", func() {
-		DescribeTable("validate feature gates",
-			func(featureGates map[string]bool, version string, matcher gomegatypes.GomegaMatcher) {
-				errList := ValidateFeatureGates(featureGates, version, nil)
-				Expect(errList).To(matcher)
-			},
-
-			Entry("empty list", nil, "1.18.14", BeEmpty()),
-			Entry("supported feature gate", map[string]bool{"AnyVolumeDataSource": true}, "1.18.14", BeEmpty()),
-			Entry("unsupported feature gate", map[string]bool{"CustomResourceValidation": true}, "1.18.14", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":   Equal(field.ErrorTypeForbidden),
-				"Field":  Equal(field.NewPath("CustomResourceValidation").String()),
-				"Detail": Equal("not supported in Kubernetes version 1.18.14"),
-			})))),
-			Entry("unknown feature gate", map[string]bool{"Foo": true}, "1.18.14", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":     Equal(field.ErrorTypeInvalid),
-				"Field":    Equal(field.NewPath("Foo").String()),
-				"BadValue": Equal("Foo"),
-				"Detail":   Equal("unknown feature gate Foo"),
-			})))),
-		)
-	})
 })
 
 func prepareShootForUpdate(shoot *core.Shoot) *core.Shoot {

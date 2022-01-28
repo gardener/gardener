@@ -29,8 +29,8 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
+	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
@@ -762,7 +762,7 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured bool, fldPa
 			}
 		}
 
-		allErrs = append(allErrs, ValidateFeatureGates(kubeAPIServer.FeatureGates, kubernetes.Version, fldPath.Child("kubeAPIServer", "featureGates"))...)
+		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kubeAPIServer.FeatureGates, kubernetes.Version, fldPath.Child("kubeAPIServer", "featureGates"))...)
 	}
 
 	allErrs = append(allErrs, validateKubeControllerManager(kubernetes.KubeControllerManager, kubernetes.Version, fldPath.Child("kubeControllerManager"))...)
@@ -923,7 +923,7 @@ func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, versio
 			}
 		}
 
-		allErrs = append(allErrs, ValidateFeatureGates(kcm.FeatureGates, version, fldPath.Child("featureGates"))...)
+		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kcm.FeatureGates, version, fldPath.Child("featureGates"))...)
 	}
 
 	return allErrs
@@ -932,7 +932,7 @@ func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, versio
 func validateKubeScheduler(ks *core.KubeSchedulerConfig, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if ks != nil {
-		allErrs = append(allErrs, ValidateFeatureGates(ks.FeatureGates, version, fldPath.Child("featureGates"))...)
+		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(ks.FeatureGates, version, fldPath.Child("featureGates"))...)
 	}
 	return allErrs
 }
@@ -945,7 +945,7 @@ func validateKubeProxy(kp *core.KubeProxyConfig, version string, fldPath *field.
 		} else if mode := *kp.Mode; !availableProxyMode.Has(string(mode)) {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("mode"), mode, availableProxyMode.List()))
 		}
-		allErrs = append(allErrs, ValidateFeatureGates(kp.FeatureGates, version, fldPath.Child("featureGates"))...)
+		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kp.FeatureGates, version, fldPath.Child("featureGates"))...)
 	}
 	return allErrs
 }
@@ -1216,7 +1216,7 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, doc
 	if kubeletConfig.ImageGCHighThresholdPercent != nil && kubeletConfig.ImageGCLowThresholdPercent != nil && *kubeletConfig.ImageGCLowThresholdPercent >= *kubeletConfig.ImageGCHighThresholdPercent {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("imageGCLowThresholdPercent"), "imageGCLowThresholdPercent must be less than imageGCHighThresholdPercent"))
 	}
-	allErrs = append(allErrs, ValidateFeatureGates(kubeletConfig.FeatureGates, version, fldPath.Child("featureGates"))...)
+	allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kubeletConfig.FeatureGates, version, fldPath.Child("featureGates"))...)
 	return allErrs
 }
 
@@ -1604,22 +1604,6 @@ func ValidateContainerRuntimes(containerRuntime []core.ContainerRuntime, fldPath
 			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("type"), fmt.Sprintf("must specify different type, %s already exist", cr.Type)))
 		}
 		crSet[cr.Type] = true
-	}
-
-	return allErrs
-}
-
-// ValidateFeatureGates validates the given Kubernetes feature gates against the given Kubernetes version.
-func ValidateFeatureGates(featureGates map[string]bool, version string, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	for featureGate := range featureGates {
-		supported, err := kutil.IsFeatureGateSupported(featureGate, version)
-		if err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child(featureGate), featureGate, err.Error()))
-		} else if !supported {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child(featureGate), fmt.Sprintf("not supported in Kubernetes version %s", version)))
-		}
 	}
 
 	return allErrs
