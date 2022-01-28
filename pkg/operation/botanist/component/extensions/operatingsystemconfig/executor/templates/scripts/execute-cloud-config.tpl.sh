@@ -171,18 +171,24 @@ else
   rm -f "{{ .pathBootstrapToken }}"
 fi
 
-NODENAME=
+# compare CCD script checksum with node annotation if present
+{{`NODENAME="$(`}}{{ .pathBinaries }}{{`/kubectl --kubeconfig="`}}{{ .pathKubeletKubeconfigReal }}{{`" get node -l "kubernetes.io/hostname=$(hostname)" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ end }}")"`}}
+if [[ ! -z "$NODENAME" ]]; then
+  ANNOTATION_CCD_SCRIPT_CHECKSUM=$({{ .pathBinaries }}/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" get node ${NODENAME} -o jsonpath={'.metadata.annotations.gardener\.cloud\/cloud-config-secret-checksum'})
+  if [[ $(cat ${PATH_CHECKSUM}) != ${ANNOTATION_CCD_SCRIPT_CHECKSUM} ]]; then
+    echo "Actual checksum '$(cat ${PATH_CHECKSUM})' and expected cloud-config secret checksum '${ANNOTATION_CCD_SCRIPT_CHECKSUM}' don't match. Skipping cloud-config evaluation."
+    exit 0
+  else
+    echo "cloud-config secret checksums match. continue evaluating ccd."
+  fi
+fi
+
 ANNOTATION_RESTART_SYSTEMD_SERVICES="worker.gardener.cloud/restart-systemd-services"
 
 # Try to find Node object for this machine if already registered to the cluster.
-if [[ -f "{{ .pathKubeletKubeconfigReal }}" ]]; then
-  {{`NODE="$(`}}{{ .pathBinaries }}{{`/kubectl --kubeconfig="`}}{{ .pathKubeletKubeconfigReal }}{{`" get node -l "kubernetes.io/hostname=$(hostname)" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ if (index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\") }} {{ index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ end }}{{ end }}")"`}}
-
-  if [[ ! -z "$NODE" ]]; then
-    NODENAME="$(echo "$NODE" | awk '{print $1}')"
-    SYSTEMD_SERVICES_TO_RESTART="$(echo "$NODE" | awk '{print $2}')"
-  fi
-
+if [[ ! -z "$NODENAME" ]]; then
+  SYSTEMD_SERVICES_TO_RESTART=$({{ .pathBinaries }}/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" get node ${NODENAME} -o jsonpath={'.metadata.annotations.worker\.gardener\.cloud\/restart-systemd-services'})
+fi
   # Restart systemd services if requested
   restart_ccd=n
   for service in $(echo "$SYSTEMD_SERVICES_TO_RESTART" | sed "s/,/ /g"); do
@@ -216,7 +222,6 @@ if [[ -f "{{ .pathKubeletKubeconfigReal }}" ]]; then
       exit 0
     fi
   fi
-fi
 
 # Apply most recent cloud-config user-data, reload the systemd daemon and restart the units to make the changes
 # effective.
