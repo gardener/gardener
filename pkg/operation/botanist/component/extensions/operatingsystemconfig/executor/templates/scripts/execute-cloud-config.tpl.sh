@@ -178,8 +178,6 @@ if [[ ! -z "$NODENAME" ]]; then
   if [[ $(cat ${PATH_CHECKSUM}) != ${ANNOTATION_CCD_SCRIPT_CHECKSUM} ]]; then
     echo "Actual checksum '$(cat ${PATH_CHECKSUM})' and expected cloud-config secret checksum '${ANNOTATION_CCD_SCRIPT_CHECKSUM}' don't match. Skipping cloud-config evaluation."
     exit 0
-  else
-    echo "cloud-config secret checksums match. continue evaluating ccd."
   fi
 fi
 
@@ -189,39 +187,36 @@ ANNOTATION_RESTART_SYSTEMD_SERVICES="worker.gardener.cloud/restart-systemd-servi
 if [[ ! -z "$NODENAME" ]]; then
   SYSTEMD_SERVICES_TO_RESTART=$({{ .pathBinaries }}/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" get node ${NODENAME} -o jsonpath={'.metadata.annotations.worker\.gardener\.cloud\/restart-systemd-services'})
 fi
-  # Restart systemd services if requested
-  restart_ccd=n
-  for service in $(echo "$SYSTEMD_SERVICES_TO_RESTART" | sed "s/,/ /g"); do
-    if [[ ${service} == {{ .cloudConfigDownloaderName }}* ]]; then
-      restart_ccd=y
-      continue
-    fi
-    echo "Restarting systemd service $service due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
-    systemctl restart "$service" || true
-  done
-  {{ .pathBinaries }}/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "${ANNOTATION_RESTART_SYSTEMD_SERVICES}-"
-  if [[ ${restart_ccd} == "y" ]]; then
-    echo "Restarting systemd service {{ .unitNameCloudConfigDownloader }} due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
-    systemctl restart "{{ .unitNameCloudConfigDownloader }}" || true
+# Restart systemd services if requested
+restart_ccd=n
+for service in $(echo "$SYSTEMD_SERVICES_TO_RESTART" | sed "s/,/ /g"); do
+  if [[ ${service} == {{ .cloudConfigDownloaderName }}* ]]; then
+    restart_ccd=y
+    continue
   fi
-
-  # If the time difference from the last execution till now is smaller than the node-specific delay then we exit early
-  # and don't apply the (potentially updated) cloud-config user data. This is to spread the restarts of the systemd
-  # units and to prevent too many restarts happening on the nodes at roughly the same time.
-  if [[ ! -f "$PATH_EXECUTION_DELAY_SECONDS" ]]; then
-    echo $(({{ .executionMinDelaySeconds }} + $RANDOM % {{ .executionMaxDelaySeconds }})) > "$PATH_EXECUTION_DELAY_SECONDS"
+  echo "Restarting systemd service $service due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
+  systemctl restart "$service" || true
+done
+{{ .pathBinaries }}/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "${ANNOTATION_RESTART_SYSTEMD_SERVICES}-"
+if [[ ${restart_ccd} == "y" ]]; then
+  echo "Restarting systemd service {{ .unitNameCloudConfigDownloader }} due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
+  systemctl restart "{{ .unitNameCloudConfigDownloader }}" || true
+fi
+# If the time difference from the last execution till now is smaller than the node-specific delay then we exit early
+# and don't apply the (potentially updated) cloud-config user data. This is to spread the restarts of the systemd
+# units and to prevent too many restarts happening on the nodes at roughly the same time.
+if [[ ! -f "$PATH_EXECUTION_DELAY_SECONDS" ]]; then
+  echo $(({{ .executionMinDelaySeconds }} + $RANDOM % {{ .executionMaxDelaySeconds }})) > "$PATH_EXECUTION_DELAY_SECONDS"
+fi
+execution_delay_seconds=$(cat "$PATH_EXECUTION_DELAY_SECONDS")
+if [[ -f "$PATH_EXECUTION_LAST_DATE" ]]; then
+  execution_last_date=$(cat "$PATH_EXECUTION_LAST_DATE")
+  now_date=$(date +%s)
+  if [[ $((now_date - execution_last_date)) -lt $execution_delay_seconds ]]; then
+    echo "$(date) Execution delay for this node is $execution_delay_seconds seconds, and the last execution was at $(date -d @$execution_last_date). Exiting now."
+    exit 0
   fi
-  execution_delay_seconds=$(cat "$PATH_EXECUTION_DELAY_SECONDS")
-
-  if [[ -f "$PATH_EXECUTION_LAST_DATE" ]]; then
-    execution_last_date=$(cat "$PATH_EXECUTION_LAST_DATE")
-    now_date=$(date +%s)
-
-    if [[ $((now_date - execution_last_date)) -lt $execution_delay_seconds ]]; then
-      echo "$(date) Execution delay for this node is $execution_delay_seconds seconds, and the last execution was at $(date -d @$execution_last_date). Exiting now."
-      exit 0
-    fi
-  fi
+fi
 
 # Apply most recent cloud-config user-data, reload the systemd daemon and restart the units to make the changes
 # effective.
