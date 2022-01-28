@@ -128,8 +128,22 @@ func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, o admission
 		return apierrors.NewInvalid(gk, bastion.Name, field.ErrorList{field.Required(shootPath, "shoot is required")})
 	}
 
-	// ensure shoot exists
 	shootName := bastion.Spec.ShootRef.Name
+
+	if a.GetOperation() == admission.Update {
+		oldBastion, ok := a.GetOldObject().(*operations.Bastion)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert old object to Bastion")
+		}
+
+		oldShootName := oldBastion.Spec.ShootRef.Name
+		if oldShootName != shootName {
+			fieldErr := field.Invalid(shootPath, shootName, "shootRef must not be changed")
+			return apierrors.NewInvalid(gk, bastion.Name, field.ErrorList{fieldErr})
+		}
+	}
+
+	// ensure shoot exists
 	shoot, err := v.coreClient.Core().Shoots(bastion.Namespace).Get(ctx, shootName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
