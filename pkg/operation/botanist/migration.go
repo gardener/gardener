@@ -26,24 +26,31 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// MigrateAllExtensionResources migrates all extension CRs.
-func (b *Botanist) MigrateAllExtensionResources(ctx context.Context) (err error) {
-	return b.runParallelTaskForEachComponent(ctx, b.Shoot.GetExtensionComponentsForMigration(), func(c component.DeployMigrateWaiter) func(context.Context) error {
+// MigrateExtensionResourcesInParallel migrates extension CRs.
+func (b *Botanist) MigrateExtensionResourcesInParallel(ctx context.Context) (err error) {
+	return b.runParallelTaskForEachComponent(ctx, b.Shoot.GetExtensionComponentsForParallelMigration(), func(c component.DeployMigrateWaiter) func(context.Context) error {
 		return c.Migrate
 	})
 }
 
-// WaitUntilAllExtensionResourcesMigrated waits until all extension CRs were successfully migrated.
-func (b *Botanist) WaitUntilAllExtensionResourcesMigrated(ctx context.Context) error {
-	return b.runParallelTaskForEachComponent(ctx, b.Shoot.GetExtensionComponentsForMigration(), func(c component.DeployMigrateWaiter) func(context.Context) error {
+// WaitUntilExtensionResourcesMigrated waits until extension CRs have been successfully migrated.
+func (b *Botanist) WaitUntilExtensionResourcesMigrated(ctx context.Context) error {
+	return b.runParallelTaskForEachComponent(ctx, b.Shoot.GetExtensionComponentsForParallelMigration(), func(c component.DeployMigrateWaiter) func(context.Context) error {
 		return c.WaitMigrate
 	})
 }
 
-// DestroyAllExtensionResources deletes all extension CRs from the Shoot namespace.
-func (b *Botanist) DestroyAllExtensionResources(ctx context.Context) error {
-	return b.runParallelTaskForEachComponent(ctx, b.Shoot.GetExtensionComponentsForMigration(), func(c component.DeployMigrateWaiter) func(context.Context) error {
+// DestroyExtensionResourcesInParallel deletes extension CRs from the Shoot namespace.
+func (b *Botanist) DestroyExtensionResourcesInParallel(ctx context.Context) error {
+	return b.runParallelTaskForEachComponent(ctx, b.Shoot.GetExtensionComponentsForParallelMigration(), func(c component.DeployMigrateWaiter) func(context.Context) error {
 		return c.Destroy
+	})
+}
+
+// WaitUntilExtensionResourcesDeleted waits until extension CRs have been deleted from the Shoot namespace.
+func (b *Botanist) WaitUntilExtensionResourcesDeleted(ctx context.Context) error {
+	return b.runParallelTaskForEachComponent(ctx, b.Shoot.GetExtensionComponentsForParallelMigration(), func(c component.DeployMigrateWaiter) func(context.Context) error {
+		return c.WaitCleanup
 	})
 }
 

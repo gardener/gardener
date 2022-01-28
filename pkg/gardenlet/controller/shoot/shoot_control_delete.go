@@ -686,52 +686,6 @@ func (r *shootReconciler) removeFinalizerFrom(ctx context.Context, gardenClient 
 	})
 }
 
-func needsControlPlaneDeployment(ctx context.Context, o *operation.Operation, kubeAPIServerDeploymentFound bool, infrastructure *extensionsv1alpha1.Infrastructure) (bool, error) {
-	var (
-		namespace = o.Shoot.SeedNamespace
-		name      = o.Shoot.GetInfo().Name
-	)
-
-	// If the `ControlPlane` resource and the kube-apiserver deployment do no longer exist then we don't want to re-deploy it.
-	// The reason for the second condition is that some providers inject a cloud-provider-config into the kube-apiserver deployment
-	// which is needed for it to run.
-	exists, markedForDeletion, err := extensionResourceStillExists(ctx, o.K8sSeedClient.APIReader(), &extensionsv1alpha1.ControlPlane{}, namespace, name)
-	if err != nil {
-		return false, err
-	}
-
-	// treat `ControlPlane` in deletion as if it is already gone. If it is marked for deletion, we also shouldn't wait
-	// for it to be reconciled, as it can potentially block the whole deletion flow (deletion depends on other control
-	// plane components like kcm and grm) which are scaled up later in the flow
-	if !exists && !kubeAPIServerDeploymentFound || markedForDeletion {
-		return false, nil
-	}
-
-	// The infrastructure resource has not been found, no need to redeploy the control plane
-	if infrastructure == nil {
-		return false, nil
-	}
-
-	if providerStatus := infrastructure.Status.ProviderStatus; providerStatus != nil {
-		// The infrastructure resource has been found with a non-nil provider status, so redeploy the control plane
-		return true, nil
-	}
-
-	// The infrastructure resource has been found, but its provider status is nil
-	// In this case the control plane could not have been created at all, so no need to redeploy it
-	return false, nil
-}
-
-func extensionResourceStillExists(ctx context.Context, reader client.Reader, obj client.Object, namespace, name string) (bool, bool, error) {
-	if err := reader.Get(ctx, kutil.Key(namespace, name), obj); err != nil {
-		if apierrors.IsNotFound(err) {
-			return false, false, nil
-		}
-		return false, false, err
-	}
-	return true, obj.GetDeletionTimestamp() != nil, nil
-}
-
 // getUsedAdditionalDNSProviders returns all additional DNS providers that are used by DNSEntry resources
 // in the shoot namespace in the seed cluster.
 func getUsedAdditionalDNSProviders(ctx context.Context, o *operation.Operation) (map[string]component.DeployWaiter, error) {

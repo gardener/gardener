@@ -346,15 +346,14 @@ func (s *Shoot) UpdateInfoStatus(ctx context.Context, c client.Client, useStrate
 	return nil
 }
 
-// GetExtensionComponentsForMigration returns a list of component.DeployMigrateWaiters of extension components that
-// should be migrated by the shoot controller.
-func (s *Shoot) GetExtensionComponentsForMigration() []component.DeployMigrateWaiter {
+// GetExtensionComponentsForParallelMigration returns a list of component.DeployMigrateWaiters of
+// extension components that should be migrated by the shoot controller in parallel.
+// Note that this method does not return ControlPlane and Infrastructure components as they require specific handling during migration.
+func (s *Shoot) GetExtensionComponentsForParallelMigration() []component.DeployMigrateWaiter {
 	return []component.DeployMigrateWaiter{
 		s.Components.Extensions.ContainerRuntime,
-		s.Components.Extensions.ControlPlane,
 		s.Components.Extensions.ControlPlaneExposure,
 		s.Components.Extensions.Extension,
-		s.Components.Extensions.Infrastructure,
 		s.Components.Extensions.Network,
 		s.Components.Extensions.OperatingSystemConfig,
 		s.Components.Extensions.Worker,

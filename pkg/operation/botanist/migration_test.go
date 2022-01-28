@@ -102,28 +102,24 @@ var _ = Describe("migration", func() {
 	Describe("#MigrateAllExtensionResources", func() {
 		It("should call the Migrate() func of all extension components", func() {
 			containerRuntime.EXPECT().Migrate(ctx)
-			controlPlane.EXPECT().Migrate(ctx)
 			controlPlaneExposure.EXPECT().Migrate(ctx)
 			extension.EXPECT().Migrate(ctx)
-			infrastructure.EXPECT().Migrate(ctx)
 			network.EXPECT().Migrate(ctx)
 			operatingSystemConfig.EXPECT().Migrate(ctx)
 			worker.EXPECT().Migrate(ctx)
 
-			Expect(botanist.MigrateAllExtensionResources(ctx)).To(Succeed())
+			Expect(botanist.MigrateExtensionResourcesInParallel(ctx)).To(Succeed())
 		})
 
 		It("should return an error if not all the Migrate() func of all extension components succeed", func() {
 			containerRuntime.EXPECT().Migrate(ctx)
-			controlPlane.EXPECT().Migrate(ctx).Return(fakeErr)
 			controlPlaneExposure.EXPECT().Migrate(ctx)
-			extension.EXPECT().Migrate(ctx)
-			infrastructure.EXPECT().Migrate(ctx)
+			extension.EXPECT().Migrate(ctx).Return(fakeErr)
 			network.EXPECT().Migrate(ctx)
 			operatingSystemConfig.EXPECT().Migrate(ctx)
 			worker.EXPECT().Migrate(ctx)
 
-			err := botanist.MigrateAllExtensionResources(ctx)
+			err := botanist.MigrateExtensionResourcesInParallel(ctx)
 			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
 			Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(fakeErr)))
 		})
@@ -132,28 +128,24 @@ var _ = Describe("migration", func() {
 	Describe("#WaitUntilAllExtensionResourcesMigrated", func() {
 		It("should call the Migrate() func of all extension components", func() {
 			containerRuntime.EXPECT().WaitMigrate(ctx)
-			controlPlane.EXPECT().WaitMigrate(ctx)
 			controlPlaneExposure.EXPECT().WaitMigrate(ctx)
 			extension.EXPECT().WaitMigrate(ctx)
-			infrastructure.EXPECT().WaitMigrate(ctx)
 			network.EXPECT().WaitMigrate(ctx)
 			operatingSystemConfig.EXPECT().WaitMigrate(ctx)
 			worker.EXPECT().WaitMigrate(ctx)
 
-			Expect(botanist.WaitUntilAllExtensionResourcesMigrated(ctx)).To(Succeed())
+			Expect(botanist.WaitUntilExtensionResourcesMigrated(ctx)).To(Succeed())
 		})
 
 		It("should return an error if not all the WaitMigrate() func of all extension components succeed", func() {
 			containerRuntime.EXPECT().WaitMigrate(ctx)
-			controlPlane.EXPECT().WaitMigrate(ctx)
 			controlPlaneExposure.EXPECT().WaitMigrate(ctx)
 			extension.EXPECT().WaitMigrate(ctx)
-			infrastructure.EXPECT().WaitMigrate(ctx)
 			network.EXPECT().WaitMigrate(ctx).Return(fakeErr)
 			operatingSystemConfig.EXPECT().WaitMigrate(ctx)
 			worker.EXPECT().WaitMigrate(ctx).Return(fakeErr)
 
-			err := botanist.WaitUntilAllExtensionResourcesMigrated(ctx)
+			err := botanist.WaitUntilExtensionResourcesMigrated(ctx)
 			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
 			Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(fakeErr), Equal(fakeErr)))
 		})
@@ -162,28 +154,24 @@ var _ = Describe("migration", func() {
 	Describe("#DestroyAllExtensionResources", func() {
 		It("should call the Destroy() func of all extension components", func() {
 			containerRuntime.EXPECT().Destroy(ctx)
-			controlPlane.EXPECT().Destroy(ctx)
 			controlPlaneExposure.EXPECT().Destroy(ctx)
 			extension.EXPECT().Destroy(ctx)
-			infrastructure.EXPECT().Destroy(ctx)
 			network.EXPECT().Destroy(ctx)
 			operatingSystemConfig.EXPECT().Destroy(ctx)
 			worker.EXPECT().Destroy(ctx)
 
-			Expect(botanist.DestroyAllExtensionResources(ctx)).To(Succeed())
+			Expect(botanist.DestroyExtensionResourcesInParallel(ctx)).To(Succeed())
 		})
 
 		It("should return an error if not all the Destroy() func of all extension components succeed", func() {
 			containerRuntime.EXPECT().Destroy(ctx).Return(fakeErr)
-			controlPlane.EXPECT().Destroy(ctx)
 			controlPlaneExposure.EXPECT().Destroy(ctx).Return(fakeErr)
 			extension.EXPECT().Destroy(ctx)
-			infrastructure.EXPECT().Destroy(ctx)
 			network.EXPECT().Destroy(ctx)
 			operatingSystemConfig.EXPECT().Destroy(ctx)
 			worker.EXPECT().Destroy(ctx)
 
-			err := botanist.DestroyAllExtensionResources(ctx)
+			err := botanist.DestroyExtensionResourcesInParallel(ctx)
 			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
 			Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(fakeErr), Equal(fakeErr)))
 		})

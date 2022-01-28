@@ -23,6 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
@@ -89,11 +90,13 @@ func (r *shootReconciler) prepareShootForMigration(ctx context.Context, logger l
 
 func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
 	var (
-		botanist                     *botanistpkg.Botanist
-		err                          error
-		tasksWithErrors              []string
-		kubeAPIServerDeploymentFound = true
-		etcdSnapshotRequired         bool
+		botanist                      *botanistpkg.Botanist
+		err                           error
+		tasksWithErrors               []string
+		controlPlaneRestorationNeeded bool
+		infrastructure                *extensionsv1alpha1.Infrastructure
+		kubeAPIServerDeploymentFound  = true
+		etcdSnapshotRequired          bool
 	)
 
 	for _, lastError := range o.Shoot.GetInfo().Status.LastErrors {
@@ -154,6 +157,21 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 			}
 			etcdSnapshotRequired = backupentry.Spec.SeedName != nil && *backupentry.Spec.SeedName == *botanist.Shoot.GetInfo().Status.SeedName
 			return nil
+		}),
+		utilerrors.ToExecute("Retrieve the infrastructure resource", func() error {
+			obj, err := botanist.Shoot.Components.Extensions.Infrastructure.Get(ctx)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
+				return err
+			}
+			infrastructure = obj
+			return nil
+		}),
+		utilerrors.ToExecute("Check whether control plane restoration is needed", func() error {
+			controlPlaneRestorationNeeded, err = needsControlPlaneDeployment(ctx, o, kubeAPIServerDeploymentFound, infrastructure)
+			return err
 		}),
 	)
 
@@ -217,75 +235,123 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 			Fn:           flow.TaskFn(botanist.ApplyEncryptionConfiguration).DoIf(wakeupRequired),
 			Dependencies: flow.NewTaskIDs(persistETCDEncryptionConfiguration),
 		})
+		// Restore the control plane in case it was already migrated to make sure all components that depend on the cloud provider secret are restarted
+		// in case it has changed. Also, it's needed for other control plane components like the kube-apiserver or kube-
+		// controller-manager to be updateable due to provider config injection.
+		restoreControlPlane = g.Add(flow.Task{
+			Name:         "Restoring Shoot control plane",
+			Fn:           flow.TaskFn(botanist.RestoreControlPlane).DoIf(cleanupShootResources && controlPlaneRestorationNeeded),
+			Dependencies: flow.NewTaskIDs(deploySecrets),
+		})
+		waitUntilControlPlaneReady = g.Add(flow.Task{
+			Name:         "Waiting until Shoot control plane has been restored",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ControlPlane.Wait).DoIf(cleanupShootResources && controlPlaneRestorationNeeded),
+			Dependencies: flow.NewTaskIDs(restoreControlPlane),
+		})
 		wakeUpKubeAPIServer = g.Add(flow.Task{
 			Name:         "Scaling Kubernetes API Server up and waiting until ready",
 			Fn:           flow.TaskFn(botanist.WakeUpKubeAPIServer).DoIf(wakeupRequired),
-			Dependencies: flow.NewTaskIDs(deployETCD, scaleETCDToOne, applyETCDEncryptionConfiguration),
+			Dependencies: flow.NewTaskIDs(deployETCD, scaleETCDToOne, applyETCDEncryptionConfiguration, waitUntilControlPlaneReady),
 		})
 		ensureResourceManagerScaledUp = g.Add(flow.Task{
 			Name:         "Ensuring that the gardener resource manager is scaled to 1",
 			Fn:           flow.TaskFn(botanist.ScaleGardenerResourceManagerToOne).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(wakeUpKubeAPIServer),
 		})
-		annotateExtensionCRsForMigration = g.Add(flow.Task{
-			Name:         "Annotating Extensions CRs with operation - migration",
-			Fn:           botanist.MigrateAllExtensionResources,
-			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
-		})
-		waitForExtensionCRsOperationMigrateToSucceed = g.Add(flow.Task{
-			Name:         "Waiting until all extension CRs are with lastOperation Status Migrate = Succeeded",
-			Fn:           botanist.WaitUntilAllExtensionResourcesMigrated,
-			Dependencies: flow.NewTaskIDs(annotateExtensionCRsForMigration),
-		})
-		deleteAllExtensionCRs = g.Add(flow.Task{
-			Name:         "Deleting all extension CRs from the Shoot namespace",
-			Dependencies: flow.NewTaskIDs(waitForExtensionCRsOperationMigrateToSucceed),
-			Fn:           botanist.DestroyAllExtensionResources,
-		})
 		keepManagedResourcesObjectsInShoot = g.Add(flow.Task{
 			Name:         "Configuring Managed Resources objects to be kept in the Shoot",
-			Fn:           flow.TaskFn(botanist.KeepObjectsForAllManagedResources).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(deleteAllExtensionCRs),
+			Fn:           flow.TaskFn(botanist.KeepObjectsForManagedResources).DoIf(cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
 		})
-		deleteAllManagedResourcesFromShootNamespace = g.Add(flow.Task{
+		deleteManagedResources = g.Add(flow.Task{
 			Name:         "Deleting all Managed Resources from the Shoot's namespace",
-			Fn:           botanist.DeleteAllManagedResourcesObjects,
+			Fn:           flow.TaskFn(botanist.DeleteManagedResources),
 			Dependencies: flow.NewTaskIDs(keepManagedResourcesObjectsInShoot, ensureResourceManagerScaledUp),
 		})
 		waitForManagedResourcesDeletion = g.Add(flow.Task{
 			Name:         "Waiting until ManagedResources are deleted",
-			Fn:           flow.TaskFn(botanist.WaitUntilAllManagedResourcesDeleted).Timeout(10 * time.Minute),
-			Dependencies: flow.NewTaskIDs(deleteAllManagedResourcesFromShootNamespace),
+			Fn:           flow.TaskFn(botanist.WaitUntilManagedResourcesDeleted).Timeout(10 * time.Minute),
+			Dependencies: flow.NewTaskIDs(deleteManagedResources),
 		})
-		prepareKubeAPIServerForMigration = g.Add(flow.Task{
-			Name:         "Preparing kube-apiserver in Shoot's namespace for migration, by deleting it and its respective hvpa",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServer.Destroy).SkipIf(!kubeAPIServerDeploymentFound),
-			Dependencies: flow.NewTaskIDs(waitForManagedResourcesDeletion, waitUntilEtcdReady),
+		migrateExtensionResources = g.Add(flow.Task{
+			Name:         "Migrating extension resources",
+			Fn:           botanist.MigrateExtensionResourcesInParallel,
+			Dependencies: flow.NewTaskIDs(waitForManagedResourcesDeletion),
 		})
-		waitUntilAPIServerDeleted = g.Add(flow.Task{
-			Name:         "Waiting until kube-apiserver doesn't exist",
-			Fn:           botanist.Shoot.Components.ControlPlane.KubeAPIServer.WaitCleanup,
-			Dependencies: flow.NewTaskIDs(prepareKubeAPIServerForMigration),
+		waitUntilExtensionResourcesMigrated = g.Add(flow.Task{
+			Name:         "Waiting until extension resources have been migrated",
+			Fn:           botanist.WaitUntilExtensionResourcesMigrated,
+			Dependencies: flow.NewTaskIDs(migrateExtensionResources),
+		})
+		deleteExtensionResources = g.Add(flow.Task{
+			Name:         "Deleting extension resources from the Shoot namespace",
+			Fn:           botanist.DestroyExtensionResourcesInParallel,
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionResourcesMigrated),
+		})
+		waitUntilExtensionResourcesDeleted = g.Add(flow.Task{
+			Name:         "Waiting until extension resources have been deleted",
+			Fn:           botanist.WaitUntilExtensionResourcesDeleted,
+			Dependencies: flow.NewTaskIDs(deleteExtensionResources),
+		})
+		migrateControlPlane = g.Add(flow.Task{
+			Name:         "Migrating shoot control plane",
+			Fn:           botanist.Shoot.Components.Extensions.ControlPlane.Migrate,
+			Dependencies: flow.NewTaskIDs(waitUntilExtensionResourcesDeleted),
+		})
+		deleteControlPlane = g.Add(flow.Task{
+			Name:         "Deleting shoot control plane",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ControlPlane.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(migrateControlPlane),
+		})
+		waitUntilControlPlaneDeleted = g.Add(flow.Task{
+			Name:         "Waiting until shoot control plane has been deleted",
+			Fn:           botanist.Shoot.Components.Extensions.ControlPlane.WaitCleanup,
+			Dependencies: flow.NewTaskIDs(deleteControlPlane),
+		})
+		deleteKubeAPIServer = g.Add(flow.Task{
+			Name:         "Deleting kube-apiserver deployment",
+			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).SkipIf(!kubeAPIServerDeploymentFound),
+			Dependencies: flow.NewTaskIDs(waitForManagedResourcesDeletion, waitUntilEtcdReady, waitUntilControlPlaneDeleted),
+		})
+		waitUntilKubeAPIServerDeleted = g.Add(flow.Task{
+			Name:         "Waiting until kube-apiserver has been deleted",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServer.WaitCleanup),
+			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
+		})
+		migrateInfrastructure = g.Add(flow.Task{
+			Name:         "Migrating shoot infrastructure",
+			Fn:           botanist.Shoot.Components.Extensions.Infrastructure.Migrate,
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
+		})
+		waitUntilInfrastructureMigrated = g.Add(flow.Task{
+			Name:         "Waiting until shoot infrastructure has been migrated",
+			Fn:           botanist.Shoot.Components.Extensions.Infrastructure.WaitMigrate,
+			Dependencies: flow.NewTaskIDs(migrateInfrastructure),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deleting shoot infrastructure",
+			Fn:           botanist.Shoot.Components.Extensions.Infrastructure.Destroy,
+			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureMigrated),
 		})
 		migrateIngressDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating nginx ingress DNS record",
-			Fn:           botanist.MigrateIngressDNSResources,
-			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
+			Fn:           flow.TaskFn(botanist.MigrateIngressDNSResources),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		migrateExternalDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating external domain DNS record",
-			Fn:           botanist.MigrateExternalDNSResources,
-			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
+			Fn:           flow.TaskFn(botanist.MigrateExternalDNSResources),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		migrateInternalDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating internal domain DNS record",
-			Fn:           botanist.MigrateInternalDNSResources,
-			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
+			Fn:           flow.TaskFn(botanist.MigrateInternalDNSResources),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		migrateOwnerDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating owner domain DNS record",
-			Fn:           botanist.MigrateOwnerDNSResources,
-			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
+			Fn:           flow.TaskFn(botanist.MigrateOwnerDNSResources),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		destroyDNSRecords = g.Add(flow.Task{
 			Name:         "Deleting DNSRecords from the Shoot namespace",
@@ -300,7 +366,7 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 		createETCDSnapshot = g.Add(flow.Task{
 			Name:         "Creating ETCD Snapshot",
 			Fn:           flow.TaskFn(botanist.SnapshotEtcd).DoIf(etcdSnapshotRequired),
-			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		migrateBackupEntryInGarden = g.Add(flow.Task{
 			Name:         "Migrating BackupEntry to new seed",
@@ -325,7 +391,7 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeleteSeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilBackupEntryInGardenMigrated, deleteAllExtensionCRs, destroyDNSRecords, destroyDNSProviders, waitForManagedResourcesDeletion, waitUntilEtcdDeleted),
+			Dependencies: flow.NewTaskIDs(waitUntilBackupEntryInGardenMigrated, deleteExtensionResources, destroyDNSRecords, destroyDNSProviders, waitForManagedResourcesDeletion, waitUntilEtcdDeleted),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespace in Seed has been deleted",
