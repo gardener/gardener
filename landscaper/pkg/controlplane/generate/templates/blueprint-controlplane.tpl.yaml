@@ -44,3 +44,7 @@ deployExecutions:
           {{ `{{ $resource := getResource .cd "name" "landscaper-controlplane" }}` }}
           image: {{ `{{ $resource.access.imageReference }}` }}
 
+exportExecutions:
+  - name: export-execution
+    file: /export-execution.yaml
+    type: GoTemplate

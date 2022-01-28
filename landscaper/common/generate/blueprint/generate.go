@@ -48,6 +48,8 @@ type BlueprintField struct {
 	Name string `json:"name"`
 	// TargetType is the name of the target import/export
 	TargetType string `json:"targetType,omitempty"`
+	// Type is the type of field (data / target)
+	Type *string `json:"type,omitempty"`
 	// Required refines if this import is required
 	Required bool `json:"required"`
 	// Schema is the JSONSchema of the import field
@@ -67,18 +69,41 @@ type BlueprintSchema struct {
 	Items []BlueprintSchema `json:"items,omitempty"`
 }
 
+// ExportExecutions are the wxport executions of blueprint corresponding to the exported fields
+type ExportExecutions struct {
+	// Exports are the exported fields
+	Exports map[string]string `json:"exports,omitempty"`
+}
+
+var (
+	// defaultExportExecutionFileName is the default name for the export execution file name
+	defaultExportExecutionFileName = "deploy-execution.yaml"
+	// defaultContainerDeployerName is the default name used for the container deployer when rendering the export executions
+	defaultContainerDeployerName = "default"
+	// typeTarget is the type of field (either in the import or export section of the blueprint)
+	typeTarget = "target"
+)
+
 // RenderBlueprint renders a blueprint filesystem (writes the blueprint + the schema files)
-// the `rootOpenAPIDefinitionKey` identifies the key in the OpenAPI definitions that identifies the root
-// definition (import configuration of the landscaper component)
-// Please note
-//  - the function `getOpenAPIDefinitions` must be generated using the `openapi-gen` binary
-//  - exportExecutions and therefore exporting targets is currently not supported by the generator
+// Parameters:
+//  - `rootImportOpenAPIDefinitionKey` identifies the key in the OpenAPI definitions that identifies the root
+//    import definition (import configuration of the landscaper component)
+//  - `rootExportOpenAPIDefinitionKey` optionally identifies the key in the OpenAPI definitions that identifies export definition
+//  - `exportExecutionFileName` is the optional name of the file in the blueprint filesystem where the export executions are render to. This will use GoTemplate!
+//  - `containerDeployerName` is the name of the deployer the exports refer to. This has to match the definition in your blueprint template!
+//
+//     Limitations:
+//       - just supports getting export data from one deployer, while the landscaper supports exports from various sub-installations, too.
+//       - no support for targets in export executions
+// Please note, the function `getOpenAPIDefinitions` should be generated using the `openapi-gen` binary
 func RenderBlueprint(blueprintTemplate *template.Template,
 	scheme *runtime.Scheme,
 	rootImportOpenAPIDefinitionKey string,
 	rootExportOpenAPIDefinitionKey *string,
 	getOpenAPIDefinitions func(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition,
 	blueprintDirectory string,
+	exportExecutionFileName *string,
+	containerDeployerName *string,
 ) error {
 	namer := openapinamer.NewDefinitionNamer(scheme)
 
@@ -103,7 +128,7 @@ func RenderBlueprint(blueprintTemplate *template.Template,
 		rootExportOpenAPIDefinition = &definiton
 	}
 
-	if err := renderBlueprint(rootImportOpenAPIDefinition, rootExportOpenAPIDefinition, blueprintTemplate, blueprintDirectory); err != nil {
+	if err := renderBlueprint(rootImportOpenAPIDefinition, rootExportOpenAPIDefinition, blueprintTemplate, blueprintDirectory, exportExecutionFileName, containerDeployerName); err != nil {
 		return err
 	}
 
@@ -156,10 +181,10 @@ func cleanDirectory(directory string) error {
 // renderBlueprint creates the blueprint.yaml in the blueprint directory based on the `blueprintTemplate`
 // The blueprint resource must contain fields defining its import fields. Only using a `ref` to a JSONSchema file is not possible.
 // Hence, this function takes the properties of the root schema and renders them as top-level import fields to the blueprint.
-func renderBlueprint(importDefinition common.OpenAPIDefinition, exportDefinition *common.OpenAPIDefinition, blueprintTemplate *template.Template, blueprintDirectory string) error {
-	importsFields, err2 := getTopLevelFields(importDefinition)
-	if err2 != nil {
-		return err2
+func renderBlueprint(importDefinition common.OpenAPIDefinition, exportDefinition *common.OpenAPIDefinition, blueprintTemplate *template.Template, blueprintDirectory string, exportExecutionFileName *string, containerDeployerName *string) error {
+	importsFields, _, err := getTopLevelFields(importDefinition)
+	if err != nil {
+		return err
 	}
 
 	data := map[string]string{
@@ -167,11 +192,16 @@ func renderBlueprint(importDefinition common.OpenAPIDefinition, exportDefinition
 	}
 
 	if exportDefinition != nil {
-		exportsFields, err2 := getTopLevelFields(*exportDefinition)
-		if err2 != nil {
-			return err2
+		exportsFields, exportedFields, err := getTopLevelFields(*exportDefinition)
+		if err != nil {
+			return err
 		}
 		data["exports"] = string(exportsFields)
+
+		err = writeExportExecutions(exportedFields, blueprintDirectory, exportExecutionFileName, containerDeployerName)
+		if err != nil {
+			return err
+		}
 	}
 
 	var ccdScript bytes.Buffer
@@ -182,7 +212,66 @@ func renderBlueprint(importDefinition common.OpenAPIDefinition, exportDefinition
 	return ioutil.WriteFile(fmt.Sprintf("%s/blueprint.yaml", blueprintDirectory), ccdScript.Bytes(), 0640)
 }
 
-func getTopLevelFields(importDefinition common.OpenAPIDefinition) ([]byte, error) {
+// writeExportExecutions writes a file to the blueprint filesystem containing the export executions corresponding to the exported fields
+// Export executions are necessary to "tell" the landscaper from where (deployer) the valus for the exported fields are actually coming from
+// the generator assumes the field name of the exported field matches the name of the field actually exported vy the deployer.
+// Hence, if your component writes an export.yaml to the export directory with "myCa": "abc", then the exported field name must be "myCa".
+// Please note: the generator currently does NOT support exports of type target (but can be added if needed)
+func writeExportExecutions(exportedFields []BlueprintField, blueprintDirectory string, exportExecutionFileName *string, containerDeployerName *string) error {
+	if exportExecutionFileName == nil {
+		exportExecutionFileName = &defaultExportExecutionFileName
+	}
+
+	if containerDeployerName == nil {
+		containerDeployerName = &defaultContainerDeployerName
+	}
+
+	fields := make(map[string]string, len(exportedFields))
+	for _, field := range exportedFields {
+		fields[field.Name] = fmt.Sprintf("{{- index .values \"deployitems\" \"%s\" \"%s\" | nindent 4 }}", *containerDeployerName, field.Name)
+	}
+
+	exportExecutions := ExportExecutions{Exports: fields}
+
+	importsJson, err := json.Marshal(exportExecutions)
+	if err != nil {
+		return err
+	}
+
+	yamlOut, err := yaml.JSONToYAML(importsJson)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(fmt.Sprintf("%s/%s", blueprintDirectory, *exportExecutionFileName), yamlOut, 0640)
+}
+
+// exports:
+//  virtualGardenApiserverCaPem: |
+//    {{- index .values "deployitems" "virtual-garden-container-deployer" "virtualGardenApiserverCaPem" | nindent 4 }}
+//
+//  etcdCaPem: |
+//    {{- index .values "deployitems" "virtual-garden-container-deployer" "etcdCaPem" | nindent 4 }}
+//
+//  etcdClientTlsPem: |
+//    {{- index .values "deployitems" "virtual-garden-container-deployer" "etcdClientTlsPem" | nindent 4 }}
+//
+//  etcdClientTlsKeyPem: |
+//    {{- index .values "deployitems" "virtual-garden-container-deployer" "etcdClientTlsKeyPem" | nindent 4 }}
+//
+//  etcdUrl: |
+//    {{- index .values "deployitems" "virtual-garden-container-deployer" "etcdUrl" | nindent 4 }}
+//
+//  virtualGardenEndpoint: |
+//    {{- index .values "deployitems" "virtual-garden-container-deployer" "virtualGardenEndpoint" | nindent 4 }}
+//
+//  virtualGardenCluster:
+//    type: landscaper.gardener.cloud/kubernetes-cluster
+//    config:
+//      kubeconfig: |
+//        {{- index .values "deployitems" "virtual-garden-container-deployer" "kubeconfigYaml" | nindent 8 }}
+
+func getTopLevelFields(importDefinition common.OpenAPIDefinition) ([]byte, []BlueprintField, error) {
 	var topLevelFields []BlueprintField
 	requiredFields := sets.NewString(importDefinition.Schema.SchemaProps.Required...)
 
@@ -208,24 +297,24 @@ func getTopLevelFields(importDefinition common.OpenAPIDefinition) ([]byte, error
 
 		typeBytes, err := schema.SchemaProps.Type.MarshalJSON()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		fieldType := strings.ReplaceAll(string(typeBytes), "\"", "")
 
 		if fieldType == "array" {
 			if schema.SchemaProps.Items == nil {
-				return nil, fmt.Errorf("array type misdefined for key %q", key)
+				return nil, nil, fmt.Errorf("array type misdefined for key %q", key)
 			}
 
 			if schema.SchemaProps.Items.Schema == nil {
-				return nil, fmt.Errorf("array type misdefined. No schema defined for key %q", key)
+				return nil, nil, fmt.Errorf("array type misdefined. No schema defined for key %q", key)
 			}
 
 			// we expect that the items of the array are defined as a JSONSchema reference (not inline).
 			reference := schema.SchemaProps.Items.Schema.Ref.Ref.GetURL()
 			if reference == nil {
-				return nil, fmt.Errorf("items of the array type %q muat be defined as a JSONSchema reference (not inline)", key)
+				return nil, nil, fmt.Errorf("items of the array type %q muat be defined as a JSONSchema reference (not inline)", key)
 			}
 
 			topLevelFields = append(topLevelFields, BlueprintField{
@@ -261,6 +350,7 @@ func getTopLevelFields(importDefinition common.OpenAPIDefinition) ([]byte, error
 				Name:       key,
 				Required:   requiredFields.Has(key),
 				TargetType: targetType,
+				Type:       &typeTarget,
 			})
 			continue
 		}
@@ -276,14 +366,14 @@ func getTopLevelFields(importDefinition common.OpenAPIDefinition) ([]byte, error
 
 	jsonBytes, err := json.Marshal(topLevelFields)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	yamlOut, err := yaml.JSONToYAML(jsonBytes)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return yamlOut, nil
+	return yamlOut, topLevelFields, nil
 }
 
 // writeJsonSchemaFile writes a JSONSchema formatted file to the blueprint directory

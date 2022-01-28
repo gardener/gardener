@@ -1,0 +1,17 @@
+exports:
+  gardenerAPIServerCA: '{{- index .values "deployitems" "default" "gardenerAPIServerCA"
+    | nindent 4 }}'
+  gardenerAPIServerEncryptionConfiguration: '{{- index .values "deployitems" "default"
+    "gardenerAPIServerEncryptionConfiguration" | nindent 4 }}'
+  gardenerAPIServerTLSServing: '{{- index .values "deployitems" "default" "gardenerAPIServerTLSServing"
+    | nindent 4 }}'
+  gardenerAdmissionControllerCA: '{{- index .values "deployitems" "default" "gardenerAdmissionControllerCA"
+    | nindent 4 }}'
+  gardenerAdmissionControllerTLSServing: '{{- index .values "deployitems" "default"
+    "gardenerAdmissionControllerTLSServing" | nindent 4 }}'
+  gardenerControllerManagerTLSServing: '{{- index .values "deployitems" "default"
+    "gardenerControllerManagerTLSServing" | nindent 4 }}'
+  gardenerIdentity: '{{- index .values "deployitems" "default" "gardenerIdentity"
+    | nindent 4 }}'
+  openVPNDiffieHellmanKey: '{{- index .values "deployitems" "default" "openVPNDiffieHellmanKey"
+    | nindent 4 }}'

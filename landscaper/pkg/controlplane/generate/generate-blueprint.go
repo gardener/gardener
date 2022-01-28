@@ -57,6 +57,8 @@ func main() {
 		pointer.String("github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports.Exports"),
 		openapi.GetOpenAPIDefinitions,
 		"landscaper/pkg/controlplane/blueprint",
+		pointer.String("export-execution.yaml"),
+		pointer.String("default"),
 	); err != nil {
 		panic(err)
 	}
