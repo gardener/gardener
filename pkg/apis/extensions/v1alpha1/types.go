@@ -15,10 +15,8 @@
 package v1alpha1
 
 import (
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
@@ -77,22 +75,6 @@ type Object interface {
 	// GetExtensionStatus retrieves the object's status.
 	GetExtensionStatus() Status
 }
-
-// ExtensionKinds contains all supported extension kinds.
-var ExtensionKinds = sets.NewString(
-	BackupBucketResource,
-	BackupEntryResource,
-	BastionResource,
-	ContainerRuntimeResource,
-	ControlPlaneResource,
-	dnsv1alpha1.DNSProviderKind,
-	DNSRecordResource,
-	ExtensionResource,
-	InfrastructureResource,
-	NetworkResource,
-	OperatingSystemConfigResource,
-	WorkerResource,
-)
 
 // ShootAlphaCSIMigrationKubernetesVersion is a constant for an annotation on the Shoot resource stating the Kubernetes
 // version for which the CSI migration shall be enabled.
