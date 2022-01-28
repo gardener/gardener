@@ -103,6 +103,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEviction":                  schema_pkg_apis_core_v1alpha1_KubeletConfigEviction(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEvictionMinimumReclaim":    schema_pkg_apis_core_v1alpha1_KubeletConfigEvictionMinimumReclaim(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEvictionSoftGracePeriod":   schema_pkg_apis_core_v1alpha1_KubeletConfigEvictionSoftGracePeriod(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigOverwrites":                schema_pkg_apis_core_v1alpha1_KubeletConfigOverwrites(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigReserved":                  schema_pkg_apis_core_v1alpha1_KubeletConfigReserved(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Kubernetes":                             schema_pkg_apis_core_v1alpha1_Kubernetes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubernetesConfig":                       schema_pkg_apis_core_v1alpha1_KubernetesConfig(ref),
@@ -252,6 +253,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEviction":                   schema_pkg_apis_core_v1beta1_KubeletConfigEviction(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionMinimumReclaim":     schema_pkg_apis_core_v1beta1_KubeletConfigEvictionMinimumReclaim(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionSoftGracePeriod":    schema_pkg_apis_core_v1beta1_KubeletConfigEvictionSoftGracePeriod(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigOverwrites":                 schema_pkg_apis_core_v1beta1_KubeletConfigOverwrites(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved":                   schema_pkg_apis_core_v1beta1_KubeletConfigReserved(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes":                              schema_pkg_apis_core_v1beta1_Kubernetes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesConfig":                        schema_pkg_apis_core_v1beta1_KubernetesConfig(ref),
@@ -3837,6 +3839,26 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfigEvictionSoftGracePeriod(ref comm
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_KubeletConfigOverwrites(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "KubeletConfigOverwrites contains overwrites for the kubelet configuration.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"cGroupDriver": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CGroupDriver defines the kubelet setting for cgroupdriver",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_KubeletConfigReserved(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -4342,12 +4364,19 @@ func schema_pkg_apis_core_v1alpha1_MachineImageVersion(ref common.ReferenceCallb
 							},
 						},
 					},
+					"kubeletConfigOverwrites": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubeletConfigOverwrites defines overwrites for the kubelet configuration",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigOverwrites"),
+						},
+					},
 				},
 				Required: []string{"version"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CRI", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigOverwrites", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -10815,6 +10844,26 @@ func schema_pkg_apis_core_v1beta1_KubeletConfigEvictionSoftGracePeriod(ref commo
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_KubeletConfigOverwrites(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "KubeletConfigOverwrites contains overwrites for the kubelet configuration.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"cGroupDriver": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CGroupDriver defines the kubelet setting for cgroupdriver",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_KubeletConfigReserved(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -11320,12 +11369,19 @@ func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallba
 							},
 						},
 					},
+					"kubeletConfigOverwrites": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubeletConfigOverwrites defines overwrites for the kubelet configuration",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigOverwrites"),
+						},
+					},
 				},
 				Required: []string{"version"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigOverwrites", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

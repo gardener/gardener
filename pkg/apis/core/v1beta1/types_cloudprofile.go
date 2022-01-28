@@ -121,6 +121,9 @@ type MachineImageVersion struct {
 	// CRI list of supported container runtime and interfaces supported by this version
 	// +optional
 	CRI []CRI `json:"cri,omitempty" protobuf:"bytes,2,rep,name=cri"`
+	// KubeletConfigOverwrites defines overwrites for the kubelet configuration
+	// +optional
+	KubeletConfigOverwrites KubeletConfigOverwrites `json:"kubeletConfigOverwrites,omitempty" protobuf:"bytes,3,rep,name=kubeletConfigOverwrites"`
 }
 
 // ExpirableVersion contains a version and an expiration date.
@@ -133,6 +136,13 @@ type ExpirableVersion struct {
 	// Classification defines the state of a version (preview, supported, deprecated)
 	// +optional
 	Classification *VersionClassification `json:"classification,omitempty" protobuf:"bytes,3,opt,name=classification,casttype=VersionClassification"`
+}
+
+// KubeletConfigOverwrites contains overwrites for the kubelet configuration.
+type KubeletConfigOverwrites struct {
+	// CGroupDriver defines the kubelet setting for cgroupdriver
+	// +optional
+	CGroupDriver *string `json:"cGroupDriver,omitempty" protobuf:"bytes,1,rep,name=cGroupDriver"`
 }
 
 // MachineType contains certain properties of a machine type.

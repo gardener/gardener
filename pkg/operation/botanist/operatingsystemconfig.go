@@ -68,6 +68,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 		&operatingsystemconfig.Values{
 			Namespace:         b.Shoot.SeedNamespace,
 			KubernetesVersion: b.Shoot.KubernetesVersion,
+			MachineImages:     b.Shoot.CloudProfile.Spec.MachineImages,
 			Workers:           b.Shoot.GetInfo().Spec.Provider.Workers,
 			OriginalValues: operatingsystemconfig.OriginalValues{
 				ClusterDNSAddress:       clusterDNSAddress,

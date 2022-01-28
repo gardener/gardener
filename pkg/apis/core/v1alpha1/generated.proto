@@ -1150,6 +1150,13 @@ message KubeletConfigEvictionSoftGracePeriod {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration nodeFSInodesFree = 5;
 }
 
+// KubeletConfigOverwrites contains overwrites for the kubelet configuration.
+message KubeletConfigOverwrites {
+  // CGroupDriver defines the kubelet setting for cgroupdriver
+  // +optional
+  optional string cGroupDriver = 1;
+}
+
 // KubeletConfigReserved contains reserved resources for daemons
 message KubeletConfigReserved {
   // CPU is the reserved cpu.
@@ -1327,6 +1334,10 @@ message MachineImageVersion {
   // CRI list of supported container runtime and interfaces supported by this version
   // +optional
   repeated CRI cri = 2;
+
+  // KubeletConfigOverwrites defines overwrites for the kubelet configuration
+  // +optional
+  optional KubeletConfigOverwrites kubeletConfigOverwrites = 3;
 }
 
 // MachineType contains certain properties of a machine type.

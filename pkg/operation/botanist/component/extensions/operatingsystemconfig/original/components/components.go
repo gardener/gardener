@@ -43,5 +43,6 @@ type Context struct {
 	KubernetesVersion       *semver.Version
 	SSHPublicKeys           []string
 	LokiIngress             string
+	CGroupDriver            *string
 	PromtailEnabled         bool
 }

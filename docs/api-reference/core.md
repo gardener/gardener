@@ -5127,6 +5127,37 @@ Kubernetes meta/v1.Duration
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.KubeletConfigOverwrites">KubeletConfigOverwrites
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.MachineImageVersion">MachineImageVersion</a>)
+</p>
+<p>
+<p>KubeletConfigOverwrites contains overwrites for the kubelet configuration.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>cGroupDriver</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CGroupDriver defines the kubelet setting for cgroupdriver</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.KubeletConfigReserved">KubeletConfigReserved
 </h3>
 <p>
@@ -5876,6 +5907,20 @@ ExpirableVersion
 <td>
 <em>(Optional)</em>
 <p>CRI list of supported container runtime and interfaces supported by this version</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeletConfigOverwrites</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.KubeletConfigOverwrites">
+KubeletConfigOverwrites
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeletConfigOverwrites defines overwrites for the kubelet configuration</p>
 </td>
 </tr>
 </tbody>

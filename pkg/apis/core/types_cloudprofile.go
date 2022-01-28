@@ -105,6 +105,8 @@ type MachineImageVersion struct {
 	ExpirableVersion
 	// CRI list of supported container runtime and interfaces supported by this version
 	CRI []CRI
+	// KubeletConfigOverwrites defines overwrites for the kubelet configuration
+	KubeletConfigOverwrites KubeletConfigOverwrites
 }
 
 // ExpirableVersion contains a version and an expiration date.
@@ -115,6 +117,12 @@ type ExpirableVersion struct {
 	ExpirationDate *metav1.Time
 	// Classification defines the state of a version (preview, supported, deprecated)
 	Classification *VersionClassification
+}
+
+// KubeletConfigOverwrites contains overwrites for the kubelet configuration.
+type KubeletConfigOverwrites struct {
+	// CGroupDriver defines the kubelet setting for cgroupdriver
+	CGroupDriver *string
 }
 
 // MachineType contains certain properties of a machine type.
