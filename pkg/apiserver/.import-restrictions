@@ -1,0 +1,5 @@
+rules:
+# override pkg/ import restriction on plugin/ for apiserver
+- selectorRegexp: github[.]com/gardener/gardener/plugin
+  allowedPrefixes:
+  - github.com/gardener/gardener/plugin/pkg
