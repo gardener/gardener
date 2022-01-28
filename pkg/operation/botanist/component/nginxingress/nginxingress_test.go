@@ -1,4 +1,4 @@
-// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ var _ = Describe("Nginx Ingress", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		configMapData = map[string]interface{}{
+		configMapData = map[string]string{
 			"foo":  "bar",
 			"dot":  "3",
 			"dash": "false",
@@ -69,7 +69,7 @@ var _ = Describe("Nginx Ingress", func() {
 			ConfigData:          configMapData,
 		}
 
-		configMapName = "nginx-ingress-controller-" + utils.ComputeConfigMapChecksum(InterfaceMapToStringMap(configMapData))[:8]
+		configMapName = "nginx-ingress-controller-" + utils.ComputeConfigMapChecksum(configMapData)[:8]
 	)
 
 	BeforeEach(func() {

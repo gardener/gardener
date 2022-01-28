@@ -1,4 +1,4 @@
-// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,14 +17,18 @@ package seed
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/sirupsen/logrus"
@@ -45,6 +49,27 @@ const annotationSeedIngressClass = "seed.gardener.cloud/ingress-class"
 
 func managedIngress(seed *Seed) bool {
 	return seed.GetInfo().Spec.DNS.Provider != nil && seed.GetInfo().Spec.Ingress != nil
+}
+
+func defaultNginxIngress(c client.Client, imageVector imagevector.ImageVector, kubernetesVersion *semver.Version, ingressClass string, config map[string]string) (component.DeployWaiter, error) {
+	imageController, err := imageVector.FindImage(charts.ImageNameNginxIngressControllerSeed, imagevector.TargetVersion(kubernetesVersion.String()))
+	if err != nil {
+		return nil, err
+	}
+	imageDefaultBackend, err := imageVector.FindImage(charts.ImageNameIngressDefaultBackend, imagevector.TargetVersion(kubernetesVersion.String()))
+	if err != nil {
+		return nil, err
+	}
+
+	values := nginxingress.Values{
+		ImageController:     imageController.String(),
+		ImageDefaultBackend: imageDefaultBackend.String(),
+		KubernetesVersion:   kubernetesVersion,
+		IngressClass:        ingressClass,
+		ConfigData:          config,
+	}
+
+	return nginxingress.New(c, v1beta1constants.GardenNamespace, values), nil
 }
 
 func getManagedIngressDNSEntry(c client.Client, seedFQDN string, seedClusterIdentity, loadBalancerAddress string, log logrus.FieldLogger) component.DeployWaiter {
@@ -189,7 +214,7 @@ func switchIngressClass(ctx context.Context, seedClient client.Client, ingressKe
 	return seedClient.Update(ctx, ingress)
 }
 
-func getConfig(seed *Seed) (map[string]interface{}, error) {
+func getConfig(seed *Seed) (map[string]string, error) {
 	var (
 		defaultConfig = map[string]interface{}{
 			"server-name-hash-bucket-size": "256",
@@ -197,13 +222,14 @@ func getConfig(seed *Seed) (map[string]interface{}, error) {
 			"worker-processes":             "2",
 		}
 		providerConfig = map[string]interface{}{}
-		err            error
 	)
 	if seed.GetInfo().Spec.Ingress != nil && seed.GetInfo().Spec.Ingress.Controller.ProviderConfig != nil {
-		err = json.Unmarshal(seed.GetInfo().Spec.Ingress.Controller.ProviderConfig.Raw, &providerConfig)
+		if err := json.Unmarshal(seed.GetInfo().Spec.Ingress.Controller.ProviderConfig.Raw, &providerConfig); err != nil {
+			return nil, err
+		}
 	}
 
-	return utils.MergeMaps(defaultConfig, providerConfig), err
+	return interfaceMapToStringMap(utils.MergeMaps(defaultConfig, providerConfig)), nil
 }
 
 func computeNginxIngressClass(seed *Seed, kubernetesVersion *semver.Version) (string, error) {
@@ -224,4 +250,12 @@ func computeNginxIngressClass(seed *Seed, kubernetesVersion *semver.Version) (st
 		return v1beta1constants.SeedNginxIngressClass, nil
 	}
 	return v1beta1constants.NginxIngressClass, nil
+}
+
+func interfaceMapToStringMap(in map[string]interface{}) map[string]string {
+	m := make(map[string]string, len(in))
+	for k, v := range in {
+		m[k] = fmt.Sprint(v)
+	}
+	return m
 }

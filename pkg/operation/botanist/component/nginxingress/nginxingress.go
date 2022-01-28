@@ -1,4 +1,4 @@
-// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@ package nginxingress
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -83,7 +82,7 @@ type Values struct {
 	// IngressClass is the ingress class for the seed nginx-ingress controller
 	IngressClass string
 	// ConfigData contains the configuration details for the nginx-ingress controller
-	ConfigData map[string]interface{}
+	ConfigData map[string]string
 }
 
 // New creates a new instance of DeployWaiter for nginx-ingress
@@ -142,7 +141,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			Labels:    getLabels(labelValueController, ""),
 			Namespace: n.namespace,
 		},
-		Data: InterfaceMapToStringMap(n.values.ConfigData),
+		Data: n.values.ConfigData,
 	}
 
 	utilruntime.Must(kutil.MakeUnique(configMap))
@@ -604,13 +603,4 @@ func (n *nginxIngress) getArgs(configMap *corev1.ConfigMap) []string {
 		out = append(out, "--controller-class=k8s.io/"+n.values.IngressClass)
 	}
 	return out
-}
-
-// InterfaceMapToStringMap converts a map[string]interface{} to map[string]string
-func InterfaceMapToStringMap(in map[string]interface{}) map[string]string {
-	m := make(map[string]string, len(in))
-	for k, v := range in {
-		m[k] = fmt.Sprint(v)
-	}
-	return m
 }
