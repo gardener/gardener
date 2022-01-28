@@ -15,8 +15,6 @@
 package utils_test
 
 import (
-	"testing"
-
 	gardenercore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/plugin/pkg/utils"
 
@@ -27,13 +25,7 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-func TestUtils(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission Utils Suite")
-}
-
 var _ = Describe("Miscellaneous", func() {
-
 	var (
 		shoot1 = gardenercore.Shoot{
 			ObjectMeta: metav1.ObjectMeta{

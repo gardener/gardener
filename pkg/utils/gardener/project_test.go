@@ -18,23 +18,20 @@ import (
 	"context"
 	"fmt"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreinternallisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	. "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("Project", func() {
@@ -61,14 +58,6 @@ var _ = Describe("Project", func() {
 				Namespace: &namespaceName,
 			},
 		}
-		projectInternal = &gardencore.Project{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: projectName,
-			},
-			Spec: gardencore.ProjectSpec{
-				Namespace: &namespaceName,
-			},
-		}
 	)
 
 	BeforeEach(func() {
@@ -78,36 +67,6 @@ var _ = Describe("Project", func() {
 
 	AfterEach(func() {
 		ctrl.Finish()
-	})
-
-	Describe("#ProjectForNamespaceFromInternalLister", func() {
-		var lister *fakeInternalLister
-
-		BeforeEach(func() {
-			lister = &fakeInternalLister{}
-		})
-
-		It("should return an error because listing failed", func() {
-			lister.err = fakeErr
-
-			result, err := ProjectForNamespaceFromInternalLister(lister, namespaceName)
-			Expect(err).To(MatchError(fakeErr))
-			Expect(result).To(BeNil())
-		})
-
-		It("should return the found project", func() {
-			lister.projects = []*gardencore.Project{projectInternal}
-
-			result, err := ProjectForNamespaceFromInternalLister(lister, namespaceName)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(projectInternal))
-		})
-
-		It("should return a 'not found' error", func() {
-			result, err := ProjectForNamespaceFromInternalLister(lister, namespaceName)
-			Expect(err).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: "core.gardener.cloud", Resource: "Project"}, namespaceName)))
-			Expect(result).To(BeNil())
-		})
 	})
 
 	Describe("#ProjectForNamespaceFromReader", func() {
@@ -195,23 +154,3 @@ var _ = Describe("Project", func() {
 		})
 	})
 })
-
-type fakeLister struct {
-	gardencorelisters.ProjectLister
-	projects []*gardencorev1beta1.Project
-	err      error
-}
-
-func (c *fakeLister) List(labels.Selector) ([]*gardencorev1beta1.Project, error) {
-	return c.projects, c.err
-}
-
-type fakeInternalLister struct {
-	gardencoreinternallisters.ProjectLister
-	projects []*gardencore.Project
-	err      error
-}
-
-func (c *fakeInternalLister) List(labels.Selector) ([]*gardencore.Project, error) {
-	return c.projects, c.err
-}

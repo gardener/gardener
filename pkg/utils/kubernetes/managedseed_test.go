@@ -16,25 +16,21 @@ package kubernetes_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
-
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	seedmanagementfake "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	. "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -62,52 +58,6 @@ var _ = Describe("managedseed", func() {
 				},
 			},
 		}
-	})
-
-	Describe("#GetManagedSeed", func() {
-		var seedManagementClient *seedmanagementfake.Clientset
-
-		BeforeEach(func() {
-			seedManagementClient = &seedmanagementfake.Clientset{}
-		})
-
-		It("should return the ManagedSeed for the given shoot namespace and name, if it exists", func() {
-			seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
-				return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed}}, nil
-			})
-
-			result, err := GetManagedSeed(ctx, seedManagementClient, namespace, name)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(managedSeed))
-		})
-
-		It("should return nil if a ManagedSeed does not exist", func() {
-			seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
-				return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{}}, nil
-			})
-
-			result, err := GetManagedSeed(ctx, seedManagementClient, namespace, name)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(BeNil())
-		})
-
-		It("should fail if more than one ManagedSeeds exist", func() {
-			seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
-				return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed, *managedSeed}}, nil
-			})
-
-			_, err := GetManagedSeed(ctx, seedManagementClient, namespace, name)
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("should fail if listing the ManagedSeeds fails", func() {
-			seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
-				return true, nil, errors.New("error")
-			})
-
-			_, err := GetManagedSeed(ctx, seedManagementClient, namespace, name)
-			Expect(err).To(HaveOccurred())
-		})
 	})
 
 	Describe("#GetManagedSeedWithReader", func() {
