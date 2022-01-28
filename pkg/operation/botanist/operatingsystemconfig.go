@@ -17,6 +17,7 @@ package botanist
 import (
 	"context"
 	"fmt"
+
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -205,7 +206,6 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 		})
 	}
 
-	// TODO: (voelzmo) below the secrets are reconciled with their new content. Anything we do needs to happen above
 	if err := flow.Parallel(fns...)(ctx); err != nil {
 		return err
 	}
