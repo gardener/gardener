@@ -1,0 +1,9 @@
+rules:
+- selectorRegexp: github[.]com/gardener/gardener
+  allowedPrefixes:
+  - ''
+  forbiddenPrefixes:
+  # make sure apiserver can build without these packages
+  - github.com/gardener/gardener/charts
+  - github.com/gardener/gardener/pkg/operation
+  - github.com/gardener/gardener/third_party
