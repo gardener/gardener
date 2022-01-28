@@ -25,7 +25,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation"
@@ -206,7 +205,7 @@ func (r *careReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 	}
 
 	// if shoot is no longer managed by this gardenlet (e.g., due to migration to another seed) then don't requeue
-	if !controllerutils.ShootIsManagedByThisGardenlet(shoot, r.config) {
+	if !IsShootManagedByThisGardenlet(shoot, r.config) {
 		return reconcile.Result{}, nil
 	}
 
