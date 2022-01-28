@@ -53,8 +53,11 @@ func main() {
 		tpl,
 		scheme,
 		"github.com/gardener/gardener/landscaper/pkg/gardenlet/apis/imports/v1alpha1.Imports",
+		nil,
 		openapi.GetOpenAPIDefinitions,
 		"landscaper/pkg/gardenlet/blueprint",
+		nil,
+		nil,
 	); err != nil {
 		panic(err)
 	}

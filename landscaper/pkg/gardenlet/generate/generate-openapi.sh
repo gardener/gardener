@@ -34,8 +34,8 @@ rm -Rf ${PROJECT_ROOT}/landscaper/pkg/gardenlet/generate/openapi/openapi_generat
 # generation (./generate.go) uses a placeholder for the missing JSONSchema.
 go run ${PROJECT_ROOT}/landscaper/common/generate/openapi \
   --root-directory ${PROJECT_ROOT} \
-  --input-directory ${PROJECT_ROOT}/landscaper/pkg/gardenlet/apis/imports/v1alpha1 \
+  --input-directories ${PROJECT_ROOT}/landscaper/pkg/gardenlet/apis/imports/v1alpha1 \
   --output-path ${PROJECT_ROOT}/landscaper/pkg/gardenlet/generate \
-  --package github.com/gardener/gardener/landscaper/pkg/gardenlet/apis/imports/v1alpha1 \
+  --packages github.com/gardener/gardener/landscaper/pkg/gardenlet/apis/imports/v1alpha1 \
   --filter-packages github.com/gardener/gardener/pkg/apis/core/v1beta1 \
   --verbosity 1

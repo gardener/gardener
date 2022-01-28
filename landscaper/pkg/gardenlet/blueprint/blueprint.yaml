@@ -30,6 +30,7 @@ imports:
   - name: gardenCluster
     required: true
     targetType: landscaper.gardener.cloud/kubernetes-cluster
+    type: target
   - name: imageVectorOverwrite
     required: false
     schema:
@@ -47,6 +48,7 @@ imports:
   - name: seedCluster
     required: true
     targetType: landscaper.gardener.cloud/kubernetes-cluster
+    type: target
   
 
 # For what can be referenced in the deployExecutions, please see:

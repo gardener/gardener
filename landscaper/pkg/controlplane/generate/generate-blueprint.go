@@ -44,6 +44,19 @@ func init() {
 	}
 }
 
+var (
+	// openAPIImportKey identifies the key in the OpenAPI definitions that identifies import definition
+	openAPIImportKey = "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.Imports"
+	// openAPIRootExportKey identifies the key in the OpenAPI definitions that identifies export definition
+	openAPIRootExportKey = "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports.Exports"
+	// blueprintDirectory the directory where the blueprint filesystem is written to
+	blueprintDirectory = "landscaper/pkg/controlplane/blueprint"
+	// has to match the name of the deploy item in the blueprint
+	deployItemName = "deploy"
+	// has to match the export executions declaration in the blueprint
+	deployExecutionsFilename = "export-execution.yaml"
+)
+
 func main() {
 	scheme := runtime.NewScheme()
 	if err := importsv1alpha1.AddToScheme(scheme); err != nil {
@@ -53,12 +66,12 @@ func main() {
 	if err := generate.RenderBlueprint(
 		tpl,
 		scheme,
-		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.Imports",
-		pointer.String("github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports.Exports"),
+		openAPIImportKey,
+		pointer.String(openAPIRootExportKey),
 		openapi.GetOpenAPIDefinitions,
-		"landscaper/pkg/controlplane/blueprint",
-		pointer.String("export-execution.yaml"),
-		pointer.String("default"),
+		blueprintDirectory,
+		pointer.String(deployExecutionsFilename),
+		pointer.String(deployItemName),
 	); err != nil {
 		panic(err)
 	}

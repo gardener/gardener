@@ -140,11 +140,11 @@ func execute() error {
 			return fmt.Errorf("import path is not a directory")
 		}
 
-	filter := sets.NewString(strings.Split(filterPackages, filterPackagesDelimiter)...)
-	discoveredPackages, err := parseImportPackages(inputDir, rootDirectory, sets.NewString(rootPackage), filter)
-	if err != nil {
-		return err
-	}
+		filter := sets.NewString(strings.Split(filterPackages, filterPackagesDelimiter)...)
+		discoveredPackages, err := parseImportPackages(inputDir, rootDirectory, sets.NewString(rootPackages), filter)
+		if err != nil {
+			return err
+		}
 
 		inputPackages = append(inputPackages, discoveredPackages...)
 

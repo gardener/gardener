@@ -228,7 +228,7 @@ func writeExportExecutions(exportedFields []BlueprintField, blueprintDirectory s
 
 	fields := make(map[string]string, len(exportedFields))
 	for _, field := range exportedFields {
-		fields[field.Name] = fmt.Sprintf("{{- index .values \"deployitems\" \"%s\" \"%s\" | nindent 4 }}", *containerDeployerName, field.Name)
+		fields[field.Name] = fmt.Sprintf("{{- index .values \"deployitems\" \"%s\" \"%s\" | toYaml | nindent 4 }}", *containerDeployerName, field.Name)
 	}
 
 	exportExecutions := ExportExecutions{Exports: fields}
@@ -245,31 +245,6 @@ func writeExportExecutions(exportedFields []BlueprintField, blueprintDirectory s
 
 	return ioutil.WriteFile(fmt.Sprintf("%s/%s", blueprintDirectory, *exportExecutionFileName), yamlOut, 0640)
 }
-
-// exports:
-//  virtualGardenApiserverCaPem: |
-//    {{- index .values "deployitems" "virtual-garden-container-deployer" "virtualGardenApiserverCaPem" | nindent 4 }}
-//
-//  etcdCaPem: |
-//    {{- index .values "deployitems" "virtual-garden-container-deployer" "etcdCaPem" | nindent 4 }}
-//
-//  etcdClientTlsPem: |
-//    {{- index .values "deployitems" "virtual-garden-container-deployer" "etcdClientTlsPem" | nindent 4 }}
-//
-//  etcdClientTlsKeyPem: |
-//    {{- index .values "deployitems" "virtual-garden-container-deployer" "etcdClientTlsKeyPem" | nindent 4 }}
-//
-//  etcdUrl: |
-//    {{- index .values "deployitems" "virtual-garden-container-deployer" "etcdUrl" | nindent 4 }}
-//
-//  virtualGardenEndpoint: |
-//    {{- index .values "deployitems" "virtual-garden-container-deployer" "virtualGardenEndpoint" | nindent 4 }}
-//
-//  virtualGardenCluster:
-//    type: landscaper.gardener.cloud/kubernetes-cluster
-//    config:
-//      kubeconfig: |
-//        {{- index .values "deployitems" "virtual-garden-container-deployer" "kubeconfigYaml" | nindent 8 }}
 
 func getTopLevelFields(importDefinition common.OpenAPIDefinition) ([]byte, []BlueprintField, error) {
 	var topLevelFields []BlueprintField

@@ -44,6 +44,10 @@ deployExecutions:
           {{ `{{ $resource := getResource .cd "name" "landscaper-controlplane" }}` }}
           image: {{ `{{ $resource.access.imageReference }}` }}
 
+# Syntax in the export executions: '.values "deployitems" "<name of deployitem. Here: deploy>" "<exported-field>"'
+# toYaml is needed because the program exports a go struct, not a yaml
+# Example:
+#  - gardenerAPIServerCA: 'index .values "deployitems" "deploy" "gardenerAPIServerCA" | toYaml | nindent 4'
 exportExecutions:
   - name: export-execution
     file: /export-execution.yaml
