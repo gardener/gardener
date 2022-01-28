@@ -38,6 +38,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1constants "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/constants"
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -182,7 +183,7 @@ var _ = Describe("dnsrecord", func() {
 			Expect(r.Deploy(ctx)).ToNot(HaveOccurred())
 
 			dnsRecord := &extensionsv1alpha1.DNSRecord{}
-			err := c.Get(ctx, types.NamespacedName{Name: shootName + "-" + DNSExternalName, Namespace: seedNamespace}, dnsRecord)
+			err := c.Get(ctx, types.NamespacedName{Name: shootName + "-" + extensionsv1alpha1constants.DNSRecordExternalName, Namespace: seedNamespace}, dnsRecord)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dnsRecord).To(DeepDerivativeEqual(&extensionsv1alpha1.DNSRecord{
 				TypeMeta: metav1.TypeMeta{
@@ -190,7 +191,7 @@ var _ = Describe("dnsrecord", func() {
 					APIVersion: "extensions.gardener.cloud/v1alpha1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            shootName + "-" + DNSExternalName,
+					Name:            shootName + "-" + extensionsv1alpha1constants.DNSRecordExternalName,
 					Namespace:       seedNamespace,
 					ResourceVersion: "1",
 					Annotations: map[string]string{
@@ -203,7 +204,7 @@ var _ = Describe("dnsrecord", func() {
 						Type: externalProvider,
 					},
 					SecretRef: corev1.SecretReference{
-						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + DNSExternalName,
+						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + extensionsv1alpha1constants.DNSRecordExternalName,
 						Namespace: seedNamespace,
 					},
 					Zone:       pointer.String(externalZone),
@@ -215,7 +216,7 @@ var _ = Describe("dnsrecord", func() {
 			}))
 
 			secret := &corev1.Secret{}
-			err = c.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + DNSExternalName, Namespace: seedNamespace}, secret)
+			err = c.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + extensionsv1alpha1constants.DNSRecordExternalName, Namespace: seedNamespace}, secret)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(secret).To(DeepDerivativeEqual(&corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
@@ -223,7 +224,7 @@ var _ = Describe("dnsrecord", func() {
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            DNSRecordSecretPrefix + "-" + shootName + "-" + DNSExternalName,
+					Name:            DNSRecordSecretPrefix + "-" + shootName + "-" + extensionsv1alpha1constants.DNSRecordExternalName,
 					Namespace:       seedNamespace,
 					ResourceVersion: "1",
 				},
@@ -244,7 +245,7 @@ var _ = Describe("dnsrecord", func() {
 			Expect(r.Deploy(ctx)).ToNot(HaveOccurred())
 
 			dnsRecord := &extensionsv1alpha1.DNSRecord{}
-			err := c.Get(ctx, types.NamespacedName{Name: shootName + "-" + DNSInternalName, Namespace: seedNamespace}, dnsRecord)
+			err := c.Get(ctx, types.NamespacedName{Name: shootName + "-" + extensionsv1alpha1constants.DNSRecordInternalName, Namespace: seedNamespace}, dnsRecord)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dnsRecord).To(DeepDerivativeEqual(&extensionsv1alpha1.DNSRecord{
 				TypeMeta: metav1.TypeMeta{
@@ -252,7 +253,7 @@ var _ = Describe("dnsrecord", func() {
 					APIVersion: "extensions.gardener.cloud/v1alpha1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            shootName + "-" + DNSInternalName,
+					Name:            shootName + "-" + extensionsv1alpha1constants.DNSRecordInternalName,
 					Namespace:       seedNamespace,
 					ResourceVersion: "1",
 					Annotations: map[string]string{
@@ -265,7 +266,7 @@ var _ = Describe("dnsrecord", func() {
 						Type: internalProvider,
 					},
 					SecretRef: corev1.SecretReference{
-						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + DNSInternalName,
+						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + extensionsv1alpha1constants.DNSRecordInternalName,
 						Namespace: seedNamespace,
 					},
 					Zone:       pointer.String(internalZone),
@@ -277,7 +278,7 @@ var _ = Describe("dnsrecord", func() {
 			}))
 
 			secret := &corev1.Secret{}
-			err = c.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + DNSInternalName, Namespace: seedNamespace}, secret)
+			err = c.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + extensionsv1alpha1constants.DNSRecordInternalName, Namespace: seedNamespace}, secret)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(secret).To(DeepDerivativeEqual(&corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
@@ -285,7 +286,7 @@ var _ = Describe("dnsrecord", func() {
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            DNSRecordSecretPrefix + "-" + shootName + "-" + DNSInternalName,
+					Name:            DNSRecordSecretPrefix + "-" + shootName + "-" + extensionsv1alpha1constants.DNSRecordInternalName,
 					Namespace:       seedNamespace,
 					ResourceVersion: "1",
 				},
@@ -473,7 +474,7 @@ var _ = Describe("dnsrecord", func() {
 		JustBeforeEach(func() {
 			// create an internal secret which is not prefixed with 'dnsrecord-' and is of the form '<shootName>-internal'
 			orphanedInternalSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-				Name:      shootName + "-" + DNSInternalName,
+				Name:      shootName + "-" + extensionsv1alpha1constants.DNSRecordInternalName,
 				Namespace: seedNamespace,
 			}}
 			err := c.Create(ctx, orphanedInternalSecret)
@@ -481,7 +482,7 @@ var _ = Describe("dnsrecord", func() {
 
 			// create a regular internal secret which is prefixed with 'dnsrecord-'
 			regularInternalSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-				Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + DNSInternalName,
+				Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + extensionsv1alpha1constants.DNSRecordInternalName,
 				Namespace: seedNamespace,
 			}}
 			err = c.Create(ctx, regularInternalSecret)
@@ -489,7 +490,7 @@ var _ = Describe("dnsrecord", func() {
 
 			// create an external secret which is not prefixed with 'dnsrecord-' and is of the form '<shootName>-external'
 			orphanedExternalSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-				Name:      shootName + "-" + DNSExternalName,
+				Name:      shootName + "-" + extensionsv1alpha1constants.DNSRecordExternalName,
 				Namespace: seedNamespace,
 			}}
 			err = c.Create(ctx, orphanedExternalSecret)
@@ -497,7 +498,7 @@ var _ = Describe("dnsrecord", func() {
 
 			// create a regular external secret which is prefixed with 'dnsrecord-'
 			regularExternalSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
-				Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + DNSExternalName,
+				Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + extensionsv1alpha1constants.DNSRecordExternalName,
 				Namespace: seedNamespace,
 			}}
 			err = c.Create(ctx, regularExternalSecret)

@@ -24,6 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1constants "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/constants"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	netpol "github.com/gardener/gardener/pkg/operation/botanist/addons/networkpolicy"
@@ -143,7 +144,7 @@ func (b *Botanist) NeedsIngressDNS() bool {
 func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
 		Name:       b.Shoot.GetInfo().Name + "-" + common.ShootDNSIngressName,
-		SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + DNSExternalName,
+		SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + extensionsv1alpha1constants.DNSRecordExternalName,
 		Namespace:  b.Shoot.SeedNamespace,
 		TTL:        b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 	}
