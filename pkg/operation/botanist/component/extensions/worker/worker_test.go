@@ -268,7 +268,9 @@ var _ = Describe("Worker", func() {
 					Maximum:        worker1Maximum,
 					MaxSurge:       worker1MaxSurge,
 					MaxUnavailable: worker1MaxUnavailable,
-					Annotations:    worker1Annotations,
+					Annotations: utils.MergeStringMaps(worker1Annotations, map[string]string{
+						v1beta1constants.GardenerCloudConfigSecretChecksum: "cloudConfigSecretChecksum",
+					}),
 					Labels: utils.MergeStringMaps(worker1Labels, map[string]string{
 						"node.kubernetes.io/role":         "node",
 						"worker.gardener.cloud/pool":      worker1Name,
@@ -310,6 +312,9 @@ var _ = Describe("Worker", func() {
 					Maximum:        worker2Maximum,
 					MaxSurge:       worker2MaxSurge,
 					MaxUnavailable: worker2MaxUnavailable,
+					Annotations: map[string]string{
+						v1beta1constants.GardenerCloudConfigSecretChecksum: "cloudConfigSecretChecksum",
+					},
 					Labels: map[string]string{
 						"node.kubernetes.io/role":                 "node",
 						"worker.gardener.cloud/system-components": "true",
@@ -357,9 +362,8 @@ var _ = Describe("Worker", func() {
 					Name:      name,
 					Namespace: namespace,
 					Annotations: map[string]string{
-						"gardener.cloud/operation":                         "reconcile",
-						"gardener.cloud/timestamp":                         now.UTC().String(),
-						v1beta1constants.GardenerCloudConfigSecretChecksum: "cloudConfigSecretChecksum",
+						"gardener.cloud/operation": "reconcile",
+						"gardener.cloud/timestamp": now.UTC().String(),
 					},
 					ResourceVersion: "1",
 				},
@@ -405,9 +409,8 @@ var _ = Describe("Worker", func() {
 					Name:      name,
 					Namespace: namespace,
 					Annotations: map[string]string{
-						v1beta1constants.GardenerCloudConfigSecretChecksum: "cloudConfigSecretChecksum",
-						"gardener.cloud/operation":                         "reconcile",
-						"gardener.cloud/timestamp":                         now.UTC().String(),
+						"gardener.cloud/operation": "reconcile",
+						"gardener.cloud/timestamp": now.UTC().String(),
 					},
 					ResourceVersion: "2",
 				},
@@ -566,7 +569,6 @@ var _ = Describe("Worker", func() {
 			obj.Spec = wSpec
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().String())
-			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, v1beta1constants.GardenerCloudConfigSecretChecksum, "cloudConfigSecretChecksum")
 			obj.TypeMeta = metav1.TypeMeta{}
 			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
 				DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
