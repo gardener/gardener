@@ -15,16 +15,17 @@
 package botanist
 
 import (
-	"github.com/gardener/gardener/charts"
+	"k8s.io/utils/pointer"
+
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodeproblemdetector"
+	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	"k8s.io/utils/pointer"
 )
 
 // DefaultNodeProblemDetector returns a deployer for the NodeProblemDetector.
 func (b *Botanist) DefaultNodeProblemDetector() (component.DeployWaiter, error) {
-	image, err := b.ImageVector.FindImage(charts.ImageNameNodeProblemDetector, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	image, err := b.ImageVector.FindImage(images.ImageNameNodeProblemDetector, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

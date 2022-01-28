@@ -60,6 +60,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -397,26 +398,26 @@ func RunReconcileSeedFlow(
 		}
 	}
 
-	images, err := imagevector.FindImages(imageVector,
+	seedImages, err := imagevector.FindImages(imageVector,
 		[]string{
-			charts.ImageNameAlertmanager,
-			charts.ImageNameAlpine,
-			charts.ImageNameConfigmapReloader,
-			charts.ImageNameLoki,
-			charts.ImageNameLokiCurator,
-			charts.ImageNameFluentBit,
-			charts.ImageNameFluentBitPluginInstaller,
-			charts.ImageNameGrafana,
-			charts.ImageNamePauseContainer,
-			charts.ImageNamePrometheus,
-			charts.ImageNameVpaAdmissionController,
-			charts.ImageNameVpaExporter,
-			charts.ImageNameVpaRecommender,
-			charts.ImageNameVpaUpdater,
-			charts.ImageNameHvpaController,
-			charts.ImageNameKubeStateMetrics,
-			charts.ImageNameNginxIngressControllerSeed,
-			charts.ImageNameIngressDefaultBackend,
+			images.ImageNameAlertmanager,
+			images.ImageNameAlpine,
+			images.ImageNameConfigmapReloader,
+			images.ImageNameLoki,
+			images.ImageNameLokiCurator,
+			images.ImageNameFluentBit,
+			images.ImageNameFluentBitPluginInstaller,
+			images.ImageNameGrafana,
+			images.ImageNamePauseContainer,
+			images.ImageNamePrometheus,
+			images.ImageNameVpaAdmissionController,
+			images.ImageNameVpaExporter,
+			images.ImageNameVpaRecommender,
+			images.ImageNameVpaUpdater,
+			images.ImageNameHvpaController,
+			images.ImageNameKubeStateMetrics,
+			images.ImageNameNginxIngressControllerSeed,
+			images.ImageNameIngressDefaultBackend,
 		},
 		imagevector.RuntimeVersion(kubernetesVersion.String()),
 		imagevector.TargetVersion(kubernetesVersion.String()),
@@ -820,12 +821,12 @@ func RunReconcileSeedFlow(
 	}
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
-		istiodImage, err := imageVector.FindImage(charts.ImageNameIstioIstiod)
+		istiodImage, err := imageVector.FindImage(images.ImageNameIstioIstiod)
 		if err != nil {
 			return err
 		}
 
-		igwImage, err := imageVector.FindImage(charts.ImageNameIstioProxy)
+		igwImage, err := imageVector.FindImage(images.ImageNameIstioProxy)
 		if err != nil {
 			return err
 		}
@@ -971,7 +972,7 @@ func RunReconcileSeedFlow(
 		"priorityClassName": v1beta1constants.PriorityClassNameShootControlPlane,
 		"global": map[string]interface{}{
 			"ingressClass": ingressClass,
-			"images":       imagevector.ImageMapToValues(images),
+			"images":       imagevector.ImageMapToValues(seedImages),
 		},
 		"reserveExcessCapacity": seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled,
 		"replicas": map[string]interface{}{

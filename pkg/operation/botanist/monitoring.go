@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/images"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -216,9 +217,9 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 	var (
 		prometheusImages = []string{
-			charts.ImageNamePrometheus,
-			charts.ImageNameConfigmapReloader,
-			charts.ImageNameBlackboxExporter,
+			images.ImageNamePrometheus,
+			images.ImageNameConfigmapReloader,
+			images.ImageNameBlackboxExporter,
 		}
 		podAnnotations = map[string]interface{}{
 			"checksum/secret-prometheus": b.LoadCheckSum("prometheus"),
@@ -272,7 +273,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	kubeStateMetricsShoot, err := b.InjectSeedShootImages(kubeStateMetricsShootConfig, charts.ImageNameKubeStateMetrics)
+	kubeStateMetricsShoot, err := b.InjectSeedShootImages(kubeStateMetricsShootConfig, images.ImageNameKubeStateMetrics)
 	if err != nil {
 		return err
 	}
@@ -339,7 +340,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"replicas":     b.Shoot.GetReplicas(1),
 			"storage":      b.Seed.GetValidVolumeSize("1Gi"),
 			"emailConfigs": emailConfigs,
-		}, charts.ImageNameAlertmanager, charts.ImageNameConfigmapReloader)
+		}, images.ImageNameAlertmanager, images.ImageNameConfigmapReloader)
 		if err != nil {
 			return err
 		}
@@ -539,7 +540,7 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 		"nodeLocalDNS": map[string]interface{}{
 			"enabled": b.Shoot.NodeLocalDNSEnabled,
 		},
-	}, charts.ImageNameGrafana)
+	}, images.ImageNameGrafana)
 	if err != nil {
 		return err
 	}

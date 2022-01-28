@@ -17,13 +17,13 @@ package botanist_test
 import (
 	"net"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	"github.com/golang/mock/gomock"
@@ -69,7 +69,7 @@ var _ = Describe("NodeLocalDNS", func() {
 
 		It("should successfully create a node-local-dns interface", func() {
 			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: charts.ImageNameNodeLocalDns}}
+			botanist.ImageVector = imagevector.ImageVector{{Name: images.ImageNameNodeLocalDns}}
 
 			nodeLocalDNS, err := botanist.DefaultNodeLocalDNS()
 			Expect(nodeLocalDNS).NotTo(BeNil())

@@ -23,6 +23,7 @@ function camelCase {
 }
 
 package_name="${1:-charts}"
+images_yaml="${2:-images.yaml}"
 
 out="
 $(cat "$(dirname $0)/LICENSE_BOILERPLATE.txt" | sed "s/YEAR/$(date +%Y)/g")
@@ -33,7 +34,7 @@ package $package_name
 
 const ("
 
-for image_name in $(yaml2json < "images.yaml" | jq -r '[.images[].name] | unique | .[]'); do
+for image_name in $(yaml2json < "$images_yaml" | jq -r '[.images[].name] | unique | .[]'); do
   variable_name="$(camelCase "$image_name")"
 
   out="

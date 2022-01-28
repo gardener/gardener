@@ -15,10 +15,10 @@
 package promtail
 
 import (
-	"github.com/gardener/gardener/charts"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -48,7 +48,7 @@ var _ = Describe("Promtail", func() {
 				CABundle:      &cABundle,
 				ClusterDomain: clusterDomain,
 				Images: map[string]*imagevector.Image{
-					charts.ImageNamePromtail: promtailImage,
+					images.ImageNamePromtail: promtailImage,
 				},
 				LokiIngress:     lokiIngress,
 				PromtailEnabled: true,
@@ -178,7 +178,7 @@ exit $?
 				CABundle:      &cABundle,
 				ClusterDomain: clusterDomain,
 				Images: map[string]*imagevector.Image{
-					charts.ImageNamePromtail: promtailImage,
+					images.ImageNamePromtail: promtailImage,
 				},
 				LokiIngress:     lokiIngress,
 				PromtailEnabled: false,
@@ -240,7 +240,7 @@ ExecStart=/bin/sh -c "rm -f /var/lib/promtail/auth-token; echo service promtail-
 				CABundle:      &cABundle,
 				ClusterDomain: clusterDomain,
 				Images: map[string]*imagevector.Image{
-					charts.ImageNamePromtail: promtailImage,
+					images.ImageNamePromtail: promtailImage,
 				},
 				PromtailEnabled: true,
 				LokiIngress:     "",

@@ -17,19 +17,19 @@ package botanist
 import (
 	"context"
 
-	"github.com/gardener/gardener/charts"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
+	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // DefaultVPNShoot returns a deployer for the VPNShoot
 func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 	var (
-		imageName         = charts.ImageNameVpnShoot
+		imageName         = images.ImageNameVpnShoot
 		nodeNetworkCIDR   string
 		reversedVPNValues = vpnshoot.ReversedVPNValues{
 			Enabled: false,
@@ -41,7 +41,7 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 	}
 
 	if b.Shoot.ReversedVPNEnabled {
-		imageName = charts.ImageNameVpnShootClient
+		imageName = images.ImageNameVpnShootClient
 
 		reversedVPNValues = vpnshoot.ReversedVPNValues{
 			Enabled:     true,

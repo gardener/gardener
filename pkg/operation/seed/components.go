@@ -20,7 +20,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -39,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	"github.com/Masterminds/semver"
@@ -60,7 +60,7 @@ func defaultEtcdDruid(
 	imageVector imagevector.ImageVector,
 	imageVectorOverwrites map[string]string,
 ) (component.DeployWaiter, error) {
-	image, err := imageVector.FindImage(charts.ImageNameEtcdDruid, imagevector.RuntimeVersion(seedVersion), imagevector.TargetVersion(seedVersion))
+	image, err := imageVector.FindImage(images.ImageNameEtcdDruid, imagevector.RuntimeVersion(seedVersion), imagevector.TargetVersion(seedVersion))
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func defaultEtcdDruid(
 }
 
 func defaultKubeScheduler(c client.Client, imageVector imagevector.ImageVector, kubernetesVersion *semver.Version) (component.DeployWaiter, error) {
-	image, err := imageVector.FindImage(charts.ImageNameKubeScheduler, imagevector.TargetVersion(kubernetesVersion.String()))
+	image, err := imageVector.FindImage(images.ImageNameKubeScheduler, imagevector.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func defaultKubeScheduler(c client.Client, imageVector imagevector.ImageVector, 
 }
 
 func defaultGardenerSeedAdmissionController(c client.Client, imageVector imagevector.ImageVector) (component.DeployWaiter, error) {
-	image, err := imageVector.FindImage(charts.ImageNameGardenerSeedAdmissionController)
+	image, err := imageVector.FindImage(images.ImageNameGardenerSeedAdmissionController)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func defaultGardenerSeedAdmissionController(c client.Client, imageVector imageve
 }
 
 func defaultGardenerResourceManager(c client.Client, imageVector imagevector.ImageVector, serverCASecret, serverSecret *corev1.Secret) (component.DeployWaiter, error) {
-	image, err := imageVector.FindImage(charts.ImageNameGardenerResourceManager)
+	image, err := imageVector.FindImage(images.ImageNameGardenerResourceManager)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func defaultDependencyWatchdogs(
 	dwdProbe component.DeployWaiter,
 	err error,
 ) {
-	image, err := imageVector.FindImage(charts.ImageNameDependencyWatchdog, imagevector.RuntimeVersion(seedVersion), imagevector.TargetVersion(seedVersion))
+	image, err := imageVector.FindImage(images.ImageNameDependencyWatchdog, imagevector.RuntimeVersion(seedVersion), imagevector.TargetVersion(seedVersion))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -252,7 +252,7 @@ func defaultExternalAuthzServer(
 	extAuthzServer component.DeployWaiter,
 	err error,
 ) {
-	image, err := imageVector.FindImage(charts.ImageNameExtAuthzServer, imagevector.RuntimeVersion(seedVersion), imagevector.TargetVersion(seedVersion))
+	image, err := imageVector.FindImage(images.ImageNameExtAuthzServer, imagevector.RuntimeVersion(seedVersion), imagevector.TargetVersion(seedVersion))
 	if err != nil {
 		return nil, err
 	}

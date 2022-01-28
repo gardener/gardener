@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
@@ -32,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	mockvpnseedserver "github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
 
@@ -97,7 +97,7 @@ var _ = Describe("VPNSeedServer", func() {
 			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.APIServerSNI, true)()
 			kubernetesClient.EXPECT().Client()
 			kubernetesClient.EXPECT().Version()
-			botanist.ImageVector = imagevector.ImageVector{{Name: charts.ImageNameVpnSeedServer}, {Name: charts.ImageNameApiserverProxy}}
+			botanist.ImageVector = imagevector.ImageVector{{Name: images.ImageNameVpnSeedServer}, {Name: images.ImageNameApiserverProxy}}
 
 			vpnSeedServer, err := botanist.DefaultVPNSeedServer()
 			Expect(vpnSeedServer).NotTo(BeNil())

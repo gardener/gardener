@@ -17,15 +17,15 @@ package botanist
 import (
 	"context"
 
-	"github.com/gardener/gardener/charts"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
+	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // DefaultKubeScheduler returns a deployer for the kube-scheduler.
 func (b *Botanist) DefaultKubeScheduler() (kubescheduler.Interface, error) {
-	image, err := b.ImageVector.FindImage(charts.ImageNameKubeScheduler, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	image, err := b.ImageVector.FindImage(images.ImageNameKubeScheduler, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

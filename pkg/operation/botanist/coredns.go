@@ -18,11 +18,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
+	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -33,7 +33,7 @@ import (
 
 // DefaultCoreDNS returns a deployer for the CoreDNS.
 func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
-	image, err := b.ImageVector.FindImage(charts.ImageNameCoredns, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	image, err := b.ImageVector.FindImage(images.ImageNameCoredns, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}
