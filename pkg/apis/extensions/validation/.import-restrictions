@@ -4,6 +4,6 @@ rules:
 - selectorRegexp: k8s[.]io
   allowedPrefixes:
   - ''
-- selectorRegexp: github[.]com/gardener/gardener
+- selectorRegexp: github[.]com/gardener
   allowedPrefixes:
   - ''

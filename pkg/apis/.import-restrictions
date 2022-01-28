@@ -1,11 +1,11 @@
 rules:
-- selectorRegexp: k8s[.]io
+- selectorRegexp: (.+[.])?k8s[.]io
   allowedPrefixes:
   - k8s.io/apimachinery
   - k8s.io/api
   - k8s.io/klog
   - k8s.io/utils/pointer
-- selectorRegexp: github[.]com/gardener/gardener
+- selectorRegexp: github[.]com/gardener
   allowedPrefixes:
   - github.com/gardener/gardener/pkg/apis
   # imports brought in by defaulting, helpers and validation
