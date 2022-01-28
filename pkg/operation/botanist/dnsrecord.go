@@ -22,8 +22,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	extensionsv1alpha1constants "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	extensionsdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -32,8 +32,8 @@ import (
 // DefaultExternalDNSRecord creates the default deployer for the external DNSRecord resource.
 func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
-		Name:       b.Shoot.GetInfo().Name + "-" + extensionsv1alpha1constants.DNSRecordExternalName,
-		SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + extensionsv1alpha1constants.DNSRecordExternalName,
+		Name:       b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
+		SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
 		Namespace:  b.Shoot.SeedNamespace,
 		TTL:        b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 	}
@@ -58,8 +58,8 @@ func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 // DefaultInternalDNSRecord creates the default deployer for the internal DNSRecord resource.
 func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
-		Name:       b.Shoot.GetInfo().Name + "-" + extensionsv1alpha1constants.DNSRecordInternalName,
-		SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + extensionsv1alpha1constants.DNSRecordInternalName,
+		Name:       b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
+		SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
 		Namespace:  b.Shoot.SeedNamespace,
 		TTL:        b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 	}
@@ -84,8 +84,8 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 // DefaultOwnerDNSRecord creates the default deployer for the owner DNSRecord resource.
 func (b *Botanist) DefaultOwnerDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
-		Name:              b.Shoot.GetInfo().Name + "-" + extensionsv1alpha1constants.DNSRecordOwnerName,
-		SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + extensionsv1alpha1constants.DNSRecordInternalName,
+		Name:              b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordOwnerName,
+		SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
 		Namespace:         b.Shoot.SeedNamespace,
 		ReconcileOnChange: true,
 		TTL:               b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
@@ -219,12 +219,12 @@ func (b *Botanist) CleanupOrphanedDNSRecordSecrets(ctx context.Context) error {
 	var err error
 	shootName := b.Shoot.GetInfo().Name
 	if shootName != "gardener" {
-		err = b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootName + "-" + extensionsv1alpha1constants.DNSRecordInternalName, Namespace: b.Shoot.SeedNamespace}})
+		err = b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootName + "-" + v1beta1constants.DNSRecordInternalName, Namespace: b.Shoot.SeedNamespace}})
 		if client.IgnoreNotFound(err) != nil {
 			return fmt.Errorf("could not clean up orphaned internal DNSRecord secret: %w", err)
 		}
 	}
-	err = b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootName + "-" + extensionsv1alpha1constants.DNSRecordExternalName, Namespace: b.Shoot.SeedNamespace}})
+	err = b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootName + "-" + v1beta1constants.DNSRecordExternalName, Namespace: b.Shoot.SeedNamespace}})
 	if client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("could not clean up orphaned external DNSRecord secret: %w", err)
 	}

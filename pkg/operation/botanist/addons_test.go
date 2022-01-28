@@ -39,7 +39,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	extensionsv1alpha1constants "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/constants"
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -290,7 +289,7 @@ var _ = Describe("addons", func() {
 						Type: externalProvider,
 					},
 					SecretRef: corev1.SecretReference{
-						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + extensionsv1alpha1constants.DNSRecordExternalName,
+						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName,
 						Namespace: seedNamespace,
 					},
 					Zone:       pointer.String(externalZone),
@@ -302,7 +301,7 @@ var _ = Describe("addons", func() {
 			}))
 
 			secret := &corev1.Secret{}
-			err = client.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + extensionsv1alpha1constants.DNSRecordExternalName, Namespace: seedNamespace}, secret)
+			err = client.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName, Namespace: seedNamespace}, secret)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(secret).To(DeepDerivativeEqual(&corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
@@ -310,7 +309,7 @@ var _ = Describe("addons", func() {
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            DNSRecordSecretPrefix + "-" + shootName + "-" + extensionsv1alpha1constants.DNSRecordExternalName,
+					Name:            DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName,
 					Namespace:       seedNamespace,
 					ResourceVersion: "1",
 				},

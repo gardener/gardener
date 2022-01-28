@@ -512,6 +512,13 @@ const (
 
 	// GardenerAudience is the identifier for Gardener controllers when interacting with the API Server
 	GardenerAudience = "gardener"
+
+	// DNSRecordInternalName is a constant for DNSRecord objects used for the internal domain name.
+	DNSRecordInternalName = "internal"
+	// DNSRecordExternalName is a constant for DNSRecord objects used for the external domain name.
+	DNSRecordExternalName = "external"
+	// DNSRecordOwnerName is a constant for DNSRecord objects used for the owner domain name.
+	DNSRecordOwnerName = "owner"
 )
 
 // ControlPlaneSecretRoles contains all role values used for control plane secrets synced to the Garden cluster.
