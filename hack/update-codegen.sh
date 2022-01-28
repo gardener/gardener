@@ -390,12 +390,18 @@ openapi_definitions() {
 
   echo "Generating openapi definitions for the Landscaper controlplane component"
   ./${PROJECT_ROOT}/landscaper/pkg/controlplane/generate/generate-openapi.sh
+
+  echo "Generating openapi definitions for the Landscaper gardenlet component"
+  ./${PROJECT_ROOT}/landscaper/pkg/gardenlet/generate/generate-openapi.sh
 }
 export -f openapi_definitions
 
 landscaper_blueprints() {
     echo "Rendering blueprint for the Landscaper controlplane component"
     go run ./${PROJECT_ROOT}/landscaper/pkg/controlplane/generate
+
+    echo "Rendering blueprint for the Landscaper gardenlet component"
+    go run ./${PROJECT_ROOT}/landscaper/pkg/gardenlet/generate
 }
 export -f landscaper_blueprints
 

@@ -29,8 +29,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
+// filterPackagesDelimiter is the delimiter for packages that should not be searched for imports
+const filterPackagesDelimiter = ";"
+
 var (
-	outputDirectory, inputDirectory, rootDirectory, rootPackage, licensePath, verbosity string
+	// flags
+	outputDirectory, inputDirectory, rootDirectory, rootPackage, licensePath, verbosity, filterPackages string
 
 	rootCommand = &cobra.Command{
 		Use:  "generate-openapi",
@@ -39,6 +43,9 @@ var (
 			return execute()
 		},
 	}
+
+	// filteredFileNames are the name of files that are not searched for imports
+	filteredFileNames = sets.NewString("conversions.go", "defaults.go", "doc.go", "register.go")
 )
 
 func init() {
@@ -68,9 +75,15 @@ func init() {
 
 	rootCommand.Flags().StringVar(
 		&licensePath,
-		"licensePath",
+		"license-path",
 		"",
 		"path to the license boilerplate. Defaulted to <root-directory>/hack/LICENSE_BOILERPLATE.txt")
+
+	rootCommand.Flags().StringVar(
+		&filterPackages,
+		"filter-packages",
+		"",
+		"semicolon seperated list of packages for whose types no OpenAPI go-code should be generated")
 
 	rootCommand.Flags().StringVar(
 		&verbosity,
@@ -120,7 +133,8 @@ func execute() error {
 		return fmt.Errorf("import path is not a directory")
 	}
 
-	inputPackages, err := parseImportPackages(inputDirectory, rootDirectory, sets.NewString(rootPackage))
+	filter := sets.NewString(strings.Split(filterPackages, filterPackagesDelimiter)...)
+	inputPackages, err := parseImportPackages(inputDirectory, rootDirectory, sets.NewString(rootPackage), filter)
 	if err != nil {
 		return err
 	}
@@ -198,14 +212,14 @@ func executeOpenAPIGen(executablePath string, outputDirectory string, licensePat
 
 // parseImportPackages recursively parses the import packages of a given inputDirectory
 // returns the union of all found packages or an error
-func parseImportPackages(inputDirectory string, rootDirectory string, alreadyParsedPackages sets.String) ([]string, error) {
+func parseImportPackages(inputDirectory string, rootDirectory string, alreadyParsedPackages sets.String, filterPackages sets.String) ([]string, error) {
 	fset := token.NewFileSet()
 	foo, err := parser.ParseDir(fset, inputDirectory, func(info os.FileInfo) bool {
 		if info.IsDir() {
 			return false
 		}
 
-		if info.Name() == "conversions.go" || info.Name() == "doc.go" || info.Name() == "register.go" || strings.HasSuffix(info.Name(), "_test.go") || strings.HasPrefix(info.Name(), "zz_") {
+		if filteredFileNames.Has(info.Name()) || strings.HasSuffix(info.Name(), "_test.go") || strings.HasPrefix(info.Name(), "zz_") {
 			return false
 		}
 
@@ -239,6 +253,10 @@ func parseImportPackages(inputDirectory string, rootDirectory string, alreadyPar
 					continue
 				}
 
+				if filterPackages.Has(escapedPackage) {
+					continue
+				}
+
 				inputPackages.Insert(escapedPackage)
 			}
 		}
@@ -269,7 +287,7 @@ func parseImportPackages(inputDirectory string, rootDirectory string, alreadyPar
 			dependentDirectory = dir
 		}
 
-		newPackages, err := parseImportPackages(dependentDirectory, rootDirectory, alreadyParsedPackages)
+		newPackages, err := parseImportPackages(dependentDirectory, rootDirectory, alreadyParsedPackages, filterPackages)
 		if err != nil {
 			return nil, err
 		}
