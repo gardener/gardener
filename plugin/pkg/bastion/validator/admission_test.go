@@ -245,6 +245,24 @@ var _ = Describe("Bastion", func() {
 			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, oldBastion, admission.Update), nil)
 			Expect(err).To(Succeed())
 		})
+
+		It("should forbid the Bastion update if the Shoot name changed", func() {
+			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+				return true, shoot, nil
+			})
+
+			oldBastion := bastion.DeepCopy()
+			oldBastion.Spec.ShootRef.Name = "other-shoot"
+
+			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion, oldBastion, admission.Update), nil)
+			Expect(err).To(BeInvalidError())
+			Expect(getErrorList(err)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.shootRef.name"),
+				})),
+			))
+		})
 	})
 
 	Describe("#Register", func() {
