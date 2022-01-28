@@ -28,10 +28,10 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/timewindow"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -173,7 +173,7 @@ func (b *Botanist) scaleETCD(ctx context.Context, replicas int) error {
 func determineBackupSchedule(shoot *gardencorev1beta1.Shoot) (string, error) {
 	schedule := "%d %d * * *"
 
-	return determineSchedule(shoot, schedule, func(maintenanceTimeWindow *utils.MaintenanceTimeWindow, shootUID types.UID) string {
+	return determineSchedule(shoot, schedule, func(maintenanceTimeWindow *timewindow.MaintenanceTimeWindow, shootUID types.UID) string {
 		// Randomize the snapshot timing daily but within last hour.
 		// The 15 minutes buffer is set to snapshot upload time before actual maintenance window start.
 		snapshotWindowBegin := maintenanceTimeWindow.Begin().Add(-1, -15, 0)
@@ -190,7 +190,7 @@ func determineDefragmentationSchedule(shoot *gardencorev1beta1.Shoot, managedSee
 		schedule = "%d %d * * *"
 	}
 
-	return determineSchedule(shoot, schedule, func(maintenanceTimeWindow *utils.MaintenanceTimeWindow, shootUID types.UID) string {
+	return determineSchedule(shoot, schedule, func(maintenanceTimeWindow *timewindow.MaintenanceTimeWindow, shootUID types.UID) string {
 		// Randomize the defragmentation timing but within the maintenance window.
 		maintenanceWindowBegin := maintenanceTimeWindow.Begin()
 		windowInMinutes := uint32(maintenanceTimeWindow.Duration().Minutes())
@@ -200,7 +200,7 @@ func determineDefragmentationSchedule(shoot *gardencorev1beta1.Shoot, managedSee
 	})
 }
 
-func determineSchedule(shoot *gardencorev1beta1.Shoot, schedule string, f func(*utils.MaintenanceTimeWindow, types.UID) string) (string, error) {
+func determineSchedule(shoot *gardencorev1beta1.Shoot, schedule string, f func(*timewindow.MaintenanceTimeWindow, types.UID) string) (string, error) {
 	var (
 		begin, end string
 		shootUID   types.UID
@@ -213,12 +213,12 @@ func determineSchedule(shoot *gardencorev1beta1.Shoot, schedule string, f func(*
 	}
 
 	if len(begin) != 0 && len(end) != 0 {
-		maintenanceTimeWindow, err := utils.ParseMaintenanceTimeWindow(begin, end)
+		maintenanceTimeWindow, err := timewindow.ParseMaintenanceTimeWindow(begin, end)
 		if err != nil {
 			return "", err
 		}
 
-		if !maintenanceTimeWindow.Equal(utils.AlwaysTimeWindow) {
+		if !maintenanceTimeWindow.Equal(timewindow.AlwaysTimeWindow) {
 			return f(maintenanceTimeWindow, shootUID), nil
 		}
 	}

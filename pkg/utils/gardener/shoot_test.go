@@ -20,10 +20,10 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"github.com/gardener/gardener/pkg/utils/timewindow"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -217,30 +217,30 @@ var _ = Describe("Shoot", func() {
 	Describe("#EffectiveMaintenanceTimeWindow", func() {
 		It("should shorten the end of the time window by 15 minutes", func() {
 			var (
-				begin = utils.NewMaintenanceTime(0, 0, 0)
-				end   = utils.NewMaintenanceTime(1, 0, 0)
+				begin = timewindow.NewMaintenanceTime(0, 0, 0)
+				end   = timewindow.NewMaintenanceTime(1, 0, 0)
 			)
 
-			Expect(EffectiveMaintenanceTimeWindow(utils.NewMaintenanceTimeWindow(begin, end))).
-				To(Equal(utils.NewMaintenanceTimeWindow(begin, utils.NewMaintenanceTime(0, 45, 0))))
+			Expect(EffectiveMaintenanceTimeWindow(timewindow.NewMaintenanceTimeWindow(begin, end))).
+				To(Equal(timewindow.NewMaintenanceTimeWindow(begin, timewindow.NewMaintenanceTime(0, 45, 0))))
 		})
 	})
 
 	DescribeTable("#EffectiveShootMaintenanceTimeWindow",
-		func(shoot *gardencorev1beta1.Shoot, window *utils.MaintenanceTimeWindow) {
+		func(shoot *gardencorev1beta1.Shoot, window *timewindow.MaintenanceTimeWindow) {
 			Expect(EffectiveShootMaintenanceTimeWindow(shoot)).To(Equal(window))
 		},
 
 		Entry("no maintenance section",
 			&gardencorev1beta1.Shoot{},
-			utils.AlwaysTimeWindow),
+			timewindow.AlwaysTimeWindow),
 		Entry("no time window",
 			&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Maintenance: &gardencorev1beta1.Maintenance{},
 				},
 			},
-			utils.AlwaysTimeWindow),
+			timewindow.AlwaysTimeWindow),
 		Entry("invalid time window",
 			&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
@@ -249,7 +249,7 @@ var _ = Describe("Shoot", func() {
 					},
 				},
 			},
-			utils.AlwaysTimeWindow),
+			timewindow.AlwaysTimeWindow),
 		Entry("valid time window",
 			&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
@@ -261,9 +261,9 @@ var _ = Describe("Shoot", func() {
 					},
 				},
 			},
-			utils.NewMaintenanceTimeWindow(
-				utils.NewMaintenanceTime(1, 0, 0),
-				utils.NewMaintenanceTime(1, 45, 0))),
+			timewindow.NewMaintenanceTimeWindow(
+				timewindow.NewMaintenanceTime(1, 0, 0),
+				timewindow.NewMaintenanceTime(1, 45, 0))),
 	)
 
 	DescribeTable("#GetShootNameFromOwnerReferences",

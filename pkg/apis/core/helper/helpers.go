@@ -18,10 +18,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/utils"
-
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,6 +25,9 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // GetConditionIndex returns the index of the condition with the given <conditionType> out of the list of <conditions>.
@@ -416,5 +415,5 @@ func SecretBindingHasType(secretBinding *core.SecretBinding, providerType string
 		return false
 	}
 
-	return utils.ValueExists(providerType, types)
+	return sets.NewString(types...).Has(providerType)
 }

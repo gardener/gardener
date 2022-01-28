@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/timewindow"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	featuresvalidation "github.com/gardener/gardener/pkg/utils/validation/features"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -983,7 +984,7 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path) fie
 	}
 
 	if maintenance.TimeWindow != nil {
-		maintenanceTimeWindow, err := utils.ParseMaintenanceTimeWindow(maintenance.TimeWindow.Begin, maintenance.TimeWindow.End)
+		maintenanceTimeWindow, err := timewindow.ParseMaintenanceTimeWindow(maintenance.TimeWindow.Begin, maintenance.TimeWindow.End)
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("timeWindow", "begin/end"), maintenance.TimeWindow, err.Error()))
 		} else {

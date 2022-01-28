@@ -16,9 +16,9 @@ package v1alpha1
 
 import (
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
@@ -69,7 +69,8 @@ type Spec interface {
 
 // Object is an extension object resource.
 type Object interface {
-	client.Object
+	metav1.Object
+	runtime.Object
 
 	// GetExtensionSpec retrieves the object's spec.
 	GetExtensionSpec() Spec

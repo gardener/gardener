@@ -12,18 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils_test
+package timewindow_test
 
 import (
 	"fmt"
 	"time"
 
-	. "github.com/gardener/gardener/pkg/utils"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	"k8s.io/apimachinery/pkg/util/rand"
+
+	. "github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
 var _ = Describe("utils", func() {
