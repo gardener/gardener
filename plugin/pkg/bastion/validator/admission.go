@@ -141,7 +141,7 @@ func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, o admission
 	}
 
 	// ensure shoot is alive
-	if shoot.DeletionTimestamp != nil {
+	if a.GetOperation() == admission.Create && shoot.DeletionTimestamp != nil {
 		fieldErr := field.Invalid(shootPath, shootName, "shoot is in deletion")
 		return apierrors.NewInvalid(gk, bastion.Name, field.ErrorList{fieldErr})
 	}
