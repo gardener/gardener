@@ -60,19 +60,11 @@ structure:
   nodes:
   - nodesSelector:
       path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/proposals
-- name: testing
-  properties:
-    frontmatter:
-      title: Testing
-      weight: 8
-  nodes:
-  - nodesSelector:
-      path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/testing
 - name: usage
   properties:
     frontmatter:
       title: Usage
-      weight: 9
+      weight: 8
   nodes:
   - nodesSelector:
       path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/usage

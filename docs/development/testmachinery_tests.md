@@ -1,9 +1,14 @@
-# Integration Testing Manual
+# Test Machinery Tests
 
-This manual gives an overview about existing integration tests of Gardener.
+In order to automatically qualify Gardener releases, we execute a set of end-to-end tests using [Test Machinery](https://github.com/gardener/test-infra).
+This requires a full Gardener installation including infrastructure extensions as well as a setup of Test Machinery itself.
+These tests operate on Shoot clusters across different Cloud Providers, using different supported Kubernetes versions and various configuration options (huge test matrix).
 
+This manual gives an overview about test machinery tests in Gardener.
+
+- [Structure](#structure)
 - [Add a new test](#add-a-new-test)
-- [Available test labels](#test-labels)
+- [Test Labels](#test-labels)
 - [Framework](#framework)
 
 ## Structure
