@@ -18,8 +18,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/logger"
-
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 
@@ -99,12 +97,12 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 	}
 
 	if obj.LogLevel == nil {
-		v := DefaultLogLevel
+		v := LogLevelInfo
 		obj.LogLevel = &v
 	}
 
 	if obj.LogFormat == nil {
-		v := logger.FormatJSON
+		v := LogFormatJSON
 		obj.LogFormat = &v
 	}
 

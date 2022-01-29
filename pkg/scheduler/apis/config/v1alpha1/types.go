@@ -38,6 +38,18 @@ const (
 	SchedulerDefaultConfigurationConfigMapName = "gardener-scheduler-configmap"
 	// DefaultDiscoveryTTL is the default ttl for the cached discovery client.
 	DefaultDiscoveryTTL = 10 * time.Second
+
+	// LogLevelDebug is the debug log level, i.e. the most verbose.
+	LogLevelDebug = "debug"
+	// LogLevelInfo is the default log level.
+	LogLevelInfo = "info"
+	// LogLevelError is a log level where only errors are logged.
+	LogLevelError = "error"
+
+	// LogFormatJSON is the output type that produces a JSON object per log line.
+	LogFormatJSON = "json"
+	// LogFormatText outputs the log as human-readable text.
+	LogFormatText = "text"
 )
 
 // Strategies defines all currently implemented SeedCandidateDeterminationStrategies

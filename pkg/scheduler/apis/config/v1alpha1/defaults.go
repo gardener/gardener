@@ -15,7 +15,6 @@
 package v1alpha1
 
 import (
-	"github.com/gardener/gardener/pkg/logger"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,11 +28,11 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 // SetDefaults_SchedulerConfiguration sets defaults for the configuration of the Gardener scheduler.
 func SetDefaults_SchedulerConfiguration(obj *SchedulerConfiguration) {
 	if obj.LogLevel == "" {
-		obj.LogLevel = logger.InfoLevel
+		obj.LogLevel = LogLevelInfo
 	}
 
 	if obj.LogFormat == "" {
-		obj.LogFormat = logger.FormatJSON
+		obj.LogFormat = LogFormatJSON
 	}
 
 	if obj.Schedulers.BackupBucket == nil {
