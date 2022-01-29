@@ -80,6 +80,8 @@ metadata:
 build:
   local:
     useBuildkit: true
+    # allow concurrency for this image build, otherwise all builds will run sequentially
+    concurrency: 3
   artifacts:
   - image: eu.gcr.io/gardener-project/gardener/extensions/provider-local
     docker:
