@@ -1235,14 +1235,14 @@ func schema_pkg_apis_seedmanagement_v1alpha1_Gardenlet(ref common.ReferenceCallb
 					},
 					"bootstrap": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Bootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken, None. If set to ServiceAccount or BootstrapToken, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig. If set to None, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster. Defaults to BootstrapToken.",
+							Description: "Bootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken, None. If set to ServiceAccount or BootstrapToken, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig. If set to None, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster. Defaults to BootstrapToken. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"mergeWithParent": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MergeWithParent specifies whether the GardenletConfiguration of the parent gardenlet should be merged with the specified GardenletConfiguration. Defaults to true.",
+							Description: "MergeWithParent specifies whether the GardenletConfiguration of the parent gardenlet should be merged with the specified GardenletConfiguration. Defaults to true. This field is immutable.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -1636,7 +1636,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetSpec(ref common.Refer
 					},
 					"selector": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Selector is a label query over ManagedSeeds and Shoots that should match the replica count. It must match the ManagedSeeds and Shoots template's labels.",
+							Description: "Selector is a label query over ManagedSeeds and Shoots that should match the replica count. It must match the ManagedSeeds and Shoots template's labels. This field is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
 						},
@@ -1663,7 +1663,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetSpec(ref common.Refer
 					},
 					"revisionHistoryLimit": {
 						SchemaProps: spec.SchemaProps{
-							Description: "RevisionHistoryLimit is the maximum number of revisions that will be maintained in the ManagedSeedSet's revision history. Defaults to 10.",
+							Description: "RevisionHistoryLimit is the maximum number of revisions that will be maintained in the ManagedSeedSet's revision history. Defaults to 10. This field is immutable.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
@@ -1792,7 +1792,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSpec(ref common.Referenc
 				Properties: map[string]spec.Schema{
 					"shoot": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Shoot references a Shoot that should be registered as Seed.",
+							Description: "Shoot references a Shoot that should be registered as Seed. This field is immutable.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Shoot"),
 						},
 					},

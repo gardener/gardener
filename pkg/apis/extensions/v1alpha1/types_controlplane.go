@@ -38,7 +38,8 @@ const ControlPlaneResource = "ControlPlane"
 type ControlPlane struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
+	// Specification of the ControlPlane.
+	// If the object's deletion timestamp is set, this field is immutable.
 	Spec ControlPlaneSpec `json:"spec"`
 	// +optional
 	Status ControlPlaneStatus `json:"status"`
@@ -75,6 +76,7 @@ type ControlPlaneSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
 	DefaultSpec `json:",inline"`
 	// Purpose contains the data if a cloud provider needs additional components in order to expose the control plane.
+	// This field is immutable.
 	// +optional
 	Purpose *Purpose `json:"purpose,omitempty"`
 	// InfrastructureProviderStatus contains the provider status that has
@@ -83,7 +85,7 @@ type ControlPlaneSpec struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional
 	InfrastructureProviderStatus *runtime.RawExtension `json:"infrastructureProviderStatus,omitempty"`
-	// Region is the region of this control plane.
+	// Region is the region of this control plane. This field is immutable.
 	Region string `json:"region"`
 	// SecretRef is a reference to a secret that contains the cloud provider specific credentials.
 	SecretRef corev1.SecretReference `json:"secretRef"`

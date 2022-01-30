@@ -42,7 +42,9 @@ type ContainerRuntime struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              ContainerRuntimeSpec `json:"spec"`
+	// Specification of the ContainerRuntime.
+	// If the object's deletion timestamp is set, this field is immutable.
+	Spec ContainerRuntimeSpec `json:"spec"`
 	// +optional
 	Status ContainerRuntimeStatus `json:"status"`
 }
@@ -82,6 +84,7 @@ type ContainerRuntimeSpec struct {
 // ContainerRuntimeWorkerPool identifies a Shoot worker pool by its name and selector.
 type ContainerRuntimeWorkerPool struct {
 	// Name specifies the name of the worker pool the container runtime should be available for.
+	// This field is immutable.
 	Name string `json:"name"`
 	// Selector is the label selector used by the extension to match the nodes belonging to the worker pool.
 	Selector metav1.LabelSelector `json:"selector"`

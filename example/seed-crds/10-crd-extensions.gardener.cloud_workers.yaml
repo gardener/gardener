@@ -51,7 +51,8 @@ spec:
           metadata:
             type: object
           spec:
-            description: WorkerSpec is the spec for a Worker resource.
+            description: Specification of the Worker. If the object's deletion timestamp
+              is set, this field is immutable.
             properties:
               infrastructureProviderStatus:
                 description: InfrastructureProviderStatus is a raw extension field
@@ -284,7 +285,7 @@ spec:
                 x-kubernetes-preserve-unknown-fields: true
               region:
                 description: Region is the name of the region where the worker pool
-                  should be deployed to.
+                  should be deployed to. This field is immutable.
                 type: string
               secretRef:
                 description: SecretRef is a reference to a secret that contains the

@@ -48,7 +48,8 @@ spec:
           metadata:
             type: object
           spec:
-            description: Spec is the specification of this Bastion.
+            description: Spec is the specification of this Bastion. If the object's
+              deletion timestamp is set, this field is immutable.
             properties:
               ingress:
                 description: Ingress controls from where the created bastion host
@@ -90,7 +91,7 @@ spec:
               userData:
                 description: UserData is the base64-encoded user data for the bastion
                   instance. This should contain code to provision the SSH key on the
-                  bastion instance.
+                  bastion instance. This field is immutable.
                 format: byte
                 type: string
             required:

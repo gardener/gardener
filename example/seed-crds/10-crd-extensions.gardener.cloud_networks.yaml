@@ -55,10 +55,12 @@ spec:
           metadata:
             type: object
           spec:
-            description: NetworkSpec is the spec for an Network resource.
+            description: Specification of the Network. If the object's deletion timestamp
+              is set, this field is immutable.
             properties:
               podCIDR:
                 description: PodCIDR defines the CIDR that will be used for pods.
+                  This field is immutable.
                 type: string
               providerConfig:
                 description: ProviderConfig is the provider specific configuration.
@@ -66,6 +68,7 @@ spec:
                 x-kubernetes-preserve-unknown-fields: true
               serviceCIDR:
                 description: ServiceCIDR defines the CIDR that will be used for services.
+                  This field is immutable.
                 type: string
               type:
                 description: Type contains the instance of the resource's kind.

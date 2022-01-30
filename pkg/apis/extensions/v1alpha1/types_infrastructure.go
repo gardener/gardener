@@ -38,7 +38,8 @@ type Infrastructure struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
+	// Specification of the Infrastructure.
+	// If the object's deletion timestamp is set, this field is immutable.
 	Spec InfrastructureSpec `json:"spec"`
 	// +optional
 	Status InfrastructureStatus `json:"status"`
@@ -70,7 +71,7 @@ type InfrastructureList struct {
 type InfrastructureSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
 	DefaultSpec `json:",inline"`
-	// Region is the region of this infrastructure.
+	// Region is the region of this infrastructure. This field is immutable.
 	Region string `json:"region"`
 	// SecretRef is a reference to a secret that contains the actual result of the generated cloud config.
 	SecretRef corev1.SecretReference `json:"secretRef"`

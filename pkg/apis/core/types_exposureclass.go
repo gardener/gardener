@@ -28,8 +28,10 @@ type ExposureClass struct {
 	// Standard object metadata.
 	metav1.ObjectMeta
 	// Handler is the name of the handler which applies the control plane endpoint exposure strategy.
+	// This field is immutable.
 	Handler string
 	// Scheduling holds information how to select applicable Seed's for ExposureClass usage.
+	// This field is immutable.
 	Scheduling *ExposureClassScheduling
 }
 

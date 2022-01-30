@@ -89,6 +89,8 @@ BackupBucketSpec
 </em>
 </td>
 <td>
+<p>Specification of the BackupBucket.
+If the object&rsquo;s deletion timestamp is set, this field is immutable.</p>
 <br/>
 <br/>
 <table>
@@ -116,7 +118,7 @@ string
 </em>
 </td>
 <td>
-<p>Region is the region of this bucket.</p>
+<p>Region is the region of this bucket. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -205,6 +207,8 @@ BackupEntrySpec
 </em>
 </td>
 <td>
+<p>Specification of the BackupEntry.
+If the object&rsquo;s deletion timestamp is set, this field is immutable.</p>
 <br/>
 <br/>
 <table>
@@ -247,7 +251,7 @@ string
 </em>
 </td>
 <td>
-<p>Region is the region of this Entry.</p>
+<p>Region is the region of this Entry. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -348,7 +352,8 @@ BastionSpec
 </em>
 </td>
 <td>
-<p>Spec is the specification of this Bastion.</p>
+<p>Spec is the specification of this Bastion.
+If the object&rsquo;s deletion timestamp is set, this field is immutable.</p>
 <br/>
 <br/>
 <table>
@@ -377,7 +382,8 @@ DefaultSpec
 </td>
 <td>
 <p>UserData is the base64-encoded user data for the bastion instance. This should
-contain code to provision the SSH key on the bastion instance.</p>
+contain code to provision the SSH key on the bastion instance.
+This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -570,6 +576,8 @@ ContainerRuntimeSpec
 </em>
 </td>
 <td>
+<p>Specification of the ContainerRuntime.
+If the object&rsquo;s deletion timestamp is set, this field is immutable.</p>
 <br/>
 <br/>
 <table>
@@ -686,6 +694,8 @@ ControlPlaneSpec
 </em>
 </td>
 <td>
+<p>Specification of the ControlPlane.
+If the object&rsquo;s deletion timestamp is set, this field is immutable.</p>
 <br/>
 <br/>
 <table>
@@ -716,7 +726,8 @@ Purpose
 </td>
 <td>
 <em>(Optional)</em>
-<p>Purpose contains the data if a cloud provider needs additional components in order to expose the control plane.</p>
+<p>Purpose contains the data if a cloud provider needs additional components in order to expose the control plane.
+This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -742,7 +753,7 @@ string
 </em>
 </td>
 <td>
-<p>Region is the region of this control plane.</p>
+<p>Region is the region of this control plane. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -830,6 +841,8 @@ DNSRecordSpec
 </em>
 </td>
 <td>
+<p>Specification of the DNSRecord.
+If the object&rsquo;s deletion timestamp is set, this field is immutable.</p>
 <br/>
 <br/>
 <table>
@@ -896,7 +909,7 @@ string
 </em>
 </td>
 <td>
-<p>Name is the fully qualified domain name, e.g. &ldquo;api.<shoot domain>&rdquo;.</p>
+<p>Name is the fully qualified domain name, e.g. &ldquo;api.<shoot domain>&rdquo;. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -909,7 +922,7 @@ DNSRecordType
 </em>
 </td>
 <td>
-<p>RecordType is the DNS record type. Only A, CNAME, and TXT records are currently supported.</p>
+<p>RecordType is the DNS record type. Only A, CNAME, and TXT records are currently supported. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -1008,6 +1021,8 @@ ExtensionSpec
 </em>
 </td>
 <td>
+<p>Specification of the Extension.
+If the object&rsquo;s deletion timestamp is set, this field is immutable.</p>
 <br/>
 <br/>
 <table>
@@ -1100,6 +1115,8 @@ InfrastructureSpec
 </em>
 </td>
 <td>
+<p>Specification of the Infrastructure.
+If the object&rsquo;s deletion timestamp is set, this field is immutable.</p>
 <br/>
 <br/>
 <table>
@@ -1127,7 +1144,7 @@ string
 </em>
 </td>
 <td>
-<p>Region is the region of this infrastructure.</p>
+<p>Region is the region of this infrastructure. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -1228,6 +1245,8 @@ NetworkSpec
 </em>
 </td>
 <td>
+<p>Specification of the Network.
+If the object&rsquo;s deletion timestamp is set, this field is immutable.</p>
 <br/>
 <br/>
 <table>
@@ -1255,7 +1274,7 @@ string
 </em>
 </td>
 <td>
-<p>PodCIDR defines the CIDR that will be used for pods.</p>
+<p>PodCIDR defines the CIDR that will be used for pods. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -1266,7 +1285,7 @@ string
 </em>
 </td>
 <td>
-<p>ServiceCIDR defines the CIDR that will be used for services.</p>
+<p>ServiceCIDR defines the CIDR that will be used for services. This field is immutable.</p>
 </td>
 </tr>
 </table>
@@ -1342,6 +1361,8 @@ OperatingSystemConfigSpec
 </em>
 </td>
 <td>
+<p>Specification of the OperatingSystemConfig.
+If the object&rsquo;s deletion timestamp is set, this field is immutable.</p>
 <br/>
 <br/>
 <table>
@@ -1387,7 +1408,8 @@ OperatingSystemConfigPurpose
 <td>
 <p>Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it
 gets sent to the <code>Worker</code> extension controller to bootstrap a VM, or it is downloaded by the
-cloud-config-downloader script already running on a bootstrapped VM.</p>
+cloud-config-downloader script already running on a bootstrapped VM.
+This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -1506,6 +1528,8 @@ WorkerSpec
 </em>
 </td>
 <td>
+<p>Specification of the Worker.
+If the object&rsquo;s deletion timestamp is set, this field is immutable.</p>
 <br/>
 <br/>
 <table>
@@ -1548,7 +1572,7 @@ string
 </em>
 </td>
 <td>
-<p>Region is the name of the region where the worker pool should be deployed to.</p>
+<p>Region is the name of the region where the worker pool should be deployed to. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -1648,7 +1672,7 @@ string
 </em>
 </td>
 <td>
-<p>Region is the region of this bucket.</p>
+<p>Region is the region of this bucket. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -1772,7 +1796,7 @@ string
 </em>
 </td>
 <td>
-<p>Region is the region of this Entry.</p>
+<p>Region is the region of this Entry. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -1910,7 +1934,8 @@ DefaultSpec
 </td>
 <td>
 <p>UserData is the base64-encoded user data for the bastion instance. This should
-contain code to provision the SSH key on the bastion instance.</p>
+contain code to provision the SSH key on the bastion instance.
+This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -2230,7 +2255,8 @@ string
 </em>
 </td>
 <td>
-<p>Name specifies the name of the worker pool the container runtime should be available for.</p>
+<p>Name specifies the name of the worker pool the container runtime should be available for.
+This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -2292,7 +2318,8 @@ Purpose
 </td>
 <td>
 <em>(Optional)</em>
-<p>Purpose contains the data if a cloud provider needs additional components in order to expose the control plane.</p>
+<p>Purpose contains the data if a cloud provider needs additional components in order to expose the control plane.
+This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -2318,7 +2345,7 @@ string
 </em>
 </td>
 <td>
-<p>Region is the region of this control plane.</p>
+<p>Region is the region of this control plane. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -2451,7 +2478,7 @@ string
 </em>
 </td>
 <td>
-<p>Name is the fully qualified domain name, e.g. &ldquo;api.<shoot domain>&rdquo;.</p>
+<p>Name is the fully qualified domain name, e.g. &ldquo;api.<shoot domain>&rdquo;. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -2464,7 +2491,7 @@ DNSRecordType
 </em>
 </td>
 <td>
-<p>RecordType is the DNS record type. Only A, CNAME, and TXT records are currently supported.</p>
+<p>RecordType is the DNS record type. Only A, CNAME, and TXT records are currently supported. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -3147,7 +3174,7 @@ string
 </em>
 </td>
 <td>
-<p>Region is the region of this infrastructure.</p>
+<p>Region is the region of this infrastructure. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -3362,7 +3389,7 @@ string
 </em>
 </td>
 <td>
-<p>PodCIDR defines the CIDR that will be used for pods.</p>
+<p>PodCIDR defines the CIDR that will be used for pods. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -3373,7 +3400,7 @@ string
 </em>
 </td>
 <td>
-<p>ServiceCIDR defines the CIDR that will be used for services.</p>
+<p>ServiceCIDR defines the CIDR that will be used for services. This field is immutable.</p>
 </td>
 </tr>
 </tbody>
@@ -3518,7 +3545,8 @@ OperatingSystemConfigPurpose
 <td>
 <p>Purpose describes how the result of this OperatingSystemConfig is used by Gardener. Either it
 gets sent to the <code>Worker</code> extension controller to bootstrap a VM, or it is downloaded by the
-cloud-config-downloader script already running on a bootstrapped VM.</p>
+cloud-config-downloader script already running on a bootstrapped VM.
+This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -4124,7 +4152,7 @@ string
 </em>
 </td>
 <td>
-<p>Region is the name of the region where the worker pool should be deployed to.</p>
+<p>Region is the name of the region where the worker pool should be deployed to. This field is immutable.</p>
 </td>
 </tr>
 <tr>

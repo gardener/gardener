@@ -30,6 +30,7 @@ type ControllerInstallation struct {
 	// Standard object metadata.
 	metav1.ObjectMeta
 	// Spec contains the specification of this installation.
+	// If the object's deletion timestamp is set, this field is immutable.
 	Spec ControllerInstallationSpec
 	// Status contains the status of this installation.
 	Status ControllerInstallationStatus
@@ -49,8 +50,9 @@ type ControllerInstallationList struct {
 // ControllerInstallationSpec is the specification of a ControllerInstallation.
 type ControllerInstallationSpec struct {
 	// RegistrationRef is used to reference a ControllerRegistration resource.
+	// The name field of the RegistrationRef is immutable.
 	RegistrationRef corev1.ObjectReference
-	// SeedRef is used to reference a Seed resource.
+	// SeedRef is used to reference a Seed resource. The name field of the SeedRef is immutable.
 	SeedRef corev1.ObjectReference
 	// DeploymentRef is used to reference a ControllerDeployment resource.
 	DeploymentRef *corev1.ObjectReference

@@ -57,7 +57,7 @@ type BastionList struct {
 
 // BastionSpec is the specification of a Bastion.
 type BastionSpec struct {
-	// ShootRef defines the target shoot for a Bastion.
+	// ShootRef defines the target shoot for a Bastion. The name field of the ShootRef is immutable.
 	ShootRef corev1.LocalObjectReference `json:"shootRef" protobuf:"bytes,1,opt,name=shootRef"`
 	// SeedName is the name of the seed to which this Bastion is currently scheduled. This field is populated
 	// at the beginning of a create/reconcile operation.
@@ -66,7 +66,7 @@ type BastionSpec struct {
 	// ProviderType is cloud provider used by the referenced Shoot.
 	// +optional
 	ProviderType *string `json:"providerType,omitempty" protobuf:"bytes,3,opt,name=providerType"`
-	// SSHPublicKey is the user's public key.
+	// SSHPublicKey is the user's public key. This field is immutable.
 	SSHPublicKey string `json:"sshPublicKey" protobuf:"bytes,4,opt,name=sshPublicKey"`
 	// Ingress controls from where the created bastion host should be reachable.
 	Ingress []BastionIngressPolicy `json:"ingress" protobuf:"bytes,5,opt,name=ingress"`

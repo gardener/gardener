@@ -81,7 +81,7 @@ Kubernetes core/v1.LocalObjectReference
 </em>
 </td>
 <td>
-<p>ShootRef defines the target shoot for a Bastion.</p>
+<p>ShootRef defines the target shoot for a Bastion. The name field of the ShootRef is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -117,7 +117,7 @@ string
 </em>
 </td>
 <td>
-<p>SSHPublicKey is the user&rsquo;s public key.</p>
+<p>SSHPublicKey is the user&rsquo;s public key. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -211,7 +211,7 @@ Kubernetes core/v1.LocalObjectReference
 </em>
 </td>
 <td>
-<p>ShootRef defines the target shoot for a Bastion.</p>
+<p>ShootRef defines the target shoot for a Bastion. The name field of the ShootRef is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -247,7 +247,7 @@ string
 </em>
 </td>
 <td>
-<p>SSHPublicKey is the user&rsquo;s public key.</p>
+<p>SSHPublicKey is the user&rsquo;s public key. This field is immutable.</p>
 </td>
 </tr>
 <tr>

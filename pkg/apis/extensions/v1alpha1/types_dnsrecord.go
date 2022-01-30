@@ -38,7 +38,8 @@ const DNSRecordResource = "DNSRecord"
 type DNSRecord struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
+	// Specification of the DNSRecord.
+	// If the object's deletion timestamp is set, this field is immutable.
 	Spec DNSRecordSpec `json:"spec"`
 	// +optional
 	Status DNSRecordStatus `json:"status"`
@@ -79,9 +80,9 @@ type DNSRecordSpec struct {
 	// getting all hosted zones of the account and searching for the longest zone name that is a suffix of Name.
 	// +optional
 	Zone *string `json:"zone,omitempty"`
-	// Name is the fully qualified domain name, e.g. "api.<shoot domain>".
+	// Name is the fully qualified domain name, e.g. "api.<shoot domain>". This field is immutable.
 	Name string `json:"name"`
-	// RecordType is the DNS record type. Only A, CNAME, and TXT records are currently supported.
+	// RecordType is the DNS record type. Only A, CNAME, and TXT records are currently supported. This field is immutable.
 	RecordType DNSRecordType `json:"recordType"`
 	// Values is a list of IP addresses for A records, a single hostname for CNAME records, or a list of texts for TXT records.
 	Values []string `json:"values"`

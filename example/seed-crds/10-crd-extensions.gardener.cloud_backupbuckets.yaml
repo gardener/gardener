@@ -54,14 +54,15 @@ spec:
           metadata:
             type: object
           spec:
-            description: BackupBucketSpec is the spec for an BackupBucket resource.
+            description: Specification of the BackupBucket. If the object's deletion
+              timestamp is set, this field is immutable.
             properties:
               providerConfig:
                 description: ProviderConfig is the provider specific configuration.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               region:
-                description: Region is the region of this bucket.
+                description: Region is the region of this bucket. This field is immutable.
                 type: string
               secretRef:
                 description: SecretRef is a reference to a secret that contains the

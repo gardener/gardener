@@ -48,7 +48,7 @@ type ShootExtensionStatusList struct {
 type ExtensionStatus struct {
 	// Kind of the extension resource
 	Kind string
-	// Type of the extension resource
+	// Type of the extension resource. This field is immutable.
 	Type string
 	// Purpose of the extension resource
 	Purpose *string

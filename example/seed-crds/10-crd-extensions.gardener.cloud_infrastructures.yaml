@@ -53,14 +53,16 @@ spec:
           metadata:
             type: object
           spec:
-            description: InfrastructureSpec is the spec for an Infrastructure resource.
+            description: Specification of the Infrastructure. If the object's deletion
+              timestamp is set, this field is immutable.
             properties:
               providerConfig:
                 description: ProviderConfig is the provider specific configuration.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               region:
-                description: Region is the region of this infrastructure.
+                description: Region is the region of this infrastructure. This field
+                  is immutable.
                 type: string
               secretRef:
                 description: SecretRef is a reference to a secret that contains the

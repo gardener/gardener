@@ -37,6 +37,7 @@ type Shoot struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Specification of the Shoot cluster.
+	// If the object's deletion timestamp is set, this field is immutable.
 	// +optional
 	Spec ShootSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	// Most recently observed status of the Shoot cluster.
@@ -71,7 +72,7 @@ type ShootSpec struct {
 	// Addons contains information about enabled/disabled addons and their configuration.
 	// +optional
 	Addons *Addons `json:"addons,omitempty" protobuf:"bytes,1,opt,name=addons"`
-	// CloudProfileName is a name of a CloudProfile object.
+	// CloudProfileName is a name of a CloudProfile object. This field is immutable.
 	CloudProfileName string `json:"cloudProfileName" protobuf:"bytes,2,opt,name=cloudProfileName"`
 	// DNS contains information about the DNS settings of the Shoot.
 	// +optional
@@ -98,12 +99,14 @@ type ShootSpec struct {
 	// Purpose is the purpose class for this cluster.
 	// +optional
 	Purpose *ShootPurpose `json:"purpose,omitempty" protobuf:"bytes,11,opt,name=purpose,casttype=ShootPurpose"`
-	// Region is a name of a region.
+	// Region is a name of a region. This field is immutable.
 	Region string `json:"region" protobuf:"bytes,12,opt,name=region"`
 	// SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
 	// The credentials inside the provider secret will be used to create the shoot in the respective account.
+	// This field is immutable.
 	SecretBindingName string `json:"secretBindingName" protobuf:"bytes,13,opt,name=secretBindingName"`
 	// SeedName is the name of the seed cluster that runs the control plane of the Shoot.
+	// This field is immutable when the SeedChange feature gate is disabled.
 	// +optional
 	SeedName *string `json:"seedName,omitempty" protobuf:"bytes,14,opt,name=seedName"`
 	// SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed.
@@ -118,6 +121,7 @@ type ShootSpec struct {
 	// +optional
 	Tolerations []Toleration `json:"tolerations,omitempty" patchStrategy:"merge" patchMergeKey:"key" protobuf:"bytes,17,rep,name=tolerations"`
 	// ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
+	// This field is immutable.
 	// +optional
 	ExposureClassName *string `json:"exposureClassName,omitempty" protobuf:"bytes,18,opt,name=exposureClassName"`
 }
@@ -162,12 +166,12 @@ type ShootStatus struct {
 	// +optional
 	SeedName *string `json:"seedName,omitempty" protobuf:"bytes,9,opt,name=seedName"`
 	// TechnicalID is the name that is used for creating the Seed namespace, the infrastructure resources, and
-	// basically everything that is related to this particular Shoot.
+	// basically everything that is related to this particular Shoot. This field is immutable.
 	TechnicalID string `json:"technicalID" protobuf:"bytes,10,opt,name=technicalID"`
 	// UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
-	// It is used to compute unique hashes.
+	// It is used to compute unique hashes. This field is immutable.
 	UID types.UID `json:"uid" protobuf:"bytes,11,opt,name=uid,casttype=k8s.io/apimachinery/pkg/types.UID"`
-	// ClusterIdentity is the identity of the Shoot cluster
+	// ClusterIdentity is the identity of the Shoot cluster. This field is immutable.
 	// +optional
 	ClusterIdentity *string `json:"clusterIdentity,omitempty" protobuf:"bytes,12,opt,name=clusterIdentity"`
 	// List of addresses on which the Kube API server can be reached.
@@ -246,7 +250,7 @@ type NginxIngress struct {
 // DNS holds information about the provider, the hosted zone id and the domain.
 type DNS struct {
 	// Domain is the external available domain of the Shoot cluster. This domain will be written into the
-	// kubeconfig that is handed out to end-users. Once set it is immutable.
+	// kubeconfig that is handed out to end-users. This field is immutable.
 	// +optional
 	Domain *string `json:"domain,omitempty" protobuf:"bytes,1,opt,name=domain"`
 	// Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if
@@ -691,7 +695,7 @@ type KubeControllerManagerConfig struct {
 	// HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
 	// +optional
 	HorizontalPodAutoscalerConfig *HorizontalPodAutoscalerConfig `json:"horizontalPodAutoscaler,omitempty" protobuf:"bytes,2,opt,name=horizontalPodAutoscaler"`
-	// NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24)
+	// NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24). This field is immutable.
 	// +optional
 	NodeCIDRMaskSize *int32 `json:"nodeCIDRMaskSize,omitempty" protobuf:"varint,3,opt,name=nodeCIDRMaskSize"`
 	// PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.
@@ -939,18 +943,18 @@ type KubeletConfigReserved struct {
 
 // Networking defines networking parameters for the shoot cluster.
 type Networking struct {
-	// Type identifies the type of the networking plugin.
+	// Type identifies the type of the networking plugin. This field is immutable.
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// ProviderConfig is the configuration passed to network resource.
 	// +optional
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
-	// Pods is the CIDR of the pod network.
+	// Pods is the CIDR of the pod network. This field is immutable.
 	// +optional
 	Pods *string `json:"pods,omitempty" protobuf:"bytes,3,opt,name=pods"`
-	// Nodes is the CIDR of the entire node network.
+	// Nodes is the CIDR of the entire node network. This field is immutable.
 	// +optional
 	Nodes *string `json:"nodes,omitempty" protobuf:"bytes,4,opt,name=nodes"`
-	// Services is the CIDR of the service network.
+	// Services is the CIDR of the service network. This field is immutable.
 	// +optional
 	Services *string `json:"services,omitempty" protobuf:"bytes,5,opt,name=services"`
 }
@@ -1032,7 +1036,7 @@ type Alerting struct {
 // Provider contains provider-specific information that are handed-over to the provider-specific
 // extension controller.
 type Provider struct {
-	// Type is the type of the provider.
+	// Type is the type of the provider. This field is immutable.
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// ControlPlaneConfig contains the provider-specific control plane config blob. Please look up the concrete
 	// definition in the documentation of your provider extension.

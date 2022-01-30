@@ -28,10 +28,13 @@ type SecretBinding struct {
 	// Standard object metadata.
 	metav1.ObjectMeta
 	// SecretRef is a reference to a secret object in the same or another namespace.
+	// This field is immutable.
 	SecretRef corev1.SecretReference
 	// Quotas is a list of references to Quota objects in the same or another namespace.
+	// This field is immutable.
 	Quotas []corev1.ObjectReference
 	// Provider defines the provider type of the SecretBinding.
+	// This field is immutable when the SecretBindingProviderValidation feature gate is enabled.
 	Provider *SecretBindingProvider
 }
 

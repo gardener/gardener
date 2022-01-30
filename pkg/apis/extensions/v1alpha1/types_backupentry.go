@@ -41,7 +41,8 @@ type BackupEntry struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
+	// Specification of the BackupEntry.
+	// If the object's deletion timestamp is set, this field is immutable.
 	Spec BackupEntrySpec `json:"spec"`
 	// +optional
 	Status BackupEntryStatus `json:"status"`
@@ -79,7 +80,7 @@ type BackupEntrySpec struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional
 	BackupBucketProviderStatus *runtime.RawExtension `json:"backupBucketProviderStatus,omitempty"`
-	// Region is the region of this Entry.
+	// Region is the region of this Entry. This field is immutable.
 	Region string `json:"region"`
 	// BucketName is the name of backup bucket for this Backup Entry.
 	BucketName string `json:"bucketName"`

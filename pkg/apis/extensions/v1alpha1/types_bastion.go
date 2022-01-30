@@ -40,6 +40,7 @@ type Bastion struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Spec is the specification of this Bastion.
+	// If the object's deletion timestamp is set, this field is immutable.
 	Spec BastionSpec `json:"spec"`
 	// Status is the bastion's status.
 	// +optional
@@ -62,6 +63,7 @@ type BastionSpec struct {
 	DefaultSpec `json:",inline"`
 	// UserData is the base64-encoded user data for the bastion instance. This should
 	// contain code to provision the SSH key on the bastion instance.
+	// This field is immutable.
 	UserData []byte `json:"userData"`
 	// Ingress controls from where the created bastion host should be reachable.
 	Ingress []BastionIngressPolicy `json:"ingress"`

@@ -53,7 +53,8 @@ spec:
           metadata:
             type: object
           spec:
-            description: ControlPlaneSpec is the spec of a ControlPlane resource.
+            description: Specification of the ControlPlane. If the object's deletion
+              timestamp is set, this field is immutable.
             properties:
               infrastructureProviderStatus:
                 description: InfrastructureProviderStatus contains the provider status
@@ -67,10 +68,11 @@ spec:
                 x-kubernetes-preserve-unknown-fields: true
               purpose:
                 description: Purpose contains the data if a cloud provider needs additional
-                  components in order to expose the control plane.
+                  components in order to expose the control plane. This field is immutable.
                 type: string
               region:
-                description: Region is the region of this control plane.
+                description: Region is the region of this control plane. This field
+                  is immutable.
                 type: string
               secretRef:
                 description: SecretRef is a reference to a secret that contains the

@@ -29,8 +29,10 @@ type ExposureClass struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Handler is the name of the handler which applies the control plane endpoint exposure strategy.
+	// This field is immutable.
 	Handler string `json:"handler" protobuf:"bytes,2,opt,name=handler"`
 	// Scheduling holds information how to select applicable Seed's for ExposureClass usage.
+	// This field is immutable.
 	// +optional
 	Scheduling *ExposureClassScheduling `json:"scheduling,omitempty" protobuf:"bytes,3,opt,name=scheduling"`
 }

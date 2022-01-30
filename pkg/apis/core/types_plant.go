@@ -28,6 +28,7 @@ type Plant struct {
 	// Standard object metadata.
 	metav1.ObjectMeta
 	// Spec contains the specification of this Plant.
+	// If the object's deletion timestamp is set, this field is immutable.
 	Spec PlantSpec
 	// Status contains the status of this Plant.
 	Status PlantStatus

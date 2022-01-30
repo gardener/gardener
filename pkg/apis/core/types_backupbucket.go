@@ -48,13 +48,14 @@ type BackupBucketList struct {
 
 // BackupBucketSpec is the specification of a Backup Bucket.
 type BackupBucketSpec struct {
-	// Provider holds the details of cloud provider of the object store.
+	// Provider holds the details of cloud provider of the object store. This field is immutable.
 	Provider BackupBucketProvider
 	// ProviderConfig is the configuration passed to BackupBucket resource.
 	ProviderConfig *runtime.RawExtension
 	// SecretRef is a reference to a secret that contains the credentials to access object store.
 	SecretRef corev1.SecretReference
 	// SeedName holds the name of the seed allocated to BackupBucket for running controller.
+	// This field is immutable.
 	SeedName *string
 }
 
