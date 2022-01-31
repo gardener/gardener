@@ -78,18 +78,18 @@ func (mr *MockInterfaceMockRecorder) Destroy(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
 }
 
-// GetCloudConfigSecretChecksum mocks base method.
-func (m *MockInterface) GetCloudConfigSecretChecksum() string {
+// GetCloudConfigSecretChecksumMap mocks base method.
+func (m *MockInterface) GetCloudConfigSecretChecksumMap() map[string]string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCloudConfigSecretChecksum")
-	ret0, _ := ret[0].(string)
+	ret := m.ctrl.Call(m, "GetCloudConfigSecretChecksumMap")
+	ret0, _ := ret[0].(map[string]string)
 	return ret0
 }
 
-// GetCloudConfigSecretChecksum indicates an expected call of GetCloudConfigSecretChecksum.
-func (mr *MockInterfaceMockRecorder) GetCloudConfigSecretChecksum() *gomock.Call {
+// GetCloudConfigSecretChecksumMap indicates an expected call of GetCloudConfigSecretChecksumMap.
+func (mr *MockInterfaceMockRecorder) GetCloudConfigSecretChecksumMap() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCloudConfigSecretChecksum", reflect.TypeOf((*MockInterface)(nil).GetCloudConfigSecretChecksum))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCloudConfigSecretChecksumMap", reflect.TypeOf((*MockInterface)(nil).GetCloudConfigSecretChecksumMap))
 }
 
 // Migrate mocks base method.
@@ -145,15 +145,15 @@ func (mr *MockInterfaceMockRecorder) SetCABundle(arg0 interface{}) *gomock.Call 
 }
 
 // SetCloudConfigSecretChecksum mocks base method.
-func (m *MockInterface) SetCloudConfigSecretChecksum(arg0 string) {
+func (m *MockInterface) SetCloudConfigSecretChecksum(arg0, arg1 string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetCloudConfigSecretChecksum", arg0)
+	m.ctrl.Call(m, "SetCloudConfigSecretChecksum", arg0, arg1)
 }
 
 // SetCloudConfigSecretChecksum indicates an expected call of SetCloudConfigSecretChecksum.
-func (mr *MockInterfaceMockRecorder) SetCloudConfigSecretChecksum(arg0 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) SetCloudConfigSecretChecksum(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCloudConfigSecretChecksum", reflect.TypeOf((*MockInterface)(nil).SetCloudConfigSecretChecksum), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCloudConfigSecretChecksum", reflect.TypeOf((*MockInterface)(nil).SetCloudConfigSecretChecksum), arg0, arg1)
 }
 
 // SetKubeletCACertificate mocks base method.

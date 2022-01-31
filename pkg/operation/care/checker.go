@@ -428,11 +428,6 @@ func (b *HealthChecker) CheckClusterNodes(
 		return nil, err
 	}
 
-	workerPoolToSecretChecksum, err := botanist.WorkerPoolToCloudConfigSecretChecksumMap(ctx, shootClient)
-	if err != nil {
-		return nil, err
-	}
-
 	for _, worker := range workers {
 		nodes := workerPoolToNodes[worker.Name]
 
@@ -446,7 +441,7 @@ func (b *HealthChecker) CheckClusterNodes(
 		}
 	}
 
-	if err := botanist.CloudConfigUpdatedForAllWorkerPools(workers, workerPoolToNodes, workerPoolToSecretChecksum); err != nil {
+	if err := botanist.CloudConfigUpdatedForAllWorkerPools(ctx, shootClient); err != nil {
 		c := b.FailedCondition(condition, "CloudConfigOutdated", err.Error())
 		return &c, nil
 	}

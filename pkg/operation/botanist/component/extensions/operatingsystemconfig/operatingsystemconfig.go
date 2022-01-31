@@ -79,10 +79,10 @@ type Interface interface {
 	// WorkerNameToOperatingSystemConfigsMap returns a map whose key is a worker name and whose value is a structure
 	// containing both the downloader and the original operating system config data.
 	WorkerNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs
-	// GetCloudConfigSecretChecksum gets the cloud-config's secret checksum
-	GetCloudConfigSecretChecksum() string
-	// SetCloudConfigSecretChecksum sets the cloud-config's secret checksum
-	SetCloudConfigSecretChecksum(string)
+	// GetCloudConfigSecretChecksumMap returns a map holding the desired cloud-config's secret checksum for a worker pool name.
+	GetCloudConfigSecretChecksumMap() map[string]string
+	// SetCloudConfigSecretChecksum sets the desired cloud-config secret checksum for a worker pool.
+	SetCloudConfigSecretChecksum(string, string)
 }
 
 // Values contains the values used to create an OperatingSystemConfig resource.
@@ -153,6 +153,8 @@ func New(
 		waitTimeout:         waitTimeout,
 	}
 
+	osc.cloudConfigSecretChecksum = make(map[string]string, len(values.Workers))
+
 	osc.workerNameToOSCs = make(map[string]*OperatingSystemConfigs, len(values.Workers))
 	for _, worker := range values.Workers {
 		osc.workerNameToOSCs[worker.Name] = &OperatingSystemConfigs{}
@@ -173,7 +175,7 @@ type operatingSystemConfig struct {
 	lock                      sync.Mutex
 	workerNameToOSCs          map[string]*OperatingSystemConfigs
 	oscs                      map[string]*extensionsv1alpha1.OperatingSystemConfig
-	cloudConfigSecretChecksum string
+	cloudConfigSecretChecksum map[string]string
 }
 
 // OperatingSystemConfigs contains operating system configs for the downloader script as well as for the original cloud
@@ -465,14 +467,14 @@ func (o *operatingSystemConfig) WorkerNameToOperatingSystemConfigsMap() map[stri
 	return o.workerNameToOSCs
 }
 
-// GetCloudConfigSecretChecksum gets the cloud-config secret's checksum
-func (o *operatingSystemConfig) GetCloudConfigSecretChecksum() string {
+// GetCloudConfigSecretChecksumMap returns a map holding the desired cloud-config's secret checksum for a worker pool name.
+func (o *operatingSystemConfig) GetCloudConfigSecretChecksumMap() map[string]string {
 	return o.cloudConfigSecretChecksum
 }
 
-// SetCloudConfigSecretChecksum sets the cloud-config secret's checksum
-func (o *operatingSystemConfig) SetCloudConfigSecretChecksum(c string) {
-	o.cloudConfigSecretChecksum = c
+// SetCloudConfigSecretChecksum sets the desired cloud-config secret checksum for a worker pool.
+func (o *operatingSystemConfig) SetCloudConfigSecretChecksum(poolName string, checksum string) {
+	o.cloudConfigSecretChecksum[poolName] = checksum
 }
 
 func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) (deployer, error) {

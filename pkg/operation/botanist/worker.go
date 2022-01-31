@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor"
@@ -59,7 +58,7 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 	b.Shoot.Components.Extensions.Worker.SetSSHPublicKey(b.LoadSecret(v1beta1constants.SecretNameSSHKeyPair).Data[secrets.DataKeySSHAuthorizedKeys])
 	b.Shoot.Components.Extensions.Worker.SetInfrastructureProviderStatus(b.Shoot.Components.Extensions.Infrastructure.ProviderStatus())
 	b.Shoot.Components.Extensions.Worker.SetWorkerNameToOperatingSystemConfigsMap(b.Shoot.Components.Extensions.OperatingSystemConfig.WorkerNameToOperatingSystemConfigsMap())
-	b.Shoot.Components.Extensions.Worker.SetCloudConfigSecretChecksum(b.Shoot.Components.Extensions.OperatingSystemConfig.GetCloudConfigSecretChecksum())
+	b.Shoot.Components.Extensions.Worker.SetCloudConfigSecretChecksumMap(b.Shoot.Components.Extensions.OperatingSystemConfig.GetCloudConfigSecretChecksumMap())
 
 	if b.isRestorePhase() {
 		return b.Shoot.Components.Extensions.Worker.Restore(ctx, b.GetShootState())
@@ -86,65 +85,25 @@ func WorkerPoolToNodesMap(ctx context.Context, shootClient client.Client) (map[s
 	return workerPoolToNodes, nil
 }
 
-// WorkerPoolToCloudConfigSecretChecksumMap lists all the cloud-config secrets with the given client in the shoot
-// cluster. It returns a map whose key is the name of a worker pool and whose values are the corresponding checksums of
-// the cloud-config script stored inside the secret's data.
-func WorkerPoolToCloudConfigSecretChecksumMap(ctx context.Context, shootClient client.Client) (map[string]string, error) {
-	secretList := &corev1.SecretList{}
-	if err := shootClient.List(ctx, secretList, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleCloudConfig}); err != nil {
-		return nil, err
-	}
-
-	workerPoolToCloudConfigSecretChecksum := make(map[string]string, len(secretList.Items))
-	for _, secret := range secretList.Items {
-		var (
-			poolName, ok1 = secret.Labels[v1beta1constants.LabelWorkerPool]
-			checksum, ok2 = secret.Annotations[downloader.AnnotationKeyChecksum]
-		)
-
-		if ok1 && ok2 {
-			workerPoolToCloudConfigSecretChecksum[poolName] = checksum
-		}
-	}
-
-	return workerPoolToCloudConfigSecretChecksum, nil
-}
-
 // CloudConfigUpdatedForAllWorkerPools checks if all the nodes for all the provided worker pools have successfully
 // applied the desired version of their cloud-config user data.
-func CloudConfigUpdatedForAllWorkerPools(workers []gardencorev1beta1.Worker, workerPoolToNodes map[string][]corev1.Node, workerPoolToCloudConfigSecretChecksum map[string]string) error {
+func CloudConfigUpdatedForAllWorkerPools(ctx context.Context, shootClient client.Client) error {
 	var result error
 
-	for _, worker := range workers {
-		secretChecksum, ok := workerPoolToCloudConfigSecretChecksum[worker.Name]
-		if !ok {
-			// This is to ensure backwards-compatibility to not break existing clusters which don't have a secret
-			// checksum label yet.
-			continue
-		}
+	nodeList := &corev1.NodeList{}
+	if err := shootClient.List(ctx, nodeList); err != nil {
+		return err
+	}
 
-		for _, node := range workerPoolToNodes[worker.Name] {
-			if cloudConfigIsNotExpectedToBeApplied(node, secretChecksum) {
-				continue
-			}
-
-			if nodeChecksum, ok := node.Annotations[executor.AnnotationKeyChecksum]; ok && nodeChecksum != secretChecksum {
-				result = multierror.Append(result, fmt.Errorf("the last successfully applied cloud config on node %q is outdated (current: %s, desired: %s)", node.Name, nodeChecksum, secretChecksum))
-			}
+	for _, node := range nodeList.Items {
+		appliedSecretChecksum, ok1 := node.Annotations[executor.AnnotationKeyChecksum]
+		desiredSecretChecksum, ok2 := node.Annotations[v1beta1constants.GardenerCloudConfigSecretChecksum]
+		if ok1 && ok2 && appliedSecretChecksum != desiredSecretChecksum {
+			result = multierror.Append(result, fmt.Errorf("the last successfully applied cloud config on node %q is outdated (current: %s, desired: %s)", node.Name, appliedSecretChecksum, desiredSecretChecksum))
 		}
 	}
 
 	return result
-}
-
-func cloudConfigIsNotExpectedToBeApplied(node corev1.Node, checksum string) bool {
-	if ccsChecksum, ok := node.Annotations[v1beta1constants.GardenerCloudConfigSecretChecksum]; ok {
-		if checksum != ccsChecksum {
-			return true
-		}
-	}
-
-	return false
 }
 
 // exposed for testing
@@ -169,17 +128,8 @@ func (b *Botanist) WaitUntilCloudConfigUpdatedForAllWorkerPools(ctx context.Cont
 	defer cancel2()
 
 	return retry.Until(timeoutCtx2, IntervalWaitCloudConfigUpdated, func(ctx context.Context) (done bool, err error) {
-		workerPoolToNodes, err := WorkerPoolToNodesMap(ctx, b.K8sShootClient.Client())
-		if err != nil {
-			return retry.SevereError(err)
-		}
 
-		workerPoolToCloudConfigSecretChecksum, err := WorkerPoolToCloudConfigSecretChecksumMap(ctx, b.K8sShootClient.Client())
-		if err != nil {
-			return retry.SevereError(err)
-		}
-
-		if err := CloudConfigUpdatedForAllWorkerPools(b.Shoot.GetInfo().Spec.Provider.Workers, workerPoolToNodes, workerPoolToCloudConfigSecretChecksum); err != nil {
+		if err := CloudConfigUpdatedForAllWorkerPools(ctx, b.K8sShootClient.Client()); err != nil {
 			return retry.MinorError(err)
 		}
 

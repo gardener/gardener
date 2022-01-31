@@ -342,8 +342,8 @@ var _ = Describe("operatingsystemconfig", func() {
 						worker1ExecutorScript, _ := ExecutorScriptFn([]byte(worker1OriginalContent), hyperkubeImage.ToImage(&kubernetesVersion), kubernetesVersion, nil, worker1OriginalCommand, worker1OriginalUnits)
 						worker2ExecutorScript, _ := ExecutorScriptFn([]byte(worker2OriginalContent), hyperkubeImage.ToImage(&worker2KubernetesVersion), worker2KubernetesVersion, &gardencorev1beta1.DataVolume{Name: worker2KubeletDataVolumeName}, worker2OriginalCommand, worker2OriginalUnits)
 
-						operatingSystemConfig.EXPECT().SetCloudConfigSecretChecksum(utils.ComputeSecretChecksum(map[string][]byte{"script": worker1ExecutorScript}))
-						operatingSystemConfig.EXPECT().SetCloudConfigSecretChecksum(utils.ComputeSecretChecksum(map[string][]byte{"script": worker2ExecutorScript}))
+						operatingSystemConfig.EXPECT().SetCloudConfigSecretChecksum(worker1Name, utils.ComputeSecretChecksum(map[string][]byte{"script": worker1ExecutorScript}))
+						operatingSystemConfig.EXPECT().SetCloudConfigSecretChecksum(worker2Name, utils.ComputeSecretChecksum(map[string][]byte{"script": worker2ExecutorScript}))
 						if params.downloaderGenerateRBACResourcesFnError == nil {
 							// managed resource secret reconciliation for executor scripts for worker pools
 							// worker pool 1

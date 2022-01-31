@@ -175,7 +175,7 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 			return err
 		}
 
-		b.Shoot.Components.Extensions.OperatingSystemConfig.SetCloudConfigSecretChecksum(checksum)
+		b.Shoot.Components.Extensions.OperatingSystemConfig.SetCloudConfigSecretChecksum(worker.Name, checksum)
 
 		cloudConfigExecutorSecretNames = append(cloudConfigExecutorSecretNames, secretName)
 		managedResourceSecretNameToData[fmt.Sprintf("shoot-cloud-config-execution-%s", worker.Name)] = data

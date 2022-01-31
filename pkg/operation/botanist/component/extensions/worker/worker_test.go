@@ -176,7 +176,7 @@ var _ = Describe("Worker", func() {
 					},
 				},
 			},
-			CloudConfigSecretChecksum: "cloudConfigSecretChecksum",
+			CloudConfigSecretChecksumMap: map[string]string{worker1Name: "cloudConfigSecretChecksumWorker1", worker2Name: "cloudConfigSecretChecksumWorker2"},
 			Workers: []gardencorev1beta1.Worker{
 				{
 					Name:           worker1Name,
@@ -269,7 +269,7 @@ var _ = Describe("Worker", func() {
 					MaxSurge:       worker1MaxSurge,
 					MaxUnavailable: worker1MaxUnavailable,
 					Annotations: utils.MergeStringMaps(worker1Annotations, map[string]string{
-						v1beta1constants.GardenerCloudConfigSecretChecksum: "cloudConfigSecretChecksum",
+						v1beta1constants.GardenerCloudConfigSecretChecksum: "cloudConfigSecretChecksumWorker1",
 					}),
 					Labels: utils.MergeStringMaps(worker1Labels, map[string]string{
 						"node.kubernetes.io/role":         "node",
@@ -313,7 +313,7 @@ var _ = Describe("Worker", func() {
 					MaxSurge:       worker2MaxSurge,
 					MaxUnavailable: worker2MaxUnavailable,
 					Annotations: map[string]string{
-						v1beta1constants.GardenerCloudConfigSecretChecksum: "cloudConfigSecretChecksum",
+						v1beta1constants.GardenerCloudConfigSecretChecksum: "cloudConfigSecretChecksumWorker2",
 					},
 					Labels: map[string]string{
 						"node.kubernetes.io/role":                 "node",
