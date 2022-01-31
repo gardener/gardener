@@ -69,7 +69,7 @@ type BlueprintSchema struct {
 	Items []BlueprintSchema `json:"items,omitempty"`
 }
 
-// ExportExecutions are the wxport executions of blueprint corresponding to the exported fields
+// ExportExecutions are the export executions of blueprint corresponding to the exported fields
 type ExportExecutions struct {
 	// Exports are the exported fields
 	Exports map[string]string `json:"exports,omitempty"`
