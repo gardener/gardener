@@ -452,13 +452,19 @@ func (r *shootReconciler) isSeedReadyForMigration(seed *gardencorev1beta1.Seed) 
 func (r *shootReconciler) shootHasBastions(ctx context.Context, shoot *gardencorev1beta1.Shoot, gardenClient kubernetes.Interface) (bool, error) {
 	// list all bastions that reference this shoot
 	bastionList := operationsv1alpha1.BastionList{}
-	listOptions := client.ListOptions{Namespace: shoot.Namespace, Limit: 1}
+	listOptions := client.ListOptions{Namespace: shoot.Namespace}
 
 	if err := gardenClient.Client().List(ctx, &bastionList, &listOptions); err != nil {
 		return false, fmt.Errorf("failed to list related Bastions: %w", err)
 	}
 
-	return len(bastionList.Items) > 0, nil
+	for _, bastion := range bastionList.Items {
+		if bastion.Spec.ShootRef.Name == shoot.Name {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func (r *shootReconciler) reconcileShoot(ctx context.Context, logger logrus.FieldLogger, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
