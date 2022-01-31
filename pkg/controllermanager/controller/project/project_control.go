@@ -112,7 +112,7 @@ func (r *projectReconciler) Reconcile(ctx context.Context, request reconcile.Req
 		return r.delete(ctx, project, r.gardenClient.Client(), r.gardenClient.Client())
 	}
 
-	return r.reconcile(ctx, project, r.gardenClient.Client(), r.gardenClient.Client())
+	return r.reconcile(ctx, project, r.gardenClient.Client(), r.gardenClient.APIReader())
 }
 
 func newProjectLogger(project *gardencorev1beta1.Project) logrus.FieldLogger {
