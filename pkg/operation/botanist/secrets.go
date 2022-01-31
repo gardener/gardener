@@ -110,6 +110,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 					vpnseedserver.DeploymentName,
 					vpnshoot.SecretNameVPNShootClient,
 					vpnseedserver.VpnSeedServerTLSAuth,
+					kubeapiserver.SecretNameHTTPProxy,
 				); err != nil {
 					return err
 				}
