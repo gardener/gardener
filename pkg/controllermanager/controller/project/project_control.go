@@ -109,7 +109,7 @@ func (r *projectReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	projectLogger.Infof("[PROJECT RECONCILE] %s", project.Name)
 
 	if project.DeletionTimestamp != nil {
-		return r.delete(ctx, project, r.gardenClient.Client(), r.gardenClient.Client())
+		return r.delete(ctx, project, r.gardenClient.Client(), r.gardenClient.APIReader())
 	}
 
 	return r.reconcile(ctx, project, r.gardenClient.Client(), r.gardenClient.APIReader())
