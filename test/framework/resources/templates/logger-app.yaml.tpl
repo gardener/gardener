@@ -54,10 +54,10 @@ spec:
         resources:
           limits:
             cpu: 8m
-            memory: 20Mi
+            memory: 30Mi
           requests:
             cpu: 4m
-            memory: 3Mi
+            memory: 10Mi
       securityContext:
         fsGroup: 65532
         runAsUser: 65532
