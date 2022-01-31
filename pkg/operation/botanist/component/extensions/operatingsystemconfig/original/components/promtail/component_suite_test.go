@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestLogrotate(t *testing.T) {
+func TestPromtail(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Botanist Component Extensions OperatingSystemConfig Original Components Promtail Suite")
 }

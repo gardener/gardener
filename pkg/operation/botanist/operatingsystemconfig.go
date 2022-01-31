@@ -57,6 +57,11 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 		clusterDNSAddress = nodelocaldns.IPVSAddress
 	}
 
+	promtailEnabled, lokiIngressHost := false, ""
+	if b.isShootNodeLoggingEnabled() {
+		promtailEnabled, lokiIngressHost = true, b.ComputeLokiHost()
+	}
+
 	return operatingsystemconfig.New(
 		b.Logger,
 		b.K8sSeedClient.Client(),
@@ -71,6 +76,8 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 				KubeletConfigParameters: components.KubeletConfigParametersFromCoreV1beta1KubeletConfig(b.Shoot.GetInfo().Spec.Kubernetes.Kubelet),
 				KubeletCLIFlags:         components.KubeletCLIFlagsFromCoreV1beta1KubeletConfig(b.Shoot.GetInfo().Spec.Kubernetes.Kubelet),
 				MachineTypes:            b.Shoot.CloudProfile.Spec.MachineTypes,
+				PromtailEnabled:         promtailEnabled,
+				LokiIngressHostName:     lokiIngressHost,
 			},
 		},
 		operatingsystemconfig.DefaultInterval,
@@ -91,11 +98,6 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 		publicKeys = append(publicKeys, string(secret.Data[secrets.DataKeySSHAuthorizedKeys]))
 	}
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetSSHPublicKeys(publicKeys)
-
-	if b.isShootNodeLoggingEnabled() {
-		b.Shoot.Components.Extensions.OperatingSystemConfig.SetPromtailRBACAuthToken(b.PromtailRBACAuthToken)
-		b.Shoot.Components.Extensions.OperatingSystemConfig.SetLokiIngressHostName(b.ComputeLokiHost())
-	}
 
 	if b.isRestorePhase() {
 		return b.Shoot.Components.Extensions.OperatingSystemConfig.Restore(ctx, b.GetShootState())

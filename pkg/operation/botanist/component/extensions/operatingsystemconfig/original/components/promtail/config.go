@@ -15,20 +15,46 @@
 package promtail
 
 import (
+	"bytes"
+	_ "embed"
 	"fmt"
+	"text/template"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
+
+	"github.com/Masterminds/sprig"
 	"github.com/gardener/gardener/pkg/utils"
 	"gopkg.in/yaml.v3"
 	"k8s.io/utils/pointer"
 )
 
+var (
+	tplNameFetchToken = "fetch-token"
+	//go:embed templates/scripts/fetch-token.tpl.sh
+	tplContentFetchToken string
+	tplFetchToken        *template.Template
+)
+
+func init() {
+	var err error
+	tplFetchToken, err = template.
+		New(tplNameFetchToken).
+		Funcs(sprig.TxtFuncMap()).
+		Parse(tplContentFetchToken)
+	if err != nil {
+		panic(err)
+	}
+}
+
 const setActiveJournalFileScript = `#!/bin/bash
 PERSISTANT_JOURNAL_FILE=/var/log/journal
 TEMP_JOURNAL_FILE=/run/log/journal
 if [ ! -d "$PERSISTANT_JOURNAL_FILE" ] && [ -d "$TEMP_JOURNAL_FILE" ]; then
-	sed -i -e "s|$PERSISTANT_JOURNAL_FILE|$TEMP_JOURNAL_FILE|g" ` + PathPromtailConfig + `
+	sed -i -e "s|$PERSISTANT_JOURNAL_FILE|$TEMP_JOURNAL_FILE|g" ` + PathConfig + `
 fi`
 
 type config struct {
@@ -66,17 +92,17 @@ var defaultConfig = config{
 	Server: server{
 		Disable:        true,
 		LogLevel:       "info",
-		HTTPListenPort: PromtailServerPort,
+		HTTPListenPort: ServerPort,
 	},
 	Client: client{
 		Url:             "http://localhost:3100/loki/api/v1/push",
-		BearerTokenFile: PathPromtailAuthToken,
+		BearerTokenFile: PathAuthToken,
 		TLSConfig: tlsConfig{
-			CAFile: PathPromtailCACert,
+			CAFile: PathCACert,
 		},
 	},
 	Positions: positions{
-		Filename: PromtailPositionFile,
+		Filename: PositionFile,
 	},
 	ScrapeConfigs: scrapeConfigs{
 		{
@@ -114,7 +140,7 @@ var defaultConfig = config{
 
 func getPromtailConfiguration(ctx components.Context) (config, error) {
 	if ctx.LokiIngress == "" {
-		return config{}, fmt.Errorf("loki ingress url is misssing for %s", ctx.ClusterDomain)
+		return config{}, fmt.Errorf("loki ingress url is missing for %s", ctx.ClusterDomain)
 	}
 	conf := defaultConfig
 	conf.Client.Url = "https://" + ctx.LokiIngress + "/loki/api/v1/push"
@@ -122,20 +148,20 @@ func getPromtailConfiguration(ctx components.Context) (config, error) {
 	return conf, nil
 }
 
-func getPromtailConfigurationFile(ctx components.Context) (*extensionsv1alpha1.File, error) {
+func getPromtailConfigurationFile(ctx components.Context) (extensionsv1alpha1.File, error) {
 	conf, err := getPromtailConfiguration(ctx)
 	if err != nil {
-		return nil, err
+		return extensionsv1alpha1.File{}, err
 	}
 
 	configYaml, err := yaml.Marshal(&conf)
 	if err != nil {
-		return nil, err
+		return extensionsv1alpha1.File{}, err
 	}
 
-	return &extensionsv1alpha1.File{
-		Path:        PathPromtailConfig,
-		Permissions: pointer.Int32Ptr(0644),
+	return extensionsv1alpha1.File{
+		Path:        PathConfig,
+		Permissions: pointer.Int32(0644),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -145,30 +171,14 @@ func getPromtailConfigurationFile(ctx components.Context) (*extensionsv1alpha1.F
 	}, nil
 }
 
-func getPromtailAuthTokenFile(ctx components.Context) *extensionsv1alpha1.File {
-	if len(ctx.PromtailRBACAuthToken) == 0 {
-		return nil
-	}
-	return &extensionsv1alpha1.File{
-		Path:        PathPromtailAuthToken,
-		Permissions: pointer.Int32Ptr(0644),
-		Content: extensionsv1alpha1.FileContent{
-			Inline: &extensionsv1alpha1.FileContentInline{
-				Encoding: "b64",
-				Data:     utils.EncodeBase64([]byte(ctx.PromtailRBACAuthToken)),
-			},
-		},
-	}
-}
-
-func getPromtailCAFile(ctx components.Context) *extensionsv1alpha1.File {
+func getPromtailCAFile(ctx components.Context) extensionsv1alpha1.File {
 	var cABundle []byte
 	if ctx.CABundle != nil {
 		cABundle = []byte(*ctx.CABundle)
 	}
-	return &extensionsv1alpha1.File{
-		Path:        PathPromtailCACert,
-		Permissions: pointer.Int32Ptr(0644),
+	return extensionsv1alpha1.File{
+		Path:        PathCACert,
+		Permissions: pointer.Int32(0644),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -178,10 +188,10 @@ func getPromtailCAFile(ctx components.Context) *extensionsv1alpha1.File {
 	}
 }
 
-func setActiveJournalFile(ctx components.Context) *extensionsv1alpha1.File {
-	return &extensionsv1alpha1.File{
+func setActiveJournalFile() extensionsv1alpha1.File {
+	return extensionsv1alpha1.File{
 		Path:        PathSetActiveJournalFileScript,
-		Permissions: pointer.Int32Ptr(0644),
+		Permissions: pointer.Int32(0644),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
@@ -191,12 +201,12 @@ func setActiveJournalFile(ctx components.Context) *extensionsv1alpha1.File {
 	}
 }
 
-func getPromtailUnit(execStartPre, execStartPreConfig, execStart string) *extensionsv1alpha1.Unit {
-	return &extensionsv1alpha1.Unit{
+func getPromtailUnit(execStartPre, execStartPreConfig, execStart string) extensionsv1alpha1.Unit {
+	return extensionsv1alpha1.Unit{
 		Name:    UnitName,
-		Command: pointer.StringPtr("start"),
-		Enable:  pointer.BoolPtr(true),
-		Content: pointer.StringPtr(`[Unit]
+		Command: pointer.String("start"),
+		Enable:  pointer.Bool(true),
+		Content: pointer.String(`[Unit]
 Description=promtail daemon
 Documentation=https://grafana.com/docs/loki/latest/clients/promtail/
 [Install]
@@ -216,5 +226,58 @@ EnvironmentFile=/etc/environment
 ExecStartPre=` + execStartPre + `
 ExecStartPre=` + execStartPreConfig + `
 ExecStart=` + execStart),
+	}
+}
+
+func getFetchTokenScriptFile() (extensionsv1alpha1.File, error) {
+	var script bytes.Buffer
+	if err := tplFetchToken.Execute(&script, map[string]interface{}{
+		"pathCredentialsToken":  downloader.PathCredentialsToken,
+		"pathCredentialsServer": downloader.PathCredentialsServer,
+		"pathCredentialsCACert": downloader.PathCredentialsCACert,
+		"pathAuthToken":         PathAuthToken,
+		"dataKeyToken":          resourcesv1alpha1.DataKeyToken,
+		"secretName":            logging.PromtailTokenSecretName,
+	}); err != nil {
+		return extensionsv1alpha1.File{}, err
+	}
+
+	return extensionsv1alpha1.File{
+		Path:        PathFetchTokenScript,
+		Permissions: pointer.Int32(0744),
+		Content: extensionsv1alpha1.FileContent{
+			Inline: &extensionsv1alpha1.FileContentInline{
+				Encoding: "b64",
+				Data:     utils.EncodeBase64(script.Bytes()),
+			},
+		},
+	}, nil
+}
+
+func getFetchTokenScriptUnit(execStartPre, execStart string) extensionsv1alpha1.Unit {
+	unitContent := `[Unit]
+Description=promtail token fetcher
+After=` + downloader.UnitName + `
+[Install]
+WantedBy=multi-user.target
+[Service]
+Restart=always
+RestartSec=300
+RuntimeMaxSec=120
+EnvironmentFile=/etc/environment`
+
+	if execStartPre != "" {
+		unitContent += `
+ExecStartPre=` + execStartPre
+	}
+
+	unitContent += `
+ExecStart=` + execStart
+
+	return extensionsv1alpha1.Unit{
+		Name:    unitNameFetchToken,
+		Command: pointer.String("start"),
+		Enable:  pointer.Bool(true),
+		Content: &unitContent,
 	}
 }

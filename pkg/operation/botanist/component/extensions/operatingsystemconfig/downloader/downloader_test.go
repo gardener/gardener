@@ -98,6 +98,7 @@ rules:
   - ` + secretName1 + `
   - ` + secretName2 + `
   - cloud-config-downloader
+  - gardener-promtail
   resources:
   - secrets
   verbs:

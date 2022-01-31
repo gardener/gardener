@@ -40,8 +40,7 @@ var _ = Describe("Promtail", func() {
 				Repository: promtailRepository,
 				Tag:        &promtailImageTag,
 			}
-			lokiIngress           = "ingress.loki.testClusterDomain"
-			promtailRBACAuthToken = "lkjnaojsnfs"
+			lokiIngress = "ingress.loki.testClusterDomain"
 		)
 
 		It("should return the expected units and files when shoot logging is enabled", func() {
@@ -51,8 +50,8 @@ var _ = Describe("Promtail", func() {
 				Images: map[string]*imagevector.Image{
 					charts.ImageNamePromtail: promtailImage,
 				},
-				LokiIngress:           lokiIngress,
-				PromtailRBACAuthToken: promtailRBACAuthToken,
+				LokiIngress:     lokiIngress,
+				PromtailEnabled: true,
 			}
 
 			conf := defaultConfig
@@ -67,9 +66,9 @@ var _ = Describe("Promtail", func() {
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
 					Name:    UnitName,
-					Command: pointer.StringPtr("start"),
-					Enable:  pointer.BoolPtr(true),
-					Content: pointer.StringPtr(`[Unit]
+					Command: pointer.String("start"),
+					Enable:  pointer.Bool(true),
+					Content: pointer.String(`[Unit]
 Description=promtail daemon
 Documentation=https://grafana.com/docs/loki/latest/clients/promtail/
 [Install]
@@ -88,13 +87,30 @@ RestartSec=5
 EnvironmentFile=/etc/environment
 ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh ` + promtailRepository + ":" + promtailImageTag + " -c " + "\"cp /usr/bin/promtail /opt/bin\"" + `
 ExecStartPre=/bin/sh ` + PathSetActiveJournalFileScript + `
-ExecStart=/opt/bin/promtail -config.file=` + PathPromtailConfig)},
+ExecStart=/opt/bin/promtail -config.file=` + PathConfig),
+				},
+				extensionsv1alpha1.Unit{
+					Name:    "promtail-fetch-token.service",
+					Command: pointer.String("start"),
+					Enable:  pointer.Bool(true),
+					Content: pointer.String(`[Unit]
+Description=promtail token fetcher
+After=cloud-config-downloader.service
+[Install]
+WantedBy=multi-user.target
+[Service]
+Restart=always
+RestartSec=300
+RuntimeMaxSec=120
+EnvironmentFile=/etc/environment
+ExecStart=/var/lib/promtail/scripts/fetch-token.sh`),
+				},
 			))
 
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{
-					Path:        PathPromtailConfig,
-					Permissions: pointer.Int32Ptr(0644),
+					Path:        "/var/lib/promtail/config/config",
+					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -103,18 +119,40 @@ ExecStart=/opt/bin/promtail -config.file=` + PathPromtailConfig)},
 					},
 				},
 				extensionsv1alpha1.File{
-					Path:        PathPromtailAuthToken,
-					Permissions: pointer.Int32Ptr(0644),
+					Path:        "/var/lib/promtail/scripts/fetch-token.sh",
+					Permissions: pointer.Int32(0744),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
-							Data:     utils.EncodeBase64([]byte(promtailRBACAuthToken)),
+							Data: utils.EncodeBase64([]byte(`#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+{
+if ! SECRET="$(wget \
+  -qO- \
+  --header         "Accept: application/yaml" \
+  --header         "Authorization: Bearer $(cat "/var/lib/cloud-config-downloader/credentials/token")" \
+  --ca-certificate "/var/lib/cloud-config-downloader/credentials/ca.crt" \
+  "$(cat "/var/lib/cloud-config-downloader/credentials/server")/api/v1/namespaces/kube-system/secrets/gardener-promtail")"; then
+
+  echo "Could not retrieve the promtail token secret"
+  exit 1
+fi
+
+echo "$SECRET" | sed -rn "s/  token: (.*)/\1/p" | base64 -d > "/var/lib/promtail/auth-token"
+
+exit $?
+}
+`)),
 						},
 					},
 				},
 				extensionsv1alpha1.File{
-					Path:        PathPromtailCACert,
-					Permissions: pointer.Int32Ptr(0644),
+					Path:        "/var/lib/promtail/ca.crt",
+					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -123,8 +161,8 @@ ExecStart=/opt/bin/promtail -config.file=` + PathPromtailConfig)},
 					},
 				},
 				extensionsv1alpha1.File{
-					Path:        PathSetActiveJournalFileScript,
-					Permissions: pointer.Int32Ptr(0644),
+					Path:        "/var/lib/promtail/scripts/set_active_journal_file.sh",
+					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -134,6 +172,7 @@ ExecStart=/opt/bin/promtail -config.file=` + PathPromtailConfig)},
 				},
 			))
 		})
+
 		It("should return the expected units and files when shoot logging is not enabled", func() {
 			ctx := components.Context{
 				CABundle:      &cABundle,
@@ -141,8 +180,8 @@ ExecStart=/opt/bin/promtail -config.file=` + PathPromtailConfig)},
 				Images: map[string]*imagevector.Image{
 					charts.ImageNamePromtail: promtailImage,
 				},
-				LokiIngress:           lokiIngress,
-				PromtailRBACAuthToken: "",
+				LokiIngress:     lokiIngress,
+				PromtailEnabled: false,
 			}
 
 			units, files, err := New().Config(ctx)
@@ -150,10 +189,10 @@ ExecStart=/opt/bin/promtail -config.file=` + PathPromtailConfig)},
 
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
-					Name:    UnitName,
-					Command: pointer.StringPtr("start"),
-					Enable:  pointer.BoolPtr(true),
-					Content: pointer.StringPtr(`[Unit]
+					Name:    "promtail.service",
+					Command: pointer.String("start"),
+					Enable:  pointer.Bool(true),
+					Content: pointer.String(`[Unit]
 Description=promtail daemon
 Documentation=https://grafana.com/docs/loki/latest/clients/promtail/
 [Install]
@@ -170,9 +209,27 @@ MemorySwapMax=0
 Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
-ExecStartPre=` + "/bin/systemctl disable " + UnitName + `
+ExecStartPre=/bin/systemctl disable promtail.service
 ExecStartPre=/bin/sh -c "echo 'service does not have configuration'"
-ExecStart=/bin/sh -c "echo service ` + UnitName + ` is removed!; while true; do sleep 86400; done"`)},
+ExecStart=/bin/sh -c "echo service promtail.service is removed!; while true; do sleep 86400; done"`),
+				},
+				extensionsv1alpha1.Unit{
+					Name:    "promtail-fetch-token.service",
+					Command: pointer.String("start"),
+					Enable:  pointer.Bool(true),
+					Content: pointer.String(`[Unit]
+Description=promtail token fetcher
+After=cloud-config-downloader.service
+[Install]
+WantedBy=multi-user.target
+[Service]
+Restart=always
+RestartSec=300
+RuntimeMaxSec=120
+EnvironmentFile=/etc/environment
+ExecStartPre=/bin/systemctl disable promtail-fetch-token.service
+ExecStart=/bin/sh -c "rm -f /var/lib/promtail/auth-token; echo service promtail-fetch-token.service is removed!; while true; do sleep 86400; done"`),
+				},
 			))
 
 			Expect(files).To(BeNil())
@@ -185,12 +242,12 @@ ExecStart=/bin/sh -c "echo service ` + UnitName + ` is removed!; while true; do 
 				Images: map[string]*imagevector.Image{
 					charts.ImageNamePromtail: promtailImage,
 				},
-				LokiIngress:           "",
-				PromtailRBACAuthToken: promtailRBACAuthToken,
+				PromtailEnabled: true,
+				LokiIngress:     "",
 			}
 
 			units, files, err := New().Config(ctx)
-			Expect(err).ToNot(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("loki ingress url is missing")))
 			Expect(units).To(BeNil())
 			Expect(files).To(BeNil())
 		})

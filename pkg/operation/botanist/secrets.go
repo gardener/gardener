@@ -26,7 +26,6 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -189,12 +188,6 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 
 	if err := b.storeAPIServerHealthCheckToken(secretsManager.StaticToken); err != nil {
 		return err
-	}
-
-	if b.isShootNodeLoggingEnabled() {
-		if err := b.storePromtailRBACAuthToken(secretsManager.StaticToken); err != nil {
-			return err
-		}
 	}
 
 	for name, secret := range secretsManager.DeployedSecrets {
@@ -374,16 +367,6 @@ func (b *Botanist) storeAPIServerHealthCheckToken(staticToken *secretutils.Stati
 	}
 
 	b.APIServerHealthCheckToken = kubeAPIServerHealthCheckToken.Token
-	return nil
-}
-
-func (b *Botanist) storePromtailRBACAuthToken(staticToken *secretutils.StaticToken) error {
-	promtailRBACAuthToken, err := staticToken.GetTokenForUsername(logging.PromtailRBACName)
-	if err != nil {
-		return err
-	}
-
-	b.PromtailRBACAuthToken = promtailRBACAuthToken.Token
 	return nil
 }
 

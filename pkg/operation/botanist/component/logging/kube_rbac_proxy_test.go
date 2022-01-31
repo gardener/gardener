@@ -42,6 +42,7 @@ var _ = Describe("KubeRBACProxy", func() {
 		namespace           = "shoot--test--namespace"
 		managedResourceName = "shoot-node-logging"
 		kubeRBACProxyName   = "kube-rbac-proxy"
+		promtailName        = "gardener-promtail"
 	)
 
 	var (
@@ -54,12 +55,13 @@ var _ = Describe("KubeRBACProxy", func() {
 		kubeRBACProxyDeployer component.Deployer
 		kubeRBACProxyOptions  *Values
 
-		managedResourceSecretName  = managedresources.SecretName(managedResourceName, true)
-		shootAccessSecretName      = "shoot-access-kube-rbac-proxy"
-		legacyKubeconfigSecretName = "kube-rbac-proxy-kubeconfig"
+		managedResourceSecretName          = managedresources.SecretName(managedResourceName, true)
+		kubeRBACProxyShootAccessSecretName = "shoot-access-kube-rbac-proxy"
+		promtailShootAccessSecretName      = "shoot-access-promtail"
+		legacyKubeconfigSecretName         = "kube-rbac-proxy-kubeconfig"
 
 		kubeRBACProxyLabels = map[string]string{"app": kubeRBACProxyName}
-		promtailLabels      = map[string]string{"app": PromtailName}
+		promtailLabels      = map[string]string{"app": promtailName}
 		keepObjects         = false
 
 		legacyKubeconfigSecretToDelete *corev1.Secret
@@ -120,9 +122,10 @@ var _ = Describe("KubeRBACProxy", func() {
 
 	Describe("#Deploy", func() {
 		var (
-			managedResourceSecretToGet *corev1.Secret
-			managedResourceToGet       *resourcesv1alpha1.ManagedResource
-			shootAccessSecretToGet     *corev1.Secret
+			managedResourceSecretToGet          *corev1.Secret
+			managedResourceToGet                *resourcesv1alpha1.ManagedResource
+			kubeRBACProxyShootAccessSecretToGet *corev1.Secret
+			promtailShootAccessSecretToGet      *corev1.Secret
 		)
 
 		Context("Tests expecting a failure", func() {
@@ -136,9 +139,20 @@ var _ = Describe("KubeRBACProxy", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			It("should fail when the shoot token secret cannot be created", func() {
+			It("should fail when the kube-rbac-proxy shoot token secret cannot be created", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, shootAccessSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, kubeRBACProxyShootAccessSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Return(fakeErr),
+				)
+
+				Expect(kubeRBACProxyDeployer.Deploy(ctx)).To(MatchError(fakeErr))
+			})
+
+			It("should fail when the promtail shoot token secret cannot be created", func() {
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(namespace, kubeRBACProxyShootAccessSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, promtailShootAccessSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Return(fakeErr),
 				)
 
@@ -147,7 +161,9 @@ var _ = Describe("KubeRBACProxy", func() {
 
 			It("should fail when the managed resource secret cannot be created", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, shootAccessSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, kubeRBACProxyShootAccessSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, promtailShootAccessSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
@@ -156,9 +172,11 @@ var _ = Describe("KubeRBACProxy", func() {
 				Expect(kubeRBACProxyDeployer.Deploy(ctx)).To(MatchError(fakeErr))
 			})
 
-			It("should fail when the managedresource cannot be created", func() {
+			It("should fail when the managed resource cannot be created", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, shootAccessSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, kubeRBACProxyShootAccessSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, promtailShootAccessSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -178,8 +196,11 @@ var _ = Describe("KubeRBACProxy", func() {
 				managedResourceToGet = &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace},
 				}
-				shootAccessSecretToGet = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecretName, Namespace: namespace},
+				kubeRBACProxyShootAccessSecretToGet = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: kubeRBACProxyShootAccessSecretName, Namespace: namespace},
+				}
+				promtailShootAccessSecretToGet = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: promtailShootAccessSecretName, Namespace: namespace},
 				}
 			})
 
@@ -203,23 +224,24 @@ var _ = Describe("KubeRBACProxy", func() {
 
 				promtailClusterRoleBinding := &rbacv1.ClusterRoleBinding{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   PromtailRBACName,
+						Name:   "gardener.cloud:logging:promtail",
 						Labels: promtailLabels,
 					},
 					RoleRef: rbacv1.RoleRef{
 						APIGroup: rbacv1.GroupName,
 						Kind:     "ClusterRole",
-						Name:     PromtailRBACName,
+						Name:     "gardener.cloud:logging:promtail",
 					},
 					Subjects: []rbacv1.Subject{{
-						Kind: rbacv1.UserKind,
-						Name: PromtailRBACName,
+						Kind:      rbacv1.ServiceAccountKind,
+						Name:      "gardener-promtail",
+						Namespace: "kube-system",
 					}},
 				}
 
 				promtailClusterRole := &rbacv1.ClusterRole{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   PromtailRBACName,
+						Name:   "gardener.cloud:logging:promtail",
 						Labels: promtailLabels,
 					},
 					Rules: []rbacv1.PolicyRule{
@@ -289,9 +311,9 @@ var _ = Describe("KubeRBACProxy", func() {
 						KeepObjects: &keepObjects,
 					},
 				}
-				shootAccessSecretToPatch := &corev1.Secret{
+				kubeRBACProxyShootAccessSecretToPatch := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      shootAccessSecretName,
+						Name:      kubeRBACProxyShootAccessSecretName,
 						Namespace: namespace,
 						Annotations: map[string]string{
 							"serviceaccount.resources.gardener.cloud/name":      "kube-rbac-proxy",
@@ -303,12 +325,33 @@ var _ = Describe("KubeRBACProxy", func() {
 					},
 					Type: corev1.SecretTypeOpaque,
 				}
+				promtailShootAccessSecretToPatch := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      promtailShootAccessSecretName,
+						Namespace: namespace,
+						Annotations: map[string]string{
+							"serviceaccount.resources.gardener.cloud/name":                     "gardener-promtail",
+							"serviceaccount.resources.gardener.cloud/namespace":                "kube-system",
+							"token-requestor.resources.gardener.cloud/target-secret-name":      "gardener-promtail",
+							"token-requestor.resources.gardener.cloud/target-secret-namespace": "kube-system",
+						},
+						Labels: map[string]string{
+							"resources.gardener.cloud/purpose": "token-requestor",
+						},
+					},
+					Type: corev1.SecretTypeOpaque,
+				}
 
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, shootAccessSecretName), shootAccessSecretToGet),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, kubeRBACProxyShootAccessSecretName), kubeRBACProxyShootAccessSecretToGet),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(shootAccessSecretToPatch))
+							Expect(obj).To(DeepEqual(kubeRBACProxyShootAccessSecretToPatch))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, promtailShootAccessSecretName), promtailShootAccessSecretToGet),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(promtailShootAccessSecretToPatch))
 						}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), managedResourceSecretToGet),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).
@@ -330,9 +373,10 @@ var _ = Describe("KubeRBACProxy", func() {
 
 	Describe("#Destroy", func() {
 		var (
-			managedResourceSecretToDelete *corev1.Secret
-			managedResourceToDelete       *resourcesv1alpha1.ManagedResource
-			shootAccessSecretToDelete     *corev1.Secret
+			managedResourceSecretToDelete          *corev1.Secret
+			managedResourceToDelete                *resourcesv1alpha1.ManagedResource
+			kubeRBACProxyShootAccessSecretToDelete *corev1.Secret
+			promtailShootAccessSecretToDelete      *corev1.Secret
 		)
 
 		BeforeEach(func() {
@@ -342,8 +386,11 @@ var _ = Describe("KubeRBACProxy", func() {
 			managedResourceToDelete = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace},
 			}
-			shootAccessSecretToDelete = &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecretName, Namespace: namespace},
+			kubeRBACProxyShootAccessSecretToDelete = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: kubeRBACProxyShootAccessSecretName, Namespace: namespace},
+			}
+			promtailShootAccessSecretToDelete = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: promtailShootAccessSecretName, Namespace: namespace},
 			}
 		})
 
@@ -375,11 +422,22 @@ var _ = Describe("KubeRBACProxy", func() {
 				Expect(kubeRBACProxyDeployer.Destroy(ctx)).To(MatchError(fakeErr))
 			})
 
-			It("should fail when the shoot token secret cannot be deleted", func() {
+			It("should fail when the kube-rbac-proxy shoot access secret cannot be deleted", func() {
 				gomock.InOrder(
 					c.EXPECT().Delete(ctx, managedResourceToDelete),
 					c.EXPECT().Delete(ctx, managedResourceSecretToDelete),
-					c.EXPECT().Delete(ctx, shootAccessSecretToDelete).Return(fakeErr),
+					c.EXPECT().Delete(ctx, kubeRBACProxyShootAccessSecretToDelete).Return(fakeErr),
+				)
+
+				Expect(kubeRBACProxyDeployer.Destroy(ctx)).To(MatchError(fakeErr))
+			})
+
+			It("should fail when the promtail shoot access secret cannot be deleted", func() {
+				gomock.InOrder(
+					c.EXPECT().Delete(ctx, managedResourceToDelete),
+					c.EXPECT().Delete(ctx, managedResourceSecretToDelete),
+					c.EXPECT().Delete(ctx, kubeRBACProxyShootAccessSecretToDelete),
+					c.EXPECT().Delete(ctx, promtailShootAccessSecretToDelete).Return(fakeErr),
 				)
 
 				Expect(kubeRBACProxyDeployer.Destroy(ctx)).To(MatchError(fakeErr))
@@ -389,7 +447,8 @@ var _ = Describe("KubeRBACProxy", func() {
 				gomock.InOrder(
 					c.EXPECT().Delete(ctx, managedResourceToDelete),
 					c.EXPECT().Delete(ctx, managedResourceSecretToDelete),
-					c.EXPECT().Delete(ctx, shootAccessSecretToDelete),
+					c.EXPECT().Delete(ctx, kubeRBACProxyShootAccessSecretToDelete),
+					c.EXPECT().Delete(ctx, promtailShootAccessSecretToDelete),
 					c.EXPECT().Delete(ctx, legacyKubeconfigSecretToDelete).Return(fakeErr),
 				)
 
@@ -409,7 +468,8 @@ var _ = Describe("KubeRBACProxy", func() {
 				gomock.InOrder(
 					c.EXPECT().Delete(ctx, managedResourceToDelete),
 					c.EXPECT().Delete(ctx, managedResourceSecretToDelete),
-					c.EXPECT().Delete(ctx, shootAccessSecretToDelete),
+					c.EXPECT().Delete(ctx, kubeRBACProxyShootAccessSecretToDelete),
+					c.EXPECT().Delete(ctx, promtailShootAccessSecretToDelete),
 					c.EXPECT().Delete(ctx, legacyKubeconfigSecretToDelete),
 				)
 

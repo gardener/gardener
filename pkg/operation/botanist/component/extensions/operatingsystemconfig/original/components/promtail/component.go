@@ -27,22 +27,28 @@ import (
 
 const (
 	// UnitName is the name of the promtail service.
-	UnitName = v1beta1constants.OperatingSystemConfigUnitNamePromtailService
-	// PathPromtailDirectory is the path for the promtail's directory.
-	PathPromtailDirectory = "/var/lib/promtail"
-	// PathPromtailAuthToken is the path for the promtail authentication token,
-	// which is used to auth agains the Loki sidecar proxy.
-	PathPromtailAuthToken = PathPromtailDirectory + "/auth-token"
-	// PathPromtailConfig is the path for the promtail's configuration file.
-	PathPromtailConfig = v1beta1constants.OperatingSystemConfigFilePathPromtailConfig
-	// PathPromtailCACert is the path for the loki-tls certificate authority.
-	PathPromtailCACert = PathPromtailDirectory + "/ca.crt"
-	// PromtailServerPort is the promtail listening port.
-	PromtailServerPort = 3001
-	// PromtailPositionFile is the path for storing the scraped file offsets.
-	PromtailPositionFile = "/var/log/positions.yaml"
+	UnitName           = v1beta1constants.OperatingSystemConfigUnitNamePromtailService
+	unitNameFetchToken = "promtail-fetch-token.service"
+
+	// PathDirectory is the path for the promtail's directory.
+	PathDirectory = "/var/lib/promtail"
 	// PathSetActiveJournalFileScript is the path for the active journal file script.
-	PathSetActiveJournalFileScript = PathPromtailDirectory + "/scripts/set_active_journal_file.sh"
+	PathSetActiveJournalFileScript = PathDirectory + "/scripts/set_active_journal_file.sh"
+	// PathFetchTokenScript is the path to a script which fetches promtail's token for communication with the Loki
+	// sidecar proxy.
+	PathFetchTokenScript = PathDirectory + "/scripts/fetch-token.sh"
+	// PathAuthToken is the path for the file containing promtail's authentication token for communication with the Loki
+	// sidecar proxy.
+	PathAuthToken = PathDirectory + "/auth-token"
+	// PathConfig is the path for the promtail's configuration file.
+	PathConfig = v1beta1constants.OperatingSystemConfigFilePathPromtailConfig
+	// PathCACert is the path for the loki-tls certificate authority.
+	PathCACert = PathDirectory + "/ca.crt"
+
+	// ServerPort is the promtail listening port.
+	ServerPort = 3001
+	// PositionFile is the path for storing the scraped file offsets.
+	PositionFile = "/var/log/positions.yaml"
 )
 
 type component struct{}
@@ -61,14 +67,18 @@ func execStartPreCopyBinaryFromContainer(binaryName string, image *imagevector.I
 }
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	promtailAuthTokenFile := getPromtailAuthTokenFile(ctx)
-	if promtailAuthTokenFile == nil {
+	if !ctx.PromtailEnabled {
 		return []extensionsv1alpha1.Unit{
-			*getPromtailUnit(
+			getPromtailUnit(
 				"/bin/systemctl disable "+UnitName,
-				"/bin/sh -c \"echo 'service does not have configuration'\"",
-				fmt.Sprintf("/bin/sh -c \"echo service %s is removed!; while true; do sleep 86400; done\"", UnitName),
-			)}, nil, nil
+				`/bin/sh -c "echo 'service does not have configuration'"`,
+				fmt.Sprintf(`/bin/sh -c "echo service %s is removed!; while true; do sleep 86400; done"`, UnitName),
+			),
+			getFetchTokenScriptUnit(
+				"/bin/systemctl disable "+unitNameFetchToken,
+				fmt.Sprintf(`/bin/sh -c "rm -f `+PathAuthToken+`; echo service %s is removed!; while true; do sleep 86400; done"`, unitNameFetchToken),
+			),
+		}, nil, nil
 	}
 
 	promtailConfigFile, err := getPromtailConfigurationFile(ctx)
@@ -76,20 +86,26 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		return nil, nil, err
 	}
 
-	promtailCAFile := getPromtailCAFile(ctx)
-
-	setActiveJournalFile := setActiveJournalFile(ctx)
+	fetchTokenScriptFile, err := getFetchTokenScriptFile()
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return []extensionsv1alpha1.Unit{
-			*getPromtailUnit(
+			getPromtailUnit(
 				execStartPreCopyBinaryFromContainer("promtail", ctx.Images[charts.ImageNamePromtail]),
 				"/bin/sh "+PathSetActiveJournalFileScript,
-				v1beta1constants.OperatingSystemConfigFilePathBinaries+`/promtail -config.file=`+PathPromtailConfig),
+				v1beta1constants.OperatingSystemConfigFilePathBinaries+`/promtail -config.file=`+PathConfig,
+			),
+			getFetchTokenScriptUnit(
+				"",
+				PathFetchTokenScript,
+			),
 		},
 		[]extensionsv1alpha1.File{
-			*promtailConfigFile,
-			*promtailAuthTokenFile,
-			*promtailCAFile,
-			*setActiveJournalFile,
+			promtailConfigFile,
+			fetchTokenScriptFile,
+			getPromtailCAFile(ctx),
+			setActiveJournalFile(),
 		}, nil
 }

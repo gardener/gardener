@@ -60,16 +60,15 @@ var _ = Describe("operatingsystemconfig", func() {
 		fakeErr    = fmt.Errorf("fake")
 		shootState = &gardencorev1alpha1.ShootState{}
 
-		apiServerAddress      = "1.2.3.4"
-		ca                    = []byte("ca")
-		caKubelet             = []byte("ca-kubelet")
-		caCloudProfile        = "ca-cloud-profile"
-		shootDomain           = "shoot.domain.com"
-		sshPublicKey          = []byte("ssh-public-key")
-		sshPublicKeyOld       = []byte("ssh-public-key-old")
-		kubernetesVersion     = "1.2.3"
-		promtailRBACAuthToken = "supersecrettoken"
-		ingressDomain         = "seed-test.ingress.domain.com"
+		apiServerAddress  = "1.2.3.4"
+		ca                = []byte("ca")
+		caKubelet         = []byte("ca-kubelet")
+		caCloudProfile    = "ca-cloud-profile"
+		shootDomain       = "shoot.domain.com"
+		sshPublicKey      = []byte("ssh-public-key")
+		sshPublicKeyOld   = []byte("ssh-public-key-old")
+		kubernetesVersion = "1.2.3"
+		ingressDomain     = "seed-test.ingress.domain.com"
 	)
 
 	BeforeEach(func() {
@@ -160,7 +159,6 @@ var _ = Describe("operatingsystemconfig", func() {
 
 			It("should deploy successfully shoot logging components with non testing purpose", func() {
 				botanist.Shoot.Purpose = "development"
-				botanist.PromtailRBACAuthToken = promtailRBACAuthToken
 				botanist.Config = &config.GardenletConfiguration{
 					Logging: &config.Logging{
 						ShootNodeLogging: &config.ShootNodeLogging{
@@ -170,8 +168,6 @@ var _ = Describe("operatingsystemconfig", func() {
 				}
 				Expect(gardenletfeatures.FeatureGate.SetFromMap(map[string]bool{string(features.Logging): true})).To(Succeed())
 				operatingSystemConfig.EXPECT().SetCABundle(pointer.StringPtr("\n" + string(ca)))
-				operatingSystemConfig.EXPECT().SetPromtailRBACAuthToken(promtailRBACAuthToken)
-				operatingSystemConfig.EXPECT().SetLokiIngressHostName(botanist.ComputeLokiHost())
 
 				operatingSystemConfig.EXPECT().Deploy(ctx)
 				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())

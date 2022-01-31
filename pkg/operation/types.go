@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
-	prometheusclient "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -78,9 +77,7 @@ type Operation struct {
 	APIServerAddress          string
 	APIServerClusterIP        string
 	APIServerHealthCheckToken string
-	PromtailRBACAuthToken     string
 	SeedNamespaceObject       *corev1.Namespace
-	MonitoringClient          prometheusclient.API
 	ExposureClassHandler      *config.ExposureClassHandler
 
 	// ControlPlaneWildcardCert is a wildcard tls certificate which is issued for the seed's ingress domain.
