@@ -99,7 +99,11 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 					}
 				}
 			} else {
-				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList, vpnseedserver.DeploymentName, vpnseedserver.VpnShootSecretName, vpnseedserver.VpnSeedServerTLSAuth); err != nil {
+				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList,
+					vpnseedserver.DeploymentName,
+					vpnseedserver.VpnShootSecretName,
+					vpnseedserver.VpnSeedServerTLSAuth,
+					kubeapiserver.SecretNameHTTPProxy); err != nil {
 					return err
 				}
 			}
