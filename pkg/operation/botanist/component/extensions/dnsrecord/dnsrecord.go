@@ -134,11 +134,7 @@ func (c *dnsRecord) Deploy(ctx context.Context) error {
 }
 
 func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, c.secret, func() error {
-		c.secret.Type = corev1.SecretTypeOpaque
-		c.secret.Data = c.values.SecretData
-		return nil
-	}); err != nil {
+	if err := c.deploySecret(ctx); err != nil {
 		return nil, err
 	}
 
@@ -201,6 +197,15 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 	return c.dnsRecord, nil
 }
 
+func (c *dnsRecord) deploySecret(ctx context.Context) error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, c.secret, func() error {
+		c.secret.Type = corev1.SecretTypeOpaque
+		c.secret.Data = c.values.SecretData
+		return nil
+	})
+	return err
+}
+
 // Restore uses the seed client and the ShootState to create the DNSRecord resource and restore its state.
 func (c *dnsRecord) Restore(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
 	return extensions.RestoreExtensionWithDeployFunction(
@@ -223,6 +228,10 @@ func (c *dnsRecord) Migrate(ctx context.Context) error {
 
 // Destroy deletes the DNSRecord resource.
 func (c *dnsRecord) Destroy(ctx context.Context) error {
+	if err := c.deploySecret(ctx); err != nil {
+		return err
+	}
+
 	return extensions.DeleteExtensionObject(
 		ctx,
 		c.client,

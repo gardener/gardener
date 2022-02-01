@@ -372,6 +372,41 @@ var _ = Describe("DNSRecord", func() {
 	})
 
 	Describe("#Destroy", func() {
+		It("should update the DNSRecord secret", func() {
+			dns := &extensionsv1alpha1.DNSRecord{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+					Annotations: map[string]string{
+						"confirmation.gardener.cloud/deletion": "true",
+						v1beta1constants.GardenerTimestamp:     now.UTC().String(),
+					},
+				},
+			}
+
+			mc := mockclient.NewMockClient(ctrl)
+			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(secret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret) error {
+					s.Data = map[string][]byte{
+						"baz": []byte("bar"),
+					}
+					return nil
+				})
+			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, s *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
+					Expect(s.Name).To(Equal(secret.Name))
+					Expect(s.Namespace).To(Equal(secret.Namespace))
+					Expect(s.Type).To(Equal(secret.Type))
+					Expect(s.Data).To(Equal(secret.Data))
+					return nil
+				})
+			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{}), gomock.Any())
+			mc.EXPECT().Delete(ctx, dns)
+
+			dnsRecord := dnsrecord.New(log, mc, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
+			Expect(dnsRecord.Destroy(ctx)).To(Succeed())
+		})
+
 		It("should succeed if the resource does not exist", func() {
 			Expect(dnsRecord.Destroy(ctx)).To(Succeed())
 		})
@@ -397,6 +432,8 @@ var _ = Describe("DNSRecord", func() {
 			}
 
 			mc := mockclient.NewMockClient(ctrl)
+			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(secret), gomock.AssignableToTypeOf(&corev1.Secret{}))
+			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any())
 			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{}), gomock.Any())
 			mc.EXPECT().Delete(ctx, dns).Return(testErr)
 
