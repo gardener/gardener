@@ -18,13 +18,22 @@ package v1alpha1
 import (
 	"fmt"
 
-	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/conversion"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 )
+
+var quotaDecoder runtime.Decoder
+
+func init() {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(corev1.AddToScheme(scheme))
+	quotaDecoder = serializer.NewCodecFactory(scheme).UniversalDecoder(corev1.SchemeGroupVersion)
+}
 
 func Convert_v1alpha1_QuotaConfiguration_To_config_QuotaConfiguration(in *QuotaConfiguration, out *config.QuotaConfiguration, s conversion.Scope) error {
 	err := autoConvert_v1alpha1_QuotaConfiguration_To_config_QuotaConfiguration(in, out, s)
@@ -33,7 +42,7 @@ func Convert_v1alpha1_QuotaConfiguration_To_config_QuotaConfiguration(in *QuotaC
 	}
 
 	if out.Config != nil {
-		quotaObj, gvk, err := serializer.NewCodecFactory(kubernetesscheme.Scheme).UniversalDecoder(corev1.SchemeGroupVersion).Decode(in.Config.Raw, nil, nil)
+		quotaObj, gvk, err := quotaDecoder.Decode(in.Config.Raw, nil, nil)
 		if err != nil {
 			return err
 		}
