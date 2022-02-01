@@ -41,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
 // RespectShootSyncPeriodOverwrite checks whether to respect the sync period overwrite of a Shoot or not.
@@ -133,20 +134,20 @@ func SyncPeriodOfShoot(respectSyncPeriodOverwrite bool, defaultMinSyncPeriod tim
 // of a maintenance time window to use a best-effort kind of finishing the operation before the end.
 // Generally, we can't make sure that the maintenance operation is done by the end of the time window anyway (considering large
 // clusters with hundreds of nodes, a rolling update will take several hours).
-func EffectiveMaintenanceTimeWindow(timeWindow *utils.MaintenanceTimeWindow) *utils.MaintenanceTimeWindow {
+func EffectiveMaintenanceTimeWindow(timeWindow *timewindow.MaintenanceTimeWindow) *timewindow.MaintenanceTimeWindow {
 	return timeWindow.WithEnd(timeWindow.End().Add(0, -15, 0))
 }
 
 // EffectiveShootMaintenanceTimeWindow returns the effective MaintenanceTimeWindow of the given Shoot.
-func EffectiveShootMaintenanceTimeWindow(shoot *v1beta1.Shoot) *utils.MaintenanceTimeWindow {
+func EffectiveShootMaintenanceTimeWindow(shoot *v1beta1.Shoot) *timewindow.MaintenanceTimeWindow {
 	maintenance := shoot.Spec.Maintenance
 	if maintenance == nil || maintenance.TimeWindow == nil {
-		return utils.AlwaysTimeWindow
+		return timewindow.AlwaysTimeWindow
 	}
 
-	timeWindow, err := utils.ParseMaintenanceTimeWindow(maintenance.TimeWindow.Begin, maintenance.TimeWindow.End)
+	timeWindow, err := timewindow.ParseMaintenanceTimeWindow(maintenance.TimeWindow.Begin, maintenance.TimeWindow.End)
 	if err != nil {
-		return utils.AlwaysTimeWindow
+		return timewindow.AlwaysTimeWindow
 	}
 
 	return EffectiveMaintenanceTimeWindow(timeWindow)

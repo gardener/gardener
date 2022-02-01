@@ -12,10 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate ../hack/generate-imagename-constants.sh
-package charts
+//go:generate ../../../hack/generate-imagename-constants.sh images ../../../charts/images.yaml
 
-const (
-	// Path is the path to the charts directory.
-	Path = "charts"
-)
+// Package images contains constants for image names in the image vector.
+package images

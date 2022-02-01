@@ -289,7 +289,7 @@ var _ = Describe("addons", func() {
 						Type: externalProvider,
 					},
 					SecretRef: corev1.SecretReference{
-						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + DNSExternalName,
+						Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName,
 						Namespace: seedNamespace,
 					},
 					Zone:       pointer.String(externalZone),
@@ -301,7 +301,7 @@ var _ = Describe("addons", func() {
 			}))
 
 			secret := &corev1.Secret{}
-			err = client.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + DNSExternalName, Namespace: seedNamespace}, secret)
+			err = client.Get(ctx, types.NamespacedName{Name: DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName, Namespace: seedNamespace}, secret)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(secret).To(DeepDerivativeEqual(&corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
@@ -309,7 +309,7 @@ var _ = Describe("addons", func() {
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            DNSRecordSecretPrefix + "-" + shootName + "-" + DNSExternalName,
+					Name:            DNSRecordSecretPrefix + "-" + shootName + "-" + v1beta1constants.DNSRecordExternalName,
 					Namespace:       seedNamespace,
 					ResourceVersion: "1",
 				},

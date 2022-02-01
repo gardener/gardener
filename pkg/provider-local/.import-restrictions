@@ -1,0 +1,5 @@
+rules:
+# override pkg/ import restriction on extensions/ for provider-local
+- selectorRegexp: github[.]com/gardener/gardener/extensions
+  allowedPrefixes:
+  - github.com/gardener/gardener/extensions/pkg

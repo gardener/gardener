@@ -19,10 +19,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-
-	"github.com/gardener/gardener/pkg/logger"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -187,11 +184,11 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 	}
 
 	if obj.LogLevel == "" {
-		obj.LogLevel = logger.InfoLevel
+		obj.LogLevel = LogLevelInfo
 	}
 
 	if obj.LogFormat == "" {
-		obj.LogFormat = logger.FormatJSON
+		obj.LogFormat = LogFormatJSON
 	}
 
 	if obj.LeaderElection == nil {
@@ -212,7 +209,9 @@ func SetDefaults_ClientConnectionConfiguration(obj *componentbaseconfigv1alpha1.
 // SetDefaults_LeaderElectionConfiguration sets defaults for the leader election of the Gardener controller manager.
 func SetDefaults_LeaderElectionConfiguration(obj *componentbaseconfigv1alpha1.LeaderElectionConfiguration) {
 	if obj.ResourceLock == "" {
-		obj.ResourceLock = resourcelock.LeasesResourceLock
+		// Don't use a constant from the client-go resourcelock package here (resourcelock is not an API package, pulls
+		// in some other dependencies and is thereby not suitable to be used in this API package).
+		obj.ResourceLock = "leases"
 	}
 
 	componentbaseconfigv1alpha1.RecommendedDefaultLeaderElectionConfiguration(obj)

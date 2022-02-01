@@ -155,3 +155,9 @@ func (c *Controller) Run(ctx context.Context, workers, migrationWorkers int) {
 
 	waitGroup.Wait()
 }
+
+// IsBackupEntryManagedByThisGardenlet checks if the given BackupEntry is managed by this gardenlet by comparing it with the seed name from the GardenletConfiguration.
+func IsBackupEntryManagedByThisGardenlet(backupEntry *gardencorev1beta1.BackupEntry, gc *config.GardenletConfiguration) bool {
+	seedName := confighelper.SeedNameFromSeedConfig(gc.SeedConfig)
+	return backupEntry.Spec.SeedName != nil && *backupEntry.Spec.SeedName == seedName
+}

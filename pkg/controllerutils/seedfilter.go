@@ -22,8 +22,6 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -70,13 +68,6 @@ func ShootMigrationFilterFunc(ctx context.Context, c client.Reader, seedName str
 
 		return ShootIsBeingMigratedToSeed(ctx, c, shoot, seedName)
 	}
-}
-
-// ShootIsManagedByThisGardenlet checks if the given shoot is managed by this gardenlet by comparing it with the seed name from the GardenletConfiguration.
-func ShootIsManagedByThisGardenlet(shoot *gardencorev1beta1.Shoot, gc *config.GardenletConfiguration) bool {
-	seedName := confighelper.SeedNameFromSeedConfig(gc.SeedConfig)
-
-	return shoot.Spec.SeedName != nil && *shoot.Spec.SeedName == seedName
 }
 
 // ShootIsBeingMigratedToSeed checks if the given shoot is currently being migrated to the seed with the given name,
@@ -150,13 +141,6 @@ func BackupEntryMigrationFilterFunc(ctx context.Context, c client.Reader, seedNa
 	}
 }
 
-// BackupEntryIsManagedByThisGardenlet checks if the given BackupEntry is managed by this gardenlet by comparing it with the seed name from the GardenletConfiguration.
-func BackupEntryIsManagedByThisGardenlet(backupEntry *gardencorev1beta1.BackupEntry, gc *config.GardenletConfiguration) bool {
-	seedName := confighelper.SeedNameFromSeedConfig(gc.SeedConfig)
-
-	return backupEntry.Spec.SeedName != nil && *backupEntry.Spec.SeedName == seedName
-}
-
 // BackupEntryIsBeingMigratedToSeed checks if the given BackupEntry is currently being migrated to the seed with the given name,
 // and the source seed has ownerChecks enabled (as it is a prerequisite to successfully force restore a shoot to a different seed).
 func BackupEntryIsBeingMigratedToSeed(ctx context.Context, c client.Reader, backupEntry *gardencorev1beta1.BackupEntry, seedName string) bool {
@@ -183,13 +167,6 @@ func BastionFilterFunc(seedName string) func(obj interface{}) bool {
 
 		return *bastion.Spec.SeedName == seedName
 	}
-}
-
-// BastionIsManagedByThisGardenlet checks if the given Bastion is managed by this gardenlet by comparing it with the seed name from the GardenletConfiguration.
-func BastionIsManagedByThisGardenlet(bastion *operationsv1alpha1.Bastion, gc *config.GardenletConfiguration) bool {
-	seedName := confighelper.SeedNameFromSeedConfig(gc.SeedConfig)
-
-	return bastion.Spec.SeedName != nil && *bastion.Spec.SeedName == seedName
 }
 
 // ManagedSeedFilterFunc returns a filtering func for ManagedSeeds that checks if the ManagedSeed references a Shoot scheduled on a Seed, for which the gardenlet is responsible..

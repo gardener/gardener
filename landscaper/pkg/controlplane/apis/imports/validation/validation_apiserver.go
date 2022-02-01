@@ -19,7 +19,8 @@ import (
 
 	"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports"
 	gardencorevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
-	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/timewindow"
+
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	landscaperv1alpha1 "github.com/gardener/landscaper/apis/core/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -393,10 +394,10 @@ func ValidateHVPA(hvpa *imports.HVPAConfiguration, fldPath *field.Path) field.Er
 
 	if hvpa.MaintenanceTimeWindow != nil {
 		fldMaintenance := fldPath.Child("maintenanceTimeWindow")
-		if _, err := utils.ParseMaintenanceTime(hvpa.MaintenanceTimeWindow.Begin); err != nil {
+		if _, err := timewindow.ParseMaintenanceTime(hvpa.MaintenanceTimeWindow.Begin); err != nil {
 			allErrs = append(allErrs, field.Invalid(fldMaintenance.Child("begin"), hvpa.MaintenanceTimeWindow.Begin, err.Error()))
 		}
-		if _, err := utils.ParseMaintenanceTime(hvpa.MaintenanceTimeWindow.End); err != nil {
+		if _, err := timewindow.ParseMaintenanceTime(hvpa.MaintenanceTimeWindow.End); err != nil {
 			allErrs = append(allErrs, field.Invalid(fldMaintenance.Child("end"), hvpa.MaintenanceTimeWindow.End, err.Error()))
 		}
 	}

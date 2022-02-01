@@ -93,8 +93,11 @@
 
 ## Development
 
-* [Setting up a local development environment](development/local_setup.md)
-* [Unit Testing and Dependency Management](development/testing_and_dependencies.md)
+* [Getting started locally (using the local provider)](development/getting_started_locally.md)
+* [Setting up a development environment (using a cloud provider)](development/local_setup.md)
+* [Testing (Unit, Integration, E2E Tests)](development/testing.md)
+* [Test Machinery Tests](development/testmachinery_tests.md)
+* [Dependency Management](development/dependencies.md)
 * [Kubernetes Clients in Gardener](development/kubernetes-clients.md)
 * [Logging in Gardener Components](development/logging.md)
 * [Changing the API](development/changing-the-api.md)
@@ -142,10 +145,6 @@
 * [Extending project roles](extensions/project-roles.md)
 * [Referenced resources](extensions/referenced-resources.md)
 * [Control plane migration](extensions/migration.md)
-
-## Testing
-
-* [Integration Testing Manual](testing/integration_tests.md)
 
 ## Deployment
 

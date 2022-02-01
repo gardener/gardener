@@ -19,7 +19,7 @@ import (
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/timewindow"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	corev1 "k8s.io/api/core/v1"
@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
 )
 
@@ -291,7 +290,7 @@ func SetDefaults_Maintenance(obj *Maintenance) {
 	}
 
 	if obj.TimeWindow == nil {
-		mt := utils.RandomMaintenanceTimeWindow()
+		mt := timewindow.RandomMaintenanceTimeWindow()
 		obj.TimeWindow = &MaintenanceTimeWindow{
 			Begin: mt.Begin().Formatted(),
 			End:   mt.End().Formatted(),
@@ -422,16 +421,16 @@ func calculateDefaultNodeCIDRMaskSize(kubelet *KubeletConfig, workers []Worker) 
 }
 
 func addTolerations(tolerations *[]Toleration, additionalTolerations ...Toleration) {
-	existingTolerations := sets.NewString()
+	existingTolerations := map[Toleration]struct{}{}
 	for _, toleration := range *tolerations {
-		existingTolerations.Insert(utils.IDForKeyWithOptionalValue(toleration.Key, toleration.Value))
+		existingTolerations[toleration] = struct{}{}
 	}
 
 	for _, toleration := range additionalTolerations {
-		if existingTolerations.Has(toleration.Key) {
+		if _, ok := existingTolerations[Toleration{Key: toleration.Key}]; ok {
 			continue
 		}
-		if existingTolerations.Has(utils.IDForKeyWithOptionalValue(toleration.Key, toleration.Value)) {
+		if _, ok := existingTolerations[toleration]; ok {
 			continue
 		}
 		*tolerations = append(*tolerations, toleration)

@@ -155,3 +155,9 @@ func (c *Controller) bastionDelete(obj interface{}) {
 	}
 	c.bastionQueue.Add(key)
 }
+
+// IsBastionManagedByThisGardenlet checks if the given Bastion is managed by this gardenlet by comparing it with the seed name from the GardenletConfiguration.
+func IsBastionManagedByThisGardenlet(bastion *operationsv1alpha1.Bastion, gc *config.GardenletConfiguration) bool {
+	seedName := confighelper.SeedNameFromSeedConfig(gc.SeedConfig)
+	return bastion.Spec.SeedName != nil && *bastion.Spec.SeedName == seedName
+}

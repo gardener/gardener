@@ -17,9 +17,9 @@ package botanist
 import (
 	"context"
 
-	"github.com/gardener/gardener/charts"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
+	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	"k8s.io/utils/pointer"
@@ -27,7 +27,7 @@ import (
 
 // DefaultMetricsServer returns a deployer for the metrics-server.
 func (b *Botanist) DefaultMetricsServer() (metricsserver.Interface, error) {
-	image, err := b.ImageVector.FindImage(charts.ImageNameMetricsServer, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	image, err := b.ImageVector.FindImage(images.ImageNameMetricsServer, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

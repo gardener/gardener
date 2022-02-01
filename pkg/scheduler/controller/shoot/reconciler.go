@@ -37,8 +37,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// MsgUnschedulable is the Message for the Event on a Shoot that the Scheduler creates in case it cannot schedule the Shoot to any Seed
-const MsgUnschedulable = "Failed to schedule shoot"
+// msgUnschedulable is the Message for the Event on a Shoot that the Scheduler creates in case it cannot schedule the Shoot to any Seed
+const msgUnschedulable = "Failed to schedule shoot"
 
 type reconciler struct {
 	config       *config.ShootSchedulerConfiguration
@@ -96,7 +96,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *reconciler) reportFailedScheduling(shoot *gardencorev1beta1.Shoot, err error) {
-	r.reportEvent(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootEventSchedulingFailed, MsgUnschedulable+" '%s': %+v", shoot.Name, err)
+	r.reportEvent(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootEventSchedulingFailed, msgUnschedulable+" '%s': %+v", shoot.Name, err)
 }
 
 func (r *reconciler) reportEvent(shoot *gardencorev1beta1.Shoot, eventType string, eventReason, messageFmt string, args ...interface{}) {

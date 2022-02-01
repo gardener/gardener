@@ -32,6 +32,7 @@ import (
 	extensionsdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -143,7 +144,7 @@ func (b *Botanist) NeedsIngressDNS() bool {
 func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
 		Name:       b.Shoot.GetInfo().Name + "-" + common.ShootDNSIngressName,
-		SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + DNSExternalName,
+		SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
 		Namespace:  b.Shoot.SeedNamespace,
 		TTL:        b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 	}
@@ -370,7 +371,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			return nil, err
 		}
 
-		image, err := b.ImageVector.FindImage(charts.ImageNameKubeProxy, imagevector.RuntimeVersion(kubernetesVersion.String()), imagevector.TargetVersion(kubernetesVersion.String()))
+		image, err := b.ImageVector.FindImage(images.ImageNameKubeProxy, imagevector.RuntimeVersion(kubernetesVersion.String()), imagevector.TargetVersion(kubernetesVersion.String()))
 		if err != nil {
 			return nil, err
 		}
@@ -391,7 +392,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			continue
 		}
 
-		image, err := b.ImageVector.FindImage(charts.ImageNameKubeProxy, imagevector.RuntimeVersion(kubernetesVersion), imagevector.TargetVersion(kubernetesVersion))
+		image, err := b.ImageVector.FindImage(images.ImageNameKubeProxy, imagevector.RuntimeVersion(kubernetesVersion), imagevector.TargetVersion(kubernetesVersion))
 		if err != nil {
 			return nil, err
 		}
@@ -404,7 +405,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 
 	// TODO(rfranzke): Delete this in a future version.
 	{
-		kubeProxyImage, err := b.ImageVector.FindImage(charts.ImageNameKubeProxy, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+		kubeProxyImage, err := b.ImageVector.FindImage(images.ImageNameKubeProxy, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 		if err != nil {
 			return nil, err
 		}
@@ -434,16 +435,16 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	}
 	shootInfo["extensions"] = strings.Join(extensions, ",")
 
-	kubeProxy, err := b.InjectShootShootImages(kubeProxyConfig, charts.ImageNameAlpine)
+	kubeProxy, err := b.InjectShootShootImages(kubeProxyConfig, images.ImageNameAlpine)
 	if err != nil {
 		return nil, err
 	}
 
-	nodeExporter, err := b.InjectShootShootImages(nodeExporterConfig, charts.ImageNameNodeExporter)
+	nodeExporter, err := b.InjectShootShootImages(nodeExporterConfig, images.ImageNameNodeExporter)
 	if err != nil {
 		return nil, err
 	}
-	blackboxExporter, err := b.InjectShootShootImages(blackboxExporterConfig, charts.ImageNameBlackboxExporter)
+	blackboxExporter, err := b.InjectShootShootImages(blackboxExporterConfig, images.ImageNameBlackboxExporter)
 	if err != nil {
 		return nil, err
 	}
@@ -460,7 +461,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		"podMutatorEnabled": b.APIServerSNIPodMutatorEnabled(),
 	}
 
-	apiserverProxy, err := b.InjectShootShootImages(apiserverProxyConfig, charts.ImageNameApiserverProxySidecar, charts.ImageNameApiserverProxy)
+	apiserverProxy, err := b.InjectShootShootImages(apiserverProxyConfig, images.ImageNameApiserverProxySidecar, images.ImageNameApiserverProxy)
 	if err != nil {
 		return nil, err
 	}
@@ -504,8 +505,8 @@ func (b *Botanist) generateOptionalAddonsChart(_ context.Context) (*chartrendere
 		return nil, err
 	}
 	kubernetesDashboardImagesToInject := []string{
-		charts.ImageNameKubernetesDashboard,
-		charts.ImageNameKubernetesDashboardMetricsScraper,
+		images.ImageNameKubernetesDashboard,
+		images.ImageNameKubernetesDashboardMetricsScraper,
 	}
 
 	kubernetesDashboard, err := b.InjectShootShootImages(kubernetesDashboardConfig, kubernetesDashboardImagesToInject...)
@@ -517,7 +518,7 @@ func (b *Botanist) generateOptionalAddonsChart(_ context.Context) (*chartrendere
 	if err != nil {
 		return nil, err
 	}
-	nginxIngress, err := b.InjectShootShootImages(nginxIngressConfig, charts.ImageNameNginxIngressController, charts.ImageNameIngressDefaultBackend)
+	nginxIngress, err := b.InjectShootShootImages(nginxIngressConfig, images.ImageNameNginxIngressController, images.ImageNameIngressDefaultBackend)
 	if err != nil {
 		return nil, err
 	}

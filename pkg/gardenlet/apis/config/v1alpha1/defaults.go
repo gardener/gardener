@@ -18,14 +18,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/logger"
-
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
 )
@@ -99,12 +96,12 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 	}
 
 	if obj.LogLevel == nil {
-		v := DefaultLogLevel
+		v := LogLevelInfo
 		obj.LogLevel = &v
 	}
 
 	if obj.LogFormat == nil {
-		v := logger.FormatJSON
+		v := LogFormatJSON
 		obj.LogFormat = &v
 	}
 
@@ -166,7 +163,9 @@ func SetDefaults_ClientConnectionConfiguration(obj *componentbaseconfigv1alpha1.
 // SetDefaults_LeaderElectionConfiguration sets defaults for the leader election of the gardenlet.
 func SetDefaults_LeaderElectionConfiguration(obj *componentbaseconfigv1alpha1.LeaderElectionConfiguration) {
 	if obj.ResourceLock == "" {
-		obj.ResourceLock = resourcelock.LeasesResourceLock
+		// Don't use a constant from the client-go resourcelock package here (resourcelock is not an API package, pulls
+		// in some other dependencies and is thereby not suitable to be used in this API package).
+		obj.ResourceLock = "leases"
 	}
 
 	componentbaseconfigv1alpha1.RecommendedDefaultLeaderElectionConfiguration(obj)

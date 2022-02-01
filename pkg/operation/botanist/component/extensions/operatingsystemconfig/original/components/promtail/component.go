@@ -17,11 +17,11 @@ package promtail
 import (
 	"fmt"
 
-	"github.com/gardener/gardener/charts"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker"
+	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
@@ -93,7 +93,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 
 	return []extensionsv1alpha1.Unit{
 			getPromtailUnit(
-				execStartPreCopyBinaryFromContainer("promtail", ctx.Images[charts.ImageNamePromtail]),
+				execStartPreCopyBinaryFromContainer("promtail", ctx.Images[images.ImageNamePromtail]),
 				"/bin/sh "+PathSetActiveJournalFileScript,
 				v1beta1constants.OperatingSystemConfigFilePathBinaries+`/promtail -config.file=`+PathConfig,
 			),

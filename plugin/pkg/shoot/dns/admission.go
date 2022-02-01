@@ -32,6 +32,7 @@ import (
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -318,7 +319,7 @@ func seedDisablesDNS(seedLister corelisters.SeedLister, seedName string) (bool, 
 // and sets it in the shoot resource in the `spec.dns.domain` field.
 // If for any reason no domain can be generated, no domain is assigned to the Shoot.
 func assignDefaultDomainIfNeeded(shoot *core.Shoot, projectLister corelisters.ProjectLister, defaultDomains []string) error {
-	project, err := gutil.ProjectForNamespaceFromInternalLister(projectLister, shoot.Namespace)
+	project, err := admissionutils.ProjectForNamespaceFromInternalLister(projectLister, shoot.Namespace)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}

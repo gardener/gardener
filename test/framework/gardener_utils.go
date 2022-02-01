@@ -17,16 +17,12 @@ package framework
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/scheduler/apis/config"
-	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
-	scheduler "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -35,8 +31,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -409,72 +403,6 @@ func (f *GardenerFramework) MigrateShoot(ctx context.Context, shoot *gardencorev
 	return f.WaitForShootToBeCreated(ctx, shoot)
 }
 
-// WaitForShootToBeUnschedulable waits for the shoot to be unschedulable. This is indicated by Events created by the scheduler on the shoot
-func (f *GardenerFramework) WaitForShootToBeUnschedulable(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
-	return retry.Until(ctx, 2*time.Second, func(ctx context.Context) (bool, error) {
-		newShoot := &gardencorev1beta1.Shoot{}
-		err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, newShoot)
-		if err != nil {
-			return false, err
-		}
-		*shoot = *newShoot
-		f.Logger.Infof("waiting for shoot %s to be unschedulable", shoot.Name)
-
-		uid := string(shoot.UID)
-		kind := "Shoot"
-		fieldSelector := f.GardenClient.Kubernetes().CoreV1().Events(shoot.Namespace).GetFieldSelector(&shoot.Name, &shoot.Namespace, &kind, &uid)
-		eventList, err := f.GardenClient.Kubernetes().CoreV1().Events(shoot.Namespace).List(ctx, metav1.ListOptions{FieldSelector: fieldSelector.String()})
-		if err != nil {
-			return false, err
-		}
-		if shootIsUnschedulable(eventList.Items) {
-			return true, nil
-		}
-
-		if shoot.Status.LastOperation != nil {
-			f.Logger.Debugf("%d%%: Shoot State: %s, Description: %s", shoot.Status.LastOperation.Progress, shoot.Status.LastOperation.State, shoot.Status.LastOperation.Description)
-		}
-		return false, nil
-	})
-}
-
-// WaitForShootToBeScheduled waits for the shoot to be scheduled successfully
-func (f *GardenerFramework) WaitForShootToBeScheduled(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
-	return retry.Until(ctx, 2*time.Second, func(ctx context.Context) (bool, error) {
-		newShoot := &gardencorev1beta1.Shoot{}
-		err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, newShoot)
-		if err != nil {
-			return retry.SevereError(err)
-		}
-		*shoot = *newShoot
-		if shootIsScheduledSuccessfully(&shoot.Spec) {
-			return retry.Ok()
-		}
-		f.Logger.Infof("waiting for shoot %s to be scheduled", shoot.Name)
-		if shoot.Status.LastOperation != nil {
-			f.Logger.Debugf("%d%%: Shoot State: %s, Description: %s", shoot.Status.LastOperation.Progress, shoot.Status.LastOperation.State, shoot.Status.LastOperation.Description)
-		}
-		return retry.MinorError(fmt.Errorf("shoot %s is not yet scheduled", shoot.Name))
-	})
-}
-
-func shootIsScheduledSuccessfully(newSpec *gardencorev1beta1.ShootSpec) bool {
-	return newSpec.SeedName != nil
-}
-
-func shootIsUnschedulable(events []corev1.Event) bool {
-	if len(events) == 0 {
-		return false
-	}
-
-	for _, event := range events {
-		if strings.Contains(event.Message, scheduler.MsgUnschedulable) {
-			return true
-		}
-	}
-	return false
-}
-
 // GetCloudProfile returns the cloudprofile from gardener with the give name
 func (f *GardenerFramework) GetCloudProfile(ctx context.Context, name string) (*gardencorev1beta1.CloudProfile, error) {
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
@@ -540,44 +468,6 @@ func setHibernation(shoot *gardencorev1beta1.Shoot, hibernated bool) {
 	shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 		Enabled: &hibernated,
 	}
-}
-
-// ParseSchedulerConfiguration returns a SchedulerConfiguration from a ConfigMap
-func ParseSchedulerConfiguration(configuration *corev1.ConfigMap) (*config.SchedulerConfiguration, error) {
-	const configurationFileName = "schedulerconfiguration.yaml"
-	if configuration == nil {
-		return nil, fmt.Errorf("scheduler Configuration could not be extracted from ConfigMap. The gardener setup with the helm chart creates this config map")
-	}
-
-	rawConfig := configuration.Data[configurationFileName]
-	byteConfig := []byte(rawConfig)
-	scheme := runtime.NewScheme()
-	if err := config.AddToScheme(scheme); err != nil {
-		return nil, err
-	}
-	if err := schedulerconfigv1alpha1.AddToScheme(scheme); err != nil {
-		return nil, err
-	}
-	codecs := serializer.NewCodecFactory(scheme)
-	configObj, gvk, err := codecs.UniversalDecoder().Decode(byteConfig, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	config, ok := configObj.(*config.SchedulerConfiguration)
-	if !ok {
-		return nil, fmt.Errorf("got unexpected config type: %v", gvk)
-	}
-	return config, nil
-}
-
-// ScaleGardenerScheduler scales the gardener-scheduler to the desired replicas
-func ScaleGardenerScheduler(ctx context.Context, client client.Client, desiredReplicas *int32) (*int32, error) {
-	return ScaleDeployment(ctx, client, desiredReplicas, "gardener-scheduler", v1beta1constants.GardenNamespace)
-}
-
-// ScaleGardenerControllerManager scales the gardener-controller-manager to the desired replicas
-func ScaleGardenerControllerManager(ctx context.Context, client client.Client, desiredReplicas *int32) (*int32, error) {
-	return ScaleDeployment(ctx, client, desiredReplicas, "gardener-controller-manager", v1beta1constants.GardenNamespace)
 }
 
 // CreateSeed creates a seed from a seed Object and waits until it is successfully reconciled

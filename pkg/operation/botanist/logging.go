@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils/images"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
@@ -54,18 +55,18 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		return err
 	}
 
-	images, err := b.InjectSeedSeedImages(map[string]interface{}{},
-		charts.ImageNameLoki,
-		charts.ImageNameLokiCurator,
-		charts.ImageNameKubeRbacProxy,
-		charts.ImageNameTelegraf,
+	seedImages, err := b.InjectSeedSeedImages(map[string]interface{}{},
+		images.ImageNameLoki,
+		images.ImageNameLokiCurator,
+		images.ImageNameKubeRbacProxy,
+		images.ImageNameTelegraf,
 	)
 	if err != nil {
 		return err
 	}
 
 	lokiValues := map[string]interface{}{
-		"global":   images,
+		"global":   seedImages,
 		"replicas": b.Shoot.GetReplicas(1),
 	}
 

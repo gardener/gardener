@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubernetes
+package features
 
 import (
 	"fmt"
+
+	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	utilsversion "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -276,4 +278,20 @@ func (r *FeatureGateVersionRange) Contains(version string) (bool, error) {
 		constraint = "*"
 	}
 	return utilsversion.CheckVersionMeetsConstraint(version, constraint)
+}
+
+// ValidateFeatureGates validates the given Kubernetes feature gates against the given Kubernetes version.
+func ValidateFeatureGates(featureGates map[string]bool, version string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for featureGate := range featureGates {
+		supported, err := IsFeatureGateSupported(featureGate, version)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child(featureGate), featureGate, err.Error()))
+		} else if !supported {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child(featureGate), fmt.Sprintf("not supported in Kubernetes version %s", version)))
+		}
+	}
+
+	return allErrs
 }

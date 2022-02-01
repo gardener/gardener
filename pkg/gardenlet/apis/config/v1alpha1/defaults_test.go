@@ -286,3 +286,13 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 })
+
+var _ = Describe("Constants", func() {
+	It("should have the same values as the corresponding constants in the logger package", func() {
+		Expect(LogLevelDebug).To(Equal(logger.DebugLevel))
+		Expect(LogLevelInfo).To(Equal(logger.InfoLevel))
+		Expect(LogLevelError).To(Equal(logger.ErrorLevel))
+		Expect(LogFormatJSON).To(Equal(logger.FormatJSON))
+		Expect(LogFormatText).To(Equal(logger.FormatText))
+	})
+})

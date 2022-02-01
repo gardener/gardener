@@ -17,11 +17,9 @@ package controllerutils_test
 import (
 	"context"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -251,26 +249,6 @@ var _ = Describe("seedfilter", func() {
 				Entry("BackupEntry.Spec.SeedName is nil but BackupEntry.Status.SeedName matches", nil, pointer.String(seedName), seedName, BeFalse()),
 				Entry("BackupEntry.Spec.SeedName matches and BackupEntry.Status.SeedName is nil", pointer.String(seedName), nil, seedName, BeTrue()),
 				Entry("BackupEntry.Spec.SeedName does not match but BackupEntry.Status.SeedName matches", pointer.String(otherSeed), pointer.String(seedName), seedName, BeTrue()),
-			)
-		})
-
-		Describe("#BackupEntryIsManagedByThisGardenlet", func() {
-			DescribeTable("check BackupEntry by seedName",
-				func(bucketSeedName string, match gomegatypes.GomegaMatcher) {
-					backupEntry.Spec.SeedName = pointer.String(bucketSeedName)
-					gc := &config.GardenletConfiguration{
-						SeedConfig: &config.SeedConfig{
-							SeedTemplate: gardencore.SeedTemplate{
-								ObjectMeta: metav1.ObjectMeta{
-									Name: seedName,
-								},
-							},
-						},
-					}
-					Expect(controllerutils.BackupEntryIsManagedByThisGardenlet(backupEntry, gc)).To(match)
-				},
-				Entry("BackupEntry is not managed by this seed", otherSeed, BeFalse()),
-				Entry("BackupEntry is managed by this seed", seedName, BeTrue()),
 			)
 		})
 	})

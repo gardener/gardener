@@ -262,3 +262,9 @@ func (c *Controller) shootIsSeed(ctx context.Context, shoot *gardencorev1beta1.S
 	}
 	return managedSeed != nil
 }
+
+// IsShootManagedByThisGardenlet checks if the given shoot is managed by this gardenlet by comparing it with the seed name from the GardenletConfiguration.
+func IsShootManagedByThisGardenlet(shoot *gardencorev1beta1.Shoot, gc *config.GardenletConfiguration) bool {
+	seedName := confighelper.SeedNameFromSeedConfig(gc.SeedConfig)
+	return shoot.Spec.SeedName != nil && *shoot.Spec.SeedName == seedName
+}

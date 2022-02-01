@@ -1,0 +1,15 @@
+rules:
+# The seedmanagement API is special, because it imports the gardenlet config API for its defaulting and conversion.
+# This is kind of undesirable for other projects importing the seedmanagement API, as it pulls in other unwanted
+# dependencies.
+# However, we can't really avoid it until we have a proper sync out mechanism like k/k, which filters
+# out defaulting and conversion code.
+# TODO: eliminate these drawbacks
+- selectorRegexp: github[.]com/gardener/gardener/pkg
+  allowedPrefixes:
+  - github.com/gardener/gardener/pkg/apis
+  - github.com/gardener/gardener/pkg/gardenlet/apis/config
+  - github.com/gardener/gardener/pkg/utils
+- selectorRegexp: k8s[.]io/component-base
+  allowedPrefixes:
+  - k8s.io/component-base/config

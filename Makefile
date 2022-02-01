@@ -193,8 +193,8 @@ install-requirements:
 
 .PHONY: revendor
 revendor:
-	@GO111MODULE=on go mod vendor
 	@GO111MODULE=on go mod tidy
+	@GO111MODULE=on go mod vendor
 
 .PHONY: clean
 clean:
@@ -205,8 +205,9 @@ check-generate:
 	@hack/check-generate.sh $(REPO_ROOT)
 
 .PHONY: check
-check: $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM)
+check: $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS)
 	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
+	@hack/check-imports.sh ./charts/... ./cmd/... ./extensions/... ./landscaper/... ./pkg/... ./plugin/... ./test/... ./third_party/...
 	@hack/check-charts.sh ./charts
 
 .PHONY: generate

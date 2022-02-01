@@ -1,0 +1,9 @@
+rules:
+# override pkg/ import restriction on cmd/ for envtest for running apiserver in-process
+- selectorRegexp: github[.]com/gardener/gardener/cmd
+  allowedPrefixes:
+  - github.com/gardener/gardener/cmd/gardener-apiserver
+# override pkg/ import restriction on plugin/ for envtest for running apiserver in-process
+- selectorRegexp: github[.]com/gardener/gardener/plugin
+  allowedPrefixes:
+  - github.com/gardener/gardener/plugin/pkg

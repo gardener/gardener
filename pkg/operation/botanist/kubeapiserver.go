@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -31,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -281,22 +281,22 @@ func resourcesRequirementsForKubeAPIServer(nodeCount int32, scalingClass string)
 }
 
 func (b *Botanist) computeKubeAPIServerImages() (kubeapiserver.Images, error) {
-	imageAlpineIPTables, err := b.ImageVector.FindImage(charts.ImageNameAlpineIptables, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	imageAlpineIPTables, err := b.ImageVector.FindImage(images.ImageNameAlpineIptables, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return kubeapiserver.Images{}, err
 	}
 
-	imageApiserverProxyPodWebhook, err := b.ImageVector.FindImage(charts.ImageNameApiserverProxyPodWebhook, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	imageApiserverProxyPodWebhook, err := b.ImageVector.FindImage(images.ImageNameApiserverProxyPodWebhook, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return kubeapiserver.Images{}, err
 	}
 
-	imageKubeAPIServer, err := b.ImageVector.FindImage(charts.ImageNameKubeApiserver, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	imageKubeAPIServer, err := b.ImageVector.FindImage(images.ImageNameKubeApiserver, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return kubeapiserver.Images{}, err
 	}
 
-	imageVPNSeed, err := b.ImageVector.FindImage(charts.ImageNameVpnSeed, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	imageVPNSeed, err := b.ImageVector.FindImage(images.ImageNameVpnSeed, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return kubeapiserver.Images{}, err
 	}

@@ -18,15 +18,15 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/gardener/gardener/charts"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
+	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // DefaultNodeLocalDNS returns a deployer for the node-local-dns.
 func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
-	image, err := b.ImageVector.FindImage(charts.ImageNameNodeLocalDns, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	image, err := b.ImageVector.FindImage(images.ImageNameNodeLocalDns, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

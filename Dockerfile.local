@@ -53,7 +53,6 @@ ENTRYPOINT ["/gardener-apiserver"]
 FROM builder-base AS builder-controller-manager
 
 # manually copy the packages we need to keep the build context slim
-COPY charts/images.go charts/images.yaml charts/
 COPY cmd cmd
 COPY pkg pkg
 
@@ -94,7 +93,6 @@ ENTRYPOINT ["/gardener-scheduler"]
 FROM builder-base AS builder-admission-controller
 
 # manually copy the packages we need to keep the build context slim
-COPY charts/images.go charts/
 COPY cmd cmd
 COPY pkg pkg
 
@@ -135,7 +133,6 @@ ENTRYPOINT ["/gardener-resource-manager"]
 FROM builder-base AS builder-seed-admission-controller
 
 # manually copy the packages we need to keep the build context slim
-COPY charts/images.go charts/images.yaml charts/
 COPY cmd cmd
 COPY pkg pkg
 
@@ -156,7 +153,7 @@ ENTRYPOINT ["/gardener-seed-admission-controller"]
 FROM builder-base AS builder-gardenlet
 
 # manually copy the packages we need to keep the build context slim
-COPY charts/images.go charts/images.yaml charts/doc.go charts/
+COPY charts/images.yaml charts/charts.go charts/
 COPY cmd cmd
 COPY pkg pkg
 COPY third_party third_party
@@ -181,11 +178,10 @@ ENTRYPOINT ["/gardenlet"]
 FROM builder-base AS builder-extension-provider-local
 
 # manually copy the packages we need to keep the build context slim
-COPY charts/images.go charts/images.yaml charts/doc.go charts/
+COPY charts/charts.go charts/
 COPY cmd cmd
 COPY extensions extensions
 COPY pkg pkg
-COPY third_party third_party
 
 COPY go.mod go.sum ./
 

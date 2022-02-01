@@ -38,12 +38,10 @@ import (
 )
 
 const (
-	// DNSInternalName is a constant for a DNS resources used for the internal domain name.
-	DNSInternalName = "internal"
-	// DNSExternalName is a constant for a DNS resources used for the external domain name.
-	DNSExternalName = "external"
-	// DNSOwnerName is a constant for a DNS resources used for the owner domain name.
-	DNSOwnerName = "owner"
+	// LegacyDNSInternalName is a constant for DNS resources (dns.gardener.cloud) used for the internal domain name.
+	LegacyDNSInternalName = "internal"
+	// LegacyDNSExternalName is a constant for DNS resources (dns.gardener.cloud) used for the external domain name.
+	LegacyDNSExternalName = "external"
 	// DNSProviderRoleAdditional is a constant for additionally managed DNS providers.
 	DNSProviderRoleAdditional = "managed-dns-provider"
 	// DNSRealmAnnotation is the annotation key for restricting provider access for shoot DNS entries
@@ -115,8 +113,8 @@ func (b *Botanist) DefaultExternalDNSProvider() component.DeployWaiter {
 			b.K8sSeedClient.Client(),
 			b.Shoot.SeedNamespace,
 			&dns.ProviderValues{
-				Name:       DNSExternalName,
-				Purpose:    DNSExternalName,
+				Name:       LegacyDNSExternalName,
+				Purpose:    LegacyDNSExternalName,
 				Provider:   b.Shoot.ExternalDomain.Provider,
 				SecretData: b.Shoot.ExternalDomain.SecretData,
 				Domains: &dns.IncludeExclude{
@@ -137,8 +135,8 @@ func (b *Botanist) DefaultExternalDNSProvider() component.DeployWaiter {
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		&dns.ProviderValues{
-			Name:    DNSExternalName,
-			Purpose: DNSExternalName,
+			Name:    LegacyDNSExternalName,
+			Purpose: LegacyDNSExternalName,
 		},
 	))
 }
@@ -150,7 +148,7 @@ func (b *Botanist) DefaultExternalDNSEntry() component.DeployWaiter {
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		&dns.EntryValues{
-			Name: DNSExternalName,
+			Name: LegacyDNSExternalName,
 			TTL:  *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 		},
 	))
@@ -162,7 +160,7 @@ func (b *Botanist) DefaultExternalDNSOwner() component.DeployWaiter {
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		&dns.OwnerValues{
-			Name: DNSExternalName,
+			Name: LegacyDNSExternalName,
 		},
 	))
 }
@@ -176,8 +174,8 @@ func (b *Botanist) DefaultInternalDNSProvider() component.DeployWaiter {
 			b.K8sSeedClient.Client(),
 			b.Shoot.SeedNamespace,
 			&dns.ProviderValues{
-				Name:       DNSInternalName,
-				Purpose:    DNSInternalName,
+				Name:       LegacyDNSInternalName,
+				Purpose:    LegacyDNSInternalName,
 				Provider:   b.Garden.InternalDomain.Provider,
 				SecretData: b.Garden.InternalDomain.SecretData,
 				Domains: &dns.IncludeExclude{
@@ -196,8 +194,8 @@ func (b *Botanist) DefaultInternalDNSProvider() component.DeployWaiter {
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		&dns.ProviderValues{
-			Name:    DNSInternalName,
-			Purpose: DNSInternalName,
+			Name:    LegacyDNSInternalName,
+			Purpose: LegacyDNSInternalName,
 		},
 	))
 }
@@ -209,7 +207,7 @@ func (b *Botanist) DefaultInternalDNSEntry() component.DeployWaiter {
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		&dns.EntryValues{
-			Name: DNSInternalName,
+			Name: LegacyDNSInternalName,
 			TTL:  *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 		},
 	))
@@ -221,7 +219,7 @@ func (b *Botanist) DefaultInternalDNSOwner() component.DeployWaiter {
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		&dns.OwnerValues{
-			Name: DNSInternalName,
+			Name: LegacyDNSInternalName,
 		},
 	))
 }
@@ -513,13 +511,13 @@ func (d dnsRestoreDeployer) Destroy(_ context.Context) error { return nil }
 
 func (b *Botanist) newDNSComponentsTargetingAPIServerAddress() {
 	if b.NeedsInternalDNS() {
-		ownerID := *b.Shoot.GetInfo().Status.ClusterIdentity + "-" + DNSInternalName
+		ownerID := *b.Shoot.GetInfo().Status.ClusterIdentity + "-" + LegacyDNSInternalName
 
 		b.Shoot.Components.Extensions.DNS.InternalOwner = dns.NewOwner(
 			b.K8sSeedClient.Client(),
 			b.Shoot.SeedNamespace,
 			&dns.OwnerValues{
-				Name:    DNSInternalName,
+				Name:    LegacyDNSInternalName,
 				Active:  pointer.Bool(true),
 				OwnerID: ownerID,
 			},
@@ -529,7 +527,7 @@ func (b *Botanist) newDNSComponentsTargetingAPIServerAddress() {
 			b.K8sSeedClient.Client(),
 			b.Shoot.SeedNamespace,
 			&dns.EntryValues{
-				Name:    DNSInternalName,
+				Name:    LegacyDNSInternalName,
 				DNSName: gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 				Targets: []string{b.APIServerAddress},
 				OwnerID: ownerID,
@@ -542,13 +540,13 @@ func (b *Botanist) newDNSComponentsTargetingAPIServerAddress() {
 	}
 
 	if b.NeedsExternalDNS() {
-		ownerID := *b.Shoot.GetInfo().Status.ClusterIdentity + "-" + DNSExternalName
+		ownerID := *b.Shoot.GetInfo().Status.ClusterIdentity + "-" + LegacyDNSExternalName
 
 		b.Shoot.Components.Extensions.DNS.ExternalOwner = dns.NewOwner(
 			b.K8sSeedClient.Client(),
 			b.Shoot.SeedNamespace,
 			&dns.OwnerValues{
-				Name:    DNSExternalName,
+				Name:    LegacyDNSExternalName,
 				Active:  pointer.Bool(true),
 				OwnerID: ownerID,
 			},
@@ -558,7 +556,7 @@ func (b *Botanist) newDNSComponentsTargetingAPIServerAddress() {
 			b.K8sSeedClient.Client(),
 			b.Shoot.SeedNamespace,
 			&dns.EntryValues{
-				Name:    DNSExternalName,
+				Name:    LegacyDNSExternalName,
 				DNSName: gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
 				Targets: []string{b.APIServerAddress},
 				OwnerID: ownerID,

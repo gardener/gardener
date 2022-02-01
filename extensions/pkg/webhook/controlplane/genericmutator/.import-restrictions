@@ -1,0 +1,12 @@
+rules:
+# allow reusing config codecs with operation package
+# Note: this will only allow sharing exactly these packages but no other packages in pkg/operation/, this is still
+# forbidden by the top-level import restriction in extensions/
+- selectorRegexp: github[.]com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig
+  allowedPrefixes:
+  - github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd
+  - github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components
+  - github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet
+  - github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker
+  - github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/logrotate
+  - github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils

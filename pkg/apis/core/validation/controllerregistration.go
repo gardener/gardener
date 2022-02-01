@@ -21,6 +21,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/extensions"
 
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
@@ -44,6 +45,23 @@ func ValidateControllerRegistration(controllerRegistration *core.ControllerRegis
 	return allErrs
 }
 
+// SupportedExtensionKinds contains all supported extension kinds.
+var SupportedExtensionKinds = sets.NewString(
+	extensionsv1alpha1.BackupBucketResource,
+	extensionsv1alpha1.BackupEntryResource,
+	extensionsv1alpha1.BastionResource,
+	extensionsv1alpha1.ContainerRuntimeResource,
+	extensionsv1alpha1.ControlPlaneResource,
+	extensionsv1alpha1.DNSRecordResource,
+	extensionsv1alpha1.ExtensionResource,
+	extensionsv1alpha1.InfrastructureResource,
+	extensionsv1alpha1.NetworkResource,
+	extensionsv1alpha1.OperatingSystemConfigResource,
+	extensionsv1alpha1.WorkerResource,
+	// TODO: drop this, once we have externalized DNSProvider functionality, see https://github.com/gardener/gardener/issues/5270
+	dnsv1alpha1.DNSProviderKind,
+)
+
 // ValidateControllerRegistrationSpec validates the specification of a ControllerRegistration object.
 func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
@@ -63,8 +81,8 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 			allErrs = append(allErrs, field.Required(idxPath.Child("kind"), "field is required"))
 		}
 
-		if !extensionsv1alpha1.ExtensionKinds.Has(resource.Kind) {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("kind"), resource.Kind, extensionsv1alpha1.ExtensionKinds.UnsortedList()))
+		if !SupportedExtensionKinds.Has(resource.Kind) {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("kind"), resource.Kind, SupportedExtensionKinds.UnsortedList()))
 		}
 
 		if len(resource.Type) == 0 {

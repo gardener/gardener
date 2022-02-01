@@ -35,7 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/operation/botanist"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -104,7 +103,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(dns.ObjectMeta, dns.Status.LastOperation)
 
-	if cluster != nil && cluster.Shoot != nil && dns.Name != cluster.Shoot.Name+"-"+botanist.DNSOwnerName && operationType != gardencorev1beta1.LastOperationTypeMigrate {
+	if cluster != nil && cluster.Shoot != nil && dns.Name != cluster.Shoot.Name+"-"+v1beta1constants.DNSRecordOwnerName && operationType != gardencorev1beta1.LastOperationTypeMigrate {
 		key := "dnsrecord:" + kutil.ObjectName(dns)
 		ok, watchdogCtx, cleanup, err := common.GetOwnerCheckResultAndContext(ctx, r.client, dns.Namespace, cluster.Shoot.Name, key)
 		if err != nil {

@@ -126,8 +126,8 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should allow all known extension kinds", func() {
-			controllerRegistration.Spec.Resources = make([]core.ControllerResource, 0, len(extensionsv1alpha1.ExtensionKinds))
-			for kind := range extensionsv1alpha1.ExtensionKinds {
+			controllerRegistration.Spec.Resources = make([]core.ControllerResource, 0, len(SupportedExtensionKinds))
+			for kind := range SupportedExtensionKinds {
 				controllerRegistration.Spec.Resources = append(controllerRegistration.Spec.Resources,
 					core.ControllerResource{
 						Kind: kind,

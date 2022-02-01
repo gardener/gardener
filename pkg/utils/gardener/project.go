@@ -20,35 +20,15 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencoreinternallisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ProjectNamespacePrefix is the prefix of namespaces representing projects.
 const ProjectNamespacePrefix = "garden-"
-
-// ProjectForNamespaceFromInternalLister returns the Project responsible for a given <namespace>. It lists all Projects
-// via the given lister, iterates over them and tries to identify the Project by looking for the namespace name
-// in the project spec.
-func ProjectForNamespaceFromInternalLister(projectLister gardencoreinternallisters.ProjectLister, namespaceName string) (*gardencore.Project, error) {
-	projectList, err := projectLister.List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	for _, project := range projectList {
-		if project.Spec.Namespace != nil && *project.Spec.Namespace == namespaceName {
-			return project, nil
-		}
-	}
-
-	return nil, apierrors.NewNotFound(gardencore.Resource("Project"), namespaceName)
-}
 
 // ProjectForNamespaceFromReader returns the Project responsible for a given <namespace>. It reads the namespace and
 // fetches the project name label. Then it will read the project with the respective name.

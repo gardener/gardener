@@ -97,7 +97,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return r.migrateBackupEntry(ctx, gardenClient, be)
 	}
 
-	if !controllerutils.BackupEntryIsManagedByThisGardenlet(be, r.config) {
+	if !IsBackupEntryManagedByThisGardenlet(be, r.config) {
 		backupEntryLogger.Debugf("Skipping because BackupEntry is not managed by this gardenlet in seed %s", *be.Spec.SeedName)
 		return reconcile.Result{}, nil
 	}

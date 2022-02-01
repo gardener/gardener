@@ -15,9 +15,6 @@
 package v1alpha1
 
 import (
-	"github.com/gardener/gardener/pkg/logger"
-	"k8s.io/client-go/tools/leaderelection/resourcelock"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 )
@@ -29,11 +26,11 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 // SetDefaults_SchedulerConfiguration sets defaults for the configuration of the Gardener scheduler.
 func SetDefaults_SchedulerConfiguration(obj *SchedulerConfiguration) {
 	if obj.LogLevel == "" {
-		obj.LogLevel = logger.InfoLevel
+		obj.LogLevel = LogLevelInfo
 	}
 
 	if obj.LogFormat == "" {
-		obj.LogFormat = logger.FormatJSON
+		obj.LogFormat = LogFormatJSON
 	}
 
 	if obj.Schedulers.BackupBucket == nil {
@@ -74,7 +71,9 @@ func SetDefaults_ClientConnectionConfiguration(obj *componentbaseconfigv1alpha1.
 // SetDefaults_LeaderElectionConfiguration sets defaults for the leader election of the Gardener scheduler.
 func SetDefaults_LeaderElectionConfiguration(obj *componentbaseconfigv1alpha1.LeaderElectionConfiguration) {
 	if obj.ResourceLock == "" {
-		obj.ResourceLock = resourcelock.LeasesResourceLock
+		// Don't use a constant from the client-go resourcelock package here (resourcelock is not an API package, pulls
+		// in some other dependencies and is thereby not suitable to be used in this API package).
+		obj.ResourceLock = "leases"
 	}
 
 	componentbaseconfigv1alpha1.RecommendedDefaultLeaderElectionConfiguration(obj)

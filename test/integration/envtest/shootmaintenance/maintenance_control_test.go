@@ -31,8 +31,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
-	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/timewindow"
 )
 
 var _ = Describe("Shoot Maintenance controller tests", func() {
@@ -150,8 +150,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 						MachineImageVersion: false,
 					},
 					TimeWindow: &gardencorev1beta1.MaintenanceTimeWindow{
-						Begin: utils.NewMaintenanceTime(time.Now().Add(2*time.Hour).Hour(), 0, 0).Formatted(),
-						End:   utils.NewMaintenanceTime(time.Now().Add(4*time.Hour).Hour(), 0, 0).Formatted(),
+						Begin: timewindow.NewMaintenanceTime(time.Now().Add(2*time.Hour).Hour(), 0, 0).Formatted(),
+						End:   timewindow.NewMaintenanceTime(time.Now().Add(4*time.Hour).Hour(), 0, 0).Formatted(),
 					},
 				},
 			},

@@ -17,12 +17,12 @@ package botanist_test
 import (
 	"net"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	"github.com/golang/mock/gomock"
@@ -61,7 +61,7 @@ var _ = Describe("VPNShoot", func() {
 
 		It("should successfully create a vpnShoot interface for ReversedVPN not enabled case", func() {
 			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: charts.ImageNameVpnShoot}}
+			botanist.ImageVector = imagevector.ImageVector{{Name: images.ImageNameVpnShoot}}
 			botanist.Shoot.ReversedVPNEnabled = false
 
 			vpnShoot, err := botanist.DefaultVPNShoot()
@@ -71,7 +71,7 @@ var _ = Describe("VPNShoot", func() {
 
 		It("should successfully create a vpnShoot interface for ReversedVPN enabled case", func() {
 			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: charts.ImageNameVpnShootClient}}
+			botanist.ImageVector = imagevector.ImageVector{{Name: images.ImageNameVpnShootClient}}
 			botanist.Shoot.ReversedVPNEnabled = true
 
 			vpnShoot, err := botanist.DefaultVPNShoot()
