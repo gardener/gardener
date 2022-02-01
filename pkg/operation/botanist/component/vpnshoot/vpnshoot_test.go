@@ -251,7 +251,7 @@ spec:
     containerPolicies:
     - containerName: '*'
       minAllowed:
-        cpu: 10m
+        cpu: 100m
         memory: 10Mi
   targetRef:
     apiVersion: apps/v1
