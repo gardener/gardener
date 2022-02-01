@@ -52,7 +52,7 @@ type ShootExtensionStatusList struct {
 type ExtensionStatus struct {
 	// Kind of the extension resource
 	Kind string `json:"kind" protobuf:"bytes,1,opt,name=kind"`
-	// Type of the extension resource
+	// Type of the extension resource. This field is immutable.
 	Type string `json:"type" protobuf:"bytes,2,opt,name=type"`
 	// Purpose of the extension resource
 	// +optional

@@ -50,7 +50,7 @@ type ManagedSeedSetSpec struct {
 	// Replicas is the desired number of replicas of the given Template. Defaults to 1.
 	Replicas *int32
 	// Selector is a label query over ManagedSeeds and Shoots that should match the replica count.
-	// It must match the ManagedSeeds and Shoots template's labels.
+	// It must match the ManagedSeeds and Shoots template's labels. This field is immutable.
 	Selector metav1.LabelSelector
 	// Template describes the ManagedSeed that will be created if insufficient replicas are detected.
 	// Each ManagedSeed created / updated by the ManagedSeedSet will fulfill this template.
@@ -62,8 +62,8 @@ type ManagedSeedSetSpec struct {
 	// employed to update ManagedSeeds / Shoots in the ManagedSeedSet when a revision is made to
 	// Template / ShootTemplate.
 	UpdateStrategy *UpdateStrategy
-	// RevisionHistoryLimit is the maximum number of revisions that will
-	// be maintained in the ManagedSeedSet's revision history. Defaults to 10.
+	// RevisionHistoryLimit is the maximum number of revisions that will be maintained
+	// in the ManagedSeedSet's revision history. Defaults to 10. This field is immutable.
 	RevisionHistoryLimit *int32
 }
 

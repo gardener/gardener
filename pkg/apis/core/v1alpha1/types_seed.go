@@ -79,7 +79,7 @@ type SeedSpec struct {
 	// Settings contains certain settings for this seed cluster.
 	// +optional
 	Settings *SeedSettings `json:"settings,omitempty" protobuf:"bytes,9,opt,name=settings"`
-	// Ingress configures Ingress specific settings of the Seed cluster.
+	// Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.
 	// +optional
 	Ingress *Ingress `json:"ingress,omitempty" protobuf:"bytes,10,opt,name=ingress"`
 }
@@ -101,7 +101,7 @@ type SeedStatus struct {
 	// Seed's generation, which is updated on mutation by the API Server.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,4,opt,name=observedGeneration"`
-	// ClusterIdentity is the identity of the Seed cluster
+	// ClusterIdentity is the identity of the Seed cluster. This field is immutable.
 	// +optional
 	ClusterIdentity *string `json:"clusterIdentity,omitempty" protobuf:"bytes,5,opt,name=clusterIdentity"`
 	// ClientCertificateExpirationTimestamp is the timestamp at which gardenlet's client certificate expires.
@@ -111,12 +111,12 @@ type SeedStatus struct {
 
 // SeedBackup contains the object store configuration for backups for shoot (currently only etcd).
 type SeedBackup struct {
-	// Provider is a provider name.
+	// Provider is a provider name. This field is immutable.
 	Provider string `json:"provider" protobuf:"bytes,1,opt,name=provider"`
 	// ProviderConfig is the configuration passed to BackupBucket resource.
 	// +optional
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
-	// Region is a region name.
+	// Region is a region name. This field is immutable.
 	// +optional
 	Region *string `json:"region,omitempty" protobuf:"bytes,3,opt,name=region"`
 	// SecretRef is a reference to a Secret object containing the cloud provider credentials for
@@ -128,7 +128,7 @@ type SeedBackup struct {
 // SeedDNS contains DNS-relevant information about this seed cluster.
 type SeedDNS struct {
 	// IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
-	// to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.
+	// to construct ingress URLs for system applications running in Shoot clusters. This field is immutable.
 	// This will be removed in the next API version and replaced by spec.ingress.domain.
 	// +optional
 	IngressDomain *string `json:"ingressDomain,omitempty" protobuf:"bytes,1,opt,name=ingressDomain"`
@@ -171,12 +171,12 @@ type IngressController struct {
 
 // SeedNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 type SeedNetworks struct {
-	// Nodes is the CIDR of the node network.
+	// Nodes is the CIDR of the node network. This field is immutable.
 	// +optional
 	Nodes *string `json:"nodes,omitempty" protobuf:"bytes,1,opt,name=nodes"`
-	// Pods is the CIDR of the pod network.
+	// Pods is the CIDR of the pod network. This field is immutable.
 	Pods string `json:"pods" protobuf:"bytes,2,opt,name=pods"`
-	// Services is the CIDR of the service network.
+	// Services is the CIDR of the service network. This field is immutable.
 	Services string `json:"services" protobuf:"bytes,3,opt,name=services"`
 	// ShootDefaults contains the default networks CIDRs for shoots.
 	// +optional

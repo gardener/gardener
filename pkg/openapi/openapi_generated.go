@@ -1123,7 +1123,7 @@ func schema_pkg_apis_core_v1alpha1_BackupBucketSpec(ref common.ReferenceCallback
 				Properties: map[string]spec.Schema{
 					"provider": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Provider hold the details of cloud provider of the object store.",
+							Description: "Provider holds the details of cloud provider of the object store. This field is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupBucketProvider"),
 						},
@@ -1143,7 +1143,7 @@ func schema_pkg_apis_core_v1alpha1_BackupBucketSpec(ref common.ReferenceCallback
 					},
 					"seed": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Seed holds the name of the seed allocated to BackupBucket for running controller.",
+							Description: "Seed holds the name of the seed allocated to BackupBucket for running controller. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -2030,7 +2030,7 @@ func schema_pkg_apis_core_v1alpha1_ControllerInstallation(ref common.ReferenceCa
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Spec contains the specification of this installation.",
+							Description: "Spec contains the specification of this installation. If the object's deletion timestamp is set, this field is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerInstallationSpec"),
 						},
@@ -2110,14 +2110,14 @@ func schema_pkg_apis_core_v1alpha1_ControllerInstallationSpec(ref common.Referen
 				Properties: map[string]spec.Schema{
 					"registrationRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "RegistrationRef is used to reference a ControllerRegistration resource.",
+							Description: "RegistrationRef is used to reference a ControllerRegistration resource. The name field of the RegistrationRef is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
 					"seedRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedRef is used to reference a Seed resource.",
+							Description: "SeedRef is used to reference a Seed resource. The name field of the SeedRef is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
@@ -2208,7 +2208,7 @@ func schema_pkg_apis_core_v1alpha1_ControllerRegistration(ref common.ReferenceCa
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Spec contains the specification of this registration.",
+							Description: "Spec contains the specification of this registration. If the object's deletion timestamp is set, this field is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerRegistrationSpec"),
 						},
@@ -2387,7 +2387,7 @@ func schema_pkg_apis_core_v1alpha1_ControllerResource(ref common.ReferenceCallba
 					},
 					"primary": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Primary determines if the controller backed by this ControllerRegistration is responsible for the extension resource's lifecycle. This field defaults to true. There must be exactly one primary controller for this kind/type combination.",
+							Description: "Primary determines if the controller backed by this ControllerRegistration is responsible for the extension resource's lifecycle. This field defaults to true. There must be exactly one primary controller for this kind/type combination. This field is immutable.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -2410,7 +2410,7 @@ func schema_pkg_apis_core_v1alpha1_DNS(ref common.ReferenceCallback) common.Open
 				Properties: map[string]spec.Schema{
 					"domain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Domain is the external available domain of the Shoot cluster. This domain will be written into the kubeconfig that is handed out to end-users. Once set it is immutable.",
+							Description: "Domain is the external available domain of the Shoot cluster. This domain will be written into the kubeconfig that is handed out to end-users. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -2705,7 +2705,7 @@ func schema_pkg_apis_core_v1alpha1_ExposureClass(ref common.ReferenceCallback) c
 					},
 					"handler": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Handler is the name of the handler which applies the control plane endpoint exposure strategy.",
+							Description: "Handler is the name of the handler which applies the control plane endpoint exposure strategy. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -2713,7 +2713,7 @@ func schema_pkg_apis_core_v1alpha1_ExposureClass(ref common.ReferenceCallback) c
 					},
 					"scheduling": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Scheduling holds information how to select applicable Seed's for ExposureClass usage.",
+							Description: "Scheduling holds information how to select applicable Seed's for ExposureClass usage. This field is immutable.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExposureClassScheduling"),
 						},
 					},
@@ -2930,7 +2930,7 @@ func schema_pkg_apis_core_v1alpha1_ExtensionStatus(ref common.ReferenceCallback)
 					},
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type of the extension resource",
+							Description: "Type of the extension resource. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -3403,7 +3403,7 @@ func schema_pkg_apis_core_v1alpha1_KubeControllerManagerConfig(ref common.Refere
 					},
 					"nodeCIDRMaskSize": {
 						SchemaProps: spec.SchemaProps{
-							Description: "NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24)",
+							Description: "NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24). This field is immutable.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
@@ -4558,7 +4558,7 @@ func schema_pkg_apis_core_v1alpha1_Networking(ref common.ReferenceCallback) comm
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type identifies the type of the networking plugin.",
+							Description: "Type identifies the type of the networking plugin. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -4572,21 +4572,21 @@ func schema_pkg_apis_core_v1alpha1_Networking(ref common.ReferenceCallback) comm
 					},
 					"pods": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Pods is the CIDR of the pod network.",
+							Description: "Pods is the CIDR of the pod network. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"nodes": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Nodes is the CIDR of the entire node network.",
+							Description: "Nodes is the CIDR of the entire node network. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"services": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Services is the CIDR of the service network.",
+							Description: "Services is the CIDR of the service network. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -4827,7 +4827,7 @@ func schema_pkg_apis_core_v1alpha1_Plant(ref common.ReferenceCallback) common.Op
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Spec contains the specification of this Plant.",
+							Description: "Spec contains the specification of this Plant. If the object's deletion timestamp is set, this field is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.PlantSpec"),
 						},
@@ -5166,7 +5166,7 @@ func schema_pkg_apis_core_v1alpha1_ProjectSpec(ref common.ReferenceCallback) com
 				Properties: map[string]spec.Schema{
 					"createdBy": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CreatedBy is a subject representing a user name, an email address, or any other identifier of a user who created the project.",
+							Description: "CreatedBy is a subject representing a user name, an email address, or any other identifier of a user who created the project. This field is immutable.",
 							Ref:         ref("k8s.io/api/rbac/v1.Subject"),
 						},
 					},
@@ -5206,7 +5206,7 @@ func schema_pkg_apis_core_v1alpha1_ProjectSpec(ref common.ReferenceCallback) com
 					},
 					"namespace": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Namespace is the name of the namespace that has been created for the Project object. A nil value means that Gardener will determine the name of the namespace.",
+							Description: "Namespace is the name of the namespace that has been created for the Project object. A nil value means that Gardener will determine the name of the namespace. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -5336,7 +5336,7 @@ func schema_pkg_apis_core_v1alpha1_Provider(ref common.ReferenceCallback) common
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type is the type of the provider.",
+							Description: "Type is the type of the provider. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -5508,7 +5508,7 @@ func schema_pkg_apis_core_v1alpha1_QuotaSpec(ref common.ReferenceCallback) commo
 					},
 					"scope": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Scope is the scope of the Quota object, either 'project' or 'secret'.",
+							Description: "Scope is the scope of the Quota object, either 'project' or 'secret'. This field is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
@@ -5695,14 +5695,14 @@ func schema_pkg_apis_core_v1alpha1_SecretBinding(ref common.ReferenceCallback) c
 					},
 					"secretRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SecretRef is a reference to a secret object in the same or another namespace.",
+							Description: "SecretRef is a reference to a secret object in the same or another namespace. This field is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
 						},
 					},
 					"quotas": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Quotas is a list of references to Quota objects in the same or another namespace.",
+							Description: "Quotas is a list of references to Quota objects in the same or another namespace. This field is immutable.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -5716,7 +5716,7 @@ func schema_pkg_apis_core_v1alpha1_SecretBinding(ref common.ReferenceCallback) c
 					},
 					"provider": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Provider defines the provider type of the SecretBinding.",
+							Description: "Provider defines the provider type of the SecretBinding. This field is immutable when the SecretBindingProviderValidation feature gate is enabled.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SecretBindingProvider"),
 						},
 					},
@@ -5861,7 +5861,7 @@ func schema_pkg_apis_core_v1alpha1_SeedBackup(ref common.ReferenceCallback) comm
 				Properties: map[string]spec.Schema{
 					"provider": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Provider is a provider name.",
+							Description: "Provider is a provider name. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -5875,7 +5875,7 @@ func schema_pkg_apis_core_v1alpha1_SeedBackup(ref common.ReferenceCallback) comm
 					},
 					"region": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Region is a region name.",
+							Description: "Region is a region name. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -5905,7 +5905,7 @@ func schema_pkg_apis_core_v1alpha1_SeedDNS(ref common.ReferenceCallback) common.
 				Properties: map[string]spec.Schema{
 					"ingressDomain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable. This will be removed in the next API version and replaced by spec.ingress.domain.",
+							Description: "IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters. This field is immutable. This will be removed in the next API version and replaced by spec.ingress.domain.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -6027,14 +6027,14 @@ func schema_pkg_apis_core_v1alpha1_SeedNetworks(ref common.ReferenceCallback) co
 				Properties: map[string]spec.Schema{
 					"nodes": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Nodes is the CIDR of the node network.",
+							Description: "Nodes is the CIDR of the node network. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"pods": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Pods is the CIDR of the pod network.",
+							Description: "Pods is the CIDR of the pod network. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -6042,7 +6042,7 @@ func schema_pkg_apis_core_v1alpha1_SeedNetworks(ref common.ReferenceCallback) co
 					},
 					"services": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Services is the CIDR of the service network.",
+							Description: "Services is the CIDR of the service network. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -6511,7 +6511,7 @@ func schema_pkg_apis_core_v1alpha1_SeedSpec(ref common.ReferenceCallback) common
 					},
 					"ingress": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Ingress configures Ingress specific settings of the Seed cluster.",
+							Description: "Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Ingress"),
 						},
 					},
@@ -6573,7 +6573,7 @@ func schema_pkg_apis_core_v1alpha1_SeedStatus(ref common.ReferenceCallback) comm
 					},
 					"clusterIdentity": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ClusterIdentity is the identity of the Seed cluster",
+							Description: "ClusterIdentity is the identity of the Seed cluster. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -6763,7 +6763,7 @@ func schema_pkg_apis_core_v1alpha1_Shoot(ref common.ReferenceCallback) common.Op
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the Shoot cluster.",
+							Description: "Specification of the Shoot cluster. If the object's deletion timestamp is set, this field is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootSpec"),
 						},
@@ -7043,7 +7043,7 @@ func schema_pkg_apis_core_v1alpha1_ShootSpec(ref common.ReferenceCallback) commo
 					},
 					"cloudProfileName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CloudProfileName is a name of a CloudProfile object.",
+							Description: "CloudProfileName is a name of a CloudProfile object. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -7117,7 +7117,7 @@ func schema_pkg_apis_core_v1alpha1_ShootSpec(ref common.ReferenceCallback) commo
 					},
 					"region": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Region is a name of a region.",
+							Description: "Region is a name of a region. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -7125,7 +7125,7 @@ func schema_pkg_apis_core_v1alpha1_ShootSpec(ref common.ReferenceCallback) commo
 					},
 					"secretBindingName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret. The credentials inside the provider secret will be used to create the shoot in the respective account.",
+							Description: "SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret. The credentials inside the provider secret will be used to create the shoot in the respective account. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -7133,7 +7133,7 @@ func schema_pkg_apis_core_v1alpha1_ShootSpec(ref common.ReferenceCallback) commo
 					},
 					"seedName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedName is the name of the seed cluster that runs the control plane of the Shoot.",
+							Description: "SeedName is the name of the seed cluster that runs the control plane of the Shoot. This field is immutable when the SeedChange feature gate is disabled.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -7180,7 +7180,7 @@ func schema_pkg_apis_core_v1alpha1_ShootSpec(ref common.ReferenceCallback) commo
 					},
 					"exposureClassName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.",
+							Description: "ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -7461,7 +7461,7 @@ func schema_pkg_apis_core_v1alpha1_ShootStatus(ref common.ReferenceCallback) com
 					},
 					"technicalID": {
 						SchemaProps: spec.SchemaProps{
-							Description: "TechnicalID is the name that is used for creating the Seed namespace, the infrastructure resources, and basically everything that is related to this particular Shoot.",
+							Description: "TechnicalID is the name that is used for creating the Seed namespace, the infrastructure resources, and basically everything that is related to this particular Shoot. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -7469,7 +7469,7 @@ func schema_pkg_apis_core_v1alpha1_ShootStatus(ref common.ReferenceCallback) com
 					},
 					"uid": {
 						SchemaProps: spec.SchemaProps{
-							Description: "UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters. It is used to compute unique hashes.",
+							Description: "UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters. It is used to compute unique hashes. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -7477,7 +7477,7 @@ func schema_pkg_apis_core_v1alpha1_ShootStatus(ref common.ReferenceCallback) com
 					},
 					"clusterIdentity": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ClusterIdentity is the identity of the Shoot cluster",
+							Description: "ClusterIdentity is the identity of the Shoot cluster. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -8316,7 +8316,7 @@ func schema_pkg_apis_core_v1beta1_BackupBucketSpec(ref common.ReferenceCallback)
 				Properties: map[string]spec.Schema{
 					"provider": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Provider hold the details of cloud provider of the object store.",
+							Description: "Provider holds the details of cloud provider of the object store. This field is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.BackupBucketProvider"),
 						},
@@ -8336,7 +8336,7 @@ func schema_pkg_apis_core_v1beta1_BackupBucketSpec(ref common.ReferenceCallback)
 					},
 					"seedName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedName holds the name of the seed allocated to BackupBucket for running controller.",
+							Description: "SeedName holds the name of the seed allocated to BackupBucket for running controller. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -9223,7 +9223,7 @@ func schema_pkg_apis_core_v1beta1_ControllerInstallation(ref common.ReferenceCal
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Spec contains the specification of this installation.",
+							Description: "Spec contains the specification of this installation. If the object's deletion timestamp is set, this field is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallationSpec"),
 						},
@@ -9303,14 +9303,14 @@ func schema_pkg_apis_core_v1beta1_ControllerInstallationSpec(ref common.Referenc
 				Properties: map[string]spec.Schema{
 					"registrationRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "RegistrationRef is used to reference a ControllerRegistration resource.",
+							Description: "RegistrationRef is used to reference a ControllerRegistration resource. The name field of the RegistrationRef is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
 					"seedRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedRef is used to reference a Seed resource.",
+							Description: "SeedRef is used to reference a Seed resource. The name field of the SeedRef is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
@@ -9401,7 +9401,7 @@ func schema_pkg_apis_core_v1beta1_ControllerRegistration(ref common.ReferenceCal
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Spec contains the specification of this registration.",
+							Description: "Spec contains the specification of this registration. If the object's deletion timestamp is set, this field is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistrationSpec"),
 						},
@@ -9580,7 +9580,7 @@ func schema_pkg_apis_core_v1beta1_ControllerResource(ref common.ReferenceCallbac
 					},
 					"primary": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Primary determines if the controller backed by this ControllerRegistration is responsible for the extension resource's lifecycle. This field defaults to true. There must be exactly one primary controller for this kind/type combination.",
+							Description: "Primary determines if the controller backed by this ControllerRegistration is responsible for the extension resource's lifecycle. This field defaults to true. There must be exactly one primary controller for this kind/type combination. This field is immutable.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -9603,7 +9603,7 @@ func schema_pkg_apis_core_v1beta1_DNS(ref common.ReferenceCallback) common.OpenA
 				Properties: map[string]spec.Schema{
 					"domain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Domain is the external available domain of the Shoot cluster. This domain will be written into the kubeconfig that is handed out to end-users. Once set it is immutable.",
+							Description: "Domain is the external available domain of the Shoot cluster. This domain will be written into the kubeconfig that is handed out to end-users. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -10310,7 +10310,7 @@ func schema_pkg_apis_core_v1beta1_KubeControllerManagerConfig(ref common.Referen
 					},
 					"nodeCIDRMaskSize": {
 						SchemaProps: spec.SchemaProps{
-							Description: "NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24)",
+							Description: "NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24). This field is immutable.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
@@ -11465,7 +11465,7 @@ func schema_pkg_apis_core_v1beta1_Networking(ref common.ReferenceCallback) commo
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type identifies the type of the networking plugin.",
+							Description: "Type identifies the type of the networking plugin. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -11479,21 +11479,21 @@ func schema_pkg_apis_core_v1beta1_Networking(ref common.ReferenceCallback) commo
 					},
 					"pods": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Pods is the CIDR of the pod network.",
+							Description: "Pods is the CIDR of the pod network. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"nodes": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Nodes is the CIDR of the entire node network.",
+							Description: "Nodes is the CIDR of the entire node network. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"services": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Services is the CIDR of the service network.",
+							Description: "Services is the CIDR of the service network. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -11734,7 +11734,7 @@ func schema_pkg_apis_core_v1beta1_Plant(ref common.ReferenceCallback) common.Ope
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Spec contains the specification of this Plant.",
+							Description: "Spec contains the specification of this Plant. If the object's deletion timestamp is set, this field is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.PlantSpec"),
 						},
@@ -12073,7 +12073,7 @@ func schema_pkg_apis_core_v1beta1_ProjectSpec(ref common.ReferenceCallback) comm
 				Properties: map[string]spec.Schema{
 					"createdBy": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CreatedBy is a subject representing a user name, an email address, or any other identifier of a user who created the project.",
+							Description: "CreatedBy is a subject representing a user name, an email address, or any other identifier of a user who created the project. This field is immutable.",
 							Ref:         ref("k8s.io/api/rbac/v1.Subject"),
 						},
 					},
@@ -12113,7 +12113,7 @@ func schema_pkg_apis_core_v1beta1_ProjectSpec(ref common.ReferenceCallback) comm
 					},
 					"namespace": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Namespace is the name of the namespace that has been created for the Project object. A nil value means that Gardener will determine the name of the namespace.",
+							Description: "Namespace is the name of the namespace that has been created for the Project object. A nil value means that Gardener will determine the name of the namespace. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -12243,7 +12243,7 @@ func schema_pkg_apis_core_v1beta1_Provider(ref common.ReferenceCallback) common.
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type is the type of the provider.",
+							Description: "Type is the type of the provider. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -12415,7 +12415,7 @@ func schema_pkg_apis_core_v1beta1_QuotaSpec(ref common.ReferenceCallback) common
 					},
 					"scope": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Scope is the scope of the Quota object, either 'project' or 'secret'.",
+							Description: "Scope is the scope of the Quota object, either 'project' or 'secret'. This field is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
@@ -12556,14 +12556,14 @@ func schema_pkg_apis_core_v1beta1_SecretBinding(ref common.ReferenceCallback) co
 					},
 					"secretRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SecretRef is a reference to a secret object in the same or another namespace.",
+							Description: "SecretRef is a reference to a secret object in the same or another namespace. This field is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
 						},
 					},
 					"quotas": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Quotas is a list of references to Quota objects in the same or another namespace.",
+							Description: "Quotas is a list of references to Quota objects in the same or another namespace. This field is immutable.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -12577,7 +12577,7 @@ func schema_pkg_apis_core_v1beta1_SecretBinding(ref common.ReferenceCallback) co
 					},
 					"provider": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Provider defines the provider type of the SecretBinding.",
+							Description: "Provider defines the provider type of the SecretBinding. This field is immutable when the SecretBindingProviderValidation feature gate is enabled.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBindingProvider"),
 						},
 					},
@@ -12722,7 +12722,7 @@ func schema_pkg_apis_core_v1beta1_SeedBackup(ref common.ReferenceCallback) commo
 				Properties: map[string]spec.Schema{
 					"provider": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Provider is a provider name.",
+							Description: "Provider is a provider name. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -12736,7 +12736,7 @@ func schema_pkg_apis_core_v1beta1_SeedBackup(ref common.ReferenceCallback) commo
 					},
 					"region": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Region is a region name.",
+							Description: "Region is a region name. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -12766,7 +12766,7 @@ func schema_pkg_apis_core_v1beta1_SeedDNS(ref common.ReferenceCallback) common.O
 				Properties: map[string]spec.Schema{
 					"ingressDomain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable. This will be removed in the next API version and replaced by spec.ingress.domain.",
+							Description: "IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters. This field is immutable. This will be removed in the next API version and replaced by spec.ingress.domain.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -12888,14 +12888,14 @@ func schema_pkg_apis_core_v1beta1_SeedNetworks(ref common.ReferenceCallback) com
 				Properties: map[string]spec.Schema{
 					"nodes": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Nodes is the CIDR of the node network.",
+							Description: "Nodes is the CIDR of the node network. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"pods": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Pods is the CIDR of the pod network.",
+							Description: "Pods is the CIDR of the pod network. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -12903,7 +12903,7 @@ func schema_pkg_apis_core_v1beta1_SeedNetworks(ref common.ReferenceCallback) com
 					},
 					"services": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Services is the CIDR of the service network.",
+							Description: "Services is the CIDR of the service network. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -13372,7 +13372,7 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 					},
 					"ingress": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Ingress configures Ingress specific settings of the Seed cluster.",
+							Description: "Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress"),
 						},
 					},
@@ -13434,7 +13434,7 @@ func schema_pkg_apis_core_v1beta1_SeedStatus(ref common.ReferenceCallback) commo
 					},
 					"clusterIdentity": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ClusterIdentity is the identity of the Seed cluster",
+							Description: "ClusterIdentity is the identity of the Seed cluster. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -13683,7 +13683,7 @@ func schema_pkg_apis_core_v1beta1_Shoot(ref common.ReferenceCallback) common.Ope
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the Shoot cluster.",
+							Description: "Specification of the Shoot cluster. If the object's deletion timestamp is set, this field is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSpec"),
 						},
@@ -13863,7 +13863,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					},
 					"cloudProfileName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CloudProfileName is a name of a CloudProfile object.",
+							Description: "CloudProfileName is a name of a CloudProfile object. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -13937,7 +13937,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					},
 					"region": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Region is a name of a region.",
+							Description: "Region is a name of a region. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -13945,7 +13945,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					},
 					"secretBindingName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret. The credentials inside the provider secret will be used to create the shoot in the respective account.",
+							Description: "SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret. The credentials inside the provider secret will be used to create the shoot in the respective account. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -13953,7 +13953,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					},
 					"seedName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedName is the name of the seed cluster that runs the control plane of the Shoot.",
+							Description: "SeedName is the name of the seed cluster that runs the control plane of the Shoot. This field is immutable when the SeedChange feature gate is disabled.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -14000,7 +14000,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					},
 					"exposureClassName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.",
+							Description: "ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -14118,7 +14118,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 					},
 					"technicalID": {
 						SchemaProps: spec.SchemaProps{
-							Description: "TechnicalID is the name that is used for creating the Seed namespace, the infrastructure resources, and basically everything that is related to this particular Shoot.",
+							Description: "TechnicalID is the name that is used for creating the Seed namespace, the infrastructure resources, and basically everything that is related to this particular Shoot. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -14126,7 +14126,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 					},
 					"uid": {
 						SchemaProps: spec.SchemaProps{
-							Description: "UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters. It is used to compute unique hashes.",
+							Description: "UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters. It is used to compute unique hashes. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -14134,7 +14134,7 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 					},
 					"clusterIdentity": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ClusterIdentity is the identity of the Shoot cluster",
+							Description: "ClusterIdentity is the identity of the Shoot cluster. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -14794,7 +14794,7 @@ func schema_pkg_apis_operations_v1alpha1_BastionSpec(ref common.ReferenceCallbac
 				Properties: map[string]spec.Schema{
 					"shootRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ShootRef defines the target shoot for a Bastion.",
+							Description: "ShootRef defines the target shoot for a Bastion. The name field of the ShootRef is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
 						},
@@ -14815,7 +14815,7 @@ func schema_pkg_apis_operations_v1alpha1_BastionSpec(ref common.ReferenceCallbac
 					},
 					"sshPublicKey": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SSHPublicKey is the user's public key.",
+							Description: "SSHPublicKey is the user's public key. This field is immutable.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -14926,14 +14926,14 @@ func schema_pkg_apis_seedmanagement_v1alpha1_Gardenlet(ref common.ReferenceCallb
 					},
 					"bootstrap": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Bootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken, None. If set to ServiceAccount or BootstrapToken, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig. If set to None, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster. Defaults to BootstrapToken.",
+							Description: "Bootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken, None. If set to ServiceAccount or BootstrapToken, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig. If set to None, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster. Defaults to BootstrapToken. This field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"mergeWithParent": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MergeWithParent specifies whether the GardenletConfiguration of the parent gardenlet should be merged with the specified GardenletConfiguration. Defaults to true.",
+							Description: "MergeWithParent specifies whether the GardenletConfiguration of the parent gardenlet should be merged with the specified GardenletConfiguration. Defaults to true. This field is immutable.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -15327,7 +15327,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetSpec(ref common.Refer
 					},
 					"selector": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Selector is a label query over ManagedSeeds and Shoots that should match the replica count. It must match the ManagedSeeds and Shoots template's labels.",
+							Description: "Selector is a label query over ManagedSeeds and Shoots that should match the replica count. It must match the ManagedSeeds and Shoots template's labels. This field is immutable.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
 						},
@@ -15354,7 +15354,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetSpec(ref common.Refer
 					},
 					"revisionHistoryLimit": {
 						SchemaProps: spec.SchemaProps{
-							Description: "RevisionHistoryLimit is the maximum number of revisions that will be maintained in the ManagedSeedSet's revision history. Defaults to 10.",
+							Description: "RevisionHistoryLimit is the maximum number of revisions that will be maintained in the ManagedSeedSet's revision history. Defaults to 10. This field is immutable.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
@@ -15483,7 +15483,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSpec(ref common.Referenc
 				Properties: map[string]spec.Schema{
 					"shoot": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Shoot references a Shoot that should be registered as Seed.",
+							Description: "Shoot references a Shoot that should be registered as Seed. This field is immutable.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Shoot"),
 						},
 					},

@@ -58,7 +58,8 @@ spec:
           metadata:
             type: object
           spec:
-            description: BackupEntrySpec is the spec for an BackupEntry resource.
+            description: Specification of the BackupEntry. If the object's deletion
+              timestamp is set, this field is immutable.
             properties:
               backupBucketProviderStatus:
                 description: BackupBucketProviderStatus contains the provider status
@@ -75,7 +76,7 @@ spec:
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               region:
-                description: Region is the region of this Entry.
+                description: Region is the region of this Entry. This field is immutable.
                 type: string
               secretRef:
                 description: SecretRef is a reference to a secret that contains the

@@ -103,7 +103,7 @@ BackupBucketProvider
 </em>
 </td>
 <td>
-<p>Provider hold the details of cloud provider of the object store.</p>
+<p>Provider holds the details of cloud provider of the object store. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -142,7 +142,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SeedName holds the name of the seed allocated to BackupBucket for running controller.</p>
+<p>SeedName holds the name of the seed allocated to BackupBucket for running controller.
+This field is immutable.</p>
 </td>
 </tr>
 </table>
@@ -578,7 +579,8 @@ ControllerInstallationSpec
 </em>
 </td>
 <td>
-<p>Spec contains the specification of this installation.</p>
+<p>Spec contains the specification of this installation.
+If the object&rsquo;s deletion timestamp is set, this field is immutable.</p>
 <br/>
 <br/>
 <table>
@@ -592,7 +594,8 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
-<p>RegistrationRef is used to reference a ControllerRegistration resource.</p>
+<p>RegistrationRef is used to reference a ControllerRegistration resource.
+The name field of the RegistrationRef is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -605,7 +608,7 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
-<p>SeedRef is used to reference a Seed resource.</p>
+<p>SeedRef is used to reference a Seed resource. The name field of the SeedRef is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -695,7 +698,8 @@ ControllerRegistrationSpec
 </em>
 </td>
 <td>
-<p>Spec contains the specification of this registration.</p>
+<p>Spec contains the specification of this registration.
+If the object&rsquo;s deletion timestamp is set, this field is immutable.</p>
 <br/>
 <br/>
 <table>
@@ -789,7 +793,8 @@ PlantSpec
 </em>
 </td>
 <td>
-<p>Spec contains the specification of this Plant.</p>
+<p>Spec contains the specification of this Plant.
+If the object&rsquo;s deletion timestamp is set, this field is immutable.</p>
 <br/>
 <br/>
 <table>
@@ -912,7 +917,7 @@ Kubernetes rbac/v1.Subject
 <td>
 <em>(Optional)</em>
 <p>CreatedBy is a subject representing a user name, an email address, or any other identifier of a user
-who created the project.</p>
+who created the project. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -983,7 +988,8 @@ string
 <td>
 <em>(Optional)</em>
 <p>Namespace is the name of the namespace that has been created for the Project object.
-A nil value means that Gardener will determine the name of the namespace.</p>
+A nil value means that Gardener will determine the name of the namespace.
+This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -1115,7 +1121,7 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
-<p>Scope is the scope of the Quota object, either &lsquo;project&rsquo; or &lsquo;secret&rsquo;.</p>
+<p>Scope is the scope of the Quota object, either &lsquo;project&rsquo; or &lsquo;secret&rsquo;. This field is immutable.</p>
 </td>
 </tr>
 </table>
@@ -1179,7 +1185,8 @@ Kubernetes core/v1.SecretReference
 </em>
 </td>
 <td>
-<p>SecretRef is a reference to a secret object in the same or another namespace.</p>
+<p>SecretRef is a reference to a secret object in the same or another namespace.
+This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -1193,7 +1200,8 @@ Kubernetes core/v1.SecretReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>Quotas is a list of references to Quota objects in the same or another namespace.</p>
+<p>Quotas is a list of references to Quota objects in the same or another namespace.
+This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -1207,7 +1215,8 @@ SecretBindingProvider
 </td>
 <td>
 <em>(Optional)</em>
-<p>Provider defines the provider type of the SecretBinding.</p>
+<p>Provider defines the provider type of the SecretBinding.
+This field is immutable when the SecretBindingProviderValidation feature gate is enabled.</p>
 </td>
 </tr>
 </tbody>
@@ -1395,7 +1404,7 @@ Ingress
 </td>
 <td>
 <em>(Optional)</em>
-<p>Ingress configures Ingress specific settings of the Seed cluster.</p>
+<p>Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.</p>
 </td>
 </tr>
 </table>
@@ -1473,7 +1482,8 @@ ShootSpec
 </td>
 <td>
 <em>(Optional)</em>
-<p>Specification of the Shoot cluster.</p>
+<p>Specification of the Shoot cluster.
+If the object&rsquo;s deletion timestamp is set, this field is immutable.</p>
 <br/>
 <br/>
 <table>
@@ -1499,7 +1509,7 @@ string
 </em>
 </td>
 <td>
-<p>CloudProfileName is a name of a CloudProfile object.</p>
+<p>CloudProfileName is a name of a CloudProfile object. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -1634,7 +1644,7 @@ string
 </em>
 </td>
 <td>
-<p>Region is a name of a region.</p>
+<p>Region is a name of a region. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -1646,7 +1656,8 @@ string
 </td>
 <td>
 <p>SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
-The credentials inside the provider secret will be used to create the shoot in the respective account.</p>
+The credentials inside the provider secret will be used to create the shoot in the respective account.
+This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -1658,7 +1669,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SeedName is the name of the seed cluster that runs the control plane of the Shoot.</p>
+<p>SeedName is the name of the seed cluster that runs the control plane of the Shoot.
+This field is immutable when the SeedChange feature gate is disabled.</p>
 </td>
 </tr>
 <tr>
@@ -1712,7 +1724,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.</p>
+<p>ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
+This field is immutable.</p>
 </td>
 </tr>
 </table>
@@ -2076,7 +2089,7 @@ BackupBucketProvider
 </em>
 </td>
 <td>
-<p>Provider hold the details of cloud provider of the object store.</p>
+<p>Provider holds the details of cloud provider of the object store. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -2115,7 +2128,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SeedName holds the name of the seed allocated to BackupBucket for running controller.</p>
+<p>SeedName holds the name of the seed allocated to BackupBucket for running controller.
+This field is immutable.</p>
 </td>
 </tr>
 </tbody>
@@ -2983,7 +2997,8 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
-<p>RegistrationRef is used to reference a ControllerRegistration resource.</p>
+<p>RegistrationRef is used to reference a ControllerRegistration resource.
+The name field of the RegistrationRef is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -2996,7 +3011,7 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
-<p>SeedRef is used to reference a Seed resource.</p>
+<p>SeedRef is used to reference a Seed resource. The name field of the SeedRef is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -3250,7 +3265,7 @@ bool
 <em>(Optional)</em>
 <p>Primary determines if the controller backed by this ControllerRegistration is responsible for the extension
 resource&rsquo;s lifecycle. This field defaults to true. There must be exactly one primary controller for this kind/type
-combination.</p>
+combination. This field is immutable.</p>
 </td>
 </tr>
 </tbody>
@@ -3282,7 +3297,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>Domain is the external available domain of the Shoot cluster. This domain will be written into the
-kubeconfig that is handed out to end-users. Once set it is immutable.</p>
+kubeconfig that is handed out to end-users. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -4338,7 +4353,7 @@ int32
 </td>
 <td>
 <em>(Optional)</em>
-<p>NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24)</p>
+<p>NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24). This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -6189,7 +6204,7 @@ string
 </em>
 </td>
 <td>
-<p>Type identifies the type of the networking plugin.</p>
+<p>Type identifies the type of the networking plugin. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -6215,7 +6230,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Pods is the CIDR of the pod network.</p>
+<p>Pods is the CIDR of the pod network. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -6227,7 +6242,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Nodes is the CIDR of the entire node network.</p>
+<p>Nodes is the CIDR of the entire node network. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -6239,7 +6254,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Services is the CIDR of the service network.</p>
+<p>Services is the CIDR of the service network. This field is immutable.</p>
 </td>
 </tr>
 </tbody>
@@ -6710,7 +6725,7 @@ Kubernetes rbac/v1.Subject
 <td>
 <em>(Optional)</em>
 <p>CreatedBy is a subject representing a user name, an email address, or any other identifier of a user
-who created the project.</p>
+who created the project. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -6781,7 +6796,8 @@ string
 <td>
 <em>(Optional)</em>
 <p>Namespace is the name of the namespace that has been created for the Project object.
-A nil value means that Gardener will determine the name of the namespace.</p>
+A nil value means that Gardener will determine the name of the namespace.
+This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -6961,7 +6977,7 @@ string
 </em>
 </td>
 <td>
-<p>Type is the type of the provider.</p>
+<p>Type is the type of the provider. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -7075,7 +7091,7 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
-<p>Scope is the scope of the Quota object, either &lsquo;project&rsquo; or &lsquo;secret&rsquo;.</p>
+<p>Scope is the scope of the Quota object, either &lsquo;project&rsquo; or &lsquo;secret&rsquo;. This field is immutable.</p>
 </td>
 </tr>
 </tbody>
@@ -7250,7 +7266,7 @@ string
 </em>
 </td>
 <td>
-<p>Provider is a provider name.</p>
+<p>Provider is a provider name. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -7276,7 +7292,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Region is a region name.</p>
+<p>Region is a region name. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -7323,7 +7339,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
-to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.
+to construct ingress URLs for system applications running in Shoot clusters. This field is immutable.
 This will be removed in the next API version and replaced by spec.ingress.domain.</p>
 </td>
 </tr>
@@ -7440,7 +7456,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>Nodes is the CIDR of the node network.</p>
+<p>Nodes is the CIDR of the node network. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -7451,7 +7467,7 @@ string
 </em>
 </td>
 <td>
-<p>Pods is the CIDR of the pod network.</p>
+<p>Pods is the CIDR of the pod network. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -7462,7 +7478,7 @@ string
 </em>
 </td>
 <td>
-<p>Services is the CIDR of the service network.</p>
+<p>Services is the CIDR of the service network. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -8157,7 +8173,7 @@ Ingress
 </td>
 <td>
 <em>(Optional)</em>
-<p>Ingress configures Ingress specific settings of the Seed cluster.</p>
+<p>Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.</p>
 </td>
 </tr>
 </tbody>
@@ -8241,7 +8257,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>ClusterIdentity is the identity of the Seed cluster</p>
+<p>ClusterIdentity is the identity of the Seed cluster. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -8499,7 +8515,7 @@ Ingress
 </td>
 <td>
 <em>(Optional)</em>
-<p>Ingress configures Ingress specific settings of the Seed cluster.</p>
+<p>Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.</p>
 </td>
 </tr>
 </table>
@@ -8866,7 +8882,7 @@ string
 </em>
 </td>
 <td>
-<p>CloudProfileName is a name of a CloudProfile object.</p>
+<p>CloudProfileName is a name of a CloudProfile object. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -9001,7 +9017,7 @@ string
 </em>
 </td>
 <td>
-<p>Region is a name of a region.</p>
+<p>Region is a name of a region. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -9013,7 +9029,8 @@ string
 </td>
 <td>
 <p>SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
-The credentials inside the provider secret will be used to create the shoot in the respective account.</p>
+The credentials inside the provider secret will be used to create the shoot in the respective account.
+This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -9025,7 +9042,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SeedName is the name of the seed cluster that runs the control plane of the Shoot.</p>
+<p>SeedName is the name of the seed cluster that runs the control plane of the Shoot.
+This field is immutable when the SeedChange feature gate is disabled.</p>
 </td>
 </tr>
 <tr>
@@ -9079,7 +9097,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.</p>
+<p>ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
+This field is immutable.</p>
 </td>
 </tr>
 </tbody>
@@ -9231,7 +9250,7 @@ string
 </td>
 <td>
 <p>TechnicalID is the name that is used for creating the Seed namespace, the infrastructure resources, and
-basically everything that is related to this particular Shoot.</p>
+basically everything that is related to this particular Shoot. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -9245,7 +9264,7 @@ k8s.io/apimachinery/pkg/types.UID
 </td>
 <td>
 <p>UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
-It is used to compute unique hashes.</p>
+It is used to compute unique hashes. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -9257,7 +9276,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>ClusterIdentity is the identity of the Shoot cluster</p>
+<p>ClusterIdentity is the identity of the Shoot cluster. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -9356,7 +9375,7 @@ string
 </em>
 </td>
 <td>
-<p>CloudProfileName is a name of a CloudProfile object.</p>
+<p>CloudProfileName is a name of a CloudProfile object. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -9491,7 +9510,7 @@ string
 </em>
 </td>
 <td>
-<p>Region is a name of a region.</p>
+<p>Region is a name of a region. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -9503,7 +9522,8 @@ string
 </td>
 <td>
 <p>SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
-The credentials inside the provider secret will be used to create the shoot in the respective account.</p>
+The credentials inside the provider secret will be used to create the shoot in the respective account.
+This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -9515,7 +9535,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SeedName is the name of the seed cluster that runs the control plane of the Shoot.</p>
+<p>SeedName is the name of the seed cluster that runs the control plane of the Shoot.
+This field is immutable when the SeedChange feature gate is disabled.</p>
 </td>
 </tr>
 <tr>
@@ -9569,7 +9590,8 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.</p>
+<p>ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
+This field is immutable.</p>
 </td>
 </tr>
 </table>

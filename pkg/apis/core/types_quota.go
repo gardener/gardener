@@ -48,7 +48,7 @@ type QuotaSpec struct {
 	ClusterLifetimeDays *int32
 	// Metrics is a list of resources which will be put under constraints.
 	Metrics corev1.ResourceList
-	// Scope is the scope of the Quota object, either 'project' or 'secret'.
+	// Scope is the scope of the Quota object, either 'project' or 'secret'. This field is immutable.
 	Scope corev1.ObjectReference
 }
 

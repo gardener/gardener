@@ -50,7 +50,8 @@ spec:
           metadata:
             type: object
           spec:
-            description: ContainerRuntimeSpec is the spec for a ContainerRuntime resource.
+            description: Specification of the ContainerRuntime. If the object's deletion
+              timestamp is set, this field is immutable.
             properties:
               binaryPath:
                 description: BinaryPath is the Worker's machine path where container
@@ -69,7 +70,7 @@ spec:
                 properties:
                   name:
                     description: Name specifies the name of the worker pool the container
-                      runtime should be available for.
+                      runtime should be available for. This field is immutable.
                     type: string
                   selector:
                     description: Selector is the label selector used by the extension

@@ -86,7 +86,8 @@ Shoot
 </td>
 <td>
 <em>(Optional)</em>
-<p>Shoot references a Shoot that should be registered as Seed.</p>
+<p>Shoot references a Shoot that should be registered as Seed.
+This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -223,7 +224,7 @@ Kubernetes meta/v1.LabelSelector
 </td>
 <td>
 <p>Selector is a label query over ManagedSeeds and Shoots that should match the replica count.
-It must match the ManagedSeeds and Shoots template&rsquo;s labels.</p>
+It must match the ManagedSeeds and Shoots template&rsquo;s labels. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -279,8 +280,8 @@ int32
 </td>
 <td>
 <em>(Optional)</em>
-<p>RevisionHistoryLimit is the maximum number of revisions that will
-be maintained in the ManagedSeedSet&rsquo;s revision history. Defaults to 10.</p>
+<p>RevisionHistoryLimit is the maximum number of revisions that will be maintained
+in the ManagedSeedSet&rsquo;s revision history. Defaults to 10. This field is immutable.</p>
 </td>
 </tr>
 </table>
@@ -370,7 +371,8 @@ Bootstrap
 <em>(Optional)</em>
 <p>Bootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken, None.
 If set to ServiceAccount or BootstrapToken, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig.
-If set to None, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster. Defaults to BootstrapToken.</p>
+If set to None, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster. Defaults to BootstrapToken.
+This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -383,7 +385,7 @@ bool
 <td>
 <em>(Optional)</em>
 <p>MergeWithParent specifies whether the GardenletConfiguration of the parent gardenlet
-should be merged with the specified GardenletConfiguration. Defaults to true.</p>
+should be merged with the specified GardenletConfiguration. Defaults to true. This field is immutable.</p>
 </td>
 </tr>
 </tbody>
@@ -648,7 +650,7 @@ Kubernetes meta/v1.LabelSelector
 </td>
 <td>
 <p>Selector is a label query over ManagedSeeds and Shoots that should match the replica count.
-It must match the ManagedSeeds and Shoots template&rsquo;s labels.</p>
+It must match the ManagedSeeds and Shoots template&rsquo;s labels. This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -704,8 +706,8 @@ int32
 </td>
 <td>
 <em>(Optional)</em>
-<p>RevisionHistoryLimit is the maximum number of revisions that will
-be maintained in the ManagedSeedSet&rsquo;s revision history. Defaults to 10.</p>
+<p>RevisionHistoryLimit is the maximum number of revisions that will be maintained
+in the ManagedSeedSet&rsquo;s revision history. Defaults to 10. This field is immutable.</p>
 </td>
 </tr>
 </tbody>
@@ -894,7 +896,8 @@ Shoot
 </td>
 <td>
 <em>(Optional)</em>
-<p>Shoot references a Shoot that should be registered as Seed.</p>
+<p>Shoot references a Shoot that should be registered as Seed.
+This field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -1034,7 +1037,8 @@ Shoot
 </td>
 <td>
 <em>(Optional)</em>
-<p>Shoot references a Shoot that should be registered as Seed.</p>
+<p>Shoot references a Shoot that should be registered as Seed.
+This field is immutable.</p>
 </td>
 </tr>
 <tr>

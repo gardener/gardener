@@ -29,6 +29,7 @@ type Plant struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Spec contains the specification of this Plant.
+	// If the object's deletion timestamp is set, this field is immutable.
 	Spec PlantSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	// Status contains the status of this Plant.
 	Status PlantStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`

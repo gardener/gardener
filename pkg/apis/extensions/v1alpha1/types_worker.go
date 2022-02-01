@@ -42,7 +42,8 @@ type Worker struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
+	// Specification of the Worker.
+	// If the object's deletion timestamp is set, this field is immutable.
 	Spec WorkerSpec `json:"spec"`
 	// +optional
 	Status WorkerStatus `json:"status"`
@@ -81,7 +82,7 @@ type WorkerSpec struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional
 	InfrastructureProviderStatus *runtime.RawExtension `json:"infrastructureProviderStatus,omitempty"`
-	// Region is the name of the region where the worker pool should be deployed to.
+	// Region is the name of the region where the worker pool should be deployed to. This field is immutable.
 	Region string `json:"region"`
 	// SecretRef is a reference to a secret that contains the cloud provider specific credentials.
 	SecretRef corev1.SecretReference `json:"secretRef"`

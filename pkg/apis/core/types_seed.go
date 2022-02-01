@@ -77,7 +77,7 @@ type SeedSpec struct {
 	Taints []SeedTaint
 	// Volume contains settings for persistentvolumes created in the seed cluster.
 	Volume *SeedVolume
-	// Ingress configures Ingress specific settings of the Seed cluster.
+	// Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.
 	Ingress *Ingress
 }
 
@@ -97,7 +97,7 @@ type SeedStatus struct {
 	// ObservedGeneration is the most recent generation observed for this Seed. It corresponds to the
 	// Seed's generation, which is updated on mutation by the API Server.
 	ObservedGeneration int64
-	// ClusterIdentity is the identity of Seed cluster
+	// ClusterIdentity is the identity of the Seed cluster. This field is immutable.
 	ClusterIdentity *string
 	// Capacity represents the total resources of a seed.
 	Capacity corev1.ResourceList
@@ -110,11 +110,11 @@ type SeedStatus struct {
 
 // SeedBackup contains the object store configuration for backups for shoot (currently only etcd).
 type SeedBackup struct {
-	// Provider is a provider name.
+	// Provider is a provider name. This field is immutable.
 	Provider string
 	// ProviderConfig is the configuration passed to BackupBucket resource.
 	ProviderConfig *runtime.RawExtension
-	// Region is a region name.
+	// Region is a region name. This field is immutable.
 	Region *string
 	// SecretRef is a reference to a Secret object containing the cloud provider credentials for
 	// the object store where backups should be stored. It should have enough privileges to manipulate
@@ -125,7 +125,7 @@ type SeedBackup struct {
 // SeedDNS contains the external domain and configuration for the DNS provider
 type SeedDNS struct {
 	// IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
-	// to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.
+	// to construct ingress URLs for system applications running in Shoot clusters. This field is immutable.
 	// This will be removed in the next API version and replaced by spec.ingress.domain.
 	IngressDomain *string
 	// Provider configures a DNSProvider
@@ -163,11 +163,11 @@ type IngressController struct {
 
 // SeedNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 type SeedNetworks struct {
-	// Nodes is the CIDR of the node network.
+	// Nodes is the CIDR of the node network. This field is immutable.
 	Nodes *string
-	// Pods is the CIDR of the pod network.
+	// Pods is the CIDR of the pod network. This field is immutable.
 	Pods string
-	// Services is the CIDR of the service network.
+	// Services is the CIDR of the service network. This field is immutable.
 	Services string
 	// ShootDefaults contains the default networks CIDRs for shoots.
 	ShootDefaults *ShootNetworks

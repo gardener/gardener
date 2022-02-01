@@ -49,7 +49,7 @@ type BackupBucketList struct {
 
 // BackupBucketSpec is the specification of a Backup Bucket.
 type BackupBucketSpec struct {
-	// Provider hold the details of cloud provider of the object store.
+	// Provider holds the details of cloud provider of the object store. This field is immutable.
 	Provider BackupBucketProvider `json:"provider" protobuf:"bytes,1,opt,name=provider"`
 	// ProviderConfig is the configuration passed to BackupBucket resource.
 	// +optional
@@ -57,6 +57,7 @@ type BackupBucketSpec struct {
 	// SecretRef is a reference to a secret that contains the credentials to access object store.
 	SecretRef corev1.SecretReference `json:"secretRef" protobuf:"bytes,3,opt,name=secretRef"`
 	// SeedName holds the name of the seed allocated to BackupBucket for running controller.
+	// This field is immutable.
 	// +optional
 	SeedName *string `json:"seedName,omitempty" protobuf:"bytes,4,opt,name=seedName"`
 }

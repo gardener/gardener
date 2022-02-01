@@ -55,11 +55,12 @@ spec:
           metadata:
             type: object
           spec:
-            description: DNSRecordSpec is the spec of a DNSRecord resource.
+            description: Specification of the DNSRecord. If the object's deletion
+              timestamp is set, this field is immutable.
             properties:
               name:
                 description: Name is the fully qualified domain name, e.g. "api.<shoot
-                  domain>".
+                  domain>". This field is immutable.
                 type: string
               providerConfig:
                 description: ProviderConfig is the provider specific configuration.
@@ -67,7 +68,7 @@ spec:
                 x-kubernetes-preserve-unknown-fields: true
               recordType:
                 description: RecordType is the DNS record type. Only A, CNAME, and
-                  TXT records are currently supported.
+                  TXT records are currently supported. This field is immutable.
                 type: string
               region:
                 description: Region is the region of this DNS record. If not specified,

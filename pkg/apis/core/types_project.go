@@ -48,7 +48,7 @@ type ProjectList struct {
 // ProjectSpec is the specification of a Project.
 type ProjectSpec struct {
 	// CreatedBy is a subject representing a user name, an email address, or any other identifier of a user
-	// who created the project.
+	// who created the project. This field is immutable.
 	CreatedBy *rbacv1.Subject
 	// Description is a human-readable description of what the project is used for.
 	Description *string
@@ -62,6 +62,7 @@ type ProjectSpec struct {
 	Members []ProjectMember
 	// Namespace is the name of the namespace that has been created for the Project object.
 	// A nil value means that Gardener will determine the name of the namespace.
+	// This field is immutable.
 	Namespace *string
 	// Tolerations contains the default tolerations and a list for allowed taints on seed clusters.
 	Tolerations *ProjectTolerations

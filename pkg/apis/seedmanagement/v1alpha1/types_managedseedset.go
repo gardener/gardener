@@ -55,7 +55,7 @@ type ManagedSeedSetSpec struct {
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty" protobuf:"varint,1,opt,name=replicas"`
 	// Selector is a label query over ManagedSeeds and Shoots that should match the replica count.
-	// It must match the ManagedSeeds and Shoots template's labels.
+	// It must match the ManagedSeeds and Shoots template's labels. This field is immutable.
 	Selector metav1.LabelSelector `json:"selector" protobuf:"bytes,2,opt,name=selector"`
 	// Template describes the ManagedSeed that will be created if insufficient replicas are detected.
 	// Each ManagedSeed created / updated by the ManagedSeedSet will fulfill this template.
@@ -68,8 +68,8 @@ type ManagedSeedSetSpec struct {
 	// Template / ShootTemplate.
 	// +optional
 	UpdateStrategy *UpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,5,opt,name=updateStrategy"`
-	// RevisionHistoryLimit is the maximum number of revisions that will
-	// be maintained in the ManagedSeedSet's revision history. Defaults to 10.
+	// RevisionHistoryLimit is the maximum number of revisions that will be maintained
+	// in the ManagedSeedSet's revision history. Defaults to 10. This field is immutable.
 	// +optional
 	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty" protobuf:"varint,6,opt,name=revisionHistoryLimit"`
 }

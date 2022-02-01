@@ -128,7 +128,7 @@ message BackupBucketProvider {
 
 // BackupBucketSpec is the specification of a Backup Bucket.
 message BackupBucketSpec {
-  // Provider hold the details of cloud provider of the object store.
+  // Provider holds the details of cloud provider of the object store. This field is immutable.
   optional BackupBucketProvider provider = 1;
 
   // ProviderConfig is the configuration passed to BackupBucket resource.
@@ -139,6 +139,7 @@ message BackupBucketSpec {
   optional k8s.io.api.core.v1.SecretReference secretRef = 3;
 
   // SeedName holds the name of the seed allocated to BackupBucket for running controller.
+  // This field is immutable.
   // +optional
   optional string seedName = 4;
 }
@@ -430,6 +431,7 @@ message ControllerInstallation {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec contains the specification of this installation.
+  // If the object's deletion timestamp is set, this field is immutable.
   optional ControllerInstallationSpec spec = 2;
 
   // Status contains the status of this installation.
@@ -449,9 +451,10 @@ message ControllerInstallationList {
 // ControllerInstallationSpec is the specification of a ControllerInstallation.
 message ControllerInstallationSpec {
   // RegistrationRef is used to reference a ControllerRegistration resource.
+  // The name field of the RegistrationRef is immutable.
   optional k8s.io.api.core.v1.ObjectReference registrationRef = 1;
 
-  // SeedRef is used to reference a Seed resource.
+  // SeedRef is used to reference a Seed resource. The name field of the SeedRef is immutable.
   optional k8s.io.api.core.v1.ObjectReference seedRef = 2;
 
   // DeploymentRef is used to reference a ControllerDeployment resource.
@@ -478,6 +481,7 @@ message ControllerRegistration {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec contains the specification of this registration.
+  // If the object's deletion timestamp is set, this field is immutable.
   optional ControllerRegistrationSpec spec = 2;
 }
 
@@ -539,7 +543,7 @@ message ControllerResource {
 
   // Primary determines if the controller backed by this ControllerRegistration is responsible for the extension
   // resource's lifecycle. This field defaults to true. There must be exactly one primary controller for this kind/type
-  // combination.
+  // combination. This field is immutable.
   // +optional
   optional bool primary = 5;
 }
@@ -547,7 +551,7 @@ message ControllerResource {
 // DNS holds information about the provider, the hosted zone id and the domain.
 message DNS {
   // Domain is the external available domain of the Shoot cluster. This domain will be written into the
-  // kubeconfig that is handed out to end-users. Once set it is immutable.
+  // kubeconfig that is handed out to end-users. This field is immutable.
   // +optional
   optional string domain = 1;
 
@@ -829,7 +833,7 @@ message KubeControllerManagerConfig {
   // +optional
   optional HorizontalPodAutoscalerConfig horizontalPodAutoscaler = 2;
 
-  // NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24)
+  // NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24). This field is immutable.
   // +optional
   optional int32 nodeCIDRMaskSize = 3;
 
@@ -1317,22 +1321,22 @@ message NamedResourceReference {
 
 // Networking defines networking parameters for the shoot cluster.
 message Networking {
-  // Type identifies the type of the networking plugin.
+  // Type identifies the type of the networking plugin. This field is immutable.
   optional string type = 1;
 
   // ProviderConfig is the configuration passed to network resource.
   // +optional
   optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
 
-  // Pods is the CIDR of the pod network.
+  // Pods is the CIDR of the pod network. This field is immutable.
   // +optional
   optional string pods = 3;
 
-  // Nodes is the CIDR of the entire node network.
+  // Nodes is the CIDR of the entire node network. This field is immutable.
   // +optional
   optional string nodes = 4;
 
-  // Services is the CIDR of the service network.
+  // Services is the CIDR of the service network. This field is immutable.
   // +optional
   optional string services = 5;
 }
@@ -1419,6 +1423,7 @@ message Plant {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec contains the specification of this Plant.
+  // If the object's deletion timestamp is set, this field is immutable.
   optional PlantSpec spec = 2;
 
   // Status contains the status of this Plant.
@@ -1510,7 +1515,7 @@ message ProjectMember {
 // ProjectSpec is the specification of a Project.
 message ProjectSpec {
   // CreatedBy is a subject representing a user name, an email address, or any other identifier of a user
-  // who created the project.
+  // who created the project. This field is immutable.
   // +optional
   optional k8s.io.api.rbac.v1.Subject createdBy = 1;
 
@@ -1538,6 +1543,7 @@ message ProjectSpec {
 
   // Namespace is the name of the namespace that has been created for the Project object.
   // A nil value means that Gardener will determine the name of the namespace.
+  // This field is immutable.
   // +optional
   optional string namespace = 6;
 
@@ -1588,7 +1594,7 @@ message ProjectTolerations {
 // Provider contains provider-specific information that are handed-over to the provider-specific
 // extension controller.
 message Provider {
-  // Type is the type of the provider.
+  // Type is the type of the provider. This field is immutable.
   optional string type = 1;
 
   // ControlPlaneConfig contains the provider-specific control plane config blob. Please look up the concrete
@@ -1637,7 +1643,7 @@ message QuotaSpec {
   // Metrics is a list of resources which will be put under constraints.
   map<string, k8s.io.apimachinery.pkg.api.resource.Quantity> metrics = 2;
 
-  // Scope is the scope of the Quota object, either 'project' or 'secret'.
+  // Scope is the scope of the Quota object, either 'project' or 'secret'. This field is immutable.
   optional k8s.io.api.core.v1.ObjectReference scope = 3;
 }
 
@@ -1681,13 +1687,16 @@ message SecretBinding {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // SecretRef is a reference to a secret object in the same or another namespace.
+  // This field is immutable.
   optional k8s.io.api.core.v1.SecretReference secretRef = 2;
 
   // Quotas is a list of references to Quota objects in the same or another namespace.
+  // This field is immutable.
   // +optional
   repeated k8s.io.api.core.v1.ObjectReference quotas = 3;
 
   // Provider defines the provider type of the SecretBinding.
+  // This field is immutable when the SecretBindingProviderValidation feature gate is enabled.
   // +optional
   optional SecretBindingProvider provider = 4;
 }
@@ -1725,14 +1734,14 @@ message Seed {
 
 // SeedBackup contains the object store configuration for backups for shoot (currently only etcd).
 message SeedBackup {
-  // Provider is a provider name.
+  // Provider is a provider name. This field is immutable.
   optional string provider = 1;
 
   // ProviderConfig is the configuration passed to BackupBucket resource.
   // +optional
   optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
 
-  // Region is a region name.
+  // Region is a region name. This field is immutable.
   // +optional
   optional string region = 3;
 
@@ -1745,7 +1754,7 @@ message SeedBackup {
 // SeedDNS contains DNS-relevant information about this seed cluster.
 message SeedDNS {
   // IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
-  // to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.
+  // to construct ingress URLs for system applications running in Shoot clusters. This field is immutable.
   // This will be removed in the next API version and replaced by spec.ingress.domain.
   // +optional
   optional string ingressDomain = 1;
@@ -1784,14 +1793,14 @@ message SeedList {
 
 // SeedNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 message SeedNetworks {
-  // Nodes is the CIDR of the node network.
+  // Nodes is the CIDR of the node network. This field is immutable.
   // +optional
   optional string nodes = 1;
 
-  // Pods is the CIDR of the pod network.
+  // Pods is the CIDR of the pod network. This field is immutable.
   optional string pods = 2;
 
-  // Services is the CIDR of the service network.
+  // Services is the CIDR of the service network. This field is immutable.
   optional string services = 3;
 
   // ShootDefaults contains the default networks CIDRs for shoots.
@@ -1966,7 +1975,7 @@ message SeedSpec {
   // +optional
   optional SeedSettings settings = 8;
 
-  // Ingress configures Ingress specific settings of the Seed cluster.
+  // Ingress configures Ingress specific settings of the Seed cluster. This field is immutable.
   // +optional
   optional Ingress ingress = 9;
 }
@@ -1992,7 +2001,7 @@ message SeedStatus {
   // +optional
   optional int64 observedGeneration = 4;
 
-  // ClusterIdentity is the identity of the Seed cluster
+  // ClusterIdentity is the identity of the Seed cluster. This field is immutable.
   // +optional
   optional string clusterIdentity = 5;
 
@@ -2088,6 +2097,7 @@ message Shoot {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Specification of the Shoot cluster.
+  // If the object's deletion timestamp is set, this field is immutable.
   // +optional
   optional ShootSpec spec = 2;
 
@@ -2148,7 +2158,7 @@ message ShootSpec {
   // +optional
   optional Addons addons = 1;
 
-  // CloudProfileName is a name of a CloudProfile object.
+  // CloudProfileName is a name of a CloudProfile object. This field is immutable.
   optional string cloudProfileName = 2;
 
   // DNS contains information about the DNS settings of the Shoot.
@@ -2185,14 +2195,16 @@ message ShootSpec {
   // +optional
   optional string purpose = 11;
 
-  // Region is a name of a region.
+  // Region is a name of a region. This field is immutable.
   optional string region = 12;
 
   // SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
   // The credentials inside the provider secret will be used to create the shoot in the respective account.
+  // This field is immutable.
   optional string secretBindingName = 13;
 
   // SeedName is the name of the seed cluster that runs the control plane of the Shoot.
+  // This field is immutable when the SeedChange feature gate is disabled.
   // +optional
   optional string seedName = 14;
 
@@ -2211,6 +2223,7 @@ message ShootSpec {
   repeated Toleration tolerations = 17;
 
   // ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
+  // This field is immutable.
   // +optional
   optional string exposureClassName = 18;
 }
@@ -2259,14 +2272,14 @@ message ShootStatus {
   optional string seedName = 9;
 
   // TechnicalID is the name that is used for creating the Seed namespace, the infrastructure resources, and
-  // basically everything that is related to this particular Shoot.
+  // basically everything that is related to this particular Shoot. This field is immutable.
   optional string technicalID = 10;
 
   // UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
-  // It is used to compute unique hashes.
+  // It is used to compute unique hashes. This field is immutable.
   optional string uid = 11;
 
-  // ClusterIdentity is the identity of the Shoot cluster
+  // ClusterIdentity is the identity of the Shoot cluster. This field is immutable.
   // +optional
   optional string clusterIdentity = 12;
 

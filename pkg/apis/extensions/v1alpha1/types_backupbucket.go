@@ -39,7 +39,8 @@ type BackupBucket struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
+	// Specification of the BackupBucket.
+	// If the object's deletion timestamp is set, this field is immutable.
 	Spec BackupBucketSpec `json:"spec"`
 	// +optional
 	Status BackupBucketStatus `json:"status"`
@@ -71,7 +72,7 @@ type BackupBucketList struct {
 type BackupBucketSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
 	DefaultSpec `json:",inline"`
-	// Region is the region of this bucket.
+	// Region is the region of this bucket. This field is immutable.
 	Region string `json:"region"`
 	// SecretRef is a reference to a secret that contains the credentials to access object store.
 	SecretRef corev1.SecretReference `json:"secretRef"`

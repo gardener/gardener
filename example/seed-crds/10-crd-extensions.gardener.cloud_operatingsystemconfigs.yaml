@@ -54,8 +54,8 @@ spec:
           metadata:
             type: object
           spec:
-            description: OperatingSystemConfigSpec is the spec for a OperatingSystemConfig
-              resource.
+            description: Specification of the OperatingSystemConfig. If the object's
+              deletion timestamp is set, this field is immutable.
             properties:
               criConfig:
                 description: CRI config is a structure contains configurations of
@@ -138,7 +138,7 @@ spec:
                 description: Purpose describes how the result of this OperatingSystemConfig
                   is used by Gardener. Either it gets sent to the `Worker` extension
                   controller to bootstrap a VM, or it is downloaded by the cloud-config-downloader
-                  script already running on a bootstrapped VM.
+                  script already running on a bootstrapped VM. This field is immutable.
                 type: string
               reloadConfigFilePath:
                 description: ReloadConfigFilePath is the path to the generated operating
