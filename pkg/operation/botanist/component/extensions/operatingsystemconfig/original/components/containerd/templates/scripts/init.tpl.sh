@@ -6,6 +6,13 @@ if [ ! -s "$FILE" ]; then
   containerd config default > "$FILE"
 fi
 
+# Inject cGroupDriver
+cGroupDriver={{ .cGroupDriver }}
+cGroupDriver_line="$(grep SystemdCgroup $FILE | sed -e 's/^[ ]*//')"
+if [ "$cGroupDriver" = "systemd" ]; then
+  sed -i "s|$cGroupDriver_line|SystemdCgroup = true|g" $FILE
+fi
+
 # use injected image as sandbox image
 sandbox_image_line="$(grep sandbox_image $FILE | sed -e 's/^[ ]*//')"
 pause_image={{ .pauseContainerImage }}

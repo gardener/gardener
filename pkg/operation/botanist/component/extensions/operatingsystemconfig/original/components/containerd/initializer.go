@@ -68,6 +68,7 @@ func (initializer) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []
 	if err := tplInitializer.Execute(&script, map[string]interface{}{
 		"binaryPath":          extensionsv1alpha1.ContainerDRuntimeContainersBinFolder,
 		"pauseContainerImage": ctx.Images[images.ImageNamePauseContainer],
+		"cGroupDriver":        ctx.CGroupDriver,
 	}); err != nil {
 		return nil, nil, err
 	}
