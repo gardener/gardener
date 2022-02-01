@@ -943,6 +943,11 @@ func RunReconcileSeedFlow(
 		}
 	}
 
+	ingressClass, err = ComputeNginxIngressClass(seed, pointer.String(kubernetesVersion.String()))
+	if err != nil {
+		return err
+	}
+
 	values := kubernetes.Values(map[string]interface{}{
 		"priorityClassName": v1beta1constants.PriorityClassNameShootControlPlane,
 		"global": map[string]interface{}{
@@ -1031,11 +1036,6 @@ func RunReconcileSeedFlow(
 		}
 	}
 
-	ingressClass, err = ComputeNginxIngressClass(seed, pointer.String(kubernetesVersion.String()))
-	if err != nil {
-		return err
-	}
-
 	if err := migrateIngressClassForShootIngresses(ctx, gardenClient, seedClient, seed, ingressClass, kubernetesVersion); err != nil {
 		return err
 	}
@@ -1101,7 +1101,6 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-
 	kubeScheduler, err := defaultKubeScheduler(seedClient, imageVector, kubernetesVersion)
 	if err != nil {
 		return err

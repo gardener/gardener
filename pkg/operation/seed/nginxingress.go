@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
@@ -28,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -52,11 +52,11 @@ func managedIngress(seed *Seed) bool {
 }
 
 func defaultNginxIngress(c client.Client, imageVector imagevector.ImageVector, kubernetesVersion *semver.Version, ingressClass string, config map[string]string) (component.DeployWaiter, error) {
-	imageController, err := imageVector.FindImage(charts.ImageNameNginxIngressControllerSeed, imagevector.TargetVersion(kubernetesVersion.String()))
+	imageController, err := imageVector.FindImage(images.ImageNameNginxIngressControllerSeed, imagevector.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
 		return nil, err
 	}
-	imageDefaultBackend, err := imageVector.FindImage(charts.ImageNameIngressDefaultBackend, imagevector.TargetVersion(kubernetesVersion.String()))
+	imageDefaultBackend, err := imageVector.FindImage(images.ImageNameIngressDefaultBackend, imagevector.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
 		return nil, err
 	}
