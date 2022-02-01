@@ -94,6 +94,7 @@ func (r *projectReconciler) releaseNamespace(ctx context.Context, gardenClient c
 	if keepNamespace {
 		delete(namespace.Annotations, v1beta1constants.NamespaceProject)
 		delete(namespace.Annotations, v1beta1constants.NamespaceKeepAfterProjectDeletion)
+		delete(namespace.Annotations, v1beta1constants.NamespaceCreatedByProjectController)
 		delete(namespace.Labels, v1beta1constants.ProjectName)
 		delete(namespace.Labels, v1beta1constants.GardenRole)
 		for i := len(namespace.OwnerReferences) - 1; i >= 0; i-- {

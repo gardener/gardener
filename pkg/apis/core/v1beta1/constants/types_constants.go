@@ -499,6 +499,10 @@ const (
 	// should not be deleted if the corresponding `Project` gets deleted. Please note that all project related labels
 	// from the namespace will be removed when the project is being deleted.
 	NamespaceKeepAfterProjectDeletion = "namespace.gardener.cloud/keep-after-project-deletion"
+	// NamespaceCreatedByProjectController is a constant for annotation on a `Namespace` resource that states that it
+	// was created by the project controller because either the Project's `spec.namespace` field was not specified
+	// or the specified namespace was not present.
+	NamespaceCreatedByProjectController = "namespace.gardener.cloud/created-by-project-controller"
 
 	// DefaultVpnRange is the default network range for the vpn between seed and shoot cluster.
 	DefaultVpnRange = "192.168.123.0/24"

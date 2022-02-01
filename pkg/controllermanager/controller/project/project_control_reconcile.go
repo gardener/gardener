@@ -169,6 +169,7 @@ func (r *projectReconciler) reconcileNamespaceForProject(ctx context.Context, ga
 				Annotations:     projectAnnotations,
 			},
 		}
+		obj.Annotations[v1beta1constants.NamespaceCreatedByProjectController] = "true"
 		return obj, gardenClient.Create(ctx, obj)
 	}
 
@@ -186,6 +187,7 @@ func (r *projectReconciler) reconcileNamespaceForProject(ctx context.Context, ga
 				Annotations:     projectAnnotations,
 			},
 		}
+		obj.Annotations[v1beta1constants.NamespaceCreatedByProjectController] = "true"
 		return obj, gardenClient.Create(ctx, obj)
 	}
 
@@ -203,9 +205,9 @@ func (r *projectReconciler) reconcileNamespaceForProject(ctx context.Context, ga
 	namespace.Labels = utils.MergeStringMaps(namespace.Labels, projectLabels)
 	namespace.Annotations = utils.MergeStringMaps(namespace.Annotations, projectAnnotations)
 
-	// If the project is reconciled for the first time then its observed generation is 0. Only in this case we want
-	// to add the "keep-after-project-deletion" annotation to the namespace when we adopt it.
-	if project.Status.ObservedGeneration == 0 {
+	// Add the "keep-after-project-deletion" annotation to the namespace only when we adopt it
+	// (i.e. the namespace was not created by the project controller).
+	if !metav1.HasAnnotation(namespace.ObjectMeta, v1beta1constants.NamespaceCreatedByProjectController) {
 		namespace.Annotations[v1beta1constants.NamespaceKeepAfterProjectDeletion] = "true"
 	}
 
