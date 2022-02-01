@@ -128,8 +128,9 @@ func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, o admission
 		return apierrors.NewInvalid(gk, bastion.Name, field.ErrorList{field.Required(shootPath, "shoot is required")})
 	}
 
-	// ensure shoot exists
 	shootName := bastion.Spec.ShootRef.Name
+
+	// ensure shoot exists
 	shoot, err := v.coreClient.Core().Shoots(bastion.Namespace).Get(ctx, shootName, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -141,7 +142,7 @@ func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, o admission
 	}
 
 	// ensure shoot is alive
-	if shoot.DeletionTimestamp != nil {
+	if a.GetOperation() == admission.Create && shoot.DeletionTimestamp != nil {
 		fieldErr := field.Invalid(shootPath, shootName, "shoot is in deletion")
 		return apierrors.NewInvalid(gk, bastion.Name, field.ErrorList{fieldErr})
 	}
