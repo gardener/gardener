@@ -381,9 +381,9 @@ func (r *shootReconciler) deleteShoot(ctx context.Context, logger logrus.FieldLo
 		return reconcile.Result{}, fmt.Errorf("failed to check for related Bastions: %w", err)
 	}
 	if hasBastions {
-		hasBastionError := errors.New("shoot has still Bastions")
-		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, hasBastionError.Error(), operationType, shoot.Status.LastErrors...)
-		return reconcile.Result{}, utilerrors.WithSuppressed(hasBastionError, updateErr)
+		hasBastionErr := errors.New("shoot has still Bastions")
+		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, hasBastionErr.Error(), operationType, shoot.Status.LastErrors...)
+		return reconcile.Result{}, utilerrors.WithSuppressed(hasBastionErr, updateErr)
 	}
 
 	// If the .status.lastOperation already indicates that the deletion is successful then we finalize it immediately.
