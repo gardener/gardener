@@ -53,9 +53,9 @@ In order to support that rule and automatically check compliance with that goal,
 The tool checks all imports of the given packages (including transitive imports) against rules defined in `.import-restrictions` files in each directory.
 An import is allowed if it matches at least one allowed prefix and does not match any forbidden prefixes.
 Note: `''` (the empty string) is a prefix of everything.
-For more details,see: https://github.com/kubernetes/code-generator/tree/master/cmd/import-boss
+For more details, see: https://github.com/kubernetes/code-generator/tree/master/cmd/import-boss
 
-`import-boss` is executed on every pull request and block the PR, if it doesn't comply with the defined import restrictions.
+`import-boss` is executed on every pull request and blocks the PR if it doesn't comply with the defined import restrictions.
 You can also run it locally using `make check`.
 
 Import restrictions should be changed in the following situations:
