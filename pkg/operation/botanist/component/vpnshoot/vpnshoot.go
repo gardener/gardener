@@ -448,7 +448,7 @@ func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
 						{
 							ContainerName: autoscalingv1beta2.DefaultContainerResourcePolicy,
 							MinAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("10m"),
+								corev1.ResourceCPU:    resource.MustParse("100m"),
 								corev1.ResourceMemory: resource.MustParse("10Mi"),
 							},
 						},
