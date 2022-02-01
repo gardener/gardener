@@ -270,7 +270,9 @@ func (r *shootReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 			return reconcile.Result{}, fmt.Errorf("failed to check for related Bastions: %w", err)
 		}
 		if hasBastions {
-			return reconcile.Result{}, errors.New("shoot has still Bastions")
+			hasBastionErr := errors.New("shoot has still Bastions")
+			updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, hasBastionErr.Error(), gardencorev1beta1.LastOperationTypeMigrate, shoot.Status.LastErrors...)
+			return reconcile.Result{}, utilerrors.WithSuppressed(hasBastionErr, updateErr)
 		}
 
 		sourceSeed := &gardencorev1beta1.Seed{}
@@ -379,7 +381,9 @@ func (r *shootReconciler) deleteShoot(ctx context.Context, logger logrus.FieldLo
 		return reconcile.Result{}, fmt.Errorf("failed to check for related Bastions: %w", err)
 	}
 	if hasBastions {
-		return reconcile.Result{}, errors.New("shoot has still Bastions")
+		hasBastionErr := errors.New("shoot has still Bastions")
+		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, hasBastionErr.Error(), operationType, shoot.Status.LastErrors...)
+		return reconcile.Result{}, utilerrors.WithSuppressed(hasBastionErr, updateErr)
 	}
 
 	// If the .status.lastOperation already indicates that the deletion is successful then we finalize it immediately.
