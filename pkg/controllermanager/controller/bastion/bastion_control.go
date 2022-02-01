@@ -67,7 +67,7 @@ func (c *Controller) shootAdd(ctx context.Context, obj interface{}) {
 
 	// list all bastions that reference this shoot
 	bastionList := operationsv1alpha1.BastionList{}
-	listOptions := client.ListOptions{Namespace: shoot.Namespace, Limit: int64(1)}
+	listOptions := client.ListOptions{Namespace: shoot.Namespace}
 
 	if err := c.gardenClient.List(ctx, &bastionList, &listOptions); err != nil {
 		logger.Logger.Errorf("Failed to list Bastions: %v", err)
