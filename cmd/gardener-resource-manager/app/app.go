@@ -118,6 +118,11 @@ func NewResourceManagerCommand() *cobra.Command {
 					return fmt.Errorf("could not add target cluster to manager: %w", err)
 				}
 
+				log.Info("setting up readycheck for webhook server")
+				if err := mgr.AddHealthzCheck("readyz", mgr.GetWebhookServer().StartedChecker()); err != nil {
+					return err
+				}
+
 				// add controllers, health endpoint and webhooks to manager
 				if err := resourcemanagercmd.AddAllToManager(mgr,
 					// controllers

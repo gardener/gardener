@@ -233,6 +233,10 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			reconcileOpts.Completed().Apply(&oscommon.DefaultAddOptions.IgnoreOperationAnnotation)
 			reconcileOpts.Completed().Apply(&localworker.DefaultAddOptions.IgnoreOperationAnnotation)
 
+			if err := mgr.AddHealthzCheck("readyz", mgr.GetWebhookServer().StartedChecker()); err != nil {
+				controllercmd.LogErrAndExit(err, "Could not add readycheck of webhook to manager")
+			}
+
 			_, shootWebhooks, err := webhookOptions.Completed().AddToManager(ctx, mgr)
 			if err != nil {
 				return fmt.Errorf("could not add webhooks to manager: %w", err)
