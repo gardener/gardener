@@ -199,6 +199,9 @@ var _ = Describe("VpnSeedServer", func() {
   clusters:
   - name: dynamic_forward_proxy_cluster
     connect_timeout: 20s
+    circuitBreakers:
+      thresholds:
+      - maxConnections: 8192
     lb_policy: CLUSTER_PROVIDED
     cluster_type:
       name: envoy.clusters.dynamic_forward_proxy
