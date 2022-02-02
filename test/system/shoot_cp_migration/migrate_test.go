@@ -87,11 +87,10 @@ var _ = ginkgo.Describe("Shoot migration testing", func() {
 			Namespace: ServiceAccountNamespace,
 		}}
 
-	CBeforeSuite(func(c context.Context) {
+	CBeforeEach(func(c context.Context) {
 		validateConfig()
 	}, 1*time.Minute)
-
-	CBeforeEach(func(ctx context.Context) {
+	CJustBeforeEach(func(ctx context.Context) {
 		if err := beforeMigration(ctx, t, &guestBookApp, testSecret, testServiceAccount); err != nil {
 			ginkgo.Fail("The Shoot CP Migration preparation steps failed with: " + err.Error())
 		}
