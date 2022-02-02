@@ -28,7 +28,6 @@ import (
 	tokeninvalidatorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
 	tokenrequestorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
 	"github.com/gardener/gardener/pkg/resourcemanager/healthz"
-	"github.com/gardener/gardener/pkg/resourcemanager/readyz"
 	projectedtokenmountwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 
@@ -133,9 +132,8 @@ func NewResourceManagerCommand() *cobra.Command {
 					tokeninvalidatorcontroller.AddToManager,
 					tokenrequestorcontroller.AddToManager,
 					rootcacontroller.AddToManager,
-					// health/ready endpoints
+					// health endpoints
 					healthz.AddToManager,
-					readyz.AddToManager,
 					// webhooks
 					tokeninvalidatorwebhook.AddToManager,
 					projectedtokenmountwebhook.AddToManager,
