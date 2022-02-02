@@ -55,6 +55,7 @@ func NewCommandStartLandscaperGardenelet(ctx context.Context) *cobra.Command {
 
 			return run(ctx)
 		},
+		SilenceUsage: true,
 	}
 
 	cmd.Flags().BoolVar(
