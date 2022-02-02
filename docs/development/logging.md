@@ -27,6 +27,12 @@ gardener-apiserver differs from the other components as it is based on the [apis
 As gardener-apiserver writes (almost) no logs in our coding (outside the apiserver library), there is currently no plan for switching the logging implementation.
 Hence, the following sections focus on logging in the controller and admission components only.
 
+## `logcheck` Tool
+
+To ensure a smooth migration to logr and make logging in Gardener components more consistent, the [`logcheck` tool](../../hack/tools/logcheck) was added.
+It enforces (parts of) this guideline and detects programmer-level errors early on in order to prevent bugs.
+Please check out the [tool's documentation](../../hack/tools/logcheck) for a detailed description. 
+
 ## Structured Logging
 
 Similar to [efforts in the Kubernetes project](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/migration-to-structured-logging.md), we want to migrate our component logs to structured logging.
