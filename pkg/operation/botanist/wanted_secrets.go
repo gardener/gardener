@@ -290,13 +290,6 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			UsedForSSH: true,
 		},
 
-		// Secret definition for ssh-keypair.old
-		&secrets.RSASecretConfig{
-			Name:       v1beta1constants.SecretNameOldSSHKeyPair,
-			Bits:       4096,
-			UsedForSSH: true,
-		},
-
 		// Secret definition for service-account-key
 		&secrets.RSASecretConfig{
 			Name:       v1beta1constants.SecretNameServiceAccountKey,
@@ -386,6 +379,14 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		},
 	}
 
+	// Secret definition for ssh-keypair.old
+	if b.Shoot.GetInfo().Annotations[v1beta1constants.GardenerSSHRotation] == v1beta1constants.ShootOperationSSHKeypairRotated {
+		secretList = append(secretList, &secrets.RSASecretConfig{
+			Name:       v1beta1constants.SecretNameOldSSHKeyPair,
+			Bits:       4096,
+			UsedForSSH: true,
+		})
+	}
 	// Secret definition for kubecfg
 	var kubecfgToken *secrets.Token
 	if staticToken != nil {

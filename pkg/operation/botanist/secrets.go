@@ -350,9 +350,11 @@ func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResource
 	}
 	gardenerResourceDataList.Delete(v1beta1constants.SecretNameSSHKeyPair)
 
-	// remove operation annotation
+	// remove operation annotation and annotate shoot with GardenerSSHRotation annotation indicating that Shoot's ssh-keypair
+	// has been rotated.
 	return b.Shoot.UpdateInfo(ctx, b.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
 		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerSSHRotation, v1beta1constants.ShootOperationSSHKeypairRotated)
 		return nil
 	})
 }
@@ -429,16 +431,20 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 			labels:     map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSSHKeyPair},
 		},
 		{
-			secretName: v1beta1constants.SecretNameOldSSHKeyPair,
-			suffix:     gutil.ShootProjectSecretSuffixOldSSHKeypair,
-			labels:     map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSSHKeyPair},
-		},
-		{
 			secretName:  "monitoring-ingress-credentials-users",
 			suffix:      gutil.ShootProjectSecretSuffixMonitoring,
 			annotations: map[string]string{"url": "https://" + b.ComputeGrafanaUsersHost()},
 			labels:      map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring},
 		},
+	}
+
+	// Secret definition for ssh-keypair.old. ssh-keypair.old secret will created when Shoot ssh-keypair is rotated atleast once.
+	if b.Shoot.GetInfo().Annotations[v1beta1constants.GardenerSSHRotation] == v1beta1constants.ShootOperationSSHKeypairRotated {
+		projectSecrets = append(projectSecrets, projectSecret{
+			secretName: v1beta1constants.SecretNameOldSSHKeyPair,
+			suffix:     gutil.ShootProjectSecretSuffixOldSSHKeypair,
+			labels:     map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSSHKeyPair},
+		})
 	}
 
 	var fns []flow.TaskFn

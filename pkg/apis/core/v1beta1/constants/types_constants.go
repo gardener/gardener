@@ -155,6 +155,9 @@ const (
 	// GardenerOperationKeepalive is a constant for the value of the operation annotation describing an
 	// operation that extends the lifetime of the object having the operation annotation.
 	GardenerOperationKeepalive = "keepalive"
+	// GardenerSSHRotation is the key for an annotation of a Shoot cluster whose value indicates the rotation
+	// of ssh-keypair secret.
+	GardenerSSHRotation = "gardener.cloud/ssh-keypair"
 
 	// DeprecatedGardenRole is the key for an annotation on a Kubernetes object indicating what it is used for.
 	//
@@ -269,6 +272,9 @@ const (
 	// ShootOperationRotateCAComplete is a constant for an annotation on a Shoot indicating that the rotation of the
 	// certificate authorities shall be completed.
 	ShootOperationRotateCAComplete = "rotate-ca-complete"
+	// ShootOperationSSHKeypairRotated is a constant for an annotation on a Shoot indicating that the SSH keypair for the shoot nodes
+	// has been rotated atleast once.
+	ShootOperationSSHKeypairRotated = "rotated"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.
