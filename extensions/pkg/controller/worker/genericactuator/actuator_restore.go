@@ -138,8 +138,9 @@ func (a *genericActuator) restoreMachineSetsAndMachines(ctx context.Context, log
 				}
 			}
 
-			newMachine.Status = machine.Status
-			return a.client.Status().Update(ctx, newMachine)
+			patch := client.MergeFrom(newMachine.DeepCopy())
+			newMachine.Status.Node = machine.Status.Node
+			return a.client.Status().Patch(ctx, newMachine, patch)
 		}
 	}
 
