@@ -33,9 +33,9 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-func (r *projectReconciler) delete(ctx context.Context, project *gardencorev1beta1.Project, gardenClient client.Client, gardenReader client.Reader) (reconcile.Result, error) {
+func (r *projectReconciler) delete(ctx context.Context, project *gardencorev1beta1.Project, gardenClient client.Client) (reconcile.Result, error) {
 	if namespace := project.Spec.Namespace; namespace != nil {
-		inUse, err := kutil.IsNamespaceInUse(ctx, gardenReader, *namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
+		inUse, err := kutil.IsNamespaceInUse(ctx, gardenClient, *namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to check if namespace is empty: %w", err)
 		}
