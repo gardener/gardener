@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -282,6 +283,45 @@ var _ = Describe("Namespaces", func() {
 						"backup.gardener.cloud/provider":              seedProviderType,
 						"extensions.gardener.cloud/" + extensionType1: "true",
 					},
+					ResourceVersion: "2",
+				},
+			}))
+		})
+
+		It("should not overwrite other annotations or labels", func() {
+			var (
+				customAnnotations = map[string]string{"foo": "bar"}
+				customLabels      = map[string]string{"bar": "foo"}
+			)
+
+			Expect(fakeSeedClient.Create(ctx, &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        namespace,
+					Annotations: customAnnotations,
+					Labels:      customLabels,
+				},
+			})).To(Succeed())
+
+			Expect(botanist.SeedNamespaceObject).To(BeNil())
+			Expect(botanist.DeploySeedNamespace(ctx)).To(Succeed())
+			Expect(botanist.SeedNamespaceObject).To(Equal(&corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Namespace",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
+					Annotations: utils.MergeStringMaps(customAnnotations, map[string]string{
+						"shoot.gardener.cloud/uid": string(uid),
+					}),
+					Labels: utils.MergeStringMaps(customLabels, map[string]string{
+						"gardener.cloud/role":                         "shoot",
+						"seed.gardener.cloud/provider":                seedProviderType,
+						"shoot.gardener.cloud/provider":               shootProviderType,
+						"networking.shoot.gardener.cloud/provider":    networkingProviderType,
+						"backup.gardener.cloud/provider":              seedProviderType,
+						"extensions.gardener.cloud/" + extensionType3: "true",
+					}),
 					ResourceVersion: "2",
 				},
 			}))

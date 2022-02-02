@@ -17,6 +17,7 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -47,28 +48,30 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), namespace, func() error {
-		namespace.Annotations = map[string]string{
-			v1beta1constants.ShootUID: string(b.Shoot.GetInfo().Status.UID),
-		}
-		namespace.Labels = map[string]string{
-			v1beta1constants.GardenRole:              v1beta1constants.GardenRoleShoot,
-			v1beta1constants.LabelSeedProvider:       b.Seed.GetInfo().Spec.Provider.Type,
-			v1beta1constants.LabelShootProvider:      b.Shoot.GetInfo().Spec.Provider.Type,
-			v1beta1constants.LabelNetworkingProvider: b.Shoot.GetInfo().Spec.Networking.Type,
-			v1beta1constants.LabelBackupProvider:     b.Seed.GetInfo().Spec.Provider.Type,
-		}
-
-		requiredExtensions, err := getShootRequiredExtensionTypes(ctx, b)
+		requiredExtensions, err := b.getShootRequiredExtensionTypes(ctx)
 		if err != nil {
 			return err
 		}
 
+		metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, v1beta1constants.ShootUID, string(b.Shoot.GetInfo().Status.UID))
+		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleShoot)
+		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelSeedProvider, b.Seed.GetInfo().Spec.Provider.Type)
+		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelShootProvider, b.Shoot.GetInfo().Spec.Provider.Type)
+		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelNetworkingProvider, b.Shoot.GetInfo().Spec.Networking.Type)
+
+		// Remove all old extension labels before reconciling the new extension labels.
+		for k := range namespace.Labels {
+			if strings.HasPrefix(k, v1beta1constants.LabelExtensionPrefix) {
+				delete(namespace.Labels, k)
+			}
+		}
 		for extensionType := range requiredExtensions {
-			namespace.Labels[v1beta1constants.LabelExtensionPrefix+extensionType] = "true"
+			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelExtensionPrefix+extensionType, "true")
 		}
 
+		metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelBackupProvider, b.Seed.GetInfo().Spec.Provider.Type)
 		if b.Seed.GetInfo().Spec.Backup != nil {
-			namespace.Labels[v1beta1constants.LabelBackupProvider] = b.Seed.GetInfo().Spec.Backup.Provider
+			metav1.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelBackupProvider, b.Seed.GetInfo().Spec.Backup.Provider)
 		}
 
 		return nil
@@ -119,7 +122,7 @@ func (b *Botanist) DefaultShootNamespaces() component.DeployWaiter {
 
 // getShootRequiredExtensionTypes returns all extension types that are enabled or explicitly disabled for the shoot.
 // The function considers only extensions of kind `Extension`.
-func getShootRequiredExtensionTypes(ctx context.Context, b *Botanist) (sets.String, error) {
+func (b *Botanist) getShootRequiredExtensionTypes(ctx context.Context) (sets.String, error) {
 	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
 	if err := b.K8sGardenClient.Client().List(ctx, controllerRegistrationList); err != nil {
 		return nil, err
