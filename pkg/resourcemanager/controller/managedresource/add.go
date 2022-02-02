@@ -85,6 +85,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 				garbageCollectorActivated: conf.GarbageCollectorActivated,
 			},
 		),
+		RecoverPanic: true,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to set up managedresource controller: %w", err)

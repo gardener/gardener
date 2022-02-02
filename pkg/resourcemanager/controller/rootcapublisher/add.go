@@ -67,6 +67,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 			rootCA:       string(rootCA),
 			targetClient: conf.TargetCluster.GetClient(),
 		},
+		RecoverPanic: true,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to set up root ca controller: %w", err)

@@ -65,6 +65,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 			targetClient: conf.TargetCluster.GetClient(),
 			targetScheme: conf.TargetCluster.GetScheme(),
 		},
+		RecoverPanic: true,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to set up individual controller: %w", err)

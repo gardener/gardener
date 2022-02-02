@@ -28,7 +28,11 @@ import (
 const ControllerName = "node_controller"
 
 // DefaultAddOptions are the default AddOptions for AddToManager.
-var DefaultAddOptions = AddOptions{}
+var DefaultAddOptions = AddOptions{
+	Controller: controller.Options{
+		RecoverPanic: true,
+	},
+}
 
 // AddOptions are options to apply when adding the local infrastructure controller to the manager.
 type AddOptions struct {
