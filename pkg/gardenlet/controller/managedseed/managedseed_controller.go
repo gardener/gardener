@@ -31,9 +31,30 @@ func (c *Controller) managedSeedAdd(obj interface{}) {
 		return
 	}
 
-	if managedSeed.Generation != managedSeed.Status.ObservedGeneration || managedSeed.DeletionTimestamp != nil {
+	generationChanged := managedSeed.Generation != managedSeed.Status.ObservedGeneration
+	jitterUpdates := (c.config.Controllers.ManagedSeed.JitterUpdates != nil) && *(c.config.Controllers.ManagedSeed.JitterUpdates)
+	if managedSeed.DeletionTimestamp != nil {
 		c.logger.Debugf("Added ManagedSeed %s without delay to the queue", key)
 		c.managedSeedQueue.Add(key)
+		return
+	}
+
+	// Newly created managed seed will be enqueued immediatly. Generation is 1 for newly created objects.
+	if managedSeed.Generation == 1 {
+		c.logger.Debugf("Added ManagedSeed %s without delay to the queue", key)
+		c.managedSeedQueue.Add(key)
+		return
+	}
+
+	if generationChanged {
+		if jitterUpdates {
+			duration := utils.RandomDurationWithMetaDuration(c.config.Controllers.ManagedSeed.SyncJitterPeriod)
+			c.logger.Infof("Added ManagedSeed %s with delay %s to the queue", key, duration)
+			c.managedSeedQueue.AddAfter(key, duration)
+		} else {
+			c.logger.Debugf("Added ManagedSeed %s without delay to the queue", key)
+			c.managedSeedQueue.Add(key)
+		}
 	} else {
 		// Spread reconciliation of managed seeds (including gardenlet updates/rollouts) across the configured sync jitter
 		// period to avoid overloading the gardener-apiserver if all gardenlets in all managed seeds are (re)starting
@@ -42,6 +63,7 @@ func (c *Controller) managedSeedAdd(obj interface{}) {
 		c.logger.Infof("Added ManagedSeed %s with delay %s to the queue", key, duration)
 		c.managedSeedQueue.AddAfter(key, duration)
 	}
+
 }
 
 func (c *Controller) managedSeedUpdate(_, newObj interface{}) {
@@ -49,15 +71,26 @@ func (c *Controller) managedSeedUpdate(_, newObj interface{}) {
 	if !ok {
 		return
 	}
-	if managedSeed.Generation == managedSeed.Status.ObservedGeneration {
-		return
-	}
+
 	key, err := cache.MetaNamespaceKeyFunc(newObj)
 	if err != nil {
 		return
 	}
 
-	c.managedSeedQueue.Add(key)
+	jitterUpdates := (c.config.Controllers.ManagedSeed.JitterUpdates != nil) && *(c.config.Controllers.ManagedSeed.JitterUpdates)
+	if managedSeed.Generation == managedSeed.Status.ObservedGeneration {
+		return
+	} else {
+		if jitterUpdates {
+			duration := utils.RandomDurationWithMetaDuration(c.config.Controllers.ManagedSeed.SyncJitterPeriod)
+			c.logger.Infof("Added ManagedSeed %s with delay %s to the queue", key, duration)
+			c.managedSeedQueue.AddAfter(key, duration)
+		} else {
+			c.logger.Debugf("Added ManagedSeed %s without delay to the queue", key)
+			c.managedSeedQueue.Add(key)
+		}
+	}
+
 }
 
 func (c *Controller) managedSeedDelete(obj interface{}) {

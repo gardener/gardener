@@ -408,6 +408,11 @@ func SetDefaults_ManagedSeedControllerConfiguration(obj *ManagedSeedControllerCo
 		v := metav1.Duration{Duration: 5 * time.Minute}
 		obj.SyncJitterPeriod = &v
 	}
+
+	if obj.JitterUpdates == nil {
+		falseVar := false
+		obj.JitterUpdates = &falseVar
+	}
 }
 
 // SetDefaults_SNI sets defaults for SNI.

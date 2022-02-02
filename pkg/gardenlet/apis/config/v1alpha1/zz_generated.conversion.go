@@ -1209,6 +1209,7 @@ func autoConvert_v1alpha1_ManagedSeedControllerConfiguration_To_config_ManagedSe
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	out.WaitSyncPeriod = (*v1.Duration)(unsafe.Pointer(in.WaitSyncPeriod))
 	out.SyncJitterPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncJitterPeriod))
+	out.JitterUpdates = (*bool)(unsafe.Pointer(in.JitterUpdates))
 	return nil
 }
 
@@ -1222,6 +1223,7 @@ func autoConvert_config_ManagedSeedControllerConfiguration_To_v1alpha1_ManagedSe
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	out.WaitSyncPeriod = (*v1.Duration)(unsafe.Pointer(in.WaitSyncPeriod))
 	out.SyncJitterPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncJitterPeriod))
+	out.JitterUpdates = (*bool)(unsafe.Pointer(in.JitterUpdates))
 	return nil
 }
 

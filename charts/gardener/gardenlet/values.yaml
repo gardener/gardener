@@ -110,6 +110,7 @@ global:
           syncPeriod: 1h
           waitSyncPeriod: 15s
           syncJitterPeriod: 5m
+          jitterUpdates: false
         shootMigration:
           concurrentSyncs: 5
           syncPeriod: 1m

@@ -183,6 +183,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 1 * time.Hour})))
 			Expect(obj.WaitSyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 15 * time.Second})))
 			Expect(obj.SyncJitterPeriod).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
+			Expect(obj.JitterUpdates).To(PointTo(Equal(false)))
 		})
 	})
 

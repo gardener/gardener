@@ -28,6 +28,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -57,6 +58,7 @@ var _ = Describe("Controller", func() {
 				Controllers: &config.GardenletControllerConfiguration{
 					ManagedSeed: &config.ManagedSeedControllerConfiguration{
 						SyncJitterPeriod: &metav1.Duration{Duration: syncJitterPeriod},
+						JitterUpdates:    pointer.Bool(false),
 					},
 				},
 			},
@@ -67,7 +69,7 @@ var _ = Describe("Controller", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       name,
 				Namespace:  namespace,
-				Generation: 1,
+				Generation: 2,
 			},
 		}
 	})
@@ -90,14 +92,21 @@ var _ = Describe("Controller", func() {
 		It("should add the object to the queue (deletion)", func() {
 			now := metav1.Now()
 			managedSeed.DeletionTimestamp = &now
+			queue.EXPECT().Add(key)
+
+			c.managedSeedAdd(managedSeed)
+		})
+
+		It("should add new object to the queue without delay", func() {
 			managedSeed.Status.ObservedGeneration = 1
 			queue.EXPECT().Add(key)
 
 			c.managedSeedAdd(managedSeed)
 		})
 
-		It("should add the object to the queue with a jittered delay", func() {
-			managedSeed.Status.ObservedGeneration = 1
+		It("should add the object to the queue with a jittered delay because object generation and observed generation are not equal and jitterUpdates is set to true", func() {
+			managedSeed.Status.ObservedGeneration = 3
+			c.config.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(true)
 			queue.EXPECT().AddAfter(key, gomock.AssignableToTypeOf(time.Second)).DoAndReturn(
 				func(_ interface{}, d time.Duration) {
 					Expect(d > 0 && d <= syncJitterPeriod).To(BeTrue())
@@ -106,6 +115,26 @@ var _ = Describe("Controller", func() {
 
 			c.managedSeedAdd(managedSeed)
 		})
+
+		It("should add the object to the queue without jittered delay because object generation and observed generation are not equal and jitterUpdates is set to false", func() {
+			managedSeed.Status.ObservedGeneration = 3
+			c.config.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(false)
+			queue.EXPECT().Add(key)
+			c.managedSeedAdd(managedSeed)
+		})
+
+		It("should add the object to the queue with a jittered delay because the object generation and observed generation are equal", func() {
+			managedSeed.Status.ObservedGeneration = 2
+
+			queue.EXPECT().AddAfter(key, gomock.AssignableToTypeOf(time.Second)).DoAndReturn(
+				func(_ interface{}, d time.Duration) {
+					Expect(d > 0 && d <= syncJitterPeriod).To(BeTrue())
+				},
+			)
+
+			c.managedSeedAdd(managedSeed)
+		})
+
 	})
 
 	Describe("#managedSeedUpdate", func() {
@@ -113,17 +142,37 @@ var _ = Describe("Controller", func() {
 			c.managedSeedUpdate(nil, &gardencorev1beta1.Seed{})
 		})
 
-		It("should do nothing because the object generation and observed generation are equal", func() {
-			managedSeed.Status.ObservedGeneration = 1
-
-			c.managedSeedUpdate(nil, managedSeed)
-		})
-
 		It("should add the object to the queue", func() {
 			queue.EXPECT().Add(key)
 
 			c.managedSeedUpdate(nil, managedSeed)
 		})
+
+		It("should do nothing because the object generation and observed generation are equal", func() {
+			managedSeed.Status.ObservedGeneration = 2
+
+			c.managedSeedUpdate(nil, managedSeed)
+		})
+
+		It("should add the object to the queue with a jittered delay because object generation and observed generation are not equal and jitterUpdates is set to true", func() {
+			managedSeed.Status.ObservedGeneration = 3
+			c.config.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(true)
+			queue.EXPECT().AddAfter(key, gomock.AssignableToTypeOf(time.Second)).DoAndReturn(
+				func(_ interface{}, d time.Duration) {
+					Expect(d > 0 && d <= syncJitterPeriod).To(BeTrue())
+				},
+			)
+
+			c.managedSeedUpdate(nil, managedSeed)
+		})
+
+		It("should add the object to the queue without jittered delay because object generation and observed generation are not equal and jitterUpdates is set to false", func() {
+			managedSeed.Status.ObservedGeneration = 3
+			c.config.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(false)
+			queue.EXPECT().Add(key)
+			c.managedSeedUpdate(nil, managedSeed)
+		})
+
 	})
 
 	Describe("#managedSeedDelete", func() {

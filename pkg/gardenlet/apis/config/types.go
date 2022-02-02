@@ -330,6 +330,10 @@ type ManagedSeedControllerConfiguration struct {
 	// If its value is greater than 0 then the managed seeds will not be enqueued immediately but only after a random
 	// duration between 0 and the configured value. It is defaulted to 5m.
 	SyncJitterPeriod *metav1.Duration
+	// JitterUpdates is a bool which when enabled enqueues managed seeds with random duration if there is a change in
+	// observed generation(spec change).
+	// Defaults to false.
+	JitterUpdates *bool
 }
 
 // ResourcesConfiguration defines the total capacity for seed resources and the amount reserved for use by Gardener.

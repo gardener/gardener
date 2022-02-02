@@ -684,6 +684,7 @@ func ComputeExpectedGardenletConfiguration(
 			},
 			ManagedSeed: &gardenletconfigv1alpha1.ManagedSeedControllerConfiguration{
 				ConcurrentSyncs: &five,
+				JitterUpdates:   pointer.Bool(false),
 				SyncPeriod: &metav1.Duration{
 					Duration: 1 * time.Hour,
 				},
