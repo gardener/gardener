@@ -36,6 +36,10 @@ type AdmissionControllerConfiguration struct {
 	// Debugging holds configuration for Debugging related features.
 	// +optional
 	Debugging *componentbaseconfigv1alpha1.DebuggingConfiguration `json:"debugging,omitempty"`
+	// AllowTokenFile specifies if "tokenFile" field is allowed to be used in the kubeconfig file
+	// used for connecting to the Garden cluster.
+	// +optional
+	AllowTokenFile *bool `json:"allowTokenFile,omitempty"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

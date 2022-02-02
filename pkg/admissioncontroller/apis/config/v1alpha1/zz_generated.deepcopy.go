@@ -38,6 +38,11 @@ func (in *AdmissionControllerConfiguration) DeepCopyInto(out *AdmissionControlle
 		*out = new(configv1alpha1.DebuggingConfiguration)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.AllowTokenFile != nil {
+		in, out := &in.AllowTokenFile, &out.AllowTokenFile
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

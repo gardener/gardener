@@ -31,3 +31,4 @@ server:
 debugging:
   enableProfiling: false
   enableContentionProfiling: false
+allowTokenFile: false

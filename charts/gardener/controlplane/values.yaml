@@ -325,6 +325,10 @@ global:
         enableContentionProfiling: false
     seedRestriction:
       enabled: false
+    serviceAccountTokenVolumeProjection:
+      enabled: false
+      expirationSeconds: 43200
+      audience: ""
 
   # Gardener controller manager configuration values
   controller:
@@ -513,6 +517,9 @@ global:
       enabled: false
       clusterIP: 1.2.3.4
       createNamespace: true
+      admission:
+        user:
+          name: ""
 
   # RBAC related configuration
   rbac:
