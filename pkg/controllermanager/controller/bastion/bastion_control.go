@@ -21,6 +21,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -65,9 +66,11 @@ func (c *Controller) shootAdd(ctx context.Context, obj interface{}) {
 	}
 
 	// list all bastions that reference this shoot
-	// TODO: this should be done via a field-selector
 	bastionList := operationsv1alpha1.BastionList{}
-	listOptions := client.ListOptions{Namespace: shoot.Namespace}
+	listOptions := client.ListOptions{
+		Namespace:     shoot.Namespace,
+		FieldSelector: fields.SelectorFromSet(fields.Set{"spec.shootRef.name": shoot.Name}),
+	}
 
 	if err := c.gardenClient.List(ctx, &bastionList, &listOptions); err != nil {
 		c.log.Error(err, "Failed to list Bastions")
@@ -75,9 +78,7 @@ func (c *Controller) shootAdd(ctx context.Context, obj interface{}) {
 	}
 
 	for _, bastion := range bastionList.Items {
-		if bastion.Spec.ShootRef.Name == shoot.Name {
-			c.bastionAdd(bastion)
-		}
+		c.bastionAdd(bastion)
 	}
 }
 

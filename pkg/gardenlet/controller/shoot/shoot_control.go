@@ -49,6 +49,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -456,19 +457,16 @@ func (r *shootReconciler) isSeedReadyForMigration(seed *gardencorev1beta1.Seed) 
 func (r *shootReconciler) shootHasBastions(ctx context.Context, shoot *gardencorev1beta1.Shoot, gardenClient kubernetes.Interface) (bool, error) {
 	// list all bastions that reference this shoot
 	bastionList := operationsv1alpha1.BastionList{}
-	listOptions := client.ListOptions{Namespace: shoot.Namespace}
+	listOptions := client.ListOptions{
+		Namespace:     shoot.Namespace,
+		FieldSelector: fields.SelectorFromSet(fields.Set{"spec.shootRef.name": shoot.Name}),
+	}
 
 	if err := gardenClient.Client().List(ctx, &bastionList, &listOptions); err != nil {
 		return false, fmt.Errorf("failed to list related Bastions: %w", err)
 	}
 
-	for _, bastion := range bastionList.Items {
-		if bastion.Spec.ShootRef.Name == shoot.Name {
-			return true, nil
-		}
-	}
-
-	return false, nil
+	return len(bastionList.Items) > 0, nil
 }
 
 func (r *shootReconciler) reconcileShoot(ctx context.Context, logger logrus.FieldLogger, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
