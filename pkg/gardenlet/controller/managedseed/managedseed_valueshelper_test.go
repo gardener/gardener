@@ -112,6 +112,9 @@ var _ = Describe("ValuesHelper", func() {
 			FeatureGates: map[string]bool{
 				string(features.HVPA): true,
 			},
+			Logging: &config.Logging{
+				Enabled: pointer.Bool(true),
+			},
 			SeedConfig: &config.SeedConfig{
 				SeedTemplate: gardencore.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
@@ -230,6 +233,9 @@ var _ = Describe("ValuesHelper", func() {
 					string(features.HVPA):                 true,
 					string(features.CachedRuntimeClients): true,
 				},
+				Logging: &configv1alpha1.Logging{
+					Enabled: pointer.Bool(true),
+				},
 			}
 		}
 
@@ -285,6 +291,9 @@ var _ = Describe("ValuesHelper", func() {
 							"featureGates": map[string]interface{}{
 								"HVPA":                 true,
 								"CachedRuntimeClients": true,
+							},
+							"logging": map[string]interface{}{
+								"enabled": true,
 							},
 						},
 					},
