@@ -1032,9 +1032,9 @@ var _ = Describe("health check", func() {
 			[]care.ExtensionCondition{
 				{
 					Condition: gardencorev1beta1.Condition{
-						Type:           gardencorev1beta1.ShootControlPlaneHealthy,
-						Status:         gardencorev1beta1.ConditionTrue,
-						LastUpdateTime: metav1.Time{Time: time.Now().Add(time.Second * -30)},
+						Type:              gardencorev1beta1.ShootControlPlaneHealthy,
+						Status:            gardencorev1beta1.ConditionTrue,
+						LastHeartbeatTime: &metav1.Time{Time: time.Now().Add(time.Second * -30)},
 					},
 				},
 			},
@@ -1050,7 +1050,7 @@ var _ = Describe("health check", func() {
 						Type:   gardencorev1beta1.ShootControlPlaneHealthy,
 						Status: gardencorev1beta1.ConditionTrue,
 						// health check result is only 30 seconds old so < than the staleExtensionHealthCheckThreshold
-						LastUpdateTime: metav1.Time{Time: time.Now().Add(time.Second * -30)},
+						LastHeartbeatTime: &metav1.Time{Time: time.Now().Add(time.Second * -30)},
 					},
 				},
 			},
@@ -1069,7 +1069,7 @@ var _ = Describe("health check", func() {
 						Type:   gardencorev1beta1.ShootControlPlaneHealthy,
 						Status: gardencorev1beta1.ConditionTrue,
 						// health check result is already 3 minutes old
-						LastUpdateTime: metav1.Time{Time: time.Now().Add(time.Minute * -3)},
+						LastHeartbeatTime: &metav1.Time{Time: time.Now().Add(time.Minute * -3)},
 					},
 					ExtensionType:      "Worker",
 					ExtensionName:      "worker-ubuntu",
@@ -1087,11 +1087,11 @@ var _ = Describe("health check", func() {
 				{
 					ExtensionType: "Foo",
 					Condition: gardencorev1beta1.Condition{
-						Type:           gardencorev1beta1.ShootControlPlaneHealthy,
-						Status:         gardencorev1beta1.ConditionProgressing,
-						Reason:         "Bar",
-						Message:        "Baz",
-						LastUpdateTime: metav1.Time{Time: time.Now()},
+						Type:              gardencorev1beta1.ShootControlPlaneHealthy,
+						Status:            gardencorev1beta1.ConditionProgressing,
+						Reason:            "Bar",
+						Message:           "Baz",
+						LastHeartbeatTime: &metav1.Time{Time: time.Now()},
 					},
 				},
 			},
@@ -1108,9 +1108,9 @@ var _ = Describe("health check", func() {
 				{
 					ExtensionType: "Foo",
 					Condition: gardencorev1beta1.Condition{
-						Type:           gardencorev1beta1.ShootControlPlaneHealthy,
-						Status:         gardencorev1beta1.ConditionFalse,
-						LastUpdateTime: metav1.Time{Time: time.Now()},
+						Type:              gardencorev1beta1.ShootControlPlaneHealthy,
+						Status:            gardencorev1beta1.ConditionFalse,
+						LastHeartbeatTime: &metav1.Time{Time: time.Now()},
 					},
 				},
 			},
@@ -1127,9 +1127,9 @@ var _ = Describe("health check", func() {
 				{
 					ExtensionType: "Foo",
 					Condition: gardencorev1beta1.Condition{
-						Type:           gardencorev1beta1.ShootControlPlaneHealthy,
-						Status:         gardencorev1beta1.ConditionUnknown,
-						LastUpdateTime: metav1.Time{Time: time.Now()},
+						Type:              gardencorev1beta1.ShootControlPlaneHealthy,
+						Status:            gardencorev1beta1.ConditionUnknown,
+						LastHeartbeatTime: &metav1.Time{Time: time.Now()},
 					},
 				},
 			},

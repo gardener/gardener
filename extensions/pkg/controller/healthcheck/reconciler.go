@@ -273,7 +273,7 @@ func (r *reconciler) updateExtensionConditions(ctx context.Context, extension ex
 		}
 		updatedCondition, _ := cond.builder.WithNowFunc(func() metav1.Time { return now }).Build()
 		// always update - the Gardenlet expects a recent health check
-		updatedCondition.LastUpdateTime = now
+		updatedCondition.LastHeartbeatTime = &now
 		extension.GetExtensionStatus().SetConditions(gardencorev1beta1helper.MergeConditions(extension.GetExtensionStatus().GetConditions(), updatedCondition))
 	}
 	return r.client.Status().Update(ctx, extension)

@@ -28,6 +28,8 @@ type Condition struct {
 	LastTransitionTime metav1.Time
 	// Last time the condition was updated.
 	LastUpdateTime metav1.Time
+	// Last time the health check was done.
+	LastHeartbeatTime *metav1.Time
 	// The reason for the condition's last transition.
 	Reason string
 	// A human readable message indicating details about the transition.
