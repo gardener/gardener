@@ -183,7 +183,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 						"enabled": b.Shoot.WantsAlertmanager,
 					},
 					"loki": map[string]interface{}{
-						"enabled": b.Shoot.IsLoggingEnabled() && gardenlethelper.IsLoggingEnabled(b.Config),
+						"enabled": gardenlethelper.IsLoggingEnabled(b.Config),
 					},
 					"lokiTelegraf": map[string]interface{}{
 						"enabled": b.isShootNodeLoggingEnabled(),

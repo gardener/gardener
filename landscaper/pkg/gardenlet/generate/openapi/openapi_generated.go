@@ -2844,6 +2844,13 @@ func schema_gardenlet_apis_config_v1alpha1_Logging(ref common.ReferenceCallback)
 				Description: "Logging contains configuration for the logging stack.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled is used to enable or disable logging stack for clusters.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"fluentBit": {
 						SchemaProps: spec.SchemaProps{
 							Description: "FluentBit contains configurations for the fluent-bit",
