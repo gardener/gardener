@@ -47,7 +47,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		lokiEnabled = *b.Config.Logging.Loki.Enabled
 	}
 
-	if !b.Shoot.IsLoggingEnabled() || gardenlethelper.IsLoggingEnabled(b.Config) || !lokiEnabled {
+	if !b.Shoot.IsLoggingEnabled() || !gardenlethelper.IsLoggingEnabled(b.Config) || !lokiEnabled {
 		return b.destroyShootLoggingStack(ctx)
 	}
 
