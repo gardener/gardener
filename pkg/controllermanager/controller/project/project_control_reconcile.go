@@ -41,20 +41,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1beta1.Project, gardenClient client.Client, gardenReader client.Reader) (reconcile.Result, error) {
+func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1beta1.Project, gardenClient client.Client) (reconcile.Result, error) {
 	if !controllerutil.ContainsFinalizer(project, gardencorev1beta1.GardenerName) {
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, project, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not add finalizer to Project: %w", err)
 		}
-	}
-
-	// Ensure that we really get the latest version of the project to prevent working with an outdated version that has
-	// an unset .spec.namespace field (which would result in trying to create another namespace again).
-	if err := gardenReader.Get(ctx, kutil.Key(project.Name), project); err != nil {
-		if apierrors.IsNotFound(err) {
-			return reconcile.Result{}, nil
-		}
-		return reconcile.Result{}, err
 	}
 
 	// If the project has no phase yet then we update it to be 'pending'.
