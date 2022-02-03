@@ -32,9 +32,14 @@ func (t *terraformer) WaitForCleanEnvironment(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, t.deadlineCleaning)
 	defer cancel()
 
+	var (
+		err     error
+		podList = &corev1.PodList{}
+	)
+
 	t.logger.Info("Waiting for clean environment")
-	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
-		podList, err := t.listPods(ctx)
+	err = retry.UntilTimeout(ctx, 5*time.Second, 2*time.Minute, func(ctx context.Context) (done bool, err error) {
+		podList, err = t.listPods(ctx)
 		if err != nil {
 			return retry.SevereError(err)
 		}
@@ -46,6 +51,22 @@ func (t *terraformer) WaitForCleanEnvironment(ctx context.Context) error {
 
 		return retry.Ok()
 	})
+
+	if err == context.DeadlineExceeded && len(podList.Items) > 0 {
+		t.logger.Info("Fetching logs of Terraformer pods as waiting for clean environment timed out")
+		for _, pod := range podList.Items {
+			podLogger := t.logger.WithValues("pod", client.ObjectKey{Namespace: t.namespace, Name: pod.Name})
+			podLogs, err := t.retrievePodLogs(ctx, podLogger, &pod)
+
+			if err != nil {
+				podLogger.Error(err, "Could not retrieve logs of Terraformer pod, "+pod.Name)
+				continue
+			}
+			podLogger.Info("Logs of Terraformer pod, " + pod.Name + ": " + podLogs)
+		}
+	}
+
+	return err
 }
 
 type podStatus byte
