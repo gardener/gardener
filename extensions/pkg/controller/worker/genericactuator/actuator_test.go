@@ -18,12 +18,16 @@ import (
 	"context"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -32,6 +36,8 @@ import (
 	workerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Actuator", func() {
@@ -335,19 +341,25 @@ var _ = Describe("Actuator", func() {
 			ctx    = context.TODO()
 			logger = log.Log.WithName("test")
 
-			c client.Client
+			mockCtrl   *gomock.Controller
+			mockClient *mockclient.MockClient
+
 			a *genericActuator
 
 			machineDeployments worker.MachineDeployments
 			expectedMachineSet machinev1alpha1.MachineSet
 			expectedMachine    machinev1alpha1.Machine
+
+			machineWithoutNode *machinev1alpha1.Machine
+
+			alreadyExistsError = apierrors.NewAlreadyExists(schema.GroupResource{Resource: "Machines"}, "machine")
 		)
 
 		BeforeEach(func() {
-			s := runtime.NewScheme()
-			Expect(machinev1alpha1.AddToScheme(s)).To(Succeed())
-			c = fake.NewClientBuilder().WithScheme(s).Build()
-			a = &genericActuator{client: c}
+			mockCtrl = gomock.NewController(GinkgoT())
+			mockClient = mockclient.NewMockClient(mockCtrl)
+
+			a = &genericActuator{client: mockClient}
 
 			expectedMachineSet = machinev1alpha1.MachineSet{
 				ObjectMeta: metav1.ObjectMeta{
@@ -379,30 +391,32 @@ var _ = Describe("Actuator", func() {
 					},
 				},
 			}
+
+			machineWithoutNode = expectedMachine.DeepCopy()
+			machineWithoutNode.Status.Node = ""
+		})
+
+		AfterEach(func() {
+			mockCtrl.Finish()
 		})
 
 		It("should deploy machinesets and machines present in the machine deployments' state", func() {
+			mockClient.EXPECT().Create(ctx, &expectedMachineSet)
+			mockClient.EXPECT().Create(ctx, machineWithoutNode)
+			mockClient.EXPECT().Status().Return(mockClient)
+			test.EXPECTPatch(ctx, mockClient, &expectedMachine, machineWithoutNode, types.MergePatchType)
+
 			Expect(a.restoreMachineSetsAndMachines(ctx, logger, machineDeployments)).To(Succeed())
-
-			createdMachine := &machinev1alpha1.Machine{}
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(&expectedMachine), createdMachine)).To(Succeed())
-			Expect(createdMachine.Status).To(Equal(expectedMachine.Status))
-
-			createdMachineSet := &machinev1alpha1.MachineSet{}
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(&expectedMachineSet), createdMachineSet)).To(Succeed())
 		})
 
 		It("should update the machine status if machineset and machine already exist", func() {
-			Expect(c.Create(ctx, (&expectedMachine).DeepCopy())).To(Succeed())
-			Expect(c.Create(ctx, (&expectedMachineSet).DeepCopy())).To(Succeed())
+			mockClient.EXPECT().Create(ctx, &expectedMachineSet).Return(alreadyExistsError)
+			mockClient.EXPECT().Create(ctx, machineWithoutNode).Return(alreadyExistsError)
+			mockClient.EXPECT().Get(ctx, client.ObjectKeyFromObject(machineWithoutNode), machineWithoutNode)
+			mockClient.EXPECT().Status().Return(mockClient)
+			test.EXPECTPatch(ctx, mockClient, &expectedMachine, machineWithoutNode, types.MergePatchType)
+
 			Expect(a.restoreMachineSetsAndMachines(ctx, logger, machineDeployments)).To(Succeed())
-
-			createdMachine := &machinev1alpha1.Machine{}
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(&expectedMachine), createdMachine)).To(Succeed())
-			Expect(expectedMachine.Status).To(Equal(expectedMachine.Status))
-
-			createdMachineSet := &machinev1alpha1.MachineSet{}
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(&expectedMachineSet), createdMachineSet)).To(Succeed())
 		})
 	})
 })
