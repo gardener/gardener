@@ -2863,6 +2863,20 @@ Kubernetes meta/v1.Time
 </tr>
 <tr>
 <td>
+<code>lastHeartbeatTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Last time the health check was done.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>reason</code></br>
 <em>
 string

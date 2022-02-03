@@ -382,15 +382,19 @@ message Condition {
   // Last time the condition was updated.
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastUpdateTime = 4;
 
+  // Last time the health check was done.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastHeartbeatTime = 5;
+
   // The reason for the condition's last transition.
-  optional string reason = 5;
+  optional string reason = 6;
 
   // A human readable message indicating details about the transition.
-  optional string message = 6;
+  optional string message = 7;
 
   // Well-defined error codes in case the condition reports a problem.
   // +optional
-  repeated string codes = 7;
+  repeated string codes = 8;
 }
 
 // ContainerRuntime contains information about worker's available container runtime

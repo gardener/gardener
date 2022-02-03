@@ -2056,6 +2056,7 @@ func autoConvert_v1beta1_Condition_To_core_Condition(in *Condition, out *core.Co
 	out.Status = core.ConditionStatus(in.Status)
 	out.LastTransitionTime = in.LastTransitionTime
 	out.LastUpdateTime = in.LastUpdateTime
+	out.LastHeartbeatTime = (*metav1.Time)(unsafe.Pointer(in.LastHeartbeatTime))
 	out.Reason = in.Reason
 	out.Message = in.Message
 	out.Codes = *(*[]core.ErrorCode)(unsafe.Pointer(&in.Codes))
@@ -2072,6 +2073,7 @@ func autoConvert_core_Condition_To_v1beta1_Condition(in *core.Condition, out *Co
 	out.Status = ConditionStatus(in.Status)
 	out.LastTransitionTime = in.LastTransitionTime
 	out.LastUpdateTime = in.LastUpdateTime
+	out.LastHeartbeatTime = (*metav1.Time)(unsafe.Pointer(in.LastHeartbeatTime))
 	out.Reason = in.Reason
 	out.Message = in.Message
 	out.Codes = *(*[]ErrorCode)(unsafe.Pointer(&in.Codes))
