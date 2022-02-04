@@ -52,7 +52,7 @@ func (g *graph) setupShootWatch(_ context.Context, informer cache.Informer) {
 				!apiequality.Semantic.DeepEqual(oldShoot.Status.SeedName, newShoot.Status.SeedName) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.SecretBindingName, newShoot.Spec.SecretBindingName) ||
 				!apiequality.Semantic.DeepEqual(oldShoot.Spec.CloudProfileName, newShoot.Spec.CloudProfileName) ||
-				!gardencorev1beta1helper.ShootAuditPolicyConfigMapRefEqual(oldShoot.Spec.Kubernetes.KubeAPIServer, newShoot.Spec.Kubernetes.KubeAPIServer) ||
+				gardencorev1beta1helper.GetShootAuditPolicyConfigMapName(oldShoot.Spec.Kubernetes.KubeAPIServer) != gardencorev1beta1helper.GetShootAuditPolicyConfigMapName(newShoot.Spec.Kubernetes.KubeAPIServer) ||
 				!gardencorev1beta1helper.ShootDNSProviderSecretNamesEqual(oldShoot.Spec.DNS, newShoot.Spec.DNS) ||
 				!gardencorev1beta1helper.ShootSecretResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources) {
 				g.handleShootCreateOrUpdate(newShoot)
