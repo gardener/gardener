@@ -21,7 +21,6 @@ import (
 	"math/big"
 	"net"
 	"strings"
-	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -366,32 +365,5 @@ func DeleteGrafanaByRole(ctx context.Context, k8sClient kubernetes.Interface, na
 		ctx, fmt.Sprintf("grafana-%s", role), metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
-	return nil
-}
-
-// DeleteStatefulSetsHavingDeprecatedRoleLabelKey deletes the StatefulSets with the passed object keys if
-// the corresponding StatefulSet .spec.selector contains the deprecated "garden.sapcloud.io/role" label key.
-func DeleteStatefulSetsHavingDeprecatedRoleLabelKey(ctx context.Context, c client.Client, keys []client.ObjectKey) error {
-	for _, key := range keys {
-		sts := &appsv1.StatefulSet{}
-		if err := c.Get(ctx, key, sts); err != nil {
-			if apierrors.IsNotFound(err) {
-				continue
-			}
-
-			return err
-		}
-
-		if _, ok := sts.Spec.Selector.MatchLabels[v1beta1constants.DeprecatedGardenRole]; ok {
-			if err := c.Delete(ctx, sts); client.IgnoreNotFound(err) != nil {
-				return err
-			}
-
-			if err := kutil.WaitUntilResourceDeleted(ctx, c, sts, 2*time.Second); err != nil {
-				return err
-			}
-		}
-	}
-
 	return nil
 }
