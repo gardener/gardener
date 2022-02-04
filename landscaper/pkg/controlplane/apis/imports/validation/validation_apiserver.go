@@ -73,9 +73,6 @@ func ValidateAPIServerDeploymentConfiguration(config *imports.APIServerDeploymen
 func ValidateAPIServerComponentConfiguration(config imports.APIServerComponentConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// validation of mandatory configuration
-	allErrs = append(allErrs, ValidateAPIServerETCDConfiguration(config.Etcd, fldPath.Child("etcd"))...)
-
 	// validation of optional configuration
 	if (config.CA.Crt == nil && config.CA.SecretRef == nil) && (config.TLS.Crt != nil || config.TLS.SecretRef != nil) {
 		// the control plane helm chart requires the public CA bundle to validate the Gardener API server TLS certificates
@@ -310,35 +307,6 @@ func ValidateAPIServerAdmission(config *imports.APIServerAdmissionConfiguration,
 		if pluginConfiguration.Configuration == nil {
 			allErrs = append(allErrs, field.Invalid(path.Child("configuration"), pluginConfiguration.Configuration, "Admission plugin configuration must be set"))
 		}
-	}
-
-	return allErrs
-}
-
-// ValidateAPIServerETCDConfiguration validates the etcd configuration of the Gardener API server.
-func ValidateAPIServerETCDConfiguration(config imports.APIServerEtcdConfiguration, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if len(config.Url) == 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("url"), config.Url, "url of etcd must be set"))
-	}
-
-	if config.SecretRef != nil && (config.CABundle != nil || config.ClientCert != nil || config.ClientKey != nil) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("secretRef"), config.Url, "cannot configure both the secret reference as well as supply the certificate values directly"))
-	}
-
-	// Do not verify the client certs against the given CA, as the client certs do not necessarily have to be signed by the
-	// same CA that signed etcd's TLS serving certificates.
-	if config.CABundle != nil {
-		allErrs = append(allErrs, ValidateCACertificate(*config.CABundle, fldPath.Child("caBundle"))...)
-	}
-
-	if config.ClientCert != nil {
-		allErrs = append(allErrs, ValidateClientCertificate(*config.ClientCert, fldPath.Child("clientCert"))...)
-	}
-
-	if config.ClientKey != nil {
-		allErrs = append(allErrs, ValidatePrivateKey(*config.ClientKey, fldPath.Child("clientKey"))...)
 	}
 
 	return allErrs

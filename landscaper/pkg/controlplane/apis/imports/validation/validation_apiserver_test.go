@@ -49,12 +49,6 @@ var _ = Describe("ValidateAPIServer", func() {
 		apiServerTLSServingCert       = testutils.GenerateTLSServingCertificate(&caAPIServerTLS)
 		apiServerTLSServingCertString = string(apiServerTLSServingCert.CertificatePEM)
 		apiServerTLSServingKeyString  = string(apiServerTLSServingCert.PrivateKeyPEM)
-
-		caEtcdTLS      = testutils.GenerateCACertificate("gardener.cloud:system:etcd-virtual")
-		caEtcdString   = string(caEtcdTLS.CertificatePEM)
-		etcdClientCert = testutils.GenerateClientCertificate(&caEtcdTLS)
-		etcdCertString = string(etcdClientCert.CertificatePEM)
-		etcdKeyString  = string(etcdClientCert.PrivateKeyPEM)
 	)
 
 	BeforeEach(func() {
@@ -113,12 +107,6 @@ var _ = Describe("ValidateAPIServer", func() {
 			},
 			ComponentConfiguration: imports.APIServerComponentConfiguration{
 				Encryption: nil,
-				Etcd: imports.APIServerEtcdConfiguration{
-					Url:        "etcd-virtual-garden:2237",
-					CABundle:   &caEtcdString,
-					ClientCert: &etcdCertString,
-					ClientKey:  &etcdKeyString,
-				},
 				CA: &imports.CA{
 					Crt: &caAPIServerCrt,
 					Key: &caAPIServerKey,
@@ -145,63 +133,6 @@ var _ = Describe("ValidateAPIServer", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
-		Context("Etcd", func() {
-			It("should forbid invalid TLS configuration - etcd url is not set", func() {
-				gardenerAPIServer.ComponentConfiguration.Etcd.Url = ""
-				errorList := ValidateAPIServer(gardenerAPIServer, path)
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("apiserver.componentConfiguration.etcd.url"),
-					})),
-				))
-			})
-
-			It("should forbid invalid TLS configuration - etcd CA is invalid", func() {
-				gardenerAPIServer.ComponentConfiguration.Etcd.CABundle = pointer.String("invalid")
-				errorList := ValidateAPIServer(gardenerAPIServer, path)
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("apiserver.componentConfiguration.etcd.caBundle"),
-					})),
-				))
-			})
-
-			It("should forbid invalid TLS configuration - etcd client certificate is invalid", func() {
-				gardenerAPIServer.ComponentConfiguration.Etcd.ClientCert = pointer.String("invalid")
-				errorList := ValidateAPIServer(gardenerAPIServer, path)
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("apiserver.componentConfiguration.etcd.clientCert"),
-					})),
-				))
-			})
-
-			It("should forbid invalid TLS configuration - etcd client certificate is invalid", func() {
-				gardenerAPIServer.ComponentConfiguration.Etcd.ClientKey = pointer.String("invalid")
-				errorList := ValidateAPIServer(gardenerAPIServer, path)
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("apiserver.componentConfiguration.etcd.clientKey"),
-					})),
-				))
-			})
-
-			It("should forbid providing both the etcd secret reference as well as supply the certificate values directly", func() {
-				gardenerAPIServer.ComponentConfiguration.Etcd.SecretRef = &corev1.SecretReference{}
-				errorList := ValidateAPIServer(gardenerAPIServer, path)
-				Expect(errorList).To(ConsistOf(
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("apiserver.componentConfiguration.etcd.secretRef"),
-						"Detail": ContainSubstring("cannot configure both the secret reference as well as supply the certificate values directly"),
-					})),
-				))
-			})
-		})
 		Context("CA", func() {
 			It("CA public key must be provided in order to validate the TLS serving cert of the Gardener API server", func() {
 				gardenerAPIServer.ComponentConfiguration.CA.Crt = nil

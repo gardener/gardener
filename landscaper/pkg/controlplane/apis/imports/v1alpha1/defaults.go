@@ -67,7 +67,10 @@ func SetDefaults_Imports(obj *Imports) {
 
 	// GAC  defaults
 	if obj.GardenerAdmissionController == nil {
-		obj.GardenerAdmissionController = &GardenerAdmissionController{}
+		obj.GardenerAdmissionController = &GardenerAdmissionController{
+			// this matches the default in the helm chart
+			Enabled: true,
+		}
 	}
 
 	if obj.GardenerAdmissionController.Enabled {

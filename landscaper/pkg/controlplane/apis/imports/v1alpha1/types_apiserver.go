@@ -80,8 +80,6 @@ type APIServerComponentConfiguration struct {
 	//    - identity: {}
 	// +optional
 	Encryption *apiserverconfigv1.EncryptionConfiguration `json:"encryption,omitempty"`
-	// Etcd contains configuration for the etcd of the Gardener API server
-	Etcd APIServerEtcdConfiguration `json:"etcd"`
 	// CA contains a PEM encoded CA public key which will be used by the Kubernetes API server
 	// (either the RuntimeCluster or the VirtualGarden cluster)
 	// to validate the Gardener Extension API server's TLS serving certificate.
@@ -219,43 +217,6 @@ type HVPAConfigurationVPA struct {
 	//    percentage: 70
 	// +optional
 	LimitsRequestsGapScaleParams *hvpav1alpha1.ScaleParams `json:"limitsRequestsGapScaleParams,omitempty"`
-}
-
-// APIServerEtcdConfiguration contains configuration for the etcd of the Gardener API server
-// etcd is a required as a prerequisite
-type APIServerEtcdConfiguration struct {
-	// Url is the 'url:port' of the etcd of the Gardener API server
-	// If the etcd is deployed in-cluster, should be of the form 'k8s-service-name:port'
-	// if the etcd serves TLS (configurable via flag --cert-file on etcd), this URL can use the HTTPS schema.
-	Url string `json:"url"`
-	// CABundle is a PEM encoded CA bundle which will be used by the Gardener API server
-	// to verify that the TLS serving certificate presented by etcd is signed by this CA
-	// configures the flag --etcd-cafile on the Gardener API server
-	// Optional. if not set, the Gardener API server will not validate etcd's TLS serving certificate
-	// +optional
-	CABundle *string `json:"caBundle,omitempty"`
-	// ClientCert contains a client certificate which will be used by the Gardener API server
-	// to communicate with etcd via TLS.
-	// Configures the flags --etcd-certfile on the Gardener API server.
-	// On the etcd make sure that
-	//  - client authentication is enabled via the flag --client-cert-auth
-	//  - the client credentials have been signed by the CA provided to etcd via the flag --trusted-ca-file
-	// Optional. Etcd does not have to enforce client authentication.
-	// +optional
-	ClientCert *string `json:"clientCert,omitempty"`
-	// ClientKey is the key matching the configured client certificate.
-	// Configures the flags --etcd-keyfile on the Gardener API server.
-	// Optional. Etcd does not have to enforce client authentication.
-	// +optional
-	ClientKey *string `json:"clientKey,omitempty"`
-	// SecretRef is an optional reference to a secret in the runtime cluster that contains the etcd's CABundle
-	// Client certificate and key
-	// Expects the following keys
-	// - ca.crt:  CABundle
-	// - tls.crt: ClientCert
-	// - tls.key: ClientKey
-	// +optional
-	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
 }
 
 // APIServerAuditConfiguration contains audit logging configuration

@@ -32,11 +32,14 @@ import (
 func ValidateLandscaperImports(imports *imports.Imports) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	// validation of mandatory configuration
+	allErrs = append(allErrs, ValidateAPIServerETCDConfiguration(imports)...)
+
 	if len(imports.RuntimeCluster.Spec.Configuration.RawMessage) == 0 {
 		allErrs = append(allErrs, field.Required(field.NewPath("gardenCluster"), "the runtime cluster kubeconfig has to be provided."))
 	}
 
-	if imports.VirtualGarden != nil && imports.VirtualGarden.Enabled && (imports.VirtualGarden.Kubeconfig == nil || len(imports.VirtualGarden.Kubeconfig.Spec.Configuration.RawMessage) == 0) {
+	if imports.VirtualGarden != nil && imports.VirtualGarden.Enabled && (imports.VirtualGardenCluster == nil || len(imports.VirtualGardenCluster.Spec.Configuration.RawMessage) == 0) {
 		allErrs = append(allErrs, field.Required(field.NewPath("seedCluster"), "the virtual Garden cluster kubeconfig has to be provided when the virtual Garden setup option is enabled."))
 	}
 
@@ -69,6 +72,35 @@ func ValidateLandscaperImports(imports *imports.Imports) field.ErrorList {
 	if imports.Rbac != nil && imports.Rbac.SeedAuthorizer != nil && imports.Rbac.SeedAuthorizer.Enabled != nil && *imports.Rbac.SeedAuthorizer.Enabled &&
 		imports.GardenerAdmissionController != nil && (imports.GardenerAdmissionController.Enabled == false || imports.GardenerAdmissionController.SeedRestriction == nil || !imports.GardenerAdmissionController.SeedRestriction.Enabled) {
 		allErrs = append(allErrs, field.Forbidden(field.NewPath("rbac").Child("seedAuthorizer").Child("enabled"), "When the seed authorizer option is enabled, then the seed restriction webhook serving the authorisation webhook in the admission controller must be enabled"))
+	}
+
+	return allErrs
+}
+
+// ValidateAPIServerETCDConfiguration validates the etcd configuration of the Gardener API server.
+func ValidateAPIServerETCDConfiguration(config *imports.Imports) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(config.EtcdUrl) == 0 {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("etcdUrl"), config.EtcdUrl, "url of etcd must be set"))
+	}
+
+	if config.EtcdSecretRef != nil && (config.EtcdCABundle != nil || config.EtcdClientCert != nil || config.EtcdClientKey != nil) {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("etcdSecretRef"), config.EtcdUrl, "cannot configure both the secret reference as well as supply the certificate values directly"))
+	}
+
+	// Do not verify the client certs against the given CA, as the client certs do not necessarily have to be signed by the
+	// same CA that signed etcd's TLS serving certificates.
+	if config.EtcdCABundle != nil {
+		allErrs = append(allErrs, ValidateCACertificate(*config.EtcdCABundle, field.NewPath("etcdCaBundle"))...)
+	}
+
+	if config.EtcdClientCert != nil {
+		allErrs = append(allErrs, ValidateClientCertificate(*config.EtcdClientCert, field.NewPath("etcdClientCert"))...)
+	}
+
+	if config.EtcdClientKey != nil {
+		allErrs = append(allErrs, ValidatePrivateKey(*config.EtcdClientKey, field.NewPath("etcdClientKey"))...)
 	}
 
 	return allErrs

@@ -96,6 +96,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should default the mutating webhook kubeconfig for token volume projection", func() {
 			var obj = &Imports{
+				GardenerAdmissionController: &GardenerAdmissionController{Enabled: false},
 				GardenerAPIServer: GardenerAPIServer{
 					ComponentConfiguration: APIServerComponentConfiguration{
 						Admission: &APIServerAdmissionConfiguration{
@@ -135,7 +136,9 @@ var _ = Describe("Defaults", func() {
 						},
 					},
 				},
-				GardenerAdmissionController: &GardenerAdmissionController{},
+				GardenerAdmissionController: &GardenerAdmissionController{
+					Enabled: false,
+				},
 				GardenerControllerManager: &GardenerControllerManager{
 					ComponentConfiguration: &ControllerManagerComponentConfiguration{
 						TLS: &TLSServer{
@@ -155,6 +158,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should default the validating webhook kubeconfig for token volume projection", func() {
 			var obj = &Imports{
+				GardenerAdmissionController: &GardenerAdmissionController{Enabled: false},
 				GardenerAPIServer: GardenerAPIServer{
 					ComponentConfiguration: APIServerComponentConfiguration{
 						Admission: &APIServerAdmissionConfiguration{
@@ -194,7 +198,9 @@ var _ = Describe("Defaults", func() {
 						},
 					},
 				},
-				GardenerAdmissionController: &GardenerAdmissionController{},
+				GardenerAdmissionController: &GardenerAdmissionController{
+					Enabled: false,
+				},
 				GardenerControllerManager: &GardenerControllerManager{
 					ComponentConfiguration: &ControllerManagerComponentConfiguration{
 						TLS: &TLSServer{

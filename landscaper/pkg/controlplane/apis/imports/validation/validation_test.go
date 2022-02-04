@@ -15,20 +15,27 @@
 package validation_test
 
 import (
-	"encoding/json"
-
+	testutils "github.com/gardener/gardener/landscaper/common/test-utils"
 	"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports"
 	. "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/validation"
 	landscaperv1alpha1 "github.com/gardener/landscaper/apis/core/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 )
 
 var _ = Describe("ValidateImports", func() {
 	var (
 		landscaperImport *imports.Imports
+		caEtcdTLS      = testutils.GenerateCACertificate("gardener.cloud:system:etcd-virtual")
+		caEtcdString   = string(caEtcdTLS.CertificatePEM)
+		etcdClientCert = testutils.GenerateClientCertificate(&caEtcdTLS)
+		etcdCertString = string(etcdClientCert.CertificatePEM)
+		etcdKeyString  = string(etcdClientCert.PrivateKeyPEM)
 	)
 
 	BeforeEach(func() {
@@ -39,13 +46,16 @@ var _ = Describe("ValidateImports", func() {
 			InternalDomain: imports.DNS{
 				Domain:      "default.domain",
 				Provider:    "abc",
-				Credentials: json.RawMessage([]byte("credentials")),
+				Credentials: []byte("credentials"),
+			},
+			Etcd: imports.Etcd{
+				EtcdUrl:        "virtual-garden-etcd-main-client.garden.svc:2379",
+				EtcdCABundle:   &caEtcdString,
+				EtcdClientCert: &etcdCertString,
+				EtcdClientKey:  &etcdKeyString,
 			},
 			GardenerAPIServer: imports.GardenerAPIServer{
 				ComponentConfiguration: imports.APIServerComponentConfiguration{
-					Etcd: imports.APIServerEtcdConfiguration{
-						Url: "virtual-garden-etcd-main-client.garden.svc:2379",
-					},
 					CA:  &imports.CA{},
 					TLS: &imports.TLSServer{},
 				},
@@ -66,34 +76,79 @@ var _ = Describe("ValidateImports", func() {
 			Expect(errorList).To(HaveLen(3))
 		})
 
-		It("should fail: missing API server config", func() {
-			landscaperImport.GardenerAPIServer = imports.GardenerAPIServer{
-				ComponentConfiguration: imports.APIServerComponentConfiguration{
-					CA:  &imports.CA{},
-					TLS: &imports.TLSServer{},
-				},
-			}
-
-			errorList := ValidateLandscaperImports(landscaperImport)
-			Expect(errorList).To(HaveLen(1))
-		})
-
 		It("should fail: etcd Url has length 0", func() {
-			landscaperImport.GardenerAPIServer = imports.GardenerAPIServer{
-				ComponentConfiguration: imports.APIServerComponentConfiguration{
-					Etcd: imports.APIServerEtcdConfiguration{
-						Url: "",
-					},
-					CA:  &imports.CA{},
-					TLS: &imports.TLSServer{},
-				},
-			}
+			landscaperImport.EtcdUrl = ""
 			errorList := ValidateLandscaperImports(landscaperImport)
 			Expect(errorList).To(HaveLen(1))
 		})
 	})
 
+	Context("Etcd", func() {
+		It("should forbid invalid TLS configuration - etcd url is not set", func() {
+			landscaperImport.EtcdUrl = ""
+			errorList := ValidateLandscaperImports(landscaperImport)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("etcdUrl"),
+				})),
+			))
+		})
+
+		It("should forbid invalid TLS configuration - etcd CA is invalid", func() {
+			landscaperImport.EtcdCABundle  = pointer.String("invalid")
+			errorList := ValidateLandscaperImports(landscaperImport)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("etcdCaBundle"),
+				})),
+			))
+		})
+
+		It("should forbid invalid TLS configuration - etcd client certificate is invalid", func() {
+			landscaperImport.EtcdClientCert = pointer.String("invalid")
+			errorList := ValidateLandscaperImports(landscaperImport)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("etcdClientCert"),
+				})),
+			))
+		})
+
+		It("should forbid invalid TLS configuration - etcd client certificate is invalid", func() {
+			landscaperImport.EtcdClientKey = pointer.String("invalid")
+			errorList := ValidateLandscaperImports(landscaperImport)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("etcdClientKey"),
+				})),
+			))
+		})
+
+		It("should forbid providing both the etcd secret reference as well as supply the certificate values directly", func() {
+			landscaperImport.EtcdSecretRef = &corev1.SecretReference{}
+			errorList := ValidateLandscaperImports(landscaperImport)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("etcdSecretRef"),
+					"Detail": ContainSubstring("cannot configure both the secret reference as well as supply the certificate values directly"),
+				})),
+			))
+		})
+	})
+
 	Describe("Validate Optional Configuration", func() {
+		It("validate that the virtual garden kubeconfig is provided when virtual garden is enabled", func() {
+			landscaperImport.VirtualGarden = &imports.VirtualGarden{Enabled: true}
+			landscaperImport.VirtualGardenCluster = nil
+			errorList := ValidateLandscaperImports(landscaperImport)
+			Expect(errorList).To(HaveLen(1))
+		})
+
 		It("validate default domain - missing credentials", func() {
 			landscaperImport.DefaultDomains = append(landscaperImport.DefaultDomains, imports.DNS{
 				Domain:   "xyz",

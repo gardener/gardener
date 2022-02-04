@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 
 	landscaperv1alpha1 "github.com/gardener/landscaper/apis/core/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -26,6 +27,11 @@ import (
 // Imports defines the import for the Gardener landscaper control plane component.
 type Imports struct {
 	metav1.TypeMeta `json:",inline"`
+	// Etcd contains the etcd configuration to be used for the Gardener API Server.
+	// Please note that this is an embedded struct to create top-level keys
+	// This is required because etcd configuration, when deployed via landscaper, is imported from the virtual-garden component.
+	// Due to restriction in the landscaper, imported data-refs have to be on the root-level (or require proprietary mappings which we want to avoid)
+	Etcd `json:",inline"`
 	// Identity is the id that uniquely identifies this Gardener installation
 	// If not set, uses the existing identity of the installation or generates a default identity ("landscape-").
 	// +optional
@@ -37,6 +43,17 @@ type Imports struct {
 	// Using the "virtual Garden" installation, this cluster is solely used to run the Gardener control plane pods
 	// as well as the  Kubernetes API server pods of the "virtual Garden".
 	RuntimeCluster landscaperv1alpha1.Target `json:"runtimeCluster"`
+	// VirtualGardenCluster is the landscaper target containing the kubeconfig to an existing "Virtual Garden" API server
+	// deployed in the runtime cluster.
+	// This is the kubeconfig of the Cluster
+	//  - that will be aggregated by the Gardener Extension API server with Gardener resource groups
+	//  - where the Gardener configuration is created (garden namespace, default & internal domain secrets, Gardener webhooks)
+	//  - essentially, this helm chart will be applied: charts/gardener/controlplane/charts/application
+	//
+	// The Gardener control plane (Gardener Controller Manager, Gardener Scheduler, ...)
+	// will in turn run in the runtime cluster, but use kubeconfigs with credentials to this API server.
+	// To use this kubeconfig, the virtual garden has to be enabled in the configuration under virtualGarden.enabled
+	VirtualGardenCluster *landscaperv1alpha1.Target `json:"virtualGardenCluster,omitempty"`
 	// VirtualGarden contains configuration for the "Virtual Garden" setup option of Gardener
 	// +optional
 	VirtualGarden *VirtualGarden `json:"virtualGarden,omitempty"`
@@ -76,6 +93,42 @@ type Imports struct {
 	CertificateRotation *CertificateRotation `json:"certificateRotation,omitempty"`
 }
 
+// Etcd contains the etcd configuration to be used for the Gardener API Server
+type Etcd struct {
+	// Url is the 'url:port' of the etcd of the Gardener API server
+	// If the etcd is deployed in-cluster, should be of the form 'k8s-service-name:port'
+	// if the etcd serves TLS (configurable via flag --cert-file on etcd), this URL can use the HTTPS schema.
+	EtcdUrl string `json:"etcdUrl"`
+	// CABundle is a PEM encoded CA bundle which will be used by the Gardener API server
+	// to verify that the TLS serving certificate presented by etcd is signed by this CA
+	// configures the flag --etcd-cafile on the Gardener API server
+	// Optional. if not set, the Gardener API server will not validate etcd's TLS serving certificate
+	// +optional
+	EtcdCABundle *string `json:"etcdCaBundle,omitempty"`
+	// ClientCert contains a client certificate which will be used by the Gardener API server
+	// to communicate with etcd via TLS.
+	// Configures the flags --etcd-certfile on the Gardener API server.
+	// On the etcd make sure that
+	//  - client authentication is enabled via the flag --client-cert-auth
+	//  - the client credentials have been signed by the CA provided to etcd via the flag --trusted-ca-file
+	// Optional. Etcd does not have to enforce client authentication.
+	// +optional
+	EtcdClientCert *string `json:"etcdClientCert,omitempty"`
+	// ClientKey is the key matching the configured client certificate.
+	// Configures the flags --etcd-keyfile on the Gardener API server.
+	// Optional. Etcd does not have to enforce client authentication.
+	// +optional
+	EtcdClientKey *string `json:"etcdClientKey,omitempty"`
+	// SecretRef is an optional reference to a secret in the runtime cluster that contains the etcd's CABundle
+	// Client certificate and key
+	// Expects the following keys
+	// - ca.crt:  CABundle
+	// - tls.crt: ClientCert
+	// - tls.key: ClientKey
+	// +optional
+	EtcdSecretRef *corev1.SecretReference `json:"etcdSecretRef,omitempty"`
+}
+
 // VirtualGarden contains configuration for the "Virtual Garden" setup option of Gardener
 type VirtualGarden struct {
 	// Enabled configures whether to setup Gardener with the "Virtual Garden" setup option of Gardener
@@ -84,17 +137,6 @@ type VirtualGarden struct {
 	// and must be able to communicate with the Gardener Extension API server pod that will
 	// be deployed to the Garden namespace
 	Enabled bool `json:"enabled"`
-	// Kubeconfig is the landscaper target containing the kubeconfig to an existing "Virtual Garden" API server
-	// deployed in the runtime cluster.
-	// This is the kubeconfig of the Cluster
-	//  - that will be aggregated by the Gardener Extension API server with Gardener resource groups
-	//  - where the Gardener configuration is created (garden namespace, default & internal domain secrets, Gardener webhooks)
-	//  - essentially, this helm chart will be applied: charts/gardener/controlplane/charts/application
-	//
-	// The Gardener control plane (Gardener Controller Manager, Gardener Scheduler, ...)
-	// will in turn run in the runtime cluster, but use kubeconfigs with credentials to this API server.
-	// +optional
-	Kubeconfig *landscaperv1alpha1.Target `json:"kubeconfig,omitempty"`
 	// ClusterIP is an arbitrary private ipV4 IP that is used to enable the virtual Garden API server
 	// running as a pod in the runtime cluster to talk to the Gardener Extension API server pod also running
 	// as a pod in the runtime cluster
