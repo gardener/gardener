@@ -113,7 +113,8 @@ spec:
                         type: string
                       type: array
                     lastHeartbeatTime:
-                      description: Last time the health check was done.
+                      description: LastHeartbeatTime is the last time the health check
+                        was done.
                       format: date-time
                       type: string
                     lastTransitionTime:

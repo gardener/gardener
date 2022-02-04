@@ -688,14 +688,14 @@ func (in *Condition) DeepCopyInto(out *Condition) {
 	*out = *in
 	in.LastTransitionTime.DeepCopyInto(&out.LastTransitionTime)
 	in.LastUpdateTime.DeepCopyInto(&out.LastUpdateTime)
-	if in.LastHeartbeatTime != nil {
-		in, out := &in.LastHeartbeatTime, &out.LastHeartbeatTime
-		*out = (*in).DeepCopy()
-	}
 	if in.Codes != nil {
 		in, out := &in.Codes, &out.Codes
 		*out = make([]ErrorCode, len(*in))
 		copy(*out, *in)
+	}
+	if in.LastHeartbeatTime != nil {
+		in, out := &in.LastHeartbeatTime, &out.LastHeartbeatTime
+		*out = (*in).DeepCopy()
 	}
 	return
 }
