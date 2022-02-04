@@ -86,6 +86,8 @@ spec:
         - --collector.loadavg
         - --collector.meminfo
         - --collector.uname
+        - --collector.stat
+        - --collector.pressure
         ports:
         - containerPort: {{ .Values.ports.metrics }}
           protocol: TCP
