@@ -975,9 +975,7 @@ func Convert_imports_Etcd_To_v1alpha1_Etcd(in *imports.Etcd, out *Etcd, s conver
 
 func autoConvert_v1alpha1_GardenerAPIServer_To_imports_GardenerAPIServer(in *GardenerAPIServer, out *imports.GardenerAPIServer, s conversion.Scope) error {
 	out.DeploymentConfiguration = (*imports.APIServerDeploymentConfiguration)(unsafe.Pointer(in.DeploymentConfiguration))
-	if err := Convert_v1alpha1_APIServerComponentConfiguration_To_imports_APIServerComponentConfiguration(&in.ComponentConfiguration, &out.ComponentConfiguration, s); err != nil {
-		return err
-	}
+	out.ComponentConfiguration = (*imports.APIServerComponentConfiguration)(unsafe.Pointer(in.ComponentConfiguration))
 	return nil
 }
 
@@ -988,9 +986,7 @@ func Convert_v1alpha1_GardenerAPIServer_To_imports_GardenerAPIServer(in *Gardene
 
 func autoConvert_imports_GardenerAPIServer_To_v1alpha1_GardenerAPIServer(in *imports.GardenerAPIServer, out *GardenerAPIServer, s conversion.Scope) error {
 	out.DeploymentConfiguration = (*APIServerDeploymentConfiguration)(unsafe.Pointer(in.DeploymentConfiguration))
-	if err := Convert_imports_APIServerComponentConfiguration_To_v1alpha1_APIServerComponentConfiguration(&in.ComponentConfiguration, &out.ComponentConfiguration, s); err != nil {
-		return err
-	}
+	out.ComponentConfiguration = (*APIServerComponentConfiguration)(unsafe.Pointer(in.ComponentConfiguration))
 	return nil
 }
 
@@ -1181,9 +1177,7 @@ func autoConvert_v1alpha1_Imports_To_imports_Imports(in *Imports, out *imports.I
 	out.DefaultDomains = *(*[]imports.DNS)(unsafe.Pointer(&in.DefaultDomains))
 	out.Alerting = *(*[]imports.Alerting)(unsafe.Pointer(&in.Alerting))
 	out.OpenVPNDiffieHellmanKey = (*string)(unsafe.Pointer(in.OpenVPNDiffieHellmanKey))
-	if err := Convert_v1alpha1_GardenerAPIServer_To_imports_GardenerAPIServer(&in.GardenerAPIServer, &out.GardenerAPIServer, s); err != nil {
-		return err
-	}
+	out.GardenerAPIServer = (*imports.GardenerAPIServer)(unsafe.Pointer(in.GardenerAPIServer))
 	if in.GardenerControllerManager != nil {
 		in, out := &in.GardenerControllerManager, &out.GardenerControllerManager
 		*out = new(imports.GardenerControllerManager)
@@ -1235,9 +1229,7 @@ func autoConvert_imports_Imports_To_v1alpha1_Imports(in *imports.Imports, out *I
 	out.DefaultDomains = *(*[]DNS)(unsafe.Pointer(&in.DefaultDomains))
 	out.Alerting = *(*[]Alerting)(unsafe.Pointer(&in.Alerting))
 	out.OpenVPNDiffieHellmanKey = (*string)(unsafe.Pointer(in.OpenVPNDiffieHellmanKey))
-	if err := Convert_imports_GardenerAPIServer_To_v1alpha1_GardenerAPIServer(&in.GardenerAPIServer, &out.GardenerAPIServer, s); err != nil {
-		return err
-	}
+	out.GardenerAPIServer = (*GardenerAPIServer)(unsafe.Pointer(in.GardenerAPIServer))
 	if in.GardenerControllerManager != nil {
 		in, out := &in.GardenerControllerManager, &out.GardenerControllerManager
 		*out = new(GardenerControllerManager)

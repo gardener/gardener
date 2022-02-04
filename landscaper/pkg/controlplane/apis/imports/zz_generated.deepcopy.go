@@ -816,7 +816,11 @@ func (in *GardenerAPIServer) DeepCopyInto(out *GardenerAPIServer) {
 		*out = new(APIServerDeploymentConfiguration)
 		(*in).DeepCopyInto(*out)
 	}
-	in.ComponentConfiguration.DeepCopyInto(&out.ComponentConfiguration)
+	if in.ComponentConfiguration != nil {
+		in, out := &in.ComponentConfiguration, &out.ComponentConfiguration
+		*out = new(APIServerComponentConfiguration)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 
@@ -1067,7 +1071,11 @@ func (in *Imports) DeepCopyInto(out *Imports) {
 		*out = new(string)
 		**out = **in
 	}
-	in.GardenerAPIServer.DeepCopyInto(&out.GardenerAPIServer)
+	if in.GardenerAPIServer != nil {
+		in, out := &in.GardenerAPIServer, &out.GardenerAPIServer
+		*out = new(GardenerAPIServer)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.GardenerControllerManager != nil {
 		in, out := &in.GardenerControllerManager, &out.GardenerControllerManager
 		*out = new(GardenerControllerManager)

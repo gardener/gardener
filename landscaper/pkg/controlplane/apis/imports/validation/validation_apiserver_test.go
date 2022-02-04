@@ -105,7 +105,7 @@ var _ = Describe("ValidateAPIServer", func() {
 					HVPAConfigurationVPA:  nil,
 				},
 			},
-			ComponentConfiguration: imports.APIServerComponentConfiguration{
+			ComponentConfiguration: &imports.APIServerComponentConfiguration{
 				Encryption: nil,
 				CA: &imports.CA{
 					Crt: &caAPIServerCrt,

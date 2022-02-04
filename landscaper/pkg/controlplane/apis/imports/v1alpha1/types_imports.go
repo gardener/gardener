@@ -75,7 +75,8 @@ type Imports struct {
 	// +optional
 	OpenVPNDiffieHellmanKey *string `json:"openVPNDiffieHellmanKey,omitempty"`
 	// GardenerAPIServer contains the configuration for the Gardener API Server
-	GardenerAPIServer GardenerAPIServer `json:"gardenerAPIServer"`
+	// +optional
+	GardenerAPIServer *GardenerAPIServer `json:"gardenerAPIServer,omitempty"`
 	// GardenerControllerManager contains the configuration for the Gardener Controller Manager
 	// +optional
 	GardenerControllerManager *GardenerControllerManager `json:"gardenerControllerManager,omitempty"`

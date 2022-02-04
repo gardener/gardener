@@ -32,7 +32,8 @@ type GardenerAPIServer struct {
 	DeploymentConfiguration *APIServerDeploymentConfiguration `json:"deploymentConfiguration,omitempty"`
 	// ComponentConfiguration contains optional configurations for
 	// the Gardener Extension API server
-	ComponentConfiguration APIServerComponentConfiguration `json:"componentConfiguration"`
+	// +optional
+	ComponentConfiguration *APIServerComponentConfiguration `json:"componentConfiguration,omitempty"`
 }
 
 // APIServerDeploymentConfiguration contains certain configurations for the deployment

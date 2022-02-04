@@ -54,8 +54,8 @@ var _ = Describe("ValidateImports", func() {
 				EtcdClientCert: &etcdCertString,
 				EtcdClientKey:  &etcdKeyString,
 			},
-			GardenerAPIServer: imports.GardenerAPIServer{
-				ComponentConfiguration: imports.APIServerComponentConfiguration{
+			GardenerAPIServer: &imports.GardenerAPIServer{
+				ComponentConfiguration: &imports.APIServerComponentConfiguration{
 					CA:  &imports.CA{},
 					TLS: &imports.TLSServer{},
 				},

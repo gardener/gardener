@@ -42,7 +42,12 @@ func ValidateAPIServer(config imports.GardenerAPIServer, fldPath *field.Path) fi
 		allErrs = append(allErrs, ValidateAPIServerDeploymentConfiguration(config.DeploymentConfiguration, fldPath.Child("deploymentConfiguration"))...)
 	}
 
-	return append(allErrs, ValidateAPIServerComponentConfiguration(config.ComponentConfiguration, fldPath.Child("componentConfiguration"))...)
+	if config.ComponentConfiguration != nil {
+		allErrs = append(allErrs, ValidateAPIServerComponentConfiguration(*config.ComponentConfiguration, fldPath.Child("componentConfiguration"))...)
+
+	}
+
+	return allErrs
 }
 
 // ValidateAPIServerDeploymentConfiguration validates the deployment configuration of the Gardener API server.

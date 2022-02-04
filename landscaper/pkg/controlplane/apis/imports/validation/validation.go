@@ -53,7 +53,9 @@ func ValidateLandscaperImports(imports *imports.Imports) field.ErrorList {
 		allErrs = append(allErrs, validateAlerting(alerting, field.NewPath("alerting").Index(i))...)
 	}
 
-	allErrs = append(allErrs, ValidateAPIServer(imports.GardenerAPIServer, field.NewPath("gardenerApiserver"))...)
+	if imports.GardenerAPIServer != nil {
+		allErrs = append(allErrs, ValidateAPIServer(*imports.GardenerAPIServer, field.NewPath("gardenerApiserver"))...)
+	}
 
 	if imports.GardenerControllerManager != nil {
 		allErrs = append(allErrs, ValidateControllerManager(*imports.GardenerControllerManager, field.NewPath("gardenerControllerManager"))...)

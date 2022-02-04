@@ -49,6 +49,14 @@ func SetDefaults_Imports(obj *Imports) {
 	}
 
 	// GAPI defaults
+	if obj.GardenerAPIServer == nil {
+		obj.GardenerAPIServer = &GardenerAPIServer{}
+	}
+
+	if obj.GardenerAPIServer.ComponentConfiguration == nil {
+		obj.GardenerAPIServer.ComponentConfiguration = &APIServerComponentConfiguration{}
+	}
+
 	if obj.GardenerAPIServer.ComponentConfiguration.CA == nil {
 		obj.GardenerAPIServer.ComponentConfiguration.CA = &CA{}
 	}
