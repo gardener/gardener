@@ -23,7 +23,8 @@ import (
 	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
-	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
@@ -42,8 +43,8 @@ import (
 	auditv1alpha1 "k8s.io/apiserver/pkg/apis/audit/v1alpha1"
 	auditv1beta1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
 	auditvalidation "k8s.io/apiserver/pkg/apis/audit/validation"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -92,6 +93,7 @@ func init() {
 
 type handler struct {
 	apiReader client.Reader
+	cache     client.Reader
 	decoder   *admission.Decoder
 	logger    logr.Logger
 }
@@ -100,6 +102,11 @@ var _ admission.Handler = &handler{}
 
 func (h *handler) InjectAPIReader(reader client.Reader) error {
 	h.apiReader = reader
+	return nil
+}
+
+func (h *handler) InjectCache(cache cache.Cache) error {
+	h.cache = cache
 	return nil
 }
 
@@ -118,7 +125,7 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 	case shootGK:
 		return h.admitShoot(ctx, request)
 	case configmapGK:
-		return h.admitConfigMap(request)
+		return h.admitConfigMap(ctx, request)
 	}
 	return acadmission.Allowed("resource is not core.gardener.cloud/v1beta1.shoot or v1.configmap")
 }
@@ -190,7 +197,7 @@ func (h *handler) admitShoot(ctx context.Context, request admission.Request) adm
 	)
 }
 
-func (h *handler) admitConfigMap(request admission.Request) admission.Response {
+func (h *handler) admitConfigMap(ctx context.Context, request admission.Request) admission.Response {
 	var (
 		oldCm = &corev1.ConfigMap{}
 		cm    = &corev1.ConfigMap{}
@@ -203,7 +210,22 @@ func (h *handler) admitConfigMap(request admission.Request) admission.Response {
 	if err := h.decoder.Decode(request, cm); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	if !controllerutil.ContainsFinalizer(cm, shootcontroller.FinalizerName) {
+
+	// lookup if configmap is referenced by any shoot in the same namespace
+	shootList := &gardencorev1beta1.ShootList{}
+	if err := h.cache.List(ctx, shootList, client.InNamespace(request.Namespace)); err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+
+	configMapIsReferenced := false
+	for _, shoot := range shootList.Items {
+		if gardencorev1beta1helper.GetShootAuditPolicyConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer) == request.Name {
+			configMapIsReferenced = true
+			break
+		}
+	}
+
+	if !configMapIsReferenced {
 		return acadmission.Allowed("configmap is not referenced by a Shoot")
 	}
 

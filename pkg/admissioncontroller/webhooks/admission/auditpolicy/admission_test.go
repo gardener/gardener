@@ -19,6 +19,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/auditpolicy"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -56,6 +59,7 @@ var _ = Describe("handler", func() {
 
 		ctrl       *gomock.Controller
 		mockReader *mockclient.MockReader
+		fakeClient client.Client
 
 		statusCodeAllowed       int32 = http.StatusOK
 		statusCodeInvalid       int32 = http.StatusUnprocessableEntity
@@ -66,7 +70,7 @@ var _ = Describe("handler", func() {
 		cmName         = "fake-cm-name"
 		cmNamespace    = "fake-cm-namespace"
 		shootName      = "fake-shoot-name"
-		shootNamespace = "fake-shoot-namespace"
+		shootNamespace = cmNamespace
 
 		cm            *v1.ConfigMap
 		shootv1beta1  *gardencorev1beta1.Shoot
@@ -132,6 +136,7 @@ rules:
 
 		ctrl = gomock.NewController(GinkgoT())
 		mockReader = mockclient.NewMockReader(ctrl)
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 
 		var err error
 		decoder, err = admission.NewDecoder(kubernetes.GardenScheme)
@@ -142,6 +147,53 @@ rules:
 		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 
 		request = admission.Request{}
+
+		shootv1beta1 = &gardencorev1beta1.Shoot{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+				Kind:       "Shoot",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      shootName,
+				Namespace: shootNamespace,
+			},
+			Spec: gardencorev1beta1.ShootSpec{
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+						AuditConfig: &gardencorev1beta1.AuditConfig{
+							AuditPolicy: &gardencorev1beta1.AuditPolicy{
+								ConfigMapRef: &v1.ObjectReference{
+									Name: cmName,
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		shootv1alpha1 = &gardencorev1alpha1.Shoot{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: gardencorev1alpha1.SchemeGroupVersion.String(),
+				Kind:       "Shoot",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      shootName,
+				Namespace: shootNamespace,
+			},
+			Spec: gardencorev1alpha1.ShootSpec{
+				Kubernetes: gardencorev1alpha1.Kubernetes{
+					KubeAPIServer: &gardencorev1alpha1.KubeAPIServerConfig{
+						AuditConfig: &gardencorev1alpha1.AuditConfig{
+							AuditPolicy: &gardencorev1alpha1.AuditPolicy{
+								ConfigMapRef: &v1.ObjectReference{
+									Name: cmName,
+								},
+							},
+						},
+					},
+				},
+			},
+		}
 	})
 
 	AfterEach(func() {
@@ -183,52 +235,6 @@ rules:
 	Context("Shoots", func() {
 		BeforeEach(func() {
 			request.Kind = metav1.GroupVersionKind{Group: "core.gardener.cloud", Version: "v1beta1", Kind: "Shoot"}
-			shootv1beta1 = &gardencorev1beta1.Shoot{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-					Kind:       "Shoot",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      shootName,
-					Namespace: shootNamespace,
-				},
-				Spec: gardencorev1beta1.ShootSpec{
-					Kubernetes: gardencorev1beta1.Kubernetes{
-						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-							AuditConfig: &gardencorev1beta1.AuditConfig{
-								AuditPolicy: &gardencorev1beta1.AuditPolicy{
-									ConfigMapRef: &v1.ObjectReference{
-										Name: cmName,
-									},
-								},
-							},
-						},
-					},
-				},
-			}
-			shootv1alpha1 = &gardencorev1alpha1.Shoot{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: gardencorev1alpha1.SchemeGroupVersion.String(),
-					Kind:       "Shoot",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      shootName,
-					Namespace: shootNamespace,
-				},
-				Spec: gardencorev1alpha1.ShootSpec{
-					Kubernetes: gardencorev1alpha1.Kubernetes{
-						KubeAPIServer: &gardencorev1alpha1.KubeAPIServerConfig{
-							AuditConfig: &gardencorev1alpha1.AuditConfig{
-								AuditPolicy: &gardencorev1alpha1.AuditPolicy{
-									ConfigMapRef: &v1.ObjectReference{
-										Name: cmName,
-									},
-								},
-							},
-						},
-					},
-				},
-			}
 		})
 
 		It("should ignore subresources", func() {
@@ -418,14 +424,13 @@ rules:
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      cmName,
 					Namespace: cmNamespace,
-					Finalizers: []string{
-						"gardener.cloud/reference-protection",
-					},
 				},
 				Data: map[string]string{
 					"policy": validAuditPolicy,
 				},
 			}
+
+			Expect(inject.CacheInto(fakeCache{Reader: fakeClient}, handler)).To(BeTrue())
 		})
 
 		Context("ignored requests", func() {
@@ -446,28 +451,27 @@ rules:
 			BeforeEach(func() {
 				request.Name = cmName
 				request.Namespace = cmNamespace
-
-				shootv1beta1 = &gardencorev1beta1.Shoot{}
-				shootv1beta1.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
-					AuditConfig: &gardencorev1beta1.AuditConfig{
-						AuditPolicy: &gardencorev1beta1.AuditPolicy{
-							ConfigMapRef: &v1.ObjectReference{Name: cmName},
-						},
-					},
-				}
 			})
 
 			Context("Allow", func() {
-				It("does not have a finalizer from a Shoot", func() {
-					cm.ObjectMeta.Finalizers = nil
+				It("is not reference by any shoot", func() {
+					shootInSameNamespaceButNotReferencing := shootv1beta1.DeepCopy()
+					shootInSameNamespaceButNotReferencing.Spec.Kubernetes.KubeAPIServer = nil
+					Expect(fakeClient.Create(ctx, shootInSameNamespaceButNotReferencing)).To(Succeed())
+					shootInDifferentNamespaceAndReferencing := shootv1beta1.DeepCopy()
+					shootInDifferentNamespaceAndReferencing.Namespace = shootNamespace + "other"
+					Expect(fakeClient.Create(ctx, shootInDifferentNamespaceAndReferencing)).To(Succeed())
+
 					test(admissionv1.Update, cm, cm, true, statusCodeAllowed, "configmap is not referenced by a Shoot", "")
 				})
 
 				It("did not change policy field", func() {
+					Expect(fakeClient.Create(ctx, shootv1beta1)).To(Succeed())
 					test(admissionv1.Update, cm, cm, true, statusCodeAllowed, "audit policy not changed", "")
 				})
 
 				It("should allow if the auditPolicy is changed to something valid", func() {
+					Expect(fakeClient.Create(ctx, shootv1beta1)).To(Succeed())
 					shootv1beta1.Spec.Kubernetes.Version = "1.20"
 					newCm := cm.DeepCopy()
 					newCm.Data["policy"] = anotherValidAuditPolicy
@@ -477,6 +481,10 @@ rules:
 			})
 
 			Context("Deny", func() {
+				BeforeEach(func() {
+					Expect(fakeClient.Create(ctx, shootv1beta1)).To(Succeed())
+				})
+
 				It("has no data key", func() {
 					newCm := cm.DeepCopy()
 					newCm.Data = nil
@@ -508,3 +516,10 @@ rules:
 		})
 	})
 })
+
+// fakeCache implements cache.Cache by delegating to the given client.Reader.
+// This is used to inject a fake cache into the handler that is based on a fake client.
+type fakeCache struct {
+	client.Reader
+	cache.Informers
+}
