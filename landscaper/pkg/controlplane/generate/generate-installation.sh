@@ -82,19 +82,16 @@ spec:
         target: 'virtual-garden-cluster'
     data:
       #  ----- Data refs: importing from virtual garden component -----
-      - name: virtualGardenApiserverCaPem
-        dataRef: "virtual-garden-apiserver-ca-pem"
-
       - name: etcdUrl
         dataRef: "etcd-url"
 
-      - name: etcdCaPem
+      - name: etcdCaBundle
         dataRef: "etcd-ca-pem"
 
-      - name: etcdClientTlsPem
+      - name: etcdClientCert
         dataRef: "etcd-client-tls-pem"
 
-      - name: etcdClientTlsKeyPem
+      - name: etcdClientKey
         dataRef: "etcd-client-tls-key-pem"
 
   # static data to not require to import config map
@@ -102,7 +99,6 @@ spec:
     virtualGarden:
       enabled: true
       clusterIP: "100.64.10.10"
-      kubeconfig: (( virtualGardenCluster ))
 
     internalDomain:
       provider: aws-route53
@@ -112,17 +108,26 @@ spec:
         AWS_ACCESS_KEY_ID: ZHVtbXk=
         AWS_SECRET_ACCESS_KEY: ZHVtbXk=
 
-    gardenerAPIServer:
-      componentConfiguration:
-        etcd:
-          url: (( etcdUrl ))
-          caBundle: (( etcdCaPem ))
-          clientCert: (( etcdClientTlsPem ))
-          clientKey: (( etcdClientTlsKeyPem ))
-
     gardenerAdmissionController:
       enabled: true
+
+  exports:
+    data:
+    - name: gardenerAPIServerCA
+      dataRef: "gardener-apiserver-ca"
+    - name: gardenerAPIServerTLSServing
+      dataRef: "gardener-apiserver-tls-serving"
+    - name: gardenerAdmissionControllerCA
+      dataRef: "gardener-admission-controller-ca"
+    - name: gardenerAdmissionControllerTLSServing
+      dataRef: "gardener-admission-controller-tls-serving"
+    - name: gardenerControllerManagerTLSServing
+      dataRef: "gardener-controller-manager-tls-serving"
+    - name: gardenerIdentity
+      dataRef: "gardener-identity"
+    - name: openVPNDiffieHellmanKey
+      dataRef: "openvpn-diffie-hellman-key"
 EOF
 
-echo "Installation exported to ${INSTALLATION_PATH}"
+echo "[Landscaper Controlplane]: Installation exported to ${INSTALLATION_PATH}"
 

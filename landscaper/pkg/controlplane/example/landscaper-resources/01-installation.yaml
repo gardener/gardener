@@ -16,34 +16,6 @@ spec:
     ref:
       resourceName: controlplane-blueprint
 
-  # https://github.com/gardener/landscaper/blob/master/docs/usage/Installations.md#import-data-mappings
-  importDataMappings:
-    virtualGarden:
-      enabled: true
-      clusterIP: (( virtualGardenCopy.clusterIP ))
-      kubeconfig: (( virtualGardenCluster ))
-
-    internalDomain:
-      <<<: (( internalDomainCopy ))
-      credentials: (( landscaperControlplaneInternalDomain ))
-
-    gardenerAPIServer:
-      # this is a SPIFF command to merge the contents of the key "gardenerAPIServer" from the imports define below
-      <<<: (( gardenerAPIServerCopy ))
-
-      componentConfiguration:
-        # optionally import the CA of the Virtual Garden API Server if it should be the same as the GAPIs
-        #        ca: (( virtualGardenApiserverCaPem ))
-
-        # this is a SPIFF command to merge the contents of the key "gardenerAPIServer.componentConfiguration" from the imports define below
-        <<<: (( gardenerAPIServerCopy.componentConfiguration ))
-        etcd:
-          # template-in the data-refs exported by the virtual-garden component
-          url: (( etcdUrl ))
-          caBundle: (( etcdCaPem ))
-          clientCert: (( etcdClientTlsPem ))
-          clientKey: (( etcdClientTlsKeyPem ))
-
   imports:
     targets:
       # the "#" forces the landscaper to use the target with the name "runtime-cluster" in the same namespace
@@ -54,85 +26,93 @@ spec:
         target: 'virtual-garden-cluster'
     data:
       #  -----  Data refs: importing from virtual garden component -----
-      - name: virtualGardenApiserverCaPem
-        dataRef: "virtual-garden-apiserver-ca-pem"
+      #      - name: virtualGardenApiserverCaPem
+      #        dataRef: "virtual-garden-apiserver-ca-pem"
 
       - name: etcdUrl
         dataRef: "etcd-url"
 
-      - name: etcdCaPem
+      - name: etcdCaBundle
         dataRef: "etcd-ca-pem"
 
-      - name: etcdClientTlsPem
+      - name: etcdClientCert
         dataRef: "etcd-client-tls-pem"
 
-      - name: etcdClientTlsKeyPem
+      - name: etcdClientKey
         dataRef: "etcd-client-tls-key-pem"
-
-      # NOTE: all specified import keys have to exist (even though declared optional in the blueprint)
-      # Hence, the installation imports have to be adjusted based on the supplied import configuration
 
       #  -----  User supplied import configuration -----
       - name: gardenerAdmissionController
-        configMapRef:
+        secretRef:
           name: landscaper-controlplane-config
           key: gardenerAdmissionController
-      - name: internalDomain
-        configMapRef:
-          name: landscaper-controlplane-config
-          key: internalDomain
       - name: rbac
-        configMapRef:
+        secretRef:
           name: landscaper-controlplane-config
           key: rbac
       - name: gardenerControllerManager
-        configMapRef:
+        secretRef:
           name: landscaper-controlplane-config
           key: gardenerControllerManager
-
-      #  -----  imports that are mapped again in import mappings -----
-      - name: gardenerAPIServerCopy
-        configMapRef:
+      - name: internalDomain
+        secretRef:
           name: landscaper-controlplane-config
-          key: gardenerAPIServer
-      - name: virtualGardenCopy
-        configMapRef:
+          key: internalDomain
+      - name: virtualGarden
+        secretRef:
           name: landscaper-controlplane-config
           key: virtualGarden
-#        There is a bug in landscaper that prevents all keys from a secret to be imported.
-#        That's why we introduce an artificial top level key "credentials".
-#        Please see: https://github.com/gardener/landscaper/issues/398
-      - name: landscaperControlplaneInternalDomain
+      - name: gardenerAPIServer
         secretRef:
-          name: landscaper-controlplane-internal-domain
-          key: credentials
+          name: landscaper-controlplane-config
+          key: gardenerAPIServer
 
-#  -----  Other optional imports -----
-#      - name: openVPNDiffieHellmanKey
-#        configMapRef:
-#          name: landscaper-controlplane-config
-#          key: openVPNDiffieHellmanKey
-#      - name: gardenerScheduler
-#        configMapRef:
-#          name: landscaper-controlplane-config
-#          key: gardenerScheduler
-#      - name: identity
-#        configMapRef:
-#          name: landscaper-controlplane-config
-#          key: identity
-#      - name: alerting
-#        configMapRef:
-#          name: landscaper-controlplane-config
-#          key: alerting
-#      - name: apiVersion
-#        configMapRef:
-#          name: landscaper-controlplane-config
-#          key: apiVersion
-#      - name: certificateRotation
-#        configMapRef:
-#          name: landscaper-controlplane-config
-#          key: certificateRotation
-#      - name: defaultDomains
-#        configMapRef:
-#          name: landscaper-controlplane-config
-#          key: defaultDomains
+
+# NOTE: all specified import keys have to exist (even though declared optional in the blueprint)
+# Hence, the installation imports have to be adjusted based on the supplied import configuration
+
+  #  -----  other optional import values -----
+  #      - name: openVPNDiffieHellmanKey
+  #        configMapRef:
+  #          name: landscaper-controlplane-config
+  #          key: openVPNDiffieHellmanKey
+  #      - name: gardenerScheduler
+  #        configMapRef:
+  #          name: landscaper-controlplane-config
+  #          key: gardenerScheduler
+  #      - name: identity
+  #        configMapRef:
+  #          name: landscaper-controlplane-config
+  #          key: identity
+  #      - name: alerting
+  #        configMapRef:
+  #          name: landscaper-controlplane-config
+  #          key: alerting
+  #      - name: apiVersion
+  #        configMapRef:
+  #          name: landscaper-controlplane-config
+  #          key: apiVersion
+  #      - name: certificateRotation
+  #        configMapRef:
+  #          name: landscaper-controlplane-config
+  #          key: certificateRotation
+  #      - name: defaultDomains
+  #        configMapRef:
+  #          name: landscaper-controlplane-config
+  #          key: defaultDomains
+  exports:
+    data:
+    - name: gardenerAPIServerCA
+      dataRef: "gardener-apiserver-ca"
+    - name: gardenerAPIServerTLSServing
+      dataRef: "gardener-apiserver-tls-serving"
+    - name: gardenerAdmissionControllerCA
+      dataRef: "gardener-admission-controller-ca"
+    - name: gardenerAdmissionControllerTLSServing
+      dataRef: "gardener-admission-controller-tls-serving"
+    - name: gardenerControllerManagerTLSServing
+      dataRef: "gardener-controller-manager-tls-serving"
+    - name: gardenerIdentity
+      dataRef: "gardener-identity"
+    - name: openVPNDiffieHellmanKey
+      dataRef: "openvpn-diffie-hellman-key"

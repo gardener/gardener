@@ -103,11 +103,11 @@ This is how the exports from the virtual-garden Landscaper component map to the 
    
 | Virtual Garden Exports | Control Plane Import Configuration  |
 |---|---|
-| `kubeconfigYaml`  |  `virtualGarden.kubeconfig` |
-|  `etcdCaPem` |  `gardenerAPIserver.componentConfiguration.etcd.caBundle` |
-|  `etcdClientTlsPem`  | `gardenerAPIserver.componentConfiguration.etcd.clientCert`  |
-|  `etcdClientTlsKeyPem` | `gardenerAPIserver.componentConfiguration.etcd.clientKey`  |
-| virtual-garden-etcd-main-client.garden.svc:2379  |  `gardenerAPIserver.componentConfiguration.etcd.url` |
+| `kubeconfigYaml`  |  `virtualGardenCluster` |
+|  `etcdCaPem` |  `etcdCaBundle` |
+|  `etcdClientTlsPem`  | `etcdClientCert`  |
+|  `etcdClientTlsKeyPem` | `etcdClientKey`  |
+| virtual-garden-etcd-main-client.garden.svc:2379  |  `etcdUrl` |
 
 4. Finally, run the below `make` statement.
    This already sets the required environment variables and the path to the local imports and component descriptor file.

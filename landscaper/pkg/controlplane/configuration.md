@@ -58,19 +58,20 @@ runtimeCluster:
 Optionally, configure the `virtual-garden` setup option of Gardener.
 
 ``` yaml
+virtualGardenCluster: 
+  apiVersion: landscaper.gardener.cloud/v1alpha1
+  kind: Target
+  spec:
+    type: landscaper.gardener.cloud/kubernetes-cluster
+    config:
+      kubeconfig: |
+        ---
+        apiVersion:...
+        # here goes the kubeconfig of the virtual-garden API server
+
 virtualGarden:
   enabled: true
-  kubeconfig: 
-    apiVersion: landscaper.gardener.cloud/v1alpha1
-    kind: Target
-    spec:
-      type: landscaper.gardener.cloud/kubernetes-cluster
-      config:
-        kubeconfig: |
-          ---
-          apiVersion:...
-          # here goes the kubeconfig of the virtual-garden API server
-
+  clusterIP: "100.64.10.10" # must be an IP in a valid service CIDR range of the runtime (!) cluster
 ```
 
 ## DNS Setup
@@ -105,10 +106,7 @@ At least the URL of the etcd cluster must be provided.
 - If the etcd serves TLS (configurable via flag `--cert-file` on etcd), this URL can use the HTTPS schema.
 
 ``` yaml
-gardenerAPIserver:
-  componentConfiguration:
-    etcd:
-      url: "virtual-garden-etcd-main-client.garden.svc:2379"
+etcdUrl: "virtual-garden-etcd-main-client.garden.svc:2379"
 ```
 
 It is recommended to provide a PEM encoded CA bundle of the TLS serving certificate of etcd.
@@ -117,13 +115,10 @@ Used by the Gardener API server to verify that the TLS serving certificate of et
 
 
 ``` yaml
-gardenerAPIserver:
-  componentConfiguration:
-    etcd:
-      caBundle: |
-        -----BEGIN CERTIFICATE-----
-        ...
-        -----END CERTIFICATE-----
+etcdCaBundle: |
+  -----BEGIN CERTIFICATE-----
+  ...
+  -----END CERTIFICATE-----
 ```
 
 Provide client credentials, if the etcd cluster requires client authentication.
@@ -131,17 +126,14 @@ Provide client credentials, if the etcd cluster requires client authentication.
 Make sure that the client credentials are signed by the CA provided to etcd via the flag `--trusted-ca-file`
 
 ``` yaml
-gardenerAPIserver:
-  componentConfiguration:
-    etcd:
-      clientCrt: |
-        -----BEGIN CERTIFICATE-----
-        ...
-        -----END CERTIFICATE-----
-      clientKey: |
-        -----BEGIN RSA PRIVATE KEY-----
-        ...
-        -----END RSA PRIVATE KEY-----
+etcdClientCrt: |
+  -----BEGIN CERTIFICATE-----
+  ...
+  -----END CERTIFICATE-----
+etcdClientKey: |
+  -----BEGIN RSA PRIVATE KEY-----
+  ...
+  -----END RSA PRIVATE KEY-----
 ```
 
 
@@ -400,7 +392,7 @@ gardenerControllerManager:
 
 ### Component configuration for the Gardener Admission Controller
 
-The component configuration of the Gardener Admission Controller is optional, as default values will be provided.
+The component configuration of the Gardener Admission Controller is optional and enabled by default.
 To overwrite the default values, please see the [example configuration](../../../example/20-componentconfig-gardener-admission-controller.yaml).
 
 ```
