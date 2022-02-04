@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shoot_maintenance
+package shoot_maintenance_test
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,9 +28,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
+
+// waitForShootToBeMaintained uses gomega.Eventually to wait until the maintenance controller has picked up its work
+// and removed the operation annotation.
+// This is better than wait.Poll* because it respects gomega's environment variables for globally configuring the
+// polling intervals and timeouts. This allows to easily make integration tests more robust in CI environments.
+// see https://onsi.github.io/gomega/#modifying-default-intervals
+// TODO: use this helper in all test cases instead of polling like in the other helper functions.
+func waitForShootToBeMaintained(shoot *gardencorev1beta1.Shoot) {
+	By("waiting for shoot to be maintained")
+	Eventually(func(g Gomega) bool {
+		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+		return metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.GardenerOperation)
+	}).Should(BeFalse())
+}
 
 // WaitForExpectedMachineImageMaintenance polls a shoot until the given deadline is exceeded. Checks if the shoot's machine image  equals the targetImage and if an image update is required.
 func waitForExpectedMachineImageMaintenance(ctx context.Context, logger *logrus.Logger, gardenClient client.Client, s *gardencorev1beta1.Shoot, targetMachineImage gardencorev1beta1.ShootMachineImage, imageUpdateRequired bool, deadline time.Time) error {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shoot_maintenance
+package shoot_maintenance_test
 
 import (
 	"context"

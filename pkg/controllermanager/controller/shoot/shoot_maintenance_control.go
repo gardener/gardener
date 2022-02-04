@@ -221,6 +221,12 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 	}
 
+	// unset the AuditPolicy reference's resourceVersion, as it is no longer used (see https://github.com/gardener/gardener/pull/5392)
+	// TODO: remove this in a future release
+	if ref := gardencorev1beta1helper.GetShootAuditPolicyConfigMapRef(shoot.Spec.Kubernetes.KubeAPIServer); ref != nil {
+		ref.ResourceVersion = ""
+	}
+
 	// try to maintain shoot, but don't retry on conflict, because a conflict means that we potentially operated on stale
 	// data (e.g. when calculating the updated k8s version), so rather return error and backoff
 	if err := gardenClient.Update(ctx, shoot); err != nil {
