@@ -114,8 +114,8 @@ var _ = Describe("#SyncWithExistingGardenerInstallation", func() {
 			runtimeClient:       runtimeClient,
 			virtualGardenClient: &virtualGardenClient,
 			imports: &imports.Imports{
-				GardenerAPIServer: imports.GardenerAPIServer{
-					ComponentConfiguration: imports.APIServerComponentConfiguration{
+				GardenerAPIServer: &imports.GardenerAPIServer{
+					ComponentConfiguration: &imports.APIServerComponentConfiguration{
 						CA:  &imports.CA{},
 						TLS: &imports.TLSServer{},
 					},

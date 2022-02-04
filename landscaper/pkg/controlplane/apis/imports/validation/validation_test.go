@@ -31,11 +31,11 @@ import (
 var _ = Describe("ValidateImports", func() {
 	var (
 		landscaperImport *imports.Imports
-		caEtcdTLS      = testutils.GenerateCACertificate("gardener.cloud:system:etcd-virtual")
-		caEtcdString   = string(caEtcdTLS.CertificatePEM)
-		etcdClientCert = testutils.GenerateClientCertificate(&caEtcdTLS)
-		etcdCertString = string(etcdClientCert.CertificatePEM)
-		etcdKeyString  = string(etcdClientCert.PrivateKeyPEM)
+		caEtcdTLS        = testutils.GenerateCACertificate("gardener.cloud:system:etcd-virtual")
+		caEtcdString     = string(caEtcdTLS.CertificatePEM)
+		etcdClientCert   = testutils.GenerateClientCertificate(&caEtcdTLS)
+		etcdCertString   = string(etcdClientCert.CertificatePEM)
+		etcdKeyString    = string(etcdClientCert.PrivateKeyPEM)
 	)
 
 	BeforeEach(func() {
@@ -96,7 +96,7 @@ var _ = Describe("ValidateImports", func() {
 		})
 
 		It("should forbid invalid TLS configuration - etcd CA is invalid", func() {
-			landscaperImport.EtcdCABundle  = pointer.String("invalid")
+			landscaperImport.EtcdCABundle = pointer.String("invalid")
 			errorList := ValidateLandscaperImports(landscaperImport)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{

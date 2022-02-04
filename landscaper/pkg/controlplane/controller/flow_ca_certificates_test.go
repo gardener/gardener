@@ -63,8 +63,8 @@ var _ = Describe("#GenerateCACertificates", func() {
 			log:           logrus.NewEntry(logger.NewNopLogger()),
 			runtimeClient: runtimeClient,
 			imports: &imports.Imports{
-				GardenerAPIServer: imports.GardenerAPIServer{
-					ComponentConfiguration: imports.APIServerComponentConfiguration{
+				GardenerAPIServer: &imports.GardenerAPIServer{
+					ComponentConfiguration: &imports.APIServerComponentConfiguration{
 						CA: &imports.CA{
 							Validity: &metav1.Duration{Duration: 10 * time.Second},
 						},

@@ -45,8 +45,12 @@ var _ = Describe("#GenerateEncryptionConfiguration", func() {
 
 	BeforeEach(func() {
 		testOperation = operation{
-			log:     logrus.NewEntry(logger.NewNopLogger()),
-			imports: &imports.Imports{},
+			log: logrus.NewEntry(logger.NewNopLogger()),
+			imports: &imports.Imports{
+				GardenerAPIServer: &imports.GardenerAPIServer{
+					ComponentConfiguration: &imports.APIServerComponentConfiguration{},
+				},
+			},
 		}
 	})
 
@@ -61,7 +65,7 @@ var _ = Describe("#GenerateEncryptionConfiguration", func() {
 			},
 		}
 
-		testOperation.imports = &imports.Imports{GardenerAPIServer: imports.GardenerAPIServer{ComponentConfiguration: imports.APIServerComponentConfiguration{
+		testOperation.imports = &imports.Imports{GardenerAPIServer: &imports.GardenerAPIServer{ComponentConfiguration: &imports.APIServerComponentConfiguration{
 			Encryption: &existingEncryptionConfig,
 		},
 		},

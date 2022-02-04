@@ -134,7 +134,7 @@ func NewRuntimeChartValuesHelper(
 	schedulerConfiguration importsv1alpha1.GardenerScheduler,
 	apiServerImage, controllerManagerImage, schedulerImage, admissionControllerImage Image) RuntimeChartValuesHelper {
 	return &runtimeValuesHelper{
-		Etcd: etcd,
+		Etcd:                                     etcd,
 		ClusterIdentity:                          clusterIdentity,
 		UseVirtualGarden:                         useVirtualGarden,
 		VirtualGardenClusterIP:                   virtualGardenClusterIP,

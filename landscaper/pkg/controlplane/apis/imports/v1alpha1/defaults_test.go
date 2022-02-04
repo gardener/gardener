@@ -45,8 +45,8 @@ var _ = Describe("Defaults", func() {
 				Rbac: &Rbac{
 					SeedAuthorizer: &SeedAuthorizer{Enabled: pointer.Bool(true)},
 				},
-				GardenerAPIServer: GardenerAPIServer{
-					ComponentConfiguration: APIServerComponentConfiguration{
+				GardenerAPIServer: &GardenerAPIServer{
+					ComponentConfiguration: &APIServerComponentConfiguration{
 						CA: &CA{
 							Validity: &metav1.Duration{
 								Duration: 157680000000000000,
@@ -97,8 +97,8 @@ var _ = Describe("Defaults", func() {
 		It("should default the mutating webhook kubeconfig for token volume projection", func() {
 			var obj = &Imports{
 				GardenerAdmissionController: &GardenerAdmissionController{Enabled: false},
-				GardenerAPIServer: GardenerAPIServer{
-					ComponentConfiguration: APIServerComponentConfiguration{
+				GardenerAPIServer: &GardenerAPIServer{
+					ComponentConfiguration: &APIServerComponentConfiguration{
 						Admission: &APIServerAdmissionConfiguration{
 							MutatingWebhook: &APIServerAdmissionWebhookCredentials{
 								TokenProjection: &APIServerAdmissionWebhookCredentialsTokenProjection{
@@ -112,8 +112,8 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_Imports(obj)
 
 			Expect(obj).To(Equal(&Imports{
-				GardenerAPIServer: GardenerAPIServer{
-					ComponentConfiguration: APIServerComponentConfiguration{
+				GardenerAPIServer: &GardenerAPIServer{
+					ComponentConfiguration: &APIServerComponentConfiguration{
 						CA: &CA{
 							Validity: &metav1.Duration{
 								Duration: 157680000000000000,
@@ -159,8 +159,8 @@ var _ = Describe("Defaults", func() {
 		It("should default the validating webhook kubeconfig for token volume projection", func() {
 			var obj = &Imports{
 				GardenerAdmissionController: &GardenerAdmissionController{Enabled: false},
-				GardenerAPIServer: GardenerAPIServer{
-					ComponentConfiguration: APIServerComponentConfiguration{
+				GardenerAPIServer: &GardenerAPIServer{
+					ComponentConfiguration: &APIServerComponentConfiguration{
 						Admission: &APIServerAdmissionConfiguration{
 							ValidatingWebhook: &APIServerAdmissionWebhookCredentials{
 								TokenProjection: &APIServerAdmissionWebhookCredentialsTokenProjection{
@@ -174,8 +174,8 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_Imports(obj)
 
 			Expect(obj).To(Equal(&Imports{
-				GardenerAPIServer: GardenerAPIServer{
-					ComponentConfiguration: APIServerComponentConfiguration{
+				GardenerAPIServer: &GardenerAPIServer{
+					ComponentConfiguration: &APIServerComponentConfiguration{
 						CA: &CA{
 							Validity: &metav1.Duration{
 								Duration: 157680000000000000,

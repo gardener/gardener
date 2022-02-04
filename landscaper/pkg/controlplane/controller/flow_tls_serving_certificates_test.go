@@ -41,8 +41,8 @@ var _ = Describe("Generate TLS serving certificates", func() {
 		testOperation = operation{
 			log: logrus.NewEntry(logger.NewNopLogger()),
 			imports: &imports.Imports{
-				GardenerAPIServer: imports.GardenerAPIServer{
-					ComponentConfiguration: imports.APIServerComponentConfiguration{
+				GardenerAPIServer: &imports.GardenerAPIServer{
+					ComponentConfiguration: &imports.APIServerComponentConfiguration{
 						CA: &imports.CA{
 							Crt: &caCrt,
 						},

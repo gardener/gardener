@@ -93,8 +93,8 @@ var _ = Describe("#FetchAndValidateConfigurationFromSecretReferences", func() {
 				Etcd: imports.Etcd{
 					EtcdSecretRef: &etcdSecretRef,
 				},
-				GardenerAPIServer: imports.GardenerAPIServer{
-					ComponentConfiguration: imports.APIServerComponentConfiguration{
+				GardenerAPIServer: &imports.GardenerAPIServer{
+					ComponentConfiguration: &imports.APIServerComponentConfiguration{
 						CA: &imports.CA{
 							SecretRef: &caSecretRef,
 						},
