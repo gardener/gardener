@@ -2059,7 +2059,7 @@ var _ = Describe("helper", func() {
 
 	Describe("GetShootAuditPolicyConfigMapName", func() {
 		test := func(description string, config *gardencorev1beta1.KubeAPIServerConfig, expectedName string) {
-			It(description, Offset(1), func() {
+			It(description, func() {
 				Expect(GetShootAuditPolicyConfigMapName(config)).To(Equal(expectedName))
 			})
 		}
@@ -2085,7 +2085,7 @@ var _ = Describe("helper", func() {
 
 	Describe("GetShootAuditPolicyConfigMapRef", func() {
 		test := func(description string, config *gardencorev1beta1.KubeAPIServerConfig, expectedRef *corev1.ObjectReference) {
-			It(description, Offset(1), func() {
+			It(description, func() {
 				Expect(GetShootAuditPolicyConfigMapRef(config)).To(Equal(expectedRef))
 			})
 		}
