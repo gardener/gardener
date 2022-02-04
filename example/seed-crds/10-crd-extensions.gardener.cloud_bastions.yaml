@@ -292,8 +292,6 @@ spec:
                   what ever data it needs.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
-            required:
-            - ingress
             type: object
         required:
         - spec
