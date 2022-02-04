@@ -208,6 +208,7 @@ API rule violation: names_match,github.com/gardener/component-spec/bindings-go/a
 API rule violation: names_match,github.com/gardener/component-spec/bindings-go/apis/v2,Resource,SourceRef
 API rule violation: names_match,github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1,APIServerAuditLogBackend,MaxAge
 API rule violation: names_match,github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1,APIServerAuditWebhookBackend,InitialBackoff
+API rule violation: names_match,github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1,Etcd,EtcdCABundle
 API rule violation: names_match,github.com/gardener/landscaper/apis/core,BlueprintDefinition,Reference
 API rule violation: names_match,github.com/gardener/landscaper/apis/core,ComponentDescriptorDefinition,Reference
 API rule violation: names_match,github.com/gardener/landscaper/apis/core,DeployItemSpec,Configuration

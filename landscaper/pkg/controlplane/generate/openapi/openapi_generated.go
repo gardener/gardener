@@ -55,7 +55,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerAuditWebhookBackend":                        schema_controlplane_apis_imports_v1alpha1_APIServerAuditWebhookBackend(ref),
 		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerComponentConfiguration":                     schema_controlplane_apis_imports_v1alpha1_APIServerComponentConfiguration(ref),
 		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerDeploymentConfiguration":                    schema_controlplane_apis_imports_v1alpha1_APIServerDeploymentConfiguration(ref),
-		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerEtcdConfiguration":                          schema_controlplane_apis_imports_v1alpha1_APIServerEtcdConfiguration(ref),
 		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerRequests":                                   schema_controlplane_apis_imports_v1alpha1_APIServerRequests(ref),
 		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerWatchCacheConfiguration":                    schema_controlplane_apis_imports_v1alpha1_APIServerWatchCacheConfiguration(ref),
 		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.AdmissionControllerComponentConfiguration":           schema_controlplane_apis_imports_v1alpha1_AdmissionControllerComponentConfiguration(ref),
@@ -66,6 +65,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.ControllerManagerComponentConfiguration":             schema_controlplane_apis_imports_v1alpha1_ControllerManagerComponentConfiguration(ref),
 		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.ControllerManagerDeploymentConfiguration":            schema_controlplane_apis_imports_v1alpha1_ControllerManagerDeploymentConfiguration(ref),
 		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.DNS":                                                 schema_controlplane_apis_imports_v1alpha1_DNS(ref),
+		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.Etcd":                                                schema_controlplane_apis_imports_v1alpha1_Etcd(ref),
 		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.GardenerAPIServer":                                   schema_controlplane_apis_imports_v1alpha1_GardenerAPIServer(ref),
 		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.GardenerAdmissionController":                         schema_controlplane_apis_imports_v1alpha1_GardenerAdmissionController(ref),
 		"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.GardenerControllerManager":                           schema_controlplane_apis_imports_v1alpha1_GardenerControllerManager(ref),
@@ -1643,13 +1643,6 @@ func schema_controlplane_apis_imports_v1alpha1_APIServerComponentConfiguration(r
 							Ref:         ref("k8s.io/apiserver/pkg/apis/config/v1.EncryptionConfiguration"),
 						},
 					},
-					"etcd": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Etcd contains configuration for the etcd of the Gardener API server",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerEtcdConfiguration"),
-						},
-					},
 					"ca": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CA contains a PEM encoded CA public key which will be used by the Kubernetes API server (either the RuntimeCluster or the VirtualGarden cluster) to validate the Gardener Extension API server's TLS serving certificate. It is put into the APIService resources for the Gardener resource groups The TLS serving certificate of the Gardener Extension API server has to be signed by this CA. For more information, please see: https://kubernetes.io/docs/tasks/extend-kubernetes/configure-aggregation-layer/#contacting-the-extension-apiserver If the TLS serving certificate of the Gardener Extension API server is not provided, then must contain the private key of the CA to generate missing TLS serving certificate. If left empty, generates a new CA or reuses the CA of an existing APIService registration.",
@@ -1723,11 +1716,10 @@ func schema_controlplane_apis_imports_v1alpha1_APIServerComponentConfiguration(r
 						},
 					},
 				},
-				Required: []string{"etcd"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerAdmissionConfiguration", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerAuditConfiguration", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerEtcdConfiguration", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerRequests", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerWatchCacheConfiguration", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.CA", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.TLSServer", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration", "k8s.io/apiserver/pkg/apis/config/v1.EncryptionConfiguration"},
+			"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerAdmissionConfiguration", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerAuditConfiguration", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerRequests", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerWatchCacheConfiguration", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.CA", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.TLSServer", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration", "k8s.io/apiserver/pkg/apis/config/v1.EncryptionConfiguration"},
 	}
 }
 
@@ -1827,57 +1819,6 @@ func schema_controlplane_apis_imports_v1alpha1_APIServerDeploymentConfiguration(
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.HVPAConfiguration", "k8s.io/api/core/v1.Probe", "k8s.io/api/core/v1.ResourceRequirements"},
-	}
-}
-
-func schema_controlplane_apis_imports_v1alpha1_APIServerEtcdConfiguration(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "APIServerEtcdConfiguration contains configuration for the etcd of the Gardener API server etcd is a required as a prerequisite",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"url": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Url is the 'url:port' of the etcd of the Gardener API server If the etcd is deployed in-cluster, should be of the form 'k8s-service-name:port' if the etcd serves TLS (configurable via flag --cert-file on etcd), this URL can use the HTTPS schema.",
-							Default:     "",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"caBundle": {
-						SchemaProps: spec.SchemaProps{
-							Description: "CABundle is a PEM encoded CA bundle which will be used by the Gardener API server to verify that the TLS serving certificate presented by etcd is signed by this CA configures the flag --etcd-cafile on the Gardener API server Optional. if not set, the Gardener API server will not validate etcd's TLS serving certificate",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"clientCert": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ClientCert contains a client certificate which will be used by the Gardener API server to communicate with etcd via TLS. Configures the flags --etcd-certfile on the Gardener API server. On the etcd make sure that\n - client authentication is enabled via the flag --client-cert-auth\n - the client credentials have been signed by the CA provided to etcd via the flag --trusted-ca-file\nOptional. Etcd does not have to enforce client authentication.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"clientKey": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ClientKey is the key matching the configured client certificate. Configures the flags --etcd-keyfile on the Gardener API server. Optional. Etcd does not have to enforce client authentication.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"secretRef": {
-						SchemaProps: spec.SchemaProps{
-							Description: "SecretRef is an optional reference to a secret in the runtime cluster that contains the etcd's CABundle Client certificate and key Expects the following keys - ca.crt:  CABundle - tls.crt: ClientCert - tls.key: ClientKey",
-							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
-						},
-					},
-				},
-				Required: []string{"url"},
-			},
-		},
-		Dependencies: []string{
-			"k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -2419,6 +2360,57 @@ func schema_controlplane_apis_imports_v1alpha1_DNS(ref common.ReferenceCallback)
 	}
 }
 
+func schema_controlplane_apis_imports_v1alpha1_Etcd(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Etcd contains the etcd configuration to be used for the Gardener API Server",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"etcdUrl": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Url is the 'url:port' of the etcd of the Gardener API server If the etcd is deployed in-cluster, should be of the form 'k8s-service-name:port' if the etcd serves TLS (configurable via flag --cert-file on etcd), this URL can use the HTTPS schema.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"etcdCaBundle": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CABundle is a PEM encoded CA bundle which will be used by the Gardener API server to verify that the TLS serving certificate presented by etcd is signed by this CA configures the flag --etcd-cafile on the Gardener API server Optional. if not set, the Gardener API server will not validate etcd's TLS serving certificate",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"etcdClientCert": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ClientCert contains a client certificate which will be used by the Gardener API server to communicate with etcd via TLS. Configures the flags --etcd-certfile on the Gardener API server. On the etcd make sure that\n - client authentication is enabled via the flag --client-cert-auth\n - the client credentials have been signed by the CA provided to etcd via the flag --trusted-ca-file\nOptional. Etcd does not have to enforce client authentication.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"etcdClientKey": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ClientKey is the key matching the configured client certificate. Configures the flags --etcd-keyfile on the Gardener API server. Optional. Etcd does not have to enforce client authentication.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"etcdSecretRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SecretRef is an optional reference to a secret in the runtime cluster that contains the etcd's CABundle Client certificate and key Expects the following keys - ca.crt:  CABundle - tls.crt: ClientCert - tls.key: ClientKey",
+							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
+						},
+					},
+				},
+				Required: []string{"etcdUrl"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.SecretReference"},
+	}
+}
+
 func schema_controlplane_apis_imports_v1alpha1_GardenerAPIServer(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -2435,12 +2427,10 @@ func schema_controlplane_apis_imports_v1alpha1_GardenerAPIServer(ref common.Refe
 					"componentConfiguration": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ComponentConfiguration contains optional configurations for the Gardener Extension API server",
-							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.APIServerComponentConfiguration"),
 						},
 					},
 				},
-				Required: []string{"componentConfiguration"},
 			},
 		},
 		Dependencies: []string{
@@ -2691,6 +2681,41 @@ func schema_controlplane_apis_imports_v1alpha1_Imports(ref common.ReferenceCallb
 							Format:      "",
 						},
 					},
+					"etcdUrl": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Url is the 'url:port' of the etcd of the Gardener API server If the etcd is deployed in-cluster, should be of the form 'k8s-service-name:port' if the etcd serves TLS (configurable via flag --cert-file on etcd), this URL can use the HTTPS schema.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"etcdCaBundle": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CABundle is a PEM encoded CA bundle which will be used by the Gardener API server to verify that the TLS serving certificate presented by etcd is signed by this CA configures the flag --etcd-cafile on the Gardener API server Optional. if not set, the Gardener API server will not validate etcd's TLS serving certificate",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"etcdClientCert": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ClientCert contains a client certificate which will be used by the Gardener API server to communicate with etcd via TLS. Configures the flags --etcd-certfile on the Gardener API server. On the etcd make sure that\n - client authentication is enabled via the flag --client-cert-auth\n - the client credentials have been signed by the CA provided to etcd via the flag --trusted-ca-file\nOptional. Etcd does not have to enforce client authentication.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"etcdClientKey": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ClientKey is the key matching the configured client certificate. Configures the flags --etcd-keyfile on the Gardener API server. Optional. Etcd does not have to enforce client authentication.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"etcdSecretRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SecretRef is an optional reference to a secret in the runtime cluster that contains the etcd's CABundle Client certificate and key Expects the following keys - ca.crt:  CABundle - tls.crt: ClientCert - tls.key: ClientKey",
+							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
+						},
+					},
 					"identity": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Identity is the id that uniquely identifies this Gardener installation If not set, uses the existing identity of the installation or generates a default identity (\"landscape-\").",
@@ -2702,6 +2727,12 @@ func schema_controlplane_apis_imports_v1alpha1_Imports(ref common.ReferenceCallb
 						SchemaProps: spec.SchemaProps{
 							Description: "RuntimeCluster contains the kubeconfig for the cluster where the Gardener control plane pods will run. if you do NOT configure a \"virtual Garden\" installation, the API server of this cluster will be aggregated by the Gardener Extension API server and in turn serves the Gardener API. Using the \"virtual Garden\" installation, this cluster is solely used to run the Gardener control plane pods as well as the  Kubernetes API server pods of the \"virtual Garden\".",
 							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/landscaper/apis/core/v1alpha1.Target"),
+						},
+					},
+					"virtualGardenCluster": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VirtualGardenCluster is the landscaper target containing the kubeconfig to an existing \"Virtual Garden\" API server deployed in the runtime cluster. This is the kubeconfig of the Cluster\n - that will be aggregated by the Gardener Extension API server with Gardener resource groups\n - where the Gardener configuration is created (garden namespace, default & internal domain secrets, Gardener webhooks)\n - essentially, this helm chart will be applied: charts/gardener/controlplane/charts/application\n\nThe Gardener control plane (Gardener Controller Manager, Gardener Scheduler, ...) will in turn run in the runtime cluster, but use kubeconfigs with credentials to this API server. To use this kubeconfig, the virtual garden has to be enabled in the configuration under virtualGarden.enabled",
 							Ref:         ref("github.com/gardener/landscaper/apis/core/v1alpha1.Target"),
 						},
 					},
@@ -2756,7 +2787,6 @@ func schema_controlplane_apis_imports_v1alpha1_Imports(ref common.ReferenceCallb
 					"gardenerAPIServer": {
 						SchemaProps: spec.SchemaProps{
 							Description: "GardenerAPIServer contains the configuration for the Gardener API Server",
-							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.GardenerAPIServer"),
 						},
 					},
@@ -2791,11 +2821,11 @@ func schema_controlplane_apis_imports_v1alpha1_Imports(ref common.ReferenceCallb
 						},
 					},
 				},
-				Required: []string{"runtimeCluster", "internalDomain", "gardenerAPIServer"},
+				Required: []string{"etcdUrl", "runtimeCluster", "internalDomain"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.Alerting", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.CertificateRotation", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.DNS", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.GardenerAPIServer", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.GardenerAdmissionController", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.GardenerControllerManager", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.GardenerScheduler", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.Rbac", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.VirtualGarden", "github.com/gardener/landscaper/apis/core/v1alpha1.Target"},
+			"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.Alerting", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.CertificateRotation", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.DNS", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.GardenerAPIServer", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.GardenerAdmissionController", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.GardenerControllerManager", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.GardenerScheduler", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.Rbac", "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.VirtualGarden", "github.com/gardener/landscaper/apis/core/v1alpha1.Target", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -2938,12 +2968,6 @@ func schema_controlplane_apis_imports_v1alpha1_VirtualGarden(ref common.Referenc
 							Format:      "",
 						},
 					},
-					"kubeconfig": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kubeconfig is the landscaper target containing the kubeconfig to an existing \"Virtual Garden\" API server deployed in the runtime cluster. This is the kubeconfig of the Cluster\n - that will be aggregated by the Gardener Extension API server with Gardener resource groups\n - where the Gardener configuration is created (garden namespace, default & internal domain secrets, Gardener webhooks)\n - essentially, this helm chart will be applied: charts/gardener/controlplane/charts/application\n\nThe Gardener control plane (Gardener Controller Manager, Gardener Scheduler, ...) will in turn run in the runtime cluster, but use kubeconfigs with credentials to this API server.",
-							Ref:         ref("github.com/gardener/landscaper/apis/core/v1alpha1.Target"),
-						},
-					},
 					"clusterIP": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ClusterIP is an arbitrary private ipV4 IP that is used to enable the virtual Garden API server running as a pod in the runtime cluster to talk to the Gardener Extension API server pod also running as a pod in the runtime cluster This IP\n - In the Virtual Garden cluster: is written into the endpoints resource of the \"gardener-apiserver\" service.\n   This service is used by the APIService resources to register Gardener resource groups.\n - In the runtime cluster: is the ClusterIP of the \"gardener-apiserver\" service selecting the Gardener Extension\n   API server pods.\n\nExposed to accommodate existing Gardener installation defaults to 10.0.1.0",
@@ -2955,8 +2979,6 @@ func schema_controlplane_apis_imports_v1alpha1_VirtualGarden(ref common.Referenc
 				Required: []string{"enabled"},
 			},
 		},
-		Dependencies: []string{
-			"github.com/gardener/landscaper/apis/core/v1alpha1.Target"},
 	}
 }
 

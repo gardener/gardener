@@ -28,10 +28,6 @@ properties:
         providers:
          - aescbc with a randomly generated key
          - identity: {}
-  etcd:
-    $ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.APIServerEtcdConfiguration.yaml
-    default: {}
-    description: Etcd contains configuration for the etcd of the Gardener API server
   featureGates:
     additionalProperties:
       default: false
@@ -71,6 +67,4 @@ properties:
     $ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.APIServerWatchCacheConfiguration.yaml
     description: WatchCacheSize optionally configures the watch cache size for resources
       watched by the Gardener API Server
-required:
-- etcd
 type: object

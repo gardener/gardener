@@ -3,13 +3,10 @@ description: GardenerAPIServer contains the configuration of the Gardener Aggreg
 properties:
   componentConfiguration:
     $ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.APIServerComponentConfiguration.yaml
-    default: {}
     description: ComponentConfiguration contains optional configurations for the Gardener
       Extension API server
   deploymentConfiguration:
     $ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.APIServerDeploymentConfiguration.yaml
     description: DeploymentConfiguration contains optional configurations for the
       deployment of the Gardener API server
-required:
-- componentConfiguration
 type: object

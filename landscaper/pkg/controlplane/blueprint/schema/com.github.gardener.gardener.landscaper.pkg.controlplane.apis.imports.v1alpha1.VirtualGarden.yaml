@@ -20,15 +20,6 @@ properties:
       installation via the landscaper) and must be able to communicate with the Gardener
       Extension API server pod that will be deployed to the Garden namespace
     type: boolean
-  kubeconfig:
-    $ref: blueprint://schema/com.github.gardener.landscaper.apis.core.v1alpha1.Target.yaml
-    description: |-
-      Kubeconfig is the landscaper target containing the kubeconfig to an existing "Virtual Garden" API server deployed in the runtime cluster. This is the kubeconfig of the Cluster
-       - that will be aggregated by the Gardener Extension API server with Gardener resource groups
-       - where the Gardener configuration is created (garden namespace, default & internal domain secrets, Gardener webhooks)
-       - essentially, this helm chart will be applied: charts/gardener/controlplane/charts/application
-
-      The Gardener control plane (Gardener Controller Manager, Gardener Scheduler, ...) will in turn run in the runtime cluster, but use kubeconfigs with credentials to this API server.
 required:
 - enabled
 type: object

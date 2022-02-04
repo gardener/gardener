@@ -29,8 +29,44 @@ imports:
       items:
       - ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.DNS.yaml
       type: array
-  - name: gardenerAPIServer
+  - name: etcdCaBundle
+    required: false
+    schema:
+      description: CABundle is a PEM encoded CA bundle which will be used by the Gardener
+        API server to verify that the TLS serving certificate presented by etcd is signed
+        by this CA configures the flag --etcd-cafile on the Gardener API server Optional.
+        if not set, the Gardener API server will not validate etcds TLS serving certificate
+      type: string
+  - name: etcdClientCert
+    required: false
+    schema:
+      description: |-
+        ClientCert contains a client certificate which will be used by the Gardener API server to communicate with etcd via TLS. Configures the flags --etcd-certfile on the Gardener API server. On the etcd make sure that
+         - client authentication is enabled via the flag --client-cert-auth
+         - the client credentials have been signed by the CA provided to etcd via the flag --trusted-ca-file
+        Optional. Etcd does not have to enforce client authentication.
+      type: string
+  - name: etcdClientKey
+    required: false
+    schema:
+      description: ClientKey is the key matching the configured client certificate.
+        Configures the flags --etcd-keyfile on the Gardener API server. Optional. Etcd
+        does not have to enforce client authentication.
+      type: string
+  - name: etcdSecretRef
+    required: false
+    schema:
+      ref: blueprint://schema/io.k8s.api.core.v1.SecretReference.yaml
+  - name: etcdUrl
     required: true
+    schema:
+      description: Url is the url:port of the etcd of the Gardener API server If the
+        etcd is deployed in-cluster, should be of the form k8s-service-name:port if
+        the etcd serves TLS (configurable via flag --cert-file on etcd), this URL can
+        use the HTTPS schema.
+      type: string
+  - name: gardenerAPIServer
+    required: false
     schema:
       ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.GardenerAPIServer.yaml
   - name: gardenerAdmissionController
@@ -78,6 +114,9 @@ imports:
     required: false
     schema:
       ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.VirtualGarden.yaml
+  - name: virtualGardenCluster
+    required: false
+    targetType: landscaper.gardener.cloud/kubernetes-cluster
   
 
 # For what can be referenced in the deployExecutions, please see:
