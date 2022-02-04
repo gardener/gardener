@@ -65,7 +65,7 @@ deploy:
             image: eu.gcr.io/gardener-project/gardener/controller-manager
           scheduler:
             image: eu.gcr.io/gardener-project/gardener/scheduler
-          admission-controller:
+          admission:
             image: eu.gcr.io/gardener-project/gardener/admission-controller
       imageStrategy:
         helm: {}
