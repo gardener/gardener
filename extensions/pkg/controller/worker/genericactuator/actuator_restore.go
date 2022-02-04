@@ -138,8 +138,12 @@ func (a *genericActuator) restoreMachineSetsAndMachines(ctx context.Context, log
 				}
 			}
 
-			newMachine.Status = machine.Status
-			return a.client.Status().Update(ctx, newMachine)
+			// Patch() is used here instead of Update() so that only the machine.Status.Node field is modified as a workaround
+			// for https://github.com/gardener/machine-controller-manager/issues/642. Check also https://github.com/kubernetes/kubernetes/issues/86811.
+			// Calling Update() would include the whole MachineStatus in the request - including fields of type metav1.Time causing the mentioned issues.
+			patch := client.MergeFrom(newMachine.DeepCopy())
+			newMachine.Status.Node = machine.Status.Node
+			return a.client.Status().Patch(ctx, newMachine, patch)
 		}
 	}
 
