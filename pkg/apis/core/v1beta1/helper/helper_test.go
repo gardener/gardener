@@ -2017,22 +2017,6 @@ var _ = Describe("helper", func() {
 		Entry("equality", &gardencorev1beta1.SeedBackup{SecretRef: corev1.SecretReference{Name: "foo", Namespace: "bar"}}, &gardencorev1beta1.SeedBackup{SecretRef: corev1.SecretReference{Name: "foo", Namespace: "bar"}}, BeTrue()),
 	)
 
-	DescribeTable("#ShootAuditPolicyConfigMapRefEqual",
-		func(oldAPIServerConfig, newAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, matcher gomegatypes.GomegaMatcher) {
-			Expect(ShootAuditPolicyConfigMapRefEqual(oldAPIServerConfig, newAPIServerConfig)).To(matcher)
-		},
-
-		Entry("both nil", nil, nil, BeTrue()),
-		Entry("old auditconfig nil", &gardencorev1beta1.KubeAPIServerConfig{}, &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "foo"}}}}, BeFalse()),
-		Entry("old auditpolicy nil", &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{}}, &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "foo"}}}}, BeFalse()),
-		Entry("old configmapref nil", &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{}}}, &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "foo"}}}}, BeFalse()),
-		Entry("new auditconfig nil", &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "foo"}}}}, &gardencorev1beta1.KubeAPIServerConfig{}, BeFalse()),
-		Entry("new auditpolicy nil", &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "foo"}}}}, &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{}}, BeFalse()),
-		Entry("new configmapref nil", &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "foo"}}}}, &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{}}}, BeFalse()),
-		Entry("difference", &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "bar"}}}}, &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "foo"}}}}, BeFalse()),
-		Entry("equality", &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "bar"}}}}, &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "bar"}}}}, BeTrue()),
-	)
-
 	DescribeTable("#ShootDNSProviderSecretNamesEqual",
 		func(oldDNS, newDNS *gardencorev1beta1.DNS, matcher gomegatypes.GomegaMatcher) {
 			Expect(ShootDNSProviderSecretNamesEqual(oldDNS, newDNS)).To(matcher)
@@ -2072,6 +2056,58 @@ var _ = Describe("helper", func() {
 		Entry("explicitly enabled", &gardencorev1beta1.KubeAPIServerConfig{EnableAnonymousAuthentication: &trueVar}, true),
 		Entry("explicitly disabled", &gardencorev1beta1.KubeAPIServerConfig{EnableAnonymousAuthentication: &falseVar}, false),
 	)
+
+	Describe("GetShootAuditPolicyConfigMapName", func() {
+		test := func(description string, config *gardencorev1beta1.KubeAPIServerConfig, expectedName string) {
+			It(description, Offset(1), func() {
+				Expect(GetShootAuditPolicyConfigMapName(config)).To(Equal(expectedName))
+			})
+		}
+
+		test("KubeAPIServerConfig = nil", nil, "")
+		test("AuditConfig = nil", &gardencorev1beta1.KubeAPIServerConfig{}, "")
+		test("AuditPolicy = nil", &gardencorev1beta1.KubeAPIServerConfig{
+			AuditConfig: &gardencorev1beta1.AuditConfig{},
+		}, "")
+		test("ConfigMapRef = nil", &gardencorev1beta1.KubeAPIServerConfig{
+			AuditConfig: &gardencorev1beta1.AuditConfig{
+				AuditPolicy: &gardencorev1beta1.AuditPolicy{},
+			},
+		}, "")
+		test("ConfigMapRef set", &gardencorev1beta1.KubeAPIServerConfig{
+			AuditConfig: &gardencorev1beta1.AuditConfig{
+				AuditPolicy: &gardencorev1beta1.AuditPolicy{
+					ConfigMapRef: &corev1.ObjectReference{Name: "foo"},
+				},
+			},
+		}, "foo")
+	})
+
+	Describe("GetShootAuditPolicyConfigMapRef", func() {
+		test := func(description string, config *gardencorev1beta1.KubeAPIServerConfig, expectedRef *corev1.ObjectReference) {
+			It(description, Offset(1), func() {
+				Expect(GetShootAuditPolicyConfigMapRef(config)).To(Equal(expectedRef))
+			})
+		}
+
+		test("KubeAPIServerConfig = nil", nil, nil)
+		test("AuditConfig = nil", &gardencorev1beta1.KubeAPIServerConfig{}, nil)
+		test("AuditPolicy = nil", &gardencorev1beta1.KubeAPIServerConfig{
+			AuditConfig: &gardencorev1beta1.AuditConfig{},
+		}, nil)
+		test("ConfigMapRef = nil", &gardencorev1beta1.KubeAPIServerConfig{
+			AuditConfig: &gardencorev1beta1.AuditConfig{
+				AuditPolicy: &gardencorev1beta1.AuditPolicy{},
+			},
+		}, nil)
+		test("ConfigMapRef set", &gardencorev1beta1.KubeAPIServerConfig{
+			AuditConfig: &gardencorev1beta1.AuditConfig{
+				AuditPolicy: &gardencorev1beta1.AuditPolicy{
+					ConfigMapRef: &corev1.ObjectReference{Name: "foo"},
+				},
+			},
+		}, &corev1.ObjectReference{Name: "foo"})
+	})
 
 	Describe("#CalculateSeedUsage", func() {
 		type shootCase struct {

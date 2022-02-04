@@ -1322,31 +1322,6 @@ func SeedBackupSecretRefEqual(oldBackup, newBackup *gardencorev1beta1.SeedBackup
 	return apiequality.Semantic.DeepEqual(oldSecretRef, newSecretRef)
 }
 
-// ShootAuditPolicyConfigMapRefEqual returns true if the name of the ConfigMap reference for the audit policy
-// configuration is the same.
-func ShootAuditPolicyConfigMapRefEqual(oldAPIServerConfig, newAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig) bool {
-	var (
-		oldConfigMapRefName string
-		newConfigMapRefName string
-	)
-
-	if oldAPIServerConfig != nil &&
-		oldAPIServerConfig.AuditConfig != nil &&
-		oldAPIServerConfig.AuditConfig.AuditPolicy != nil &&
-		oldAPIServerConfig.AuditConfig.AuditPolicy.ConfigMapRef != nil {
-		oldConfigMapRefName = oldAPIServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name
-	}
-
-	if newAPIServerConfig != nil &&
-		newAPIServerConfig.AuditConfig != nil &&
-		newAPIServerConfig.AuditConfig.AuditPolicy != nil &&
-		newAPIServerConfig.AuditConfig.AuditPolicy.ConfigMapRef != nil {
-		newConfigMapRefName = newAPIServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name
-	}
-
-	return oldConfigMapRefName == newConfigMapRefName
-}
-
 // ShootDNSProviderSecretNamesEqual returns true when all the secretNames in the `.spec.dns.providers[]` list are the
 // same.
 func ShootDNSProviderSecretNamesEqual(oldDNS, newDNS *gardencorev1beta1.DNS) bool {
@@ -1395,6 +1370,24 @@ func ShootSecretResourceReferencesEqual(oldResources, newResources []gardencorev
 	}
 
 	return oldNames.Equal(newNames)
+}
+
+// GetShootAuditPolicyConfigMapName returns the Shoot's ConfigMap reference name for the audit policy.
+func GetShootAuditPolicyConfigMapName(apiServerConfig *gardencorev1beta1.KubeAPIServerConfig) string {
+	if ref := GetShootAuditPolicyConfigMapRef(apiServerConfig); ref != nil {
+		return ref.Name
+	}
+	return ""
+}
+
+// GetShootAuditPolicyConfigMapRef returns the Shoot's ConfigMap reference for the audit policy.
+func GetShootAuditPolicyConfigMapRef(apiServerConfig *gardencorev1beta1.KubeAPIServerConfig) *corev1.ObjectReference {
+	if apiServerConfig != nil &&
+		apiServerConfig.AuditConfig != nil &&
+		apiServerConfig.AuditConfig.AuditPolicy != nil {
+		return apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef
+	}
+	return nil
 }
 
 // ShootWantsAnonymousAuthentication returns true if anonymous authentication is set explicitly to 'true' and false otherwise.
