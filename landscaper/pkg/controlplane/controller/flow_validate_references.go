@@ -65,37 +65,37 @@ func (o *operation) FetchAndValidateConfigurationFromSecretReferences(ctx contex
 		}
 	}
 
-	if o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef != nil {
+	if o.imports.EtcdSecretRef != nil {
 		secret := &corev1.Secret{}
-		if err := o.runtimeClient.Client().Get(ctx, kutil.Key(o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef.Namespace, o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef.Name), secret); err != nil {
+		if err := o.runtimeClient.Client().Get(ctx, kutil.Key(o.imports.EtcdSecretRef.Namespace, o.imports.EtcdSecretRef.Name), secret); err != nil {
 			if apierrors.IsNotFound(err) {
-				return fmt.Errorf("secret %s/%s configured to contain the etcd certificates, does not exist in the runtime cluster: %v", o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef.Namespace, o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef.Name, err)
+				return fmt.Errorf("secret %s/%s configured to contain the etcd certificates, does not exist in the runtime cluster: %v", o.imports.EtcdSecretRef.Namespace, o.imports.EtcdSecretRef.Name, err)
 			}
-			fmt.Errorf("failed to retrieve secret %s/%s from the runtime cluster: %v", o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef.Namespace, o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef.Name, err)
+			fmt.Errorf("failed to retrieve secret %s/%s from the runtime cluster: %v", o.imports.EtcdSecretRef.Namespace, o.imports.EtcdSecretRef.Name, err)
 		}
 
 		if ca, ok := secret.Data[secretDataKeyCACrt]; ok {
-			if errors := validation.ValidateCACertificate(string(ca), field.NewPath("gardenerAPIServer.componentConfiguration.etcd.secretRef")); len(errors) > 0 {
-				return fmt.Errorf("the configured etcd CA certificate configured in the secret (%s/%s) is erroneous: %s", o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef.Namespace, o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef.Name, errors.ToAggregate().Error())
+			if errors := validation.ValidateCACertificate(string(ca), field.NewPath("etcdSecretRef")); len(errors) > 0 {
+				return fmt.Errorf("the configured etcd CA certificate configured in the secret (%s/%s) is erroneous: %s", o.imports.EtcdSecretRef.Namespace, o.imports.EtcdSecretRef.Name, errors.ToAggregate().Error())
 			}
-			o.log.Debugf("Using configured etcd CA certificate configured in the secret %s/%s in the runtime cluster", o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef.Namespace, o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef.Name)
-			o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.CABundle = pointer.String(string(ca))
+			o.log.Debugf("Using configured etcd CA certificate configured in the secret %s/%s in the runtime cluster", o.imports.EtcdSecretRef.Namespace, o.imports.EtcdSecretRef.Name)
+			o.imports.EtcdCABundle = pointer.String(string(ca))
 		}
 
 		if cert, ok := secret.Data[secretDataKeyTLSCrt]; ok {
-			if errors := validation.ValidateClientCertificate(string(cert), field.NewPath("gardenerAPIServer.componentConfiguration.etcd.secretRef")); len(errors) > 0 {
-				return fmt.Errorf("the configured etcd client certificate configured in the secret (%s/%s) is erroneous: %s", o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef.Namespace, o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef.Name, errors.ToAggregate().Error())
+			if errors := validation.ValidateClientCertificate(string(cert), field.NewPath("etcdSecretRef")); len(errors) > 0 {
+				return fmt.Errorf("the configured etcd client certificate configured in the secret (%s/%s) is erroneous: %s", o.imports.EtcdSecretRef.Namespace, o.imports.EtcdSecretRef.Name, errors.ToAggregate().Error())
 			}
-			o.log.Debugf("Using configured etcd client certificate configured in the secret %s/%s in the runtime cluster", o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef.Namespace, o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef.Name)
-			o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.ClientCert = pointer.String(string(cert))
+			o.log.Debugf("Using configured etcd client certificate configured in the secret %s/%s in the runtime cluster", o.imports.EtcdSecretRef.Namespace, o.imports.EtcdSecretRef.Name)
+			o.imports.EtcdClientCert = pointer.String(string(cert))
 		}
 
 		if key, ok := secret.Data[secretDataKeyTLSKey]; ok {
-			if errors := validation.ValidatePrivateKey(string(key), field.NewPath("gardenerAPIServer.componentConfiguration.etcd.secretRef")); len(errors) > 0 {
-				return fmt.Errorf("the configured etcd client key configured in the secret (%s/%s) is erroneous: %s", o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef.Namespace, o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef.Name, errors.ToAggregate().Error())
+			if errors := validation.ValidatePrivateKey(string(key), field.NewPath("etcdSecretRef")); len(errors) > 0 {
+				return fmt.Errorf("the configured etcd client key configured in the secret (%s/%s) is erroneous: %s", o.imports.EtcdSecretRef.Namespace, o.imports.EtcdSecretRef.Name, errors.ToAggregate().Error())
 			}
-			o.log.Debugf("Using configured etcd client key configured in the secret %s/%s in the runtime cluster", o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef.Namespace, o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.SecretRef.Name)
-			o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.ClientKey = pointer.String(string(key))
+			o.log.Debugf("Using configured etcd client key configured in the secret %s/%s in the runtime cluster", o.imports.EtcdSecretRef.Namespace, o.imports.EtcdSecretRef.Name)
+			o.imports.EtcdClientKey = pointer.String(string(key))
 		}
 	}
 
@@ -117,7 +117,7 @@ func (o *operation) FetchAndValidateConfigurationFromSecretReferences(ctx contex
 		}
 	}
 
-	if o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.SecretRef != nil {
+	if o.imports.GardenerAdmissionController.Enabled && o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.SecretRef != nil {
 		cert, key, err := ValidateTLSConfigurationFromSecretReferences(ctx, o.runtimeClient.Client(), o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.SecretRef, o.imports.GardenerAdmissionController.ComponentConfiguration.CA, field.NewPath("gardenerAdmissionController.componentConfiguration.tls"))
 		if err != nil {
 			return fmt.Errorf("failed to validate Gardener API Server TLS certificates: %v", err)

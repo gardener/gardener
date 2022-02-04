@@ -141,7 +141,7 @@ func (o *operation) getRuntimeChartValues() (map[string]interface{}, error) {
 	// work on external version of the import configuration for marshalling into values
 	// internal structs do not have json marshalling tags
 	gardenerAPIServerV1alpha1 := &importsv1alpha1.GardenerAPIServer{}
-	if err := importsv1alpha1.Convert_imports_GardenerAPIServer_To_v1alpha1_GardenerAPIServer(&o.imports.GardenerAPIServer, gardenerAPIServerV1alpha1, nil); err != nil {
+	if err := importsv1alpha1.Convert_imports_GardenerAPIServer_To_v1alpha1_GardenerAPIServer(o.imports.GardenerAPIServer, gardenerAPIServerV1alpha1, nil); err != nil {
 		return nil, fmt.Errorf("failed to convert Gardern API Server import configuration to external version for rendering the chart values: %w", err)
 	}
 
@@ -167,7 +167,13 @@ func (o *operation) getRuntimeChartValues() (map[string]interface{}, error) {
 		}
 	}
 
+	etcdV1alpha1 := &importsv1alpha1.Etcd{}
+	if err := importsv1alpha1.Convert_imports_Etcd_To_v1alpha1_Etcd(&o.imports.Etcd, etcdV1alpha1, nil); err != nil {
+		return nil, fmt.Errorf("failed to convert etcd import configuration to external version for rendering the chart values: %w", err)
+	}
+
 	valuesHelper := values.NewRuntimeChartValuesHelper(
+		*etcdV1alpha1,
 		*o.imports.Identity,
 		o.imports.VirtualGarden != nil && o.imports.VirtualGarden.Enabled,
 		rbacV1alpha1,

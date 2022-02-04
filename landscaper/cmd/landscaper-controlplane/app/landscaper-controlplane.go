@@ -123,7 +123,7 @@ func run(ctx context.Context, opts *Options, log *logrus.Logger) error {
 
 	if imports.VirtualGarden != nil && imports.VirtualGarden.Enabled {
 		gardenClusterTargetConfig := &landscaperv1alpha1.KubernetesClusterTargetConfig{}
-		if err := json.Unmarshal(imports.VirtualGarden.Kubeconfig.Spec.Configuration.RawMessage, gardenClusterTargetConfig); err != nil {
+		if err := json.Unmarshal(imports.VirtualGardenCluster.Spec.Configuration.RawMessage, gardenClusterTargetConfig); err != nil {
 			return fmt.Errorf("failed to parse the virtual-garden cluster kubeconfig : %w", err)
 		}
 

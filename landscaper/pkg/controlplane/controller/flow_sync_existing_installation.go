@@ -83,33 +83,33 @@ func (o *operation) SyncWithExistingGardenerInstallation(ctx context.Context) er
 	}
 
 	if err == nil {
-		if o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.CABundle == nil {
+		if o.imports.EtcdCABundle == nil {
 			if etcdCACrt, ok := secret.Data[secretDataKeyEtcdCACrt]; ok {
 				if errors := validation.ValidateCACertificate(string(etcdCACrt), field.NewPath("gardenerAPIServer.componentConfiguration.etcd.caBundle")); len(errors) > 0 {
 					return fmt.Errorf("the existing etcd CA certificate configured in the secret (%s/%s) is erroneous: %s", gardencorev1beta1constants.GardenNamespace, secretNameGardenerAPIServerCert, errors.ToAggregate().Error())
 				}
 				o.log.Infof("Using existing etcd CA certificate found in secret %s/%s in the runtime cluster", gardencorev1beta1constants.GardenNamespace, secretNameGardenerAPIServerCert)
-				o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.CABundle = pointer.String(string(etcdCACrt))
+				o.imports.EtcdCABundle = pointer.String(string(etcdCACrt))
 			}
 		}
 
-		if o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.ClientCert == nil {
+		if o.imports.EtcdClientCert == nil {
 			if etcdClientCert, ok := secret.Data[secretDataKeyEtcdCrt]; ok {
 				if errors := validation.ValidateClientCertificate(string(etcdClientCert), field.NewPath("gardenerAPIServer.componentConfiguration.etcd.clientCert")); len(errors) > 0 {
 					return fmt.Errorf("the existing etcd client certificate configured in the secret (%s/%s) is erroneous: %s", gardencorev1beta1constants.GardenNamespace, secretNameGardenerAPIServerCert, errors.ToAggregate().Error())
 				}
 				o.log.Infof("Using existing etcd client certificate found in secret %s/%s in the runtime cluster", gardencorev1beta1constants.GardenNamespace, secretNameGardenerAPIServerCert)
-				o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.ClientCert = pointer.String(string(etcdClientCert))
+				o.imports.EtcdClientCert = pointer.String(string(etcdClientCert))
 			}
 		}
 
-		if o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.ClientKey == nil {
+		if o.imports.EtcdClientKey == nil {
 			if etcdClientCert, ok := secret.Data[secretDataKeyEtcdKey]; ok {
 				if errors := validation.ValidatePrivateKey(string(etcdClientCert), field.NewPath("gardenerAPIServer.componentConfiguration.etcd.clientKey")); len(errors) > 0 {
 					return fmt.Errorf("the existing etcd client key configured in the secret (%s/%s) is erroneous: %s", gardencorev1beta1constants.GardenNamespace, secretNameGardenerAPIServerCert, errors.ToAggregate().Error())
 				}
 				o.log.Infof("Using existing etcd client key found in secret %s/%s in the runtime cluster", gardencorev1beta1constants.GardenNamespace, secretNameGardenerAPIServerCert)
-				o.imports.GardenerAPIServer.ComponentConfiguration.Etcd.ClientCert = pointer.String(string(etcdClientCert))
+				o.imports.EtcdClientCert = pointer.String(string(etcdClientCert))
 			}
 		}
 

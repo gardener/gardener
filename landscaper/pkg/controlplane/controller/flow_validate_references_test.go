@@ -90,13 +90,13 @@ var _ = Describe("#FetchAndValidateConfigurationFromSecretReferences", func() {
 			log:           logrus.NewEntry(logger.NewNopLogger()),
 			runtimeClient: runtimeClient,
 			imports: &imports.Imports{
+				Etcd: imports.Etcd{
+					EtcdSecretRef: &etcdSecretRef,
+				},
 				GardenerAPIServer: imports.GardenerAPIServer{
 					ComponentConfiguration: imports.APIServerComponentConfiguration{
 						CA: &imports.CA{
 							SecretRef: &caSecretRef,
-						},
-						Etcd: imports.APIServerEtcdConfiguration{
-							SecretRef: &etcdSecretRef,
 						},
 						TLS: &imports.TLSServer{
 							SecretRef: &tlsSecretRef,
@@ -174,8 +174,8 @@ var _ = Describe("#FetchAndValidateConfigurationFromSecretReferences", func() {
 
 		Expect(testOperation.FetchAndValidateConfigurationFromSecretReferences(ctx)).ToNot(HaveOccurred())
 
-		Expect(testOperation.imports.GardenerAPIServer.ComponentConfiguration.Etcd.CABundle).ToNot(BeNil())
-		Expect(testOperation.imports.GardenerAPIServer.ComponentConfiguration.Etcd.ClientCert).ToNot(BeNil())
+		Expect(testOperation.imports.EtcdCABundle).ToNot(BeNil())
+		Expect(testOperation.imports.EtcdClientCert).ToNot(BeNil())
 
 		Expect(testOperation.imports.GardenerAPIServer.ComponentConfiguration.CA.Crt).ToNot(BeNil())
 		Expect(testOperation.imports.GardenerAPIServer.ComponentConfiguration.CA.Key).ToNot(BeNil())

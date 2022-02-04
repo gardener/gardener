@@ -213,19 +213,13 @@ config:
 					},
 				},
 			},
-			ComponentConfiguration: importsv1alpha1.APIServerComponentConfiguration{
+			ComponentConfiguration: &importsv1alpha1.APIServerComponentConfiguration{
 				Encryption: &apiserverconfigv1.EncryptionConfiguration{
 					Resources: []apiserverconfigv1.ResourceConfiguration{
 						{
 							Resources: []string{"plants", "secrets"},
 						},
 					},
-				},
-				Etcd: importsv1alpha1.APIServerEtcdConfiguration{
-					Url:        etcdUrl,
-					CABundle:   &etcdCACrt,
-					ClientCert: &etcdClientCert,
-					ClientKey:  &etcdClientKey,
 				},
 				CA: &importsv1alpha1.CA{
 					Crt: &defaultCACrt,
@@ -433,6 +427,13 @@ config:
 			},
 		}
 
+		etcdConfiguration = importsv1alpha1.Etcd{
+			EtcdUrl:        etcdUrl,
+			EtcdCABundle:   &etcdCACrt,
+			EtcdClientCert: &etcdClientCert,
+			EtcdClientKey:  &etcdClientKey,
+		}
+
 		defaultImage = Image{
 			Repository: "test",
 			Tag:        "repo",
@@ -456,7 +457,7 @@ config:
 
 		getValuesHelper = func(virtualGardenEnabled, useSecretReferences bool) RuntimeChartValuesHelper {
 			if useSecretReferences {
-				apiserverConfiguration.ComponentConfiguration.Etcd.SecretRef = &corev1.SecretReference{
+				etcdConfiguration.EtcdSecretRef = &corev1.SecretReference{
 					Name:      secretNameEtcdTLS,
 					Namespace: "garden",
 				}
@@ -478,6 +479,7 @@ config:
 			}
 
 			return NewRuntimeChartValuesHelper(
+				etcdConfiguration,
 				clusterIdentity,
 				virtualGardenEnabled,
 				&rbac,

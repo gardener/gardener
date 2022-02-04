@@ -268,8 +268,8 @@ var _ = Describe("#SyncWithExistingGardenerInstallation", func() {
 		)
 
 		Expect(testOperation.SyncWithExistingGardenerInstallation(ctx)).ToNot(HaveOccurred())
-		Expect(testOperation.imports.GardenerAPIServer.ComponentConfiguration.Etcd.CABundle).ToNot(BeNil())
-		Expect(testOperation.imports.GardenerAPIServer.ComponentConfiguration.Etcd.ClientCert).ToNot(BeNil())
+		Expect(testOperation.imports.EtcdCABundle).ToNot(BeNil())
+		Expect(testOperation.imports.EtcdClientCert).ToNot(BeNil())
 
 		Expect(testOperation.imports.GardenerAPIServer.ComponentConfiguration.CA.Crt).ToNot(BeNil())
 		Expect(testOperation.imports.GardenerAPIServer.ComponentConfiguration.CA.Key).ToNot(BeNil())

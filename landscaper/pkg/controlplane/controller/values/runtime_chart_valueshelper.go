@@ -48,6 +48,8 @@ type RuntimeChartValuesHelper interface {
 // runtimeValuesHelper is a concrete implementation of RuntimeChartValuesHelper
 // Contains all values that are needed to render the control plane runtime chart
 type runtimeValuesHelper struct {
+	// Etcd contains the etcd configuration for the Gardener API Server
+	Etcd importsv1alpha1.Etcd
 	// ClusterIdentity is the identity of the Gardener Installation configured in the Gardener API Server configuration
 	ClusterIdentity string
 	// UseVirtualGarden defines if the application chart is installed into a virtual Garden cluster
@@ -114,6 +116,7 @@ func init() {
 
 // NewRuntimeChartValuesHelper creates a new RuntimeChartValuesHelper.
 func NewRuntimeChartValuesHelper(
+	etcd importsv1alpha1.Etcd,
 	clusterIdentity string,
 	useVirtualGarden bool,
 	rbac *importsv1alpha1.Rbac,
@@ -131,6 +134,7 @@ func NewRuntimeChartValuesHelper(
 	schedulerConfiguration importsv1alpha1.GardenerScheduler,
 	apiServerImage, controllerManagerImage, schedulerImage, admissionControllerImage Image) RuntimeChartValuesHelper {
 	return &runtimeValuesHelper{
+		Etcd: etcd,
 		ClusterIdentity:                          clusterIdentity,
 		UseVirtualGarden:                         useVirtualGarden,
 		VirtualGardenClusterIP:                   virtualGardenClusterIP,
@@ -515,13 +519,13 @@ func (v runtimeValuesHelper) getAPIServerComponentValues() (map[string]interface
 		}
 	}
 
-	values, err = utils.SetToValuesMap(values, v.ApiServerConfiguration.ComponentConfiguration.Etcd.Url, "etcd", "servers")
+	values, err = utils.SetToValuesMap(values, v.Etcd.EtcdUrl, "etcd", "servers")
 	if err != nil {
 		return nil, err
 	}
 
-	if v.ApiServerConfiguration.ComponentConfiguration.Etcd.CABundle != nil {
-		values, err = utils.SetToValuesMap(values, *v.ApiServerConfiguration.ComponentConfiguration.Etcd.CABundle, "etcd", "caBundle")
+	if v.Etcd.EtcdCABundle != nil {
+		values, err = utils.SetToValuesMap(values, *v.Etcd.EtcdCABundle, "etcd", "caBundle")
 		if err != nil {
 			return nil, err
 		}
@@ -529,20 +533,20 @@ func (v runtimeValuesHelper) getAPIServerComponentValues() (map[string]interface
 
 	// if a secret reference is specified, also use the secret reference name in the chart.
 	// Otherwise, directly set the values
-	if v.ApiServerConfiguration.ComponentConfiguration.Etcd.SecretRef != nil {
+	if v.Etcd.EtcdSecretRef != nil {
 		// the helm chart only has the option to set the name of the secret.
 		// This is odd and should probably be changed in the chart.
-		values, err = utils.SetToValuesMap(values, v.ApiServerConfiguration.ComponentConfiguration.Etcd.SecretRef.Name, "etcd", "tlsSecretName")
+		values, err = utils.SetToValuesMap(values, v.Etcd.EtcdSecretRef.Name, "etcd", "tlsSecretName")
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		values, err = utils.SetToValuesMap(values, v.ApiServerConfiguration.ComponentConfiguration.Etcd.ClientCert, "etcd", "tls", "crt")
+		values, err = utils.SetToValuesMap(values, v.Etcd.EtcdClientCert, "etcd", "tls", "crt")
 		if err != nil {
 			return nil, err
 		}
 
-		values, err = utils.SetToValuesMap(values, v.ApiServerConfiguration.ComponentConfiguration.Etcd.ClientKey, "etcd", "tls", "key")
+		values, err = utils.SetToValuesMap(values, v.Etcd.EtcdClientKey, "etcd", "tls", "key")
 		if err != nil {
 			return nil, err
 		}
