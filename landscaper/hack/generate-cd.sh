@@ -130,7 +130,7 @@ name: landscaper-gardenlet
 relation: local
 access:
   type: ociRegistry
-  imageReference: eu.gcr.io/gardener-project/gardener/landscaper-controlplane:${EFFECTIVE_VERSION}
+  imageReference: eu.gcr.io/gardener-project/gardener/landscaper-gardenlet:${EFFECTIVE_VERSION}
 ---
 type: ociImage
 name: apiserver
@@ -159,6 +159,13 @@ relation: local
 access:
   type: ociRegistry
   imageReference: eu.gcr.io/gardener-project/gardener/scheduler:latest
+---
+type: ociImage
+name: gardenlet
+relation: local
+access:
+  type: ociRegistry
+  imageReference: eu.gcr.io/gardener-project/gardener/gardenlet:latest
 ...
 EOF
 
