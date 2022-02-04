@@ -19,7 +19,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,8 +43,11 @@ func (c *Controller) configMapUpdate(oldObj, newObj interface{}) {
 		newConfigMap = newObj.(*corev1.ConfigMap)
 	)
 
-	if apiequality.Semantic.Equalities.DeepEqual(oldConfigMap.Data, newConfigMap.Data) {
-		logger.Logger.Debugf("[SHOOT CONFIGMAP controller] No update of the `.data` field of cm %v/%v. Do not requeue the ConfigMap", oldConfigMap.Namespace, oldConfigMap.Name)
+	// immediately trigger the reconciler on any configmap update (even if data did not change)
+	// otherwise, controller-manager will enqueue all configmaps on the next restart and reconcile a high number of shoots
+	// at the same time, which can lead to DNS rate limit errors and other problems in large-scale gardener installations.
+	if oldConfigMap.ResourceVersion == newConfigMap.ResourceVersion {
+		logger.Logger.Debugf("[SHOOT CONFIGMAP controller] ResourceVersion of ConfigMap %v/%v has not changed. Do not enqueue ConfigMap", oldConfigMap.Namespace, oldConfigMap.Name)
 		return
 	}
 	c.configMapAdd(newObj)
