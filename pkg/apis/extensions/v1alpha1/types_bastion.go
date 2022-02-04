@@ -78,7 +78,8 @@ type BastionStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
 	DefaultStatus `json:",inline"`
 	// Ingress is the external IP and/or hostname of the bastion host.
-	Ingress corev1.LoadBalancerIngress `json:"ingress"`
+	// +optional
+	Ingress *corev1.LoadBalancerIngress `json:"ingress,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
