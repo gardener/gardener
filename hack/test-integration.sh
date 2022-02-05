@@ -36,4 +36,4 @@ export KUBEBUILDER_CONTROLPLANE_START_TIMEOUT=2m
 export GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT=5s
 export GOMEGA_DEFAULT_EVENTUALLY_POLLING_INTERVAL=200ms
 
-GO111MODULE=on go test -timeout=5m -mod=vendor $@ | grep -v 'no test files'
+GO111MODULE=on go test -race -timeout=5m -mod=vendor $@ | grep -v 'no test files'
