@@ -22,13 +22,13 @@ import (
 
 	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
-	"gomodules.xyz/jsonpatch/v2"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -150,6 +150,8 @@ func (h *handler) admitShoot(ctx context.Context, request admission.Request) adm
 		return acadmission.Allowed("shoot is already marked for deletion")
 	}
 
+	var oldAuditPolicyConfigMapName, newAuditPolicyConfigMapName string
+
 	if request.Operation == admissionv1.Update {
 		oldShoot := &gardencore.Shoot{}
 		if err := runtime.DecodeInto(internalDecoder, request.OldObject.Raw, oldShoot); err != nil {
@@ -161,28 +163,31 @@ func (h *handler) admitShoot(ctx context.Context, request admission.Request) adm
 		if apiequality.Semantic.DeepEqual(oldShoot.Spec, shoot.Spec) {
 			return acadmission.Allowed("shoot spec was not changed")
 		}
-	}
 
-	if !hasAuditPolicyInternal(shoot) {
+		oldAuditPolicyConfigMapName = gardencorehelper.GetShootAuditPolicyConfigMapName(oldShoot.Spec.Kubernetes.KubeAPIServer)
+	}
+	newAuditPolicyConfigMapName = gardencorehelper.GetShootAuditPolicyConfigMapName(shoot.Spec.Kubernetes.KubeAPIServer)
+
+	if newAuditPolicyConfigMapName == "" {
 		return acadmission.Allowed("shoot resource is not specifying any audit policy")
 	}
-	cmRef := shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef
+
+	// oldAuditPolicyConfigMapName is empty for CREATE shoot requests that specify audit policy reference
+	if oldAuditPolicyConfigMapName == newAuditPolicyConfigMapName {
+		return acadmission.Allowed("audit policy configmap was not changed")
+	}
 
 	auditPolicyCm := &corev1.ConfigMap{}
-	if err := h.apiReader.Get(ctx, kutil.Key(shoot.Namespace, cmRef.Name), auditPolicyCm); err != nil {
+	if err := h.apiReader.Get(ctx, kutil.Key(shoot.Namespace, newAuditPolicyConfigMapName), auditPolicyCm); err != nil {
 		if apierrors.IsNotFound(err) {
-			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("referenced audit policy does not exist: namespace: %s, name: %s", shoot.Namespace, cmRef.Name))
+			return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("referenced audit policy does not exist: namespace: %s, name: %s", shoot.Namespace, newAuditPolicyConfigMapName))
 		}
 		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("could not retrieve config map: %s", err))
 	}
 
 	auditPolicy, err := getAuditPolicy(auditPolicyCm)
 	if err != nil {
-		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting auditlog policy from ConfigMap %s/%s: %w", shoot.Namespace, cmRef.Name, err))
-	}
-
-	if shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion == auditPolicyCm.ResourceVersion {
-		return acadmission.Allowed("no change detected in referenced configmap holding audit policy")
+		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting auditlog policy from ConfigMap %s/%s: %w", shoot.Namespace, newAuditPolicyConfigMapName, err))
 	}
 
 	errCode, err := validateAuditPolicySemantics(auditPolicy)
@@ -190,11 +195,7 @@ func (h *handler) admitShoot(ctx context.Context, request admission.Request) adm
 		return admission.Errored(errCode, err)
 	}
 
-	// If the resource Version in the audit policy cm changed it also needs to be adapted in the configMapRef
-	return admission.Patched(
-		"referenced audit policy is valid",
-		jsonpatch.NewOperation("replace", "/spec/kubernetes/kubeAPIServer/auditConfig/auditPolicy/configMapRef/resourceVersion", auditPolicyCm.ResourceVersion),
-	)
+	return acadmission.Allowed("referenced audit policy is valid")
 }
 
 func (h *handler) admitConfigMap(ctx context.Context, request admission.Request) admission.Response {
@@ -282,13 +283,4 @@ func getAuditPolicy(cm *corev1.ConfigMap) (string, error) {
 		return "", fmt.Errorf("empty audit policy. Provide non-empty audit policy")
 	}
 	return auditPolicy, nil
-}
-
-func hasAuditPolicyInternal(shoot *gardencore.Shoot) bool {
-	apiServerConfig := shoot.Spec.Kubernetes.KubeAPIServer
-	return apiServerConfig != nil &&
-		apiServerConfig.AuditConfig != nil &&
-		apiServerConfig.AuditConfig.AuditPolicy != nil &&
-		apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef != nil &&
-		len(apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name) != 0
 }

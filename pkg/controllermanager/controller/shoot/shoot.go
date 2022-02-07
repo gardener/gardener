@@ -31,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -51,7 +50,6 @@ type Controller struct {
 	shootRetryReconciler       reconcile.Reconciler
 	shootConditionsReconciler  reconcile.Reconciler
 	shootStatusLabelReconciler reconcile.Reconciler
-	configMapReconciler        reconcile.Reconciler
 	hasSyncedFuncs             []cache.InformerSynced
 
 	shootMaintenanceQueue  workqueue.RateLimitingInterface
@@ -61,7 +59,6 @@ type Controller struct {
 	shootRetryQueue        workqueue.RateLimitingInterface
 	shootConditionsQueue   workqueue.RateLimitingInterface
 	shootStatusLabelQueue  workqueue.RateLimitingInterface
-	configMapQueue         workqueue.RateLimitingInterface
 	numberOfRunningWorkers int
 	workerCh               chan int
 }
@@ -86,10 +83,6 @@ func NewShootController(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
 	}
-	configMapInformer, err := gardenClient.Cache().GetInformer(ctx, &corev1.ConfigMap{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get ConfigMap Informer: %w", err)
-	}
 	seedInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Seed{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
@@ -101,7 +94,6 @@ func NewShootController(
 		shootHibernationReconciler: NewShootHibernationReconciler(logger.Logger, gardenClient.Client(), NewHibernationScheduleRegistry(), recorder),
 		shootMaintenanceReconciler: NewShootMaintenanceReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootMaintenance, recorder),
 		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootQuota),
-		configMapReconciler:        NewConfigMapReconciler(logger.Logger, gardenClient.Client()),
 		shootRetryReconciler:       NewShootRetryReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootRetry),
 		shootConditionsReconciler:  NewShootConditionsReconciler(logger.Logger, gardenClient.Client()),
 		shootStatusLabelReconciler: NewShootStatusLabelReconciler(logger.Logger, gardenClient.Client()),
@@ -114,7 +106,6 @@ func NewShootController(
 		shootRetryQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-retry"),
 		shootConditionsQueue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-conditions"),
 		shootStatusLabelQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-status-label"),
-		configMapQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "configmaps"),
 
 		workerCh: make(chan int),
 	}
@@ -134,11 +125,6 @@ func NewShootController(
 		AddFunc:    shootController.shootHibernationAdd,
 		UpdateFunc: shootController.shootHibernationUpdate,
 		DeleteFunc: shootController.shootHibernationDelete,
-	})
-
-	configMapInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    shootController.configMapAdd,
-		UpdateFunc: shootController.configMapUpdate,
 	})
 
 	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -190,7 +176,6 @@ func NewShootController(
 
 	shootController.hasSyncedFuncs = []cache.InformerSynced{
 		shootInformer.HasSynced,
-		configMapInformer.HasSynced,
 		seedInformer.HasSynced,
 	}
 
@@ -227,9 +212,6 @@ func (c *Controller) Run(
 	for i := 0; i < shootHibernationWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.shootHibernationQueue, "Shoot Hibernation", c.shootHibernationReconciler, &waitGroup, c.workerCh)
 	}
-	for i := 0; i < shootMaintenanceWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.configMapQueue, "ConfigMap", c.configMapReconciler, &waitGroup, c.workerCh)
-	}
 	for i := 0; i < shootReferenceWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.shootReferenceQueue, "ShootReference", c.shootRefReconciler, &waitGroup, c.workerCh)
 	}
@@ -248,7 +230,6 @@ func (c *Controller) Run(
 	c.shootMaintenanceQueue.ShutDown()
 	c.shootQuotaQueue.ShutDown()
 	c.shootHibernationQueue.ShutDown()
-	c.configMapQueue.ShutDown()
 	c.shootReferenceQueue.ShutDown()
 	c.shootRetryQueue.ShutDown()
 	c.shootConditionsQueue.ShutDown()
@@ -259,12 +240,11 @@ func (c *Controller) Run(
 			shootMaintenanceQueueLength = c.shootMaintenanceQueue.Len()
 			shootQuotaQueueLength       = c.shootQuotaQueue.Len()
 			shootHibernationQueueLength = c.shootHibernationQueue.Len()
-			configMapQueueLength        = c.configMapQueue.Len()
 			referenceQueueLength        = c.shootReferenceQueue.Len()
 			shootRetryQueueLength       = c.shootRetryQueue.Len()
 			shootConditionsQueueLength  = c.shootConditionsQueue.Len()
 			shootStatusLabelQueueLength = c.shootStatusLabelQueue.Len()
-			queueLengths                = shootMaintenanceQueueLength + shootQuotaQueueLength + shootHibernationQueueLength + configMapQueueLength + referenceQueueLength + shootRetryQueueLength + shootConditionsQueueLength + shootStatusLabelQueueLength
+			queueLengths                = shootMaintenanceQueueLength + shootQuotaQueueLength + shootHibernationQueueLength + referenceQueueLength + shootRetryQueueLength + shootConditionsQueueLength + shootStatusLabelQueueLength
 		)
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
 			logger.Logger.Debug("No running Shoot worker and no items left in the queues. Terminated Shoot controller...")

@@ -39,6 +39,9 @@ auditPolicy:
 
 from the shoot spec.
 
-## Change Audit Policy on the Fly
+## Rolling Out Changes to the Audit Policy
 
-The Gardener is watching for changes in the referred `ConfigMap` containing the audit policy. Hence, once the audit policy is modified, the Gardener will schedule for reconciliation the affected Shoots and will apply the new audit policy.
+Gardener is not automatically rolling out changes to the Audit Policy to minimize the amount of Shoot reconciliations in order to prevent cloud provider rate limits, etc.
+Gardener will pick up the changes on the next reconciliation of Shoots referencing the Audit Policy ConfigMap.
+If users want to immediately rollout Audit Policy changes, they can manually trigger a Shoot reconciliation as described in [triggering an immediate reconciliation](shoot_operations.md#immediate-reconciliation).
+This is similar to changes to the cloud provider secret referenced by Shoots.
