@@ -201,7 +201,7 @@ var _ = Describe("KubeScheduler", func() {
 									ImagePullPolicy: corev1.PullIfNotPresent,
 									Command:         commandForKubernetesVersion(version, 10259, featureGateFlags(config)...),
 									LivenessProbe: &corev1.Probe{
-										Handler: corev1.Handler{
+										ProbeHandler: corev1.ProbeHandler{
 											HTTPGet: &corev1.HTTPGetAction{
 												Path:   "/healthz",
 												Scheme: corev1.URISchemeHTTPS,

@@ -333,14 +333,14 @@ admin:
 										},
 									},
 									ReadinessProbe: &corev1.Probe{
-										Handler: corev1.Handler{
+										ProbeHandler: corev1.ProbeHandler{
 											TCPSocket: &corev1.TCPSocketAction{
 												Port: intstr.FromInt(1194),
 											},
 										},
 									},
 									LivenessProbe: &corev1.Probe{
-										Handler: corev1.Handler{
+										ProbeHandler: corev1.ProbeHandler{
 											TCPSocket: &corev1.TCPSocketAction{
 												Port: intstr.FromInt(1194),
 											},
@@ -390,14 +390,14 @@ admin:
 										"/etc/envoy/envoy.yaml",
 									},
 									ReadinessProbe: &corev1.Probe{
-										Handler: corev1.Handler{
+										ProbeHandler: corev1.ProbeHandler{
 											TCPSocket: &corev1.TCPSocketAction{
 												Port: intstr.FromInt(9443),
 											},
 										},
 									},
 									LivenessProbe: &corev1.Probe{
-										Handler: corev1.Handler{
+										ProbeHandler: corev1.ProbeHandler{
 											TCPSocket: &corev1.TCPSocketAction{
 												Port: intstr.FromInt(9443),
 											},

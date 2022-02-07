@@ -2319,7 +2319,7 @@ rules:
 						deployAndRead()
 
 						Expect(deployment.Spec.Template.Spec.Containers[0].LivenessProbe).To(Equal(&corev1.Probe{
-							Handler: corev1.Handler{
+							ProbeHandler: corev1.ProbeHandler{
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/livez",
 									Scheme: corev1.URISchemeHTTPS,
@@ -2337,7 +2337,7 @@ rules:
 							TimeoutSeconds:      15,
 						}))
 						Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe).To(Equal(&corev1.Probe{
-							Handler: corev1.Handler{
+							ProbeHandler: corev1.ProbeHandler{
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/readyz",
 									Scheme: corev1.URISchemeHTTPS,

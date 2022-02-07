@@ -544,7 +544,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 							},
 						},
 						LivenessProbe: &corev1.Probe{
-							Handler: corev1.Handler{
+							ProbeHandler: corev1.ProbeHandler{
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/healthz",
 									Scheme: "HTTP",

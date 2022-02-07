@@ -189,7 +189,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 						}},
 						Resources: k.values.Autoscaling.APIServerResources,
 						LivenessProbe: &corev1.Probe{
-							Handler: corev1.Handler{
+							ProbeHandler: corev1.ProbeHandler{
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/livez",
 									Scheme: corev1.URISchemeHTTPS,
@@ -207,7 +207,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							TimeoutSeconds:      15,
 						},
 						ReadinessProbe: &corev1.Probe{
-							Handler: corev1.Handler{
+							ProbeHandler: corev1.ProbeHandler{
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/readyz",
 									Scheme: corev1.URISchemeHTTPS,

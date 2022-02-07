@@ -325,7 +325,7 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 								fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey),
 							},
 							ReadinessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
+								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/readyz",
 										Port:   intstr.FromInt(int(containerPort)),
@@ -337,7 +337,7 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 								FailureThreshold:    1,
 							},
 							LivenessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
+								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/livez",
 										Port:   intstr.FromInt(int(containerPort)),

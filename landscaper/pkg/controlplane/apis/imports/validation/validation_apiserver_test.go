@@ -76,7 +76,7 @@ var _ = Describe("ValidateAPIServer", func() {
 					VPA:            pointer.Bool(true),
 				},
 				LivenessProbe: &corev1.Probe{
-					Handler: corev1.Handler{
+					ProbeHandler: corev1.ProbeHandler{
 						HTTPGet: &corev1.HTTPGetAction{
 							Path:   "/healthz",
 							Scheme: corev1.URISchemeHTTPS,
@@ -90,7 +90,7 @@ var _ = Describe("ValidateAPIServer", func() {
 					TimeoutSeconds:      15,
 				},
 				ReadinessProbe: &corev1.Probe{
-					Handler: corev1.Handler{
+					ProbeHandler: corev1.ProbeHandler{
 						HTTPGet: &corev1.HTTPGetAction{
 							Path:   "/readyz",
 							Scheme: corev1.URISchemeHTTPS,

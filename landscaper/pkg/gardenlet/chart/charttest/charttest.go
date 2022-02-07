@@ -886,7 +886,7 @@ func ComputeExpectedGardenletDeploymentSpec(deploymentConfiguration *seedmanagem
 							"--config=/etc/gardenlet/config/config.yaml",
 						},
 						LivenessProbe: &corev1.Probe{
-							Handler: corev1.Handler{
+							ProbeHandler: corev1.ProbeHandler{
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/healthz",
 									Port:   intstr.IntOrString{IntVal: 2720},
