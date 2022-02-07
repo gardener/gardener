@@ -32,6 +32,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -61,15 +62,9 @@ func NewReconciler(
 type reconciler struct {
 	clock              clock.Clock
 	jitter             func(time.Duration, float64) time.Duration
-	log                logr.Logger
 	targetClient       client.Client
 	targetCoreV1Client corev1clientset.CoreV1Interface
 	client             client.Client
-}
-
-func (r *reconciler) InjectLogger(l logr.Logger) error {
-	r.log = l.WithName(ControllerName)
-	return nil
 }
 
 func (r *reconciler) InjectClient(c client.Client) error {
@@ -78,10 +73,10 @@ func (r *reconciler) InjectClient(c client.Client) error {
 }
 
 func (r *reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(reconcileCtx)
+
 	ctx, cancel := context.WithTimeout(reconcileCtx, time.Minute)
 	defer cancel()
-
-	log := r.log.WithValues("object", req)
 
 	secret := &corev1.Secret{}
 	if err := r.client.Get(ctx, req.NamespacedName, secret); err != nil {
@@ -101,8 +96,11 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, err
 	}
 	if mustRequeue {
+		log.Info("No need to generate new token, renewal is scheduled", "after", requeueAfter)
 		return reconcile.Result{Requeue: true, RequeueAfter: requeueAfter}, nil
 	}
+
+	log.Info("Requesting new token")
 
 	serviceAccount, err := r.reconcileServiceAccount(ctx, secret)
 	if err != nil {
@@ -121,10 +119,11 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 
 	renewDuration := r.renewDuration(tokenRequest.Status.ExpirationTimestamp.Time)
 
-	if err := r.reconcileSecret(ctx, secret, tokenRequest.Status.Token, renewDuration); err != nil {
+	if err := r.reconcileSecret(ctx, log, secret, tokenRequest.Status.Token, renewDuration); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not update Secret with token: %w", err)
 	}
 
+	log.Info("Successfully requested token and scheduled renewal", "after", renewDuration)
 	return reconcile.Result{Requeue: true, RequeueAfter: renewDuration}, nil
 }
 
@@ -141,20 +140,26 @@ func (r *reconciler) reconcileServiceAccount(ctx context.Context, secret *corev1
 	return serviceAccount, nil
 }
 
-func (r *reconciler) reconcileSecret(ctx context.Context, sourceSecret *corev1.Secret, token string, renewDuration time.Duration) error {
+func (r *reconciler) reconcileSecret(ctx context.Context, log logr.Logger, sourceSecret *corev1.Secret, token string, renewDuration time.Duration) error {
 	patch := client.MergeFrom(sourceSecret.DeepCopy())
 	metav1.SetMetaDataAnnotation(&sourceSecret.ObjectMeta, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, r.clock.Now().UTC().Add(renewDuration).Format(time.RFC3339))
 
 	if targetSecret := getTargetSecretFromAnnotations(sourceSecret.Annotations); targetSecret != nil {
-		if _, err := controllerutil.CreateOrUpdate(ctx, r.targetClient, targetSecret, r.populateToken(targetSecret, token)); err != nil {
+		log.Info("Populating the token to the target secret", "targetSecret", client.ObjectKeyFromObject(targetSecret))
+
+		if _, err := controllerutil.CreateOrUpdate(ctx, r.targetClient, targetSecret, r.populateToken(log, targetSecret, token)); err != nil {
 			return err
 		}
+
+		log.Info("Depopulating the token from the source secret")
 
 		if err := r.depopulateToken(sourceSecret)(); err != nil {
 			return err
 		}
 	} else {
-		if err := r.populateToken(sourceSecret, token)(); err != nil {
+		log.Info("Populating the token to the source secret")
+
+		if err := r.populateToken(log, sourceSecret, token)(); err != nil {
 			return err
 		}
 	}
@@ -162,12 +167,12 @@ func (r *reconciler) reconcileSecret(ctx context.Context, sourceSecret *corev1.S
 	return r.client.Patch(ctx, sourceSecret, patch)
 }
 
-func (r *reconciler) populateToken(secret *corev1.Secret, token string) func() error {
+func (r *reconciler) populateToken(log logr.Logger, secret *corev1.Secret, token string) func() error {
 	return func() error {
 		if secret.Data == nil {
 			secret.Data = make(map[string][]byte, 1)
 		}
-		return updateTokenInSecretData(secret.Data, token)
+		return updateTokenInSecretData(log, secret.Data, token)
 	}
 }
 
@@ -284,11 +289,14 @@ func getTargetSecretFromAnnotations(annotations map[string]string) *corev1.Secre
 	}
 }
 
-func updateTokenInSecretData(data map[string][]byte, token string) error {
+func updateTokenInSecretData(log logr.Logger, data map[string][]byte, token string) error {
 	if _, ok := data[resourcesv1alpha1.DataKeyKubeconfig]; !ok {
+		log.Info("Writing token to data")
 		data[resourcesv1alpha1.DataKeyToken] = []byte(token)
 		return nil
 	}
+
+	log.Info("Writing token as part of kubeconfig to data")
 
 	kubeconfig, authInfo, err := decodeKubeconfigAndGetUser(data[resourcesv1alpha1.DataKeyKubeconfig])
 	if err != nil {

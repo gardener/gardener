@@ -63,6 +63,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	if !metav1.HasLabel(secret.ObjectMeta, resourcesv1alpha1.ResourceManagerPurpose) {
 		if err := r.addPurposeLabel(ctx, secret); err != nil {
+			log.Info("Adding 'purpose' label")
 			return reconcile.Result{}, err
 		}
 	}
@@ -71,10 +72,12 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		serviceAccount.AutomountServiceAccountToken == nil ||
 		*serviceAccount.AutomountServiceAccountToken {
 
+		log.Info("Removing 'consider' label since secret is either explicitly skipped or `.automountServiceAccountToken` != false")
 		return reconcile.Result{}, r.removeConsiderLabel(ctx, secret)
 	}
 
 	if metav1.HasLabel(secret.ObjectMeta, resourcesv1alpha1.StaticTokenConsider) {
+		log.Info("Secret already has 'consider' label, nothing to be done")
 		return reconcile.Result{}, nil
 	}
 
@@ -86,11 +89,13 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	for _, pod := range podList.Items {
 		for _, volume := range pod.Spec.Volumes {
 			if volume.Secret != nil && volume.Secret.SecretName == secret.Name {
+				log.Info("Requeueing since there is still at least one pod mounting secret", "pod", client.ObjectKeyFromObject(&pod))
 				return reconcile.Result{Requeue: true}, nil
 			}
 		}
 	}
 
+	log.Info("Adding 'consider' label")
 	return reconcile.Result{}, r.addConsiderLabel(ctx, secret)
 }
 

@@ -22,7 +22,6 @@ import (
 	. "github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -38,7 +37,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
@@ -48,7 +46,6 @@ var _ = Describe("Reconciler", func() {
 		var (
 			ctx = context.TODO()
 
-			logger     logr.Logger
 			fakeClock  clock.Clock
 			fakeJitter func(time.Duration, float64) time.Duration
 
@@ -95,7 +92,6 @@ var _ = Describe("Reconciler", func() {
 		)
 
 		BeforeEach(func() {
-			logger = log.Log.WithName("test")
 			fakeNow = time.Date(2021, 10, 4, 10, 0, 0, 0, time.UTC)
 			fakeClock = clock.NewFakeClock(fakeNow)
 			fakeJitter = func(d time.Duration, _ float64) time.Duration { return d }
@@ -105,7 +101,6 @@ var _ = Describe("Reconciler", func() {
 			coreV1Client = &corev1fake.FakeCoreV1{Fake: &testing.Fake{}}
 
 			ctrl = NewReconciler(fakeClock, fakeJitter, targetClient, coreV1Client)
-			Expect(inject.LoggerInto(logger, ctrl)).To(BeTrue())
 			Expect(inject.ClientInto(sourceClient, ctrl)).To(BeTrue())
 
 			secretName = "kube-scheduler"

@@ -22,18 +22,21 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 type tokenInvalidator struct {
+	logger  logr.Logger
 	decoder *admission.Decoder
 }
 
 // NewHandler returns a new handler.
-func NewHandler() admission.Handler {
-	return &tokenInvalidator{}
+func NewHandler(logger logr.Logger) admission.Handler {
+	return &tokenInvalidator{logger: logger}
 }
 
 func (w *tokenInvalidator) InjectDecoder(d *admission.Decoder) error {
@@ -47,15 +50,20 @@ func (w *tokenInvalidator) Handle(_ context.Context, req admission.Request) admi
 		return admission.Errored(http.StatusUnprocessableEntity, err)
 	}
 
+	log := w.logger.WithValues("secret", client.ObjectKeyFromObject(secret))
+
 	if secret.Data == nil {
+		log.Info("Secret's data is nil, nothing to be done")
 		return admission.Allowed("data is nil")
 	}
 
 	switch {
 	case metav1.HasLabel(secret.ObjectMeta, resourcesv1alpha1.StaticTokenConsider):
+		log.Info("Secret has 'consider' label, invalidating token")
 		secret.Data[corev1.ServiceAccountTokenKey] = invalidToken
 
 	case bytes.Equal(secret.Data[corev1.ServiceAccountTokenKey], invalidToken):
+		log.Info("Secret has invalidated token and no 'consider' label, regenerating token")
 		delete(secret.Data, corev1.ServiceAccountTokenKey)
 	}
 

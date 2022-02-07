@@ -20,6 +20,7 @@ import (
 
 	. "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"gomodules.xyz/jsonpatch/v2"
@@ -29,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
+	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -36,6 +38,8 @@ var _ = Describe("Handler", func() {
 	var (
 		ctx = context.TODO()
 		err error
+
+		logger logr.Logger
 
 		decoder *admission.Decoder
 		encoder runtime.Encoder
@@ -48,11 +52,13 @@ var _ = Describe("Handler", func() {
 	)
 
 	BeforeEach(func() {
+		logger = logzap.New(logzap.WriteTo(GinkgoWriter))
+
 		decoder, err = admission.NewDecoder(kubernetesscheme.Scheme)
 		Expect(err).NotTo(HaveOccurred())
 		encoder = &json.Serializer{}
 
-		handler = NewHandler()
+		handler = NewHandler(logger)
 		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 
 		request = admission.Request{}
