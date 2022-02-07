@@ -41,8 +41,8 @@ require (
 	github.com/texttheater/golang-levenshtein v0.0.0-20191208221605-eb6844b05fc6
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	go.uber.org/automaxprocs v1.4.0
-	go.uber.org/goleak v1.1.10
-	go.uber.org/zap v1.19.0
+	go.uber.org/goleak v1.1.12
+	go.uber.org/zap v1.19.1
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
 	golang.org/x/tools v0.1.7
@@ -72,9 +72,9 @@ require (
 	k8s.io/metrics v0.23.3
 	k8s.io/utils v0.0.0-20211116205334-6203023598ed
 	sigs.k8s.io/controller-runtime v0.11.0
-	sigs.k8s.io/controller-runtime/tools/setup-envtest f236f0345ad2933912ebf34bfcf0f93620769654 // v0.11.0
+	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20211208212546-f236f0345ad2 // v0.11.0
 	sigs.k8s.io/controller-tools v0.7.0
-	sigs.k8s.io/yaml v1.2.0
+	sigs.k8s.io/yaml v1.3.0
 )
 
 replace (
