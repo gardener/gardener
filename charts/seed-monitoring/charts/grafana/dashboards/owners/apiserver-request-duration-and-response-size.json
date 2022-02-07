@@ -1,0 +1,828 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "",
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 1,
+  "id": 34,
+  "iteration": 1644251281045,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 19,
+      "panels": [],
+      "repeat": "resource",
+      "scopedVars": {
+        "resource": {
+          "selected": true,
+          "text": "pods",
+          "value": "pods"
+        }
+      },
+      "title": "Request Duration ($resource)",
+      "type": "row"
+    },
+    {
+      "cards": {
+        "cardPadding": 1,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateOranges",
+        "exponent": 0.5,
+        "mode": "opacity"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 6,
+      "legend": {
+        "show": true
+      },
+      "pluginVersion": "7.5.11",
+      "repeat": "ApiServer",
+      "repeatDirection": "h",
+      "reverseYBuckets": false,
+      "scopedVars": {
+        "ApiServer": {
+          "selected": false,
+          "text": "kube-apiserver-c77bb9ff-6hc8t",
+          "value": "kube-apiserver-c77bb9ff-6hc8t"
+        },
+        "resource": {
+          "selected": true,
+          "text": "pods",
+          "value": "pods"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(apiserver_request_duration_seconds_bucket{resource=~\"$resource\",subresource=\"\",verb=\"LIST\",pod=~\"$ApiServer\"}[$__rate_interval])) by (le)",
+          "format": "heatmap",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "$ApiServer $resource",
+      "tooltip": {
+        "show": true,
+        "showHistogram": true
+      },
+      "tooltipDecimals": 2,
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "s",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
+      "cards": {
+        "cardPadding": 1,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateOranges",
+        "exponent": 0.5,
+        "mode": "opacity"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 23,
+      "legend": {
+        "show": true
+      },
+      "pluginVersion": "7.5.11",
+      "repeatDirection": "h",
+      "repeatIteration": 1644251281045,
+      "repeatPanelId": 6,
+      "reverseYBuckets": false,
+      "scopedVars": {
+        "ApiServer": {
+          "selected": false,
+          "text": "kube-apiserver-c77bb9ff-m5lkw",
+          "value": "kube-apiserver-c77bb9ff-m5lkw"
+        },
+        "resource": {
+          "selected": true,
+          "text": "pods",
+          "value": "pods"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(apiserver_request_duration_seconds_bucket{resource=~\"$resource\",subresource=\"\",verb=\"LIST\",pod=~\"$ApiServer\"}[$__rate_interval])) by (le)",
+          "format": "heatmap",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "$ApiServer $resource",
+      "tooltip": {
+        "show": true,
+        "showHistogram": true
+      },
+      "tooltipDecimals": 2,
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "s",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
+      "cards": {
+        "cardPadding": 1,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateOranges",
+        "exponent": 0.5,
+        "mode": "opacity"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 24,
+      "legend": {
+        "show": true
+      },
+      "pluginVersion": "7.5.11",
+      "repeatDirection": "h",
+      "repeatIteration": 1644251281045,
+      "repeatPanelId": 6,
+      "reverseYBuckets": false,
+      "scopedVars": {
+        "ApiServer": {
+          "selected": false,
+          "text": "kube-apiserver-c77bb9ff-nppb2",
+          "value": "kube-apiserver-c77bb9ff-nppb2"
+        },
+        "resource": {
+          "selected": true,
+          "text": "pods",
+          "value": "pods"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(apiserver_request_duration_seconds_bucket{resource=~\"$resource\",subresource=\"\",verb=\"LIST\",pod=~\"$ApiServer\"}[$__rate_interval])) by (le)",
+          "format": "heatmap",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "$ApiServer $resource",
+      "tooltip": {
+        "show": true,
+        "showHistogram": true
+      },
+      "tooltipDecimals": 2,
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "s",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
+      "cards": {
+        "cardPadding": 1,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateOranges",
+        "exponent": 0.5,
+        "mode": "opacity"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 25,
+      "legend": {
+        "show": true
+      },
+      "pluginVersion": "7.5.11",
+      "repeatDirection": "h",
+      "repeatIteration": 1644251281045,
+      "repeatPanelId": 6,
+      "reverseYBuckets": false,
+      "scopedVars": {
+        "ApiServer": {
+          "selected": false,
+          "text": "kube-apiserver-c77bb9ff-x48sm",
+          "value": "kube-apiserver-c77bb9ff-x48sm"
+        },
+        "resource": {
+          "selected": true,
+          "text": "pods",
+          "value": "pods"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(apiserver_request_duration_seconds_bucket{resource=~\"$resource\",subresource=\"\",verb=\"LIST\",pod=~\"$ApiServer\"}[$__rate_interval])) by (le)",
+          "format": "heatmap",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "$ApiServer $resource",
+      "tooltip": {
+        "show": true,
+        "showHistogram": true
+      },
+      "tooltipDecimals": 2,
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "s",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "id": 22,
+      "panels": [],
+      "repeat": "resource",
+      "scopedVars": {
+        "resource": {
+          "selected": true,
+          "text": "pods",
+          "value": "pods"
+        }
+      },
+      "title": "Response Size ($resource)",
+      "type": "row"
+    },
+    {
+      "cards": {
+        "cardPadding": 1,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateOranges",
+        "exponent": 0.5,
+        "mode": "opacity"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 0,
+        "y": 11
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 20,
+      "legend": {
+        "show": true
+      },
+      "pluginVersion": "7.5.11",
+      "repeat": "ApiServer",
+      "reverseYBuckets": false,
+      "scopedVars": {
+        "ApiServer": {
+          "selected": false,
+          "text": "kube-apiserver-c77bb9ff-6hc8t",
+          "value": "kube-apiserver-c77bb9ff-6hc8t"
+        },
+        "resource": {
+          "selected": true,
+          "text": "pods",
+          "value": "pods"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(apiserver_response_sizes_bucket{resource=~\"$resource\",subresource=\"\",verb=\"LIST\",pod=~\"$ApiServer\"}[$__rate_interval])) by (le)",
+          "format": "heatmap",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "$ApiServer $resource",
+      "tooltip": {
+        "show": true,
+        "showHistogram": true
+      },
+      "tooltipDecimals": 2,
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "bytes",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
+      "cards": {
+        "cardPadding": 1,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateOranges",
+        "exponent": 0.5,
+        "mode": "opacity"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 6,
+        "y": 11
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 26,
+      "legend": {
+        "show": true
+      },
+      "pluginVersion": "7.5.11",
+      "repeatIteration": 1644251281045,
+      "repeatPanelId": 20,
+      "reverseYBuckets": false,
+      "scopedVars": {
+        "ApiServer": {
+          "selected": false,
+          "text": "kube-apiserver-c77bb9ff-m5lkw",
+          "value": "kube-apiserver-c77bb9ff-m5lkw"
+        },
+        "resource": {
+          "selected": true,
+          "text": "pods",
+          "value": "pods"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(apiserver_response_sizes_bucket{resource=~\"$resource\",subresource=\"\",verb=\"LIST\",pod=~\"$ApiServer\"}[$__rate_interval])) by (le)",
+          "format": "heatmap",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "$ApiServer $resource",
+      "tooltip": {
+        "show": true,
+        "showHistogram": true
+      },
+      "tooltipDecimals": 2,
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "bytes",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
+      "cards": {
+        "cardPadding": 1,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateOranges",
+        "exponent": 0.5,
+        "mode": "opacity"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 12,
+        "y": 11
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 27,
+      "legend": {
+        "show": true
+      },
+      "pluginVersion": "7.5.11",
+      "repeatIteration": 1644251281045,
+      "repeatPanelId": 20,
+      "reverseYBuckets": false,
+      "scopedVars": {
+        "ApiServer": {
+          "selected": false,
+          "text": "kube-apiserver-c77bb9ff-nppb2",
+          "value": "kube-apiserver-c77bb9ff-nppb2"
+        },
+        "resource": {
+          "selected": true,
+          "text": "pods",
+          "value": "pods"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(apiserver_response_sizes_bucket{resource=~\"$resource\",subresource=\"\",verb=\"LIST\",pod=~\"$ApiServer\"}[$__rate_interval])) by (le)",
+          "format": "heatmap",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "$ApiServer $resource",
+      "tooltip": {
+        "show": true,
+        "showHistogram": true
+      },
+      "tooltipDecimals": 2,
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "bytes",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
+      "cards": {
+        "cardPadding": 1,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateOranges",
+        "exponent": 0.5,
+        "mode": "opacity"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 18,
+        "y": 11
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 28,
+      "legend": {
+        "show": true
+      },
+      "pluginVersion": "7.5.11",
+      "repeatIteration": 1644251281045,
+      "repeatPanelId": 20,
+      "reverseYBuckets": false,
+      "scopedVars": {
+        "ApiServer": {
+          "selected": false,
+          "text": "kube-apiserver-c77bb9ff-x48sm",
+          "value": "kube-apiserver-c77bb9ff-x48sm"
+        },
+        "resource": {
+          "selected": true,
+          "text": "pods",
+          "value": "pods"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum(rate(apiserver_response_sizes_bucket{resource=~\"$resource\",subresource=\"\",verb=\"LIST\",pod=~\"$ApiServer\"}[$__rate_interval])) by (le)",
+          "format": "heatmap",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "$ApiServer $resource",
+      "tooltip": {
+        "show": true,
+        "showHistogram": true
+      },
+      "tooltipDecimals": 2,
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "bytes",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 27,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "allValue": ".+",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": null,
+        "definition": "label_values(apiserver_audit_event_total,pod)",
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "ApiServer",
+        "options": [],
+        "query": {
+          "query": "label_values(apiserver_audit_event_total,pod)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": ".+",
+        "current": {
+          "selected": true,
+          "text": [
+            "pods"
+          ],
+          "value": [
+            "pods"
+          ]
+        },
+        "datasource": null,
+        "definition": "label_values(apiserver_request_duration_seconds_bucket,resource)",
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "resource",
+        "options": [],
+        "query": {
+          "query": "label_values(apiserver_request_duration_seconds_bucket,resource)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "utc",
+  "title": "API Server Request Duration and Response Size",
+  "uid": "apiserver-request-duration-and-response"
+}
