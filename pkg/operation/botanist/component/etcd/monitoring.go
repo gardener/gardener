@@ -152,7 +152,7 @@ const (
       summary: Etcd3 {{ .role }} DB size has crossed its current practical limit.
 
   - record: shoot:etcd_object_counts:sum_by_resource
-    expr: sum(etcd_object_counts) by (resource)
+    expr: max(etcd_object_counts) by (resource)
 
   {{- if .backupEnabled }}
   # etcd backup failure alerts

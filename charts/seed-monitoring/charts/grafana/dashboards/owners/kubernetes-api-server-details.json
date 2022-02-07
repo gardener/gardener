@@ -596,7 +596,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(max(etcd_object_counts) by (resource)) by (resource)",
+          "expr": "max(etcd_object_counts) by (resource)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,

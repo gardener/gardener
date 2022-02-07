@@ -2227,7 +2227,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(etcd_object_counts{job=~\"$apiserver\"}) by (resource)",
+          "expr": "max(etcd_object_counts{job=~\"$apiserver\"}) by (resource)",
           "interval": "",
           "legendFormat": "{{resource}}",
           "refId": "A"
