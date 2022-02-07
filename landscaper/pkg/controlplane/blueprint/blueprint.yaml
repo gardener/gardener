@@ -5,7 +5,7 @@ kind: Blueprint
 # For reference, see: https://json-schema.org/specification-links.html#draft-4
 jsonSchema: "http://json-schema.org/draft-04/schema"
 imports:
-  
+
   - name: alerting
     required: false
     schema:
@@ -82,7 +82,7 @@ imports:
   
 
 exports:
-  
+
   - name: gardenerAPIServerCA
     required: true
     schema:

@@ -24,7 +24,7 @@ type Exports struct {
 	OpenVPNDiffieHellmanKey string `json:"openVPNDiffieHellmanKey"`
 
 	// GardenerAPIServerCA is the PEM encoded CA certificate of the Gardener API Server
-	GardenerAPIServerCA Certificate `json:"gardenerAPIServerCA" yaml:"gardenerAPIServerCA"`
+	GardenerAPIServerCA Certificate `json:"gardenerAPIServerCA"`
 	// GardenerAPIServerCA is the PEM encoded CA certificate of the Gardener Admission Controller
 	GardenerAdmissionControllerCA *Certificate `json:"gardenerAdmissionControllerCA,omitempty"`
 
@@ -36,7 +36,7 @@ type Exports struct {
 	GardenerAdmissionControllerTLSServing *Certificate `json:"gardenerAdmissionControllerTLSServing,omitempty"`
 }
 
-// Certificate represents an  exported certificate
+// Certificate represents an exported certificate
 type Certificate struct {
 	// Rotated defines if the certificate has been rotated due to expiration during execution
 	Rotated bool `json:"rotated"`

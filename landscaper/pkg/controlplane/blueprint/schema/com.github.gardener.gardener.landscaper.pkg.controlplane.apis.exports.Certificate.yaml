@@ -1,4 +1,4 @@
-description: Certificate represents an  exported certificate
+description: Certificate represents an exported certificate
 properties:
   crt:
     default: ""

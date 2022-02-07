@@ -15,7 +15,6 @@
 package utils
 
 import (
-	"io/ioutil"
 	"os"
 
 	"sigs.k8s.io/yaml"
@@ -30,5 +29,5 @@ func ExportsToFile(exp *exports.Exports, path string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(path, b, os.ModePerm)
+	return os.WriteFile(path, b, os.ModePerm)
 }

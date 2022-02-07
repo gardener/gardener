@@ -44,7 +44,7 @@ func init() {
 	}
 }
 
-var (
+const (
 	// openAPIImportKey identifies the key in the OpenAPI definitions that identifies import definition
 	openAPIImportKey = "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1.Imports"
 	// openAPIRootExportKey identifies the key in the OpenAPI definitions that identifies export definition

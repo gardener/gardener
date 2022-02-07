@@ -1137,7 +1137,7 @@ func schema_pkg_controlplane_apis_exports_Certificate(ref common.ReferenceCallba
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "Certificate represents an  exported certificate",
+				Description: "Certificate represents an exported certificate",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"rotated": {

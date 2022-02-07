@@ -34,7 +34,8 @@ const filterPackagesDelimiter = ";"
 
 var (
 	// flags
-	outputDirectory, inputDirectories, rootDirectory, rootPackages, licensePath, verbosity, filterPackages string
+	outputDirectory, rootDirectory, licensePath, verbosity, filterPackages string
+	inputDirectories, rootPackages []string
 
 	rootCommand = &cobra.Command{
 		Use:  "generate-openapi",
@@ -55,11 +56,11 @@ func init() {
 		"",
 		"the output path for the generated OpenAPI code")
 
-	rootCommand.Flags().StringVar(
+	rootCommand.Flags().StringSliceVar(
 		&inputDirectories,
 		"input-directories",
-		"",
-		"the absolute input directories (colon-seperated) which should contain the go types to generate OpenAPI code for. Example: `/Users/<superuser>/go/src/github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1,other-directory`")
+		nil,
+		"the absolute input directories (comma-seperated) which should contain the go types to generate OpenAPI code for. Example: /Users/<superuser>/go/src/github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1,other-directory")
 
 	rootCommand.Flags().StringVar(
 		&rootDirectory,
@@ -67,11 +68,11 @@ func init() {
 		"",
 		"the absolute vendor directory to parse dependent packages")
 
-	rootCommand.Flags().StringVar(
+	rootCommand.Flags().StringSliceVar(
 		&rootPackages,
 		"packages",
-		"",
-		"the root golang packages (colon-seperated) to generate OpenAPI code for. Example: `github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1,other-package`")
+		nil,
+		"the root golang packages (comma-seperated) to generate OpenAPI code for. Example: github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1,other-package")
 
 	rootCommand.Flags().StringVar(
 		&licensePath,
@@ -121,13 +122,10 @@ func execute() error {
 		return fmt.Errorf("the project's root directory has to be specified")
 	}
 
-	directories := strings.Split(inputDirectories, ",")
-	parsedRootPackages := strings.Split(rootPackages, ",")
-
 	// generate OpenAPI for the root packages
-	inputPackages := parsedRootPackages
+	inputPackages := rootPackages
 
-	for _, inputDir := range directories {
+	for _, inputDir := range inputDirectories {
 		fp, err := filepath.Abs(inputDir)
 		if err != nil {
 			return err
@@ -141,7 +139,7 @@ func execute() error {
 		}
 
 		filter := sets.NewString(strings.Split(filterPackages, filterPackagesDelimiter)...)
-		discoveredPackages, err := parseImportPackages(inputDir, rootDirectory, sets.NewString(rootPackages), filter)
+		discoveredPackages, err := parseImportPackages(inputDir, rootDirectory, sets.NewString(rootPackages...), filter)
 		if err != nil {
 			return err
 		}
