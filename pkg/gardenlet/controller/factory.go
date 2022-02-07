@@ -25,6 +25,8 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/operations"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -280,6 +282,16 @@ func addAllFieldIndexes(ctx context.Context, indexer client.FieldIndexer) error 
 		return []string{""}
 	}); err != nil {
 		return fmt.Errorf("failed to add indexer to ManagedSeed Informer: %w", err)
+	}
+
+	if err := indexer.IndexField(ctx, &operationsv1alpha1.Bastion{}, operations.BastionShootName, func(obj client.Object) []string {
+		bastion, ok := obj.(*operationsv1alpha1.Bastion)
+		if !ok {
+			return []string{""}
+		}
+		return []string{bastion.Spec.ShootRef.Name}
+	}); err != nil {
+		return fmt.Errorf("failed to add indexer to Bastion Informer: %w", err)
 	}
 
 	return nil

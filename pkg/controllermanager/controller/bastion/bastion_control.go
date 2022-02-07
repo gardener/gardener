@@ -21,13 +21,13 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -67,12 +67,8 @@ func (c *Controller) shootAdd(ctx context.Context, obj interface{}) {
 
 	// list all bastions that reference this shoot
 	bastionList := operationsv1alpha1.BastionList{}
-	listOptions := client.ListOptions{
-		Namespace:     shoot.Namespace,
-		FieldSelector: fields.SelectorFromSet(fields.Set{"spec.shootRef.name": shoot.Name}),
-	}
 
-	if err := c.gardenClient.List(ctx, &bastionList, &listOptions); err != nil {
+	if err := c.gardenClient.List(ctx, &bastionList, client.InNamespace(shoot.Namespace), client.MatchingFields{operations.BastionShootName: shoot.Name}); err != nil {
 		c.log.Error(err, "Failed to list Bastions")
 		return
 	}
