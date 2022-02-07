@@ -151,6 +151,8 @@ func (r *reconciler) reconcileSecret(ctx context.Context, log logr.Logger, sourc
 			return err
 		}
 
+		log.Info("Depopulating the token from the source secret")
+
 		if err := r.depopulateToken(sourceSecret)(); err != nil {
 			return err
 		}

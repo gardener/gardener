@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,7 +63,7 @@ func (w *tokenInvalidator) Handle(_ context.Context, req admission.Request) admi
 		secret.Data[corev1.ServiceAccountTokenKey] = invalidToken
 
 	case bytes.Equal(secret.Data[corev1.ServiceAccountTokenKey], invalidToken):
-		log.Info("Secret does not have 'consider' label, regenerating token")
+		log.Info("Secret has invalidated token and no 'consider' label, regenerating token")
 		delete(secret.Data, corev1.ServiceAccountTokenKey)
 	}
 

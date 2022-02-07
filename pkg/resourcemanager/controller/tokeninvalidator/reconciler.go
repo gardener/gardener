@@ -72,7 +72,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		serviceAccount.AutomountServiceAccountToken == nil ||
 		*serviceAccount.AutomountServiceAccountToken {
 
-		log.Info("Removing 'purpose' label since secret is either explicitly skipped or `.automountServiceAccountToken` != false")
+		log.Info("Removing 'consider' label since secret is either explicitly skipped or `.automountServiceAccountToken` != false")
 		return reconcile.Result{}, r.removeConsiderLabel(ctx, secret)
 	}
 
