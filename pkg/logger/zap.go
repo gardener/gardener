@@ -50,7 +50,7 @@ func NewZapLogger(level string, format string) (logr.Logger, error) {
 	case "", InfoLevel:
 		zapLevel = zap.InfoLevel
 	default:
-		return nil, fmt.Errorf("invalid log level %q", level)
+		return logr.Logger{}, fmt.Errorf("invalid log level %q", level)
 	}
 	opts = append(opts, logzap.Level(zapLevel))
 
@@ -61,7 +61,7 @@ func NewZapLogger(level string, format string) (logr.Logger, error) {
 	case "", FormatJSON:
 		opts = append(opts, logzap.JSONEncoder(setCommonEncoderConfigOptions))
 	default:
-		return nil, fmt.Errorf("invalid log format %q", format)
+		return logr.Logger{}, fmt.Errorf("invalid log format %q", format)
 	}
 
 	return logzap.New(opts...), nil
