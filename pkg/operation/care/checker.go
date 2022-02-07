@@ -521,7 +521,11 @@ func (b *HealthChecker) CheckLoggingControlPlane(
 // CheckExtensionCondition checks whether the conditions provided by extensions are healthy.
 func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Condition, extensionsConditions []ExtensionCondition) *gardencorev1beta1.Condition {
 	for _, cond := range extensionsConditions {
-		lastHeartbeatTime := *cond.Condition.LastHeartbeatTime
+		// for backward compatibility
+		lastHeartbeatTime := cond.Condition.LastUpdateTime
+		if cond.Condition.LastHeartbeatTime != nil {
+			lastHeartbeatTime = *cond.Condition.LastHeartbeatTime
+		}
 		// check if the health check condition.lastHeartbeatTime is older than the configured staleExtensionHealthCheckThreshold
 		if b.staleExtensionHealthCheckThreshold != nil && Now().UTC().Sub(lastHeartbeatTime.UTC()) > b.staleExtensionHealthCheckThreshold.Duration {
 			c := gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionUnknown, fmt.Sprintf("%sOutdatedHealthCheckReport", cond.ExtensionType), fmt.Sprintf("%s extension (%s/%s) reports an outdated health status (last updated: %s ago at %s).", cond.ExtensionType, cond.ExtensionNamespace, cond.ExtensionName, time.Now().UTC().Sub(lastHeartbeatTime.UTC()).Round(time.Minute).String(), lastHeartbeatTime.UTC().Round(time.Minute).String()))

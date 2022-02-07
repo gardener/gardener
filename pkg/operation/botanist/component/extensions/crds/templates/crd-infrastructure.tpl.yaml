@@ -103,6 +103,11 @@ spec:
                           description: ErrorCode is a string alias.
                           type: string
                         type: array
+                      lastHeartbeatTime:
+                        description: LastHeartbeatTime is the last time the health check
+                          was done.
+                        format: date-time
+                        type: string 
                       lastTransitionTime:
                         description: Last time the condition transitioned from one status
                           to another.
