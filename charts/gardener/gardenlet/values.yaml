@@ -41,6 +41,9 @@ global:
                              # then only this kubeconfig will be considered.
       #   name: gardenlet-kubeconfig-bootstrap
       #   namespace: garden
+      #   secretRef:
+      #     name: secretName of your bootstrapKubeconfig
+      #     namespace: namespace of your bootstrapKubeconfig
       #   kubeconfig: |
       #     some-kubeconfig-for-bootstrapping
       # kubeconfigSecret: # kubeconfigSecret is the reference to a secret object that stores the gardenlet's kubeconfig that
