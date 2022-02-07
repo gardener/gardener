@@ -99,7 +99,7 @@ func (c *FakeCloudProfiles) Update(ctx context.Context, cloudProfile *core.Cloud
 // Delete takes name of the cloudProfile and deletes it. Returns an error if one occurs.
 func (c *FakeCloudProfiles) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(cloudprofilesResource, name), &core.CloudProfile{})
+		Invokes(testing.NewRootDeleteActionWithOptions(cloudprofilesResource, name, opts), &core.CloudProfile{})
 	return err
 }
 

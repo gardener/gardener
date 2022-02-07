@@ -35,6 +35,24 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 
 func SetObjectDefaults_Imports(in *Imports) {
 	SetDefaults_Imports(in)
+	if in.GardenerAPIServer.DeploymentConfiguration != nil {
+		if in.GardenerAPIServer.DeploymentConfiguration.LivenessProbe != nil {
+			if in.GardenerAPIServer.DeploymentConfiguration.LivenessProbe.ProbeHandler.GRPC != nil {
+				if in.GardenerAPIServer.DeploymentConfiguration.LivenessProbe.ProbeHandler.GRPC.Service == nil {
+					var ptrVar1 string = ""
+					in.GardenerAPIServer.DeploymentConfiguration.LivenessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+				}
+			}
+		}
+		if in.GardenerAPIServer.DeploymentConfiguration.ReadinessProbe != nil {
+			if in.GardenerAPIServer.DeploymentConfiguration.ReadinessProbe.ProbeHandler.GRPC != nil {
+				if in.GardenerAPIServer.DeploymentConfiguration.ReadinessProbe.ProbeHandler.GRPC.Service == nil {
+					var ptrVar1 string = ""
+					in.GardenerAPIServer.DeploymentConfiguration.ReadinessProbe.ProbeHandler.GRPC.Service = &ptrVar1
+				}
+			}
+		}
+	}
 	if in.GardenerScheduler != nil {
 		SetDefaults_GardenerScheduler(in.GardenerScheduler)
 	}

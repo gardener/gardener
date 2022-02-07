@@ -99,7 +99,7 @@ func (c *FakeControllerRegistrations) Update(ctx context.Context, controllerRegi
 // Delete takes name of the controllerRegistration and deletes it. Returns an error if one occurs.
 func (c *FakeControllerRegistrations) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(controllerregistrationsResource, name), &core.ControllerRegistration{})
+		Invokes(testing.NewRootDeleteActionWithOptions(controllerregistrationsResource, name, opts), &core.ControllerRegistration{})
 	return err
 }
 

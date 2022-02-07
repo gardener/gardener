@@ -110,7 +110,7 @@ func (c *FakeSeeds) UpdateStatus(ctx context.Context, seed *v1beta1.Seed, opts v
 // Delete takes name of the seed and deletes it. Returns an error if one occurs.
 func (c *FakeSeeds) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(seedsResource, name), &v1beta1.Seed{})
+		Invokes(testing.NewRootDeleteActionWithOptions(seedsResource, name, opts), &v1beta1.Seed{})
 	return err
 }
 

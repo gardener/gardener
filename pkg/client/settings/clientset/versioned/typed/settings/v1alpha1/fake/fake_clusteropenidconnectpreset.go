@@ -99,7 +99,7 @@ func (c *FakeClusterOpenIDConnectPresets) Update(ctx context.Context, clusterOpe
 // Delete takes name of the clusterOpenIDConnectPreset and deletes it. Returns an error if one occurs.
 func (c *FakeClusterOpenIDConnectPresets) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(clusteropenidconnectpresetsResource, name), &v1alpha1.ClusterOpenIDConnectPreset{})
+		Invokes(testing.NewRootDeleteActionWithOptions(clusteropenidconnectpresetsResource, name, opts), &v1alpha1.ClusterOpenIDConnectPreset{})
 	return err
 }
 

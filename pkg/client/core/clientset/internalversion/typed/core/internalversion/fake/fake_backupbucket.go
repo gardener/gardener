@@ -110,7 +110,7 @@ func (c *FakeBackupBuckets) UpdateStatus(ctx context.Context, backupBucket *core
 // Delete takes name of the backupBucket and deletes it. Returns an error if one occurs.
 func (c *FakeBackupBuckets) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(backupbucketsResource, name), &core.BackupBucket{})
+		Invokes(testing.NewRootDeleteActionWithOptions(backupbucketsResource, name, opts), &core.BackupBucket{})
 	return err
 }
 

@@ -110,7 +110,7 @@ func (c *FakeProjects) UpdateStatus(ctx context.Context, project *v1beta1.Projec
 // Delete takes name of the project and deletes it. Returns an error if one occurs.
 func (c *FakeProjects) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(projectsResource, name), &v1beta1.Project{})
+		Invokes(testing.NewRootDeleteActionWithOptions(projectsResource, name, opts), &v1beta1.Project{})
 	return err
 }
 
