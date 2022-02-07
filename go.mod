@@ -71,8 +71,8 @@ require (
 	k8s.io/kubelet v0.23.3
 	k8s.io/metrics v0.23.3
 	k8s.io/utils v0.0.0-20211116205334-6203023598ed
-	sigs.k8s.io/controller-runtime v0.10.2
-	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20211005045149-78ce10e2ebad // v0.10.2
+	sigs.k8s.io/controller-runtime v0.11.0
+	sigs.k8s.io/controller-runtime/tools/setup-envtest f236f0345ad2933912ebf34bfcf0f93620769654 // v0.11.0
 	sigs.k8s.io/controller-tools v0.7.0
 	sigs.k8s.io/yaml v1.2.0
 )
