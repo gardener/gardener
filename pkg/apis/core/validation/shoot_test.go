@@ -1074,7 +1074,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						*worker2,
 					}
 
-					errorList := ValidateShoot(shoot)
+					errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
 
 					Expect(errorList).To(BeEmpty())
 				})
@@ -1082,15 +1082,15 @@ var _ = Describe("Shoot Validation Tests", func() {
 				It("should allow valid total number of worker nodes", func() {
 					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(24)
 					shoot.Spec.Networking.Pods = pointer.String("100.96.0.0/16")
-					worker1.Maximum = 127
-					worker2.Maximum = 127
+					worker1.Maximum = 128
+					worker2.Maximum = 128
 
 					shoot.Spec.Provider.Workers = []core.Worker{
 						*worker1,
 						*worker2,
 					}
 
-					errorList := ValidateShoot(shoot)
+					errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
 
 					Expect(errorList).To(BeEmpty())
 				})
@@ -1106,7 +1106,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						*worker2,
 					}
 
-					errorList := ValidateShoot(shoot)
+					errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
 
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
@@ -1118,14 +1118,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(24)
 					shoot.Spec.Networking.Pods = pointer.String("100.96.0.0/16")
 					worker1.Maximum = 128
-					worker2.Maximum = 127
+					worker2.Maximum = 129
 
 					shoot.Spec.Provider.Workers = []core.Worker{
 						*worker1,
 						*worker2,
 					}
 
-					errorList := ValidateShoot(shoot)
+					errorList := ValidateTotalNodeCountWithPodCIDR(shoot)
 
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
