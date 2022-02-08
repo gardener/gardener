@@ -1711,16 +1711,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(max_over_time(apiserver_current_inflight_requests{job=~\"gardener-apiserver\"}[1m])) by (request_kind)",
+          "expr": "sum(max_over_time(apiserver_current_inflight_requests{job=~\"kube-apiserver\"}[1m])) by (request_kind)",
           "interval": "",
           "legendFormat": "{{request_kind}} (GAPI)",
           "refId": "A"
-        },
-        {
-          "expr": "sum(max_over_time(apiserver_current_inflight_requests{job=~\"virtual-kube-apiserver\"}[1m])) by (requestKind)",
-          "interval": "",
-          "legendFormat": "{{requestKind}} (KAPI)",
-          "refId": "B"
         }
       ],
       "thresholds": [],
