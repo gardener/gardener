@@ -53,8 +53,6 @@ properties:
       Use CSI for light-weight local ephemeral volumes if the CSI driver is meant to be used that way - see the documentation of the driver for more information.
 
       A pod can use both types of ephemeral volumes and persistent volumes at the same time.
-
-      This is a beta feature and only available when the GenericEphemeralVolume feature gate is enabled.
   fc:
     $ref: blueprint://schema/io.k8s.api.core.v1.FCVolumeSource.yaml
     description: FC represents a Fibre Channel resource that is attached to a kubelet's

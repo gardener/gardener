@@ -1,10 +1,9 @@
-
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.7.0
+    controller-gen.kubebuilder.io/version: v0.8.0
   creationTimestamp: null
   name: bastions.extensions.gardener.cloud
 spec:
@@ -168,10 +167,10 @@ spec:
                           description: 'Error is to record the problem with the service
                             port The format of the error shall comply with the following
                             rules: - built-in error values shall be specified in this
-                            file and those shall use   CamelCase names - cloud provider
+                            file and those shall use CamelCase names - cloud provider
                             specific error values must have names that comply with
-                            the   format foo.example.com/CamelCase. --- The regex
-                            it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)'
+                            the format foo.example.com/CamelCase. --- The regex it
+                            matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)'
                           maxLength: 316
                           pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                           type: string

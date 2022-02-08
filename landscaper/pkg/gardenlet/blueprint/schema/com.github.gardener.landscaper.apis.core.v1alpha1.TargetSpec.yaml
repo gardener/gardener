@@ -2,7 +2,6 @@ description: TargetSpec contains the definition of a target.
 properties:
   config:
     $ref: blueprint://schema/com.github.gardener.landscaper.apis.core.v1alpha1.AnyJSON.yaml
-    default: {}
     description: Configuration contains the target type specific configuration.
   type:
     default: ""
