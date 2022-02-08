@@ -18,11 +18,16 @@ import (
 	"context"
 	"time"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -90,7 +95,83 @@ func (s *shootSystem) WaitCleanup(ctx context.Context) error {
 func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+
+		kubeControllerManagerServiceAccounts []client.Object
 	)
 
-	return registry.AddAllAndSerialize()
+	for _, name := range s.getServiceAccountNamesToInvalidate() {
+		kubeControllerManagerServiceAccounts = append(kubeControllerManagerServiceAccounts, &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        name,
+				Namespace:   metav1.NamespaceSystem,
+				Annotations: map[string]string{resourcesv1alpha1.KeepObject: "true"},
+			},
+			AutomountServiceAccountToken: pointer.Bool(false),
+		})
+	}
+
+	return registry.AddAllAndSerialize(kubeControllerManagerServiceAccounts...)
+}
+
+func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
+	// Well-known {kube,cloud}-controller-manager controllers using a token for ServiceAccounts in the shoot
+	// To maintain this list for each new Kubernetes version:
+	// * Run hack/compare-kcm-controllers.sh <old-version> <new-version> (e.g. 'hack/compare-kcm-controllers.sh 1.22 1.23').
+	//   It will present 2 lists of controllers: those added and those removed in <new-version> compared to <old-version>.
+	// * Double check whether such ServiceAccount indeed appears in the kube-system namespace when creating a cluster
+	//   with <new-version>. Note that it sometimes might be hidden behind a default-off feature gate.
+	//   If it appears, add all added controllers to the list if the Kubernetes version is high enough.
+	// * For any removed controllers, add them only to the Kubernetes version if it is low enough.
+	kubeControllerManagerServiceAccountNames := []string{
+		"attachdetach-controller",
+		"bootstrap-signer",
+		"certificate-controller",
+		"clusterrole-aggregation-controller",
+		"controller-discovery",
+		"cronjob-controller",
+		"daemon-set-controller",
+		"deployment-controller",
+		"disruption-controller",
+		"endpoint-controller",
+		"endpointslice-controller",
+		"expand-controller",
+		"generic-garbage-collector",
+		"horizontal-pod-autoscaler",
+		"job-controller",
+		"metadata-informers",
+		"namespace-controller",
+		"node-controller",
+		"persistent-volume-binder",
+		"pod-garbage-collector",
+		"pv-protection-controller",
+		"pvc-protection-controller",
+		"replicaset-controller",
+		"replication-controller",
+		"resourcequota-controller",
+		"root-ca-cert-publisher",
+		"route-controller",
+		"service-account-controller",
+		"service-controller",
+		"shared-informers",
+		"statefulset-controller",
+		"token-cleaner",
+		"tokens-controller",
+		"ttl-after-finished-controller",
+		"ttl-controller",
+	}
+
+	if versionutils.ConstraintK8sGreaterEqual119.Check(s.values.KubernetesVersion) {
+		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
+			"endpointslicemirroring-controller",
+			"ephemeral-volume-controller",
+		)
+	}
+
+	if versionutils.ConstraintK8sGreaterEqual120.Check(s.values.KubernetesVersion) {
+		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
+			"storage-version-garbage-collector",
+		)
+	}
+
+	return append(kubeControllerManagerServiceAccountNames, "default")
 }
