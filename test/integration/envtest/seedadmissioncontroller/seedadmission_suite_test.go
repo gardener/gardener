@@ -68,8 +68,8 @@ var _ = BeforeSuite(func() {
 	By("starting test environment")
 	testEnv = &envtest.Environment{
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			ValidatingWebhooks: []admissionregistrationv1.ValidatingWebhookConfiguration{*getValidatingWebhookConfig()},
-			MutatingWebhooks:   []admissionregistrationv1.MutatingWebhookConfiguration{*getMutatingWebhookConfig()},
+			ValidatingWebhooks: []*admissionregistrationv1.ValidatingWebhookConfiguration{getValidatingWebhookConfig()},
+			MutatingWebhooks:   []*admissionregistrationv1.MutatingWebhookConfiguration{getMutatingWebhookConfig()},
 		},
 	}
 	restConfig, err = testEnv.Start()

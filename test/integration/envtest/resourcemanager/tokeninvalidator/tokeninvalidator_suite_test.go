@@ -103,8 +103,8 @@ var _ = AfterSuite(func() {
 	Expect(testEnv.Stop()).To(Succeed())
 })
 
-func getMutatingWebhookConfigurations() []admissionregistrationv1.MutatingWebhookConfiguration {
-	return []admissionregistrationv1.MutatingWebhookConfiguration{
+func getMutatingWebhookConfigurations() []*admissionregistrationv1.MutatingWebhookConfiguration {
+	return []*admissionregistrationv1.MutatingWebhookConfiguration{
 		{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: admissionregistrationv1.SchemeGroupVersion.String(),
