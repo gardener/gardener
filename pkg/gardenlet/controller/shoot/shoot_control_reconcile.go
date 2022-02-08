@@ -448,6 +448,16 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Fn:           flow.TaskFn(botanist.Shoot.Components.SystemComponents.NodeProblemDetector.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, waitUntilOperatingSystemConfigReady),
 		})
+		deployKubeProxy = g.Add(flow.Task{
+			Name:         "Deploying kube-proxy system component",
+			Fn:           flow.TaskFn(botanist.DeployKubeProxy).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, initializeShootClients, ensureShootClusterIdentity, deployKubeScheduler),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deleting stale kube-proxy DaemonSets",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.SystemComponents.KubeProxy.DeleteStaleResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployKubeProxy),
+		})
 		deployManagedResourcesForAddons = g.Add(flow.Task{
 			Name:         "Deploying managed resources for system components and optional addons",
 			Fn:           flow.TaskFn(botanist.DeployManagedResourceForAddons).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),

@@ -39,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardeneraccess"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
@@ -145,13 +146,14 @@ type Extensions struct {
 // SystemComponents contains references to system components.
 type SystemComponents struct {
 	ClusterIdentity     clusteridentity.Interface
-	Namespaces          component.DeployWaiter
 	CoreDNS             coredns.Interface
-	NodeLocalDNS        nodelocaldns.Interface
+	KubeProxy           kubeproxy.Interface
 	MetricsServer       metricsserver.Interface
+	Namespaces          component.DeployWaiter
+	NodeLocalDNS        nodelocaldns.Interface
+	NodeProblemDetector component.DeployWaiter
 	Resources           component.DeployWaiter
 	VPNShoot            vpnshoot.Interface
-	NodeProblemDetector component.DeployWaiter
 }
 
 // DNS contains references to internal and external DNSProvider and DNSEntry deployers.

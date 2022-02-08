@@ -66,6 +66,8 @@ type Interface interface {
 	DeleteStaleResources(context.Context) error
 	// WaitCleanupStaleResources waits until all no longer required ManagedResource are cleaned up.
 	WaitCleanupStaleResources(context.Context) error
+	// SetWorkerPools sets the WorkerPools field in the Values.
+	SetWorkerPools([]WorkerPool)
 }
 
 type kubeProxy struct {
@@ -258,3 +260,5 @@ func managedResourceName(pool *WorkerPool) string {
 func name(pool WorkerPool) string {
 	return fmt.Sprintf("kube-proxy-%s-v%s", pool.Name, pool.KubernetesVersion)
 }
+
+func (k *kubeProxy) SetWorkerPools(pools []WorkerPool) { k.values.WorkerPools = pools }
