@@ -149,6 +149,7 @@ type SystemComponents struct {
 	CoreDNS             coredns.Interface
 	NodeLocalDNS        nodelocaldns.Interface
 	MetricsServer       metricsserver.Interface
+	Resources           component.DeployWaiter
 	VPNShoot            vpnshoot.Interface
 	NodeProblemDetector component.DeployWaiter
 }
