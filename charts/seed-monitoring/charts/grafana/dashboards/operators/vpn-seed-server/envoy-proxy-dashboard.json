@@ -1478,13 +1478,110 @@
       }
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 58
+      },
+      "hiddenSeries": false,
+      "id": 46,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.11",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "envoy_cluster_upstream_cx_overflow{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}",
+          "interval": "",
+          "legendFormat": "connection overflows",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Connection Overflows",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:119",
+          "decimals": 0,
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "$$hashKey": "object:120",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
       "collapsed": false,
       "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 58
+        "y": 66
       },
       "id": 15,
       "panels": [],
@@ -1508,7 +1605,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 59
+        "y": 67
       },
       "hiddenSeries": false,
       "id": 11,
@@ -1613,7 +1710,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 59
+        "y": 67
       },
       "hiddenSeries": false,
       "id": 13,
@@ -1708,7 +1805,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 67
+        "y": 75
       },
       "id": 6,
       "panels": [],
@@ -1732,7 +1829,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 68
+        "y": 76
       },
       "hiddenSeries": false,
       "id": 4,
@@ -1829,7 +1926,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 68
+        "y": 76
       },
       "hiddenSeries": false,
       "id": 3,
@@ -1926,7 +2023,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 77
+        "y": 85
       },
       "hiddenSeries": false,
       "id": 2,
@@ -2013,7 +2110,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 86
+        "y": 94
       },
       "id": 30,
       "panels": [],
@@ -2036,7 +2133,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 87
+        "y": 95
       },
       "hiddenSeries": false,
       "id": 32,
@@ -2132,7 +2229,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 87
+        "y": 95
       },
       "hiddenSeries": false,
       "id": 34,
@@ -2228,7 +2325,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 95
+        "y": 103
       },
       "hiddenSeries": false,
       "id": 33,
@@ -2315,7 +2412,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 103
+        "y": 111
       },
       "id": 36,
       "panels": [],
@@ -2338,7 +2435,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 104
+        "y": 112
       },
       "hiddenSeries": false,
       "id": 38,
