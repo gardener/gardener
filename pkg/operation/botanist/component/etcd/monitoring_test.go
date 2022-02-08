@@ -251,7 +251,7 @@ metric_relabel_configs:
       summary: Etcd3 ` + testRole + ` DB size has crossed its current practical limit.
 
   - record: shoot:etcd_object_counts:sum_by_resource
-    expr: sum(etcd_object_counts) by (resource)
+    expr: max(etcd_object_counts) by (resource)
 `
 
 	alertingRulesBackup = `  # etcd backup failure alerts
