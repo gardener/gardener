@@ -350,19 +350,60 @@ import custom/*.server
 					Spec: corev1.PodSpec{
 						Affinity: &corev1.Affinity{
 							PodAntiAffinity: &corev1.PodAntiAffinity{
-								PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
-									Weight: 100,
-									PodAffinityTerm: corev1.PodAffinityTerm{
-										TopologyKey: corev1.LabelHostname,
-										LabelSelector: &metav1.LabelSelector{
-											MatchExpressions: []metav1.LabelSelectorRequirement{{
-												Key:      LabelKey,
-												Operator: metav1.LabelSelectorOpIn,
-												Values:   []string{LabelValue},
-											}},
+								PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+									{
+										Weight: 100,
+										PodAffinityTerm: corev1.PodAffinityTerm{
+											TopologyKey: corev1.LabelTopologyZone,
+											LabelSelector: &metav1.LabelSelector{
+												MatchExpressions: []metav1.LabelSelectorRequirement{{
+													Key:      LabelKey,
+													Operator: metav1.LabelSelectorOpIn,
+													Values:   []string{LabelValue},
+												}},
+											},
 										},
 									},
-								}},
+									{
+										Weight: 95,
+										PodAffinityTerm: corev1.PodAffinityTerm{
+											TopologyKey: corev1.LabelHostname,
+											LabelSelector: &metav1.LabelSelector{
+												MatchExpressions: []metav1.LabelSelectorRequirement{{
+													Key:      LabelKey,
+													Operator: metav1.LabelSelectorOpIn,
+													Values:   []string{LabelValue},
+												}},
+											},
+										},
+									},
+								},
+							},
+						},
+						TopologySpreadConstraints: []corev1.TopologySpreadConstraint{
+							{
+								MaxSkew:           2,
+								TopologyKey:       corev1.LabelTopologyZone,
+								WhenUnsatisfiable: "ScheduleAnyway",
+								LabelSelector: &metav1.LabelSelector{
+									MatchExpressions: []metav1.LabelSelectorRequirement{{
+										Key:      LabelKey,
+										Operator: metav1.LabelSelectorOpIn,
+										Values:   []string{LabelValue},
+									}},
+								},
+							},
+							{
+								MaxSkew:           2,
+								TopologyKey:       corev1.LabelHostname,
+								WhenUnsatisfiable: "ScheduleAnyway",
+								LabelSelector: &metav1.LabelSelector{
+									MatchExpressions: []metav1.LabelSelectorRequirement{{
+										Key:      LabelKey,
+										Operator: metav1.LabelSelectorOpIn,
+										Values:   []string{LabelValue},
+									}},
+								},
 							},
 						},
 						PriorityClassName:  "system-cluster-critical",
