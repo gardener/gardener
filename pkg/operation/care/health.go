@@ -23,6 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -30,19 +31,13 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 
-	"github.com/Masterminds/semver"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -305,24 +300,6 @@ func (h *Health) checkControlPlane(
 	return &c, nil
 }
 
-var versionConstraintGreaterEqual131 *semver.Constraints
-var versionConstraintGreaterEqual132 *semver.Constraints
-var versionConstraintGreaterEqual138 *semver.Constraints
-var versionConstraintGreaterEqual139 *semver.Constraints
-
-func init() {
-	var err error
-
-	versionConstraintGreaterEqual131, err = semver.NewConstraint(">= 1.31")
-	utilruntime.Must(err)
-	versionConstraintGreaterEqual132, err = semver.NewConstraint(">= 1.32")
-	utilruntime.Must(err)
-	versionConstraintGreaterEqual138, err = semver.NewConstraint(">= 1.38")
-	utilruntime.Must(err)
-	versionConstraintGreaterEqual139, err = semver.NewConstraint(">= 1.39")
-	utilruntime.Must(err)
-}
-
 // checkSystemComponents checks whether the system components of a Shoot are running.
 func (h *Health) checkSystemComponents(
 	ctx context.Context,
@@ -333,34 +310,17 @@ func (h *Health) checkSystemComponents(
 	*gardencorev1beta1.Condition,
 	error,
 ) {
-	managedResources := managedResourcesShoot.List()
-	if versionConstraintGreaterEqual131.Check(checker.gardenerVersion) {
-		// TODO: Add this ManagedResource unconditionally to the `managedResourcesShoot` in a future version.
-		managedResources = append(managedResources, kubeapiserver.ManagedResourceName)
+	mrList := &resourcesv1alpha1.ManagedResourceList{}
+	if err := h.seedClient.Client().List(ctx, mrList, client.InNamespace(h.shoot.SeedNamespace), client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener}); err != nil {
+		return nil, err
 	}
 
-	if versionConstraintGreaterEqual132.Check(checker.gardenerVersion) {
-		// TODO: Add this ManagedResource unconditionally to the `managedResourcesShoot` in a future version.
-		managedResources = append(managedResources, coredns.ManagedResourceName)
-	}
-
-	if versionConstraintGreaterEqual138.Check(checker.gardenerVersion) {
-		// TODO: Add this ManagedResource unconditionally to the `managedResourcesShoot` in a future version.
-		managedResources = append(managedResources, vpnshoot.ManagedResourceName)
-	}
-
-	if versionConstraintGreaterEqual139.Check(checker.gardenerVersion) && h.shoot.NodeLocalDNSEnabled {
-		// TODO: Add this ManagedResource unconditionally to the `managedResourcesShoot` in a future version.
-		managedResources = append(managedResources, nodelocaldns.ManagedResourceName)
-	}
-
-	for _, name := range managedResources {
-		mr := &resourcesv1alpha1.ManagedResource{}
-		if err := h.seedClient.Client().Get(ctx, kutil.Key(h.shoot.SeedNamespace, name), mr); err != nil {
-			return nil, err
+	for _, mr := range mrList.Items {
+		if mr.Spec.Class != nil {
+			continue
 		}
 
-		if exitCondition := checker.CheckManagedResource(condition, mr); exitCondition != nil {
+		if exitCondition := checker.CheckManagedResource(condition, &mr); exitCondition != nil {
 			return exitCondition, nil
 		}
 	}
@@ -373,6 +333,7 @@ func (h *Health) checkSystemComponents(
 	if err := h.shootClient.Client().List(ctx, podsList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"type": "tunnel"}); err != nil {
 		return nil, err
 	}
+
 	if len(podsList.Items) == 0 {
 		c := checker.FailedCondition(condition, "NoTunnelDeployed", "no tunnels are currently deployed to perform health-check on")
 		return &c, nil
