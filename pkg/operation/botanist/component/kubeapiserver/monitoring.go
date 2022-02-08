@@ -27,40 +27,41 @@ import (
 const (
 	monitoringPrometheusJobName = "kube-apiserver"
 
-	monitoringMetricAuthenticationAttempts                                     = "authentication_attempts"
-	monitoringMetricAuthenticatedUserRequests                                  = "authenticated_user_requests"
-	monitoringMetricApiserverAdmissionControllerAdmissionDurationSecondsBucket = "apiserver_admission_controller_admission_duration_seconds_bucket"
-	monitoringMetricApiserverAdmissionWebhookAdmissionDurationSecondsBucket    = "apiserver_admission_webhook_admission_duration_seconds_bucket"
-	monitoringMetricApiserverAdmissionStepAdmissionDurationSecondsBucket       = "apiserver_admission_step_admission_duration_seconds_bucket"
-	monitoringMetricApiserverAdmissionWebhookRejectionCount                    = "apiserver_admission_webhook_rejection_count"
-	monitoringMetricApiserverAuditEventTotal                                   = "apiserver_audit_event_total"
-	monitoringMetricApiserverAuditErrorTotal                                   = "apiserver_audit_error_total"
-	monitoringMetricApiserverAuditRequestsRejectedTotal                        = "apiserver_audit_requests_rejected_total"
-	monitoringMetricApiserverLatencySeconds                                    = "apiserver_latency_seconds"
-	monitoringMetricApiserverCRDWebhookConversionDurationSecondsBucket         = "apiserver_crd_webhook_conversion_duration_seconds_bucket"
-	monitoringMetricApiserverCurrentInflightRequests                           = "apiserver_current_inflight_requests"
-	monitoringMetricApiserverCurrentInqueueRequests                            = "apiserver_current_inqueue_requests"
-	monitoringMetricApiserverResponseSizesBucket                               = "apiserver_response_sizes_bucket"
-	monitoringMetricApiserverRegisteredWatchers                                = "apiserver_registered_watchers"
-	monitoringMetricApiserverRequestDurationSecondsBucket                      = "apiserver_request_duration_seconds_bucket"
-	monitoringMetricApiserverRequestTerminationsTotal                          = "apiserver_request_terminations_total"
-	monitoringMetricApiserverRequestTotal                                      = "apiserver_request_total"
-	monitoringMetricApiserverRequestCount                                      = "apiserver_request_count"
-	monitoringMetricApiserverStorageTransformationDurationSecondsBucket        = "apiserver_storage_transformation_duration_seconds_bucket"
-	monitoringMetricApiserverStorageTransformationOperationsTotal              = "apiserver_storage_transformation_operations_total"
-	monitoringMetricApiserverInitEventsTotal                                   = "apiserver_init_events_total"
-	monitoringMetricApiserverWatchEventsSizesBucket                            = "apiserver_watch_events_sizes_bucket"
-	monitoringMetricApiserverWatchEventsTotal                                  = "apiserver_watch_events_total"
-	monitoringMetricApiserverWatchDuration                                     = "apiserver_watch_duration"
-	monitoringMetricEtcdDbTotalSizeInBytes                                     = "etcd_db_total_size_in_bytes"
-	monitoringMetricEtcdObjectCounts                                           = "etcd_object_counts"
-	monitoringMetricEtcdRequestDurationSecondsBucket                           = "etcd_request_duration_seconds_bucket"
-	monitoringMetricGo                                                         = "go_.+"
-	monitoringMetricProcessMaxFds                                              = "process_max_fds"
-	monitoringMetricProcessOpenFds                                             = "process_open_fds"
-	monitoringMetricWatchCacheCapacityIncreaseTotal                            = "watch_cache_capacity_increase_total"
-	monitoringMetricWatchCacheCapacityDecreaseTotal                            = "watch_cache_capacity_decrease_total"
-	monitoringMetricWatchCacheCapacity                                         = "watch_cache_capacity"
+	monitoringMetricAuthenticationAttempts                               = "authentication_attempts"
+	monitoringMetricAuthenticatedUserRequests                            = "authenticated_user_requests"
+	monitoringMetricApiserverAdmissionControllerAdmissionDurationSeconds = "apiserver_admission_controller_admission_duration_seconds_.+"
+	monitoringMetricApiserverAdmissionWebhookAdmissionDurationSeconds    = "apiserver_admission_webhook_admission_duration_seconds_.+"
+	monitoringMetricApiserverAdmissionStepAdmissionDurationSeconds       = "apiserver_admission_step_admission_duration_seconds_.+"
+	monitoringMetricApiserverAdmissionWebhookRejectionCount              = "apiserver_admission_webhook_rejection_count"
+	monitoringMetricApiserverAuditEventTotal                             = "apiserver_audit_event_total"
+	monitoringMetricApiserverAuditErrorTotal                             = "apiserver_audit_error_total"
+	monitoringMetricApiserverAuditRequestsRejectedTotal                  = "apiserver_audit_requests_rejected_total"
+	monitoringMetricApiserverLatencySeconds                              = "apiserver_latency_seconds"
+	monitoringMetricApiserverCRDWebhookConversionDurationSeconds         = "apiserver_crd_webhook_conversion_duration_seconds_.+"
+	monitoringMetricApiserverCurrentInflightRequests                     = "apiserver_current_inflight_requests"
+	monitoringMetricApiserverCurrentInqueueRequests                      = "apiserver_current_inqueue_requests"
+	monitoringMetricApiserverResponseSizes                               = "apiserver_response_sizes_.+"
+	monitoringMetricApiserverRegisteredWatchers                          = "apiserver_registered_watchers"
+	monitoringMetricApiserverRequestDurationSeconds                      = "apiserver_request_duration_seconds_.+"
+	monitoringMetricApiserverRequestDurationSecondsBucket                = "apiserver_request_duration_seconds_bucket"
+	monitoringMetricApiserverRequestTerminationsTotal                    = "apiserver_request_terminations_total"
+	monitoringMetricApiserverRequestTotal                                = "apiserver_request_total"
+	monitoringMetricApiserverRequestCount                                = "apiserver_request_count"
+	monitoringMetricApiserverStorageTransformationDurationSeconds        = "apiserver_storage_transformation_duration_seconds_.+"
+	monitoringMetricApiserverStorageTransformationOperationsTotal        = "apiserver_storage_transformation_operations_total"
+	monitoringMetricApiserverInitEventsTotal                             = "apiserver_init_events_total"
+	monitoringMetricApiserverWatchEventsSizes                            = "apiserver_watch_events_sizes_.+"
+	monitoringMetricApiserverWatchEventsTotal                            = "apiserver_watch_events_total"
+	monitoringMetricApiserverWatchDuration                               = "apiserver_watch_duration"
+	monitoringMetricEtcdDbTotalSizeInBytes                               = "etcd_db_total_size_in_bytes"
+	monitoringMetricEtcdObjectCounts                                     = "etcd_object_counts"
+	monitoringMetricEtcdRequestDurationSeconds                           = "etcd_request_duration_seconds_.+"
+	monitoringMetricGo                                                   = "go_.+"
+	monitoringMetricProcessMaxFds                                        = "process_max_fds"
+	monitoringMetricProcessOpenFds                                       = "process_open_fds"
+	monitoringMetricWatchCacheCapacityIncreaseTotal                      = "watch_cache_capacity_increase_total"
+	monitoringMetricWatchCacheCapacityDecreaseTotal                      = "watch_cache_capacity_decrease_total"
+	monitoringMetricWatchCacheCapacity                                   = "watch_cache_capacity"
 
 	// TODO: Replace below hard-coded job name of the Blackbox Exporter once its deployment has been refactored.
 	monitoringAlertingRules = `groups:
@@ -183,31 +184,31 @@ var (
 	monitoringAllowedMetrics = []string{
 		monitoringMetricAuthenticationAttempts,
 		monitoringMetricAuthenticatedUserRequests,
-		monitoringMetricApiserverAdmissionControllerAdmissionDurationSecondsBucket,
-		monitoringMetricApiserverAdmissionWebhookAdmissionDurationSecondsBucket,
-		monitoringMetricApiserverAdmissionStepAdmissionDurationSecondsBucket,
+		monitoringMetricApiserverAdmissionControllerAdmissionDurationSeconds,
+		monitoringMetricApiserverAdmissionWebhookAdmissionDurationSeconds,
+		monitoringMetricApiserverAdmissionStepAdmissionDurationSeconds,
 		monitoringMetricApiserverAdmissionWebhookRejectionCount,
 		monitoringMetricApiserverAuditEventTotal,
 		monitoringMetricApiserverAuditErrorTotal,
 		monitoringMetricApiserverAuditRequestsRejectedTotal,
 		monitoringMetricApiserverLatencySeconds,
-		monitoringMetricApiserverCRDWebhookConversionDurationSecondsBucket,
+		monitoringMetricApiserverCRDWebhookConversionDurationSeconds,
 		monitoringMetricApiserverCurrentInflightRequests,
 		monitoringMetricApiserverCurrentInqueueRequests,
-		monitoringMetricApiserverResponseSizesBucket,
+		monitoringMetricApiserverResponseSizes,
 		monitoringMetricApiserverRegisteredWatchers,
-		monitoringMetricApiserverRequestDurationSecondsBucket,
+		monitoringMetricApiserverRequestDurationSeconds,
 		monitoringMetricApiserverRequestTerminationsTotal,
 		monitoringMetricApiserverRequestTotal,
 		monitoringMetricApiserverRequestCount,
-		monitoringMetricApiserverStorageTransformationDurationSecondsBucket,
+		monitoringMetricApiserverStorageTransformationDurationSeconds,
 		monitoringMetricApiserverStorageTransformationOperationsTotal,
 		monitoringMetricApiserverInitEventsTotal,
-		monitoringMetricApiserverWatchEventsSizesBucket,
+		monitoringMetricApiserverWatchEventsSizes,
 		monitoringMetricApiserverWatchEventsTotal,
 		monitoringMetricEtcdDbTotalSizeInBytes,
 		monitoringMetricEtcdObjectCounts,
-		monitoringMetricEtcdRequestDurationSecondsBucket,
+		monitoringMetricEtcdRequestDurationSeconds,
 		monitoringMetricGo,
 		monitoringMetricProcessMaxFds,
 		monitoringMetricProcessOpenFds,
