@@ -1971,6 +1971,7 @@ Kubernetes core/v1.LoadBalancerIngress
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Ingress is the external IP and/or hostname of the bastion host.</p>
 </td>
 </tr>

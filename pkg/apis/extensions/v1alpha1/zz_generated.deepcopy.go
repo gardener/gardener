@@ -340,7 +340,11 @@ func (in *BastionSpec) DeepCopy() *BastionSpec {
 func (in *BastionStatus) DeepCopyInto(out *BastionStatus) {
 	*out = *in
 	in.DefaultStatus.DeepCopyInto(&out.DefaultStatus)
-	in.Ingress.DeepCopyInto(&out.Ingress)
+	if in.Ingress != nil {
+		in, out := &in.Ingress, &out.Ingress
+		*out = new(v1.LoadBalancerIngress)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 
