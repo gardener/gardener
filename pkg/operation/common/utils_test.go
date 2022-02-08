@@ -32,7 +32,6 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -190,105 +189,6 @@ var _ = Describe("common", func() {
 					))
 				})
 			})
-		})
-	})
-
-	Describe("#DeleteStatefulSetsHavingDeprecatedRoleLabelKey", func() {
-		var (
-			ctrl *gomock.Controller
-			c    *mockclient.MockClient
-
-			ctx  context.Context
-			sts1 *appsv1.StatefulSet
-			sts2 *appsv1.StatefulSet
-			key1 client.ObjectKey
-			key2 client.ObjectKey
-		)
-
-		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
-			c = mockclient.NewMockClient(ctrl)
-
-			ctx = context.TODO()
-			sts1 = &appsv1.StatefulSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: v1beta1constants.GardenNamespace,
-				},
-				Spec: appsv1.StatefulSetSpec{
-					Selector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{"app": "foo"},
-					},
-				},
-			}
-			sts2 = &appsv1.StatefulSet{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: v1beta1constants.GardenNamespace,
-				},
-				Spec: appsv1.StatefulSetSpec{
-					Selector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{"app": "bar"},
-					},
-				},
-			}
-			key1 = client.ObjectKey{Name: sts1.Name, Namespace: sts1.Namespace}
-			key2 = client.ObjectKey{Name: sts2.Name, Namespace: sts2.Namespace}
-		})
-
-		AfterEach(func() {
-			ctrl.Finish()
-		})
-
-		It("should return error if error occurs during get of StatefulSet", func() {
-			fakeErr := fmt.Errorf("fake err")
-
-			c.EXPECT().Get(ctx, key1, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).Return(fakeErr)
-
-			err := DeleteStatefulSetsHavingDeprecatedRoleLabelKey(ctx, c, []client.ObjectKey{key1, key2})
-			Expect(err).To(MatchError(fakeErr))
-		})
-
-		It("should do nothing when the StatefulSets are missing", func() {
-			c.EXPECT().Get(ctx, key1, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).
-				Return(apierrors.NewNotFound(appsv1.Resource("StatefulSet"), sts1.Name))
-			c.EXPECT().Get(ctx, key2, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).
-				Return(apierrors.NewNotFound(appsv1.Resource("StatefulSet"), sts2.Name))
-
-			err := DeleteStatefulSetsHavingDeprecatedRoleLabelKey(ctx, c, []client.ObjectKey{key1, key2})
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should do nothing when .spec.selector does not have the label key", func() {
-			c.EXPECT().Get(ctx, key1, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).SetArg(2, *sts1)
-			c.EXPECT().Get(ctx, key2, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).SetArg(2, *sts2)
-
-			err := DeleteStatefulSetsHavingDeprecatedRoleLabelKey(ctx, c, []client.ObjectKey{key1, key2})
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should delete the StatefulSets when .spec.selector has the label key", func() {
-			labelSelector := &metav1.LabelSelector{
-				MatchLabels: map[string]string{v1beta1constants.DeprecatedGardenRole: "bar"},
-			}
-			sts1.Spec.Selector = labelSelector
-			sts2.Spec.Selector = labelSelector
-
-			gomock.InOrder(
-				// sts1
-				c.EXPECT().Get(ctx, key1, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).SetArg(2, *sts1),
-				c.EXPECT().Delete(ctx, sts1),
-				c.EXPECT().Get(ctx, key1, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).SetArg(2, *sts1).
-					Return(apierrors.NewNotFound(appsv1.Resource("StatefulSet"), sts1.Name)),
-				// sts2
-				c.EXPECT().Get(ctx, key2, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).SetArg(2, *sts2),
-				c.EXPECT().Delete(ctx, sts2),
-				c.EXPECT().Get(ctx, key2, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).SetArg(2, *sts2).
-					Return(apierrors.NewNotFound(appsv1.Resource("StatefulSet"), sts2.Name)),
-			)
-
-			err := DeleteStatefulSetsHavingDeprecatedRoleLabelKey(ctx, c, []client.ObjectKey{key1, key2})
-			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
