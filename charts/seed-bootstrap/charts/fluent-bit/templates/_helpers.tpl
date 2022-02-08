@@ -76,13 +76,6 @@ filter-kubernetes.conf: |-
   # System components filters
   [FILTER]
       Name                parser
-      Match               kubernetes.*kube-proxy*kube-proxy*
-      Key_Name            log
-      Parser              kubeapiserverParser
-      Reserve_Data        True
-
-  [FILTER]
-      Name                parser
       Match               kubernetes.*addons-nginx-ingress-controller*nginx-ingress-controller*
       Key_Name            log
       Parser              kubeapiserverParser

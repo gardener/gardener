@@ -34,6 +34,11 @@ const (
 	labelValueRole                = "pool"
 	labelKeyPoolName              = "pool-name"
 	labelKeyKubernetesVersion     = "kubernetes-version"
+
+	// DaemonSetNamePrefix is the prefix for the names of the kube-proxy DaemonSets.
+	DaemonSetNamePrefix = "kube-proxy"
+
+	containerName = "kube-proxy"
 )
 
 var (
