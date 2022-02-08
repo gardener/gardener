@@ -7,7 +7,7 @@ authors:
 - "@beckermax"
 - "@rfranzke"
 - "@timebertt"
-  reviewers:
+reviewers:
 - "@beckermax"
 - "@rfranzke"
 - "@timebertt"
