@@ -19,22 +19,27 @@ import (
 	"fmt"
 	"strings"
 
+	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
+
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 )
 
 type mutator struct {
-	logger logr.Logger
+	logger               logr.Logger
+	kubeProxyConfigCodec kubeproxy.ConfigCodec
 }
 
 // NewMutator creates a new Mutator that mutates resources in the shoot cluster.
 func NewMutator() extensionswebhook.Mutator {
-	return &mutator{logger: log.Log.WithName("shoot-mutator")}
+	return &mutator{
+		logger:               log.Log.WithName("shoot-mutator"),
+		kubeProxyConfigCodec: kubeproxy.NewConfigCodec(),
+	}
 }
 
 func (m *mutator) Mutate(ctx context.Context, new, _ client.Object) error {
