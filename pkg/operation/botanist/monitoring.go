@@ -29,12 +29,12 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -143,7 +143,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		},
 	}
 
-	ingressClass, err := getIngressClass(b.Seed.GetInfo())
+	ingressClass, err := seed.ComputeNginxIngressClass(b.Seed, b.Seed.GetInfo().Status.KubernetesVersion)
 	if err != nil {
 		return err
 	}
@@ -405,28 +405,6 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 	return b.deployGrafanaCharts(ctx, common.GrafanaUsersRole, usersDashboards.String(), basicAuthUsers, common.GrafanaUsersPrefix)
 }
 
-func getIngressClass(seed *gardencorev1beta1.Seed) (string, error) {
-	managedIngress := seed.Spec.Ingress != nil && seed.Spec.Ingress.Controller.Kind == v1beta1constants.IngressKindNginx
-	if !managedIngress {
-		return v1beta1constants.ShootNginxIngressClass, nil
-	}
-
-	if seed.Status.KubernetesVersion == nil {
-		return "", fmt.Errorf("kubernetes version is missing in status for seed %q", seed.Name)
-	}
-
-	greaterEqual122, err := versionutils.CompareVersions(*seed.Status.KubernetesVersion, ">=", "1.22")
-	if err != nil {
-		return "", err
-	}
-
-	if greaterEqual122 {
-		return v1beta1constants.SeedNginxIngressClass122, nil
-	}
-
-	return v1beta1constants.SeedNginxIngressClass, nil
-}
-
 func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretKeys []string) (map[string]interface{}, error) {
 	configs := map[string]interface{}{
 		"auth_type": map[string]interface{}{},
@@ -517,7 +495,7 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 		},
 	}
 
-	ingressClass, err := getIngressClass(b.Seed.GetInfo())
+	ingressClass, err := seed.ComputeNginxIngressClass(b.Seed, b.Seed.GetInfo().Status.KubernetesVersion)
 	if err != nil {
 		return err
 	}

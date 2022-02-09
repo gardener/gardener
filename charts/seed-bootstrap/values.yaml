@@ -345,7 +345,6 @@ global:
     vpa-recommender: image-repository:image-tag
     vpa-updater: image-repository:image-tag
     hvpa-controller: image-repository:image-tag
-  ingressClass: nginx
 
 fluent-bit:
   enabled: true
@@ -376,7 +375,4 @@ vpa:
       gardener.cloud/role: vpa
 
 istio:
-  enabled: false
-
-nginxIngress:
   enabled: false

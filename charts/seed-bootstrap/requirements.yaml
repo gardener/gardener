@@ -13,10 +13,6 @@ dependencies:
   repository: http://localhost:10191
   version: 0.1.0
   condition: vpa.enabled
-- name: nginx-ingress
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: nginx-ingress.enabled
 - name: hvpa
   repository: http://localhost:10191
   version: 0.1.0

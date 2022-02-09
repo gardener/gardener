@@ -479,8 +479,8 @@ const (
 	SeedNginxIngressClass122 = "nginx-ingress-gardener"
 	// IngressKindNginx defines nginx as kind as managed Seed ingress
 	IngressKindNginx = "nginx"
-	// ShootNginxIngressClass defines the ingress class for the seed nginx ingress controller
-	ShootNginxIngressClass = "nginx"
+	// NginxIngressClass defines the ingress class for the seed nginx ingress controller if the seed cluster is a non Gardener managed cluster.
+	NginxIngressClass = "nginx"
 
 	// SeedsGroup is the identity group for gardenlets when authenticating to the API server.
 	SeedsGroup = "gardener.cloud:system:seeds"
