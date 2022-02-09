@@ -127,7 +127,7 @@ func (o *options) run(ctx context.Context) error {
 		o.config.GardenClientConnection.Kubeconfig = kubeconfig
 	}
 
-	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfigurationWithAllowedFields(&o.config.GardenClientConnection, nil, []string{kubernetes.AuthTokenFile})
+	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&o.config.GardenClientConnection, nil, kubernetes.AuthTokenFile)
 	if err != nil {
 		return err
 	}

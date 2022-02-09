@@ -141,14 +141,9 @@ func NewClientFromSecretObject(secret *corev1.Secret, fns ...ConfigFunc) (Interf
 	return nil, errors.New("the secret does not contain a field with name 'kubeconfig'")
 }
 
-// RESTConfigFromClientConnectionConfiguration creates a *rest.Config from a componentbaseconfig.ClientConnectionConfiguration & the configured kubeconfig.
-func RESTConfigFromClientConnectionConfiguration(cfg *componentbaseconfig.ClientConnectionConfiguration, kubeconfig []byte) (*rest.Config, error) {
-	return RESTConfigFromClientConnectionConfigurationWithAllowedFields(cfg, kubeconfig, nil)
-}
-
-// RESTConfigFromClientConnectionConfigurationWithAllowedFields creates a *rest.Config from a componentbaseconfig.ClientConnectionConfiguration and the configured kubeconfig.
+// RESTConfigFromClientConnectionConfiguration creates a *rest.Config from a componentbaseconfig.ClientConnectionConfiguration and the configured kubeconfig.
 // Allowed fields are not considered unsupported if used in the kubeconfig.
-func RESTConfigFromClientConnectionConfigurationWithAllowedFields(cfg *componentbaseconfig.ClientConnectionConfiguration, kubeconfig []byte, allowedFields []string) (*rest.Config, error) {
+func RESTConfigFromClientConnectionConfiguration(cfg *componentbaseconfig.ClientConnectionConfiguration, kubeconfig []byte, allowedFields ...string) (*rest.Config, error) {
 	var (
 		restConfig *rest.Config
 		err        error
@@ -169,7 +164,7 @@ func RESTConfigFromClientConnectionConfigurationWithAllowedFields(cfg *component
 			return nil, err
 		}
 	} else {
-		restConfig, err = RESTConfigFromKubeconfigWithAllowedFields(kubeconfig, allowedFields)
+		restConfig, err = RESTConfigFromKubeconfig(kubeconfig, allowedFields...)
 		if err != nil {
 			return restConfig, err
 		}
@@ -186,13 +181,8 @@ func RESTConfigFromClientConnectionConfigurationWithAllowedFields(cfg *component
 }
 
 // RESTConfigFromKubeconfig returns a rest.Config from the bytes of a kubeconfig.
-func RESTConfigFromKubeconfig(kubeconfig []byte) (*rest.Config, error) {
-	return RESTConfigFromKubeconfigWithAllowedFields(kubeconfig, nil)
-}
-
-// RESTConfigFromKubeconfigWithAllowedFields returns a rest.Config from the bytes of a kubeconfig.
 // Allowed fields are not considered unsupported if used in the kubeconfig.
-func RESTConfigFromKubeconfigWithAllowedFields(kubeconfig []byte, allowedFields []string) (*rest.Config, error) {
+func RESTConfigFromKubeconfig(kubeconfig []byte, allowedFields ...string) (*rest.Config, error) {
 	clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfig)
 	if err != nil {
 		return nil, err
