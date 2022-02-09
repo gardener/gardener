@@ -106,6 +106,17 @@ var _ = Describe("KubeProxy", func() {
 	})
 
 	Describe("#Deploy", func() {
+		var (
+			serviceAccountYAML = `apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  creationTimestamp: null
+  name: kube-proxy
+  namespace: kube-system
+`
+		)
+
 		It("should successfully deploy all resources", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceCentral), managedResourceCentral)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResourceCentral.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecretCentral.Name)))
@@ -148,7 +159,8 @@ var _ = Describe("KubeProxy", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(Succeed())
 			Expect(managedResourceSecretCentral.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecretCentral.Data).To(HaveLen(0))
+			Expect(managedResourceSecretCentral.Data).To(HaveLen(1))
+			Expect(string(managedResourceSecretCentral.Data["serviceaccount__kube-system__kube-proxy.yaml"])).To(Equal(serviceAccountYAML))
 
 			for _, pool := range values.WorkerPools {
 				By(pool.Name)

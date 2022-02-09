@@ -17,14 +17,28 @@ package kubeproxy
 import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+
+		serviceAccount = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kube-proxy",
+				Namespace: metav1.NamespaceSystem,
+			},
+			AutomountServiceAccountToken: pointer.Bool(false),
+		}
 	)
 
-	return registry.AddAllAndSerialize()
+	return registry.AddAllAndSerialize(
+		serviceAccount,
+	)
 }
 
 func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte, error) {
