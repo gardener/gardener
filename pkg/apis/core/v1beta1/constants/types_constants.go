@@ -347,6 +347,8 @@ const (
 	LabelControllerManager = "controller-manager"
 	// LabelScheduler is a constant for a label for the kube-scheduler.
 	LabelScheduler = "scheduler"
+	// LabelProxy is a constant for a label for the kube-proxy.
+	LabelProxy = "proxy"
 	// LabelExtensionProjectRole is a constant for a label value for extension project roles
 	LabelExtensionProjectRole = "extension-project-role"
 

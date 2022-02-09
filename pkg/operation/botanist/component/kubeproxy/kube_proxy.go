@@ -42,6 +42,7 @@ const (
 	serviceName   = "kube-proxy"
 
 	portNameMetrics = "metrics"
+	portMetrics     = 10249
 )
 
 var (

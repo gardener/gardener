@@ -15,6 +15,7 @@
 package kubeproxy
 
 import (
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
@@ -34,10 +35,29 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
+
+		service = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      serviceName,
+				Namespace: metav1.NamespaceSystem,
+				Labels:    getLabels(),
+			},
+			Spec: corev1.ServiceSpec{
+				Type:      corev1.ServiceTypeClusterIP,
+				ClusterIP: corev1.ClusterIPNone,
+				Ports: []corev1.ServicePort{{
+					Name:     portNameMetrics,
+					Port:     int32(portMetrics),
+					Protocol: corev1.ProtocolTCP,
+				}},
+				Selector: getLabels(),
+			},
+		}
 	)
 
 	return registry.AddAllAndSerialize(
 		serviceAccount,
+		service,
 	)
 }
 
@@ -47,4 +67,11 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 	)
 
 	return registry.AddAllAndSerialize()
+}
+
+func getLabels() map[string]string {
+	return map[string]string{
+		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
+		v1beta1constants.LabelRole: v1beta1constants.LabelProxy,
+	}
 }

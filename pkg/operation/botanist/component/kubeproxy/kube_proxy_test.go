@@ -115,6 +115,30 @@ metadata:
   name: kube-proxy
   namespace: kube-system
 `
+
+			serviceYAML = `apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: kubernetes
+    role: proxy
+  name: kube-proxy
+  namespace: kube-system
+spec:
+  clusterIP: None
+  ports:
+  - name: metrics
+    port: 10249
+    protocol: TCP
+    targetPort: 0
+  selector:
+    app: kubernetes
+    role: proxy
+  type: ClusterIP
+status:
+  loadBalancer: {}
+`
 		)
 
 		It("should successfully deploy all resources", func() {
@@ -159,8 +183,9 @@ metadata:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(Succeed())
 			Expect(managedResourceSecretCentral.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecretCentral.Data).To(HaveLen(1))
+			Expect(managedResourceSecretCentral.Data).To(HaveLen(2))
 			Expect(string(managedResourceSecretCentral.Data["serviceaccount__kube-system__kube-proxy.yaml"])).To(Equal(serviceAccountYAML))
+			Expect(string(managedResourceSecretCentral.Data["service__kube-system__kube-proxy.yaml"])).To(Equal(serviceYAML))
 
 			for _, pool := range values.WorkerPools {
 				By(pool.Name)
