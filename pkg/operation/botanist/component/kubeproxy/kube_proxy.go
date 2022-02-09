@@ -43,6 +43,8 @@ const (
 
 	portNameMetrics = "metrics"
 	portMetrics     = 10249
+
+	dataKeyKubeconfig = "kubeconfig"
 )
 
 var (
@@ -76,6 +78,8 @@ type Interface interface {
 	DeleteStaleResources(context.Context) error
 	// WaitCleanupStaleResources waits until all no longer required ManagedResource are cleaned up.
 	WaitCleanupStaleResources(context.Context) error
+	// SetKubeconfig sets the Kubeconfig field in the Values.
+	SetKubeconfig([]byte)
 	// SetWorkerPools sets the WorkerPools field in the Values.
 	SetWorkerPools([]WorkerPool)
 }
@@ -88,6 +92,8 @@ type kubeProxy struct {
 
 // Values is a set of configuration values for the kube-proxy component.
 type Values struct {
+	// Kubeconfig is the kubeconfig which should be used to communicate with the kube-apiserver.
+	Kubeconfig []byte
 	// WorkerPools is a list of worker pools for which the kube-proxy DaemonSets should be deployed.
 	WorkerPools []WorkerPool
 }
@@ -271,4 +277,5 @@ func name(pool WorkerPool) string {
 	return fmt.Sprintf("kube-proxy-%s-v%s", pool.Name, pool.KubernetesVersion)
 }
 
+func (k *kubeProxy) SetKubeconfig(kubeconfig []byte)   { k.values.Kubeconfig = kubeconfig }
 func (k *kubeProxy) SetWorkerPools(pools []WorkerPool) { k.values.WorkerPools = pools }

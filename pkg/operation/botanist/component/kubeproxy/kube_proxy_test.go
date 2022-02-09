@@ -21,6 +21,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -41,8 +42,10 @@ var _ = Describe("KubeProxy", func() {
 	var (
 		ctx = context.TODO()
 
-		namespace = "some-namespace"
-		values    = Values{
+		namespace  = "some-namespace"
+		kubeconfig = []byte("some-kubeconfig")
+		values     = Values{
+			Kubeconfig: kubeconfig,
 			WorkerPools: []WorkerPool{
 				{Name: "pool1", KubernetesVersion: "1.20.13", Image: "some-image:some-tag1"},
 				{Name: "pool2", KubernetesVersion: "1.21.4", Image: "some-image:some-tag2"},
@@ -139,6 +142,21 @@ spec:
 status:
   loadBalancer: {}
 `
+
+			secretName = "kube-proxy-e3a80e6d"
+			secretYAML = `apiVersion: v1
+data:
+  kubeconfig: ` + utils.EncodeBase64(kubeconfig) + `
+immutable: true
+kind: Secret
+metadata:
+  creationTimestamp: null
+  labels:
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+  name: ` + secretName + `
+  namespace: kube-system
+type: Opaque
+`
 		)
 
 		It("should successfully deploy all resources", func() {
@@ -183,9 +201,10 @@ status:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(Succeed())
 			Expect(managedResourceSecretCentral.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecretCentral.Data).To(HaveLen(2))
+			Expect(managedResourceSecretCentral.Data).To(HaveLen(3))
 			Expect(string(managedResourceSecretCentral.Data["serviceaccount__kube-system__kube-proxy.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecretCentral.Data["service__kube-system__kube-proxy.yaml"])).To(Equal(serviceYAML))
+			Expect(string(managedResourceSecretCentral.Data["secret__kube-system__"+secretName+".yaml"])).To(Equal(secretYAML))
 
 			for _, pool := range values.WorkerPools {
 				By(pool.Name)

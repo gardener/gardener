@@ -23,23 +23,39 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	mockkubeproxy "github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var _ = Describe("KubeProxy", func() {
 	var (
 		ctrl     *gomock.Controller
 		botanist *Botanist
+
+		namespace             = "shoot--foo--bar"
+		apiServerAddress      = "1.2.3.4"
+		internalClusterDomain = "example.com"
+		caCert                = []byte("cert")
+		caSecret              = &corev1.Secret{Data: map[string][]byte{"ca.crt": caCert}}
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		botanist = &Botanist{Operation: &operation.Operation{}}
-		botanist.Shoot = &shootpkg.Shoot{}
+		botanist = &Botanist{
+			Operation: &operation.Operation{
+				APIServerAddress: apiServerAddress,
+				Shoot: &shootpkg.Shoot{
+					InternalClusterDomain: internalClusterDomain,
+					SeedNamespace:         namespace,
+				},
+			},
+		}
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
+		botanist.StoreSecret("ca", caSecret)
 	})
 
 	AfterEach(func() {
@@ -62,6 +78,26 @@ var _ = Describe("KubeProxy", func() {
 					KubeProxy: kubeProxy,
 				},
 			}
+
+			kubeProxy.EXPECT().SetKubeconfig([]byte(`apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: ` + utils.EncodeBase64(caCert) + `
+    server: https://api.` + internalClusterDomain + `
+  name: ` + namespace + `
+contexts:
+- context:
+    cluster: ` + namespace + `
+    user: ` + namespace + `
+  name: ` + namespace + `
+current-context: ` + namespace + `
+kind: Config
+preferences: {}
+users:
+- name: ` + namespace + `
+  user:
+    tokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+`))
 		})
 
 		It("should fail when the deploy function fails", func() {

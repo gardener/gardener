@@ -30,14 +30,6 @@ config.yaml: |-
 kube-proxy-config-{{ include "kube-proxy.componentconfig.data" . | sha256sum | trunc 8 }}
 {{- end }}
 
-{{- define "kube-proxy.secret-kubeconfig.data" -}}
-kubeconfig: {{ .Values.kubeconfig }}
-{{- end -}}
-
-{{- define "kube-proxy.secret-kubeconfig.name" -}}
-kube-proxy-{{ include "kube-proxy.secret-kubeconfig.data" . | sha256sum | trunc 8 }}
-{{- end }}
-
 {{- define "kube-proxy.cleanup-script.data" -}}
 cleanup.sh: |
   #!/bin/sh -e

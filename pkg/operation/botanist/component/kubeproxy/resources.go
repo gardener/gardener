@@ -17,10 +17,12 @@ package kubeproxy
 import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
 )
 
@@ -53,11 +55,23 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 				Selector: getLabels(),
 			},
 		}
+
+		secret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kube-proxy",
+				Namespace: metav1.NamespaceSystem,
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{dataKeyKubeconfig: k.values.Kubeconfig},
+		}
 	)
+
+	utilruntime.Must(kutil.MakeUnique(secret))
 
 	return registry.AddAllAndSerialize(
 		serviceAccount,
 		service,
+		secret,
 	)
 }
 

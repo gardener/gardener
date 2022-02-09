@@ -107,6 +107,18 @@ func (mr *MockInterfaceMockRecorder) ScrapeConfigs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScrapeConfigs", reflect.TypeOf((*MockInterface)(nil).ScrapeConfigs))
 }
 
+// SetKubeconfig mocks base method.
+func (m *MockInterface) SetKubeconfig(arg0 []byte) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetKubeconfig", arg0)
+}
+
+// SetKubeconfig indicates an expected call of SetKubeconfig.
+func (mr *MockInterfaceMockRecorder) SetKubeconfig(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetKubeconfig", reflect.TypeOf((*MockInterface)(nil).SetKubeconfig), arg0)
+}
+
 // SetWorkerPools mocks base method.
 func (m *MockInterface) SetWorkerPools(arg0 []kubeproxy.WorkerPool) {
 	m.ctrl.T.Helper()

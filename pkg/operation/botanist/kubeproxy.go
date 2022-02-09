@@ -17,7 +17,14 @@ package botanist
 import (
 	"context"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/secrets"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 )
 
 // DefaultKubeProxy returns a deployer for the kube-proxy.
@@ -31,7 +38,19 @@ func (b *Botanist) DefaultKubeProxy() (kubeproxy.Interface, error) {
 
 // DeployKubeProxy deploys the kube-proxy.
 func (b *Botanist) DeployKubeProxy(ctx context.Context) error {
+	kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kutil.NewKubeconfig(
+		b.Shoot.SeedNamespace,
+		b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
+		b.LoadSecret(v1beta1constants.SecretNameCACluster).Data[secrets.DataKeyCertificateCA],
+		clientcmdv1.AuthInfo{TokenFile: "/var/run/secrets/kubernetes.io/serviceaccount/token"},
+	))
+	if err != nil {
+		return err
+	}
+
 	// TODO In a subsequent commit: Move computation of WorkerPools from addons.go to this place.
+
+	b.Shoot.Components.SystemComponents.KubeProxy.SetKubeconfig(kubeconfig)
 
 	return b.Shoot.Components.SystemComponents.KubeProxy.Deploy(ctx)
 }
