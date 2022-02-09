@@ -39,6 +39,9 @@ const (
 	DaemonSetNamePrefix = "kube-proxy"
 
 	containerName = "kube-proxy"
+	serviceName   = "kube-proxy"
+
+	portNameMetrics = "metrics"
 )
 
 var (
@@ -67,6 +70,7 @@ func New(
 // Interface is an interface for managing kube-proxy DaemonSets.
 type Interface interface {
 	component.DeployWaiter
+	component.MonitoringComponent
 	// DeleteStaleResources deletes no longer required ManagedResource from the shoot namespace in the seed.
 	DeleteStaleResources(context.Context) error
 	// WaitCleanupStaleResources waits until all no longer required ManagedResource are cleaned up.

@@ -57,13 +57,6 @@ allowedMetrics:
   - rest_client_requests_total
   - process_max_fds
   - process_open_fds
-  kubeProxy:
-  - kubeproxy_network_programming_duration_seconds_bucket
-  - kubeproxy_network_programming_duration_seconds_count
-  - kubeproxy_network_programming_duration_seconds_sum
-  - kubeproxy_sync_proxy_rules_duration_seconds_bucket
-  - kubeproxy_sync_proxy_rules_duration_seconds_count
-  - kubeproxy_sync_proxy_rules_duration_seconds_sum
   kubeStateMetrics:
   - kube_daemonset_metadata_generation
   - kube_daemonset_status_current_number_scheduled

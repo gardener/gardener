@@ -72,5 +72,7 @@ func ExecutePromtool(c component.MonitoringComponent, filenameRulesTest string) 
 // AlertingRulesWithPromtool tests the alerting rules and execute promtool tests.
 func AlertingRulesWithPromtool(c component.MonitoringComponent, expectedAlertingRules map[string]string, filenameRulesTest string) {
 	AlertingRules(c, expectedAlertingRules)
-	ExecutePromtool(c, filenameRulesTest)
+	if filenameRulesTest != "" {
+		ExecutePromtool(c, filenameRulesTest)
+	}
 }
