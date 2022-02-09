@@ -37,6 +37,8 @@ const (
 
 	// DaemonSetNamePrefix is the prefix for the names of the kube-proxy DaemonSets.
 	DaemonSetNamePrefix = "kube-proxy"
+	// ConfigNamePrefix is the prefix for the name of the kube-proxy ConfigMap.
+	ConfigNamePrefix = "kube-proxy-config"
 
 	containerName = "kube-proxy"
 	serviceName   = "kube-proxy"
@@ -45,6 +47,9 @@ const (
 	portMetrics     = 10249
 
 	dataKeyKubeconfig = "kubeconfig"
+	dataKeyConfig     = "config.yaml"
+
+	volumeMountPathKubeconfig = "/var/lib/kube-proxy-kubeconfig"
 )
 
 var (
@@ -92,8 +97,14 @@ type kubeProxy struct {
 
 // Values is a set of configuration values for the kube-proxy component.
 type Values struct {
+	// IPVSEnabled states whether IPVS is enabled.
+	IPVSEnabled bool
+	// FeatureGates is the set of feature gates.
+	FeatureGates map[string]bool
 	// Kubeconfig is the kubeconfig which should be used to communicate with the kube-apiserver.
 	Kubeconfig []byte
+	// PodNetworkCIDR is the CIDR of the pod network. Only relevant when IPVSEnabled is false.
+	PodNetworkCIDR *string
 	// WorkerPools is a list of worker pools for which the kube-proxy DaemonSets should be deployed.
 	WorkerPools []WorkerPool
 }

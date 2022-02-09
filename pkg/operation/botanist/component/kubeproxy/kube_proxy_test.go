@@ -42,18 +42,13 @@ var _ = Describe("KubeProxy", func() {
 	var (
 		ctx = context.TODO()
 
-		namespace  = "some-namespace"
-		kubeconfig = []byte("some-kubeconfig")
-		values     = Values{
-			Kubeconfig: kubeconfig,
-			WorkerPools: []WorkerPool{
-				{Name: "pool1", KubernetesVersion: "1.20.13", Image: "some-image:some-tag1"},
-				{Name: "pool2", KubernetesVersion: "1.21.4", Image: "some-image:some-tag2"},
-			},
-		}
+		namespace      = "some-namespace"
+		kubeconfig     = []byte("some-kubeconfig")
+		podNetworkCIDR = "4.5.6.7/8"
 
 		c         client.Client
 		component Interface
+		values    Values
 
 		managedResourceCentral       *resourcesv1alpha1.ManagedResource
 		managedResourceSecretCentral *corev1.Secret
@@ -90,6 +85,18 @@ var _ = Describe("KubeProxy", func() {
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		values = Values{
+			IPVSEnabled: true,
+			FeatureGates: map[string]bool{
+				"Foo": true,
+				"Bar": false,
+			},
+			Kubeconfig: kubeconfig,
+			WorkerPools: []WorkerPool{
+				{Name: "pool1", KubernetesVersion: "1.20.13", Image: "some-image:some-tag1"},
+				{Name: "pool2", KubernetesVersion: "1.21.4", Image: "some-image:some-tag2"},
+			},
+		}
 		component = New(c, namespace, values)
 
 		managedResourceCentral = &resourcesv1alpha1.ManagedResource{
@@ -157,6 +164,91 @@ metadata:
   namespace: kube-system
 type: Opaque
 `
+
+			configMapNameFor = func(ipvsEnabled bool) string {
+				if !ipvsEnabled {
+					return "kube-proxy-config-1212aab2"
+				}
+				return "kube-proxy-config-b9f4a324"
+			}
+			configMapYAMLFor = func(ipvsEnabled bool) string {
+				out := `apiVersion: v1
+data:
+  config.yaml: |
+    apiVersion: kubeproxy.config.k8s.io/v1alpha1
+    bindAddress: ""
+    bindAddressHardFail: false
+    clientConnection:
+      acceptContentTypes: ""
+      burst: 0
+      contentType: ""
+      kubeconfig: /var/lib/kube-proxy-kubeconfig/kubeconfig
+      qps: 0`
+				if ipvsEnabled {
+					out += `
+    clusterCIDR: ""`
+				} else {
+					out += `
+    clusterCIDR: ` + podNetworkCIDR
+				}
+				out += `
+    configSyncPeriod: 0s
+    conntrack:
+      maxPerCore: 524288
+      min: null
+      tcpCloseWaitTimeout: null
+      tcpEstablishedTimeout: null
+    detectLocalMode: ""
+    enableProfiling: false
+    featureGates:
+      Bar: false
+      Foo: true
+    healthzBindAddress: ""
+    hostnameOverride: ""
+    iptables:
+      masqueradeAll: false
+      masqueradeBit: null
+      minSyncPeriod: 0s
+      syncPeriod: 0s
+    ipvs:
+      excludeCIDRs: null
+      minSyncPeriod: 0s
+      scheduler: ""
+      strictARP: false
+      syncPeriod: 0s
+      tcpFinTimeout: 0s
+      tcpTimeout: 0s
+      udpTimeout: 0s
+    kind: KubeProxyConfiguration
+    metricsBindAddress: 0.0.0.0:10249`
+				if ipvsEnabled {
+					out += `
+    mode: ipvs`
+				} else {
+					out += `
+    mode: iptables`
+				}
+				out += `
+    nodePortAddresses: null
+    oomScoreAdj: null
+    portRange: ""
+    showHiddenMetricsForVersion: ""
+    udpIdleTimeout: 0s
+    winkernel:
+      enableDSR: false
+      networkName: ""
+      sourceVip: ""
+immutable: true
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+  name: ` + configMapNameFor(ipvsEnabled) + `
+  namespace: kube-system
+`
+				return out
+			}
 		)
 
 		It("should successfully deploy all resources", func() {
@@ -201,10 +293,11 @@ type: Opaque
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(Succeed())
 			Expect(managedResourceSecretCentral.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecretCentral.Data).To(HaveLen(3))
+			Expect(managedResourceSecretCentral.Data).To(HaveLen(4))
 			Expect(string(managedResourceSecretCentral.Data["serviceaccount__kube-system__kube-proxy.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecretCentral.Data["service__kube-system__kube-proxy.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecretCentral.Data["secret__kube-system__"+secretName+".yaml"])).To(Equal(secretYAML))
+			Expect(string(managedResourceSecretCentral.Data["configmap__kube-system__"+configMapNameFor(values.IPVSEnabled)+".yaml"])).To(Equal(configMapYAMLFor(values.IPVSEnabled)))
 
 			for _, pool := range values.WorkerPools {
 				By(pool.Name)
@@ -243,6 +336,42 @@ type: Opaque
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecret.Data).To(HaveLen(0))
 			}
+		})
+
+		It("should successfully deploy the expected config when IPVS is disabled", func() {
+			values.IPVSEnabled = false
+			values.PodNetworkCIDR = &podNetworkCIDR
+			component = New(c, namespace, values)
+
+			Expect(component.Deploy(ctx)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceCentral), managedResourceCentral)).To(Succeed())
+			Expect(managedResourceCentral).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+					Kind:       "ManagedResource",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            managedResourceCentral.Name,
+					Namespace:       managedResourceCentral.Namespace,
+					ResourceVersion: "1",
+					Labels: map[string]string{
+						"origin":    "gardener",
+						"component": "kube-proxy",
+					},
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+					SecretRefs: []corev1.LocalObjectReference{{
+						Name: managedResourceSecretCentral.Name,
+					}},
+					KeepObjects: pointer.Bool(false),
+				},
+			}))
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(Succeed())
+			Expect(managedResourceSecretCentral.Type).To(Equal(corev1.SecretTypeOpaque))
+			Expect(string(managedResourceSecretCentral.Data["configmap__kube-system__"+configMapNameFor(values.IPVSEnabled)+".yaml"])).To(Equal(configMapYAMLFor(values.IPVSEnabled)))
 		})
 	})
 

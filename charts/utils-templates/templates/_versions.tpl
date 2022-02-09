@@ -1,7 +1,3 @@
-{{- define "proxycomponentconfigversion" -}}
-kubeproxy.config.k8s.io/v1alpha1
-{{- end -}}
-
 {{- define "apiserverversion" -}}
 apiserver.k8s.io/v1alpha1
 {{- end -}}

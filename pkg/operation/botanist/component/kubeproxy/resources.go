@@ -15,6 +15,8 @@
 package kubeproxy
 
 import (
+	"fmt"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -23,10 +25,24 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	kubeproxyconfigv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	"k8s.io/utils/pointer"
 )
 
+var (
+	//go:embed resources/conntrack-fix.sh
+	conntrackFixScript string
+	//go:embed resources/cleanup.sh
+	cleanupScript string
+)
+
 func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
+	componentConfigRaw, err := k.getRawComponentConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
@@ -64,14 +80,24 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{dataKeyKubeconfig: k.values.Kubeconfig},
 		}
+
+		configMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      ConfigNamePrefix,
+				Namespace: metav1.NamespaceSystem,
+			},
+			Data: map[string]string{dataKeyConfig: componentConfigRaw},
+		}
 	)
 
 	utilruntime.Must(kutil.MakeUnique(secret))
+	utilruntime.Must(kutil.MakeUnique(configMap))
 
 	return registry.AddAllAndSerialize(
 		serviceAccount,
 		service,
 		secret,
+		configMap,
 	)
 }
 
@@ -88,4 +114,31 @@ func getLabels() map[string]string {
 		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
 		v1beta1constants.LabelRole: v1beta1constants.LabelProxy,
 	}
+}
+
+func (k *kubeProxy) getRawComponentConfig() (string, error) {
+	config := &kubeproxyconfigv1alpha1.KubeProxyConfiguration{
+		ClientConnection: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+			Kubeconfig: volumeMountPathKubeconfig + "/" + dataKeyKubeconfig,
+		},
+		MetricsBindAddress: fmt.Sprintf("0.0.0.0:%d", portMetrics),
+		Mode:               k.getMode(),
+		Conntrack: kubeproxyconfigv1alpha1.KubeProxyConntrackConfiguration{
+			MaxPerCore: pointer.Int32(524288),
+		},
+		FeatureGates: k.values.FeatureGates,
+	}
+
+	if !k.values.IPVSEnabled && k.values.PodNetworkCIDR != nil {
+		config.ClusterCIDR = *k.values.PodNetworkCIDR
+	}
+
+	return NewConfigCodec().Encode(config)
+}
+
+func (k *kubeProxy) getMode() kubeproxyconfigv1alpha1.ProxyMode {
+	if k.values.IPVSEnabled {
+		return "ipvs"
+	}
+	return "iptables"
 }

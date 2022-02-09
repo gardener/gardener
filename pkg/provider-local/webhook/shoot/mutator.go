@@ -56,7 +56,7 @@ func (m *mutator) Mutate(ctx context.Context, new, _ client.Object) error {
 	switch x := new.(type) {
 	case *corev1.ConfigMap:
 		switch {
-		case strings.HasPrefix(x.Name, "kube-proxy-config"):
+		case strings.HasPrefix(x.Name, kubeproxy.ConfigNamePrefix):
 			extensionswebhook.LogMutation(logger, x.Kind, x.Namespace, x.Name)
 			return m.mutateKubeProxyConfigMap(ctx, x)
 		}

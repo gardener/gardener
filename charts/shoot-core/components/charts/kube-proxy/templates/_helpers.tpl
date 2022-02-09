@@ -6,30 +6,6 @@ kube-proxy-{{ .name }}-v{{ .kubernetesVersion }}
 {{- end -}}
 {{- end -}}
 
-{{- define "kube-proxy.componentconfig.data" -}}
-config.yaml: |-
-  ---
-  apiVersion: {{ include "proxycomponentconfigversion" . }}
-  kind: KubeProxyConfiguration
-  clientConnection:
-    kubeconfig: /var/lib/kube-proxy-kubeconfig/kubeconfig
-{{- if not .Values.enableIPVS }}
-  clusterCIDR: {{ .Values.podNetwork }}
-{{- end }}
-  metricsBindAddress: 0.0.0.0:{{ .Values.ports.metrics }}
-  mode: {{ include "kube-proxy.mode" . }}
-  conntrack:
-    maxPerCore: 524288
-  {{- if .Values.featureGates }}
-  featureGates:
-{{ toYaml .Values.featureGates | indent 4 }}
-  {{- end }}
-{{- end -}}
-
-{{- define "kube-proxy.componentconfig.name" -}}
-kube-proxy-config-{{ include "kube-proxy.componentconfig.data" . | sha256sum | trunc 8 }}
-{{- end }}
-
 {{- define "kube-proxy.cleanup-script.data" -}}
 cleanup.sh: |
   #!/bin/sh -e
