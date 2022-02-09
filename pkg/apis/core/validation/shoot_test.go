@@ -2360,6 +2360,22 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("should not allow kubeconfig rotation for cluster in deletion with already requested operation", map[string]string{"gardener.cloud/operation": "some-other-operation"}, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, true, true),
 			)
 		})
+
+		Describe("#ValidateSystemComponents", func() {
+			DescribeTable("validate system components",
+				func(systemComponents *core.SystemComponents, matcher gomegatypes.GomegaMatcher) {
+					Expect(ValidateSystemComponents(systemComponents, nil)).To(matcher)
+				},
+				Entry("no system components", nil, BeEmpty()),
+				Entry("empty system components", &core.SystemComponents{}, BeEmpty()),
+				Entry("empty core dns", &core.SystemComponents{CoreDNS: &core.CoreDNS{}}, BeEmpty()),
+				Entry("horizontal core dns autoscaler", &core.SystemComponents{CoreDNS: &core.CoreDNS{Autoscaling: &core.CoreDNSAutoscaling{Mode: core.CoreDNSAutoscalingModeHorizontal}}}, BeEmpty()),
+				Entry("cluster proportional core dns autoscaler", &core.SystemComponents{CoreDNS: &core.CoreDNS{Autoscaling: &core.CoreDNSAutoscaling{Mode: core.CoreDNSAutoscalingModeHorizontal}}}, BeEmpty()),
+				Entry("incorrect core dns autoscaler", &core.SystemComponents{CoreDNS: &core.CoreDNS{Autoscaling: &core.CoreDNSAutoscaling{Mode: "dummy"}}}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type": Equal(field.ErrorTypeNotSupported),
+				})))),
+			)
+		})
 	})
 
 	Describe("#ValidateShootStatus, #ValidateShootStatusUpdate", func() {

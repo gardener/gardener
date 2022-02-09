@@ -31,6 +31,7 @@
 * [Cleanup of Shoot clusters in deletion](usage/shoot_cleanup.md)
 * [Custom `CoreDNS` configuration](usage/custom-dns.md)
 * [(Custom) CSI components](usage/csi_components.md)
+* [DNS Autoscaling](usage/dns-autoscaling.md)
 * [Dockershim removal](usage/docker-shim-removal.md)
 * [ExposureClasses](usage/exposureclasses.md)
 * [Gardener configuration and usage](usage/configuration.md)

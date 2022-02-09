@@ -47,6 +47,7 @@ var _ = Describe("CoreDNS", func() {
 		clusterDomain       = "foo.bar"
 		clusterIP           = "1.2.3.4"
 		image               = "some-image:some-tag"
+		cpaImage            = "cpa-image:cpa-tag"
 		podNetworkCIDR      = "5.6.7.8/9"
 		nodeNetworkCIDR     = "10.11.12.13/14"
 
@@ -56,36 +57,8 @@ var _ = Describe("CoreDNS", func() {
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
-	)
 
-	BeforeEach(func() {
-		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		values = Values{
-			ClusterDomain:   clusterDomain,
-			ClusterIP:       clusterIP,
-			Image:           image,
-			PodNetworkCIDR:  podNetworkCIDR,
-			NodeNetworkCIDR: &nodeNetworkCIDR,
-		}
-		component = New(c, namespace, values)
-
-		managedResource = &resourcesv1alpha1.ManagedResource{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      managedResourceName,
-				Namespace: namespace,
-			},
-		}
-		managedResourceSecret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "managedresource-" + managedResource.Name,
-				Namespace: namespace,
-			},
-		}
-	})
-
-	Describe("#Deploy", func() {
-		var (
-			serviceAccountYAML = `apiVersion: v1
+		serviceAccountYAML = `apiVersion: v1
 automountServiceAccountToken: false
 kind: ServiceAccount
 metadata:
@@ -93,7 +66,7 @@ metadata:
   name: coredns
   namespace: kube-system
 `
-			clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
@@ -123,7 +96,7 @@ rules:
   - list
   - watch
 `
-			clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+		clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   annotations:
@@ -139,7 +112,7 @@ subjects:
   name: coredns
   namespace: kube-system
 `
-			configMapYAML = `apiVersion: v1
+		configMapYAML = `apiVersion: v1
 data:
   Corefile: |
     .:8053 {
@@ -171,7 +144,7 @@ metadata:
   name: coredns
   namespace: kube-system
 `
-			configMapCustomYAML = `apiVersion: v1
+		configMapCustomYAML = `apiVersion: v1
 data:
   changeme.override: '# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/custom-dns.md'
   changeme.server: '# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/custom-dns.md'
@@ -183,7 +156,7 @@ metadata:
   name: coredns-custom
   namespace: kube-system
 `
-			serviceYAML = `apiVersion: v1
+		serviceYAML = `apiVersion: v1
 kind: Service
 metadata:
   creationTimestamp: null
@@ -212,7 +185,7 @@ spec:
 status:
   loadBalancer: {}
 `
-			networkPolicyYAML = `apiVersion: networking.k8s.io/v1
+		networkPolicyYAML = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   annotations:
@@ -256,8 +229,8 @@ spec:
   - Ingress
   - Egress
 `
-			deploymentYAMLFor = func(apiserverHost string, podAnnotations map[string]string) string {
-				out := `apiVersion: apps/v1
+		deploymentYAMLFor = func(apiserverHost string, podAnnotations map[string]string) string {
+			out := `apiVersion: apps/v1
 kind: Deployment
 metadata:
   creationTimestamp: null
@@ -280,17 +253,17 @@ spec:
   template:
     metadata:
 `
-				if len(podAnnotations) > 0 {
-					out += `      annotations:
+			if len(podAnnotations) > 0 {
+				out += `      annotations:
 `
-				}
+			}
 
-				for k, v := range podAnnotations {
-					out += `        ` + k + `: ` + v + `
+			for k, v := range podAnnotations {
+				out += `        ` + k + `: ` + v + `
 `
-				}
+			}
 
-				out += `      creationTimestamp: null
+			out += `      creationTimestamp: null
       labels:
         gardener.cloud/role: system-component
         k8s-app: kube-dns
@@ -323,14 +296,14 @@ spec:
         - /etc/coredns/Corefile
 `
 
-				if apiserverHost != "" {
-					out += `        env:
+			if apiserverHost != "" {
+				out += `        env:
         - name: KUBERNETES_SERVICE_HOST
           value: ` + apiserverHost + `
 `
-				}
+			}
 
-				out += `        image: ` + image + `
+			out += `        image: ` + image + `
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 5
@@ -426,9 +399,9 @@ spec:
         name: custom-config-volume
 status: {}
 `
-				return out
-			}
-			pdbYAML = `apiVersion: policy/v1beta1
+			return out
+		}
+		pdbYAML = `apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
   creationTimestamp: null
@@ -447,7 +420,7 @@ status:
   disruptionsAllowed: 0
   expectedPods: 0
 `
-			hpaYAML = `apiVersion: autoscaling/v2beta1
+		hpaYAML = `apiVersion: autoscaling/v2beta1
 kind: HorizontalPodAutoscaler
 metadata:
   creationTimestamp: null
@@ -471,7 +444,181 @@ status:
   currentReplicas: 0
   desiredReplicas: 0
 `
-		)
+		cpasaYAML = `apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  creationTimestamp: null
+  name: coredns-autoscaler
+  namespace: kube-system
+`
+		cpacrYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: system:coredns-autoscaler
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - replicationcontrollers/scale
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - apps
+  resources:
+  - deployments/scale
+  - replicasets/scale
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - create
+`
+		cpacrbYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  name: system:coredns-autoscaler
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:coredns-autoscaler
+subjects:
+- kind: ServiceAccount
+  name: coredns-autoscaler
+  namespace: kube-system
+`
+		cpaDeploymentYAML = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: system-component
+    k8s-app: coredns-autoscaler
+    kubernetes.io/cluster-service: "true"
+    origin: gardener
+  name: coredns-autoscaler
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      k8s-app: coredns-autoscaler
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        gardener.cloud/role: system-component
+        k8s-app: coredns-autoscaler
+        kubernetes.io/cluster-service: "true"
+        origin: gardener
+    spec:
+      containers:
+      - command:
+        - /cluster-proportional-autoscaler
+        - --namespace=kube-system
+        - --configmap=coredns-autoscaler
+        - --target=deployment/coredns
+        - --default-params={"linear":{"coresPerReplica":256,"nodesPerReplica":16,"min":2,"preventSinglePointFailure":true,"includeUnschedulableNodes":true}}
+        - --logtostderr=true
+        - --v=2
+        image: ` + cpaImage + `
+        imagePullPolicy: IfNotPresent
+        name: autoscaler
+        resources:
+          limits:
+            cpu: 100m
+            memory: 50Mi
+          requests:
+            cpu: 20m
+            memory: 10Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - all
+          readOnlyRootFilesystem: true
+      priorityClassName: system-cluster-critical
+      securityContext:
+        fsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+        supplementalGroups:
+        - 65534
+      serviceAccountName: coredns-autoscaler
+      tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+status: {}
+`
+
+		cpaDeploymentVpaYAML = `apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  creationTimestamp: null
+  name: coredns-autoscaler
+  namespace: kube-system
+spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      minAllowed:
+        cpu: 20m
+        memory: 10Mi
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: coredns-autoscaler
+  updatePolicy:
+    updateMode: Auto
+status: {}
+`
+	)
+
+	BeforeEach(func() {
+		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		values = Values{
+			ClusterDomain:   clusterDomain,
+			ClusterIP:       clusterIP,
+			Image:           image,
+			PodNetworkCIDR:  podNetworkCIDR,
+			NodeNetworkCIDR: &nodeNetworkCIDR,
+		}
+		component = New(c, namespace, values)
+
+		managedResource = &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      managedResourceName,
+				Namespace: namespace,
+			},
+		}
+		managedResourceSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "managedresource-" + managedResource.Name,
+				Namespace: namespace,
+			},
+		}
+	})
+
+	Describe("#Deploy", func() {
+		var cpaEnabled = false
+		var vpaEnabled = false
 
 		JustBeforeEach(func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
@@ -502,7 +649,15 @@ status:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(10))
+			if cpaEnabled {
+				if vpaEnabled {
+					Expect(managedResourceSecret.Data).To(HaveLen(14))
+				} else {
+					Expect(managedResourceSecret.Data).To(HaveLen(13))
+				}
+			} else {
+				Expect(managedResourceSecret.Data).To(HaveLen(10))
+			}
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__coredns.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____system_coredns.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____system_coredns.yaml"])).To(Equal(clusterRoleBindingYAML))
@@ -511,7 +666,24 @@ status:
 			Expect(string(managedResourceSecret.Data["service__kube-system__kube-dns.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-dns.yaml"])).To(Equal(networkPolicyYAML))
 			Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__coredns.yaml"])).To(Equal(pdbYAML))
-			Expect(string(managedResourceSecret.Data["horizontalpodautoscaler__kube-system__coredns.yaml"])).To(Equal(hpaYAML))
+			if cpaEnabled {
+				Expect(string(managedResourceSecret.Data["horizontalpodautoscaler__kube-system__coredns.yaml"])).To(Equal(""))
+				Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__coredns-autoscaler.yaml"])).To(Equal(cpasaYAML))
+				Expect(string(managedResourceSecret.Data["clusterrole____system_coredns-autoscaler.yaml"])).To(Equal(cpacrYAML))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____system_coredns-autoscaler.yaml"])).To(Equal(cpacrbYAML))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns-autoscaler.yaml"])).To(Equal(cpaDeploymentYAML))
+				if vpaEnabled {
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__coredns-autoscaler.yaml"])).To(Equal(cpaDeploymentVpaYAML))
+				} else {
+					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__coredns-autoscaler.yaml"])).To(Equal(""))
+				}
+			} else {
+				Expect(string(managedResourceSecret.Data["horizontalpodautoscaler__kube-system__coredns.yaml"])).To(Equal(hpaYAML))
+				Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__coredns-autoscaler.yaml"])).To(Equal(""))
+				Expect(string(managedResourceSecret.Data["clusterrole____system_coredns-autoscaler.yaml"])).To(Equal(""))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____system_coredns-autoscaler.yaml"])).To(Equal(""))
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns-autoscaler.yaml"])).To(Equal(""))
+			}
 		})
 
 		Context("w/o apiserver host, w/o pod annotations", func() {
@@ -534,6 +706,52 @@ status:
 
 			It("should successfully deploy all resources", func() {
 				Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor(apiserverHost, podAnnotations)))
+			})
+		})
+
+		Context("w/ cluster proportional autoscaler enabled", func() {
+			BeforeEach(func() {
+				cpaEnabled = true
+				values.AutoscalingMode = gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional
+				values.ClusterProportionalAutoscalerImage = cpaImage
+				component = New(c, namespace, values)
+			})
+
+			Context("w/o apiserver host, w/o pod annotations", func() {
+				It("should successfully deploy all resources", func() {
+					Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor("", nil)))
+				})
+			})
+
+			Context("w/ apiserver host, w/ pod annotations", func() {
+				var (
+					apiserverHost  = "apiserver.host"
+					podAnnotations = map[string]string{"foo": "bar"}
+				)
+
+				BeforeEach(func() {
+					values.APIServerHost = &apiserverHost
+					values.PodAnnotations = podAnnotations
+					component = New(c, namespace, values)
+				})
+
+				It("should successfully deploy all resources", func() {
+					Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor(apiserverHost, podAnnotations)))
+				})
+			})
+
+			Context("w/ vpa enabled", func() {
+				BeforeEach(func() {
+					vpaEnabled = true
+					values.WantsVerticalPodAutoscaler = true
+					component = New(c, namespace, values)
+				})
+
+				Context("w/o apiserver host, w/o pod annotations", func() {
+					It("should successfully deploy all resources", func() {
+						Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor("", nil)))
+					})
+				})
 			})
 		})
 	})

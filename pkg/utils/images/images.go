@@ -35,6 +35,8 @@ const (
 	ImageNameBlackboxExporter = "blackbox-exporter"
 	// ImageNameClusterAutoscaler is a constant for an image in the image vector with name 'cluster-autoscaler'.
 	ImageNameClusterAutoscaler = "cluster-autoscaler"
+	// ImageNameClusterProportionalAutoscaler is a constant for an image in the image vector with name 'cluster-proportional-autoscaler'.
+	ImageNameClusterProportionalAutoscaler = "cluster-proportional-autoscaler"
 	// ImageNameConfigmapReloader is a constant for an image in the image vector with name 'configmap-reloader'.
 	ImageNameConfigmapReloader = "configmap-reloader"
 	// ImageNameCoredns is a constant for an image in the image vector with name 'coredns'.

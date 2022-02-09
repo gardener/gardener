@@ -549,6 +549,19 @@ message ControllerResource {
   optional bool primary = 5;
 }
 
+// CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.
+message CoreDNS {
+  // Autoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
+  optional CoreDNSAutoscaling autoscaling = 1;
+}
+
+// CoreDNSAutoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
+message CoreDNSAutoscaling {
+  // The mode of the autoscaling to be used for the Core DNS components running in the data plane of the Shoot cluster.
+  // Supported values are `horizontal` and `cluster-proportional`.
+  optional string mode = 1;
+}
+
 // DNS holds information about the provider, the hosted zone id and the domain.
 message DNS {
   // Domain is the external available domain of the Shoot cluster. This domain will be written into the
@@ -2329,6 +2342,10 @@ message ShootSpec {
   // This field is immutable.
   // +optional
   optional string exposureClassName = 18;
+
+  // SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
+  // +optional
+  optional SystemComponents systemComponents = 19;
 }
 
 // ShootState contains a snapshot of the Shoot's state required to migrate the Shoot's control plane to a new Seed.
@@ -2437,6 +2454,13 @@ message ShootStatus {
   // MigrationStartTime is the time when a migration to a different seed was initiated.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time migrationStartTime = 15;
+}
+
+// SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
+message SystemComponents {
+  // CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.
+  // +optional
+  optional CoreDNS coreDNS = 1;
 }
 
 // Toleration is a toleration for a seed taint.

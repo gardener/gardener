@@ -1728,6 +1728,20 @@ string
 This field is immutable.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>systemComponents</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SystemComponents">
+SystemComponents
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -3270,6 +3284,80 @@ combination. This field is immutable.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.CoreDNS">CoreDNS
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SystemComponents">SystemComponents</a>)
+</p>
+<p>
+<p>CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>autoscaling</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CoreDNSAutoscaling">
+CoreDNSAutoscaling
+</a>
+</em>
+</td>
+<td>
+<p>Autoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.CoreDNSAutoscaling">CoreDNSAutoscaling
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CoreDNS">CoreDNS</a>)
+</p>
+<p>
+<p>CoreDNSAutoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>mode</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CoreDNSAutoscalingMode">
+CoreDNSAutoscalingMode
+</a>
+</em>
+</td>
+<td>
+<p>The mode of the autoscaling to be used for the Core DNS components running in the data plane of the Shoot cluster.
+Supported values are <code>horizontal</code> and <code>cluster-proportional</code>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.CoreDNSAutoscalingMode">CoreDNSAutoscalingMode
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CoreDNSAutoscaling">CoreDNSAutoscaling</a>)
+</p>
+<p>
+<p>CoreDNSAutoscalingMode is a type alias for the Core DNS autoscaling mode string.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.DNS">DNS
 </h3>
 <p>
@@ -9101,6 +9189,20 @@ string
 This field is immutable.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>systemComponents</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SystemComponents">
+SystemComponents
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ShootStatus">ShootStatus
@@ -9594,7 +9696,54 @@ string
 This field is immutable.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>systemComponents</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SystemComponents">
+SystemComponents
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.</p>
+</td>
+</tr>
 </table>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.SystemComponents">SystemComponents
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
+</p>
+<p>
+<p>SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>coreDNS</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CoreDNS">
+CoreDNS
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.</p>
 </td>
 </tr>
 </tbody>

@@ -588,6 +588,14 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Provider.Workers[0].CRI).To(BeNil())
 			Expect(obj.Spec.Provider.Workers[1].CRI.Name).To(BeEquivalentTo("some configured value"))
 		})
+
+		It("should set the system components and coredns autoscaling fields", func() {
+			obj.Spec.SystemComponents = nil
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.SystemComponents).To(Equal(&SystemComponents{CoreDNS: &CoreDNS{Autoscaling: &CoreDNSAutoscaling{Mode: CoreDNSAutoscalingModeHorizontal}}}))
+		})
 	})
 
 	Describe("#SetDefaults_Maintenance", func() {

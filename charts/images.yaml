@@ -242,6 +242,12 @@ images:
   repository: eu.gcr.io/gardener-project/gardener/hvpa-controller
   tag: "v0.4.0"
 
+# Horizontal cluster-proportional-autoscaler
+- name: cluster-proportional-autoscaler
+  sourceRepository: https://github.com/kubernetes-sigs/cluster-proportional-autoscaler
+  repository: k8s.gcr.io/cpa/cluster-proportional-autoscaler
+  tag: "1.8.5"
+
 # Istio
 - name: istio-proxy
   sourceRepository: github.com/istio/istio

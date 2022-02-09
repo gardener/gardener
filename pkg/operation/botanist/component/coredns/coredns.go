@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -27,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -35,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -45,6 +48,9 @@ const (
 	// LabelValue is the value of a label used for the identification of CoreDNS pods (it's 'kube-dns' for legacy
 	// reasons).
 	LabelValue = "kube-dns"
+	// clusterProportionalDNSAutoscalerLabelValue is the value of a label used for the identification of the
+	// cluster proportional DNS autoscaler.
+	clusterProportionalDNSAutoscalerLabelValue = "coredns-autoscaler"
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 	ManagedResourceName = "shoot-core-coredns"
 	// PortServiceServer is the service port used for the DNS server.
@@ -53,6 +59,8 @@ const (
 	PortServer = 8053
 	// DeploymentName is the name of the coredns Deployment.
 	DeploymentName = "coredns"
+	// clusterProportionalAutoscalerDeploymentName is the name of the cluster proportional autoscaler deployment.
+	clusterProportionalAutoscalerDeploymentName = "coredns-autoscaler"
 
 	containerName = "coredns"
 	serviceName   = "kube-dns" // this is due to legacy reasons
@@ -90,6 +98,12 @@ type Values struct {
 	PodNetworkCIDR string
 	// NodeNetworkCIDR is the CIDR of the node network.
 	NodeNetworkCIDR *string
+	// AutoscalingMode indicates whether cluster proportional autoscaling is enabled.
+	AutoscalingMode gardencorev1beta1.CoreDNSAutoscalingMode
+	// ClusterProportionalAutoscalerImage is the container image used for the cluster proportional autoscaler.
+	ClusterProportionalAutoscalerImage string
+	// WantsVerticalPodAutoscaler indicates whether vertical autoscaler should be used.
+	WantsVerticalPodAutoscaler bool
 }
 
 // New creates a new instance of DeployWaiter for coredns.
@@ -152,6 +166,8 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 		protocolUDP         = corev1.ProtocolUDP
 		intStrOne           = intstr.FromInt(1)
 		intStrZero          = intstr.FromInt(0)
+
+		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
 
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
@@ -569,6 +585,163 @@ import custom/*.server
 				},
 			},
 		}
+
+		clusterProportionalDNSAutoscalerServiceAccount = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "coredns-autoscaler",
+				Namespace: metav1.NamespaceSystem,
+			},
+			AutomountServiceAccountToken: pointer.Bool(false),
+		}
+
+		clusterProportionalDNSAutoscalerClusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "system:coredns-autoscaler",
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"nodes"},
+					Verbs:     []string{"list", "watch"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"replicationcontrollers/scale"},
+					Verbs:     []string{"get", "update"},
+				},
+				{
+					APIGroups: []string{"apps"},
+					Resources: []string{"deployments/scale", "replicasets/scale"},
+					Verbs:     []string{"get", "update"},
+				},
+				// Remove the configmaps rule once below issue is fixed:
+				// kubernetes-incubator/cluster-proportional-autoscaler#16
+				{
+					APIGroups: []string{""},
+					Resources: []string{"configmaps"},
+					Verbs:     []string{"get", "create"},
+				},
+			},
+		}
+
+		clusterProportionalDNSAutoscalerClusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "system:coredns-autoscaler",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     clusterProportionalDNSAutoscalerClusterRole.Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      clusterProportionalDNSAutoscalerServiceAccount.Name,
+				Namespace: clusterProportionalDNSAutoscalerServiceAccount.Namespace,
+			}},
+		}
+
+		clusterProportionalDNSAutoscalerDeployment = &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      clusterProportionalAutoscalerDeploymentName,
+				Namespace: metav1.NamespaceSystem,
+				Labels:    getClusterProportionalDNSAutoscalerLabels(),
+			},
+			Spec: appsv1.DeploymentSpec{
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{LabelKey: clusterProportionalDNSAutoscalerLabelValue},
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: getClusterProportionalDNSAutoscalerLabels(),
+					},
+					Spec: corev1.PodSpec{
+						PriorityClassName:  "system-cluster-critical",
+						ServiceAccountName: clusterProportionalDNSAutoscalerServiceAccount.Name,
+						SecurityContext: &corev1.PodSecurityContext{
+							SeccompProfile: &corev1.SeccompProfile{
+								Type: corev1.SeccompProfileTypeRuntimeDefault,
+							},
+							RunAsNonRoot:       pointer.Bool(true),
+							RunAsUser:          pointer.Int64(65534),
+							SupplementalGroups: []int64{65534},
+							FSGroup:            pointer.Int64(65534),
+						},
+						Tolerations: []corev1.Toleration{{
+							Key:      "CriticalAddonsOnly",
+							Operator: corev1.TolerationOpExists,
+						}},
+						Containers: []corev1.Container{{
+							Name:            "autoscaler",
+							Image:           c.values.ClusterProportionalAutoscalerImage,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command: []string{
+								"/cluster-proportional-autoscaler",
+								"--namespace=" + metav1.NamespaceSystem,
+								"--configmap=coredns-autoscaler",
+								"--target=deployment/" + deployment.Name,
+								`--default-params={"linear":{"coresPerReplica":256,"nodesPerReplica":16,"min":2,"preventSinglePointFailure":true,"includeUnschedulableNodes":true}}`,
+								"--logtostderr=true",
+								"--v=2",
+							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: pointer.Bool(false),
+								Capabilities: &corev1.Capabilities{
+									Drop: []corev1.Capability{"all"},
+								},
+								ReadOnlyRootFilesystem: pointer.Bool(true),
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("20m"),
+									corev1.ResourceMemory: resource.MustParse("10Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("100m"),
+									corev1.ResourceMemory: resource.MustParse("50Mi"),
+								},
+							},
+						}},
+					},
+				},
+			},
+		}
+
+		clusterProportionalDNSAutoscalerVPA = &autoscalingv1beta2.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{Name: clusterProportionalAutoscalerDeploymentName, Namespace: metav1.NamespaceSystem},
+			Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "Deployment",
+					Name:       clusterProportionalAutoscalerDeploymentName,
+				},
+				UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
+					UpdateMode: &vpaUpdateMode,
+				},
+				ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
+					ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+						{
+							ContainerName: autoscalingv1beta2.DefaultContainerResourcePolicy,
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("20m"),
+								corev1.ResourceMemory: resource.MustParse("10Mi"),
+							},
+						},
+					},
+				},
+			},
+		}
+
+		managedObjects = []client.Object{
+			serviceAccount,
+			clusterRole,
+			clusterRoleBinding,
+			configMap,
+			configMapCustom,
+			service,
+			networkPolicy,
+			deployment,
+			podDisruptionBudget,
+		}
 	)
 
 	if c.values.APIServerHost != nil {
@@ -584,18 +757,21 @@ import custom/*.server
 		})
 	}
 
-	return registry.AddAllAndSerialize(
-		serviceAccount,
-		clusterRole,
-		clusterRoleBinding,
-		configMap,
-		configMapCustom,
-		service,
-		networkPolicy,
-		deployment,
-		podDisruptionBudget,
-		horizontalPodAutoscaler,
-	)
+	if c.values.AutoscalingMode == gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional {
+		managedObjects = append(managedObjects,
+			clusterProportionalDNSAutoscalerServiceAccount,
+			clusterProportionalDNSAutoscalerClusterRole,
+			clusterProportionalDNSAutoscalerClusterRoleBinding,
+			clusterProportionalDNSAutoscalerDeployment,
+		)
+		if c.values.WantsVerticalPodAutoscaler {
+			managedObjects = append(managedObjects, clusterProportionalDNSAutoscalerVPA)
+		}
+	} else {
+		managedObjects = append(managedObjects, horizontalPodAutoscaler)
+	}
+
+	return registry.AddAllAndSerialize(managedObjects...)
 }
 
 func (c *coreDNS) SetPodAnnotations(v map[string]string) {
@@ -607,5 +783,14 @@ func getLabels() map[string]string {
 		"origin":                    "gardener",
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleSystemComponent,
 		LabelKey:                    LabelValue,
+	}
+}
+
+func getClusterProportionalDNSAutoscalerLabels() map[string]string {
+	return map[string]string{
+		"origin":                        "gardener",
+		v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
+		LabelKey:                        clusterProportionalDNSAutoscalerLabelValue,
+		"kubernetes.io/cluster-service": "true",
 	}
 }

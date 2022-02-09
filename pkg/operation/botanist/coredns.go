@@ -20,6 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
 	"github.com/gardener/gardener/pkg/utils/images"
@@ -46,10 +47,21 @@ func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
 		Image:           image.String(),
 		PodNetworkCIDR:  b.Shoot.Networks.Pods.String(),
 		NodeNetworkCIDR: b.Shoot.GetInfo().Spec.Networking.Nodes,
+		AutoscalingMode: gardencorev1beta1.CoreDNSAutoscalingModeHorizontal,
 	}
 
 	if b.APIServerSNIEnabled() {
 		values.APIServerHost = pointer.String(b.outOfClusterAPIServerFQDN())
+	}
+
+	if gardencorev1beta1helper.IsCoreDNSAutoscalingModeUsed(b.Shoot.GetInfo().Spec.SystemComponents, gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional) {
+		image, err = b.ImageVector.FindImage(images.ImageNameClusterProportionalAutoscaler, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+		if err != nil {
+			return nil, err
+		}
+		values.ClusterProportionalAutoscalerImage = image.String()
+		values.AutoscalingMode = gardencorev1beta1.CoreDNSAutoscalingModeClusterProportional
+		values.WantsVerticalPodAutoscaler = b.Shoot.WantsVerticalPodAutoscaler
 	}
 
 	return coredns.New(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, values), nil
