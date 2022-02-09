@@ -611,6 +611,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			SSHPublicKeys:           d.sshPublicKeys,
 			PromtailEnabled:         d.promtailEnabled,
 			LokiIngress:             d.lokiIngressHostName,
+			APIServerURL:            d.apiServerURL,
 		})
 		if err != nil {
 			return nil, err
