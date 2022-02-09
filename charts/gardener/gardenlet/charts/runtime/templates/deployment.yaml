@@ -33,7 +33,9 @@ spec:
         checksum/configmap-gardenlet-imagevector-overwrite-components: {{ include (print $.Template.BasePath "/configmap-imagevector-overwrite-components.yaml") . | sha256sum }}
         {{- end }}
         {{- if .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig }}
+        {{- if not .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig.secretRef }}
         checksum/secret-gardenlet-kubeconfig-garden-bootstrap: {{ include (print $.Template.BasePath "/secret-kubeconfig-garden-bootstrap.yaml") . | sha256sum }}
+        {{- end }}
         {{- end }}
         {{- if .Values.global.gardenlet.config.gardenClientConnection.kubeconfig }}
         checksum/secret-gardenlet-kubeconfig-garden: {{ include (print $.Template.BasePath "/secret-kubeconfig-garden.yaml") . | sha256sum }}
