@@ -44,12 +44,6 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.Server.Metrics.BindAddress).To(BeEmpty())
 				Expect(obj.Server.Metrics.Port).To(Equal(2723))
 			})
-
-			It("should not default AllowTokenFile in admission controller configuration", func() {
-				SetObjectDefaults_AdmissionControllerConfiguration(obj)
-
-				Expect(obj.AllowTokenFile).To(BeNil())
-			})
 		})
 
 		Context("Resource Admission Configuration", func() {

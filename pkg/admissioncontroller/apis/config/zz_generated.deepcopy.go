@@ -38,11 +38,6 @@ func (in *AdmissionControllerConfiguration) DeepCopyInto(out *AdmissionControlle
 		*out = new(componentbaseconfig.DebuggingConfiguration)
 		**out = **in
 	}
-	if in.AllowTokenFile != nil {
-		in, out := &in.AllowTokenFile, &out.AllowTokenFile
-		*out = new(bool)
-		**out = **in
-	}
 	return
 }
 

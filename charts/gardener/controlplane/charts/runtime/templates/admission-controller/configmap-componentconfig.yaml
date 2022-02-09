@@ -56,7 +56,4 @@ data:
       enableProfiling: {{ .Values.global.admission.config.debugging.enableProfiling | default false }}
       enableContentionProfiling: {{ .Values.global.admission.config.debugging.enableContentionProfiling | default false }}
     {{- end }}
-    {{- if .Values.global.admission.serviceAccountTokenVolumeProjection.enabled }}
-    allowTokenFile: true
-    {{- end }}
 {{- end }}

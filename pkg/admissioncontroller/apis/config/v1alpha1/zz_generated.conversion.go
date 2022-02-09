@@ -129,7 +129,6 @@ func autoConvert_v1alpha1_AdmissionControllerConfiguration_To_config_AdmissionCo
 	} else {
 		out.Debugging = nil
 	}
-	out.AllowTokenFile = (*bool)(unsafe.Pointer(in.AllowTokenFile))
 	return nil
 }
 
@@ -155,7 +154,6 @@ func autoConvert_config_AdmissionControllerConfiguration_To_v1alpha1_AdmissionCo
 	} else {
 		out.Debugging = nil
 	}
-	out.AllowTokenFile = (*bool)(unsafe.Pointer(in.AllowTokenFile))
 	return nil
 }
 
