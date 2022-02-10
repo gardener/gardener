@@ -46,8 +46,9 @@ const (
 	portNameMetrics = "metrics"
 	portMetrics     = 10249
 
-	dataKeyKubeconfig = "kubeconfig"
-	dataKeyConfig     = "config.yaml"
+	dataKeyKubeconfig   = "kubeconfig"
+	dataKeyConfig       = "config.yaml"
+	dataKeyConntrackFix = "conntrack_fix.sh"
 
 	volumeMountPathKubeconfig = "/var/lib/kube-proxy-kubeconfig"
 )

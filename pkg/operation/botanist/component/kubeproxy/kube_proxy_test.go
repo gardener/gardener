@@ -249,6 +249,48 @@ metadata:
 `
 				return out
 			}
+
+			configMapConntrackFixScriptName = "kube-proxy-conntrack-fix-script-40092541"
+			configMapConntrackFixScriptYAML = `apiVersion: v1
+data:
+  conntrack_fix.sh: |
+    #!/bin/sh -e
+    trap "kill -s INT 1" TERM
+    apk add conntrack-tools
+    sleep 120 & wait
+    date
+    # conntrack example:
+    # tcp      6 113 SYN_SENT src=21.73.193.93 dst=21.71.0.65 sport=1413 dport=443 \
+    #   [UNREPLIED] src=21.71.0.65 dst=21.73.193.93 sport=443 dport=1413 mark=0 use=1
+    eval "$(
+      conntrack -L -p tcp --state SYN_SENT \
+      | sed 's/=/ /g'                      \
+      | awk '$6 !~ /^10\./ &&
+             $8 !~ /^10\./ &&
+             $6  == $17    &&
+             $8  == $15    &&
+             $10 == $21    &&
+             $12 == $19 {
+               printf "conntrack -D -p tcp -s %s --sport %s -d %s --dport %s;\n",
+                                              $6,        $10,  $8,        $12}'
+    )"
+    while true; do
+      date
+      sleep 3600 & wait
+    done
+immutable: true
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: kubernetes
+    gardener.cloud/role: system-component
+    origin: gardener
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+    role: proxy
+  name: ` + configMapConntrackFixScriptName + `
+  namespace: kube-system
+`
 		)
 
 		It("should successfully deploy all resources", func() {
@@ -293,11 +335,12 @@ metadata:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(Succeed())
 			Expect(managedResourceSecretCentral.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecretCentral.Data).To(HaveLen(4))
+			Expect(managedResourceSecretCentral.Data).To(HaveLen(5))
 			Expect(string(managedResourceSecretCentral.Data["serviceaccount__kube-system__kube-proxy.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecretCentral.Data["service__kube-system__kube-proxy.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecretCentral.Data["secret__kube-system__"+secretName+".yaml"])).To(Equal(secretYAML))
 			Expect(string(managedResourceSecretCentral.Data["configmap__kube-system__"+configMapNameFor(values.IPVSEnabled)+".yaml"])).To(Equal(configMapYAMLFor(values.IPVSEnabled)))
+			Expect(string(managedResourceSecretCentral.Data["configmap__kube-system__"+configMapConntrackFixScriptName+".yaml"])).To(Equal(configMapConntrackFixScriptYAML))
 
 			for _, pool := range values.WorkerPools {
 				By(pool.Name)

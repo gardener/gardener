@@ -15,10 +15,12 @@
 package kubeproxy
 
 import (
+	_ "embed"
 	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
@@ -30,12 +32,8 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-var (
-	//go:embed resources/conntrack-fix.sh
-	conntrackFixScript string
-	//go:embed resources/cleanup.sh
-	cleanupScript string
-)
+//go:embed resources/conntrack-fix.sh
+var conntrackFixScript string
 
 func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 	componentConfigRaw, err := k.getRawComponentConfig()
@@ -88,16 +86,30 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 			},
 			Data: map[string]string{dataKeyConfig: componentConfigRaw},
 		}
+
+		configMapConntrackFixScript = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kube-proxy-conntrack-fix-script",
+				Namespace: metav1.NamespaceSystem,
+				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+					managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
+					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
+				}),
+			},
+			Data: map[string]string{dataKeyConntrackFix: conntrackFixScript},
+		}
 	)
 
 	utilruntime.Must(kutil.MakeUnique(secret))
 	utilruntime.Must(kutil.MakeUnique(configMap))
+	utilruntime.Must(kutil.MakeUnique(configMapConntrackFixScript))
 
 	return registry.AddAllAndSerialize(
 		serviceAccount,
 		service,
 		secret,
 		configMap,
+		configMapConntrackFixScript,
 	)
 }
 
