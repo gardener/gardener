@@ -461,6 +461,10 @@ global:
   # podAnnotations: # YAML formatted annotations used for pod template
   # podLabels: # YAML formatted labels used for pod template
     vpa: false
+    serviceAccountTokenVolumeProjection:
+      enabled: false
+      expirationSeconds: 43200
+      audience: ""
     config:
       clientConnection:
       # acceptContentTypes: application/json
@@ -525,6 +529,9 @@ global:
         user:
           name: ""
       controller:
+        user:
+          name: ""
+      scheduler:
         user:
           name: ""
 
