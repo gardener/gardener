@@ -20,7 +20,7 @@ const (
 	// BastionSeedName is the field selector path for finding
 	// the Seed cluster of a operations.gardener.cloud/v1alpha1 Bastion.
 	BastionSeedName = "spec.seedName"
-	// ShootRefName is the field selector path for finding
-	// the target Shoot name of a operations.gardener.cloud/v1alpha1 Bastion.
+	// BastionShootName is the field selector path for finding
+	// the Shoot name of a operations.gardener.cloud/v1alpha1 Bastion.
 	BastionShootName = "spec.shootRef.name"
 )
