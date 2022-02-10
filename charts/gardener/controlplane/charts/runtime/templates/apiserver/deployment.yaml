@@ -54,8 +54,15 @@ spec:
 {{ toYaml .Values.global.apiserver.podLabels | indent 8 }}
         {{- end }}
     spec:
-      {{- if not .Values.global.apiserver.kubeconfig }}
+      {{- if not .Values.global.deployment.virtualGarden.enabled }}
       serviceAccountName: {{ required ".Values.global.apiserver.serviceAccountName is required" .Values.global.apiserver.serviceAccountName }}
+      {{- else if and .Values.global.deployment.virtualGarden.enabled .Values.global.deployment.virtualGarden.apiserver.user.name }}
+      {{- if .Values.global.apiserver.serviceAccountTokenVolumeProjection.enabled }}
+      serviceAccountName: {{ required ".Values.global.apiserver.serviceAccountName is required" .Values.global.apiserver.serviceAccountName }}
+      {{- end }}
+      {{- end }}
+      {{- if .Values.global.apiserver.kubeconfig }}
+      automountServiceAccountToken: false
       {{- end }}
       {{- if or .Values.global.apiserver.hvpa.enabled (gt (int .Values.global.apiserver.replicaCount) 1) }}
       affinity:
@@ -307,6 +314,11 @@ spec:
           mountPath: /etc/gardener-apiserver/kubeconfig
           readOnly: true
         {{- end }}
+        {{- if .Values.global.apiserver.serviceAccountTokenVolumeProjection.enabled }}
+        - name: service-account-token
+          mountPath: /var/run/secrets/projected/serviceaccount
+          readOnly: true
+        {{- end }}
         {{- if .Values.global.apiserver.audit.policy }}
         - name: gardener-audit-policy-config
           mountPath: /etc/gardener-apiserver/audit
@@ -389,6 +401,17 @@ spec:
       - name: gardener-apiserver-kubeconfig
         secret:
           secretName: gardener-apiserver-kubeconfig
+      {{- end }}
+      {{- if .Values.global.apiserver.serviceAccountTokenVolumeProjection.enabled }}
+      - name: service-account-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              path: token
+              expirationSeconds: {{ .Values.global.apiserver.serviceAccountTokenVolumeProjection.expirationSeconds }}
+              {{- if .Values.global.apiserver.serviceAccountTokenVolumeProjection.audience }}
+              audience: {{ .Values.global.apiserver.serviceAccountTokenVolumeProjection.audience }}
+              {{- end }}
       {{- end }}
       {{- if .Values.global.apiserver.audit.policy }}
       - name: gardener-audit-policy-config

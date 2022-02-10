@@ -133,6 +133,10 @@ global:
           enabled: false
           audience: mutating-webhook
           expirationSeconds: 3600
+    serviceAccountTokenVolumeProjection:
+      enabled: false
+      expirationSeconds: 43200
+      audience: ""
     vpa: false
     hvpa:
       enabled: false
@@ -525,6 +529,9 @@ global:
       enabled: false
       clusterIP: 1.2.3.4
       createNamespace: true
+      apiserver:
+        user:
+          name: ""
       admission:
         user:
           name: ""
