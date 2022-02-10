@@ -35,8 +35,15 @@ spec:
 {{ toYaml .Values.global.admission.podLabels | indent 8 }}
         {{- end }}
     spec:
-      {{- if not .Values.global.admission.kubeconfig }}
+      {{- if not .Values.global.deployment.virtualGarden.enabled }}
       serviceAccountName: {{ required ".Values.global.admission.serviceAccountName is required" .Values.global.admission.serviceAccountName }}
+      {{- else if and .Values.global.deployment.virtualGarden.enabled .Values.global.deployment.virtualGarden.admission.user.name }}
+      {{- if .Values.global.admission.serviceAccountTokenVolumeProjection.enabled }}
+      serviceAccountName: {{ required ".Values.global.admission.serviceAccountName is required" .Values.global.admission.serviceAccountName }}
+      {{- end }}
+      {{- end }}
+      {{- if .Values.global.admission.kubeconfig }}
+      automountServiceAccountToken: false
       {{- end }}
       {{- if gt (int .Values.global.admission.replicaCount) 1 }}
       affinity:
@@ -92,6 +99,11 @@ spec:
           mountPath: /etc/gardener-admission-controller/kubeconfig
           readOnly: true
         {{- end }}
+        {{- if .Values.global.admission.serviceAccountTokenVolumeProjection.enabled }}
+        - name: service-account-token
+          mountPath: /var/run/secrets/projected/serviceaccount
+          readOnly: true
+        {{- end }}
         - name: gardener-admission-controller-config
           mountPath: /etc/gardener-admission-controller/config
       volumes:
@@ -108,6 +120,17 @@ spec:
       - name: gardener-admission-controller-kubeconfig
         secret:
           secretName: gardener-admission-controller-kubeconfig
+      {{- end }}
+      {{- if .Values.global.admission.serviceAccountTokenVolumeProjection.enabled }}
+      - name: service-account-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              path: token
+              expirationSeconds: {{ .Values.global.admission.serviceAccountTokenVolumeProjection.expirationSeconds }}
+              {{- if .Values.global.admission.serviceAccountTokenVolumeProjection.audience }}
+              audience: {{ .Values.global.admission.serviceAccountTokenVolumeProjection.audience }}
+              {{- end }}
       {{- end }}
       - name: gardener-admission-controller-config
         configMap:
