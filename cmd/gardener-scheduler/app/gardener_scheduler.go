@@ -128,7 +128,7 @@ func runCommand(ctx context.Context, opts *Options) error {
 	}
 
 	// Prepare REST config
-	restCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.ClientConnection, nil)
+	restCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.ClientConnection, nil, kubernetes.AuthTokenFile)
 	if err != nil {
 		return fmt.Errorf("failed to create Kubernetes REST configuration: %w", err)
 	}

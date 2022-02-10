@@ -34,8 +34,15 @@ spec:
 {{ toYaml .Values.global.scheduler.podLabels | indent 8 }}
         {{- end }}
     spec:
-      {{- if not .Values.global.scheduler.kubeconfig }}
+      {{- if not .Values.global.deployment.virtualGarden.enabled }}
       serviceAccountName: {{ required ".Values.global.scheduler.serviceAccountName is required" .Values.global.scheduler.serviceAccountName }}
+      {{- else if and .Values.global.deployment.virtualGarden.enabled .Values.global.deployment.virtualGarden.scheduler.user.name }}
+      {{- if .Values.global.scheduler.serviceAccountTokenVolumeProjection.enabled }}
+      serviceAccountName: {{ required ".Values.global.scheduler.serviceAccountName is required" .Values.global.scheduler.serviceAccountName }}
+      {{- end }}
+      {{- end }}
+      {{- if .Values.global.scheduler.kubeconfig }}
+      automountServiceAccountToken: false
       {{- end }}
       {{- if gt (int .Values.global.scheduler.replicaCount) 1 }}
       affinity:
@@ -81,6 +88,11 @@ spec:
           mountPath: /etc/gardener-scheduler/kubeconfig
           readOnly: true
         {{- end }}
+        {{- if .Values.global.scheduler.serviceAccountTokenVolumeProjection.enabled }}
+        - name: service-account-token
+          mountPath: /var/run/secrets/projected/serviceaccount
+          readOnly: true
+        {{- end }}
         - name: gardener-scheduler-config
           mountPath: /etc/gardener-scheduler/config
       volumes:
@@ -88,6 +100,17 @@ spec:
       - name: gardener-scheduler-kubeconfig
         secret:
           secretName: gardener-scheduler-kubeconfig
+      {{- end }}
+      {{- if .Values.global.scheduler.serviceAccountTokenVolumeProjection.enabled }}
+      - name: service-account-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              path: token
+              expirationSeconds: {{ .Values.global.scheduler.serviceAccountTokenVolumeProjection.expirationSeconds }}
+              {{- if .Values.global.scheduler.serviceAccountTokenVolumeProjection.audience }}
+              audience: {{ .Values.global.scheduler.serviceAccountTokenVolumeProjection.audience }}
+              {{- end }}
       {{- end }}
       - name: gardener-scheduler-config
         configMap:
