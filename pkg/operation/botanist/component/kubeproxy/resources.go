@@ -45,15 +45,20 @@ const (
 	portNameMetrics = "metrics"
 	portMetrics     = 10249
 
-	dataKeyKubeconfig   = "kubeconfig"
-	dataKeyConfig       = "config.yaml"
-	dataKeyConntrackFix = "conntrack_fix.sh"
+	dataKeyKubeconfig         = "kubeconfig"
+	dataKeyConfig             = "config.yaml"
+	dataKeyConntrackFixScript = "conntrack_fix.sh"
+	dataKeyCleanupScript      = "cleanup.sh"
 
 	volumeMountPathKubeconfig = "/var/lib/kube-proxy-kubeconfig"
 )
 
-//go:embed resources/conntrack-fix.sh
-var conntrackFixScript string
+var (
+	//go:embed resources/conntrack-fix.sh
+	conntrackFixScript string
+	//go:embed resources/cleanup.sh
+	cleanupScript string
+)
 
 func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 	componentConfigRaw, err := k.getRawComponentConfig()
@@ -134,13 +139,26 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
 				}),
 			},
-			Data: map[string]string{dataKeyConntrackFix: conntrackFixScript},
+			Data: map[string]string{dataKeyConntrackFixScript: conntrackFixScript},
+		}
+
+		configMapCleanupScript = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kube-proxy-cleanup-script",
+				Namespace: metav1.NamespaceSystem,
+				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+					managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
+					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
+				}),
+			},
+			Data: map[string]string{dataKeyCleanupScript: cleanupScript},
 		}
 	)
 
 	utilruntime.Must(kutil.MakeUnique(secret))
 	utilruntime.Must(kutil.MakeUnique(configMap))
 	utilruntime.Must(kutil.MakeUnique(configMapConntrackFixScript))
+	utilruntime.Must(kutil.MakeUnique(configMapCleanupScript))
 
 	return registry.AddAllAndSerialize(
 		serviceAccount,
@@ -149,6 +167,7 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 		secret,
 		configMap,
 		configMapConntrackFixScript,
+		configMapCleanupScript,
 	)
 }
 

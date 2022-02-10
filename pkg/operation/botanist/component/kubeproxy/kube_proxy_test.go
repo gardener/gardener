@@ -306,6 +306,34 @@ metadata:
   name: ` + configMapConntrackFixScriptName + `
   namespace: kube-system
 `
+
+			configMapCleanupScriptName = "kube-proxy-cleanup-script-a4263ada"
+			configMapCleanupScriptYAML = `apiVersion: v1
+data:
+  cleanup.sh: |
+    #!/bin/sh -e
+    OLD_KUBE_PROXY_MODE="$(cat "$1")"
+    if [ -z "${OLD_KUBE_PROXY_MODE}" ] || [ "${OLD_KUBE_PROXY_MODE}" = "${KUBE_PROXY_MODE}" ]; then
+      echo "${KUBE_PROXY_MODE}" >"$1"
+      echo "Nothing to cleanup - the mode didn't change."
+      exit 0
+    fi
+
+    /usr/local/bin/kube-proxy --v=2 --cleanup --config=/var/lib/kube-proxy-config/config.yaml --proxy-mode="${OLD_KUBE_PROXY_MODE}"
+    echo "${KUBE_PROXY_MODE}" >"$1"
+immutable: true
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  labels:
+    app: kubernetes
+    gardener.cloud/role: system-component
+    origin: gardener
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+    role: proxy
+  name: ` + configMapCleanupScriptName + `
+  namespace: kube-system
+`
 		)
 
 		It("should successfully deploy all resources", func() {
@@ -350,13 +378,14 @@ metadata:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(Succeed())
 			Expect(managedResourceSecretCentral.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecretCentral.Data).To(HaveLen(6))
+			Expect(managedResourceSecretCentral.Data).To(HaveLen(7))
 			Expect(string(managedResourceSecretCentral.Data["serviceaccount__kube-system__kube-proxy.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecretCentral.Data["clusterrolebinding____gardener.cloud_target_node-proxier.yaml"])).To(Equal(clusterRoleBindingYAML))
 			Expect(string(managedResourceSecretCentral.Data["service__kube-system__kube-proxy.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecretCentral.Data["secret__kube-system__"+secretName+".yaml"])).To(Equal(secretYAML))
 			Expect(string(managedResourceSecretCentral.Data["configmap__kube-system__"+configMapNameFor(values.IPVSEnabled)+".yaml"])).To(Equal(configMapYAMLFor(values.IPVSEnabled)))
 			Expect(string(managedResourceSecretCentral.Data["configmap__kube-system__"+configMapConntrackFixScriptName+".yaml"])).To(Equal(configMapConntrackFixScriptYAML))
+			Expect(string(managedResourceSecretCentral.Data["configmap__kube-system__"+configMapCleanupScriptName+".yaml"])).To(Equal(configMapCleanupScriptYAML))
 
 			for _, pool := range values.WorkerPools {
 				By(pool.Name)
