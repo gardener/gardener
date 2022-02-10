@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -77,6 +78,12 @@ type kubeProxy struct {
 	client    client.Client
 	namespace string
 	values    Values
+
+	serviceAccount              *corev1.ServiceAccount
+	secret                      *corev1.Secret
+	configMap                   *corev1.ConfigMap
+	configMapCleanupScript      *corev1.ConfigMap
+	configMapConntrackFixScript *corev1.ConfigMap
 }
 
 // Values is a set of configuration values for the kube-proxy component.
@@ -85,10 +92,14 @@ type Values struct {
 	IPVSEnabled bool
 	// FeatureGates is the set of feature gates.
 	FeatureGates map[string]bool
+	// ImageAlpine is the alpine container image.
+	ImageAlpine string
 	// Kubeconfig is the kubeconfig which should be used to communicate with the kube-apiserver.
 	Kubeconfig []byte
 	// PodNetworkCIDR is the CIDR of the pod network. Only relevant when IPVSEnabled is false.
 	PodNetworkCIDR *string
+	// VPAEnabled states whether VerticalPodAutoscaler is enabled.
+	VPAEnabled bool
 	// WorkerPools is a list of worker pools for which the kube-proxy DaemonSets should be deployed.
 	WorkerPools []WorkerPool
 }

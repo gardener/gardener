@@ -21,6 +21,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -45,6 +46,7 @@ var _ = Describe("KubeProxy", func() {
 		namespace      = "some-namespace"
 		kubeconfig     = []byte("some-kubeconfig")
 		podNetworkCIDR = "4.5.6.7/8"
+		imageAlpine    = "some-alpine:image"
 
 		c         client.Client
 		component Interface
@@ -91,7 +93,9 @@ var _ = Describe("KubeProxy", func() {
 				"Foo": true,
 				"Bar": false,
 			},
-			Kubeconfig: kubeconfig,
+			ImageAlpine: imageAlpine,
+			Kubeconfig:  kubeconfig,
+			VPAEnabled:  false,
 			WorkerPools: []WorkerPool{
 				{Name: "pool1", KubernetesVersion: "1.20.13", Image: "some-image:some-tag1"},
 				{Name: "pool2", KubernetesVersion: "1.21.4", Image: "some-image:some-tag2"},
@@ -334,6 +338,216 @@ metadata:
   name: ` + configMapCleanupScriptName + `
   namespace: kube-system
 `
+
+			daemonSetNameFor = func(pool WorkerPool) string {
+				return "kube-proxy-" + pool.Name + "-v" + pool.KubernetesVersion
+			}
+			daemonSetYAMLFor = func(pool WorkerPool, ipvsEnabled, vpaEnabled bool) string {
+				out := `apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:`
+
+				if ipvsEnabled {
+					out += `
+    ` + references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled) + `
+    ` + references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName + `
+    ` + references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName + `
+    ` + references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName
+				} else {
+					out += `
+    ` + references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName + `
+    ` + references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName + `
+    ` + references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled) + `
+    ` + references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName
+				}
+
+				out += `
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: system-component
+    origin: gardener
+  name: ` + daemonSetNameFor(pool) + `
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: kubernetes
+      pool: ` + pool.Name + `
+      role: proxy
+      version: ` + pool.KubernetesVersion + `
+  template:
+    metadata:
+      annotations:`
+
+				if ipvsEnabled {
+					out += `
+        ` + references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled) + `
+        ` + references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName + `
+        ` + references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName + `
+        ` + references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName
+				} else {
+					out += `
+        ` + references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName + `
+        ` + references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName + `
+        ` + references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled) + `
+        ` + references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName
+				}
+
+				out += `
+      creationTimestamp: null
+      labels:
+        app: kubernetes
+        gardener.cloud/role: system-component
+        origin: gardener
+        pool: ` + pool.Name + `
+        role: proxy
+        version: ` + pool.KubernetesVersion + `
+    spec:
+      containers:
+      - command:
+        - /usr/local/bin/kube-proxy
+        - --config=/var/lib/kube-proxy-config/config.yaml
+        - --v=2
+        image: ` + pool.Image + `
+        imagePullPolicy: IfNotPresent
+        name: kube-proxy
+        ports:
+        - containerPort: 10249
+          hostPort: 10249
+          name: metrics
+          protocol: TCP
+        resources:`
+
+				if vpaEnabled {
+					out += `
+          limits:
+            cpu: 80m
+            memory: 256Mi`
+				}
+
+				out += `
+          requests:
+            cpu: 20m
+            memory: 64Mi
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /var/lib/kube-proxy-kubeconfig
+          name: kubeconfig
+        - mountPath: /var/lib/kube-proxy-config
+          name: kube-proxy-config
+        - mountPath: /etc/ssl/certs
+          name: ssl-certs-hosts
+          readOnly: true
+        - mountPath: /var/run/dbus/system_bus_socket
+          name: systembussocket
+        - mountPath: /lib/modules
+          name: kernel-modules
+      - command:
+        - /bin/sh
+        - /script/conntrack_fix.sh
+        image: ` + imageAlpine + `
+        imagePullPolicy: IfNotPresent
+        name: conntrack-fix
+        resources: {}
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+        volumeMounts:
+        - mountPath: /script
+          name: conntrack-fix-script
+      hostNetwork: true
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - /script/cleanup.sh /var/lib/kube-proxy/mode
+        env:
+        - name: KUBE_PROXY_MODE`
+
+				if ipvsEnabled {
+					out += `
+          value: ipvs`
+				} else {
+					out += `
+          value: iptables`
+				}
+
+				out += `
+        image: ` + pool.Image + `
+        imagePullPolicy: IfNotPresent
+        name: cleanup
+        resources: {}
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /script
+          name: kube-proxy-cleanup-script
+        - mountPath: /lib/modules
+          name: kernel-modules
+        - mountPath: /var/lib/kube-proxy
+          name: kube-proxy-dir
+        - mountPath: /var/lib/kube-proxy/mode
+          name: kube-proxy-mode
+        - mountPath: /var/lib/kube-proxy-kubeconfig
+          name: kubeconfig
+        - mountPath: /var/lib/kube-proxy-config
+          name: kube-proxy-config
+      nodeSelector:
+        worker.gardener.cloud/kubernetes-version: ` + pool.KubernetesVersion + `
+        worker.gardener.cloud/pool: ` + pool.Name + `
+      priorityClassName: system-node-critical
+      serviceAccountName: kube-proxy
+      tolerations:
+      - effect: NoSchedule
+        operator: Exists
+      - key: CriticalAddonsOnly
+        operator: Exists
+      - effect: NoExecute
+        operator: Exists
+      volumes:
+      - name: kubeconfig
+        secret:
+          secretName: ` + secretName + `
+      - configMap:
+          name: ` + configMapNameFor(ipvsEnabled) + `
+        name: kube-proxy-config
+      - hostPath:
+          path: /usr/share/ca-certificates
+        name: ssl-certs-hosts
+      - hostPath:
+          path: /var/run/dbus/system_bus_socket
+        name: systembussocket
+      - hostPath:
+          path: /lib/modules
+        name: kernel-modules
+      - configMap:
+          defaultMode: 511
+          name: ` + configMapCleanupScriptName + `
+        name: kube-proxy-cleanup-script
+      - hostPath:
+          path: /var/lib/kube-proxy
+          type: DirectoryOrCreate
+        name: kube-proxy-dir
+      - hostPath:
+          path: /var/lib/kube-proxy/mode
+          type: FileOrCreate
+        name: kube-proxy-mode
+      - configMap:
+          name: ` + configMapConntrackFixScriptName + `
+        name: conntrack-fix-script
+  updateStrategy:
+    type: RollingUpdate
+status:
+  currentNumberScheduled: 0
+  desiredNumberScheduled: 0
+  numberMisscheduled: 0
+  numberReady: 0
+`
+				return out
+			}
 		)
 
 		It("should successfully deploy all resources", func() {
@@ -422,7 +636,8 @@ metadata:
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(0))
+				Expect(managedResourceSecret.Data).To(HaveLen(1))
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled)))
 			}
 		})
 
@@ -460,6 +675,91 @@ metadata:
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(Succeed())
 			Expect(managedResourceSecretCentral.Type).To(Equal(corev1.SecretTypeOpaque))
 			Expect(string(managedResourceSecretCentral.Data["configmap__kube-system__"+configMapNameFor(values.IPVSEnabled)+".yaml"])).To(Equal(configMapYAMLFor(values.IPVSEnabled)))
+
+			for _, pool := range values.WorkerPools {
+				By(pool.Name)
+
+				managedResource := managedResourceForPool(pool)
+				managedResourceSecret := managedResourceSecretForPool(pool)
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+						Kind:       "ManagedResource",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResource.Name,
+						Namespace:       managedResource.Namespace,
+						ResourceVersion: "1",
+						Labels: map[string]string{
+							"origin":             "gardener",
+							"component":          "kube-proxy",
+							"role":               "pool",
+							"pool-name":          pool.Name,
+							"kubernetes-version": pool.KubernetesVersion,
+						},
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResourceSecret.Name,
+						}},
+						KeepObjects: pointer.Bool(false),
+					},
+				}))
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Data).To(HaveLen(1))
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled)))
+			}
+		})
+
+		It("should successfully deploy the expected resources when VPA is enabled", func() {
+			values.VPAEnabled = true
+			component = New(c, namespace, values)
+
+			Expect(component.Deploy(ctx)).To(Succeed())
+
+			for _, pool := range values.WorkerPools {
+				By(pool.Name)
+
+				managedResource := managedResourceForPool(pool)
+				managedResourceSecret := managedResourceSecretForPool(pool)
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+						Kind:       "ManagedResource",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResource.Name,
+						Namespace:       managedResource.Namespace,
+						ResourceVersion: "1",
+						Labels: map[string]string{
+							"origin":             "gardener",
+							"component":          "kube-proxy",
+							"role":               "pool",
+							"pool-name":          pool.Name,
+							"kubernetes-version": pool.KubernetesVersion,
+						},
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResourceSecret.Name,
+						}},
+						KeepObjects: pointer.Bool(false),
+					},
+				}))
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Data).To(HaveLen(1))
+				Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled)))
+			}
 		})
 	})
 

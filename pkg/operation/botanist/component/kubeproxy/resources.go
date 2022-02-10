@@ -20,12 +20,15 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
@@ -50,7 +53,25 @@ const (
 	dataKeyConntrackFixScript = "conntrack_fix.sh"
 	dataKeyCleanupScript      = "cleanup.sh"
 
-	volumeMountPathKubeconfig = "/var/lib/kube-proxy-kubeconfig"
+	volumeMountPathKubeconfig         = "/var/lib/kube-proxy-kubeconfig"
+	volumeMountPathConfig             = "/var/lib/kube-proxy-config"
+	volumeMountPathDir                = "/var/lib/kube-proxy"
+	volumeMountPathMode               = "/var/lib/kube-proxy/mode"
+	volumeMountPathCleanupScript      = "/script"
+	volumeMountPathConntrackFixScript = "/script"
+	volumeMountPathKernelModules      = "/lib/modules"
+	volumeMountPathSSLCertsHosts      = "/etc/ssl/certs"
+	volumeMountPathSystemBusSocket    = "/var/run/dbus/system_bus_socket"
+
+	volumeNameKubeconfig         = "kubeconfig"
+	volumeNameConfig             = "kube-proxy-config"
+	volumeNameDir                = "kube-proxy-dir"
+	volumeNameMode               = "kube-proxy-mode"
+	volumeNameCleanupScript      = "kube-proxy-cleanup-script"
+	volumeNameConntrackFixScript = "conntrack-fix-script"
+	volumeNameKernelModules      = "kernel-modules"
+	volumeNameSSLCertsHosts      = "ssl-certs-hosts"
+	volumeNameSystemBusSocket    = "systembussocket"
 )
 
 var (
@@ -134,10 +155,7 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-proxy-conntrack-fix-script",
 				Namespace: metav1.NamespaceSystem,
-				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-					managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
-					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
-				}),
+				Labels:    utils.MergeStringMaps(getLabels(), getSystemComponentLabels()),
 			},
 			Data: map[string]string{dataKeyConntrackFixScript: conntrackFixScript},
 		}
@@ -146,10 +164,7 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-proxy-cleanup-script",
 				Namespace: metav1.NamespaceSystem,
-				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-					managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
-					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
-				}),
+				Labels:    utils.MergeStringMaps(getLabels(), getSystemComponentLabels()),
 			},
 			Data: map[string]string{dataKeyCleanupScript: cleanupScript},
 		}
@@ -159,6 +174,12 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 	utilruntime.Must(kutil.MakeUnique(configMap))
 	utilruntime.Must(kutil.MakeUnique(configMapConntrackFixScript))
 	utilruntime.Must(kutil.MakeUnique(configMapCleanupScript))
+
+	k.serviceAccount = serviceAccount
+	k.secret = secret
+	k.configMap = configMap
+	k.configMapCleanupScript = configMapCleanupScript
+	k.configMapConntrackFixScript = configMapConntrackFixScript
 
 	return registry.AddAllAndSerialize(
 		serviceAccount,
@@ -174,9 +195,264 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+
+		directoryOrCreate = corev1.HostPathDirectoryOrCreate
+		fileOrCreate      = corev1.HostPathFileOrCreate
+
+		daemonSet = &appsv1.DaemonSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name(pool),
+				Namespace: metav1.NamespaceSystem,
+				Labels:    getSystemComponentLabels(),
+			},
+			Spec: appsv1.DaemonSetSpec{
+				UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
+					Type: appsv1.RollingUpdateDaemonSetStrategyType,
+				},
+				Selector: &metav1.LabelSelector{
+					MatchLabels: getPoolLabels(pool),
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: utils.MergeStringMaps(getPoolLabels(pool), getSystemComponentLabels()),
+					},
+					Spec: corev1.PodSpec{
+						NodeSelector: map[string]string{
+							v1beta1constants.LabelWorkerPool:              pool.Name,
+							v1beta1constants.LabelWorkerKubernetesVersion: pool.KubernetesVersion,
+						},
+						InitContainers: []corev1.Container{{
+							Name:            "cleanup",
+							Image:           pool.Image,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command: []string{
+								"sh",
+								"-c",
+								fmt.Sprintf("%s/%s %s", volumeMountPathCleanupScript, dataKeyCleanupScript, volumeMountPathMode),
+							},
+							Env: []corev1.EnvVar{{
+								Name:  "KUBE_PROXY_MODE",
+								Value: string(k.getMode()),
+							}},
+							SecurityContext: &corev1.SecurityContext{
+								Privileged: pointer.Bool(true),
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      volumeNameCleanupScript,
+									MountPath: volumeMountPathCleanupScript,
+								},
+								{
+									Name:      volumeNameKernelModules,
+									MountPath: volumeMountPathKernelModules,
+								},
+								{
+									Name:      volumeNameDir,
+									MountPath: volumeMountPathDir,
+								},
+								{
+									Name:      volumeNameMode,
+									MountPath: volumeMountPathMode,
+								},
+								{
+									Name:      volumeNameKubeconfig,
+									MountPath: volumeMountPathKubeconfig,
+								},
+								{
+									Name:      volumeNameConfig,
+									MountPath: volumeMountPathConfig,
+								},
+							},
+						}},
+						PriorityClassName: "system-node-critical",
+						Tolerations: []corev1.Toleration{
+							{
+								Effect:   corev1.TaintEffectNoSchedule,
+								Operator: corev1.TolerationOpExists,
+							},
+							{
+								Key:      "CriticalAddonsOnly",
+								Operator: corev1.TolerationOpExists,
+							},
+							{
+								Effect:   corev1.TaintEffectNoExecute,
+								Operator: corev1.TolerationOpExists,
+							},
+						},
+						HostNetwork:        true,
+						ServiceAccountName: k.serviceAccount.Name,
+						Containers: []corev1.Container{
+							{
+								Name:            containerName,
+								Image:           pool.Image,
+								ImagePullPolicy: corev1.PullIfNotPresent,
+								Command: []string{
+									"/usr/local/bin/kube-proxy",
+									fmt.Sprintf("--config=%s/%s", volumeMountPathConfig, dataKeyConfig),
+									"--v=2",
+								},
+								SecurityContext: &corev1.SecurityContext{
+									Privileged: pointer.Bool(true),
+								},
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("20m"),
+										corev1.ResourceMemory: resource.MustParse("64Mi"),
+									},
+								},
+								Ports: []corev1.ContainerPort{{
+									Name:          portNameMetrics,
+									ContainerPort: portMetrics,
+									HostPort:      portMetrics,
+									Protocol:      corev1.ProtocolTCP,
+								}},
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										Name:      volumeNameKubeconfig,
+										MountPath: volumeMountPathKubeconfig,
+									},
+									{
+										Name:      volumeNameConfig,
+										MountPath: volumeMountPathConfig,
+									},
+									{
+										Name:      volumeNameSSLCertsHosts,
+										MountPath: volumeMountPathSSLCertsHosts,
+										ReadOnly:  true,
+									},
+									{
+										Name:      volumeNameSystemBusSocket,
+										MountPath: volumeMountPathSystemBusSocket,
+									},
+									{
+										Name:      volumeNameKernelModules,
+										MountPath: volumeMountPathKernelModules,
+									},
+								},
+							},
+							// sidecar container with fix for conntrack
+							{
+								Name:            "conntrack-fix",
+								Image:           k.values.ImageAlpine,
+								ImagePullPolicy: corev1.PullIfNotPresent,
+								Command: []string{
+									"/bin/sh",
+									fmt.Sprintf("%s/%s", volumeMountPathConntrackFixScript, dataKeyConntrackFixScript),
+								},
+								SecurityContext: &corev1.SecurityContext{
+									Capabilities: &corev1.Capabilities{
+										Add: []corev1.Capability{"NET_ADMIN"},
+									},
+								},
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										Name:      volumeNameConntrackFixScript,
+										MountPath: volumeMountPathConntrackFixScript,
+									},
+								},
+							},
+						},
+						Volumes: []corev1.Volume{
+							{
+								Name: volumeNameKubeconfig,
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: k.secret.Name,
+									},
+								},
+							},
+							{
+								Name: volumeNameConfig,
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: k.configMap.Name,
+										},
+									},
+								},
+							},
+							{
+								Name: volumeNameSSLCertsHosts,
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/usr/share/ca-certificates",
+									},
+								},
+							},
+							{
+								Name: volumeNameSystemBusSocket,
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/var/run/dbus/system_bus_socket",
+									},
+								},
+							},
+							{
+								Name: volumeNameKernelModules,
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/lib/modules",
+									},
+								},
+							},
+							{
+								Name: volumeNameCleanupScript,
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: k.configMapCleanupScript.Name,
+										},
+										DefaultMode: pointer.Int32(0777),
+									},
+								},
+							},
+							{
+								Name: volumeNameDir,
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/var/lib/kube-proxy",
+										Type: &directoryOrCreate,
+									},
+								},
+							},
+							{
+								Name: volumeNameMode,
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/var/lib/kube-proxy/mode",
+										Type: &fileOrCreate,
+									},
+								},
+							},
+							{
+								Name: volumeNameConntrackFixScript,
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: k.configMapConntrackFixScript.Name,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
 	)
 
-	return registry.AddAllAndSerialize()
+	if k.values.VPAEnabled {
+		daemonSet.Spec.Template.Spec.Containers[0].Resources.Limits = corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("80m"),
+			corev1.ResourceMemory: resource.MustParse("256Mi"),
+		}
+	}
+
+	utilruntime.Must(references.InjectAnnotations(daemonSet))
+
+	return registry.AddAllAndSerialize(
+		daemonSet,
+	)
 }
 
 func getLabels() map[string]string {
@@ -184,6 +460,20 @@ func getLabels() map[string]string {
 		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
 		v1beta1constants.LabelRole: v1beta1constants.LabelProxy,
 	}
+}
+
+func getSystemComponentLabels() map[string]string {
+	return map[string]string{
+		managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
+		v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
+	}
+}
+
+func getPoolLabels(pool WorkerPool) map[string]string {
+	return utils.MergeStringMaps(getLabels(), map[string]string{
+		"pool":    pool.Name,
+		"version": pool.KubernetesVersion,
+	})
 }
 
 func (k *kubeProxy) getRawComponentConfig() (string, error) {

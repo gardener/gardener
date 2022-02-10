@@ -17,13 +17,16 @@ package botanist_test
 import (
 	"context"
 	"fmt"
+	"net"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	mockkubeproxy "github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -60,6 +63,36 @@ var _ = Describe("KubeProxy", func() {
 
 	AfterEach(func() {
 		ctrl.Finish()
+	})
+
+	Describe("#DefaultKubeProxy", func() {
+		var kubernetesClient *mockkubernetes.MockInterface
+
+		BeforeEach(func() {
+			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
+
+			botanist.K8sSeedClient = kubernetesClient
+			botanist.Shoot.Networks = &shootpkg.Networks{
+				Pods: &net.IPNet{IP: net.ParseIP("22.23.24.25")},
+			}
+		})
+
+		It("should successfully create a kube-proxy interface", func() {
+			kubernetesClient.EXPECT().Client()
+			botanist.ImageVector = imagevector.ImageVector{{Name: "alpine"}}
+
+			kubeProxy, err := botanist.DefaultKubeProxy()
+			Expect(kubeProxy).NotTo(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return an error because the image cannot be found", func() {
+			botanist.ImageVector = imagevector.ImageVector{}
+
+			kubeProxy, err := botanist.DefaultKubeProxy()
+			Expect(kubeProxy).To(BeNil())
+			Expect(err).To(HaveOccurred())
+		})
 	})
 
 	Describe("#DeployKubeProxy", func() {

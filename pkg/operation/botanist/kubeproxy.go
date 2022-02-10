@@ -19,6 +19,8 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
+	"github.com/gardener/gardener/pkg/utils/images"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
@@ -30,6 +32,11 @@ import (
 
 // DefaultKubeProxy returns a deployer for the kube-proxy.
 func (b *Botanist) DefaultKubeProxy() (kubeproxy.Interface, error) {
+	imageAlpine, err := b.ImageVector.FindImage(images.ImageNameAlpine, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	if err != nil {
+		return nil, err
+	}
+
 	var featureGates map[string]bool
 	if kubeProxyConfig := b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy; kubeProxyConfig != nil {
 		featureGates = kubeProxyConfig.FeatureGates
@@ -41,7 +48,9 @@ func (b *Botanist) DefaultKubeProxy() (kubeproxy.Interface, error) {
 		kubeproxy.Values{
 			IPVSEnabled:    b.Shoot.IPVSEnabled(),
 			FeatureGates:   featureGates,
+			ImageAlpine:    imageAlpine.String(),
 			PodNetworkCIDR: pointer.String(b.Shoot.Networks.Pods.String()),
+			VPAEnabled:     b.Shoot.WantsVerticalPodAutoscaler,
 		},
 	), nil
 }
