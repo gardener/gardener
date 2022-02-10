@@ -4,7 +4,8 @@ metadata:
 spec:
   owner: gardener-oq@listserv.sap.com
   description: Tests the kubernetes update of a shoot.
-  activeDeadlineSeconds: 3600
+
+  activeDeadlineSeconds: 4200
 
   labels: ["shoot"]
 

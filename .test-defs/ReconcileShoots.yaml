@@ -5,7 +5,7 @@ spec:
   owner: gardener-oq@listserv.sap.com
   description: Tests to wait and check if all shoots are successfully reconciled
 
-  activeDeadlineSeconds: 3600
+  activeDeadlineSeconds: 4200
 
   command: [bash, -c]
   args:
