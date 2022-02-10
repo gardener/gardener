@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
@@ -50,6 +51,24 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 				Namespace: metav1.NamespaceSystem,
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
+		}
+
+		// This ClusterRoleBinding is similar to 'system:node-proxier' with the difference that it binds the kube-proxy's
+		// ServiceAccount to the 'system:node-proxier' ClusterRole.
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:target:node-proxier",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "system:node-proxier",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccount.Name,
+				Namespace: metav1.NamespaceSystem,
+			}},
 		}
 
 		service = &corev1.Service{
@@ -106,6 +125,7 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 
 	return registry.AddAllAndSerialize(
 		serviceAccount,
+		clusterRoleBinding,
 		service,
 		secret,
 		configMap,
