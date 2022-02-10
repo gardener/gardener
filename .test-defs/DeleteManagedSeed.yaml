@@ -4,6 +4,7 @@ metadata:
 spec:
   owner: gardener-oq@listserv.sap.com
   description: Tests the deletion of a managed seed.
+
   activeDeadlineSeconds: 4200
 
   command: [bash, -c]
