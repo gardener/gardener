@@ -26,11 +26,13 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	kubeproxyconfigv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 	"k8s.io/utils/pointer"
@@ -439,6 +441,8 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 				},
 			},
 		}
+
+		vpa *autoscalingv1beta2.VerticalPodAutoscaler
 	)
 
 	if k.values.VPAEnabled {
@@ -446,12 +450,31 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 			corev1.ResourceCPU:    resource.MustParse("80m"),
 			corev1.ResourceMemory: resource.MustParse("256Mi"),
 		}
+
+		vpaUpdateMode := autoscalingv1beta2.UpdateModeAuto
+		vpa = &autoscalingv1beta2.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name(pool),
+				Namespace: metav1.NamespaceSystem,
+			},
+			Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "DaemonSet",
+					Name:       daemonSet.Name,
+				},
+				UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
+					UpdateMode: &vpaUpdateMode,
+				},
+			},
+		}
 	}
 
 	utilruntime.Must(references.InjectAnnotations(daemonSet))
 
 	return registry.AddAllAndSerialize(
 		daemonSet,
+		vpa,
 	)
 }
 

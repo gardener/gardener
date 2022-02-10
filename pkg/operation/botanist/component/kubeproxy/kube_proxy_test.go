@@ -548,6 +548,25 @@ status:
 `
 				return out
 			}
+
+			vpaNameFor = daemonSetNameFor
+			vpaYAMLFor = func(pool WorkerPool) string {
+				return `apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  creationTimestamp: null
+  name: ` + vpaNameFor(pool) + `
+  namespace: kube-system
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: DaemonSet
+    name: ` + daemonSetNameFor(pool) + `
+  updatePolicy:
+    updateMode: Auto
+status: {}
+`
+			}
 		)
 
 		It("should successfully deploy all resources", func() {
@@ -757,8 +776,9 @@ status:
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(1))
+				Expect(managedResourceSecret.Data).To(HaveLen(2))
 				Expect(string(managedResourceSecret.Data["daemonset__kube-system__"+daemonSetNameFor(pool)+".yaml"])).To(Equal(daemonSetYAMLFor(pool, values.IPVSEnabled, values.VPAEnabled)))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__"+vpaNameFor(pool)+".yaml"])).To(Equal(vpaYAMLFor(pool)))
 			}
 		})
 	})

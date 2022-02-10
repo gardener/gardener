@@ -1,3 +1,4 @@
+# TODO(rfranzke): Delete this Helm chart in a future version.
 {{- if .Values.vpaEnabled }}
 {{- range $i, $pool := .Values.workerPools }}
 ---
@@ -6,12 +7,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: {{ include "kube-proxy.name" $pool }}
   namespace: {{ $.Release.Namespace }}
-spec:
-  targetRef:
-    apiVersion: {{ include "daemonsetversion" . }}
-    kind: DaemonSet
-    name: {{ include "kube-proxy.name" $pool }}
-  updatePolicy:
-    updateMode: "Auto"
+  annotations:
+    resources.gardener.cloud/mode: Ignore
 {{- end }}
 {{- end }}
