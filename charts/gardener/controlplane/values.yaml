@@ -406,7 +406,7 @@ global:
           syncPeriod: 24h
         shootReference:
           concurrentSyncs: 5
-          protectAuditPolicyConfigMaps: false
+          protectAuditPolicyConfigMaps: true
         shootRetry:
           concurrentSyncs: 5
           retryPeriod: 10m

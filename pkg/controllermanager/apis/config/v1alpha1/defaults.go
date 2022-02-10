@@ -138,6 +138,10 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 			ConcurrentSyncs: 5,
 		}
 	}
+	if obj.Controllers.ShootReference.ProtectAuditPolicyConfigMaps == nil {
+		v := true
+		obj.Controllers.ShootReference.ProtectAuditPolicyConfigMaps = &v
+	}
 
 	if obj.Controllers.ShootRetry == nil {
 		obj.Controllers.ShootRetry = &ShootRetryControllerConfiguration{
