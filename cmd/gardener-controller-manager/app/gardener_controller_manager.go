@@ -243,7 +243,7 @@ func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration
 		cfg.GardenClientConnection.Kubeconfig = kubeconfig
 	}
 
-	restCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.GardenClientConnection, nil)
+	restCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.GardenClientConnection, nil, kubernetes.AuthTokenFile)
 	if err != nil {
 		return nil, err
 	}

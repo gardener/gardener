@@ -15,7 +15,13 @@ roleRef:
   kind: ClusterRole
   name: gardener.cloud:system:controller-manager
 subjects:
+{{- if and .Values.global.deployment.virtualGarden.enabled .Values.global.deployment.virtualGarden.controller.user.name }}
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: {{ .Values.global.deployment.virtualGarden.controller.user.name  }}
+{{- else }}
 - kind: ServiceAccount
   name: "{{ required ".Values.global.controller.serviceAccountName is required" .Values.global.controller.serviceAccountName }}"
   namespace: garden
+{{- end }}
 {{- end }}
