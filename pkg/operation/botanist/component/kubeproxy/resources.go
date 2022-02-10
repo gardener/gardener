@@ -33,6 +33,25 @@ import (
 	"k8s.io/utils/pointer"
 )
 
+const (
+	// DaemonSetNamePrefix is the prefix for the names of the kube-proxy DaemonSets.
+	DaemonSetNamePrefix = "kube-proxy"
+	// ConfigNamePrefix is the prefix for the name of the kube-proxy ConfigMap.
+	ConfigNamePrefix = "kube-proxy-config"
+
+	containerName = "kube-proxy"
+	serviceName   = "kube-proxy"
+
+	portNameMetrics = "metrics"
+	portMetrics     = 10249
+
+	dataKeyKubeconfig   = "kubeconfig"
+	dataKeyConfig       = "config.yaml"
+	dataKeyConntrackFix = "conntrack_fix.sh"
+
+	volumeMountPathKubeconfig = "/var/lib/kube-proxy-kubeconfig"
+)
+
 //go:embed resources/conntrack-fix.sh
 var conntrackFixScript string
 
