@@ -352,6 +352,10 @@ global:
     additionalVolumeMounts: []
     env: []
     vpa: false
+    serviceAccountTokenVolumeProjection:
+      enabled: false
+      expirationSeconds: 43200
+      audience: ""
     config:
       gardenClientConnection:
       # acceptContentTypes: application/json
@@ -518,6 +522,9 @@ global:
       clusterIP: 1.2.3.4
       createNamespace: true
       admission:
+        user:
+          name: ""
+      controller:
         user:
           name: ""
 

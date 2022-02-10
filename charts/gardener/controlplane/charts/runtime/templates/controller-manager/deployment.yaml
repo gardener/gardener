@@ -41,8 +41,15 @@ spec:
 {{ toYaml .Values.global.controller.podLabels | indent 8 }}
         {{- end }}
     spec:
-      {{- if not .Values.global.controller.kubeconfig }}
+      {{- if not .Values.global.deployment.virtualGarden.enabled }}
       serviceAccountName: {{ required ".Values.global.controller.serviceAccountName is required" .Values.global.controller.serviceAccountName }}
+      {{- else if and .Values.global.deployment.virtualGarden.enabled .Values.global.deployment.virtualGarden.controller.user.name }}
+      {{- if .Values.global.controller.serviceAccountTokenVolumeProjection.enabled }}
+      serviceAccountName: {{ required ".Values.global.controller.serviceAccountName is required" .Values.global.controller.serviceAccountName }}
+      {{- end }}
+      {{- end }}
+      {{- if .Values.global.controller.kubeconfig }}
+      automountServiceAccountToken: false
       {{- end }}
       {{- if gt (int .Values.global.controller.replicaCount) 1 }}
       affinity:
@@ -106,6 +113,11 @@ spec:
           mountPath: /etc/gardener-controller-manager/kubeconfig
           readOnly: true
         {{- end }}
+        {{- if .Values.global.controller.serviceAccountTokenVolumeProjection.enabled }}
+        - name: service-account-token
+          mountPath: /var/run/secrets/projected/serviceaccount
+          readOnly: true
+        {{- end }}
         - name: gardener-controller-manager-config
           mountPath: /etc/gardener-controller-manager/config
 {{- if .Values.global.controller.additionalVolumeMounts }}
@@ -121,6 +133,17 @@ spec:
       - name: gardener-controller-manager-kubeconfig
         secret:
           secretName: gardener-controller-manager-kubeconfig
+      {{- end }}
+      {{- if .Values.global.controller.serviceAccountTokenVolumeProjection.enabled }}
+      - name: service-account-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              path: token
+              expirationSeconds: {{ .Values.global.controller.serviceAccountTokenVolumeProjection.expirationSeconds }}
+              {{- if .Values.global.controller.serviceAccountTokenVolumeProjection.audience }}
+              audience: {{ .Values.global.controller.serviceAccountTokenVolumeProjection.audience }}
+              {{- end }}
       {{- end }}
       - name: gardener-controller-manager-config
         configMap:
