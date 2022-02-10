@@ -22,5 +22,6 @@ spec:
       -fenced=$FENCED
       -ginkgo.focus="\[DEFAULT\].*\[SERIAL\]"
       -ginkgo.skip="\[DISRUPTIVE\]"
+      -ginkgo.timeout=3h
 
   image: eu.gcr.io/gardener-project/3rd/golang:1.17.6
