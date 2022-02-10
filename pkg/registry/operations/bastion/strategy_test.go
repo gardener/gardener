@@ -33,9 +33,15 @@ var _ = Describe("ToSelectableFields", func() {
 	It("should return correct fields", func() {
 		result := ToSelectableFields(newBastion("shoot", "foo"))
 
-		Expect(result).To(HaveLen(3))
+		Expect(result).To(HaveLen(4))
+		Expect(result.Has("metadata.name")).To(BeTrue())
+		Expect(result.Get("metadata.name")).To(Equal("test"))
+		Expect(result.Has("metadata.namespace")).To(BeTrue())
+		Expect(result.Get("metadata.namespace")).To(Equal("test-namespace"))
 		Expect(result.Has(operations.BastionSeedName)).To(BeTrue())
 		Expect(result.Get(operations.BastionSeedName)).To(Equal("foo"))
+		Expect(result.Has(operations.BastionShootName)).To(BeTrue())
+		Expect(result.Get(operations.BastionShootName)).To(Equal("shoot"))
 	})
 })
 
@@ -51,6 +57,7 @@ var _ = Describe("GetAttrs", func() {
 		Expect(ls).To(HaveLen(1))
 		Expect(ls.Get("foo")).To(Equal("bar"))
 		Expect(fs.Get(operations.BastionSeedName)).To(Equal("foo"))
+		Expect(fs.Get(operations.BastionShootName)).To(Equal("shoot"))
 		Expect(err).NotTo(HaveOccurred())
 	})
 })

@@ -56,6 +56,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 		NewListFunc:              func() runtime.Object { return &operations.BastionList{} },
 		DefaultQualifiedResource: operations.Resource("bastions"),
 		EnableGarbageCollection:  true,
+		PredicateFunc:            bastion.MatchBastion,
 
 		CreateStrategy: bastion.Strategy,
 		UpdateStrategy: bastion.Strategy,
