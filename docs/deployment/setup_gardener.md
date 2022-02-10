@@ -10,7 +10,7 @@ Please always make sure that you use the Helm chart version that matches the Gar
 ## Deploying the Gardener control plane (API server, admission controller, controller manager, scheduler)
 
 The [configuration values](../../charts/gardener/controlplane/values.yaml) depict the various options to configure the different components.
-Please consult [this document](../usage/configuration.md) to get a detailed explanation of what can be configured for which component.
+Please consult [this document](../usage/configuration.md) for component specific configurations and [this document](./authentication_gardener_control_plane.md) for authentication related specifics.
 
 Also note that all resources and deployments need to be created in the `garden` namespace (not overrideable).
 If you enable the Gardener admission controller as part of you setup, please make sure the `garden` namespace is labelled with `app: gardener`.
