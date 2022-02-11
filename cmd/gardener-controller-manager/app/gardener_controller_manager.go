@@ -219,7 +219,7 @@ func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration
 	// set the logger used by sigs.k8s.io/controller-runtime
 	runtimelog.SetLogger(log)
 
-	log.Info("Starting gardener-controller-manager...", "version", version.Get())
+	log.Info("Starting gardener-controller-manager", "version", version.Get())
 	log.Info("Feature Gates", "featureGates", controllermanagerfeatures.FeatureGate.String())
 
 	if flag := flag.Lookup("v"); flag != nil {

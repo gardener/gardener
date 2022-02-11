@@ -89,7 +89,7 @@ func (t *terraformer) waitForPod(ctx context.Context, logger logr.Logger, pod *c
 	timeoutCtx, cancel := context.WithTimeout(ctx, t.deadlinePod)
 	defer cancel()
 
-	log.Info("Waiting for Terraformer pod to be completed...")
+	log.Info("Waiting for Terraformer pod to be completed")
 	_ = retry.Until(timeoutCtx, 5*time.Second, func(ctx context.Context) (bool, error) {
 		if err := t.client.Get(ctx, client.ObjectKeyFromObject(pod), pod); err != nil {
 			if apierrors.IsNotFound(err) {

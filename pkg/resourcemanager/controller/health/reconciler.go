@@ -95,7 +95,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// falsy health condition (resources may need a second try to apply, e.g. CRDs and CRs in the same MR)
 	conditionResourcesApplied := v1beta1helper.GetCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
 	if conditionResourcesApplied == nil || conditionResourcesApplied.Status == gardencorev1beta1.ConditionProgressing || conditionResourcesApplied.Status == gardencorev1beta1.ConditionFalse {
-		log.Info("Skipping health checks for ManagedResource, as it is has not been reconciled successfully yet.")
+		log.Info("Skipping health checks for ManagedResource, as it is has not been reconciled successfully yet")
 		return ctrl.Result{RequeueAfter: r.syncPeriod}, nil
 	}
 

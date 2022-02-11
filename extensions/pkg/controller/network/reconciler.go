@@ -193,7 +193,7 @@ func (r *reconciler) delete(ctx context.Context, network *extensionsv1alpha1.Net
 		return reconcile.Result{}, err
 	}
 
-	r.logger.Info("Removing finalizer.", "network", network.Name)
+	r.logger.Info("Removing finalizer", "network", network.Name)
 	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, network, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizer from the network: %+v", err)
 	}

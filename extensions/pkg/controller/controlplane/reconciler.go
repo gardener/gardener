@@ -96,7 +96,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	logger := r.logger.WithValues("controlplane", kutil.ObjectName(cp))
 	if extensionscontroller.IsFailed(cluster) {
-		logger.Info("Skipping the reconciliation of controlplane of failed shoot.")
+		logger.Info("Skipping the reconciliation of controlplane of failed shoot")
 		return reconcile.Result{}, nil
 	}
 
@@ -202,7 +202,7 @@ func (r *reconciler) migrate(ctx context.Context, cp *extensionsv1alpha1.Control
 		return reconcile.Result{}, err
 	}
 
-	r.logger.Info("Removing all finalizers.", "controlplane", kutil.ObjectName(cp))
+	r.logger.Info("Removing all finalizers", "controlplane", kutil.ObjectName(cp))
 	if err := controllerutils.RemoveAllFinalizers(ctx, r.client, r.client, cp); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizers from controlplane: %+v", err)
 	}

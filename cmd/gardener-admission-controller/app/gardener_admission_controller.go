@@ -120,7 +120,7 @@ func (o *options) validate() error {
 
 // run runs gardener-admission-controller using the specified options.
 func (o *options) run(ctx context.Context) error {
-	log.Info("Starting Gardener admission controller...", "version", version.Get())
+	log.Info("Starting Gardener admission controller", "version", version.Get())
 
 	log.Info("getting rest config")
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
@@ -225,7 +225,7 @@ func NewGardenerAdmissionControllerCommand() *cobra.Command {
 				return err
 			}
 
-			log.Info("Starting "+Name+"...", "version", version.Get())
+			log.Info("Starting "+Name, "version", version.Get())
 			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value))
 			})

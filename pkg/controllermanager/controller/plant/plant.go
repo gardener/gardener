@@ -134,10 +134,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for {
 		if c.plantQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			c.log.V(1).Info("No running Plant worker and no items left in the queues. Terminating Plant controller...")
+			c.log.V(1).Info("No running Plant worker and no items left in the queues. Terminating Plant controller")
 			break
 		}
-		c.log.V(1).Info("Waiting for Plant workers to finish...", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.plantQueue.Len())
+		c.log.V(1).Info("Waiting for Plant workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.plantQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

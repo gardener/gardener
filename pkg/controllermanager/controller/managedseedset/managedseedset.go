@@ -199,10 +199,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for {
 		if c.managedSeedSetQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			c.log.V(1).Info("No running ManagedSeedSet worker and no items left in the queues. Terminating ManagedSeedSet controller...")
+			c.log.V(1).Info("No running ManagedSeedSet worker and no items left in the queues. Terminating ManagedSeedSet controller")
 			break
 		}
-		c.log.V(1).Info("Waiting for ManagedSeedSet workers to finish...", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.managedSeedSetQueue.Len())
+		c.log.V(1).Info("Waiting for ManagedSeedSet workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.managedSeedSetQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

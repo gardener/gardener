@@ -63,7 +63,7 @@ func NewSeedAdmissionControllerCommand() *cobra.Command {
 				return err
 			}
 
-			log.Info("Starting "+Name+"...", "version", version.Get())
+			log.Info("Starting "+Name, "version", version.Get())
 			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value))
 			})

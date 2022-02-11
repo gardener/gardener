@@ -117,10 +117,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for {
 		if c.exposureClassQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			c.log.V(1).Info("No running ExposureClass worker and no items left in the queues. Terminating ExposureClass controller...")
+			c.log.V(1).Info("No running ExposureClass worker and no items left in the queues. Terminating ExposureClass controller")
 			break
 		}
-		c.log.V(1).Info("Waiting for ExposureClass workers to finish...", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.exposureClassQueue.Len())
+		c.log.V(1).Info("Waiting for ExposureClass workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.exposureClassQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

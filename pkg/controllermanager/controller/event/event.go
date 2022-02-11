@@ -124,10 +124,10 @@ func (c *Controller) Run(ctx context.Context) {
 
 	for {
 		if c.eventQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			c.log.V(1).Info("No running Event worker and no items left in the queues. Terminating Event controller...")
+			c.log.V(1).Info("No running Event worker and no items left in the queues. Terminating Event controller")
 			break
 		}
-		c.log.V(1).Info("Waiting for Event workers to finish...", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.eventQueue.Len())
+		c.log.V(1).Info("Waiting for Event workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.eventQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

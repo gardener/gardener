@@ -233,7 +233,7 @@ func (r *reconciler) delete(ctx context.Context, be *extensionsv1alpha1.BackupEn
 		return reconcile.Result{}, fmt.Errorf("failed to remove finalizer on backup entry secret: %+v", err)
 	}
 
-	r.logger.Info("Removing finalizer.", "backupentry", be.Name)
+	r.logger.Info("Removing finalizer", "backupentry", be.Name)
 	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, be, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizer from backupentry: %+v", err)
 	}
