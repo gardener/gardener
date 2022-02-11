@@ -69,7 +69,7 @@ type ControllerConfig struct {
 
 // AddToManagerWithOptions adds the controller to a Manager with the given config.
 func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
-	mgr.GetLogger().Info("Used cluster id: " + conf.ClusterID)
+	mgr.GetLogger().Info("Using cluster id", "clusterID", conf.ClusterID)
 	c, err := controller.New(ControllerName, mgr, controller.Options{
 		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
 		Reconciler: reconcilerutils.OperationAnnotationWrapper(

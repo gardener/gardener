@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -57,7 +59,7 @@ func (r *reconciler) InjectLogger(l logr.Logger) error {
 
 // Reconcile performs health checks.
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.log.WithValues("object", req)
+	log := logf.FromContext(ctx)
 	log.Info("Starting ManagedResource health checks")
 
 	mr := &resourcesv1alpha1.ManagedResource{}

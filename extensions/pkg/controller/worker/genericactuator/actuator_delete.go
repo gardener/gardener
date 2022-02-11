@@ -252,9 +252,10 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 		}
 
 		if countMachines != 0 || countMachineSets != 0 || countMachineDeployments != 0 || countMachineClasses != 0 || countMachineClassSecrets != 0 {
-			msg := fmt.Sprintf("Waiting until the following machine resources have been deleted: %s", strings.TrimSuffix(msg, ", "))
-			logger.Info(msg)
-			return retryutils.MinorError(errors.New(msg))
+			logger.Info("Waiting until machine resources have been deleted",
+				"machines", countMachines, "machineSets", countMachineSets, "machineDeployments", countMachineDeployments,
+				"machineClasses", countMachineClasses, "machineClassSecrets", countMachineClassSecrets)
+			return retryutils.MinorError(fmt.Errorf("waiting until the following machine resources have been deleted: %s", strings.TrimSuffix(msg, ", ")))
 		}
 
 		return retryutils.Ok()

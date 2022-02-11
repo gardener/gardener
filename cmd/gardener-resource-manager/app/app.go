@@ -69,7 +69,7 @@ func NewResourceManagerCommand() *cobra.Command {
 
 				log.Info("Starting gardener-resource-manager", "version", version.Get().GitVersion)
 				cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-					log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value))
+					log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value)) //nolint:logcheck
 				})
 
 				if err := resourcemanagercmd.CompleteAll(

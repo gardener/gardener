@@ -98,93 +98,95 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 		return auth.DecisionNoOpinion, "", nil
 	}
 
+	requestLog := a.logger.WithValues("seedName", seedName, "attributes", fmt.Sprintf("%#v", attrs))
+
 	if attrs.IsResourceRequest() {
 		requestResource := schema.GroupResource{Group: attrs.GetAPIGroup(), Resource: attrs.GetResource()}
 		switch requestResource {
 		case backupBucketResource:
-			return a.authorize(seedName, graph.VertexTypeBackupBucket, attrs,
+			return a.authorize(requestLog, seedName, graph.VertexTypeBackupBucket, attrs,
 				[]string{"update", "patch", "delete"},
 				[]string{"create", "get", "list", "watch"},
 				[]string{"status"},
 			)
 		case backupEntryResource:
-			return a.authorize(seedName, graph.VertexTypeBackupEntry, attrs,
+			return a.authorize(requestLog, seedName, graph.VertexTypeBackupEntry, attrs,
 				[]string{"update", "patch", "delete"},
 				[]string{"create", "get", "list", "watch"},
 				[]string{"status"},
 			)
 		case bastionResource:
-			return a.authorize(seedName, graph.VertexTypeBastion, attrs,
+			return a.authorize(requestLog, seedName, graph.VertexTypeBastion, attrs,
 				[]string{"update", "patch"},
 				[]string{"create", "get", "list", "watch"},
 				[]string{"status"},
 			)
 		case certificateSigningRequestResource:
-			return a.authorize(seedName, graph.VertexTypeCertificateSigningRequest, attrs,
+			return a.authorize(requestLog, seedName, graph.VertexTypeCertificateSigningRequest, attrs,
 				[]string{"get"},
 				[]string{"create"},
 				[]string{"seedclient"},
 			)
 		case cloudProfileResource:
-			return a.authorizeRead(seedName, graph.VertexTypeCloudProfile, attrs)
+			return a.authorizeRead(requestLog, seedName, graph.VertexTypeCloudProfile, attrs)
 		case clusterRoleBindingResource:
-			return a.authorizeClusterRoleBinding(seedName, attrs)
+			return a.authorizeClusterRoleBinding(requestLog, seedName, attrs)
 		case configMapResource:
-			return a.authorizeConfigMap(seedName, attrs)
+			return a.authorizeConfigMap(requestLog, seedName, attrs)
 		case controllerDeploymentResource:
-			return a.authorizeRead(seedName, graph.VertexTypeControllerDeployment, attrs)
+			return a.authorizeRead(requestLog, seedName, graph.VertexTypeControllerDeployment, attrs)
 		case controllerInstallationResource:
-			return a.authorize(seedName, graph.VertexTypeControllerInstallation, attrs,
+			return a.authorize(requestLog, seedName, graph.VertexTypeControllerInstallation, attrs,
 				[]string{"update", "patch"},
 				[]string{"get", "list", "watch"},
 				[]string{"status"},
 			)
 		case controllerRegistrationResource:
-			return a.authorize(seedName, graph.VertexTypeControllerRegistration, attrs,
+			return a.authorize(requestLog, seedName, graph.VertexTypeControllerRegistration, attrs,
 				nil,
 				[]string{"get", "list", "watch"},
 				nil,
 			)
 		case eventCoreResource, eventResource:
-			return a.authorizeEvent(seedName, attrs)
+			return a.authorizeEvent(requestLog, attrs)
 		case leaseResource:
-			return a.authorizeLease(seedName, attrs)
+			return a.authorizeLease(requestLog, seedName, attrs)
 		case managedSeedResource:
-			return a.authorize(seedName, graph.VertexTypeManagedSeed, attrs,
+			return a.authorize(requestLog, seedName, graph.VertexTypeManagedSeed, attrs,
 				[]string{"update", "patch"},
 				[]string{"get", "list", "watch"},
 				[]string{"status"},
 			)
 		case namespaceResource:
-			return a.authorizeNamespace(seedName, attrs)
+			return a.authorizeNamespace(requestLog, seedName, attrs)
 		case projectResource:
-			return a.authorizeRead(seedName, graph.VertexTypeProject, attrs)
+			return a.authorizeRead(requestLog, seedName, graph.VertexTypeProject, attrs)
 		case secretBindingResource:
-			return a.authorizeRead(seedName, graph.VertexTypeSecretBinding, attrs)
+			return a.authorizeRead(requestLog, seedName, graph.VertexTypeSecretBinding, attrs)
 		case secretResource:
-			return a.authorizeSecret(seedName, attrs)
+			return a.authorizeSecret(requestLog, seedName, attrs)
 		case seedResource:
-			return a.authorize(seedName, graph.VertexTypeSeed, attrs,
+			return a.authorize(requestLog, seedName, graph.VertexTypeSeed, attrs,
 				nil,
 				[]string{"create", "update", "patch", "delete", "get", "list", "watch"},
 				[]string{"status"},
 			)
 		case serviceAccountResource:
-			return a.authorizeServiceAccount(seedName, attrs)
+			return a.authorizeServiceAccount(requestLog, seedName, attrs)
 		case shootResource:
-			return a.authorize(seedName, graph.VertexTypeShoot, attrs,
+			return a.authorize(requestLog, seedName, graph.VertexTypeShoot, attrs,
 				[]string{"update", "patch"},
 				[]string{"get", "list", "watch"},
 				[]string{"status"},
 			)
 		case shootStateResource:
-			return a.authorize(seedName, graph.VertexTypeShootState, attrs,
+			return a.authorize(requestLog, seedName, graph.VertexTypeShootState, attrs,
 				[]string{"get", "update", "patch", "delete"},
 				[]string{"create"},
 				nil,
 			)
 		case exposureClassResource:
-			return a.authorizeRead(seedName, graph.VertexTypeExposureClass, attrs)
+			return a.authorizeRead(requestLog, seedName, graph.VertexTypeExposureClass, attrs)
 		default:
 			a.logger.Info(
 				"Unhandled resource request",
@@ -200,7 +202,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 	return auth.DecisionNoOpinion, "", nil
 }
 
-func (a *authorizer) authorizeClusterRoleBinding(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+func (a *authorizer) authorizeClusterRoleBinding(log logr.Logger, seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
 	// Allow gardenlet to delete its cluster role binding after bootstrapping (in this case, there is no `Seed` resource
 	// in the system yet, so we can't rely on the graph).
 	if attrs.GetVerb() == "delete" &&
@@ -212,14 +214,14 @@ func (a *authorizer) authorizeClusterRoleBinding(seedName string, attrs auth.Att
 		}
 	}
 
-	return a.authorize(seedName, graph.VertexTypeClusterRoleBinding, attrs,
+	return a.authorize(log, seedName, graph.VertexTypeClusterRoleBinding, attrs,
 		[]string{"get", "patch", "update"},
 		[]string{"create"},
 		nil,
 	)
 }
 
-func (a *authorizer) authorizeConfigMap(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+func (a *authorizer) authorizeConfigMap(log logr.Logger, seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
 	if attrs.GetVerb() == "get" &&
 		attrs.GetNamespace() == metav1.NamespaceSystem &&
 		attrs.GetName() == v1beta1constants.ClusterIdentity {
@@ -227,36 +229,36 @@ func (a *authorizer) authorizeConfigMap(seedName string, attrs auth.Attributes) 
 		return auth.DecisionAllow, "", nil
 	}
 
-	return a.authorizeRead(seedName, graph.VertexTypeConfigMap, attrs)
+	return a.authorizeRead(log, seedName, graph.VertexTypeConfigMap, attrs)
 }
 
-func (a *authorizer) authorizeEvent(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
-	if ok, reason := a.checkVerb(seedName, attrs, "create", "patch"); !ok {
+func (a *authorizer) authorizeEvent(log logr.Logger, attrs auth.Attributes) (auth.Decision, string, error) {
+	if ok, reason := a.checkVerb(log, attrs, "create", "patch"); !ok {
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
-	if ok, reason := a.checkSubresource(seedName, attrs); !ok {
+	if ok, reason := a.checkSubresource(log, attrs); !ok {
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
 	return auth.DecisionAllow, "", nil
 }
 
-func (a *authorizer) authorizeLease(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+func (a *authorizer) authorizeLease(log logr.Logger, seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
 	if attrs.GetName() == "gardenlet-leader-election" &&
 		utils.ValueExists(attrs.GetVerb(), []string{"create", "get", "watch", "update"}) {
 
 		return auth.DecisionAllow, "", nil
 	}
 
-	return a.authorize(seedName, graph.VertexTypeLease, attrs,
+	return a.authorize(log, seedName, graph.VertexTypeLease, attrs,
 		[]string{"get", "update"},
 		[]string{"create"},
 		nil,
 	)
 }
 
-func (a *authorizer) authorizeNamespace(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+func (a *authorizer) authorizeNamespace(log logr.Logger, seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
 	// TODO: Remove this once the gardenlet's `ControllerInstallation` controller does no longer populate the already
 	// deprecated `gardener.garden.identity` value when rendering the Helm charts.
 	if attrs.GetName() == v1beta1constants.GardenNamespace &&
@@ -265,10 +267,10 @@ func (a *authorizer) authorizeNamespace(seedName string, attrs auth.Attributes) 
 		return auth.DecisionAllow, "", nil
 	}
 
-	return a.authorizeRead(seedName, graph.VertexTypeNamespace, attrs)
+	return a.authorizeRead(log, seedName, graph.VertexTypeNamespace, attrs)
 }
 
-func (a *authorizer) authorizeSecret(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+func (a *authorizer) authorizeSecret(log logr.Logger, seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
 	// Allow gardenlets to get/list/watch secrets in their seed-<name> namespaces.
 	if utils.ValueExists(attrs.GetVerb(), []string{"get", "list", "watch"}) && attrs.GetNamespace() == gutil.ComputeGardenNamespace(seedName) {
 		return auth.DecisionAllow, "", nil
@@ -284,14 +286,14 @@ func (a *authorizer) authorizeSecret(seedName string, attrs auth.Attributes) (au
 		return auth.DecisionAllow, "", nil
 	}
 
-	return a.authorize(seedName, graph.VertexTypeSecret, attrs,
+	return a.authorize(log, seedName, graph.VertexTypeSecret, attrs,
 		[]string{"get", "patch", "update", "delete"},
 		[]string{"create"},
 		nil,
 	)
 }
 
-func (a *authorizer) authorizeServiceAccount(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+func (a *authorizer) authorizeServiceAccount(log logr.Logger, seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
 	// Allow gardenlet to delete its service account after bootstrapping (in this case, there is no `Seed` resource in
 	// the system yet, so we can't rely on the graph).
 	if attrs.GetVerb() == "delete" &&
@@ -302,15 +304,15 @@ func (a *authorizer) authorizeServiceAccount(seedName string, attrs auth.Attribu
 		return auth.DecisionAllow, "", nil
 	}
 
-	return a.authorize(seedName, graph.VertexTypeServiceAccount, attrs,
+	return a.authorize(log, seedName, graph.VertexTypeServiceAccount, attrs,
 		[]string{"get", "patch", "update"},
 		[]string{"create"},
 		nil,
 	)
 }
 
-func (a *authorizer) authorizeRead(seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
-	return a.authorize(seedName, fromType, attrs,
+func (a *authorizer) authorizeRead(log logr.Logger, seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
+	return a.authorize(log, seedName, fromType, attrs,
 		[]string{"get"},
 		nil,
 		nil,
@@ -318,6 +320,7 @@ func (a *authorizer) authorizeRead(seedName string, fromType graph.VertexType, a
 }
 
 func (a *authorizer) authorize(
+	log logr.Logger,
 	seedName string,
 	fromType graph.VertexType,
 	attrs auth.Attributes,
@@ -329,7 +332,7 @@ func (a *authorizer) authorize(
 	string,
 	error,
 ) {
-	if ok, reason := a.checkSubresource(seedName, attrs, allowedSubresources...); !ok {
+	if ok, reason := a.checkSubresource(log, attrs, allowedSubresources...); !ok {
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
@@ -340,16 +343,16 @@ func (a *authorizer) authorize(
 		return auth.DecisionAllow, "", nil
 	}
 
-	if ok, reason := a.checkVerb(seedName, attrs, append(alwaysAllowedVerbs, allowedVerbs...)...); !ok {
+	if ok, reason := a.checkVerb(log, attrs, append(alwaysAllowedVerbs, allowedVerbs...)...); !ok {
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
-	return a.hasPathFrom(seedName, fromType, attrs)
+	return a.hasPathFrom(log, seedName, fromType, attrs)
 }
 
-func (a *authorizer) hasPathFrom(seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
+func (a *authorizer) hasPathFrom(log logr.Logger, seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
 	if len(attrs.GetName()) == 0 {
-		a.logger.Info(fmt.Sprintf("SEED DENY: '%s' %#v", seedName, attrs))
+		log.Info("Denying authorization because attributes are missing object name")
 		return auth.DecisionNoOpinion, "No Object name found", nil
 	}
 
@@ -367,25 +370,25 @@ func (a *authorizer) hasPathFrom(seedName string, fromType graph.VertexType, att
 	}
 
 	if !a.graph.HasPathFrom(fromType, namespace, attrs.GetName(), graph.VertexTypeSeed, "", seedName) {
-		a.logger.Info(fmt.Sprintf("SEED DENY: '%s' %#v", seedName, attrs))
+		log.Info("Denying authorization because no relationship is found between seed and object")
 		return auth.DecisionNoOpinion, fmt.Sprintf("no relationship found between seed '%s' and this object", seedName), nil
 	}
 
 	return auth.DecisionAllow, "", nil
 }
 
-func (a *authorizer) checkVerb(seedName string, attrs auth.Attributes, allowedVerbs ...string) (bool, string) {
+func (a *authorizer) checkVerb(log logr.Logger, attrs auth.Attributes, allowedVerbs ...string) (bool, string) {
 	if !utils.ValueExists(attrs.GetVerb(), allowedVerbs) {
-		a.logger.Info(fmt.Sprintf("SEED DENY: '%s' %#v", seedName, attrs))
+		log.Info("Denying authorization because verb is not allowed for this resource type", "allowedVerbs", allowedVerbs)
 		return false, fmt.Sprintf("only the following verbs are allowed for this resource type: %+v", allowedVerbs)
 	}
 
 	return true, ""
 }
 
-func (a *authorizer) checkSubresource(seedName string, attrs auth.Attributes, allowedSubresources ...string) (bool, string) {
+func (a *authorizer) checkSubresource(log logr.Logger, attrs auth.Attributes, allowedSubresources ...string) (bool, string) {
 	if subresource := attrs.GetSubresource(); len(subresource) > 0 && !utils.ValueExists(attrs.GetSubresource(), allowedSubresources) {
-		a.logger.Info(fmt.Sprintf("SEED DENY: '%s' %#v", seedName, attrs))
+		log.Info("Denying authorization because subresource is not allowed for this resource type", "allowedSubresources", allowedSubresources)
 		return false, fmt.Sprintf("only the following subresources are allowed for this resource type: %+v", allowedSubresources)
 	}
 
