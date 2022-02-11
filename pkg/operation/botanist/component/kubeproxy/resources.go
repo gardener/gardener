@@ -218,6 +218,20 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 				ReadOnlyRootFilesystem: false,
 			},
 		}
+
+		clusterRolePSP = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:psp:kube-system:kube-proxy",
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups:     []string{"policy", "extensions"},
+					ResourceNames: []string{podSecurityPolicy.Name},
+					Resources:     []string{"podsecuritypolicies"},
+					Verbs:         []string{"use"},
+				},
+			},
+		}
 	)
 
 	utilruntime.Must(kutil.MakeUnique(secret))
@@ -240,6 +254,7 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 		configMapConntrackFixScript,
 		configMapCleanupScript,
 		podSecurityPolicy,
+		clusterRolePSP,
 	)
 }
 
