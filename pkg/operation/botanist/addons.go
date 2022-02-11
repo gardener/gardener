@@ -34,15 +34,11 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
-	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -271,23 +267,12 @@ func (b *Botanist) DeployManagedResourceForAddons(ctx context.Context) error {
 		}
 	}
 
-	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObject(ctx, b.K8sSeedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-proxy", Namespace: b.Shoot.SeedNamespace}})
+	return nil
 }
 
 // generateCoreAddonsChart renders the gardener-resource-manager configuration for the core addons. After that it
 // creates a ManagedResource CRD that references the rendered manifests and creates it.
 func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.RenderedChart, error) {
-	kubeProxyKubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kutil.NewKubeconfig(
-		b.Shoot.SeedNamespace,
-		b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
-		b.LoadSecret(v1beta1constants.SecretNameCACluster).Data[secrets.DataKeyCertificateCA],
-		clientcmdv1.AuthInfo{TokenFile: "/var/run/secrets/kubernetes.io/serviceaccount/token"},
-	))
-	if err != nil {
-		return nil, err
-	}
-
 	var (
 		kasFQDN = b.outOfClusterAPIServerFQDN()
 		global  = map[string]interface{}{
@@ -298,15 +283,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 
 		podSecurityPolicies = map[string]interface{}{
 			"allowPrivilegedContainers": *b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers,
-		}
-		kubeProxyConfig = map[string]interface{}{
-			"kubeconfig": kubeProxyKubeconfig,
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-kube-proxy": b.LoadCheckSum("kube-proxy"),
-			},
-			"enableIPVS": b.Shoot.IPVSEnabled(),
-			"podNetwork": b.Shoot.Networks.Pods.String(),
-			"vpaEnabled": b.Shoot.WantsVerticalPodAutoscaler,
 		}
 		verticalPodAutoscaler = map[string]interface{}{
 			"application": map[string]interface{}{
@@ -353,13 +329,9 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		verticalPodAutoscaler["application"].(map[string]interface{})["admissionController"].(map[string]interface{})["caCert"] = vpaSecret.Data[secrets.DataKeyCertificateCA]
 	}
 
-	proxyConfig := b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy
 	kubeProxyEnabled := true
-	if proxyConfig != nil {
-		kubeProxyConfig["featureGates"] = proxyConfig.FeatureGates
-		if proxyConfig.Enabled != nil {
-			kubeProxyEnabled = *proxyConfig.Enabled
-		}
+	if proxyConfig := b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy; proxyConfig != nil && proxyConfig.Enabled != nil {
+		kubeProxyEnabled = *proxyConfig.Enabled
 	}
 
 	workerPoolKubeProxyImages := make(map[string]workerPoolKubeProxyImage)
@@ -401,21 +373,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	}
 
 	var workerPools []map[string]string
-
-	// TODO(rfranzke): Delete this in a future version.
-	{
-		kubeProxyImage, err := b.ImageVector.FindImage(images.ImageNameKubeProxy, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
-		if err != nil {
-			return nil, err
-		}
-
-		workerPools = append(workerPools, map[string]string{
-			"name":              "",
-			"kubernetesVersion": b.Shoot.GetInfo().Spec.Kubernetes.Version,
-			"kubeProxyImage":    kubeProxyImage.String(),
-		})
-	}
-
 	for _, obj := range workerPoolKubeProxyImages {
 		workerPools = append(workerPools, map[string]string{
 			"name":              obj.poolName,
@@ -423,7 +380,9 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"kubeProxyImage":    obj.image,
 		})
 	}
-	kubeProxyConfig["workerPools"] = workerPools
+	kubeProxy := map[string]interface{}{
+		"workerPools": workerPools,
+	}
 
 	if domain := b.Shoot.ExternalClusterDomain; domain != nil {
 		shootInfo["domain"] = *domain
@@ -433,11 +392,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		extensions = append(extensions, extensionType)
 	}
 	shootInfo["extensions"] = strings.Join(extensions, ",")
-
-	kubeProxy, err := b.InjectShootShootImages(kubeProxyConfig, images.ImageNameAlpine)
-	if err != nil {
-		return nil, err
-	}
 
 	nodeExporter, err := b.InjectShootShootImages(nodeExporterConfig, images.ImageNameNodeExporter)
 	if err != nil {
