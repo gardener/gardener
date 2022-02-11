@@ -28,6 +28,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -74,6 +75,11 @@ const (
 	volumeNameKernelModules      = "kernel-modules"
 	volumeNameSSLCertsHosts      = "ssl-certs-hosts"
 	volumeNameSystemBusSocket    = "systembussocket"
+
+	hostPathSSLCertsHosts   = "/usr/share/ca-certificates"
+	hostPathSystemBusSocket = "/var/run/dbus/system_bus_socket"
+	hostPathKernelModules   = "/lib/modules"
+	hostPathDir             = "/var/lib/kube-proxy"
 )
 
 var (
@@ -170,6 +176,48 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 			},
 			Data: map[string]string{dataKeyCleanupScript: cleanupScript},
 		}
+
+		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.kube-system.kube-proxy",
+			},
+			Spec: policyv1beta1.PodSecurityPolicySpec{
+				Privileged: true,
+				Volumes: []policyv1beta1.FSType{
+					"hostPath",
+					"secret",
+					"configMap",
+					"projected",
+				},
+				HostNetwork: true,
+				HostPorts: []policyv1beta1.HostPortRange{{
+					Min: portMetrics,
+					Max: portMetrics,
+				}},
+				AllowedHostPaths: []policyv1beta1.AllowedHostPath{
+					{PathPrefix: hostPathSSLCertsHosts},
+					{PathPrefix: hostPathSystemBusSocket},
+					{PathPrefix: hostPathKernelModules},
+					{PathPrefix: hostPathDir},
+				},
+				AllowedCapabilities: []corev1.Capability{
+					"NET_ADMIN",
+				},
+				RunAsUser: policyv1beta1.RunAsUserStrategyOptions{
+					Rule: policyv1beta1.RunAsUserStrategyRunAsAny,
+				},
+				SELinux: policyv1beta1.SELinuxStrategyOptions{
+					Rule: policyv1beta1.SELinuxStrategyRunAsAny,
+				},
+				SupplementalGroups: policyv1beta1.SupplementalGroupsStrategyOptions{
+					Rule: policyv1beta1.SupplementalGroupsStrategyRunAsAny,
+				},
+				FSGroup: policyv1beta1.FSGroupStrategyOptions{
+					Rule: policyv1beta1.FSGroupStrategyRunAsAny,
+				},
+				ReadOnlyRootFilesystem: false,
+			},
+		}
 	)
 
 	utilruntime.Must(kutil.MakeUnique(secret))
@@ -191,6 +239,7 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 		configMap,
 		configMapConntrackFixScript,
 		configMapCleanupScript,
+		podSecurityPolicy,
 	)
 }
 
@@ -377,7 +426,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 								Name: volumeNameSSLCertsHosts,
 								VolumeSource: corev1.VolumeSource{
 									HostPath: &corev1.HostPathVolumeSource{
-										Path: "/usr/share/ca-certificates",
+										Path: hostPathSSLCertsHosts,
 									},
 								},
 							},
@@ -385,7 +434,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 								Name: volumeNameSystemBusSocket,
 								VolumeSource: corev1.VolumeSource{
 									HostPath: &corev1.HostPathVolumeSource{
-										Path: "/var/run/dbus/system_bus_socket",
+										Path: hostPathSystemBusSocket,
 									},
 								},
 							},
@@ -393,7 +442,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 								Name: volumeNameKernelModules,
 								VolumeSource: corev1.VolumeSource{
 									HostPath: &corev1.HostPathVolumeSource{
-										Path: "/lib/modules",
+										Path: hostPathKernelModules,
 									},
 								},
 							},
@@ -412,7 +461,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 								Name: volumeNameDir,
 								VolumeSource: corev1.VolumeSource{
 									HostPath: &corev1.HostPathVolumeSource{
-										Path: "/var/lib/kube-proxy",
+										Path: hostPathDir,
 										Type: &directoryOrCreate,
 									},
 								},
@@ -421,7 +470,7 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 								Name: volumeNameMode,
 								VolumeSource: corev1.VolumeSource{
 									HostPath: &corev1.HostPathVolumeSource{
-										Path: "/var/lib/kube-proxy/mode",
+										Path: hostPathDir + "/mode",
 										Type: &fileOrCreate,
 									},
 								},
