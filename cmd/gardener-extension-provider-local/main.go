@@ -15,9 +15,10 @@
 package main
 
 import (
+	"os"
+
 	"github.com/gardener/gardener/cmd/gardener-extension-provider-local/app"
 	"github.com/gardener/gardener/cmd/utils"
-	controllercmd "github.com/gardener/gardener/extensions/pkg/controller/cmd"
 	"github.com/gardener/gardener/pkg/logger"
 
 	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -30,6 +31,7 @@ func main() {
 	runtimelog.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON))
 
 	if err := app.NewControllerManagerCommand(signals.SetupSignalHandler()).Execute(); err != nil {
-		controllercmd.LogErrAndExit(err, "error executing the main controller command")
+		runtimelog.Log.Error(err, "Error executing the main controller command")
+		os.Exit(1)
 	}
 }
