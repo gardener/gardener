@@ -111,7 +111,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		runtimeObject, err := r.targetScheme.New(ref.GroupVersionKind())
 		if err != nil {
 			log.Info("Could not create new object of kind for health checks (probably not registered in the used scheme), falling back to unstructured request",
-				"GroupVersionKind", ref.GroupVersionKind().String(), "error", err.Error())
+				"groupVersionKind", ref.GroupVersionKind().String(), "error", err.Error())
 
 			// fallback to unstructured requests if the object's type is not registered in the scheme
 			unstructuredObj := &unstructured.Unstructured{}
@@ -122,7 +122,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			var ok bool
 			if obj, ok = runtimeObject.(client.Object); !ok {
 				err := fmt.Errorf("expected client.Object but got %T", obj)
-				log.Error(err, "Could not execute health check", "GroupVersionKind", ref.GroupVersionKind().String())
+				log.Error(err, "Could not execute health check", "groupVersionKind", ref.GroupVersionKind().String())
 				// do not requeue because there anyway will be another update event to fix the problem
 				return ctrl.Result{}, nil
 			}
