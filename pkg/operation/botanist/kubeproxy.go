@@ -18,12 +18,14 @@ import (
 	"context"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -67,9 +69,72 @@ func (b *Botanist) DeployKubeProxy(ctx context.Context) error {
 		return err
 	}
 
-	// TODO In a subsequent commit: Move computation of WorkerPools from addons.go to this place.
+	workerPools, err := b.computeWorkerPoolsForKubeProxy(ctx)
+	if err != nil {
+		return err
+	}
 
 	b.Shoot.Components.SystemComponents.KubeProxy.SetKubeconfig(kubeconfig)
+	b.Shoot.Components.SystemComponents.KubeProxy.SetWorkerPools(workerPools)
 
 	return b.Shoot.Components.SystemComponents.KubeProxy.Deploy(ctx)
+}
+
+func (b *Botanist) computeWorkerPoolsForKubeProxy(ctx context.Context) ([]kubeproxy.WorkerPool, error) {
+	poolKeyToPoolInfo := make(map[string]kubeproxy.WorkerPool)
+
+	for _, worker := range b.Shoot.GetInfo().Spec.Provider.Workers {
+		kubernetesVersion, err := gardencorev1beta1helper.CalculateEffectiveKubernetesVersion(b.Shoot.KubernetesVersion, worker.Kubernetes)
+		if err != nil {
+			return nil, err
+		}
+
+		image, err := b.ImageVector.FindImage(images.ImageNameKubeProxy, imagevector.RuntimeVersion(kubernetesVersion.String()), imagevector.TargetVersion(kubernetesVersion.String()))
+		if err != nil {
+			return nil, err
+		}
+
+		key := workerPoolKey(worker.Name, kubernetesVersion.String())
+		poolKeyToPoolInfo[key] = kubeproxy.WorkerPool{
+			Name:              worker.Name,
+			KubernetesVersion: kubernetesVersion.String(),
+			Image:             image.String(),
+		}
+	}
+
+	nodeList := &corev1.NodeList{}
+	if err := b.K8sShootClient.Client().List(ctx, nodeList); err != nil {
+		return nil, err
+	}
+
+	for _, node := range nodeList.Items {
+		poolName, ok1 := node.Labels[v1beta1constants.LabelWorkerPool]
+		kubernetesVersion, ok2 := node.Labels[v1beta1constants.LabelWorkerKubernetesVersion]
+		if !ok1 || !ok2 {
+			continue
+		}
+
+		image, err := b.ImageVector.FindImage(images.ImageNameKubeProxy, imagevector.RuntimeVersion(kubernetesVersion), imagevector.TargetVersion(kubernetesVersion))
+		if err != nil {
+			return nil, err
+		}
+
+		key := workerPoolKey(poolName, kubernetesVersion)
+		poolKeyToPoolInfo[key] = kubeproxy.WorkerPool{
+			Name:              poolName,
+			KubernetesVersion: kubernetesVersion,
+			Image:             image.String(),
+		}
+	}
+
+	var workerPools []kubeproxy.WorkerPool
+	for _, poolInfo := range poolKeyToPoolInfo {
+		workerPools = append(workerPools, poolInfo)
+	}
+
+	return workerPools, nil
+}
+
+func workerPoolKey(poolName, kubernetesVersion string) string {
+	return poolName + "@" + kubernetesVersion
 }

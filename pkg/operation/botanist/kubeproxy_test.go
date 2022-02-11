@@ -18,46 +18,119 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sort"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
 	mockkubeproxy "github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
+	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("KubeProxy", func() {
 	var (
-		ctrl     *gomock.Controller
-		botanist *Botanist
+		ctrl                         *gomock.Controller
+		fakeSeedClient               client.Client
+		fakeSeedKubernetesInterface  kubernetes.Interface
+		fakeShootClient              client.Client
+		fakeShootKubernetesInterface kubernetes.Interface
+		botanist                     *Botanist
 
 		namespace             = "shoot--foo--bar"
 		apiServerAddress      = "1.2.3.4"
 		internalClusterDomain = "example.com"
 		caCert                = []byte("cert")
 		caSecret              = &corev1.Secret{Data: map[string][]byte{"ca.crt": caCert}}
+
+		repositoryKubeProxyImage = "foo.bar.com/kube-proxy"
+
+		poolName1                     = "pool1"
+		poolName2                     = "pool2"
+		poolName3                     = "pool3"
+		kubernetesVersionControlPlane = "1.20.3"
+		kubernetesVersionPool2        = "1.19.4"
+		kubernetesVersionPool3        = kubernetesVersionControlPlane
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
+		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		fakeSeedKubernetesInterface = fakekubernetes.NewClientSetBuilder().WithClient(fakeSeedClient).Build()
+		fakeShootClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
+		fakeShootKubernetesInterface = fakekubernetes.NewClientSetBuilder().WithClient(fakeShootClient).Build()
 		botanist = &Botanist{
 			Operation: &operation.Operation{
 				APIServerAddress: apiServerAddress,
+				ImageVector: imagevector.ImageVector{
+					{
+						Name: "alpine",
+					},
+					{
+						Name:          "kube-proxy",
+						Repository:    repositoryKubeProxyImage,
+						TargetVersion: pointer.String("1.20.x"),
+					},
+					{
+						Name:          "kube-proxy",
+						Repository:    repositoryKubeProxyImage,
+						TargetVersion: pointer.String("1.19.x"),
+					},
+					{
+						Name:          "kube-proxy",
+						Repository:    repositoryKubeProxyImage,
+						TargetVersion: pointer.String("1.18.x"),
+					},
+				},
+				K8sSeedClient:  fakeSeedKubernetesInterface,
+				K8sShootClient: fakeShootKubernetesInterface,
 				Shoot: &shootpkg.Shoot{
 					InternalClusterDomain: internalClusterDomain,
+					KubernetesVersion:     semver.MustParse(kubernetesVersionControlPlane),
 					SeedNamespace:         namespace,
 				},
 			},
 		}
-		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
+		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					Version: kubernetesVersionControlPlane,
+				},
+				Provider: gardencorev1beta1.Provider{
+					Workers: []gardencorev1beta1.Worker{
+						{
+							Name: poolName1,
+						},
+						{
+							Name: poolName2,
+							Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+								Version: &kubernetesVersionPool2,
+							},
+						},
+						{
+							Name: poolName3,
+							Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+								Version: &kubernetesVersionPool3,
+							},
+						},
+					},
+				},
+			},
+		})
 		botanist.StoreSecret("ca", caSecret)
 	})
 
@@ -66,21 +139,13 @@ var _ = Describe("KubeProxy", func() {
 	})
 
 	Describe("#DefaultKubeProxy", func() {
-		var kubernetesClient *mockkubernetes.MockInterface
-
 		BeforeEach(func() {
-			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
-
-			botanist.K8sSeedClient = kubernetesClient
 			botanist.Shoot.Networks = &shootpkg.Networks{
 				Pods: &net.IPNet{IP: net.ParseIP("22.23.24.25")},
 			}
 		})
 
 		It("should successfully create a kube-proxy interface", func() {
-			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: "alpine"}}
-
 			kubeProxy, err := botanist.DefaultKubeProxy()
 			Expect(kubeProxy).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
@@ -134,15 +199,132 @@ users:
 		})
 
 		It("should fail when the deploy function fails", func() {
+			kubeProxy.EXPECT().SetWorkerPools(gomock.Any())
 			kubeProxy.EXPECT().Deploy(ctx).Return(fakeErr)
 
 			Expect(botanist.DeployKubeProxy(ctx)).To(MatchError(fakeErr))
 		})
 
-		It("should successfully deploy", func() {
-			kubeProxy.EXPECT().Deploy(ctx)
+		Context("successful deployment", func() {
+			It("with no still existing worker pools", func() {
+				kubeProxy.EXPECT().SetWorkerPools(gomock.AssignableToTypeOf([]kubeproxy.WorkerPool{})).DoAndReturn(func(actual []kubeproxy.WorkerPool) {
+					verifyWorkerPools(actual, []kubeproxy.WorkerPool{
+						{
+							Name:              poolName1,
+							KubernetesVersion: kubernetesVersionControlPlane,
+							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionControlPlane,
+						},
+						{
+							Name:              poolName2,
+							KubernetesVersion: kubernetesVersionPool2,
+							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionPool2,
+						},
+						{
+							Name:              poolName3,
+							KubernetesVersion: kubernetesVersionPool3,
+							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionPool3,
+						},
+					})
+				})
+				kubeProxy.EXPECT().Deploy(ctx)
 
-			Expect(botanist.DeployKubeProxy(ctx)).To(Succeed())
+				Expect(botanist.DeployKubeProxy(ctx)).To(Succeed())
+			})
+
+			It("with still existing worker pools", func() {
+				for _, node := range []*corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "node1",
+							Labels: map[string]string{
+								"worker.gardener.cloud/pool":               poolName1,
+								"worker.gardener.cloud/kubernetes-version": kubernetesVersionControlPlane,
+							},
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "node2",
+							Labels: map[string]string{
+								"worker.gardener.cloud/pool":               poolName2,
+								"worker.gardener.cloud/kubernetes-version": "1.20.3",
+							},
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "node3",
+							Labels: map[string]string{
+								"worker.gardener.cloud/pool":               poolName2,
+								"worker.gardener.cloud/kubernetes-version": kubernetesVersionPool2,
+							},
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "node4",
+							Labels: map[string]string{
+								"worker.gardener.cloud/pool":               "pool4",
+								"worker.gardener.cloud/kubernetes-version": "1.20.3",
+							},
+						},
+					},
+				} {
+					Expect(fakeShootClient.Create(ctx, node)).To(Succeed())
+				}
+
+				kubeProxy.EXPECT().SetWorkerPools(gomock.AssignableToTypeOf([]kubeproxy.WorkerPool{})).DoAndReturn(func(actual []kubeproxy.WorkerPool) {
+					verifyWorkerPools(actual, []kubeproxy.WorkerPool{
+						{
+							Name:              poolName1,
+							KubernetesVersion: kubernetesVersionControlPlane,
+							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionControlPlane,
+						},
+						{
+							Name:              poolName2,
+							KubernetesVersion: kubernetesVersionPool2,
+							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionPool2,
+						},
+						{
+							Name:              poolName3,
+							KubernetesVersion: kubernetesVersionPool3,
+							Image:             repositoryKubeProxyImage + ":v" + kubernetesVersionPool3,
+						},
+						{
+							Name:              poolName2,
+							KubernetesVersion: "1.20.3",
+							Image:             repositoryKubeProxyImage + ":v1.20.3",
+						},
+						{
+							Name:              "pool4",
+							KubernetesVersion: "1.20.3",
+							Image:             repositoryKubeProxyImage + ":v1.20.3",
+						},
+					})
+				})
+				kubeProxy.EXPECT().Deploy(ctx)
+
+				Expect(botanist.DeployKubeProxy(ctx)).To(Succeed())
+			})
 		})
 	})
 })
+
+func verifyWorkerPools(expected, actual []kubeproxy.WorkerPool) {
+	getSortFn := func(slice []kubeproxy.WorkerPool) func(i, j int) bool {
+		return func(i, j int) bool {
+			if slice[i].Name < slice[j].Name {
+				return true
+			}
+			if slice[i].Name > slice[j].Name {
+				return false
+			}
+			return slice[i].KubernetesVersion < slice[j].KubernetesVersion
+		}
+	}
+
+	sort.Slice(actual, getSortFn(actual))
+	sort.Slice(expected, getSortFn(expected))
+
+	Expect(actual).To(Equal(expected))
+}
