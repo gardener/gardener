@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
@@ -232,6 +233,26 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 				},
 			},
 		}
+
+		roleBindingPSP = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:psp:kube-proxy",
+				Namespace: metav1.NamespaceSystem,
+				Annotations: map[string]string{
+					resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     clusterRolePSP.Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
+			}},
+		}
 	)
 
 	utilruntime.Must(kutil.MakeUnique(secret))
@@ -255,6 +276,7 @@ func (k *kubeProxy) computeCentralResourcesData() (map[string][]byte, error) {
 		configMapCleanupScript,
 		podSecurityPolicy,
 		clusterRolePSP,
+		roleBindingPSP,
 	)
 }
 

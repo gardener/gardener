@@ -389,6 +389,24 @@ rules:
   - use
 `
 
+			roleBindingPSPYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
+  creationTimestamp: null
+  name: gardener.cloud:psp:kube-proxy
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gardener.cloud:psp:kube-system:kube-proxy
+subjects:
+- kind: ServiceAccount
+  name: kube-proxy
+  namespace: kube-system
+`
+
 			daemonSetNameFor = func(pool WorkerPool) string {
 				return "kube-proxy-" + pool.Name + "-v" + pool.KubernetesVersion
 			}
@@ -661,7 +679,7 @@ status: {}
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecretCentral), managedResourceSecretCentral)).To(Succeed())
 			Expect(managedResourceSecretCentral.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecretCentral.Data).To(HaveLen(9))
+			Expect(managedResourceSecretCentral.Data).To(HaveLen(10))
 			Expect(string(managedResourceSecretCentral.Data["serviceaccount__kube-system__kube-proxy.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecretCentral.Data["clusterrolebinding____gardener.cloud_target_node-proxier.yaml"])).To(Equal(clusterRoleBindingYAML))
 			Expect(string(managedResourceSecretCentral.Data["service__kube-system__kube-proxy.yaml"])).To(Equal(serviceYAML))
@@ -671,6 +689,7 @@ status: {}
 			Expect(string(managedResourceSecretCentral.Data["configmap__kube-system__"+configMapCleanupScriptName+".yaml"])).To(Equal(configMapCleanupScriptYAML))
 			Expect(string(managedResourceSecretCentral.Data["podsecuritypolicy____gardener.kube-system.kube-proxy.yaml"])).To(Equal(podSecurityPolicyYAML))
 			Expect(string(managedResourceSecretCentral.Data["clusterrole____gardener.cloud_psp_kube-system_kube-proxy.yaml"])).To(Equal(clusterRolePSPYAML))
+			Expect(string(managedResourceSecretCentral.Data["rolebinding__kube-system__gardener.cloud_psp_kube-proxy.yaml"])).To(Equal(roleBindingPSPYAML))
 
 			for _, pool := range values.WorkerPools {
 				By(pool.Name)
