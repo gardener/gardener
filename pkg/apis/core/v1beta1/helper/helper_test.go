@@ -1997,6 +1997,17 @@ var _ = Describe("helper", func() {
 		Entry("nginxIngress enabled", &gardencorev1beta1.Addons{NginxIngress: &gardencorev1beta1.NginxIngress{Addon: gardencorev1beta1.Addon{Enabled: true}}}, BeTrue()),
 	)
 
+	DescribeTable("#KubeProxyEnabled",
+		func(kubeProxy *gardencorev1beta1.KubeProxyConfig, matcher gomegatypes.GomegaMatcher) {
+			Expect(KubeProxyEnabled(kubeProxy)).To(matcher)
+		},
+
+		Entry("kubeProxy nil", nil, BeFalse()),
+		Entry("kubeProxy empty", &gardencorev1beta1.KubeProxyConfig{}, BeFalse()),
+		Entry("kubeProxy disabled", &gardencorev1beta1.KubeProxyConfig{Enabled: pointer.Bool(false)}, BeFalse()),
+		Entry("kubeProxy enabled", &gardencorev1beta1.KubeProxyConfig{Enabled: pointer.Bool(true)}, BeTrue()),
+	)
+
 	DescribeTable("#BackupBucketIsErroneous",
 		func(bb *gardencorev1beta1.BackupBucket, matcher1, matcher2 gomegatypes.GomegaMatcher) {
 			erroneous, msg := BackupBucketIsErroneous(bb)

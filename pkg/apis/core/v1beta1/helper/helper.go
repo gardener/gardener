@@ -1290,6 +1290,11 @@ func NginxIngressEnabled(addons *gardencorev1beta1.Addons) bool {
 	return addons != nil && addons.NginxIngress != nil && addons.NginxIngress.Enabled
 }
 
+// KubeProxyEnabled returns true if the kube-proxy is enabled in the Shoot manifest.
+func KubeProxyEnabled(config *gardencorev1beta1.KubeProxyConfig) bool {
+	return config != nil && config.Enabled != nil && *config.Enabled
+}
+
 // BackupBucketIsErroneous returns `true` if the given BackupBucket has a last error.
 // It also returns the error description if available.
 func BackupBucketIsErroneous(bb *gardencorev1beta1.BackupBucket) (bool, string) {

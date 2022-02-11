@@ -92,6 +92,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		generation                     = o.Shoot.GetInfo().Generation
 		sniPhase                       = botanist.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase
 		requestControlPlanePodsRestart = controllerutils.HasTask(o.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
+		kubeProxyEnabled               = gardencorev1beta1helper.KubeProxyEnabled(o.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 
 		g                      = flow.NewGraph(fmt.Sprintf("Shoot cluster %s", utils.IifString(isRestoring, "restoration", "reconciliation")))
 		ensureShootStateExists = g.Add(flow.Task{
@@ -450,13 +451,18 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		})
 		deployKubeProxy = g.Add(flow.Task{
 			Name:         "Deploying kube-proxy system component",
-			Fn:           flow.TaskFn(botanist.DeployKubeProxy).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
+			Fn:           flow.TaskFn(botanist.DeployKubeProxy).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled).DoIf(kubeProxyEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, initializeShootClients, ensureShootClusterIdentity, deployKubeScheduler),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deleting stale kube-proxy DaemonSets",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.SystemComponents.KubeProxy.DeleteStaleResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.SystemComponents.KubeProxy.DeleteStaleResources).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(kubeProxyEnabled),
 			Dependencies: flow.NewTaskIDs(deployKubeProxy),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deleting kube-proxy system component",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.SystemComponents.KubeProxy.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled).DoIf(!kubeProxyEnabled),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, initializeShootClients, ensureShootClusterIdentity, deployKubeScheduler),
 		})
 		deployManagedResourcesForAddons = g.Add(flow.Task{
 			Name:         "Deploying managed resources for system components and optional addons",
