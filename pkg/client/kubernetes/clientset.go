@@ -135,7 +135,7 @@ func (c *clientSet) Start(ctx context.Context) {
 	c.startOnce.Do(func() {
 		go func() {
 			if err := c.cache.Start(ctx); err != nil {
-				logf.Log.Error(err, "cache.Start returned error, which should never happen, ignoring")
+				logf.Log.Error(err, "Failed to start the cache, which should never happen, ignoring")
 			}
 		}()
 	})

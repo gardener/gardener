@@ -71,7 +71,7 @@ func (a *actuator) reconcile(dnsRecord *extensionsv1alpha1.DNSRecord, mutateEtcH
 
 	defer func() {
 		if err := file.Close(); err != nil {
-			a.logger.Error(err, "error closing hosts file")
+			a.logger.Error(err, "Error closing hosts file")
 		}
 	}()
 

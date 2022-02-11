@@ -35,6 +35,8 @@ issues:
   # typecheck:
   - "undeclared name: `.*`"
   - "\".*\" imported but not used"
+  # allow non-capitalized messages if they start with technical terms
+  - "structured logging message should be capitalized: \"gardener-(apiserver|controller-manager)"
   exclude-rules:
   - linters:
     - staticcheck

@@ -136,7 +136,7 @@ func (s *statusUpdater) ErrorCustom(ctx context.Context, obj extensionsv1alpha1.
 	}
 
 	errDescription := gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err))
-	s.logger.Error(fmt.Errorf(errDescription), "error", s.logKeysAndValues(obj)...)
+	s.logger.Error(fmt.Errorf(errDescription), "Error", s.logKeysAndValues(obj)...)
 
 	lastOp, lastErr := ReconcileError(lastOperationType, errDescription, 50, gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err, err.Error()))...)
 
