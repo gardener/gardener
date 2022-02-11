@@ -678,6 +678,22 @@ var _ = Describe("health check", func() {
 				},
 				cloudConfigSecretChecksums,
 				BeNil()),
+			Entry("too old Kubernetes patch version with pool version overwrite",
+				[]corev1.Node{
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, "v1.18.2"),
+				},
+				[]gardencorev1beta1.Worker{
+					{
+						Name:    workerPoolName1,
+						Maximum: 10,
+						Minimum: 1,
+						Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+							Version: pointer.String("1.18.3"),
+						},
+					},
+				},
+				cloudConfigSecretChecksums,
+				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "KubeletVersionMismatch", fmt.Sprintf("The kubelet version for node %q (v1.18.2) does not match the desired Kubernetes version (v1.18.3)", nodeName)))),
 			Entry("different Kubernetes minor version (all healthy)",
 				[]corev1.Node{
 					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, "v1.18.2"),
