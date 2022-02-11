@@ -31,7 +31,7 @@ users:
     tokenFile: /var/run/secrets/projected/serviceaccount/token
 ```
 
-This will allow for automatic rotation of the service account token by the `kubelet`. The configuration can be achieved by setting both `.Values.global.GardenerControlPlaneComponent.serviceAccountTokenVolumeProjection.enabled: true` and `.Values.global.GardenerControlPlaneComponent.kubeconfig` in the respective chart's `values.yaml` file.
+This will allow for automatic rotation of the service account token by the `kubelet`. The configuration can be achieved by setting both `.Values.global.<GardenerControlPlaneComponent>.serviceAccountTokenVolumeProjection.enabled: true` and `.Values.global.<GardenerControlPlaneComponent>.kubeconfig` in the respective chart's `values.yaml` file.
 
 ## *Virtual Garden* is used, i.e., the `runtime` Garden cluster is different from the `target` Garden cluster.
 
@@ -43,7 +43,7 @@ The easiest way to setup the authentication will be to create a service account 
 3. Set the crafted `kubeconfig` and deploy the `runtime` part of the charts in the `runtime` cluster.
 
 **Client Certificate**
-Another solution will be to bind the roles in the `target` cluster to a `User` subject instead of a service account and use a client certificate for authentication. This approach does not provide a solution for the client certificate rotation. However, this setup can be achieved by setting both `.Values.global.deployment.virtualGarden.enabled: true` and `.Values.global.deployment.virtualGarden.GardenerControlPlaneComponent.user.name`, then following these steps:
+Another solution will be to bind the roles in the `target` cluster to a `User` subject instead of a service account and use a client certificate for authentication. This approach does not provide a solution for the client certificate rotation. However, this setup can be achieved by setting both `.Values.global.deployment.virtualGarden.enabled: true` and `.Values.global.deployment.virtualGarden.<GardenerControlPlaneComponent>.user.name`, then following these steps:
 
 1. Generate a client certificate for the `target` cluster for the respective user.
 2. Deploy the `application` part of the charts in the `target` cluster.
@@ -54,8 +54,8 @@ Another solution will be to bind the roles in the `target` cluster to a `User` s
 This approach requires an already deployed and configured [oidc-webhook-authenticator](https://github.com/gardener/oidc-webhook-authenticator) for the `target` cluster. Also the `runtime` cluster should be registered as a trusted identity provider in the `target` cluster. Then projected service accounts tokens from the `runtime` cluster can be used to authenticate against the `target` cluster. The needed steps are as follows:
 
 1. Deploy [OWA](https://github.com/gardener/oidc-webhook-authenticator) and establish the needed trust.
-2. Set `.Values.global.deployment.virtualGarden.enabled: true` and `.Values.global.deployment.virtualGarden.GardenerControlPlaneComponent.user.name`. **Note:** username value will depend on the trust configuration, e.g., `<prefix>:system:serviceaccount:<namespace>:<serviceaccount>`
-3. Set `.Values.global.GardenerControlPlaneComponent.serviceAccountTokenVolumeProjection.enabled: true` and `.Values.global.GardenerControlPlaneComponent.serviceAccountTokenVolumeProjection.audience`. **Note:** audience value will depend on the trust configuration, e.g., `<cliend-id-from-trust-config>`.
+2. Set `.Values.global.deployment.virtualGarden.enabled: true` and `.Values.global.deployment.virtualGarden.<GardenerControlPlaneComponent>.user.name`. **Note:** username value will depend on the trust configuration, e.g., `<prefix>:system:serviceaccount:<namespace>:<serviceaccount>`
+3. Set `.Values.global.<GardenerControlPlaneComponent>.serviceAccountTokenVolumeProjection.enabled: true` and `.Values.global.<GardenerControlPlaneComponent>.serviceAccountTokenVolumeProjection.audience`. **Note:** audience value will depend on the trust configuration, e.g., `<cliend-id-from-trust-config>`.
 4. Craft a kubeconfig (see example below).
 5. Deploy the `application` part of the charts in the `target` cluster.
 6. Deploy the `runtime` part of the charts in the `runtime` cluster.
