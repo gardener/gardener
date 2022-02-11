@@ -207,7 +207,7 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 
 	case len(podList.Items) > 1:
 		// unreachable
-		logger.Error(fmt.Errorf("too many Terraformer pods"), "Unexpected number of still existing Terraformer pods: %d", len(podList.Items))
+		logger.Error(fmt.Errorf("too many Terraformer pods"), "Unexpected number of still existing Terraformer pods", "numberOfPods", len(podList.Items))
 		if err := t.EnsureCleanedUp(ctx); err != nil {
 			return err
 		}
