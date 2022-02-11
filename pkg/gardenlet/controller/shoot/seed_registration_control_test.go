@@ -298,7 +298,7 @@ var _ = Describe("SeedRegistrationReconciler", func() {
 				})
 
 				It("should create the correct ManagedSeed resource, all custom", func() {
-					shoot := newShoot("true,disable-dns,disable-capacity-reservation,protected,invisible,minimumVolumeSize=20Gi,apiServer.replicas=2,apiServer.autoscaler.minReplicas=2,apiServer.autoscaler.maxReplicas=5,blockCIDRs=169.254.169.254/32,shootDefaults.pods=100.96.0.0/11,shootDefaults.services=100.64.0.0/13,backup.provider=gcp,backup.region=europe-north1,use-serviceaccount-bootstrapping,with-secret-ref,featureGates.SeedChange=false,resources.capacity.shoots=100,loadBalancerServices.annotations.foo=bar,ingress.controller.kind=nginx")
+					shoot := newShoot("true,disable-dns,disable-capacity-reservation,protected,invisible,minimumVolumeSize=20Gi,apiServer.replicas=2,apiServer.autoscaler.minReplicas=2,apiServer.autoscaler.maxReplicas=5,blockCIDRs=169.254.169.254/32,shootDefaults.pods=100.96.0.0/11,shootDefaults.services=100.64.0.0/13,backup.provider=gcp,backup.region=europe-north1,use-serviceaccount-bootstrapping,with-secret-ref,featureGates.ReversedVPN=false,resources.capacity.shoots=100,loadBalancerServices.annotations.foo=bar,ingress.controller.kind=nginx")
 					Expect(c.Create(ctx, shoot)).To(Succeed())
 
 					expectedManagedSeed = &seedmanagementv1alpha1.ManagedSeed{
@@ -325,7 +325,7 @@ var _ = Describe("SeedRegistrationReconciler", func() {
 										},
 									},
 									FeatureGates: map[string]bool{
-										string(features.SeedChange): false,
+										string(features.ReversedVPN): false,
 									},
 									SeedConfig: &configv1alpha1.SeedConfig{
 										SeedTemplate: gardencorev1beta1.SeedTemplate{

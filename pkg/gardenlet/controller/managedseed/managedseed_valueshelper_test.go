@@ -110,7 +110,8 @@ var _ = Describe("ValuesHelper", func() {
 				},
 			},
 			FeatureGates: map[string]bool{
-				string(features.HVPA): true,
+				string(features.ReversedVPN): true,
+				string(features.HVPA):        true,
 			},
 			Logging: &config.Logging{
 				Enabled: pointer.Bool(true),
@@ -150,6 +151,7 @@ var _ = Describe("ValuesHelper", func() {
 				Kind:       "GardenletConfiguration",
 			},
 			FeatureGates: map[string]bool{
+				string(features.ReversedVPN):          false,
 				string(features.CachedRuntimeClients): true,
 			},
 		}
@@ -230,6 +232,7 @@ var _ = Describe("ValuesHelper", func() {
 					},
 				},
 				FeatureGates: map[string]bool{
+					string(features.ReversedVPN):          false,
 					string(features.HVPA):                 true,
 					string(features.CachedRuntimeClients): true,
 				},
@@ -289,6 +292,7 @@ var _ = Describe("ValuesHelper", func() {
 								},
 							},
 							"featureGates": map[string]interface{}{
+								"ReversedVPN":          false,
 								"HVPA":                 true,
 								"CachedRuntimeClients": true,
 							},

@@ -39,13 +39,7 @@ import (
 // DeploySeedLogging will install the Helm release "seed-bootstrap/charts/loki" in the Seed clusters.
 func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	// check if loki is enabled in gardenlet config, default is true
-	var lokiEnabled = true
-	if b.Config != nil &&
-		b.Config.Logging != nil &&
-		b.Config.Logging.Loki != nil &&
-		b.Config.Logging.Loki.Enabled != nil {
-		lokiEnabled = *b.Config.Logging.Loki.Enabled
-	}
+	var lokiEnabled = gardenlethelper.IsLokiEnabled(b.Config)
 
 	if !b.Shoot.IsLoggingEnabled() || !gardenlethelper.IsLoggingEnabled(b.Config) || !lokiEnabled {
 		return b.destroyShootLoggingStack(ctx)
@@ -155,7 +149,7 @@ func (b *Botanist) destroyShootNodeLogging(ctx context.Context) error {
 func (b *Botanist) isShootNodeLoggingEnabled() bool {
 	if b.Shoot != nil && b.Shoot.IsLoggingEnabled() && b.Config != nil &&
 		b.Config.Logging != nil && gardenlethelper.IsLoggingEnabled(b.Config) &&
-		b.Config.Logging.ShootNodeLogging != nil {
+		gardenlethelper.IsLokiEnabled(b.Config) && b.Config.Logging.ShootNodeLogging != nil {
 
 		for _, purpose := range b.Config.Logging.ShootNodeLogging.ShootPurposes {
 			if gardencore.ShootPurpose(b.Shoot.Purpose) == purpose {

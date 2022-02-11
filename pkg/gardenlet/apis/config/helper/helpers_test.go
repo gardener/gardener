@@ -148,4 +148,36 @@ var _ = Describe("helper", func() {
 			Expect(IsLoggingEnabled(gardenletConfig)).To(BeTrue())
 		})
 	})
+
+	Describe("#LokiConfiguration", func() {
+		It("should return true when the logging is nil", func() {
+			gardenletConfig := &config.GardenletConfiguration{}
+
+			Expect(IsLokiEnabled(gardenletConfig)).To(BeTrue())
+		})
+
+		It("should return false when the loki is not enabled", func() {
+			gardenletConfig := &config.GardenletConfiguration{
+				Logging: &config.Logging{
+					Loki: &config.Loki{
+						Enabled: pointer.Bool(false),
+					},
+				},
+			}
+
+			Expect(IsLokiEnabled(gardenletConfig)).To(BeFalse())
+		})
+
+		It("should return true when the loki is enabled", func() {
+			gardenletConfig := &config.GardenletConfiguration{
+				Logging: &config.Logging{
+					Loki: &config.Loki{
+						Enabled: pointer.Bool(true),
+					},
+				},
+			}
+
+			Expect(IsLokiEnabled(gardenletConfig)).To(BeTrue())
+		})
+	})
 })

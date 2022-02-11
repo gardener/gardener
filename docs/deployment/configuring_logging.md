@@ -2,7 +2,7 @@
 
 # Enable the Logging
 
-To enable logging, in the Gardenlet configuration add:
+In order to install the Gardener logging stack the `logging.enabled` configuration option has to be enabled in the Gardenlet configuration:
 ```yaml
 logging:
   enabled: true
