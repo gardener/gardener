@@ -435,6 +435,11 @@ func ValidateTotalNodeCountWithPodCIDR(shoot *core.Shoot) field.ErrorList {
 	}
 
 	cidrMask, _ := podNetwork.Mask.Size()
+	if cidrMask == 0 {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("networking").Child("pods"), podNetwork.String(), fmt.Sprintf("incorrect pod network mask : %s. Please ensure the mask is in proper form", podNetwork.String())))
+		return allErrs
+	}
+
 	maxNodeCount := int32(math.Pow(2, float64(nodeCIDRMaskSize-int32(cidrMask))))
 
 	for _, worker := range shoot.Spec.Provider.Workers {
