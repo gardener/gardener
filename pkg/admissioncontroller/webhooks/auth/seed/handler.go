@@ -90,7 +90,7 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 	if contentType != "application/json" {
 		err = fmt.Errorf("contentType=%s, expected application/json", contentType)
-		h.logger.Error(err, "Unable to process a request with an unknown content type", "content type", contentType)
+		h.logger.Error(err, "Unable to process a request with an unknown content type", "contentType", contentType)
 		h.writeResponse(w, nil, Errored(http.StatusBadRequest, err))
 		return
 	}

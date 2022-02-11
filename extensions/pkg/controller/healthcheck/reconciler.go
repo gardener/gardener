@@ -133,7 +133,7 @@ func (r *reconciler) performHealthCheck(ctx context.Context, request reconcile.R
 	healthCheckResults, err := r.actuator.ExecuteHealthCheckFunctions(ctx, types.NamespacedName{Namespace: request.Namespace, Name: request.Name})
 	if err != nil {
 		var conditions []condition
-		r.logger.Info("Failed to execute healthChecks, updating each HealthCheckCondition for the extension resource to ConditionCheckError", "kind", r.registeredExtension.groupVersionKind.Kind, "health condition types", r.registeredExtension.healthConditionTypes, "name", request.Name, "namespace", request.Namespace, "error", err.Error())
+		r.logger.Info("Failed to execute healthChecks, updating each HealthCheckCondition for the extension resource to ConditionCheckError", "kind", r.registeredExtension.groupVersionKind.Kind, "conditionTypes", r.registeredExtension.healthConditionTypes, "name", request.Name, "namespace", request.Namespace, "error", err.Error())
 		for _, healthConditionType := range r.registeredExtension.healthConditionTypes {
 			conditionBuilder, buildErr := gardencorev1beta1helper.NewConditionBuilder(gardencorev1beta1.ConditionType(healthConditionType))
 			if buildErr != nil {
@@ -163,13 +163,13 @@ func (r *reconciler) performHealthCheck(ctx context.Context, request reconcile.R
 		}
 
 		if healthCheckResult.Status == gardencorev1beta1.ConditionTrue {
-			logger.Info("Health check for extension resource successful", "kind", r.registeredExtension.groupVersionKind.Kind, "health condition type", healthCheckResult.HealthConditionType, "name", request.Name, "namespace", request.Namespace)
+			logger.Info("Health check for extension resource successful", "kind", r.registeredExtension.groupVersionKind.Kind, "conditionType", healthCheckResult.HealthConditionType, "name", request.Name, "namespace", request.Namespace)
 			conditions = append(conditions, extensionConditionSuccessful(conditionBuilder, healthCheckResult.HealthConditionType, healthCheckResult))
 			continue
 		}
 
 		if healthCheckResult.FailedChecks > 0 {
-			r.logger.Info("Updating HealthCheckCondition for extension resource to ConditionCheckError", "kind", r.registeredExtension.groupVersionKind.Kind, "health condition type", healthCheckResult.HealthConditionType, "name", request.Name, "namespace", request.Namespace)
+			r.logger.Info("Updating HealthCheckCondition for extension resource to ConditionCheckError", "kind", r.registeredExtension.groupVersionKind.Kind, "conditionType", healthCheckResult.HealthConditionType, "name", request.Name, "namespace", request.Namespace)
 			conditions = append(conditions, extensionConditionCheckError(conditionBuilder, healthCheckResult.HealthConditionType, healthCheckResult))
 			continue
 		}

@@ -163,7 +163,7 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, request type
 				}
 
 				if !preCheckFunc(obj, cluster) {
-					a.logger.V(6).Info("Skipping health check as pre check function returned false", "condition type", healthConditionType)
+					a.logger.V(6).Info("Skipping health check as pre check function returned false", "conditionType", healthConditionType)
 					channel <- channelResult{
 						healthCheckResult: &SingleCheckResult{
 							Status: gardencorev1beta1.ConditionTrue,
