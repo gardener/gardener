@@ -194,6 +194,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 	for name, secret := range secretsManager.DeployedSecrets {
 		b.StoreSecret(name, secret)
 	}
+
 	for _, name := range b.AllSecretKeys() {
 		b.StoreCheckSum(name, utils.ComputeSecretChecksum(b.LoadSecret(name).Data))
 	}
@@ -350,11 +351,9 @@ func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResource
 	}
 	gardenerResourceDataList.Delete(v1beta1constants.SecretNameSSHKeyPair)
 
-	// remove operation annotation and annotate shoot with GardenerSSHRotation annotation indicating that Shoot's ssh-keypair
-	// has been rotated.
+	// remove operation annotation
 	return b.Shoot.UpdateInfo(ctx, b.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
 		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerSSHRotation, v1beta1constants.ShootOperationSSHKeypairRotated)
 		return nil
 	})
 }
@@ -438,8 +437,9 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 		},
 	}
 
-	// Secret definition for ssh-keypair.old. ssh-keypair.old secret will created when Shoot ssh-keypair is rotated atleast once.
-	if b.Shoot.GetInfo().Annotations[v1beta1constants.GardenerSSHRotation] == v1beta1constants.ShootOperationSSHKeypairRotated {
+	// ssh-keypair.old secret will be synced to the Garden cluster if shoot's ssh-keypair is rotated atleast once.
+	gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(b.GetShootState().Spec.Gardener)
+	if secret := gardenerResourceDataList.Get(v1beta1constants.SecretNameOldSSHKeyPair); secret != nil {
 		projectSecrets = append(projectSecrets, projectSecret{
 			secretName: v1beta1constants.SecretNameOldSSHKeyPair,
 			suffix:     gutil.ShootProjectSecretSuffixOldSSHKeypair,
