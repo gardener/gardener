@@ -44,6 +44,7 @@ func AddToManager(
 			recorder:     mgr.GetEventRecorderFor(ControllerName),
 		},
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
+		RecoverPanic:            true,
 	}
 
 	c, err := controller.New(ControllerName, mgr, ctrlOptions)

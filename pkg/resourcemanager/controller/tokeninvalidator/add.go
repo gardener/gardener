@@ -60,6 +60,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		crcontroller.Options{
 			MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
 			Reconciler:              NewReconciler(conf.TargetCluster.GetClient(), conf.TargetCluster.GetAPIReader()),
+			RecoverPanic:            true,
 		},
 	)
 	if err != nil {

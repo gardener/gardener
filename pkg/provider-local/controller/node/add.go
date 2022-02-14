@@ -40,6 +40,7 @@ type AddOptions struct {
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 	opts.Controller.Reconciler = NewReconciler()
+	opts.Controller.RecoverPanic = true
 
 	ctrl, err := controller.New(ControllerName, mgr, opts.Controller)
 	if err != nil {

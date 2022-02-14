@@ -59,6 +59,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 			targetReader: conf.TargetCluster.GetAPIReader(),
 			targetWriter: conf.TargetCluster.GetClient(),
 		},
+		RecoverPanic: true,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to set up gc controller: %w", err)

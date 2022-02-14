@@ -80,6 +80,7 @@ func NewCommandStartLandscaperControlplane(ctx context.Context) *cobra.Command {
 			log.Infof("Execution finished successfully.")
 			return nil
 		},
+		SilenceUsage: true,
 	}
 	return cmd
 }

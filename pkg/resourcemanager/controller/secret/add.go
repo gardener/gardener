@@ -55,6 +55,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		Reconciler: &Reconciler{
 			ClassFilter: &conf.ClassFilter,
 		},
+		RecoverPanic: true,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to set up secret controller: %w", err)

@@ -60,6 +60,7 @@ type AddArgs struct {
 // Add adds an Extension controller to the given manager using the given AddArgs.
 func Add(mgr manager.Manager, args AddArgs) error {
 	args.ControllerOptions.Reconciler = NewReconciler(args)
+	args.ControllerOptions.RecoverPanic = true
 	return add(mgr, args)
 }
 
