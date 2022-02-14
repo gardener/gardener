@@ -68,7 +68,12 @@ func NewAt(path string) *Store {
 
 // Initialize ensures that the store is all set up on disk, etc.
 func (s *Store) Initialize(ctx context.Context) error {
-	logr.FromContext(ctx).V(1).Info("ensuring base binaries dir exists")
+	log, err := logr.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	log.V(1).Info("ensuring base binaries dir exists")
 	if err := s.unpackedBase().MkdirAll("", 0755); err != nil {
 		return fmt.Errorf("unable to make sure base binaries dir exists: %w", err)
 	}
@@ -109,7 +114,11 @@ func (s *Store) List(ctx context.Context, matching Filter) ([]Item, error) {
 
 // Add adds this item to the store, with the given contents (a .tar.gz file).
 func (s *Store) Add(ctx context.Context, item Item, contents io.Reader) (resErr error) {
-	log := logr.FromContext(ctx)
+	log, err := logr.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
 	itemName := item.dirName()
 	log = log.WithValues("version-platform", itemName)
 	itemPath := s.unpackedPath(itemName)
@@ -126,7 +135,7 @@ func (s *Store) Add(ctx context.Context, item Item, contents io.Reader) (resErr 
 	}()
 
 	log.V(1).Info("ensuring version-platform binaries dir exists and is empty & writable")
-	_, err := itemPath.Stat("")
+	_, err = itemPath.Stat("")
 	if err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 		return fmt.Errorf("unable to ensure version-platform binaries dir %s exists", itemName)
 	}
@@ -191,7 +200,11 @@ func (s *Store) Add(ctx context.Context, item Item, contents io.Reader) (resErr 
 // It returns a list of the successfully removed items (even in the case
 // of an error).
 func (s *Store) Remove(ctx context.Context, matching Filter) ([]Item, error) {
-	log := logr.FromContext(ctx)
+	log, err := logr.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	var removed []Item
 	var savedErr error
 	if err := s.eachItem(ctx, matching, func(name string, item Item) {
@@ -237,7 +250,11 @@ func (s *Store) unpackedPath(name string) afero.Fs {
 // eachItem iterates through the on-disk versions that match our version & platform selector,
 // calling the callback for each.
 func (s *Store) eachItem(ctx context.Context, filter Filter, cb func(name string, item Item)) error {
-	log := logr.FromContext(ctx)
+	log, err := logr.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
 	entries, err := afero.ReadDir(s.unpackedBase(), "")
 	if err != nil {
 		return fmt.Errorf("unable to list folders in store's unpacked directory: %w", err)

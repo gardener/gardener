@@ -105,7 +105,7 @@ func (c *FakeOpenIDConnectPresets) Update(ctx context.Context, openIDConnectPres
 // Delete takes name of the openIDConnectPreset and deletes it. Returns an error if one occurs.
 func (c *FakeOpenIDConnectPresets) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(openidconnectpresetsResource, c.ns, name), &v1alpha1.OpenIDConnectPreset{})
+		Invokes(testing.NewDeleteActionWithOptions(openidconnectpresetsResource, c.ns, name, opts), &v1alpha1.OpenIDConnectPreset{})
 
 	return err
 }

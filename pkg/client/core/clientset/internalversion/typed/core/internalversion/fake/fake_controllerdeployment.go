@@ -99,7 +99,7 @@ func (c *FakeControllerDeployments) Update(ctx context.Context, controllerDeploy
 // Delete takes name of the controllerDeployment and deletes it. Returns an error if one occurs.
 func (c *FakeControllerDeployments) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(controllerdeploymentsResource, name), &core.ControllerDeployment{})
+		Invokes(testing.NewRootDeleteActionWithOptions(controllerdeploymentsResource, name, opts), &core.ControllerDeployment{})
 	return err
 }
 

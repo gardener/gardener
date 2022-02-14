@@ -117,7 +117,7 @@ func (c *FakeShoots) UpdateStatus(ctx context.Context, shoot *core.Shoot, opts v
 // Delete takes name of the shoot and deletes it. Returns an error if one occurs.
 func (c *FakeShoots) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(shootsResource, c.ns, name), &core.Shoot{})
+		Invokes(testing.NewDeleteActionWithOptions(shootsResource, c.ns, name, opts), &core.Shoot{})
 
 	return err
 }

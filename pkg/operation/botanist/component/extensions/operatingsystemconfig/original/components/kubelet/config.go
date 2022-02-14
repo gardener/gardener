@@ -90,7 +90,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		ReadOnlyPort:                     0,
 		RegistryBurst:                    10,
 		RegistryPullQPS:                  pointer.Int32(5),
-		ResolverConfig:                   "/etc/resolv.conf",
+		ResolverConfig:                   pointer.String("/etc/resolv.conf"),
 		RotateCertificates:               true,
 		RuntimeRequestTimeout:            metav1.Duration{Duration: 2 * time.Minute},
 		SerializeImagePulls:              params.SerializeImagePulls,

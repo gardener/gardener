@@ -149,6 +149,18 @@ func (mr *MockRateLimitingInterfaceMockRecorder) ShutDown() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShutDown", reflect.TypeOf((*MockRateLimitingInterface)(nil).ShutDown))
 }
 
+// ShutDownWithDrain mocks base method.
+func (m *MockRateLimitingInterface) ShutDownWithDrain() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ShutDownWithDrain")
+}
+
+// ShutDownWithDrain indicates an expected call of ShutDownWithDrain.
+func (mr *MockRateLimitingInterfaceMockRecorder) ShutDownWithDrain() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShutDownWithDrain", reflect.TypeOf((*MockRateLimitingInterface)(nil).ShutDownWithDrain))
+}
+
 // ShuttingDown mocks base method.
 func (m *MockRateLimitingInterface) ShuttingDown() bool {
 	m.ctrl.T.Helper()

@@ -117,7 +117,7 @@ func (c *FakePlants) UpdateStatus(ctx context.Context, plant *v1beta1.Plant, opt
 // Delete takes name of the plant and deletes it. Returns an error if one occurs.
 func (c *FakePlants) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(plantsResource, c.ns, name), &v1beta1.Plant{})
+		Invokes(testing.NewDeleteActionWithOptions(plantsResource, c.ns, name, opts), &v1beta1.Plant{})
 
 	return err
 }

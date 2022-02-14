@@ -99,7 +99,7 @@ func (c *FakeExposureClasses) Update(ctx context.Context, exposureClass *v1alpha
 // Delete takes name of the exposureClass and deletes it. Returns an error if one occurs.
 func (c *FakeExposureClasses) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(exposureclassesResource, name), &v1alpha1.ExposureClass{})
+		Invokes(testing.NewRootDeleteActionWithOptions(exposureclassesResource, name, opts), &v1alpha1.ExposureClass{})
 	return err
 }
 

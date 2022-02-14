@@ -17,7 +17,7 @@ package main
 import (
 	"os"
 
-	"k8s.io/component-base/logs"
+	_ "k8s.io/component-base/logs/json/register" // for JSON log format registration
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/gardener/gardener/cmd/gardener-apiserver/app"
@@ -28,9 +28,6 @@ import (
 func main() {
 	utils.DeduplicateWarnings()
 	features.RegisterFeatureGates()
-
-	logs.InitLogs()
-	defer logs.FlushLogs()
 
 	ctx := signals.SetupSignalHandler()
 	if err := app.NewCommandStartGardenerAPIServer().ExecuteContext(ctx); err != nil {

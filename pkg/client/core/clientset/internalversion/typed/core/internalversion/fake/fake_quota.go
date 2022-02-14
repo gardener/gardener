@@ -105,7 +105,7 @@ func (c *FakeQuotas) Update(ctx context.Context, quota *core.Quota, opts v1.Upda
 // Delete takes name of the quota and deletes it. Returns an error if one occurs.
 func (c *FakeQuotas) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(quotasResource, c.ns, name), &core.Quota{})
+		Invokes(testing.NewDeleteActionWithOptions(quotasResource, c.ns, name, opts), &core.Quota{})
 
 	return err
 }

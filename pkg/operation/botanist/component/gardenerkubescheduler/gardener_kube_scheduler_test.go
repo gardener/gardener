@@ -459,7 +459,7 @@ var _ = Describe("New", func() {
 											"--port=0",
 										},
 										LivenessProbe: &corev1.Probe{
-											Handler: corev1.Handler{
+											ProbeHandler: corev1.ProbeHandler{
 												HTTPGet: &corev1.HTTPGetAction{
 													Path:   "/healthz",
 													Scheme: corev1.URISchemeHTTPS,
@@ -663,7 +663,7 @@ var _ = Describe("New", func() {
 											"--v=2",
 										},
 										LivenessProbe: &corev1.Probe{
-											Handler: corev1.Handler{
+											ProbeHandler: corev1.ProbeHandler{
 												HTTPGet: &corev1.HTTPGetAction{
 													Path:   "/healthz",
 													Scheme: corev1.URISchemeHTTPS,

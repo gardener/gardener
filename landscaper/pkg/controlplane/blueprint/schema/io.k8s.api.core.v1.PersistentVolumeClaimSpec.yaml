@@ -29,7 +29,9 @@ properties:
     $ref: blueprint://schema/io.k8s.api.core.v1.ResourceRequirements.yaml
     default: {}
     description: 'Resources represents the minimum resources the volume should have.
-      More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources'
+      If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify
+      resource requirements that are lower than previous value but must still be higher
+      than capacity recorded in the status field of the claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources'
   selector:
     $ref: blueprint://schema/io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector.yaml
     description: A label query over volumes to consider for binding.

@@ -23,6 +23,7 @@ import (
 	secretcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
 	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
 	"github.com/gardener/gardener/pkg/utils/test"
+	"github.com/go-logr/logr"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -34,7 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
@@ -60,7 +60,7 @@ var _ = Describe("SecretReconciler", func() {
 		r = &secretcontroller.Reconciler{ClassFilter: classFilter}
 
 		Expect(inject.ClientInto(c, r)).To(BeTrue())
-		Expect(inject.LoggerInto(log.NullLogger{}, r)).To(BeTrue())
+		Expect(inject.LoggerInto(logr.Discard(), r)).To(BeTrue())
 
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{

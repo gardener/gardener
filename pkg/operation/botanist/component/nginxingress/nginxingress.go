@@ -354,7 +354,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 							Image:           n.values.ImageDefaultBackend,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							LivenessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
+								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/healthy",
 										Port:   intstr.FromInt(int(containerPortBackend)),
@@ -459,7 +459,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 							},
 							LivenessProbe: &corev1.Probe{
 								FailureThreshold: 3,
-								Handler: corev1.Handler{
+								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/healthz",
 										Port:   healthProbePort,
@@ -486,7 +486,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 							ReadinessProbe: &corev1.Probe{
 								FailureThreshold:    3,
 								InitialDelaySeconds: 40,
-								Handler: corev1.Handler{
+								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/healthz",
 										Port:   healthProbePort,

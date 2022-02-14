@@ -20,6 +20,7 @@ import (
 
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher"
+	"github.com/go-logr/logr"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -33,7 +34,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
@@ -58,7 +58,7 @@ var _ = Describe("Reconciler", func() {
 			Build()
 
 		ctrl = NewReconciler(fakeClient, rootCA)
-		Expect(inject.LoggerInto(log.NullLogger{}, ctrl)).To(BeTrue())
+		Expect(inject.LoggerInto(logr.Discard(), ctrl)).To(BeTrue())
 
 		namespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -130,7 +130,7 @@ var _ = Describe("Reconciler", func() {
 					mockClient = mockclient.NewMockClient(mockCtrl)
 
 					ctrl = NewReconciler(mockClient, rootCA)
-					Expect(inject.LoggerInto(log.NullLogger{}, ctrl)).To(BeTrue())
+					Expect(inject.LoggerInto(logr.Discard(), ctrl)).To(BeTrue())
 				})
 
 				AfterEach(func() {

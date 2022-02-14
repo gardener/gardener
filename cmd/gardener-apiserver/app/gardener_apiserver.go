@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/component-base/logs"
+
 	"github.com/gardener/gardener/pkg/api"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -120,6 +122,8 @@ type Options struct {
 	KubeInformerFactory           kubeinformers.SharedInformerFactory
 	SeedManagementInformerFactory seedmanagementinformer.SharedInformerFactory
 	SettingsInformerFactory       settingsinformer.SharedInformerFactory
+
+	Logs *logs.Options
 }
 
 // NewOptions returns a new Options object.
@@ -136,6 +140,7 @@ func NewOptions() *Options {
 		),
 		ServerRunOptions: genericoptions.NewServerRunOptions(),
 		ExtraOptions:     &apiserver.ExtraOptions{},
+		Logs:             logs.NewOptions(),
 	}
 	o.Recommended.Etcd.StorageConfig.EncodeVersioner = runtime.NewMultiGroupVersioner(
 		gardencorev1beta1.SchemeGroupVersion,
@@ -154,6 +159,7 @@ func (o *Options) AddFlags(flags *pflag.FlagSet) {
 	o.Recommended.AddFlags(flags)
 	o.ServerRunOptions.AddUniversalFlags(flags)
 	o.ExtraOptions.AddFlags(flags)
+	o.Logs.AddFlags(flags)
 }
 
 // Validate validates all the required options.
@@ -167,6 +173,11 @@ func (o *Options) Validate() error {
 	keyCert := &o.Recommended.SecureServing.ServerCert.CertKey
 	if len(keyCert.CertFile) == 0 || len(keyCert.KeyFile) == 0 {
 		errs = append(errs, errors.New("must specify both --tls-cert-file and --tls-private-key-file"))
+	}
+
+	// Activate logging as soon as possible
+	if err := o.Logs.ValidateAndApply(); err != nil {
+		return err
 	}
 
 	return utilerrors.NewAggregate(errs)

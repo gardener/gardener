@@ -485,7 +485,7 @@ var _ = Describe("KubeControllerManager", func() {
 											ImagePullPolicy: corev1.PullIfNotPresent,
 											Command:         commandForKubernetesVersion(version, 10257, config.NodeCIDRMaskSize, config.PodEvictionTimeout, config.NodeMonitorGracePeriod, namespace, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kutil.FeatureGatesToCommandLineParameter(config.FeatureGates)),
 											LivenessProbe: &corev1.Probe{
-												Handler: corev1.Handler{
+												ProbeHandler: corev1.ProbeHandler{
 													HTTPGet: &corev1.HTTPGetAction{
 														Path:   "/healthz",
 														Scheme: corev1.URISchemeHTTPS,

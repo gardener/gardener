@@ -117,7 +117,7 @@ func (c *FakeManagedSeeds) UpdateStatus(ctx context.Context, managedSeed *v1alph
 // Delete takes name of the managedSeed and deletes it. Returns an error if one occurs.
 func (c *FakeManagedSeeds) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(managedseedsResource, c.ns, name), &v1alpha1.ManagedSeed{})
+		Invokes(testing.NewDeleteActionWithOptions(managedseedsResource, c.ns, name, opts), &v1alpha1.ManagedSeed{})
 
 	return err
 }

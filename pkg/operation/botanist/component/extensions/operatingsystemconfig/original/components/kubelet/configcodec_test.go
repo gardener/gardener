@@ -80,7 +80,7 @@ var _ = Describe("ConfigCodec", func() {
 			RuntimeRequestTimeout:       metav1.Duration{Duration: 2 * time.Minute},
 			HairpinMode:                 "promiscuous-bridge",
 			MaxPods:                     110,
-			ResolverConfig:              "/etc/resolv.conf",
+			ResolverConfig:              pointer.String("/etc/resolv.conf"),
 			CPUCFSQuota:                 pointer.Bool(true),
 			MaxOpenFiles:                1000000,
 			KubeAPIQPS:                  pointer.Int32(50),
@@ -182,7 +182,12 @@ kubeAPIQPS: 50
 kubeReserved:
   cpu: 80m
   memory: 1Gi
-logging: {}
+logging:
+  flushFrequency: 0
+  options:
+    json:
+      infoBufferSize: "0"
+  verbosity: 0
 maxOpenFiles: 1000000
 maxPods: 110
 memorySwap: {}

@@ -222,7 +222,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Command:         k.command(port),
 								LivenessProbe: &corev1.Probe{
-									Handler: corev1.Handler{
+									ProbeHandler: corev1.ProbeHandler{
 										HTTPGet: &corev1.HTTPGetAction{
 											Path:   "/healthz",
 											Scheme: corev1.URISchemeHTTPS,

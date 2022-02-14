@@ -101,7 +101,7 @@ func worker(ctx context.Context, queue workqueue.RateLimitingInterface, resource
 
 			req, err := requestFromKey(key)
 			if err != nil {
-				if controllerLogger != nil {
+				if controllerLogger.GetSink() != nil {
 					controllerLogger.Error(err, "Cannot obtain request from key")
 				} else {
 					logger.Logger.WithError(err).Error("Cannot obtain request from key")
@@ -114,14 +114,14 @@ func worker(ctx context.Context, queue workqueue.RateLimitingInterface, resource
 				reconcileCtx    = ctx
 				reconcileLogger logr.Logger
 			)
-			if controllerLogger != nil {
+			if controllerLogger.GetSink() != nil {
 				reconcileLogger = controllerLogger.WithValues("name", req.Name, "namespace", req.Namespace)
 				reconcileCtx = logf.IntoContext(ctx, reconcileLogger)
 			}
 
 			res, err := reconciler.Reconcile(reconcileCtx, req)
 			if err != nil {
-				if reconcileLogger != nil {
+				if reconcileLogger.GetSink() != nil {
 					// resource type is not added to logger here. Ideally, each controller sets WithName and it is clear from
 					// which controller the error log comes.
 					reconcileLogger.Error(err, "Error reconciling request")

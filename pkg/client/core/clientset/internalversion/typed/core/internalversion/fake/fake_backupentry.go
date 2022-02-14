@@ -117,7 +117,7 @@ func (c *FakeBackupEntries) UpdateStatus(ctx context.Context, backupEntry *core.
 // Delete takes name of the backupEntry and deletes it. Returns an error if one occurs.
 func (c *FakeBackupEntries) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(backupentriesResource, c.ns, name), &core.BackupEntry{})
+		Invokes(testing.NewDeleteActionWithOptions(backupentriesResource, c.ns, name, opts), &core.BackupEntry{})
 
 	return err
 }

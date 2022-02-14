@@ -110,7 +110,7 @@ func (c *FakeControllerInstallations) UpdateStatus(ctx context.Context, controll
 // Delete takes name of the controllerInstallation and deletes it. Returns an error if one occurs.
 func (c *FakeControllerInstallations) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(controllerinstallationsResource, name), &v1beta1.ControllerInstallation{})
+		Invokes(testing.NewRootDeleteActionWithOptions(controllerinstallationsResource, name, opts), &v1beta1.ControllerInstallation{})
 	return err
 }
 

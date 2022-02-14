@@ -467,7 +467,7 @@ import custom/*.server
 								ReadOnlyRootFilesystem: pointer.Bool(true),
 							},
 							LivenessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
+								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/health",
 										Scheme: corev1.URISchemeHTTP,
@@ -480,7 +480,7 @@ import custom/*.server
 								TimeoutSeconds:      5,
 							},
 							ReadinessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
+								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/ready",
 										Scheme: corev1.URISchemeHTTP,

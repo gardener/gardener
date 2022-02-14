@@ -105,7 +105,7 @@ func (c *FakeSecretBindings) Update(ctx context.Context, secretBinding *core.Sec
 // Delete takes name of the secretBinding and deletes it. Returns an error if one occurs.
 func (c *FakeSecretBindings) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(secretbindingsResource, c.ns, name), &core.SecretBinding{})
+		Invokes(testing.NewDeleteActionWithOptions(secretbindingsResource, c.ns, name, opts), &core.SecretBinding{})
 
 	return err
 }
