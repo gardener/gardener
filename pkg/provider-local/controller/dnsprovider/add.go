@@ -29,11 +29,7 @@ import (
 const ControllerName = "dnsprovider_controller"
 
 // DefaultAddOptions are the default AddOptions for AddToManager.
-var DefaultAddOptions = AddOptions{
-	Controller: controller.Options{
-		RecoverPanic: true,
-	},
-}
+var DefaultAddOptions = AddOptions{}
 
 // AddOptions are options to apply when adding the local infrastructure controller to the manager.
 type AddOptions struct {
@@ -45,7 +41,7 @@ type AddOptions struct {
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 	opts.Controller.Reconciler = NewReconciler()
-
+	opts.Controller.RecoverPanic = true
 	ctrl, err := controller.New(ControllerName, mgr, opts.Controller)
 	if err != nil {
 		return err

@@ -26,11 +26,7 @@ import (
 
 var (
 	// DefaultAddOptions are the default AddOptions for AddToManager.
-	DefaultAddOptions = AddOptions{
-		Controller: controller.Options{
-			RecoverPanic: true,
-		},
-	}
+	DefaultAddOptions = AddOptions{}
 )
 
 // AddOptions are options to apply when adding the local worker controller to the manager.
