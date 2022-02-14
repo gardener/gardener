@@ -60,6 +60,7 @@ var _ = Describe("GetAttrs", func() {
 		Expect(ls).To(HaveLen(1))
 		Expect(ls.Get("foo")).To(Equal("bar"))
 		Expect(fs.Get(core.SeedRefName)).To(Equal("qux"))
+		Expect(fs.Get(core.RegistrationRefName)).To(Equal("baz"))
 	})
 })
 

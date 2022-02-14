@@ -28,7 +28,7 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 	if err := scheme.AddFieldLabelConversionFunc(SchemeGroupVersion.WithKind("Bastion"),
 		func(label, value string) (string, string, error) {
 			switch label {
-			case "metadata.name", "metadata.namespace", operations.BastionSeedName:
+			case "metadata.name", "metadata.namespace", operations.BastionSeedName, operations.BastionShootName:
 				return label, value, nil
 			default:
 				return "", "", fmt.Errorf("field label not supported: %s", label)

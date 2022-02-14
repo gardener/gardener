@@ -166,8 +166,9 @@ func ToSelectableFields(bastion *operations.Bastion) fields.Set {
 	// amount of allocations needed to create the fields.Set. If you add any
 	// field here or the number of object-meta related fields changes, this should
 	// be adjusted.
-	bastionSpecificFieldsSet := make(fields.Set, 3)
+	bastionSpecificFieldsSet := make(fields.Set, 4)
 	bastionSpecificFieldsSet[operations.BastionSeedName] = getSeedName(bastion)
+	bastionSpecificFieldsSet[operations.BastionShootName] = bastion.Spec.ShootRef.Name
 	return generic.AddObjectMetaFieldsSet(bastionSpecificFieldsSet, &bastion.ObjectMeta, true)
 }
 

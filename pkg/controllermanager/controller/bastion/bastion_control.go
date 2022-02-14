@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -65,19 +66,15 @@ func (c *Controller) shootAdd(ctx context.Context, obj interface{}) {
 	}
 
 	// list all bastions that reference this shoot
-	// TODO: this should be done via a field-selector
 	bastionList := operationsv1alpha1.BastionList{}
-	listOptions := client.ListOptions{Namespace: shoot.Namespace}
 
-	if err := c.gardenClient.List(ctx, &bastionList, &listOptions); err != nil {
+	if err := c.gardenClient.List(ctx, &bastionList, client.InNamespace(shoot.Namespace), client.MatchingFields{operations.BastionShootName: shoot.Name}); err != nil {
 		c.log.Error(err, "Failed to list Bastions")
 		return
 	}
 
 	for _, bastion := range bastionList.Items {
-		if bastion.Spec.ShootRef.Name == shoot.Name {
-			c.bastionAdd(bastion)
-		}
+		c.bastionAdd(bastion)
 	}
 }
 
