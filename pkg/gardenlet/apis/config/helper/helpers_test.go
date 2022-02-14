@@ -122,6 +122,10 @@ var _ = Describe("helper", func() {
 	})
 
 	Describe("#LoggingConfiguration", func() {
+		It("should return false when the GardenletConfiguration is nil", func() {
+			Expect(IsLoggingEnabled(nil)).To(BeFalse())
+		})
+
 		It("should return false when the logging is nil", func() {
 			gardenletConfig := &config.GardenletConfiguration{}
 
@@ -150,6 +154,10 @@ var _ = Describe("helper", func() {
 	})
 
 	Describe("#LokiConfiguration", func() {
+		It("should return true when the GardenletConfiguration is nil", func() {
+			Expect(IsLokiEnabled(nil)).To(BeTrue())
+		})
+
 		It("should return true when the logging is nil", func() {
 			gardenletConfig := &config.GardenletConfiguration{}
 

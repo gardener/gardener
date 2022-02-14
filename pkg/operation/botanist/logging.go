@@ -41,7 +41,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	// check if loki is enabled in gardenlet config, default is true
 	var lokiEnabled = gardenlethelper.IsLokiEnabled(b.Config)
 
-	if !b.Shoot.IsLoggingEnabled() || !gardenlethelper.IsLoggingEnabled(b.Config) || !lokiEnabled {
+	if !b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) || !lokiEnabled {
 		return b.destroyShootLoggingStack(ctx)
 	}
 
@@ -147,9 +147,9 @@ func (b *Botanist) destroyShootNodeLogging(ctx context.Context) error {
 }
 
 func (b *Botanist) isShootNodeLoggingEnabled() bool {
-	if b.Shoot != nil && b.Shoot.IsLoggingEnabled() && b.Config != nil &&
-		b.Config.Logging != nil && gardenlethelper.IsLoggingEnabled(b.Config) &&
-		gardenlethelper.IsLokiEnabled(b.Config) && b.Config.Logging.ShootNodeLogging != nil {
+	if b.Shoot != nil && b.Shoot.IsShootControlPlaneLoggingEnabled(b.Config) &&
+		gardenlethelper.IsLokiEnabled(b.Config) && b.Config != nil &&
+		b.Config.Logging != nil && b.Config.Logging.ShootNodeLogging != nil {
 
 		for _, purpose := range b.Config.Logging.ShootNodeLogging.ShootPurposes {
 			if gardencore.ShootPurpose(b.Shoot.Purpose) == purpose {

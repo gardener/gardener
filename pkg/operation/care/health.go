@@ -288,7 +288,7 @@ func (h *Health) checkControlPlane(
 	var loggingEnabled = gardenlethelper.IsLoggingEnabled(h.gardenletConfiguration)
 
 	if loggingEnabled {
-		if exitCondition, err := checker.CheckLoggingControlPlane(h.shoot.SeedNamespace, !h.shoot.IsLoggingEnabled(), lokiEnabled, condition, seedStatefulSetLister); err != nil || exitCondition != nil {
+		if exitCondition, err := checker.CheckLoggingControlPlane(h.shoot.SeedNamespace, h.shoot.Purpose == gardencorev1beta1.ShootPurposeTesting, lokiEnabled, condition, seedStatefulSetLister); err != nil || exitCondition != nil {
 			return exitCondition, err
 		}
 	}
