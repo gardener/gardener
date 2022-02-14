@@ -120,7 +120,10 @@ func mustIncreaseGenerationForSpecChanges(oldShoot, newShoot *core.Shoot) bool {
 
 func (shootStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	shoot := obj.(*core.Shoot)
-	return validation.ValidateShoot(shoot)
+	errorList := field.ErrorList{}
+	errorList = append(errorList, validation.ValidateShoot(shoot)...)
+	errorList = append(errorList, validation.ValidateTotalNodeCountWithPodCIDR(shoot)...)
+	return errorList
 }
 
 func (shootStrategy) Canonicalize(obj runtime.Object) {

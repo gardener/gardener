@@ -17,6 +17,7 @@ package validation
 import (
 	"fmt"
 	"math"
+	"net"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -407,6 +408,47 @@ func ValidateNodeCIDRMaskWithMaxPod(maxPod int32, nodeCIDRMaskSize int32) field.
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("kubernetes").Child("kubeControllerManager").Child("nodeCIDRMaskSize"), nodeCIDRMaskSize, fmt.Sprintf("kubelet or kube-controller configuration incorrect. Please adjust the NodeCIDRMaskSize of the kube-controller to support the highest maxPod on any worker pool. The NodeCIDRMaskSize of '%d (default: 24)' of the kube-controller only supports '%d' ip adresses. Highest maxPod setting on kubelet is '%d (default: 110)'. Please choose a NodeCIDRMaskSize that at least supports %d ip adresses", nodeCIDRMaskSize, ipAdressesAvailable, maxPod, maxPod)))
 	}
 
+	return allErrs
+}
+
+// ValidateTotalNodeCountWithPodCIDR validates if the podCIDRs in the Pod Network can support the maximum number of nodes configured in the worker pools of the shoot
+func ValidateTotalNodeCountWithPodCIDR(shoot *core.Shoot) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	var (
+		totalNodes       int32
+		nodeCIDRMaskSize int32 = 24
+		podNetworkCIDR         = core.DefaultPodNetworkCIDR
+	)
+
+	if shoot.Spec.Networking.Pods != nil {
+		podNetworkCIDR = *shoot.Spec.Networking.Pods
+	}
+	if shoot.Spec.Kubernetes.KubeControllerManager != nil && shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize != nil {
+		nodeCIDRMaskSize = *shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize
+	}
+
+	_, podNetwork, err := net.ParseCIDR(podNetworkCIDR)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("networking").Child("pods"), podNetworkCIDR, fmt.Sprintf("cannot parse shoot's pod network cidr : %s", podNetworkCIDR)))
+		return allErrs
+	}
+
+	cidrMask, _ := podNetwork.Mask.Size()
+	if cidrMask == 0 {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("networking").Child("pods"), podNetwork.String(), fmt.Sprintf("incorrect pod network mask : %s. Please ensure the mask is in proper form", podNetwork.String())))
+		return allErrs
+	}
+
+	maxNodeCount := int32(math.Pow(2, float64(nodeCIDRMaskSize-int32(cidrMask))))
+
+	for _, worker := range shoot.Spec.Provider.Workers {
+		totalNodes += worker.Maximum
+	}
+
+	if totalNodes > maxNodeCount {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("provider").Child("workers"), totalNodes, fmt.Sprintf("worker configuration incorrect. The podCIDRs in `spec.networking.pod` can only support a maximum of %d nodes. The total number of worker pool nodes should be less than %d ", maxNodeCount, maxNodeCount)))
+	}
 	return allErrs
 }
 
