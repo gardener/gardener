@@ -134,6 +134,5 @@ const (
 	// Only supported if feature `UseDNSRecords` is set to true.
 	// owner: @MartinWeindel @timuthy
 	// alpha: ?
-	// beta: ?
 	DisableDNSProviderManagement featuregate.Feature = "DisableDNSProviderManagement"
 )
