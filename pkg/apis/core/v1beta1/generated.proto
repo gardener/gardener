@@ -2128,6 +2128,31 @@ message ShootAdvertisedAddress {
   optional string url = 2;
 }
 
+// ShootCARotation contains information about the certificate authority credential rotation.
+message ShootCARotation {
+  // Phase describes the phase of the certificate authority credential rotation.
+  optional string phase = 1;
+
+  // LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
+  // completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
+}
+
+// ShootCredentials contains information about the shoot credentials.
+message ShootCredentials {
+  // Rotation contains information about the credential rotations.
+  // +optional
+  optional ShootCredentialsRotation rotation = 1;
+}
+
+// ShootCredentialsRotation contains information about the certificate authority credential rotation.
+message ShootCredentialsRotation {
+  // CertificateAuthorities contains information about the certificate authority credential rotation.
+  // +optional
+  optional ShootCARotation certificateAuthorities = 1;
+}
+
 // ShootList is a list of Shoot objects.
 message ShootList {
   // Standard list object metadata.
@@ -2309,6 +2334,10 @@ message ShootStatus {
   // MigrationStartTime is the time when a migration to a different seed was initiated.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time migrationStartTime = 14;
+
+  // Credentials contains information about the shoot credentials.
+  // +optional
+  optional ShootCredentials credentials = 15;
 }
 
 // ShootTemplate is a template for creating a Shoot object.

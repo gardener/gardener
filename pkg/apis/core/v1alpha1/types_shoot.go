@@ -173,7 +173,49 @@ type ShootStatus struct {
 	// MigrationStartTime is the time when a migration to a different seed was initiated.
 	// +optional
 	MigrationStartTime *metav1.Time `json:"migrationStartTime,omitempty" protobuf:"bytes,15,opt,name=migrationStartTime"`
+	// Credentials contains information about the shoot credentials.
+	// +optional
+	Credentials *ShootCredentials `json:"credentials,omitempty" protobuf:"bytes,16,opt,name=credentials"`
 }
+
+// ShootCredentials contains information about the shoot credentials.
+type ShootCredentials struct {
+	// Rotation contains information about the credential rotations.
+	// +optional
+	Rotation *ShootCredentialsRotation `json:"rotation,omitempty" protobuf:"bytes,1,opt,name=rotation"`
+}
+
+// ShootCredentialsRotation contains information about the certificate authority credential rotation.
+type ShootCredentialsRotation struct {
+	// CertificateAuthorities contains information about the certificate authority credential rotation.
+	// +optional
+	CertificateAuthorities *ShootCARotation `json:"certificateAuthorities,omitempty" protobuf:"bytes,1,opt,name=certificateAuthorities"`
+}
+
+// ShootCARotation contains information about the certificate authority credential rotation.
+type ShootCARotation struct {
+	// Phase describes the phase of the certificate authority credential rotation.
+	Phase ShootCredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
+	// LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
+	// completed.
+	// +optional
+	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
+}
+
+// ShootCredentialsRotationPhase is a string alias.
+type ShootCredentialsRotationPhase string
+
+const (
+	// RotationPrepare is a constant for the credentials rotation phase describing that the procedure is being prepared.
+	RotationPrepare ShootCredentialsRotationPhase = "Prepare"
+	// RotationPrepared is a constant for the credentials rotation phase describing that the procedure was prepared.
+	RotationPrepared ShootCredentialsRotationPhase = "Prepared"
+	// RotationComplete is a constant for the credentials rotation phase describing that the procedure is being
+	// completed.
+	RotationComplete ShootCredentialsRotationPhase = "Complete"
+	// RotationCompleted is a constant for the credentials rotation phase describing that the procedure was completed.
+	RotationCompleted ShootCredentialsRotationPhase = "Completed"
+)
 
 // ShootAdvertisedAddress contains information for the shoot's Kube API server.
 type ShootAdvertisedAddress struct {
