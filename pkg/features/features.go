@@ -132,7 +132,7 @@ const (
 
 	// DisableDNSProviderMgmt disables management of DNSProviders for moving this responsibility to the shoot-dns-service.
 	// Only supported if feature `UseDNSRecords` is set to true.
-	// owner: @martinweindel @timuthy
+	// owner: @MartinWeindel @timuthy
 	// alpha: ?
 	// beta: ?
 	DisableDNSProviderMgmt featuregate.Feature = "DisableDNSProviderMgmt"
