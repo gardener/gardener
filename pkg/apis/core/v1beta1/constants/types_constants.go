@@ -263,6 +263,12 @@ const (
 	// ShootOperationRotateSSHKeypair is a constant for an annotation on a Shoot indicating that the SSH keypair for the shoot
 	// nodes shall be rotated.
 	ShootOperationRotateSSHKeypair = "rotate-ssh-keypair"
+	// ShootOperationRotateCAStart is a constant for an annotation on a Shoot indicating that the rotation of the
+	// certificate authorities shall be started.
+	ShootOperationRotateCAStart = "rotate-ca-start"
+	// ShootOperationRotateCAComplete is a constant for an annotation on a Shoot indicating that the rotation of the
+	// certificate authorities shall be completed.
+	ShootOperationRotateCAComplete = "rotate-ca-complete"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.

@@ -17,11 +17,14 @@ package shoot_test
 import (
 	"testing"
 
+	"github.com/gardener/gardener/pkg/apiserver/features"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 func TestShoot(t *testing.T) {
+	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Registry Shoot Suite")
 }

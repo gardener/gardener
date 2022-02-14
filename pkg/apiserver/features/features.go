@@ -15,11 +15,11 @@
 package features
 
 import (
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
-	"k8s.io/component-base/featuregate"
-
 	"github.com/gardener/gardener/pkg/features"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
+
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/component-base/featuregate"
 )
 
 var featureGates = map[featuregate.Feature]featuregate.FeatureSpec{
@@ -31,7 +31,7 @@ var featureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	features.ShootCARotation:                 {Default: false, PreRelease: featuregate.Alpha},
 }
 
-// RegisterFeatureGates registers the feature gates of the Gardener API Server.
+// RegisterFeatureGates registers the feature gates of the gardener-apiserver.
 func RegisterFeatureGates() {
 	utilruntime.Must(utilfeature.DefaultMutableFeatureGate.Add(featureGates))
 }
