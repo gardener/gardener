@@ -42,6 +42,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | SecretBindingProviderValidation              | `false` | `Alpha` | `1.38` |        |
 | ForceRestore                                 | `false` | `Alpha` | `1.39` |        |
 | DisableDNSProviderManagement                 | `false` | `Alpha` | `1.41` |        |
+| ShootCARotation                              | `false` | `Alpha` | `1.42` |        |
 
 ## Feature gates for graduated or deprecated features
 
@@ -116,8 +117,9 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 * `WorkerPoolKubernetesVersion` allows to overwrite the Kubernetes version used for shoot clusters per worker pool (see [this document](../usage/worker_pool_k8s_versions.md))
 * `CopyEtcdBackupsDuringControlPlaneMigration` enables the copy of etcd backups from the object store of the source seed to the object store of the destination seed during control plane migration.
 * `SecretBindingProviderValidation` enables validations on Gardener API server that:
-	- requires the provider type of a SecretBinding to be set (on SecretBinding creation)
-	- requires the SecretBinding provider type to match the Shoot provider type (on Shoot creation)
-	- enforces immutability on the provider type of a SecretBinding
+    - requires the provider type of a SecretBinding to be set (on SecretBinding creation)
+    - requires the SecretBinding provider type to match the Shoot provider type (on Shoot creation)
+    - enforces immutability on the provider type of a SecretBinding
 * `ForceRestore` enables forcing the shoot's restoration to the destination seed during control plane migration if the preparation for migration in the source seed is not finished after a certain grace period and is considered unlikely to succeed (falling back to the [control plane migration "bad case" scenario](../proposals/17-shoot-control-plane-migration-bad-case.md)). If you enable this feature gate, make sure to also enable `UseDNSRecords` and `CopyEtcdBackupsDuringControlPlaneMigration`.
 * `DisableDNSProviderManagement` disables management of `dns.gardener.cloud/v1alpha1.DNSProvider` resources. In this case, the `shoot-dns-service` extension will take this over if it is installed. This feature is only effective if the feature `UseDNSRecords` is `true`.
+* `ShootCARotation` enables the automated CA rotation for shoot clusters.

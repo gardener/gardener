@@ -47,6 +47,7 @@ global:
         ReversedVPN: true
         UseDNSRecords: true
         DenyInvalidExtensionResources: true
+        ShootCARotation: true
       seedConfig:
         apiVersion: core.gardener.cloud/v1beta1
         kind: Seed

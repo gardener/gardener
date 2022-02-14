@@ -158,6 +158,7 @@ global:
       SeedChange: true
       AdminKubeconfigRequest: true
       WorkerPoolKubernetesVersion: true
+      ShootCARotation: true
     resources: {}
 
   # Gardener admission controller configuration values

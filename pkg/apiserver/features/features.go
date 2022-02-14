@@ -28,6 +28,7 @@ var featureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	features.UseDNSRecords:                   {Default: true, PreRelease: featuregate.Beta},
 	features.WorkerPoolKubernetesVersion:     {Default: false, PreRelease: featuregate.Alpha},
 	features.SecretBindingProviderValidation: {Default: false, PreRelease: featuregate.Alpha},
+	features.ShootCARotation:                 {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // RegisterFeatureGates registers the feature gates of the Gardener API Server.
