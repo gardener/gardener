@@ -411,6 +411,11 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, waitUntilOperatingSystemConfigReady),
 		})
 		_ = g.Add(flow.Task{
+			Name:         "Deploying shoot system resources",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.SystemComponents.Resources.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, waitUntilOperatingSystemConfigReady),
+		})
+		_ = g.Add(flow.Task{
 			Name: "Deploying CoreDNS system component",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				if err := botanist.DeployCoreDNS(ctx); err != nil {
