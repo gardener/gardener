@@ -16,6 +16,7 @@ package kubeproxy_test
 
 import (
 	"context"
+	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -411,26 +412,34 @@ subjects:
 				return "kube-proxy-" + pool.Name + "-v" + pool.KubernetesVersion
 			}
 			daemonSetYAMLFor = func(pool WorkerPool, ipvsEnabled, vpaEnabled bool) string {
+
+				referenceAnnotations := func() string {
+					var annotations []string
+
+					if ipvsEnabled {
+						annotations = []string{
+							references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled),
+							references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName,
+							references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName,
+							references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName,
+						}
+					} else {
+						annotations = []string{
+							references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName,
+							references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName,
+							references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled),
+							references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName,
+						}
+					}
+
+					return strings.Join(annotations, "\n")
+				}
+
 				out := `apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  annotations:`
-
-				if ipvsEnabled {
-					out += `
-    ` + references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled) + `
-    ` + references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName + `
-    ` + references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName + `
-    ` + references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName
-				} else {
-					out += `
-    ` + references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName + `
-    ` + references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName + `
-    ` + references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled) + `
-    ` + references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName
-				}
-
-				out += `
+  annotations:
+    ` + utils.Indent(referenceAnnotations(), 4) + `
   creationTimestamp: null
   labels:
     gardener.cloud/role: system-component
@@ -446,23 +455,8 @@ spec:
       version: ` + pool.KubernetesVersion + `
   template:
     metadata:
-      annotations:`
-
-				if ipvsEnabled {
-					out += `
-        ` + references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled) + `
-        ` + references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName + `
-        ` + references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName + `
-        ` + references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName
-				} else {
-					out += `
-        ` + references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName + `
-        ` + references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName + `
-        ` + references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled) + `
-        ` + references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName
-				}
-
-				out += `
+      annotations:
+        ` + utils.Indent(referenceAnnotations(), 8) + `
       creationTimestamp: null
       labels:
         app: kubernetes
