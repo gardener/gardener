@@ -135,5 +135,5 @@ const (
 	// owner: @MartinWeindel @timuthy
 	// alpha: ?
 	// beta: ?
-	DisableDNSProviderMgmt featuregate.Feature = "DisableDNSProviderMgmt"
+	DisableDNSProviderManagement featuregate.Feature = "DisableDNSProviderManagement"
 )
