@@ -144,7 +144,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
-      "description": "The experimental \"Throttle factor\" metric tries to estimate how much more time the execution of the pod takes due to CPU throttling. A factor of 1 means no throttling, a factor of 2 could be OK, a factor of 10 could indicate underprovisioned requests/limits or contention for the burstable CPU shares",
+      "description": "The \"Throttle %\" metric shows the percentage of the 100ms time slots where the CPU usage reaches the quota.\n\n0% means the quota is not reached. 100% means the quota is reached in all the 100ms time slots.",
       "editable": true,
       "error": false,
       "fieldConfig": {
@@ -190,7 +190,7 @@
       "renderer": "flot",
       "seriesOverrides": [
         {
-          "alias": "Throttle factor",
+          "alias": "Throttle %",
           "dashLength": 5,
           "dashes": true,
           "yaxis": 2
@@ -231,11 +231,11 @@
           "refId": "C"
         },
         {
-          "expr": "1 / (1 -\nmax(\nrate(container_cpu_cfs_throttled_periods_total{container=~\"$container\",pod=~\"$pod\"}[$__rate_interval])\n/\nrate(container_cpu_cfs_periods_total{container=~\"$container\",pod=~\"$pod\"}[$__rate_interval])\n))",
+          "expr": "max(\nrate(container_cpu_cfs_throttled_periods_total{container=~\"$container\",pod=~\"$pod\"}[$__rate_interval])\n/\nrate(container_cpu_cfs_periods_total{container=~\"$container\",pod=~\"$pod\"}[$__rate_interval])\n)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "Throttle factor",
+          "legendFormat": "Throttle %",
           "refId": "D"
         }
       ],
@@ -268,11 +268,11 @@
           "show": true
         },
         {
-          "format": "short",
+          "format": "percentunit",
           "label": null,
           "logBase": 1,
-          "max": null,
-          "min": "1",
+          "max": "1",
+          "min": "0",
           "show": true
         }
       ],
