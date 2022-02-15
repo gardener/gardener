@@ -110,8 +110,11 @@ var _ = Describe("ValuesHelper", func() {
 				},
 			},
 			FeatureGates: map[string]bool{
-				string(features.Logging): true,
-				string(features.HVPA):    true,
+				string(features.ReversedVPN): true,
+				string(features.HVPA):        true,
+			},
+			Logging: &config.Logging{
+				Enabled: pointer.Bool(true),
 			},
 			SeedConfig: &config.SeedConfig{
 				SeedTemplate: gardencore.SeedTemplate{
@@ -148,7 +151,7 @@ var _ = Describe("ValuesHelper", func() {
 				Kind:       "GardenletConfiguration",
 			},
 			FeatureGates: map[string]bool{
-				string(features.Logging):              false,
+				string(features.ReversedVPN):          false,
 				string(features.CachedRuntimeClients): true,
 			},
 		}
@@ -229,9 +232,12 @@ var _ = Describe("ValuesHelper", func() {
 					},
 				},
 				FeatureGates: map[string]bool{
-					string(features.Logging):              false,
+					string(features.ReversedVPN):          false,
 					string(features.HVPA):                 true,
 					string(features.CachedRuntimeClients): true,
+				},
+				Logging: &configv1alpha1.Logging{
+					Enabled: pointer.Bool(true),
 				},
 			}
 		}
@@ -286,9 +292,12 @@ var _ = Describe("ValuesHelper", func() {
 								},
 							},
 							"featureGates": map[string]interface{}{
-								"Logging":              false,
+								"ReversedVPN":          false,
 								"HVPA":                 true,
 								"CachedRuntimeClients": true,
+							},
+							"logging": map[string]interface{}{
+								"enabled": true,
 							},
 						},
 					},

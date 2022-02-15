@@ -38,7 +38,6 @@ global:
         shoot:
           reconcileInMaintenanceOnly: true
       featureGates:
-        Logging: true
         HVPA: true
         HVPAForShootedSeed: true
         ManagedIstio: true

@@ -24,9 +24,8 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/features"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist"
@@ -284,15 +283,11 @@ func (h *Health) checkControlPlane(
 		return exitCondition, err
 	}
 
-	lokiEnabled := true
-	if h.gardenletConfiguration != nil &&
-		h.gardenletConfiguration.Logging != nil &&
-		h.gardenletConfiguration.Logging.Loki != nil &&
-		h.gardenletConfiguration.Logging.Loki.Enabled != nil {
-		lokiEnabled = *h.gardenletConfiguration.Logging.Loki.Enabled
-	}
+	lokiEnabled := gardenlethelper.IsLokiEnabled(h.gardenletConfiguration)
 
-	if gardenletfeatures.FeatureGate.Enabled(features.Logging) {
+	var loggingEnabled = gardenlethelper.IsLoggingEnabled(h.gardenletConfiguration)
+
+	if loggingEnabled {
 		if exitCondition, err := checker.CheckLoggingControlPlane(h.shoot.SeedNamespace, h.shoot.Purpose == gardencorev1beta1.ShootPurposeTesting, lokiEnabled, condition, seedStatefulSetLister); err != nil || exitCondition != nil {
 			return exitCondition, err
 		}

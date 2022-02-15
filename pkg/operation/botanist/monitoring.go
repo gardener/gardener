@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
+	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -182,7 +183,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 						"enabled": b.Shoot.WantsAlertmanager,
 					},
 					"loki": map[string]interface{}{
-						"enabled": gardenletfeatures.FeatureGate.Enabled(features.Logging),
+						"enabled": gardenlethelper.IsLoggingEnabled(b.Config),
 					},
 					"lokiTelegraf": map[string]interface{}{
 						"enabled": b.isShootNodeLoggingEnabled(),

@@ -36,6 +36,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -452,9 +454,9 @@ func (s *Shoot) IPVSEnabled() bool {
 		*shoot.Spec.Kubernetes.KubeProxy.Mode == gardencorev1beta1.ProxyModeIPVS
 }
 
-// IsLoggingEnabled return true if the Shoot controlplane logging is enabled
-func (s *Shoot) IsLoggingEnabled() bool {
-	return s.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenletfeatures.FeatureGate.Enabled(features.Logging)
+// IsShootControlPlaneLoggingEnabled return true if the Shoot controlplane logging is enabled
+func (s *Shoot) IsShootControlPlaneLoggingEnabled(c *config.GardenletConfiguration) bool {
+	return s.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenlethelper.IsLoggingEnabled(c)
 }
 
 // TechnicalIDPrefix is a prefix used for a shoot's technical id.

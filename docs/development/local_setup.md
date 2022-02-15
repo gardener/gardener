@@ -306,10 +306,10 @@ apiservice.apiregistration.k8s.io/v1alpha1.seedmanagement.gardener.cloud created
 apiservice.apiregistration.k8s.io/v1alpha1.settings.gardener.cloud created
 ```
 
-Optionally, you can switch off the `Logging` feature gate of Gardenlet to save resources:
-
-```bash
-sed -i -e 's/Logging: true/Logging: false/g' dev/20-componentconfig-gardenlet.yaml
+ℹ️ [Optional] If you want to enable logging, in the Gardenlet configuration add:
+```yaml
+logging:
+  enabled: true
 ```
 
 The Gardener exposes the API servers of Shoot clusters via Kubernetes services of type `LoadBalancer`.

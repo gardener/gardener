@@ -469,6 +469,9 @@ type ShootNodeLogging struct {
 
 // Logging contains configuration for the logging stack.
 type Logging struct {
+	// Enabled is used to enable or disable logging stack for clusters.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	// FluentBit contains configurations for the fluent-bit
 	// +optional
 	FluentBit *FluentBit `json:"fluentBit,omitempty" yaml:"fluentBit,omitempty"`

@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
@@ -504,12 +505,14 @@ func RunReconcileSeedFlow(
 
 	// Logging feature gate
 	var (
-		loggingEnabled                    = gardenletfeatures.FeatureGate.Enabled(features.Logging)
+		loggingEnabled                    bool
 		filters                           = strings.Builder{}
 		parsers                           = strings.Builder{}
 		fluentBitConfigurationsOverwrites = map[string]interface{}{}
 		lokiValues                        = map[string]interface{}{}
 	)
+
+	loggingEnabled = gardenlethelper.IsLoggingEnabled(conf)
 
 	lokiValues["enabled"] = loggingEnabled
 
@@ -520,11 +523,7 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	// check if loki disabled in gardenlet config
-	if loggingConfig != nil &&
-		loggingConfig.Loki != nil &&
-		loggingConfig.Loki.Enabled != nil &&
-		!*loggingConfig.Loki.Enabled {
+	if !gardenlethelper.IsLokiEnabled(conf) {
 		lokiValues["enabled"] = false
 		if err := common.DeleteLoki(ctx, seedClient, gardenNamespace.Name); err != nil {
 			return err
