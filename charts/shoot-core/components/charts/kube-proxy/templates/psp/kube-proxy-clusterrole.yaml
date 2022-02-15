@@ -1,15 +1,8 @@
-
+# TODO(rfranzke): Delete this Helm chart in a future version.
+---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
   name: gardener.cloud:psp:kube-system:kube-proxy
-rules:
-- apiGroups:
-  - policy
-  - extensions
-  resourceNames:
-  - gardener.kube-system.kube-proxy
-  resources:
-  - podsecuritypolicies
-  verbs:
-  - use
+  annotations:
+    resources.gardener.cloud/mode: Ignore

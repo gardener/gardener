@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shoot
+package kubeproxy
 
 import (
 	"fmt"
@@ -25,29 +25,24 @@ import (
 	kubeproxyconfigv1alpha1 "k8s.io/kube-proxy/config/v1alpha1"
 )
 
-// KubeProxyConfigCodec contains methods for encoding and decoding *kubeproxyconfigv1alpha1.KubeProxyConfiguration objects
+// ConfigCodec contains methods for encoding and decoding *kubeproxyconfigv1alpha1.KubeProxyConfiguration objects
 // to and from string.
-type KubeProxyConfigCodec interface {
+type ConfigCodec interface {
 	// Encode encodes the given *kubeproxyconfigv1alpha1.KubeProxyConfiguration into a string.
 	Encode(*kubeproxyconfigv1alpha1.KubeProxyConfiguration) (string, error)
 	// Decode decodes a *kubeproxyconfigv1alpha1.KubeProxyConfiguration from the given string.
 	Decode(string) (*kubeproxyconfigv1alpha1.KubeProxyConfiguration, error)
 }
 
-var (
-	scheme      *runtime.Scheme
-	configCodec KubeProxyConfigCodec
-)
+var scheme *runtime.Scheme
 
 func init() {
 	scheme = runtime.NewScheme()
 	utilruntime.Must(kubeproxyconfigv1alpha1.AddToScheme(scheme))
-
-	configCodec = NewKubeProxyConfigCodec()
 }
 
-// NewKubeProxyConfigCodec creates an returns a new KubeProxyConfigCodec.
-func NewKubeProxyConfigCodec() KubeProxyConfigCodec {
+// NewConfigCodec creates an returns a new ConfigCodec.
+func NewConfigCodec() ConfigCodec {
 	ser := json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
 	versions := schema.GroupVersions([]schema.GroupVersion{kubeproxyconfigv1alpha1.SchemeGroupVersion})
 	codec := serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)

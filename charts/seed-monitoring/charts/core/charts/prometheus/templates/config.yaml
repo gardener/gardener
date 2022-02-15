@@ -334,33 +334,6 @@ data:
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.nodeExporter | indent 6 }}
 
-    - job_name: kube-proxy
-      honor_labels: false
-      scheme: https
-{{ include "prometheus.kube-auth" . | indent 6 }}
-      kubernetes_sd_configs:
-      - role: endpoints
-        api_server: https://kube-apiserver:443
-{{ include "prometheus.kube-auth" . | indent 8 }}
-      relabel_configs:
-      - source_labels:
-        - __meta_kubernetes_endpoints_name
-        - __meta_kubernetes_endpoint_port_name
-        action: keep
-        regex: kube-proxy;metrics
-      - source_labels: [ __meta_kubernetes_pod_name ]
-        target_label: pod
-      - source_labels: [ __meta_kubernetes_pod_node_name ]
-        target_label: node
-      - target_label: __address__
-        replacement: kube-apiserver:443
-      - source_labels: [__meta_kubernetes_pod_name, __meta_kubernetes_pod_container_port_number]
-        regex: (.+);(.+)
-        target_label: __metrics_path__
-        replacement: /api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics
-      metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubeProxy | indent 6 }}
-
 {{- if .Values.shoot.sniEnabled }}
     - job_name: apiserver-proxy
       metrics_path: /metrics

@@ -45,6 +45,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
@@ -609,9 +610,10 @@ func RunReconcileSeedFlow(
 			kubecontrollermanager.CentralLoggingConfiguration,
 			// shoot system components
 			coredns.CentralLoggingConfiguration,
+			kubeproxy.CentralLoggingConfiguration,
 			metricsserver.CentralLoggingConfiguration,
-			vpnshoot.CentralLoggingConfiguration,
 			nodeproblemdetector.CentralLoggingConfiguration,
+			vpnshoot.CentralLoggingConfiguration,
 		}
 		userAllowedComponents := []string{
 			v1beta1constants.DeploymentNameKubeAPIServer,
