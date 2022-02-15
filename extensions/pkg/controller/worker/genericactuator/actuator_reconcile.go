@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
@@ -484,12 +485,14 @@ func (a *genericActuator) updateWorkerStatusMachineDeployments(ctx context.Conte
 		return err
 	}
 
-	if len(statusMachineDeployments) > 0 {
-		worker.Status.MachineDeployments = statusMachineDeployments
-	}
+	return tryUpdateStatus(ctx, retry.DefaultBackoff, a.client, worker, func() error {
+		if len(statusMachineDeployments) > 0 {
+			worker.Status.MachineDeployments = statusMachineDeployments
+		}
 
-	worker.Status.Conditions = gardencorev1beta1helper.MergeConditions(worker.Status.Conditions, rollingUpdateCondition)
-	return a.client.Status().Update(ctx, worker)
+		worker.Status.Conditions = gardencorev1beta1helper.MergeConditions(worker.Status.Conditions, rollingUpdateCondition)
+		return nil
+	})
 }
 
 const (
