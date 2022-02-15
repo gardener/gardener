@@ -62,6 +62,8 @@ const (
 	monitoringMetricWatchCacheCapacityIncreaseTotal                      = "watch_cache_capacity_increase_total"
 	monitoringMetricWatchCacheCapacityDecreaseTotal                      = "watch_cache_capacity_decrease_total"
 	monitoringMetricWatchCacheCapacity                                   = "watch_cache_capacity"
+	monitoringmetricApiserverCacheList                                   = "apiserver_cache_list_.+"
+	monitoringmetricApiserverStorageList                                 = "apiserver_storage_list_.+"
 
 	// TODO: Replace below hard-coded job name of the Blackbox Exporter once its deployment has been refactored.
 	monitoringAlertingRules = `groups:
@@ -215,6 +217,8 @@ var (
 		monitoringMetricWatchCacheCapacityIncreaseTotal,
 		monitoringMetricWatchCacheCapacityDecreaseTotal,
 		monitoringMetricWatchCacheCapacity,
+		monitoringmetricApiserverCacheList,
+		monitoringmetricApiserverStorageList,
 	}
 
 	// TODO: Replace below hard-coded paths to Prometheus certificates once its deployment has been refactored.
