@@ -33,7 +33,8 @@ spec:
           - --config.file=/etc/prometheus/config/prometheus.yaml
           - --storage.tsdb.path=/var/prometheus/data
           - --storage.tsdb.no-lockfile
-          - --storage.tsdb.retention.time=2w
+          - --storage.tsdb.retention.time=30d
+          - --storage.tsdb.retention.size=15GB
           - --web.enable-admin-api
           - --web.listen-address=0.0.0.0:{{ .Values.aggregatePrometheus.port }}
           - --web.enable-lifecycle
