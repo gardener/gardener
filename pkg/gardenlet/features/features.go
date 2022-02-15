@@ -37,11 +37,16 @@ var (
 		features.DenyInvalidExtensionResources:              {Default: false, PreRelease: featuregate.Alpha},
 		features.CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
 		features.ForceRestore:                               {Default: false, PreRelease: featuregate.Alpha},
-		features.DisableDNSProviderMgmt:                     {Default: false, PreRelease: featuregate.Alpha},
+		features.DisableDNSProviderManagement:               {Default: false, PreRelease: featuregate.Alpha},
 	}
 )
 
 // RegisterFeatureGates registers the feature gates of the Gardenlet.
 func RegisterFeatureGates() {
 	utilruntime.Must(FeatureGate.Add(featureGates))
+}
+
+// DisabledDNSProviderManagement returns true if `DisableDNSProviderManagement` is effective.
+func DisabledDNSProviderManagement() bool {
+	return FeatureGate.Enabled(features.UseDNSRecords) && FeatureGate.Enabled(features.DisableDNSProviderManagement)
 }

@@ -118,6 +118,7 @@ featureGates:
   DenyInvalidExtensionResources: true
   CopyEtcdBackupsDuringControlPlaneMigration: false
   ForceRestore: false
+  DisableDNSProviderManagement: false
 # seedConfig:
 #   metadata:
 #     name: my-seed
