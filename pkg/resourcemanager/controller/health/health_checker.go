@@ -16,6 +16,9 @@ package health
 
 import (
 	"context"
+	"fmt"
+
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
@@ -32,10 +35,22 @@ import (
 // CheckHealth checks whether the given `runtime.Unstructured` is healthy.
 // `nil` is returned when the `runtime.Unstructured` has kind which is not supported by this function.
 func CheckHealth(ctx context.Context, c client.Client, scheme *runtime.Scheme, obj runtime.Object) error {
-	switch obj.GetObjectKind().GroupVersionKind().GroupKind() {
+	// We must not rely on TypeMeta to be set in objects as decoder clears apiVersion and kind fields, see
+	// https://github.com/kubernetes/kubernetes/issues/80609 and https://github.com/gardener/gardener/issues/5357#issuecomment-1040150204.
+	// Instead of using GetObjectKind(), we use the scheme to figure out the GroupVersionKind which works for both typed
+	// and unstructured objects.
+	gvk, err := apiutil.GVKForObject(obj, scheme)
+	if err != nil {
+		return fmt.Errorf("failed to determine GVK of object: %w", err)
+	}
+
+	// Note: we can't do client-side conversions from one version to another, because conversion code is not exported
+	// to k8s.io/api (apiextensions API is an exception). The only conversion we can do, is from unstructured objects to
+	// typed objects in the same version. This is what most of the following scheme.Convert calls do.
+	switch gvk.GroupKind() {
 	case apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition").GroupKind():
 		crdObj := obj
-		if obj.GetObjectKind().GroupVersionKind().Version == apiextensionsv1beta1.SchemeGroupVersion.Version {
+		if gvk.Version == apiextensionsv1beta1.SchemeGroupVersion.Version {
 			// Convert to internal version first if v1beta1 because converter cannot convert from external -> external version.
 			crd := &apiextensions.CustomResourceDefinition{}
 			if err := scheme.Convert(crdObj, crd, nil); err != nil {
