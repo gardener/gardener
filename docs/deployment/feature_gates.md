@@ -58,7 +58,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | DisallowKubeconfigRotationForShootInDeletion | `true`  | `Beta`    | `1.32` | `1.35` |
 | DisallowKubeconfigRotationForShootInDeletion | `true`  | `GA`      | `1.36` |        |
 | DisallowKubeconfigRotationForShootInDeletion |         | `Removed` | `1.38` |        |
-| Logging                                      | `false` | `Alpha`   | `0.13` | `1.39` |
+| Logging                                      | `false` | `Alpha`   | `0.13` | `1.40` |
 | Logging                                      | `false` | `Removed` | `1.41` |        |
 
 ## Using a feature
