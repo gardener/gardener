@@ -193,7 +193,7 @@ func (b *HealthChecker) checkStatefulSets(condition gardencorev1beta1.Condition,
 	return nil
 }
 
-func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, nodes []corev1.Node, workerGroupName string) *gardencorev1beta1.Condition {
+func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, nodes []corev1.Node, workerGroupName string, workerGroupKubernetesVersion *semver.Version) *gardencorev1beta1.Condition {
 	for _, object := range nodes {
 		if err := health.CheckNode(&object); err != nil {
 			var (
@@ -210,16 +210,15 @@ func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, nodes 
 			c := b.FailedCondition(condition, "VersionParseError", fmt.Sprintf("Error checking for same major minor Kubernetes version for node %q: %+v", object.Name, err))
 			return &c
 		}
-
-		if sameMajorMinor.Check(b.kubernetesVersion) {
+		if sameMajorMinor.Check(workerGroupKubernetesVersion) {
 			equal, err := semver.NewConstraint("= " + object.Status.NodeInfo.KubeletVersion)
 			if err != nil {
 				c := b.FailedCondition(condition, "VersionParseError", fmt.Sprintf("Error checking for equal Kubernetes versions for node %q: %+v", object.Name, err))
 				return &c
 			}
 
-			if !equal.Check(b.kubernetesVersion) {
-				c := b.FailedCondition(condition, "KubeletVersionMismatch", fmt.Sprintf("The kubelet version for node %q (%s) does not match the desired Kubernetes version (v%s)", object.Name, object.Status.NodeInfo.KubeletVersion, b.kubernetesVersion.Original()))
+			if !equal.Check(workerGroupKubernetesVersion) {
+				c := b.FailedCondition(condition, "KubeletVersionMismatch", fmt.Sprintf("The kubelet version for node %q (%s) does not match the desired Kubernetes version (v%s)", object.Name, object.Status.NodeInfo.KubeletVersion, workerGroupKubernetesVersion.Original()))
 				return &c
 			}
 		}
@@ -433,7 +432,12 @@ func (b *HealthChecker) CheckClusterNodes(
 	for _, worker := range workers {
 		nodes := workerPoolToNodes[worker.Name]
 
-		if exitCondition := b.checkNodes(condition, nodes, worker.Name); exitCondition != nil {
+		kubernetesVersion, err := gardencorev1beta1helper.CalculateEffectiveKubernetesVersion(b.kubernetesVersion, worker.Kubernetes)
+		if err != nil {
+			return nil, err
+		}
+
+		if exitCondition := b.checkNodes(condition, nodes, worker.Name, kubernetesVersion); exitCondition != nil {
 			return exitCondition, nil
 		}
 
