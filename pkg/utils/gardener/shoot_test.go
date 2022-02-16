@@ -477,9 +477,10 @@ var _ = Describe("Shoot", func() {
 
 	Describe("#InjectGenericKubeconfig", func() {
 		var (
-			tokenSecretName = "tokensecret"
-			containerName1  = "container1"
-			containerName2  = "container2"
+			tokenSecretName           = "tokensecret"
+			containerName1            = "container1"
+			containerName2            = "container2"
+			genericKubeconfigChecksum = "1234"
 
 			podSpec = corev1.PodSpec{
 				Containers: []corev1.Container{
@@ -579,12 +580,14 @@ var _ = Describe("Shoot", func() {
 		)
 
 		It("should do nothing because object is not handled", func() {
-			Expect(InjectGenericKubeconfig(&corev1.Service{}, tokenSecretName)).To(MatchError(ContainSubstring("unhandled object type")))
+			Expect(InjectGenericKubeconfig(&corev1.Service{}, genericKubeconfigChecksum, tokenSecretName)).To(MatchError(ContainSubstring("unhandled object type")))
 		})
 
 		DescribeTable("should behave properly",
-			func(obj runtime.Object, podSpec *corev1.PodSpec, expectedVolumeMountInContainer1, expectedVolumeMountInContainer2 bool, containerNames ...string) {
-				Expect(InjectGenericKubeconfig(obj, tokenSecretName, containerNames...)).To(Succeed())
+			func(obj runtime.Object, podSpec *corev1.PodSpec, objectMeta *metav1.ObjectMeta, expectedVolumeMountInContainer1, expectedVolumeMountInContainer2 bool, containerNames ...string) {
+				Expect(InjectGenericKubeconfig(obj, tokenSecretName, genericKubeconfigChecksum, containerNames...)).To(Succeed())
+
+				Expect(objectMeta.Annotations).To(HaveKeyWithValue("checksum/secret-generic-token-kubeconfig", genericKubeconfigChecksum))
 
 				Expect(podSpec.Volumes).To(ContainElement(corev1.Volume{
 					Name: "kubeconfig",
@@ -630,53 +633,53 @@ var _ = Describe("Shoot", func() {
 				}
 			},
 
-			Entry("corev1.Pod, all containers", pod, &pod.Spec, true, true),
-			Entry("corev1.Pod, only container 1", pod, &pod.Spec, true, false, containerName1),
-			Entry("corev1.Pod, only container 2", pod, &pod.Spec, false, true, containerName2),
+			Entry("corev1.Pod, all containers", pod, &pod.Spec, &pod.ObjectMeta, true, true),
+			Entry("corev1.Pod, only container 1", pod, &pod.Spec, &pod.ObjectMeta, true, false, containerName1),
+			Entry("corev1.Pod, only container 2", pod, &pod.Spec, &pod.ObjectMeta, false, true, containerName2),
 
-			Entry("appsv1.Deployment, all containers", deployment, &deployment.Spec.Template.Spec, true, true),
-			Entry("appsv1.Deployment, only container 1", deployment, &deployment.Spec.Template.Spec, true, false, containerName1),
-			Entry("appsv1.Deployment, only container 2", deployment, &deployment.Spec.Template.Spec, false, true, containerName2),
+			Entry("appsv1.Deployment, all containers", deployment, &deployment.Spec.Template.Spec, &deployment.Spec.Template.ObjectMeta, true, true),
+			Entry("appsv1.Deployment, only container 1", deployment, &deployment.Spec.Template.Spec, &deployment.Spec.Template.ObjectMeta, true, false, containerName1),
+			Entry("appsv1.Deployment, only container 2", deployment, &deployment.Spec.Template.Spec, &deployment.Spec.Template.ObjectMeta, false, true, containerName2),
 
-			Entry("appsv1beta2.Deployment, all containers", deploymentV1beta2, &deploymentV1beta2.Spec.Template.Spec, true, true),
-			Entry("appsv1beta2.Deployment, only container 1", deploymentV1beta2, &deploymentV1beta2.Spec.Template.Spec, true, false, containerName1),
-			Entry("appsv1beta2.Deployment, only container 2", deploymentV1beta2, &deploymentV1beta2.Spec.Template.Spec, false, true, containerName2),
+			Entry("appsv1beta2.Deployment, all containers", deploymentV1beta2, &deploymentV1beta2.Spec.Template.Spec, &deploymentV1beta2.Spec.Template.ObjectMeta, true, true),
+			Entry("appsv1beta2.Deployment, only container 1", deploymentV1beta2, &deploymentV1beta2.Spec.Template.Spec, &deploymentV1beta2.Spec.Template.ObjectMeta, true, false, containerName1),
+			Entry("appsv1beta2.Deployment, only container 2", deploymentV1beta2, &deploymentV1beta2.Spec.Template.Spec, &deploymentV1beta2.Spec.Template.ObjectMeta, false, true, containerName2),
 
-			Entry("appsv1beta1.Deployment, all containers", deploymentV1beta1, &deploymentV1beta1.Spec.Template.Spec, true, true),
-			Entry("appsv1beta1.Deployment, only container 1", deploymentV1beta1, &deploymentV1beta1.Spec.Template.Spec, true, false, containerName1),
-			Entry("appsv1beta1.Deployment, only container 2", deploymentV1beta1, &deploymentV1beta1.Spec.Template.Spec, false, true, containerName2),
+			Entry("appsv1beta1.Deployment, all containers", deploymentV1beta1, &deploymentV1beta1.Spec.Template.Spec, &deploymentV1beta1.Spec.Template.ObjectMeta, true, true),
+			Entry("appsv1beta1.Deployment, only container 1", deploymentV1beta1, &deploymentV1beta1.Spec.Template.Spec, &deploymentV1beta1.Spec.Template.ObjectMeta, true, false, containerName1),
+			Entry("appsv1beta1.Deployment, only container 2", deploymentV1beta1, &deploymentV1beta1.Spec.Template.Spec, &deploymentV1beta1.Spec.Template.ObjectMeta, false, true, containerName2),
 
-			Entry("appsv1.StatefulSet, all containers", statefulSet, &statefulSet.Spec.Template.Spec, true, true),
-			Entry("appsv1.StatefulSet, only container 1", statefulSet, &statefulSet.Spec.Template.Spec, true, false, containerName1),
-			Entry("appsv1.StatefulSet, only container 2", statefulSet, &statefulSet.Spec.Template.Spec, false, true, containerName2),
+			Entry("appsv1.StatefulSet, all containers", statefulSet, &statefulSet.Spec.Template.Spec, &statefulSet.Spec.Template.ObjectMeta, true, true),
+			Entry("appsv1.StatefulSet, only container 1", statefulSet, &statefulSet.Spec.Template.Spec, &statefulSet.Spec.Template.ObjectMeta, true, false, containerName1),
+			Entry("appsv1.StatefulSet, only container 2", statefulSet, &statefulSet.Spec.Template.Spec, &statefulSet.Spec.Template.ObjectMeta, false, true, containerName2),
 
-			Entry("appsv1beta2.StatefulSet, all containers", statefulSetV1beta2, &statefulSetV1beta2.Spec.Template.Spec, true, true),
-			Entry("appsv1beta2.StatefulSet, only container 1", statefulSetV1beta2, &statefulSetV1beta2.Spec.Template.Spec, true, false, containerName1),
-			Entry("appsv1beta2.StatefulSet, only container 2", statefulSetV1beta2, &statefulSetV1beta2.Spec.Template.Spec, false, true, containerName2),
+			Entry("appsv1beta2.StatefulSet, all containers", statefulSetV1beta2, &statefulSetV1beta2.Spec.Template.Spec, &statefulSetV1beta2.Spec.Template.ObjectMeta, true, true),
+			Entry("appsv1beta2.StatefulSet, only container 1", statefulSetV1beta2, &statefulSetV1beta2.Spec.Template.Spec, &statefulSetV1beta2.Spec.Template.ObjectMeta, true, false, containerName1),
+			Entry("appsv1beta2.StatefulSet, only container 2", statefulSetV1beta2, &statefulSetV1beta2.Spec.Template.Spec, &statefulSetV1beta2.Spec.Template.ObjectMeta, false, true, containerName2),
 
-			Entry("appsv1beta1.StatefulSet, all containers", statefulSetV1beta1, &statefulSetV1beta1.Spec.Template.Spec, true, true),
-			Entry("appsv1beta1.StatefulSet, only container 1", statefulSetV1beta1, &statefulSetV1beta1.Spec.Template.Spec, true, false, containerName1),
-			Entry("appsv1beta1.StatefulSet, only container 2", statefulSetV1beta1, &statefulSetV1beta1.Spec.Template.Spec, false, true, containerName2),
+			Entry("appsv1beta1.StatefulSet, all containers", statefulSetV1beta1, &statefulSetV1beta1.Spec.Template.Spec, &statefulSetV1beta1.Spec.Template.ObjectMeta, true, true),
+			Entry("appsv1beta1.StatefulSet, only container 1", statefulSetV1beta1, &statefulSetV1beta1.Spec.Template.Spec, &statefulSetV1beta1.Spec.Template.ObjectMeta, true, false, containerName1),
+			Entry("appsv1beta1.StatefulSet, only container 2", statefulSetV1beta1, &statefulSetV1beta1.Spec.Template.Spec, &statefulSetV1beta1.Spec.Template.ObjectMeta, false, true, containerName2),
 
-			Entry("appsv1.DaemonSet, all containers", daemonSet, &daemonSet.Spec.Template.Spec, true, true),
-			Entry("appsv1.DaemonSet, only container 1", daemonSet, &daemonSet.Spec.Template.Spec, true, false, containerName1),
-			Entry("appsv1.DaemonSet, only container 2", daemonSet, &daemonSet.Spec.Template.Spec, false, true, containerName2),
+			Entry("appsv1.DaemonSet, all containers", daemonSet, &daemonSet.Spec.Template.Spec, &daemonSet.Spec.Template.ObjectMeta, true, true),
+			Entry("appsv1.DaemonSet, only container 1", daemonSet, &daemonSet.Spec.Template.Spec, &daemonSet.Spec.Template.ObjectMeta, true, false, containerName1),
+			Entry("appsv1.DaemonSet, only container 2", daemonSet, &daemonSet.Spec.Template.Spec, &daemonSet.Spec.Template.ObjectMeta, false, true, containerName2),
 
-			Entry("appsv1beta2.DaemonSet, all containers", daemonSetV1beta2, &daemonSetV1beta2.Spec.Template.Spec, true, true),
-			Entry("appsv1beta2.DaemonSet, only container 1", daemonSetV1beta2, &daemonSetV1beta2.Spec.Template.Spec, true, false, containerName1),
-			Entry("appsv1beta2.DaemonSet, only container 2", daemonSetV1beta2, &daemonSetV1beta2.Spec.Template.Spec, false, true, containerName2),
+			Entry("appsv1beta2.DaemonSet, all containers", daemonSetV1beta2, &daemonSetV1beta2.Spec.Template.Spec, &daemonSetV1beta2.Spec.Template.ObjectMeta, true, true),
+			Entry("appsv1beta2.DaemonSet, only container 1", daemonSetV1beta2, &daemonSetV1beta2.Spec.Template.Spec, &daemonSetV1beta2.Spec.Template.ObjectMeta, true, false, containerName1),
+			Entry("appsv1beta2.DaemonSet, only container 2", daemonSetV1beta2, &daemonSetV1beta2.Spec.Template.Spec, &daemonSetV1beta2.Spec.Template.ObjectMeta, false, true, containerName2),
 
-			Entry("batchv1.Job, all containers", job, &job.Spec.Template.Spec, true, true),
-			Entry("batchv1.Job, only container 1", job, &job.Spec.Template.Spec, true, false, containerName1),
-			Entry("batchv1.Job, only container 2", job, &job.Spec.Template.Spec, false, true, containerName2),
+			Entry("batchv1.Job, all containers", job, &job.Spec.Template.Spec, &job.Spec.Template.ObjectMeta, true, true),
+			Entry("batchv1.Job, only container 1", job, &job.Spec.Template.Spec, &job.Spec.Template.ObjectMeta, true, false, containerName1),
+			Entry("batchv1.Job, only container 2", job, &job.Spec.Template.Spec, &job.Spec.Template.ObjectMeta, false, true, containerName2),
 
-			Entry("batchv1.CronJob, all containers", cronJob, &cronJob.Spec.JobTemplate.Spec.Template.Spec, true, true),
-			Entry("batchv1.CronJob, only container 1", cronJob, &cronJob.Spec.JobTemplate.Spec.Template.Spec, true, false, containerName1),
-			Entry("batchv1.CronJob, only container 2", cronJob, &cronJob.Spec.JobTemplate.Spec.Template.Spec, false, true, containerName2),
+			Entry("batchv1.CronJob, all containers", cronJob, &cronJob.Spec.JobTemplate.Spec.Template.Spec, &cronJob.Spec.JobTemplate.Spec.Template.ObjectMeta, true, true),
+			Entry("batchv1.CronJob, only container 1", cronJob, &cronJob.Spec.JobTemplate.Spec.Template.Spec, &cronJob.Spec.JobTemplate.Spec.Template.ObjectMeta, true, false, containerName1),
+			Entry("batchv1.CronJob, only container 2", cronJob, &cronJob.Spec.JobTemplate.Spec.Template.Spec, &cronJob.Spec.JobTemplate.Spec.Template.ObjectMeta, false, true, containerName2),
 
-			Entry("batchv1beta1.CronJob, all containers", cronJobV1beta1, &cronJobV1beta1.Spec.JobTemplate.Spec.Template.Spec, true, true),
-			Entry("batchv1beta1.CronJob, only container 1", cronJobV1beta1, &cronJobV1beta1.Spec.JobTemplate.Spec.Template.Spec, true, false, containerName1),
-			Entry("batchv1beta1.CronJob, only container 2", cronJobV1beta1, &cronJobV1beta1.Spec.JobTemplate.Spec.Template.Spec, false, true, containerName2),
+			Entry("batchv1beta1.CronJob, all containers", cronJobV1beta1, &cronJobV1beta1.Spec.JobTemplate.Spec.Template.Spec, &cronJobV1beta1.Spec.JobTemplate.Spec.Template.ObjectMeta, true, true),
+			Entry("batchv1beta1.CronJob, only container 1", cronJobV1beta1, &cronJobV1beta1.Spec.JobTemplate.Spec.Template.Spec, &cronJobV1beta1.Spec.JobTemplate.Spec.Template.ObjectMeta, true, false, containerName1),
+			Entry("batchv1beta1.CronJob, only container 2", cronJobV1beta1, &cronJobV1beta1.Spec.JobTemplate.Spec.Template.Spec, &cronJobV1beta1.Spec.JobTemplate.Spec.Template.ObjectMeta, false, true, containerName2),
 		)
 	})
 })
