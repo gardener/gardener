@@ -217,7 +217,7 @@ func (r *reconciler) restore(ctx context.Context, osc *extensionsv1alpha1.Operat
 
 func (r *reconciler) delete(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig) (reconcile.Result, error) {
 	if !controllerutil.ContainsFinalizer(osc, FinalizerName) {
-		r.logger.Info("Deleting operating system config causes a no-op as there is no finalizer.", "osc", osc.Name)
+		r.logger.Info("Deleting operating system config causes a no-op as there is no finalizer", "osc", osc.Name)
 		return reconcile.Result{}, nil
 	}
 
@@ -235,7 +235,7 @@ func (r *reconciler) delete(ctx context.Context, osc *extensionsv1alpha1.Operati
 		return reconcile.Result{}, err
 	}
 
-	r.logger.Info("Removing finalizer.", "operatingsystemconfig", kutil.ObjectName(osc))
+	r.logger.Info("Removing finalizer", "operatingsystemconfig", kutil.ObjectName(osc))
 	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, osc, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizer from operatingsystemconfig: %+v", err)
 	}
@@ -263,7 +263,7 @@ func (r *reconciler) migrate(ctx context.Context, osc *extensionsv1alpha1.Operat
 		return reconcile.Result{}, err
 	}
 
-	r.logger.Info("Removing finalizer.", "osc", osc.Name)
+	r.logger.Info("Removing finalizer", "osc", osc.Name)
 	if err := controllerutils.RemoveAllFinalizers(ctx, r.client, r.client, osc); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing all finalizers from operatingsystemconfig: %+v", err)
 	}

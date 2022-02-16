@@ -16,6 +16,7 @@ package worker
 
 import (
 	"context"
+	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -83,9 +84,7 @@ func (r *stateReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 	}
 
 	if err := r.actuator.Reconcile(ctx, worker); err != nil {
-		msg := "Error updating worker state"
-		logger.Error(err, msg)
-		return errorutils.ReconcileErr(err)
+		return errorutils.ReconcileErr(fmt.Errorf("error updating worker state: %w", err))
 	}
 
 	logger.Info("Successfully updated worker state")

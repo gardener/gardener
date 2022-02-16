@@ -18,6 +18,7 @@ linters:
   - unused
   enable:
   - revive
+  - logcheck
 
 issues:
   exclude-use-default: false
@@ -34,7 +35,16 @@ issues:
   # typecheck:
   - "undeclared name: `.*`"
   - "\".*\" imported but not used"
+  # allow non-capitalized messages if they start with technical terms
+  - "structured logging message should be capitalized: \"gardener-(apiserver|controller-manager)"
   exclude-rules:
   - linters:
     - staticcheck
     text: "SA1019:" # Excludes messages where deprecated variables are used
+
+linters-settings:
+  custom:
+    logcheck:
+      path: hack/tools/bin/logcheck.so
+      description: Check structured logging calls to logr.Logger instances
+      original-url: github.com/gardener/gardener/hack/tools/logcheck

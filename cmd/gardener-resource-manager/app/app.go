@@ -67,9 +67,9 @@ func NewResourceManagerCommand() *cobra.Command {
 				ctx, cancel := context.WithCancel(cmd.Context())
 				defer cancel()
 
-				log.Info("Starting gardener-resource-manager...", "version", version.Get().GitVersion)
+				log.Info("Starting gardener-resource-manager", "version", version.Get().GitVersion)
 				cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-					log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value))
+					log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value)) //nolint:logcheck
 				})
 
 				if err := resourcemanagercmd.CompleteAll(
@@ -158,7 +158,7 @@ func NewResourceManagerCommand() *cobra.Command {
 					return err
 
 				case <-cmd.Context().Done():
-					log.Info("Stop signal received, shutting down.")
+					log.Info("Stop signal received, shutting down")
 					wg.Wait()
 					return nil
 				}

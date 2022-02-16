@@ -201,10 +201,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for {
 		if c.controllerRegistrationFinalizerQueue.Len() == 0 && c.seedFinalizerQueue.Len() == 0 && c.seedQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			c.log.V(1).Info("No running ControllerRegistration worker and no items left in the queues. Terminating ControllerRegistration controller...")
+			c.log.V(1).Info("No running ControllerRegistration worker and no items left in the queues. Terminating ControllerRegistration controller")
 			break
 		}
-		c.log.V(1).Info("Waiting for ControllerRegistration workers to finish...", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.controllerRegistrationFinalizerQueue.Len()+c.seedFinalizerQueue.Len()+c.seedQueue.Len())
+		c.log.V(1).Info("Waiting for ControllerRegistration workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.controllerRegistrationFinalizerQueue.Len()+c.seedFinalizerQueue.Len()+c.seedQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

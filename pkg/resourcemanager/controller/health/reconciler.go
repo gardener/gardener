@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -57,7 +59,7 @@ func (r *reconciler) InjectLogger(l logr.Logger) error {
 
 // Reconcile performs health checks.
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.log.WithValues("object", req)
+	log := logf.FromContext(ctx)
 	log.Info("Starting ManagedResource health checks")
 
 	mr := &resourcesv1alpha1.ManagedResource{}
@@ -95,7 +97,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// falsy health condition (resources may need a second try to apply, e.g. CRDs and CRs in the same MR)
 	conditionResourcesApplied := v1beta1helper.GetCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
 	if conditionResourcesApplied == nil || conditionResourcesApplied.Status == gardencorev1beta1.ConditionProgressing || conditionResourcesApplied.Status == gardencorev1beta1.ConditionFalse {
-		log.Info("Skipping health checks for ManagedResource, as it is has not been reconciled successfully yet.")
+		log.Info("Skipping health checks for ManagedResource, as it is has not been reconciled successfully yet")
 		return ctrl.Result{RequeueAfter: r.syncPeriod}, nil
 	}
 
@@ -111,7 +113,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		runtimeObject, err := r.targetScheme.New(ref.GroupVersionKind())
 		if err != nil {
 			log.Info("Could not create new object of kind for health checks (probably not registered in the used scheme), falling back to unstructured request",
-				"GroupVersionKind", ref.GroupVersionKind().String(), "error", err.Error())
+				"groupVersionKind", ref.GroupVersionKind().String(), "error", err.Error())
 
 			// fallback to unstructured requests if the object's type is not registered in the scheme
 			unstructuredObj := &unstructured.Unstructured{}
@@ -122,7 +124,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			var ok bool
 			if obj, ok = runtimeObject.(client.Object); !ok {
 				err := fmt.Errorf("expected client.Object but got %T", obj)
-				log.Error(err, "Could not execute health check", "GroupVersionKind", ref.GroupVersionKind().String())
+				log.Error(err, "Could not execute health check", "groupVersionKind", ref.GroupVersionKind().String())
 				// do not requeue because there anyway will be another update event to fix the problem
 				return ctrl.Result{}, nil
 			}

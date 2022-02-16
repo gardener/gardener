@@ -112,7 +112,9 @@ func (s *statusUpdater) ProcessingCustom(ctx context.Context, obj extensionsv1al
 		return fmt.Errorf("client is not set. Call InjectClient() first")
 	}
 
-	s.logger.Info(description, s.logKeysAndValues(obj)...)
+	// TODO: get a logger from the reconciler context via logf.FromContext everywhere and pass a logger down to this func
+	// instead of adding key-value pairs ourselves here
+	s.logger.Info(description, s.logKeysAndValues(obj)...) //nolint:logcheck
 
 	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
 	lastOp := LastOperation(lastOperationType, gardencorev1beta1.LastOperationStateProcessing, 1, description)
@@ -136,7 +138,10 @@ func (s *statusUpdater) ErrorCustom(ctx context.Context, obj extensionsv1alpha1.
 	}
 
 	errDescription := gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err))
-	s.logger.Error(fmt.Errorf(errDescription), "error", s.logKeysAndValues(obj)...)
+
+	// TODO: get a logger from the reconciler context via logf.FromContext everywhere and pass a logger down to this func
+	// instead of adding key-value pairs ourselves here
+	s.logger.Error(fmt.Errorf(errDescription), "Error", s.logKeysAndValues(obj)...) //nolint:logcheck
 
 	lastOp, lastErr := ReconcileError(lastOperationType, errDescription, 50, gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err, err.Error()))...)
 
@@ -162,7 +167,9 @@ func (s *statusUpdater) SuccessCustom(ctx context.Context, obj extensionsv1alpha
 		return fmt.Errorf("client is not set. Call InjectClient() first")
 	}
 
-	s.logger.Info(description, s.logKeysAndValues(obj)...)
+	// TODO: get a logger from the reconciler context via logf.FromContext everywhere and pass a logger down to this func
+	// instead of adding key-value pairs ourselves here
+	s.logger.Info(description, s.logKeysAndValues(obj)...) //nolint:logcheck
 
 	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
 	lastOp, lastErr := ReconcileSucceeded(lastOperationType, description)

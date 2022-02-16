@@ -134,10 +134,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for {
 		if c.bastionQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			c.log.V(1).Info("No running Bastion worker and no items left in the queues. Terminating Bastion controller...")
+			c.log.V(1).Info("No running Bastion worker and no items left in the queues. Terminating Bastion controller")
 			break
 		}
-		c.log.V(1).Info("Waiting for Bastion workers to finish...", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.bastionQueue.Len())
+		c.log.V(1).Info("Waiting for Bastion workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.bastionQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

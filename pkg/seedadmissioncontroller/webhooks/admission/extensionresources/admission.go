@@ -242,7 +242,7 @@ func (h handler) handleValidation(request admission.Request, newObject newObject
 	if len(request.OldObject.Raw) != 0 {
 		oldObj = newObject()
 		if err := h.decoder.DecodeRaw(request.OldObject, oldObj); err != nil {
-			h.logger.Error(err, "Could not decode old object", "old object", oldObj)
+			h.logger.Error(err, "Could not decode old object", "oldObject", oldObj)
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("could not decode old object %v: %v", oldObj, err))
 		}
 	}

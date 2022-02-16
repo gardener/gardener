@@ -115,10 +115,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for {
 		if c.controllerDeploymentQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			c.log.V(1).Info("No running ControllerDeployment worker and no items left in the queues. Terminating ControllerDeployment controller...")
+			c.log.V(1).Info("No running ControllerDeployment worker and no items left in the queues. Terminating ControllerDeployment controller")
 			break
 		}
-		c.log.V(1).Info("Waiting for ControllerDeployment workers to finish...", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.controllerDeploymentQueue.Len())
+		c.log.V(1).Info("Waiting for ControllerDeployment workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.controllerDeploymentQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

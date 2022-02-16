@@ -90,7 +90,7 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 	if contentType != "application/json" {
 		err = fmt.Errorf("contentType=%s, expected application/json", contentType)
-		h.logger.Error(err, "Unable to process a request with an unknown content type", "content type", contentType)
+		h.logger.Error(err, "Unable to process a request with an unknown content type", "contentType", contentType)
 		h.writeResponse(w, nil, Errored(http.StatusBadRequest, err))
 		return
 	}
@@ -104,19 +104,14 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log request information
-	keysAndValues := []interface{}{"user", sarSpec.User, "groups", sarSpec.Groups}
-	if sarSpec.ResourceAttributes != nil {
-		keysAndValues = append(keysAndValues, "resourceAttributes", sarSpec.ResourceAttributes.String())
-	}
-	if sarSpec.NonResourceAttributes != nil {
-		keysAndValues = append(keysAndValues, "nonResourceAttributes", sarSpec.NonResourceAttributes.String())
-	}
-	h.logger.V(1).Info("Received request", keysAndValues...)
+	log := h.logger.WithValues("user", sarSpec.User, "groups", sarSpec.Groups,
+		"resourceAttributes", sarSpec.ResourceAttributes.String(), "nonResourceAttributes", sarSpec.NonResourceAttributes.String())
+	log.V(1).Info("Received request")
 
 	// Consult authorizer for result and write the response
 	decision, reason, err := h.authorizer.Authorize(ctx, AuthorizationAttributesFrom(*sarSpec))
 	if err != nil {
-		h.logger.Error(err, "Error when consulting authorizer for opinion")
+		log.Error(err, "Error when consulting authorizer for opinion")
 		h.writeResponse(w, gvk, Errored(http.StatusInternalServerError, err))
 		return
 	}
@@ -133,7 +128,7 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 		status = Errored(http.StatusInternalServerError, fmt.Errorf("unexpected decision: %d", decision))
 	}
 
-	h.logger.V(1).Info("Responding to request", append([]interface{}{"decision", decision, "reason", reason}, keysAndValues...))
+	log.V(1).Info("Responding to request", "decision", decision, "reason", reason)
 	h.writeResponse(w, gvk, status)
 }
 

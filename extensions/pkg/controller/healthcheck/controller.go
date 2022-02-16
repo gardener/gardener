@@ -168,7 +168,7 @@ func add(mgr manager.Manager, args AddArgs) error {
 		return err
 	}
 
-	log.Log.Info("Registered health check controller", "kind", args.registeredExtension.groupVersionKind.Kind, "type", args.Type, "health check type", args.registeredExtension.healthConditionTypes, "sync period", args.SyncPeriod.Duration.String())
+	log.Log.Info("Registered health check controller", "kind", args.registeredExtension.groupVersionKind.Kind, "type", args.Type, "conditionTypes", args.registeredExtension.healthConditionTypes, "syncPeriod", args.SyncPeriod.Duration.String())
 
 	// add type predicate to only watch registered resource (e.g ControlPlane) with a certain type (e.g aws)
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)

@@ -28,7 +28,7 @@ var _ = Describe("#NewIDLogger", func() {
 		logBuffer := gbytes.NewBuffer()
 		logger := logzap.New(logzap.JSONEncoder(), logzap.WriteTo(logBuffer))
 
-		NewIDLogger(logger).Info("foo")
-		Eventually(logBuffer).Should(gbytes.Say(`"msg":"foo","process_id":"[a-zA-Z0-9]{8}"`))
+		NewIDLogger(logger).Info("Foo")
+		Eventually(logBuffer).Should(gbytes.Say(`"msg":"Foo","process_id":"[a-zA-Z0-9]{8}"`))
 	})
 })

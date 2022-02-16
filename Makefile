@@ -45,6 +45,8 @@ endif
 TOOLS_DIR := hack/tools
 include hack/tools.mk
 
+LOGCHECK_DIR := $(TOOLS_DIR)/logcheck
+
 #########################################
 # Rules for local development scenarios #
 #########################################
@@ -195,6 +197,7 @@ install-requirements:
 revendor:
 	@GO111MODULE=on go mod tidy
 	@GO111MODULE=on go mod vendor
+	@cd $(LOGCHECK_DIR); go mod tidy
 
 .PHONY: clean
 clean:
@@ -205,9 +208,15 @@ check-generate:
 	@hack/check-generate.sh $(REPO_ROOT)
 
 .PHONY: check
-check: $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS)
+check: $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM) $(IMPORT_BOSS) $(LOGCHECK)
 	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 	@hack/check-imports.sh ./charts/... ./cmd/... ./extensions/... ./landscaper/... ./pkg/... ./plugin/... ./test/... ./third_party/...
+
+	@echo "> Check $(LOGCHECK_DIR)"
+	@cd $(LOGCHECK_DIR); $(abspath $(GOLANGCI_LINT)) run -c $(REPO_ROOT)/.golangci.yaml --timeout 10m ./...
+	@cd $(LOGCHECK_DIR); go vet ./...
+	@cd $(LOGCHECK_DIR); $(abspath $(GOIMPORTS)) -l .
+
 	@hack/check-charts.sh ./charts
 
 .PHONY: generate
@@ -227,10 +236,12 @@ generate-sequential: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS
 .PHONY: format
 format: $(GOIMPORTS)
 	@./hack/format.sh ./cmd ./extensions ./pkg ./plugin ./test ./landscaper ./hack
+	@cd $(LOGCHECK_DIR); $(abspath $(GOIMPORTS)) -l -w .
 
 .PHONY: test
 test: $(PROMTOOL)
 	@./hack/test.sh ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/... ./landscaper/...
+	@cd $(LOGCHECK_DIR); go test -race -timeout=2m ./... | grep -v 'no test files'
 
 .PHONY: test-integration
 test-integration: $(SETUP_ENVTEST)

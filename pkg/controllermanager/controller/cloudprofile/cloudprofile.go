@@ -118,10 +118,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for {
 		if c.cloudProfileQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			c.log.V(1).Info("No running CloudProfile worker and no items left in the queues. Terminating CloudProfile controller...")
+			c.log.V(1).Info("No running CloudProfile worker and no items left in the queues. Terminating CloudProfile controller")
 			break
 		}
-		c.log.V(1).Info("Waiting for CloudProfile workers to finish...", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.cloudProfileQueue.Len())
+		c.log.V(1).Info("Waiting for CloudProfile workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.cloudProfileQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

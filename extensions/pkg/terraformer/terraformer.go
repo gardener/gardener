@@ -199,7 +199,8 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 			deployNewPod = false
 		} else {
 			// delete still existing pod and wait until it's gone
-			logger.Info(fmt.Sprintf("Still existing Terraform pod with command %q found - ensuring the cleanup before starting a new Terraform pod with command %q", cmd, command))
+			oldPod := &podList.Items[0]
+			logger.Info("Found old Terraformer pod with other command, ensuring cleanup", "command", cmd, "oldPod", oldPod)
 			if err := t.EnsureCleanedUp(ctx); err != nil {
 				return err
 			}
@@ -207,7 +208,7 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 
 	case len(podList.Items) > 1:
 		// unreachable
-		logger.Error(fmt.Errorf("too many Terraformer pods"), "Unexpected number of still existing Terraformer pods: %d", len(podList.Items))
+		logger.Error(fmt.Errorf("too many Terraformer pods"), "Unexpected number of still existing Terraformer pods", "numberOfPods", len(podList.Items))
 		if err := t.EnsureCleanedUp(ctx); err != nil {
 			return err
 		}
@@ -246,9 +247,9 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 			podLogger.Info("Terraformer pod finished with error")
 
 			if terminationMessage != "" {
-				podLogger.Info("Termination message of Terraformer pod: " + terminationMessage)
-			} else if ctx.Err() != nil {
-				podLogger.Info("Context error: " + ctx.Err().Error())
+				podLogger.Info("Terraformer pod terminated with message", "terminationMessage", terminationMessage)
+			} else if ctxErr := ctx.Err(); ctxErr != nil {
+				podLogger.Info("Context error", "err", ctxErr.Error())
 			} else {
 				// fall back to pod logs as termination message
 				podLogger.Info("Fetching logs of Terraformer pod as termination message is empty")
@@ -257,7 +258,7 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 					podLogger.Error(err, "Could not retrieve logs of Terraformer pod")
 					return err
 				}
-				podLogger.Info("Logs of Terraformer pod: " + terminationMessage)
+				podLogger.Info("Terraformer pod terminated with logs", "logs", terminationMessage)
 			}
 		}
 

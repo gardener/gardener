@@ -63,9 +63,9 @@ func NewSeedAdmissionControllerCommand() *cobra.Command {
 				return err
 			}
 
-			log.Info("Starting "+Name+"...", "version", version.Get())
+			log.Info("Starting "+Name, "version", version.Get())
 			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value))
+				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value)) //nolint:logcheck
 			})
 
 			return opts.Run(cmd.Context())
@@ -119,13 +119,13 @@ func (o *Options) validate() error {
 
 // Run runs gardener-seed-admission-controller using the specified options.
 func (o *Options) Run(ctx context.Context) error {
-	log.Info("getting rest config")
+	log.Info("Getting rest config")
 	restConfig, err := config.GetConfig()
 	if err != nil {
 		return err
 	}
 
-	log.Info("setting up manager")
+	log.Info("Setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:                  kubernetes.SeedScheme,
 		LeaderElection:          false,
@@ -139,15 +139,15 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 
-	log.Info("setting up webhook server")
+	log.Info("Setting up webhook server")
 	server := mgr.GetWebhookServer()
 	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(runtimelog.Log.WithName(extensioncrds.HandlerName))})
 	server.Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName)})
 	server.Register(extensionresources.WebhookPath, &webhook.Admission{Handler: extensionresources.New(runtimelog.Log.WithName(extensionresources.HandlerName), o.AllowInvalidExtensionResources)})
 
-	log.Info("starting manager")
+	log.Info("Starting manager")
 	if err := mgr.Start(ctx); err != nil {
-		log.Error(err, "error running manager")
+		log.Error(err, "Error running manager")
 		return err
 	}
 

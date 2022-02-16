@@ -136,25 +136,25 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 
 	// Wait until all generated machine deployments are healthy/available.
 	if err := a.waitUntilWantedMachineDeploymentsAvailable(ctx, logger, cluster, worker, existingMachineDeploymentNames, existingMachineClassNames, wantedMachineDeployments, clusterAutoscalerUsed); err != nil {
-		// check if the machine controller manager is stuck
+		// check if the machine-controller-manager is stuck
 		isStuck, msg, err2 := a.IsMachineControllerStuck(ctx, worker)
 		if err2 != nil {
-			logger.Error(err2, "Failed to check if the machine controller manager pod is stuck after unsuccessfully waiting for all machine deployments to be ready")
+			logger.Error(err2, "Failed to check if the machine-controller-manager pod is stuck after unsuccessfully waiting for all machine deployments to be ready")
 			// continue in order to return `err` and determine error codes
 		}
 
 		if isStuck {
 			podList := corev1.PodList{}
 			if err2 := a.client.List(ctx, &podList, client.InNamespace(worker.Namespace), client.MatchingLabels{"role": "machine-controller-manager"}); err2 != nil {
-				return fmt.Errorf("failed to list machine controller manager pods for worker (%s/%s): %w", worker.Namespace, worker.Name, err2)
+				return fmt.Errorf("failed to list machine-controller-manager pods for worker (%s/%s): %w", worker.Namespace, worker.Name, err2)
 			}
 
 			for _, pod := range podList.Items {
 				if err2 := a.client.Delete(ctx, &pod); err2 != nil {
-					return fmt.Errorf("failed to delete stuck machine controller manager pod for worker (%s/%s): %w", worker.Namespace, worker.Name, err2)
+					return fmt.Errorf("failed to delete stuck machine-controller-manager pod for worker (%s/%s): %w", worker.Namespace, worker.Name, err2)
 				}
 			}
-			logger.Info("Successfully deleted stuck machine controller manager pod", "reason", msg)
+			logger.Info("Successfully deleted stuck machine-controller-manager pod", "reason", msg)
 		}
 
 		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Failed while waiting for all machine deployments to be ready: '%s'", err.Error()))
@@ -370,7 +370,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 			numberOfAwakeMachines += deployment.Status.Replicas
 
-			// Skip further checks if cluster is hibernated because MachineControllerManager is usually scaled down during hibernation.
+			// Skip further checks if cluster is hibernated because machine-controller-manager is usually scaled down during hibernation.
 			if controller.IsHibernated(cluster) {
 				continue
 			}
@@ -386,16 +386,16 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 				logger.Info("Machine deployment is performing a rolling update", "machineDeployment", &deployment)
 				// Already existing machine deployments with a rolling update should have > 1 machine sets
 				if len(machineSets) <= 1 {
-					msg := fmt.Sprintf("waiting for the MachineControllerManager to create the machine sets for the machine deployment (%s/%s)", deployment.Namespace, deployment.Name)
-					logger.Info(msg)
-					return retryutils.MinorError(fmt.Errorf(msg))
+					err := fmt.Errorf("waiting for the machine-controller-manager to create the machine sets for the machine deployment (%s/%s)", deployment.Namespace, deployment.Name)
+					logger.Error(err, "Minor error while waiting for wanted MachineDeployments to become available")
+					return retryutils.MinorError(err)
 				}
 			}
 
 			// If the Shoot is not hibernated we want to make sure that the machine set with the right
-			// machine class for the machine deployment is deployed by the machine controller manager
+			// machine class for the machine deployment is deployed by the machine-controller-manager
 			if machineSet := workerhelper.GetMachineSetWithMachineClass(wantedDeployment.Name, wantedDeployment.ClassName, ownerReferenceToMachineSet); machineSet == nil {
-				return retryutils.MinorError(fmt.Errorf("waiting for the machine controller manager to create the updated machine set for the machine deployment (%s/%s)", deployment.Namespace, deployment.Name))
+				return retryutils.MinorError(fmt.Errorf("waiting for the machine-controller-manager to create the updated machine set for the machine deployment (%s/%s)", deployment.Namespace, deployment.Name))
 			}
 
 			// If the Shoot is not hibernated we want to wait until all wanted machine deployments have as many
@@ -439,7 +439,9 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			msg = fmt.Sprintf("Waiting until all machines have been hibernated (%d still awake)...", numberOfAwakeMachines)
 		}
 
-		logger.Info(msg)
+		// TODO: Rework logging in this method. There should be one proper log message per MachineDeployment and on aggregated error to return.
+		// Currently, later MachineDeployments override earlier messages, logs are not structured, etc.
+		logger.Info(msg) //nolint:logcheck
 		return retryutils.MinorError(errors.New(msg))
 	})
 }

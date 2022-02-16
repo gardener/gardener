@@ -55,14 +55,14 @@ func (t *terraformer) WaitForCleanEnvironment(ctx context.Context) error {
 	if err == context.DeadlineExceeded && len(podList.Items) > 0 {
 		t.logger.Info("Fetching logs of Terraformer pods as waiting for clean environment timed out")
 		for _, pod := range podList.Items {
-			podLogger := t.logger.WithValues("pod", client.ObjectKey{Namespace: t.namespace, Name: pod.Name})
+			podLogger := t.logger.WithValues("pod", client.ObjectKeyFromObject(&pod))
 			podLogs, err := t.retrievePodLogs(ctx, podLogger, &pod)
 
 			if err != nil {
-				podLogger.Error(err, "Could not retrieve logs of Terraformer pod, "+pod.Name)
+				podLogger.Error(err, "Could not retrieve logs of Terraformer pod")
 				continue
 			}
-			podLogger.Info("Logs of Terraformer pod, " + pod.Name + ": " + podLogs)
+			podLogger.Info("Logs of Terraformer pod", "logs", podLogs)
 		}
 	}
 
@@ -89,7 +89,7 @@ func (t *terraformer) waitForPod(ctx context.Context, logger logr.Logger, pod *c
 	timeoutCtx, cancel := context.WithTimeout(ctx, t.deadlinePod)
 	defer cancel()
 
-	log.Info("Waiting for Terraformer pod to be completed...")
+	log.Info("Waiting for Terraformer pod to be completed")
 	_ = retry.Until(timeoutCtx, 5*time.Second, func(ctx context.Context) (bool, error) {
 		if err := t.client.Get(ctx, client.ObjectKeyFromObject(pod), pod); err != nil {
 			if apierrors.IsNotFound(err) {

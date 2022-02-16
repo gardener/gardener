@@ -15,6 +15,7 @@
 package app
 
 import (
+	"fmt"
 	"os"
 
 	extcontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -58,11 +59,11 @@ func NewControllerCommand(ctrlName string, osTypes []string, generator generator
 	cmd := &cobra.Command{
 		Use: "os-" + ctrlName + "-controller-manager",
 
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
 			if err := aggOption.Complete(); err != nil {
-				controllercmd.LogErrAndExit(err, "Error completing options")
+				return fmt.Errorf("error completing options: %w", err)
 			}
 
 			// TODO: Make these flags configurable via command line parameters or component config file.
@@ -73,11 +74,11 @@ func NewControllerCommand(ctrlName string, osTypes []string, generator generator
 
 			mgr, err := manager.New(restOpts.Completed().Config, mgrOpts.Completed().Options())
 			if err != nil {
-				controllercmd.LogErrAndExit(err, "Could not instantiate manager")
+				return fmt.Errorf("could not instantiate manager: %w", err)
 			}
 
 			if err := extcontroller.AddToScheme(mgr.GetScheme()); err != nil {
-				controllercmd.LogErrAndExit(err, "Could not update manager scheme")
+				return fmt.Errorf("could not update manager scheme: %w", err)
 			}
 
 			ctrlOpts.Completed().Apply(&oscommon.DefaultAddOptions.Controller)
@@ -85,12 +86,14 @@ func NewControllerCommand(ctrlName string, osTypes []string, generator generator
 			reconcileOpts.Completed().Apply(&oscommon.DefaultAddOptions.IgnoreOperationAnnotation)
 
 			if err := controllerSwitches.Completed().AddToManager(mgr); err != nil {
-				controllercmd.LogErrAndExit(err, "Could not add controller to manager")
+				return fmt.Errorf("could not add controller to manager: %w", err)
 			}
 
 			if err := mgr.Start(ctx); err != nil {
-				controllercmd.LogErrAndExit(err, "Error running manager")
+				return fmt.Errorf("error running manager: %w", err)
 			}
+
+			return nil
 		},
 	}
 

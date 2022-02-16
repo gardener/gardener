@@ -24,6 +24,8 @@ import (
 	"sync"
 	"time"
 
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -93,7 +95,7 @@ func (r *Reconciler) InjectLogger(l logr.Logger) error {
 
 // Reconcile implements `reconcile.Reconciler`.
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.log.WithValues("object", req)
+	log := logf.FromContext(ctx)
 
 	mr := &resourcesv1alpha1.ManagedResource{}
 	if err := r.client.Get(ctx, req.NamespacedName, mr); err != nil {
@@ -105,7 +107,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	action, responsible := r.class.Active(mr)
-	log.Info(fmt.Sprintf("reconcile: action required: %t, responsible: %t", action, responsible))
+	log.Info("Reconciling ManagedResource", "actionRequired", action, "responsible", responsible)
 
 	// If the object should be deleted or the responsibility changed
 	// the actual deployments have to be deleted
@@ -168,26 +170,28 @@ func (r *Reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 			return reconcile.Result{}, fmt.Errorf("could not read secret '%s': %+v", secret.Name, err)
 		}
 
-		for key, value := range secret.Data {
+		for secretKey, value := range secret.Data {
 			var (
 				decoder    = yaml.NewYAMLOrJSONDecoder(bytes.NewReader(value), 1024)
 				decodedObj map[string]interface{}
 			)
 
-			for i := 0; true; i++ {
+			for indexInFile := 0; true; indexInFile++ {
+				objLog := log.WithValues("secret", client.ObjectKeyFromObject(secret), "secretKey", secretKey, "indexInFile", indexInFile)
+
 				err := decoder.Decode(&decodedObj)
 				if err == io.EOF {
 					break
 				}
 				if err != nil {
-					decodingError := &decodingError{
-						err:               err,
-						secret:            fmt.Sprintf("%s/%s", secret.Namespace, secret.Name),
-						secretKey:         key,
-						objectIndexInFile: i,
+					dErr := &decodingError{
+						err:         err,
+						secret:      client.ObjectKeyFromObject(secret),
+						secretKey:   secretKey,
+						indexInFile: indexInFile,
 					}
-					decodingErrors = append(decodingErrors, decodingError)
-					log.Error(decodingError.err, decodingError.StringShort())
+					decodingErrors = append(decodingErrors, dErr)
+					objLog.Error(dErr.err, "Could not decode resource")
 					continue
 				}
 
@@ -196,14 +200,19 @@ func (r *Reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 				}
 
 				obj := &unstructured.Unstructured{Object: decodedObj}
+				objLog = objLog.WithValues("object", client.Object(obj))
 
 				// look up scope of objects' kind to check, if we should default the namespace field
 				mapping, err := r.targetRESTMapper.RESTMapping(obj.GroupVersionKind().GroupKind(), obj.GroupVersionKind().Version)
 				if err != nil || mapping == nil {
 					// Cache miss most probably indicates, that the corresponding CRD is not yet applied.
 					// CRD might be applied later as part of the ManagedResource reconciliation
-					log.Info(fmt.Sprintf("could not get rest mapping for %s '%s/%s': %v", obj.GetKind(), obj.GetNamespace(), obj.GetName(), err),
-						"secret", fmt.Sprintf("%s/%s", secret.Namespace, secret.Name), "secretKey", key, "objectIndexInFile", i)
+
+					errMsg := "<nil>"
+					if err != nil {
+						errMsg = err.Error()
+					}
+					objLog.Info("Could not get RESTMapping for object", "err", errMsg)
 
 					// default namespace on a best effort basis
 					if obj.GetKind() != "Namespace" && obj.GetNamespace() == "" {
@@ -248,8 +257,7 @@ func (r *Reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 						orphanedObjectReferences = append(orphanedObjectReferences, objectReference)
 					}
 
-					log.Info(fmt.Sprintf("Skipping object %s '%s/%s', as it is annotated with %s=%s",
-						obj.GetKind(), obj.GetNamespace(), obj.GetName(), resourcesv1alpha1.Mode, resourcesv1alpha1.ModeIgnore))
+					objLog.Info("Skipping object because it is marked to be ignored")
 					continue
 				}
 
@@ -392,7 +400,7 @@ func (r *Reconciler) delete(ctx context.Context, mr *resourcesv1alpha1.ManagedRe
 			}
 		}
 	} else {
-		log.Info(fmt.Sprintf("Do not delete any resources of %s because .spec.keepObjects=true", mr.Name))
+		log.Info("Skipping deletion of objects as ManagedResource is marked to keep objects")
 	}
 
 	log.Info("All resources have been deleted, removing finalizers from ManagedResource")
@@ -962,14 +970,14 @@ type object struct {
 }
 
 type decodingError struct {
-	err               error
-	secret            string
-	secretKey         string
-	objectIndexInFile int
+	err         error
+	secret      client.ObjectKey
+	secretKey   string
+	indexInFile int
 }
 
 func (d *decodingError) StringShort() string {
-	return fmt.Sprintf("Could not decode resource at index %d in '%s' in secret '%s'", d.objectIndexInFile, d.secretKey, d.secret)
+	return fmt.Sprintf("Could not decode resource at index %d in '%s' in secret '%s'", d.indexInFile, d.secretKey, d.secret.String())
 }
 
 func (d *decodingError) String() string {

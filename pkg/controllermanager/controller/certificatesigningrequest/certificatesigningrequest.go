@@ -127,10 +127,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for {
 		if c.csrQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			c.log.V(1).Info("No running CertificateSigningRequest worker and no items left in the queues. Terminating CertificateSigningRequest controller...")
+			c.log.V(1).Info("No running CertificateSigningRequest worker and no items left in the queues. Terminating CertificateSigningRequest controller")
 			break
 		}
-		c.log.V(1).Info("Waiting for CertificateSigningRequest workers to finish...", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.csrQueue.Len())
+		c.log.V(1).Info("Waiting for CertificateSigningRequest workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.csrQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

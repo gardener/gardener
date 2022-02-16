@@ -244,7 +244,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		return nil, fmt.Errorf("error instantiating zap logger: %w", err)
 	}
 
-	log.Info("Starting gardenlet...", "version", version.Get())
+	log.Info("Starting gardenlet", "version", version.Get())
 	log.Info("Feature Gates", "featureGates", gardenletfeatures.FeatureGate.String())
 
 	if flag := flag.Lookup("v"); flag != nil {
@@ -288,7 +288,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 			return nil, err
 		}
 	} else {
-		log.Info("No kubeconfig secret given in the configuration under `.gardenClientConnection.kubeconfigSecret`. Skipping the kubeconfig bootstrap process and certificate rotation.")
+		log.Info("No kubeconfig secret given in the configuration under `.gardenClientConnection.kubeconfigSecret`. Skipping the kubeconfig bootstrap process and certificate rotation")
 	}
 
 	if kubeconfigFromBootstrap == nil {
@@ -435,7 +435,7 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 
 	// Start HTTPS server.
 	if g.Config.Server.HTTPS.TLS == nil {
-		g.Log.Info("No TLS server certificates provided... self-generating them now...")
+		g.Log.Info("No TLS server certificates provided, self-generating them now")
 
 		_, _, tempDir, err := secrets.SelfGenerateTLSServerCertificate("gardenlet", []string{
 			"gardenlet",
@@ -451,7 +451,7 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 			ServerKeyPath:  filepath.Join(tempDir, secrets.DataKeyPrivateKey),
 		}
 
-		g.Log.Info("TLS server certificates successfully self-generated.")
+		g.Log.Info("TLS server certificates successfully self-generated")
 	}
 
 	g.startServer(ctx)

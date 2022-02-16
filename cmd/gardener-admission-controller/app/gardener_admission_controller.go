@@ -120,9 +120,9 @@ func (o *options) validate() error {
 
 // run runs gardener-admission-controller using the specified options.
 func (o *options) run(ctx context.Context) error {
-	log.Info("Starting Gardener admission controller...", "version", version.Get())
+	log.Info("Starting Gardener admission controller", "version", version.Get())
 
-	log.Info("getting rest config")
+	log.Info("Getting rest config")
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
 		o.config.GardenClientConnection.Kubeconfig = kubeconfig
 	}
@@ -132,7 +132,7 @@ func (o *options) run(ctx context.Context) error {
 		return err
 	}
 
-	log.Info("setting up manager")
+	log.Info("Setting up manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:                  kubernetes.GardenScheme,
 		LeaderElection:          false,
@@ -157,7 +157,7 @@ func (o *options) run(ctx context.Context) error {
 		}
 	}
 
-	log.Info("setting up healthcheck endpoints")
+	log.Info("Setting up healthcheck endpoints")
 	if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 		return err
 	}
@@ -165,13 +165,13 @@ func (o *options) run(ctx context.Context) error {
 		return err
 	}
 
-	log.Info("setting up graph for seed authorization handler")
+	log.Info("Setting up graph for seed authorization handler")
 	graph := seedauthorizergraph.New(log, mgr.GetClient())
 	if err := graph.Setup(ctx, mgr.GetCache()); err != nil {
 		return err
 	}
 
-	log.Info("setting up webhook server")
+	log.Info("Setting up webhook server")
 	server := mgr.GetWebhookServer()
 
 	namespaceValidationHandler, err := namespacedeletion.New(ctx, runtimelog.Log.WithName(namespacedeletion.HandlerName), mgr.GetCache())
@@ -193,13 +193,13 @@ func (o *options) run(ctx context.Context) error {
 	server.Register(internaldomainsecret.WebhookPath, &webhook.Admission{Handler: internaldomainsecret.New(runtimelog.Log.WithName(internaldomainsecret.HandlerName))})
 
 	if utils.IsTrue(o.config.Server.EnableDebugHandlers) {
-		log.Info("registering debug handlers")
+		log.Info("Registering debug handlers")
 		server.Register(seedauthorizergraph.DebugHandlerPath, seedauthorizergraph.NewDebugHandler(graph))
 	}
 
-	log.Info("starting manager")
+	log.Info("Starting manager")
 	if err := mgr.Start(ctx); err != nil {
-		log.Error(err, "error running manager")
+		log.Error(err, "Error running manager")
 		return err
 	}
 
@@ -225,9 +225,9 @@ func NewGardenerAdmissionControllerCommand() *cobra.Command {
 				return err
 			}
 
-			log.Info("Starting "+Name+"...", "version", version.Get())
+			log.Info("Starting "+Name, "version", version.Get())
 			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value))
+				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value)) //nolint:logcheck
 			})
 
 			return opts.run(cmd.Context())
