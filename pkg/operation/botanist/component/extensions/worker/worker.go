@@ -60,7 +60,7 @@ type Interface interface {
 	SetInfrastructureProviderStatus(*runtime.RawExtension)
 	SetWorkerNameToOperatingSystemConfigsMap(map[string]*operatingsystemconfig.OperatingSystemConfigs)
 	MachineDeployments() []extensionsv1alpha1.MachineDeployment
-	SetCloudConfigSecretChecksumMap(map[string]string)
+	SetWorkerNameToOperatingSystemConfigSecretChecksumMap(map[string]string)
 }
 
 // Values contains the values used to create a Worker resources.
@@ -86,8 +86,8 @@ type Values struct {
 	InfrastructureProviderStatus *runtime.RawExtension
 	// WorkerNameToOperatingSystemConfigsMap contains the operating system configurations for the worker pools.
 	WorkerNameToOperatingSystemConfigsMap map[string]*operatingsystemconfig.OperatingSystemConfigs
-	// CloudConfigSecretChecksumMap contains a map holding the desired cloud-config's secret checksum for a worker pool name.
-	CloudConfigSecretChecksumMap map[string]string
+	// WorkerNameToOperatingSystemConfigSecretChecksumMap contains a map holding the desired cloud-config's secret checksum for a worker pool name.
+	WorkerNameToOperatingSystemConfigSecretChecksumMap map[string]string
 }
 
 // New creates a new instance of Interface.
@@ -231,7 +231,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			Maximum:        workerPool.Maximum,
 			MaxSurge:       *workerPool.MaxSurge,
 			MaxUnavailable: *workerPool.MaxUnavailable,
-			Annotations:    utils.MergeStringMaps(workerPool.Annotations, map[string]string{v1beta1constants.GardenerCloudConfigSecretChecksum: w.values.CloudConfigSecretChecksumMap[workerPool.Name]}),
+			Annotations:    utils.MergeStringMaps(workerPool.Annotations, map[string]string{v1beta1constants.GardenerCloudConfigSecretChecksum: w.values.WorkerNameToOperatingSystemConfigSecretChecksumMap[workerPool.Name]}),
 			Labels:         labels,
 			Taints:         workerPool.Taints,
 			MachineType:    workerPool.Machine.Type,
@@ -365,9 +365,9 @@ func (w *worker) SetWorkerNameToOperatingSystemConfigsMap(maps map[string]*opera
 	w.values.WorkerNameToOperatingSystemConfigsMap = maps
 }
 
-// SetCloudConfigSecretChecksumMap sets a map holding the desired cloud-config's secret checksum for a worker pool name.
-func (w *worker) SetCloudConfigSecretChecksumMap(m map[string]string) {
-	w.values.CloudConfigSecretChecksumMap = m
+// SetWorkerNameToOperatingSystemConfigSecretChecksumMap sets a map holding the desired cloud-config's secret checksum for a worker pool name.
+func (w *worker) SetWorkerNameToOperatingSystemConfigSecretChecksumMap(m map[string]string) {
+	w.values.WorkerNameToOperatingSystemConfigSecretChecksumMap = m
 }
 
 // MachineDeployments returns the generated machine deployments of the Worker.

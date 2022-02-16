@@ -90,12 +90,12 @@ var _ = Describe("Worker", func() {
 		BeforeEach(func() {
 			infrastructure.EXPECT().ProviderStatus().Return(infrastructureProviderStatus)
 			operatingSystemConfig.EXPECT().WorkerNameToOperatingSystemConfigsMap().Return(workerNameToOperatingSystemConfigMaps)
-			operatingSystemConfig.EXPECT().GetCloudConfigSecretChecksumMap()
+			operatingSystemConfig.EXPECT().WorkerNameToOperatingSystemConfigSecretChecksumMap()
 
 			worker.EXPECT().SetSSHPublicKey(sshPublicKey)
 			worker.EXPECT().SetInfrastructureProviderStatus(infrastructureProviderStatus)
 			worker.EXPECT().SetWorkerNameToOperatingSystemConfigsMap(workerNameToOperatingSystemConfigMaps)
-			worker.EXPECT().SetCloudConfigSecretChecksumMap(gomock.AssignableToTypeOf(map[string]string{}))
+			worker.EXPECT().SetWorkerNameToOperatingSystemConfigSecretChecksumMap(gomock.AssignableToTypeOf(map[string]string{}))
 		})
 
 		Context("deploy", func() {

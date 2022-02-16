@@ -108,18 +108,6 @@ func (mr *MockInterfaceMockRecorder) Restore(arg0, arg1 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restore", reflect.TypeOf((*MockInterface)(nil).Restore), arg0, arg1)
 }
 
-// SetCloudConfigSecretChecksumMap mocks base method.
-func (m *MockInterface) SetCloudConfigSecretChecksumMap(arg0 map[string]string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetCloudConfigSecretChecksumMap", arg0)
-}
-
-// SetCloudConfigSecretChecksumMap indicates an expected call of SetCloudConfigSecretChecksumMap.
-func (mr *MockInterfaceMockRecorder) SetCloudConfigSecretChecksumMap(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCloudConfigSecretChecksumMap", reflect.TypeOf((*MockInterface)(nil).SetCloudConfigSecretChecksumMap), arg0)
-}
-
 // SetInfrastructureProviderStatus mocks base method.
 func (m *MockInterface) SetInfrastructureProviderStatus(arg0 *runtime.RawExtension) {
 	m.ctrl.T.Helper()
@@ -142,6 +130,18 @@ func (m *MockInterface) SetSSHPublicKey(arg0 []byte) {
 func (mr *MockInterfaceMockRecorder) SetSSHPublicKey(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSSHPublicKey", reflect.TypeOf((*MockInterface)(nil).SetSSHPublicKey), arg0)
+}
+
+// SetWorkerNameToOperatingSystemConfigSecretChecksumMap mocks base method.
+func (m *MockInterface) SetWorkerNameToOperatingSystemConfigSecretChecksumMap(arg0 map[string]string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetWorkerNameToOperatingSystemConfigSecretChecksumMap", arg0)
+}
+
+// SetWorkerNameToOperatingSystemConfigSecretChecksumMap indicates an expected call of SetWorkerNameToOperatingSystemConfigSecretChecksumMap.
+func (mr *MockInterfaceMockRecorder) SetWorkerNameToOperatingSystemConfigSecretChecksumMap(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWorkerNameToOperatingSystemConfigSecretChecksumMap", reflect.TypeOf((*MockInterface)(nil).SetWorkerNameToOperatingSystemConfigSecretChecksumMap), arg0)
 }
 
 // SetWorkerNameToOperatingSystemConfigsMap mocks base method.

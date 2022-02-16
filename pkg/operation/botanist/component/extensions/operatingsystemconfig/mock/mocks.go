@@ -78,20 +78,6 @@ func (mr *MockInterfaceMockRecorder) Destroy(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
 }
 
-// GetCloudConfigSecretChecksumMap mocks base method.
-func (m *MockInterface) GetCloudConfigSecretChecksumMap() map[string]string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCloudConfigSecretChecksumMap")
-	ret0, _ := ret[0].(map[string]string)
-	return ret0
-}
-
-// GetCloudConfigSecretChecksumMap indicates an expected call of GetCloudConfigSecretChecksumMap.
-func (mr *MockInterfaceMockRecorder) GetCloudConfigSecretChecksumMap() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCloudConfigSecretChecksumMap", reflect.TypeOf((*MockInterface)(nil).GetCloudConfigSecretChecksumMap))
-}
-
 // Migrate mocks base method.
 func (m *MockInterface) Migrate(arg0 context.Context) error {
 	m.ctrl.T.Helper()
@@ -234,6 +220,20 @@ func (m *MockInterface) WaitMigrate(arg0 context.Context) error {
 func (mr *MockInterfaceMockRecorder) WaitMigrate(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitMigrate", reflect.TypeOf((*MockInterface)(nil).WaitMigrate), arg0)
+}
+
+// WorkerNameToOperatingSystemConfigSecretChecksumMap mocks base method.
+func (m *MockInterface) WorkerNameToOperatingSystemConfigSecretChecksumMap() map[string]string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WorkerNameToOperatingSystemConfigSecretChecksumMap")
+	ret0, _ := ret[0].(map[string]string)
+	return ret0
+}
+
+// WorkerNameToOperatingSystemConfigSecretChecksumMap indicates an expected call of WorkerNameToOperatingSystemConfigSecretChecksumMap.
+func (mr *MockInterfaceMockRecorder) WorkerNameToOperatingSystemConfigSecretChecksumMap() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorkerNameToOperatingSystemConfigSecretChecksumMap", reflect.TypeOf((*MockInterface)(nil).WorkerNameToOperatingSystemConfigSecretChecksumMap))
 }
 
 // WorkerNameToOperatingSystemConfigsMap mocks base method.

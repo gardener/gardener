@@ -176,7 +176,7 @@ var _ = Describe("Worker", func() {
 					},
 				},
 			},
-			CloudConfigSecretChecksumMap: map[string]string{worker1Name: "cloudConfigSecretChecksumWorker1", worker2Name: "cloudConfigSecretChecksumWorker2"},
+			WorkerNameToOperatingSystemConfigSecretChecksumMap: map[string]string{worker1Name: "cloudConfigSecretChecksumWorker1", worker2Name: "cloudConfigSecretChecksumWorker2"},
 			Workers: []gardencorev1beta1.Worker{
 				{
 					Name:           worker1Name,

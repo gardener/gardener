@@ -79,8 +79,8 @@ type Interface interface {
 	// WorkerNameToOperatingSystemConfigsMap returns a map whose key is a worker name and whose value is a structure
 	// containing both the downloader and the original operating system config data.
 	WorkerNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs
-	// GetCloudConfigSecretChecksumMap returns a map holding the desired cloud-config's secret checksum for a worker pool name.
-	GetCloudConfigSecretChecksumMap() map[string]string
+	// WorkerNameToOperatingSystemConfigSecretChecksumMap returns a map holding the desired cloud-config's secret checksum for a worker pool name.
+	WorkerNameToOperatingSystemConfigSecretChecksumMap() map[string]string
 	// SetCloudConfigSecretChecksum sets the desired cloud-config secret checksum for a worker pool.
 	SetCloudConfigSecretChecksum(string, string)
 }
@@ -467,8 +467,8 @@ func (o *operatingSystemConfig) WorkerNameToOperatingSystemConfigsMap() map[stri
 	return o.workerNameToOSCs
 }
 
-// GetCloudConfigSecretChecksumMap returns a map holding the desired cloud-config's secret checksum for a worker pool name.
-func (o *operatingSystemConfig) GetCloudConfigSecretChecksumMap() map[string]string {
+// WorkerNameToOperatingSystemConfigSecretChecksumMap returns a map holding the desired cloud-config's secret checksum for a worker pool name.
+func (o *operatingSystemConfig) WorkerNameToOperatingSystemConfigSecretChecksumMap() map[string]string {
 	return o.cloudConfigSecretChecksum
 }
 
