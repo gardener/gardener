@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	clusterautoscaler "github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	gomock "github.com/golang/mock/gomock"
 	types "k8s.io/apimachinery/pkg/types"
 )
@@ -116,6 +117,18 @@ func (m *MockInterface) SetNamespaceUID(arg0 types.UID) {
 func (mr *MockInterfaceMockRecorder) SetNamespaceUID(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNamespaceUID", reflect.TypeOf((*MockInterface)(nil).SetNamespaceUID), arg0)
+}
+
+// SetSecrets mocks base method.
+func (m *MockInterface) SetSecrets(arg0 clusterautoscaler.Secrets) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetSecrets", arg0)
+}
+
+// SetSecrets indicates an expected call of SetSecrets.
+func (mr *MockInterfaceMockRecorder) SetSecrets(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSecrets", reflect.TypeOf((*MockInterface)(nil).SetSecrets), arg0)
 }
 
 // Wait mocks base method.

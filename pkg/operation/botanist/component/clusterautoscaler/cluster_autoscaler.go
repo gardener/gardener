@@ -58,6 +58,8 @@ const (
 type Interface interface {
 	component.DeployWaiter
 	component.MonitoringComponent
+	// SetSecrets sets the secrets.
+	SetSecrets(Secrets)
 	// SetNamespaceUID sets the UID of the namespace into which the cluster-autoscaler shall be deployed.
 	SetNamespaceUID(types.UID)
 	// SetMachineDeployments sets the machine deployments.
@@ -88,6 +90,7 @@ type clusterAutoscaler struct {
 	replicas  int32
 	config    *gardencorev1beta1.ClusterAutoscaler
 
+	secrets            Secrets
 	namespaceUID       types.UID
 	machineDeployments []extensionsv1alpha1.MachineDeployment
 }
@@ -220,7 +223,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 			},
 		}
 
-		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, shootAccessSecret.Secret.Name))
+		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, shootAccessSecret.Secret.Name, c.secrets.GenericTokenKubeconfigChecksum))
 		return nil
 	}); err != nil {
 		return err
@@ -289,7 +292,9 @@ func (c *clusterAutoscaler) Destroy(ctx context.Context) error {
 
 func (c *clusterAutoscaler) Wait(_ context.Context) error        { return nil }
 func (c *clusterAutoscaler) WaitCleanup(_ context.Context) error { return nil }
-func (c *clusterAutoscaler) SetNamespaceUID(uid types.UID)       { c.namespaceUID = uid }
+
+func (c *clusterAutoscaler) SetSecrets(secrets Secrets)    { c.secrets = secrets }
+func (c *clusterAutoscaler) SetNamespaceUID(uid types.UID) { c.namespaceUID = uid }
 func (c *clusterAutoscaler) SetMachineDeployments(machineDeployments []extensionsv1alpha1.MachineDeployment) {
 	c.machineDeployments = machineDeployments
 }
@@ -476,4 +481,10 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string)
 		clusterRole,
 		clusterRoleBinding,
 	)
+}
+
+// Secrets is collection of secrets for the cluster-autoscaler.
+type Secrets struct {
+	// GenericTokenKubeconfigChecksum is the checksum of the generic token kubeconfig used for shoot access secrets.
+	GenericTokenKubeconfigChecksum string
 }

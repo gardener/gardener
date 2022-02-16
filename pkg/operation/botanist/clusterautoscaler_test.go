@@ -23,6 +23,7 @@ import (
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	mockclusterautoscaler "github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler/mock"
 	mockworker "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
@@ -86,8 +87,12 @@ var _ = Describe("ClusterAutoscaler", func() {
 			clusterAutoscaler *mockclusterautoscaler.MockInterface
 			worker            *mockworker.MockInterface
 
-			ctx                = context.TODO()
-			fakeErr            = fmt.Errorf("fake err")
+			ctx     = context.TODO()
+			fakeErr = fmt.Errorf("fake err")
+
+			secretNameGenericTokenKubeconfig = "generic-token-kubeconfig"
+			checksumGenericTokenKubeconfig   = "9012"
+
 			namespaceUID       = types.UID("5678")
 			machineDeployments = []extensionsv1alpha1.MachineDeployment{{}}
 		)
@@ -95,6 +100,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 		BeforeEach(func() {
 			clusterAutoscaler = mockclusterautoscaler.NewMockInterface(ctrl)
 			worker = mockworker.NewMockInterface(ctrl)
+
+			botanist.StoreCheckSum(secretNameGenericTokenKubeconfig, checksumGenericTokenKubeconfig)
 
 			botanist.SeedNamespaceObject = &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
@@ -117,6 +124,9 @@ var _ = Describe("ClusterAutoscaler", func() {
 			BeforeEach(func() {
 				botanist.Shoot.WantsClusterAutoscaler = true
 
+				clusterAutoscaler.EXPECT().SetSecrets(clusterautoscaler.Secrets{
+					GenericTokenKubeconfigChecksum: checksumGenericTokenKubeconfig,
+				})
 				clusterAutoscaler.EXPECT().SetNamespaceUID(namespaceUID)
 				worker.EXPECT().MachineDeployments().Return(machineDeployments)
 				clusterAutoscaler.EXPECT().SetMachineDeployments(machineDeployments)

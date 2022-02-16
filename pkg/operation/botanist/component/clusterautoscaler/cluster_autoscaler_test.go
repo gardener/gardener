@@ -90,6 +90,11 @@ var _ = Describe("ClusterAutoscaler", func() {
 			IgnoreTaints:                  configIgnoreTaints,
 		}
 
+		genericTokenKubeconfigChecksum = "1234"
+		secrets                        = Secrets{
+			GenericTokenKubeconfigChecksum: genericTokenKubeconfigChecksum,
+		}
+
 		serviceAccountName        = "cluster-autoscaler"
 		secretName                = "shoot-access-cluster-autoscaler"
 		clusterRoleBindingName    = "cluster-autoscaler-" + namespace
@@ -318,7 +323,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				},
 			}
 
-			Expect(gutil.InjectGenericKubeconfig(deploy, secret.Name)).To(Succeed())
+			Expect(gutil.InjectGenericKubeconfig(deploy, secret.Name, genericTokenKubeconfigChecksum)).To(Succeed())
 			return deploy
 		}
 
@@ -497,6 +502,7 @@ subjects:
 		c = mockclient.NewMockClient(ctrl)
 
 		clusterAutoscaler = New(c, namespace, image, replicas, nil)
+		clusterAutoscaler.SetSecrets(secrets)
 		clusterAutoscaler.SetNamespaceUID(namespaceUID)
 		clusterAutoscaler.SetMachineDeployments(machineDeployments)
 	})
@@ -666,6 +672,7 @@ subjects:
 				}
 
 				clusterAutoscaler = New(c, namespace, image, replicas, config)
+				clusterAutoscaler.SetSecrets(secrets)
 				clusterAutoscaler.SetNamespaceUID(namespaceUID)
 				clusterAutoscaler.SetMachineDeployments(machineDeployments)
 
