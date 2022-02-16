@@ -516,8 +516,7 @@ var _ = Describe("health check", func() {
 			workerPoolName1            = "cpu-worker-1"
 			workerPoolName2            = "cpu-worker-2"
 			cloudConfigSecretChecksum1 = "foo"
-			//cloudConfigSecretChecksum2 = "foo"
-			nodeName = "node1"
+			nodeName                   = "node1"
 		)
 
 		BeforeEach(func() {
