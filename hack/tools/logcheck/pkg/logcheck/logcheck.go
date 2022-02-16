@@ -156,7 +156,7 @@ func checkCallExpr(pass *analysis.Pass, callExpr *ast.CallExpr, loggerType *type
 			return
 		}
 
-		if value == "\"\"" { // string literal or constant values contain quotes ""
+		if value == `""` { // string literal or constant values contain quotes ""
 			pass.ReportRangef(message, "structured logging message should not be empty: %s", value)
 			return
 		}
@@ -202,7 +202,7 @@ func checkKeysAndValues(pass *analysis.Pass, rng analysis.Range, funcName string
 			continue
 		}
 
-		if value == "\"\"" { // string literal or constant values contain quotes ""
+		if value == `""` { // string literal or constant values contain quotes ""
 			if ident, ok := key.(*ast.Ident); ok {
 				value = ident.String()
 			}

@@ -241,7 +241,7 @@ format: $(GOIMPORTS)
 .PHONY: test
 test: $(PROMTOOL)
 	@./hack/test.sh ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/... ./landscaper/...
-	@cd $(LOGCHECK_DIR); go test -race -timeout=2m ./...
+	@cd $(LOGCHECK_DIR); go test -race -timeout=2m ./... | grep -v 'no test files'
 
 .PHONY: test-integration
 test-integration: $(SETUP_ENVTEST)
