@@ -154,11 +154,19 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{}, err
 		}
 
-		if err := CheckHealth(healthCheckCtx, r.targetClient, r.targetScheme, obj); err != nil {
+		if checked, err := CheckHealth(healthCheckCtx, r.targetClient, obj); err != nil {
 			var (
 				reason  = ref.Kind + "Unhealthy"
 				message = fmt.Sprintf("%s %q is unhealthy: %v", ref.Kind, objectKey.String(), err)
 			)
+
+			if !checked {
+				// there was an error executing the health check (which is different than a failed health check)
+				// handle it separately and log it prominently
+				reason = "HealthCheckError"
+				message = fmt.Sprintf("Error executing health check for %s %q: %v", ref.Kind, objectKey.String(), err)
+				objectLog.Error(err, "Error executing health check for object")
+			}
 
 			conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, reason, message)
 			if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
