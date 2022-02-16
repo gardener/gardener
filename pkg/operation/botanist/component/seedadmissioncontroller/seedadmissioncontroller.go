@@ -262,6 +262,20 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 									corev1.ResourceMemory: resource.MustParse("100Mi"),
 								},
 							},
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/healthz",
+										Scheme: "HTTP",
+										Port:   intstr.FromInt(healthPort),
+									},
+								},
+								FailureThreshold:    5,
+								InitialDelaySeconds: 5,
+								PeriodSeconds:       5,
+								SuccessThreshold:    1,
+								TimeoutSeconds:      5,
+							},
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{

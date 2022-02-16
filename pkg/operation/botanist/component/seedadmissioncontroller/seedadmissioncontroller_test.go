@@ -178,6 +178,16 @@ spec:
         - --health-bind-address=:8081
         image: ` + image + `
         imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /healthz
+            port: 8081
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
         name: gardener-seed-admission-controller
         ports:
         - containerPort: 10250

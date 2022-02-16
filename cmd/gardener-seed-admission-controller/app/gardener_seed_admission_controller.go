@@ -25,12 +25,14 @@ import (
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
@@ -143,7 +145,15 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 
-	log.Info("Setting up webhook server")
+	log.Info("setting up healthcheck endpoints")
+	if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
+		return err
+	}
+	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
+		return err
+	}
+
+	log.Info("setting up webhook server")
 	server := mgr.GetWebhookServer()
 
 	log.Info("setting up readycheck for webhook server")

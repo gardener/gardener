@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	webhookcmd "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
+	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	localinstall "github.com/gardener/gardener/pkg/provider-local/apis/local/install"
 	localcontrolplane "github.com/gardener/gardener/pkg/provider-local/controller/controlplane"
 	localdnsprovider "github.com/gardener/gardener/pkg/provider-local/controller/dnsprovider"
@@ -46,6 +47,7 @@ import (
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -237,6 +239,12 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			reconcileOpts.Completed().Apply(&oscommon.DefaultAddOptions.IgnoreOperationAnnotation)
 			reconcileOpts.Completed().Apply(&localworker.DefaultAddOptions.IgnoreOperationAnnotation)
 
+			if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
+				controllercmd.LogErrAndExit(err, "Could not add readycheck for informers")
+			}
+			if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
+				controllercmd.LogErrAndExit(err, "Could not add healthcheck")
+			}
 			if err := mgr.AddReadyzCheck("webhook-server", mgr.GetWebhookServer().StartedChecker()); err != nil {
 				controllercmd.LogErrAndExit(err, "Could not add readycheck of webhook to manager")
 			}
