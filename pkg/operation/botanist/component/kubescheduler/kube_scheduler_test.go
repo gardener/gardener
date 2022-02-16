@@ -62,9 +62,13 @@ var _ = Describe("KubeScheduler", func() {
 		configEmpty *gardencorev1beta1.KubeSchedulerConfig
 		configFull  = &gardencorev1beta1.KubeSchedulerConfig{KubernetesConfig: gardencorev1beta1.KubernetesConfig{FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false}}, KubeMaxPDVols: pointer.String("23")}
 
-		secretNameServer     = "server-secret"
-		secretChecksumServer = "5678"
-		secrets              = Secrets{Server: component.Secret{Name: secretNameServer, Checksum: secretChecksumServer}}
+		secretNameServer               = "server-secret"
+		secretChecksumServer           = "5678"
+		genericTokenKubeconfigChecksum = "9012"
+		secrets                        = Secrets{
+			Server:                         component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
+			GenericTokenKubeconfigChecksum: genericTokenKubeconfigChecksum,
+		}
 
 		vpaName                   = "kube-scheduler-vpa"
 		serviceName               = "kube-scheduler"
@@ -269,7 +273,7 @@ var _ = Describe("KubeScheduler", func() {
 				},
 			}
 
-			Expect(gutil.InjectGenericKubeconfig(deploy, secret.Name)).To(Succeed())
+			Expect(gutil.InjectGenericKubeconfig(deploy, secret.Name, genericTokenKubeconfigChecksum)).To(Succeed())
 			Expect(references.InjectAnnotations(deploy)).To(Succeed())
 			return deploy
 		}

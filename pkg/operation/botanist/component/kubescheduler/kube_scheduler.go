@@ -264,7 +264,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			},
 		}
 
-		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, shootAccessSecret.Secret.Name))
+		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, shootAccessSecret.Secret.Name, k.secrets.GenericTokenKubeconfigChecksum))
 		utilruntime.Must(references.InjectAnnotations(deployment))
 		return nil
 	}); err != nil {
@@ -447,4 +447,6 @@ func init() {
 type Secrets struct {
 	// Server is a secret for the HTTPS server inside the kube-scheduler (which is used for metrics and health checks).
 	Server component.Secret
+	// GenericTokenKubeconfigChecksum is the checksum of the generic token kubeconfig used for shoot access secrets.
+	GenericTokenKubeconfigChecksum string
 }
