@@ -26,7 +26,7 @@ func CheckJob(job *batchv1.Job) error {
 	if condition == nil {
 		return nil
 	}
-	return checkConditionState(string(condition.Type), string(batchv1.JobFailed), string(corev1.ConditionFalse), condition.Reason, condition.Message)
+	return checkConditionState(string(condition.Type), string(corev1.ConditionFalse), string(condition.Status), condition.Reason, condition.Message)
 }
 
 func getJobCondition(conditions []batchv1.JobCondition, conditionType batchv1.JobConditionType) *batchv1.JobCondition {
