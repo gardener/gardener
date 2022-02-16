@@ -276,7 +276,7 @@ func (t *ShootMigrationTest) CheckForOrphanedNonNamespacedResources(ctx context.
 
 		if err := meta.EachListItem(obj, func(object runtime.Object) error {
 			if strings.Contains(object.(client.Object).GetName(), t.SeedShootNamespace) {
-				leakedObjects = append(leakedObjects, fmt.Sprintf("%s/%s", object.(client.Object).GetObjectKind(), object.(client.Object).GetName()))
+				leakedObjects = append(leakedObjects, fmt.Sprintf("%T %s", object, object.(client.Object).GetName()))
 			}
 			return nil
 		}); err != nil {

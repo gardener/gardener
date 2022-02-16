@@ -130,6 +130,7 @@ func (n *network) WaitMigrate(ctx context.Context) error {
 		ctx,
 		n.client,
 		n.network,
+		extensionsv1alpha1.NetworkResource,
 		n.waitInterval,
 		n.waitTimeout,
 	)

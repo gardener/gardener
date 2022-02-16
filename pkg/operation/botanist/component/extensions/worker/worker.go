@@ -329,6 +329,7 @@ func (w *worker) WaitMigrate(ctx context.Context) error {
 		ctx,
 		w.client,
 		w.worker,
+		extensionsv1alpha1.WorkerResource,
 		w.waitInterval,
 		w.waitTimeout,
 	)

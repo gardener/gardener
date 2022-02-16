@@ -373,7 +373,7 @@ var _ = Describe("Extension", func() {
 			}
 
 			Expect(c.Create(ctx, expected[0])).To(Succeed(), "creating extensions succeeds")
-			Expect(defaultDepWaiter.WaitMigrate(ctx)).To(MatchError(ContainSubstring("is not Migrate=Succeeded")))
+			Expect(defaultDepWaiter.WaitMigrate(ctx)).To(MatchError(ContainSubstring("to be successfully migrated")))
 		})
 
 		It("should not return error if resource gets migrated successfully", func() {
@@ -406,7 +406,7 @@ var _ = Describe("Extension", func() {
 			for _, e := range expected {
 				Expect(c.Create(ctx, e)).To(Succeed(), "creating extensions succeeds")
 			}
-			Expect(defaultDepWaiter.WaitMigrate(ctx)).To(MatchError(ContainSubstring("is not Migrate=Succeeded")))
+			Expect(defaultDepWaiter.WaitMigrate(ctx)).To(MatchError(ContainSubstring("to be successfully migrated")))
 		})
 	})
 

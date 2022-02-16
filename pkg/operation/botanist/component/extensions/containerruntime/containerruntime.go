@@ -177,6 +177,7 @@ func (c *containerRuntime) WaitMigrate(ctx context.Context) error {
 		ctx,
 		c.client,
 		&extensionsv1alpha1.ContainerRuntimeList{},
+		extensionsv1alpha1.ContainerRuntimeResource,
 		c.values.Namespace,
 		c.waitInterval,
 		c.waitTimeout,

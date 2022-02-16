@@ -794,7 +794,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}
 
 				Expect(c.Create(ctx, expected[0])).To(Succeed())
-				Expect(defaultDepWaiter.WaitMigrate(ctx)).To(MatchError(ContainSubstring("is not Migrate=Succeeded")))
+				Expect(defaultDepWaiter.WaitMigrate(ctx)).To(MatchError(ContainSubstring("to be successfully migrated")))
 			})
 
 			It("should not return error if resource gets migrated successfully", func() {
@@ -827,7 +827,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				for _, e := range expected {
 					Expect(c.Create(ctx, e)).To(Succeed())
 				}
-				Expect(defaultDepWaiter.WaitMigrate(ctx)).To(MatchError(ContainSubstring("is not Migrate=Succeeded")))
+				Expect(defaultDepWaiter.WaitMigrate(ctx)).To(MatchError(ContainSubstring("to be successfully migrated")))
 			})
 		})
 

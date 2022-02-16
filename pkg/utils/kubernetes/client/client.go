@@ -42,7 +42,7 @@ func (n objectsRemaining) Error() string {
 		var typeID string
 		gvk := obj.GetObjectKind().GroupVersionKind()
 		if gvk.Empty() {
-			typeID = fmt.Sprintf("%T", n[0])
+			typeID = fmt.Sprintf("%T", obj)
 		} else {
 			typeID = gvk.String()
 		}

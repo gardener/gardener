@@ -208,6 +208,7 @@ func (i *infrastructure) WaitMigrate(ctx context.Context) error {
 		ctx,
 		i.client,
 		i.infrastructure,
+		extensionsv1alpha1.InfrastructureResource,
 		i.waitInterval,
 		i.waitTimeout,
 	)

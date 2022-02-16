@@ -297,6 +297,7 @@ func (o *operatingSystemConfig) WaitMigrate(ctx context.Context) error {
 		ctx,
 		o.client,
 		&extensionsv1alpha1.OperatingSystemConfigList{},
+		extensionsv1alpha1.OperatingSystemConfigResource,
 		o.values.Namespace,
 		o.waitInterval,
 		o.waitTimeout,
