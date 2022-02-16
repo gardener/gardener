@@ -61,7 +61,7 @@ const (
 	// PathKubeconfigReal is the path for the kubelet's real kubeconfig (with client certificate after the TLS
 	// bootstrapping process finished).
 	PathKubeconfigReal = PathKubeletDirectory + "/kubeconfig-real"
-	// PathKubeletCACert is the path for the kubelet's certificate authority.
+	// PathKubeletCACert is the path for the kubelet's client certificate authority.
 	PathKubeletCACert = PathKubeletDirectory + "/ca.crt"
 	// PathKubeletConfig is the path for the kubelet's config file.
 	PathKubeletConfig = v1beta1constants.OperatingSystemConfigFilePathKubeletConfig

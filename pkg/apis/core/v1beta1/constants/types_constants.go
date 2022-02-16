@@ -24,7 +24,7 @@ const (
 	// SecretNameCAFrontProxy is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of the kube-aggregator a shoot cluster.
 	SecretNameCAFrontProxy = "ca-front-proxy"
-	// SecretNameCAKubelet is a constant for the name of a Kubernetes secret object that contains the CA
+	// SecretNameCAKubelet is a constant for the name of a Kubernetes secret object that contains the client CA
 	// certificate of the kubelet of a shoot cluster.
 	SecretNameCAKubelet = "ca-kubelet"
 	// SecretNameCAMetricsServer is a constant for the name of a Kubernetes secret object that contains the CA
