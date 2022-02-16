@@ -145,7 +145,7 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 
-	log.Info("setting up healthcheck endpoints")
+	log.Info("Setting up healthcheck endpoints")
 	if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 		return err
 	}
@@ -153,10 +153,10 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 
-	log.Info("setting up webhook server")
+	log.Info("Setting up webhook server")
 	server := mgr.GetWebhookServer()
 
-	log.Info("setting up readycheck for webhook server")
+	log.Info("Setting up readycheck for webhook server")
 	if err := mgr.AddReadyzCheck("webhook-server", server.StartedChecker()); err != nil {
 		return err
 	}

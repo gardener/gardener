@@ -240,13 +240,13 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			reconcileOpts.Completed().Apply(&localworker.DefaultAddOptions.IgnoreOperationAnnotation)
 
 			if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
-				controllercmd.LogErrAndExit(err, "Could not add readycheck for informers")
+				return fmt.Errorf("could not add readycheck for informers: %w", err)
 			}
 			if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
-				controllercmd.LogErrAndExit(err, "Could not add healthcheck")
+				return fmt.Errorf("could not add healthcheck: %w", err)
 			}
 			if err := mgr.AddReadyzCheck("webhook-server", mgr.GetWebhookServer().StartedChecker()); err != nil {
-				controllercmd.LogErrAndExit(err, "Could not add readycheck of webhook to manager")
+				return fmt.Errorf("could not add readycheck of webhook to manager: %w", err)
 			}
 
 			_, shootWebhooks, err := webhookOptions.Completed().AddToManager(ctx, mgr)

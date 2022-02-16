@@ -174,7 +174,7 @@ func (o *options) run(ctx context.Context) error {
 	log.Info("Setting up webhook server")
 	server := mgr.GetWebhookServer()
 
-	log.Info("setting up readycheck for webhook server")
+	log.Info("Setting up readycheck for webhook server")
 	if err := mgr.AddReadyzCheck("webhook-server", server.StartedChecker()); err != nil {
 		return err
 	}
