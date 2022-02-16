@@ -78,12 +78,15 @@ var _ = Describe("VpnSeedServer", func() {
 		secretNameServer      = DeploymentName
 		secretChecksumServer  = "5678"
 		secretDataServer      = map[string][]byte{"ca.crt": []byte("baz"), "tls.crt": []byte("baz"), "tls.key": []byte("baz")}
+		secretNameCA          = "ca"
+		secretChecksumCA      = "3456"
 		secretNameDH          = "vpn-seed-server-dh"
 		secretChecksumDH      = "9012"
 		secretDataDH          = map[string][]byte{"dh2048.pem": []byte("baz")}
 		secrets               = Secrets{
 			TLSAuth:          component.Secret{Name: secretNameTLSAuth, Checksum: secretChecksumTLSAuth, Data: secretDataTLSAuth},
 			Server:           component.Secret{Name: secretNameServer, Checksum: secretChecksumServer, Data: secretDataServer},
+			CA:               component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
 			DiffieHellmanKey: component.Secret{Name: secretNameDH, Checksum: secretChecksumDH, Data: secretDataDH},
 		}
 
@@ -281,6 +284,12 @@ admin:
 					},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
+							Annotations: map[string]string{
+								"checksum/secret-" + secretNameCA:      secretChecksumCA,
+								"checksum/secret-" + secretNameServer:  secretChecksumServer,
+								"checksum/secret-" + secretNameTLSAuth: secretChecksumTLSAuth,
+								"checksum/secret-" + secretNameDH:      secretChecksumDH,
+							},
 							Labels: map[string]string{
 								v1beta1constants.GardenRole:                          v1beta1constants.GardenRoleControlPlane,
 								v1beta1constants.LabelApp:                            DeploymentName,
@@ -430,9 +439,38 @@ admin:
 								{
 									Name: DeploymentName,
 									VolumeSource: corev1.VolumeSource{
-										Secret: &corev1.SecretVolumeSource{
-											SecretName:  secretServer.Name,
-											DefaultMode: pointer.Int32(0400),
+										Projected: &corev1.ProjectedVolumeSource{
+											DefaultMode: pointer.Int32(420),
+											Sources: []corev1.VolumeProjection{
+												{
+													Secret: &corev1.SecretProjection{
+														LocalObjectReference: corev1.LocalObjectReference{
+															Name: secretNameCA,
+														},
+														Items: []corev1.KeyToPath{{
+															Key:  "ca.crt",
+															Path: "ca.crt",
+														}},
+													},
+												},
+												{
+													Secret: &corev1.SecretProjection{
+														LocalObjectReference: corev1.LocalObjectReference{
+															Name: secretServer.Name,
+														},
+														Items: []corev1.KeyToPath{
+															{
+																Key:  "tls.crt",
+																Path: "tls.crt",
+															},
+															{
+																Key:  "tls.key",
+																Path: "tls.key",
+															},
+														},
+													},
+												},
+											},
 										},
 									},
 								},
@@ -676,6 +714,15 @@ admin:
 					DiffieHellmanKey: component.Secret{Name: secretNameDH, Checksum: secretChecksumDH},
 				})
 				Expect(vpnSeedServer.Deploy(ctx)).To(MatchError(ContainSubstring("missing server secret information")))
+			})
+
+			It("should return an error because the CA secret information is not provided", func() {
+				vpnSeedServer.SetSecrets(Secrets{
+					TLSAuth:          component.Secret{Name: secretNameTLSAuth, Checksum: secretChecksumTLSAuth},
+					DiffieHellmanKey: component.Secret{Name: secretNameDH, Checksum: secretChecksumDH},
+					Server:           component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
+				})
+				Expect(vpnSeedServer.Deploy(ctx)).To(MatchError(ContainSubstring("missing CA secret information")))
 			})
 		})
 

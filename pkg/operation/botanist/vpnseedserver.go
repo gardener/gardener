@@ -97,6 +97,7 @@ func (b *Botanist) DeployVPNServer(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.VPNSeedServer.SetSecrets(vpnseedserver.Secrets{
 		TLSAuth:          component.Secret{Name: vpnseedserver.VpnSeedServerTLSAuth, Checksum: b.LoadCheckSum(vpnseedserver.VpnSeedServerTLSAuth), Data: b.LoadSecret(vpnseedserver.VpnSeedServerTLSAuth).Data},
 		Server:           component.Secret{Name: vpnseedserver.DeploymentName, Checksum: b.LoadCheckSum(vpnseedserver.DeploymentName), Data: b.LoadSecret(vpnseedserver.DeploymentName).Data},
+		CA:               component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
 		DiffieHellmanKey: component.Secret{Name: v1beta1constants.GardenRoleOpenVPNDiffieHellman, Checksum: checkSumDH, Data: openvpnDiffieHellmanSecret},
 	})
 

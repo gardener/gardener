@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	protobuftypes "github.com/gogo/protobuf/types"
@@ -94,6 +95,8 @@ type Secrets struct {
 	TLSAuth component.Secret
 	// Server is a secret containing the server certificate and key.
 	Server component.Secret
+	// CA is a secret containing a CA certificate and key.
+	CA component.Secret
 	// DiffieHellmanKey is a secret containing the diffie hellman key.
 	DiffieHellmanKey component.Secret
 }
@@ -158,6 +161,9 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 	}
 	if v.secrets.Server.Name == "" || v.secrets.Server.Checksum == "" {
 		return fmt.Errorf("missing server secret information")
+	}
+	if v.secrets.CA.Name == "" || v.secrets.CA.Checksum == "" {
+		return fmt.Errorf("missing CA secret information")
 	}
 
 	var (
@@ -326,6 +332,12 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"checksum/secret-" + v.secrets.CA.Name:               v.secrets.CA.Checksum,
+						"checksum/secret-" + v.secrets.Server.Name:           v.secrets.Server.Checksum,
+						"checksum/secret-" + v.secrets.TLSAuth.Name:          v.secrets.TLSAuth.Checksum,
+						"checksum/secret-" + v.secrets.DiffieHellmanKey.Name: v.secrets.DiffieHellmanKey.Checksum,
+					},
 					Labels: map[string]string{
 						v1beta1constants.GardenRole:                          v1beta1constants.GardenRoleControlPlane,
 						v1beta1constants.LabelApp:                            DeploymentName,
@@ -475,9 +487,38 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 						{
 							Name: DeploymentName,
 							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName:  serverSecret.Name,
-									DefaultMode: pointer.Int32Ptr(0400),
+								Projected: &corev1.ProjectedVolumeSource{
+									DefaultMode: pointer.Int32(420),
+									Sources: []corev1.VolumeProjection{
+										{
+											Secret: &corev1.SecretProjection{
+												LocalObjectReference: corev1.LocalObjectReference{
+													Name: v.secrets.CA.Name,
+												},
+												Items: []corev1.KeyToPath{{
+													Key:  secretutils.DataKeyCertificateCA,
+													Path: "ca.crt",
+												}},
+											},
+										},
+										{
+											Secret: &corev1.SecretProjection{
+												LocalObjectReference: corev1.LocalObjectReference{
+													Name: serverSecret.Name,
+												},
+												Items: []corev1.KeyToPath{
+													{
+														Key:  secretutils.DataKeyCertificate,
+														Path: "tls.crt",
+													},
+													{
+														Key:  secretutils.DataKeyPrivateKey,
+														Path: "tls.key",
+													},
+												},
+											},
+										},
+									},
 								},
 							},
 						},
@@ -691,7 +732,7 @@ func (v *vpnSeedServer) emptyEnvoyFilter() *networkingv1alpha3.EnvoyFilter {
 }
 
 func (v *vpnSeedServer) getIngressGatewaySelectors() map[string]string {
-	var defaulIgwSelectors = map[string]string{
+	var defaultIgwSelectors = map[string]string{
 		v1beta1constants.LabelApp: gardenletconfigv1alpha1.DefaultIngressGatewayAppLabelValue,
 	}
 
@@ -699,10 +740,10 @@ func (v *vpnSeedServer) getIngressGatewaySelectors() map[string]string {
 		if v.exposureClassHandlerName != nil {
 			return gutil.GetMandatoryExposureClassHandlerSNILabels(v.sniConfig.Ingress.Labels, *v.exposureClassHandlerName)
 		}
-		return utils.MergeStringMaps(v.sniConfig.Ingress.Labels, defaulIgwSelectors)
+		return utils.MergeStringMaps(v.sniConfig.Ingress.Labels, defaultIgwSelectors)
 	}
 
-	return defaulIgwSelectors
+	return defaultIgwSelectors
 }
 
 // GetLabels returns the labels for the vpn-seed-server

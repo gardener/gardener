@@ -124,6 +124,8 @@ var _ = Describe("VPNSeedServer", func() {
 			secretChecksumTLSAuth = "1234"
 			secretNameServer      = vpnseedserver.DeploymentName
 			secretChecksumServer  = "5678"
+			secretNameCA          = "ca"
+			secretChecksumCA      = "3456"
 			secretNameDH          = v1beta1constants.GardenRoleOpenVPNDiffieHellman
 			secretChecksumDH      = "9012"
 
@@ -135,9 +137,11 @@ var _ = Describe("VPNSeedServer", func() {
 
 			botanist.StoreCheckSum(secretNameTLSAuth, secretChecksumTLSAuth)
 			botanist.StoreCheckSum(secretNameServer, secretChecksumServer)
+			botanist.StoreCheckSum(secretNameCA, secretChecksumCA)
 			botanist.StoreCheckSum(secretNameDH, secretChecksumDH)
 			botanist.StoreSecret(secretNameTLSAuth, &corev1.Secret{})
 			botanist.StoreSecret(secretNameServer, &corev1.Secret{})
+			botanist.StoreSecret(secretNameCA, &corev1.Secret{})
 			botanist.StoreSecret(secretNameDH, &corev1.Secret{})
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
@@ -167,7 +171,8 @@ var _ = Describe("VPNSeedServer", func() {
 		BeforeEach(func() {
 			vpnSeedServer.EXPECT().SetSecrets(vpnseedserver.Secrets{
 				TLSAuth:          component.Secret{Name: secretNameTLSAuth, Checksum: secretChecksumTLSAuth},
-				Server:           component.Secret{Name: vpnseedserver.DeploymentName, Checksum: secretChecksumServer},
+				Server:           component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
+				CA:               component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
 				DiffieHellmanKey: component.Secret{Name: secretNameDH, Checksum: secretChecksumDH},
 			})
 			vpnSeedServer.EXPECT().SetSeedNamespaceObjectUID(namespaceUID)
