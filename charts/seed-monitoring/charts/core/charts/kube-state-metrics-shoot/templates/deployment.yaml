@@ -20,6 +20,10 @@ spec:
       maxUnavailable: 1
   template:
     metadata:
+{{- if .Values.podAnnotations }}
+      annotations:
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
       labels:
         gardener.cloud/role: monitoring
         component: kube-state-metrics

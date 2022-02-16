@@ -29,6 +29,7 @@ import (
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
@@ -206,9 +207,19 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"alerting":                alerting,
 			"additionalRules":         alertingRules.String(),
 			"additionalScrapeConfigs": scrapeConfigs.String(),
+			"podAnnotations": map[string]interface{}{
+				"checksum/secret-prometheus":                              b.LoadCheckSum("prometheus"),
+				"checksum/secret-prometheus-kubelet":                      b.LoadCheckSum("prometheus-kubelet"),
+				"checksum/secret-" + v1beta1constants.SecretNameCACluster: b.LoadCheckSum(v1beta1constants.SecretNameCACluster),
+				"checksum/secret-" + v1beta1constants.SecretNameCAETCD:    b.LoadCheckSum(v1beta1constants.SecretNameCAETCD),
+				"checksum/secret-" + etcd.SecretNameClient:                b.LoadCheckSum(etcd.SecretNameClient),
+			},
 		}
 		kubeStateMetricsShootConfig = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),
+			"podAnnotations": map[string]interface{}{
+				"checksum/secret-" + v1beta1constants.SecretNameGenericTokenKubeconfig: b.LoadCheckSum(v1beta1constants.SecretNameGenericTokenKubeconfig),
+			},
 		}
 	)
 
@@ -216,19 +227,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		networks["nodes"] = *v
 	}
 	prometheusConfig["networks"] = networks
-
-	var (
-		prometheusImages = []string{
-			images.ImageNamePrometheus,
-			images.ImageNameConfigmapReloader,
-			images.ImageNameBlackboxExporter,
-		}
-		podAnnotations = map[string]interface{}{
-			"checksum/secret-prometheus": b.LoadCheckSum("prometheus"),
-		}
-	)
-
-	prometheusConfig["podAnnotations"] = podAnnotations
 
 	// Add remotewrite to prometheus when enabled
 	if b.Config.Monitoring != nil &&
@@ -271,7 +269,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		prometheusConfig["externalLabels"] = b.Config.Monitoring.Shoot.ExternalLabels
 	}
 
-	prometheus, err := b.InjectSeedShootImages(prometheusConfig, prometheusImages...)
+	prometheus, err := b.InjectSeedShootImages(prometheusConfig, images.ImageNamePrometheus, images.ImageNameConfigmapReloader, images.ImageNameBlackboxExporter)
 	if err != nil {
 		return err
 	}
