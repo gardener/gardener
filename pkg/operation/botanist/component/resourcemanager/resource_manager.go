@@ -641,7 +641,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 					ReadOnly:  true,
 				})
 			} else if r.secrets.shootAccess != nil {
-				utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, r.secrets.shootAccess.Secret.Name))
+				utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, r.secrets.shootAccess.Secret.Name, r.secrets.GenericTokenKubeconfigChecksum))
 			}
 		}
 
@@ -1106,6 +1106,8 @@ type Secrets struct {
 	Server component.Secret
 	// RootCA is a secret containing the root CA secret of the target cluster.
 	RootCA *component.Secret
+	// GenericTokenKubeconfigChecksum is the checksum of the generic token kubeconfig used for shoot access secrets.
+	GenericTokenKubeconfigChecksum string
 
 	shootAccess *gutil.ShootAccessSecret
 }

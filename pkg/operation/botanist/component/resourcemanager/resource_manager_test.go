@@ -71,9 +71,11 @@ var _ = Describe("ResourceManager", func() {
 		// optional configuration
 		clusterIdentity                      = "foo"
 		secretNameServer                     = "server-secret"
+		secretNameGenericTokenKubeconfig     = "generic-token-kubeconfig"
 		secretMountPathServer                = "/etc/gardener-resource-manager-tls"
 		secretMountPathAPIAccess             = "/var/run/secrets/kubernetes.io/serviceaccount"
 		secretChecksumServer                 = "5678"
+		genericTokenKubeconfigChecksum       = "9012"
 		secrets                              Secrets
 		alwaysUpdate                               = true
 		concurrentSyncs                      int32 = 20
@@ -127,8 +129,9 @@ var _ = Describe("ResourceManager", func() {
 		c = mockclient.NewMockClient(ctrl)
 
 		secrets = Secrets{
-			Server:   component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
-			ServerCA: component.Secret{Data: map[string][]byte{"ca.crt": caBundle}},
+			Server:                         component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
+			ServerCA:                       component.Secret{Data: map[string][]byte{"ca.crt": caBundle}},
+			GenericTokenKubeconfigChecksum: genericTokenKubeconfigChecksum,
 		}
 		allowAll = []rbacv1.PolicyRule{{
 			APIGroups: []string{"*"},
@@ -368,7 +371,8 @@ var _ = Describe("ResourceManager", func() {
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
-							"checksum/secret-" + secretNameServer: secretChecksumServer,
+							"checksum/secret-" + secretNameServer:                 secretChecksumServer,
+							"checksum/secret-" + secretNameGenericTokenKubeconfig: genericTokenKubeconfigChecksum,
 						},
 						Labels: map[string]string{
 							"projected-token-mount.resources.gardener.cloud/skip": "true",
@@ -518,7 +522,7 @@ var _ = Describe("ResourceManager", func() {
 											{
 												Secret: &corev1.SecretProjection{
 													LocalObjectReference: corev1.LocalObjectReference{
-														Name: "generic-token-kubeconfig",
+														Name: secretNameGenericTokenKubeconfig,
 													},
 													Items: []corev1.KeyToPath{{
 														Key:  "kubeconfig",
@@ -951,6 +955,7 @@ subjects:
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							deployment.Spec.Template.Annotations["checksum/secret-"+secretNameBootstrapKubeconfig] = secretChecksumBootstrapKubeconfig
+							delete(deployment.Spec.Template.Annotations, "checksum/secret-"+secretNameGenericTokenKubeconfig)
 							deployment.Spec.Template.Spec.Containers[0].VolumeMounts[len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-1].Name = "kubeconfig-bootstrap"
 							deployment.Spec.Template.Spec.Volumes[len(deployment.Spec.Template.Spec.Volumes)-1] = corev1.Volume{
 								Name: "kubeconfig-bootstrap",
@@ -1321,6 +1326,7 @@ subjects:
 				clusterRole.Rules = allowAll
 
 				deployment.Spec.Template.Spec.Containers[0].Command = cmd[:len(cmd)-1]
+				delete(deployment.Spec.Template.Annotations, "checksum/secret-"+secretNameGenericTokenKubeconfig)
 				deployment.Spec.Template.Spec.Volumes = deployment.Spec.Template.Spec.Volumes[:len(deployment.Spec.Template.Spec.Volumes)-1]
 				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = deployment.Spec.Template.Spec.Containers[0].VolumeMounts[:len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-1]
 				deployment.Spec.Template.Labels["gardener.cloud/role"] = "seed"

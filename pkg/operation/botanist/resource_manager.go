@@ -104,9 +104,10 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 			},
 		}
 		secrets = resourcemanager.Secrets{
-			ServerCA: component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster), Data: b.LoadSecret(v1beta1constants.SecretNameCACluster).Data},
-			Server:   component.Secret{Name: resourcemanager.SecretNameServer, Checksum: b.LoadCheckSum(resourcemanager.SecretNameServer)},
-			RootCA:   &component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
+			ServerCA:                       component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster), Data: b.LoadSecret(v1beta1constants.SecretNameCACluster).Data},
+			Server:                         component.Secret{Name: resourcemanager.SecretNameServer, Checksum: b.LoadCheckSum(resourcemanager.SecretNameServer)},
+			RootCA:                         &component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
+			GenericTokenKubeconfigChecksum: b.LoadCheckSum(v1beta1constants.SecretNameGenericTokenKubeconfig),
 		}
 	)
 

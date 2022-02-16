@@ -75,11 +75,13 @@ var _ = Describe("ResourceManager", func() {
 
 			seedNamespace = "fake-seed-ns"
 
-			secretNameCA         = "ca"
-			secretNameServer     = "gardener-resource-manager-server"
-			secretChecksumServer = "5678"
-			secretChecksumCA     = "9012"
-			secretDataServerCA   = map[string][]byte{
+			secretNameCA                     = "ca"
+			secretNameServer                 = "gardener-resource-manager-server"
+			secretChecksumServer             = "5678"
+			secretNameGenericTokenKubeconfig = "generic-token-kubeconfig"
+			checksumGenericTokenKubeconfig   = "3456"
+			secretChecksumCA                 = "9012"
+			secretDataServerCA               = map[string][]byte{
 				"ca.crt": []byte(`-----BEGIN CERTIFICATE-----
 MIIDYDCCAkigAwIBAgIUEb00DjvE8F0HiGOlQY/B/AG1AjMwDQYJKoZIhvcNAQEL
 BQAwSDELMAkGA1UEBhMCVVMxCzAJBgNVBAgTAkNBMRYwFAYDVQQHEw1TYW4gRnJh
@@ -145,6 +147,7 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 
 			botanist.StoreCheckSum(secretNameCA, secretChecksumCA)
 			botanist.StoreCheckSum(secretNameServer, secretChecksumServer)
+			botanist.StoreCheckSum(secretNameGenericTokenKubeconfig, checksumGenericTokenKubeconfig)
 			botanist.StoreSecret(secretNameCA, &corev1.Secret{Data: secretDataServerCA})
 
 			botanist.K8sSeedClient = k8sSeedClient
@@ -166,9 +169,10 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 			})
 
 			secrets = resourcemanager.Secrets{
-				ServerCA: component.Secret{Name: secretNameCA, Checksum: secretChecksumCA, Data: secretDataServerCA},
-				Server:   component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
-				RootCA:   &component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
+				ServerCA:                       component.Secret{Name: secretNameCA, Checksum: secretChecksumCA, Data: secretDataServerCA},
+				Server:                         component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
+				RootCA:                         &component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
+				GenericTokenKubeconfigChecksum: checksumGenericTokenKubeconfig,
 			}
 
 			bootstrapKubeconfigSecret = &corev1.Secret{
