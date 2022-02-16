@@ -118,7 +118,7 @@ func NewResourceManagerCommand() *cobra.Command {
 				}
 
 				log.Info("setting up readycheck for webhook server")
-				if err := mgr.AddHealthzCheck("readyz", mgr.GetWebhookServer().StartedChecker()); err != nil {
+				if err := mgr.AddReadyzCheck("webhook-server", mgr.GetWebhookServer().StartedChecker()); err != nil {
 					return err
 				}
 

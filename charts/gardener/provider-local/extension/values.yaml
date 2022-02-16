@@ -64,6 +64,8 @@ webhookConfig:
   servicePort: 443
   serverPort: 10250
 
+healthPort: 8081
+
 leaderElection:
   resourceLock: leases
 

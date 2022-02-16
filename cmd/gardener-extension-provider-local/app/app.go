@@ -179,7 +179,10 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			mgr, err := manager.New(restOpts.Completed().Config, mgrOpts.Completed().Options())
+			var opts manager.Options = mgrOpts.Completed().Options()
+			opts.HealthProbeBindAddress = ":8081"
+
+			mgr, err := manager.New(restOpts.Completed().Config, opts)
 			if err != nil {
 				return fmt.Errorf("could not instantiate manager: %w", err)
 			}
@@ -233,7 +236,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			reconcileOpts.Completed().Apply(&oscommon.DefaultAddOptions.IgnoreOperationAnnotation)
 			reconcileOpts.Completed().Apply(&localworker.DefaultAddOptions.IgnoreOperationAnnotation)
 
-			if err := mgr.AddHealthzCheck("readyz", mgr.GetWebhookServer().StartedChecker()); err != nil {
+			if err := mgr.AddReadyzCheck("webhook-server", mgr.GetWebhookServer().StartedChecker()); err != nil {
 				controllercmd.LogErrAndExit(err, "Could not add readycheck of webhook to manager")
 			}
 

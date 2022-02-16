@@ -131,6 +131,7 @@ func (o *Options) Run(ctx context.Context) error {
 		LeaderElection:          false,
 		MetricsBindAddress:      "0", // disable for now, as we don't scrape the component
 		Host:                    o.BindAddress,
+		HealthProbeBindAddress:  ":8081",
 		Port:                    o.Port,
 		CertDir:                 o.ServerCertDir,
 		GracefulShutdownTimeout: &gracefulShutdownTimeout,
@@ -143,7 +144,7 @@ func (o *Options) Run(ctx context.Context) error {
 	server := mgr.GetWebhookServer()
 
 	log.Info("setting up readycheck for webhook server")
-	if err := mgr.AddHealthzCheck("readyz", server.StartedChecker()); err != nil {
+	if err := mgr.AddReadyzCheck("webhook-server", server.StartedChecker()); err != nil {
 		return err
 	}
 

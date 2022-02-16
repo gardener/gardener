@@ -72,6 +72,16 @@ spec:
         - name: IMAGEVECTOR_OVERWRITE
           value: /charts_overwrite/images_overwrite.yaml
         {{- end }}
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: {{ .Values.healthPort }}
+            scheme: HTTP
+          initialDelaySeconds: 5
+          failureThreshold: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
         ports:
         - name: webhook-server
           containerPort: {{ .Values.webhookConfig.serverPort }}
