@@ -93,7 +93,8 @@ var _ = Describe("KubeControllerManager", func() {
 		// checksums
 		secretChecksumServer            = "5678"
 		secretChecksumCA                = "1234"
-		secretChecksumServiceAccountKey = "1234"
+		secretChecksumServiceAccountKey = "9012"
+		genericTokenKubeconfigChecksum  = "3456"
 
 		vpaName                   = "kube-controller-manager-vpa"
 		hvpaName                  = "kube-controller-manager"
@@ -150,9 +151,10 @@ var _ = Describe("KubeControllerManager", func() {
 			Context("secret information available", func() {
 				BeforeEach(func() {
 					kubeControllerManager.SetSecrets(Secrets{
-						Server:            component.Secret{Name: "kube-controller-manager-server", Checksum: secretChecksumServer},
-						CA:                component.Secret{Name: "ca", Checksum: secretChecksumCA},
-						ServiceAccountKey: component.Secret{Name: "service-account-key", Checksum: secretChecksumServiceAccountKey},
+						Server:                         component.Secret{Name: "kube-controller-manager-server", Checksum: secretChecksumServer},
+						CA:                             component.Secret{Name: "ca", Checksum: secretChecksumCA},
+						ServiceAccountKey:              component.Secret{Name: "service-account-key", Checksum: secretChecksumServiceAccountKey},
+						GenericTokenKubeconfigChecksum: genericTokenKubeconfigChecksum,
 					})
 				})
 
@@ -562,7 +564,7 @@ var _ = Describe("KubeControllerManager", func() {
 						},
 					}
 
-					Expect(gutil.InjectGenericKubeconfig(deploy, secret.Name)).To(Succeed())
+					Expect(gutil.InjectGenericKubeconfig(deploy, secret.Name, genericTokenKubeconfigChecksum)).To(Succeed())
 					return deploy
 				}
 
@@ -641,9 +643,10 @@ subjects:
 					)
 
 					kubeControllerManager.SetSecrets(Secrets{
-						Server:            component.Secret{Name: "kube-controller-manager-server", Checksum: secretChecksumServer},
-						CA:                component.Secret{Name: "ca", Checksum: secretChecksumCA},
-						ServiceAccountKey: component.Secret{Name: "service-account-key", Checksum: secretChecksumServiceAccountKey},
+						Server:                         component.Secret{Name: "kube-controller-manager-server", Checksum: secretChecksumServer},
+						CA:                             component.Secret{Name: "ca", Checksum: secretChecksumCA},
+						ServiceAccountKey:              component.Secret{Name: "service-account-key", Checksum: secretChecksumServiceAccountKey},
+						GenericTokenKubeconfigChecksum: genericTokenKubeconfigChecksum,
 					})
 
 					kubeControllerManager.SetReplicaCount(replicas)

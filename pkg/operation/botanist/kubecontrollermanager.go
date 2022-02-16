@@ -73,9 +73,10 @@ func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
 
 	b.Shoot.Components.ControlPlane.KubeControllerManager.SetReplicaCount(replicaCount)
 	b.Shoot.Components.ControlPlane.KubeControllerManager.SetSecrets(kubecontrollermanager.Secrets{
-		CA:                component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
-		ServiceAccountKey: component.Secret{Name: v1beta1constants.SecretNameServiceAccountKey, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameServiceAccountKey)},
-		Server:            component.Secret{Name: kubecontrollermanager.SecretNameServer, Checksum: b.LoadCheckSum(kubecontrollermanager.SecretNameServer)},
+		CA:                             component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
+		ServiceAccountKey:              component.Secret{Name: v1beta1constants.SecretNameServiceAccountKey, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameServiceAccountKey)},
+		Server:                         component.Secret{Name: kubecontrollermanager.SecretNameServer, Checksum: b.LoadCheckSum(kubecontrollermanager.SecretNameServer)},
+		GenericTokenKubeconfigChecksum: b.LoadCheckSum(v1beta1constants.SecretNameGenericTokenKubeconfig),
 	})
 
 	return b.Shoot.Components.ControlPlane.KubeControllerManager.Deploy(ctx)

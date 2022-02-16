@@ -100,16 +100,19 @@ var _ = Describe("KubeControllerManager", func() {
 			kubeAPIServer         *mockkubeapiserver.MockInterface
 			kubeControllerManager *mockkubecontrollermanager.MockInterface
 
-			secretNameServer            = "kube-controller-manager-server"
-			secretNameCA                = "ca"
-			secretNameServiceAccountKey = "service-account-key"
-			checksumServer              = "34"
-			checksumCA                  = "56"
-			checksumServiceAccountKey   = "78"
-			secrets                     = kubecontrollermanager.Secrets{
-				Server:            component.Secret{Name: secretNameServer, Checksum: checksumServer},
-				CA:                component.Secret{Name: secretNameCA, Checksum: checksumCA},
-				ServiceAccountKey: component.Secret{Name: secretNameServiceAccountKey, Checksum: checksumServiceAccountKey},
+			secretNameServer                 = "kube-controller-manager-server"
+			secretNameCA                     = "ca"
+			secretNameServiceAccountKey      = "service-account-key"
+			secretNameGenericTokenKubeconfig = "generic-token-kubeconfig"
+			checksumServer                   = "34"
+			checksumCA                       = "56"
+			checksumServiceAccountKey        = "78"
+			checksumGenericTokenKubeconfig   = "90"
+			secrets                          = kubecontrollermanager.Secrets{
+				Server:                         component.Secret{Name: secretNameServer, Checksum: checksumServer},
+				CA:                             component.Secret{Name: secretNameCA, Checksum: checksumCA},
+				ServiceAccountKey:              component.Secret{Name: secretNameServiceAccountKey, Checksum: checksumServiceAccountKey},
+				GenericTokenKubeconfigChecksum: checksumGenericTokenKubeconfig,
 			}
 		)
 
@@ -121,6 +124,7 @@ var _ = Describe("KubeControllerManager", func() {
 			botanist.StoreCheckSum(secretNameServer, checksumServer)
 			botanist.StoreCheckSum(secretNameCA, checksumCA)
 			botanist.StoreCheckSum(secretNameServiceAccountKey, checksumServiceAccountKey)
+			botanist.StoreCheckSum(secretNameGenericTokenKubeconfig, checksumGenericTokenKubeconfig)
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					ControlPlane: &shootpkg.ControlPlane{

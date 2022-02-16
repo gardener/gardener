@@ -293,7 +293,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			},
 		}
 
-		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, shootAccessSecret.Secret.Name))
+		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, shootAccessSecret.Secret.Name, k.secrets.GenericTokenKubeconfigChecksum))
 		return nil
 	}); err != nil {
 		return err
@@ -594,4 +594,6 @@ type Secrets struct {
 	// ServiceAccountKey is a secret containing a PEM-encoded private RSA or ECDSA key used to sign service account tokens.
 	// used for the flag: --service-account-private-key-file
 	ServiceAccountKey component.Secret
+	// GenericTokenKubeconfigChecksum is the checksum of the generic token kubeconfig used for shoot access secrets.
+	GenericTokenKubeconfigChecksum string
 }
