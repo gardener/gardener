@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
@@ -65,6 +66,17 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, lo
 		if err := gutil.NewShootAccessSecret(a.mcmName, workerObj.Namespace).Reconcile(ctx, a.client); err != nil {
 			return err
 		}
+
+		genericTokenKubeconfigSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      v1beta1constants.SecretNameGenericTokenKubeconfig,
+				Namespace: workerObj.Namespace,
+			},
+		}
+		if err := a.client.Get(ctx, client.ObjectKeyFromObject(genericTokenKubeconfigSecret), genericTokenKubeconfigSecret); err != nil {
+			return err
+		}
+		injectPodAnnotation(mcmValues, "checksum/secret-"+genericTokenKubeconfigSecret.Name, utils.ComputeChecksum(genericTokenKubeconfigSecret.Data))
 	} else {
 		mcmKubeconfigSecret, err := createKubeconfigForMachineControllerManager(ctx, a.client, workerObj.Namespace, a.mcmName)
 		if err != nil {
