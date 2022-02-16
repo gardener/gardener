@@ -2,6 +2,9 @@
 reference.resources.gardener.cloud/configmap-{{ include "loki.config.name" . | sha256sum | trunc 8 }}: {{ include "loki.config.name" . }}
 {{- if .Values.rbacSidecarEnabled }}
 reference.resources.gardener.cloud/configmap-{{ include "telegraf.config.name" . | sha256sum | trunc 8 }}: {{ include "telegraf.config.name" . }}
+{{- if .Values.podAnnotations }}
+{{ toYaml .Values.podAnnotations }}
+{{- end }}
 {{- end }}
 {{- end -}}
 ---

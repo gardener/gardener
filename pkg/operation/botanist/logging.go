@@ -21,6 +21,7 @@ import (
 
 	"github.com/gardener/gardener/charts"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -77,6 +78,9 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 
 	if b.isShootNodeLoggingEnabled() {
 		lokiValues["rbacSidecarEnabled"] = true
+		lokiValues["podAnnotations"] = map[string]interface{}{
+			"checksum/secret-" + v1beta1constants.SecretNameGenericTokenKubeconfig: b.LoadCheckSum(v1beta1constants.SecretNameGenericTokenKubeconfig),
+		}
 		lokiValues["ingress"] = map[string]interface{}{
 			"class": ingressClass,
 			"hosts": []map[string]interface{}{
