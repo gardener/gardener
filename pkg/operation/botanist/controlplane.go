@@ -65,8 +65,8 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 		admissionController = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),
 			"podAnnotations": map[string]interface{}{
-				"checksum/secret-vpa-tls-certs":            b.LoadCheckSum(common.VPASecretName),
-				"checksum/secret-vpa-admission-controller": b.LoadCheckSum("vpa-admission-controller"),
+				"checksum/secret-vpa-tls-certs": b.LoadCheckSum(common.VPASecretName),
+				"checksum/secret-ca":            b.LoadCheckSum(v1beta1constants.SecretNameCACluster),
 			},
 			"podLabels": utils.MergeMaps(podLabels, map[string]interface{}{
 				v1beta1constants.LabelNetworkPolicyFromShootAPIServer: "allowed",
@@ -80,7 +80,7 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 		recommender = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),
 			"podAnnotations": map[string]interface{}{
-				"checksum/secret-vpa-recommender": b.LoadCheckSum("vpa-recommender"),
+				"checksum/secret-ca": b.LoadCheckSum(v1beta1constants.SecretNameCACluster),
 			},
 			"podLabels":                    podLabels,
 			"createServiceAccount":         false,
@@ -90,7 +90,7 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 		updater = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),
 			"podAnnotations": map[string]interface{}{
-				"checksum/secret-vpa-updater": b.LoadCheckSum("vpa-updater"),
+				"checksum/secret-ca": b.LoadCheckSum(v1beta1constants.SecretNameCACluster),
 			},
 			"podLabels":              podLabels,
 			"createServiceAccount":   false,
