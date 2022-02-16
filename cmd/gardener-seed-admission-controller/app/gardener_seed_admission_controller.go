@@ -90,6 +90,8 @@ type Options struct {
 	ServerCertDir string
 	// AllowInvalidExtensionResources causes the seed-admission-controller to allow invalid extension resources.
 	AllowInvalidExtensionResources bool
+	// HealthBindAddress is the TCP address that the controller should bind to for serving health probes
+	HealthBindAddress string
 }
 
 // AddFlags adds gardener-seed-admission-controller's flags to the specified FlagSet.
@@ -98,6 +100,7 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&o.Port, "port", 9443, "webhook server port")
 	fs.StringVar(&o.ServerCertDir, "tls-cert-dir", "", "directory with server TLS certificate and key (must contain a tls.crt and tls.key file)")
 	fs.BoolVar(&o.AllowInvalidExtensionResources, "allow-invalid-extension-resources", false, "Allow invalid extension resources")
+	fs.StringVar(&o.HealthBindAddress, "health-bind-address", ":8081", "bind address for the health server")
 }
 
 // validate validates all the required options.
@@ -131,7 +134,7 @@ func (o *Options) Run(ctx context.Context) error {
 		LeaderElection:          false,
 		MetricsBindAddress:      "0", // disable for now, as we don't scrape the component
 		Host:                    o.BindAddress,
-		HealthProbeBindAddress:  ":8081",
+		HealthProbeBindAddress:  o.HealthBindAddress,
 		Port:                    o.Port,
 		CertDir:                 o.ServerCertDir,
 		GracefulShutdownTimeout: &gracefulShutdownTimeout,

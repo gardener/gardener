@@ -163,6 +163,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			reconcileOpts,
 			webhookOptions,
 		)
+		opts = manager.Options{}
 	)
 
 	cmd := &cobra.Command{
@@ -179,10 +180,10 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			var opts manager.Options = mgrOpts.Completed().Options()
-			opts.HealthProbeBindAddress = ":8081"
+			mgrOpt := mgrOpts.Completed().Options()
+			mgrOpt.HealthProbeBindAddress = opts.HealthProbeBindAddress
 
-			mgr, err := manager.New(restOpts.Completed().Config, opts)
+			mgr, err := manager.New(restOpts.Completed().Config, mgrOpt)
 			if err != nil {
 				return fmt.Errorf("could not instantiate manager: %w", err)
 			}
@@ -269,7 +270,9 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 		},
 	}
 
-	aggOption.AddFlags(cmd.Flags())
+	flags := cmd.Flags()
+	aggOption.AddFlags(flags)
+	flags.StringVar(&opts.HealthProbeBindAddress, "health-bind-address", ":8081", "bind address for the health server")
 
 	return cmd
 }

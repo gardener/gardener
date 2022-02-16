@@ -247,6 +247,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 								fmt.Sprintf("--port=%d", port),
 								fmt.Sprintf("--tls-cert-dir=%s", volumeMountPath),
 								fmt.Sprintf("--allow-invalid-extension-resources=%t", !gardenletfeatures.FeatureGate.Enabled(features.DenyInvalidExtensionResources)),
+								fmt.Sprintf("--health-bind-address=:%v", healthPort),
 							},
 							Ports: []corev1.ContainerPort{{
 								ContainerPort: int32(port),
