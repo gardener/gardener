@@ -115,7 +115,7 @@ Used by the Gardener API server to verify that the TLS serving certificate of et
 
 
 ``` yaml
-etcdCaBundle: |
+etcdCABundle: |
   -----BEGIN CERTIFICATE-----
   ...
   -----END CERTIFICATE-----
@@ -392,7 +392,7 @@ gardenerControllerManager:
 
 ### Component configuration for the Gardener Admission Controller
 
-The component configuration of the Gardener Admission Controller is optional and enabled by default.
+The component configuration of the Gardener Admission Controller is optional.
 To overwrite the default values, please see the [example configuration](../../../example/20-componentconfig-gardener-admission-controller.yaml).
 
 ```

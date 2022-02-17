@@ -32,7 +32,7 @@ spec:
       - name: etcdUrl
         dataRef: "etcd-url"
 
-      - name: etcdCaBundle
+      - name: etcdCABundle
         dataRef: "etcd-ca-pem"
 
       - name: etcdClientCert

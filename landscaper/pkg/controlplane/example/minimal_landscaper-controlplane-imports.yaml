@@ -22,7 +22,7 @@ internalDomain:
 
 etcdUrl: "virtual-garden-etcd-main-client.garden.svc:2379"
 # if etcd requires client authentication:
-#etcdCaBundle: |
+#etcdCABundle: |
 #  -----BEGIN CERTIFICATE-----
 #  ...
 #  -----END CERTIFICATE-----

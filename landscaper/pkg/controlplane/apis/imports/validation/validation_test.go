@@ -101,7 +101,7 @@ var _ = Describe("ValidateImports", func() {
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("etcdCaBundle"),
+					"Field": Equal("etcdCABundle"),
 				})),
 			))
 		})
@@ -117,7 +117,7 @@ var _ = Describe("ValidateImports", func() {
 			))
 		})
 
-		It("should forbid invalid TLS configuration - etcd client certificate is invalid", func() {
+		It("should forbid invalid TLS configuration - etcd client key is invalid", func() {
 			landscaperImport.EtcdClientKey = pointer.String("invalid")
 			errorList := ValidateLandscaperImports(landscaperImport)
 			Expect(errorList).To(ConsistOf(

@@ -94,7 +94,7 @@ func ValidateAPIServerETCDConfiguration(config *imports.Imports) field.ErrorList
 	// Do not verify the client certs against the given CA, as the client certs do not necessarily have to be signed by the
 	// same CA that signed etcd's TLS serving certificates.
 	if config.EtcdCABundle != nil {
-		allErrs = append(allErrs, ValidateCACertificate(*config.EtcdCABundle, field.NewPath("etcdCaBundle"))...)
+		allErrs = append(allErrs, ValidateCACertificate(*config.EtcdCABundle, field.NewPath("etcdCABundle"))...)
 	}
 
 	if config.EtcdClientCert != nil {

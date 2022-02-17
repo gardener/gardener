@@ -29,7 +29,7 @@ imports:
       items:
       - ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.DNS.yaml
       type: array
-  - name: etcdCaBundle
+  - name: etcdCABundle
     required: false
     schema:
       description: CABundle is a PEM encoded CA bundle which will be used by the Gardener

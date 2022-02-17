@@ -3,11 +3,6 @@ description: 'APIServerAuditWebhookBackend contains configuration for the webhoo
   events to a remote web API, which is assumed to be a form of the Kubernetes API,
   including means of authentication. For more information, please see here: https://kubernetes.io/docs/tasks/debug-application-cluster/audit/#webhook-backend'
 properties:
-  InitialBackoff:
-    $ref: blueprint://schema/io.k8s.apimachinery.pkg.apis.meta.v1.Duration.yaml
-    description: InitialBackoff specifies the amount of time to wait after the first
-      failed request before retrying. Subsequent requests are retried with exponential
-      backoff.
   batchBufferSize:
     description: BatchBufferSize is the size of the buffer to store events before
       batching and writing. Only used in batch mode.
@@ -35,6 +30,11 @@ properties:
       Only used in batch mode.
     format: float
     type: number
+  initialBackoff:
+    $ref: blueprint://schema/io.k8s.apimachinery.pkg.apis.meta.v1.Duration.yaml
+    description: InitialBackoff specifies the amount of time to wait after the first
+      failed request before retrying. Subsequent requests are retried with exponential
+      backoff.
   kubeconfig:
     $ref: blueprint://schema/com.github.gardener.landscaper.apis.core.v1alpha1.Target.yaml
     default: {}

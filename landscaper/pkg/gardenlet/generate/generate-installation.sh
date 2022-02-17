@@ -20,25 +20,27 @@
 # - the virtual-garden component needs to be run before so that the data imports are satisfied
 # - a Kubernetes cluster that can be registered as Seed cluster
 
-set -e
+set -o errexit
+set -o nounset
+set -o pipefail
 
 EXPORT_DIR=''
 EFFECTIVE_VERSION=''
 
 while test $# -gt 0; do
-             case "$1" in
-                  --export-dir)
-                      shift
-                      EXPORT_DIR=$1
-                      shift
-                      ;;
-                  --version)
-                      shift
-                      EFFECTIVE_VERSION=$1
-                      shift
-                      ;;
-            esac
-    done
+  case "$1" in
+    --export-dir)
+        shift
+        EXPORT_DIR=$1
+        shift
+        ;;
+    --version)
+        shift
+        EFFECTIVE_VERSION=$1
+        shift
+        ;;
+  esac
+done
 
 if [ -z "$EXPORT_DIR" ]
   then
@@ -104,7 +106,6 @@ spec:
       $seedKubeconfig
 EOF
 
-
 cat << EOF > ${INSTALLATION_PATH}
 apiVersion: landscaper.gardener.cloud/v1alpha1
 kind: Installation
@@ -166,4 +167,3 @@ EOF
 
 echo "[Landscaper Gardenlet]: Target for Seed cluster exported to ${TARGET_PATH}"
 echo "[Landscaper Gardenlet]: Installation exported to ${INSTALLATION_PATH}"
-

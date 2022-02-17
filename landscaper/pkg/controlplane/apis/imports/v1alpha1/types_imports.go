@@ -53,6 +53,7 @@ type Imports struct {
 	// The Gardener control plane (Gardener Controller Manager, Gardener Scheduler, ...)
 	// will in turn run in the runtime cluster, but use kubeconfigs with credentials to this API server.
 	// To use this kubeconfig, the virtual garden has to be enabled in the configuration under virtualGarden.enabled
+	// +optional
 	VirtualGardenCluster *landscaperv1alpha1.Target `json:"virtualGardenCluster,omitempty"`
 	// VirtualGarden contains configuration for the "Virtual Garden" setup option of Gardener
 	// +optional
@@ -105,7 +106,7 @@ type Etcd struct {
 	// configures the flag --etcd-cafile on the Gardener API server
 	// Optional. if not set, the Gardener API server will not validate etcd's TLS serving certificate
 	// +optional
-	EtcdCABundle *string `json:"etcdCaBundle,omitempty"`
+	EtcdCABundle *string `json:"etcdCABundle,omitempty"`
 	// ClientCert contains a client certificate which will be used by the Gardener API server
 	// to communicate with etcd via TLS.
 	// Configures the flags --etcd-certfile on the Gardener API server.

@@ -11,7 +11,7 @@ name: landscaper-gardenlet
 relation: local
 access:
   type: ociRegistry
-  imageReference: eu.gcr.io/gardener-project/gardener/landscaper-control-plane:${EFFECTIVE_VERSION}
+  imageReference: eu.gcr.io/gardener-project/gardener/landscaper-gardenlet:${EFFECTIVE_VERSION}
 ---
 type: ociImage
 name: apiserver

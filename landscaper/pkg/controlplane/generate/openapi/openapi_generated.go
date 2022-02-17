@@ -1489,7 +1489,7 @@ func schema_controlplane_apis_imports_v1alpha1_APIServerAuditLogBackend(ref comm
 							Format:      "",
 						},
 					},
-					"maxAgema": {
+					"maxAge": {
 						SchemaProps: spec.SchemaProps{
 							Description: "MaxAge is the maximum number of days to retain old audit log files based on the timestamp encoded in their filename.",
 							Type:        []string{"integer"},
@@ -1615,7 +1615,7 @@ func schema_controlplane_apis_imports_v1alpha1_APIServerAuditWebhookBackend(ref 
 							Ref:         ref("github.com/gardener/landscaper/apis/core/v1alpha1.Target"),
 						},
 					},
-					"InitialBackoff": {
+					"initialBackoff": {
 						SchemaProps: spec.SchemaProps{
 							Description: "InitialBackoff specifies the amount of time to wait after the first failed request before retrying. Subsequent requests are retried with exponential backoff.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
@@ -2375,7 +2375,7 @@ func schema_controlplane_apis_imports_v1alpha1_Etcd(ref common.ReferenceCallback
 							Format:      "",
 						},
 					},
-					"etcdCaBundle": {
+					"etcdCABundle": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CABundle is a PEM encoded CA bundle which will be used by the Gardener API server to verify that the TLS serving certificate presented by etcd is signed by this CA configures the flag --etcd-cafile on the Gardener API server Optional. if not set, the Gardener API server will not validate etcd's TLS serving certificate",
 							Type:        []string{"string"},
@@ -2689,7 +2689,7 @@ func schema_controlplane_apis_imports_v1alpha1_Imports(ref common.ReferenceCallb
 							Format:      "",
 						},
 					},
-					"etcdCaBundle": {
+					"etcdCABundle": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CABundle is a PEM encoded CA bundle which will be used by the Gardener API server to verify that the TLS serving certificate presented by etcd is signed by this CA configures the flag --etcd-cafile on the Gardener API server Optional. if not set, the Gardener API server will not validate etcd's TLS serving certificate",
 							Type:        []string{"string"},

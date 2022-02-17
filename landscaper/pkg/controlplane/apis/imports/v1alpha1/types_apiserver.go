@@ -254,7 +254,7 @@ type APIServerAuditWebhookBackend struct {
 	// InitialBackoff specifies the amount of time to wait after the first failed request before retrying.
 	// Subsequent requests are retried with exponential backoff.
 	// +optional
-	InitialBackoff *metav1.Duration `json:"InitialBackoff,omitempty"`
+	InitialBackoff *metav1.Duration `json:"initialBackoff,omitempty"`
 }
 
 // APIServerAuditLogBackend are various audit-related settings for the Gardener API server.
@@ -267,7 +267,7 @@ type APIServerAuditLogBackend struct {
 	Format *string `json:"format,omitempty"`
 	// MaxAge is the maximum number of days to retain old audit log files based on the timestamp encoded in their filename.
 	// +optional
-	MaxAge *int32 `json:"maxAgema,omitempty"`
+	MaxAge *int32 `json:"maxAge,omitempty"`
 	// MaxBackup is the maximum number of old audit log files to retain.
 	// Default: 5
 	// +optional

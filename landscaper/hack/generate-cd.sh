@@ -14,7 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -e
+set -o errexit
+set -o nounset
+set -o pipefail
 
 DEFAULT_REPO_CTX="eu.gcr.io/gardener-project/development"
 DEFAULT_BLUEPRINT_RESOURCES_FILE_PATH='landscaper/resources.yaml'
@@ -28,35 +30,34 @@ BLUEPRINT_RESOURCES_FILE_PATH=''
 OCI_IMAGE_RESOURCES_FILE_PATH=''
 
 while test $# -gt 0; do
-             case "$1" in
-                  --component-name)
-                      shift
-                      COMPONENT_NAME=$1
-                      shift
-                      ;;
-                  --version)
-                      shift
-                      EFFECTIVE_VERSION=$1
-                      shift
-                      ;;
-                  --repo-context)
-                      shift
-                      REPO_CTX=$1
-                      shift
-                      ;;
-                  --blueprint-resources-file-path)
-                      shift
-                      BLUEPRINT_RESOURCES_FILE_PATH=$1
-                      shift
-                      ;;
-                  --oci-image-resources-file-path)
-                      shift
-                      OCI_IMAGE_RESOURCES_FILE_PATH=$1
-                      shift
-                      ;;
-            esac
-    done
-
+  case "$1" in
+      --component-name)
+          shift
+          COMPONENT_NAME=$1
+          shift
+          ;;
+      --version)
+          shift
+          EFFECTIVE_VERSION=$1
+          shift
+          ;;
+      --repo-context)
+          shift
+          REPO_CTX=$1
+          shift
+          ;;
+      --blueprint-resources-file-path)
+          shift
+          BLUEPRINT_RESOURCES_FILE_PATH=$1
+          shift
+          ;;
+      --oci-image-resources-file-path)
+          shift
+          OCI_IMAGE_RESOURCES_FILE_PATH=$1
+          shift
+          ;;
+  esac
+done
 
 if [ -z "$COMPONENT_NAME" ]
   then

@@ -32,7 +32,7 @@ properties:
     description: Format of saved audits. "legacy" indicates 1-line text format for
       each event. "json" indicates structured json format.
     type: string
-  maxAgema:
+  maxAge:
     description: MaxAge is the maximum number of days to retain old audit log files
       based on the timestamp encoded in their filename.
     format: int32

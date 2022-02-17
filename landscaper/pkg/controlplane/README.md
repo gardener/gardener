@@ -104,7 +104,7 @@ This is how the exports from the virtual-garden Landscaper component map to the 
 | Virtual Garden Exports | Control Plane Import Configuration  |
 |---|---|
 | `kubeconfigYaml`  |  `virtualGardenCluster` |
-|  `etcdCaPem` |  `etcdCaBundle` |
+|  `etcdCaPem` |  `etcdCABundle` |
 |  `etcdClientTlsPem`  | `etcdClientCert`  |
 |  `etcdClientTlsKeyPem` | `etcdClientKey`  |
 | virtual-garden-etcd-main-client.garden.svc:2379  |  `etcdUrl` |
