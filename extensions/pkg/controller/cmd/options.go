@@ -153,7 +153,7 @@ func (b *OptionAggregator) Complete() error {
 type ManagerOptions struct {
 	// LeaderElection is whether leader election is turned on or not.
 	LeaderElection bool
-	// LeaderElectionResourceLock is the resource type used for leader election (defaults to `configmapsleases`).
+	// LeaderElectionResourceLock is the resource type used for leader election (defaults to `leases`).
 	//
 	// When changing the default resource lock, please make sure to migrate via multilocks to
 	// avoid situations where multiple running instances of your controller have each acquired leadership
@@ -185,11 +185,8 @@ type ManagerOptions struct {
 func (m *ManagerOptions) AddFlags(fs *pflag.FlagSet) {
 	defaultLeaderElectionResourceLock := m.LeaderElectionResourceLock
 	if defaultLeaderElectionResourceLock == "" {
-		// explicitly default to configmapleases if no default is specified for migration purposes
-		// same as in controller-runtime, see
-		// https://github.com/kubernetes-sigs/controller-runtime/blob/a763c9a36c6f18660799384c9765348942bda53a/pkg/leaderelection/leader_election.go#L59-L64
-		// we might consider changing this default after many releases
-		defaultLeaderElectionResourceLock = resourcelock.ConfigMapsLeasesResourceLock
+		// explicitly default to leases if no default is specified
+		defaultLeaderElectionResourceLock = resourcelock.LeasesResourceLock
 	}
 
 	fs.BoolVar(&m.LeaderElection, LeaderElectionFlag, m.LeaderElection, "Whether to use leader election or not when running this controller manager.")

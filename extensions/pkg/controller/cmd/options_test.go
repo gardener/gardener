@@ -229,7 +229,7 @@ var _ = Describe("Options", func() {
 				}))
 			})
 
-			It("should default resource lock to configmapsleases", func() {
+			It("should default resource lock to leases", func() {
 				fs := pflag.NewFlagSet(name, pflag.ExitOnError)
 				opts := ManagerOptions{}
 
@@ -247,7 +247,7 @@ var _ = Describe("Options", func() {
 				)).NotTo(HaveOccurred())
 				Expect(opts).To(Equal(ManagerOptions{
 					LeaderElection:             true,
-					LeaderElectionResourceLock: "configmapsleases",
+					LeaderElectionResourceLock: "leases",
 					LeaderElectionID:           leaderElectionID,
 					LeaderElectionNamespace:    leaderElectionNamespace,
 				}))
