@@ -61,9 +61,13 @@ var _ Option = &TargetClusterOptions{}
 // TargetClusterOptions contains options needed to construct the target config.
 type TargetClusterOptions struct {
 	kubeconfigPath      string
-	namespace           string
 	disableCachedClient bool
 	cacheResyncPeriod   time.Duration
+
+	// Namespace is the namespace in which controllers for the target cluster act on objects (defaults to all namespaces)
+	Namespace string
+	// If RESTConfig is set, don't load the kubeconfig but use the provided config instead (for integration tests).
+	RESTConfig *rest.Config
 
 	config *TargetClusterConfig
 }
@@ -78,28 +82,31 @@ type TargetClusterConfig struct {
 // AddFlags adds the needed command line flags to the given FlagSet.
 func (o *TargetClusterOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.kubeconfigPath, "target-kubeconfig", "", "path to the kubeconfig for the target cluster")
-	fs.StringVar(&o.namespace, "target-namespace", "", "namespace in which controllers for the target cluster act on objects (defaults to all namespaces)")
+	fs.StringVar(&o.Namespace, "target-namespace", "", "namespace in which controllers for the target cluster act on objects (defaults to all namespaces)")
 	fs.BoolVar(&o.disableCachedClient, "target-disable-cache", false, "disable the cache for target cluster client and always talk directly to the API server (defaults to false)")
 	fs.DurationVar(&o.cacheResyncPeriod, "target-cache-resync-period", 24*time.Hour, "duration how often the controller's cache for the target cluster is resynced")
 }
 
 // Complete builds the target config based on the given flag values and saves it for retrieval via Completed.
 func (o *TargetClusterOptions) Complete() error {
-	restConfig, err := getTargetRESTConfig(o.kubeconfigPath)
-	if err != nil {
-		return fmt.Errorf("unable to create REST config for target cluster: %w", err)
+	if o.RESTConfig == nil {
+		var err error
+		o.RESTConfig, err = getTargetRESTConfig(o.kubeconfigPath)
+		if err != nil {
+			return fmt.Errorf("unable to create REST config for target cluster: %w", err)
+		}
+		// TODO: make this configurable
+		o.RESTConfig.QPS = 100.0
+		o.RESTConfig.Burst = 130
 	}
-	// TODO: make this configurable
-	restConfig.QPS = 100.0
-	restConfig.Burst = 130
 
 	scheme := runtime.NewScheme()
 	utilruntime.Must(AddToTargetScheme(scheme))
 
 	cl, err := cluster.New(
-		restConfig,
+		o.RESTConfig,
 		func(opts *cluster.Options) {
-			opts.Namespace = o.namespace
+			opts.Namespace = o.Namespace
 			opts.Scheme = scheme
 			opts.MapperProvider = getTargetRESTMapper
 			opts.SyncPeriod = &o.cacheResyncPeriod
