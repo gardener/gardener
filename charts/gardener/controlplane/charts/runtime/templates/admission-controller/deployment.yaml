@@ -38,9 +38,13 @@ spec:
       {{- if not .Values.global.deployment.virtualGarden.enabled }}
       serviceAccountName: {{ required ".Values.global.admission.serviceAccountName is required" .Values.global.admission.serviceAccountName }}
       {{- else if and .Values.global.deployment.virtualGarden.enabled .Values.global.deployment.virtualGarden.admission.user.name }}
-      {{- if .Values.global.admission.serviceAccountTokenVolumeProjection.enabled }}
+        {{- if .Values.global.admission.serviceAccountTokenVolumeProjection.enabled }}
       serviceAccountName: {{ required ".Values.global.admission.serviceAccountName is required" .Values.global.admission.serviceAccountName }}
-      {{- end }}
+        {{- else }}
+      serviceAccountName: default
+        {{- end }}
+      {{- else }}
+      serviceAccountName: default
       {{- end }}
       {{- if .Values.global.admission.kubeconfig }}
       automountServiceAccountToken: false
