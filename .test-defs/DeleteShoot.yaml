@@ -10,7 +10,7 @@ spec:
   command: [bash, -c]
   args:
   - >-
-    go test -timeout=0 -mod=vendor ./test/system/shoot_deletion
+    go test -timeout=0 -mod=vendor ./test/testmachinery/system/shoot_deletion
     --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
     --shoot-name=$SHOOT_NAME
     --project-namespace=$PROJECT_NAMESPACE

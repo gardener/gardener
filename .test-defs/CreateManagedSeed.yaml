@@ -10,7 +10,7 @@ spec:
   command: [bash, -c]
   args:
   - >-
-    go test -timeout=0 -mod=vendor ./test/system/managed_seed_creation
+    go test -timeout=0 -mod=vendor ./test/testmachinery/system/managed_seed_creation
     --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
     -kubecfg="$TM_KUBECONFIG_PATH/gardener.config"
     -managed-seed-name=$MANAGED_SEED_NAME

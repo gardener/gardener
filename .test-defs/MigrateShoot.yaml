@@ -10,7 +10,7 @@ spec:
   command: [bash, -c]
   args:
   - >-
-    go test -timeout=0 -mod=vendor ./test/system/shoot_cp_migration
+    go test -timeout=0 -mod=vendor ./test/testmachinery/system/shoot_cp_migration
     --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
     -target-seed-name=$SEED_NAME
     -shoot-name=$SHOOT_NAME

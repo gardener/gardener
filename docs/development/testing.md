@@ -30,11 +30,26 @@ make test-integration
 If you want to run a specific set of integration tests, you can also execute them using `./hack/test-integration.sh` directly instead of using the `test-integration` rule. For example:
 
 ```bash
-./hack/test-integration.sh ./test/integration/envtest/resourcemanager/tokenrequestor
+./hack/test-integration.sh ./test/integration/resourcemanager/tokenrequestor
 ```
 
 The script takes care of preparing the environment for you.
 If you want to execute the test suites directly via `go test` or `ginkgo`, you have to point the `KUBEBUILDER_ASSETS` environment variable to the path that contains the etcd and kube-apiserver binaries. Alternatively, you can install the binaries to `/usr/local/kubebuilder/bin`.
+
+### Debugging Integration Tests
+
+You can configure envtest to use an existing cluster instead of starting a temporary control plane for your test.
+This can be helpful for debugging integration tests, because you can easily inspect what is going on in your test cluster.
+For example:
+
+```bash
+make kind-up
+export KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig
+export USE_EXISTING_CLUSTER=true
+
+# run test with verbose output
+./hack/test-integration.sh -v ./test/integration/resourcemanager/health -ginkgo.v
+```
 
 ## End-to-end Tests (using provider-local)
 
@@ -49,7 +64,7 @@ You can also run these tests on your development machine, using the following co
 
 ```bash
 make kind-up
-export KUBECONFIG=$PWD/example/provider-local/base/kubeconfig
+export KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig
 make gardener-up
 make test-e2e-local  # alternatively: make test-e2e-local-fast
 ```
