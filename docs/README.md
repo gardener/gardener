@@ -104,6 +104,7 @@
 * [Changing the API](development/changing-the-api.md)
 * [Releases, Features, Hotfixes](development/process.md)
 * [Adding New Cloud Providers](development/new-cloud-provider.md)
+* [Adding Support For A New Kubernetes Version](development/new-kubernetes-version.md)
 * [Extending the Monitoring Stack](development/monitoring-stack.md)
 * [How to create log parser for container into fluent-bit](development/log_parsers.md)
 * [Network Policies in the Seed Cluster](development/seed_network_policies.md)
