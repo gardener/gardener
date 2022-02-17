@@ -42,6 +42,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 )
 
+var targetSchemeBuilder = runtime.NewSchemeBuilder(
+	kubernetesscheme.AddToScheme,
+	hvpav1alpha1.AddToScheme,
+	volumesnapshotv1beta1.AddToScheme,
+)
+
+// AddToTargetScheme registers all API types in the given scheme that resource-manager expects to be in the target
+// cluster scheme (the Cluster that ManagedResources are applied to).
+func AddToTargetScheme(scheme *runtime.Scheme) error {
+	apiextensionsinstall.Install(scheme)
+	apiregistrationinstall.Install(scheme)
+	return targetSchemeBuilder.AddToScheme(scheme)
+}
+
 var _ Option = &TargetClusterOptions{}
 
 // TargetClusterOptions contains options needed to construct the target config.
@@ -79,11 +93,14 @@ func (o *TargetClusterOptions) Complete() error {
 	restConfig.QPS = 100.0
 	restConfig.Burst = 130
 
-	cluster, err := cluster.New(
+	scheme := runtime.NewScheme()
+	utilruntime.Must(AddToTargetScheme(scheme))
+
+	cl, err := cluster.New(
 		restConfig,
 		func(opts *cluster.Options) {
 			opts.Namespace = o.namespace
-			opts.Scheme = getTargetScheme()
+			opts.Scheme = scheme
 			opts.MapperProvider = getTargetRESTMapper
 			opts.SyncPeriod = &o.cacheResyncPeriod
 			opts.ClientDisableCacheFor = []client.Object{
@@ -103,7 +120,7 @@ func (o *TargetClusterOptions) Complete() error {
 		return fmt.Errorf("could not instantiate target cluster: %w", err)
 	}
 
-	o.config = &TargetClusterConfig{Cluster: cluster}
+	o.config = &TargetClusterConfig{Cluster: cl}
 	return nil
 }
 
@@ -112,18 +129,6 @@ func (o *TargetClusterOptions) Complete() error {
 // and has been populated successfully.
 func (o *TargetClusterOptions) Completed() *TargetClusterConfig {
 	return o.config
-}
-
-func getTargetScheme() *runtime.Scheme {
-	scheme := runtime.NewScheme()
-
-	utilruntime.Must(kubernetesscheme.AddToScheme(scheme))
-	apiextensionsinstall.Install(scheme)
-	apiregistrationinstall.Install(scheme)
-	utilruntime.Must(hvpav1alpha1.AddToScheme(scheme))
-	utilruntime.Must(volumesnapshotv1beta1.AddToScheme(scheme))
-
-	return scheme
 }
 
 func getTargetRESTMapper(config *rest.Config) (meta.RESTMapper, error) {
