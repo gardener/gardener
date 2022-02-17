@@ -46,6 +46,6 @@ var _ = Describe("CheckJob", func() {
 				Status: corev1.ConditionTrue,
 			}},
 		}}
-		Expect(health.CheckJob(job)).To(MatchError(ContainSubstring("condition \"Failed\"")))
+		Expect(health.CheckJob(job)).To(MatchError(ContainSubstring(`condition "Failed"`)))
 	})
 })
