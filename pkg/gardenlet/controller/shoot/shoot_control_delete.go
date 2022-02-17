@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -150,8 +151,10 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			return err
 		}),
 		errors.ToExecute("Get additional DNS providers that are used by DNSEntry resources", func() error {
-			if additionalDNSProviders, err = getUsedAdditionalDNSProviders(ctx, o); err != nil {
-				return err
+			if !gardenletfeatures.DisabledDNSProviderManagement() {
+				if additionalDNSProviders, err = getUsedAdditionalDNSProviders(ctx, o); err != nil {
+					return err
+				}
 			}
 			return nil
 		}),
@@ -243,7 +246,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Name: "Deploying additional DNS providers",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.DeployDNSProviders(ctx, additionalDNSProviders)
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace),
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace && !gardenletfeatures.DisabledDNSProviderManagement()),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, deployInternalDomainDNSRecord, deployOwnerDomainDNSRecord),
 		})
 		_ = g.Add(flow.Task{
@@ -603,7 +606,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		})
 		deleteDNSProviders = g.Add(flow.Task{
 			Name:         "Deleting additional DNS providers",
-			Fn:           botanist.DeleteDNSProviders,
+			Fn:           flow.TaskFn(botanist.DeleteDNSProviders).DoIf(!gardenletfeatures.DisabledDNSProviderManagement()),
 			Dependencies: flow.NewTaskIDs(destroyInternalDomainDNSRecord, destroyOwnerDomainDNSRecord),
 		})
 		destroyReferencedResources = g.Add(flow.Task{
