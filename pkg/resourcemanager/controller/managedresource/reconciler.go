@@ -628,7 +628,7 @@ func keyExistsAndValueTrue(kv map[string]string, key string) bool {
 
 func (r *Reconciler) cleanOldResources(ctx context.Context, index *objectIndex, mr *resourcesv1alpha1.ManagedResource) (bool, error) {
 	type output struct {
-		obj             client.Object
+		obj             *unstructured.Unstructured
 		deletionPending bool
 		err             error
 	}
@@ -827,7 +827,7 @@ func (r *Reconciler) releaseOrphanedResource(ctx context.Context, ref resourcesv
 	return nil
 }
 
-func eventsForObject(ctx context.Context, scheme *runtime.Scheme, c client.Client, obj client.Object) (string, error) {
+func eventsForObject(ctx context.Context, scheme *runtime.Scheme, c client.Client, obj *unstructured.Unstructured) (string, error) {
 	var (
 		relevantGKs = []schema.GroupKind{
 			corev1.SchemeGroupVersion.WithKind("Service").GroupKind(),
@@ -861,10 +861,10 @@ func updateConditions(ctx context.Context, c client.Client, mr *resourcesv1alpha
 	return c.Status().Update(ctx, mr)
 }
 
-func unstructuredToString(o client.Object) string {
+func unstructuredToString(u *unstructured.Unstructured) string {
 	// return no key, but an description including the version
-	apiVersion, kind := o.GetObjectKind().GroupVersionKind().ToAPIVersionAndKind()
-	return objectKey(apiVersion, kind, o.GetNamespace(), o.GetName())
+	apiVersion, kind := u.GetObjectKind().GroupVersionKind().ToAPIVersionAndKind()
+	return objectKey(apiVersion, kind, u.GetNamespace(), u.GetName())
 }
 
 // injectLabels injects the given labels into the given object's metadata and if present also into the

@@ -260,6 +260,7 @@ func (c *dnsRecord) WaitMigrate(ctx context.Context) error {
 		ctx,
 		c.client,
 		c.dnsRecord,
+		extensionsv1alpha1.DNSRecordResource,
 		c.waitInterval,
 		c.waitTimeout,
 	)

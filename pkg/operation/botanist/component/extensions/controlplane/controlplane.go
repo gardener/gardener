@@ -18,12 +18,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/controllerutils"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -205,6 +206,7 @@ func (c *controlPlane) WaitMigrate(ctx context.Context) error {
 		ctx,
 		c.client,
 		c.controlPlane,
+		extensionsv1alpha1.ControlPlaneResource,
 		c.waitInterval,
 		c.waitTimeout,
 	)

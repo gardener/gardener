@@ -16,6 +16,12 @@ package health
 
 import (
 	"context"
+	"fmt"
+
+	apiextensionsinstall "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/install"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
@@ -29,74 +35,101 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// CheckHealth checks whether the given `runtime.Unstructured` is healthy.
-// `nil` is returned when the `runtime.Unstructured` has kind which is not supported by this function.
-func CheckHealth(ctx context.Context, c client.Client, scheme *runtime.Scheme, obj runtime.Object) error {
-	switch obj.GetObjectKind().GroupVersionKind().GroupKind() {
+// healthCheckScheme is a dedicated healthCheckScheme for CheckHealth which contains all API types, that can be checked
+// by CheckHealth. Needed for converting unstructured objects to structured objects.
+var healthCheckScheme *runtime.Scheme
+
+func init() {
+	healthCheckScheme = runtime.NewScheme()
+	utilruntime.Must(kubernetesscheme.AddToScheme(healthCheckScheme))
+	apiextensionsinstall.Install(healthCheckScheme)
+}
+
+// CheckHealth checks whether the given object is healthy.
+// It returns a bool indicating whether the object was actually checked and an error if any health check failed.
+func CheckHealth(ctx context.Context, c client.Client, obj runtime.Object) (bool, error) {
+	// We must not rely on TypeMeta to be set in objects as decoder clears apiVersion and kind fields, see
+	// https://github.com/kubernetes/kubernetes/issues/80609 and https://github.com/gardener/gardener/issues/5357#issuecomment-1040150204.
+	// Instead of using GetObjectKind(), we use a scheme to figure out the GroupVersionKind which works for both typed
+	// and unstructured objects.
+	gvk, err := apiutil.GVKForObject(obj, healthCheckScheme)
+	if err != nil {
+		if runtime.IsNotRegisteredError(err) {
+			// types that this function runs health checks on must be registered in healthCheckScheme
+			// if the healthCheckScheme doesn't recognize it the object, skip the check as we don't have a health check for it
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to determine GVK of object: %w", err)
+	}
+
+	// Note: we can't do client-side conversions from one version to another, because conversion code is not exported
+	// to k8s.io/api (apiextensions API is an exception). The only conversion we can do, is from unstructured objects to
+	// typed objects in the same version. This is what most of the following healthCheckScheme.Convert calls do.
+	switch gvk.GroupKind() {
 	case apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition").GroupKind():
 		crdObj := obj
-		if obj.GetObjectKind().GroupVersionKind().Version == apiextensionsv1beta1.SchemeGroupVersion.Version {
+		if gvk.Version == apiextensionsv1beta1.SchemeGroupVersion.Version {
 			// Convert to internal version first if v1beta1 because converter cannot convert from external -> external version.
 			crd := &apiextensions.CustomResourceDefinition{}
-			if err := scheme.Convert(crdObj, crd, nil); err != nil {
-				return err
+			if err := healthCheckScheme.Convert(crdObj, crd, nil); err != nil {
+				return false, err
 			}
 			crdObj = crd
 		}
 		crd := &apiextensionsv1.CustomResourceDefinition{}
-		if err := scheme.Convert(crdObj, crd, nil); err != nil {
-			return err
+		if err := healthCheckScheme.Convert(crdObj, crd, nil); err != nil {
+			return false, err
 		}
-		return health.CheckCustomResourceDefinition(crd)
+		return true, health.CheckCustomResourceDefinition(crd)
 	case appsv1.SchemeGroupVersion.WithKind("DaemonSet").GroupKind():
 		ds := &appsv1.DaemonSet{}
-		if err := scheme.Convert(obj, ds, nil); err != nil {
-			return err
+		if err := healthCheckScheme.Convert(obj, ds, nil); err != nil {
+			return false, err
 		}
-		return health.CheckDaemonSet(ds)
+		return true, health.CheckDaemonSet(ds)
 	case appsv1.SchemeGroupVersion.WithKind("Deployment").GroupKind():
 		deploy := &appsv1.Deployment{}
-		if err := scheme.Convert(obj, deploy, nil); err != nil {
-			return err
+		if err := healthCheckScheme.Convert(obj, deploy, nil); err != nil {
+			return false, err
 		}
-		return health.CheckDeployment(deploy)
+		return true, health.CheckDeployment(deploy)
 	case batchv1.SchemeGroupVersion.WithKind("Job").GroupKind():
 		job := &batchv1.Job{}
-		if err := scheme.Convert(obj, job, nil); err != nil {
-			return err
+		if err := healthCheckScheme.Convert(obj, job, nil); err != nil {
+			return false, err
 		}
-		return health.CheckJob(job)
+		return true, health.CheckJob(job)
 	case corev1.SchemeGroupVersion.WithKind("Pod").GroupKind():
 		pod := &corev1.Pod{}
-		if err := scheme.Convert(obj, pod, nil); err != nil {
-			return err
+		if err := healthCheckScheme.Convert(obj, pod, nil); err != nil {
+			return false, err
 		}
-		return health.CheckPod(pod)
+		return true, health.CheckPod(pod)
 	case appsv1.SchemeGroupVersion.WithKind("ReplicaSet").GroupKind():
 		rs := &appsv1.ReplicaSet{}
-		if err := scheme.Convert(obj, rs, nil); err != nil {
-			return err
+		if err := healthCheckScheme.Convert(obj, rs, nil); err != nil {
+			return false, err
 		}
-		return health.CheckReplicaSet(rs)
+		return true, health.CheckReplicaSet(rs)
 	case corev1.SchemeGroupVersion.WithKind("ReplicationController").GroupKind():
 		rc := &corev1.ReplicationController{}
-		if err := scheme.Convert(obj, rc, nil); err != nil {
-			return err
+		if err := healthCheckScheme.Convert(obj, rc, nil); err != nil {
+			return false, err
 		}
-		return health.CheckReplicationController(rc)
+		return true, health.CheckReplicationController(rc)
 	case corev1.SchemeGroupVersion.WithKind("Service").GroupKind():
 		service := &corev1.Service{}
-		if err := scheme.Convert(obj, service, nil); err != nil {
-			return err
+		if err := healthCheckScheme.Convert(obj, service, nil); err != nil {
+			return false, err
 		}
-		return health.CheckService(ctx, scheme, c, service)
+		return true, health.CheckService(ctx, healthCheckScheme, c, service)
 	case appsv1.SchemeGroupVersion.WithKind("StatefulSet").GroupKind():
 		statefulSet := &appsv1.StatefulSet{}
-		if err := scheme.Convert(obj, statefulSet, nil); err != nil {
-			return err
+		if err := healthCheckScheme.Convert(obj, statefulSet, nil); err != nil {
+			return false, err
 		}
-		return health.CheckStatefulSet(statefulSet)
+		return true, health.CheckStatefulSet(statefulSet)
 	}
 
-	return nil
+	return false, nil
 }

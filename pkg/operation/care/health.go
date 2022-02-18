@@ -138,7 +138,7 @@ func (h *Health) getAllExtensionConditions(ctx context.Context) ([]ExtensionCond
 }
 
 func (h *Health) retrieveExtensions(ctx context.Context) ([]runtime.Object, error) {
-	extensions := []runtime.Object{}
+	var allExtensions []runtime.Object
 
 	for _, listObj := range []client.ObjectList{
 		&extensionsv1alpha1.ContainerRuntimeList{},
@@ -149,16 +149,15 @@ func (h *Health) retrieveExtensions(ctx context.Context) ([]runtime.Object, erro
 		&extensionsv1alpha1.OperatingSystemConfigList{},
 		&extensionsv1alpha1.WorkerList{},
 	} {
-		listKind := listObj.GetObjectKind().GroupVersionKind().Kind
 		if err := h.seedClient.Client().List(ctx, listObj, client.InNamespace(h.shoot.SeedNamespace)); err != nil {
 			return nil, err
 		}
 
 		if err := meta.EachListItem(listObj, func(obj runtime.Object) error {
-			extensions = append(extensions, obj)
+			allExtensions = append(allExtensions, obj)
 			return nil
 		}); err != nil {
-			h.logger.Errorf("Error during evaluation of kind %q for extensions health check: %+v", listKind, err)
+			h.logger.Errorf("Error during evaluation of kind %T for extensions health check: %+v", listObj, err)
 			return nil, err
 		}
 	}
@@ -169,9 +168,9 @@ func (h *Health) retrieveExtensions(ctx context.Context) ([]runtime.Object, erro
 	if err := h.seedClient.Client().Get(ctx, kutil.Key(h.shoot.BackupEntryName), be); client.IgnoreNotFound(err) != nil {
 		return nil, err
 	}
-	extensions = append(extensions, be)
+	allExtensions = append(allExtensions, be)
 
-	return extensions, nil
+	return allExtensions, nil
 }
 
 func (h *Health) healthChecks(

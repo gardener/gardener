@@ -163,6 +163,7 @@ func (b *backupEntry) WaitMigrate(ctx context.Context) error {
 		ctx,
 		b.client,
 		b.backupEntry,
+		extensionsv1alpha1.BackupEntryResource,
 		b.waitInterval,
 		b.waitTimeout,
 	)

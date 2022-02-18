@@ -153,16 +153,15 @@ func (c *Chart) Delete(ctx context.Context, client client.Client, namespace stri
 // Delete deletes this object from the given namespace using the given client.
 func (o *Object) Delete(ctx context.Context, c client.Client, namespace string) error {
 	obj := o.Type.DeepCopyObject().(client.Object)
-	kind := obj.GetObjectKind().GroupVersionKind().Kind
 	key := objectKey(namespace, o.Name)
 	if err := c.Get(ctx, key, obj); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
-		return fmt.Errorf("could not get %s '%s': %w", kind, key.String(), err)
+		return fmt.Errorf("could not get %T '%s': %w", obj, key.String(), err)
 	}
 	if err := c.Delete(ctx, obj); err != nil {
-		return fmt.Errorf("could not delete %s '%s': %w", kind, key.String(), err)
+		return fmt.Errorf("could not delete %T '%s': %w", obj, key.String(), err)
 	}
 	return nil
 }

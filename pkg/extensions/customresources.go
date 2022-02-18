@@ -345,6 +345,7 @@ func WaitUntilExtensionObjectMigrated(
 	ctx context.Context,
 	c client.Client,
 	obj extensionsv1alpha1.Object,
+	kind string,
 	interval time.Duration,
 	timeout time.Duration,
 ) error {
@@ -364,11 +365,7 @@ func WaitUntilExtensionObjectMigrated(
 			}
 		}
 
-		var extensionType string
-		if extensionSpec := obj.GetExtensionSpec(); extensionSpec != nil {
-			extensionType = extensionSpec.GetExtensionType()
-		}
-		return retry.MinorError(fmt.Errorf("lastOperation for %s with name %s and type %s is not Migrate=Succeeded", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), extensionType))
+		return retry.MinorError(fmt.Errorf("error while waiting for %s to be successfully migrated", extensionKey(kind, obj.GetNamespace(), obj.GetName())))
 	})
 }
 
@@ -377,12 +374,13 @@ func WaitUntilExtensionObjectsMigrated(
 	ctx context.Context,
 	c client.Client,
 	listObj client.ObjectList,
+	kind string,
 	namespace string,
 	interval time.Duration,
 	timeout time.Duration,
 ) error {
 	fns, err := applyFuncToExtensionObjects(ctx, c, listObj, namespace, nil, func(ctx context.Context, obj extensionsv1alpha1.Object) error {
-		return WaitUntilExtensionObjectMigrated(ctx, c, obj, interval, timeout)
+		return WaitUntilExtensionObjectMigrated(ctx, c, obj, kind, interval, timeout)
 	})
 	if err != nil {
 		return err

@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
@@ -59,7 +58,7 @@ const (
 
 // NewReconciler creates a new performHealthCheck.Reconciler that reconciles
 // the registered extension resources (Gardener's `extensions.gardener.cloud` API group).
-func NewReconciler(mgr manager.Manager, actuator HealthCheckActuator, registeredExtension RegisteredExtension, syncPeriod metav1.Duration) reconcile.Reconciler {
+func NewReconciler(actuator HealthCheckActuator, registeredExtension RegisteredExtension, syncPeriod metav1.Duration) reconcile.Reconciler {
 	return &reconciler{
 		logger:              log.Log.WithName(ControllerName),
 		actuator:            actuator,
@@ -121,11 +120,11 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, err
 		}
 
-		r.logger.V(6).Info("Do not perform HealthCheck for extension resource, Shoot is hibernated", "healthcheck", kutil.ObjectName(acc), "kind", acc.GetObjectKind().GroupVersionKind().Kind)
+		r.logger.V(6).Info("Do not perform HealthCheck for extension resource, Shoot is hibernated", "healthcheck", kutil.ObjectName(acc), "groupVersionKind", r.registeredExtension.groupVersionKind)
 		return reconcile.Result{}, nil
 	}
 
-	r.logger.V(6).Info("Performing healthcheck", "healthcheck", kutil.ObjectName(acc), "kind", acc.GetObjectKind().GroupVersionKind().Kind)
+	r.logger.V(6).Info("Performing healthcheck", "healthcheck", kutil.ObjectName(acc), "groupVersionKind", r.registeredExtension.groupVersionKind)
 	return r.performHealthCheck(ctx, request, extension)
 }
 

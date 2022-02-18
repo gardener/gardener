@@ -712,6 +712,7 @@ var _ = Describe("extensions", func() {
 				ctx,
 				c,
 				expected,
+				extensionsv1alpha1.WorkerResource,
 				defaultInterval, defaultTimeout,
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -725,6 +726,7 @@ var _ = Describe("extensions", func() {
 					ctx,
 					c,
 					expected,
+					extensionsv1alpha1.WorkerResource,
 					defaultInterval, defaultTimeout,
 				)
 				Expect(err).To(match())
@@ -750,7 +752,7 @@ var _ = Describe("extensions", func() {
 				ctx,
 				c,
 				&extensionsv1alpha1.WorkerList{},
-
+				extensionsv1alpha1.WorkerResource,
 				namespace,
 				defaultInterval,
 				defaultTimeout)).To(Succeed())
@@ -768,6 +770,7 @@ var _ = Describe("extensions", func() {
 					ctx,
 					c,
 					&extensionsv1alpha1.WorkerList{},
+					extensionsv1alpha1.WorkerResource,
 					namespace,
 					defaultInterval,
 					defaultTimeout)

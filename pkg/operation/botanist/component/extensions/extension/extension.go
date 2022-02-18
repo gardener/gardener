@@ -187,6 +187,7 @@ func (e *extension) WaitMigrate(ctx context.Context) error {
 		ctx,
 		e.client,
 		&extensionsv1alpha1.ExtensionList{},
+		extensionsv1alpha1.ExtensionResource,
 		e.values.Namespace,
 		e.waitInterval,
 		e.waitTimeout,

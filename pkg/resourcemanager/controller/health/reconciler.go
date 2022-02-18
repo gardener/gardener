@@ -107,13 +107,17 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	)
 
 	for _, ref := range resourcesObjectReferences {
-		var obj client.Object
+		var (
+			objectKey = client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}
+			objectLog = log.WithValues("object", objectKey, "objectGVK", ref.GroupVersionKind())
+			obj       client.Object
+		)
+
 		// sigs.k8s.io/controller-runtime/pkg/client.DelegatingReader does not use the cache for unstructured.Unstructured
 		// objects, so we create a new object of the object's type to use the caching client
 		runtimeObject, err := r.targetScheme.New(ref.GroupVersionKind())
 		if err != nil {
-			log.Info("Could not create new object of kind for health checks (probably not registered in the used scheme), falling back to unstructured request",
-				"groupVersionKind", ref.GroupVersionKind().String(), "error", err.Error())
+			objectLog.Info("Could not create new object of kind for health checks (probably not registered in the used scheme), falling back to unstructured request", "err", err.Error())
 
 			// fallback to unstructured requests if the object's type is not registered in the scheme
 			unstructuredObj := &unstructured.Unstructured{}
@@ -124,15 +128,15 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			var ok bool
 			if obj, ok = runtimeObject.(client.Object); !ok {
 				err := fmt.Errorf("expected client.Object but got %T", obj)
-				log.Error(err, "Could not execute health check", "groupVersionKind", ref.GroupVersionKind().String())
+				objectLog.Error(err, "Could not execute health check")
 				// do not requeue because there anyway will be another update event to fix the problem
 				return ctrl.Result{}, nil
 			}
 		}
 
-		if err := r.targetClient.Get(healthCheckCtx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, obj); err != nil {
+		if err := r.targetClient.Get(healthCheckCtx, objectKey, obj); err != nil {
 			if apierrors.IsNotFound(err) {
-				log.Info("Could not get object", "namespace", ref.Namespace, "name", ref.Name)
+				objectLog.Info("Could not get object")
 
 				var (
 					reason  = ref.Kind + "Missing"
@@ -150,11 +154,19 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{}, err
 		}
 
-		if err := CheckHealth(healthCheckCtx, r.targetClient, r.targetScheme, obj); err != nil {
+		if checked, err := CheckHealth(healthCheckCtx, r.targetClient, obj); err != nil {
 			var (
 				reason  = ref.Kind + "Unhealthy"
-				message = fmt.Sprintf("Required %s %q in namespace %q is unhealthy: %v", ref.Kind, ref.Name, ref.Namespace, err.Error())
+				message = fmt.Sprintf("%s %q is unhealthy: %v", ref.Kind, objectKey.String(), err)
 			)
+
+			if !checked {
+				// there was an error executing the health check (which is different than a failed health check)
+				// handle it separately and log it prominently
+				reason = "HealthCheckError"
+				message = fmt.Sprintf("Error executing health check for %s %q: %v", ref.Kind, objectKey.String(), err)
+				objectLog.Error(err, "Error executing health check for object")
+			}
 
 			conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, reason, message)
 			if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
