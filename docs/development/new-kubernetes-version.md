@@ -8,7 +8,7 @@ This is because patch versions do not introduce any new feature or API changes, 
 The Kubernetes community release a new minor version roughly every 4 months.
 Please refer to the [official documentation](https://kubernetes.io/releases/release/) about their release cycles for any additional information.
 
-Shortly before a new release an "umbrella" issue should be opened which is used to collect the required adaptations and to track the work items.
+Shortly before a new release, an "umbrella" issue should be opened which is used to collect the required adaptations and to track the work items.
 For example, [#5102](https://github.com/gardener/gardener/issues/5102) can be used as a template for the issue description.\
 As you can see, the task of supporting a new Kubernetes version also includes the provider extensions maintained in the `gardener` GitHub organization and is not restricted to `gardener/gardener` only.
 
@@ -21,7 +21,7 @@ Most new minor Kubernetes releases incorporate API changes, deprecations or new 
 The community announces them via their [change logs](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/).
 In order to derive the release-specific tasks, the respective change log for the new version `vX.Y` has to be read and understood (for example, [this document](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.24.md) for `v1.24`).
 
-As already mentioned, typical changes to watch our for are:
+As already mentioned, typical changes to watch out for are:
 
 - API version promotions or deprecations
 - Feature gate promotions or deprecations
@@ -63,7 +63,7 @@ Run the [`.ci/check-and-release`](https://github.com/gardener/hyperkube/blob/mas
   - To maintain this list for new Kubernetes versions, run `hack/compare-kcm-controllers.sh <old-version> <new-version>` (e.g. `hack/compare-kcm-controllers.sh 1.22 1.23`).
   - It will present 2 lists of controllers: those added and those removed in `<new-version>` compared to `<old-version>`.
   - Double check whether such `ServiceAccount` indeed appears in the `kube-system` namespace when creating a cluster with `<new-version>`. Note that it sometimes might be hidden behind a default-off feature gate. You can create a local cluster with the new version using the [local provider](https://github.com/gardener/gardener/blob/master/docs/development/getting_started_locally.md).
-  - If it appears, add all added controllers to the list if the Kubernetes version is high enough.
+  - If it appears, add all added controllers to the list based on the Kubernetes version ([example](https://github.com/gardener/gardener/blob/5f87b18b951e104c2c25a7145548c8a2d08adefc/pkg/operation/botanist/component/shootsystem/shootsystem.go#L170-L174)).
   - For any removed controllers, add them only to the Kubernetes version if it is low enough.
 - Bump the used Kubernetes version for local `Shoot` and local e2e test.
   - See [this](https://github.com/gardener/gardener/pull/5255/commits/5707c4c7a4fd265b176387178b755cabeea89ffe) example commit.
