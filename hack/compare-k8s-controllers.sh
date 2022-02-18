@@ -18,9 +18,9 @@ set -e
 
 usage() {
   echo "Usage:"
-  echo "> compare-kcm-controllers.sh [ -h | <old version> <new version> ]"
+  echo "> compare-k8s-controllers.sh [ -h | <old version> <new version> ]"
   echo
-  echo ">> For example: compare-kcm-controllers.sh 1.22 1.23"
+  echo ">> For example: compare-k8s-controllers.sh 1.22 1.23"
 
   exit 0
 }
@@ -34,25 +34,36 @@ versions=("$1" "$2")
 out_dir=dev/temp
 mkdir -p "${out_dir}"
 
+kcm_dir="cmd/kube-controller-manager/app"
+ccm_dir="staging/src/k8s.io/cloud-provider/app"
+
 for version in "${versions[@]}"; do
   rm -rf "${out_dir}/kubernetes-${version}"
-  rm -f "${out_dir}/kcm-controllers-${version}.txt"
+  rm -f "${out_dir}/k8s-controllers-${version}.txt"
 
   git clone --depth 1 --filter=blob:none --sparse https://github.com/kubernetes/kubernetes -b "release-${version}" "${out_dir}/kubernetes-${version}"
   pushd "${out_dir}/kubernetes-${version}" > /dev/null
-  git sparse-checkout set "cmd/kube-controller-manager/app"
+  git sparse-checkout set "$kcm_dir" "$ccm_dir"
   popd > /dev/null
 
-  cat "${out_dir}/kubernetes-${version}/cmd/kube-controller-manager/app/"*.go |\
-    sed -rn "s/.*[Client|Config]OrDie\(\"(.*)\"\).*/\1/p" |\
-    grep -vE "informers|discovery" |\
+  for dir in $kcm_dir $ccm_dir; do
+    cat "${out_dir}/kubernetes-${version}/$dir/"*.go |\
+      sed -rn "s/.*[Client|Config]OrDie\(\"(.*)\"\).*/\1/p" |\
+      grep -vE "informers|discovery" |\
+      sort |\
+      uniq >> "${out_dir}/k8s-controllers-${version}.txt"
+  done
+
+  # Starting with release-v1.23 the names for the CCM controllers are maintained differently.
+  cat "${out_dir}/kubernetes-${version}/$ccm_dir/controllermanager.go" |\
+    sed -rn "s/.*ClientName: \"(.*)\",.*/\1/p" |\
     sort |\
-    uniq > "${out_dir}/kcm-controllers-${version}.txt"
+    uniq >> "${out_dir}/k8s-controllers-${version}.txt"
 done
 
 echo
 echo "kube-controller-manager controllers added in $2 compared to $1:"
-diff "${out_dir}/kcm-controllers-$1.txt" "${out_dir}/kcm-controllers-$2.txt" | grep '>' | awk '{print $2}'
+diff "${out_dir}/k8s-controllers-$1.txt" "${out_dir}/k8s-controllers-$2.txt" | grep '>' | awk '{print $2}'
 echo
 echo "kube-controller-manager controllers removed in $2 compared to $1:"
-diff "${out_dir}/kcm-controllers-$1.txt" "${out_dir}/kcm-controllers-$2.txt" | grep '<' | awk '{print $2}'
+diff "${out_dir}/k8s-controllers-$1.txt" "${out_dir}/k8s-controllers-$2.txt" | grep '<' | awk '{print $2}'

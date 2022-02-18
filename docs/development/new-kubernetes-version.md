@@ -62,7 +62,7 @@ Run the [`.ci/check-and-release`](https://github.com/gardener/hyperkube/blob/mas
   - See [this](https://github.com/gardener/gardener/pull/5255/commits/97923b0604300ff805def8eae981ed388d5e4a83) example commit.
 - Maintain the `ServiceAccount` names for the controllers part of `kube-controller-manager`:
   - The names are maintained in [this](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/component/shootsystem/shootsystem.go) file.
-  - To maintain this list for new Kubernetes versions, run `hack/compare-kcm-controllers.sh <old-version> <new-version>` (e.g. `hack/compare-kcm-controllers.sh 1.22 1.23`).
+  - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-controllers.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-controllers.sh 1.22 1.23`).
   - It will present 2 lists of controllers: those added and those removed in `<new-version>` compared to `<old-version>`.
   - Double check whether such `ServiceAccount` indeed appears in the `kube-system` namespace when creating a cluster with `<new-version>`. Note that it sometimes might be hidden behind a default-off feature gate. You can create a local cluster with the new version using the [local provider](https://github.com/gardener/gardener/blob/master/docs/development/getting_started_locally.md).
   - If it appears, add all added controllers to the list based on the Kubernetes version ([example](https://github.com/gardener/gardener/blob/5f87b18b951e104c2c25a7145548c8a2d08adefc/pkg/operation/botanist/component/shootsystem/shootsystem.go#L170-L174)).
