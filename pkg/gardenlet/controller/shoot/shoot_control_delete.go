@@ -545,6 +545,11 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServerService.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer, destroyKubeAPIServerSNI),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying gardener-resource-manager",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.ResourceManager.Destroy),
+			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
+		})
 
 		destroyControlPlaneExposure = g.Add(flow.Task{
 			Name:         "Destroying shoot control plane exposure",

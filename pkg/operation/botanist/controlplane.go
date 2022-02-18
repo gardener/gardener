@@ -205,7 +205,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 
 		// TODO: check if we can remove this mitigation once there is a garbage collection for VolumeAttachments (ref https://github.com/kubernetes/kubernetes/issues/77324)
-		// Currently on hibernation Machines are forecefully deleted and machine-controller-manager does not wait volumes to be detached.
+		// Currently on hibernation Machines are forcefully deleted and machine-controller-manager does not wait volumes to be detached.
 		// In this case kube-controller-manager cannot delete the corresponding VolumeAttachment objects and they are orphaned.
 		// Such orphaned VolumeAttachments then prevent/block PV deletion. For more details see https://github.com/gardener/gardener-extension-provider-gcp/issues/172.
 		// As the Nodes are already deleted, we can delete all VolumeAttachments.
