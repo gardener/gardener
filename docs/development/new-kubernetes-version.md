@@ -15,6 +15,8 @@ As you can see, the task of supporting a new Kubernetes version also includes th
 Generally, the work items can be split into two groups:
 The first group contains Kubernetes release-independent tasks, the second group contains tasks specific to the changes in the given Kubernetes release.
 
+> ℹ️ Upgrading the `k8s.io/*` and `sigs.k8s.io/controller-runtime` Golang dependencies is typically tracked and worked on separately (see e.g. [#4772](https://github.com/gardener/gardener/issues/4772) or [#5282](https://github.com/gardener/gardener/issues/5282)).
+
 ## Deriving Release-Specific Tasks
 
 Most new minor Kubernetes releases incorporate API changes, deprecations or new features.
