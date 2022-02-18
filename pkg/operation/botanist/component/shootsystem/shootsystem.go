@@ -140,7 +140,6 @@ func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 		"job-controller",
 		"metadata-informers",
 		"namespace-controller",
-		"node-controller",
 		"persistent-volume-binder",
 		"pod-garbage-collector",
 		"pv-protection-controller",
@@ -149,9 +148,7 @@ func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 		"replication-controller",
 		"resourcequota-controller",
 		"root-ca-cert-publisher",
-		"route-controller",
 		"service-account-controller",
-		"service-controller",
 		"shared-informers",
 		"statefulset-controller",
 		"token-cleaner",
@@ -170,6 +167,18 @@ func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 	if versionutils.ConstraintK8sGreaterEqual120.Check(s.values.KubernetesVersion) {
 		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
 			"storage-version-garbage-collector",
+		)
+	}
+
+	// The cloud-controller-manager library was only adapted beginning with Kubernetes 1.21 to not rely on the static
+	// ServiceAccount secrets anymore. Prior versions still need them, so let's add the ServiceAccount names for
+	// controllers which are part of cloud-controller-managers only for 1.21+.
+	// See https://github.com/kubernetes/kubernetes/pull/99291 for more details.
+	if versionutils.ConstraintK8sGreaterEqual121.Check(s.values.KubernetesVersion) {
+		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
+			"node-controller",
+			"route-controller",
+			"service-controller",
 		)
 	}
 

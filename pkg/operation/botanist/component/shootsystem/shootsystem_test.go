@@ -138,7 +138,6 @@ metadata:
 			"job-controller",
 			"metadata-informers",
 			"namespace-controller",
-			"node-controller",
 			"persistent-volume-binder",
 			"pod-garbage-collector",
 			"pv-protection-controller",
@@ -147,9 +146,7 @@ metadata:
 			"replication-controller",
 			"resourcequota-controller",
 			"root-ca-cert-publisher",
-			"route-controller",
 			"service-account-controller",
-			"service-controller",
 			"shared-informers",
 			"statefulset-controller",
 			"token-cleaner",
@@ -187,12 +184,28 @@ metadata:
 
 		Context("k8s >= 1.20", func() {
 			BeforeEach(func() {
-				values.KubernetesVersion = semver.MustParse("1.21.4")
+				values.KubernetesVersion = semver.MustParse("1.20.4")
 				component = New(c, namespace, values)
 			})
 
 			It("should successfully deploy all resources", func() {
 				names := append(defaultKCMControllerSANames, "default", "endpointslicemirroring-controller", "ephemeral-volume-controller", "storage-version-garbage-collector")
+
+				Expect(managedResourceSecret.Data).To(HaveLen(len(names)))
+				for _, name := range names {
+					Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__"+name+".yaml"])).To(Equal(serviceAccountYAMLFor(name)))
+				}
+			})
+		})
+
+		Context("k8s >= 1.21", func() {
+			BeforeEach(func() {
+				values.KubernetesVersion = semver.MustParse("1.21.4")
+				component = New(c, namespace, values)
+			})
+
+			It("should successfully deploy all resources", func() {
+				names := append(defaultKCMControllerSANames, "default", "endpointslicemirroring-controller", "ephemeral-volume-controller", "storage-version-garbage-collector", "service-controller", "route-controller", "node-controller")
 
 				Expect(managedResourceSecret.Data).To(HaveLen(len(names)))
 				for _, name := range names {
