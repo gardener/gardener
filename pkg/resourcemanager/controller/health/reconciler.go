@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -132,14 +133,17 @@ func (r *reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, m
 		}
 
 		if err := r.targetClient.Get(healthCheckCtx, objectKey, obj); err != nil {
-			if !apierrors.IsNotFound(err) {
+			if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
 				return ctrl.Result{}, err
 			}
 
 			var (
 				reason  = ref.Kind + "Missing"
-				message = fmt.Sprintf("Required %s %q in namespace %q is missing.", ref.Kind, ref.Name, ref.Namespace)
+				message = fmt.Sprintf("Required %s %q in namespace %q is missing", ref.Kind, ref.Name, ref.Namespace)
 			)
+			if meta.IsNoMatchError(err) {
+				message = fmt.Sprintf("%s: %v", message, err)
+			}
 			objectLog.Info("Finished ManagedResource health checks", "status", "unhealthy", "reason", reason, "message", message)
 
 			conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, reason, message)
