@@ -78,6 +78,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			LeaderElectionNamespace:    os.Getenv("LEADER_ELECTION_NAMESPACE"),
 			WebhookServerPort:          443,
 			WebhookCertDir:             "/tmp/gardener-extensions-cert",
+			HealthBindAddress:          ":8081",
 		}
 		generalOpts = &controllercmd.GeneralOptions{}
 
@@ -165,7 +166,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			reconcileOpts,
 			webhookOptions,
 		)
-		opts = manager.Options{}
 	)
 
 	cmd := &cobra.Command{
@@ -182,10 +182,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			mgrOpt := mgrOpts.Completed().Options()
-			mgrOpt.HealthProbeBindAddress = opts.HealthProbeBindAddress
-
-			mgr, err := manager.New(restOpts.Completed().Config, mgrOpt)
+			mgr, err := manager.New(restOpts.Completed().Config, mgrOpts.Completed().Options())
 			if err != nil {
 				return fmt.Errorf("could not instantiate manager: %w", err)
 			}
@@ -278,9 +275,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 		},
 	}
 
-	flags := cmd.Flags()
-	aggOption.AddFlags(flags)
-	flags.StringVar(&opts.HealthProbeBindAddress, "health-bind-address", ":8081", "bind address for the health server")
+	aggOption.AddFlags(cmd.Flags())
 
 	return cmd
 }
