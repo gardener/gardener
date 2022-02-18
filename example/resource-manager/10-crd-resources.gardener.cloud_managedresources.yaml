@@ -22,7 +22,7 @@ spec:
         this ManagedResource.
       jsonPath: .spec.class
       name: Class
-      type: date
+      type: string
     - description: ' Indicates whether all resources have been applied.'
       jsonPath: .status.conditions[?(@.type=="ResourcesApplied")].status
       name: Applied
