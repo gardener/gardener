@@ -116,7 +116,7 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 	// Well-known {kube,cloud}-controller-manager controllers using a token for ServiceAccounts in the shoot
 	// To maintain this list for each new Kubernetes version:
-	// * Run hack/compare-kcm-controllers.sh <old-version> <new-version> (e.g. 'hack/compare-kcm-controllers.sh 1.22 1.23').
+	// * Run hack/compare-k8s-controllers.sh <old-version> <new-version> (e.g. 'hack/compare-k8s-controllers.sh 1.22 1.23').
 	//   It will present 2 lists of controllers: those added and those removed in <new-version> compared to <old-version>.
 	// * Double check whether such ServiceAccount indeed appears in the kube-system namespace when creating a cluster
 	//   with <new-version>. Note that it sometimes might be hidden behind a default-off feature gate.
@@ -140,7 +140,6 @@ func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 		"job-controller",
 		"metadata-informers",
 		"namespace-controller",
-		"node-controller",
 		"persistent-volume-binder",
 		"pod-garbage-collector",
 		"pv-protection-controller",
@@ -149,9 +148,7 @@ func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 		"replication-controller",
 		"resourcequota-controller",
 		"root-ca-cert-publisher",
-		"route-controller",
 		"service-account-controller",
-		"service-controller",
 		"shared-informers",
 		"statefulset-controller",
 		"token-cleaner",
@@ -170,6 +167,18 @@ func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 	if versionutils.ConstraintK8sGreaterEqual120.Check(s.values.KubernetesVersion) {
 		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
 			"storage-version-garbage-collector",
+		)
+	}
+
+	// The cloud-controller-manager library was only adapted beginning with Kubernetes 1.21 to not rely on the static
+	// ServiceAccount secrets anymore. Prior versions still need them, so let's add the ServiceAccount names for
+	// controllers which are part of cloud-controller-managers only for 1.21+.
+	// See https://github.com/kubernetes/kubernetes/pull/99291 for more details.
+	if versionutils.ConstraintK8sGreaterEqual121.Check(s.values.KubernetesVersion) {
+		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
+			"node-controller",
+			"route-controller",
+			"service-controller",
 		)
 	}
 
