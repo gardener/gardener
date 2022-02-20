@@ -55,6 +55,8 @@ PERSISTANT_JOURNAL_FILE=/var/log/journal
 TEMP_JOURNAL_FILE=/run/log/journal
 if [ ! -d "$PERSISTANT_JOURNAL_FILE" ] && [ -d "$TEMP_JOURNAL_FILE" ]; then
 	sed -i -e "s|$PERSISTANT_JOURNAL_FILE|$TEMP_JOURNAL_FILE|g" ` + PathConfig + `
+elif  [ ! -d "$TEMP_JOURNAL_FILE" ] && [ -d "$PERSISTANT_JOURNAL_FILE" ]; then
+	sed -i -e "s|$TEMP_JOURNAL_FILE$|$PERSISTANT_JOURNAL_FILE|g" ` + PathConfig + `
 fi`
 
 type config struct {
