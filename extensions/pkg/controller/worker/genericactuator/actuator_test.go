@@ -348,8 +348,10 @@ var _ = Describe("Actuator", func() {
 			machineDeployments worker.MachineDeployments
 			expectedMachineSet machinev1alpha1.MachineSet
 			expectedMachine    machinev1alpha1.Machine
+			expectedMachine2   machinev1alpha1.Machine
 
-			machineWithoutNode *machinev1alpha1.Machine
+			machineWithoutNode  *machinev1alpha1.Machine
+			machineWithoutNode2 *machinev1alpha1.Machine
 
 			alreadyExistsError = apierrors.NewAlreadyExists(schema.GroupResource{Resource: "Machines"}, "machine")
 		)
@@ -377,15 +379,26 @@ var _ = Describe("Actuator", func() {
 				},
 			}
 
+			expectedMachine2 = machinev1alpha1.Machine{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "machine-two",
+					Namespace: "test-ns",
+				},
+				Status: machinev1alpha1.MachineStatus{
+					Node: "node-name-two",
+				},
+			}
+
 			machineDeployments = worker.MachineDeployments{
 				{
 					State: &worker.MachineDeploymentState{
-						Replicas: 1,
+						Replicas: 2,
 						MachineSets: []machinev1alpha1.MachineSet{
 							expectedMachineSet,
 						},
 						Machines: []machinev1alpha1.Machine{
 							expectedMachine,
+							expectedMachine2,
 						},
 					},
 				},
@@ -393,6 +406,9 @@ var _ = Describe("Actuator", func() {
 
 			machineWithoutNode = expectedMachine.DeepCopy()
 			machineWithoutNode.Status.Node = ""
+
+			machineWithoutNode2 = expectedMachine2.DeepCopy()
+			machineWithoutNode2.Status.Node = ""
 		})
 
 		AfterEach(func() {
@@ -402,8 +418,11 @@ var _ = Describe("Actuator", func() {
 		It("should deploy machinesets and machines present in the machine deployments' state", func() {
 			mockClient.EXPECT().Create(ctx, &expectedMachineSet)
 			mockClient.EXPECT().Create(ctx, machineWithoutNode)
+			mockClient.EXPECT().Create(ctx, machineWithoutNode2)
+			mockClient.EXPECT().Status().Return(mockClient)
 			mockClient.EXPECT().Status().Return(mockClient)
 			test.EXPECTPatch(ctx, mockClient, &expectedMachine, machineWithoutNode, types.MergePatchType)
+			test.EXPECTPatch(ctx, mockClient, &expectedMachine2, machineWithoutNode2, types.MergePatchType)
 
 			Expect(a.restoreMachineSetsAndMachines(ctx, logger, machineDeployments)).To(Succeed())
 		})
@@ -411,9 +430,12 @@ var _ = Describe("Actuator", func() {
 		It("should update the machine status if machineset and machine already exist", func() {
 			mockClient.EXPECT().Create(ctx, &expectedMachineSet).Return(alreadyExistsError)
 			mockClient.EXPECT().Create(ctx, machineWithoutNode).Return(alreadyExistsError)
+			mockClient.EXPECT().Create(ctx, machineWithoutNode2)
 			mockClient.EXPECT().Get(ctx, client.ObjectKeyFromObject(machineWithoutNode), machineWithoutNode)
 			mockClient.EXPECT().Status().Return(mockClient)
+			mockClient.EXPECT().Status().Return(mockClient)
 			test.EXPECTPatch(ctx, mockClient, &expectedMachine, machineWithoutNode, types.MergePatchType)
+			test.EXPECTPatch(ctx, mockClient, &expectedMachine2, machineWithoutNode2, types.MergePatchType)
 
 			Expect(a.restoreMachineSetsAndMachines(ctx, logger, machineDeployments)).To(Succeed())
 		})
