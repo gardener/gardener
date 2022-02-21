@@ -143,7 +143,9 @@ func (a *genericActuator) restoreMachineSetsAndMachines(ctx context.Context, log
 			// Calling Update() would include the whole MachineStatus in the request - including fields of type metav1.Time causing the mentioned issues.
 			patch := client.MergeFrom(newMachine.DeepCopy())
 			newMachine.Status.Node = machine.Status.Node
-			return a.client.Status().Patch(ctx, newMachine, patch)
+			if err := a.client.Status().Patch(ctx, newMachine, patch); err != nil {
+				return err
+			}
 		}
 	}
 
