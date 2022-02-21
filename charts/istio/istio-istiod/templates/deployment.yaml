@@ -133,6 +133,7 @@ spec:
       - name: config-volume
         configMap:
           name: istio
+      priorityClassName: {{ .Values.priorityClassName }}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
