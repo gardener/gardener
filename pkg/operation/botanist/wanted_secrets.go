@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"net"
 
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
@@ -404,16 +403,6 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			APIServerHost: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, false),
 		}},
 	})
-
-	// Secret definition for ssh-keypair.old
-	gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(b.GetShootState().Spec.Gardener)
-	if secret := gardenerResourceDataList.Get(v1beta1constants.SecretNameOldSSHKeyPair); secret != nil {
-		secretList = append(secretList, &secrets.RSASecretConfig{
-			Name:       v1beta1constants.SecretNameOldSSHKeyPair,
-			Bits:       4096,
-			UsedForSSH: true,
-		})
-	}
 
 	if b.isShootNodeLoggingEnabled() {
 		// Secret definition for loki (ingress)
