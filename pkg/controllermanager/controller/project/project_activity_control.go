@@ -16,67 +16,68 @@ package project
 
 import (
 	"context"
+	"fmt"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/logger"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/sirupsen/logrus"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const activityReconcilerName = "activity"
+
 // NewActivityReconciler creates a new instance of a reconciler which reconciles the LastActivityTimestamp of a project, then it calls the stale reconciler.
-func NewActivityReconciler(
-	l logrus.FieldLogger,
-	gardenClient client.Client,
-) reconcile.Reconciler {
+func NewActivityReconciler(gardenClient client.Client) reconcile.Reconciler {
 	return &projectActivityReconciler{
-		logger:       l,
 		gardenClient: gardenClient,
 	}
 }
 
 type projectActivityReconciler struct {
-	logger       logrus.FieldLogger
 	gardenClient client.Client
 }
 
 func (r *projectActivityReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
 
 	shoot := &gardencorev1beta1.Shoot{}
-
 	if err := r.gardenClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: request.Name}, shoot); err != nil {
-		logger.Logger.Errorf("Couldn't get Shoot due to: %v", err)
-		return reconcile.Result{}, err
+		if apierrors.IsNotFound(err) {
+			log.Info("Object is gone, stop reconciling")
+			return reconcile.Result{}, nil
+		}
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	return r.reconcile(ctx, shoot)
+	return r.reconcile(ctx, log, shoot)
 }
 
-func (r *projectActivityReconciler) reconcile(ctx context.Context, obj client.Object) (reconcile.Result, error) {
+func (r *projectActivityReconciler) reconcile(ctx context.Context, log logr.Logger, obj client.Object) (reconcile.Result, error) {
 	project, err := gutil.ProjectForNamespaceFromReader(ctx, r.gardenClient, obj.GetNamespace())
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return reconcile.Result{Requeue: false}, nil
+			// project is gone, nothing to do here
+			return reconcile.Result{}, nil
 		}
-		logger.Logger.Errorf("Couldn't get project due to: %v", err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("failed to get project for namespace %q: %w", obj.GetNamespace(), err)
 	}
 
 	if project.Status.LastActivityTimestamp != nil && obj.GetCreationTimestamp().UTC().Before(project.Status.LastActivityTimestamp.UTC()) {
+		// not the newest object in this project, nothing to do
 		return reconcile.Result{}, nil
 	}
 
 	timestamp := obj.GetCreationTimestamp()
-
 	if project.Status.LastActivityTimestamp == nil {
 		shoots := &gardencorev1beta1.ShootList{}
 		if err := r.gardenClient.List(ctx, shoots, client.InNamespace(*project.Spec.Namespace)); err != nil {
-			logger.Logger.Errorf("Couldn't list Shoots due to: %v", err)
-			return reconcile.Result{}, err
+			return reconcile.Result{}, fmt.Errorf("failed to list shoots in project namespace %q: %w", *project.Spec.Namespace, err)
 		}
 		for _, shoot := range shoots.Items {
 			if shoot.GetCreationTimestamp().UTC().After(timestamp.UTC()) {
@@ -85,11 +86,11 @@ func (r *projectActivityReconciler) reconcile(ctx context.Context, obj client.Ob
 		}
 	}
 
+	log.Info("Updating Project's lastActivityTimestamp", "lastActivityTimestamp", timestamp)
 	if err := updateStatus(ctx, r.gardenClient, project, func() {
 		project.Status.LastActivityTimestamp = &timestamp
 	}); err != nil {
-		logger.Logger.Errorf("Error while updating project: %v", err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("failed updating Project's lastActivityTimestamp: %w", err)
 	}
 	return reconcile.Result{}, nil
 }
@@ -97,7 +98,7 @@ func (r *projectActivityReconciler) reconcile(ctx context.Context, obj client.Ob
 func (c *Controller) updateShootActivity(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
 	c.projectShootActivityQueue.Add(key)

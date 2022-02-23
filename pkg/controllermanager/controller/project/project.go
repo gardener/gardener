@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/client-go/tools/cache"
@@ -96,7 +95,7 @@ func NewProjectController(
 		log:                            log,
 		projectReconciler:              NewProjectReconciler(config.Controllers.Project, gardenClient, recorder),
 		projectStaleReconciler:         NewProjectStaleReconciler(config.Controllers.Project, gardenClient.Client()),
-		projectShootActivityReconciler: NewActivityReconciler(logger.Logger, gardenClient.Client()),
+		projectShootActivityReconciler: NewActivityReconciler(gardenClient.Client()),
 		projectQueue:                   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
 		projectStaleQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
 		projectShootActivityQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Activity"),
@@ -148,7 +147,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	for i := 0; i < workers; i++ {
 		controllerutils.CreateWorker(ctx, c.projectQueue, "Project", c.projectReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(projectReconcilerName)))
 		controllerutils.CreateWorker(ctx, c.projectStaleQueue, "Project Stale", c.projectStaleReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(staleReconcilerName)))
-		controllerutils.CreateWorker(ctx, c.projectShootActivityQueue, "Project Activity", c.projectShootActivityReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log))
+		controllerutils.CreateWorker(ctx, c.projectShootActivityQueue, "Project Activity", c.projectShootActivityReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(activityReconcilerName)))
 	}
 
 	// Shutdown handling
