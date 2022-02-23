@@ -174,6 +174,28 @@ var _ = Describe("dnsrecord", func() {
 	})
 
 	Context("DefaultExternalDNSRecord", func() {
+		It("should create a component with correct values", func() {
+			r := b.DefaultExternalDNSRecord()
+			r.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
+			r.SetValues([]string{address})
+
+			actual := r.GetValues()
+			Expect(actual).To(DeepEqual(&dnsrecord.Values{
+				Name:       b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
+				SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
+				Namespace:  seedNamespace,
+				TTL:        pointer.Int64(ttl),
+				Type:       externalProvider,
+				Zone:       pointer.String(externalZone),
+				SecretData: map[string][]byte{
+					"external-foo": []byte("external-bar"),
+				},
+				DNSName:    "api." + externalDomain,
+				RecordType: extensionsv1alpha1.DNSRecordTypeA,
+				Values:     []string{address},
+			}))
+		})
+
 		It("should create a component that creates the DNSRecord and its secret on Deploy", func() {
 			r := b.DefaultExternalDNSRecord()
 			r.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
@@ -236,6 +258,28 @@ var _ = Describe("dnsrecord", func() {
 	})
 
 	Context("DefaultInternalDNSRecord", func() {
+		It("should create a component with correct values", func() {
+			c := b.DefaultInternalDNSRecord()
+			c.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
+			c.SetValues([]string{address})
+
+			actual := c.GetValues()
+			Expect(actual).To(DeepEqual(&dnsrecord.Values{
+				Name:       b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
+				SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
+				Namespace:  seedNamespace,
+				TTL:        pointer.Int64(ttl),
+				Type:       internalProvider,
+				Zone:       pointer.String(internalZone),
+				SecretData: map[string][]byte{
+					"internal-foo": []byte("internal-bar"),
+				},
+				DNSName:    "api." + internalDomain,
+				RecordType: extensionsv1alpha1.DNSRecordTypeA,
+				Values:     []string{address},
+			}))
+		})
+
 		It("should create a component that creates the DNSRecord and its secret on Deploy", func() {
 			r := b.DefaultInternalDNSRecord()
 			r.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
