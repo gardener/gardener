@@ -109,7 +109,7 @@ data:
             - source_labels: [__meta_kubernetes_pod_label_app]
               regex: vpa-recommender
               action: keep
-            - source_labels: [ __meta_kubernetes_service_port_name ]
+            - source_labels: [__meta_kubernetes_pod_container_port_name]
               regex: metrics
               action: keep
             - action: labelmap
