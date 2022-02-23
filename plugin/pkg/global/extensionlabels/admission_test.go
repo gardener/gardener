@@ -271,11 +271,8 @@ var _ = Describe("ExtensionLabels tests", func() {
 	Context("CloudProfile", func() {
 		var (
 			cloudProfile  *core.CloudProfile
-			providerType  = "provider-type"
-			machineImage1 = "machine-image-1"
-			machineImage2 = "machine-image-2"
-			crType1       = "containerRuntime-types-1"
-			crType2       = "containerRuntime-types-2"
+			providerType1 = "provider-type-1"
+			providerType2 = "provider-type-2"
 		)
 
 		BeforeEach(func() {
@@ -284,30 +281,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 					Name: "test-cloudprofile",
 				},
 				Spec: core.CloudProfileSpec{
-					Type: providerType,
-					MachineImages: []core.MachineImage{
-						{
-							Name: machineImage1,
-							Versions: []core.MachineImageVersion{
-								{
-									ExpirableVersion: core.ExpirableVersion{Version: "version-1"},
-									CRI: []core.CRI{
-										{
-											ContainerRuntimes: []core.ContainerRuntime{{Type: crType1}},
-										},
-									},
-								},
-								{
-									ExpirableVersion: core.ExpirableVersion{Version: "version-2"},
-									CRI: []core.CRI{
-										{
-											ContainerRuntimes: []core.ContainerRuntime{{Type: crType1}},
-										},
-									},
-								},
-							},
-						},
-					},
+					Type: providerType1,
 				},
 			}
 		})
@@ -319,48 +293,23 @@ var _ = Describe("ExtensionLabels tests", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			expectedLabels := map[string]string{
-				"operatingsystemconfig.extensions.gardener.cloud/" + machineImage1: "true",
-				"provider.extensions.gardener.cloud/" + providerType:               "true",
-				"containerruntime.extensions.gardener.cloud/" + crType1:            "true",
+				"provider.extensions.gardener.cloud/" + providerType1: "true",
 			}
 
 			Expect(cloudProfile.ObjectMeta.Labels).To(Equal(expectedLabels))
 		})
 
 		It("should add all the correct labels on updation", func() {
-			machineImage := core.MachineImage{
-				Name: machineImage2,
-				Versions: []core.MachineImageVersion{
-					{
-						CRI: []core.CRI{
-							{
-								ContainerRuntimes: []core.ContainerRuntime{
-									{
-										Type: crType2,
-									},
-								},
-							},
-						},
-					},
-				},
-			}
-
 			newCloudProfile := cloudProfile.DeepCopy()
-			newCloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, machineImage)
+			newCloudProfile.Spec.Type = providerType2
 
 			attrs := admission.NewAttributesRecord(newCloudProfile, cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 			err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 
-			expectedLabels := make(map[string]string)
-
-			expectedLabels["provider.extensions.gardener.cloud/"+providerType] = "true"
-			for _, machineImage := range []string{machineImage1, machineImage2} {
-				expectedLabels["operatingsystemconfig.extensions.gardener.cloud/"+machineImage] = "true"
-			}
-			for _, crType := range []string{crType1, crType2} {
-				expectedLabels["containerruntime.extensions.gardener.cloud/"+crType] = "true"
+			expectedLabels := map[string]string{
+				"provider.extensions.gardener.cloud/" + providerType2: "true",
 			}
 
 			Expect(newCloudProfile.ObjectMeta.Labels).To(Equal(expectedLabels))

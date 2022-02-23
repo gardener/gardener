@@ -287,18 +287,18 @@ const (
 	// LabelMonitoring is a constant for a label for monitoring stack configurations
 	LabelMonitoring = "monitoring"
 
-	// LabelExtensionTypePrefix is used to prefix extension label for extension types.
-	LabelExtensionTypePrefix = "extensions.extensions.gardener.cloud/"
-	// LabelExtensionProviderPrefix is used to prefix extension label for cloud provider types.
-	LabelExtensionProviderPrefix = "provider.extensions.gardener.cloud/"
-	// LabelExtensionDNSRecordPrefix is used to prefix extension label for DNS types.
-	LabelExtensionDNSRecordPrefix = "dnsrecord.extensions.gardener.cloud/"
-	// LabelExtensionNetworkingPrefix is used to prefix extension label for networking plugin types.
-	LabelExtensionNetworkingPrefix = "networking.extensions.gardener.cloud/"
-	// LabelExtensionOperatingSystemConfigPrefix is used to prefix extension label for OperatingSystemConfig types.
-	LabelExtensionOperatingSystemConfigPrefix = "operatingsystemconfig.extensions.gardener.cloud/"
-	// LabelExtensionContainerRuntimePrefix is used to prefix extension label for ContainerRuntime types.
-	LabelExtensionContainerRuntimePrefix = "containerruntime.extensions.gardener.cloud/"
+	// LabelExtensionExtensionTypePrefix is used to prefix extension label for extension types.
+	LabelExtensionExtensionTypePrefix = "extensions.extensions.gardener.cloud/"
+	// LabelExtensionProviderTypePrefix is used to prefix extension label for cloud provider types.
+	LabelExtensionProviderTypePrefix = "provider.extensions.gardener.cloud/"
+	// LabelExtensionDNSRecordTypePrefix is used to prefix extension label for DNS types.
+	LabelExtensionDNSRecordTypePrefix = "dnsrecord.extensions.gardener.cloud/"
+	// LabelExtensionNetworkingTypePrefix is used to prefix extension label for networking plugin types.
+	LabelExtensionNetworkingTypePrefix = "networking.extensions.gardener.cloud/"
+	// LabelExtensionOperatingSystemConfigTypePrefix is used to prefix extension label for OperatingSystemConfig types.
+	LabelExtensionOperatingSystemConfigTypePrefix = "operatingsystemconfig.extensions.gardener.cloud/"
+	// LabelExtensionContainerRuntimeTypePrefix is used to prefix extension label for ContainerRuntime types.
+	LabelExtensionContainerRuntimeTypePrefix = "containerruntime.extensions.gardener.cloud/"
 
 	// LabelNetworkPolicyToBlockedCIDRs allows Egress from pods labeled with 'networking.gardener.cloud/to-blocked-cidrs=allowed'.
 	LabelNetworkPolicyToBlockedCIDRs = "networking.gardener.cloud/to-blocked-cidrs"

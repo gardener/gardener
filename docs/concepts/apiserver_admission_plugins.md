@@ -58,7 +58,7 @@ This prevents misconfigurations that would otherwise allow users to create such 
 
 _(enabled by default)_
 
-This admission controller reacts on `CREATE` and `UPDATE` operations for  `BackupBucket`s, `BackupEntry`s, `CloudProfile`s, `Seed`s and `Shoot`s. For all the various extension types in the specifications of these objects, it adds a corresponding label in the resource. This would allow the extension admission webhooks to filter out the resources they are responsible for and ignore all others.
+This admission controller reacts on `CREATE` and `UPDATE` operations for  `BackupBucket`s, `BackupEntry`s, `CloudProfile`s, `Seed`s and `Shoot`s. For all the various extension types in the specifications of these objects, it adds a corresponding label in the resource. This would allow extension admission webhooks to filter out the resources they are responsible for and ignore all others. This label is of the form `<extension>.extensions.gardener.cloud/<type> : "true"`. For example, an extension label for provider extension type `aws`, looks like `provider.extensions.gardener.cloud/aws : "true"`.
 
 ## `PlantValidator`
 

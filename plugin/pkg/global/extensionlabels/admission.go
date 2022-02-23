@@ -173,13 +173,13 @@ func (e *ExtensionLabels) Admit(ctx context.Context, a admission.Attributes, o a
 }
 
 func addMetaDataLabelsSeed(seed *core.Seed) {
-	metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelExtensionProviderPrefix+seed.Spec.Provider.Type, "true")
+	metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+seed.Spec.Provider.Type, "true")
 	if seed.Spec.Backup != nil {
-		metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelExtensionProviderPrefix+seed.Spec.Backup.Provider, "true")
+		metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+seed.Spec.Backup.Provider, "true")
 	}
 
 	if seed.Spec.DNS.Provider != nil && utilfeature.DefaultFeatureGate.Enabled(features.UseDNSRecords) {
-		metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelExtensionDNSRecordPrefix+seed.Spec.DNS.Provider.Type, "true")
+		metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelExtensionDNSRecordTypePrefix+seed.Spec.DNS.Provider.Type, "true")
 	}
 }
 
@@ -188,16 +188,16 @@ func addMetaDataLabelsShoot(shoot *core.Shoot) {
 		if extension.Disabled != nil && *extension.Disabled {
 			continue
 		}
-		metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionTypePrefix+extension.Type, "true")
+		metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionExtensionTypePrefix+extension.Type, "true")
 	}
 	for _, pool := range shoot.Spec.Provider.Workers {
 		if pool.CRI != nil {
 			for _, cr := range pool.CRI.ContainerRuntimes {
-				metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionContainerRuntimePrefix+cr.Type, "true")
+				metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionContainerRuntimeTypePrefix+cr.Type, "true")
 			}
 		}
 		if pool.Machine.Image != nil {
-			metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionOperatingSystemConfigPrefix+pool.Machine.Image.Name, "true")
+			metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionOperatingSystemConfigTypePrefix+pool.Machine.Image.Name, "true")
 		}
 	}
 	if shoot.Spec.DNS != nil {
@@ -206,49 +206,38 @@ func addMetaDataLabelsShoot(shoot *core.Shoot) {
 				continue
 			}
 			if utilfeature.DefaultFeatureGate.Enabled(features.UseDNSRecords) {
-				metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionDNSRecordPrefix+*provider.Type, "true")
+				metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionDNSRecordTypePrefix+*provider.Type, "true")
 			}
 		}
 	}
-	metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionProviderPrefix+shoot.Spec.Provider.Type, "true")
-	metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionNetworkingPrefix+shoot.Spec.Networking.Type, "true")
+	metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+shoot.Spec.Provider.Type, "true")
+	metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionNetworkingTypePrefix+shoot.Spec.Networking.Type, "true")
 }
 
 func addMetaDataLabelsCloudProfile(cloudProfile *core.CloudProfile) {
-	for _, machineImage := range cloudProfile.Spec.MachineImages {
-		metav1.SetMetaDataLabel(&cloudProfile.ObjectMeta, v1beta1constants.LabelExtensionOperatingSystemConfigPrefix+machineImage.Name, "true")
-
-		for _, machineImageVersion := range machineImage.Versions {
-			for _, cri := range machineImageVersion.CRI {
-				for _, cr := range cri.ContainerRuntimes {
-					metav1.SetMetaDataLabel(&cloudProfile.ObjectMeta, v1beta1constants.LabelExtensionContainerRuntimePrefix+cr.Type, "true")
-				}
-			}
-		}
-	}
-	metav1.SetMetaDataLabel(&cloudProfile.ObjectMeta, v1beta1constants.LabelExtensionProviderPrefix+cloudProfile.Spec.Type, "true")
+	metav1.SetMetaDataLabel(&cloudProfile.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+cloudProfile.Spec.Type, "true")
 }
 
 func addMetaDataLabelsBackupBucket(backupBucket *core.BackupBucket) {
-	metav1.SetMetaDataLabel(&backupBucket.ObjectMeta, v1beta1constants.LabelExtensionProviderPrefix+backupBucket.Spec.Provider.Type, "true")
+	metav1.SetMetaDataLabel(&backupBucket.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+backupBucket.Spec.Provider.Type, "true")
 }
 
 func addMetaDataLabelsBackupEntry(backupEntry *core.BackupEntry, backupBucket *core.BackupBucket) {
-	metav1.SetMetaDataLabel(&backupEntry.ObjectMeta, v1beta1constants.LabelExtensionProviderPrefix+backupBucket.Spec.Provider.Type, "true")
+	metav1.SetMetaDataLabel(&backupEntry.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+backupBucket.Spec.Provider.Type, "true")
 }
 
 func removeLabels(objectMeta *metav1.ObjectMeta) {
 	extensionLabels := []string{
-		v1beta1constants.LabelExtensionTypePrefix,
-		v1beta1constants.LabelExtensionProviderPrefix,
-		v1beta1constants.LabelExtensionDNSRecordPrefix,
-		v1beta1constants.LabelExtensionNetworkingPrefix,
-		v1beta1constants.LabelExtensionOperatingSystemConfigPrefix,
-		v1beta1constants.LabelExtensionContainerRuntimePrefix,
+		v1beta1constants.LabelExtensionExtensionTypePrefix,
+		v1beta1constants.LabelExtensionProviderTypePrefix,
+		v1beta1constants.LabelExtensionDNSRecordTypePrefix,
+		v1beta1constants.LabelExtensionNetworkingTypePrefix,
+		v1beta1constants.LabelExtensionOperatingSystemConfigTypePrefix,
+		v1beta1constants.LabelExtensionContainerRuntimeTypePrefix,
 	}
 	for k := range objectMeta.Labels {
 		for _, label := range extensionLabels {
-			if strings.Contains(k, label) {
+			if strings.HasPrefix(k, label) {
 				delete(objectMeta.Labels, k)
 			}
 		}
