@@ -30,3 +30,7 @@ component-cli component-archive resources add \
 # Create CTF tar archive at CTF_PATH based on directory in component archive layout (packed automatically)
 # Pushed by CI to private registry if CTF is found at CTF_PATH.
 component-cli ctf add "${CTF_PATH}" -f "${COMPONENT_ARCHIVE_PATH}"
+
+# Also upload the ctf to an open source repo
+# todo: remove as soon as the default component repository is public
+component-cli ctf push --repo-ctx="eu.gcr.io/gardener-project/development" "${CTF_PATH}"
