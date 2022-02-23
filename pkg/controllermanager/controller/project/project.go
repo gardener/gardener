@@ -95,7 +95,7 @@ func NewProjectController(
 		gardenClient:                   gardenClient.Client(),
 		log:                            log,
 		projectReconciler:              NewProjectReconciler(config.Controllers.Project, gardenClient, recorder),
-		projectStaleReconciler:         NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, gardenClient.Client()),
+		projectStaleReconciler:         NewProjectStaleReconciler(config.Controllers.Project, gardenClient.Client()),
 		projectShootActivityReconciler: NewActivityReconciler(logger.Logger, gardenClient.Client()),
 		projectQueue:                   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
 		projectStaleQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
@@ -147,7 +147,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for i := 0; i < workers; i++ {
 		controllerutils.CreateWorker(ctx, c.projectQueue, "Project", c.projectReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(projectReconcilerName)))
-		controllerutils.CreateWorker(ctx, c.projectStaleQueue, "Project Stale", c.projectStaleReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log))
+		controllerutils.CreateWorker(ctx, c.projectStaleQueue, "Project Stale", c.projectStaleReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(staleReconcilerName)))
 		controllerutils.CreateWorker(ctx, c.projectShootActivityQueue, "Project Activity", c.projectShootActivityReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log))
 	}
 
