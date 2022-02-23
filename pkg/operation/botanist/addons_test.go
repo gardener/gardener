@@ -260,6 +260,52 @@ var _ = Describe("addons", func() {
 	})
 
 	Context("DefaultIngressDNSRecord", func() {
+		It("should create a component with correct values when nginx-ingress addon is enabled", func() {
+			c := b.DefaultIngressDNSRecord()
+			c.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
+			c.SetValues([]string{address})
+
+			actual := c.GetValues()
+			Expect(actual).To(DeepEqual(&dnsrecord.Values{
+				Name:       b.Shoot.GetInfo().Name + "-" + common.ShootDNSIngressName,
+				SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
+				Namespace:  seedNamespace,
+				TTL:        pointer.Int64(ttl),
+				Type:       externalProvider,
+				Zone:       pointer.String(externalZone),
+				SecretData: map[string][]byte{
+					"external-foo": []byte("external-bar"),
+				},
+				DNSName:    "*.ingress." + externalDomain,
+				RecordType: extensionsv1alpha1.DNSRecordTypeA,
+				Values:     []string{address},
+			}))
+		})
+
+		It("should create a component with correct values when nginx-ingress addon is disabled", func() {
+			b.Shoot.GetInfo().Spec.Addons.NginxIngress.Enabled = false
+
+			c := b.DefaultIngressDNSRecord()
+			c.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
+			c.SetValues([]string{address})
+
+			actual := c.GetValues()
+			Expect(actual).To(DeepEqual(&dnsrecord.Values{
+				Name:       b.Shoot.GetInfo().Name + "-" + common.ShootDNSIngressName,
+				SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
+				Namespace:  seedNamespace,
+				TTL:        pointer.Int64(ttl),
+				Type:       externalProvider,
+				Zone:       pointer.String(externalZone),
+				SecretData: map[string][]byte{
+					"external-foo": []byte("external-bar"),
+				},
+				DNSName:    "*.ingress." + externalDomain,
+				RecordType: extensionsv1alpha1.DNSRecordTypeA,
+				Values:     []string{address},
+			}))
+		})
+
 		It("should create a component that creates the DNSRecord and its secret on Deploy", func() {
 			c := b.DefaultIngressDNSRecord()
 			c.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
