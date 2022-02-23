@@ -2481,7 +2481,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					if !allowed {
 						matcher = ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeForbidden),
-							"Field": Equal("metadata.annotations.gardener.cloud/operation"),
+							"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
 						})))
 					}
 
@@ -2521,6 +2521,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Type: core.LastOperationTypeRestore,
 					},
 				}),
+				Entry("shoot was restored successfully", true, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type:  core.LastOperationTypeRestore,
+						State: core.LastOperationStateSucceeded,
+					},
+				}),
 				Entry("ca rotation phase is prepare", false, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeReconcile,
@@ -2528,7 +2534,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
 							CertificateAuthorities: &core.ShootCARotation{
-								Phase: core.RotationPrepare,
+								Phase: core.RotationPreparing,
 							},
 						},
 					},
@@ -2552,7 +2558,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
 							CertificateAuthorities: &core.ShootCARotation{
-								Phase: core.RotationComplete,
+								Phase: core.RotationCompleting,
 							},
 						},
 					},
@@ -2581,7 +2587,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					if !allowed {
 						matcher = ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeForbidden),
-							"Field": Equal("metadata.annotations.gardener.cloud/operation"),
+							"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
 						})))
 					}
 
@@ -2595,7 +2601,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
 							CertificateAuthorities: &core.ShootCARotation{
-								Phase: core.RotationPrepare,
+								Phase: core.RotationPreparing,
 							},
 						},
 					},
@@ -2619,7 +2625,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Credentials: &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
 							CertificateAuthorities: &core.ShootCARotation{
-								Phase: core.RotationComplete,
+								Phase: core.RotationCompleting,
 							},
 						},
 					},

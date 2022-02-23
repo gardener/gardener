@@ -20,6 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -42,44 +43,62 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
 		defer cancel()
 
-		patch := client.MergeFrom(f.Shoot.DeepCopy())
-		metav1.SetMetaDataAnnotation(&f.Shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateCAStart)
-		Expect(f.GardenClient.Client().Patch(ctx, f.Shoot, patch)).To(Succeed())
+		Eventually(func() error {
+			patch := client.MergeFrom(f.Shoot.DeepCopy())
+			metav1.SetMetaDataAnnotation(&f.Shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateCAStart)
+			return f.GardenClient.Client().Patch(ctx, f.Shoot, patch)
+		}).Should(Succeed())
 
-		Eventually(func() gardencorev1beta1.ShootCredentialsRotationPhase {
-			Expect(f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot)).To(Succeed())
-			if f.Shoot.Status.Credentials != nil &&
-				f.Shoot.Status.Credentials.Rotation != nil &&
-				f.Shoot.Status.Credentials.Rotation.CertificateAuthorities != nil {
-				return f.Shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase
+		Eventually(func(g Gomega) gardencorev1beta1.ShootCredentialsRotationPhase {
+			g.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot)).To(Succeed())
+			if phase := helper.GetShootCARotationPhase(f.Shoot.Status.Credentials); len(phase) > 0 {
+				return phase
 			}
 			return ""
-		}).Should(Equal(gardencorev1beta1.RotationPrepare), "ca rotation phase should be 'Prepare'")
+		}).Should(Equal(gardencorev1beta1.RotationPreparing), "ca rotation phase should be 'Preparing'")
+
+		Eventually(func(g Gomega) bool {
+			g.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot)).To(Succeed())
+			_, ok := f.Shoot.Annotations[v1beta1constants.GardenerOperation]
+			return ok
+		}).Should(BeFalse())
 
 		Expect(f.WaitForShootToBeReconciled(ctx, f.Shoot)).To(Succeed())
-		Expect(f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot)).To(Succeed())
+
+		Eventually(func() error {
+			return f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot)
+		}).Should(Succeed())
 		Expect(f.Shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase).To(Equal(gardencorev1beta1.RotationPrepared), "ca rotation phase should be 'Prepared'")
 
 		By("Complete CA rotation")
 		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
 		defer cancel()
 
-		patch = client.MergeFrom(f.Shoot.DeepCopy())
-		metav1.SetMetaDataAnnotation(&f.Shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateCAComplete)
-		Expect(f.GardenClient.Client().Patch(ctx, f.Shoot, patch)).To(Succeed())
+		Eventually(func() error {
+			patch := client.MergeFrom(f.Shoot.DeepCopy())
+			metav1.SetMetaDataAnnotation(&f.Shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateCAComplete)
+			return f.GardenClient.Client().Patch(ctx, f.Shoot, patch)
+		}).Should(Succeed())
 
-		Eventually(func() gardencorev1beta1.ShootCredentialsRotationPhase {
-			Expect(f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot)).To(Succeed())
-			if f.Shoot.Status.Credentials != nil &&
-				f.Shoot.Status.Credentials.Rotation != nil &&
-				f.Shoot.Status.Credentials.Rotation.CertificateAuthorities != nil {
-				return f.Shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase
+		Eventually(func(g Gomega) gardencorev1beta1.ShootCredentialsRotationPhase {
+			g.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot)).To(Succeed())
+			if phase := helper.GetShootCARotationPhase(f.Shoot.Status.Credentials); len(phase) > 0 {
+				return phase
 			}
 			return ""
-		}).Should(Equal(gardencorev1beta1.RotationComplete))
+		}).Should(Equal(gardencorev1beta1.RotationCompleting), "ca rotation phase should be 'Completing'")
+
+		Eventually(func(g Gomega) bool {
+			g.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot)).To(Succeed())
+			_, ok := f.Shoot.Annotations[v1beta1constants.GardenerOperation]
+			return ok
+		}).Should(BeFalse())
 
 		Expect(f.WaitForShootToBeReconciled(ctx, f.Shoot)).To(Succeed())
-		Expect(f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot)).To(Succeed())
+
+		Eventually(func() error {
+			return f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot)
+		}).Should(Succeed())
 		Expect(f.Shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase).To(Equal(gardencorev1beta1.RotationCompleted))
 		Expect(time.Now().UTC().Sub(f.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastCompletionTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
 

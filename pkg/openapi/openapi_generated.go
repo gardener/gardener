@@ -6927,7 +6927,7 @@ func schema_pkg_apis_core_v1alpha1_ShootCredentialsRotation(ref common.Reference
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ShootCredentialsRotation contains information about the certificate authority credential rotation.",
+				Description: "ShootCredentialsRotation contains information about the rotation of credentials.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"certificateAuthorities": {
@@ -13996,7 +13996,7 @@ func schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref common.ReferenceC
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ShootCredentialsRotation contains information about the certificate authority credential rotation.",
+				Description: "ShootCredentialsRotation contains information about the rotation of credentials.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"certificateAuthorities": {

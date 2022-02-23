@@ -2146,7 +2146,7 @@ message ShootCredentials {
   optional ShootCredentialsRotation rotation = 1;
 }
 
-// ShootCredentialsRotation contains information about the certificate authority credential rotation.
+// ShootCredentialsRotation contains information about the rotation of credentials.
 message ShootCredentialsRotation {
   // CertificateAuthorities contains information about the certificate authority credential rotation.
   // +optional

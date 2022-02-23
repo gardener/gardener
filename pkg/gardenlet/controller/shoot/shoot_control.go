@@ -676,20 +676,11 @@ func (r *shootReconciler) updateShootStatusOperationStart(ctx context.Context, g
 
 	switch shoot.Annotations[v1beta1constants.GardenerOperation] {
 	case v1beta1constants.ShootOperationRotateCAStart:
-		if shoot.Status.Credentials == nil {
-			shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{}
-		}
-		if shoot.Status.Credentials.Rotation == nil {
-			shoot.Status.Credentials.Rotation = &gardencorev1beta1.ShootCredentialsRotation{}
-		}
-		if shoot.Status.Credentials.Rotation.CertificateAuthorities == nil {
-			shoot.Status.Credentials.Rotation.CertificateAuthorities = &gardencorev1beta1.ShootCARotation{}
-		}
-		shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase = gardencorev1beta1.RotationPrepare
+		v1beta1helper.SetShootCARotationPhase(shoot, gardencorev1beta1.RotationPreparing)
 		mustRemoveOperationAnnotation = true
 
 	case v1beta1constants.ShootOperationRotateCAComplete:
-		shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase = gardencorev1beta1.RotationComplete
+		v1beta1helper.SetShootCARotationPhase(shoot, gardencorev1beta1.RotationCompleting)
 		mustRemoveOperationAnnotation = true
 	}
 
@@ -784,15 +775,12 @@ func (r *shootReconciler) patchShootStatusOperationSuccess(
 		LastUpdateTime: now,
 	}
 
-	if shoot.Status.Credentials != nil && shoot.Status.Credentials.Rotation != nil && shoot.Status.Credentials.Rotation.CertificateAuthorities != nil {
-		if shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase == gardencorev1beta1.RotationPrepare {
-			shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase = gardencorev1beta1.RotationPrepared
-		}
-
-		if shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase == gardencorev1beta1.RotationComplete {
-			shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase = gardencorev1beta1.RotationCompleted
-			shoot.Status.Credentials.Rotation.CertificateAuthorities.LastCompletionTime = &now
-		}
+	switch v1beta1helper.GetShootCARotationPhase(shoot.Status.Credentials) {
+	case gardencorev1beta1.RotationPreparing:
+		shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase = gardencorev1beta1.RotationPrepared
+	case gardencorev1beta1.RotationCompleting:
+		shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase = gardencorev1beta1.RotationCompleted
+		shoot.Status.Credentials.Rotation.CertificateAuthorities.LastCompletionTime = &now
 	}
 
 	return gardenClient.Status().Patch(ctx, shoot, patch)

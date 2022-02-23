@@ -8907,7 +8907,7 @@ ShootCredentialsRotation
 <a href="#core.gardener.cloud/v1beta1.ShootCredentials">ShootCredentials</a>)
 </p>
 <p>
-<p>ShootCredentialsRotation contains information about the certificate authority credential rotation.</p>
+<p>ShootCredentialsRotation contains information about the rotation of credentials.</p>
 </p>
 <table>
 <thead>

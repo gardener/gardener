@@ -122,4 +122,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
     - enforces immutability on the provider type of a SecretBinding
 * `ForceRestore` enables forcing the shoot's restoration to the destination seed during control plane migration if the preparation for migration in the source seed is not finished after a certain grace period and is considered unlikely to succeed (falling back to the [control plane migration "bad case" scenario](../proposals/17-shoot-control-plane-migration-bad-case.md)). If you enable this feature gate, make sure to also enable `UseDNSRecords` and `CopyEtcdBackupsDuringControlPlaneMigration`.
 * `DisableDNSProviderManagement` disables management of `dns.gardener.cloud/v1alpha1.DNSProvider` resources. In this case, the `shoot-dns-service` extension will take this over if it is installed. This feature is only effective if the feature `UseDNSRecords` is `true`.
-* `ShootCARotation` enables the automated CA rotation for shoot clusters.
+* `ShootCARotation` enables the feature to trigger automated CA rotation for shoot clusters.

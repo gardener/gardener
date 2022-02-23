@@ -105,7 +105,7 @@ func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&shoot.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateNameConsecutiveHyphens(shoot.Name, field.NewPath("metadata", "name"))...)
-	allErrs = append(allErrs, validateShootOperation(shoot.Annotations[v1beta1constants.GardenerOperation], shoot, field.NewPath("metadata", "annotations", v1beta1constants.GardenerOperation))...)
+	allErrs = append(allErrs, validateShootOperation(shoot.Annotations[v1beta1constants.GardenerOperation], shoot, field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerOperation))...)
 	allErrs = append(allErrs, ValidateShootSpec(shoot.ObjectMeta, &shoot.Spec, field.NewPath("spec"), false)...)
 
 	return allErrs
@@ -1699,27 +1699,31 @@ func validateShootOperation(operation string, shoot *core.Shoot, fldPath *field.
 
 	switch operation {
 	case v1beta1constants.ShootOperationRotateCAStart:
-		if shoot.Status.LastOperation == nil ||
-			(shoot.Status.LastOperation.Type != core.LastOperationTypeReconcile &&
-				(shoot.Status.LastOperation.Type != core.LastOperationTypeCreate || shoot.Status.LastOperation.State != core.LastOperationStateSucceeded)) {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start CA rotation if shoot was created successfully or is ready for reconciliation"))
+		if !isShootReadyForCARotationStart(shoot.Status.LastOperation) {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start CA rotation if shoot was not yet created successfully or is not ready for reconciliation"))
 		}
-
-		if shoot.Status.Credentials != nil &&
-			shoot.Status.Credentials.Rotation != nil &&
-			shoot.Status.Credentials.Rotation.CertificateAuthorities != nil &&
-			shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase != core.RotationCompleted {
+		if phase := helper.GetShootCARotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start CA rotation if .status.credentials.rotation.certificateAuthorities.phase is not 'Completed'"))
 		}
 
 	case v1beta1constants.ShootOperationRotateCAComplete:
-		if shoot.Status.Credentials == nil ||
-			shoot.Status.Credentials.Rotation == nil ||
-			shoot.Status.Credentials.Rotation.CertificateAuthorities == nil ||
-			shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase != core.RotationPrepared {
+		if helper.GetShootCARotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete CA rotation if .status.credentials.rotation.certificateAuthorities.phase is not 'Prepared'"))
 		}
 	}
 
 	return allErrs
+}
+
+func isShootReadyForCARotationStart(lastOperation *core.LastOperation) bool {
+	if lastOperation == nil {
+		return false
+	}
+	if lastOperation.Type == core.LastOperationTypeCreate && lastOperation.State == core.LastOperationStateSucceeded {
+		return true
+	}
+	if lastOperation.Type == core.LastOperationTypeRestore && lastOperation.State == core.LastOperationStateSucceeded {
+		return true
+	}
+	return lastOperation.Type == core.LastOperationTypeReconcile
 }

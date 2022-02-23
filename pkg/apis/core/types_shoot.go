@@ -157,7 +157,7 @@ type ShootCredentials struct {
 	Rotation *ShootCredentialsRotation
 }
 
-// ShootCredentialsRotation contains information about the certificate authority credential rotation.
+// ShootCredentialsRotation contains information about the rotation of credentials.
 type ShootCredentialsRotation struct {
 	// CertificateAuthorities contains information about the certificate authority credential rotation.
 	CertificateAuthorities *ShootCARotation
@@ -176,13 +176,13 @@ type ShootCARotation struct {
 type ShootCredentialsRotationPhase string
 
 const (
-	// RotationPrepare is a constant for the credentials rotation phase describing that the procedure is being prepared.
-	RotationPrepare ShootCredentialsRotationPhase = "Prepare"
+	// RotationPreparing is a constant for the credentials rotation phase describing that the procedure is being prepared.
+	RotationPreparing ShootCredentialsRotationPhase = "Preparing"
 	// RotationPrepared is a constant for the credentials rotation phase describing that the procedure was prepared.
 	RotationPrepared ShootCredentialsRotationPhase = "Prepared"
-	// RotationComplete is a constant for the credentials rotation phase describing that the procedure is being
+	// RotationCompleting is a constant for the credentials rotation phase describing that the procedure is being
 	// completed.
-	RotationComplete ShootCredentialsRotationPhase = "Complete"
+	RotationCompleting ShootCredentialsRotationPhase = "Completing"
 	// RotationCompleted is a constant for the credentials rotation phase describing that the procedure was completed.
 	RotationCompleted ShootCredentialsRotationPhase = "Completed"
 )

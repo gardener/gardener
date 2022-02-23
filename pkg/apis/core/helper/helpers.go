@@ -361,6 +361,16 @@ func ShootWantsVerticalPodAutoscaler(shoot *core.Shoot) bool {
 	return shoot.Spec.Kubernetes.VerticalPodAutoscaler != nil && shoot.Spec.Kubernetes.VerticalPodAutoscaler.Enabled
 }
 
+// GetShootCARotationPhase returns the specified shoot CA rotation phase or an empty string
+func GetShootCARotationPhase(credentials *core.ShootCredentials) core.ShootCredentialsRotationPhase {
+	if credentials != nil &&
+		credentials.Rotation != nil &&
+		credentials.Rotation.CertificateAuthorities != nil {
+		return credentials.Rotation.CertificateAuthorities.Phase
+	}
+	return ""
+}
+
 var scheme *runtime.Scheme
 
 func init() {
