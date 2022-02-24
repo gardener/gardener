@@ -21,7 +21,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -86,7 +85,7 @@ var _ = Describe("BackupBucketReconciler", func() {
 					return nil
 				})
 
-			control = NewDefaultBackupBucketControl(logger.NewNopLogger(), k8sGardenClient)
+			control = NewBackupBucketReconciler(k8sGardenClient)
 
 			c.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
 				*obj = *seed

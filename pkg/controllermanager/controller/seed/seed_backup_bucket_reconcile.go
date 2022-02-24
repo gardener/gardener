@@ -18,16 +18,19 @@ import (
 	"context"
 	"fmt"
 
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 
-	"github.com/sirupsen/logrus"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+const seedBackupBucketReconcilerName = "backupbucket"
 
 func (c *Controller) backupBucketEnqueue(bb *gardencorev1beta1.BackupBucket) {
 	seedName := bb.Spec.SeedName
@@ -60,16 +63,14 @@ func (c *Controller) backupBucketUpdate(oldObj, newObj interface{}) {
 	}
 }
 
-// NewDefaultBackupBucketControl returns a new default control to checks backup buckets of related seeds.
-func NewDefaultBackupBucketControl(logger logrus.FieldLogger, gardenClient kubernetes.Interface) *backupBucketReconciler {
+// NewBackupBucketReconciler returns a new default control to checks backup buckets of related seeds.
+func NewBackupBucketReconciler(gardenClient kubernetes.Interface) *backupBucketReconciler {
 	return &backupBucketReconciler{
-		logger:       logger,
 		gardenClient: gardenClient,
 	}
 }
 
 type backupBucketReconciler struct {
-	logger       logrus.FieldLogger
 	gardenClient kubernetes.Interface
 }
 
@@ -83,14 +84,15 @@ func (b *backupBucketInfo) String() string {
 }
 
 func (b *backupBucketReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
 	seed := &gardencorev1beta1.Seed{}
 	if err := b.gardenClient.Client().Get(ctx, req.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
-			b.logger.Debugf("[BACKUPBUCKET SEED RECONCILE] %s - skipping because Seed has been deleted", req.NamespacedName)
-			return reconcileResult(nil)
+			log.Info("Object is gone, stop reconciling")
+			return reconcile.Result{}, nil
 		}
-		b.logger.Infof("[BACKUPBUCKET SEED RECONCILE] %s - unable to retrieve seed object from store: %v", req.NamespacedName, err)
-		return reconcileResult(err)
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	backupBucketList := &gardencorev1beta1.BackupBucketList{}

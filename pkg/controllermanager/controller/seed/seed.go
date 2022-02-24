@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -98,7 +97,7 @@ func NewSeedController(
 
 		secretsReconciler:    NewSecretsReconciler(gardenClient.Client()),
 		lifeCycleReconciler:  NewLifecycleReconciler(gardenClient, config),
-		seedBackupReconciler: NewDefaultBackupBucketControl(logger.Logger, gardenClient),
+		seedBackupReconciler: NewBackupBucketReconciler(gardenClient),
 
 		secretsQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Secrets"),
 		seedBackupBucketQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Backup Bucket"),
@@ -157,7 +156,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	for i := 0; i < workers; i++ {
 		controllerutils.CreateWorker(ctx, c.secretsQueue, "Seed Secrets", c.secretsReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedSecretsReconcilerName)))
 		controllerutils.CreateWorker(ctx, c.seedLifecycleQueue, "Seed Lifecycle", c.lifeCycleReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedLifecycleReconcilerName)))
-		controllerutils.CreateWorker(ctx, c.seedBackupBucketQueue, "Seed Backup Bucket", c.seedBackupReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.seedBackupBucketQueue, "Seed Backup Bucket", c.seedBackupReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedBackupBucketReconcilerName)))
 	}
 
 	// Shutdown handling
