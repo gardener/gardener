@@ -349,10 +349,7 @@ func EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts .
 
 func ensureGone(ctx context.Context, c client.Client, obj client.Object) error {
 	if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		if meta.IsNoMatchError(err) {
+		if meta.IsNoMatchError(err) || apierrors.IsNotFound(err) {
 			return nil
 		}
 		return err
@@ -361,7 +358,10 @@ func ensureGone(ctx context.Context, c client.Client, obj client.Object) error {
 }
 
 func ensureCollectionGone(ctx context.Context, c client.Client, list client.ObjectList, opts ...client.ListOption) error {
-	if err := c.List(ctx, list, opts...); err != nil && !meta.IsNoMatchError(err) {
+	if err := c.List(ctx, list, opts...); err != nil {
+		if meta.IsNoMatchError(err) || apierrors.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
 
@@ -380,7 +380,10 @@ func cleanAction(
 	cleanOptions *CleanOptions,
 	action actionFunc,
 ) error {
-	if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); client.IgnoreNotFound(err) != nil {
+	if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
+		if meta.IsNoMatchError(err) || apierrors.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
 
@@ -395,7 +398,7 @@ func cleanCollectionAction(
 	action actionFunc,
 ) error {
 	if err := c.List(ctx, list, cleanOptions.ListOptions...); err != nil {
-		if meta.IsNoMatchError(err) {
+		if meta.IsNoMatchError(err) || apierrors.IsNotFound(err) {
 			return nil
 		}
 		return err
