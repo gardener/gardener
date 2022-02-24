@@ -16,15 +16,14 @@ package quota
 
 import (
 	"context"
-	"errors"
 	"fmt"
+
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
 
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -38,7 +37,7 @@ import (
 func (c *Controller) quotaAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
 	c.quotaQueue.Add(key)
@@ -51,39 +50,36 @@ func (c *Controller) quotaUpdate(oldObj, newObj interface{}) {
 func (c *Controller) quotaDelete(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
 	c.quotaQueue.Add(key)
 }
 
 // NewQuotaReconciler creates a new instance of a reconciler which reconciles Quotas.
-func NewQuotaReconciler(l logrus.FieldLogger, gardenClient client.Client, recorder record.EventRecorder) reconcile.Reconciler {
+func NewQuotaReconciler(gardenClient client.Client, recorder record.EventRecorder) reconcile.Reconciler {
 	return &quotaReconciler{
-		logger:       l,
 		gardenClient: gardenClient,
 		recorder:     recorder,
 	}
 }
 
 type quotaReconciler struct {
-	logger       logrus.FieldLogger
 	gardenClient client.Client
 	recorder     record.EventRecorder
 }
 
 func (r *quotaReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
 	quota := &gardencorev1beta1.Quota{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, quota); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			log.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
-
-	quotaLogger := logger.NewFieldLogger(r.logger, "quota", fmt.Sprintf("%s/%s", quota.Namespace, quota.Name))
 
 	// The deletionTimestamp labels a Quota as intended to get deleted. Before deletion,
 	// it has to be ensured that no SecretBindings are depending on the Quota anymore.
@@ -95,12 +91,11 @@ func (r *quotaReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 
 		associatedSecretBindings, err := controllerutils.DetermineSecretBindingAssociations(ctx, r.gardenClient, quota)
 		if err != nil {
-			quotaLogger.Error(err.Error())
 			return reconcile.Result{}, err
 		}
 
 		if len(associatedSecretBindings) == 0 {
-			quotaLogger.Info("No SecretBindings are referencing the Quota. Deletion accepted.")
+			log.Info("No SecretBindings are referencing the Quota, deletion accepted")
 
 			// Remove finalizer from Quota
 			if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, quota, gardencorev1beta1.GardenerName); err != nil {
@@ -110,17 +105,14 @@ func (r *quotaReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 			return reconcile.Result{}, nil
 		}
 
-		message := fmt.Sprintf("Can't delete Quota, because the following SecretBindings are still referencing it: %v", associatedSecretBindings)
-		quotaLogger.Info(message)
+		message := fmt.Sprintf("Cannot delete Quota, because the following SecretBindings are still referencing it: %+v", associatedSecretBindings)
 		r.recorder.Event(quota, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
-
-		return reconcile.Result{}, errors.New("quota still has references")
+		return reconcile.Result{}, fmt.Errorf(message)
 	}
 
 	if !controllerutil.ContainsFinalizer(quota, gardencorev1beta1.GardenerName) {
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, quota, gardencorev1beta1.GardenerName); err != nil {
-			quotaLogger.Errorf("Could not add finalizer to Quota: %s", err.Error())
-			return reconcile.Result{}, err
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to Quota: %w", err)
 		}
 	}
 
