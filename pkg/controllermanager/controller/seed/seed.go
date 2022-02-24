@@ -46,11 +46,11 @@ type Controller struct {
 	config       *config.ControllerManagerConfiguration
 	log          logr.Logger
 
-	seedReconciler       reconcile.Reconciler
+	secretsReconciler    reconcile.Reconciler
 	seedBackupReconciler reconcile.Reconciler
 	lifeCycleReconciler  reconcile.Reconciler
 
-	seedQueue             workqueue.RateLimitingInterface
+	secretsQueue          workqueue.RateLimitingInterface
 	seedBackupBucketQueue workqueue.RateLimitingInterface
 	seedLifecycleQueue    workqueue.RateLimitingInterface
 
@@ -96,11 +96,11 @@ func NewSeedController(
 		config:       config,
 		log:          log,
 
-		seedReconciler:       NewDefaultControl(logger.Logger, gardenClient.Client()),
+		secretsReconciler:    NewSecretsReconciler(gardenClient.Client()),
 		lifeCycleReconciler:  NewLifecycleDefaultControl(logger.Logger, gardenClient, config),
 		seedBackupReconciler: NewDefaultBackupBucketControl(logger.Logger, gardenClient),
 
-		seedQueue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed"),
+		secretsQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Secrets"),
 		seedBackupBucketQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Backup Bucket"),
 		seedLifecycleQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Lifecycle"),
 		workerCh:              make(chan int),
@@ -155,19 +155,19 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	var waitGroup sync.WaitGroup
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.seedReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.secretsQueue, "Seed Secrets", c.secretsReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedSecretsReconcilerName)))
 		controllerutils.CreateWorker(ctx, c.seedLifecycleQueue, "Seed Lifecycle", c.lifeCycleReconciler, &waitGroup, c.workerCh)
 		controllerutils.CreateWorker(ctx, c.seedBackupBucketQueue, "Seed Backup Bucket", c.seedBackupReconciler, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
 	<-ctx.Done()
-	c.seedQueue.ShutDown()
+	c.secretsQueue.ShutDown()
 	c.seedBackupBucketQueue.ShutDown()
 	c.seedLifecycleQueue.ShutDown()
 
 	for {
-		queueLength := c.seedQueue.Len() + c.seedBackupBucketQueue.Len() + c.seedLifecycleQueue.Len()
+		queueLength := c.secretsQueue.Len() + c.seedBackupBucketQueue.Len() + c.seedLifecycleQueue.Len()
 		if queueLength == 0 && c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running Seed worker and no items left in the queues. Terminating Seed controller")
 			break

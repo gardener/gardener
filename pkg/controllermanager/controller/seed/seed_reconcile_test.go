@@ -18,18 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
-	"github.com/gardener/gardener/pkg/logger"
-	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
-	mockclientgo "github.com/gardener/gardener/pkg/mock/client-go/kubernetes"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/test"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -41,6 +29,16 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
+	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
+	mockclientgo "github.com/gardener/gardener/pkg/mock/client-go/kubernetes"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("SeedReconciler", func() {
@@ -93,7 +91,7 @@ var _ = Describe("SeedReconciler", func() {
 		})
 
 		JustBeforeEach(func() {
-			control = NewDefaultControl(logger.NewNopLogger(), cl)
+			control = NewSecretsReconciler(cl)
 		})
 
 		It("should fail if get namespace fails", func() {
@@ -249,7 +247,6 @@ var _ = Describe("SeedReconciler", func() {
 			It("should not create and copy assets if seed cannot be found", func() {
 				cl.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
-				defer test.WithVar(&logger.Logger, logger.NewNopLogger())()
 				result, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(result).To(Equal(reconcile.Result{}))

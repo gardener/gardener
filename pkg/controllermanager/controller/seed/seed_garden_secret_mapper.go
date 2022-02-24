@@ -43,7 +43,7 @@ func (c *Controller) enqueueSeeds(ctx context.Context) {
 		c.log.Error(err, "Could not enqueue all seeds")
 	}
 	for _, seed := range seedList.Items {
-		c.seedQueue.Add(client.ObjectKeyFromObject(&seed).String())
+		c.secretsQueue.Add(client.ObjectKeyFromObject(&seed).String())
 	}
 }
 

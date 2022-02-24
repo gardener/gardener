@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -25,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,13 +38,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const seedSecretsReconcilerName = "secrets"
+
 func (c *Controller) seedEnqueue(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		return
 	}
 
-	c.seedQueue.Add(key)
+	c.secretsQueue.Add(key)
 }
 
 func (c *Controller) seedAdd(obj interface{}) {
@@ -55,31 +58,29 @@ func (c *Controller) seedAdd(obj interface{}) {
 	c.seedEnqueue(seed)
 }
 
-// NewDefaultControl returns a new instance of the default implementation that
+// NewSecretsReconciler returns a new instance of the default implementation that
 // implements the documented semantics for seeds.
-// You should use an instance returned from NewDefaultControl() for any scenario other than testing.
-func NewDefaultControl(logger logrus.FieldLogger, gardenClient client.Client) *reconciler {
+// You should use an instance returned from NewSecretsReconciler() for any scenario other than testing.
+func NewSecretsReconciler(gardenClient client.Client) *reconciler {
 	return &reconciler{
-		logger:       logger,
 		gardenClient: gardenClient,
 	}
 }
 
 type reconciler struct {
-	logger       logrus.FieldLogger
 	gardenClient client.Client
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
 	seed := &gardencorev1beta1.Seed{}
-	err := r.gardenClient.Get(ctx, req.NamespacedName, seed)
-	if apierrors.IsNotFound(err) {
-		r.logger.Infof("[SEED] Stopping operations for Seed %s since it has been deleted", req.Name)
-		return reconcileResult(nil)
-	}
-	if err != nil {
-		r.logger.Infof("[SEED] %s - unable to retrieve object from store: %v", req.Name, err)
-		return reconcileResult(err)
+	if err := r.gardenClient.Get(ctx, req.NamespacedName, seed); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("Object is gone, stop reconciling")
+			return reconcile.Result{}, nil
+		}
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	namespace := &corev1.Namespace{
@@ -87,6 +88,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			Name: gutil.ComputeGardenNamespace(seed.Name),
 		},
 	}
+	log = log.WithValues("gardenNamespace", namespace.Name)
 
 	if err := r.gardenClient.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -95,6 +97,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 		// create namespace with controller ref to seed
 		namespace.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))})
+		log.Info("Creating Namespace in garden for Seed")
 		if err := r.gardenClient.Create(ctx, namespace); err != nil {
 			return reconcile.Result{}, err
 		}
