@@ -16,23 +16,27 @@ package secretbinding
 
 import (
 	"context"
+	"fmt"
+
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/logger"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
+
+const providerTypeReconcilerName = "provider-type"
 
 func (c *Controller) shootAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
 	c.shootQueue.Add(key)
@@ -40,27 +44,26 @@ func (c *Controller) shootAdd(obj interface{}) {
 
 // NewSecretBindingProviderReconciler creates a new instance of a reconciler which populates
 // the SecretBinding provider type based on the Shoot provider type.
-func NewSecretBindingProviderReconciler(l logrus.FieldLogger, gardenClient client.Client) reconcile.Reconciler {
+func NewSecretBindingProviderReconciler(gardenClient client.Client) reconcile.Reconciler {
 	return &secretBindingProviderReconciler{
-		logger:       l,
 		gardenClient: gardenClient,
 	}
 }
 
 type secretBindingProviderReconciler struct {
-	logger       logrus.FieldLogger
 	gardenClient client.Client
 }
 
 func (r *secretBindingProviderReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			log.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	secretBinding := &gardencorev1beta1.SecretBinding{}
@@ -68,22 +71,17 @@ func (r *secretBindingProviderReconciler) Reconcile(ctx context.Context, request
 		return reconcile.Result{}, err
 	}
 
-	secretBindingLogger := logger.NewFieldLogger(r.logger, "secretbinding", kutil.ObjectName(secretBinding))
-
 	shootProviderType := shoot.Spec.Provider.Type
+	log = log.WithValues("secretBinding", client.ObjectKeyFromObject(secretBinding), "shootProviderType", shootProviderType)
+
 	if secretBinding.Provider != nil && gardencorev1beta1helper.SecretBindingHasType(secretBinding, shootProviderType) {
-		secretBindingLogger.Debugf("SecretBinding already has provider type '%s'. Nothing to do.", shootProviderType)
+		log.V(1).Info("SecretBinding already has provider type, nothing to do")
 		return reconcile.Result{}, nil
 	}
 
-	secretBindingLogger.Debugf("SecretBinding does not have provider type '%s'. Will add it.", shootProviderType)
+	log.Info("SecretBinding does not have provider type, adding it")
 
 	patch := client.MergeFromWithOptions(secretBinding.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	gardencorev1beta1helper.AddTypeToSecretBinding(secretBinding, shootProviderType)
-
-	if err := r.gardenClient.Patch(ctx, secretBinding, patch); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, r.gardenClient.Patch(ctx, secretBinding, patch)
 }
