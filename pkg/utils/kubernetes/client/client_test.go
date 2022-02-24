@@ -110,6 +110,28 @@ var _ = Describe("Cleaner", func() {
 				Expect(cleaner.Clean(ctx, c, &cm1)).To(Succeed())
 			})
 
+			It("should succeed if not found error occurs for target object", func() {
+				var (
+					ctx     = context.TODO()
+					cleaner = NewCleaner(timeOps, NewFinalizer())
+				)
+
+				c.EXPECT().Get(ctx, cm1Key, &cm1).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+
+				Expect(cleaner.Clean(ctx, c, &cm1)).To(Succeed())
+			})
+
+			It("should succeed if no match error occurs for target object", func() {
+				var (
+					ctx     = context.TODO()
+					cleaner = NewCleaner(timeOps, NewFinalizer())
+				)
+
+				c.EXPECT().Get(ctx, cm1Key, &cm1).Return(&meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}})
+
+				Expect(cleaner.Clean(ctx, c, &cm1)).To(Succeed())
+			})
+
 			It("should delete all objects matching the selector", func() {
 				var (
 					ctx     = context.TODO()
@@ -120,6 +142,30 @@ var _ = Describe("Cleaner", func() {
 				listCall := c.EXPECT().List(ctx, list).SetArg(1, cmList)
 				c.EXPECT().Delete(ctx, &cm1).After(listCall)
 				c.EXPECT().Delete(ctx, &cm2).After(listCall)
+
+				Expect(cleaner.Clean(ctx, c, list)).To(Succeed())
+			})
+
+			It("should succeed if not found error occurs for list type", func() {
+				var (
+					ctx     = context.TODO()
+					list    = &corev1.ConfigMapList{}
+					cleaner = NewCleaner(timeOps, NewFinalizer())
+				)
+
+				c.EXPECT().List(ctx, list).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+
+				Expect(cleaner.Clean(ctx, c, list)).To(Succeed())
+			})
+
+			It("should succeed if no match error occurs for list type", func() {
+				var (
+					ctx     = context.TODO()
+					list    = &corev1.ConfigMapList{}
+					cleaner = NewCleaner(timeOps, NewFinalizer())
+				)
+
+				c.EXPECT().List(ctx, list).Return(&meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}})
 
 				Expect(cleaner.Clean(ctx, c, list)).To(Succeed())
 			})
@@ -428,10 +474,18 @@ var _ = Describe("Cleaner", func() {
 	})
 
 	Describe("#EnsureGone", func() {
-		It("should ensure that the object is gone", func() {
+		It("should ensure that the object is gone when not found error occurs", func() {
 			ctx := context.TODO()
 
 			c.EXPECT().Get(ctx, cm1Key, &cm1).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+
+			Expect(EnsureGone(ctx, c, &cm1)).To(Succeed())
+		})
+
+		It("should ensure that the object is gone when no match error occurs", func() {
+			ctx := context.TODO()
+
+			c.EXPECT().Get(ctx, cm1Key, &cm1).Return(&meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}})
 
 			Expect(EnsureGone(ctx, c, &cm1)).To(Succeed())
 		})
@@ -443,6 +497,28 @@ var _ = Describe("Cleaner", func() {
 			)
 
 			c.EXPECT().List(ctx, &list)
+
+			Expect(EnsureGone(ctx, c, &list)).To(Succeed())
+		})
+
+		It("should ensure that the list is gone when not found error occurs", func() {
+			var (
+				ctx  = context.TODO()
+				list = corev1.ConfigMapList{}
+			)
+
+			c.EXPECT().List(ctx, &list).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+
+			Expect(EnsureGone(ctx, c, &list)).To(Succeed())
+		})
+
+		It("should ensure that the list is gone when no match error occurs", func() {
+			var (
+				ctx  = context.TODO()
+				list = corev1.ConfigMapList{}
+			)
+
+			c.EXPECT().List(ctx, &list).Return(&meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}})
 
 			Expect(EnsureGone(ctx, c, &list)).To(Succeed())
 		})
