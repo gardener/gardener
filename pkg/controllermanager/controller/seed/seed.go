@@ -97,7 +97,7 @@ func NewSeedController(
 		log:          log,
 
 		secretsReconciler:    NewSecretsReconciler(gardenClient.Client()),
-		lifeCycleReconciler:  NewLifecycleDefaultControl(logger.Logger, gardenClient, config),
+		lifeCycleReconciler:  NewLifecycleReconciler(gardenClient, config),
 		seedBackupReconciler: NewDefaultBackupBucketControl(logger.Logger, gardenClient),
 
 		secretsQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Secrets"),
@@ -156,7 +156,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 	for i := 0; i < workers; i++ {
 		controllerutils.CreateWorker(ctx, c.secretsQueue, "Seed Secrets", c.secretsReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedSecretsReconcilerName)))
-		controllerutils.CreateWorker(ctx, c.seedLifecycleQueue, "Seed Lifecycle", c.lifeCycleReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.seedLifecycleQueue, "Seed Lifecycle", c.lifeCycleReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedLifecycleReconcilerName)))
 		controllerutils.CreateWorker(ctx, c.seedBackupBucketQueue, "Seed Backup Bucket", c.seedBackupReconciler, &waitGroup, c.workerCh)
 	}
 
