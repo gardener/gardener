@@ -141,7 +141,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing SecretBinding controller: %w", err)
 	}
 
-	seedController, err := seedcontroller.NewSeedController(ctx, f.clientMap, f.cfg)
+	seedController, err := seedcontroller.NewSeedController(ctx, log, f.clientMap, f.cfg)
 	if err != nil {
 		return fmt.Errorf("failed initializing Seed controller: %w", err)
 	}

@@ -17,14 +17,13 @@ package seed
 import (
 	"context"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/logger"
-
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 func filterGardenSecret(obj interface{}) bool {
@@ -41,7 +40,7 @@ func filterGardenSecret(obj interface{}) bool {
 func (c *Controller) enqueueSeeds(ctx context.Context) {
 	seedList := &gardencorev1beta1.SeedList{}
 	if err := c.gardenClient.List(ctx, seedList); err != nil {
-		logger.Logger.Errorf("Could not enqueue seeds: %v", err)
+		c.log.Error(err, "Could not enqueue all seeds")
 	}
 	for _, seed := range seedList.Items {
 		c.seedQueue.Add(client.ObjectKeyFromObject(&seed).String())
