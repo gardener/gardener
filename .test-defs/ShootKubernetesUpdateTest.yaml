@@ -12,7 +12,7 @@ spec:
   command: [bash, -c]
   args:
   - >-
-    go test -timeout=0 -mod=vendor ./test/system/shoot_update
+    go test -timeout=0 -mod=vendor ./test/testmachinery/system/shoot_update
     --v -ginkgo.v -ginkgo.progress -ginkgo.noColor -verbose=debug
     -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
     -shoot-name=$SHOOT_NAME

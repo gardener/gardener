@@ -42,14 +42,32 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 )
 
+var targetSchemeBuilder = runtime.NewSchemeBuilder(
+	kubernetesscheme.AddToScheme,
+	hvpav1alpha1.AddToScheme,
+	volumesnapshotv1beta1.AddToScheme,
+)
+
+// AddToTargetScheme registers all API types in the given scheme that resource-manager expects to be in the target
+// cluster scheme (the Cluster that ManagedResources are applied to).
+func AddToTargetScheme(scheme *runtime.Scheme) error {
+	apiextensionsinstall.Install(scheme)
+	apiregistrationinstall.Install(scheme)
+	return targetSchemeBuilder.AddToScheme(scheme)
+}
+
 var _ Option = &TargetClusterOptions{}
 
 // TargetClusterOptions contains options needed to construct the target config.
 type TargetClusterOptions struct {
 	kubeconfigPath      string
-	namespace           string
 	disableCachedClient bool
 	cacheResyncPeriod   time.Duration
+
+	// Namespace is the namespace in which controllers for the target cluster act on objects (defaults to all namespaces)
+	Namespace string
+	// If RESTConfig is set, don't load the kubeconfig but use the provided config instead (for integration tests).
+	RESTConfig *rest.Config
 
 	config *TargetClusterConfig
 }
@@ -64,26 +82,32 @@ type TargetClusterConfig struct {
 // AddFlags adds the needed command line flags to the given FlagSet.
 func (o *TargetClusterOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.kubeconfigPath, "target-kubeconfig", "", "path to the kubeconfig for the target cluster")
-	fs.StringVar(&o.namespace, "target-namespace", "", "namespace in which controllers for the target cluster act on objects (defaults to all namespaces)")
+	fs.StringVar(&o.Namespace, "target-namespace", "", "namespace in which controllers for the target cluster act on objects (defaults to all namespaces)")
 	fs.BoolVar(&o.disableCachedClient, "target-disable-cache", false, "disable the cache for target cluster client and always talk directly to the API server (defaults to false)")
 	fs.DurationVar(&o.cacheResyncPeriod, "target-cache-resync-period", 24*time.Hour, "duration how often the controller's cache for the target cluster is resynced")
 }
 
 // Complete builds the target config based on the given flag values and saves it for retrieval via Completed.
 func (o *TargetClusterOptions) Complete() error {
-	restConfig, err := getTargetRESTConfig(o.kubeconfigPath)
-	if err != nil {
-		return fmt.Errorf("unable to create REST config for target cluster: %w", err)
+	if o.RESTConfig == nil {
+		var err error
+		o.RESTConfig, err = getTargetRESTConfig(o.kubeconfigPath)
+		if err != nil {
+			return fmt.Errorf("unable to create REST config for target cluster: %w", err)
+		}
+		// TODO: make this configurable
+		o.RESTConfig.QPS = 100.0
+		o.RESTConfig.Burst = 130
 	}
-	// TODO: make this configurable
-	restConfig.QPS = 100.0
-	restConfig.Burst = 130
 
-	cluster, err := cluster.New(
-		restConfig,
+	scheme := runtime.NewScheme()
+	utilruntime.Must(AddToTargetScheme(scheme))
+
+	cl, err := cluster.New(
+		o.RESTConfig,
 		func(opts *cluster.Options) {
-			opts.Namespace = o.namespace
-			opts.Scheme = getTargetScheme()
+			opts.Namespace = o.Namespace
+			opts.Scheme = scheme
 			opts.MapperProvider = getTargetRESTMapper
 			opts.SyncPeriod = &o.cacheResyncPeriod
 			opts.ClientDisableCacheFor = []client.Object{
@@ -103,7 +127,7 @@ func (o *TargetClusterOptions) Complete() error {
 		return fmt.Errorf("could not instantiate target cluster: %w", err)
 	}
 
-	o.config = &TargetClusterConfig{Cluster: cluster}
+	o.config = &TargetClusterConfig{Cluster: cl}
 	return nil
 }
 
@@ -112,18 +136,6 @@ func (o *TargetClusterOptions) Complete() error {
 // and has been populated successfully.
 func (o *TargetClusterOptions) Completed() *TargetClusterConfig {
 	return o.config
-}
-
-func getTargetScheme() *runtime.Scheme {
-	scheme := runtime.NewScheme()
-
-	utilruntime.Must(kubernetesscheme.AddToScheme(scheme))
-	apiextensionsinstall.Install(scheme)
-	apiregistrationinstall.Install(scheme)
-	utilruntime.Must(hvpav1alpha1.AddToScheme(scheme))
-	utilruntime.Must(volumesnapshotv1beta1.AddToScheme(scheme))
-
-	return scheme
 }
 
 func getTargetRESTMapper(config *rest.Config) (meta.RESTMapper, error) {

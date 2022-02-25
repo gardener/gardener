@@ -147,11 +147,6 @@ func (o *ControllerOptions) Completed() *ControllerConfig {
 	return &defaultControllerConfig
 }
 
-// ApplyClassFilter sets filter to the ClassFilter of this config.
-func (c *ControllerConfig) ApplyClassFilter(filter *managerpredicate.ClassFilter) {
-	*filter = *c.ClassFilter
-}
-
 // ApplyDefaultClusterId sets the cluster id according to a dedicated cluster access
 func (c *ControllerConfig) ApplyDefaultClusterId(ctx context.Context, log logr.Logger, restcfg *rest.Config) error {
 	if c.ClusterID == "<cluster>" || c.ClusterID == "<default>" {

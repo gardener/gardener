@@ -57,7 +57,7 @@ type ControllerConfig struct {
 
 // AddToManagerWithOptions adds the controller to a Manager with the given config.
 func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
-	healthController, err := controller.New("health-controller", mgr, controller.Options{
+	healthController, err := controller.New(ControllerName, mgr, controller.Options{
 		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
 		Reconciler: &reconciler{
 			syncPeriod:   conf.SyncPeriod,
@@ -68,7 +68,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		RecoverPanic: true,
 	})
 	if err != nil {
-		return fmt.Errorf("unable to set up individual controller: %w", err)
+		return fmt.Errorf("unable to set up health controller: %w", err)
 	}
 
 	if err := healthController.Watch(

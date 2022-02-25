@@ -13,47 +13,61 @@ This manual gives an overview about test machinery tests in Gardener.
 
 ## Structure
 
-Gardener integration test are split into 2 big test suites that can be found under [gardener/test/suites](../../test/suites):
+Gardener test machinery tests are split into two test suites that can be found under [`test/testmachinery/suites`](../../test/testmachinery/suites):
 
 * The **Gardener Test Suite** contains all tests that only require a running gardener instance.
 * The **Shoot Test Suite** contains all tests that require a predefined running shoot cluster.
 
-The corresponding tests of a test suite are defined in the import statement of the suite definition see [gardener/test/suites/shoot/run_suite_test.go](../../test/suites/shoot/run_suite_test.go)
-and their source code can be found under [gardener/test/integration](../../test/integration)
+The corresponding tests of a test suite are defined in the import statement of the suite definition see [`shoot/run_suite_test.go`](../../test/testmachinery/suites/shoot/run_suite_test.go)
+and their source code can be found under [`test/testmachinery`](../../test/testmachinery)
 
-The testing directory
-is divided into the following major subdirectories:
+The `test` directory is structured as follows:
 
 ```console
-├── framework
-│   ├── applications
-│   ├── config
-│   ├── reporter
-│   ├── resources
-├── integration
-│   ├── gardener
-│   │   ├── scheduler
-│   │   └── security
-│   ├── plants
-│   └── shoots
-│       ├── applications
-│       ├── logging
-│       ├── maintenance
-│       └── operations
-├── suites
-│   ├── gardener
-│   └── shoot
-└── system
-    ├── complete_reconcile
-    ├── shoot_creation
-    ├── shoot_deletion
-    └── shoot_update
+test
+├── e2e           # end-to-end tests (using provider-local)
+│  └── shoot
+├── framework     # helper code shared across integration, e2e and testmachinery tests
+├── integration   # integration tests (envtests)
+│  ├── controllermanager
+│  ├── envtest
+│  ├── resourcemanager
+│  ├── scheduler
+│  ├── seedadmissioncontroller
+│  ├── shootmaintenance
+│  └── ...
+└── testmachinery # test machinery tests
+   ├── gardener   # actual test cases imported by suites/gardener
+   │  └── security
+   ├── landscaper
+   │  └── gardenlet
+   ├── plants
+   ├── shoots     # actual test cases imported by suites/shoot
+   │  ├── applications
+   │  ├── care
+   │  ├── logging
+   │  ├── operatingsystem
+   │  ├── operations
+   │  └── vpntunnel
+   ├── suites     # suites that run agains a running garden or shoot cluster
+   │  ├── gardener
+   │  └── shoot
+   └── system     # suites that are used for building a full test flow
+      ├── complete_reconcile
+      ├── managed_seed_creation
+      ├── managed_seed_deletion
+      ├── shoot_cp_migration
+      ├── shoot_creation
+      ├── shoot_deletion
+      ├── shoot_hibernation
+      ├── shoot_hibernation_wakeup
+      └── shoot_update
 ```
 
 A suite can be executed by running the suite definition with ginkgo's `focus` and `skip` flags 
 to control the execution of specific labeled test. See example below:
 ```console
-go test -timeout=0 -mod=vendor ./test/suites/shoot \
+go test -timeout=0 -mod=vendor ./test/testmachinery/suites/shoot \
       --v -ginkgo.v -ginkgo.progress -ginkgo.noColor \
       --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
       --disable-dump=false \                               # disables dumping of teh current state if a test fails
@@ -66,11 +80,10 @@ go test -timeout=0 -mod=vendor ./test/suites/shoot \
 
 ## Add a new test
 
-To add a new test the framework requires the following steps:
+To add a new test the framework requires the following steps (step 1. and 2. can be skipped if the test is added to an existing package):
 
-(The step 1. and 2. can be skipped if the test is added to an already existing package)
-1. Create a new test file e.g. `test/integration/shoot/security/my-sec-test.go`
-2. Import the test into the appropriate framework you want use (gardener or shoot): `import _ "github.com/gardener/gardener/test/integration/shoot/security"`
+1. Create a new test file e.g. `test/testmachinery/shoot/security/my-sec-test.go`
+2. Import the test into the appropriate test suite (gardener or shoot): `import _ "github.com/gardener/gardener/test/testmachinery/shoot/security"`
 3. Define your test with the testframework. The framework will automatically add its initialization, cleanup and dump functions.
 ```golang
 var _ = ginkgo.Describe("my suite", func(){
@@ -86,7 +99,7 @@ var _ = ginkgo.Describe("my suite", func(){
 The newly created test can be tested by focusing the test with the default ginkgo focus `f.Beta().FCIt("my first test", func(ctx context.Context)`
 and run the shoot test suite with:
 ```
-go test -timeout=0 -mod=vendor ./test/suites/shoot \
+go test -timeout=0 -mod=vendor ./test/testmachinery/suites/shoot \
       --v -ginkgo.v -ginkgo.progress -ginkgo.noColor \
       --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
       --disable-dump=false \                               # disables dumping of the current state if a test fails
@@ -97,7 +110,7 @@ go test -timeout=0 -mod=vendor ./test/suites/shoot \
 ```
 or for the gardener suite with:
 ```
-go test -timeout=0 -mod=vendor ./test/suites/gardener \
+go test -timeout=0 -mod=vendor ./test/testmachinery/suites/gardener \
       --v -ginkgo.v -ginkgo.progress -ginkgo.noColor \
       --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
       --disable-dump=false \                               # disables dumping of the current state if a test fails
@@ -105,11 +118,11 @@ go test -timeout=0 -mod=vendor ./test/suites/gardener \
       -project-namespace=<gardener project namespace>
 ```
 
-:warning: Make sure that you do not commit any code focused test as this feature is only intended for local development!
+:warning: Make sure that you do not commit any focused specs as this feature is only intended for local development! Ginkgo will fail the test suite if there are any focused specs.
 
 Alternatively, a test can be triggered by specifying a ginkgo focus regex with the name of the test e.g.
 ```
-go test -timeout=0 -mod=vendor ./test/suites/gardener \
+go test -timeout=0 -mod=vendor ./test/testmachinery/suites/gardener \
       --v -ginkgo.v -ginkgo.progress -ginkgo.noColor \
       --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
       -kubecfg=/path/to/gardener/kubeconfig \
@@ -121,7 +134,8 @@ go test -timeout=0 -mod=vendor ./test/suites/gardener \
 ## Test Labels
 
 Every test should be labeled by using the predefined labels available with every framework to have consistent labeling across 
-all gardener integration tests. 
+all test machinery tests. 
+
 The labels are applied to every new `It()/CIt()` definition by:
 ```golang
 f := framework.NewCommonFramework()
@@ -149,7 +163,7 @@ Only create such tests if really necessary as the execution will be expensive (n
 
 ## Framework
 
-The framework directory contains all the necessary functions / utilities for running the integration test suite. 
+The framework directory contains all the necessary functions / utilities for running test machinery tests. 
 For example, there are methods for creation/deletion of shoots, waiting for shoot deletion/creation, downloading/installing/deploying helm charts, logging, etc.
 
 The framework itself consists of 3 different framework that expect different prerequisites and offer context specific functionality.
@@ -239,7 +253,7 @@ Create Shoot test is meant to test shoot creation.
 **Example Run**
 
 ```console
-go test -mod=vendor -timeout=0 ./test/system/shoot_creation \
+go test -mod=vendor -timeout=0 ./test/testmachinery/system/shoot_creation \
   --v -ginkgo.v -ginkgo.progress \
   -kubecfg=$HOME/.kube/config \
   -shoot-name=$SHOOT_NAME \
@@ -269,7 +283,7 @@ Delete Shoot test is meant to test the deletion of a shoot.
 
 ```console
 go test -mod=vendor -timeout=0 -ginkgo.v -ginkgo.progress \
-  ./test/system/shoot_deletion \
+  ./test/testmachinery/system/shoot_deletion \
   -kubecfg=$HOME/.kube/config \
   -shoot-name=$SHOOT_NAME \
   -project-namespace=$PROJECT_NAMESPACE
@@ -284,7 +298,7 @@ If there is no available newer version this test is a noop.
 **Example Run**
 
 ```console
-go test -mod=vendor -timeout=0 ./test/system/shoot_update \
+go test -mod=vendor -timeout=0 ./test/testmachinery/system/shoot_update \
   --v -ginkgo.v -ginkgo.progress \
   -kubecfg=$HOME/.kube/config \
   -shoot-name=$SHOOT_NAME \
@@ -299,7 +313,7 @@ The Gardener Full Reconcile test is meant to test if all shoots of a gardener in
 **Example Run**
 
 ```console
-go test -mod=vendor -timeout=0 ./test/system/complete_reconcile \
+go test -mod=vendor -timeout=0 ./test/testmachinery/system/complete_reconcile \
   --v -ginkgo.v -ginkgo.progress \
   -kubecfg=$HOME/.kube/config \
   -project-namespace=$PROJECT_NAMESPACE \

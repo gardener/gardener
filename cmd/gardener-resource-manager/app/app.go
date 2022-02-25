@@ -95,8 +95,8 @@ func NewResourceManagerCommand() *cobra.Command {
 				sourceClientOpts.Completed().ApplyManagerOptions(&managerOptions)
 				sourceClientOpts.Completed().ApplyClientSet(&healthz.DefaultAddOptions.ClientSet)
 				resourceControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
-				resourceControllerOpts.Completed().ApplyClassFilter(&secretControllerOpts.Completed().ClassFilter)
-				resourceControllerOpts.Completed().ApplyClassFilter(&healthControllerOpts.Completed().ClassFilter)
+				secretControllerOpts.Completed().ClassFilter = *resourceControllerOpts.Completed().ClassFilter
+				healthControllerOpts.Completed().ClassFilter = *resourceControllerOpts.Completed().ClassFilter
 				resourceControllerOpts.Completed().GarbageCollectorActivated = gcControllerOpts.Completed().SyncPeriod > 0
 				if err := resourceControllerOpts.Completed().ApplyDefaultClusterId(ctx, log, sourceClientOpts.Completed().RESTConfig); err != nil {
 					return err

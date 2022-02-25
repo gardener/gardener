@@ -10,7 +10,7 @@ spec:
   command: [bash, -c]
   args:
   - >-
-    go test -timeout=0 -mod=vendor ./test/system/complete_reconcile
+    go test -timeout=0 -mod=vendor ./test/testmachinery/system/complete_reconcile
     --v -ginkgo.v -ginkgo.progress -ginkgo.noColor --verbose=debug
     -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
     -version=$GARDENER_VERSION

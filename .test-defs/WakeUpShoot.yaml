@@ -10,7 +10,7 @@ spec:
   command: [bash, -c]
   args:
   - >-
-    go test -timeout=0 -mod=vendor ./test/system/shoot_hibernation_wakeup
+    go test -timeout=0 -mod=vendor ./test/testmachinery/system/shoot_hibernation_wakeup
     --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
     --shoot-name=$SHOOT_NAME
     --project-namespace=$PROJECT_NAMESPACE

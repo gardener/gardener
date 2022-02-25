@@ -245,7 +245,7 @@ test: $(PROMTOOL)
 
 .PHONY: test-integration
 test-integration: $(SETUP_ENVTEST)
-	@./hack/test-integration.sh ./extensions/test/integration/envtest/... ./test/integration/envtest/...
+	@./hack/test-integration.sh ./extensions/test/integration/... ./test/integration/...
 
 .PHONY: test-cov
 test-cov: $(PROMTOOL)
