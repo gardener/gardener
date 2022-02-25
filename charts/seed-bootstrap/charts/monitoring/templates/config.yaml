@@ -101,3 +101,21 @@ data:
     - job_name: prometheus
       static_configs:
       - targets: [ localhost:9090 ]
+
+    - job_name: vpa-recommender
+      kubernetes_sd_configs:
+        - role: pod
+          relabel_configs:
+            - source_labels: [__meta_kubernetes_pod_label_app]
+              regex: vpa-recommender
+              action: keep
+            - source_labels: [__meta_kubernetes_pod_container_port_name]
+              regex: metrics
+              action: keep
+            - action: labelmap
+              regex: __meta_kubernetes_pod_label_(.+)
+            - source_labels: [ __meta_kubernetes_namespace ]
+              target_label: namespace
+            - source_labels: [ __meta_kubernetes_pod_name ]
+              target_label: pod
+
