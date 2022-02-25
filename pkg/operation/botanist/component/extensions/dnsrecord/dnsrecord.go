@@ -52,6 +52,7 @@ var TimeNow = time.Now
 // Interface is an interface for managing DNSRecords
 type Interface interface {
 	component.DeployMigrateWaiter
+	GetValues() *Values
 	SetRecordType(extensionsv1alpha1.DNSRecordType)
 	SetValues([]string)
 }
@@ -276,6 +277,11 @@ func (c *dnsRecord) WaitCleanup(ctx context.Context) error {
 		c.waitInterval,
 		c.waitTimeout,
 	)
+}
+
+// GetValues returns the current configuration values of the deployer.
+func (c *dnsRecord) GetValues() *Values {
+	return c.values
 }
 
 // SetRecordType sets the record type in the values.
