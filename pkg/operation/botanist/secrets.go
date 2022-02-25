@@ -38,6 +38,7 @@ import (
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
@@ -454,7 +455,12 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 
 	// ssh-keypair.old secret will be synced to the Garden cluster if it is present in shoot namespace in seed.
 	oldSecret := &corev1.Secret{}
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.SecretNameOldSSHKeyPair), oldSecret); err == nil {
+	err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.SecretNameOldSSHKeyPair), oldSecret)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			b.Logger.Info("Newly created shoot will not have ssh-keypair.old secret")
+		}
+	} else {
 		projectSecrets = append(projectSecrets, projectSecret{
 			secretName: v1beta1constants.SecretNameOldSSHKeyPair,
 			suffix:     gutil.ShootProjectSecretSuffixOldSSHKeypair,
