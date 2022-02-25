@@ -1055,7 +1055,7 @@
       "targets": [
         {
           "exemplar": false,
-          "expr": "max by(verb, quantile) (apiserver_latency_seconds:quantile{job=~\"$apiserver\", verb=~\"$verb\",quantile=~\"$quantile\"})",
+          "expr": "max by(verb, quantile) (apiserver_latency_seconds:quantile{job=~\"$apiserver\", verb=~\"$verb\",quantile=~\"$quantile\",subresource!~\"log|portforward|exec\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
