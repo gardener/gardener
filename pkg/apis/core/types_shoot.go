@@ -147,7 +147,45 @@ type ShootStatus struct {
 	AdvertisedAddresses []ShootAdvertisedAddress
 	// MigrationStartTime is the time when a migration to a different seed was initiated.
 	MigrationStartTime *metav1.Time
+	// Credentials contains information about the shoot credentials.
+	Credentials *ShootCredentials
 }
+
+// ShootCredentials contains information about the shoot credentials.
+type ShootCredentials struct {
+	// Rotation contains information about the credential rotations.
+	Rotation *ShootCredentialsRotation
+}
+
+// ShootCredentialsRotation contains information about the rotation of credentials.
+type ShootCredentialsRotation struct {
+	// CertificateAuthorities contains information about the certificate authority credential rotation.
+	CertificateAuthorities *ShootCARotation
+}
+
+// ShootCARotation contains information about the certificate authority credential rotation.
+type ShootCARotation struct {
+	// Phase describes the phase of the certificate authority credential rotation.
+	Phase ShootCredentialsRotationPhase
+	// LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
+	// completed.
+	LastCompletionTime *metav1.Time
+}
+
+// ShootCredentialsRotationPhase is a string alias.
+type ShootCredentialsRotationPhase string
+
+const (
+	// RotationPreparing is a constant for the credentials rotation phase describing that the procedure is being prepared.
+	RotationPreparing ShootCredentialsRotationPhase = "Preparing"
+	// RotationPrepared is a constant for the credentials rotation phase describing that the procedure was prepared.
+	RotationPrepared ShootCredentialsRotationPhase = "Prepared"
+	// RotationCompleting is a constant for the credentials rotation phase describing that the procedure is being
+	// completed.
+	RotationCompleting ShootCredentialsRotationPhase = "Completing"
+	// RotationCompleted is a constant for the credentials rotation phase describing that the procedure was completed.
+	RotationCompleted ShootCredentialsRotationPhase = "Completed"
+)
 
 // ShootAdvertisedAddress contains information for the shoot's Kube API server.
 type ShootAdvertisedAddress struct {

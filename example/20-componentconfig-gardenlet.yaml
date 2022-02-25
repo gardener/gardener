@@ -118,6 +118,7 @@ featureGates:
   CopyEtcdBackupsDuringControlPlaneMigration: false
   ForceRestore: false
   DisableDNSProviderManagement: false
+  ShootCARotation: true
 # seedConfig:
 #   metadata:
 #     name: my-seed

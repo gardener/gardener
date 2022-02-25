@@ -37,6 +37,7 @@ var (
 		features.CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
 		features.ForceRestore:                               {Default: false, PreRelease: featuregate.Alpha},
 		features.DisableDNSProviderManagement:               {Default: false, PreRelease: featuregate.Alpha},
+		features.ShootCARotation:                            {Default: false, PreRelease: featuregate.Alpha},
 	}
 )
 

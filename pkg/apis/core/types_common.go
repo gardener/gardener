@@ -70,6 +70,8 @@ type LastError struct {
 type LastOperationType string
 
 const (
+	// LastOperationTypeCreate indicates a 'create' operation.
+	LastOperationTypeCreate LastOperationType = "Create"
 	// LastOperationTypeReconcile indicates a 'reconcile' operation.
 	LastOperationTypeReconcile LastOperationType = "Reconcile"
 	// LastOperationTypeDelete indicates a 'delete' operation.

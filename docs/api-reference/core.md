@@ -8820,6 +8820,128 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ShootCARotation">ShootCARotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotation">ShootCredentialsRotation</a>)
+</p>
+<p>
+<p>ShootCARotation contains information about the certificate authority credential rotation.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>phase</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotationPhase">
+ShootCredentialsRotationPhase
+</a>
+</em>
+</td>
+<td>
+<p>Phase describes the phase of the certificate authority credential rotation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastCompletionTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
+completed.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ShootCredentials">ShootCredentials
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootStatus">ShootStatus</a>)
+</p>
+<p>
+<p>ShootCredentials contains information about the shoot credentials.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>rotation</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotation">
+ShootCredentialsRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Rotation contains information about the credential rotations.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ShootCredentialsRotation">ShootCredentialsRotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentials">ShootCredentials</a>)
+</p>
+<p>
+<p>ShootCredentialsRotation contains information about the rotation of credentials.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>certificateAuthorities</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootCARotation">
+ShootCARotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CertificateAuthorities contains information about the certificate authority credential rotation.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ShootCredentialsRotationPhase">ShootCredentialsRotationPhase
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootCARotation">ShootCARotation</a>)
+</p>
+<p>
+<p>ShootCredentialsRotationPhase is a string alias.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.ShootMachineImage">ShootMachineImage
 </h3>
 <p>
@@ -9407,6 +9529,20 @@ Kubernetes meta/v1.Time
 <td>
 <em>(Optional)</em>
 <p>MigrationStartTime is the time when a migration to a different seed was initiated.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>credentials</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentials">
+ShootCredentials
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Credentials contains information about the shoot credentials.</p>
 </td>
 </tr>
 </tbody>

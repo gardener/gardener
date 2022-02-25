@@ -130,4 +130,9 @@ const (
 	// owner: @MartinWeindel @timuthy
 	// alpha: v1.41
 	DisableDNSProviderManagement featuregate.Feature = "DisableDNSProviderManagement"
+
+	// ShootCARotation enables the automated rotation of the shoot CA certificates.
+	// owner: @rfranzke
+	// alpha: v1.42.0
+	ShootCARotation featuregate.Feature = "ShootCARotation"
 )

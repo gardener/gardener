@@ -19,13 +19,16 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/features"
 	shootregistry "github.com/gardener/gardener/pkg/registry/core/shoot"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 )
 
@@ -346,6 +349,66 @@ var _ = Describe("Strategy", func() {
 
 				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
+			})
+
+			It("should increase when the rotate-ca-start annotation gets set and feature gate is enabled", func() {
+				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, true)()
+
+				oldShoot := &core.Shoot{
+					Status: core.ShootStatus{
+						LastOperation: &core.LastOperation{},
+					},
+				}
+				newShoot := oldShoot.DeepCopy()
+				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateCAStart}
+
+				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
+			})
+
+			It("should increase when the rotate-ca-complete annotation gets set and feature gate is enabled", func() {
+				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, true)()
+
+				oldShoot := &core.Shoot{
+					Status: core.ShootStatus{
+						LastOperation: &core.LastOperation{},
+					},
+				}
+				newShoot := oldShoot.DeepCopy()
+				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateCAComplete}
+
+				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
+			})
+
+			It("should not increase when the rotate-ca-start annotation gets set and feature gate is disabled", func() {
+				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, false)()
+
+				oldShoot := &core.Shoot{
+					Status: core.ShootStatus{
+						LastOperation: &core.LastOperation{},
+					},
+				}
+				newShoot := oldShoot.DeepCopy()
+				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateCAStart}
+
+				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
+			})
+
+			It("should not increase when the rotate-ca-complete annotation gets set and feature gate is disabled", func() {
+				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, false)()
+
+				oldShoot := &core.Shoot{
+					Status: core.ShootStatus{
+						LastOperation: &core.LastOperation{},
+					},
+				}
+				newShoot := oldShoot.DeepCopy()
+				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateCAComplete}
+
+				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
 			})
 		})
 	})

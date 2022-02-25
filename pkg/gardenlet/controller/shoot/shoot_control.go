@@ -22,6 +22,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operations"
@@ -671,7 +672,29 @@ func (r *shootReconciler) updateShootStatusOperationStart(ctx context.Context, g
 		LastUpdateTime: now,
 	}
 
-	return gardenClient.Status().Update(ctx, shoot)
+	var mustRemoveOperationAnnotation bool
+
+	switch shoot.Annotations[v1beta1constants.GardenerOperation] {
+	case v1beta1constants.ShootOperationRotateCAStart:
+		v1beta1helper.SetShootCARotationPhase(shoot, gardencorev1beta1.RotationPreparing)
+		mustRemoveOperationAnnotation = true
+
+	case v1beta1constants.ShootOperationRotateCAComplete:
+		v1beta1helper.SetShootCARotationPhase(shoot, gardencorev1beta1.RotationCompleting)
+		mustRemoveOperationAnnotation = true
+	}
+
+	if err := gardenClient.Status().Update(ctx, shoot); err != nil {
+		return err
+	}
+
+	if mustRemoveOperationAnnotation {
+		patch := client.MergeFrom(shoot.DeepCopy())
+		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
+		return gardenClient.Patch(ctx, shoot, patch)
+	}
+
+	return nil
 }
 
 func (r *shootReconciler) patchShootStatusOperationSuccess(
@@ -750,6 +773,14 @@ func (r *shootReconciler) patchShootStatusOperationSuccess(
 		Progress:       100,
 		Description:    description,
 		LastUpdateTime: now,
+	}
+
+	switch v1beta1helper.GetShootCARotationPhase(shoot.Status.Credentials) {
+	case gardencorev1beta1.RotationPreparing:
+		shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase = gardencorev1beta1.RotationPrepared
+	case gardencorev1beta1.RotationCompleting:
+		shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase = gardencorev1beta1.RotationCompleted
+		shoot.Status.Credentials.Rotation.CertificateAuthorities.LastCompletionTime = &now
 	}
 
 	return gardenClient.Status().Patch(ctx, shoot, patch)

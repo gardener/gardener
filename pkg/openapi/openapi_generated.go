@@ -172,6 +172,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ServiceAccountConfig":                   schema_pkg_apis_core_v1alpha1_ServiceAccountConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Shoot":                                  schema_pkg_apis_core_v1alpha1_Shoot(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootAdvertisedAddress":                 schema_pkg_apis_core_v1alpha1_ShootAdvertisedAddress(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCARotation":                        schema_pkg_apis_core_v1alpha1_ShootCARotation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCredentials":                       schema_pkg_apis_core_v1alpha1_ShootCredentials(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCredentialsRotation":               schema_pkg_apis_core_v1alpha1_ShootCredentialsRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootExtensionStatus":                   schema_pkg_apis_core_v1alpha1_ShootExtensionStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootExtensionStatusList":               schema_pkg_apis_core_v1alpha1_ShootExtensionStatusList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootList":                              schema_pkg_apis_core_v1alpha1_ShootList(ref),
@@ -321,6 +324,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig":                    schema_pkg_apis_core_v1beta1_ServiceAccountConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Shoot":                                   schema_pkg_apis_core_v1beta1_Shoot(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootAdvertisedAddress":                  schema_pkg_apis_core_v1beta1_ShootAdvertisedAddress(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCARotation":                         schema_pkg_apis_core_v1beta1_ShootCARotation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentials":                        schema_pkg_apis_core_v1beta1_ShootCredentials(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentialsRotation":                schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootList":                               schema_pkg_apis_core_v1beta1_ShootList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootMachineImage":                       schema_pkg_apis_core_v1beta1_ShootMachineImage(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootNetworks":                           schema_pkg_apis_core_v1beta1_ShootNetworks(ref),
@@ -6866,6 +6872,78 @@ func schema_pkg_apis_core_v1alpha1_ShootAdvertisedAddress(ref common.ReferenceCa
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_ShootCARotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootCARotation contains information about the certificate authority credential rotation.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Phase describes the phase of the certificate authority credential rotation.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"lastCompletionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"phase"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ShootCredentials(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootCredentials contains information about the shoot credentials.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"rotation": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Rotation contains information about the credential rotations.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCredentialsRotation"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCredentialsRotation"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ShootCredentialsRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootCredentialsRotation contains information about the rotation of credentials.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"certificateAuthorities": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CertificateAuthorities contains information about the certificate authority credential rotation.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCARotation"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCARotation"},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_ShootExtensionStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -7567,12 +7645,18 @@ func schema_pkg_apis_core_v1alpha1_ShootStatus(ref common.ReferenceCallback) com
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
+					"credentials": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Credentials contains information about the shoot credentials.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCredentials"),
+						},
+					},
 				},
 				Required: []string{"gardener", "hibernated", "technicalID", "uid"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootAdvertisedAddress", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootAdvertisedAddress", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCredentials", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -13857,6 +13941,78 @@ func schema_pkg_apis_core_v1beta1_ShootAdvertisedAddress(ref common.ReferenceCal
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_ShootCARotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootCARotation contains information about the certificate authority credential rotation.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Phase describes the phase of the certificate authority credential rotation.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"lastCompletionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"phase"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ShootCredentials(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootCredentials contains information about the shoot credentials.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"rotation": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Rotation contains information about the credential rotations.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentialsRotation"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentialsRotation"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootCredentialsRotation contains information about the rotation of credentials.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"certificateAuthorities": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CertificateAuthorities contains information about the certificate authority credential rotation.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCARotation"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCARotation"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_ShootList(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -14295,12 +14451,18 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
+					"credentials": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Credentials contains information about the shoot credentials.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentials"),
+						},
+					},
 				},
 				Required: []string{"gardener", "hibernated", "technicalID", "uid"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootAdvertisedAddress", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootAdvertisedAddress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentials", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
