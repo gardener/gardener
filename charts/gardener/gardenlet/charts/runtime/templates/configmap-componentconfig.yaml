@@ -32,8 +32,13 @@ data:
       {{- end }}
       {{- if .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig }}
       bootstrapKubeconfig:
+        {{- if .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig.secretRef }}
+        name: {{ required ".Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig.secretRef.name is required" .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig.secretRef.name }}
+        namespace: {{ required ".Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig.secretRef.namespace is required" .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig.secretRef.namespace }}
+        {{- else }}
         name: {{ required ".Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig.name is required" .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig.name }}
         namespace: {{ required ".Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig.namespace is required" .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig.namespace }}
+        {{- end }}
       {{- end }}
       {{- if .Values.global.gardenlet.config.gardenClientConnection.kubeconfigSecret }}
       kubeconfigSecret:
