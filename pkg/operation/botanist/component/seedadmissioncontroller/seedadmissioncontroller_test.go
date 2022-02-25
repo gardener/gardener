@@ -179,28 +179,20 @@ spec:
         image: ` + image + `
         imagePullPolicy: IfNotPresent
         livenessProbe:
-          failureThreshold: 5
           httpGet:
             path: /healthz
             port: 8081
             scheme: HTTP
           initialDelaySeconds: 5
-          periodSeconds: 5
-          successThreshold: 1
-          timeoutSeconds: 5
         name: gardener-seed-admission-controller
         ports:
         - containerPort: 10250
         readinessProbe:
-          failureThreshold: 5
           httpGet:
             path: /readyz
             port: 8081
             scheme: HTTP
           initialDelaySeconds: 10
-          periodSeconds: 5
-          successThreshold: 1
-          timeoutSeconds: 5
         resources:
           limits:
             cpu: 100m

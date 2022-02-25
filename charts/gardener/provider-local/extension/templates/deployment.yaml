@@ -80,21 +80,13 @@ spec:
             path: /healthz
             port: {{ .Values.healthPort }}
             scheme: HTTP
-          initialDelaySeconds: 30
-          failureThreshold: 5
-          periodSeconds: 10
-          successThreshold: 1
-          timeoutSeconds: 5
+          initialDelaySeconds: 10
         readinessProbe:
           httpGet:
             path: /readyz
             port: {{ .Values.healthPort }}
             scheme: HTTP
           initialDelaySeconds: 5
-          failureThreshold: 5
-          periodSeconds: 5
-          successThreshold: 1
-          timeoutSeconds: 5
         ports:
         - name: webhook-server
           containerPort: {{ .Values.webhookConfig.serverPort }}

@@ -566,10 +566,6 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 								},
 							},
 							InitialDelaySeconds: 10,
-							FailureThreshold:    5,
-							PeriodSeconds:       5,
-							SuccessThreshold:    1,
-							TimeoutSeconds:      5,
 						},
 						VolumeMounts: []corev1.VolumeMount{{
 							Name:      volumeNameAPIServerAccess,

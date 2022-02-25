@@ -440,11 +440,7 @@ var _ = Describe("ResourceManager", func() {
 											Port:   intstr.FromInt(int(healthPort)),
 										},
 									},
-									FailureThreshold:    5,
 									InitialDelaySeconds: 10,
-									PeriodSeconds:       5,
-									SuccessThreshold:    1,
-									TimeoutSeconds:      5,
 								},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{

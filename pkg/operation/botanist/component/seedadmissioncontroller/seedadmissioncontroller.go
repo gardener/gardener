@@ -270,11 +270,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 										Port:   intstr.FromInt(healthPort),
 									},
 								},
-								FailureThreshold:    5,
 								InitialDelaySeconds: 5,
-								PeriodSeconds:       5,
-								SuccessThreshold:    1,
-								TimeoutSeconds:      5,
 							},
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
@@ -284,11 +280,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 										Port:   intstr.FromInt(healthPort),
 									},
 								},
-								FailureThreshold:    5,
 								InitialDelaySeconds: 10,
-								PeriodSeconds:       5,
-								SuccessThreshold:    1,
-								TimeoutSeconds:      5,
 							},
 							VolumeMounts: []corev1.VolumeMount{{
 								Name:      volumeName,
