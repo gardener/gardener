@@ -410,8 +410,7 @@ func SetDefaults_ManagedSeedControllerConfiguration(obj *ManagedSeedControllerCo
 	}
 
 	if obj.JitterUpdates == nil {
-		falseVar := false
-		obj.JitterUpdates = &falseVar
+		obj.JitterUpdates = pointer.Bool(false)
 	}
 }
 

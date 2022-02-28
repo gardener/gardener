@@ -45,6 +45,14 @@ var _ = Describe("Controller", func() {
 		c *Controller
 
 		managedSeed *seedmanagementv1alpha1.ManagedSeed
+
+		expectAddedWithJitter = func() {
+			queue.EXPECT().AddAfter(key, gomock.AssignableToTypeOf(time.Second)).DoAndReturn(
+				func(_ interface{}, d time.Duration) {
+					Expect(d > 0 && d <= syncJitterPeriod).To(BeTrue())
+				},
+			)
+		}
 	)
 
 	BeforeEach(func() {
@@ -69,7 +77,7 @@ var _ = Describe("Controller", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       name,
 				Namespace:  namespace,
-				Generation: 2,
+				Generation: 1,
 			},
 		}
 	})
@@ -89,7 +97,7 @@ var _ = Describe("Controller", func() {
 			c.managedSeedAdd(managedSeed)
 		})
 
-		It("should add the object to the queue (deletion)", func() {
+		It("should add the object to the queue without delay (deletion)", func() {
 			now := metav1.Now()
 			managedSeed.DeletionTimestamp = &now
 			queue.EXPECT().Add(key)
@@ -98,39 +106,37 @@ var _ = Describe("Controller", func() {
 		})
 
 		It("should add new object to the queue without delay", func() {
-			managedSeed.Status.ObservedGeneration = 1
+			managedSeed.Status.ObservedGeneration = 0
 			queue.EXPECT().Add(key)
 
 			c.managedSeedAdd(managedSeed)
 		})
+		Context("when the spec changed", func() {
+			BeforeEach(func() {
+				managedSeed.Generation = 2
+				managedSeed.Status.ObservedGeneration = 1
+			})
 
-		It("should add the object to the queue with a jittered delay because object generation and observed generation are not equal and jitterUpdates is set to true", func() {
-			managedSeed.Status.ObservedGeneration = 3
-			c.config.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(true)
-			queue.EXPECT().AddAfter(key, gomock.AssignableToTypeOf(time.Second)).DoAndReturn(
-				func(_ interface{}, d time.Duration) {
-					Expect(d > 0 && d <= syncJitterPeriod).To(BeTrue())
-				},
-			)
+			It("should add the object to the queue with a jittered delay because jitterUpdates is enabled", func() {
+				c.config.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(true)
+				expectAddedWithJitter()
 
-			c.managedSeedAdd(managedSeed)
-		})
+				c.managedSeedAdd(managedSeed)
+			})
 
-		It("should add the object to the queue without jittered delay because object generation and observed generation are not equal and jitterUpdates is set to false", func() {
-			managedSeed.Status.ObservedGeneration = 3
-			c.config.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(false)
-			queue.EXPECT().Add(key)
-			c.managedSeedAdd(managedSeed)
+			It("should add the object to the queue without delay and jitterUpdates is disabled", func() {
+				c.config.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(false)
+
+				queue.EXPECT().Add(key)
+				c.managedSeedAdd(managedSeed)
+			})
+
 		})
 
 		It("should add the object to the queue with a jittered delay because the object generation and observed generation are equal", func() {
+			managedSeed.Generation = 2
 			managedSeed.Status.ObservedGeneration = 2
-
-			queue.EXPECT().AddAfter(key, gomock.AssignableToTypeOf(time.Second)).DoAndReturn(
-				func(_ interface{}, d time.Duration) {
-					Expect(d > 0 && d <= syncJitterPeriod).To(BeTrue())
-				},
-			)
+			expectAddedWithJitter()
 
 			c.managedSeedAdd(managedSeed)
 		})
@@ -149,28 +155,30 @@ var _ = Describe("Controller", func() {
 		})
 
 		It("should do nothing because the object generation and observed generation are equal", func() {
-			managedSeed.Status.ObservedGeneration = 2
+			managedSeed.Status.ObservedGeneration = 1
 
 			c.managedSeedUpdate(nil, managedSeed)
 		})
 
-		It("should add the object to the queue with a jittered delay because object generation and observed generation are not equal and jitterUpdates is set to true", func() {
-			managedSeed.Status.ObservedGeneration = 3
-			c.config.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(true)
-			queue.EXPECT().AddAfter(key, gomock.AssignableToTypeOf(time.Second)).DoAndReturn(
-				func(_ interface{}, d time.Duration) {
-					Expect(d > 0 && d <= syncJitterPeriod).To(BeTrue())
-				},
-			)
+		Context("when the spec changed", func() {
+			BeforeEach(func() {
+				managedSeed.Generation = 2
+				managedSeed.Status.ObservedGeneration = 1
+			})
 
-			c.managedSeedUpdate(nil, managedSeed)
-		})
+			It("should add the object to the queue with a jittered delay because jitterUpdates is enabled", func() {
+				c.config.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(true)
+				expectAddedWithJitter()
 
-		It("should add the object to the queue without jittered delay because object generation and observed generation are not equal and jitterUpdates is set to false", func() {
-			managedSeed.Status.ObservedGeneration = 3
-			c.config.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(false)
-			queue.EXPECT().Add(key)
-			c.managedSeedUpdate(nil, managedSeed)
+				c.managedSeedUpdate(nil, managedSeed)
+			})
+
+			It("should add the object to the queue without delay and jitterUpdates is disabled", func() {
+				c.config.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(false)
+
+				queue.EXPECT().Add(key)
+				c.managedSeedUpdate(nil, managedSeed)
+			})
 		})
 
 	})
