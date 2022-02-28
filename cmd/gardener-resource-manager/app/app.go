@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"sync"
 
+	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
 	garbagecollectorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
 	healthcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/health"
@@ -27,8 +28,7 @@ import (
 	secretcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
 	tokeninvalidatorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
 	tokenrequestorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
-	"github.com/gardener/gardener/pkg/resourcemanager/healthz"
-	"github.com/gardener/gardener/pkg/resourcemanager/readyz"
+	resourcemanagerhealthz "github.com/gardener/gardener/pkg/resourcemanager/healthz"
 	projectedtokenmountwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 
@@ -36,6 +36,7 @@ import (
 	"github.com/spf13/pflag"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -89,11 +90,11 @@ func NewResourceManagerCommand() *cobra.Command {
 				}
 
 				var managerOptions manager.Options
-				healthz.DefaultAddOptions.Ctx = ctx
+				resourcemanagerhealthz.DefaultAddOptions.Ctx = ctx
 
 				managerOpts.Completed().Apply(&managerOptions)
 				sourceClientOpts.Completed().ApplyManagerOptions(&managerOptions)
-				sourceClientOpts.Completed().ApplyClientSet(&healthz.DefaultAddOptions.ClientSet)
+				sourceClientOpts.Completed().ApplyClientSet(&resourcemanagerhealthz.DefaultAddOptions.ClientSet)
 				resourceControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
 				secretControllerOpts.Completed().ClassFilter = *resourceControllerOpts.Completed().ClassFilter
 				healthControllerOpts.Completed().ClassFilter = *resourceControllerOpts.Completed().ClassFilter
@@ -118,6 +119,19 @@ func NewResourceManagerCommand() *cobra.Command {
 					return fmt.Errorf("could not add target cluster to manager: %w", err)
 				}
 
+				log.Info("Setting up healthcheck endpoints")
+				if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
+					return err
+				}
+				if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
+					return err
+				}
+
+				log.Info("Setting up readycheck for webhook server")
+				if err := mgr.AddReadyzCheck("webhook-server", mgr.GetWebhookServer().StartedChecker()); err != nil {
+					return err
+				}
+
 				// add controllers, health endpoint and webhooks to manager
 				if err := resourcemanagercmd.AddAllToManager(mgr,
 					// controllers
@@ -128,9 +142,8 @@ func NewResourceManagerCommand() *cobra.Command {
 					tokeninvalidatorcontroller.AddToManager,
 					tokenrequestorcontroller.AddToManager,
 					rootcacontroller.AddToManager,
-					// health/ready endpoints
-					healthz.AddToManager,
-					readyz.AddToManager,
+					// health endpoints
+					resourcemanagerhealthz.AddToManager,
 					// webhooks
 					tokeninvalidatorwebhook.AddToManager,
 					projectedtokenmountwebhook.AddToManager,

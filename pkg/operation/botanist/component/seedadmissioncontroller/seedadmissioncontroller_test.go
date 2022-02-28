@@ -175,11 +175,24 @@ spec:
         - --port=10250
         - --tls-cert-dir=/srv/gardener-seed-admission-controller
         - --allow-invalid-extension-resources=true
+        - --health-bind-address=:8081
         image: ` + image + `
         imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+            scheme: HTTP
+          initialDelaySeconds: 5
         name: gardener-seed-admission-controller
         ports:
         - containerPort: 10250
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+            scheme: HTTP
+          initialDelaySeconds: 10
         resources:
           limits:
             cpu: 100m
@@ -230,6 +243,10 @@ metadata:
   namespace: shoot--foo--bar
 spec:
   ports:
+  - name: health
+    port: 8081
+    protocol: TCP
+    targetPort: 8081
   - name: web
     port: 443
     protocol: TCP

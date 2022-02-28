@@ -557,6 +557,16 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 							SuccessThreshold:    1,
 							TimeoutSeconds:      5,
 						},
+						ReadinessProbe: &corev1.Probe{
+							ProbeHandler: corev1.ProbeHandler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path:   "/readyz",
+									Scheme: "HTTP",
+									Port:   intstr.FromInt(healthPort),
+								},
+							},
+							InitialDelaySeconds: 10,
+						},
 						VolumeMounts: []corev1.VolumeMount{{
 							Name:      volumeNameAPIServerAccess,
 							MountPath: volumeMountPathAPIServerAccess,

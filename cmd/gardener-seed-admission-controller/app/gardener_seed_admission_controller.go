@@ -25,12 +25,14 @@ import (
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
@@ -90,6 +92,8 @@ type Options struct {
 	ServerCertDir string
 	// AllowInvalidExtensionResources causes the seed-admission-controller to allow invalid extension resources.
 	AllowInvalidExtensionResources bool
+	// HealthBindAddress is the TCP address that the controller should bind to for serving health probes
+	HealthBindAddress string
 }
 
 // AddFlags adds gardener-seed-admission-controller's flags to the specified FlagSet.
@@ -98,6 +102,7 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&o.Port, "port", 9443, "webhook server port")
 	fs.StringVar(&o.ServerCertDir, "tls-cert-dir", "", "directory with server TLS certificate and key (must contain a tls.crt and tls.key file)")
 	fs.BoolVar(&o.AllowInvalidExtensionResources, "allow-invalid-extension-resources", false, "Allow invalid extension resources")
+	fs.StringVar(&o.HealthBindAddress, "health-bind-address", ":8081", "bind address for the health server")
 }
 
 // validate validates all the required options.
@@ -131,6 +136,7 @@ func (o *Options) Run(ctx context.Context) error {
 		LeaderElection:          false,
 		MetricsBindAddress:      "0", // disable for now, as we don't scrape the component
 		Host:                    o.BindAddress,
+		HealthProbeBindAddress:  o.HealthBindAddress,
 		Port:                    o.Port,
 		CertDir:                 o.ServerCertDir,
 		GracefulShutdownTimeout: &gracefulShutdownTimeout,
@@ -139,8 +145,22 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}
 
+	log.Info("Setting up healthcheck endpoints")
+	if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
+		return err
+	}
+	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
+		return err
+	}
+
 	log.Info("Setting up webhook server")
 	server := mgr.GetWebhookServer()
+
+	log.Info("Setting up readycheck for webhook server")
+	if err := mgr.AddReadyzCheck("webhook-server", server.StartedChecker()); err != nil {
+		return err
+	}
+
 	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(runtimelog.Log.WithName(extensioncrds.HandlerName))})
 	server.Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName)})
 	server.Register(extensionresources.WebhookPath, &webhook.Admission{Handler: extensionresources.New(runtimelog.Log.WithName(extensionresources.HandlerName), o.AllowInvalidExtensionResources)})

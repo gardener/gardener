@@ -61,6 +61,7 @@ const (
 	deploymentName      = Name
 	containerName       = Name
 
+	healthPort      = 8081
 	port            = 10250
 	volumeName      = Name + "-tls"
 	volumeMountPath = "/srv/gardener-seed-admission-controller"
@@ -178,12 +179,20 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 			Spec: corev1.ServiceSpec{
 				Type:     corev1.ServiceTypeClusterIP,
 				Selector: getLabels(),
-				Ports: []corev1.ServicePort{{
-					Name:       "web",
-					Port:       443,
-					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(port),
-				}},
+				Ports: []corev1.ServicePort{
+					{
+						Name:       "health",
+						Port:       healthPort,
+						Protocol:   corev1.ProtocolTCP,
+						TargetPort: intstr.FromInt(healthPort),
+					},
+					{
+						Name:       "web",
+						Port:       443,
+						Protocol:   corev1.ProtocolTCP,
+						TargetPort: intstr.FromInt(port),
+					},
+				},
 			},
 		}
 
@@ -238,6 +247,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 								fmt.Sprintf("--port=%d", port),
 								fmt.Sprintf("--tls-cert-dir=%s", volumeMountPath),
 								fmt.Sprintf("--allow-invalid-extension-resources=%t", !gardenletfeatures.FeatureGate.Enabled(features.DenyInvalidExtensionResources)),
+								fmt.Sprintf("--health-bind-address=:%d", healthPort),
 							},
 							Ports: []corev1.ContainerPort{{
 								ContainerPort: int32(port),
@@ -251,6 +261,26 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 									corev1.ResourceCPU:    resource.MustParse("100m"),
 									corev1.ResourceMemory: resource.MustParse("100Mi"),
 								},
+							},
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/healthz",
+										Scheme: "HTTP",
+										Port:   intstr.FromInt(healthPort),
+									},
+								},
+								InitialDelaySeconds: 5,
+							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/readyz",
+										Scheme: "HTTP",
+										Port:   intstr.FromInt(healthPort),
+									},
+								},
+								InitialDelaySeconds: 10,
 							},
 							VolumeMounts: []corev1.VolumeMount{{
 								Name:      volumeName,

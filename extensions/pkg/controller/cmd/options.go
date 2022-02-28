@@ -45,6 +45,9 @@ const (
 	WebhookServerPortFlag = "webhook-config-server-port"
 	// WebhookCertDirFlag is the name of the command line flag to specify the webhook certificate directory.
 	WebhookCertDirFlag = "webhook-config-cert-dir"
+	// HealthBindAddressFlag is the name of the command line flag to specify the TCP address that the controller
+	// should bind to for serving health probes
+	HealthBindAddressFlag = "health-bind-address"
 
 	// MaxConcurrentReconcilesFlag is the name of the command line flag to specify the maximum number of
 	// concurrent reconciliations a controller can do.
@@ -177,6 +180,8 @@ type ManagerOptions struct {
 	WebhookServerPort int
 	// WebhookCertDir is the directory that contains the webhook server key and certificate.
 	WebhookCertDir string
+	// HealthBindAddress is the TCP address that the controller should bind to for serving health probes
+	HealthBindAddress string
 
 	config *ManagerConfig
 }
@@ -197,11 +202,12 @@ func (m *ManagerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&m.WebhookServerHost, WebhookServerHostFlag, m.WebhookServerHost, "The webhook server host.")
 	fs.IntVar(&m.WebhookServerPort, WebhookServerPortFlag, m.WebhookServerPort, "The webhook server port.")
 	fs.StringVar(&m.WebhookCertDir, WebhookCertDirFlag, m.WebhookCertDir, "The directory that contains the webhook server key and certificate.")
+	fs.StringVar(&m.HealthBindAddress, HealthBindAddressFlag, ":8081", "bind address for the health server")
 }
 
 // Complete implements Completer.Complete.
 func (m *ManagerOptions) Complete() error {
-	m.config = &ManagerConfig{m.LeaderElection, m.LeaderElectionResourceLock, m.LeaderElectionID, m.LeaderElectionNamespace, m.WebhookServerHost, m.WebhookServerPort, m.WebhookCertDir}
+	m.config = &ManagerConfig{m.LeaderElection, m.LeaderElectionResourceLock, m.LeaderElectionID, m.LeaderElectionNamespace, m.WebhookServerHost, m.WebhookServerPort, m.WebhookCertDir, m.HealthBindAddress}
 	return nil
 }
 
@@ -226,6 +232,8 @@ type ManagerConfig struct {
 	WebhookServerPort int
 	// WebhookCertDir is the directory that contains the webhook server key and certificate.
 	WebhookCertDir string
+	// HealthBindAddress is the TCP address that the controller should bind to for serving health probes
+	HealthBindAddress string
 }
 
 // Apply sets the values of this ManagerConfig in the given manager.Options.
@@ -237,6 +245,7 @@ func (c *ManagerConfig) Apply(opts *manager.Options) {
 	opts.Host = c.WebhookServerHost
 	opts.Port = c.WebhookServerPort
 	opts.CertDir = c.WebhookCertDir
+	opts.HealthProbeBindAddress = c.HealthBindAddress
 }
 
 // Options initializes empty manager.Options, applies the set values and returns it.

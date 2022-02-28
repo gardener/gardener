@@ -432,6 +432,16 @@ var _ = Describe("ResourceManager", func() {
 										Protocol:      corev1.ProtocolTCP,
 									},
 								},
+								ReadinessProbe: &corev1.Probe{
+									ProbeHandler: corev1.ProbeHandler{
+										HTTPGet: &corev1.HTTPGetAction{
+											Path:   "/readyz",
+											Scheme: "HTTP",
+											Port:   intstr.FromInt(int(healthPort)),
+										},
+									},
+									InitialDelaySeconds: 10,
+								},
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("23m"),

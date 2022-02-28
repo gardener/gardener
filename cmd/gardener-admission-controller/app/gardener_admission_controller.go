@@ -174,6 +174,11 @@ func (o *options) run(ctx context.Context) error {
 	log.Info("Setting up webhook server")
 	server := mgr.GetWebhookServer()
 
+	log.Info("Setting up readycheck for webhook server")
+	if err := mgr.AddReadyzCheck("webhook-server", server.StartedChecker()); err != nil {
+		return err
+	}
+
 	namespaceValidationHandler, err := namespacedeletion.New(ctx, runtimelog.Log.WithName(namespacedeletion.HandlerName), mgr.GetCache())
 	if err != nil {
 		return err
