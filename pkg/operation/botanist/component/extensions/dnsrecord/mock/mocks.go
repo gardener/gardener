@@ -10,6 +10,7 @@ import (
 
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha10 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	dnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -62,6 +63,20 @@ func (m *MockInterface) Destroy(arg0 context.Context) error {
 func (mr *MockInterfaceMockRecorder) Destroy(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
+}
+
+// GetValues mocks base method.
+func (m *MockInterface) GetValues() *dnsrecord.Values {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetValues")
+	ret0, _ := ret[0].(*dnsrecord.Values)
+	return ret0
+}
+
+// GetValues indicates an expected call of GetValues.
+func (mr *MockInterfaceMockRecorder) GetValues() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValues", reflect.TypeOf((*MockInterface)(nil).GetValues))
 }
 
 // Migrate mocks base method.

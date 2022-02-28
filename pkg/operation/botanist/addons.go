@@ -141,7 +141,8 @@ func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 		Namespace:  b.Shoot.SeedNamespace,
 		TTL:        b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 	}
-	if b.NeedsIngressDNS() {
+	// Set component values even if the nginx-ingress addons is not enabled.
+	if b.NeedsExternalDNS() {
 		values.Type = b.Shoot.ExternalDomain.Provider
 		if b.Shoot.ExternalDomain.Zone != "" {
 			values.Zone = &b.Shoot.ExternalDomain.Zone
