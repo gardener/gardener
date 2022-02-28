@@ -20,12 +20,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -34,20 +36,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// ControllerName is the name of this controller.
+const ControllerName = "seed"
+
 // Controller controls Seeds.
 type Controller struct {
 	gardenClient client.Client
 	config       *config.ControllerManagerConfiguration
+	log          logr.Logger
 
-	seedReconciler       reconcile.Reconciler
-	lifeCycleReconciler  reconcile.Reconciler
+	secretsReconciler    reconcile.Reconciler
 	seedBackupReconciler reconcile.Reconciler
-	hasSyncedFuncs       []cache.InformerSynced
+	lifeCycleReconciler  reconcile.Reconciler
 
+	secretsQueue          workqueue.RateLimitingInterface
 	seedBackupBucketQueue workqueue.RateLimitingInterface
-	seedQueue             workqueue.RateLimitingInterface
 	seedLifecycleQueue    workqueue.RateLimitingInterface
 
+	hasSyncedFuncs         []cache.InformerSynced
 	workerCh               chan int
 	numberOfRunningWorkers int
 }
@@ -57,12 +63,15 @@ type Controller struct {
 // event recording. It creates a new Seed controller.
 func NewSeedController(
 	ctx context.Context,
+	log logr.Logger,
 	clientMap clientmap.ClientMap,
 	config *config.ControllerManagerConfiguration,
 ) (
 	*Controller,
 	error,
 ) {
+	log = log.WithName(ControllerName)
+
 	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return nil, err
@@ -84,14 +93,15 @@ func NewSeedController(
 	seedController := &Controller{
 		gardenClient: gardenClient.Client(),
 		config:       config,
+		log:          log,
 
-		seedReconciler:       NewDefaultControl(logger.Logger, gardenClient.Client()),
-		lifeCycleReconciler:  NewLifecycleDefaultControl(logger.Logger, gardenClient, config),
-		seedBackupReconciler: NewDefaultBackupBucketControl(logger.Logger, gardenClient),
+		secretsReconciler:    NewSecretsReconciler(gardenClient.Client()),
+		lifeCycleReconciler:  NewLifecycleReconciler(gardenClient, config),
+		seedBackupReconciler: NewBackupBucketReconciler(gardenClient),
 
+		secretsQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Secrets"),
 		seedBackupBucketQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Backup Bucket"),
 		seedLifecycleQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Lifecycle"),
-		seedQueue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed"),
 		workerCh:              make(chan int),
 	}
 
@@ -129,7 +139,7 @@ func NewSeedController(
 // Run runs the Controller until the given stop channel can be read from.
 func (c *Controller) Run(ctx context.Context, workers int) {
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
-		logger.Logger.Error("Timed out waiting for caches to sync")
+		c.log.Error(wait.ErrWaitTimeout, "Timed out waiting for caches to sync")
 		return
 	}
 
@@ -137,31 +147,31 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	go func() {
 		for res := range c.workerCh {
 			c.numberOfRunningWorkers += res
-			logger.Logger.Debugf("Current number of running Seed workers is %d", c.numberOfRunningWorkers)
 		}
 	}()
 
-	logger.Logger.Info("Seed controller initialized.")
+	c.log.Info("Seed controller initialized")
 
 	var waitGroup sync.WaitGroup
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.seedReconciler, &waitGroup, c.workerCh)
-		controllerutils.CreateWorker(ctx, c.seedLifecycleQueue, "Seed Lifecycle", c.lifeCycleReconciler, &waitGroup, c.workerCh)
-		controllerutils.CreateWorker(ctx, c.seedBackupBucketQueue, "Seed Backup Bucket", c.seedBackupReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.secretsQueue, "Seed Secrets", c.secretsReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedSecretsReconcilerName)))
+		controllerutils.CreateWorker(ctx, c.seedLifecycleQueue, "Seed Lifecycle", c.lifeCycleReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedLifecycleReconcilerName)))
+		controllerutils.CreateWorker(ctx, c.seedBackupBucketQueue, "Seed Backup Bucket", c.seedBackupReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(seedBackupBucketReconcilerName)))
 	}
 
 	// Shutdown handling
 	<-ctx.Done()
-	c.seedQueue.ShutDown()
+	c.secretsQueue.ShutDown()
 	c.seedBackupBucketQueue.ShutDown()
 	c.seedLifecycleQueue.ShutDown()
 
 	for {
-		if c.seedQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Debug("No running Seed worker and no items left in the queues. Terminated Seed controller...")
+		queueLength := c.secretsQueue.Len() + c.seedBackupBucketQueue.Len() + c.seedLifecycleQueue.Len()
+		if queueLength == 0 && c.numberOfRunningWorkers == 0 {
+			c.log.V(1).Info("No running Seed worker and no items left in the queues. Terminating Seed controller")
 			break
 		}
-		logger.Logger.Debugf("Waiting for %d Seed worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.seedQueue.Len())
+		c.log.V(1).Info("Waiting for Seed workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", queueLength)
 		time.Sleep(5 * time.Second)
 	}
 

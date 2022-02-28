@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -33,29 +34,33 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-func (r *projectReconciler) delete(ctx context.Context, project *gardencorev1beta1.Project, gardenClient client.Client) (reconcile.Result, error) {
+func (r *projectReconciler) delete(ctx context.Context, log logr.Logger, project *gardencorev1beta1.Project, gardenClient client.Client) (reconcile.Result, error) {
 	if namespace := project.Spec.Namespace; namespace != nil {
+		log = log.WithValues("namespaceName", *namespace)
+
 		inUse, err := kutil.IsNamespaceInUse(ctx, gardenClient, *namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to check if namespace is empty: %w", err)
 		}
 
 		if inUse {
-			r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceNotEmpty, "Cannot release namespace %q because it still contains Shoots.", *namespace)
+			r.recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceNotEmpty, "Cannot release namespace %q because it still contains Shoots", *namespace)
+			log.Info("Cannot release Project Namespace because it still contains Shoots")
 
 			_ = updateStatus(ctx, gardenClient, project, func() { project.Status.Phase = gardencorev1beta1.ProjectTerminating })
-			return reconcile.Result{RequeueAfter: time.Minute}, nil
+			// requeue with exponential backoff
+			return reconcile.Result{Requeue: true}, nil
 		}
 
-		released, err := r.releaseNamespace(ctx, gardenClient, project, *namespace)
+		released, err := r.releaseNamespace(ctx, log, gardenClient, project, *namespace)
 		if err != nil {
-			r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceDeletionFailed, err.Error())
+			r.recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceDeletionFailed, "Failed to release project namespace %q: %v", *namespace, err)
 			_ = updateStatus(ctx, gardenClient, project, func() { project.Status.Phase = gardencorev1beta1.ProjectFailed })
-			return reconcile.Result{}, err
+			return reconcile.Result{}, fmt.Errorf("failed to release project namespace: %w", err)
 		}
 
 		if !released {
-			r.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceMarkedForDeletion, "Successfully marked namespace %q for deletion.", *namespace)
+			r.recorder.Eventf(project, corev1.EventTypeNormal, gardencorev1beta1.ProjectEventNamespaceMarkedForDeletion, "Successfully marked project namespace %q for deletion", *namespace)
 			_ = updateStatus(ctx, gardenClient, project, func() { project.Status.Phase = gardencorev1beta1.ProjectTerminating })
 			return reconcile.Result{RequeueAfter: time.Minute}, nil
 		}
@@ -64,7 +69,7 @@ func (r *projectReconciler) delete(ctx context.Context, project *gardencorev1bet
 	return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, gardenClient, project, gardencorev1beta1.GardenerName)
 }
 
-func (r *projectReconciler) releaseNamespace(ctx context.Context, gardenClient client.Client, project *gardencorev1beta1.Project, namespaceName string) (bool, error) {
+func (r *projectReconciler) releaseNamespace(ctx context.Context, log logr.Logger, gardenClient client.Client, project *gardencorev1beta1.Project, namespaceName string) (bool, error) {
 	namespace := &corev1.Namespace{}
 	if err := r.gardenClient.Client().Get(ctx, kutil.Key(namespaceName), namespace); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -75,12 +80,14 @@ func (r *projectReconciler) releaseNamespace(ctx context.Context, gardenClient c
 
 	// If the namespace has been already marked for deletion we do not need to do it again.
 	if namespace.DeletionTimestamp != nil {
+		log.Info("Project Namespace is already marked for deletion, nothing to do for releasing it")
 		return false, nil
 	}
 
 	// To prevent "stealing" namespaces by other projects we only delete the namespace if its labels match
 	// the project labels.
 	if !apiequality.Semantic.DeepDerivative(namespaceLabelsFromProject(project), namespace.Labels) {
+		log.Info("Referenced Namespace does not belong to this Project, nothing to do for releasing it")
 		return true, nil
 	}
 
@@ -105,10 +112,12 @@ func (r *projectReconciler) releaseNamespace(ctx context.Context, gardenClient c
 				namespace.OwnerReferences = append(namespace.OwnerReferences[:i], namespace.OwnerReferences[i+1:]...)
 			}
 		}
+		log.Info("Project Namespace should be kept, removing owner references")
 		err := gardenClient.Update(ctx, namespace)
 		return true, err
 	}
 
+	log.Info("Deleting Project Namespace")
 	err := gardenClient.Delete(ctx, namespace, kubernetes.DefaultDeleteOptions...)
 	return false, client.IgnoreNotFound(err)
 }

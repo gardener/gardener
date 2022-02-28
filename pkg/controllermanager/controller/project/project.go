@@ -20,12 +20,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/client-go/tools/cache"
@@ -35,9 +37,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// ControllerName is the name of this controller.
+const ControllerName = "project"
+
 // Controller controls Projects.
 type Controller struct {
 	gardenClient client.Client
+	log          logr.Logger
 
 	projectReconciler              reconcile.Reconciler
 	projectStaleReconciler         reconcile.Reconciler
@@ -56,6 +62,7 @@ type Controller struct {
 // event recording. It creates a new Gardener controller.
 func NewProjectController(
 	ctx context.Context,
+	log logr.Logger,
 	clientMap clientmap.ClientMap,
 	config *config.ControllerManagerConfiguration,
 	recorder record.EventRecorder,
@@ -63,6 +70,8 @@ func NewProjectController(
 	*Controller,
 	error,
 ) {
+	log = log.WithName(ControllerName)
+
 	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return nil, err
@@ -83,9 +92,10 @@ func NewProjectController(
 
 	projectController := &Controller{
 		gardenClient:                   gardenClient.Client(),
-		projectReconciler:              NewProjectReconciler(logger.Logger, config.Controllers.Project, gardenClient, recorder),
-		projectStaleReconciler:         NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, gardenClient.Client()),
-		projectShootActivityReconciler: NewActivityReconciler(logger.Logger, gardenClient.Client()),
+		log:                            log,
+		projectReconciler:              NewProjectReconciler(config.Controllers.Project, gardenClient, recorder),
+		projectStaleReconciler:         NewProjectStaleReconciler(config.Controllers.Project, gardenClient.Client()),
+		projectShootActivityReconciler: NewActivityReconciler(gardenClient.Client()),
 		projectQueue:                   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
 		projectStaleQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
 		projectShootActivityQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Activity"),
@@ -121,7 +131,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
-		logger.Logger.Error("Timed out waiting for caches to sync")
+		c.log.Error(wait.ErrWaitTimeout, "Timed out waiting for caches to sync")
 		return
 	}
 
@@ -129,16 +139,15 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	go func() {
 		for res := range c.workerCh {
 			c.numberOfRunningWorkers += res
-			logger.Logger.Debugf("Current number of running Project workers is %d", c.numberOfRunningWorkers)
 		}
 	}()
 
-	logger.Logger.Info("Project controller initialized.")
+	c.log.Info("Project controller initialized")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.projectQueue, "Project", c.projectReconciler, &waitGroup, c.workerCh)
-		controllerutils.CreateWorker(ctx, c.projectStaleQueue, "Project Stale", c.projectStaleReconciler, &waitGroup, c.workerCh)
-		controllerutils.CreateWorker(ctx, c.projectShootActivityQueue, "Project Activity", c.projectShootActivityReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.projectQueue, "Project", c.projectReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(projectReconcilerName)))
+		controllerutils.CreateWorker(ctx, c.projectStaleQueue, "Project Stale", c.projectStaleReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(staleReconcilerName)))
+		controllerutils.CreateWorker(ctx, c.projectShootActivityQueue, "Project Activity", c.projectShootActivityReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(activityReconcilerName)))
 	}
 
 	// Shutdown handling
@@ -148,11 +157,11 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	c.projectShootActivityQueue.ShutDown()
 
 	for {
-		if c.projectQueue.Len() == 0 && c.projectStaleQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Debug("No running Project worker and no items left in the queues. Terminated Project controller...")
+		if c.projectQueue.Len() == 0 && c.projectStaleQueue.Len() == 0 && c.projectShootActivityQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
+			c.log.V(1).Info("No running Project worker and no items left in the queues. Terminating Project controller")
 			break
 		}
-		logger.Logger.Debugf("Waiting for %d Project worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.projectQueue.Len()+c.projectStaleQueue.Len())
+		c.log.V(1).Info("Waiting for Project workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.projectQueue.Len()+c.projectStaleQueue.Len()+c.projectShootActivityQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

@@ -16,15 +16,15 @@ package project
 
 import (
 	"context"
+	"fmt"
 	"reflect"
+
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/logger"
 
-	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -32,10 +32,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const projectReconcilerName = "project"
+
 func (c *Controller) projectAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
 	c.projectQueue.Add(key)
@@ -55,7 +57,7 @@ func (c *Controller) projectUpdate(oldObj, newObj interface{}) {
 	if reflect.DeepEqual(newProject.Status.LastActivityTimestamp, oldProject.Status.LastActivityTimestamp) {
 		key, err := cache.MetaNamespaceKeyFunc(newObj)
 		if err != nil {
-			logger.Logger.Errorf("Couldn't get key for object %+v: %v", newObj, err)
+			c.log.Error(err, "Couldn't get key for object", "object", newObj)
 			return
 		}
 		c.projectStaleQueue.Add(key)
@@ -71,16 +73,15 @@ func (c *Controller) projectUpdate(oldObj, newObj interface{}) {
 func (c *Controller) projectDelete(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
 	c.projectQueue.Add(key)
 }
 
 // NewProjectReconciler creates a new instance of a reconciler which reconciles Projects.
-func NewProjectReconciler(l logrus.FieldLogger, config *config.ProjectControllerConfiguration, gardenClient kubernetes.Interface, recorder record.EventRecorder) reconcile.Reconciler {
+func NewProjectReconciler(config *config.ProjectControllerConfiguration, gardenClient kubernetes.Interface, recorder record.EventRecorder) reconcile.Reconciler {
 	return &projectReconciler{
-		logger:       l,
 		config:       config,
 		gardenClient: gardenClient,
 		recorder:     recorder,
@@ -88,55 +89,30 @@ func NewProjectReconciler(l logrus.FieldLogger, config *config.ProjectController
 }
 
 type projectReconciler struct {
-	logger       logrus.FieldLogger
 	config       *config.ProjectControllerConfiguration
 	gardenClient kubernetes.Interface
 	recorder     record.EventRecorder
 }
 
 func (r *projectReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
 	project := &gardencorev1beta1.Project{}
 	if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, project); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			log.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
-
-	projectLogger := newProjectLogger(project)
-	projectLogger.Infof("[PROJECT RECONCILE] %s", project.Name)
 
 	if project.DeletionTimestamp != nil {
-		return r.delete(ctx, project, r.gardenClient.Client())
+		log.Info("Deleting project")
+		return r.delete(ctx, log, project, r.gardenClient.Client())
 	}
 
-	return r.reconcile(ctx, project, r.gardenClient.Client())
-}
-
-func newProjectLogger(project *gardencorev1beta1.Project) logrus.FieldLogger {
-	if project == nil {
-		return logger.Logger
-	}
-	return logger.NewFieldLogger(logger.Logger, "project", project.Name)
-}
-
-func (r *projectReconciler) reportEvent(project *gardencorev1beta1.Project, isError bool, eventReason, messageFmt string, args ...interface{}) {
-	var (
-		eventType     string
-		projectLogger = newProjectLogger(project)
-	)
-
-	if !isError {
-		eventType = corev1.EventTypeNormal
-		projectLogger.Infof(messageFmt, args...)
-	} else {
-		eventType = corev1.EventTypeWarning
-		projectLogger.Errorf(messageFmt, args...)
-	}
-
-	r.recorder.Eventf(project, eventType, eventReason, messageFmt, args...)
+	log.Info("Reconciling project")
+	return r.reconcile(ctx, log, project, r.gardenClient.Client())
 }
 
 func updateStatus(ctx context.Context, c client.Client, project *gardencorev1beta1.Project, transform func()) error {

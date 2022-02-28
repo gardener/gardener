@@ -16,17 +16,16 @@ package secretbinding
 
 import (
 	"context"
-	"errors"
 	"fmt"
+
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,7 +39,7 @@ import (
 func (c *Controller) secretBindingAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
 	c.secretBindingQueue.Add(key)
@@ -53,39 +52,36 @@ func (c *Controller) secretBindingUpdate(oldObj, newObj interface{}) {
 func (c *Controller) secretBindingDelete(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
 	c.secretBindingQueue.Add(key)
 }
 
 // NewSecretBindingReconciler creates a new instance of a reconciler which reconciles SecretBindings.
-func NewSecretBindingReconciler(l logrus.FieldLogger, gardenClient client.Client, recorder record.EventRecorder) reconcile.Reconciler {
+func NewSecretBindingReconciler(gardenClient client.Client, recorder record.EventRecorder) reconcile.Reconciler {
 	return &secretBindingReconciler{
-		logger:       l,
 		gardenClient: gardenClient,
 		recorder:     recorder,
 	}
 }
 
 type secretBindingReconciler struct {
-	logger       logrus.FieldLogger
 	gardenClient client.Client
 	recorder     record.EventRecorder
 }
 
 func (r *secretBindingReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
 	secretBinding := &gardencorev1beta1.SecretBinding{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, secretBinding); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			log.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
-
-	secretBindingLogger := logger.NewFieldLogger(r.logger, "secretbinding", fmt.Sprintf("%s/%s", secretBinding.Namespace, secretBinding.Name))
 
 	// The deletionTimestamp labels a SecretBinding as intended to get deleted. Before deletion,
 	// it has to be ensured that no Shoots are depending on the SecretBinding anymore.
@@ -97,16 +93,14 @@ func (r *secretBindingReconciler) Reconcile(ctx context.Context, request reconci
 
 		associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, r.gardenClient, secretBinding)
 		if err != nil {
-			secretBindingLogger.Error(err.Error())
 			return reconcile.Result{}, err
 		}
 
 		if len(associatedShoots) == 0 {
-			secretBindingLogger.Info("No Shoots are referencing the SecretBinding. Deletion accepted.")
+			log.Info("No Shoots are referencing the SecretBinding, deletion accepted")
 
 			mayReleaseSecret, err := r.mayReleaseSecret(ctx, secretBinding.Namespace, secretBinding.Name, secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name)
 			if err != nil {
-				secretBindingLogger.Error(err.Error())
 				return reconcile.Result{}, err
 			}
 
@@ -114,9 +108,8 @@ func (r *secretBindingReconciler) Reconcile(ctx context.Context, request reconci
 				// Remove finalizer from referenced secret
 				secret := &corev1.Secret{}
 				if err := r.gardenClient.Get(ctx, kutil.Key(secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name), secret); err == nil {
-					if err2 := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, secret.DeepCopy(), gardencorev1beta1.ExternalGardenerName); err2 != nil {
-						secretBindingLogger.Error(err2.Error())
-						return reconcile.Result{}, err2
+					if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, secret.DeepCopy(), gardencorev1beta1.ExternalGardenerName); client.IgnoreNotFound(err) != nil {
+						return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from Secret: %w", err)
 					}
 				} else if !apierrors.IsNotFound(err) {
 					return reconcile.Result{}, err
@@ -124,25 +117,21 @@ func (r *secretBindingReconciler) Reconcile(ctx context.Context, request reconci
 			}
 
 			// Remove finalizer from SecretBinding
-			if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, secretBinding, gardencorev1beta1.GardenerName); err != nil {
-				secretBindingLogger.Error(err.Error())
-				return reconcile.Result{}, err
+			if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, secretBinding, gardencorev1beta1.GardenerName); client.IgnoreNotFound(err) != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from SecretBinding: %w", err)
 			}
 
 			return reconcile.Result{}, nil
 		}
 
-		message := fmt.Sprintf("Can't delete SecretBinding, because the following Shoots are still referencing it: %v", associatedShoots)
-		secretBindingLogger.Infof(message)
+		message := fmt.Sprintf("Cannot delete SecretBinding, because the following Shoots are still referencing it: %+v", associatedShoots)
 		r.recorder.Event(secretBinding, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
-
-		return reconcile.Result{}, errors.New("SecretBinding still has references")
+		return reconcile.Result{}, fmt.Errorf(message)
 	}
 
 	if !controllerutil.ContainsFinalizer(secretBinding, gardencorev1beta1.GardenerName) {
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, secretBinding, gardencorev1beta1.GardenerName); err != nil {
-			secretBindingLogger.Errorf("Could not add finalizer to SecretBinding: %s", err.Error())
-			return reconcile.Result{}, err
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to SecretBinding: %w", err)
 		}
 	}
 
@@ -150,14 +139,12 @@ func (r *secretBindingReconciler) Reconcile(ctx context.Context, request reconci
 	// the SecretBinding resource does exist.
 	secret := &corev1.Secret{}
 	if err := r.gardenClient.Get(ctx, kutil.Key(secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name), secret); err != nil {
-		secretBindingLogger.Error(err.Error())
 		return reconcile.Result{}, err
 	}
 
 	if !controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
-			secretBindingLogger.Errorf("Could not add finalizer to Secret referenced in SecretBinding: %s", err.Error())
-			return reconcile.Result{}, err
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to Secret referenced in SecretBinding: %w", err)
 		}
 	}
 
@@ -170,8 +157,7 @@ func (r *secretBindingReconciler) Reconcile(ctx context.Context, request reconci
 				patch := client.MergeFrom(secret.DeepCopy())
 				metav1.SetMetaDataLabel(&secret.ObjectMeta, labelKey, "true")
 				if err := r.gardenClient.Patch(ctx, secret, patch); err != nil {
-					secretBindingLogger.Errorf("Could not add provider type label to Secret referenced in SecretBinding: %s", err.Error())
-					return reconcile.Result{}, err
+					return reconcile.Result{}, fmt.Errorf("failed to add provider type label to Secret referenced in SecretBinding: %w", err)
 				}
 			}
 		}

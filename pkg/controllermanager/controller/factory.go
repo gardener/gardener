@@ -126,22 +126,22 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Plant controller: %w", err)
 	}
 
-	projectController, err := projectcontroller.NewProjectController(ctx, f.clientMap, f.cfg, f.recorder)
+	projectController, err := projectcontroller.NewProjectController(ctx, log, f.clientMap, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Project controller: %w", err)
 	}
 
-	quotaController, err := quotacontroller.NewQuotaController(ctx, f.clientMap, f.recorder)
+	quotaController, err := quotacontroller.NewQuotaController(ctx, log, f.clientMap, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Quota controller: %w", err)
 	}
 
-	secretBindingController, err := secretbindingcontroller.NewSecretBindingController(ctx, f.clientMap, f.recorder)
+	secretBindingController, err := secretbindingcontroller.NewSecretBindingController(ctx, log, f.clientMap, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing SecretBinding controller: %w", err)
 	}
 
-	seedController, err := seedcontroller.NewSeedController(ctx, f.clientMap, f.cfg)
+	seedController, err := seedcontroller.NewSeedController(ctx, log, f.clientMap, f.cfg)
 	if err != nil {
 		return fmt.Errorf("failed initializing Seed controller: %w", err)
 	}

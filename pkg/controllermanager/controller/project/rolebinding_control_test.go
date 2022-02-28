@@ -17,8 +17,9 @@ package project
 import (
 	"context"
 
+	"github.com/go-logr/logr"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 
 	"github.com/golang/mock/gomock"
@@ -46,9 +47,6 @@ var _ = Describe("#roleBindingDelete", func() {
 	)
 
 	BeforeEach(func() {
-		// This should not be here!!! Hidden dependency!!!
-		logger.Logger = logger.NewNopLogger()
-
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 
@@ -63,6 +61,7 @@ var _ = Describe("#roleBindingDelete", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: "role-1", Namespace: ns},
 		}
 		controller = &Controller{
+			log:          logr.Discard(),
 			gardenClient: c,
 			projectQueue: queue,
 		}

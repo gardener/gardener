@@ -20,11 +20,11 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/golang/mock/gomock"
+
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/golang/mock/gomock"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -95,10 +95,9 @@ var _ = Describe("Project Activity Reconcile", func() {
 			},
 		}
 
-		logger.Logger = logger.NewLogger("info", "")
 		ctrl := gomock.NewController(GinkgoT())
 		k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
-		reconciler = NewActivityReconciler(logger.NewNopLogger(), k8sGardenRuntimeClient)
+		reconciler = NewActivityReconciler(k8sGardenRuntimeClient)
 		request = reconcile.Request{NamespacedName: types.NamespacedName{Name: shoot.Name, Namespace: shoot.Namespace}}
 		k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ProjectList{}), gomock.Any()).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ProjectList, opts client.MatchingFields) error {
 			if reflect.DeepEqual(opts[core.ProjectNamespace], *project.Spec.Namespace) {
@@ -108,7 +107,6 @@ var _ = Describe("Project Activity Reconcile", func() {
 			if reflect.DeepEqual(opts[core.ProjectNamespace], "error") {
 				return errors.New("API ERROR")
 			}
-			logger.Logger.Infof("Project %s not found returning empty", opts[core.ProjectNamespace])
 			*obj = gardencorev1beta1.ProjectList{}
 			return nil
 		}).AnyTimes()
@@ -172,7 +170,7 @@ var _ = Describe("Project Activity Reconcile", func() {
 
 		It("should not update the creation timestamp since the shoot does not exist", func() {
 			reconcileResult, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: shoot.Name, Namespace: "empty"}})
-			Expect(err).To(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(reconcileResult).To(Equal(reconcile.Result{}))
 		})
 
