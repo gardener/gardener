@@ -114,13 +114,17 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		return err
 	}
 
-	// TODO(rfranzke): Remove in a future release.
+	// TODO(ialidzhikov): Remove in a future release.
 	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "loki-config"}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "telegraf-config"}},
-		// Follow-up of https://github.com/gardener/gardener/pull/5010 (loki `ServiceAccount` got removed and was never
-		// used.
+		// Follow-up of https://github.com/gardener/gardener/pull/5010 (loki ServiceAccount got removed and was never
+		// used).
 		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "loki"}},
+		// Follow-up of https://github.com/gardener/gardener/pull/2515 (Secrets related to the old logging stack were
+		// not deleted).
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kibana-tls"}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "curator-sg-credentials"}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "sg-admin-client"}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "admin-sg-credentials"}},
 	)
 }
 
