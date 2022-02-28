@@ -59,7 +59,7 @@ spec:
   args:
   - >-
     go test -timeout=0 -mod=vendor ./test/integration/suite
-    --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
+    --v -ginkgo.v -ginkgo.progress -ginkgo.no-color
     -ginkgo.focus="[GARDENER] [BETA]"
 ```
 Using this approach, the overall number of testsuites is then reduced to a fixed number (excluding the system steps) of `test suites * labelCombinations`.

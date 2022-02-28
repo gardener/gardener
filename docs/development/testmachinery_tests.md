@@ -68,7 +68,7 @@ A suite can be executed by running the suite definition with ginkgo's `focus` an
 to control the execution of specific labeled test. See example below:
 ```console
 go test -timeout=0 -mod=vendor ./test/testmachinery/suites/shoot \
-      --v -ginkgo.v -ginkgo.progress -ginkgo.noColor \
+      --v -ginkgo.v -ginkgo.progress -ginkgo.no-color \
       --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
       --disable-dump=false \                               # disables dumping of teh current state if a test fails
       -kubecfg=/path/to/gardener/kubeconfig \
@@ -100,7 +100,7 @@ The newly created test can be tested by focusing the test with the default ginkg
 and run the shoot test suite with:
 ```
 go test -timeout=0 -mod=vendor ./test/testmachinery/suites/shoot \
-      --v -ginkgo.v -ginkgo.progress -ginkgo.noColor \
+      --v -ginkgo.v -ginkgo.progress -ginkgo.no-color \
       --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
       --disable-dump=false \                               # disables dumping of the current state if a test fails
       -kubecfg=/path/to/gardener/kubeconfig \
@@ -111,7 +111,7 @@ go test -timeout=0 -mod=vendor ./test/testmachinery/suites/shoot \
 or for the gardener suite with:
 ```
 go test -timeout=0 -mod=vendor ./test/testmachinery/suites/gardener \
-      --v -ginkgo.v -ginkgo.progress -ginkgo.noColor \
+      --v -ginkgo.v -ginkgo.progress -ginkgo.no-color \
       --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
       --disable-dump=false \                               # disables dumping of the current state if a test fails
       -kubecfg=/path/to/gardener/kubeconfig \
@@ -123,7 +123,7 @@ go test -timeout=0 -mod=vendor ./test/testmachinery/suites/gardener \
 Alternatively, a test can be triggered by specifying a ginkgo focus regex with the name of the test e.g.
 ```
 go test -timeout=0 -mod=vendor ./test/testmachinery/suites/gardener \
-      --v -ginkgo.v -ginkgo.progress -ginkgo.noColor \
+      --v -ginkgo.v -ginkgo.progress -ginkgo.no-color \
       --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
       -kubecfg=/path/to/gardener/kubeconfig \
       -project-namespace=<gardener project namespace> \

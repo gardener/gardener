@@ -11,7 +11,7 @@ spec:
   args:
   - >-
     go test -timeout=0 -mod=vendor ./test/testmachinery/system/managed_seed_deletion
-    --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
+    --v -ginkgo.v -ginkgo.progress -ginkgo.no-color
     -kubecfg="$TM_KUBECONFIG_PATH/gardener.config"
     -managed-seed-name=$MANAGED_SEED_NAME
   image: eu.gcr.io/gardener-project/3rd/golang:1.17.7
