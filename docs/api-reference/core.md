@@ -8726,8 +8726,22 @@ string
 <td>
 <em>(Optional)</em>
 <p>Issuer is the identifier of the service account token issuer. The issuer will assert this
-identifier in &ldquo;iss&rdquo; claim of issued tokens. This value is a string or URI.
-Defaults to URI of the API server.</p>
+identifier in &ldquo;iss&rdquo; claim of issued tokens. This value is used to generate new service account tokens.
+This value is a string or URI. Defaults to URI of the API server.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>acceptedIssuers</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.
+These values are not used to generate new service account tokens. Only useful when service account tokens are also
+issued by another external system or a change of the current issuer that is used for generating tokens is being performed.</p>
 </td>
 </tr>
 <tr>

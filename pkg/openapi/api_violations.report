@@ -41,6 +41,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,SeedSpec,Taints
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,SeedStatus,Conditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,SeedVolume,Providers
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ServiceAccountConfig,AcceptedIssuers
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootExtensionStatus,Statuses
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootSpec,Extensions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootSpec,Resources
@@ -96,6 +97,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedSpec,Taints
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedStatus,Conditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedVolume,Providers
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ServiceAccountConfig,AcceptedIssuers
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootSpec,Extensions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootSpec,Resources
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootSpec,Tolerations
@@ -263,6 +265,7 @@ API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alp
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,KubeletConfig,PodPIDsLimit
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,MachineTypeStorage,StorageSize
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ResourceWatchCacheSize,CacheSize
+API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ServiceAccountConfig,AcceptedIssuers
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ServiceAccountConfig,SigningKeySecret
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootStatus,IsHibernated
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,Volume,VolumeSize

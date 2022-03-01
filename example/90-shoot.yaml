@@ -177,6 +177,9 @@ spec:
   #   enableAnonymousAuthentication: false # See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
   #   serviceAccountConfig:
   #     issuer: foo
+  #     acceptedIssuers:
+  #     - foo1
+  #     - foo2
   #     signingKeySecretName:
   #       name: my-signing-key-secret
   #     extendTokenExpiration: true

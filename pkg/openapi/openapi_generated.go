@@ -6760,9 +6760,24 @@ func schema_pkg_apis_core_v1alpha1_ServiceAccountConfig(ref common.ReferenceCall
 				Properties: map[string]spec.Schema{
 					"issuer": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Issuer is the identifier of the service account token issuer. The issuer will assert this identifier in \"iss\" claim of issued tokens. This value is a string or URI. Defaults to URI of the API server.",
+							Description: "Issuer is the identifier of the service account token issuer. The issuer will assert this identifier in \"iss\" claim of issued tokens. This value is used to generate new service account tokens. This value is a string or URI. Defaults to URI of the API server.",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"additionalIssuers": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted. These values are not used to generate new service account tokens. Only useful when service account tokens are also issued by another external system or a change of the current issuer that is used for generating tokens is being performed.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
 						},
 					},
 					"signingKeySecretName": {
@@ -13829,9 +13844,24 @@ func schema_pkg_apis_core_v1beta1_ServiceAccountConfig(ref common.ReferenceCallb
 				Properties: map[string]spec.Schema{
 					"issuer": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Issuer is the identifier of the service account token issuer. The issuer will assert this identifier in \"iss\" claim of issued tokens. This value is a string or URI. Defaults to URI of the API server.",
+							Description: "Issuer is the identifier of the service account token issuer. The issuer will assert this identifier in \"iss\" claim of issued tokens. This value is used to generate new service account tokens. This value is a string or URI. Defaults to URI of the API server.",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"acceptedIssuers": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted. These values are not used to generate new service account tokens. Only useful when service account tokens are also issued by another external system or a change of the current issuer that is used for generating tokens is being performed.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
 						},
 					},
 					"signingKeySecretName": {

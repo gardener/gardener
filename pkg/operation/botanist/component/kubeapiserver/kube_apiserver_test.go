@@ -1693,9 +1693,18 @@ rules:
 							eventTTL                            = 2 * time.Hour
 							externalHostname                    = "api.foo.bar.com"
 							serviceAccountIssuer                = "issuer"
+							acceptedIssuers                     = []string{"issuer1", "issuer2"}
 							serviceAccountMaxTokenExpiration    = time.Hour
 							serviceAccountExtendTokenExpiration = false
 							serviceNetworkCIDR                  = "1.2.3.4/5"
+							indexOfElement                      = func(elements []string, element string) int {
+								for i, e := range elements {
+									if e == element {
+										return i
+									}
+								}
+								return -1
+							}
 						)
 
 						kapi = New(kubernetesInterface, namespace, Values{
@@ -1706,6 +1715,7 @@ rules:
 							Images:           images,
 							ServiceAccount: ServiceAccountConfig{
 								Issuer:                serviceAccountIssuer,
+								AcceptedIssuers:       acceptedIssuers,
 								MaxTokenExpiration:    &metav1.Duration{Duration: serviceAccountMaxTokenExpiration},
 								ExtendTokenExpiration: &serviceAccountExtendTokenExpiration,
 							},
@@ -1714,6 +1724,10 @@ rules:
 						})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
+
+						issuerIdx := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Command, "--service-account-issuer="+serviceAccountIssuer)
+						issuerIdx1 := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Command, "--service-account-issuer="+acceptedIssuers[0])
+						issuerIdx2 := indexOfElement(deployment.Spec.Template.Spec.Containers[0].Command, "--service-account-issuer="+acceptedIssuers[1])
 
 						Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(Equal("kube-apiserver"))
 						Expect(deployment.Spec.Template.Spec.Containers[0].Image).To(Equal(images.KubeAPIServer))
@@ -1757,6 +1771,8 @@ rules:
 							"--secure-port=443",
 							"--service-cluster-ip-range="+serviceNetworkCIDR,
 							"--service-account-issuer="+serviceAccountIssuer,
+							"--service-account-issuer="+acceptedIssuers[0],
+							"--service-account-issuer="+acceptedIssuers[1],
 							"--service-account-max-token-expiration="+serviceAccountMaxTokenExpiration.String(),
 							"--service-account-extend-token-expiration="+strconv.FormatBool(serviceAccountExtendTokenExpiration),
 							"--service-account-key-file=/srv/kubernetes/service-account-key/id_rsa",
@@ -1767,6 +1783,9 @@ rules:
 							"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
 							"--v=2",
 						))
+						Expect(issuerIdx).To(BeNumerically(">=", 0))
+						Expect(issuerIdx).To(BeNumerically("<", issuerIdx1))
+						Expect(issuerIdx).To(BeNumerically("<", issuerIdx2))
 						Expect(deployment.Spec.Template.Spec.Containers[0].TerminationMessagePath).To(Equal("/dev/termination-log"))
 						Expect(deployment.Spec.Template.Spec.Containers[0].TerminationMessagePolicy).To(Equal(corev1.TerminationMessageReadFile))
 						Expect(deployment.Spec.Template.Spec.Containers[0].Ports).To(ConsistOf(corev1.ContainerPort{

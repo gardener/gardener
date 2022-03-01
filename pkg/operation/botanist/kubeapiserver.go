@@ -323,6 +323,10 @@ func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context,
 		out.Issuer = *config.ServiceAccountConfig.Issuer
 	}
 
+	if config.ServiceAccountConfig.AcceptedIssuers != nil {
+		out.AcceptedIssuers = append([]string{}, config.ServiceAccountConfig.AcceptedIssuers...)
+	}
+
 	if signingKeySecret := config.ServiceAccountConfig.SigningKeySecret; signingKeySecret != nil {
 		secret := &corev1.Secret{}
 		if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.GetInfo().Namespace, signingKeySecret.Name), secret); err != nil {

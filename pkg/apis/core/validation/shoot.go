@@ -800,6 +800,11 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured bool, fldPa
 			if kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration != nil && kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration < 0 {
 				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), *kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration, "can not be negative"))
 			}
+
+			geqKubernetes122, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.22")
+			if kubeAPIServer.ServiceAccountConfig.AcceptedIssuers != nil && !geqKubernetes122 {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "acceptedIssuers"), "this field is only available in Kubernetes v1.22+"))
+			}
 		}
 
 		if kubeAPIServer.EventTTL != nil {
