@@ -12,7 +12,7 @@ require (
 	github.com/envoyproxy/go-control-plane v0.9.10-0.20210907150352-cf90f659a021
 	github.com/frankban/quicktest v1.13.1 // indirect
 	github.com/gardener/component-spec/bindings-go v0.0.33
-	github.com/gardener/dependency-watchdog v0.6.1-0.20210623112844-96f73d5dc311
+	github.com/gardener/dependency-watchdog v0.7.0
 	github.com/gardener/etcd-druid v0.7.0
 	github.com/gardener/external-dns-management v0.7.18
 	github.com/gardener/hvpa-controller v0.3.1
@@ -45,7 +45,7 @@ require (
 	go.uber.org/zap v1.19.1
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
-	golang.org/x/tools v0.1.7
+	golang.org/x/tools v0.1.9
 	gomodules.xyz/jsonpatch/v2 v2.2.0
 	gonum.org/v1/gonum v0.8.2
 	google.golang.org/genproto v0.0.0-20220107163113-42d7afdf6368 // indirect
