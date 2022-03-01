@@ -21,6 +21,7 @@ import (
 	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -67,13 +68,45 @@ var _ = Describe("DependencyWatchdog", func() {
 					Internal:      &scalerapi.ProbeDetails{KubeconfigSecretName: "dependency-watchdog-internal-probe"},
 					PeriodSeconds: pointer.Int32(30),
 				},
-				DependantScales: []*scalerapi.DependantScaleDetails{{
-					ScaleRef: autoscalingv1.CrossVersionObjectReference{
-						APIVersion: "apps/v1",
-						Kind:       "Deployment",
-						Name:       "kube-controller-manager",
+				DependantScales: []*scalerapi.DependantScaleDetails{
+					{
+						ScaleRef: autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "apps/v1",
+							Kind:       "Deployment",
+							Name:       "kube-controller-manager",
+						},
+						ScaleUpDelaySeconds: pointer.Int32(120),
 					},
-				}},
+					{
+						ScaleRef: autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "apps/v1",
+							Kind:       "Deployment",
+							Name:       "machine-controller-manager",
+						},
+						ScaleUpDelaySeconds: pointer.Int32(60),
+						ScaleRefDependsOn: []autoscalingv1.CrossVersionObjectReference{
+							{
+								APIVersion: appsv1.SchemeGroupVersion.String(),
+								Kind:       "Deployment",
+								Name:       "kube-controller-manager",
+							},
+						},
+					},
+					{
+						ScaleRef: autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "apps/v1",
+							Kind:       "Deployment",
+							Name:       "cluster-autoscaler",
+						},
+						ScaleRefDependsOn: []autoscalingv1.CrossVersionObjectReference{
+							{
+								APIVersion: appsv1.SchemeGroupVersion.String(),
+								Kind:       "Deployment",
+								Name:       "machine-controller-manager",
+							},
+						},
+					},
+				},
 			}))
 			Expect(err).NotTo(HaveOccurred())
 		})

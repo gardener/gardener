@@ -15,6 +15,7 @@
 package kubeapiserver
 
 import (
+	worker "github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
@@ -70,12 +71,44 @@ func DependencyWatchdogProbeConfiguration() ([]scalerapi.ProbeDependants, error)
 			Internal:      &scalerapi.ProbeDetails{KubeconfigSecretName: DependencyWatchdogInternalProbeSecretName},
 			PeriodSeconds: pointer.Int32(30),
 		},
-		DependantScales: []*scalerapi.DependantScaleDetails{{
-			ScaleRef: autoscalingv1.CrossVersionObjectReference{
-				APIVersion: appsv1.SchemeGroupVersion.String(),
-				Kind:       "Deployment",
-				Name:       v1beta1constants.DeploymentNameKubeControllerManager,
+		DependantScales: []*scalerapi.DependantScaleDetails{
+			{
+				ScaleRef: autoscalingv1.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "Deployment",
+					Name:       v1beta1constants.DeploymentNameKubeControllerManager,
+				},
+				ScaleUpDelaySeconds: pointer.Int32(120),
 			},
-		}},
+			{
+				ScaleRef: autoscalingv1.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "Deployment",
+					Name:       worker.McmDeploymentName,
+				},
+				ScaleUpDelaySeconds: pointer.Int32(60),
+				ScaleRefDependsOn: []autoscalingv1.CrossVersionObjectReference{
+					{
+						APIVersion: appsv1.SchemeGroupVersion.String(),
+						Kind:       "Deployment",
+						Name:       v1beta1constants.DeploymentNameKubeControllerManager,
+					},
+				},
+			},
+			{
+				ScaleRef: autoscalingv1.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "Deployment",
+					Name:       v1beta1constants.DeploymentNameClusterAutoscaler,
+				},
+				ScaleRefDependsOn: []autoscalingv1.CrossVersionObjectReference{
+					{
+						APIVersion: appsv1.SchemeGroupVersion.String(),
+						Kind:       "Deployment",
+						Name:       worker.McmDeploymentName,
+					},
+				},
+			},
+		},
 	}}, nil
 }
