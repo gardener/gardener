@@ -143,6 +143,7 @@
     * [`ContainerRuntime` resource](extensions/containerruntime.md)
   * Generic (non-essential) extensions
     * [`Extension` resource](extensions/extension.md)
+  * [Extension Admission](extensions/extension-admission.md)
 * [Provider Local](extensions/provider-local.md)
 * [Extending project roles](extensions/project-roles.md)
 * [Referenced resources](extensions/referenced-resources.md)
