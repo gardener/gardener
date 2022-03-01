@@ -15,7 +15,6 @@
 package kubeapiserver
 
 import (
-	worker "github.com/gardener/gardener/extensions/pkg/controller/worker/genericactuator"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
@@ -84,7 +83,7 @@ func DependencyWatchdogProbeConfiguration() ([]scalerapi.ProbeDependants, error)
 				ScaleRef: autoscalingv1.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 					Kind:       "Deployment",
-					Name:       worker.McmDeploymentName,
+					Name:       v1beta1constants.DeploymentNameMachineControllerManager,
 				},
 				ScaleUpDelaySeconds: pointer.Int32(60),
 				ScaleRefDependsOn: []autoscalingv1.CrossVersionObjectReference{
@@ -105,7 +104,7 @@ func DependencyWatchdogProbeConfiguration() ([]scalerapi.ProbeDependants, error)
 					{
 						APIVersion: appsv1.SchemeGroupVersion.String(),
 						Kind:       "Deployment",
-						Name:       worker.McmDeploymentName,
+						Name:       v1beta1constants.DeploymentNameMachineControllerManager,
 					},
 				},
 			},

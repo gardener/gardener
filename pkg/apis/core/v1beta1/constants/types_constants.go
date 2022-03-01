@@ -109,6 +109,10 @@ const (
 	// DeploymentNameVPAUpdater is a constant for the name of the VPA updater deployment.
 	DeploymentNameVPAUpdater = "vpa-updater"
 
+	// DeploymentNameMachineControllerManager is a constant for the name of a Kubernetes deployment object that contains
+	// the machine-controller-manager pod.
+	DeploymentNameMachineControllerManager = "machine-controller-manager"
+
 	// StatefulSetNameAlertManager is a constant for the name of a Kubernetes stateful set object that contains
 	// the alertmanager pod.
 	StatefulSetNameAlertManager = "alertmanager"
