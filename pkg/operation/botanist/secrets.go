@@ -88,6 +88,17 @@ func (b *Botanist) wantedCertificateAuthorities() map[string]*secretutils.Certif
 // InitializeSecretsManagement initializes the secrets management and deploys the required secrets to the shoot
 // namespace in the seed.
 func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
+	// Generally, the existing secrets in the shoot namespace in the seeds are the source of truth for the secret
+	// manager. Hence, if we restore a shoot control plane then let's fetch the existing data from the ShootState and
+	// create corresponding secrets in the shoot namespace in the seed before initializing it. Note that this is
+	// explicitly only done in case of restoration to prevent split-brain situations as described in
+	// https://github.com/gardener/gardener/issues/5377.
+	if b.isRestorePhase() {
+		if err := b.restoreSecretsFromShootStateForSecretsManagerAdoption(ctx); err != nil {
+			return err
+		}
+	}
+
 	for _, config := range b.wantedCertificateAuthorities() {
 		if _, err := b.SecretsManager.GetOrGenerate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld)); err != nil {
 			return err
@@ -101,6 +112,37 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 	rotation := make(map[string]time.Time)
 
 	return rotation
+}
+
+func (b *Botanist) restoreSecretsFromShootStateForSecretsManagerAdoption(ctx context.Context) error {
+	var fns []flow.TaskFn
+
+	for _, v := range b.GetShootState().Spec.Gardener {
+		entry := v
+
+		if entry.Labels[secretsmanager.LabelKeyManagedBy] != secretsmanager.LabelValueSecretsManager ||
+			entry.Type != "secret" {
+			continue
+		}
+
+		fns = append(fns, func(ctx context.Context) error {
+			objectMeta := metav1.ObjectMeta{
+				Name:      entry.Name,
+				Namespace: b.Shoot.SeedNamespace,
+				Labels:    entry.Labels,
+			}
+
+			data := make(map[string][]byte)
+			if err := json.Unmarshal(entry.Data.Raw, &data); err != nil {
+				return err
+			}
+
+			secret := secretsmanager.Secret(objectMeta, data)
+			return kutil.IgnoreAlreadyExists(b.K8sSeedClient.Client().Create(ctx, secret))
+		})
+	}
+
+	return flow.Parallel(fns...)(ctx)
 }
 
 func (b *Botanist) fetchCertificateAuthoritiesForLegacySecretsManager(ctx context.Context, legacySecretsManager *shootsecrets.SecretsManager, addToDeployedSecrets bool) (map[string]*secretutils.Certificate, error) {
