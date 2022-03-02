@@ -82,7 +82,8 @@ type CertificateSecretConfig struct {
 	SigningCA *Certificate
 	PKCS      int
 
-	Validity *time.Duration
+	Validity                    *time.Duration
+	SkipPublishingCACertificate bool
 
 	Clock clock.Clock
 }
@@ -92,7 +93,8 @@ type CertificateSecretConfig struct {
 type Certificate struct {
 	Name string
 
-	CA *Certificate
+	CA                          *Certificate
+	SkipPublishingCACertificate bool
 
 	PrivateKey    *rsa.PrivateKey
 	PrivateKeyPEM []byte
@@ -133,8 +135,9 @@ func (s *CertificateSecretConfig) GenerateFromInfoData(infoData infodata.InfoDat
 		return nil, fmt.Errorf("could not convert InfoData entry %s to CertificateInfoData", s.Name)
 	}
 	certificateObj := &Certificate{
-		Name: s.Name,
-		CA:   s.SigningCA,
+		Name:                        s.Name,
+		CA:                          s.SigningCA,
+		SkipPublishingCACertificate: s.SkipPublishingCACertificate,
 
 		PrivateKeyPEM:  data.PrivateKey,
 		CertificatePEM: data.Certificate,
@@ -177,8 +180,9 @@ func (s *CertificateSecretConfig) LoadFromSecretData(secretData map[string][]byt
 // GenerateCertificate computes a CA, server, or client certificate based on the configuration.
 func (s *CertificateSecretConfig) GenerateCertificate() (*Certificate, error) {
 	certificateObj := &Certificate{
-		Name: s.Name,
-		CA:   s.SigningCA,
+		Name:                        s.Name,
+		CA:                          s.SigningCA,
+		SkipPublishingCACertificate: s.SkipPublishingCACertificate,
 	}
 
 	// If no cert type is given then we only return a certificate object that contains the CA.
@@ -239,7 +243,9 @@ func (c *Certificate) SecretData() map[string][]byte {
 		// keys in the secret data.
 		data[DataKeyPrivateKey] = c.PrivateKeyPEM
 		data[DataKeyCertificate] = c.CertificatePEM
-		data[DataKeyCertificateCA] = c.CA.CertificatePEM
+		if !c.SkipPublishingCACertificate {
+			data[DataKeyCertificateCA] = c.CA.CertificatePEM
+		}
 	}
 
 	return data
