@@ -45,43 +45,6 @@ var basicAuthSecretAPIServer = &secrets.BasicAuthSecretConfig{
 	PasswordLength: 32,
 }
 
-func (b *Botanist) wantedCertificateAuthorities() map[string]*secrets.CertificateSecretConfig {
-	wantedCertificateAuthorities := map[string]*secrets.CertificateSecretConfig{
-		v1beta1constants.SecretNameCACluster: {
-			Name:       v1beta1constants.SecretNameCACluster,
-			CommonName: "kubernetes",
-			CertType:   secrets.CACert,
-		},
-		v1beta1constants.SecretNameCAETCD: {
-			Name:       etcd.SecretNameCA,
-			CommonName: "etcd",
-			CertType:   secrets.CACert,
-		},
-		v1beta1constants.SecretNameCAFrontProxy: {
-			Name:       v1beta1constants.SecretNameCAFrontProxy,
-			CommonName: "front-proxy",
-			CertType:   secrets.CACert,
-		},
-		v1beta1constants.SecretNameCAKubelet: {
-			Name:       v1beta1constants.SecretNameCAKubelet,
-			CommonName: "kubelet",
-			CertType:   secrets.CACert,
-		},
-		v1beta1constants.SecretNameCAMetricsServer: {
-			Name:       metricsserver.SecretNameCA,
-			CommonName: "metrics-server",
-			CertType:   secrets.CACert,
-		},
-		v1beta1constants.SecretNameCAVPN: {
-			Name:       v1beta1constants.SecretNameCAVPN,
-			CommonName: "vpn",
-			CertType:   secrets.CACert,
-		},
-	}
-
-	return wantedCertificateAuthorities
-}
-
 func (b *Botanist) generateStaticTokenConfig() *secrets.StaticTokenSecretConfig {
 	return &secrets.StaticTokenSecretConfig{
 		Name: kubeapiserver.SecretNameStaticToken,

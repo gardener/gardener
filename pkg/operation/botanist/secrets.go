@@ -49,6 +49,41 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+func (b *Botanist) wantedCertificateAuthorities() map[string]*secretutils.CertificateSecretConfig {
+	return map[string]*secretutils.CertificateSecretConfig{
+		v1beta1constants.SecretNameCACluster: {
+			Name:       v1beta1constants.SecretNameCACluster,
+			CommonName: "kubernetes",
+			CertType:   secretutils.CACert,
+		},
+		v1beta1constants.SecretNameCAETCD: {
+			Name:       v1beta1constants.SecretNameCAETCD,
+			CommonName: "etcd",
+			CertType:   secretutils.CACert,
+		},
+		v1beta1constants.SecretNameCAFrontProxy: {
+			Name:       v1beta1constants.SecretNameCAFrontProxy,
+			CommonName: "front-proxy",
+			CertType:   secretutils.CACert,
+		},
+		v1beta1constants.SecretNameCAKubelet: {
+			Name:       v1beta1constants.SecretNameCAKubelet,
+			CommonName: "kubelet",
+			CertType:   secretutils.CACert,
+		},
+		v1beta1constants.SecretNameCAMetricsServer: {
+			Name:       v1beta1constants.SecretNameCAMetricsServer,
+			CommonName: "metrics-server",
+			CertType:   secretutils.CACert,
+		},
+		v1beta1constants.SecretNameCAVPN: {
+			Name:       v1beta1constants.SecretNameCAVPN,
+			CommonName: "vpn",
+			CertType:   secretutils.CACert,
+		},
+	}
+}
+
 func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 	rotation := make(map[string]time.Time)
 
