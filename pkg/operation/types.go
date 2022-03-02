@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -54,8 +55,9 @@ type Operation struct {
 	checkSumsMutex sync.RWMutex
 	checkSums      map[string]string
 
-	secrets      map[string]*corev1.Secret
-	secretsMutex sync.RWMutex
+	secrets        map[string]*corev1.Secret
+	secretsMutex   sync.RWMutex
+	SecretsManager secretsmanager.Interface
 
 	shootState      atomic.Value
 	shootStateMutex sync.Mutex

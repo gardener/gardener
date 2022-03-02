@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -68,6 +69,8 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err = b.InitializeSeedClients(ctx); err != nil {
 		return nil, err
 	}
+
+	o.SecretsManager = secretsmanager.New(b.Logger, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, b.lastSecretRotationStartTimes())
 
 	// extension components
 	o.Shoot.Components.Extensions.ContainerRuntime = b.DefaultContainerRuntime()

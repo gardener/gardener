@@ -49,6 +49,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
+	rotation := make(map[string]time.Time)
+
+	return rotation
+}
+
 // GenerateAndSaveSecrets creates a CA certificate for the Shoot cluster and uses it to sign the server certificate
 // used by the kube-apiserver, and all client certificates used for communication. It also creates RSA key
 // pairs for SSH connections to the nodes/VMs and for the VPN tunnel. Moreover, basic authentication
