@@ -16,7 +16,9 @@ package extensions
 
 import (
 	"context"
+	"fmt"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -176,6 +178,41 @@ func ShootFromCluster(cluster *extensionsv1alpha1.Cluster) (*gardencorev1beta1.S
 	}
 
 	return shoot, nil
+}
+
+// GetShootStateForCluster retrieves the ShootState and the Shoot resources for a given Cluster name by first fetching
+// the *extensionsv1alpha1.Cluster object in the seed, extracting the Shoot resource from it and then fetching the
+// *gardencorev1alpha1.ShootState resource from the garden.
+func GetShootStateForCluster(
+	ctx context.Context,
+	gardenClient client.Client,
+	seedClient client.Client,
+	clusterName string,
+) (
+	*gardencorev1alpha1.ShootState,
+	*gardencorev1beta1.Shoot,
+	error,
+) {
+	cluster := &extensionsv1alpha1.Cluster{}
+	if err := seedClient.Get(ctx, kutil.Key(clusterName), cluster); err != nil {
+		return nil, nil, err
+	}
+
+	shoot, err := ShootFromCluster(cluster)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if shoot == nil {
+		return nil, nil, fmt.Errorf("cluster resource %s doesn't contain shoot resource in raw format", cluster.Name)
+	}
+
+	shootState := &gardencorev1alpha1.ShootState{}
+	if err := gardenClient.Get(ctx, kutil.Key(shoot.Namespace, shoot.Name), shootState); err != nil {
+		return nil, nil, err
+	}
+
+	return shootState, shoot, nil
 }
 
 // GetShoot tries to read Gardener's Cluster extension resource in the given namespace and return the embedded Shoot resource.
