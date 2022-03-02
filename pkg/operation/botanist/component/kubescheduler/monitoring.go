@@ -117,7 +117,7 @@ relabel_configs:
   - __meta_kubernetes_service_name
   - __meta_kubernetes_endpoint_port_name
   action: keep
-  regex: ` + ServiceName + `;` + portNameMetrics + `
+  regex: ` + serviceName + `;` + portNameMetrics + `
 - action: labelmap
   regex: __meta_kubernetes_service_label_(.+)
 - source_labels: [ __meta_kubernetes_pod_name ]

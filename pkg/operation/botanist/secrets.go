@@ -183,13 +183,13 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 		for _, name := range []string{
 			"gardener",
 			"gardener-internal",
-			"kube-scheduler",
 			"kube-controller-manager",
 			"cluster-autoscaler",
 			"kube-state-metrics",
 			// TODO(rfranzke): Uncomment this in a future release once all monitoring configurations of extensions have been
 			// adapted.
 			// "prometheus",
+			"kube-scheduler-server",
 		} {
 			gardenerResourceDataList.Delete(name)
 		}
