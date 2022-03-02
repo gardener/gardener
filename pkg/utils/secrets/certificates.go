@@ -28,13 +28,14 @@ import (
 	"sync"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/infodata"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/clock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // CertType is a string alias for certificate types.
@@ -83,9 +84,7 @@ type CertificateSecretConfig struct {
 
 	Validity *time.Duration
 
-	// Now should only be set in tests.
-	// Defaults to time.Now
-	Now func() time.Time
+	Clock clock.Clock
 }
 
 // Certificate contains the private key, and the certificate. It does also contain the CA certificate
@@ -289,13 +288,13 @@ func LoadCAFromSecret(ctx context.Context, k8sClient client.Client, namespace, n
 // or both, depending on the <certType> value. If <isCACert> is true, then a CA certificate is being created.
 // The certificates a valid for 10 years.
 func (s *CertificateSecretConfig) generateCertificateTemplate() *x509.Certificate {
-	nowFunc := time.Now
+	var clock clock.Clock = clock.RealClock{}
 
-	if s.Now != nil {
-		nowFunc = s.Now
+	if s.Clock != nil {
+		clock = s.Clock
 	}
 
-	now := nowFunc()
+	now := clock.Now()
 	expiration := now.AddDate(10, 0, 0) // + 10 years
 	if s.Validity != nil {
 		expiration = now.Add(*s.Validity)
@@ -487,13 +486,11 @@ func SelfGenerateTLSServerCertificate(name string, dnsNames []string, ips []net.
 
 // CertificateIsExpired returns `true` if the given certificate is expired.
 // The given `renewalWindow` lets the certificate expire earlier.
-func CertificateIsExpired(cert []byte, renewalWindow time.Duration) (bool, error) {
-	now := NowFunc()
-
+func CertificateIsExpired(clock clock.Clock, cert []byte, renewalWindow time.Duration) (bool, error) {
 	x509, err := utils.DecodeCertificate(cert)
 	if err != nil {
 		return false, err
 	}
 
-	return now.After(x509.NotAfter.Add(-renewalWindow)), nil
+	return clock.Now().After(x509.NotAfter.Add(-renewalWindow)), nil
 }

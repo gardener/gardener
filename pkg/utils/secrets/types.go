@@ -15,8 +15,6 @@
 package secrets
 
 import (
-	"time"
-
 	"github.com/gardener/gardener/pkg/utils/infodata"
 )
 
@@ -37,7 +35,3 @@ type DataInterface interface {
 	// SecretData computes the data map which can be used in a Kubernetes secret.
 	SecretData() map[string][]byte
 }
-
-// NowFunc is a function returning the current time.
-// Exposed for testing.
-var NowFunc = time.Now

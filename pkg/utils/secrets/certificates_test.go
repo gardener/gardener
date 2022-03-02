@@ -18,11 +18,11 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/test"
-
 	. "github.com/gardener/gardener/pkg/utils/secrets"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/util/clock"
 )
 
 var _ = Describe("Certificate Secrets", func() {
@@ -195,46 +195,34 @@ knrjCu4WX+cJxJk=
 		)
 
 		Context("when certificate is expired", func() {
-			var revert func()
+			var fakeClock clock.Clock
 
 			BeforeEach(func() {
-				revert = test.WithVar(&NowFunc, func() time.Time {
-					time, err := time.Parse(time.RFC3339, "2027-09-16T06:16:00+00:00")
-					Expect(err).NotTo(HaveOccurred())
-					return time
-				})
-			})
-
-			AfterEach(func() {
-				revert()
+				time, err := time.Parse(time.RFC3339, "2027-09-16T06:16:00+00:00")
+				Expect(err).NotTo(HaveOccurred())
+				fakeClock = clock.NewFakeClock(time)
 			})
 
 			It("should detect expired certificate", func() {
-				Expect(CertificateIsExpired(cert, noRenewalWindow)).To(BeTrue())
+				Expect(CertificateIsExpired(fakeClock, cert, noRenewalWindow)).To(BeTrue())
 			})
 		})
 
 		Context("when certificate is valid", func() {
-			var revert func()
+			var fakeClock clock.Clock
 
 			BeforeEach(func() {
-				revert = test.WithVar(&NowFunc, func() time.Time {
-					time, err := time.Parse(time.RFC3339, "2027-08-17T06:16:00+00:00")
-					Expect(err).NotTo(HaveOccurred())
-					return time
-				})
-			})
-
-			AfterEach(func() {
-				revert()
+				time, err := time.Parse(time.RFC3339, "2027-08-17T06:16:00+00:00")
+				Expect(err).NotTo(HaveOccurred())
+				fakeClock = clock.NewFakeClock(time)
 			})
 
 			It("should return valid certificate", func() {
-				Expect(CertificateIsExpired(cert, noRenewalWindow)).To(BeFalse())
+				Expect(CertificateIsExpired(fakeClock, cert, noRenewalWindow)).To(BeFalse())
 			})
 
 			It("should return expired certificate because of 30 days renewal window", func() {
-				Expect(CertificateIsExpired(cert, 30*24*time.Hour)).To(BeTrue())
+				Expect(CertificateIsExpired(fakeClock, cert, 30*24*time.Hour)).To(BeTrue())
 			})
 		})
 	})

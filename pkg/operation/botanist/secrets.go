@@ -40,6 +40,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/clock"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -385,7 +386,7 @@ func getExpiredCerts(gardenerResourceDataList gardencorev1alpha1helper.GardenerR
 			return nil, err
 		}
 
-		expired, err := secretutils.CertificateIsExpired(certObj.Certificate, renewalWindow)
+		expired, err := secretutils.CertificateIsExpired(clock.RealClock{}, certObj.Certificate, renewalWindow)
 		if err != nil {
 			return nil, err
 		}
