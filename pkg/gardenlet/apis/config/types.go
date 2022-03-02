@@ -137,6 +137,8 @@ type GardenletControllerConfiguration struct {
 	SeedAPIServerNetworkPolicy *SeedAPIServerNetworkPolicyControllerConfiguration
 	// ManagedSeedControllerConfiguration the configuration of the ManagedSeed controller.
 	ManagedSeed *ManagedSeedControllerConfiguration
+	// ShootSecretControllerConfiguration the configuration of the ShootSecret controller.
+	ShootSecret *ShootSecretControllerConfiguration
 }
 
 // BackupBucketControllerConfiguration defines the configuration of the BackupBucket
@@ -280,6 +282,12 @@ type ShootMigrationControllerConfiguration struct {
 	GracePeriod *metav1.Duration
 	// LastOperationStaleDuration is the duration to consider the last operation stale after it was last updated.
 	LastOperationStaleDuration *metav1.Duration
+}
+
+// ShootSecretControllerConfiguration defines the configuration of the ShootSecret controller.
+type ShootSecretControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	ConcurrentSyncs *int
 }
 
 // StaleExtensionHealthChecks defines the configuration of the check for stale extension health checks.
