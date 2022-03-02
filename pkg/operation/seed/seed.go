@@ -517,10 +517,16 @@ func RunReconcileSeedFlow(
 
 	lokiValues["enabled"] = loggingEnabled
 
-	// Follow-up of https://github.com/gardener/gardener/pull/5010 (loki `ServiceAccount` got removed and was never
-	// used.
-	// TODO(rfranzke): Delete this in a future release.
-	if err := seedClient.Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}}); client.IgnoreNotFound(err) != nil {
+	// TODO(ialidzhikov): Remove in a future release.
+	if err := kutil.DeleteObjects(ctx, seedClient,
+		// Follow-up of https://github.com/gardener/gardener/pull/5010 (loki ServiceAccount got removed and was never
+		// used).
+		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "loki"}},
+		// Follow-up of https://github.com/gardener/gardener/pull/2515 (Secrets related to the old logging stack were
+		// not deleted).
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "kibana-tls"}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "fluentd-es-sg-credentials"}},
+	); err != nil {
 		return err
 	}
 
