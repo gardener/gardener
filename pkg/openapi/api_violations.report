@@ -265,7 +265,6 @@ API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alp
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,KubeletConfig,PodPIDsLimit
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,MachineTypeStorage,StorageSize
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ResourceWatchCacheSize,CacheSize
-API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ServiceAccountConfig,AcceptedIssuers
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ServiceAccountConfig,SigningKeySecret
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootStatus,IsHibernated
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,Volume,VolumeSize

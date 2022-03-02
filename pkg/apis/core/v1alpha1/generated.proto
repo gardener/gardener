@@ -2163,30 +2163,30 @@ message ServiceAccountConfig {
   // +optional
   optional string issuer = 1;
 
-  // AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.
-  // These values are not used to generate new service account tokens. Only useful when service account tokens are also
-  // issued by another external system or a change of the current issuer that is used for generating tokens is being performed.
-  // +optional
-  repeated string additionalIssuers = 2;
-
   // SigningKeySecret is a reference to a secret that contains an optional private key of the
   // service account token issuer. The issuer will sign issued ID tokens with this private key.
   // Only useful if service account tokens are also issued by another external system.
   // +optional
-  optional k8s.io.api.core.v1.LocalObjectReference signingKeySecretName = 3;
+  optional k8s.io.api.core.v1.LocalObjectReference signingKeySecretName = 2;
 
   // ExtendTokenExpiration turns on projected service account expiration extension during token generation, which
   // helps safe transition from legacy token to bound service account token feature. If this flag is enabled,
   // admission injected tokens would be extended up to 1 year to prevent unexpected failure during transition,
   // ignoring value of service-account-max-token-expiration.
   // +optional
-  optional bool extendTokenExpiration = 4;
+  optional bool extendTokenExpiration = 3;
 
   // MaxTokenExpiration is the maximum validity duration of a token created by the service account token issuer. If an
   // otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued
   // with a validity duration of this value.
   // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration maxTokenExpiration = 5;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration maxTokenExpiration = 4;
+
+  // AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.
+  // These values are not used to generate new service account tokens. Only useful when service account tokens are also
+  // issued by another external system or a change of the current issuer that is used for generating tokens is being performed.
+  // +optional
+  repeated string acceptedIssuers = 5;
 }
 
 // Shoot represents a Shoot cluster created and managed by Gardener.

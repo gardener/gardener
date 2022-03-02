@@ -5064,10 +5064,10 @@ func Convert_core_SeedVolumeProvider_To_v1alpha1_SeedVolumeProvider(in *core.See
 
 func autoConvert_v1alpha1_ServiceAccountConfig_To_core_ServiceAccountConfig(in *ServiceAccountConfig, out *core.ServiceAccountConfig, s conversion.Scope) error {
 	out.Issuer = (*string)(unsafe.Pointer(in.Issuer))
-	out.AcceptedIssuers = *(*[]string)(unsafe.Pointer(&in.AcceptedIssuers))
 	out.SigningKeySecret = (*v1.LocalObjectReference)(unsafe.Pointer(in.SigningKeySecret))
 	out.ExtendTokenExpiration = (*bool)(unsafe.Pointer(in.ExtendTokenExpiration))
 	out.MaxTokenExpiration = (*metav1.Duration)(unsafe.Pointer(in.MaxTokenExpiration))
+	out.AcceptedIssuers = *(*[]string)(unsafe.Pointer(&in.AcceptedIssuers))
 	return nil
 }
 
@@ -5078,10 +5078,10 @@ func Convert_v1alpha1_ServiceAccountConfig_To_core_ServiceAccountConfig(in *Serv
 
 func autoConvert_core_ServiceAccountConfig_To_v1alpha1_ServiceAccountConfig(in *core.ServiceAccountConfig, out *ServiceAccountConfig, s conversion.Scope) error {
 	out.Issuer = (*string)(unsafe.Pointer(in.Issuer))
-	out.AcceptedIssuers = *(*[]string)(unsafe.Pointer(&in.AcceptedIssuers))
 	out.SigningKeySecret = (*v1.LocalObjectReference)(unsafe.Pointer(in.SigningKeySecret))
 	out.ExtendTokenExpiration = (*bool)(unsafe.Pointer(in.ExtendTokenExpiration))
 	out.MaxTokenExpiration = (*metav1.Duration)(unsafe.Pointer(in.MaxTokenExpiration))
+	out.AcceptedIssuers = *(*[]string)(unsafe.Pointer(&in.AcceptedIssuers))
 	return nil
 }
 

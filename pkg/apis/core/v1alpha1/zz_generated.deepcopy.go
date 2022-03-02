@@ -3856,11 +3856,6 @@ func (in *ServiceAccountConfig) DeepCopyInto(out *ServiceAccountConfig) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.AcceptedIssuers != nil {
-		in, out := &in.AcceptedIssuers, &out.AcceptedIssuers
-		*out = make([]string, len(*in))
-		copy(*out, *in)
-	}
 	if in.SigningKeySecret != nil {
 		in, out := &in.SigningKeySecret, &out.SigningKeySecret
 		*out = new(v1.LocalObjectReference)
@@ -3875,6 +3870,11 @@ func (in *ServiceAccountConfig) DeepCopyInto(out *ServiceAccountConfig) {
 		in, out := &in.MaxTokenExpiration, &out.MaxTokenExpiration
 		*out = new(metav1.Duration)
 		**out = **in
+	}
+	if in.AcceptedIssuers != nil {
+		in, out := &in.AcceptedIssuers, &out.AcceptedIssuers
+		*out = make([]string, len(*in))
+		copy(*out, *in)
 	}
 	return
 }
