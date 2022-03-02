@@ -138,11 +138,16 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Fn:           botanist.UpdateAdvertisedAddresses,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
 		})
+		initializeSecretsManagement = g.Add(flow.Task{
+			Name:         "Initializing secrets management",
+			Fn:           flow.TaskFn(botanist.InitializeSecretsManagement).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists),
+		})
 		generateSecrets = g.Add(flow.Task{
 			Name: "Generating secrets and saving them into ShootState",
 			Fn:   botanist.GenerateAndSaveSecrets,
 			Dependencies: func() flow.TaskIDs {
-				taskIDs := flow.NewTaskIDs(deployNamespace, ensureShootStateExists)
+				taskIDs := flow.NewTaskIDs(deployNamespace, ensureShootStateExists, initializeSecretsManagement)
 				if !dnsEnabled && !o.Shoot.HibernationEnabled {
 					taskIDs.Insert(waitUntilKubeAPIServerServiceIsReady)
 				}
@@ -152,7 +157,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		deploySecrets = g.Add(flow.Task{
 			Name:         "Deploying Shoot certificates / keys",
 			Fn:           botanist.DeploySecrets,
-			Dependencies: flow.NewTaskIDs(deployNamespace, generateSecrets, ensureShootStateExists),
+			Dependencies: flow.NewTaskIDs(deployNamespace, generateSecrets, ensureShootStateExists, initializeSecretsManagement),
 		})
 		deploySeedLogging = g.Add(flow.Task{
 			Name:         "Deploying shoot logging stack in Seed",
@@ -628,10 +633,15 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			}).DoIf(requestControlPlanePodsRestart),
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployControlPlane, deployControlPlaneExposure),
 		})
-		_ = g.Add(flow.Task{
+		deployVPA = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes vertical pod autoscaler",
 			Fn:           flow.TaskFn(botanist.DeployVerticalPodAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, waitUntilKubeAPIServerIsReady, deployManagedResourcesForAddons, deployManagedResourceForCloudConfigExecutor, hibernateControlPlane),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Cleaning no longer required secrets",
+			Fn:           flow.TaskFn(botanist.SecretsManager.Cleanup).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployVPA),
 		})
 	)
 

@@ -38,6 +38,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -82,6 +83,18 @@ func (b *Botanist) wantedCertificateAuthorities() map[string]*secretutils.Certif
 			CertType:   secretutils.CACert,
 		},
 	}
+}
+
+// InitializeSecretsManagement initializes the secrets management and deploys the required secrets to the shoot
+// namespace in the seed.
+func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
+	for _, config := range b.wantedCertificateAuthorities() {
+		if _, err := b.SecretsManager.GetOrGenerate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld)); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
