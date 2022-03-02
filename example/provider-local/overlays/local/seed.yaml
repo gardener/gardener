@@ -3,6 +3,12 @@ kind: Seed
 metadata:
   name: local
 spec:
+  backup:
+    provider: local
+    region: local
+    secretRef:
+      name: seed-local
+      namespace: garden
   provider:
     type: local
     region: local

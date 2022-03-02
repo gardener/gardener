@@ -16,6 +16,8 @@
 
 source $(dirname "${0}")/common/helpers
 REPO_ROOT=$(dirname "${0}")/../..
+ETCD_BACKUP_DIR=$REPO_ROOT/dev/local-backupbuckets
+CONTAINER_PATH=/etc/gardener/local-backupbuckets
 
 mktemp_kubeconfig
 kubeconfig="$__tmp_kubeconfig"
@@ -41,4 +43,6 @@ $SUDO go run \
   --webhook-config-server-host=0.0.0.0 \
   --webhook-config-server-port=8444 \
   --webhook-config-url=$(get_host_address):8444 \
-  --gardener-version="$(cat "$(dirname $0)/../../VERSION")"
+  --gardener-version="$(cat "$(dirname $0)/../../VERSION")" \
+  --backupbucket-local-dir="$ETCD_BACKUP_DIR" \
+  --backupbucket-container-mount-path="$CONTAINER_PATH"

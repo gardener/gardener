@@ -36,6 +36,9 @@ controllers:
     concurrentSyncs: 5
     hostIP: "127.0.0.1"
     apiServerSNIEnabled: true
+  backupbucket:
+    localDir: "dev/local-backupbuckets"
+    containerMountPath: "/etc/gardener/local-backupbuckets"
   healthcheck:
     concurrentSyncs: 5
   ignoreOperationAnnotation: false

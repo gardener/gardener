@@ -54,6 +54,8 @@ spec:
         - --service-max-concurrent-reconciles={{ .Values.controllers.service.concurrentSyncs }}
         - --service-host-ip={{ .Values.controllers.service.hostIP }}
         - --service-apiserver-sni-enabled={{ .Values.controllers.service.apiServerSNIEnabled }}
+        - --backupbucket-local-dir={{ .Values.controllers.backupbucket.localDir }}
+        - --backupbucket-container-mount-path={{ .Values.controllers.backupbucket.containerMountPath }}
         - --webhook-config-namespace={{ .Release.Namespace }}
         - --webhook-config-service-port={{ .Values.webhookConfig.servicePort }}
         - --webhook-config-server-port={{ .Values.webhookConfig.serverPort }}

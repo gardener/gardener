@@ -26,27 +26,23 @@ Please note that all of them are no technical limitations/blockers but simply ad
 
    _We don't install any CSI plugin into the shoot cluster yet, hence, there is no persistent storage for shoot clusters._
 
-3. No support for ETCD backups.
-
-   _We have not yet implemented the [`BackupBucket`](backupbucket.md)/[`BackupEntry`](backupentry.md) extension API, hence, there is no support for ETCD backups._
-
-4. No owner TXT `DNSRecord`s (hence, no ["bad-case" control plane migration](../proposals/17-shoot-control-plane-migration-bad-case.md)).
+3. No owner TXT `DNSRecord`s (hence, no ["bad-case" control plane migration](../proposals/17-shoot-control-plane-migration-bad-case.md)).
 
    _In order to realize DNS (see [Implementation Details](#implementation-details) section below), the `/etc/hosts` file is manipulated. This does not work for TXT records. In the future, we could look into using [CoreDNS](https://coredns.io/) instead._
 
-5. No load balancers for Shoot clusters.
+4. No load balancers for Shoot clusters.
 
    _We have not yet developed a `cloud-controller-manager` which could reconcile load balancer `Service`s in the shoot cluster. Hence, when the gardenlet's `ReversedVPN` feature gate is disabled then the `kube-system/vpn-shoot` `Service` must be manually patched (with `{"status": {"loadBalancer": {"ingress": [{"hostname": "vpn-shoot"}]}}}`) to make the reconciliation work._
 
-6. Only one shoot cluster possible when gardenlet's `APIServerSNI` feature gate is disabled.
+5. Only one shoot cluster possible when gardenlet's `APIServerSNI` feature gate is disabled.
 
    _When [`APIServerSNI`](../proposals/08-shoot-apiserver-via-sni.md) is disabled then gardenlet uses load balancer `Service`s in order to expose the shoot clusters' `kube-apiserver`s. Typically, local Kubernetes clusters don't support this. In this case, the local extension uses the host IP to expose the `kube-apiserver`, however, this can only be done once._
 
-7. Dependency-Watchdog cannot be enabled.
+6. Dependency-Watchdog cannot be enabled.
 
    _The `dependency-watchdog` needs to be able to resolve the shoot cluster's DNS names. It is not yet able to do so, hence, it cannot be enabled._
 
-9. `Ingress`es exposed in the seed cluster are not reachable.
+7. `Ingress`es exposed in the seed cluster are not reachable.
 
    _There is no DNS resolution for the domains used for `Ingress`es in the seed cluster yet, hence, they are not reachable. Consequently, the [shoot node logging](../deployment/configuring_logging.md#enable-logs-from-the-shoots-node-systemd-services) feature does not work end-to-end._
 
@@ -132,6 +128,9 @@ Typically, the `.status.{capacity,allocatable}` values are determined by the res
 Since many of the `Pod`s deployed by Gardener have quite high `.spec.resources.{requests,limits}`, the kind `Node`s easily get filled up and only a few `Pod`s can be scheduled (even if they barely consume any of their reserved resources).
 In order to improve the user experience, the controller submits an empty patch which triggers the "Node webhook" (see below section) in case the `.status.{capacity,allocatable}` values are not high enough.
 The webhook will increase the capacity of the `Node`s to allow all `Pod`s to be scheduled.
+
+#### ETCD Backups
+This controller reconciles the `BackuBucket` and `BackupEntry` of the shoot allowing the `etcd-backup-restore` to create and copy backups using the `local` provider functionality. The backups are stored on the host file system. This is achieved by mounting that directory to the `etcd-backup-restore` container.
 
 #### Health Checks
 
