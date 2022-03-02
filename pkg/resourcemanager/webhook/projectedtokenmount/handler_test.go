@@ -20,6 +20,7 @@ import (
 
 	. "github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"gomodules.xyz/jsonpatch/v2"
@@ -32,6 +33,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -40,6 +42,7 @@ var _ = Describe("Handler", func() {
 		ctx = context.TODO()
 		err error
 
+		logger     logr.Logger
 		decoder    *admission.Decoder
 		encoder    runtime.Encoder
 		fakeClient client.Client
@@ -57,13 +60,15 @@ var _ = Describe("Handler", func() {
 	)
 
 	BeforeEach(func() {
+		logger = logzap.New(logzap.WriteTo(GinkgoWriter))
+
 		decoder, err = admission.NewDecoder(kubernetesscheme.Scheme)
 		Expect(err).NotTo(HaveOccurred())
 		encoder = &json.Serializer{}
 
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 
-		handler = NewHandler(fakeClient, expirationSeconds)
+		handler = NewHandler(logger, fakeClient, expirationSeconds)
 		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 
 		request = admission.Request{
