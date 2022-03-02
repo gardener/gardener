@@ -778,6 +778,10 @@ message GardenerResourceData {
 
   // Data contains the payload required to generate resources
   optional k8s.io.apimachinery.pkg.runtime.RawExtension data = 3;
+
+  // Labels are labels of the object
+  // +optional
+  map<string, string> labels = 4;
 }
 
 // Hibernation contains information whether the Shoot is suspended or not.

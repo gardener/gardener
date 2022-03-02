@@ -61,6 +61,8 @@ type GardenerResourceData struct {
 	Type string
 	// Data contains the payload required to generate resources
 	Data runtime.RawExtension
+	// Labels are labels of the object
+	Labels map[string]string
 }
 
 // ExtensionResourceState contains the kind of the extension custom resource and its last observed state in the Shoot's

@@ -71,6 +71,9 @@ type GardenerResourceData struct {
 	Type string `json:"type" protobuf:"bytes,2,opt,name=type"`
 	// Data contains the payload required to generate resources
 	Data runtime.RawExtension `json:"data" protobuf:"bytes,3,opt,name=data"`
+	// Labels are labels of the object
+	// +optional
+	Labels map[string]string `json:"labels,omitempty" protobuf:"bytes,4,opt,name=labels"`
 }
 
 // ExtensionResourceState contains the kind of the extension custom resource and its last observed state in the Shoot's

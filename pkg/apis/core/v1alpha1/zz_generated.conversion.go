@@ -2942,6 +2942,7 @@ func autoConvert_v1alpha1_GardenerResourceData_To_core_GardenerResourceData(in *
 	out.Name = in.Name
 	out.Type = in.Type
 	out.Data = in.Data
+	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
 	return nil
 }
 
@@ -2954,6 +2955,7 @@ func autoConvert_core_GardenerResourceData_To_v1alpha1_GardenerResourceData(in *
 	out.Name = in.Name
 	out.Type = in.Type
 	out.Data = in.Data
+	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
 	return nil
 }
 
