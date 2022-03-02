@@ -49,7 +49,7 @@ var _ = Describe("Shoot Creation testing", func() {
 	f := framework.NewShootCreationFramework(&framework.ShootCreationConfig{
 		GardenerConfig: &framework.GardenerConfig{
 			CommonConfig: &framework.CommonConfig{
-				ResourceDir: "../../framework/resources",
+				ResourceDir: "../../../framework/resources",
 			},
 		},
 	})

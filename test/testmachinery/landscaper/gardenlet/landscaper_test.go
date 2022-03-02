@@ -46,7 +46,7 @@ var _ = Describe("Gardenlet landscaper testing", func() {
 	f := landscaperframework.NewGardenletFramework(&landscaperframework.GardenletConfig{
 		GardenerConfig: &framework.GardenerConfig{
 			CommonConfig: &framework.CommonConfig{
-				ResourceDir: "../../framework/resources",
+				ResourceDir: "../../../framework/resources",
 			},
 		},
 		LandscaperCommonConfig: nil,

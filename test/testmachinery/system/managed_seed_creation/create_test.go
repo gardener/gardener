@@ -36,7 +36,7 @@ var _ = Describe("ManagedSeed creation testing", func() {
 	f := framework.NewManagedSeedFramework(&framework.ManagedSeedConfig{
 		GardenerConfig: &framework.GardenerConfig{
 			CommonConfig: &framework.CommonConfig{
-				ResourceDir: "../../framework/resources",
+				ResourceDir: "../../../framework/resources",
 			},
 		},
 	})
