@@ -22,7 +22,20 @@ TOOLS_BIN_DIR=${TOOLS_BIN_DIR:-$(dirname $0)/bin}
 
 platform=$(uname -s | tr '[:upper:]' '[:lower:]')
 version="2.24.1"
-archive_name="prometheus-${version}.${platform}-amd64"
+case $(uname -m) in
+  aarch64)
+    arch="arm64"
+    ;;
+  x86_64)
+    arch="amd64"
+    ;;
+  *)
+    echo "Unknown architecture"
+    exit -1
+    ;;
+esac
+
+archive_name="prometheus-${version}.${platform}-${arch}"
 file_name="${archive_name}.tar.gz"
 
 temp_dir="$(mktemp -d)"
