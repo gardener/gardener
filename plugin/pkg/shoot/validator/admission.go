@@ -25,7 +25,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
-	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
@@ -575,7 +574,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 	}
 
 	if a.GetOperation() == admission.Create && utilfeature.DefaultFeatureGate.Enabled(features.SecretBindingProviderValidation) {
-		if !gardencorehelper.SecretBindingHasType(c.secretBinding, c.shoot.Spec.Provider.Type) {
+		if !helper.SecretBindingHasType(c.secretBinding, c.shoot.Spec.Provider.Type) {
 			var secretBindingProviderType string
 			if c.secretBinding.Provider != nil {
 				secretBindingProviderType = c.secretBinding.Provider.Type
