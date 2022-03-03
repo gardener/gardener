@@ -22,6 +22,7 @@ kube-state-metrics-shoot:
   replicas: 1
   images:
     kube-state-metrics: image-repository:image-tag
+  genericTokenKubeconfigSecretName: generic-token-kubeconfig
 global:
   shootKubeVersion:
     gitVersion: v1.7.5

@@ -150,6 +150,11 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
+	genericTokenKubeconfigSecret, err := b.SecretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if err != nil {
+		return err
+	}
+
 	var (
 		networks = map[string]interface{}{
 			"pods":     b.Shoot.Networks.Pods.String(),
@@ -208,7 +213,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"additionalScrapeConfigs": scrapeConfigs.String(),
 		}
 		kubeStateMetricsShootConfig = map[string]interface{}{
-			"replicas": b.Shoot.GetReplicas(1),
+			"replicas":                         b.Shoot.GetReplicas(1),
+			"genericTokenKubeconfigSecretName": genericTokenKubeconfigSecret.Name,
 		}
 	)
 
