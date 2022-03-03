@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -58,8 +59,6 @@ const (
 	ServiceName = "gardener-resource-manager"
 	// ManagedResourceName is the name for the ManagedResource containing resources deployed to the shoot cluster.
 	ManagedResourceName = "shoot-core-gardener-resource-manager"
-	// SecretName is a constant for the secret name for the gardener resource manager's kubeconfig secret.
-	SecretName = "gardener-resource-manager"
 	// SecretNameServer is the name of the gardener-resource-manager server certificate secret.
 	SecretNameServer = "gardener-resource-manager-server"
 	// SecretNameShootAccess is the name of the shoot access secret for the gardener-resource-manager.
@@ -144,23 +143,26 @@ type Interface interface {
 func New(
 	client client.Client,
 	namespace string,
+	secretsManager secretsmanager.Interface,
 	image string,
 	values Values,
 ) Interface {
 	return &resourceManager{
-		client:    client,
-		image:     image,
-		namespace: namespace,
-		values:    values,
+		client:         client,
+		image:          image,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		values:         values,
 	}
 }
 
 type resourceManager struct {
-	client    client.Client
-	namespace string
-	image     string
-	values    Values
-	secrets   Secrets
+	client         client.Client
+	namespace      string
+	secretsManager secretsmanager.Interface
+	image          string
+	values         Values
+	secrets        Secrets
 }
 
 // Values holds the optional configuration options for the gardener resource manager
@@ -635,7 +637,12 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 					ReadOnly:  true,
 				})
 			} else if r.secrets.shootAccess != nil {
-				utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, r.secrets.shootAccess.Secret.Name))
+				genericTokenKubeconfigSecret, err := r.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+				if err != nil {
+					return err
+				}
+
+				utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, r.secrets.shootAccess.Secret.Name))
 			}
 		}
 

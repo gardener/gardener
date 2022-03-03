@@ -84,6 +84,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 	return resourcemanager.New(
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
+		b.SecretsManager,
 		image.String(),
 		cfg,
 	), nil

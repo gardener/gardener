@@ -26,6 +26,8 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -57,6 +59,8 @@ var _ = Describe("ResourceManager", func() {
 	var (
 		ctrl            *gomock.Controller
 		c               *mockclient.MockClient
+		fakeClient      client.Client
+		sm              secretsmanager.Interface
 		resourceManager Interface
 
 		ctx                   = context.TODO()
@@ -77,6 +81,7 @@ var _ = Describe("ResourceManager", func() {
 		secrets                              Secrets
 		alwaysUpdate                               = true
 		concurrentSyncs                      int32 = 20
+		genericTokenKubeconfigSecretName           = "generic-token-kubeconfig"
 		clusterRoleName                            = "gardener-resource-manager-seed"
 		serviceAccountSecretName                   = "sa-secret"
 		healthSyncPeriod                           = time.Minute
@@ -125,6 +130,8 @@ var _ = Describe("ResourceManager", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+		sm = fakesecretsmanager.New(fakeClient, deployNamespace)
 
 		secrets = Secrets{
 			Server:   component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
@@ -289,7 +296,7 @@ var _ = Describe("ResourceManager", func() {
 				},
 			},
 		}
-		resourceManager = New(c, deployNamespace, image, cfg)
+		resourceManager = New(c, deployNamespace, sm, image, cfg)
 		resourceManager.SetSecrets(secrets)
 
 		cmd = []string{"/gardener-resource-manager",
@@ -528,7 +535,7 @@ var _ = Describe("ResourceManager", func() {
 											{
 												Secret: &corev1.SecretProjection{
 													LocalObjectReference: corev1.LocalObjectReference{
-														Name: "generic-token-kubeconfig",
+														Name: genericTokenKubeconfigSecretName,
 													},
 													Items: []corev1.KeyToPath{{
 														Key:  "kubeconfig",
@@ -851,7 +858,7 @@ subjects:
 		Context("target cluster != source cluster; watched namespace is set", func() {
 			BeforeEach(func() {
 				role.Namespace = watchedNamespace
-				resourceManager = New(c, deployNamespace, image, cfg)
+				resourceManager = New(c, deployNamespace, sm, image, cfg)
 				resourceManager.SetSecrets(secrets)
 			})
 
@@ -924,7 +931,7 @@ subjects:
 				secretNameBootstrapKubeconfig, secretChecksumBootstrapKubeconfig := "bootstrap-kubeconfig", "bootchecksum"
 
 				secrets.BootstrapKubeconfig = &component.Secret{Name: secretNameBootstrapKubeconfig, Checksum: secretChecksumBootstrapKubeconfig}
-				resourceManager = New(c, deployNamespace, image, cfg)
+				resourceManager = New(c, deployNamespace, sm, image, cfg)
 				resourceManager.SetSecrets(secrets)
 
 				gomock.InOrder(
@@ -1229,7 +1236,7 @@ subjects:
 				cfg.WatchedNamespace = nil
 				deployment.Spec.Template.Spec.Containers[0].Command = cmdWithoutWatchedNamespace
 
-				resourceManager = New(c, deployNamespace, image, cfg)
+				resourceManager = New(c, deployNamespace, sm, image, cfg)
 				resourceManager.SetSecrets(secrets)
 			})
 
@@ -1352,7 +1359,7 @@ subjects:
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/from-shoot-apiserver")
 
 				cfg.TargetDiffersFromSourceCluster = false
-				resourceManager = New(c, deployNamespace, image, cfg)
+				resourceManager = New(c, deployNamespace, sm, image, cfg)
 				resourceManager.SetSecrets(secrets)
 			})
 
@@ -1411,7 +1418,7 @@ subjects:
 	Describe("#Destroy", func() {
 		Context("target differs from source cluster", func() {
 			BeforeEach(func() {
-				resourceManager = New(c, deployNamespace, image, cfg)
+				resourceManager = New(c, deployNamespace, sm, image, cfg)
 			})
 
 			It("should delete all created resources", func() {
@@ -1571,7 +1578,7 @@ subjects:
 				cfg.TargetDiffersFromSourceCluster = false
 				cfg.WatchedNamespace = nil
 				deployment.Spec.Template.Spec.Containers[0].Command = cmdWithoutWatchedNamespace
-				resourceManager = New(c, deployNamespace, image, cfg)
+				resourceManager = New(c, deployNamespace, sm, image, cfg)
 			})
 
 			It("should delete all created resources", func() {
@@ -1592,11 +1599,8 @@ subjects:
 	})
 
 	Describe("#Wait", func() {
-		var fakeClient client.Client
-
 		BeforeEach(func() {
-			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-			resourceManager = New(fakeClient, deployNamespace, image, cfg)
+			resourceManager = New(fakeClient, deployNamespace, nil, image, cfg)
 		})
 
 		It("should successfully wait for the deployment to be ready", func() {
@@ -1646,7 +1650,7 @@ subjects:
 
 	Describe("#SetReplicas, #GetReplicas", func() {
 		It("should set and return the replicas", func() {
-			resourceManager = New(nil, "", "", Values{})
+			resourceManager = New(nil, "", nil, "", Values{})
 			Expect(resourceManager.GetReplicas()).To(BeZero())
 
 			resourceManager.SetReplicas(&replicas)
