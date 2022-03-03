@@ -27,7 +27,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
@@ -70,12 +70,13 @@ var _ = Describe("KubeScheduler", func() {
 		secretNameClientCA = "ca"
 		secretNameServer   = "kube-scheduler-server"
 
-		vpaName                   = "kube-scheduler-vpa"
-		serviceName               = "kube-scheduler"
-		secretName                = "shoot-access-kube-scheduler"
-		deploymentName            = "kube-scheduler"
-		managedResourceName       = "shoot-core-kube-scheduler"
-		managedResourceSecretName = "managedresource-shoot-core-kube-scheduler"
+		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
+		vpaName                          = "kube-scheduler-vpa"
+		serviceName                      = "kube-scheduler"
+		secretName                       = "shoot-access-kube-scheduler"
+		deploymentName                   = "kube-scheduler"
+		managedResourceName              = "shoot-core-kube-scheduler"
+		managedResourceSecretName        = "managedresource-shoot-core-kube-scheduler"
 
 		configMapFor = func(version string) *corev1.ConfigMap {
 			componentConfigYAML := componentConfigYAMLForKubernetesVersion(version)
@@ -295,7 +296,7 @@ var _ = Describe("KubeScheduler", func() {
 				},
 			}
 
-			Expect(gutil.InjectGenericKubeconfig(deploy, secret.Name)).To(Succeed())
+			Expect(gutil.InjectGenericKubeconfig(deploy, genericTokenKubeconfigSecretName, secret.Name)).To(Succeed())
 			Expect(references.InjectAnnotations(deploy)).To(Succeed())
 			return deploy
 		}
@@ -358,7 +359,7 @@ subjects:
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-		sm = fake.New(fakeClient, namespace)
+		sm = fakesecretsmanager.New(fakeClient, namespace)
 		kubeScheduler = New(c, namespace, sm, semverVersion, image, replicas, configEmpty)
 	})
 
