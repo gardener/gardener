@@ -12,6 +12,8 @@ providerName: provider-foo
 useTokenRequestor: false
 useProjectedTokenMount: false
 
+genericTokenKubeconfigSecretName: generic-token-kubeconfig
+
 namespace:
   uid: uuid-of-namespace
 

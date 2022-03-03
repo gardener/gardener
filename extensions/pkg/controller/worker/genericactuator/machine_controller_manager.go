@@ -65,6 +65,7 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, lo
 		if err := gutil.NewShootAccessSecret(a.mcmName, workerObj.Namespace).Reconcile(ctx, a.client); err != nil {
 			return err
 		}
+		mcmValues["genericTokenKubeconfigSecretName"] = extensionscontroller.GenericTokenKubeconfigSecretNameFromCluster(cluster)
 	} else {
 		mcmKubeconfigSecret, err := createKubeconfigForMachineControllerManager(ctx, a.client, workerObj.Namespace, a.mcmName)
 		if err != nil {
