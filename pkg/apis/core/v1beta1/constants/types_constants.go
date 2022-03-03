@@ -62,6 +62,10 @@ const (
 	// SecretNameGenericTokenKubeconfig is a constant for the name of the kubeconfig used by the shoot controlplane
 	// components to authenticate against the shoot Kubernetes API server.
 	SecretNameGenericTokenKubeconfig = "generic-token-kubeconfig"
+	// AnnotationKeyGenericTokenKubeconfigSecretName is a constant for the key of an annotation on
+	// extensions.gardener.cloud/v1alpha1.Cluster resources whose value contains the name of the generic token
+	// kubeconfig secret in the seed cluster.
+	AnnotationKeyGenericTokenKubeconfigSecretName = "generic-token-kubeconfig.secret.gardener.cloud/name"
 
 	// SecretPrefixGeneratedBackupBucket is a constant for the prefix of a secret name in the garden cluster related to
 	// BackpuBuckets.
