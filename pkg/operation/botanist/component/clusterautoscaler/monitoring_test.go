@@ -22,7 +22,7 @@ import (
 )
 
 var _ = Describe("Monitoring", func() {
-	clusterAutoscaler := New(nil, "", "", 0, nil)
+	clusterAutoscaler := New(nil, "", nil, "", 0, nil)
 
 	Describe("#ScrapeConfig", func() {
 		It("should successfully test the scrape configuration", func() {
