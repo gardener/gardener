@@ -403,9 +403,10 @@ func ValidateNodeCIDRMaskWithMaxPod(maxPod int32, nodeCIDRMaskSize int32) field.
 
 	free := float64(32 - nodeCIDRMaskSize)
 	// first and last ips are reserved
-	ipAdressesAvailable := int32(math.Pow(2, free) - 2)
+	// 2**32 will overflow int32 so use an unsigned
+	ipAdressesAvailable := uint32(math.Pow(2, free) - 2)
 
-	if ipAdressesAvailable < maxPod {
+	if ipAdressesAvailable < uint32(maxPod) {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("kubernetes").Child("kubeControllerManager").Child("nodeCIDRMaskSize"), nodeCIDRMaskSize, fmt.Sprintf("kubelet or kube-controller configuration incorrect. Please adjust the NodeCIDRMaskSize of the kube-controller to support the highest maxPod on any worker pool. The NodeCIDRMaskSize of '%d (default: 24)' of the kube-controller only supports '%d' ip adresses. Highest maxPod setting on kubelet is '%d (default: 110)'. Please choose a NodeCIDRMaskSize that at least supports %d ip adresses", nodeCIDRMaskSize, ipAdressesAvailable, maxPod, maxPod)))
 	}
 
@@ -441,13 +442,13 @@ func ValidateTotalNodeCountWithPodCIDR(shoot *core.Shoot) field.ErrorList {
 		return allErrs
 	}
 
-	maxNodeCount := int32(math.Pow(2, float64(nodeCIDRMaskSize-int32(cidrMask))))
+	maxNodeCount := uint32(math.Pow(2, float64(nodeCIDRMaskSize-int32(cidrMask))))
 
 	for _, worker := range shoot.Spec.Provider.Workers {
 		totalNodes += worker.Maximum
 	}
 
-	if totalNodes > maxNodeCount {
+	if uint32(totalNodes) > maxNodeCount {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("provider").Child("workers"), totalNodes, fmt.Sprintf("worker configuration incorrect. The podCIDRs in `spec.networking.pod` can only support a maximum of %d nodes. The total number of worker pool nodes should be less than %d ", maxNodeCount, maxNodeCount)))
 	}
 	return allErrs
