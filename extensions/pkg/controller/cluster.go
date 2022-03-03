@@ -32,4 +32,8 @@ var (
 	GetShoot = extensions.GetShoot
 	// GetOwnerNameAndID reads the owner DNS name and ID from the owner DNSRecord extension resource in the given namespace.
 	GetOwnerNameAndID = extensions.GetOwnerNameAndID
+	// GenericTokenKubeconfigSecretNameFromCluster reads the generic-token-kubeconfig.secret.gardener.cloud/name annotation
+	// and returns its value. If the annotation is not present then it falls back to the deprecated
+	// SecretNameGenericTokenKubeconfig.
+	GenericTokenKubeconfigSecretNameFromCluster = extensions.GenericTokenKubeconfigSecretNameFromCluster
 )

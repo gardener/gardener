@@ -44,6 +44,25 @@ var _ = Describe("Cluster", func() {
 		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 	})
 
+	Describe("#GenericTokenKubeconfigSecretNameFromCluster", func() {
+		var cluster *Cluster
+
+		BeforeEach(func() {
+			cluster = &Cluster{}
+		})
+
+		It("should return the deprecated constant name due to missing annotation", func() {
+			Expect(GenericTokenKubeconfigSecretNameFromCluster(cluster)).To(Equal("generic-token-kubeconfig"))
+		})
+
+		It("should return the name provided in the annotation value", func() {
+			name := "generic-token-kubeconfig-12345"
+			metav1.SetMetaDataAnnotation(&cluster.ObjectMeta, "generic-token-kubeconfig.secret.gardener.cloud/name", name)
+
+			Expect(GenericTokenKubeconfigSecretNameFromCluster(cluster)).To(Equal(name))
+		})
+	})
+
 	Describe("#GetShootStateForCluster", func() {
 		var (
 			expectedShoot      *gardencorev1beta1.Shoot

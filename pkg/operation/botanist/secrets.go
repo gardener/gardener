@@ -429,6 +429,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 	return b.reconcileGenericKubeconfigSecret(ctx)
 }
 
+// TODO(rfranzke): Remove this function is a future release.
 func (b *Botanist) reconcileGenericKubeconfigSecret(ctx context.Context) error {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
