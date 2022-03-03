@@ -1785,11 +1785,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-				})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-					}))))
+				}))))
 			})
 
 			It("should fail when nodeCIDRMaskSize is out of lower boundary", func() {
@@ -1799,12 +1795,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-				})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-					})),
-				))
+				}))))
 			})
 
 			It("should succeed when nodeCIDRMaskSize is within boundaries", func() {
