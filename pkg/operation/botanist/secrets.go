@@ -341,21 +341,21 @@ func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResource
 	gardenerResourceDataList.Upsert(oldSecret)
 
 	// current ssh keypair in shoot namespace in seed
-	secretSSHkeypair := &corev1.Secret{}
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.SecretNameSSHKeyPair), secretSSHkeypair); err != nil {
+	secretSSHkeyPair := &corev1.Secret{}
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.SecretNameSSHKeyPair), secretSSHkeyPair); err != nil {
 		return err
 	}
 
 	// old ssh keypair to be created in shoot namespace in seed
-	secretOldSSHkeypair := &corev1.Secret{
+	secretOldSSHkeyPair := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v1beta1constants.SecretNameOldSSHKeyPair,
 			Namespace: b.Shoot.SeedNamespace,
 		},
 	}
-	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, b.K8sSeedClient.Client(), secretOldSSHkeypair, func() error {
-		secretOldSSHkeypair.Type = corev1.SecretTypeOpaque
-		secretOldSSHkeypair.Data = secretSSHkeypair.Data
+	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, b.K8sSeedClient.Client(), secretOldSSHkeyPair, func() error {
+		secretOldSSHkeyPair.Type = corev1.SecretTypeOpaque
+		secretOldSSHkeyPair.Data = secretSSHkeyPair.Data
 		return nil
 	}); err != nil {
 		return err
@@ -455,12 +455,12 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 
 	// ssh-keypair.old secret will be synced to the Garden cluster if it is present in shoot namespace in seed.
 	oldSecret := &corev1.Secret{}
-	err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.SecretNameOldSSHKeyPair), oldSecret)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			b.Logger.Info("Newly created shoot will not have ssh-keypair.old secret")
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.SecretNameOldSSHKeyPair), oldSecret); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
 		}
 	} else {
+		b.StoreSecret(v1beta1constants.SecretNameOldSSHKeyPair, oldSecret)
 		projectSecrets = append(projectSecrets, projectSecret{
 			secretName: v1beta1constants.SecretNameOldSSHKeyPair,
 			suffix:     gutil.ShootProjectSecretSuffixOldSSHKeypair,
@@ -486,11 +486,7 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 				secretObj.Annotations = s.annotations
 				secretObj.Labels = s.labels
 				secretObj.Type = corev1.SecretTypeOpaque
-				if s.secretName == v1beta1constants.SecretNameOldSSHKeyPair {
-					secretObj.Data = oldSecret.Data
-				} else {
-					secretObj.Data = b.LoadSecret(s.secretName).Data
-				}
+				secretObj.Data = b.LoadSecret(s.secretName).Data
 				return nil
 			})
 			return err
