@@ -52,6 +52,7 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 		b.Logger.WithField("component", "kube-controller-manager"),
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
+		b.SecretsManager,
 		b.Shoot.KubernetesVersion,
 		image.String(),
 		b.Shoot.GetInfo().Spec.Kubernetes.KubeControllerManager,

@@ -29,6 +29,8 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
@@ -48,8 +50,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("KubeControllerManager", func() {
@@ -58,6 +62,8 @@ var _ = Describe("KubeControllerManager", func() {
 		testLogger            = logrus.NewEntry(logger.NewNopLogger())
 		ctrl                  *gomock.Controller
 		c                     *mockclient.MockClient
+		fakeClient            client.Client
+		sm                    secretsmanager.Interface
 		kubeControllerManager Interface
 
 		_, podCIDR, _                 = net.ParseCIDR("100.96.0.0/11")
@@ -95,16 +101,19 @@ var _ = Describe("KubeControllerManager", func() {
 		secretChecksumCA                = "1234"
 		secretChecksumServiceAccountKey = "1234"
 
-		vpaName                   = "kube-controller-manager-vpa"
-		hvpaName                  = "kube-controller-manager"
-		secretName                = "shoot-access-kube-controller-manager"
-		managedResourceName       = "shoot-core-kube-controller-manager"
-		managedResourceSecretName = "managedresource-shoot-core-kube-controller-manager"
+		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
+		vpaName                          = "kube-controller-manager-vpa"
+		hvpaName                         = "kube-controller-manager"
+		secretName                       = "shoot-access-kube-controller-manager"
+		managedResourceName              = "shoot-core-kube-controller-manager"
+		managedResourceSecretName        = "managedresource-shoot-core-kube-controller-manager"
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+		sm = fakesecretsmanager.New(fakeClient, namespace)
 	})
 
 	AfterEach(func() {
@@ -118,6 +127,7 @@ var _ = Describe("KubeControllerManager", func() {
 					testLogger,
 					c,
 					namespace,
+					sm,
 					semverVersion,
 					image,
 					&kcmConfig,
@@ -562,7 +572,7 @@ var _ = Describe("KubeControllerManager", func() {
 						},
 					}
 
-					Expect(gutil.InjectGenericKubeconfig(deploy, secret.Name)).To(Succeed())
+					Expect(gutil.InjectGenericKubeconfig(deploy, genericTokenKubeconfigSecretName, secret.Name)).To(Succeed())
 					return deploy
 				}
 
@@ -632,6 +642,7 @@ subjects:
 						testLogger,
 						c,
 						namespace,
+						sm,
 						semverVersion,
 						image,
 						config,
