@@ -1570,11 +1570,15 @@ var _ = Describe("kubernetes", func() {
 			contextName = "context"
 			server      = "server"
 			caCert      = []byte("ca crt")
-			authInfo    = clientcmdv1.AuthInfo{Token: "foo"}
+			cluster     = clientcmdv1.Cluster{
+				Server:                   server,
+				CertificateAuthorityData: caCert,
+			}
+			authInfo = clientcmdv1.AuthInfo{Token: "foo"}
 		)
 
 		It("should return the expected kubeconfig", func() {
-			Expect(NewKubeconfig(contextName, server, caCert, authInfo)).To(Equal(&clientcmdv1.Config{
+			Expect(NewKubeconfig(contextName, cluster, authInfo)).To(Equal(&clientcmdv1.Config{
 				CurrentContext: contextName,
 				Clusters: []clientcmdv1.NamedCluster{{
 					Name: contextName,

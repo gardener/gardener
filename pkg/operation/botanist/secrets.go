@@ -407,8 +407,10 @@ func (b *Botanist) reconcileGenericKubeconfigSecret(ctx context.Context) error {
 
 	kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kutil.NewKubeconfig(
 		b.Shoot.SeedNamespace,
-		b.Shoot.ComputeInClusterAPIServerAddress(true),
-		b.LoadSecret(v1beta1constants.SecretNameCACluster).Data[secretutils.DataKeyCertificateCA],
+		clientcmdv1.Cluster{
+			Server:                   b.Shoot.ComputeInClusterAPIServerAddress(true),
+			CertificateAuthorityData: b.LoadSecret(v1beta1constants.SecretNameCACluster).Data[secretutils.DataKeyCertificateCA],
+		},
 		clientcmdv1.AuthInfo{TokenFile: gutil.PathShootToken},
 	))
 	if err != nil {

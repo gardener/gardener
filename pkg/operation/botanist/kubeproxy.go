@@ -61,8 +61,10 @@ func (b *Botanist) DefaultKubeProxy() (kubeproxy.Interface, error) {
 func (b *Botanist) DeployKubeProxy(ctx context.Context) error {
 	kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kutil.NewKubeconfig(
 		b.Shoot.SeedNamespace,
-		b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
-		b.LoadSecret(v1beta1constants.SecretNameCACluster).Data[secrets.DataKeyCertificateCA],
+		clientcmdv1.Cluster{
+			Server:                   b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
+			CertificateAuthorityData: b.LoadSecret(v1beta1constants.SecretNameCACluster).Data[secrets.DataKeyCertificateCA],
+		},
 		clientcmdv1.AuthInfo{TokenFile: "/var/run/secrets/kubernetes.io/serviceaccount/token"},
 	))
 	if err != nil {
