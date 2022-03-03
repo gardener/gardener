@@ -96,7 +96,7 @@ status:
         client-key-data: LS0tLS1CRUd...
 ```
 
-The `AdminKubeconfigRequest` feature gate (enabled by default starting from `v1.39`) enables the above mentioned API in the `gardener-apiserver`. The old `{shoot-name}.kubeconfig` is kept, but deprecated and will be removed in the future.
+New feature gate called `AdminKubeconfigRequest` enables the above mentioned API in the `gardener-apiserver`. The old `{shoot-name}.kubeconfig` is kept, but deprecated and will be removed in the future.
 
 In order to get the server's address used in the `kubeconfig`, the Shoot's `status` should be updated with new entries:
 

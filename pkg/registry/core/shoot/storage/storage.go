@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/registry/core/shoot"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +28,6 @@ import (
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )
 
 // REST implements a RESTStorage for shoots against etcd
@@ -53,13 +51,11 @@ func NewStorage(optsGetter generic.RESTOptionsGetter, shootStateStore *genericre
 		Status: shootStatusRest,
 	}
 
-	if utilfeature.DefaultFeatureGate.Enabled(features.AdminKubeconfigRequest) {
-		s.AdminKubeconfig = &AdminKubeconfigREST{
-			shootStateStorage:    shootStateStore,
-			shootStorage:         shootRest,
-			clock:                clock.RealClock{},
-			maxExpirationSeconds: int64(max.Seconds()),
-		}
+	s.AdminKubeconfig = &AdminKubeconfigREST{
+		shootStateStorage:    shootStateStore,
+		shootStorage:         shootRest,
+		clock:                clock.RealClock{},
+		maxExpirationSeconds: int64(max.Seconds()),
 	}
 
 	return s
