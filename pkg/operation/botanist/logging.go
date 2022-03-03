@@ -21,6 +21,7 @@ import (
 
 	"github.com/gardener/gardener/charts"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -75,6 +76,11 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		return err
 	}
 
+	genericTokenKubeconfigSecret, err := b.SecretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if err != nil {
+		return err
+	}
+
 	if b.isShootNodeLoggingEnabled() {
 		lokiValues["rbacSidecarEnabled"] = true
 		lokiValues["ingress"] = map[string]interface{}{
@@ -89,6 +95,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 				},
 			},
 		}
+		lokiValues["genericTokenKubeconfigSecretName"] = genericTokenKubeconfigSecret.Name
 	} else {
 		if err := b.destroyShootNodeLogging(ctx); err != nil {
 			return err
