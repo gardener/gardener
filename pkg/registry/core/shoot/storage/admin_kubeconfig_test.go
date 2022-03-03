@@ -30,6 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 	registryrest "k8s.io/apiserver/pkg/registry/rest"
@@ -155,9 +156,7 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 		akcREST = &AdminKubeconfigREST{
 			shootStorage:      shootGetter,
 			shootStateStorage: shootStateGetter,
-			now: func() time.Time {
-				return time.Unix(10, 0)
-			},
+			clock:             clock.NewFakeClock(time.Unix(10, 0)),
 		}
 
 		ctx = request.WithUser(context.Background(), &user.DefaultInfo{

@@ -36,6 +36,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apiserver/pkg/authentication/user"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/rest"
@@ -45,7 +46,7 @@ import (
 type AdminKubeconfigREST struct {
 	shootStateStorage    getter
 	shootStorage         getter
-	now                  func() time.Time
+	clock                clock.Clock
 	maxExpirationSeconds int64
 }
 
@@ -147,7 +148,7 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 			CertType:     secrets.ClientCert,
 			Validity:     &validity,
 			SigningCA:    caCert,
-			Now:          r.now,
+			Clock:        r.clock,
 		},
 	}
 

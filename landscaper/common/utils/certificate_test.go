@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/util/clock"
 )
 
 var _ = Describe("Utils", func() {
@@ -126,9 +127,7 @@ func generateClientCert(caCert *secrets.Certificate, notBefore time.Time, validi
 		CertType:   secrets.ClientCert,
 		Validity:   &validity,
 		SigningCA:  caCert,
-		Now: func() time.Time {
-			return notBefore
-		},
+		Clock:      clock.NewFakeClock(notBefore),
 	}
 	cert, err := csc.GenerateCertificate()
 	Expect(err).ToNot(HaveOccurred())
