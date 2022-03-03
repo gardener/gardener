@@ -2942,7 +2942,7 @@ func schema_gardenlet_apis_config_v1alpha1_ManagedSeedControllerConfiguration(re
 					},
 					"jitterUpdates": {
 						SchemaProps: spec.SchemaProps{
-							Description: "JitterUpdates is a bool which when enabled enqueues managed seeds with random duration if there is a change in observed generation(spec change).",
+							Description: "JitterUpdates enables enqueuing managed seeds with a random duration(jitter) in case of an update to the spec. The applied jitterPeriod is taken from SyncJitterPeriod.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},

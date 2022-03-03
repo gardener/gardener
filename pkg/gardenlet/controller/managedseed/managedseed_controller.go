@@ -44,7 +44,7 @@ func (c *Controller) managedSeedAdd(obj interface{}) {
 
 	if generationChanged {
 		if jitterUpdates {
-			enqueueWithJitterDelay(c, key)
+			c.enqueueWithJitterDelay(key)
 		} else {
 			c.logger.Debugf("Added ManagedSeed %s without delay to the queue", key)
 			c.managedSeedQueue.Add(key)
@@ -53,7 +53,7 @@ func (c *Controller) managedSeedAdd(obj interface{}) {
 		// Spread reconciliation of managed seeds (including gardenlet updates/rollouts) across the configured sync jitter
 		// period to avoid overloading the gardener-apiserver if all gardenlets in all managed seeds are (re)starting
 		// roughly at the same time
-		enqueueWithJitterDelay(c, key)
+		c.enqueueWithJitterDelay(key)
 	}
 }
 
@@ -86,7 +86,7 @@ func (c *Controller) managedSeedDelete(obj interface{}) {
 	c.managedSeedQueue.Add(key)
 }
 
-func enqueueWithJitterDelay(c *Controller, key string) {
+func (c *Controller) enqueueWithJitterDelay(key string) {
 	duration := utils.RandomDurationWithMetaDuration(c.config.Controllers.ManagedSeed.SyncJitterPeriod)
 	c.logger.Infof("Added ManagedSeed %s with delay %s to the queue", key, duration)
 	c.managedSeedQueue.AddAfter(key, duration)
