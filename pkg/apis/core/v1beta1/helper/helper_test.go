@@ -2262,9 +2262,11 @@ var _ = Describe("helper", func() {
 		Entry("phase set", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{CertificateAuthorities: &gardencorev1beta1.ShootCARotation{Phase: gardencorev1beta1.RotationCompleting}}}, gardencorev1beta1.RotationCompleting),
 	)
 
-	DescribeTable("#SetShootCARotationPhase",
+	DescribeTable("#MutateShootCARotation",
 		func(shoot *gardencorev1beta1.Shoot, phase gardencorev1beta1.ShootCredentialsRotationPhase) {
-			SetShootCARotationPhase(shoot, phase)
+			MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.ShootCARotation) {
+				rotation.Phase = phase
+			})
 			Expect(shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase).To(Equal(phase))
 		},
 

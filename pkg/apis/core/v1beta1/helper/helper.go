@@ -1491,16 +1491,15 @@ func IsCoreDNSAutoscalingModeUsed(systemComponents *gardencorev1beta1.SystemComp
 
 // GetShootCARotationPhase returns the specified shoot CA rotation phase or an empty string
 func GetShootCARotationPhase(credentials *gardencorev1beta1.ShootCredentials) gardencorev1beta1.ShootCredentialsRotationPhase {
-	if credentials != nil &&
-		credentials.Rotation != nil &&
-		credentials.Rotation.CertificateAuthorities != nil {
+	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.CertificateAuthorities != nil {
 		return credentials.Rotation.CertificateAuthorities.Phase
 	}
 	return ""
 }
 
-// SetShootCARotationPhase sets the .status.credentials.rotation.certificateAuthorities.phase field of the Shoot.
-func SetShootCARotationPhase(shoot *gardencorev1beta1.Shoot, phase gardencorev1beta1.ShootCredentialsRotationPhase) {
+// MutateShootCARotation mutates the .status.credentials.rotation.certificateAuthorities field based on the provided
+// mutation function. If the field is nil then it is initialized.
+func MutateShootCARotation(shoot *gardencorev1beta1.Shoot, f func(*gardencorev1beta1.ShootCARotation)) {
 	if shoot.Status.Credentials == nil {
 		shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{}
 	}
@@ -1510,5 +1509,6 @@ func SetShootCARotationPhase(shoot *gardencorev1beta1.Shoot, phase gardencorev1b
 	if shoot.Status.Credentials.Rotation.CertificateAuthorities == nil {
 		shoot.Status.Credentials.Rotation.CertificateAuthorities = &gardencorev1beta1.ShootCARotation{}
 	}
-	shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase = phase
+
+	f(shoot.Status.Credentials.Rotation.CertificateAuthorities)
 }
