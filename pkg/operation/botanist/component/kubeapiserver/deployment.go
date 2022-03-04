@@ -170,6 +170,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							}},
 						},
 					},
+					AutomountServiceAccountToken:  pointer.Bool(false),
 					PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane,
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
