@@ -71,8 +71,6 @@ type Interface interface {
 	SetServiceAccountConfig(ServiceAccountConfig)
 	// SetSNIConfig sets the SNI field in the Values of the deployer.
 	SetSNIConfig(SNIConfig)
-	// SetProbeToken sets the ProbeToken field in the Values of the deployer.
-	SetProbeToken(string)
 	// SetExternalHostname sets the ExternalHostname field in the Values of the deployer.
 	SetExternalHostname(string)
 	// SetExternalServer sets the ExternalServer field in the Values of the deployer.
@@ -106,8 +104,6 @@ type Values struct {
 	Images Images
 	// OIDC contains information for configuring OIDC settings for the kube-apiserver.
 	OIDC *gardencorev1beta1.OIDCConfig
-	// ProbeToken is the JWT token used for {live,readi}ness probes of the kube-apiserver container.
-	ProbeToken string
 	// Requests contains configuration for the kube-apiserver requests.
 	Requests *gardencorev1beta1.KubeAPIServerRequests
 	// RuntimeConfig is the set of runtime configurations.
@@ -460,10 +456,6 @@ func (k *kubeAPIServer) SetSNIConfig(config SNIConfig) {
 	k.values.SNI = config
 }
 
-func (k *kubeAPIServer) SetProbeToken(token string) {
-	k.values.ProbeToken = token
-}
-
 func (k *kubeAPIServer) SetExternalHostname(hostname string) {
 	k.values.ExternalHostname = hostname
 }
@@ -488,9 +480,6 @@ func getLabels() map[string]string {
 
 // Secrets is collection of secrets for the kube-apiserver.
 type Secrets struct {
-	// BasicAuthentication contains the basic authentication credentials.
-	// Only relevant if BasicAuthenticationEnabled is true.
-	BasicAuthentication *component.Secret
 	// CA is the cluster's certificate authority.
 	CA component.Secret
 	// CAEtcd is the certificate authority for the etcd.
@@ -512,8 +501,6 @@ type Secrets struct {
 	Server component.Secret
 	// ServiceAccountKey is key for service accounts.
 	ServiceAccountKey component.Secret
-	// StaticToken is the static token secret.
-	StaticToken component.Secret
 	// VPNSeed is the client certificate for the vpn-seed to talk to the kube-apiserver.
 	// Only relevant if VPNConfig.ReversedVPNEnabled is false.
 	VPNSeed *component.Secret
@@ -532,7 +519,6 @@ type secret struct {
 
 func (s *Secrets) all() map[string]secret {
 	return map[string]secret{
-		"BasicAuthentication":    {Secret: s.BasicAuthentication, isRequired: func(v Values) bool { return v.BasicAuthenticationEnabled }},
 		"CA":                     {Secret: &s.CA},
 		"CAEtcd":                 {Secret: &s.CAEtcd},
 		"CAFrontProxy":           {Secret: &s.CAFrontProxy},
@@ -543,7 +529,6 @@ func (s *Secrets) all() map[string]secret {
 		"KubeAPIServerToKubelet": {Secret: &s.KubeAPIServerToKubelet},
 		"Server":                 {Secret: &s.Server},
 		"ServiceAccountKey":      {Secret: &s.ServiceAccountKey},
-		"StaticToken":            {Secret: &s.StaticToken},
 		"VPNSeed":                {Secret: s.VPNSeed, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
 		"VPNSeedTLSAuth":         {Secret: s.VPNSeedTLSAuth, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
 		"VPNSeedServerTLSAuth":   {Secret: s.VPNSeedServerTLSAuth, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},

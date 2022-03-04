@@ -124,7 +124,6 @@ var _ = Describe("KubeAPIServer", func() {
 		kapi = New(kubernetesInterface, namespace, sm, Values{Version: version})
 
 		secrets = Secrets{
-			BasicAuthentication:    &component.Secret{Name: secretNameBasicAuthentication, Checksum: secretChecksumBasicAuthentication},
 			CA:                     component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
 			CAEtcd:                 component.Secret{Name: secretNameCAEtcd, Checksum: secretChecksumCAEtcd},
 			CAFrontProxy:           component.Secret{Name: secretNameCAFrontProxy, Checksum: secretChecksumCAFrontProxy},
@@ -135,7 +134,6 @@ var _ = Describe("KubeAPIServer", func() {
 			KubeAPIServerToKubelet: component.Secret{Name: secretNameKubeAPIServerToKubelet, Checksum: secretChecksumKubeAPIServerToKubelet},
 			Server:                 component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
 			ServiceAccountKey:      component.Secret{Name: secretNameServiceAccountKey, Checksum: secretChecksumServiceAccountKey},
-			StaticToken:            component.Secret{Name: secretNameStaticToken, Checksum: secretChecksumStaticToken},
 			VPNSeed:                &component.Secret{Name: secretNameVPNSeed, Checksum: secretChecksumVPNSeed},
 			VPNSeedTLSAuth:         &component.Secret{Name: secretNameVPNSeedTLSAuth, Checksum: secretChecksumVPNSeedTLSAuth},
 			VPNSeedServerTLSAuth:   &component.Secret{Name: secretNameVPNSeedServerTLSAuth, Checksum: secretChecksumVPNSeedServerTLSAuth},
@@ -216,9 +214,6 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(kapi.Deploy(ctx)).To(MatchError(ContainSubstring("missing information for required secret " + name)))
 				},
 
-				Entry("BasicAuthentication enabled but missing",
-					"BasicAuthentication", func(s *Secrets) { s.BasicAuthentication = nil }, Values{BasicAuthenticationEnabled: true},
-				),
 				Entry("CA missing",
 					"CA", func(s *Secrets) { s.CA.Name = "" }, Values{},
 				),
@@ -245,9 +240,6 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("ServiceAccountKey missing",
 					"ServiceAccountKey", func(s *Secrets) { s.ServiceAccountKey.Name = "" }, Values{},
-				),
-				Entry("StaticToken missing",
-					"StaticToken", func(s *Secrets) { s.StaticToken.Name = "" }, Values{},
 				),
 				Entry("ReversedVPN disabled but VPNSeed missing",
 					"VPNSeed", func(s *Secrets) { s.VPNSeed = nil }, Values{VPN: VPNConfig{ReversedVPNEnabled: false}},
@@ -2611,14 +2603,6 @@ rules:
 			v := SNIConfig{AdvertiseAddress: "foo"}
 			kapi.SetSNIConfig(v)
 			Expect(kapi.GetValues().SNI).To(Equal(v))
-		})
-	})
-
-	Describe("#SetProbeToken", func() {
-		It("should properly set the field", func() {
-			v := "bar"
-			kapi.SetProbeToken(v)
-			Expect(kapi.GetValues().ProbeToken).To(Equal(v))
 		})
 	})
 

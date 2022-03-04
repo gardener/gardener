@@ -34,37 +34,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apiserver/pkg/authentication/user"
 )
-
-var basicAuthSecretAPIServer = &secrets.BasicAuthSecretConfig{
-	Name:           kubeapiserver.SecretNameBasicAuth,
-	Format:         secrets.BasicAuthFormatCSV,
-	Username:       "admin",
-	PasswordLength: 32,
-}
-
-func (b *Botanist) generateStaticTokenConfig() *secrets.StaticTokenSecretConfig {
-	return &secrets.StaticTokenSecretConfig{
-		Name: kubeapiserver.SecretNameStaticToken,
-		Tokens: map[string]secrets.TokenConfig{
-			common.KubecfgUsername: {
-				Username: common.KubecfgUsername,
-				UserID:   common.KubecfgUsername,
-				Groups:   []string{user.SystemPrivilegedGroup},
-			},
-			common.KubeAPIServerHealthCheck: {
-				Username: common.KubeAPIServerHealthCheck,
-				UserID:   common.KubeAPIServerHealthCheck,
-			},
-		},
-	}
-}
 
 // generateWantedSecrets returns a list of Secret configuration objects satisfying the secret config interface,
 // each containing their specific configuration for the creation of certificates (server/client), RSA key pairs, basic
 // authentication credentials, etc.
-func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.BasicAuth, staticToken *secrets.StaticToken, certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error) {
+func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error) {
 	var (
 		apiServerIPAddresses = []net.IP{
 			net.ParseIP("127.0.0.1"),
@@ -318,31 +293,6 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			Validity:  &endUserCrtValidity,
 		},
 	}
-
-	// Secret definition for kubecfg
-	var kubecfgToken *secrets.Token
-	if staticToken != nil {
-		var err error
-		kubecfgToken, err = staticToken.GetTokenForUsername(common.KubecfgUsername)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
-		CertificateSecretConfig: &secrets.CertificateSecretConfig{
-			Name:      common.KubecfgSecretName,
-			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-		},
-
-		BasicAuth: basicAuthAPIServer,
-		Token:     kubecfgToken,
-
-		KubeConfigRequests: []secrets.KubeConfigRequest{{
-			ClusterName:   b.Shoot.SeedNamespace,
-			APIServerHost: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, false),
-		}},
-	})
 
 	if b.isShootNodeLoggingEnabled() {
 		// Secret definition for loki (ingress)

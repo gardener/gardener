@@ -35,9 +35,11 @@ import (
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -77,7 +79,6 @@ var _ = Describe("KubeAPIServer", func() {
 		podNetworkCIDR        = "10.0.1.0/24"
 		serviceNetworkCIDR    = "10.0.2.0/24"
 		nodeNetworkCIDR       = "10.0.3.0/24"
-		healthCheckToken      = "some-token"
 		apiServerClusterIP    = "1.2.3.4"
 	)
 
@@ -125,8 +126,7 @@ var _ = Describe("KubeAPIServer", func() {
 					{Name: "kube-apiserver"},
 					{Name: "vpn-seed"},
 				},
-				APIServerHealthCheckToken: healthCheckToken,
-				APIServerClusterIP:        apiServerClusterIP,
+				APIServerClusterIP: apiServerClusterIP,
 			},
 		}
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
@@ -945,7 +945,6 @@ var _ = Describe("KubeAPIServer", func() {
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(&expectedReplicas)
 				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-				kubeAPIServer.EXPECT().SetProbeToken(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
@@ -1028,7 +1027,6 @@ var _ = Describe("KubeAPIServer", func() {
 				}
 				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-				kubeAPIServer.EXPECT().SetProbeToken(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
@@ -1100,7 +1098,6 @@ var _ = Describe("KubeAPIServer", func() {
 					KubeAPIServerToKubelet: component.Secret{Name: "kube-apiserver-kubelet", Checksum: botanist.LoadCheckSum("kube-apiserver-kubelet")},
 					Server:                 component.Secret{Name: "kube-apiserver", Checksum: botanist.LoadCheckSum("kube-apiserver")},
 					ServiceAccountKey:      component.Secret{Name: "service-account-key", Checksum: botanist.LoadCheckSum("service-account-key")},
-					StaticToken:            component.Secret{Name: "static-token", Checksum: botanist.LoadCheckSum("static-token")},
 				}
 				mutateSecrets(&secrets)
 
@@ -1108,7 +1105,6 @@ var _ = Describe("KubeAPIServer", func() {
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 				kubeAPIServer.EXPECT().SetSecrets(secrets)
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-				kubeAPIServer.EXPECT().SetProbeToken(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
@@ -1131,14 +1127,6 @@ var _ = Describe("KubeAPIServer", func() {
 					s.VPNSeedServerTLSAuth = &component.Secret{Name: "vpn-seed-server-tlsauth", Checksum: botanist.LoadCheckSum("vpn-seed-server-tlsauth")}
 				},
 			),
-			Entry("basic auth enabled",
-				kubeapiserver.Values{BasicAuthenticationEnabled: true, VPN: kubeapiserver.VPNConfig{ReversedVPNEnabled: true}},
-				func(s *kubeapiserver.Secrets) {
-					s.BasicAuthentication = &component.Secret{Name: "kube-apiserver-basic-auth", Checksum: botanist.LoadCheckSum("kube-apiserver-basic-auth")}
-					s.HTTPProxy = &component.Secret{Name: "kube-apiserver-http-proxy", Checksum: botanist.LoadCheckSum("kube-apiserver-http-proxy")}
-					s.VPNSeedServerTLSAuth = &component.Secret{Name: "vpn-seed-server-tlsauth", Checksum: botanist.LoadCheckSum("vpn-seed-server-tlsauth")}
-				},
-			),
 		)
 
 		Describe("ExternalHostname", func() {
@@ -1147,23 +1135,7 @@ var _ = Describe("KubeAPIServer", func() {
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-				kubeAPIServer.EXPECT().SetProbeToken(gomock.Any())
-				kubeAPIServer.EXPECT().SetExternalHostname("api.foo.bar.com")
-				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
-				kubeAPIServer.EXPECT().Deploy(ctx)
-
-				Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
-			})
-		})
-
-		Describe("ProbeToken", func() {
-			It("should have the correct probe token", func() {
-				kubeAPIServer.EXPECT().GetValues()
-				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
-				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
-				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-				kubeAPIServer.EXPECT().SetProbeToken(healthCheckToken)
-				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+				kubeAPIServer.EXPECT().SetExternalHostname("api." + internalClusterDomain)
 				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
@@ -1200,7 +1172,6 @@ var _ = Describe("KubeAPIServer", func() {
 					kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 					kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 					kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-					kubeAPIServer.EXPECT().SetProbeToken(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 					if !expectError {
@@ -1442,7 +1413,6 @@ var _ = Describe("KubeAPIServer", func() {
 					kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 					kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 					kubeAPIServer.EXPECT().SetSNIConfig(expectedConfig)
-					kubeAPIServer.EXPECT().SetProbeToken(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 					kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())

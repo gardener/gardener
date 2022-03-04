@@ -64,15 +64,6 @@ const (
 	// LokiPrefix is a constant for a prefix used for the Loki instance.
 	LokiPrefix = "l"
 
-	// KubecfgUsername is the username for the token used for the kubeconfig the shoot.
-	KubecfgUsername = "system:cluster-admin"
-
-	// KubecfgSecretName is the name of the kubecfg secret.
-	KubecfgSecretName = "kubecfg"
-
-	// KubeAPIServerHealthCheck is a key for the kube-apiserver-health-check user.
-	KubeAPIServerHealthCheck = "kube-apiserver-health-check"
-
 	// VPASecretName is the name of the secret used by VPA
 	VPASecretName = "vpa-tls-certs"
 

@@ -413,11 +413,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		KubeAPIServerToKubelet: component.Secret{Name: kubeapiserver.SecretNameKubeAPIServerToKubelet, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameKubeAPIServerToKubelet)},
 		Server:                 component.Secret{Name: kubeapiserver.SecretNameServer, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameServer)},
 		ServiceAccountKey:      component.Secret{Name: v1beta1constants.SecretNameServiceAccountKey, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameServiceAccountKey)},
-		StaticToken:            component.Secret{Name: kubeapiserver.SecretNameStaticToken, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameStaticToken)},
-	}
-
-	if values.BasicAuthenticationEnabled {
-		secrets.BasicAuthentication = &component.Secret{Name: kubeapiserver.SecretNameBasicAuth, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameBasicAuth)}
 	}
 
 	if values.VPN.ReversedVPNEnabled {
@@ -430,7 +425,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSecrets(secrets)
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSNIConfig(b.computeKubeAPIServerSNIConfig())
-	b.Shoot.Components.ControlPlane.KubeAPIServer.SetProbeToken(b.APIServerHealthCheckToken)
 
 	externalHostname := b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetExternalHostname(externalHostname)
