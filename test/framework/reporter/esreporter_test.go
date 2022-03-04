@@ -113,6 +113,48 @@ var _ = Describe("processReport tests", func() {
 
 		Expect(reporter.suite.Tests).To(Equal(1))
 		Expect(reporter.suite.Failures).To(Equal(1))
+		Expect(reporter.suite.Errors).To(Equal(0))
+		Expect(reporter.suite.Phase).To(Equal(SpecPhaseFailed))
+
+		Expect(len(reporter.testCases)).To(Equal(1))
+		Expect(reporter.testCases[0].Metadata.Name).To(Equal(mockReportSuiteDescription))
+		Expect(reporter.testCases[0].Name).To(Equal(testCaseName))
+		Expect(reporter.testCases[0].ShortName).To(Equal(testCaseName))
+		Expect(reporter.testCases[0].Phase).To(Equal(SpecPhaseFailed))
+		Expect(reporter.testCases[0].Duration).To(Equal(testCaseDuration))
+		Expect(reporter.testCases[0].FailureMessage).NotTo(BeNil())
+		Expect(reporter.testCases[0].FailureMessage.Type).To(Equal(SpecPhaseFailed))
+		Expect(reporter.testCases[0].FailureMessage.Message).To(Equal(fmt.Sprintf("%s\n%s\n%s", failureLocation.String(), failureMessage, location.String())))
+		Expect(reporter.testCases[0].SystemOut).To(Equal(stderr))
+	})
+
+	It("should process one panicked test correctly", func() {
+		stderr := "stderr - something panicked"
+		failureMessage := "something went utterly wrong"
+		location := types.CodeLocation{
+			FileName:       "test.go",
+			LineNumber:     10,
+			FullStackTrace: "some text",
+		}
+		failureLocation := types.CodeLocation{
+			FileName:       "error.go",
+			LineNumber:     20,
+			FullStackTrace: "some error",
+		}
+		mockReport.PreRunStats.SpecsThatWillRun = 1
+		mockReport.SpecReports[0].State = types.SpecStatePanicked
+		mockReport.SpecReports[0].Failure = types.Failure{
+			Message:             failureMessage,
+			Location:            location,
+			FailureNodeLocation: failureLocation,
+		}
+		mockReport.SpecReports[0].CapturedStdOutErr = stderr
+
+		reporter.processReport(mockReport)
+
+		Expect(reporter.suite.Tests).To(Equal(1))
+		Expect(reporter.suite.Failures).To(Equal(0))
+		Expect(reporter.suite.Errors).To(Equal(1))
 		Expect(reporter.suite.Phase).To(Equal(SpecPhaseFailed))
 
 		Expect(len(reporter.testCases)).To(Equal(1))

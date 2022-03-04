@@ -134,7 +134,12 @@ func (reporter *GardenerESReporter) processReport(report ginkgo.Report) {
 		}
 
 		if spec.State == types.SpecStateFailed || spec.State == types.SpecStateInterrupted || spec.State == types.SpecStatePanicked {
-			reporter.suite.Failures++
+			if spec.State == types.SpecStateFailed {
+				reporter.suite.Failures++
+			} else {
+				reporter.suite.Errors++
+			}
+
 			testCase.FailureMessage = &FailureMessage{
 				Type:    PhaseForState(spec.State),
 				Message: failureMessage(spec.Failure),
@@ -147,12 +152,11 @@ func (reporter *GardenerESReporter) processReport(report ginkgo.Report) {
 
 	}
 
-	if reporter.suite.Failures != 0 {
+	if reporter.suite.Failures != 0 || reporter.suite.Errors != 0 {
 		reporter.suite.Phase = SpecPhaseFailed
 	}
 	reporter.suite.Tests = report.PreRunStats.SpecsThatWillRun
 	reporter.suite.Duration = math.Trunc(report.RunTime.Seconds()*1000) / 1000
-	reporter.suite.Errors = 0
 }
 
 func (reporter *GardenerESReporter) storeResults() {
