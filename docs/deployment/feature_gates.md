@@ -30,7 +30,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | CachedRuntimeClients                         | `true`  | `Beta`  | `1.34` |        |
 | SeedChange                                   | `false` | `Alpha` | `1.12` |        |
 | SeedKubeScheduler                            | `false` | `Alpha` | `1.15` |        |
-| ReversedVPN                                  | `false` | `Alpha` | `1.22` |        |
+| ReversedVPN                                  | `false` | `Alpha` | `1.22` | `1.41` |
+| ReversedVPN                                  | `true`  | `Beta`  | `1.42` |        |
 | AdminKubeconfigRequest                       | `false` | `Alpha` | `1.24` | `1.38` |
 | AdminKubeconfigRequest                       | `true`  | `Beta`  | `1.39` |        |
 | UseDNSRecords                                | `false` | `Alpha` | `1.27` | `1.38` |
