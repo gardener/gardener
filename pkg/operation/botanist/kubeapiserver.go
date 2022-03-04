@@ -322,10 +322,7 @@ func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context,
 	if config.ServiceAccountConfig.Issuer != nil {
 		out.Issuer = *config.ServiceAccountConfig.Issuer
 	}
-
-	if config.ServiceAccountConfig.AcceptedIssuers != nil {
-		out.AcceptedIssuers = append([]string{}, config.ServiceAccountConfig.AcceptedIssuers...)
-	}
+	out.AcceptedIssuers = config.ServiceAccountConfig.AcceptedIssuers
 
 	if signingKeySecret := config.ServiceAccountConfig.SigningKeySecret; signingKeySecret != nil {
 		secret := &corev1.Secret{}

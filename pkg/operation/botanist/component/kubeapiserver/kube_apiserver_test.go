@@ -1697,14 +1697,6 @@ rules:
 							serviceAccountMaxTokenExpiration    = time.Hour
 							serviceAccountExtendTokenExpiration = false
 							serviceNetworkCIDR                  = "1.2.3.4/5"
-							indexOfElement                      = func(elements []string, element string) int {
-								for i, e := range elements {
-									if e == element {
-										return i
-									}
-								}
-								return -1
-							}
 						)
 
 						kapi = New(kubernetesInterface, namespace, Values{
@@ -2637,4 +2629,13 @@ egressSelections:
   name: etcd
 kind: EgressSelectorConfiguration
 `
+}
+
+func indexOfElement(elements []string, element string) int {
+	for i, e := range elements {
+		if e == element {
+			return i
+		}
+	}
+	return -1
 }
