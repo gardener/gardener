@@ -157,8 +157,8 @@ func LoadBasicAuthFromCSV(name string, data []byte) (*BasicAuth, error) {
 	}
 
 	return &BasicAuth{
-		Name: name,
-
+		Name:     name,
+		Format:   BasicAuthFormatCSV,
 		Username: csv[1],
 		Password: csv[0],
 	}, nil

@@ -164,6 +164,7 @@ var _ = Describe("Basic Auth Secrets", func() {
 				Expect(obj.Username).To(Equal("admin"))
 				Expect(obj.Password).To(Equal("foo"))
 				Expect(obj.Name).To(Equal("basicauth"))
+				Expect(obj.Format).To(Equal(BasicAuthFormatCSV))
 			})
 		})
 	})
