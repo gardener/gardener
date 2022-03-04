@@ -73,14 +73,18 @@ var _ = Describe("OperatingSystemConfig", func() {
 			mockNow *mocktime.MockNow
 			now     time.Time
 
-			apiServerURL            = "https://url-to-apiserver"
-			caBundle                = pointer.String("ca-bundle")
-			clusterDNSAddress       = "cluster-dns"
-			clusterDomain           = "cluster-domain"
-			images                  = map[string]*imagevector.Image{"foo": {}}
-			kubeletCACertificate    = "kubelet-ca"
-			kubeletCLIFlags         = components.ConfigurableKubeletCLIFlags{}
-			kubeletConfigParameters = components.ConfigurableKubeletConfigParameters{}
+			apiServerURL                = "https://url-to-apiserver"
+			caBundle                    = pointer.String("ca-bundle")
+			clusterDNSAddress           = "cluster-dns"
+			clusterDomain               = "cluster-domain"
+			images                      = map[string]*imagevector.Image{"foo": {}}
+			kubeletCACertificate        = "kubelet-ca"
+			evictionHardMemoryAvailable = "100Mi"
+			kubeletConfig               = &gardencorev1beta1.KubeletConfig{
+				EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
+					MemoryAvailable: &evictionHardMemoryAvailable,
+				},
+			}
 			kubeletDataVolumeName   = "foo"
 			machineTypes            []gardencorev1beta1.MachineType
 			sshPublicKeys           = []string{"ssh-public-key", "ssh-public-key-b"}
@@ -177,16 +181,15 @@ var _ = Describe("OperatingSystemConfig", func() {
 					APIServerURL: apiServerURL,
 				},
 				OriginalValues: OriginalValues{
-					CABundle:                caBundle,
-					ClusterDNSAddress:       clusterDNSAddress,
-					ClusterDomain:           clusterDomain,
-					Images:                  images,
-					KubeletCACertificate:    kubeletCACertificate,
-					KubeletConfigParameters: kubeletConfigParameters,
-					KubeletCLIFlags:         kubeletCLIFlags,
-					MachineTypes:            machineTypes,
-					SSHPublicKeys:           sshPublicKeys,
-					PromtailEnabled:         promtailEnabled,
+					CABundle:             caBundle,
+					ClusterDNSAddress:    clusterDNSAddress,
+					ClusterDomain:        clusterDomain,
+					Images:               images,
+					KubeletConfig:        kubeletConfig,
+					KubeletCACertificate: kubeletCACertificate,
+					MachineTypes:         machineTypes,
+					SSHPublicKeys:        sshPublicKeys,
+					PromtailEnabled:      promtailEnabled,
 				},
 			}
 
@@ -219,18 +222,21 @@ var _ = Describe("OperatingSystemConfig", func() {
 					apiServerURL,
 				)
 				originalUnits, originalFiles, _ := originalConfigFn(components.Context{
-					CABundle:                caBundle,
-					ClusterDNSAddress:       clusterDNSAddress,
-					ClusterDomain:           clusterDomain,
-					CRIName:                 criName,
-					Images:                  images,
-					KubeletCACertificate:    kubeletCACertificate,
-					KubeletCLIFlags:         kubeletCLIFlags,
-					KubeletConfigParameters: kubeletConfigParameters,
-					KubeletDataVolumeName:   &kubeletDataVolumeName,
-					KubernetesVersion:       k8sVersion,
-					SSHPublicKeys:           sshPublicKeys,
-					PromtailEnabled:         promtailEnabled,
+					CABundle:             caBundle,
+					ClusterDNSAddress:    clusterDNSAddress,
+					ClusterDomain:        clusterDomain,
+					CRIName:              criName,
+					Images:               images,
+					KubeletCACertificate: kubeletCACertificate,
+					KubeletConfigParameters: components.ConfigurableKubeletConfigParameters{
+						EvictionHard: map[string]string{
+							"memory.available": evictionHardMemoryAvailable,
+						},
+					},
+					KubeletDataVolumeName: &kubeletDataVolumeName,
+					KubernetesVersion:     k8sVersion,
+					SSHPublicKeys:         sshPublicKeys,
+					PromtailEnabled:       promtailEnabled,
 				})
 
 				oscDownloader := &extensionsv1alpha1.OperatingSystemConfig{
