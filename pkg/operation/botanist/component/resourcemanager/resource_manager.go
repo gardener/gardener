@@ -16,7 +16,6 @@ package resourcemanager
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -261,8 +260,6 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 		r.emptyDeployment(),
 		r.emptyService(),
 		r.emptyServiceAccount(),
-		r.emptyClusterRole(),
-		r.emptyClusterRoleBinding(),
 	}
 
 	if r.values.TargetDiffersFromSourceCluster {
@@ -277,18 +274,17 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 			return err
 		}
 
-		objectsToDelete = append(objectsToDelete, r.newShootAccessSecret().Secret)
+		objectsToDelete = append(objectsToDelete,
+			r.newShootAccessSecret().Secret,
+			r.emptyRoleInWatchedNamespace(),
+			r.emptyRoleBindingInWatchedNamespace(),
+		)
 	} else {
-		objectsToDelete = append(objectsToDelete, r.emptyMutatingWebhookConfiguration())
-	}
-
-	role, err := r.emptyRoleInWatchedNamespace()
-	if err == nil {
-		objectsToDelete = append(objectsToDelete, role)
-	}
-	rb, err := r.emptyRoleBindingInWatchedNamespace()
-	if err == nil {
-		objectsToDelete = append(objectsToDelete, rb)
+		objectsToDelete = append(objectsToDelete,
+			r.emptyMutatingWebhookConfiguration(),
+			r.emptyClusterRole(),
+			r.emptyClusterRoleBinding(),
+		)
 	}
 
 	return kutil.DeleteObjects(
@@ -364,11 +360,8 @@ func (r *resourceManager) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 }
 
 func (r *resourceManager) ensureRoleInWatchedNamespace(ctx context.Context, policies []rbacv1.PolicyRule) error {
-	role, err := r.emptyRoleInWatchedNamespace()
-	if err != nil {
-		return err
-	}
-	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, role, func() error {
+	role := r.emptyRoleInWatchedNamespace()
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, role, func() error {
 		role.Labels = r.getLabels()
 		role.Rules = policies
 		return nil
@@ -376,19 +369,13 @@ func (r *resourceManager) ensureRoleInWatchedNamespace(ctx context.Context, poli
 	return err
 }
 
-func (r *resourceManager) emptyRoleInWatchedNamespace() (*rbacv1.Role, error) {
-	if r.values.WatchedNamespace == nil {
-		return nil, errors.New("creating Role in watched namespace failed - no namespace defined")
-	}
-	return &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: roleName, Namespace: *r.values.WatchedNamespace}}, nil
+func (r *resourceManager) emptyRoleInWatchedNamespace() *rbacv1.Role {
+	return &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: roleName, Namespace: *r.values.WatchedNamespace}}
 }
 
 func (r *resourceManager) ensureRoleBinding(ctx context.Context) error {
-	roleBinding, err := r.emptyRoleBindingInWatchedNamespace()
-	if err != nil {
-		return err
-	}
-	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, roleBinding, func() error {
+	roleBinding := r.emptyRoleBindingInWatchedNamespace()
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, roleBinding, func() error {
 		roleBinding.Labels = r.getLabels()
 		roleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
@@ -405,11 +392,8 @@ func (r *resourceManager) ensureRoleBinding(ctx context.Context) error {
 	return err
 }
 
-func (r *resourceManager) emptyRoleBindingInWatchedNamespace() (*rbacv1.RoleBinding, error) {
-	if r.values.WatchedNamespace == nil {
-		return nil, errors.New("creating RoleBinding in watched namespace failed - no namespace defined")
-	}
-	return &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: *r.values.WatchedNamespace}}, nil
+func (r *resourceManager) emptyRoleBindingInWatchedNamespace() *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: *r.values.WatchedNamespace}}
 }
 
 func (r *resourceManager) ensureService(ctx context.Context) error {
