@@ -291,7 +291,17 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := k.reconcileDeployment(ctx, deployment, configMapAuditPolicy, configMapAdmission, configMapEgressSelector, secretOIDCCABundle, secretServiceAccountSigningKey); err != nil {
+	if err := k.reconcileDeployment(
+		ctx,
+		deployment,
+		configMapAuditPolicy,
+		configMapAdmission,
+		configMapEgressSelector,
+		secretOIDCCABundle,
+		secretServiceAccountSigningKey,
+		secretStaticToken,
+		secretBasicAuth,
+	); err != nil {
 		return err
 	}
 

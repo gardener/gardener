@@ -60,23 +60,23 @@ const (
 	containerNameVPNSeed                  = "vpn-seed"
 	containerNameAPIServerProxyPodMutator = "apiserver-proxy-pod-mutator"
 
-	volumeNameAdmissionConfiguration   = "kube-apiserver-admission-config"
+	volumeNameAdmissionConfiguration   = "admission-config"
 	volumeNameAuditPolicy              = "audit-policy-config"
-	volumeNameBasicAuthentication      = "kube-apiserver-basic-auth"
+	volumeNameBasicAuthentication      = "basic-auth"
 	volumeNameCA                       = "ca"
 	volumeNameCAEtcd                   = "ca-etcd"
 	volumeNameCAFrontProxy             = "ca-front-proxy"
 	volumeNameEgressSelector           = "egress-selection-config"
 	volumeNameEtcdClient               = "etcd-client-tls"
 	volumeNameEtcdEncryptionConfig     = "etcd-encryption-secret"
-	volumeNameHTTPProxy                = "kube-apiserver-http-proxy"
-	volumeNameKubeAPIServerToKubelet   = "kube-apiserver-kubelet"
+	volumeNameHTTPProxy                = "http-proxy"
+	volumeNameKubeAPIServerToKubelet   = "kubelet-client"
 	volumeNameKubeAggregator           = "kube-aggregator"
 	volumeNameLibModules               = "modules"
-	volumeNameOIDCCABundle             = "kube-apiserver-oidc-cabundle"
-	volumeNameServer                   = "kube-apiserver"
+	volumeNameOIDCCABundle             = "oidc-cabundle"
+	volumeNameServer                   = "kube-apiserver-server"
 	volumeNameServiceAccountKey        = "service-account-key"
-	volumeNameServiceAccountSigningKey = "kube-apiserver-service-account-signing-key"
+	volumeNameServiceAccountSigningKey = "service-account-signing-key"
 	volumeNameStaticToken              = "static-token"
 	volumeNameVPNSeed                  = "vpn-seed"
 	volumeNameVPNSeedTLSAuth           = "vpn-seed-tlsauth"
@@ -123,11 +123,28 @@ func (k *kubeAPIServer) reconcileDeployment(
 	configMapEgressSelector *corev1.ConfigMap,
 	secretOIDCCABundle *corev1.Secret,
 	secretServiceAccountSigningKey *corev1.Secret,
+	secretStaticToken *corev1.Secret,
+	secretBasicAuth *corev1.Secret,
 ) error {
 	var (
 		maxSurge       = intstr.FromString("25%")
 		maxUnavailable = intstr.FromInt(0)
 	)
+
+	var healthCheckToken string
+	if secretStaticToken != nil {
+		staticToken, err := secrets.LoadStaticTokenFromCSV(SecretStaticTokenName, secretStaticToken.Data[secrets.DataKeyStaticTokenCSV])
+		if err != nil {
+			return err
+		}
+
+		token, err := staticToken.GetTokenForUsername(userNameHealthCheck)
+		if err != nil {
+			return err
+		}
+
+		healthCheckToken = token.Token
+	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), deployment, func() error {
 		deployment.Labels = GetLabels()
@@ -193,7 +210,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 									Port:   intstr.FromInt(Port),
 									HTTPHeaders: []corev1.HTTPHeader{{
 										Name:  "Authorization",
-										Value: "Bearer " + k.values.ProbeToken,
+										Value: "Bearer " + healthCheckToken,
 									}},
 								},
 							},
@@ -211,7 +228,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 									Port:   intstr.FromInt(Port),
 									HTTPHeaders: []corev1.HTTPHeader{{
 										Name:  "Authorization",
-										Value: "Bearer " + k.values.ProbeToken,
+										Value: "Bearer " + healthCheckToken,
 									}},
 								},
 							},
@@ -338,7 +355,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameStaticToken,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: k.secrets.StaticToken.Name,
+									SecretName: secretStaticToken.Name,
 								},
 							},
 						},
@@ -379,7 +396,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 			},
 		}
 
-		k.handleBasicAuthenticationSettings(deployment)
+		k.handleBasicAuthenticationSettings(deployment, secretBasicAuth)
 		k.handleLifecycleSettings(deployment)
 		k.handleHostCertVolumes(deployment)
 		k.handleSNISettings(deployment)
@@ -593,7 +610,7 @@ func (k *kubeAPIServer) handleHostCertVolumes(deployment *appsv1.Deployment) {
 	}...)
 }
 
-func (k *kubeAPIServer) handleBasicAuthenticationSettings(deployment *appsv1.Deployment) {
+func (k *kubeAPIServer) handleBasicAuthenticationSettings(deployment *appsv1.Deployment, secret *corev1.Secret) {
 	if !k.values.BasicAuthenticationEnabled {
 		return
 	}
@@ -610,7 +627,7 @@ func (k *kubeAPIServer) handleBasicAuthenticationSettings(deployment *appsv1.Dep
 			Name: volumeNameBasicAuthentication,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: k.secrets.BasicAuthentication.Name,
+					SecretName: secret.Name,
 				},
 			},
 		},
