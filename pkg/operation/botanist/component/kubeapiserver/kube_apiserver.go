@@ -163,6 +163,8 @@ type Values struct {
 	VPN VPNConfig
 	// WatchCacheSizes are the configured sizes for the watch caches.
 	WatchCacheSizes *gardencorev1beta1.WatchCacheSizes
+	// ZoneSpread determines if the Kube-Apiserver should be spread across multiple zones.
+	ZoneSpread bool
 }
 
 // AuditConfig contains information for configuring audit settings for the kube-apiserver.
