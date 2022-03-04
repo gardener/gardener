@@ -67,8 +67,9 @@ var _ = Describe("KubeAPIServer", func() {
 		kubeAPIServer   *mockkubeapiserver.MockInterface
 
 		ctx                   = context.TODO()
-		projectNamespace      = "garden-my-project"
-		shootNamespace        = "shoot--foo--bar"
+		projectNamespace      = "garden-foo"
+		seedNamespace         = "shoot--foo--bar"
+		shootName             = "bar"
 		internalClusterDomain = "internal.foo.bar.com"
 		externalClusterDomain = "external.foo.bar.com"
 		podNetwork            *net.IPNet
@@ -129,6 +130,10 @@ var _ = Describe("KubeAPIServer", func() {
 			},
 		}
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      shootName,
+				Namespace: projectNamespace,
+			},
 			Spec: gardencorev1beta1.ShootSpec{
 				Networking: gardencorev1beta1.Networking{
 					Nodes: &nodeNetworkCIDR,
@@ -971,7 +976,7 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
-							Namespace: shootNamespace,
+							Namespace: seedNamespace,
 						},
 						Spec: appsv1.DeploymentSpec{
 							Replicas: pointer.Int32(3),
@@ -987,7 +992,7 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
-							Namespace: shootNamespace,
+							Namespace: seedNamespace,
 						},
 						Spec: appsv1.DeploymentSpec{
 							Replicas: pointer.Int32(0),
@@ -1042,7 +1047,7 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
-							Namespace: shootNamespace,
+							Namespace: seedNamespace,
 						},
 						Spec: appsv1.DeploymentSpec{
 							Template: corev1.PodTemplateSpec{
@@ -1064,7 +1069,7 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
-							Namespace: shootNamespace,
+							Namespace: seedNamespace,
 						},
 						Spec: appsv1.DeploymentSpec{
 							Template: corev1.PodTemplateSpec{
@@ -1137,7 +1142,7 @@ var _ = Describe("KubeAPIServer", func() {
 		)
 
 		Describe("ExternalHostname", func() {
-			It("should set the external hostname to the out-of-cluster address", func() {
+			It("should set the external hostname to the out-of-cluster address (internal domain)", func() {
 				kubeAPIServer.EXPECT().GetValues()
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
@@ -1528,6 +1533,27 @@ var _ = Describe("KubeAPIServer", func() {
 				Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
 			})
 		})
+
+		It("should sync the kubeconfig to the garden project namespace", func() {
+			kubeAPIServer.EXPECT().GetValues()
+			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+			kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
+			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+			kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
+			kubeAPIServer.EXPECT().Deploy(ctx)
+
+			Expect(gc.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(BeNotFoundError())
+
+			Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
+
+			kubeconfigSecret := &corev1.Secret{}
+			Expect(gc.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), kubeconfigSecret)).To(Succeed())
+			Expect(kubeconfigSecret.Annotations).To(HaveKeyWithValue("url", "https://api."+externalClusterDomain))
+			Expect(kubeconfigSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "kubeconfig"))
+			Expect(kubeconfigSecret.Data).To(Equal(map[string][]byte{"data-for": []byte("user-kubeconfig")}))
+		})
 	})
 
 	Describe("#DeleteKubeAPIServer", func() {
@@ -1547,7 +1573,7 @@ var _ = Describe("KubeAPIServer", func() {
 			Expect(botanist.DeleteKubeAPIServer(ctx)).To(Succeed())
 
 			shootClient, err = clientMap.GetClient(ctx, keys.ForShoot(botanist.Shoot.GetInfo()))
-			Expect(err).To(MatchError("clientSet for key \"/\" not found"))
+			Expect(err).To(MatchError(`clientSet for key "` + botanist.Shoot.GetInfo().Namespace + `/` + botanist.Shoot.GetInfo().Name + `" not found`))
 			Expect(shootClient).To(BeNil())
 
 			Expect(botanist.K8sShootClient).To(BeNil())
@@ -1555,7 +1581,7 @@ var _ = Describe("KubeAPIServer", func() {
 	})
 
 	Describe("#ScaleKubeAPIServerToOne", func() {
-		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: shootNamespace}}
+		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: seedNamespace}}
 
 		It("should scale the KAPI deployment", func() {
 			Expect(c.Create(ctx, deployment)).To(Succeed())

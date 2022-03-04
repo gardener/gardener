@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
@@ -447,6 +448,15 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		return err
 	}
 
+	if err := b.syncShootCredentialToGarden(
+		ctx,
+		kubeapiserver.SecretNameUserKubeconfig,
+		gutil.ShootProjectSecretSuffixKubeconfig,
+		map[string]string{"url": "https://" + externalServer},
+		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleKubeconfig},
+	); err != nil {
+		return err
+	}
 	// TODO(rfranzke): Remove in a future release.
 	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "audit-policy-config"}},

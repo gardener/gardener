@@ -177,6 +177,38 @@ func (b *Botanist) getOrGenerateGenericTokenKubeconfig(ctx context.Context) erro
 	return err
 }
 
+func (b *Botanist) syncShootCredentialToGarden(
+	ctx context.Context,
+	seedSecretName string,
+	nameSuffix string,
+	annotations map[string]string,
+	labels map[string]string,
+) error {
+	seedSecret, err := b.SecretsManager.Get(seedSecretName)
+	if err != nil {
+		return err
+	}
+
+	gardenSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      gutil.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, nameSuffix),
+			Namespace: b.Shoot.GetInfo().Namespace,
+		},
+	}
+
+	_, err = controllerutils.GetAndCreateOrStrategicMergePatch(ctx, b.K8sGardenClient.Client(), gardenSecret, func() error {
+		gardenSecret.OwnerReferences = []metav1.OwnerReference{
+			*metav1.NewControllerRef(b.Shoot.GetInfo(), gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot")),
+		}
+		gardenSecret.Annotations = annotations
+		gardenSecret.Labels = labels
+		gardenSecret.Type = corev1.SecretTypeOpaque
+		gardenSecret.Data = seedSecret.Data
+		return nil
+	})
+	return err
+}
+
 func (b *Botanist) fetchCertificateAuthoritiesForLegacySecretsManager(ctx context.Context, legacySecretsManager *shootsecrets.SecretsManager, addToDeployedSecrets bool) (map[string]*secretutils.Certificate, error) {
 	cas := make(map[string]*secretutils.Certificate)
 
