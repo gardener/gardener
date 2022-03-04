@@ -18,6 +18,8 @@ import (
 	"context"
 
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,6 +38,8 @@ const (
 	// SecretEtcdEncryptionConfigurationDataKey is a constant for a key in the data map that contains the config
 	// which is used to encrypt etcd data.
 	SecretEtcdEncryptionConfigurationDataKey = "encryption-configuration.yaml"
+	// SecretBasicAuthName is a constant for the name of the basic-auth secret.
+	SecretBasicAuthName = "kube-apiserver-basic-auth"
 )
 
 func (k *kubeAPIServer) emptySecret(name string) *corev1.Secret {
@@ -66,4 +70,26 @@ func (k *kubeAPIServer) reconcileSecretServiceAccountSigningKey(ctx context.Cont
 	utilruntime.Must(kutil.MakeUnique(secret))
 
 	return kutil.IgnoreAlreadyExists(k.client.Client().Create(ctx, secret))
+}
+
+func (k *kubeAPIServer) reconcileSecretBasicAuth(ctx context.Context) (*corev1.Secret, error) {
+	var (
+		secret *corev1.Secret
+		err    error
+	)
+
+	if k.values.BasicAuthenticationEnabled {
+		secret, err = k.secretsManager.Generate(ctx, &secretutils.BasicAuthSecretConfig{
+			Name:           SecretBasicAuthName,
+			Format:         secretutils.BasicAuthFormatCSV,
+			Username:       "admin",
+			PasswordLength: 32,
+		}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// TODO(rfranzke): Remove this in a future release.
+	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-basic-auth", Namespace: k.namespace}})
 }

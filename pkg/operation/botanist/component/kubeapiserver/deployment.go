@@ -38,8 +38,6 @@ import (
 )
 
 const (
-	// SecretNameBasicAuth is the name of the secret containing basic authentication credentials for the kube-apiserver.
-	SecretNameBasicAuth = "kube-apiserver-basic-auth"
 	// SecretNameEtcdEncryption is the name of the secret which contains the EncryptionConfiguration. The
 	// EncryptionConfiguration contains a key which the kube-apiserver uses for encrypting selected etcd content.
 	SecretNameEtcdEncryption = "etcd-encryption-secret"

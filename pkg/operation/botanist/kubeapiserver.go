@@ -92,6 +92,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	return kubeapiserver.New(
 		b.K8sSeedClient,
 		b.Shoot.SeedNamespace,
+		b.SecretsManager,
 		kubeapiserver.Values{
 			AdmissionPlugins:               admissionPlugins,
 			AnonymousAuthenticationEnabled: gardencorev1beta1helper.ShootWantsAnonymousAuthentication(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer),

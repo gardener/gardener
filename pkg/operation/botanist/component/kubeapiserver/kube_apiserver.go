@@ -28,6 +28,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
@@ -194,19 +195,21 @@ type SNIConfig struct {
 }
 
 // New creates a new instance of DeployWaiter for the kube-apiserver.
-func New(client kubernetes.Interface, namespace string, values Values) Interface {
+func New(client kubernetes.Interface, namespace string, secretsManager secretsmanager.Interface, values Values) Interface {
 	return &kubeAPIServer{
-		client:    client,
-		namespace: namespace,
-		values:    values,
+		client:         client,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		values:         values,
 	}
 }
 
 type kubeAPIServer struct {
-	client    kubernetes.Interface
-	namespace string
-	values    Values
-	secrets   Secrets
+	client         kubernetes.Interface
+	namespace      string
+	secretsManager secretsmanager.Interface
+	values         Values
+	secrets        Secrets
 }
 
 func (k *kubeAPIServer) Deploy(ctx context.Context) error {
@@ -263,6 +266,11 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	if err := k.reconcileSecretServiceAccountSigningKey(ctx, secretServiceAccountSigningKey); err != nil {
+		return err
+	}
+
+	secretBasicAuth, err := k.reconcileSecretBasicAuth(ctx)
+	if err != nil {
 		return err
 	}
 
