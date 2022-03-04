@@ -104,6 +104,11 @@ func newGardenerESReporter(filename, index string) *GardenerESReporter {
 // ReportsResults is intended to be called once in an ReportAfterSuite node.
 func ReportResults(filename, index string, report ginkgo.Report) {
 	reporter := newGardenerESReporter(filename, index)
+	reporter.processReport(report)
+	reporter.storeResults()
+}
+
+func (reporter *GardenerESReporter) processReport(report ginkgo.Report) {
 	reporter.suite = &TestSuiteMetadata{
 		Name:  report.SuiteDescription,
 		Phase: SpecPhaseSucceeded,
@@ -135,7 +140,6 @@ func ReportResults(filename, index string, report ginkgo.Report) {
 				Message: failureMessage(spec.Failure),
 			}
 			testCase.SystemOut = spec.CombinedOutput()
-			reporter.suite.Phase = SpecPhaseFailed
 		}
 
 		testCase.Duration = spec.RunTime.Seconds()
@@ -143,11 +147,12 @@ func ReportResults(filename, index string, report ginkgo.Report) {
 
 	}
 
+	if reporter.suite.Failures != 0 {
+		reporter.suite.Phase = SpecPhaseFailed
+	}
 	reporter.suite.Tests = report.PreRunStats.SpecsThatWillRun
 	reporter.suite.Duration = math.Trunc(report.RunTime.Seconds()*1000) / 1000
 	reporter.suite.Errors = 0
-
-	reporter.storeResults()
 }
 
 func (reporter *GardenerESReporter) storeResults() {
@@ -194,7 +199,7 @@ func failureMessage(failure types.Failure) string {
 	return fmt.Sprintf("%s\n%s\n%s", failure.FailureNodeLocation.String(), failure.Message, failure.Location.String())
 }
 
-// parseLabels returns all labels of a test that have teh format [<label>]
+// parseLabels returns all labels of a test that have the format [<label>]
 func parseLabels(name string) []string {
 	labels := matchLabel.FindAllString(name, -1)
 	for i, label := range labels {
