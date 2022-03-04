@@ -17,6 +17,7 @@ package kubeapiserver
 import (
 	"context"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -122,4 +123,50 @@ func (k *kubeAPIServer) reconcileSecretStaticToken(ctx context.Context) (*corev1
 
 	// TODO(rfranzke): Remove this in a future release.
 	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "static-token", Namespace: k.namespace}})
+}
+
+func (k *kubeAPIServer) reconcileSecretUserKubeconfig(ctx context.Context, secretStaticToken, secretBasicAuth *corev1.Secret) error {
+	caBundleSecret, err := k.secretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if err != nil {
+		return err
+	}
+
+	var basicAuth *secretutils.BasicAuth
+	if secretBasicAuth != nil {
+		basicAuth, err = secretutils.LoadBasicAuthFromCSV(SecretBasicAuthName, secretBasicAuth.Data[secretutils.DataKeyCSV])
+		if err != nil {
+			return err
+		}
+	}
+
+	var token *secretutils.Token
+	if secretStaticToken != nil {
+		staticToken, err := secretutils.LoadStaticTokenFromCSV(SecretStaticTokenName, secretStaticToken.Data[secretutils.DataKeyStaticTokenCSV])
+		if err != nil {
+			return err
+		}
+
+		token, err = staticToken.GetTokenForUsername(userNameClusterAdmin)
+		if err != nil {
+			return err
+		}
+	}
+
+	// TODO: In the future when we no longer support basic auth (dropped support for Kubernetes < 1.18) then we can
+	//  switch from ControlPlaneSecretConfig to KubeconfigSecretConfig.
+	if _, err := k.secretsManager.Generate(ctx, &secretutils.ControlPlaneSecretConfig{
+		Name:      SecretNameUserKubeconfig,
+		BasicAuth: basicAuth,
+		Token:     token,
+		KubeConfigRequests: []secretutils.KubeConfigRequest{{
+			ClusterName:   k.namespace,
+			APIServerHost: k.values.ExternalServer,
+			CAData:        caBundleSecret.Data[secretutils.DataKeyCertificateBundle],
+		}},
+	}, secretsmanager.Rotate(secretsmanager.InPlace)); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove this in a future release.
+	return kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kubecfg", Namespace: k.namespace}})
 }

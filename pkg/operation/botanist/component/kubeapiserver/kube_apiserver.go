@@ -42,6 +42,8 @@ import (
 const (
 	// Port is the port exposed by the kube-apiserver.
 	Port = 443
+	// SecretNameUserKubeconfig is the name for the user kubeconfig.
+	SecretNameUserKubeconfig = "user-kubeconfig"
 	// ServicePortName is the name of the port in the service.
 	ServicePortName = "kube-apiserver"
 	// UserName is the name of the kube-apiserver user when communicating with the kubelet.
@@ -73,6 +75,8 @@ type Interface interface {
 	SetProbeToken(string)
 	// SetExternalHostname sets the ExternalHostname field in the Values of the deployer.
 	SetExternalHostname(string)
+	// SetExternalServer sets the ExternalServer field in the Values of the deployer.
+	SetExternalServer(string)
 }
 
 // Values contains configuration values for the kube-apiserver resources.
@@ -94,6 +98,8 @@ type Values struct {
 	EventTTL *metav1.Duration
 	// ExternalHostname is the external hostname which should be exposed by the kube-apiserver.
 	ExternalHostname string
+	// ExternalServer is the external server which should be used when generating the user kubeconfig.
+	ExternalServer string
 	// FeatureGates is the set of feature gates.
 	FeatureGates map[string]bool
 	// Images is a set of container images used for the containers of the kube-apiserver pods.
@@ -305,6 +311,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if err := k.reconcileSecretUserKubeconfig(ctx, secretStaticToken, secretBasicAuth); err != nil {
+		return err
+	}
+
 	data, err := k.computeShootResourcesData()
 	if err != nil {
 		return err
@@ -456,6 +466,10 @@ func (k *kubeAPIServer) SetProbeToken(token string) {
 
 func (k *kubeAPIServer) SetExternalHostname(hostname string) {
 	k.values.ExternalHostname = hostname
+}
+
+func (k *kubeAPIServer) SetExternalServer(server string) {
+	k.values.ExternalServer = server
 }
 
 // GetLabels returns the labels for the kube-apiserver.

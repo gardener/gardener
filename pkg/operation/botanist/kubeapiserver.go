@@ -434,6 +434,9 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	externalHostname := b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetExternalHostname(externalHostname)
 
+	externalServer := b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, false)
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetExternalServer(externalServer)
+
 	serviceAccountConfig, err := b.computeKubeAPIServerServiceAccountConfig(ctx, b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer, externalHostname)
 	if err != nil {
 		return err

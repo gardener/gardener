@@ -48,7 +48,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -1952,6 +1954,25 @@ rules:
 						Expect(c.Get(ctx, client.ObjectKeyFromObject(legacySecret), &corev1.Secret{})).To(BeNotFoundError())
 					})
 
+					It("should generate a kubeconfig secret for the user", func() {
+						deployAndRead()
+
+						secretList := &corev1.SecretList{}
+						Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+							"name": "user-kubeconfig",
+						})).To(Succeed())
+
+						Expect(secretList.Items).To(HaveLen(1))
+						Expect(secretList.Items[0].Data).To(HaveKey("kubeconfig"))
+						Expect(secretList.Items[0].Data).To(HaveKey("token"))
+
+						kubeconfig := &clientcmdv1.Config{}
+						Expect(yaml.Unmarshal(secretList.Items[0].Data["kubeconfig"], kubeconfig)).To(Succeed())
+						Expect(kubeconfig.CurrentContext).To(Equal(namespace))
+						Expect(kubeconfig.AuthInfos).To(HaveLen(1))
+						Expect(kubeconfig.AuthInfos[0].AuthInfo.Token).NotTo(BeEmpty())
+					})
+
 					It("should properly set the anonymous auth flag if enabled", func() {
 						kapi = New(kubernetesInterface, namespace, sm, Values{AnonymousAuthenticationEnabled: true, Images: images, Version: version})
 						kapi.SetSecrets(secrets)
@@ -2558,6 +2579,14 @@ rules:
 			v := pointer.Int32(2)
 			kapi.SetAutoscalingReplicas(v)
 			Expect(kapi.GetAutoscalingReplicas()).To(Equal(v))
+		})
+	})
+
+	Describe("#SetExternalServer", func() {
+		It("should properly set the field", func() {
+			v := "bar"
+			kapi.SetExternalServer(v)
+			Expect(kapi.GetValues().ExternalServer).To(Equal(v))
 		})
 	})
 
