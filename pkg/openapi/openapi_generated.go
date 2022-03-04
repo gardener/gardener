@@ -6760,7 +6760,7 @@ func schema_pkg_apis_core_v1alpha1_ServiceAccountConfig(ref common.ReferenceCall
 				Properties: map[string]spec.Schema{
 					"issuer": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Issuer is the identifier of the service account token issuer. The issuer will assert this identifier in \"iss\" claim of issued tokens. This value is a string or URI. Defaults to URI of the API server.",
+							Description: "Issuer is the identifier of the service account token issuer. The issuer will assert this identifier in \"iss\" claim of issued tokens. This value is used to generate new service account tokens. This value is a string or URI. Defaults to URI of the API server.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -6782,6 +6782,21 @@ func schema_pkg_apis_core_v1alpha1_ServiceAccountConfig(ref common.ReferenceCall
 						SchemaProps: spec.SchemaProps{
 							Description: "MaxTokenExpiration is the maximum validity duration of a token created by the service account token issuer. If an otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued with a validity duration of this value.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"acceptedIssuers": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted. These values are not used to generate new service account tokens. Only useful when service account tokens are also issued by another external system or a change of the current issuer that is used for generating tokens is being performed. This field is only available for Kubernetes v1.22 or later.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
 						},
 					},
 				},
@@ -13829,7 +13844,7 @@ func schema_pkg_apis_core_v1beta1_ServiceAccountConfig(ref common.ReferenceCallb
 				Properties: map[string]spec.Schema{
 					"issuer": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Issuer is the identifier of the service account token issuer. The issuer will assert this identifier in \"iss\" claim of issued tokens. This value is a string or URI. Defaults to URI of the API server.",
+							Description: "Issuer is the identifier of the service account token issuer. The issuer will assert this identifier in \"iss\" claim of issued tokens. This value is used to generate new service account tokens. This value is a string or URI. Defaults to URI of the API server.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -13851,6 +13866,21 @@ func schema_pkg_apis_core_v1beta1_ServiceAccountConfig(ref common.ReferenceCallb
 						SchemaProps: spec.SchemaProps{
 							Description: "MaxTokenExpiration is the maximum validity duration of a token created by the service account token issuer. If an otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued with a validity duration of this value.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"acceptedIssuers": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted. These values are not used to generate new service account tokens. Only useful when service account tokens are also issued by another external system or a change of the current issuer that is used for generating tokens is being performed. This field is only available for Kubernetes v1.22 or later.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
 						},
 					},
 				},

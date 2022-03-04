@@ -2158,8 +2158,8 @@ message SeedVolumeProvider {
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.
 message ServiceAccountConfig {
   // Issuer is the identifier of the service account token issuer. The issuer will assert this
-  // identifier in "iss" claim of issued tokens. This value is a string or URI.
-  // Defaults to URI of the API server.
+  // identifier in "iss" claim of issued tokens. This value is used to generate new service account tokens.
+  // This value is a string or URI. Defaults to URI of the API server.
   // +optional
   optional string issuer = 1;
 
@@ -2181,6 +2181,13 @@ message ServiceAccountConfig {
   // with a validity duration of this value.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration maxTokenExpiration = 4;
+
+  // AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.
+  // These values are not used to generate new service account tokens. Only useful when service account tokens are also
+  // issued by another external system or a change of the current issuer that is used for generating tokens is being performed.
+  // This field is only available for Kubernetes v1.22 or later.
+  // +optional
+  repeated string acceptedIssuers = 5;
 }
 
 // Shoot represents a Shoot cluster created and managed by Gardener.

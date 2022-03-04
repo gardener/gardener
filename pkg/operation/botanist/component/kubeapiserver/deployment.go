@@ -476,6 +476,9 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	}
 
 	out = append(out, "--service-account-issuer="+k.values.ServiceAccount.Issuer)
+	for _, issuer := range k.values.ServiceAccount.AcceptedIssuers {
+		out = append(out, fmt.Sprintf("--service-account-issuer=%s", issuer))
+	}
 	if k.values.ServiceAccount.ExtendTokenExpiration != nil {
 		out = append(out, fmt.Sprintf("--service-account-extend-token-expiration=%s", strconv.FormatBool(*k.values.ServiceAccount.ExtendTokenExpiration)))
 	}

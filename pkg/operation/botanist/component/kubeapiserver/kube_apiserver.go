@@ -171,6 +171,8 @@ type VPNConfig struct {
 type ServiceAccountConfig struct {
 	// Issuer is the issuer of service accounts.
 	Issuer string
+	// AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.
+	AcceptedIssuers []string
 	// SigningKey is the key used when service accounts are signed.
 	SigningKey []byte
 	// ExtendTokenExpiration states whether the service account token expirations should be extended.

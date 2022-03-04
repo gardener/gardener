@@ -615,8 +615,8 @@ type KubeAPIServerRequests struct {
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.
 type ServiceAccountConfig struct {
 	// Issuer is the identifier of the service account token issuer. The issuer will assert this
-	// identifier in "iss" claim of issued tokens. This value is a string or URI.
-	// Defaults to URI of the API server.
+	// identifier in "iss" claim of issued tokens. This value is used to generate new service account tokens.
+	// This value is a string or URI. Defaults to URI of the API server.
 	// +optional
 	Issuer *string `json:"issuer,omitempty" protobuf:"bytes,1,opt,name=issuer"`
 	// SigningKeySecret is a reference to a secret that contains an optional private key of the
@@ -635,6 +635,12 @@ type ServiceAccountConfig struct {
 	// with a validity duration of this value.
 	// +optional
 	MaxTokenExpiration *metav1.Duration `json:"maxTokenExpiration,omitempty" protobuf:"bytes,4,opt,name=maxTokenExpiration"`
+	// AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.
+	// These values are not used to generate new service account tokens. Only useful when service account tokens are also
+	// issued by another external system or a change of the current issuer that is used for generating tokens is being performed.
+	// This field is only available for Kubernetes v1.22 or later.
+	// +optional
+	AcceptedIssuers []string `json:"acceptedIssuers,omitempty" protobuf:"bytes,5,opt,name=acceptedIssuers"`
 }
 
 // AuditConfig contains settings for audit of the api server

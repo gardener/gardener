@@ -1254,6 +1254,65 @@ var _ = Describe("KubeAPIServer", func() {
 					false,
 					Not(HaveOccurred()),
 				),
+				Entry("AcceptedIssuers is provided and Issuer is not",
+					func() {
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+							Spec: gardencorev1beta1.ShootSpec{
+								Kubernetes: gardencorev1beta1.Kubernetes{
+									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+										ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+											AcceptedIssuers: []string{"issuer1", "issuer2"},
+										},
+									},
+								},
+							},
+						})
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:          "https://api." + internalClusterDomain,
+						AcceptedIssuers: []string{"issuer1", "issuer2"},
+					},
+					false,
+					Not(HaveOccurred()),
+				),
+				Entry("AcceptedIssuers and Issuer are provided",
+					func() {
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+							Spec: gardencorev1beta1.ShootSpec{
+								Kubernetes: gardencorev1beta1.Kubernetes{
+									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+										ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+											Issuer:          pointer.String("issuer"),
+											AcceptedIssuers: []string{"issuer1", "issuer2"},
+										},
+									},
+								},
+							},
+						})
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:          "issuer",
+						AcceptedIssuers: []string{"issuer1", "issuer2"},
+					},
+					false,
+					Not(HaveOccurred()),
+				),
+				Entry("AcceptedIssuers is not provided",
+					func() {
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+							Spec: gardencorev1beta1.ShootSpec{
+								Kubernetes: gardencorev1beta1.Kubernetes{
+									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+										ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{},
+									},
+								},
+							},
+						})
+					},
+					kubeapiserver.ServiceAccountConfig{Issuer: "https://api." + internalClusterDomain},
+					false,
+					Not(HaveOccurred()),
+				),
 				Entry("SigningKeySecret is nil",
 					func() {
 						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{

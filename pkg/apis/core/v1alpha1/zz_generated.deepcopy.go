@@ -3871,6 +3871,11 @@ func (in *ServiceAccountConfig) DeepCopyInto(out *ServiceAccountConfig) {
 		*out = new(metav1.Duration)
 		**out = **in
 	}
+	if in.AcceptedIssuers != nil {
+		in, out := &in.AcceptedIssuers, &out.AcceptedIssuers
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

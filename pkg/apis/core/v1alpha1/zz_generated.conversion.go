@@ -5067,6 +5067,7 @@ func autoConvert_v1alpha1_ServiceAccountConfig_To_core_ServiceAccountConfig(in *
 	out.SigningKeySecret = (*v1.LocalObjectReference)(unsafe.Pointer(in.SigningKeySecret))
 	out.ExtendTokenExpiration = (*bool)(unsafe.Pointer(in.ExtendTokenExpiration))
 	out.MaxTokenExpiration = (*metav1.Duration)(unsafe.Pointer(in.MaxTokenExpiration))
+	out.AcceptedIssuers = *(*[]string)(unsafe.Pointer(&in.AcceptedIssuers))
 	return nil
 }
 
@@ -5080,6 +5081,7 @@ func autoConvert_core_ServiceAccountConfig_To_v1alpha1_ServiceAccountConfig(in *
 	out.SigningKeySecret = (*v1.LocalObjectReference)(unsafe.Pointer(in.SigningKeySecret))
 	out.ExtendTokenExpiration = (*bool)(unsafe.Pointer(in.ExtendTokenExpiration))
 	out.MaxTokenExpiration = (*metav1.Duration)(unsafe.Pointer(in.MaxTokenExpiration))
+	out.AcceptedIssuers = *(*[]string)(unsafe.Pointer(&in.AcceptedIssuers))
 	return nil
 }
 
