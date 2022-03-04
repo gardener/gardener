@@ -533,8 +533,18 @@ type MonitoringConfig struct {
 type ShootMonitoringConfig struct {
 	// RemoteWrite is optional and contains remote write setting.
 	RemoteWrite *RemoteWriteMonitoringConfig
+	// ExternalBlackboxExporter is optional and contains settings for the external blackbox exporter.
+	ExternalBlackboxExporter *ExternalBlackboxExporterConfig
 	// ExternalLabels is optional and sets additional external labels for the monitoring stack.
 	ExternalLabels map[string]string
+}
+
+// ExternalBlackboxExporterConfig contains settings for the external blackbox exporter for monitoring stack.
+type ExternalBlackboxExporterConfig struct {
+	// URL of external blackbox exporter
+	URL string
+	// Module defines the module used in target blackbox exporter
+	Module string
 }
 
 // RemoteWriteMonitoringConfig contains settings for the remote write setting for monitoring stack.

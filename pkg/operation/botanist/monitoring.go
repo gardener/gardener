@@ -236,6 +236,37 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 	prometheusConfig["podAnnotations"] = podAnnotations
 
+	// Add external blackbox exporter when enabled
+	if b.Config.Monitoring != nil &&
+		b.Config.Monitoring.Shoot != nil &&
+		b.Config.Monitoring.Shoot.ExternalBlackboxExporter != nil &&
+		b.Config.Monitoring.Shoot.ExternalBlackboxExporter.URL != "" {
+
+		externalBlackboxExporterConfig := map[string]interface{}{
+			"url":    b.Config.Monitoring.Shoot.ExternalBlackboxExporter.URL,
+			"module": b.Config.Monitoring.Shoot.ExternalBlackboxExporter.Module,
+		}
+
+		for _, advertisedAddress := range b.Shoot.GetInfo().Status.AdvertisedAddresses {
+			if advertisedAddress.Name == "external" {
+				externalBlackboxExporterConfig["externalApiUrl"] = advertisedAddress.URL
+			}
+		}
+
+		externalBlackboxExporterAuth := b.LoadSecret(v1beta1constants.GardenRoleGlobalShootExternalBlackboxExporterMonitoring)
+		if externalBlackboxExporterAuth != nil {
+			externalBlackboxExporterUsername := string(externalBlackboxExporterAuth.Data["username"])
+			externalBlackboxExporterPassword := string(externalBlackboxExporterAuth.Data["password"])
+			if externalBlackboxExporterUsername != "" {
+				externalBlackboxExporterConfig["basic_auth"] = map[string]interface{}{
+					"username": externalBlackboxExporterUsername,
+					"password": externalBlackboxExporterPassword,
+				}
+			}
+		}
+
+		prometheusConfig["externalBlackboxExporter"] = externalBlackboxExporterConfig
+	}
 	// Add remotewrite to prometheus when enabled
 	if b.Config.Monitoring != nil &&
 		b.Config.Monitoring.Shoot != nil &&

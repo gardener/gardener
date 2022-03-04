@@ -70,3 +70,16 @@ monitoring:
 ```
 
 If basic auth is needed it can be set via secret in garden namespace (Gardener API Server). [Example secret](../../example/10-secret-remote-write.yaml)
+
+## Probe API from outside the cluster
+
+An optional blackbox exporter probing from outside gardener. This can be from anywhere
+```
+monitoring:
+  shoot:
+    externalBlackboxExporter:
+        url:
+        module:
+```
+
+If basic auth is needed it can be set via secret in garden namespace (Gardener API Server). [Example secret](../../example/10-secret-external-blackbox-exporter.yaml)

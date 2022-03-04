@@ -203,6 +203,8 @@ const (
 	GardenRoleGlobalMonitoring = "global-monitoring"
 	// GardenRoleGlobalShootRemoteWriteMonitoring is the value of the GardenRole key indicating type 'global-shoot-remote-write-monitoring'
 	GardenRoleGlobalShootRemoteWriteMonitoring = "global-shoot-remote-write-monitoring"
+	// GardenRoleGlobalShootExternalBlackboxExporterMonitoring is the value of the GardenRole key indicating type 'global-shoot-external-blackbox-exporter-monitoring'
+	GardenRoleGlobalShootExternalBlackboxExporterMonitoring = "global-shoot-external-blackbox-exporter-monitoring"
 	// GardenRoleAlerting is the value of GardenRole key indicating type 'alerting'.
 	GardenRoleAlerting = "alerting"
 	// GardenRoleHvpa is the value of GardenRole key indicating type 'hvpa'.

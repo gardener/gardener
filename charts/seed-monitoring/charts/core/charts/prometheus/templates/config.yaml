@@ -566,6 +566,38 @@ data:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.reversedVPN | indent 6 }}
 {{- end }}
 
+{{- if .Values.externalBlackboxExporter }}
+{{- if and .Values.externalBlackboxExporter.url .Values.externalBlackboxExporter.module }}
+    - job_name: external-blackbox
+      metrics_path: /probe
+      scheme: https
+      params:
+        module: [{{ .Values.externalBlackboxExporter.module }}]
+      static_configs:
+        - targets:
+{{- if .Values.externalBlackboxExporter.externalApiUrl }}
+            - {{ .Values.externalBlackboxExporter.externalApiUrl }}
+{{- else }}
+            - {{ .Values.shoot.apiserver }}
+{{- end }}
+      relabel_configs:
+        - source_labels: [__address__]
+          target_label: __param_target
+        - source_labels: [__param_target]
+          target_label: instance
+        - target_label: __address__
+          replacement: {{ .Values.externalBlackboxExporter.url }}
+{{- if .Values.externalBlackboxExporter.basic_auth }}
+      basic_auth:
+        username: {{ .Values.externalBlackboxExporter.basic_auth.username }}
+        password: {{ .Values.externalBlackboxExporter.basic_auth.password }}
+{{- end }}
+      metric_relabel_configs:
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.externalBlackboxExporter | indent 6 }}
+{{- end }}
+{{- end }}
+
+
 {{- if .Values.additionalScrapeConfigs }}
 {{ toString .Values.additionalScrapeConfigs | indent 4 }}
 {{- end }}

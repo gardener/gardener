@@ -645,6 +645,9 @@ type ShootMonitoringConfig struct {
 	// RemoteWrite is optional and contains remote write setting.
 	// +optional
 	RemoteWrite *RemoteWriteMonitoringConfig `json:"remoteWrite,omitempty"`
+	// ExternalBlackboxExporter is optional and contains settings for the external blackbox exporter.
+	// +optional
+	ExternalBlackboxExporter *ExternalBlackboxExporterConfig `json:"externalBlackboxExporter,omitempty"`
 	// ExternalLabels is optional and sets additional external labels for the monitoring stack.
 	// +optional
 	ExternalLabels map[string]string `json:"externalLabels,omitempty"`
@@ -660,6 +663,14 @@ type RemoteWriteMonitoringConfig struct {
 	// QueueConfig contains the queue_config for prometheus remote write.
 	// +optional
 	QueueConfig *string `json:"queueConfig,omitempty"`
+}
+
+// ExternalBlackboxExporterConfig contains settings for the external blackbox exporter for monitoring stack.
+type ExternalBlackboxExporterConfig struct {
+	// URL of external blackbox exporter
+	URL string `json:"url"`
+	// Module defines the module used in target blackbox exporter
+	Module string `json:"module"`
 }
 
 const (

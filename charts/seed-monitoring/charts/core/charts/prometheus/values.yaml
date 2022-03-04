@@ -288,6 +288,12 @@ allowedMetrics:
   - envoy_cluster_upstream_cx_length_ms_sum
   - envoy_http_downstream_cx_length_ms_bucket
   - envoy_http_downstream_cx_length_ms_sum
+externalBlackboxExporter:
+  - probe_duration_seconds
+  - probe_http_duration_seconds
+  - probe_success
+  - probe_http_status_code
+  - up
 seed:
   apiserver: https://api.foo.bar
   region: antarctica-1

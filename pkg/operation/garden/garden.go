@@ -253,6 +253,14 @@ func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string, l
 			secretsMap[v1beta1constants.GardenRoleGlobalShootRemoteWriteMonitoring] = &monitoringSecret
 			logInfo = append(logInfo, fmt.Sprintf("monitoring basic auth secret %q", secret.Name))
 		}
+
+		// Retrieving basic auth secret for external blackbox exporter with a label
+		// indicating the Garden role global-shoot-external-blackbox-exporter-monitoring.
+		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleGlobalShootExternalBlackboxExporterMonitoring {
+			monitoringSecret := secret
+			secretsMap[v1beta1constants.GardenRoleGlobalShootExternalBlackboxExporterMonitoring] = &monitoringSecret
+			logInfo = append(logInfo, fmt.Sprintf("monitoring basic auth secret %q", secret.Name))
+		}
 	}
 
 	// Check if an internal domain secret is required
