@@ -104,9 +104,8 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 	secretList := []secrets.ConfigInterface{
 		// Secret definition for kube-apiserver
 		&secrets.ControlPlaneSecretConfig{
+			Name: kubeapiserver.SecretNameServer,
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: kubeapiserver.SecretNameServer,
-
 				CommonName:   v1beta1constants.DeploymentNameKubeAPIServer,
 				Organization: nil,
 				DNSNames:     apiServerCertDNSNames,
@@ -118,9 +117,8 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		},
 		// Secret definition for kube-apiserver to kubelets communication
 		&secrets.ControlPlaneSecretConfig{
+			Name: kubeapiserver.SecretNameKubeAPIServerToKubelet,
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: kubeapiserver.SecretNameKubeAPIServerToKubelet,
-
 				CommonName:   kubeapiserver.UserName,
 				Organization: nil,
 				DNSNames:     nil,
@@ -133,9 +131,8 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 
 		// Secret definition for kube-aggregator
 		&secrets.ControlPlaneSecretConfig{
+			Name: kubeapiserver.SecretNameKubeAggregator,
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: kubeapiserver.SecretNameKubeAggregator,
-
 				CommonName:   "system:kube-aggregator",
 				Organization: nil,
 				DNSNames:     nil,
@@ -148,9 +145,8 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 
 		// Secret definition for kube-controller-manager server
 		&secrets.ControlPlaneSecretConfig{
+			Name: kubecontrollermanager.SecretNameServer,
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: kubecontrollermanager.SecretNameServer,
-
 				CommonName:   v1beta1constants.DeploymentNameKubeControllerManager,
 				Organization: nil,
 				DNSNames:     kubeControllerManagerCertDNSNames,
@@ -178,9 +174,8 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		// TODO(rfranzke): Delete this in a future release once all monitoring configurations of extensions have been
 		// adapted.
 		&secrets.ControlPlaneSecretConfig{
+			Name: "prometheus",
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "prometheus",
-
 				CommonName:   "gardener.cloud:monitoring:prometheus",
 				Organization: []string{"gardener.cloud:monitoring"},
 				DNSNames:     nil,
@@ -198,9 +193,8 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 
 		// Secret definition for prometheus to kubelets communication
 		&secrets.ControlPlaneSecretConfig{
+			Name: "prometheus-kubelet",
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "prometheus-kubelet",
-
 				CommonName:   "gardener.cloud:monitoring:prometheus",
 				Organization: []string{"gardener.cloud:monitoring"},
 				DNSNames:     nil,
@@ -369,9 +363,8 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(b.Seed.GetInfo().Spec.Settings) {
 		// Secret definitions for dependency-watchdog-internal and external probes
 		secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
+			Name: kubeapiserver.DependencyWatchdogInternalProbeSecretName,
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: kubeapiserver.DependencyWatchdogInternalProbeSecretName,
-
 				CommonName:   dependencywatchdog.UserName,
 				Organization: nil,
 				DNSNames:     nil,
@@ -385,9 +378,8 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(false),
 			}},
 		}, &secrets.ControlPlaneSecretConfig{
+			Name: kubeapiserver.DependencyWatchdogExternalProbeSecretName,
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: kubeapiserver.DependencyWatchdogExternalProbeSecretName,
-
 				CommonName:   dependencywatchdog.UserName,
 				Organization: nil,
 				DNSNames:     nil,

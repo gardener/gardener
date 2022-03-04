@@ -73,6 +73,7 @@ func GetOrCreateShootKubeconfig(ctx context.Context, c client.Client, certificat
 	certificateConfig.CertType = secrets.ClientCert
 
 	config := secrets.ControlPlaneSecretConfig{
+		Name:                    certificateConfig.Name,
 		CertificateSecretConfig: &certificateConfig,
 
 		KubeConfigRequests: []secrets.KubeConfigRequest{{

@@ -147,95 +147,73 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 	secretList := []secrets.ConfigInterface{
 		// Secret definition for kube-apiserver
 		&secrets.ControlPlaneSecretConfig{
+			Name: kubeAPIServerCertName,
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: kubeAPIServerCertName,
-
-				CommonName:   kubeAPIServerCertName,
-				Organization: nil,
-
+				CommonName:  kubeAPIServerCertName,
 				DNSNames:    CertificatesDNSNames[kubeAPIServerCertNamesKey],
 				IPAddresses: CertificatesIPAdresses[kubeAPIServerIPAddressesKey],
-
-				CertType:  secrets.ServerClientCert,
-				SigningCA: caCertificate,
+				CertType:    secrets.ServerClientCert,
+				SigningCA:   caCertificate,
 			},
 		},
 		// Secret definition for kube-etcd
 		&secrets.ControlPlaneSecretConfig{
+			Name: etcdCertNAME,
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: etcdCertNAME,
-
-				CommonName:   etcdCertNAME,
-				Organization: nil,
-
+				CommonName:  etcdCertNAME,
 				DNSNames:    CertificatesDNSNames[etcdCertNamesKey],
 				IPAddresses: CertificatesIPAdresses[etcdIPAddressesKey],
-
-				CertType:  secrets.ServerClientCert,
-				SigningCA: caCertificate,
+				CertType:    secrets.ServerClientCert,
+				SigningCA:   caCertificate,
 			},
 		},
 		// Secret definition for kube-etcd-peer
 		&secrets.ControlPlaneSecretConfig{
+			Name: etcdPeerCertName,
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: etcdPeerCertName,
-
-				CommonName:   etcdPeerCertName,
-				Organization: nil,
-
+				CommonName:  etcdPeerCertName,
 				DNSNames:    CertificatesDNSNames[etcdPeerCertNamesKey],
 				IPAddresses: CertificatesIPAdresses[etcdPeerIPAddressesKey],
-
-				CertType:  secrets.ServerClientCert,
-				SigningCA: caCertificate,
+				CertType:    secrets.ServerClientCert,
+				SigningCA:   caCertificate,
 			},
 		},
 		// Secret definition for kube-etcd-healthcheck-client
 		&secrets.ControlPlaneSecretConfig{
+			Name: etcdHealthCheckClientCertName,
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: etcdHealthCheckClientCertName,
-
-				CommonName:   etcdHealthCheckClientCertName,
-				Organization: nil,
-
-				CertType:  secrets.ClientCert,
-				SigningCA: caCertificate,
+				CommonName: etcdHealthCheckClientCertName,
+				CertType:   secrets.ClientCert,
+				SigningCA:  caCertificate,
 			},
 		},
 		// Secret definition for kube-apiserver-etcd-client
 		&secrets.ControlPlaneSecretConfig{
+			Name: kubeAPIServerETCDClientCertName,
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: kubeAPIServerETCDClientCertName,
-
 				CommonName:   kubeAPIServerETCDClientCertName,
 				Organization: []string{user.SystemPrivilegedGroup},
-
-				CertType:  secrets.ClientCert,
-				SigningCA: caCertificate,
+				CertType:     secrets.ClientCert,
+				SigningCA:    caCertificate,
 			},
 		},
 		// Secret definition for front-proxy
 		&secrets.ControlPlaneSecretConfig{
+			Name: frontProxyCertName,
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: frontProxyCertName,
-
-				CommonName:   frontProxyCertName,
-				Organization: nil,
-
-				CertType:  secrets.ClientCert,
-				SigningCA: caCertificate,
+				CommonName: frontProxyCertName,
+				CertType:   secrets.ClientCert,
+				SigningCA:  caCertificate,
 			},
 		},
 		// Secret definition for admin kubeconfig
 		&secrets.ControlPlaneSecretConfig{
+			Name: "default-admin",
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "default-admin",
-
 				CommonName:   kubeAdminConfCertName,
 				Organization: []string{user.SystemPrivilegedGroup},
-
-				CertType:  secrets.ClientCert,
-				SigningCA: caCertificate,
+				CertType:     secrets.ClientCert,
+				SigningCA:    caCertificate,
 			},
 			KubeConfigRequests: []secrets.KubeConfigRequest{{
 				ClusterName:   "local-garden",
@@ -244,14 +222,12 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 		},
 		// Secret definition for kube-controller-manager kubeconfig
 		&secrets.ControlPlaneSecretConfig{
+			Name: "default-kube-controller-manager",
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "default-kube-controller-manager",
-
 				CommonName:   user.KubeControllerManager,
 				Organization: []string{user.SystemPrivilegedGroup},
-
-				CertType:  secrets.ClientCert,
-				SigningCA: caCertificate,
+				CertType:     secrets.ClientCert,
+				SigningCA:    caCertificate,
 			},
 			KubeConfigRequests: []secrets.KubeConfigRequest{{
 				ClusterName:   "local-garden",
@@ -266,8 +242,8 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 		},
 		// Secret definitions for gardener components
 		&secrets.ControlPlaneSecretConfig{
+			Name: "gardener-admission-controller",
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name:       "gardener-admission-controller",
 				CommonName: gardenerAdmissionControllerName,
 				CertType:   secrets.ClientCert,
 				SigningCA:  caCertificate,
@@ -278,8 +254,8 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 			}},
 		},
 		&secrets.ControlPlaneSecretConfig{
+			Name: "gardener-apiserver",
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name:       "gardener-apiserver",
 				CommonName: gardenerAPIServerName,
 				CertType:   secrets.ClientCert,
 				SigningCA:  caCertificate,
@@ -290,8 +266,8 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 			}},
 		},
 		&secrets.ControlPlaneSecretConfig{
+			Name: "gardener-controller-manager",
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name:       "gardener-controller-manager",
 				CommonName: gardenerControllerManagerName,
 				CertType:   secrets.ClientCert,
 				SigningCA:  caCertificate,
@@ -302,8 +278,8 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 			}},
 		},
 		&secrets.ControlPlaneSecretConfig{
+			Name: "gardener-scheduler",
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name:       "gardener-scheduler",
 				CommonName: gardenerSchedulerName,
 				CertType:   secrets.ClientCert,
 				SigningCA:  caCertificate,

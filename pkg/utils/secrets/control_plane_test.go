@@ -70,7 +70,7 @@ var _ = Describe("utils", func() {
 				It("should return a kubeconfig with one context and one user", func() {
 					secret.BasicAuth = nil
 
-					kubeconfig, err := ExportGenerateKubeconfig(secret, certificate)
+					kubeconfig, err := GenerateKubeconfig(secret, certificate)
 					Expect(err).NotTo(HaveOccurred())
 
 					err = yaml.Unmarshal(kubeconfig, &kubecfg)
@@ -81,7 +81,7 @@ var _ = Describe("utils", func() {
 					Expect(kubecfg.Contexts).To(HaveLen(1))
 					Expect(kubecfg.AuthInfos).To(HaveLen(1))
 					Expect(kubecfg.Clusters[0].Cluster.Server).To(Equal("https://" + apiServerURL))
-					Expect(kubecfg.Clusters[0].Cluster.CertificateAuthorityData).ToNot(BeEmpty())
+					Expect(kubecfg.Clusters[0].Cluster.CertificateAuthorityData).To(Equal([]byte(caCert)))
 					Expect(kubecfg.AuthInfos[0].AuthInfo.ClientCertificateData).ToNot(BeEmpty())
 					Expect(kubecfg.AuthInfos[0].AuthInfo.ClientKeyData).ToNot(BeEmpty())
 				})
@@ -93,7 +93,7 @@ var _ = Describe("utils", func() {
 						APIServerHost: "foo.bar",
 					})
 
-					kubeconfig, err := ExportGenerateKubeconfig(secret, certificate)
+					kubeconfig, err := GenerateKubeconfig(secret, certificate)
 					Expect(err).NotTo(HaveOccurred())
 
 					err = yaml.Unmarshal(kubeconfig, &kubecfg)
@@ -150,7 +150,7 @@ var _ = Describe("utils", func() {
 
 			Context("with Basic Authentication credentials", func() {
 				It("should return a kubeconfig with one context and two users", func() {
-					kubeconfig, err := ExportGenerateKubeconfig(secret, certificate)
+					kubeconfig, err := GenerateKubeconfig(secret, certificate)
 					Expect(err).NotTo(HaveOccurred())
 
 					err = yaml.Unmarshal(kubeconfig, &kubecfg)
@@ -161,7 +161,7 @@ var _ = Describe("utils", func() {
 					Expect(kubecfg.Contexts).To(HaveLen(1))
 					Expect(kubecfg.AuthInfos).To(HaveLen(2))
 					Expect(kubecfg.Clusters[0].Cluster.Server).To(Equal("https://" + apiServerURL))
-					Expect(kubecfg.Clusters[0].Cluster.CertificateAuthorityData).ToNot(BeEmpty())
+					Expect(kubecfg.Clusters[0].Cluster.CertificateAuthorityData).To(Equal([]byte(caCert)))
 					Expect(kubecfg.AuthInfos[0].AuthInfo.ClientCertificateData).ToNot(BeEmpty())
 					Expect(kubecfg.AuthInfos[0].AuthInfo.ClientKeyData).ToNot(BeEmpty())
 					Expect(kubecfg.AuthInfos[1].AuthInfo.Username).To(Equal(basicAuthUser))
@@ -175,7 +175,7 @@ var _ = Describe("utils", func() {
 					APIServerHost: "foo.bar",
 				})
 
-				kubeconfig, err := ExportGenerateKubeconfig(secret, certificate)
+				kubeconfig, err := GenerateKubeconfig(secret, certificate)
 				Expect(err).NotTo(HaveOccurred())
 
 				err = yaml.Unmarshal(kubeconfig, &kubecfg)

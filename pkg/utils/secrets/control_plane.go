@@ -35,7 +35,9 @@ func ControlPlaneSecretDataKeyPrivateKey(name string) string { return fmt.Sprint
 // ControlPlaneSecretConfig is a struct which inherits from CertificateSecretConfig and is extended with a couple of additional
 // properties. A control plane secret will always contain a server/client certificate and optionally a kubeconfig.
 type ControlPlaneSecretConfig struct {
-	*CertificateSecretConfig
+	Name string
+
+	CertificateSecretConfig *CertificateSecretConfig
 
 	BasicAuth *BasicAuth
 	Token     *Token
@@ -61,7 +63,7 @@ type ControlPlane struct {
 
 // GetName returns the name of the secret.
 func (s *ControlPlaneSecretConfig) GetName() string {
-	return s.CertificateSecretConfig.Name
+	return s.Name
 }
 
 // Generate implements ConfigInterface.
@@ -71,6 +73,8 @@ func (s *ControlPlaneSecretConfig) Generate() (DataInterface, error) {
 
 // GenerateInfoData implements ConfigInterface
 func (s *ControlPlaneSecretConfig) GenerateInfoData() (infodata.InfoData, error) {
+	s.CertificateSecretConfig.Name = s.Name
+
 	cert, err := s.CertificateSecretConfig.GenerateCertificate()
 	if err != nil {
 		return nil, err
@@ -92,7 +96,7 @@ func (s *ControlPlaneSecretConfig) GenerateFromInfoData(infoData infodata.InfoDa
 
 	certificate := &Certificate{
 		Name: s.Name,
-		CA:   s.SigningCA,
+		CA:   s.CertificateSecretConfig.SigningCA,
 
 		PrivateKeyPEM:  data.PrivateKey,
 		CertificatePEM: data.Certificate,
@@ -132,9 +136,18 @@ func (s *ControlPlaneSecretConfig) LoadFromSecretData(secretData map[string][]by
 // GenerateControlPlane computes a secret for a control plane component of the clusters managed by Gardener.
 // It may include a Kubeconfig.
 func (s *ControlPlaneSecretConfig) GenerateControlPlane() (*ControlPlane, error) {
-	certificate, err := s.CertificateSecretConfig.GenerateCertificate()
-	if err != nil {
-		return nil, err
+	var (
+		certificate *Certificate
+		err         error
+	)
+
+	if s.CertificateSecretConfig != nil {
+		s.CertificateSecretConfig.Name = s.Name
+
+		certificate, err = s.CertificateSecretConfig.GenerateCertificate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	controlPlane := &ControlPlane{
@@ -158,13 +171,17 @@ func (s *ControlPlaneSecretConfig) GenerateControlPlane() (*ControlPlane, error)
 
 // SecretData computes the data map which can be used in a Kubernetes secret.
 func (c *ControlPlane) SecretData() map[string][]byte {
-	data := map[string][]byte{
-		DataKeyCertificateCA: c.Certificate.CA.CertificatePEM,
-	}
+	data := make(map[string][]byte)
 
-	if c.Certificate.CertificatePEM != nil && c.Certificate.PrivateKeyPEM != nil {
-		data[ControlPlaneSecretDataKeyPrivateKey(c.Name)] = c.Certificate.PrivateKeyPEM
-		data[ControlPlaneSecretDataKeyCertificatePEM(c.Name)] = c.Certificate.CertificatePEM
+	if c.Certificate != nil {
+		if c.Certificate.CA != nil {
+			data[DataKeyCertificateCA] = c.Certificate.CA.CertificatePEM
+		}
+
+		if c.Certificate.CertificatePEM != nil && c.Certificate.PrivateKeyPEM != nil {
+			data[ControlPlaneSecretDataKeyPrivateKey(c.Name)] = c.Certificate.PrivateKeyPEM
+			data[ControlPlaneSecretDataKeyCertificatePEM(c.Name)] = c.Certificate.CertificatePEM
+		}
 	}
 
 	if c.BasicAuth != nil {
@@ -199,7 +216,7 @@ func GenerateKubeconfig(secret *ControlPlaneSecretConfig, certificate *Certifica
 		basicAuthContextName = fmt.Sprintf("%s-basic-auth", name)
 	)
 
-	if certificate.CertificatePEM != nil && certificate.PrivateKeyPEM != nil {
+	if certificate != nil && certificate.CertificatePEM != nil && certificate.PrivateKeyPEM != nil {
 		authContextName = name
 	} else if secret.Token != nil {
 		authContextName = tokenContextName
@@ -207,7 +224,7 @@ func GenerateKubeconfig(secret *ControlPlaneSecretConfig, certificate *Certifica
 		authContextName = basicAuthContextName
 	}
 
-	if certificate.CertificatePEM != nil && certificate.PrivateKeyPEM != nil {
+	if certificate != nil && certificate.CertificatePEM != nil && certificate.PrivateKeyPEM != nil {
 		authInfos = append(authInfos, configv1.NamedAuthInfo{
 			Name: name,
 			AuthInfo: configv1.AuthInfo{
