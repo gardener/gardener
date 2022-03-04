@@ -30,9 +30,7 @@ const (
 	WebhookName = "cloudprovider"
 )
 
-var (
-	logger = log.Log.WithName("cloudprovider-webhook")
-)
+var logger = log.Log.WithName("cloudprovider-webhook")
 
 // Args are the requirements to create a cloudprovider webhook.
 type Args struct {
@@ -61,6 +59,11 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 		Webhook:  &admission.Webhook{Handler: handler},
 		Path:     WebhookName,
 		Selector: namespaceSelector,
+		ObjectSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider,
+			},
+		},
 	}, nil
 }
 
