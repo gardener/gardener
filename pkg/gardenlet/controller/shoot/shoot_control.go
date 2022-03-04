@@ -686,6 +686,12 @@ func (r *shootReconciler) updateShootStatusOperationStart(ctx context.Context, g
 		v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.ShootCARotation) {
 			rotation.Phase = gardencorev1beta1.RotationCompleting
 		})
+
+	case v1beta1constants.ShootOperationRotateKubeconfigCredentials:
+		mustRemoveOperationAnnotation = true
+		v1beta1helper.MutateShootKubeconfigRotation(shoot, func(rotation *gardencorev1beta1.ShootKubeconfigRotation) {
+			rotation.LastInitiationTime = &now
+		})
 	}
 
 	if err := gardenClient.Status().Update(ctx, shoot); err != nil {
@@ -788,6 +794,12 @@ func (r *shootReconciler) patchShootStatusOperationSuccess(
 	case gardencorev1beta1.RotationCompleting:
 		v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.ShootCARotation) {
 			rotation.Phase = gardencorev1beta1.RotationCompleted
+			rotation.LastCompletionTime = &now
+		})
+	}
+
+	if v1beta1helper.IsShootKubeconfigRotationInitiationTimeAfterLastCompletionTime(shoot.Status.Credentials) {
+		v1beta1helper.MutateShootKubeconfigRotation(shoot, func(rotation *gardencorev1beta1.ShootKubeconfigRotation) {
 			rotation.LastCompletionTime = &now
 		})
 	}

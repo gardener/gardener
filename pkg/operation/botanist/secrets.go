@@ -112,6 +112,13 @@ func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
 func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 	rotation := make(map[string]time.Time)
 
+	if shootStatus := b.Shoot.GetInfo().Status; shootStatus.Credentials != nil && shootStatus.Credentials.Rotation != nil {
+		if shootStatus.Credentials.Rotation.Kubeconfig != nil && shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime != nil {
+			rotation[kubeapiserver.SecretStaticTokenName] = shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime.Time
+			rotation[kubeapiserver.SecretBasicAuthName] = shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime.Time
+		}
+	}
+
 	return rotation
 }
 
@@ -259,11 +266,6 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 		}
 
 		switch b.Shoot.GetInfo().Annotations[v1beta1constants.GardenerOperation] {
-		case v1beta1constants.ShootOperationRotateKubeconfigCredentials:
-			if err := b.rotateKubeconfigSecrets(ctx, &gardenerResourceDataList); err != nil {
-				return err
-			}
-
 		case v1beta1constants.ShootOperationRotateSSHKeypair:
 			if err := b.rotateSSHKeypairSecrets(ctx, &gardenerResourceDataList); err != nil {
 				return err
@@ -526,24 +528,6 @@ func (b *Botanist) deleteSecrets(ctx context.Context, gardenerResourceDataList *
 		gardenerResourceDataList.Delete(secretName)
 	}
 	return nil
-}
-
-func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
-	secrets := []string{
-		kubeapiserver.SecretNameStaticToken,
-		kubeapiserver.SecretNameBasicAuth,
-		common.KubecfgSecretName,
-	}
-
-	if err := b.deleteSecrets(ctx, gardenerResourceDataList, secrets...); err != nil {
-		return err
-	}
-
-	// remove operation annotation
-	return b.Shoot.UpdateInfo(ctx, b.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
-		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
-		return nil
-	})
 }
 
 func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {

@@ -47,6 +47,8 @@ The substituted Kubeconfig are provided after the initialized reconciliation was
 which were created with Gardener version `<= 0.28.0` used to have a Kubeconfig based on a client certificate instead of a static token.
 These client certificates are not revocable and thus a full credential rotation is not supported.
 
+You can check the `.status.credentials.rotation.kubeconfig` field in the `Shoot` to see when the rotation was last initiated or last completed.
+
 #### Monitoring
 
 *Name*: `<shoot-name>.monitoring`
