@@ -117,14 +117,11 @@ Therefore, the Shoot Reference Controller scans shoot clusters for referenced ob
 The scanned shoot also gets this finalizer to enable a proper garbage collection in case the Gardener-Controller-Manager is offline at the moment of an incoming deletion request.
 When an object is not actively referenced anymore because the shoot specification has changed or all related shoots were deleted (are in deletion), the controller will remove the added finalizer again, so that the object can safely be deleted or garbage collected.
 
-The Shoot Reference Controller can inspect the following references:
+The Shoot Reference Controller inspects the following references:
 - DNS provider secrets (`.spec.dns.provider`)
 - Audit policy configmaps (`.spec.kubernetes.kubeAPIServer.auditConfig.auditPolicy.configMapRef`)
 
-> The audit policy configmap protection is configurable and enabled by default. If you want to disable it then you can set the `.controllers.shootReference.protectAuditPolicyConfigMaps` to `false` in the component configuration.
-
 Further checks might be added in the future.
-
 
 ### Shoot Retry Controller
 

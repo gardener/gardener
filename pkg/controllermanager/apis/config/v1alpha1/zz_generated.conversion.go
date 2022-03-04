@@ -976,7 +976,6 @@ func Convert_config_ShootQuotaControllerConfiguration_To_v1alpha1_ShootQuotaCont
 
 func autoConvert_v1alpha1_ShootReferenceControllerConfiguration_To_config_ShootReferenceControllerConfiguration(in *ShootReferenceControllerConfiguration, out *config.ShootReferenceControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
-	out.ProtectAuditPolicyConfigMaps = (*bool)(unsafe.Pointer(in.ProtectAuditPolicyConfigMaps))
 	return nil
 }
 
@@ -987,7 +986,6 @@ func Convert_v1alpha1_ShootReferenceControllerConfiguration_To_config_ShootRefer
 
 func autoConvert_config_ShootReferenceControllerConfiguration_To_v1alpha1_ShootReferenceControllerConfiguration(in *config.ShootReferenceControllerConfiguration, out *ShootReferenceControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
-	out.ProtectAuditPolicyConfigMaps = (*bool)(unsafe.Pointer(in.ProtectAuditPolicyConfigMaps))
 	return nil
 }
 

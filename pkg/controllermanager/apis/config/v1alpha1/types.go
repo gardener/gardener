@@ -298,10 +298,6 @@ type ShootReferenceControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// shoots.
 	ConcurrentSyncs int `json:"concurrentSyncs"`
-	// ProtectAuditPolicyConfigMaps controls whether the shoot reference controller shall protect ConfigMaps containing
-	// audit policies and referenced in Shoots.
-	// +optional
-	ProtectAuditPolicyConfigMaps *bool `json:"protectAuditPolicyConfigMaps,omitempty"`
 }
 
 // ShootRetryControllerConfiguration defines the configuration of the

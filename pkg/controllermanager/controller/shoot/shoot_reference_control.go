@@ -21,7 +21,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenlogger "github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -56,7 +55,7 @@ func (c *Controller) shootReferenceUpdate(oldObj, newObj interface{}) {
 		newShoot = newObj.(*gardencorev1beta1.Shoot)
 	)
 
-	if c.refChange(oldShoot, newShoot) || newShoot.DeletionTimestamp != nil && !controllerutil.ContainsFinalizer(newShoot, gardencorev1beta1.GardenerName) {
+	if refChange(oldShoot, newShoot) || newShoot.DeletionTimestamp != nil && !controllerutil.ContainsFinalizer(newShoot, gardencorev1beta1.GardenerName) {
 		key, err := cache.MetaNamespaceKeyFunc(newObj)
 		if err != nil {
 			gardenlogger.Logger.Errorf("Couldn't get key for object %+v: %v", newObj, err)
@@ -66,9 +65,8 @@ func (c *Controller) shootReferenceUpdate(oldObj, newObj interface{}) {
 	}
 }
 
-func (c *Controller) refChange(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
-	return shootDNSFieldChanged(oldShoot, newShoot) ||
-		(utils.IsTrue(c.config.Controllers.ShootReference.ProtectAuditPolicyConfigMaps) && shootKubeAPIServerAuditConfigFieldChanged(oldShoot, newShoot))
+func refChange(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
+	return shootDNSFieldChanged(oldShoot, newShoot) || shootKubeAPIServerAuditConfigFieldChanged(oldShoot, newShoot)
 }
 
 func shootDNSFieldChanged(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
@@ -83,18 +81,16 @@ func shootKubeAPIServerAuditConfigFieldChanged(oldShoot, newShoot *gardencorev1b
 const FinalizerName = "gardener.cloud/reference-protection"
 
 // NewShootReferenceReconciler creates a new instance of a reconciler which checks object references from shoot objects.
-func NewShootReferenceReconciler(l logrus.FieldLogger, gardenClient kubernetes.Interface, config *config.ShootReferenceControllerConfiguration) reconcile.Reconciler {
+func NewShootReferenceReconciler(l logrus.FieldLogger, gardenClient kubernetes.Interface) reconcile.Reconciler {
 	return &shootReferenceReconciler{
 		gardenClient: gardenClient,
 		logger:       l,
-		config:       config,
 	}
 }
 
 type shootReferenceReconciler struct {
 	logger       logrus.FieldLogger
 	gardenClient kubernetes.Interface
-	config       *config.ShootReferenceControllerConfiguration
 }
 
 // Reconcile checks the shoot in the given request for references to further objects in order to protect them from
@@ -190,19 +186,17 @@ func (r *shootReferenceReconciler) handleReferencedSecrets(ctx context.Context, 
 }
 
 func (r *shootReferenceReconciler) handleReferencedConfigMap(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {
-	if utils.IsTrue(r.config.ProtectAuditPolicyConfigMaps) {
-		if configMapRef := getAuditPolicyConfigMapRef(shoot.Spec.Kubernetes.KubeAPIServer); configMapRef != nil {
-			configMap := &corev1.ConfigMap{}
-			if err := c.Get(ctx, kutil.Key(shoot.Namespace, configMapRef.Name), configMap); err != nil {
-				return false, err
-			}
-
-			if controllerutil.ContainsFinalizer(configMap, FinalizerName) {
-				return true, nil
-			}
-
-			return true, controllerutils.StrategicMergePatchAddFinalizers(ctx, c, configMap, FinalizerName)
+	if configMapRef := getAuditPolicyConfigMapRef(shoot.Spec.Kubernetes.KubeAPIServer); configMapRef != nil {
+		configMap := &corev1.ConfigMap{}
+		if err := c.Get(ctx, kutil.Key(shoot.Namespace, configMapRef.Name), configMap); err != nil {
+			return false, err
 		}
+
+		if controllerutil.ContainsFinalizer(configMap, FinalizerName) {
+			return true, nil
+		}
+
+		return true, controllerutils.StrategicMergePatchAddFinalizers(ctx, c, configMap, FinalizerName)
 	}
 
 	return false, nil
@@ -310,10 +304,8 @@ func (r *shootReferenceReconciler) getUnreferencedConfigMaps(ctx context.Context
 			continue
 		}
 
-		if utils.IsTrue(r.config.ProtectAuditPolicyConfigMaps) {
-			if configMapRef := getAuditPolicyConfigMapRef(s.Spec.Kubernetes.KubeAPIServer); configMapRef != nil {
-				referencedConfigMaps.Insert(configMapRef.Name)
-			}
+		if configMapRef := getAuditPolicyConfigMapRef(s.Spec.Kubernetes.KubeAPIServer); configMapRef != nil {
+			referencedConfigMaps.Insert(configMapRef.Name)
 		}
 	}
 

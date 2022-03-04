@@ -31,7 +31,6 @@ controllers:
     syncPeriod: 60m
   shootReference:
     concurrentSyncs: 5
-    protectAuditPolicyConfigMaps: true
   shootRetry:
     concurrentSyncs: 5
   # retryDuration: 10m
