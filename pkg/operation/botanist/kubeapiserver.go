@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -451,7 +453,18 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	); err != nil {
 		return err
 	}
+
 	// TODO(rfranzke): Remove in a future release.
+	if err := b.SaveGardenerResourceDataInShootState(ctx, func(gardenerResourceData *[]gardencorev1alpha1.GardenerResourceData) error {
+		gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(*gardenerResourceData)
+		gardenerResourceDataList.Delete("static-token")
+		gardenerResourceDataList.Delete("kube-apiserver-basic-auth")
+		*gardenerResourceData = gardenerResourceDataList
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "audit-policy-config"}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-admission-config"}},
