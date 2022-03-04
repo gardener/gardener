@@ -207,15 +207,15 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources || etcdSnapshotRequired),
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})
-		scaleETCDToOne = g.Add(flow.Task{
+		scaleUpETCD = g.Add(flow.Task{
 			Name:         "Scaling etcd up",
-			Fn:           flow.TaskFn(botanist.ScaleETCDToOne).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(wakeupRequired),
+			Fn:           flow.TaskFn(botanist.ScaleUpETCD).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(wakeupRequired),
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",
 			Fn:           flow.TaskFn(botanist.WaitUntilEtcdsReady).DoIf(cleanupShootResources || etcdSnapshotRequired),
-			Dependencies: flow.NewTaskIDs(deployETCD, scaleETCDToOne),
+			Dependencies: flow.NewTaskIDs(deployETCD, scaleUpETCD),
 		})
 		// Restore the control plane in case it was already migrated to make sure all components that depend on the cloud provider secret are restarted
 		// in case it has changed. Also, it's needed for other control plane components like the kube-apiserver or kube-
@@ -233,7 +233,7 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 		wakeUpKubeAPIServer = g.Add(flow.Task{
 			Name:         "Scaling Kubernetes API Server up and waiting until ready",
 			Fn:           flow.TaskFn(botanist.WakeUpKubeAPIServer).DoIf(wakeupRequired),
-			Dependencies: flow.NewTaskIDs(deployETCD, scaleETCDToOne, waitUntilControlPlaneReady),
+			Dependencies: flow.NewTaskIDs(deployETCD, scaleUpETCD, waitUntilControlPlaneReady),
 		})
 		ensureResourceManagerScaledUp = g.Add(flow.Task{
 			Name:         "Ensuring that the gardener resource manager is scaled to 1",

@@ -29,6 +29,9 @@ const (
 	// SecretNameCAETCD is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of the etcd of a shoot cluster.
 	SecretNameCAETCD = "ca-etcd"
+	// SecretNameCAETCDPeer is a constant for the name of a Kubernetes secret object that contains the CA
+	// certificate of the etcd peer network of a shoot cluster.
+	SecretNameCAETCDPeer = "ca-etcd-peer"
 	// SecretNameCAFrontProxy is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of the kube-aggregator a shoot cluster.
 	SecretNameCAFrontProxy = "ca-front-proxy"
@@ -272,6 +275,20 @@ const (
 	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
 	// what you do.
 	ShootAlphaControlPlaneScaleDownDisabled = "alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled"
+	// ShootAlphaControlPlaneHighAvailability is a constant for an annotation on the Shoot resource stating that the
+	// high availability setup for the control plane should be enabled.
+	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
+	// what you do.
+	ShootAlphaControlPlaneHighAvailability = "alpha.control-plane.shoot.gardener.cloud/high-availability"
+	// ShootAlphaControlPlaneHighAvailabilitySingleZone is a specific value that can be set for the shoot control
+	// plane high availability annotation, that allows gardener to spread the shoot control plane across
+	// multiple nodes within a single availability zone if it is possible.
+	ShootAlphaControlPlaneHighAvailabilitySingleZone = "single-zone"
+	// ShootAlphaControlPlaneHighAvailabilityMultiZone is a specific value that can be set for the shoot control
+	// plane high availability annotation, that allows gardener to spread the shoot control plane across
+	// multiple availability zones if it is possible.
+	ShootAlphaControlPlaneHighAvailabilityMultiZone = "multi-zone"
+
 	// ShootExpirationTimestamp is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
 	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
 	// of referenced quotas.

@@ -126,10 +126,7 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowKubeAPIServer(ctx context.Con
 				// Allow connection to shoot's etcd instances.
 				To: []networkingv1.NetworkPolicyPeer{{
 					PodSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							v1beta1constants.LabelApp:             etcd.LabelAppValue,
-							v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
-						},
+						MatchLabels: etcd.GetLabels(),
 					},
 				}},
 				Ports: []networkingv1.NetworkPolicyPort{{
