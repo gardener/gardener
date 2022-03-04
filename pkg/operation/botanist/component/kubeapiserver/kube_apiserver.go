@@ -274,6 +274,11 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	secretStaticToken, err := k.reconcileSecretStaticToken(ctx)
+	if err != nil {
+		return err
+	}
+
 	if err := k.reconcileConfigMapAdmission(ctx, configMapAdmission); err != nil {
 		return err
 	}

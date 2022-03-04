@@ -69,6 +69,7 @@ var _ = Describe("KubeAPIServer", func() {
 		version             = semver.MustParse("1.22.1")
 
 		secretNameBasicAuthentication        = "kube-apiserver-basic-auth-426b1845"
+		secretNameStaticToken                = "kube-apiserver-static-token-c069a0e6"
 		secretNameCA                         = "CA-secret"
 		secretChecksumCA                     = "12345"
 		secretNameCAEtcd                     = "CAEtcd-secret"
@@ -89,8 +90,6 @@ var _ = Describe("KubeAPIServer", func() {
 		secretChecksumServer                 = "12345"
 		secretNameServiceAccountKey          = "ServiceAccountKey-secret"
 		secretChecksumServiceAccountKey      = "12345"
-		secretNameStaticToken                = "StaticToken-secret"
-		secretChecksumStaticToken            = "12345"
 		secretNameVPNSeed                    = "VPNSeed-secret"
 		secretChecksumVPNSeed                = "12345"
 		secretNameVPNSeedTLSAuth             = "VPNSeedTLSAuth-secret"
@@ -1703,7 +1702,11 @@ rules:
 							serviceNetworkCIDR                  = "1.2.3.4/5"
 						)
 
-						kapi = New(kubernetesInterface, namespace, Values{
+						By("create legacy basic auth secret to later ensure that it's gone")
+						legacySecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "static-token"}}
+						Expect(c.Create(ctx, legacySecret)).To(Succeed())
+
+						kapi = New(kubernetesInterface, namespace, sm, Values{
 							AdmissionPlugins: admissionPlugins,
 							Autoscaling:      AutoscalingConfig{APIServerResources: apiServerResources},
 							EventTTL:         &metav1.Duration{Duration: eventTTL},
@@ -1943,6 +1946,12 @@ rules:
 								},
 							},
 						))
+
+						secret := &corev1.Secret{}
+						Expect(c.Get(ctx, kutil.Key(namespace, secretNameStaticToken), secret)).To(Succeed())
+						Expect(secret.Data).To(HaveKey("static_tokens.csv"))
+
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(legacySecret), &corev1.Secret{})).To(BeNotFoundError())
 					})
 
 					It("should properly set the anonymous auth flag if enabled", func() {

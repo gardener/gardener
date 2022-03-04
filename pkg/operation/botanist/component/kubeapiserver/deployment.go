@@ -50,8 +50,6 @@ const (
 	SecretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"
 	// SecretNameServer is the name of the secret for the kube-apiserver server certificates.
 	SecretNameServer = "kube-apiserver"
-	// SecretNameStaticToken is the name of the secret containing static tokens for the kube-apiserver.
-	SecretNameStaticToken = "static-token"
 	// SecretNameVPNSeed is the name of the secret containing the certificates for the vpn-seed.
 	SecretNameVPNSeed = "vpn-seed"
 	// SecretNameVPNSeedTLSAuth is the name of the secret containing the TLS auth for the vpn-seed.

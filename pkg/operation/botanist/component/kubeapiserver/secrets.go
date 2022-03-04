@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apiserver/pkg/authentication/user"
 )
 
 const (
@@ -38,8 +39,14 @@ const (
 	// SecretEtcdEncryptionConfigurationDataKey is a constant for a key in the data map that contains the config
 	// which is used to encrypt etcd data.
 	SecretEtcdEncryptionConfigurationDataKey = "encryption-configuration.yaml"
+
+	// SecretStaticTokenName is a constant for the name of the static-token secret.
+	SecretStaticTokenName = "kube-apiserver-static-token"
 	// SecretBasicAuthName is a constant for the name of the basic-auth secret.
 	SecretBasicAuthName = "kube-apiserver-basic-auth"
+
+	userNameClusterAdmin = "system:cluster-admin"
+	userNameHealthCheck  = "health-check"
 )
 
 func (k *kubeAPIServer) emptySecret(name string) *corev1.Secret {
@@ -92,4 +99,27 @@ func (k *kubeAPIServer) reconcileSecretBasicAuth(ctx context.Context) (*corev1.S
 
 	// TODO(rfranzke): Remove this in a future release.
 	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-basic-auth", Namespace: k.namespace}})
+}
+
+func (k *kubeAPIServer) reconcileSecretStaticToken(ctx context.Context) (*corev1.Secret, error) {
+	secret, err := k.secretsManager.Generate(ctx, &secretutils.StaticTokenSecretConfig{
+		Name: SecretStaticTokenName,
+		Tokens: map[string]secretutils.TokenConfig{
+			userNameClusterAdmin: {
+				Username: userNameClusterAdmin,
+				UserID:   userNameClusterAdmin,
+				Groups:   []string{user.SystemPrivilegedGroup},
+			},
+			userNameHealthCheck: {
+				Username: userNameHealthCheck,
+				UserID:   userNameHealthCheck,
+			},
+		},
+	}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO(rfranzke): Remove this in a future release.
+	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "static-token", Namespace: k.namespace}})
 }
