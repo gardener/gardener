@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
@@ -33,14 +34,16 @@ import (
 )
 
 type handler struct {
+	logger            logr.Logger
 	targetClient      client.Reader
 	decoder           *admission.Decoder
 	expirationSeconds int64
 }
 
 // NewHandler returns a new handler.
-func NewHandler(targetClient client.Reader, expirationSeconds int64) admission.Handler {
+func NewHandler(logger logr.Logger, targetClient client.Reader, expirationSeconds int64) admission.Handler {
 	return &handler{
+		logger:            logger,
 		targetClient:      targetClient,
 		expirationSeconds: expirationSeconds,
 	}
@@ -61,32 +64,40 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 		return admission.Errored(http.StatusUnprocessableEntity, err)
 	}
 
+	log := h.logger.WithValues("pod", client.ObjectKeyFromObject(pod))
+
 	if len(pod.Spec.ServiceAccountName) == 0 || pod.Spec.ServiceAccountName == "default" {
+		log.Info("Pod's service account name is empty or defaulted, nothing to be done", "serviceAccountName", pod.Spec.ServiceAccountName)
 		return admission.Allowed("service account not specified or defaulted")
 	}
 
 	serviceAccount := &corev1.ServiceAccount{}
 	// We use `req.Namespace` instead of `pod.Namespace` due to https://github.com/kubernetes/kubernetes/issues/88282.
 	if err := h.targetClient.Get(ctx, kutil.Key(req.Namespace, pod.Spec.ServiceAccountName), serviceAccount); err != nil {
+		log.Error(err, "Error getting service account", "serviceAccountName", pod.Spec.ServiceAccountName)
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
 	if serviceAccount.AutomountServiceAccountToken == nil || *serviceAccount.AutomountServiceAccountToken {
+		log.Info("Pod's service account does not set .spec.automountServiceAccountToken=false, nothing to be done")
 		return admission.Allowed("auto-mounting service account token is not disabled on ServiceAccount level")
 	}
 
 	if pod.Spec.AutomountServiceAccountToken != nil && !*pod.Spec.AutomountServiceAccountToken {
+		log.Info("Pod explicitly disables auto-mount by setting .spec.automountServiceAccountToken to false, nothing to be done")
 		return admission.Allowed("Pod explicitly disables a service account token mount")
 	}
 
 	for _, volume := range pod.Spec.Volumes {
 		if strings.HasPrefix(volume.Name, serviceAccountVolumeNamePrefix) {
+			log.Info("Pod already has a service account volume mount, nothing to be done")
 			return admission.Allowed("pod already has service account volume mount")
 		}
 	}
 
 	expirationSeconds, err := tokenExpirationSeconds(pod.Annotations, h.expirationSeconds)
 	if err != nil {
+		log.Error(err, "Error getting the token expiration seconds")
 		return admission.Errored(http.StatusUnprocessableEntity, err)
 	}
 
@@ -115,6 +126,7 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
+	log.Info("Pod meets requirements for auto-mounting the projected token")
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
 }
 
