@@ -235,6 +235,30 @@ var _ = Describe("utils", func() {
 					},
 				}))
 			})
+
+			Context("without certificate", func() {
+				It("should return a kubeconfig with one context and one user", func() {
+					secret.KubeConfigRequests[0].CAData = []byte(caCert)
+
+					kubeconfig, err := GenerateKubeconfig(secret, nil)
+					Expect(err).NotTo(HaveOccurred())
+
+					err = yaml.Unmarshal(kubeconfig, &kubecfg)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(kubecfg.CurrentContext).To(Equal(clusterName))
+					Expect(kubecfg.Clusters).To(HaveLen(1))
+					Expect(kubecfg.Contexts).To(HaveLen(1))
+					Expect(kubecfg.AuthInfos).To(HaveLen(1))
+					Expect(kubecfg.Clusters[0].Cluster.Server).To(Equal("https://" + apiServerURL))
+					Expect(kubecfg.Clusters[0].Cluster.CertificateAuthorityData).To(Equal([]byte(caCert)))
+					Expect(kubecfg.AuthInfos[0].AuthInfo.ClientCertificateData).To(BeEmpty())
+					Expect(kubecfg.AuthInfos[0].AuthInfo.ClientKeyData).To(BeEmpty())
+					Expect(kubecfg.AuthInfos[0].AuthInfo.Token).To(BeEmpty())
+					Expect(kubecfg.AuthInfos[0].AuthInfo.Username).To(Equal(basicAuthUser))
+					Expect(kubecfg.AuthInfos[0].AuthInfo.Password).To(Equal(basicAuthPass))
+				})
+			})
 		})
 	})
 })

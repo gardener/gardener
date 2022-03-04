@@ -49,6 +49,7 @@ type ControlPlaneSecretConfig struct {
 type KubeConfigRequest struct {
 	ClusterName   string
 	APIServerHost string
+	CAData        []byte
 }
 
 // ControlPlane contains the certificate, and optionally the basic auth. information as well as a Kubeconfig.
@@ -261,10 +262,15 @@ func GenerateKubeconfig(secret *ControlPlaneSecretConfig, certificate *Certifica
 	}
 
 	for _, req := range secret.KubeConfigRequests {
+		caData := req.CAData
+		if caData == nil && certificate != nil && certificate.CA != nil {
+			caData = certificate.CA.CertificatePEM
+		}
+
 		config.Clusters = append(config.Clusters, configv1.NamedCluster{
 			Name: req.ClusterName,
 			Cluster: configv1.Cluster{
-				CertificateAuthorityData: certificate.CA.CertificatePEM,
+				CertificateAuthorityData: caData,
 				Server:                   fmt.Sprintf("https://%s", req.APIServerHost),
 			},
 		})
