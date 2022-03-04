@@ -36,7 +36,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | UseDNSRecords                                | `false` | `Alpha` | `1.27` | `1.38` |
 | UseDNSRecords                                | `true`  | `Beta`  | `1.39` |        |
 | RotateSSHKeypairOnMaintenance                | `false` | `Alpha` | `1.28` |        |
-| DenyInvalidExtensionResources                | `false` | `Alpha` | `1.31` |        |
+| DenyInvalidExtensionResources                | `false` | `Alpha` | `1.31` | `1.41` |
+| DenyInvalidExtensionResources                | `true`  | `Beta`  | `1.42` |        |
 | WorkerPoolKubernetesVersion                  | `false` | `Alpha` | `1.35` |        |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` |        |
 | SecretBindingProviderValidation              | `false` | `Alpha` | `1.38` |        |

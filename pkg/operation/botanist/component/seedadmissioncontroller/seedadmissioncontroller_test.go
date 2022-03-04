@@ -174,7 +174,7 @@ spec:
         - /gardener-seed-admission-controller
         - --port=10250
         - --tls-cert-dir=/srv/gardener-seed-admission-controller
-        - --allow-invalid-extension-resources=true
+        - --allow-invalid-extension-resources=false
         - --health-bind-address=:8081
         image: ` + image + `
         imagePullPolicy: IfNotPresent
