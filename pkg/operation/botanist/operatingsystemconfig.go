@@ -25,7 +25,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/images"
@@ -70,14 +69,13 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 			KubernetesVersion: b.Shoot.KubernetesVersion,
 			Workers:           b.Shoot.GetInfo().Spec.Provider.Workers,
 			OriginalValues: operatingsystemconfig.OriginalValues{
-				ClusterDNSAddress:       clusterDNSAddress,
-				ClusterDomain:           gardencorev1beta1.DefaultDomain,
-				Images:                  oscImages,
-				KubeletConfigParameters: components.KubeletConfigParametersFromCoreV1beta1KubeletConfig(b.Shoot.GetInfo().Spec.Kubernetes.Kubelet),
-				KubeletCLIFlags:         components.KubeletCLIFlagsFromCoreV1beta1KubeletConfig(b.Shoot.GetInfo().Spec.Kubernetes.Kubelet),
-				MachineTypes:            b.Shoot.CloudProfile.Spec.MachineTypes,
-				PromtailEnabled:         promtailEnabled,
-				LokiIngressHostName:     lokiIngressHost,
+				ClusterDNSAddress:   clusterDNSAddress,
+				ClusterDomain:       gardencorev1beta1.DefaultDomain,
+				Images:              oscImages,
+				KubeletConfig:       b.Shoot.GetInfo().Spec.Kubernetes.Kubelet,
+				MachineTypes:        b.Shoot.CloudProfile.Spec.MachineTypes,
+				PromtailEnabled:     promtailEnabled,
+				LokiIngressHostName: lokiIngressHost,
 			},
 		},
 		operatingsystemconfig.DefaultInterval,
