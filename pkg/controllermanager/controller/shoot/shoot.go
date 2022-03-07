@@ -97,7 +97,7 @@ func NewShootController(
 		shootRetryReconciler:       NewShootRetryReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootRetry),
 		shootConditionsReconciler:  NewShootConditionsReconciler(logger.Logger, gardenClient.Client()),
 		shootStatusLabelReconciler: NewShootStatusLabelReconciler(logger.Logger, gardenClient.Client()),
-		shootRefReconciler:         NewShootReferenceReconciler(logger.Logger, gardenClient, config.Controllers.ShootReference),
+		shootRefReconciler:         NewShootReferenceReconciler(logger.Logger, gardenClient),
 
 		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
 		shootQuotaQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-quota"),

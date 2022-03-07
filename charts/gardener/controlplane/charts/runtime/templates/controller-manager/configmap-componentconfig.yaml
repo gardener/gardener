@@ -118,7 +118,6 @@ data:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.shootHibernation.concurrentSyncs is required" .Values.global.controller.config.controllers.shootHibernation.concurrentSyncs }}
       shootReference:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.shootReference.concurrentSyncs is required" .Values.global.controller.config.controllers.shootReference.concurrentSyncs }}
-        protectAuditPolicyConfigMaps: {{ required ".Values.global.controller.config.controllers.shootReference.protectAuditPolicyConfigMaps is required" .Values.global.controller.config.controllers.shootReference.protectAuditPolicyConfigMaps }}
       shootRetry:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.shootRetry.concurrentSyncs is required" .Values.global.controller.config.controllers.shootRetry.concurrentSyncs }}
         {{- if .Values.global.controller.config.controllers.shootRetry.retryPeriod }}
