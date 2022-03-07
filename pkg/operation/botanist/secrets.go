@@ -269,6 +269,9 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 		secret.Annotations = map[string]string{
 			"checksum/data": checksum,
 		}
+		secret.Labels = map[string]string{
+			v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider,
+		}
 		secret.Type = corev1.SecretTypeOpaque
 		secret.Data = b.Shoot.Secret.Data
 		return nil
