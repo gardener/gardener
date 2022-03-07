@@ -2940,6 +2940,13 @@ func schema_gardenlet_apis_config_v1alpha1_ManagedSeedControllerConfiguration(re
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"jitterUpdates": {
+						SchemaProps: spec.SchemaProps{
+							Description: "JitterUpdates enables enqueuing managed seeds with a random duration(jitter) in case of an update to the spec. The applied jitterPeriod is taken from SyncJitterPeriod.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},

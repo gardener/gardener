@@ -779,6 +779,11 @@ func (in *ManagedSeedControllerConfiguration) DeepCopyInto(out *ManagedSeedContr
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.JitterUpdates != nil {
+		in, out := &in.JitterUpdates, &out.JitterUpdates
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

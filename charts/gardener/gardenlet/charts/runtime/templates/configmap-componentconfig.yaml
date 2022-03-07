@@ -148,6 +148,9 @@ data:
         {{- if .Values.global.gardenlet.config.controllers.managedSeed.syncJitterPeriod }}
         syncJitterPeriod: {{ .Values.global.gardenlet.config.controllers.managedSeed.syncJitterPeriod }}
         {{- end }}
+        {{- if .Values.global.gardenlet.config.controllers.managedSeed.jitterUpdates }}
+        jitterUpdates: {{ .Values.global.gardenlet.config.controllers.managedSeed.jitterUpdates }}
+        {{- end }}
       {{- end }}
       shootMigration:
         concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.shootMigration.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.shootMigration.concurrentSyncs }}
