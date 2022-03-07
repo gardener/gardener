@@ -34,8 +34,9 @@ var logger = log.Log.WithName("cloudprovider-webhook")
 
 // Args are the requirements to create a cloudprovider webhook.
 type Args struct {
-	Provider string
-	Mutator  extensionswebhook.Mutator
+	Provider             string
+	Mutator              extensionswebhook.Mutator
+	EnableObjectSelector bool
 }
 
 // New creates a new cloudprovider webhook.
@@ -51,7 +52,7 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 	namespaceSelector := buildSelector(args.Provider)
 	logger.Info("Creating webhook")
 
-	return &extensionswebhook.Webhook{
+	webhook := &extensionswebhook.Webhook{
 		Name:     WebhookName,
 		Target:   extensionswebhook.TargetSeed,
 		Provider: args.Provider,
@@ -59,12 +60,17 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 		Webhook:  &admission.Webhook{Handler: handler},
 		Path:     WebhookName,
 		Selector: namespaceSelector,
-		ObjectSelector: &metav1.LabelSelector{
+	}
+
+	if args.EnableObjectSelector {
+		webhook.ObjectSelector = &metav1.LabelSelector{
 			MatchLabels: map[string]string{
 				v1beta1constants.GardenerPurpose: v1beta1constants.SecretNameCloudProvider,
 			},
-		},
-	}, nil
+		}
+	}
+
+	return webhook, nil
 }
 
 func buildSelector(provider string) *metav1.LabelSelector {
