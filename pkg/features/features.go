@@ -97,6 +97,7 @@ const (
 	// DenyInvalidExtensionResources causes the seed-admission-controller to deny invalid extension resources (instead of just logging validation errors).
 	// owner: @stoyanr
 	// alpha: v1.31.0
+	// beta: v1.42.0
 	DenyInvalidExtensionResources featuregate.Feature = "DenyInvalidExtensionResources"
 
 	// WorkerPoolKubernetesVersion allows to overwrite the Kubernetes version used for shoot clusters per worker pool.
