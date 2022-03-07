@@ -171,10 +171,17 @@ else
   rm -f "{{ .pathBootstrapToken }}"
 fi
 
-NODENAME=
-ANNOTATION_RESTART_SYSTEMD_SERVICES="worker.gardener.cloud/restart-systemd-services"
-
 # Try to find Node object for this machine if already registered to the cluster.
+NODENAME=
+if [[ -s "{{ .pathNodeName }}" ]]; then
+  NODENAME="$(cat "{{ .pathNodeName }}")"
+else
+  {{`NODENAME="$(`}}{{ .pathBinaries }}{{`/kubectl --kubeconfig="`}}{{ .pathKubeletKubeconfigReal }}{{`" get node -l "kubernetes.io/hostname=$(hostname)" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ end }}")"`}}
+  echo "$NODENAME" > "{{ .pathNodeName }}"
+fi
+
+# Check if node is annotated with information about to-be-restarted systemd services
+ANNOTATION_RESTART_SYSTEMD_SERVICES="worker.gardener.cloud/restart-systemd-services"
 if [[ -f "{{ .pathKubeletKubeconfigReal }}" ]]; then
   {{`NODE="$(`}}{{ .pathBinaries }}{{`/kubectl --kubeconfig="`}}{{ .pathKubeletKubeconfigReal }}{{`" get node -l "kubernetes.io/hostname=$(hostname)" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ if (index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\") }} {{ index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ end }}{{ end }}")"`}}
 

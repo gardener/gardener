@@ -138,6 +138,7 @@ func Script(
 		"pathKubeletKubeconfigBootstrap":           kubelet.PathKubeconfigBootstrap,
 		"pathKubeletKubeconfigReal":                kubelet.PathKubeconfigReal,
 		"pathLastDownloadedHyperkubeImage":         PathLastDownloadedHyperkubeImage,
+		"pathNodeName":                             kubelet.PathNodeName,
 		"pathScriptCopyKubernetesBinary":           kubelet.PathScriptCopyKubernetesBinary,
 		"bootstrapTokenPlaceholder":                downloader.BootstrapTokenPlaceholder,
 		"cloudConfigUserData":                      utils.EncodeBase64(cloudConfigUserData),

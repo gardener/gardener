@@ -69,6 +69,9 @@ const (
 	PathKubeletDirectory = "/var/lib/kubelet"
 	// PathScriptCopyKubernetesBinary is the path for the script copying downloaded Kubernetes binaries.
 	PathScriptCopyKubernetesBinary = PathKubeletDirectory + "/copy-kubernetes-binary.sh"
+	// PathNodeName is the path for a file containing the name of the Node registered by kubelet for the respective
+	// machine.
+	PathNodeName = PathKubeletDirectory + "/nodename"
 
 	pathVolumePluginDirectory = "/var/lib/kubelet/volumeplugins"
 )
