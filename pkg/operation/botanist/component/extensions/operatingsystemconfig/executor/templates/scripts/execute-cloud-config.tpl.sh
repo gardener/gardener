@@ -187,22 +187,24 @@ if [[ -f "{{ .pathKubeletKubeconfigReal }}" ]]; then
     {{`SYSTEMD_SERVICES_TO_RESTART="$(`}}{{ .pathBinaries }}{{`/kubectl --kubeconfig="`}}{{ .pathKubeletKubeconfigReal }}{{`" get node "$NODENAME" -o go-template="{{ if index .metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ index .metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ end }}")"`}}
 
     # Restart systemd services if requested
-    restart_ccd=n
-    for service in $(echo "$SYSTEMD_SERVICES_TO_RESTART" | sed "s/,/ /g"); do
-      if [[ ${service} == {{ .cloudConfigDownloaderName }}* ]]; then
-        restart_ccd=y
-        continue
+    if [[ ! -z "$SYSTEMD_SERVICES_TO_RESTART" ]]; then
+      restart_ccd=n
+      for service in $(echo "$SYSTEMD_SERVICES_TO_RESTART" | sed "s/,/ /g"); do
+        if [[ ${service} == {{ .cloudConfigDownloaderName }}* ]]; then
+          restart_ccd=y
+          continue
+        fi
+
+        echo "Restarting systemd service $service due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
+        systemctl restart "$service" || true
+      done
+
+      {{ .pathBinaries }}/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "${ANNOTATION_RESTART_SYSTEMD_SERVICES}-"
+
+      if [[ ${restart_ccd} == "y" ]]; then
+        echo "Restarting systemd service {{ .unitNameCloudConfigDownloader }} due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
+        systemctl restart "{{ .unitNameCloudConfigDownloader }}" || true
       fi
-
-      echo "Restarting systemd service $service due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
-      systemctl restart "$service" || true
-    done
-
-    {{ .pathBinaries }}/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "${ANNOTATION_RESTART_SYSTEMD_SERVICES}-"
-
-    if [[ ${restart_ccd} == "y" ]]; then
-      echo "Restarting systemd service {{ .unitNameCloudConfigDownloader }} due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
-      systemctl restart "{{ .unitNameCloudConfigDownloader }}" || true
     fi
   fi
 
