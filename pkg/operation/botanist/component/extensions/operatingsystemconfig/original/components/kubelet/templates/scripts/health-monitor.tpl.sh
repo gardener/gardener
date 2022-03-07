@@ -37,6 +37,8 @@ function kubelet_monitoring {
   last_kubelet_ready_state="True"
 
   while [ 1 ]; do
+    node_name="$(cat "{{ .pathNodeName }}")"
+
     # Check whether the kubelet's /healthz endpoint reports unhealthiness
     if ! output=$(curl -m $max_seconds -f -s -S http://127.0.0.1:10248/healthz 2>&1); then
       echo $output
@@ -46,8 +48,13 @@ function kubelet_monitoring {
       continue
     fi
 
-    node_object="$(kubectl get nodes -l kubernetes.io/hostname=$(hostname) -o json)"
-    node_status="$(echo $node_object | jq -r '.items[0].status')"
+    if [[ -z "$node_name" ]]; then
+      sleep 20
+      continue
+    fi
+
+    node_object="$(kubectl get nodes "$node_name" -o json)"
+    node_status="$(echo $node_object | jq -r '.status')"
     if [[ -z "$node_status" ]] || [[ "$node_status" == "null" ]]; then
       echo "Node object for this hostname not found in the system, waiting."
       sleep 20
@@ -66,7 +73,6 @@ function kubelet_monitoring {
         if ip address show | grep $K8S_NODE_IP_INTERNAL_LAST_SEEN > /dev/null; then
           echo "Last seen InternalIP "$K8S_NODE_IP_INTERNAL_LAST_SEEN" is still up-to-date";
           server="$(kubectl config view -o jsonpath={.clusters[0].cluster.server})"
-          node_name="$(echo $node_object | jq -r '.items[0].metadata.name')"
           if patch_internal_ip $server $node_name $K8S_NODE_IP_INTERNAL_LAST_SEEN; then
             echo "Successfully updated Node object."
             continue
