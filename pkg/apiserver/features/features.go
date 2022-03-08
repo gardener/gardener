@@ -16,22 +16,19 @@ package features
 
 import (
 	"github.com/gardener/gardener/pkg/features"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/component-base/featuregate"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )
-
-var featureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	features.SeedChange:                      {Default: false, PreRelease: featuregate.Alpha},
-	features.AdminKubeconfigRequest:          {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	features.UseDNSRecords:                   {Default: true, PreRelease: featuregate.Beta},
-	features.WorkerPoolKubernetesVersion:     {Default: false, PreRelease: featuregate.Alpha},
-	features.SecretBindingProviderValidation: {Default: false, PreRelease: featuregate.Alpha},
-	features.ShootCARotation:                 {Default: false, PreRelease: featuregate.Alpha},
-}
 
 // RegisterFeatureGates registers the feature gates of the gardener-apiserver.
 func RegisterFeatureGates() {
-	utilruntime.Must(utilfeature.DefaultMutableFeatureGate.Add(featureGates))
+	utilruntime.Must(utilfeature.DefaultMutableFeatureGate.Add(features.GetFeatures(
+		features.SeedChange,
+		features.AdminKubeconfigRequest,
+		features.UseDNSRecords,
+		features.WorkerPoolKubernetesVersion,
+		features.SecretBindingProviderValidation,
+		features.ShootCARotation,
+	)))
 }

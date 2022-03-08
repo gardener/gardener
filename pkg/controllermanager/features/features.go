@@ -21,17 +21,14 @@ import (
 	"k8s.io/component-base/featuregate"
 )
 
-var (
-	// FeatureGate is a shared global FeatureGate for Gardener Controller Manager flags.
-	FeatureGate  = featuregate.NewFeatureGate()
-	featureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-		features.CachedRuntimeClients:          {Default: true, PreRelease: featuregate.Beta},
-		features.UseDNSRecords:                 {Default: true, PreRelease: featuregate.Beta},
-		features.RotateSSHKeypairOnMaintenance: {Default: false, PreRelease: featuregate.Alpha},
-	}
-)
+// FeatureGate is a shared global FeatureGate for Gardener Controller Manager flags.
+var FeatureGate = featuregate.NewFeatureGate()
 
 // RegisterFeatureGates registers the feature gates of the Gardener Controller Manager.
 func RegisterFeatureGates() {
-	utilruntime.Must(FeatureGate.Add(featureGates))
+	utilruntime.Must(FeatureGate.Add(features.GetFeatures(
+		features.CachedRuntimeClients,
+		features.UseDNSRecords,
+		features.RotateSSHKeypairOnMaintenance,
+	)))
 }
