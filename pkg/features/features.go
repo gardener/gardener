@@ -82,6 +82,7 @@ const (
 	// owner: @petersutter
 	// alpha: v1.24.0
 	// beta: v1.39.0
+	// GA: v1.42.0
 	AdminKubeconfigRequest featuregate.Feature = "AdminKubeconfigRequest"
 
 	// UseDNSRecords enables using DNSRecords resources for Gardener DNS records instead of DNSProvider and DNSEntry resources.

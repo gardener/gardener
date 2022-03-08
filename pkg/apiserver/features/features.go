@@ -24,7 +24,7 @@ import (
 
 var featureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	features.SeedChange:                      {Default: false, PreRelease: featuregate.Alpha},
-	features.AdminKubeconfigRequest:          {Default: true, PreRelease: featuregate.Beta},
+	features.AdminKubeconfigRequest:          {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	features.UseDNSRecords:                   {Default: true, PreRelease: featuregate.Beta},
 	features.WorkerPoolKubernetesVersion:     {Default: false, PreRelease: featuregate.Alpha},
 	features.SecretBindingProviderValidation: {Default: false, PreRelease: featuregate.Alpha},

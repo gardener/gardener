@@ -156,7 +156,6 @@ global:
     featureGates:
       UseDNSRecords: true
       SeedChange: true
-      AdminKubeconfigRequest: true
       WorkerPoolKubernetesVersion: true
       ShootCARotation: true
     resources: {}

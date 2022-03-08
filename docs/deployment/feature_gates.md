@@ -32,8 +32,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | SeedKubeScheduler                            | `false` | `Alpha` | `1.15` |        |
 | ReversedVPN                                  | `false` | `Alpha` | `1.22` | `1.41` |
 | ReversedVPN                                  | `true`  | `Beta`  | `1.42` |        |
-| AdminKubeconfigRequest                       | `false` | `Alpha` | `1.24` | `1.38` |
-| AdminKubeconfigRequest                       | `true`  | `Beta`  | `1.39` |        |
 | UseDNSRecords                                | `false` | `Alpha` | `1.27` | `1.38` |
 | UseDNSRecords                                | `true`  | `Beta`  | `1.39` |        |
 | RotateSSHKeypairOnMaintenance                | `false` | `Alpha` | `1.28` |        |
@@ -64,6 +62,9 @@ The following tables are a summary of the feature gates that you can set on diff
 | DisallowKubeconfigRotationForShootInDeletion |         | `Removed` | `1.38` |        |
 | Logging                                      | `false` | `Alpha`   | `0.13` | `1.40` |
 | Logging                                      | `false` | `Removed` | `1.41` |        |
+| AdminKubeconfigRequest                       | `false` | `Alpha`   | `1.24` | `1.38` |
+| AdminKubeconfigRequest                       | `true`  | `Beta`    | `1.39` | `1.41` |
+| AdminKubeconfigRequest                       | `true`  | `GA`      | `1.42` |        |
 
 ## Using a feature
 
