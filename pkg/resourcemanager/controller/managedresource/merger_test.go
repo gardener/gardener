@@ -831,7 +831,11 @@ var _ = Describe("merger", func() {
 			Expect(corev1.AddToScheme(s)).ToNot(HaveOccurred(), "schema add should succeed")
 
 			old = &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{},
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"loadbalancer.openstack.org/load-balancer-id": "09199d61-4cca-4c7d-8d9c-405ba7680dbe",
+					},
+				},
 				Spec: corev1.ServiceSpec{
 					ClusterIP: "1.2.3.4",
 					Ports: []corev1.ServicePort{
@@ -849,6 +853,7 @@ var _ = Describe("merger", func() {
 			}
 
 			new = old.DeepCopy()
+			new.Annotations = map[string]string{}
 			expected = old.DeepCopy()
 		})
 
@@ -861,6 +866,7 @@ var _ = Describe("merger", func() {
 				new.Spec.Ports[0].Port = 1234
 				new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				new.Spec.Ports[0].TargetPort = intstr.FromInt(989)
+				new.Annotations = old.Annotations
 
 				expected = new.DeepCopy()
 				new.Spec.ClusterIP = ""
@@ -876,6 +882,7 @@ var _ = Describe("merger", func() {
 				new.Spec.Ports[0].Protocol = corev1.ProtocolUDP
 				new.Spec.Ports[0].Port = 999
 				new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
+				new.Annotations = old.Annotations
 
 				expected = new.DeepCopy()
 				new.Spec.ClusterIP = "5.6.7.8"
@@ -887,6 +894,7 @@ var _ = Describe("merger", func() {
 				new.Spec.Ports[0].Port = 999
 				new.Spec.Ports[0].TargetPort = intstr.FromInt(888)
 				new.Spec.Ports[0].NodePort = 444
+				new.Annotations = old.Annotations
 
 				expected = new.DeepCopy()
 			}),
@@ -901,6 +909,7 @@ var _ = Describe("merger", func() {
 				new.Spec.ClusterIP = ""
 				new.Spec.ExternalName = "foo.com"
 				new.Spec.HealthCheckNodePort = 0
+				new.Annotations = old.Annotations
 
 				expected = new.DeepCopy()
 			}),
