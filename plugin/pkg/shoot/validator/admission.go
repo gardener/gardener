@@ -453,6 +453,7 @@ func (c *validationContext) validateShootHibernation(a admission.Attributes) err
 
 	if !newIsHibernated && oldIsHibernated {
 		addInfrastructureDeploymentTask(c.shoot)
+		addDNSRecordDeploymentTasks(c.shoot)
 	}
 
 	return nil
@@ -475,19 +476,27 @@ func (c *validationContext) ensureMachineImages() error {
 func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
 	if a.GetOperation() == admission.Create {
 		addInfrastructureDeploymentTask(c.shoot)
+		addDNSRecordDeploymentTasks(c.shoot)
 	}
 
 	if !reflect.DeepEqual(c.oldShoot.Spec.Provider.InfrastructureConfig, c.shoot.Spec.Provider.InfrastructureConfig) {
 		addInfrastructureDeploymentTask(c.shoot)
 	}
 
+	if !reflect.DeepEqual(c.oldShoot.Spec.DNS, c.shoot.Spec.DNS) {
+		addDNSRecordDeploymentTasks(c.shoot)
+	}
+
 	if c.shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.ShootOperationRotateSSHKeypair {
 		addInfrastructureDeploymentTask(c.shoot)
 	}
 
-	if c.shoot.Spec.Maintenance != nil && utils.IsTrue(c.shoot.Spec.Maintenance.ConfineSpecUpdateRollout) &&
+	if c.shoot.Spec.Maintenance != nil &&
+		utils.IsTrue(c.shoot.Spec.Maintenance.ConfineSpecUpdateRollout) &&
 		!apiequality.Semantic.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) &&
-		c.shoot.Status.LastOperation != nil && c.shoot.Status.LastOperation.State == core.LastOperationStateFailed {
+		c.shoot.Status.LastOperation != nil &&
+		c.shoot.Status.LastOperation.State == core.LastOperationStateFailed {
+
 		metav1.SetMetaDataAnnotation(&c.shoot.ObjectMeta, v1beta1constants.FailedShootNeedsRetryOperation, "true")
 	}
 }
@@ -1202,8 +1211,20 @@ func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []c
 }
 
 func addInfrastructureDeploymentTask(shoot *core.Shoot) {
+	addDeploymentTasks(shoot, v1beta1constants.ShootTaskDeployInfrastructure)
+}
+
+func addDNSRecordDeploymentTasks(shoot *core.Shoot) {
+	addDeploymentTasks(shoot,
+		v1beta1constants.ShootTaskDeployDNSRecordInternal,
+		v1beta1constants.ShootTaskDeployDNSRecordExternal,
+		v1beta1constants.ShootTaskDeployDNSRecordIngress,
+	)
+}
+
+func addDeploymentTasks(shoot *core.Shoot, tasks ...string) {
 	if shoot.ObjectMeta.Annotations == nil {
 		shoot.ObjectMeta.Annotations = make(map[string]string)
 	}
-	controllerutils.AddTasks(shoot.ObjectMeta.Annotations, v1beta1constants.ShootTaskDeployInfrastructure)
+	controllerutils.AddTasks(shoot.ObjectMeta.Annotations, tasks...)
 }
