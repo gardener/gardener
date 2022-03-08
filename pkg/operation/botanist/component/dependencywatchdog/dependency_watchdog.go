@@ -343,6 +343,17 @@ func (d *dependencyWatchdog) clusterRoleRules() []rbacv1.PolicyRule {
 				Resources: []string{"pods"},
 				Verbs:     []string{"get", "list", "watch", "delete"},
 			},
+			{
+				APIGroups: []string{"coordination.k8s.io"},
+				Resources: []string{"leases"},
+				Verbs:     []string{"create"},
+			},
+			{
+				APIGroups:     []string{"coordination.k8s.io"},
+				ResourceNames: []string{"dependency-watchdog"},
+				Resources:     []string{"leases"},
+				Verbs:         []string{"get", "watch", "update"},
+			},
 		}
 
 	case RoleProbe:
@@ -361,6 +372,17 @@ func (d *dependencyWatchdog) clusterRoleRules() []rbacv1.PolicyRule {
 				APIGroups: []string{"apps"},
 				Resources: []string{"deployments", "deployments/scale"},
 				Verbs:     []string{"get", "list", "watch", "update"},
+			},
+			{
+				APIGroups: []string{"coordination.k8s.io"},
+				Resources: []string{"leases"},
+				Verbs:     []string{"create"},
+			},
+			{
+				APIGroups:     []string{"coordination.k8s.io"},
+				ResourceNames: []string{"dependency-watchdog-probe"},
+				Resources:     []string{"leases"},
+				Verbs:         []string{"get", "watch", "update"},
 			},
 		}
 	}
