@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/spf13/pflag"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
@@ -55,6 +56,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	ctrl, err := crcontroller.New(ControllerName, mgr, crcontroller.Options{
 		MaxConcurrentReconciles: 1,
 		Reconciler: &reconciler{
+			clock:        clock.RealClock{},
 			syncPeriod:   conf.SyncPeriod,
 			targetReader: conf.TargetCluster.GetAPIReader(),
 			targetWriter: conf.TargetCluster.GetClient(),

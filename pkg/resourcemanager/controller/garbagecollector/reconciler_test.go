@@ -29,6 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -43,12 +44,21 @@ var _ = Describe("Collector", func() {
 		logger logr.Logger
 		c      client.Client
 		gc     *reconciler
+
+		creationTimestamp = metav1.Date(2000, 5, 5, 5, 30, 0, 0, time.Local)
+		fakeClock         = clock.NewFakeClock(creationTimestamp.Add(minimumObjectLifetime / 2))
 	)
 
 	BeforeEach(func() {
 		logger = log.Log.WithName("test")
 		c = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()
-		gc = &reconciler{logger, 0, c, c}
+		gc = &reconciler{
+			log:          logger,
+			clock:        fakeClock,
+			syncPeriod:   0,
+			targetReader: c,
+			targetWriter: c,
+		}
 	})
 
 	Describe("#collectGarbage", func() {
@@ -77,8 +87,6 @@ var _ = Describe("Collector", func() {
 			labeledConfigMap6       *corev1.ConfigMap
 			labeledConfigMap7       *corev1.ConfigMap
 			labeledConfigMap8       *corev1.ConfigMap
-
-			creationTimestamp = metav1.Date(2000, 5, 5, 5, 30, 0, 0, time.Local)
 		)
 
 		BeforeEach(func() {
@@ -192,10 +200,6 @@ var _ = Describe("Collector", func() {
 		})
 
 		It("should delete the unused resources", func() {
-			oldNowFunc := Now
-			defer func() { Now = oldNowFunc }()
-			Now = func() time.Time { return creationTimestamp.Add(minimumObjectLifetime / 2) }
-
 			Expect(c.Create(ctx, labeledSecret1)).To(Succeed())
 			Expect(c.Create(ctx, labeledSecret1System)).To(Succeed())
 			Expect(c.Create(ctx, labeledSecret2)).To(Succeed())
