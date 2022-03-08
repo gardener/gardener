@@ -19,8 +19,8 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/api/core"
 	"github.com/gardener/gardener/pkg/api/extensions"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/utils/version"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -63,8 +63,8 @@ func AddTypePredicate(predicates []predicate.Predicate, extensionTypes ...string
 
 // HasPurpose filters the incoming Controlplanes  for the given spec.purpose
 func HasPurpose(purpose extensionsv1alpha1.Purpose) predicate.Predicate {
-	return predicateutils.FromMapper(predicateutils.MapperFunc(func(e event.GenericEvent) bool {
-		controlPlane, ok := e.Object.(*extensionsv1alpha1.ControlPlane)
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		controlPlane, ok := obj.(*extensionsv1alpha1.ControlPlane)
 		if !ok {
 			return false
 		}
@@ -79,7 +79,7 @@ func HasPurpose(purpose extensionsv1alpha1.Purpose) predicate.Predicate {
 		}
 
 		return *controlPlane.Spec.Purpose == purpose
-	}), predicateutils.CreateTrigger, predicateutils.UpdateNewTrigger, predicateutils.DeleteTrigger, predicateutils.GenericTrigger)
+	})
 }
 
 // ClusterShootProviderType is a predicate for the provider type of the shoot in the cluster resource.
