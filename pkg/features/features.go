@@ -139,3 +139,37 @@ const (
 	// alpha: v1.42.0
 	ShootCARotation featuregate.Feature = "ShootCARotation"
 )
+
+var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
+	HVPA:                          {Default: false, PreRelease: featuregate.Alpha},
+	HVPAForShootedSeed:            {Default: false, PreRelease: featuregate.Alpha},
+	ManagedIstio:                  {Default: true, PreRelease: featuregate.Beta},
+	APIServerSNI:                  {Default: true, PreRelease: featuregate.Beta},
+	CachedRuntimeClients:          {Default: true, PreRelease: featuregate.Beta},
+	SeedChange:                    {Default: false, PreRelease: featuregate.Alpha},
+	SeedKubeScheduler:             {Default: false, PreRelease: featuregate.Alpha},
+	ReversedVPN:                   {Default: true, PreRelease: featuregate.Beta},
+	AdminKubeconfigRequest:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	UseDNSRecords:                 {Default: true, PreRelease: featuregate.Beta},
+	RotateSSHKeypairOnMaintenance: {Default: false, PreRelease: featuregate.Alpha},
+	DenyInvalidExtensionResources: {Default: true, PreRelease: featuregate.Beta},
+	WorkerPoolKubernetesVersion:   {Default: false, PreRelease: featuregate.Alpha},
+	CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
+	SecretBindingProviderValidation:            {Default: false, PreRelease: featuregate.Alpha},
+	ForceRestore:                               {Default: false, PreRelease: featuregate.Alpha},
+	DisableDNSProviderManagement:               {Default: false, PreRelease: featuregate.Alpha},
+	ShootCARotation:                            {Default: false, PreRelease: featuregate.Alpha},
+}
+
+// GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
+func GetFeatures(featureGates ...featuregate.Feature) map[featuregate.Feature]featuregate.FeatureSpec {
+	out := make(map[featuregate.Feature]featuregate.FeatureSpec)
+
+	for _, fg := range featureGates {
+		if spec, ok := allFeatureGates[fg]; ok {
+			out[fg] = spec
+		}
+	}
+
+	return out
+}
