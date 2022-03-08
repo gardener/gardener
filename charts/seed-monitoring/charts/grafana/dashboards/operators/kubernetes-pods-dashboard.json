@@ -6,9 +6,103 @@
   "gnetId": null,
   "graphTooltip": 1,
   "id": 24,
-  "iteration": 1591170710914,
+  "iteration": 1646746905974,
   "links": [],
   "panels": [
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 8,
+      "links": [
+        {
+          "title": "$node",
+          "url": "/d/node-details/node-details?var-Node=${node:queryparam}"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {},
+        "textMode": "name"
+      },
+      "pluginVersion": "7.2.1",
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "kube_pod_info{pod=\"$pod\"}",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        },
+        {
+          "exemplar": true,
+          "expr": "kube_pod_info{pod=\"$pod\"}",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{pod_ip}}",
+          "refId": "B"
+        },
+        {
+          "exemplar": true,
+          "expr": "kube_pod_info{pod=\"$pod\"}",
+          "format": "time_series",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{node}}",
+          "refId": "C"
+        },
+        {
+          "exemplar": true,
+          "expr": "kube_pod_info{pod=\"$pod\"}",
+          "hide": false,
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{host_ip}}",
+          "refId": "D"
+        }
+      ],
+      "type": "stat"
+    },
     {
       "aliasColors": {},
       "bars": false,
@@ -31,7 +125,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 2
       },
       "hiddenSeries": false,
       "id": 1,
@@ -161,7 +255,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 7
+        "y": 9
       },
       "hiddenSeries": false,
       "id": 2,
@@ -303,7 +397,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 14
+        "y": 16
       },
       "hiddenSeries": false,
       "id": 3,
@@ -416,7 +510,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 23
       },
       "hiddenSeries": false,
       "id": 4,
@@ -525,7 +619,7 @@
         "h": 21,
         "w": 24,
         "x": 0,
-        "y": 28
+        "y": 30
       },
       "id": 6,
       "maxDataPoints": "",
@@ -657,6 +751,38 @@
         "query": "",
         "skipUrlSync": false,
         "type": "textbox"
+      },
+      {
+        "allValue": null,
+        "datasource": null,
+        "definition": "label_values(kube_pod_info{pod=\"$pod\"}, node)",
+        "description": null,
+        "error": null,
+        "hide": 2,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "node",
+        "options": [
+          {
+            "selected": true,
+            "text": "",
+            "value": ""
+          }
+        ],
+        "query": {
+          "query": "label_values(kube_pod_info{pod=\"$pod\"}, node)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 0,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
       }
     ]
   },
