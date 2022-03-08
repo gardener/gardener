@@ -256,8 +256,6 @@ function kubelet_monitoring {
   last_kubelet_ready_state="True"
 
   while [ 1 ]; do
-    node_name="$(cat "/var/lib/kubelet/nodename")"
-
     # Check whether the kubelet's /healthz endpoint reports unhealthiness
     if ! output=$(curl -m $max_seconds -f -s -S http://127.0.0.1:10248/healthz 2>&1); then
       echo $output
@@ -267,7 +265,12 @@ function kubelet_monitoring {
       continue
     fi
 
+    node_name=
+    if [[ ! -s "/var/lib/kubelet/nodename" ]]; then
+      node_name="$(cat "/var/lib/kubelet/nodename")"
+    fi
     if [[ -z "$node_name" ]]; then
+      echo "Node name is not known yet, waiting..."
       sleep 20
       continue
     fi

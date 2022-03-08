@@ -175,7 +175,7 @@ fi
 NODENAME=
 if [[ -s "{{ .pathNodeName }}" ]]; then
   NODENAME="$(cat "{{ .pathNodeName }}")"
-else
+elif [[ -f "{{ .pathKubeletKubeconfigReal }}" ]]; then
   {{`NODENAME="$(`}}{{ .pathBinaries }}{{`/kubectl --kubeconfig="`}}{{ .pathKubeletKubeconfigReal }}{{`" get node -l "kubernetes.io/hostname=$(hostname | tr '[:upper:]' '[:lower:]')" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ end }}")"`}}
   echo "$NODENAME" > "{{ .pathNodeName }}"
 fi

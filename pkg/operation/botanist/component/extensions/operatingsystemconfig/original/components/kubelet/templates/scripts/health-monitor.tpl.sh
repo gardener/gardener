@@ -37,8 +37,6 @@ function kubelet_monitoring {
   last_kubelet_ready_state="True"
 
   while [ 1 ]; do
-    node_name="$(cat "{{ .pathNodeName }}")"
-
     # Check whether the kubelet's /healthz endpoint reports unhealthiness
     if ! output=$(curl -m $max_seconds -f -s -S http://127.0.0.1:10248/healthz 2>&1); then
       echo $output
@@ -48,7 +46,12 @@ function kubelet_monitoring {
       continue
     fi
 
+    node_name=
+    if [[ ! -s "{{ .pathNodeName }}" ]]; then
+      node_name="$(cat "{{ .pathNodeName }}")"
+    fi
     if [[ -z "$node_name" ]]; then
+      echo "Node name is not known yet, waiting..."
       sleep 20
       continue
     fi
