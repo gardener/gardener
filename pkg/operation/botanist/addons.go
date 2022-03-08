@@ -26,6 +26,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	netpol "github.com/gardener/gardener/pkg/operation/botanist/addons/networkpolicy"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
@@ -136,11 +137,13 @@ func (b *Botanist) NeedsIngressDNS() bool {
 // DefaultIngressDNSRecord creates the default deployer for the ingress DNSRecord resource.
 func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
-		Name:       b.Shoot.GetInfo().Name + "-" + common.ShootDNSIngressName,
-		SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
-		Namespace:  b.Shoot.SeedNamespace,
-		TTL:        b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+		Name:              b.Shoot.GetInfo().Name + "-" + common.ShootDNSIngressName,
+		SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
+		Namespace:         b.Shoot.SeedNamespace,
+		TTL:               b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordIngress) || b.isRestorePhase(),
 	}
+
 	// Set component values even if the nginx-ingress addons is not enabled.
 	if b.NeedsExternalDNS() {
 		values.Type = b.Shoot.ExternalDomain.Provider
@@ -150,6 +153,7 @@ func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 		values.SecretData = b.Shoot.ExternalDomain.SecretData
 		values.DNSName = b.Shoot.GetIngressFQDN("*")
 	}
+
 	return extensionsdnsrecord.New(
 		b.Logger,
 		b.K8sSeedClient.Client(),

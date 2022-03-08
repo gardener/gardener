@@ -18,24 +18,26 @@ import (
 	"context"
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	extensionsdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DefaultExternalDNSRecord creates the default deployer for the external DNSRecord resource.
 func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
-		Name:       b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
-		SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
-		Namespace:  b.Shoot.SeedNamespace,
-		TTL:        b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+		Name:              b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
+		SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
+		Namespace:         b.Shoot.SeedNamespace,
+		TTL:               b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordExternal) || b.isRestorePhase(),
 	}
 
 	if b.NeedsExternalDNS() {
@@ -60,10 +62,14 @@ func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 // DefaultInternalDNSRecord creates the default deployer for the internal DNSRecord resource.
 func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
-		Name:       b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
-		SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
-		Namespace:  b.Shoot.SeedNamespace,
-		TTL:        b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+		Name:                         b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
+		SecretName:                   DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
+		Namespace:                    b.Shoot.SeedNamespace,
+		TTL:                          b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+		ReconcileOnlyOnChangeOrError: b.Shoot.GetInfo().DeletionTimestamp != nil,
+		AnnotateOperation: b.Shoot.GetInfo().DeletionTimestamp != nil ||
+			controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordInternal) ||
+			b.isRestorePhase(),
 	}
 
 	if b.NeedsInternalDNS() {
@@ -93,6 +99,7 @@ func (b *Botanist) DefaultOwnerDNSRecord() extensionsdnsrecord.Interface {
 		Namespace:                    b.Shoot.SeedNamespace,
 		TTL:                          b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 		ReconcileOnlyOnChangeOrError: true, // avoid competing reconciliations during the control plane migration "bad case" scenario
+		AnnotateOperation:            true,
 	}
 
 	if b.NeedsInternalDNS() {

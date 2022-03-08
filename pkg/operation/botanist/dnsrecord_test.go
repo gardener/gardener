@@ -19,21 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang/mock/gomock"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/version"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -48,9 +33,25 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	mockdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord/mock"
 	"github.com/gardener/gardener/pkg/operation/garden"
+	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+
+	"github.com/golang/mock/gomock"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/version"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 const (
@@ -82,9 +83,10 @@ var _ = Describe("dnsrecord", func() {
 
 		b *Botanist
 
-		ctx     = context.TODO()
-		now     = time.Now()
-		testErr = fmt.Errorf("test")
+		ctx                 = context.TODO()
+		now                 = time.Now()
+		testErr             = fmt.Errorf("test")
+		seedClusterIdentity = "seed1"
 
 		cleanup func()
 	)
@@ -144,6 +146,7 @@ var _ = Describe("dnsrecord", func() {
 						},
 					},
 				},
+				Seed:   &seed.Seed{},
 				Logger: logrus.NewEntry(logger.NewNopLogger()),
 			},
 		}
@@ -156,6 +159,12 @@ var _ = Describe("dnsrecord", func() {
 				DNS: &gardencorev1beta1.DNS{
 					Domain: pointer.String(externalDomain),
 				},
+			},
+		})
+
+		b.Seed.SetInfo(&gardencorev1beta1.Seed{
+			Status: gardencorev1beta1.SeedStatus{
+				ClusterIdentity: &seedClusterIdentity,
 			},
 		})
 
@@ -173,7 +182,7 @@ var _ = Describe("dnsrecord", func() {
 		ctrl.Finish()
 	})
 
-	Context("DefaultExternalDNSRecord", func() {
+	Describe("#DefaultExternalDNSRecord", func() {
 		It("should create a component with correct values", func() {
 			r := b.DefaultExternalDNSRecord()
 			r.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
@@ -190,13 +199,39 @@ var _ = Describe("dnsrecord", func() {
 				SecretData: map[string][]byte{
 					"external-foo": []byte("external-bar"),
 				},
-				DNSName:    "api." + externalDomain,
-				RecordType: extensionsv1alpha1.DNSRecordTypeA,
-				Values:     []string{address},
+				DNSName:           "api." + externalDomain,
+				RecordType:        extensionsv1alpha1.DNSRecordTypeA,
+				Values:            []string{address},
+				AnnotateOperation: false,
 			}))
 		})
 
+		DescribeTable("should set AnnotateOperation value to true",
+			func(mutateShootFn func()) {
+				mutateShootFn()
+
+				c := b.DefaultExternalDNSRecord()
+
+				Expect(c.GetValues().AnnotateOperation).To(BeTrue())
+			},
+
+			Entry("task annotation present", func() {
+				shoot := b.Shoot.GetInfo()
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "shoot.gardener.cloud/tasks", "deployDNSRecordExternal")
+				b.Shoot.SetInfo(shoot)
+			}),
+			Entry("restore phase", func() {
+				shoot := b.Shoot.GetInfo()
+				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeRestore}
+				b.Shoot.SetInfo(shoot)
+			}),
+		)
+
 		It("should create a component that creates the DNSRecord and its secret on Deploy", func() {
+			shoot := b.Shoot.GetInfo()
+			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "shoot.gardener.cloud/tasks", "deployDNSRecordExternal")
+			b.Shoot.SetInfo(shoot)
+
 			r := b.DefaultExternalDNSRecord()
 			r.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
 			r.SetValues([]string{address})
@@ -257,7 +292,7 @@ var _ = Describe("dnsrecord", func() {
 		})
 	})
 
-	Context("DefaultInternalDNSRecord", func() {
+	Describe("#DefaultInternalDNSRecord", func() {
 		It("should create a component with correct values", func() {
 			c := b.DefaultInternalDNSRecord()
 			c.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
@@ -274,13 +309,44 @@ var _ = Describe("dnsrecord", func() {
 				SecretData: map[string][]byte{
 					"internal-foo": []byte("internal-bar"),
 				},
-				DNSName:    "api." + internalDomain,
-				RecordType: extensionsv1alpha1.DNSRecordTypeA,
-				Values:     []string{address},
+				DNSName:           "api." + internalDomain,
+				RecordType:        extensionsv1alpha1.DNSRecordTypeA,
+				Values:            []string{address},
+				AnnotateOperation: false,
 			}))
 		})
 
+		DescribeTable("should set AnnotateOperation value to true",
+			func(mutateShootFn func()) {
+				mutateShootFn()
+
+				c := b.DefaultInternalDNSRecord()
+
+				Expect(c.GetValues().AnnotateOperation).To(BeTrue())
+			},
+
+			Entry("shoot deletion", func() {
+				shoot := b.Shoot.GetInfo()
+				shoot.DeletionTimestamp = &metav1.Time{}
+				b.Shoot.SetInfo(shoot)
+			}),
+			Entry("task annotation present", func() {
+				shoot := b.Shoot.GetInfo()
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "shoot.gardener.cloud/tasks", "deployDNSRecordInternal")
+				b.Shoot.SetInfo(shoot)
+			}),
+			Entry("restore phase", func() {
+				shoot := b.Shoot.GetInfo()
+				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeRestore}
+				b.Shoot.SetInfo(shoot)
+			}),
+		)
+
 		It("should create a component that creates the DNSRecord and its secret on Deploy", func() {
+			shoot := b.Shoot.GetInfo()
+			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "shoot.gardener.cloud/tasks", "deployDNSRecordInternal")
+			b.Shoot.SetInfo(shoot)
+
 			r := b.DefaultInternalDNSRecord()
 			r.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
 			r.SetValues([]string{address})
@@ -337,6 +403,27 @@ var _ = Describe("dnsrecord", func() {
 				Data: map[string][]byte{
 					"internal-foo": []byte("internal-bar"),
 				},
+			}))
+		})
+	})
+
+	Describe("#DefaultOwnerDNSRecord", func() {
+		It("should create a component with correct values", func() {
+			c := b.DefaultOwnerDNSRecord()
+
+			Expect(c.GetValues()).To(DeepEqual(&dnsrecord.Values{
+				Name:                         b.Shoot.GetInfo().Name + "-owner",
+				SecretName:                   DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
+				Namespace:                    seedNamespace,
+				DNSName:                      "owner." + internalDomain,
+				RecordType:                   "TXT",
+				Values:                       []string{seedClusterIdentity},
+				SecretData:                   b.Garden.InternalDomain.SecretData,
+				Zone:                         &b.Garden.InternalDomain.Zone,
+				TTL:                          pointer.Int64(ttl),
+				Type:                         internalProvider,
+				ReconcileOnlyOnChangeOrError: true,
+				AnnotateOperation:            true,
 			}))
 		})
 	})

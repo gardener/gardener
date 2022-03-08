@@ -170,13 +170,23 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Dependencies: flow.NewTaskIDs(ensureShootStateExists, deployReferencedResources),
 		})
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
-			Name:         "Deploying internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployInternalDNSResources).DoIf(!o.Shoot.HibernationEnabled),
+			Name: "Deploying internal domain DNS record",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				if err := botanist.DeployInternalDNSResources(ctx); err != nil {
+					return err
+				}
+				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskDeployDNSRecordInternal)
+			}).DoIf(!o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady, deployOwnerDomainDNSRecord),
 		})
 		deployExternalDomainDNSRecord = g.Add(flow.Task{
-			Name:         "Deploying external domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployExternalDNSResources).DoIf(!o.Shoot.HibernationEnabled),
+			Name: "Deploying external domain DNS record",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				if err := botanist.DeployExternalDNSResources(ctx); err != nil {
+					return err
+				}
+				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskDeployDNSRecordExternal)
+			}).DoIf(!o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady, deployOwnerDomainDNSRecord),
 		})
 		deployInfrastructure = g.Add(flow.Task{
@@ -496,8 +506,13 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Dependencies: flow.NewTaskIDs(deployManagedResourcesForAddons, initializeShootClients, waitUntilWorkerReady, ensureShootClusterIdentity),
 		})
 		deployIngressDomainDNSRecord = g.Add(flow.Task{
-			Name:         "Deploying nginx ingress DNS record",
-			Fn:           flow.TaskFn(botanist.DeployIngressDNSResources).DoIf(!o.Shoot.HibernationEnabled),
+			Name: "Deploying nginx ingress DNS record",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				if err := botanist.DeployIngressDNSResources(ctx); err != nil {
+					return err
+				}
+				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskDeployDNSRecordIngress)
+			}).DoIf(!o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(nginxLBReady),
 		})
 		_ = g.Add(flow.Task{

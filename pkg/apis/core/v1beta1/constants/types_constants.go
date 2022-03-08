@@ -247,6 +247,15 @@ const (
 	// ShootTaskDeployInfrastructure is a name for a Shoot's infrastructure deployment task. It indicates that the
 	// Infrastructure extension resource shall be reconciled.
 	ShootTaskDeployInfrastructure = "deployInfrastructure"
+	// ShootTaskDeployDNSRecordInternal is a name for a Shoot's internal DNS record deployment task. It indicates that
+	// the internal DNSRecord extension resources shall be reconciled.
+	ShootTaskDeployDNSRecordInternal = "deployDNSRecordInternal"
+	// ShootTaskDeployDNSRecordExternal is a name for a Shoot's external DNS record deployment task. It indicates that
+	// the external DNSRecord extension resources shall be reconciled.
+	ShootTaskDeployDNSRecordExternal = "deployDNSRecordExternal"
+	// ShootTaskDeployDNSRecordIngress is a name for a Shoot's ingress DNS record deployment task. It indicates that
+	// the ingress DNSRecord extension resources shall be reconciled.
+	ShootTaskDeployDNSRecordIngress = "deployDNSRecordIngress"
 	// ShootTaskRestartControlPlanePods is a name for a Shoot task which is dedicated to restart related control plane pods.
 	ShootTaskRestartControlPlanePods = "restartControlPlanePods"
 	// ShootTaskRestartCoreAddons is a name for a Shoot task which is dedicated to restart some core addons.
