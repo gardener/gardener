@@ -43,8 +43,12 @@ type ControllerOptions struct {
 
 // ControllerConfig is the completed configuration for the controller.
 type ControllerConfig struct {
-	SyncPeriod    time.Duration
+	// SyncPeriod is the period how often the controller should check whether garbage can be collected.
+	SyncPeriod time.Duration
+	// TargetCluster is the target cluster.
 	TargetCluster cluster.Cluster
+	// MinimumObjectLifetime is the duration how long an object must exist before the garbage collector considers it.
+	MinimumObjectLifetime time.Duration
 }
 
 // AddToManagerWithOptions adds the controller to a Manager with the given config.
@@ -56,10 +60,11 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	ctrl, err := crcontroller.New(ControllerName, mgr, crcontroller.Options{
 		MaxConcurrentReconciles: 1,
 		Reconciler: &reconciler{
-			clock:        clock.RealClock{},
-			syncPeriod:   conf.SyncPeriod,
-			targetReader: conf.TargetCluster.GetAPIReader(),
-			targetWriter: conf.TargetCluster.GetClient(),
+			clock:                 clock.RealClock{},
+			syncPeriod:            conf.SyncPeriod,
+			targetReader:          conf.TargetCluster.GetAPIReader(),
+			targetWriter:          conf.TargetCluster.GetClient(),
+			minimumObjectLifetime: conf.MinimumObjectLifetime,
 		},
 		RecoverPanic: true,
 	})
@@ -89,7 +94,8 @@ func (o *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
 // Complete completes the given command line flags and set the defaultControllerConfig accordingly.
 func (o *ControllerOptions) Complete() error {
 	defaultControllerConfig = ControllerConfig{
-		SyncPeriod: o.syncPeriod,
+		SyncPeriod:            o.syncPeriod,
+		MinimumObjectLifetime: 10 * time.Minute,
 	}
 	return nil
 }

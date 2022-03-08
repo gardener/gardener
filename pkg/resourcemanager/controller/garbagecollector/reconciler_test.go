@@ -45,19 +45,21 @@ var _ = Describe("Collector", func() {
 		c      client.Client
 		gc     *reconciler
 
-		creationTimestamp = metav1.Date(2000, 5, 5, 5, 30, 0, 0, time.Local)
-		fakeClock         = clock.NewFakeClock(creationTimestamp.Add(minimumObjectLifetime / 2))
+		minimumObjectLifetime = time.Minute
+		creationTimestamp     = metav1.Date(2000, 5, 5, 5, 30, 0, 0, time.Local)
+		fakeClock             = clock.NewFakeClock(creationTimestamp.Add(minimumObjectLifetime / 2))
 	)
 
 	BeforeEach(func() {
 		logger = log.Log.WithName("test")
 		c = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 		gc = &reconciler{
-			log:          logger,
-			clock:        fakeClock,
-			syncPeriod:   0,
-			targetReader: c,
-			targetWriter: c,
+			log:                   logger,
+			clock:                 fakeClock,
+			syncPeriod:            0,
+			targetReader:          c,
+			targetWriter:          c,
+			minimumObjectLifetime: minimumObjectLifetime,
 		}
 	})
 
