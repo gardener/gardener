@@ -21,7 +21,6 @@ import (
 	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -86,7 +85,7 @@ var _ = Describe("DependencyWatchdog", func() {
 						ScaleUpDelaySeconds: pointer.Int32(60),
 						ScaleRefDependsOn: []autoscalingv1.CrossVersionObjectReference{
 							{
-								APIVersion: appsv1.SchemeGroupVersion.String(),
+								APIVersion: "apps/v1",
 								Kind:       "Deployment",
 								Name:       "kube-controller-manager",
 							},
@@ -100,7 +99,7 @@ var _ = Describe("DependencyWatchdog", func() {
 						},
 						ScaleRefDependsOn: []autoscalingv1.CrossVersionObjectReference{
 							{
-								APIVersion: appsv1.SchemeGroupVersion.String(),
+								APIVersion: "apps/v1",
 								Kind:       "Deployment",
 								Name:       "machine-controller-manager",
 							},

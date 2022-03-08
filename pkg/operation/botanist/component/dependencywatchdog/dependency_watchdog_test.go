@@ -99,6 +99,22 @@ rules:`
   - list
   - watch
   - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resourceNames:
+  - dependency-watchdog
+  resources:
+  - leases
+  verbs:
+  - get
+  - watch
+  - update
 `
 					}
 
