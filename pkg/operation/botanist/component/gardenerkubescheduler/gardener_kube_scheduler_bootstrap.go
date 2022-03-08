@@ -24,6 +24,8 @@ import (
 	schedulerconfigv18 "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/v18"
 	schedulerconfigv19 "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/v19"
 	schedulerconfigv20 "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/v20"
+	schedulerconfigv21 "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/v21"
+	schedulerconfigv22 "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/v22"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -31,9 +33,12 @@ import (
 	schedulerconfigv18v1alpha2 "github.com/gardener/gardener/third_party/kube-scheduler/v18/v1alpha2"
 	schedulerconfigv19v1beta1 "github.com/gardener/gardener/third_party/kube-scheduler/v19/v1beta1"
 	schedulerconfigv20v1beta1 "github.com/gardener/gardener/third_party/kube-scheduler/v20/v1beta1"
+	schedulerconfigv21v1beta1 "github.com/gardener/gardener/third_party/kube-scheduler/v21/v1beta1"
+	schedulerconfigv22v1beta2 "github.com/gardener/gardener/third_party/kube-scheduler/v22/v1beta2"
 
 	"github.com/Masterminds/semver"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -97,11 +102,7 @@ func Bootstrap(
 				},
 			}},
 		})
-	case version.ConstraintK8sEqual120.Check(seedVersion),
-		version.ConstraintK8sEqual121.Check(seedVersion),
-		// Kubernetes 1.22 already has a v1beta2 API which we cannot use here
-		// because plugins NodeResourcesLeastAllocated and NodeResourcesMostAllocated have been removed in this version.
-		version.ConstraintK8sEqual122.Check(seedVersion):
+	case version.ConstraintK8sEqual120.Check(seedVersion):
 		config, err = schedulerconfigv20.NewConfigurator(Name, Name, &schedulerconfigv20v1beta1.KubeSchedulerConfiguration{
 			Profiles: []schedulerconfigv20v1beta1.KubeSchedulerProfile{{
 				SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
@@ -113,6 +114,48 @@ func Bootstrap(
 						},
 						Enabled: []schedulerconfigv20v1beta1.Plugin{
 							{Name: "NodeResourcesMostAllocated"},
+						},
+					},
+				},
+			}},
+		})
+	case version.ConstraintK8sEqual121.Check(seedVersion):
+		config, err = schedulerconfigv21.NewConfigurator(Name, Name, &schedulerconfigv21v1beta1.KubeSchedulerConfiguration{
+			Profiles: []schedulerconfigv21v1beta1.KubeSchedulerProfile{{
+				SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
+				Plugins: &schedulerconfigv21v1beta1.Plugins{
+					Score: &schedulerconfigv21v1beta1.PluginSet{
+						Disabled: []schedulerconfigv21v1beta1.Plugin{
+							{Name: "NodeResourcesLeastAllocated"},
+							{Name: "NodeResourcesBalancedAllocation"},
+						},
+						Enabled: []schedulerconfigv21v1beta1.Plugin{
+							{Name: "NodeResourcesMostAllocated"},
+						},
+					},
+				},
+			}},
+		})
+	case version.ConstraintK8sEqual122.Check(seedVersion):
+		config, err = schedulerconfigv22.NewConfigurator(Name, Name, &schedulerconfigv22v1beta2.KubeSchedulerConfiguration{
+			Profiles: []schedulerconfigv22v1beta2.KubeSchedulerProfile{{
+				SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
+				PluginConfig: []schedulerconfigv22v1beta2.PluginConfig{
+					{
+						Name: "NodeResourcesFit",
+						Args: runtime.RawExtension{
+							Object: &schedulerconfigv22v1beta2.NodeResourcesFitArgs{
+								ScoringStrategy: &schedulerconfigv22v1beta2.ScoringStrategy{
+									Type: schedulerconfigv22v1beta2.MostAllocated,
+								},
+							},
+						},
+					},
+				},
+				Plugins: &schedulerconfigv22v1beta2.Plugins{
+					Score: schedulerconfigv22v1beta2.PluginSet{
+						Disabled: []schedulerconfigv22v1beta2.Plugin{
+							{Name: "NodeResourcesBalancedAllocation"},
 						},
 					},
 				},
