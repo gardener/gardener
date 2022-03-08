@@ -58,10 +58,10 @@ func (f *GardenClientSetFactory) CalculateClientSetHash(context.Context, clientm
 }
 
 // NewClientSet creates a new ClientSet to the garden cluster.
-func (f *GardenClientSetFactory) NewClientSet(_ context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, error) {
+func (f *GardenClientSetFactory) NewClientSet(_ context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, string, error) {
 	_, ok := k.(GardenClientSetKey)
 	if !ok {
-		return nil, fmt.Errorf("unsupported ClientSetKey: expected %T got %T", GardenClientSetKey{}, k)
+		return nil, "", fmt.Errorf("unsupported ClientSetKey: expected %T got %T", GardenClientSetKey{}, k)
 	}
 
 	configFns := []kubernetes.ConfigFunc{
@@ -84,7 +84,12 @@ func (f *GardenClientSetFactory) NewClientSet(_ context.Context, k clientmap.Cli
 		))
 	}
 
-	return NewClientSetWithConfig(configFns...)
+	clientSet, err := NewClientSetWithConfig(configFns...)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return clientSet, "", nil
 }
 
 // GardenClientSetKey is a ClientSetKey for the garden cluster.
