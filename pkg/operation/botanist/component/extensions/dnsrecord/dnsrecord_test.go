@@ -96,11 +96,12 @@ var _ = Describe("DNSRecord", func() {
 			SecretData: map[string][]byte{
 				"foo": []byte("bar"),
 			},
-			Zone:       pointer.String(zone),
-			DNSName:    dnsName,
-			RecordType: extensionsv1alpha1.DNSRecordTypeA,
-			Values:     []string{address},
-			TTL:        pointer.Int64(ttl),
+			Zone:              pointer.String(zone),
+			DNSName:           dnsName,
+			RecordType:        extensionsv1alpha1.DNSRecordTypeA,
+			Values:            []string{address},
+			TTL:               pointer.Int64(ttl),
+			AnnotateOperation: true,
 		}
 
 		dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
@@ -199,6 +200,46 @@ var _ = Describe("DNSRecord", func() {
 			}))
 		})
 
+		It("should deploy the DNSRecord resource and its secret without operation annotation", func() {
+			values.AnnotateOperation = false
+			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
+
+			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+
+			deployedDNS := &extensionsv1alpha1.DNSRecord{}
+			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
+					Kind:       extensionsv1alpha1.DNSRecordResource,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            name,
+					Namespace:       namespace,
+					ResourceVersion: "1",
+				},
+				Spec: dns.Spec,
+			}))
+
+			deployedSecret := &corev1.Secret{}
+			err = c.Get(ctx, client.ObjectKey{Name: secretName, Namespace: namespace}, deployedSecret)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(deployedSecret).To(DeepEqual(&corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Secret",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            secretName,
+					Namespace:       namespace,
+					ResourceVersion: "1",
+				},
+				Type: corev1.SecretTypeOpaque,
+				Data: secret.Data,
+			}))
+		})
+
 		It("should fail if creating the DNSRecord resource failed", func() {
 			mc := mockclient.NewMockClient(ctrl)
 			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(secret), gomock.AssignableToTypeOf(&corev1.Secret{})).
@@ -220,11 +261,11 @@ var _ = Describe("DNSRecord", func() {
 			Expect(dnsRecord.Deploy(ctx)).To(MatchError(testErr))
 		})
 
-		Context("When ReconcileOnChange is true", func() {
+		Context("When ReconcileOnlyOnChangeOrError is true", func() {
 			var expectedDNSRecord *extensionsv1alpha1.DNSRecord
 
 			BeforeEach(func() {
-				values.ReconcileOnChange = true
+				values.ReconcileOnlyOnChangeOrError = true
 
 				expectedDNSRecord = &extensionsv1alpha1.DNSRecord{
 					TypeMeta: metav1.TypeMeta{
