@@ -32,14 +32,14 @@ var logger = log.Log.WithName("predicate")
 // HasType filters the incoming OperatingSystemConfigs for ones that have the same type
 // as the given type.
 func HasType(typeName string) predicate.Predicate {
-	return predicateutils.FromMapper(predicateutils.MapperFunc(func(e event.GenericEvent) bool {
-		acc, err := extensions.Accessor(e.Object)
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		acc, err := extensions.Accessor(obj)
 		if err != nil {
 			return false
 		}
 
 		return acc.GetExtensionSpec().GetExtensionType() == typeName
-	}), predicateutils.CreateTrigger, predicateutils.UpdateNewTrigger, predicateutils.DeleteTrigger, predicateutils.GenericTrigger)
+	})
 }
 
 // AddTypePredicate returns a new slice which contains a type predicate and the given `predicates`.
