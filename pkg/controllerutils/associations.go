@@ -21,7 +21,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -91,36 +90,6 @@ func DetermineSecretBindingAssociations(ctx context.Context, c client.Client, qu
 // to seed with name <seedName>
 func DetermineBackupBucketAssociations(ctx context.Context, c client.Client, seedName string) ([]string, error) {
 	return determineAssociations(ctx, c, &gardencorev1beta1.BackupBucketList{}, client.MatchingFields{core.BackupBucketSeedName: seedName})
-}
-
-// DetermineBackupEntryAssociations determine the BackupEntry resources which are associated
-// to seed with name <seedName>
-func DetermineBackupEntryAssociations(ctx context.Context, c client.Client, seedName string) ([]string, error) {
-	return determineAssociations(ctx, c, seedName, &gardencorev1beta1.BackupEntryList{}, func(o runtime.Object) (string, error) {
-		backupEntry, ok := o.(*gardencorev1beta1.BackupEntry)
-		if !ok {
-			return "", fmt.Errorf("got unexpected object when expecting BackupEntry")
-		}
-		if backupEntry.Spec.SeedName == nil {
-			return "", nil
-		}
-		return *backupEntry.Spec.SeedName, nil
-	})
-}
-
-// DetermineBastionAssociations determine the Bastion resources which are associated
-// to seed with name <seedName>
-func DetermineBastionAssociations(ctx context.Context, c client.Client, seedName string) ([]string, error) {
-	return determineAssociations(ctx, c, seedName, &gardenoperationsv1alpha1.BastionList{}, func(o runtime.Object) (string, error) {
-		bastion, ok := o.(*gardenoperationsv1alpha1.Bastion)
-		if !ok {
-			return "", fmt.Errorf("got unexpected object when expecting Bastion")
-		}
-		if bastion.Spec.SeedName == nil {
-			return "", nil
-		}
-		return *bastion.Spec.SeedName, nil
-	})
 }
 
 // DetermineControllerInstallationAssociations determine the ControllerInstallation resources which are associated
