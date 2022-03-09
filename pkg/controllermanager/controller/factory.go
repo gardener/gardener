@@ -237,5 +237,28 @@ func addAllFieldIndexes(ctx context.Context, indexer client.FieldIndexer) error 
 		return fmt.Errorf("failed to add indexer to Bastion Informer: %w", err)
 	}
 
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.BackupBucket{}, gardencore.BackupBucketSeedName, func(obj client.Object) []string {
+		backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
+		if !ok {
+			return []string{""}
+		}
+		if backupBucket.Spec.SeedName == nil {
+			return []string{""}
+		}
+		return []string{*backupBucket.Spec.SeedName}
+	}); err != nil {
+		return fmt.Errorf("failed to add indexer to BackupBucket Informer: %w", err)
+	}
+
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.ControllerInstallation{}, gardencore.SeedRefName, func(obj client.Object) []string {
+		controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
+		if !ok {
+			return []string{""}
+		}
+		return []string{controllerInstallation.Spec.SeedRef.Name}
+	}); err != nil {
+		return fmt.Errorf("failed to add indexer to ControllerInstallation Informer: %w", err)
+	}
+
 	return nil
 }
