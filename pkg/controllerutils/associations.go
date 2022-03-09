@@ -18,13 +18,14 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DetermineShootsAssociatedTo gets a <shootLister> to determine the Shoots resources which are associated
@@ -89,16 +90,7 @@ func DetermineSecretBindingAssociations(ctx context.Context, c client.Client, qu
 // DetermineBackupBucketAssociations determine the BackupBucket resources which are associated
 // to seed with name <seedName>
 func DetermineBackupBucketAssociations(ctx context.Context, c client.Client, seedName string) ([]string, error) {
-	return determineAssociations(ctx, c, seedName, &gardencorev1beta1.BackupBucketList{}, func(o runtime.Object) (string, error) {
-		backupBucket, ok := o.(*gardencorev1beta1.BackupBucket)
-		if !ok {
-			return "", fmt.Errorf("got unexpected object when expecting BackupBucket")
-		}
-		if backupBucket.Spec.SeedName == nil {
-			return "", nil
-		}
-		return *backupBucket.Spec.SeedName, nil
-	})
+	return determineAssociations(ctx, c, &gardencorev1beta1.BackupBucketList{}, client.MatchingFields{core.BackupBucketSeedName: seedName})
 }
 
 // DetermineBackupEntryAssociations determine the BackupEntry resources which are associated
@@ -134,49 +126,22 @@ func DetermineBastionAssociations(ctx context.Context, c client.Client, seedName
 // DetermineControllerInstallationAssociations determine the ControllerInstallation resources which are associated
 // to seed with name <seedName>
 func DetermineControllerInstallationAssociations(ctx context.Context, c client.Client, seedName string) ([]string, error) {
-	return determineAssociations(ctx, c, seedName, &gardencorev1beta1.ControllerInstallationList{}, func(o runtime.Object) (string, error) {
-		controllerInstallation, ok := o.(*gardencorev1beta1.ControllerInstallation)
-		if !ok {
-			return "", fmt.Errorf("got unexpected object when expecting ControllerInstallation")
-		}
-		return controllerInstallation.Spec.SeedRef.Name, nil
-	})
+	return determineAssociations(ctx, c, &gardencorev1beta1.ControllerInstallationList{}, client.MatchingFields{core.SeedRefName: seedName})
 }
 
-// DetermineShootAssociations determine the Shoot resources which are associated
-// to seed with name <seedName>
-func DetermineShootAssociations(ctx context.Context, c client.Client, seedName string) ([]string, error) {
-	return determineAssociations(ctx, c, seedName, &gardencorev1beta1.ShootList{}, func(o runtime.Object) (string, error) {
-		shoot, ok := o.(*gardencorev1beta1.Shoot)
-		if !ok {
-			return "", fmt.Errorf("got unexpected object when expecting Shoot")
-		}
-		if shoot.Spec.SeedName == nil {
-			return "", nil
-		}
-		return *shoot.Spec.SeedName, nil
-	})
-}
-
-func determineAssociations(ctx context.Context, c client.Client, seedName string, listObj client.ObjectList, seedNameFunc func(runtime.Object) (string, error)) ([]string, error) {
-	if err := c.List(ctx, listObj); err != nil {
+func determineAssociations(ctx context.Context, c client.Client, listObj client.ObjectList, fieldSelector client.MatchingFields) ([]string, error) {
+	if err := c.List(ctx, listObj, fieldSelector); err != nil {
 		return nil, err
 	}
 
 	var associations []string
 	err := meta.EachListItem(listObj, func(obj runtime.Object) error {
-		name, err := seedNameFunc(obj)
+		accessor, err := meta.Accessor(obj)
 		if err != nil {
 			return err
 		}
 
-		if name == seedName {
-			accessor, err := meta.Accessor(obj)
-			if err != nil {
-				return err
-			}
-			associations = append(associations, accessor.GetName())
-		}
+		associations = append(associations, accessor.GetName())
 		return nil
 	})
 	return associations, err
