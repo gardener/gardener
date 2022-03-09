@@ -860,10 +860,14 @@ func getEmptyGardenletConfigMap() *corev1.ConfigMap {
 	}
 }
 
-// GetExpectedGardenletDeploymentSpec computes the expected Gardenlet deployment spec based on input parameters
+// ComputeExpectedGardenletDeploymentSpec computes the expected Gardenlet deployment spec based on input parameters
 // needs to equal exactly what is deployed via the helm chart (including defaults set in the helm chart)
 // as a consequence, if non-optional changes to the helm chart are made, these tests will fail by design
-func ComputeExpectedGardenletDeploymentSpec(deploymentConfiguration *seedmanagement.GardenletDeployment, componentConfigUsesTlsServerConfig bool, gardenClientConnectionKubeconfig, seedClientConnectionKubeconfig *string, expectedLabels map[string]string, imageVectorOverwrite, componentImageVectorOverwrites *string) appsv1.DeploymentSpec {
+func ComputeExpectedGardenletDeploymentSpec(deploymentConfiguration *seedmanagement.GardenletDeployment, image seedmanagement.Image, componentConfigUsesTlsServerConfig bool, gardenClientConnectionKubeconfig, seedClientConnectionKubeconfig *string, expectedLabels map[string]string, imageVectorOverwrite, componentImageVectorOverwrites *string) (appsv1.DeploymentSpec, error) {
+	if image.Repository == nil || image.Tag == nil {
+		return appsv1.DeploymentSpec{}, fmt.Errorf("the image repository and tag must be provided")
+	}
+
 	deployment := appsv1.DeploymentSpec{
 		RevisionHistoryLimit: pointer.Int32(10),
 		Replicas:             pointer.Int32(1),
@@ -883,7 +887,7 @@ func ComputeExpectedGardenletDeploymentSpec(deploymentConfiguration *seedmanagem
 				Containers: []corev1.Container{
 					{
 						Name:            "gardenlet",
-						Image:           fmt.Sprintf("%s:%s", *deploymentConfiguration.Image.Repository, *deploymentConfiguration.Image.Tag),
+						Image:           fmt.Sprintf("%s:%s", *image.Repository, *image.Tag),
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Command: []string{
 							"/gardenlet",
@@ -1109,7 +1113,7 @@ func ComputeExpectedGardenletDeploymentSpec(deploymentConfiguration *seedmanagem
 		deployment.Template.Spec.Volumes = append(deployment.Template.Spec.Volumes, deploymentConfiguration.AdditionalVolumes...)
 	}
 
-	return deployment
+	return deployment, nil
 }
 
 // VerifyGardenletDeployment verifies that the actual Gardenlet deployment equals the expected deployment

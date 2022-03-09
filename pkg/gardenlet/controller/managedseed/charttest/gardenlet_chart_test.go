@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package chart_test
+package charttest
 
 import (
 	"context"
@@ -39,8 +39,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/gardener/gardener/landscaper/pkg/gardenlet/chart"
-	appliercommon "github.com/gardener/gardener/landscaper/pkg/gardenlet/chart/charttest"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -127,7 +125,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 
 			mockChartApplier.EXPECT().Delete(ctx, filepath.Join(chartsRootPath, "gardener", "gardenlet"), "garden", "gardenlet", kubernetes.Values(map[string]interface{}{}))
 
-			deployer = chart.NewGardenletChartApplier(mockChartApplier, map[string]interface{}{}, chartsRootPath)
+			deployer = NewGardenletChartApplier(mockChartApplier, map[string]interface{}{}, chartsRootPath)
 			Expect(deployer.Destroy(ctx)).ToNot(HaveOccurred(), "Destroy Gardenlet resources succeeds")
 		})
 	})
@@ -209,7 +207,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				deploymentConfiguration = &seedmanagement.GardenletDeployment{}
 			}
 
-			deploymentConfiguration.Image = &seedmanagement.Image{
+			image := seedmanagement.Image{
 				Repository: pointer.String("eu.gcr.io/gardener-project/gardener/gardenlet"),
 				Tag:        pointer.String("latest"),
 			}
@@ -262,7 +260,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				gardenletValues["vpa"] = *deploymentConfiguration.VPA
 			}
 
-			deployer = chart.NewGardenletChartApplier(chartApplier, map[string]interface{}{
+			deployer = NewGardenletChartApplier(chartApplier, map[string]interface{}{
 				"global": map[string]interface{}{
 					"gardenlet": gardenletValues,
 				},
@@ -270,18 +268,18 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 
 			Expect(deployer.Deploy(ctx)).ToNot(HaveOccurred(), "Gardenlet chart deployment succeeds")
 
-			appliercommon.ValidateGardenletChartPriorityClass(ctx, c)
+			ValidateGardenletChartPriorityClass(ctx, c)
 
 			serviceAccountName := "gardenlet"
 			if deploymentConfiguration.ServiceAccountName != nil {
 				serviceAccountName = *deploymentConfiguration.ServiceAccountName
 			}
 
-			appliercommon.ValidateGardenletChartRBAC(ctx, c, expectedLabels, serviceAccountName, featureGates)
+			ValidateGardenletChartRBAC(ctx, c, expectedLabels, serviceAccountName, featureGates)
 
-			appliercommon.ValidateGardenletChartServiceAccount(ctx, c, seedClientConnectionKubeconfig != nil, expectedLabels, serviceAccountName)
+			ValidateGardenletChartServiceAccount(ctx, c, seedClientConnectionKubeconfig != nil, expectedLabels, serviceAccountName)
 
-			expectedGardenletConfig := appliercommon.ComputeExpectedGardenletConfiguration(
+			expectedGardenletConfig := ComputeExpectedGardenletConfiguration(
 				componentConfigUsesTlsServerConfig,
 				gardenClientConnectionKubeconfig != nil,
 				seedClientConnectionKubeconfig != nil,
@@ -290,13 +288,15 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				seedConfig,
 				featureGates)
 
-			appliercommon.VerifyGardenletComponentConfigConfigMap(ctx,
+			VerifyGardenletComponentConfigConfigMap(ctx,
 				c,
 				universalDecoder,
 				expectedGardenletConfig,
 				expectedLabels)
 
-			expectedGardenletDeploymentSpec := appliercommon.ComputeExpectedGardenletDeploymentSpec(deploymentConfiguration,
+			expectedGardenletDeploymentSpec, err := ComputeExpectedGardenletDeploymentSpec(
+				deploymentConfiguration,
+				image,
 				componentConfigUsesTlsServerConfig,
 				gardenClientConnectionKubeconfig,
 				seedClientConnectionKubeconfig,
@@ -305,7 +305,9 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				componentImageVectorOverwrites,
 			)
 
-			appliercommon.VerifyGardenletDeployment(ctx,
+			Expect(err).ToNot(HaveOccurred())
+
+			VerifyGardenletDeployment(ctx,
 				c,
 				expectedGardenletDeploymentSpec,
 				deploymentConfiguration,
@@ -348,7 +350,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			}
 
 			if deploymentConfiguration != nil && deploymentConfiguration.VPA != nil && *deploymentConfiguration.VPA {
-				appliercommon.ValidateGardenletChartVPA(ctx, c)
+				ValidateGardenletChartVPA(ctx, c)
 			}
 		},
 		Entry("verify the default values for the Gardenlet chart & the Gardenlet component config", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil),

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package chart_test
+package charttest
 
 import (
 	"testing"
@@ -22,10 +22,10 @@ import (
 )
 
 const (
-	chartsRootPath = "../../../../charts"
+	chartsRootPath = "../../../../../charts"
 )
 
 func TestApplier(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Landscaper Gardenlet Chart Suite")
+	RunSpecs(t, "Gardenlet Chart Suite")
 }
