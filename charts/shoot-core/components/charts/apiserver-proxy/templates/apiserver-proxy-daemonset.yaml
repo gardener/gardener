@@ -111,6 +111,15 @@ spec:
           periodSeconds: 2
           successThreshold: 1
           timeoutSeconds: 1
+        livenessProbe:
+          httpGet:
+            path: /ready
+            port: {{ .Values.adminPort }}
+          initialDelaySeconds: 1
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+          failureThreshold: 3
         ports:
         - name: metrics
           containerPort: {{ .Values.adminPort }}
