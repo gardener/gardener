@@ -11,12 +11,10 @@ require (
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/envoyproxy/go-control-plane v0.9.10-0.20210907150352-cf90f659a021
 	github.com/frankban/quicktest v1.13.1 // indirect
-	github.com/gardener/component-spec/bindings-go v0.0.33
 	github.com/gardener/dependency-watchdog v0.7.0
 	github.com/gardener/etcd-druid v0.7.0
 	github.com/gardener/external-dns-management v0.7.18
 	github.com/gardener/hvpa-controller v0.3.1
-	github.com/gardener/landscaper/apis v0.7.0
 	github.com/gardener/machine-controller-manager v0.41.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.2.0
