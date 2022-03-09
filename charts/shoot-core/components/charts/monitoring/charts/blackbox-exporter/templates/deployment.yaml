@@ -32,6 +32,7 @@ spec:
         networking.gardener.cloud/to-public-networks: allowed
         networking.gardener.cloud/to-apiserver: allowed
     spec:
+      serviceAccountName: blackbox-exporter
       tolerations:
       - effect: NoSchedule
         operator: Exists
