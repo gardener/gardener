@@ -102,8 +102,8 @@ var _ = Describe("BackupBucketReconciler", func() {
 					createBackupBucket("4", seed.Name, nil),
 				}
 
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucketList{})).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.BackupBucketList, opts ...client.ListOption) error {
-					(&gardencorev1beta1.BackupBucketList{Items: bbs}).DeepCopyInto(list)
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucketList{}), client.MatchingFields{"spec.seedName": seed.Name}).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.BackupBucketList, opts ...client.ListOption) error {
+					(&gardencorev1beta1.BackupBucketList{Items: backupBucketsForSeed(bbs, seed.Name)}).DeepCopyInto(list)
 					return nil
 				})
 			})
@@ -161,8 +161,8 @@ var _ = Describe("BackupBucketReconciler", func() {
 					createBackupBucket("4", "barSeed", nil),
 				}
 
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucketList{})).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.BackupBucketList, opts ...client.ListOption) error {
-					(&gardencorev1beta1.BackupBucketList{Items: bbs}).DeepCopyInto(list)
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucketList{}), client.MatchingFields{"spec.seedName": seed.Name}).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.BackupBucketList, opts ...client.ListOption) error {
+					(&gardencorev1beta1.BackupBucketList{Items: backupBucketsForSeed(bbs, seed.Name)}).DeepCopyInto(list)
 					return nil
 				})
 			})
@@ -188,8 +188,8 @@ var _ = Describe("BackupBucketReconciler", func() {
 					createBackupBucket("1", seed.Name, &gardencorev1beta1.LastError{Description: "foo error"}),
 					createBackupBucket("2", seed.Name, nil),
 				}
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucketList{})).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.BackupBucketList, opts ...client.ListOption) error {
-					(&gardencorev1beta1.BackupBucketList{Items: bbs}).DeepCopyInto(list)
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucketList{}), client.MatchingFields{"spec.seedName": seed.Name}).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.BackupBucketList, opts ...client.ListOption) error {
+					(&gardencorev1beta1.BackupBucketList{Items: backupBucketsForSeed(bbs, seed.Name)}).DeepCopyInto(list)
 					return nil
 				})
 			})
@@ -221,8 +221,8 @@ var _ = Describe("BackupBucketReconciler", func() {
 					createBackupBucket("1", "fooSeed", &gardencorev1beta1.LastError{Description: "foo error"}),
 					createBackupBucket("2", "barSeed", nil),
 				}
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucketList{})).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.BackupBucketList, opts ...client.ListOption) error {
-					(&gardencorev1beta1.BackupBucketList{Items: bbs}).DeepCopyInto(list)
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucketList{}), client.MatchingFields{"spec.seedName": seed.Name}).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.BackupBucketList, opts ...client.ListOption) error {
+					(&gardencorev1beta1.BackupBucketList{Items: backupBucketsForSeed(bbs, seed.Name)}).DeepCopyInto(list)
 					return nil
 				})
 			})
@@ -264,4 +264,16 @@ func createBackupBucket(name, seedName string, lastErr *gardencorev1beta1.LastEr
 			LastError: lastErr,
 		},
 	}
+}
+
+func backupBucketsForSeed(items []gardencorev1beta1.BackupBucket, seedName string) []gardencorev1beta1.BackupBucket {
+	var out []gardencorev1beta1.BackupBucket
+
+	for _, item := range items {
+		if pointer.StringPtrDerefOr(item.Spec.SeedName, "") == seedName {
+			out = append(out, item)
+		}
+	}
+
+	return out
 }

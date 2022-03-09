@@ -18,8 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -27,6 +26,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -96,7 +96,7 @@ func (b *backupBucketReconciler) Reconcile(ctx context.Context, req reconcile.Re
 	}
 
 	backupBucketList := &gardencorev1beta1.BackupBucketList{}
-	if err := b.gardenClient.Client().List(ctx, backupBucketList); err != nil {
+	if err := b.gardenClient.Client().List(ctx, backupBucketList, client.MatchingFields{core.BackupBucketSeedName: seed.Name}); err != nil {
 		return reconcileResult(err)
 	}
 
@@ -107,10 +107,6 @@ func (b *backupBucketReconciler) Reconcile(ctx context.Context, req reconcile.Re
 		erroneousBackupBuckets []backupBucketInfo
 	)
 	for _, bb := range backupBucketList.Items {
-		if *bb.Spec.SeedName != seed.Name {
-			continue
-		}
-
 		bbCount++
 		if occurred, msg := gardencorev1beta1helper.BackupBucketIsErroneous(&bb); occurred {
 			erroneousBackupBuckets = append(erroneousBackupBuckets, backupBucketInfo{
