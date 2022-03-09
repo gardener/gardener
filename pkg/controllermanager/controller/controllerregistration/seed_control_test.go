@@ -73,16 +73,6 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 		type11 = "type11"
 		type12 = "type12"
 
-		backupBucket1 = &gardencorev1beta1.BackupBucket{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "bb1",
-			},
-			Spec: gardencorev1beta1.BackupBucketSpec{
-				Provider: gardencorev1beta1.BackupBucketProvider{
-					Type: type1,
-				},
-			},
-		}
 		backupBucket2 = &gardencorev1beta1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "bb2",
@@ -107,32 +97,22 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 		}
 		backupBucketList = &gardencorev1beta1.BackupBucketList{
 			Items: []gardencorev1beta1.BackupBucket{
-				*backupBucket1,
 				*backupBucket2,
 				*backupBucket3,
 			},
 		}
 		buckets = map[string]gardencorev1beta1.BackupBucket{
-			backupBucket1.Name: *backupBucket1,
 			backupBucket2.Name: *backupBucket2,
 			backupBucket3.Name: *backupBucket3,
 		}
 
-		backupEntry1 = &gardencorev1beta1.BackupEntry{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "be1",
-			},
-			Spec: gardencorev1beta1.BackupEntrySpec{
-				BucketName: backupBucket1.Name,
-			},
-		}
 		backupEntry2 = &gardencorev1beta1.BackupEntry{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "be2",
 			},
 			Spec: gardencorev1beta1.BackupEntrySpec{
 				SeedName:   &seedName,
-				BucketName: backupBucket1.Name,
+				BucketName: backupBucket2.Name,
 			},
 		}
 		backupEntry3 = &gardencorev1beta1.BackupEntry{
@@ -146,7 +126,6 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 		}
 		backupEntryList = &gardencorev1beta1.BackupEntryList{
 			Items: []gardencorev1beta1.BackupEntry{
-				*backupEntry1,
 				*backupEntry2,
 				*backupEntry3,
 			},
@@ -503,14 +482,14 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 
 	Describe("#computeKindTypesForBackupBuckets", func() {
 		It("should return empty results for empty input", func() {
-			kindTypes, bs := computeKindTypesForBackupBuckets(&gardencorev1beta1.BackupBucketList{}, seedName)
+			kindTypes, bs := computeKindTypesForBackupBuckets(&gardencorev1beta1.BackupBucketList{})
 
 			Expect(kindTypes.Len()).To(BeZero())
 			Expect(bs).To(BeEmpty())
 		})
 
 		It("should correctly compute the result", func() {
-			kindTypes, bs := computeKindTypesForBackupBuckets(backupBucketList, seedName)
+			kindTypes, bs := computeKindTypesForBackupBuckets(backupBucketList)
 
 			Expect(kindTypes).To(Equal(sets.NewString(
 				extensionsv1alpha1.BackupBucketResource+"/"+backupBucket2.Spec.Provider.Type,
@@ -522,17 +501,16 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 
 	Describe("#computeKindTypesForBackupEntries", func() {
 		It("should return empty results for empty input", func() {
-			kindTypes := computeKindTypesForBackupEntries(nopLogger, &gardencorev1beta1.BackupEntryList{}, nil, seedName)
+			kindTypes := computeKindTypesForBackupEntries(nopLogger, &gardencorev1beta1.BackupEntryList{}, nil)
 
 			Expect(kindTypes.Len()).To(BeZero())
 		})
 
 		It("should correctly compute the result", func() {
-			kindTypes := computeKindTypesForBackupEntries(nopLogger, backupEntryList, buckets, seedName)
+			kindTypes := computeKindTypesForBackupEntries(nopLogger, backupEntryList, buckets)
 
 			Expect(kindTypes).To(Equal(sets.NewString(
-				extensionsv1alpha1.BackupEntryResource+"/"+backupBucket1.Spec.Provider.Type,
-				extensionsv1alpha1.BackupEntryResource+"/"+backupBucket2.Spec.Provider.Type,
+				extensionsv1alpha1.BackupEntryResource + "/" + backupBucket2.Spec.Provider.Type,
 			)))
 		})
 	})
