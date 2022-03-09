@@ -266,7 +266,7 @@ function kubelet_monitoring {
     fi
 
     node_name=
-    if [[ ! -s "/var/lib/kubelet/nodename" ]]; then
+    if [[ -s "/var/lib/kubelet/nodename" ]]; then
       node_name="$(cat "/var/lib/kubelet/nodename")"
     fi
     if [[ -z "$node_name" ]]; then

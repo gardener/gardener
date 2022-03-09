@@ -47,7 +47,7 @@ function kubelet_monitoring {
     fi
 
     node_name=
-    if [[ ! -s "{{ .pathNodeName }}" ]]; then
+    if [[ -s "{{ .pathNodeName }}" ]]; then
       node_name="$(cat "{{ .pathNodeName }}")"
     fi
     if [[ -z "$node_name" ]]; then
