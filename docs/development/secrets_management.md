@@ -4,7 +4,7 @@
 Accordingly, expect adaptations to this document and implementation details.
 
 The gardenlet needs to create quite some amount of credentials (certificates, private keys, passwords, etc.) for seed and shoot clusters in order to ensure secure deployments.
-Such credentials typically should be rotated regularly, and they potentially need to be persisted such that they don't get lost in case of a disaster or a control plane migration.
+Such credentials typically should be rotated regularly, and they potentially need to be persisted such that they don't get lost in case of a control plane migration or a lost seed cluster.
 
 These requirements can be covered by using the `SecretsManager` package maintained in [`pkg/utils/secrets/manager`](pkg/utils/secrets/manager).
 It is built on top of the `ConfigInterface` and `DataInterface` interfaces part of [`pkg/utils/secrets`](pkg/utils/secrets) and provides the following functions:
@@ -17,7 +17,7 @@ It is built on top of the `ConfigInterface` and `DataInterface` interfaces part 
   - `SignedByCA(string)`: This is only valid for certificate secrets and automatically retrieves the correct certificate authority in order to sign the provided server or client certificate.
   - `Persist()`: This marks the secret such that it gets persisted in the `ShootState` resource in the garden cluster. Consequently, it should only be used for secrets related to a shoot cluster.
   - `Rotate(rotationStrategy)`: This specifies the strategy in case this secret is to be rotated or regenerated (either `InPlace` which immediately forgets about the old secret, or `KeepOld` which keeps the old secret in the system).
-  - `IgnoreOldSecrets()`: This specifies whether old secrets should be considered and loaded (which is done by default). It should be used when old secrets are no longer important and can be "forgotten".
+  - `IgnoreOldSecrets()`: This specifies whether old secrets should be considered and loaded (which is done by default). It should be used when old secrets are no longer important and can be "forgotten" (e.g. in ["phase 2" (`t2`) of the CA certificate rotation](../proposals/18-shoot-CA-rotation.md#rotation-sequence-for-cluster-and-client-ca)).
 
 - `GetByName(string, ...GetByNameOption) (*corev1.Secret, error)`
 

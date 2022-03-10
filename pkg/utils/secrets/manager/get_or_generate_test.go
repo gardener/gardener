@@ -18,9 +18,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/gardener/gardener/pkg/logger"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -42,7 +42,7 @@ var _ = Describe("GetOrGenerate", func() {
 
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-		m = New(logger.NewNopLogger(), fakeClient, namespace, nil).(*manager)
+		m = New(logr.Discard(), fakeClient, namespace, nil).(*manager)
 	})
 
 	Describe("#GetOrGenerate", func() {
@@ -94,14 +94,14 @@ var _ = Describe("GetOrGenerate", func() {
 				Expect(secretInfos.bundle).To(BeNil())
 			})
 
-			It("should generate a new secret when the last rotation started time changes", func() {
+			It("should generate a new secret when the last rotation initiation time changes", func() {
 				By("generating new secret")
 				secret, err := m.GetOrGenerate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
-				By("changing last rotation started time and generate again")
-				m = New(logger.NewNopLogger(), fakeClient, namespace, map[string]time.Time{name: time.Now()}).(*manager)
+				By("changing last rotation initiation time and generate again")
+				m = New(logr.Discard(), fakeClient, namespace, map[string]time.Time{name: time.Now()}).(*manager)
 
 				newSecret, err := m.GetOrGenerate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
@@ -223,7 +223,7 @@ var _ = Describe("GetOrGenerate", func() {
 				oldBundleSecret := secretInfos.bundle.obj
 
 				By("changing secret config and generate again")
-				m = New(logger.NewNopLogger(), fakeClient, namespace, map[string]time.Time{name: time.Now()}).(*manager)
+				m = New(logr.Discard(), fakeClient, namespace, map[string]time.Time{name: time.Now()}).(*manager)
 				newSecret, err := m.GetOrGenerate(ctx, config, Rotate(KeepOld))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newSecret)
@@ -283,7 +283,7 @@ var _ = Describe("GetOrGenerate", func() {
 				expectSecretWasCreated(ctx, fakeClient, serverSecret)
 
 				By("rotating CA")
-				m = New(logger.NewNopLogger(), fakeClient, namespace, map[string]time.Time{caName: time.Now()}).(*manager)
+				m = New(logr.Discard(), fakeClient, namespace, map[string]time.Time{caName: time.Now()}).(*manager)
 				newCASecret, err := m.GetOrGenerate(ctx, caConfig, Rotate(KeepOld))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newCASecret)
@@ -310,7 +310,7 @@ var _ = Describe("GetOrGenerate", func() {
 				expectSecretWasCreated(ctx, fakeClient, clientSecret)
 
 				By("rotating CA")
-				m = New(logger.NewNopLogger(), fakeClient, namespace, map[string]time.Time{caName: time.Now()}).(*manager)
+				m = New(logr.Discard(), fakeClient, namespace, map[string]time.Time{caName: time.Now()}).(*manager)
 				newCASecret, err := m.GetOrGenerate(ctx, caConfig, Rotate(KeepOld))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newCASecret)

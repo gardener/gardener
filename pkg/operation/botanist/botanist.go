@@ -34,6 +34,7 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -70,7 +71,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		return nil, err
 	}
 
-	o.SecretsManager = secretsmanager.New(b.Logger, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, b.lastSecretRotationStartTimes())
+	o.SecretsManager = secretsmanager.New(logf.Log.WithName("secretsmanager"), b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, b.lastSecretRotationStartTimes())
 
 	// extension components
 	o.Shoot.Components.Extensions.ContainerRuntime = b.DefaultContainerRuntime()

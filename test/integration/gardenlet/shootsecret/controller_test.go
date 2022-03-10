@@ -283,16 +283,16 @@ var _ = Describe("ShootSecret controller tests", func() {
 		By("deleting secret")
 		Expect(testClient.Delete(ctx, secret)).To(Succeed())
 
+		By("verifying secret has been removed from the system")
+		Eventually(func() error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
+		}).Should(BeNotFoundError())
+
 		By("verifying secret info did not get removed in shootstate")
 		Consistently(func(g Gomega) []gardencorev1alpha1.GardenerResourceData {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
 			return shootState.Spec.Gardener
 		}).Should(containData(withName(secret.Name)))
-
-		By("verifying secret has been removed from the system")
-		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
-		}).Should(BeNotFoundError())
 	})
 })
 

@@ -49,7 +49,7 @@ func (m *manager) Cleanup(ctx context.Context) error {
 		}
 
 		fns = append(fns, func(ctx context.Context) error {
-			m.logger.Infof("Deleting stale secret %s/%s", secret.Namespace, secret.Name)
+			m.logger.Info("Deleting stale secret", "namespace", secret.Namespace, "name", secret.Name)
 			return client.IgnoreNotFound(m.client.Delete(ctx, &secret))
 		})
 	}

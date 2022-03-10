@@ -17,9 +17,9 @@ package manager
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -40,7 +40,7 @@ var _ = Describe("Cleanup", func() {
 
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-		m = New(logger.NewNopLogger(), fakeClient, namespace, nil).(*manager)
+		m = New(logr.Discard(), fakeClient, namespace, nil).(*manager)
 	})
 
 	Describe("#Cleanup", func() {

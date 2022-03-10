@@ -22,8 +22,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 
+	"github.com/go-logr/logr"
 	"github.com/mitchellh/hashstructure/v2"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -46,9 +46,9 @@ const (
 	LabelKeyBundleFor = "bundle-for"
 	// LabelKeyPersist is a constant for a key of a label on a Secret describing that it should get persisted.
 	LabelKeyPersist = "persist"
-	// LabelKeyLastRotationStartedTime is a constant for a key of a value on a Secret describing the unix timestamps
-	// of when the secret was last rotated.
-	LabelKeyLastRotationStartedTime = "last-rotation-started-time"
+	// LabelKeyLastRotationInitiationTime is a constant for a key of a value on a Secret describing the unix timestamps
+	// of when the last secret rotation was initiated.
+	LabelKeyLastRotationInitiationTime = "last-rotation-initiation-time"
 
 	// LabelValueTrue is a constant for a value of a label on a Secret describing the value 'true'.
 	LabelValueTrue = "true"
@@ -60,12 +60,12 @@ const (
 
 type (
 	manager struct {
-		lock                   sync.Mutex
-		logger                 logrus.FieldLogger
-		client                 client.Client
-		namespace              string
-		lastRotationStartTimes nameToUnixTime
-		store                  secretStore
+		lock                        sync.Mutex
+		logger                      logr.Logger
+		client                      client.Client
+		namespace                   string
+		lastRotationInitiationTimes nameToUnixTime
+		store                       secretStore
 	}
 
 	nameToUnixTime map[string]string
@@ -77,9 +77,9 @@ type (
 		bundle  *secretInfo
 	}
 	secretInfo struct {
-		obj                     *corev1.Secret
-		dataChecksum            string
-		lastRotationStartedTime int64
+		obj                        *corev1.Secret
+		dataChecksum               string
+		lastRotationInitiationTime int64
 	}
 )
 
@@ -94,19 +94,19 @@ const (
 )
 
 // New returns a new manager for secrets in a given namespace.
-func New(logger logrus.FieldLogger, client client.Client, namespace string, nameToTime map[string]time.Time) Interface {
-	lastRotationStartTimes := make(map[string]string)
+func New(logger logr.Logger, client client.Client, namespace string, secretNamesToTimes map[string]time.Time) Interface {
+	lastRotationInitiationTimes := make(map[string]string)
 
-	for name, time := range nameToTime {
-		lastRotationStartTimes[name] = strconv.FormatInt(time.UTC().Unix(), 10)
+	for name, time := range secretNamesToTimes {
+		lastRotationInitiationTimes[name] = strconv.FormatInt(time.UTC().Unix(), 10)
 	}
 
 	return &manager{
-		logger:                 logger,
-		client:                 client,
-		namespace:              namespace,
-		store:                  make(secretStore),
-		lastRotationStartTimes: lastRotationStartTimes,
+		logger:                      logger.WithValues("namespace", namespace),
+		client:                      client,
+		namespace:                   namespace,
+		store:                       make(secretStore),
+		lastRotationInitiationTimes: lastRotationInitiationTimes,
 	}
 }
 
@@ -125,9 +125,7 @@ func (m *manager) addToStore(name string, secret *corev1.Secret, class secretCla
 	case current:
 		secrets.current = info
 	case old:
-		if secrets.old == nil || secrets.old.lastRotationStartedTime < info.lastRotationStartedTime {
-			secrets.old = &info
-		}
+		secrets.old = &info
 	case bundle:
 		secrets.bundle = &info
 	}
@@ -151,17 +149,17 @@ func computeSecretInfo(obj *corev1.Secret) (secretInfo, error) {
 		err                   error
 	)
 
-	if v := obj.Labels[LabelKeyLastRotationStartedTime]; len(v) > 0 {
-		lastRotationStartTime, err = strconv.ParseInt(obj.Labels[LabelKeyLastRotationStartedTime], 10, 64)
+	if v := obj.Labels[LabelKeyLastRotationInitiationTime]; len(v) > 0 {
+		lastRotationStartTime, err = strconv.ParseInt(obj.Labels[LabelKeyLastRotationInitiationTime], 10, 64)
 		if err != nil {
 			return secretInfo{}, err
 		}
 	}
 
 	return secretInfo{
-		obj:                     obj,
-		dataChecksum:            utils.ComputeSecretChecksum(obj.Data),
-		lastRotationStartedTime: lastRotationStartTime,
+		obj:                        obj,
+		dataChecksum:               utils.ComputeSecretChecksum(obj.Data),
+		lastRotationInitiationTime: lastRotationStartTime,
 	}, nil
 }
 
@@ -169,7 +167,7 @@ func computeSecretInfo(obj *corev1.Secret) (secretInfo, error) {
 func ObjectMeta(
 	namespace string,
 	config secretutils.ConfigInterface,
-	lastRotationStartedTime string,
+	lastRotationInitiationTime string,
 	signingCAChecksum *string,
 	persist *bool,
 	bundleFor *string,
@@ -183,10 +181,10 @@ func ObjectMeta(
 	}
 
 	labels := map[string]string{
-		LabelKeyName:                    config.GetName(),
-		LabelKeyManagedBy:               LabelValueSecretsManager,
-		LabelKeyChecksumConfig:          strconv.FormatUint(configHash, 10),
-		LabelKeyLastRotationStartedTime: lastRotationStartedTime,
+		LabelKeyName:                       config.GetName(),
+		LabelKeyManagedBy:                  LabelValueSecretsManager,
+		LabelKeyChecksumConfig:             strconv.FormatUint(configHash, 10),
+		LabelKeyLastRotationInitiationTime: lastRotationInitiationTime,
 	}
 
 	if signingCAChecksum != nil {
@@ -221,7 +219,7 @@ func computeSecretName(config secretutils.ConfigInterface, labels map[string]str
 		}
 	}
 
-	if suffix := labels[LabelKeyLastRotationStartedTime]; len(suffix) > 0 {
+	if suffix := labels[LabelKeyLastRotationInitiationTime]; len(suffix) > 0 {
 		name += "-" + utils.ComputeSHA256Hex([]byte(suffix))[:5]
 	}
 

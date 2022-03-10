@@ -172,7 +172,7 @@ func verifyCASecret(name string, secret *corev1.Secret, dataMatcher gomegatypes.
 		HaveKeyWithValue("persist", "true"),
 		HaveKeyWithValue("rotation-strategy", "keepold"),
 		HaveKey("checksum-of-config"),
-		HaveKey("last-rotation-started-time"),
+		HaveKey("last-rotation-initiation-time"),
 	))
 
 	if dataMatcher != nil {

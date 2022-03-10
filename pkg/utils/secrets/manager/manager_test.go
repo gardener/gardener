@@ -29,9 +29,9 @@ import (
 var _ = Describe("Manager", func() {
 	Describe("#ObjectMeta", func() {
 		var (
-			configName              = "config-name"
-			namespace               = "some-namespace"
-			lastRotationStartedTime = "1646060228"
+			configName                 = "config-name"
+			namespace                  = "some-namespace"
+			lastRotationInitiationTime = "1646060228"
 		)
 
 		It("should generate the expected object meta for a never-rotated CA cert secret", func() {
@@ -44,10 +44,10 @@ var _ = Describe("Manager", func() {
 				Name:      configName,
 				Namespace: namespace,
 				Labels: map[string]string{
-					"name":                       configName,
-					"managed-by":                 "secrets-manager",
-					"checksum-of-config":         "1645436262831067767",
-					"last-rotation-started-time": "",
+					"name":                          configName,
+					"managed-by":                    "secrets-manager",
+					"checksum-of-config":            "1645436262831067767",
+					"last-rotation-initiation-time": "",
 				},
 			}))
 		})
@@ -55,17 +55,17 @@ var _ = Describe("Manager", func() {
 		It("should generate the expected object meta for a rotated CA cert secret", func() {
 			config := &secretutils.CertificateSecretConfig{Name: configName}
 
-			meta, err := ObjectMeta(namespace, config, lastRotationStartedTime, nil, nil, nil)
+			meta, err := ObjectMeta(namespace, config, lastRotationInitiationTime, nil, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(meta).To(Equal(metav1.ObjectMeta{
 				Name:      configName + "-76711",
 				Namespace: namespace,
 				Labels: map[string]string{
-					"name":                       configName,
-					"managed-by":                 "secrets-manager",
-					"checksum-of-config":         "1645436262831067767",
-					"last-rotation-started-time": "1646060228",
+					"name":                          configName,
+					"managed-by":                    "secrets-manager",
+					"checksum-of-config":            "1645436262831067767",
+					"last-rotation-initiation-time": "1646060228",
 				},
 			}))
 		})
@@ -77,14 +77,14 @@ var _ = Describe("Manager", func() {
 					SigningCA: &secretutils.Certificate{},
 				}
 
-				meta, err := ObjectMeta(namespace, config, lastRotationStartedTime, signingCAChecksum, persist, bundleFor)
+				meta, err := ObjectMeta(namespace, config, lastRotationInitiationTime, signingCAChecksum, persist, bundleFor)
 				Expect(err).NotTo(HaveOccurred())
 
 				labels := map[string]string{
-					"name":                       configName,
-					"managed-by":                 "secrets-manager",
-					"checksum-of-config":         "17861245496710117091",
-					"last-rotation-started-time": "1646060228",
+					"name":                          configName,
+					"managed-by":                    "secrets-manager",
+					"checksum-of-config":            "17861245496710117091",
+					"last-rotation-initiation-time": "1646060228",
 				}
 
 				Expect(meta).To(Equal(metav1.ObjectMeta{

@@ -40,7 +40,7 @@ func (m *manager) GetOrGenerate(ctx context.Context, config secretutils.ConfigIn
 		bundleFor = pointer.String(strings.TrimSuffix(config.GetName(), nameSuffixBundle))
 	}
 
-	objectMeta, err := ObjectMeta(m.namespace, config, m.lastRotationStartTimes[config.GetName()], options.signingCAChecksum, &options.Persist, bundleFor)
+	objectMeta, err := ObjectMeta(m.namespace, config, m.lastRotationInitiationTimes[config.GetName()], options.signingCAChecksum, &options.Persist, bundleFor)
 	if err != nil {
 		return nil, err
 	}
@@ -87,11 +87,17 @@ func (m *manager) generateAndCreate(ctx context.Context, config secretutils.Conf
 	}
 
 	secret := Secret(objectMeta, data.SecretData())
-	if err := m.client.Create(ctx, secret); kutil.IgnoreAlreadyExists(err) != nil {
-		return nil, err
+	if err := m.client.Create(ctx, secret); err != nil {
+		if !apierrors.IsAlreadyExists(err) {
+			return nil, err
+		}
+
+		if err := m.client.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+			return nil, err
+		}
 	}
 
-	m.logger.Infof("Generated new secret for %q with name %q", config.GetName(), secret.Name)
+	m.logger.Info("Generated new secret", "configName", config.GetName(), "secretName", secret.Name)
 	return secret, nil
 }
 
@@ -104,17 +110,23 @@ func (m *manager) storeOldSecrets(ctx context.Context, name, currentSecretName s
 		return err
 	}
 
+	var oldSecret *corev1.Secret
+
 	for _, secret := range secretList.Items {
 		if secret.Name == currentSecretName {
 			continue
 		}
 
-		if err := m.addToStore(secret.Labels[LabelKeyName], secret.DeepCopy(), old); err != nil {
-			return err
+		if oldSecret == nil || oldSecret.CreationTimestamp.Time.Before(secret.CreationTimestamp.Time) {
+			oldSecret = secret.DeepCopy()
 		}
 	}
 
-	return nil
+	if oldSecret == nil {
+		return nil
+	}
+
+	return m.addToStore(oldSecret.Labels[LabelKeyName], oldSecret, old)
 }
 
 func (m *manager) getOrGenerateBundleSecret(ctx context.Context, config secretutils.ConfigInterface) error {
