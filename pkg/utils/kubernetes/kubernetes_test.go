@@ -1597,4 +1597,15 @@ var _ = Describe("kubernetes", func() {
 			}))
 		})
 	})
+
+	DescribeTable("#ObjectKeyForCreateWebhooks",
+		func(obj client.Object, expectedKey client.ObjectKey) {
+			Expect(ObjectKeyForCreateWebhooks(obj)).To(Equal(expectedKey))
+		},
+
+		Entry("object w/o namespace with generateName", &corev1.Pod{ObjectMeta: metav1.ObjectMeta{GenerateName: "foo"}}, client.ObjectKey{Namespace: "default", Name: "foo"}),
+		Entry("object w/o namespace with name", &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}, client.ObjectKey{Namespace: "default", Name: "foo"}),
+		Entry("object w/ namespace with generateName", &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "bar", GenerateName: "foo"}}, client.ObjectKey{Namespace: "bar", Name: "foo"}),
+		Entry("object w/ namespace with name", &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "bar", Name: "foo"}}, client.ObjectKey{Namespace: "bar", Name: "foo"}),
+	)
 })
