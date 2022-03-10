@@ -73,9 +73,9 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 		type11 = "type11"
 		type12 = "type12"
 
-		backupBucket2 = &gardencorev1beta1.BackupBucket{
+		backupBucket1 = &gardencorev1beta1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "bb2",
+				Name: "bb1",
 			},
 			Spec: gardencorev1beta1.BackupBucketSpec{
 				SeedName: &seedName,
@@ -84,9 +84,9 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 				},
 			},
 		}
-		backupBucket3 = &gardencorev1beta1.BackupBucket{
+		backupBucket2 = &gardencorev1beta1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "bb3",
+				Name: "bb2",
 			},
 			Spec: gardencorev1beta1.BackupBucketSpec{
 				SeedName: &seedName,
@@ -97,13 +97,13 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 		}
 		backupBucketList = &gardencorev1beta1.BackupBucketList{
 			Items: []gardencorev1beta1.BackupBucket{
+				*backupBucket1,
 				*backupBucket2,
-				*backupBucket3,
 			},
 		}
 		buckets = map[string]gardencorev1beta1.BackupBucket{
+			backupBucket1.Name: *backupBucket1,
 			backupBucket2.Name: *backupBucket2,
-			backupBucket3.Name: *backupBucket3,
 		}
 
 		backupEntry2 = &gardencorev1beta1.BackupEntry{
@@ -112,7 +112,7 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 			},
 			Spec: gardencorev1beta1.BackupEntrySpec{
 				SeedName:   &seedName,
-				BucketName: backupBucket2.Name,
+				BucketName: backupBucket1.Name,
 			},
 		}
 		backupEntry3 = &gardencorev1beta1.BackupEntry{
@@ -121,7 +121,7 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 			},
 			Spec: gardencorev1beta1.BackupEntrySpec{
 				SeedName:   &seedName,
-				BucketName: backupBucket2.Name,
+				BucketName: backupBucket1.Name,
 			},
 		}
 		backupEntryList = &gardencorev1beta1.BackupEntryList{
@@ -492,8 +492,8 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 			kindTypes, bs := computeKindTypesForBackupBuckets(backupBucketList)
 
 			Expect(kindTypes).To(Equal(sets.NewString(
+				extensionsv1alpha1.BackupBucketResource+"/"+backupBucket1.Spec.Provider.Type,
 				extensionsv1alpha1.BackupBucketResource+"/"+backupBucket2.Spec.Provider.Type,
-				extensionsv1alpha1.BackupBucketResource+"/"+backupBucket3.Spec.Provider.Type,
 			)))
 			Expect(bs).To(Equal(buckets))
 		})
@@ -510,7 +510,7 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 			kindTypes := computeKindTypesForBackupEntries(nopLogger, backupEntryList, buckets)
 
 			Expect(kindTypes).To(Equal(sets.NewString(
-				extensionsv1alpha1.BackupEntryResource + "/" + backupBucket2.Spec.Provider.Type,
+				extensionsv1alpha1.BackupEntryResource + "/" + backupBucket1.Spec.Provider.Type,
 			)))
 		})
 	})
