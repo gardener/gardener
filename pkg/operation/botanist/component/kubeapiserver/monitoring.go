@@ -160,6 +160,10 @@ const (
     annotations:
       description: 'The API servers cumulative failure rate in logging audit events is greater than 2%.'
       summary: 'The kubernetes API server has too many failed attempts to log audit events'
+  - record: shoot:` + monitoringMetricApiserverAuditEventTotal + `:sum
+    expr: sum(rate(` + monitoringMetricApiserverAuditEventTotal + `{job="` + monitoringPrometheusJobName + `"}[5m]))
+  - record: shoot:` + monitoringMetricApiserverAuditErrorTotal + `:sum
+    expr: sum(rate(` + monitoringMetricApiserverAuditErrorTotal + `{plugin="webhook",job="` + monitoringPrometheusJobName + `"}[5m]))
   ### API latency ###
   - record: ` + monitoringMetricApiserverLatencySeconds + `:quantile
     expr: histogram_quantile(0.99, sum without (instance, pod) (rate(` + monitoringMetricApiserverRequestDurationSecondsBucket + `[5m])))
