@@ -21,11 +21,11 @@ import (
 	"net/http"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -50,7 +50,7 @@ func (w *tokenInvalidator) Handle(_ context.Context, req admission.Request) admi
 		return admission.Errored(http.StatusUnprocessableEntity, err)
 	}
 
-	log := w.logger.WithValues("secret", client.ObjectKeyFromObject(secret))
+	log := w.logger.WithValues("secret", kutil.ObjectKeyForCreateWebhooks(secret))
 
 	if secret.Data == nil {
 		log.Info("Secret's data is nil, nothing to be done")
