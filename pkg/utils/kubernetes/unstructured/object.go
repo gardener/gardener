@@ -60,7 +60,7 @@ func GetObject(ctx context.Context, c client.Client, gvk schema.GroupVersionKind
 	}
 
 	// Return object content
-	return filterMetadata(obj.UnstructuredContent(), systemMetadataFields...), nil
+	return FilterMetadata(obj.UnstructuredContent(), systemMetadataFields...), nil
 }
 
 // CreateOrPatchObjectByRef creates or patches the object with the given reference and namespace using the given client.
@@ -91,7 +91,7 @@ func CreateOrPatchObject(ctx context.Context, c client.Client, gvk schema.GroupV
 		// Set object content
 		if content != nil {
 			obj.SetUnstructuredContent(mergeObjectContents(obj.UnstructuredContent(),
-				filterMetadata(content, add(systemMetadataFields, "namespace", "name")...)))
+				FilterMetadata(content, add(systemMetadataFields, "namespace", "name")...)))
 		}
 		return nil
 	})
@@ -156,7 +156,8 @@ func mergeObjectContents(dest, src map[string]interface{}) map[string]interface{
 	return dest
 }
 
-func filterMetadata(content map[string]interface{}, fields ...string) map[string]interface{} {
+// FilterMetadata filters metadata from the provided unstructured object content.
+func FilterMetadata(content map[string]interface{}, fields ...string) map[string]interface{} {
 	// Copy content to result
 	result := make(map[string]interface{})
 	for key, value := range content {

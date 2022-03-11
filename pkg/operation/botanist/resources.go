@@ -45,6 +45,8 @@ func (b *Botanist) DeployReferencedResources(ctx context.Context) error {
 			return fmt.Errorf("object not found %v", resource.ResourceRef)
 		}
 
+		obj = unstructuredutils.FilterMetadata(obj, "finalizers", "labels", "annotations")
+
 		// Create an unstructured object and append it to the slice
 		unstructuredObj := &unstructured.Unstructured{Object: obj}
 		unstructuredObj.SetNamespace(b.Shoot.SeedNamespace)
