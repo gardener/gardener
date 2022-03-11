@@ -1044,11 +1044,11 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path) fie
 		} else {
 			duration := maintenanceTimeWindow.Duration()
 			if duration > core.MaintenanceTimeWindowDurationMaximum {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("timeWindow"), fmt.Sprintf("time window must not be greater than %s", core.MaintenanceTimeWindowDurationMaximum)))
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("timeWindow"), duration, fmt.Sprintf("time window must not be greater than %s", core.MaintenanceTimeWindowDurationMaximum)))
 				return allErrs
 			}
 			if duration < core.MaintenanceTimeWindowDurationMinimum {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("timeWindow"), fmt.Sprintf("time window must not be smaller than %s", core.MaintenanceTimeWindowDurationMinimum)))
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("timeWindow"), duration, fmt.Sprintf("time window must not be smaller than %s", core.MaintenanceTimeWindowDurationMinimum)))
 				return allErrs
 			}
 		}
