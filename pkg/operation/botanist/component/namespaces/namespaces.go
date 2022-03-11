@@ -16,6 +16,7 @@ package namespaces
 
 import (
 	"context"
+	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -59,8 +60,23 @@ func (n *namespaces) Destroy(ctx context.Context) error {
 	return managedresources.DeleteForShoot(ctx, n.client, n.namespace, ManagedResourceName)
 }
 
-func (n *namespaces) Wait(_ context.Context) error        { return nil }
-func (n *namespaces) WaitCleanup(_ context.Context) error { return nil }
+// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
+// or deleted.
+var TimeoutWaitForManagedResource = 2 * time.Minute
+
+func (n *namespaces) Wait(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilHealthy(timeoutCtx, n.client, n.namespace, ManagedResourceName)
+}
+
+func (n *namespaces) WaitCleanup(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilDeleted(timeoutCtx, n.client, n.namespace, ManagedResourceName)
+}
 
 func (n *namespaces) computeResourcesData() (map[string][]byte, error) {
 	var (
