@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package v19 a kube-scheduler specific configuration for
-// 1.19 Kubernetes version. The API types used by the scheduler
-// are in the v1beta1 subpackage.
+// Package v19 contains a kube-scheduler specific configuration for
+// Kubernetes version 1.19. The used API version for the kube-scheduler's
+// component config is kubescheduler.config.k8s.io/v1beta1.
 package v19
