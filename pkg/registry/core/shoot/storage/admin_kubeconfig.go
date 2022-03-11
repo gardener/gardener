@@ -37,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/clock"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/authentication/user"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/rest"
@@ -111,7 +112,8 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 	}
 
 	if len(shoot.Status.AdvertisedAddresses) == 0 {
-		return nil, errors.NewBadRequest("no kube-apiserver advertised addresses in Shoot .status.advertisedAddresses")
+		fieldErr := field.Invalid(field.NewPath("status", "status"), shoot.Status.AdvertisedAddresses, "no kube-apiserver advertised addresses in Shoot .status.advertisedAddresses")
+		return nil, errors.NewInvalid(gvk.GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 	}
 
 	ca, err := infodata.GetInfoData(shootState.Spec.Gardener, v1beta1constants.SecretNameCACluster)
@@ -120,7 +122,7 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 	}
 
 	if ca == nil {
-		return nil, errors.NewBadRequest("certificate authority not yet provisioned")
+		return nil, errors.NewInternalError(fmt.Errorf("certificate authority not yet provisioned"))
 	}
 
 	caInfoData, ok := ca.(*secrets.CertificateInfoData)

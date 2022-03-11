@@ -204,27 +204,27 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 
 	cloudProfile, err := v.cloudProfileLister.Get(shoot.Spec.CloudProfileName)
 	if err != nil {
-		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced cloud profile: %+v", err.Error()))
+		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
 	}
 
 	var seed *core.Seed
 	if shoot.Spec.SeedName != nil {
 		seed, err = v.seedLister.Get(*shoot.Spec.SeedName)
 		if err != nil {
-			return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced seed %q: %+v", *shoot.Spec.SeedName, err.Error()))
+			return apierrors.NewInternalError(fmt.Errorf("could not find referenced seed %q: %+v", *shoot.Spec.SeedName, err.Error()))
 		}
 	}
 
 	project, err := admissionutils.ProjectForNamespaceFromInternalLister(v.projectLister, shoot.Namespace)
 	if err != nil {
-		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced project: %+v", err.Error()))
+		return apierrors.NewInternalError(fmt.Errorf("could not find referenced project: %+v", err.Error()))
 	}
 
 	var secretBinding *core.SecretBinding
 	if utilfeature.DefaultFeatureGate.Enabled(features.SecretBindingProviderValidation) {
 		secretBinding, err = v.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.SecretBindingName)
 		if err != nil {
-			return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced secret binding: %+v", err.Error()))
+			return apierrors.NewInternalError(fmt.Errorf("could not find referenced secret binding: %+v", err.Error()))
 		}
 	}
 
@@ -293,6 +293,8 @@ func (c *validationContext) validateProjectMembership(a admission.Attributes) er
 		return nil
 	}
 
+	namePath := field.NewPath("name")
+
 	// We currently use the identifier "shoot-<project-name>-<shoot-name> in nearly all places for old Shoots, but have
 	// changed that to "shoot--<project-name>-<shoot-name>": when creating infrastructure resources, Kubernetes resources,
 	// DNS names, etc., then this identifier is used to tag/name the resources. Some of those resources have length
@@ -304,11 +306,13 @@ func (c *validationContext) validateProjectMembership(a admission.Attributes) er
 	if len(c.shoot.Name) == 0 && len(c.shoot.GenerateName) > 0 {
 		var randomLength = 5
 		if len(c.project.Name+c.shoot.GenerateName) > lengthLimit-randomLength {
-			return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot generateName and the project name must not exceed %d characters (project: %s; shoot with generateName: %s)", lengthLimit-randomLength, c.project.Name, c.shoot.GenerateName))
+			fieldErr := field.Invalid(namePath, c.shoot.Name, fmt.Sprintf("the length of the shoot generateName and the project name must not exceed %d characters (project: %s; shoot with generateName: %s)", lengthLimit-randomLength, c.project.Name, c.shoot.GenerateName))
+			return apierrors.NewInvalid(a.GetKind().GroupKind(), c.shoot.Name, field.ErrorList{fieldErr})
 		}
 	} else {
 		if len(c.project.Name+c.shoot.Name) > lengthLimit {
-			return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot name and the project name must not exceed %d characters (project: %s; shoot: %s)", lengthLimit, c.project.Name, c.shoot.Name))
+			fieldErr := field.Invalid(namePath, c.shoot.Name, fmt.Sprintf("the length of the shoot name and the project name must not exceed %d characters (project: %s; shoot: %s)", lengthLimit, c.project.Name, c.shoot.Name))
+			return apierrors.NewInvalid(a.GetKind().GroupKind(), c.shoot.Name, field.ErrorList{fieldErr})
 		}
 	}
 
@@ -354,7 +358,7 @@ func (c *validationContext) validateScheduling(a admission.Attributes, shootList
 	if shootIsBeingRescheduled {
 		oldSeed, err := seedLister.Get(*c.oldShoot.Spec.SeedName)
 		if err != nil {
-			return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced seed: %+v", err.Error()))
+			return apierrors.NewInternalError(fmt.Errorf("could not find referenced seed: %+v", err.Error()))
 		}
 
 		if oldSeed.Spec.Backup == nil {

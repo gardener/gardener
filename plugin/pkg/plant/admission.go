@@ -175,7 +175,7 @@ func (a *Handler) validate(plant *core.Plant, attrs admission.Attributes) error 
 
 	project, err := admissionutils.ProjectForNamespaceFromInternalLister(a.projectLister, plant.Namespace)
 	if err != nil {
-		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced project: %+v", err.Error()))
+		return apierrors.NewInternalError(fmt.Errorf("could not find referenced project: %+v", err.Error()))
 	}
 
 	// We don't want new Plants to be created in Projects which were already marked for deletion.
