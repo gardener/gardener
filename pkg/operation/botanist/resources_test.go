@@ -147,6 +147,22 @@ var _ = Describe("Resources", func() {
 				}))
 			}
 		})
+
+		It("should remove extra fields from existing resources", func() {
+			resourceInSeed := resource.DeepCopy()
+			resourceInSeed.Name = "ref-" + resourceInSeed.Name
+			resourceInSeed.Namespace = seedNamespace
+
+			Expect(fakeGardenClient.Create(ctx, resource)).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, resourceInSeed)).To(Succeed())
+
+			Expect(botanist.DeployReferencedResources(ctx)).To(Succeed())
+
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(resourceInSeed), resourceInSeed)).To(Succeed())
+			Expect(resourceInSeed.Labels).To(BeNil())
+			Expect(resourceInSeed.Annotations).To(BeNil())
+			Expect(resourceInSeed.Finalizers).To(BeEmpty())
+		})
 	})
 
 	Describe("#DestroyReferencedResources", func() {
