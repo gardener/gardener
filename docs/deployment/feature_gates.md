@@ -43,6 +43,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | ForceRestore                                 | `false` | `Alpha` | `1.39` |        |
 | DisableDNSProviderManagement                 | `false` | `Alpha` | `1.41` |        |
 | ShootCARotation                              | `false` | `Alpha` | `1.42` |        |
+| ShootMaxTokenExpirationOverwrite             | `false` | `Alpha` | `1.43` |        |
+| ShootMaxTokenExpirationValidation            | `false` | `Alpha` | `1.43` |        |
 
 ## Feature gates for graduated or deprecated features
 
@@ -122,3 +124,5 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | ForceRestore                               | `gardenlet`                                                      | Enables forcing the shoot's restoration to the destination seed during control plane migration if the preparation for migration in the source seed is not finished after a certain grace period and is considered unlikely to succeed (falling back to the [control plane migration "bad case" scenario](../proposals/17-shoot-control-plane-migration-bad-case.md)). If you enable this feature gate, make sure to also enable `UseDNSRecords` and `CopyEtcdBackupsDuringControlPlaneMigration`. |
 | DisableDNSProviderManagement               | `gardenlet`                                                      | Disables management of `dns.gardener.cloud/v1alpha1.DNSProvider` resources. In this case, the `shoot-dns-service` extension will take this over if it is installed. This feature is only effective if the feature `UseDNSRecords` is `true`. |
 | ShootCARotation                            | `gardener-apiserver`, `gardenlet`                                | Enables the feature to trigger automated CA rotation for shoot clusters. |
+| ShootMaxTokenExpirationOverwrite           | `gardener-apiserver`                                             | Makes the Gardener API server overwriting values in the `.spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration` field of Shoot specifications to<br>- be at least 720h (30d) when the current value is lower<br>- be at most 2160h (90d) when the current value is higher<br>before persisting the object to etcd. |
+| ShootMaxTokenExpirationValidation          | `gardener-apiserver`                                             | Enables validations on Gardener API server that enforce that the value of the `.spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration` field<br>- is at least 720h (30d).<br>- is at most 2160h (90d).<br>Only enable this after `ShootMaxTokenExpirationOverwrite` is enabled and all shoots got updated accordingly. |

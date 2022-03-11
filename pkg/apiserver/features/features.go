@@ -30,5 +30,7 @@ func RegisterFeatureGates() {
 		features.WorkerPoolKubernetesVersion,
 		features.SecretBindingProviderValidation,
 		features.ShootCARotation,
+		features.ShootMaxTokenExpirationOverwrite,
+		features.ShootMaxTokenExpirationValidation,
 	)))
 }
