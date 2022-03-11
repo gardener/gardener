@@ -74,8 +74,11 @@ var _ = Describe("Resources", func() {
 
 		resource = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: gardenNamespace,
+				Name:        "foo",
+				Namespace:   gardenNamespace,
+				Finalizers:  []string{"some-finalizer1", "some-finalizer2"},
+				Annotations: map[string]string{"foo": "bar"},
+				Labels:      map[string]string{"bar": "foo"},
 			},
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{"some": []byte("data")},
