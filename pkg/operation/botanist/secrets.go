@@ -38,6 +38,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -48,6 +49,125 @@ import (
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+func (b *Botanist) wantedCertificateAuthorities() map[string]*secretutils.CertificateSecretConfig {
+	return map[string]*secretutils.CertificateSecretConfig{
+		v1beta1constants.SecretNameCACluster: {
+			Name:       v1beta1constants.SecretNameCACluster,
+			CommonName: "kubernetes",
+			CertType:   secretutils.CACert,
+		},
+		v1beta1constants.SecretNameCAETCD: {
+			Name:       v1beta1constants.SecretNameCAETCD,
+			CommonName: "etcd",
+			CertType:   secretutils.CACert,
+		},
+		v1beta1constants.SecretNameCAFrontProxy: {
+			Name:       v1beta1constants.SecretNameCAFrontProxy,
+			CommonName: "front-proxy",
+			CertType:   secretutils.CACert,
+		},
+		v1beta1constants.SecretNameCAKubelet: {
+			Name:       v1beta1constants.SecretNameCAKubelet,
+			CommonName: "kubelet",
+			CertType:   secretutils.CACert,
+		},
+		v1beta1constants.SecretNameCAMetricsServer: {
+			Name:       v1beta1constants.SecretNameCAMetricsServer,
+			CommonName: "metrics-server",
+			CertType:   secretutils.CACert,
+		},
+		v1beta1constants.SecretNameCAVPN: {
+			Name:       v1beta1constants.SecretNameCAVPN,
+			CommonName: "vpn",
+			CertType:   secretutils.CACert,
+		},
+	}
+}
+
+// InitializeSecretsManagement initializes the secrets management and deploys the required secrets to the shoot
+// namespace in the seed.
+func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
+	// Generally, the existing secrets in the shoot namespace in the seeds are the source of truth for the secret
+	// manager. Hence, if we restore a shoot control plane then let's fetch the existing data from the ShootState and
+	// create corresponding secrets in the shoot namespace in the seed before initializing it. Note that this is
+	// explicitly only done in case of restoration to prevent split-brain situations as described in
+	// https://github.com/gardener/gardener/issues/5377.
+	if b.isRestorePhase() {
+		if err := b.restoreSecretsFromShootStateForSecretsManagerAdoption(ctx); err != nil {
+			return err
+		}
+	}
+
+	for _, config := range b.wantedCertificateAuthorities() {
+		if _, err := b.SecretsManager.Generate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
+	rotation := make(map[string]time.Time)
+
+	return rotation
+}
+
+func (b *Botanist) restoreSecretsFromShootStateForSecretsManagerAdoption(ctx context.Context) error {
+	var fns []flow.TaskFn
+
+	for _, v := range b.GetShootState().Spec.Gardener {
+		entry := v
+
+		if entry.Labels[secretsmanager.LabelKeyManagedBy] != secretsmanager.LabelValueSecretsManager ||
+			entry.Type != "secret" {
+			continue
+		}
+
+		fns = append(fns, func(ctx context.Context) error {
+			objectMeta := metav1.ObjectMeta{
+				Name:      entry.Name,
+				Namespace: b.Shoot.SeedNamespace,
+				Labels:    entry.Labels,
+			}
+
+			data := make(map[string][]byte)
+			if err := json.Unmarshal(entry.Data.Raw, &data); err != nil {
+				return err
+			}
+
+			secret := secretsmanager.Secret(objectMeta, data)
+			return kutil.IgnoreAlreadyExists(b.K8sSeedClient.Client().Create(ctx, secret))
+		})
+	}
+
+	return flow.Parallel(fns...)(ctx)
+}
+
+func (b *Botanist) fetchCertificateAuthoritiesForLegacySecretsManager(ctx context.Context, legacySecretsManager *shootsecrets.SecretsManager, addToDeployedSecrets bool) (map[string]*secretutils.Certificate, error) {
+	cas := make(map[string]*secretutils.Certificate)
+
+	for _, config := range b.wantedCertificateAuthorities() {
+		secret, err := b.SecretsManager.Generate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld))
+		if err != nil {
+			return nil, err
+		}
+
+		if addToDeployedSecrets {
+			legacySecretsManager.DeployedSecrets[secret.Name] = secret
+		}
+
+		cert, err := secretutils.LoadCertificate(secret.Name, secret.Data[secretutils.DataKeyPrivateKeyCA], secret.Data[secretutils.DataKeyCertificateCA])
+		if err != nil {
+			return nil, err
+		}
+
+		cas[secret.Name] = cert
+	}
+
+	return cas, nil
+}
 
 // GenerateAndSaveSecrets creates a CA certificate for the Shoot cluster and uses it to sign the server certificate
 // used by the kube-apiserver, and all client certificates used for communication. It also creates RSA key
@@ -63,13 +183,13 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 		for _, name := range []string{
 			"gardener",
 			"gardener-internal",
-			"kube-scheduler",
 			"kube-controller-manager",
 			"cluster-autoscaler",
 			"kube-state-metrics",
 			// TODO(rfranzke): Uncomment this in a future release once all monitoring configurations of extensions have been
 			// adapted.
 			// "prometheus",
+			"kube-scheduler-server",
 		} {
 			gardenerResourceDataList.Delete(name)
 		}
@@ -150,13 +270,20 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 		secretsManager := shootsecrets.NewSecretsManager(
 			gardenerResourceDataList,
 			b.generateStaticTokenConfig(),
-			b.wantedCertificateAuthorities(),
 			b.generateWantedSecretConfigs,
 		)
 
 		if shootWantsBasicAuth {
 			secretsManager = secretsManager.WithAPIServerBasicAuthConfig(basicAuthSecretAPIServer)
 		}
+
+		// For backwards-compatibility, we need to make the CAs known to the legacy secret manager.
+		// TODO(rfranzke): This can be removed in a future release once all secrets where adapted.
+		cas, err := b.fetchCertificateAuthoritiesForLegacySecretsManager(ctx, secretsManager, false)
+		if err != nil {
+			return err
+		}
+		secretsManager = secretsManager.WithCertificateAuthorities(cas)
 
 		if err := secretsManager.Generate(); err != nil {
 			return err
@@ -179,13 +306,20 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 	secretsManager := shootsecrets.NewSecretsManager(
 		gardenerResourceDataList,
 		b.generateStaticTokenConfig(),
-		b.wantedCertificateAuthorities(),
 		b.generateWantedSecretConfigs,
 	)
 
 	if gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo()) {
 		secretsManager.WithAPIServerBasicAuthConfig(basicAuthSecretAPIServer)
 	}
+
+	// For backwards-compatibility, we need to make the CAs known to the legacy secret manager.
+	// TODO(rfranzke): This can be removed in a future release once all secrets where adapted.
+	cas, err := b.fetchCertificateAuthoritiesForLegacySecretsManager(ctx, secretsManager, true)
+	if err != nil {
+		return err
+	}
+	secretsManager = secretsManager.WithCertificateAuthorities(cas)
 
 	if err := secretsManager.WithExistingSecrets(existingSecrets).Deploy(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace); err != nil {
 		return err

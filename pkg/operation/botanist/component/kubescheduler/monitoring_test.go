@@ -30,7 +30,7 @@ var _ = Describe("Monitoring", func() {
 		func(version, expectedScrapeConfig string) {
 			semverVersion, err := semver.NewVersion(version)
 			Expect(err).NotTo(HaveOccurred())
-			kubeScheduler := New(nil, "", semverVersion, "", 0, nil)
+			kubeScheduler := New(nil, "", nil, semverVersion, "", 0, nil)
 
 			test.ScrapeConfigs(kubeScheduler, expectedScrapeConfig)
 		},
@@ -46,7 +46,7 @@ var _ = Describe("Monitoring", func() {
 	It("should successfully test the alerting rules", func() {
 		semverVersion, err := semver.NewVersion("1.18.4")
 		Expect(err).NotTo(HaveOccurred())
-		kubeScheduler := New(nil, "", semverVersion, "", 0, nil)
+		kubeScheduler := New(nil, "", nil, semverVersion, "", 0, nil)
 
 		test.AlertingRulesWithPromtool(
 			kubeScheduler,

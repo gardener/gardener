@@ -240,6 +240,20 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
+	Describe("#SetDefaults_ShootSecretControllerConfiguration", func() {
+		var obj *ShootSecretControllerConfiguration
+
+		BeforeEach(func() {
+			obj = &ShootSecretControllerConfiguration{}
+		})
+
+		It("should default the configuration", func() {
+			SetDefaults_ShootSecretControllerConfiguration(obj)
+
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
+		})
+	})
+
 	Describe("#SetDefaults_BackupEntryControllerConfiguration", func() {
 		var obj *BackupEntryControllerConfiguration
 

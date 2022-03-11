@@ -92,6 +92,7 @@ func (g *GardenerResourceDataList) Upsert(data *gardencorev1alpha1.GardenerResou
 		if obj.Name == data.Name {
 			(*g)[i].Type = data.Type
 			(*g)[i].Data = data.Data
+			(*g)[i].Labels = data.Labels
 			return
 		}
 	}

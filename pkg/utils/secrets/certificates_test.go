@@ -58,7 +58,7 @@ var _ = Describe("Certificate Secrets", func() {
 		})
 
 		Describe("#Generate", func() {
-			It("should properly generate Certificate Object", func() {
+			It("should properly generate CA Certificate Object", func() {
 				obj, err := certificateConfig.Generate()
 				Expect(err).NotTo(HaveOccurred())
 
@@ -69,6 +69,7 @@ var _ = Describe("Certificate Secrets", func() {
 				Expect(certificate.CertificatePEM).NotTo(BeNil())
 				Expect(certificate.PrivateKey).NotTo(BeNil())
 				Expect(certificate.Certificate).NotTo(BeNil())
+				Expect(certificate.CA).To(BeNil())
 			})
 		})
 
@@ -147,22 +148,30 @@ var _ = Describe("Certificate Secrets", func() {
 
 		Describe("#SecretData", func() {
 			It("should properly return secret data if certificate type is CA", func() {
-				secretData := map[string][]byte{
+				Expect(certificate.SecretData()).To(Equal(map[string][]byte{
 					DataKeyPrivateKeyCA:  []byte("foo"),
 					DataKeyCertificateCA: []byte("bar"),
-				}
-				Expect(certificate.SecretData()).To(Equal(secretData))
+				}))
 			})
+
 			It("should properly return secret data if certificate type is server, client or both", func() {
-				certificate.CA = &Certificate{
-					CertificatePEM: []byte("ca"),
-				}
-				secretData := map[string][]byte{
+				certificate.CA = &Certificate{CertificatePEM: []byte("ca")}
+
+				Expect(certificate.SecretData()).To(Equal(map[string][]byte{
 					DataKeyPrivateKey:    []byte("foo"),
 					DataKeyCertificate:   []byte("bar"),
 					DataKeyCertificateCA: []byte("ca"),
-				}
-				Expect(certificate.SecretData()).To(Equal(secretData))
+				}))
+			})
+
+			It("should properly return secret data if certificate type is server, client or both w/o publishing CA", func() {
+				certificate.CA = &Certificate{CertificatePEM: []byte("ca")}
+				certificate.SkipPublishingCACertificate = true
+
+				Expect(certificate.SecretData()).To(Equal(map[string][]byte{
+					DataKeyPrivateKey:  []byte("foo"),
+					DataKeyCertificate: []byte("bar"),
+				}))
 			})
 		})
 	})

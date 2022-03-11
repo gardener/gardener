@@ -1460,6 +1460,13 @@ func (in *Gardener) DeepCopy() *Gardener {
 func (in *GardenerResourceData) DeepCopyInto(out *GardenerResourceData) {
 	*out = *in
 	in.Data.DeepCopyInto(&out.Data)
+	if in.Labels != nil {
+		in, out := &in.Labels, &out.Labels
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	return
 }
 

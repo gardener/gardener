@@ -137,6 +137,10 @@ data:
         {{- if .Values.global.gardenlet.config.controllers.shootCare.conditionThresholds }}
 {{ toYaml .Values.global.gardenlet.config.controllers.shootCare.conditionThresholds | indent 8 }}
         {{- end }}
+      {{- if .Values.global.gardenlet.config.controllers.shootSecret }}
+      shootSecret:
+        concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.shootSecret.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.shootSecret.concurrentSyncs }}
+      {{- end }}
       shootStateSync:
         concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.shootStateSync.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.shootStateSync.concurrentSyncs }}
         syncPeriod: {{ required ".Values.global.gardenlet.config.controllers.shootStateSync.syncPeriod is required" .Values.global.gardenlet.config.controllers.shootStateSync.syncPeriod }}

@@ -103,6 +103,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ShootMigrationControllerConfiguration":                 schema_gardenlet_apis_config_v1alpha1_ShootMigrationControllerConfiguration(ref),
 		"github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ShootMonitoringConfig":                                 schema_gardenlet_apis_config_v1alpha1_ShootMonitoringConfig(ref),
 		"github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ShootNodeLogging":                                      schema_gardenlet_apis_config_v1alpha1_ShootNodeLogging(ref),
+		"github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ShootSecretControllerConfiguration":                    schema_gardenlet_apis_config_v1alpha1_ShootSecretControllerConfiguration(ref),
 		"github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ShootStateSyncControllerConfiguration":                 schema_gardenlet_apis_config_v1alpha1_ShootStateSyncControllerConfiguration(ref),
 		"github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.StaleExtensionHealthChecks":                            schema_gardenlet_apis_config_v1alpha1_StaleExtensionHealthChecks(ref),
 		"github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.TLSServer":                                             schema_gardenlet_apis_config_v1alpha1_TLSServer(ref),
@@ -2764,11 +2765,17 @@ func schema_gardenlet_apis_config_v1alpha1_GardenletControllerConfiguration(ref 
 							Ref:         ref("github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ManagedSeedControllerConfiguration"),
 						},
 					},
+					"shootSecret": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ShootSecretControllerConfiguration the configuration of the ShootSecret controller.",
+							Ref:         ref("github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ShootSecretControllerConfiguration"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.BackupBucketControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.BackupEntryControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.BackupEntryMigrationControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.BastionControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ControllerInstallationCareControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ControllerInstallationControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ControllerInstallationRequiredControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ManagedSeedControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.SeedAPIServerNetworkPolicyControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.SeedControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ShootCareControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ShootControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ShootMigrationControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ShootStateSyncControllerConfiguration"},
+			"github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.BackupBucketControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.BackupEntryControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.BackupEntryMigrationControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.BastionControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ControllerInstallationCareControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ControllerInstallationControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ControllerInstallationRequiredControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ManagedSeedControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.SeedAPIServerNetworkPolicyControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.SeedControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ShootCareControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ShootControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ShootMigrationControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ShootSecretControllerConfiguration", "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.ShootStateSyncControllerConfiguration"},
 	}
 }
 
@@ -3594,6 +3601,26 @@ func schema_gardenlet_apis_config_v1alpha1_ShootNodeLogging(ref common.Reference
 									},
 								},
 							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func schema_gardenlet_apis_config_v1alpha1_ShootSecretControllerConfiguration(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootSecretControllerConfiguration defines the configuration of the ShootSecret controller.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"concurrentSyncs": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ConcurrentSyncs is the number of workers used for the controller to work on events.",
+							Type:        []string{"integer"},
+							Format:      "int32",
 						},
 					},
 				},

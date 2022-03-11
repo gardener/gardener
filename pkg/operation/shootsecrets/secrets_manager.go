@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"sync"
 
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
@@ -37,10 +36,9 @@ type SecretConfigGeneratorFunc func(*secrets.BasicAuth, *secrets.StaticToken, ma
 // It uses these configurations to generate new secret infodata and save it into the ShootState
 // or create kubernetes secret objects from infodata available in the ShootState and deploy them.
 type SecretsManager struct {
-	apiServerBasicAuthConfig    *secrets.BasicAuthSecretConfig
-	staticTokenConfig           *secrets.StaticTokenSecretConfig
-	certificateAuthorityConfigs map[string]*secrets.CertificateSecretConfig
-	secretConfigGenerator       SecretConfigGeneratorFunc
+	apiServerBasicAuthConfig *secrets.BasicAuthSecretConfig
+	staticTokenConfig        *secrets.StaticTokenSecretConfig
+	secretConfigGenerator    SecretConfigGeneratorFunc
 
 	apiServerBasicAuth     *secrets.BasicAuth
 	certificateAuthorities map[string]*secrets.Certificate
@@ -57,23 +55,27 @@ type SecretsManager struct {
 func NewSecretsManager(
 	gardenerResourceDataList gardencorev1alpha1helper.GardenerResourceDataList,
 	staticTokenConfig *secrets.StaticTokenSecretConfig,
-	certificateAuthorityConfigs map[string]*secrets.CertificateSecretConfig,
 	secretConfigGenerator SecretConfigGeneratorFunc,
 ) *SecretsManager {
 	return &SecretsManager{
-		GardenerResourceDataList:    gardenerResourceDataList,
-		staticTokenConfig:           staticTokenConfig,
-		certificateAuthorityConfigs: certificateAuthorityConfigs,
-		secretConfigGenerator:       secretConfigGenerator,
-		certificateAuthorities:      make(map[string]*secrets.Certificate, len(certificateAuthorityConfigs)),
-		existingSecrets:             map[string]*corev1.Secret{},
-		DeployedSecrets:             map[string]*corev1.Secret{},
+		GardenerResourceDataList: gardenerResourceDataList,
+		staticTokenConfig:        staticTokenConfig,
+		secretConfigGenerator:    secretConfigGenerator,
+		certificateAuthorities:   make(map[string]*secrets.Certificate),
+		existingSecrets:          map[string]*corev1.Secret{},
+		DeployedSecrets:          map[string]*corev1.Secret{},
 	}
 }
 
 // WithExistingSecrets adds the provided map of existing secrets to the SecretsManager
 func (s *SecretsManager) WithExistingSecrets(existingSecrets map[string]*corev1.Secret) *SecretsManager {
 	s.existingSecrets = existingSecrets
+	return s
+}
+
+// WithCertificateAuthorities adds the provided map of CA secrets to the SecretsManager
+func (s *SecretsManager) WithCertificateAuthorities(cas map[string]*secrets.Certificate) *SecretsManager {
+	s.certificateAuthorities = cas
 	return s
 }
 
@@ -94,20 +96,6 @@ func (s *SecretsManager) Generate() error {
 
 	if err := s.generateStaticTokenAndUpdateResourceList(); err != nil {
 		return err
-	}
-
-	for _, caConfig := range s.certificateAuthorityConfigs {
-		if err := s.generateInfoDataAndUpdateResourceList(caConfig); err != nil {
-			return err
-		}
-	}
-
-	for name, caConfig := range s.certificateAuthorityConfigs {
-		cert, err := s.getInfoDataAndGenerateSecret(caConfig)
-		if err != nil {
-			return err
-		}
-		s.certificateAuthorities[name] = cert.(*secrets.Certificate)
 	}
 
 	secretConfigs, err := s.secretConfigGenerator(nil, nil, s.certificateAuthorities)
@@ -134,18 +122,6 @@ func (s *SecretsManager) Deploy(ctx context.Context, k8sClient client.Client, na
 	}
 
 	if err := s.deployStaticToken(ctx, k8sClient, namespace); err != nil {
-		return err
-	}
-
-	for name, caConfig := range s.certificateAuthorityConfigs {
-		cert, err := s.getInfoDataAndGenerateSecret(caConfig)
-		if err != nil {
-			return err
-		}
-		s.certificateAuthorities[name] = cert.(*secrets.Certificate)
-	}
-
-	if err := s.deployCertificateAuthorities(ctx, k8sClient, namespace); err != nil {
 		return err
 	}
 
@@ -308,44 +284,6 @@ func (s *SecretsManager) deployStaticToken(ctx context.Context, k8sClient client
 
 	s.DeployedSecrets[secret.Name] = secret
 
-	return nil
-}
-
-func (s *SecretsManager) deployCertificateAuthorities(ctx context.Context, k8sClient client.Client, namespace string) error {
-	type caOutput struct {
-		secret *corev1.Secret
-		err    error
-	}
-
-	var (
-		wg        sync.WaitGroup
-		results   = make(chan *caOutput)
-		errorList = []error{}
-	)
-
-	for name, certificateAuthority := range s.certificateAuthorities {
-		wg.Add(1)
-		go func(c *secrets.Certificate, n string) {
-			defer wg.Done()
-			secret, err := s.deploySecret(ctx, k8sClient, namespace, c, n)
-			results <- &caOutput{secret, err}
-		}(certificateAuthority, name)
-	}
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
-	for out := range results {
-		if out.err != nil {
-			errorList = append(errorList, out.err)
-			continue
-		}
-		s.DeployedSecrets[out.secret.Name] = out.secret
-	}
-	// Wait and check whether an error occurred during the parallel processing of the Secret creation.
-	if len(errorList) > 0 {
-		return fmt.Errorf("errors occurred during certificate authority generation: %+v", errorList)
-	}
 	return nil
 }
 

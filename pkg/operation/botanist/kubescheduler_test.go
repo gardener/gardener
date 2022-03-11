@@ -15,16 +15,10 @@
 package botanist_test
 
 import (
-	"context"
-	"fmt"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
-	mockkubescheduler "github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
@@ -75,44 +69,6 @@ var _ = Describe("KubeScheduler", func() {
 			kubeScheduler, err := botanist.DefaultKubeScheduler()
 			Expect(kubeScheduler).To(BeNil())
 			Expect(err).To(HaveOccurred())
-		})
-	})
-
-	Describe("#DeployKubeScheduler", func() {
-		var (
-			kubeScheduler *mockkubescheduler.MockInterface
-
-			ctx              = context.TODO()
-			fakeErr          = fmt.Errorf("fake err")
-			secretNameServer = "kube-scheduler-server"
-			checksumServer   = "5678"
-		)
-
-		BeforeEach(func() {
-			kubeScheduler = mockkubescheduler.NewMockInterface(ctrl)
-
-			botanist.StoreCheckSum(secretNameServer, checksumServer)
-			botanist.Shoot = &shootpkg.Shoot{
-				Components: &shootpkg.Components{
-					ControlPlane: &shootpkg.ControlPlane{
-						KubeScheduler: kubeScheduler,
-					},
-				},
-			}
-
-			kubeScheduler.EXPECT().SetSecrets(kubescheduler.Secrets{
-				Server: component.Secret{Name: secretNameServer, Checksum: checksumServer},
-			})
-		})
-
-		It("should set the secrets and deploy", func() {
-			kubeScheduler.EXPECT().Deploy(ctx)
-			Expect(botanist.DeployKubeScheduler(ctx)).To(Succeed())
-		})
-
-		It("should fail when the deploy function fails", func() {
-			kubeScheduler.EXPECT().Deploy(ctx).Return(fakeErr)
-			Expect(botanist.DeployKubeScheduler(ctx)).To(Equal(fakeErr))
 		})
 	})
 })
