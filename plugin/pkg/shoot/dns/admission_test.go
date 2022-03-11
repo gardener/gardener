@@ -23,6 +23,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/dns"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -218,7 +219,7 @@ var _ = Describe("dns", func() {
 
 			err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-			Expect(err).To(MatchError(apierrors.NewBadRequest("shoot's .spec.dns section must be nil if seed with disabled DNS is chosen")))
+			Expect(err).To(BeInvalidError())
 		})
 
 		It("should set the 'unmanaged' dns provider as the primary one", func() {
@@ -373,8 +374,7 @@ var _ = Describe("dns", func() {
 
 				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
 					"ErrStatus": MatchFields(IgnoreExtras, Fields{
-						"Code":    Equal(int32(http.StatusBadRequest)),
-						"Message": Equal("non-primary DNS providers in .spec.dns.providers must specify a `type` and `secretName`"),
+						"Code": Equal(int32(http.StatusUnprocessableEntity)),
 					})},
 				)))
 			})
@@ -454,8 +454,7 @@ var _ = Describe("dns", func() {
 
 				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
 					"ErrStatus": MatchFields(IgnoreExtras, Fields{
-						"Code":    Equal(int32(http.StatusBadRequest)),
-						"Message": Equal("non-primary DNS providers in .spec.dns.providers must specify a `type` and `secretName`"),
+						"Code": Equal(int32(http.StatusUnprocessableEntity)),
 					})},
 				)))
 			})
@@ -590,8 +589,7 @@ var _ = Describe("dns", func() {
 
 				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
 					"ErrStatus": MatchFields(IgnoreExtras, Fields{
-						"Code":    Equal(int32(http.StatusBadRequest)),
-						"Message": Equal("primary dns provider must not be set when default domain is used"),
+						"Code": Equal(int32(http.StatusUnprocessableEntity)),
 					}),
 				})))
 			})
@@ -616,8 +614,7 @@ var _ = Describe("dns", func() {
 
 				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
 					"ErrStatus": MatchFields(IgnoreExtras, Fields{
-						"Code":    Equal(int32(http.StatusBadRequest)),
-						"Message": Equal("primary dns provider must not be set when default domain is used"),
+						"Code": Equal(int32(http.StatusUnprocessableEntity)),
 					}),
 				})))
 			})
@@ -699,7 +696,7 @@ var _ = Describe("dns", func() {
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-				Expect(err).To(MatchError(apierrors.NewBadRequest("shoot domain field .spec.dns.domain must be set if provider != unmanaged and assigned to a seed which does not disable DNS")))
+				Expect(err).To(BeInvalidError())
 			})
 
 			Context("#Shoot GenerateName used", func() {

@@ -308,7 +308,7 @@ var _ = Describe("validator", func() {
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-				Expect(err).To(BeBadRequestError())
+				Expect(err).To(BeInvalidError())
 				Expect(err.Error()).To(ContainSubstring("name must not exceed"))
 			})
 
@@ -375,7 +375,7 @@ var _ = Describe("validator", func() {
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-				Expect(err).To(BeBadRequestError())
+				Expect(err).To(BeInvalidError())
 				Expect(err.Error()).To(ContainSubstring("name must not exceed"))
 			})
 		})
@@ -622,7 +622,7 @@ var _ = Describe("validator", func() {
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-				Expect(err).To(BeBadRequestError())
+				Expect(err).To(BeInternalServerError())
 			})
 
 			It("should reject because the referenced seed was not found", func() {
@@ -632,7 +632,7 @@ var _ = Describe("validator", func() {
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-				Expect(err).To(BeBadRequestError())
+				Expect(err).To(BeInternalServerError())
 			})
 
 			It("should reject because the referenced project was not found", func() {
@@ -642,7 +642,7 @@ var _ = Describe("validator", func() {
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-				Expect(err).To(BeBadRequestError())
+				Expect(err).To(BeInternalServerError())
 			})
 
 			It("should reject because the cloud provider in shoot and profile differ", func() {

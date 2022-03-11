@@ -1414,7 +1414,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 							AdmissionResponse: admissionv1.AdmissionResponse{
 								Allowed: false,
 								Result: &metav1.Status{
-									Code:    int32(http.StatusBadRequest),
+									Code:    int32(http.StatusUnprocessableEntity),
 									Message: fmt.Sprintf("unexpected secret type: %q", secret.Type),
 								},
 							},
@@ -1431,7 +1431,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 							AdmissionResponse: admissionv1.AdmissionResponse{
 								Allowed: false,
 								Result: &metav1.Status{
-									Code:    int32(http.StatusBadRequest),
+									Code:    int32(http.StatusUnprocessableEntity),
 									Message: "\"usage-bootstrap-authentication\" must be set to 'true'",
 								},
 							},
@@ -1448,7 +1448,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 							AdmissionResponse: admissionv1.AdmissionResponse{
 								Allowed: false,
 								Result: &metav1.Status{
-									Code:    int32(http.StatusBadRequest),
+									Code:    int32(http.StatusUnprocessableEntity),
 									Message: "\"usage-bootstrap-signing\" must be set to 'true'",
 								},
 							},
@@ -1465,7 +1465,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 							AdmissionResponse: admissionv1.AdmissionResponse{
 								Allowed: false,
 								Result: &metav1.Status{
-									Code:    int32(http.StatusBadRequest),
+									Code:    int32(http.StatusUnprocessableEntity),
 									Message: "\"auth-extra-groups\" must not be set",
 								},
 							},
