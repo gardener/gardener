@@ -16,6 +16,7 @@ package shoot_test
 
 import (
 	"context"
+	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -33,7 +34,77 @@ import (
 )
 
 var _ = Describe("Strategy", func() {
-	Context("PrepareForUpdate", func() {
+	Describe("#PrepareForCreate", func() {
+		Context("max token expiration", func() {
+			newShoot := func(duration time.Duration) *core.Shoot {
+				return &core.Shoot{
+					Spec: core.ShootSpec{
+						Kubernetes: core.Kubernetes{
+							KubeAPIServer: &core.KubeAPIServerConfig{
+								ServiceAccountConfig: &core.ServiceAccountConfig{
+									MaxTokenExpiration: &metav1.Duration{Duration: duration},
+								},
+							},
+						},
+					},
+				}
+			}
+
+			Context("ShootMaxTokenExpirationOverwrite feature gate enabled", func() {
+				It("should overwrite too low values of max token expiration", func() {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationOverwrite, true)()
+
+					shoot := newShoot(time.Hour)
+					shootregistry.Strategy.PrepareForCreate(context.TODO(), shoot)
+					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(720 * time.Hour))
+				})
+
+				It("should overwrite too high values of max token expiration", func() {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationOverwrite, true)()
+
+					shoot := newShoot(3000 * time.Hour)
+					shootregistry.Strategy.PrepareForCreate(context.TODO(), shoot)
+					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(2160 * time.Hour))
+				})
+
+				It("should keep values within boundaries of max token expiration", func() {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationOverwrite, true)()
+
+					shoot := newShoot(1000 * time.Hour)
+					shootregistry.Strategy.PrepareForCreate(context.TODO(), shoot)
+					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(1000 * time.Hour))
+				})
+			})
+
+			Context("ShootMaxTokenExpirationOverwrite feature gate disabled", func() {
+				It("should not overwrite too low values of max token expiration", func() {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationOverwrite, false)()
+
+					shoot := newShoot(time.Hour)
+					shootregistry.Strategy.PrepareForCreate(context.TODO(), shoot)
+					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(time.Hour))
+				})
+
+				It("should not overwrite too high values of max token expiration", func() {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationOverwrite, false)()
+
+					shoot := newShoot(3000 * time.Hour)
+					shootregistry.Strategy.PrepareForCreate(context.TODO(), shoot)
+					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(3000 * time.Hour))
+				})
+
+				It("should keep values within boundaries of max token expiration", func() {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationOverwrite, false)()
+
+					shoot := newShoot(1000 * time.Hour)
+					shootregistry.Strategy.PrepareForCreate(context.TODO(), shoot)
+					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(1000 * time.Hour))
+				})
+			})
+		})
+	})
+
+	Describe("#PrepareForUpdate", func() {
 		Context("generation increment", func() {
 			It("should not increase if new=old", func() {
 				oldShoot := &core.Shoot{}
@@ -409,6 +480,74 @@ var _ = Describe("Strategy", func() {
 
 				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 				Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
+			})
+		})
+
+		Context("max token expiration", func() {
+			newShoot := func(duration time.Duration) *core.Shoot {
+				return &core.Shoot{
+					Spec: core.ShootSpec{
+						Kubernetes: core.Kubernetes{
+							KubeAPIServer: &core.KubeAPIServerConfig{
+								ServiceAccountConfig: &core.ServiceAccountConfig{
+									MaxTokenExpiration: &metav1.Duration{Duration: duration},
+								},
+							},
+						},
+					},
+				}
+			}
+
+			Context("ShootMaxTokenExpirationOverwrite feature gate enabled", func() {
+				It("should overwrite too low values of max token expiration", func() {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationOverwrite, true)()
+
+					shoot := newShoot(time.Hour)
+					shootregistry.Strategy.PrepareForUpdate(context.TODO(), shoot, &core.Shoot{})
+					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(720 * time.Hour))
+				})
+
+				It("should overwrite too high values of max token expiration", func() {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationOverwrite, true)()
+
+					shoot := newShoot(3000 * time.Hour)
+					shootregistry.Strategy.PrepareForUpdate(context.TODO(), shoot, &core.Shoot{})
+					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(2160 * time.Hour))
+				})
+
+				It("should keep values within boundaries of max token expiration", func() {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationOverwrite, true)()
+
+					shoot := newShoot(1000 * time.Hour)
+					shootregistry.Strategy.PrepareForUpdate(context.TODO(), shoot, &core.Shoot{})
+					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(1000 * time.Hour))
+				})
+			})
+
+			Context("ShootMaxTokenExpirationOverwrite feature gate disabled", func() {
+				It("should not overwrite too low values of max token expiration", func() {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationOverwrite, false)()
+
+					shoot := newShoot(time.Hour)
+					shootregistry.Strategy.PrepareForUpdate(context.TODO(), shoot, &core.Shoot{})
+					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(time.Hour))
+				})
+
+				It("should not overwrite too high values of max token expiration", func() {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationOverwrite, false)()
+
+					shoot := newShoot(3000 * time.Hour)
+					shootregistry.Strategy.PrepareForUpdate(context.TODO(), shoot, &core.Shoot{})
+					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(3000 * time.Hour))
+				})
+
+				It("should keep values within boundaries of max token expiration", func() {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationOverwrite, false)()
+
+					shoot := newShoot(1000 * time.Hour)
+					shootregistry.Strategy.PrepareForUpdate(context.TODO(), shoot, &core.Shoot{})
+					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(1000 * time.Hour))
+				})
 			})
 		})
 	})
