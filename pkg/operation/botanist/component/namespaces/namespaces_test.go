@@ -18,10 +18,15 @@ import (
 	"context"
 	"fmt"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/namespaces"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -32,6 +37,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("Namespaces", func() {
@@ -168,15 +174,100 @@ status: {}
 		})
 	})
 
-	Describe("#Wait", func() {
-		It("should return nil as it's not implemented as of now", func() {
-			Expect(namespaces.Wait(ctx)).To(Succeed())
-		})
-	})
+	Context("waiting functions", func() {
+		var (
+			fakeClient client.Client
+			fakeOps    *retryfake.Ops
+			resetVars  func()
+		)
 
-	Describe("#WaitCleanup", func() {
-		It("should return nil as it's not implemented as of now", func() {
-			Expect(namespaces.WaitCleanup(ctx)).To(Succeed())
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			fakeOps = &retryfake.Ops{MaxAttempts: 1}
+			resetVars = test.WithVars(
+				&retry.Until, fakeOps.Until,
+				&retry.UntilTimeout, fakeOps.UntilTimeout,
+			)
+
+			namespaces = New(fakeClient, namespace)
+		})
+
+		AfterEach(func() {
+			resetVars()
+		})
+
+		Describe("#Wait", func() {
+			It("should fail because reading the ManagedResource fails", func() {
+				Expect(namespaces.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
+			})
+
+			It("should fail because the ManagedResource doesn't become healthy", func() {
+				fakeOps.MaxAttempts = 2
+
+				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       managedResourceName,
+						Namespace:  namespace,
+						Generation: 1,
+					},
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+						Conditions: []gardencorev1beta1.Condition{
+							{
+								Type:   resourcesv1alpha1.ResourcesApplied,
+								Status: gardencorev1beta1.ConditionFalse,
+							},
+							{
+								Type:   resourcesv1alpha1.ResourcesHealthy,
+								Status: gardencorev1beta1.ConditionFalse,
+							},
+						},
+					},
+				}))
+
+				Expect(namespaces.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
+			})
+
+			It("should successfully wait for the managed resource to become healthy", func() {
+				fakeOps.MaxAttempts = 2
+
+				Expect(fakeClient.Create(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       managedResourceName,
+						Namespace:  namespace,
+						Generation: 1,
+					},
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+						Conditions: []gardencorev1beta1.Condition{
+							{
+								Type:   resourcesv1alpha1.ResourcesApplied,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+							{
+								Type:   resourcesv1alpha1.ResourcesHealthy,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+						},
+					},
+				}))
+
+				Expect(namespaces.Wait(ctx)).To(Succeed())
+			})
+		})
+
+		Describe("#WaitCleanup", func() {
+			It("should fail when the wait for the managed resource deletion times out", func() {
+				fakeOps.MaxAttempts = 2
+
+				Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
+
+				Expect(namespaces.WaitCleanup(ctx)).To(MatchError(ContainSubstring("still exists")))
+			})
+
+			It("should not return an error when it's already removed", func() {
+				Expect(namespaces.WaitCleanup(ctx)).To(Succeed())
+			})
 		})
 	})
 })
