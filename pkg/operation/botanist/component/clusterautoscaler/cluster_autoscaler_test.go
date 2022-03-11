@@ -19,6 +19,17 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -30,23 +41,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("ClusterAutoscaler", func() {
 	var (
 		ctrl              *gomock.Controller
 		c                 *mockclient.MockClient
+		fakeClient        client.Client
+		sm                secretsmanager.Interface
 		clusterAutoscaler Interface
 
 		ctx                = context.TODO()
@@ -90,14 +96,15 @@ var _ = Describe("ClusterAutoscaler", func() {
 			IgnoreTaints:                  configIgnoreTaints,
 		}
 
-		serviceAccountName        = "cluster-autoscaler"
-		secretName                = "shoot-access-cluster-autoscaler"
-		clusterRoleBindingName    = "cluster-autoscaler-" + namespace
-		vpaName                   = "cluster-autoscaler-vpa"
-		serviceName               = "cluster-autoscaler"
-		deploymentName            = "cluster-autoscaler"
-		managedResourceName       = "shoot-core-cluster-autoscaler"
-		managedResourceSecretName = "managedresource-shoot-core-cluster-autoscaler"
+		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
+		serviceAccountName               = "cluster-autoscaler"
+		secretName                       = "shoot-access-cluster-autoscaler"
+		clusterRoleBindingName           = "cluster-autoscaler-" + namespace
+		vpaName                          = "cluster-autoscaler-vpa"
+		serviceName                      = "cluster-autoscaler"
+		deploymentName                   = "cluster-autoscaler"
+		managedResourceName              = "shoot-core-cluster-autoscaler"
+		managedResourceSecretName        = "managedresource-shoot-core-cluster-autoscaler"
 
 		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
 		vpa           = &autoscalingv1beta2.VerticalPodAutoscaler{
@@ -318,7 +325,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				},
 			}
 
-			Expect(gutil.InjectGenericKubeconfig(deploy, secret.Name)).To(Succeed())
+			Expect(gutil.InjectGenericKubeconfig(deploy, genericTokenKubeconfigSecretName, secret.Name)).To(Succeed())
 			return deploy
 		}
 
@@ -495,8 +502,10 @@ subjects:
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+		sm = fakesecretsmanager.New(fakeClient, namespace)
 
-		clusterAutoscaler = New(c, namespace, image, replicas, nil)
+		clusterAutoscaler = New(c, namespace, sm, image, replicas, nil)
 		clusterAutoscaler.SetNamespaceUID(namespaceUID)
 		clusterAutoscaler.SetMachineDeployments(machineDeployments)
 	})
@@ -665,7 +674,7 @@ subjects:
 					config = configFull
 				}
 
-				clusterAutoscaler = New(c, namespace, image, replicas, config)
+				clusterAutoscaler = New(c, namespace, sm, image, replicas, config)
 				clusterAutoscaler.SetNamespaceUID(namespaceUID)
 				clusterAutoscaler.SetMachineDeployments(machineDeployments)
 

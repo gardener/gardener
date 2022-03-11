@@ -86,7 +86,7 @@ func (g *gardener) Deploy(ctx context.Context) error {
 	for _, v := range accessNamesToServers {
 		var (
 			shootAccessSecret = gutil.NewShootAccessSecret(v.name, g.namespace).WithNameOverride(v.name)
-			kubeconfig        = kutil.NewKubeconfig(g.namespace, v.server, g.values.caCertificate, clientcmdv1.AuthInfo{Token: ""})
+			kubeconfig        = kutil.NewKubeconfig(g.namespace, clientcmdv1.Cluster{Server: v.server, CertificateAuthorityData: g.values.caCertificate}, clientcmdv1.AuthInfo{Token: ""})
 		)
 
 		serviceAccountNames = append(serviceAccountNames, shootAccessSecret.ServiceAccountName)

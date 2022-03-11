@@ -32,6 +32,7 @@ func (b *Botanist) DefaultClusterAutoscaler() (clusterautoscaler.Interface, erro
 	return clusterautoscaler.New(
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
+		b.SecretsManager,
 		image.String(),
 		b.Shoot.GetReplicas(1),
 		b.Shoot.GetInfo().Spec.Kubernetes.ClusterAutoscaler,

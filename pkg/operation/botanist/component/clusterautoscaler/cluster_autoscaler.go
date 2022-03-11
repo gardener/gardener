@@ -29,6 +29,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -68,25 +69,28 @@ type Interface interface {
 func New(
 	client client.Client,
 	namespace string,
+	secretsManager secretsmanager.Interface,
 	image string,
 	replicas int32,
 	config *gardencorev1beta1.ClusterAutoscaler,
 ) Interface {
 	return &clusterAutoscaler{
-		client:    client,
-		namespace: namespace,
-		image:     image,
-		replicas:  replicas,
-		config:    config,
+		client:         client,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		image:          image,
+		replicas:       replicas,
+		config:         config,
 	}
 }
 
 type clusterAutoscaler struct {
-	client    client.Client
-	namespace string
-	image     string
-	replicas  int32
-	config    *gardencorev1beta1.ClusterAutoscaler
+	client         client.Client
+	namespace      string
+	secretsManager secretsmanager.Interface
+	image          string
+	replicas       int32
+	config         *gardencorev1beta1.ClusterAutoscaler
 
 	namespaceUID       types.UID
 	machineDeployments []extensionsv1alpha1.MachineDeployment
@@ -104,6 +108,11 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
 		command       = c.computeCommand()
 	)
+
+	genericTokenKubeconfigSecret, err := c.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if err != nil {
+		return err
+	}
 
 	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c.client, serviceAccount, func() error {
 		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
@@ -220,7 +229,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 			},
 		}
 
-		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, shootAccessSecret.Secret.Name))
+		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))
 		return nil
 	}); err != nil {
 		return err

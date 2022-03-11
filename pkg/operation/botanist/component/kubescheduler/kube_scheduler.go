@@ -127,6 +127,11 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	genericTokenKubeconfigSecret, err := k.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if err != nil {
+		return err
+	}
+
 	clientCASecret, err := k.secretsManager.Get(v1beta1constants.SecretNameCACluster)
 	if err != nil {
 		return err
@@ -302,7 +307,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			},
 		}
 
-		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, shootAccessSecret.Secret.Name))
+		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))
 		utilruntime.Must(references.InjectAnnotations(deployment))
 		return nil
 	}); err != nil {

@@ -31,8 +31,8 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/Masterminds/semver"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -45,6 +45,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -102,6 +103,7 @@ func New(
 	logger logrus.FieldLogger,
 	seedClient client.Client,
 	namespace string,
+	secretsManager secretsmanager.Interface,
 	version *semver.Version,
 	image string,
 	config *gardencorev1beta1.KubeControllerManagerConfig,
@@ -113,6 +115,7 @@ func New(
 		log:            logger,
 		seedClient:     seedClient,
 		namespace:      namespace,
+		secretsManager: secretsManager,
 		version:        version,
 		image:          image,
 		config:         config,
@@ -127,6 +130,7 @@ type kubeControllerManager struct {
 	seedClient     client.Client
 	shootClient    client.Client
 	namespace      string
+	secretsManager secretsmanager.Interface
 	version        *semver.Version
 	image          string
 	replicas       int32
@@ -146,6 +150,11 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	}
 	if k.secrets.ServiceAccountKey.Name == "" || k.secrets.ServiceAccountKey.Checksum == "" {
 		return fmt.Errorf("missing ServiceAccountKey secret information")
+	}
+
+	genericTokenKubeconfigSecret, err := k.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if err != nil {
+		return err
 	}
 
 	var (
@@ -293,7 +302,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			},
 		}
 
-		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, shootAccessSecret.Secret.Name))
+		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))
 		return nil
 	}); err != nil {
 		return err

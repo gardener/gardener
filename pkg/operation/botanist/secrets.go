@@ -24,6 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
@@ -105,7 +106,7 @@ func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	return b.getOrGenerateGenericTokenKubeconfig(ctx)
 }
 
 func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
@@ -143,6 +144,37 @@ func (b *Botanist) restoreSecretsFromShootStateForSecretsManagerAdoption(ctx con
 	}
 
 	return flow.Parallel(fns...)(ctx)
+}
+
+func (b *Botanist) getOrGenerateGenericTokenKubeconfig(ctx context.Context) error {
+	clusterCABundleSecret, err := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if err != nil {
+		return err
+	}
+
+	config := &secretutils.KubeconfigSecretConfig{
+		Name:        v1beta1constants.SecretNameGenericTokenKubeconfig,
+		ContextName: b.Shoot.SeedNamespace,
+		Cluster: clientcmdv1.Cluster{
+			Server:                   b.Shoot.ComputeInClusterAPIServerAddress(true),
+			CertificateAuthorityData: clusterCABundleSecret.Data[secretutils.DataKeyCertificateBundle],
+		},
+		AuthInfo: clientcmdv1.AuthInfo{
+			TokenFile: gutil.PathShootToken,
+		},
+	}
+
+	genericTokenKubeconfigSecret, err := b.SecretsManager.Generate(ctx, config, secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return err
+	}
+
+	cluster := &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: b.Shoot.SeedNamespace}}
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), cluster, func() error {
+		metav1.SetMetaDataAnnotation(&cluster.ObjectMeta, v1beta1constants.AnnotationKeyGenericTokenKubeconfigSecretName, genericTokenKubeconfigSecret.Name)
+		return nil
+	})
+	return err
 }
 
 func (b *Botanist) fetchCertificateAuthoritiesForLegacySecretsManager(ctx context.Context, legacySecretsManager *shootsecrets.SecretsManager, addToDeployedSecrets bool) (map[string]*secretutils.Certificate, error) {
@@ -397,6 +429,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 	return b.reconcileGenericKubeconfigSecret(ctx)
 }
 
+// TODO(rfranzke): Remove this function in a future release.
 func (b *Botanist) reconcileGenericKubeconfigSecret(ctx context.Context) error {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -407,8 +440,10 @@ func (b *Botanist) reconcileGenericKubeconfigSecret(ctx context.Context) error {
 
 	kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kutil.NewKubeconfig(
 		b.Shoot.SeedNamespace,
-		b.Shoot.ComputeInClusterAPIServerAddress(true),
-		b.LoadSecret(v1beta1constants.SecretNameCACluster).Data[secretutils.DataKeyCertificateCA],
+		clientcmdv1.Cluster{
+			Server:                   b.Shoot.ComputeInClusterAPIServerAddress(true),
+			CertificateAuthorityData: b.LoadSecret(v1beta1constants.SecretNameCACluster).Data[secretutils.DataKeyCertificateCA],
+		},
 		clientcmdv1.AuthInfo{TokenFile: gutil.PathShootToken},
 	))
 	if err != nil {

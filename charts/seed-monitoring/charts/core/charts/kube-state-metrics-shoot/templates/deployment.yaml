@@ -73,7 +73,7 @@ spec:
               items:
               - key: kubeconfig
                 path: kubeconfig
-              name: generic-token-kubeconfig
+              name: {{ .Values.genericTokenKubeconfigSecretName }}
               optional: false
           - secret:
               items:

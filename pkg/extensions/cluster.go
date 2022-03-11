@@ -20,6 +20,7 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -178,6 +179,16 @@ func ShootFromCluster(cluster *extensionsv1alpha1.Cluster) (*gardencorev1beta1.S
 	}
 
 	return shoot, nil
+}
+
+// GenericTokenKubeconfigSecretNameFromCluster reads the generic-token-kubeconfig.secret.gardener.cloud/name annotation
+// and returns its value. If the annotation is not present then it falls back to the deprecated
+// SecretNameGenericTokenKubeconfig.
+func GenericTokenKubeconfigSecretNameFromCluster(cluster *Cluster) string {
+	if v, ok := cluster.ObjectMeta.Annotations[v1beta1constants.AnnotationKeyGenericTokenKubeconfigSecretName]; ok {
+		return v
+	}
+	return v1beta1constants.SecretNameGenericTokenKubeconfig
 }
 
 // GetShootStateForCluster retrieves the ShootState and the Shoot resources for a given Cluster name by first fetching

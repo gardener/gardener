@@ -24,11 +24,6 @@ import (
 	configv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 )
 
-const (
-	// DataKeyKubeconfig is the key in a secret data holding the kubeconfig.
-	DataKeyKubeconfig = "kubeconfig"
-)
-
 // ControlPlaneSecretDataKeyCertificatePEM returns the data key inside a Secret of type ControlPlane whose value
 // contains the certificate PEM.
 func ControlPlaneSecretDataKeyCertificatePEM(name string) string { return fmt.Sprintf("%s.crt", name) }
