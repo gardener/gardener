@@ -93,7 +93,7 @@ func (r *controllerRegistrationSeedReconciler) Reconcile(ctx context.Context, re
 	}
 
 	backupBucketList := &gardencorev1beta1.BackupBucketList{}
-	if err := r.gardenClient.Client().List(ctx, backupBucketList); err != nil {
+	if err := r.gardenClient.Client().List(ctx, backupBucketList, client.MatchingFields{core.BackupBucketSeedName: seed.Name}); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -129,8 +129,8 @@ func (r *controllerRegistrationSeedReconciler) Reconcile(ctx context.Context, re
 	var (
 		controllerRegistrations = computeControllerRegistrationMaps(controllerRegistrationList)
 
-		wantedKindTypeCombinationForBackupBuckets, buckets = computeKindTypesForBackupBuckets(backupBucketList, seed.Name)
-		wantedKindTypeCombinationForBackupEntries          = computeKindTypesForBackupEntries(log, backupEntryList, buckets, seed.Name)
+		wantedKindTypeCombinationForBackupBuckets, buckets = computeKindTypesForBackupBuckets(backupBucketList)
+		wantedKindTypeCombinationForBackupEntries          = computeKindTypesForBackupEntries(log, backupEntryList, buckets)
 		wantedKindTypeCombinationForShoots                 = computeKindTypesForShoots(ctx, log, r.gardenClient.Client(), shootList, seed, controllerRegistrationList, internalDomain, defaultDomains)
 		wantedKindTypeCombinationForSeed                   = computeKindTypesForSeed(seed)
 
@@ -167,7 +167,6 @@ func (r *controllerRegistrationSeedReconciler) Reconcile(ctx context.Context, re
 // the list of existing BackupBucket resources.
 func computeKindTypesForBackupBuckets(
 	backupBucketList *gardencorev1beta1.BackupBucketList,
-	seedName string,
 ) (
 	sets.String,
 	map[string]gardencorev1beta1.BackupBucket,
@@ -179,11 +178,6 @@ func computeKindTypesForBackupBuckets(
 
 	for _, backupBucket := range backupBucketList.Items {
 		buckets[backupBucket.Name] = backupBucket
-
-		if backupBucket.Spec.SeedName == nil || *backupBucket.Spec.SeedName != seedName {
-			continue
-		}
-
 		wantedKindTypeCombinations.Insert(extensions.Id(extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type))
 	}
 
@@ -196,15 +190,10 @@ func computeKindTypesForBackupEntries(
 	log logr.Logger,
 	backupEntryList *gardencorev1beta1.BackupEntryList,
 	buckets map[string]gardencorev1beta1.BackupBucket,
-	seedName string,
 ) sets.String {
 	wantedKindTypeCombinations := sets.NewString()
 
 	for _, backupEntry := range backupEntryList.Items {
-		if backupEntry.Spec.SeedName == nil || *backupEntry.Spec.SeedName != seedName {
-			continue
-		}
-
 		bucket, ok := buckets[backupEntry.Spec.BucketName]
 		if !ok {
 			log.Error(fmt.Errorf("BackupBucket not found in list"), "Couldn't find referenced BackupBucket for BackupEntry", "backupBucketName", backupEntry.Spec.BucketName, "backupEntry", client.ObjectKeyFromObject(&backupEntry))
