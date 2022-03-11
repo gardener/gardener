@@ -75,6 +75,8 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 	}
 
 	if utilfeature.DefaultFeatureGate.Enabled(features.ShootMaxTokenExpirationOverwrite) {
+		// Note that this must be executed after `mustIncreaseGeneration` is called, otherwise we might trigger a
+		// reconciliation outside of the maintenance time window because the spec might change in below call.
 		overwriteMaxTokenExpiration(newShoot)
 	}
 }
