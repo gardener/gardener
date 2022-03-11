@@ -87,11 +87,13 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 				}})
 			},
 		},
-		&conf.ClassFilter, predicate.Or(
+		&conf.ClassFilter,
+		predicate.Or(
 			managerpredicate.ClassChangedPredicate(),
 			// start health checks immediately after MR has been reconciled
 			managerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesApplied, managerpredicate.DefaultConditionChange),
 		),
+		managerpredicate.NotIgnoreMode(),
 	); err != nil {
 		return fmt.Errorf("unable to watch ManagedResources: %w", err)
 	}

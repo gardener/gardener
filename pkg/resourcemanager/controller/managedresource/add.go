@@ -94,18 +94,21 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	if err := c.Watch(
 		&source.Kind{Type: &resourcesv1alpha1.ManagedResource{}},
 		&handler.EnqueueRequestForObject{},
-		conf.ClassFilter, predicate.Or(
+		conf.ClassFilter,
+		predicate.Or(
 			predicate.GenerationChangedPredicate{},
 			managerpredicate.HasOperationAnnotation(),
 			managerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesHealthy, managerpredicate.ConditionChangedToUnhealthy),
+			managerpredicate.IgnoreModeRemoved(),
 		),
+		managerpredicate.NotIgnoreMode(),
 	); err != nil {
 		return fmt.Errorf("unable to watch ManagedResources: %w", err)
 	}
 
 	if err := c.Watch(
 		&source.Kind{Type: &corev1.Secret{}},
-		mapper.EnqueueRequestsFrom(SecretToManagedResourceMapper(conf.ClassFilter), mapper.UpdateWithOldAndNew),
+		mapper.EnqueueRequestsFrom(SecretToManagedResourceMapper(conf.ClassFilter, managerpredicate.NotIgnoreMode()), mapper.UpdateWithOldAndNew),
 	); err != nil {
 		return fmt.Errorf("unable to watch Secrets mapping to ManagedResources: %w", err)
 	}
