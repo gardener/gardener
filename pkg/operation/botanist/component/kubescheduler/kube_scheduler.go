@@ -116,7 +116,7 @@ type kubeScheduler struct {
 }
 
 func (k *kubeScheduler) Deploy(ctx context.Context) error {
-	serverSecret, err := k.secretsManager.GetOrGenerate(ctx, &secrets.CertificateSecretConfig{
+	serverSecret, err := k.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 		Name:                        secretNameServer,
 		CommonName:                  v1beta1constants.DeploymentNameKubeScheduler,
 		DNSNames:                    kutil.DNSNamesForService(serviceName, k.namespace),
@@ -127,7 +127,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	clientCASecret, err := k.secretsManager.GetByName(v1beta1constants.SecretNameCACluster)
+	clientCASecret, err := k.secretsManager.Get(v1beta1constants.SecretNameCACluster)
 	if err != nil {
 		return err
 	}

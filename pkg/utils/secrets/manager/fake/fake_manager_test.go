@@ -47,9 +47,9 @@ var _ = Describe("FakeManager", func() {
 		m = New(fakeClient, namespace)
 	})
 
-	DescribeTable("#GetByName",
-		func(expectedSecretName string, opts ...secretsmanager.GetByNameOption) {
-			secret, err := m.GetByName(name, opts...)
+	DescribeTable("#Get",
+		func(expectedSecretName string, opts ...secretsmanager.GetOption) {
+			secret, err := m.Get(name, opts...)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret).To(Equal(&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -66,7 +66,7 @@ var _ = Describe("FakeManager", func() {
 		Entry("bundle", name+"-bundle", secretsmanager.Bundle),
 	)
 
-	Describe("#GetOrGenerate", func() {
+	Describe("#Generate", func() {
 		var (
 			config         = &secretutils.BasicAuthSecretConfig{Name: name, Format: secretutils.BasicAuthFormatNormal}
 			configChecksum = "17492942871593004096"
@@ -74,7 +74,7 @@ var _ = Describe("FakeManager", func() {
 		)
 
 		It("should create a secret for the config", func() {
-			secret, err := m.GetOrGenerate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace))
+			secret, err := m.Generate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret.ObjectMeta).To(Equal(metav1.ObjectMeta{
 				Name:            secretName,
@@ -109,7 +109,7 @@ var _ = Describe("FakeManager", func() {
 			}
 			Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
 
-			secret, err := m.GetOrGenerate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld))
+			secret, err := m.Generate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret).To(Equal(&corev1.Secret{
 				TypeMeta: metav1.TypeMeta{

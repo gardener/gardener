@@ -100,7 +100,7 @@ func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
 	}
 
 	for _, config := range b.wantedCertificateAuthorities() {
-		if _, err := b.SecretsManager.GetOrGenerate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld)); err != nil {
+		if _, err := b.SecretsManager.Generate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld)); err != nil {
 			return err
 		}
 	}
@@ -149,7 +149,7 @@ func (b *Botanist) fetchCertificateAuthoritiesForLegacySecretsManager(ctx contex
 	cas := make(map[string]*secretutils.Certificate)
 
 	for _, config := range b.wantedCertificateAuthorities() {
-		secret, err := b.SecretsManager.GetOrGenerate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld))
+		secret, err := b.SecretsManager.Generate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld))
 		if err != nil {
 			return nil, err
 		}

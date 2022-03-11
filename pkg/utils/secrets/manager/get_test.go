@@ -21,18 +21,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("GetByName", func() {
+var _ = Describe("Get", func() {
 	var m *manager
 
 	BeforeEach(func() {
 		m = &manager{store: make(secretStore)}
 	})
 
-	Describe("#GetByName", func() {
+	Describe("#Get", func() {
 		name := "some-name"
 
 		It("should return an error because no secrets found for name", func() {
-			result, err := m.GetByName(name)
+			result, err := m.Get(name)
 			Expect(err).To(MatchError(ContainSubstring("not found in internal store")))
 			Expect(result).To(BeNil())
 		})
@@ -42,7 +42,7 @@ var _ = Describe("GetByName", func() {
 				currentSecret := secretForClass(current)
 				Expect(m.addToStore(name, currentSecret, current)).To(Succeed())
 
-				result, err := m.GetByName(name, Bundle)
+				result, err := m.Get(name, Bundle)
 				Expect(err).To(MatchError(ContainSubstring("there is no bundle object for the secret")))
 				Expect(result).To(BeNil())
 			})
@@ -52,7 +52,7 @@ var _ = Describe("GetByName", func() {
 			It("should get the bundle secret from the internal store", func() {
 				Expect(m.addToStore(name, secret, bundle)).To(Succeed())
 
-				result, err := m.GetByName(name, Bundle)
+				result, err := m.Get(name, Bundle)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(secret))
 			})
@@ -60,7 +60,7 @@ var _ = Describe("GetByName", func() {
 			It("should get the bundle secret from the internal store (w/o explicit option)", func() {
 				Expect(m.addToStore(name, secret, bundle)).To(Succeed())
 
-				result, err := m.GetByName(name)
+				result, err := m.Get(name)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(secret))
 			})
@@ -80,13 +80,13 @@ var _ = Describe("GetByName", func() {
 			It("should get the bundle secret from the internal store (default behaviour w/o options)", func() {
 				Expect(m.addToStore(name, bundleSecret, bundle)).To(Succeed())
 
-				result, err := m.GetByName(name)
+				result, err := m.Get(name)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(bundleSecret))
 			})
 
 			It("should get the current secret from the internal store since there is no bundle secret", func() {
-				result, err := m.GetByName(name)
+				result, err := m.Get(name)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(currentSecret))
 			})
@@ -94,7 +94,7 @@ var _ = Describe("GetByName", func() {
 			It("should get the current secret from the internal store despite a bundle secret (w/ explicit option)", func() {
 				Expect(m.addToStore(name, bundleSecret, bundle)).To(Succeed())
 
-				result, err := m.GetByName(name, Current)
+				result, err := m.Get(name, Current)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(currentSecret))
 			})
@@ -105,7 +105,7 @@ var _ = Describe("GetByName", func() {
 				currentSecret := secretForClass(current)
 				Expect(m.addToStore(name, currentSecret, current)).To(Succeed())
 
-				result, err := m.GetByName(name, Old)
+				result, err := m.Get(name, Old)
 				Expect(err).To(MatchError(ContainSubstring("there is no old object for the secret")))
 				Expect(result).To(BeNil())
 			})
@@ -114,7 +114,7 @@ var _ = Describe("GetByName", func() {
 				oldSecret := secretForClass(old)
 				Expect(m.addToStore(name, oldSecret, old)).To(Succeed())
 
-				result, err := m.GetByName(name, Old)
+				result, err := m.Get(name, Old)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(oldSecret))
 			})

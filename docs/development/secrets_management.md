@@ -9,22 +9,22 @@ Such credentials typically should be rotated regularly, and they potentially nee
 These requirements can be covered by using the `SecretsManager` package maintained in [`pkg/utils/secrets/manager`](pkg/utils/secrets/manager).
 It is built on top of the `ConfigInterface` and `DataInterface` interfaces part of [`pkg/utils/secrets`](pkg/utils/secrets) and provides the following functions:
 
-- `GetOrGenerate(context.Context, secrets.ConfigInterface, ...GetOrGenerateOption) (*corev1.Secret, error)`
+- `Generate(context.Context, secrets.ConfigInterface, ...GenerateOption) (*corev1.Secret, error)`
 
   This method either retrieves the current secret for the given configuration or it (re)generates it in case the configuration changed, the signing CA changed (for certificate secrets), or when proactive rotation was triggered.
   If the configuration describes a certificate authority secret then this method automatically generates a bundle secret containing the current and potentially the old certificate.\
-  Available `GetOrGenerateOption`s:
+  Available `GenerateOption`s:
   - `SignedByCA(string)`: This is only valid for certificate secrets and automatically retrieves the correct certificate authority in order to sign the provided server or client certificate.
   - `Persist()`: This marks the secret such that it gets persisted in the `ShootState` resource in the garden cluster. Consequently, it should only be used for secrets related to a shoot cluster.
   - `Rotate(rotationStrategy)`: This specifies the strategy in case this secret is to be rotated or regenerated (either `InPlace` which immediately forgets about the old secret, or `KeepOld` which keeps the old secret in the system).
   - `IgnoreOldSecrets()`: This specifies whether old secrets should be considered and loaded (which is done by default). It should be used when old secrets are no longer important and can be "forgotten" (e.g. in ["phase 2" (`t2`) of the CA certificate rotation](../proposals/18-shoot-CA-rotation.md#rotation-sequence-for-cluster-and-client-ca)).
 
-- `GetByName(string, ...GetByNameOption) (*corev1.Secret, error)`
+- `Get(string, ...GetOption) (*corev1.Secret, error)`
 
   This method retrieves the current secret for the given name.
   In case the secret in question is a certificate authority secret then it retrieves the bundle secret by default.
-  It is important that this method only knows about secrets for which there were prior `GetOrGenerate` calls.\
-  Available `GetByNameOption`s:
+  It is important that this method only knows about secrets for which there were prior `Generate` calls.\
+  Available `GetOption`s:
   - `Bundle` (default): This retrieves the bundle secret.
   - `Current`: This retrieves the current secret.
   - `Old`: This retrieves the old secret.
@@ -32,13 +32,13 @@ It is built on top of the `ConfigInterface` and `DataInterface` interfaces part 
 - `Cleanup(context.Context) error`
 
   This method deletes secrets which are no longer required.
-  No longer required secrets are those still existing in the system which weren't detected by prior `GetOrGenerate` calls.
-  Consequently, only call `Cleanup` after you have executed `GetOrGenerate` calls for all desired secrets.
+  No longer required secrets are those still existing in the system which weren't detected by prior `Generate` calls.
+  Consequently, only call `Cleanup` after you have executed `Generate` calls for all desired secrets.
 
 Some exemplary usages would look as follows:
 
 ```go
-secret, err := k.secretsManager.GetOrGenerate(
+secret, err := k.secretsManager.Generate(
     ctx,
     &secrets.CertificateSecretConfig{
         Name:                        "my-server-secret",
@@ -61,7 +61,7 @@ As explained above, the caller does not need to care about the rotation or the p
 In case a CA certificate is needed by some component then it can be retrieved as follows:
 
 ```go
-caSecret, err := k.secretsManager.GetByName("my-ca")
+caSecret, err := k.secretsManager.Get("my-ca")
 if err != nil {
     return err
 }

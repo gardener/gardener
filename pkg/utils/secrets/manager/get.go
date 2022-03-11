@@ -20,8 +20,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func (m *manager) GetByName(name string, opts ...GetByNameOption) (*corev1.Secret, error) {
-	options := &GetByNameOptions{}
+func (m *manager) Get(name string, opts ...GetOption) (*corev1.Secret, error) {
+	options := &GetOptions{}
 	options.ApplyOptions(opts)
 
 	secrets, found := m.getFromStore(name)
@@ -52,21 +52,21 @@ func (m *manager) GetByName(name string, opts ...GetByNameOption) (*corev1.Secre
 	}
 }
 
-// GetByNameOption is some configuration that modifies options for a GetByName request.
-type GetByNameOption interface {
+// GetOption is some configuration that modifies options for a Get request.
+type GetOption interface {
 	// ApplyToOptions applies this configuration to the given options.
-	ApplyToOptions(*GetByNameOptions)
+	ApplyToOptions(*GetOptions)
 }
 
-// GetByNameOptions are options for GetByName calls.
-type GetByNameOptions struct {
+// GetOptions are options for Get calls.
+type GetOptions struct {
 	// Class specifies whether which secret should be returned. By default, the bundle secret is returned. If there is
 	// no bundle secret then it falls back to the current secret.
 	Class *secretClass
 }
 
 // ApplyOptions applies the given update options on these options, and then returns itself (for convenient chaining).
-func (o *GetByNameOptions) ApplyOptions(opts []GetByNameOption) *GetByNameOptions {
+func (o *GetOptions) ApplyOptions(opts []GetOption) *GetOptions {
 	for _, opt := range opts {
 		opt.ApplyToOptions(o)
 	}
@@ -74,11 +74,11 @@ func (o *GetByNameOptions) ApplyOptions(opts []GetByNameOption) *GetByNameOption
 }
 
 var (
-	// Current sets the Class field to 'current' in the GetByNameOptions.
+	// Current sets the Class field to 'current' in the GetOptions.
 	Current = classOption{class: current}
-	// Old sets the Class field to 'old' in the GetByNameOptions.
+	// Old sets the Class field to 'old' in the GetOptions.
 	Old = classOption{class: old}
-	// Bundle sets the Class field to 'bundle' in the GetByNameOptions.
+	// Bundle sets the Class field to 'bundle' in the GetOptions.
 	Bundle = classOption{class: bundle}
 )
 
@@ -86,6 +86,6 @@ type classOption struct {
 	class secretClass
 }
 
-func (c classOption) ApplyToOptions(options *GetByNameOptions) {
+func (c classOption) ApplyToOptions(options *GetOptions) {
 	options.Class = &c.class
 }

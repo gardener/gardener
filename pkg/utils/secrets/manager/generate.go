@@ -29,8 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (m *manager) GetOrGenerate(ctx context.Context, config secretutils.ConfigInterface, opts ...GetOrGenerateOption) (*corev1.Secret, error) {
-	options := &GetOrGenerateOptions{}
+func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterface, opts ...GenerateOption) (*corev1.Secret, error) {
+	options := &GenerateOptions{}
 	if err := options.ApplyOptions(m, config, opts); err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (m *manager) GetOrGenerate(ctx context.Context, config secretutils.ConfigIn
 			}
 		}
 
-		if err := m.getOrGenerateBundleSecret(ctx, config); err != nil {
+		if err := m.generateBundleSecret(ctx, config); err != nil {
 			return nil, err
 		}
 	}
@@ -129,7 +129,7 @@ func (m *manager) storeOldSecrets(ctx context.Context, name, currentSecretName s
 	return m.addToStore(oldSecret.Labels[LabelKeyName], oldSecret, old)
 }
 
-func (m *manager) getOrGenerateBundleSecret(ctx context.Context, config secretutils.ConfigInterface) error {
+func (m *manager) generateBundleSecret(ctx context.Context, config secretutils.ConfigInterface) error {
 	var bundleConfig secretutils.ConfigInterface
 
 	secrets, found := m.getFromStore(config.GetName())
@@ -156,7 +156,7 @@ func (m *manager) getOrGenerateBundleSecret(ctx context.Context, config secretut
 		return nil
 	}
 
-	secret, err := m.GetOrGenerate(ctx, bundleConfig, isBundleSecret())
+	secret, err := m.Generate(ctx, bundleConfig, isBundleSecret())
 	if err != nil {
 		return err
 	}
@@ -188,11 +188,11 @@ func (m *manager) reconcileSecret(ctx context.Context, secret *corev1.Secret, la
 	return m.client.Patch(ctx, secret, patch)
 }
 
-// GetOrGenerateOption is some configuration that modifies options for a GetOrGenerate request.
-type GetOrGenerateOption func(Interface, secretutils.ConfigInterface, *GetOrGenerateOptions) error
+// GenerateOption is some configuration that modifies options for a Generate request.
+type GenerateOption func(Interface, secretutils.ConfigInterface, *GenerateOptions) error
 
-// GetOrGenerateOptions are options for GetOrGenerate calls.
-type GetOrGenerateOptions struct {
+// GenerateOptions are options for Generate calls.
+type GenerateOptions struct {
 	// Persist specifies whether the 'persist=true' label should be added to the secret resources.
 	Persist bool
 	// RotationStrategy specifies how the secret should be rotated in case it needs to get rotated.
@@ -214,7 +214,7 @@ const (
 )
 
 // ApplyOptions applies the given update options on these options, and then returns itself (for convenient chaining).
-func (o *GetOrGenerateOptions) ApplyOptions(manager Interface, configInterface secretutils.ConfigInterface, opts []GetOrGenerateOption) error {
+func (o *GenerateOptions) ApplyOptions(manager Interface, configInterface secretutils.ConfigInterface, opts []GenerateOption) error {
 	for _, opt := range opts {
 		if err := opt(manager, configInterface, o); err != nil {
 			return err
@@ -224,10 +224,10 @@ func (o *GetOrGenerateOptions) ApplyOptions(manager Interface, configInterface s
 }
 
 // SignedByCA returns a function which sets the 'SigningCA' field in case the ConfigInterface provided to the
-// GetOrGenerate request is a CertificateSecretConfig. Additionally, in such case it stores a checksum of the signing
+// Generate request is a CertificateSecretConfig. Additionally, in such case it stores a checksum of the signing
 // CA in the options.
-func SignedByCA(name string) GetOrGenerateOption {
-	return func(m Interface, config secretutils.ConfigInterface, options *GetOrGenerateOptions) error {
+func SignedByCA(name string) GenerateOption {
+	return func(m Interface, config secretutils.ConfigInterface, options *GenerateOptions) error {
 		mgr, ok := m.(*manager)
 		if !ok {
 			return nil
@@ -262,31 +262,31 @@ func SignedByCA(name string) GetOrGenerateOption {
 }
 
 // Persist returns a function which sets the 'Persist' field to true.
-func Persist() GetOrGenerateOption {
-	return func(_ Interface, _ secretutils.ConfigInterface, options *GetOrGenerateOptions) error {
+func Persist() GenerateOption {
+	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
 		options.Persist = true
 		return nil
 	}
 }
 
 // Rotate returns a function which sets the 'RotationStrategy' field to the specified value.
-func Rotate(strategy rotationStrategy) GetOrGenerateOption {
-	return func(_ Interface, _ secretutils.ConfigInterface, options *GetOrGenerateOptions) error {
+func Rotate(strategy rotationStrategy) GenerateOption {
+	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
 		options.RotationStrategy = strategy
 		return nil
 	}
 }
 
 // IgnoreOldSecrets returns a function which sets the 'IgnoreOldSecrets' field to true.
-func IgnoreOldSecrets() GetOrGenerateOption {
-	return func(_ Interface, _ secretutils.ConfigInterface, options *GetOrGenerateOptions) error {
+func IgnoreOldSecrets() GenerateOption {
+	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
 		options.IgnoreOldSecrets = true
 		return nil
 	}
 }
 
-func isBundleSecret() GetOrGenerateOption {
-	return func(_ Interface, _ secretutils.ConfigInterface, options *GetOrGenerateOptions) error {
+func isBundleSecret() GenerateOption {
+	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
 		options.isBundleSecret = true
 		return nil
 	}

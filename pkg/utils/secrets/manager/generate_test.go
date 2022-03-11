@@ -31,7 +31,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-var _ = Describe("GetOrGenerate", func() {
+var _ = Describe("Generate", func() {
 	var (
 		ctx       = context.TODO()
 		namespace = "shoot--foo--bar"
@@ -45,7 +45,7 @@ var _ = Describe("GetOrGenerate", func() {
 		m = New(logr.Discard(), fakeClient, namespace, nil).(*manager)
 	})
 
-	Describe("#GetOrGenerate", func() {
+	Describe("#Generate", func() {
 		name := "config"
 
 		Context("for non-certificate secrets", func() {
@@ -62,7 +62,7 @@ var _ = Describe("GetOrGenerate", func() {
 
 			It("should generate a new secret", func() {
 				By("generating new secret")
-				secret, err := m.GetOrGenerate(ctx, config)
+				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
@@ -76,13 +76,13 @@ var _ = Describe("GetOrGenerate", func() {
 
 			It("should generate a new secret when the config changes", func() {
 				By("generating new secret")
-				secret, err := m.GetOrGenerate(ctx, config)
+				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
 				By("changing secret config and generate again")
 				config.PasswordLength = 4
-				newSecret, err := m.GetOrGenerate(ctx, config)
+				newSecret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newSecret)
 
@@ -96,14 +96,14 @@ var _ = Describe("GetOrGenerate", func() {
 
 			It("should generate a new secret when the last rotation initiation time changes", func() {
 				By("generating new secret")
-				secret, err := m.GetOrGenerate(ctx, config)
+				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
 				By("changing last rotation initiation time and generate again")
 				m = New(logr.Discard(), fakeClient, namespace, map[string]time.Time{name: time.Now()}).(*manager)
 
-				newSecret, err := m.GetOrGenerate(ctx, config)
+				newSecret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newSecret)
 
@@ -117,13 +117,13 @@ var _ = Describe("GetOrGenerate", func() {
 
 			It("should store the old secret if rotation strategy is KeepOld", func() {
 				By("generating new secret")
-				secret, err := m.GetOrGenerate(ctx, config)
+				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
 				By("changing secret config and generate again with KeepOld strategy")
 				config.PasswordLength = 4
-				newSecret, err := m.GetOrGenerate(ctx, config, Rotate(KeepOld))
+				newSecret, err := m.Generate(ctx, config, Rotate(KeepOld))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newSecret)
 
@@ -137,13 +137,13 @@ var _ = Describe("GetOrGenerate", func() {
 
 			It("should not store the old secret even if rotation strategy is KeepOld when old secrets shall be ignored", func() {
 				By("generating new secret")
-				secret, err := m.GetOrGenerate(ctx, config)
+				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
 				By("changing secret config and generate again with KeepOld strategy and ignore old secrets option")
 				config.PasswordLength = 4
-				newSecret, err := m.GetOrGenerate(ctx, config, Rotate(KeepOld), IgnoreOldSecrets())
+				newSecret, err := m.Generate(ctx, config, Rotate(KeepOld), IgnoreOldSecrets())
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newSecret)
 
@@ -157,7 +157,7 @@ var _ = Describe("GetOrGenerate", func() {
 
 			It("should reconcile the secret", func() {
 				By("generating new secret")
-				secret, err := m.GetOrGenerate(ctx, config)
+				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
@@ -167,7 +167,7 @@ var _ = Describe("GetOrGenerate", func() {
 				Expect(fakeClient.Patch(ctx, secret, patch)).To(Succeed())
 
 				By("changing options and generate again")
-				secret, err = m.GetOrGenerate(ctx, config, Persist())
+				secret, err = m.Generate(ctx, config, Persist())
 				Expect(err).NotTo(HaveOccurred())
 
 				By("verifying labels got reconciled")
@@ -191,7 +191,7 @@ var _ = Describe("GetOrGenerate", func() {
 
 			It("should generate a new CA secret and a corresponding bundle", func() {
 				By("generating new secret")
-				secret, err := m.GetOrGenerate(ctx, config)
+				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
@@ -213,7 +213,7 @@ var _ = Describe("GetOrGenerate", func() {
 
 			It("should rotate a CA secret and add old and new to the corresponding bundle", func() {
 				By("generating new secret")
-				secret, err := m.GetOrGenerate(ctx, config)
+				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
@@ -224,7 +224,7 @@ var _ = Describe("GetOrGenerate", func() {
 
 				By("changing secret config and generate again")
 				m = New(logr.Discard(), fakeClient, namespace, map[string]time.Time{name: time.Now()}).(*manager)
-				newSecret, err := m.GetOrGenerate(ctx, config, Rotate(KeepOld))
+				newSecret, err := m.Generate(ctx, config, Rotate(KeepOld))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newSecret)
 
@@ -273,23 +273,23 @@ var _ = Describe("GetOrGenerate", func() {
 
 			It("should keep the same server cert even when the CA rotates", func() {
 				By("generating new CA secret")
-				caSecret, err := m.GetOrGenerate(ctx, caConfig)
+				caSecret, err := m.Generate(ctx, caConfig)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, caSecret)
 
 				By("generating new server secret")
-				serverSecret, err := m.GetOrGenerate(ctx, serverConfig, SignedByCA(caName))
+				serverSecret, err := m.Generate(ctx, serverConfig, SignedByCA(caName))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, serverSecret)
 
 				By("rotating CA")
 				m = New(logr.Discard(), fakeClient, namespace, map[string]time.Time{caName: time.Now()}).(*manager)
-				newCASecret, err := m.GetOrGenerate(ctx, caConfig, Rotate(KeepOld))
+				newCASecret, err := m.Generate(ctx, caConfig, Rotate(KeepOld))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newCASecret)
 
 				By("get or generate server secret")
-				newServerSecret, err := m.GetOrGenerate(ctx, serverConfig, SignedByCA(caName))
+				newServerSecret, err := m.Generate(ctx, serverConfig, SignedByCA(caName))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newServerSecret)
 
@@ -300,23 +300,23 @@ var _ = Describe("GetOrGenerate", func() {
 
 			It("should regenerate the client cert when the CA rotates", func() {
 				By("generating new CA secret")
-				caSecret, err := m.GetOrGenerate(ctx, caConfig)
+				caSecret, err := m.Generate(ctx, caConfig)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, caSecret)
 
 				By("generating new client secret")
-				clientSecret, err := m.GetOrGenerate(ctx, clientConfig, SignedByCA(caName))
+				clientSecret, err := m.Generate(ctx, clientConfig, SignedByCA(caName))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, clientSecret)
 
 				By("rotating CA")
 				m = New(logr.Discard(), fakeClient, namespace, map[string]time.Time{caName: time.Now()}).(*manager)
-				newCASecret, err := m.GetOrGenerate(ctx, caConfig, Rotate(KeepOld))
+				newCASecret, err := m.Generate(ctx, caConfig, Rotate(KeepOld))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newCASecret)
 
 				By("get or generate client secret")
-				newClientSecret, err := m.GetOrGenerate(ctx, clientConfig, SignedByCA(caName))
+				newClientSecret, err := m.Generate(ctx, clientConfig, SignedByCA(caName))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newClientSecret)
 

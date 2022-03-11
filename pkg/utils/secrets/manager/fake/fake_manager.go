@@ -44,8 +44,8 @@ func New(client client.Client, namespace string) *fakeManager {
 	}
 }
 
-func (m *fakeManager) GetByName(name string, opts ...secretsmanager.GetByNameOption) (*corev1.Secret, error) {
-	options := &secretsmanager.GetByNameOptions{}
+func (m *fakeManager) Get(name string, opts ...secretsmanager.GetOption) (*corev1.Secret, error) {
+	options := &secretsmanager.GetOptions{}
 	options.ApplyOptions(opts)
 
 	secretName := name
@@ -62,8 +62,8 @@ func (m *fakeManager) GetByName(name string, opts ...secretsmanager.GetByNameOpt
 	}, nil
 }
 
-func (m *fakeManager) GetOrGenerate(ctx context.Context, config secretutils.ConfigInterface, opts ...secretsmanager.GetOrGenerateOption) (*corev1.Secret, error) {
-	options := &secretsmanager.GetOrGenerateOptions{}
+func (m *fakeManager) Generate(ctx context.Context, config secretutils.ConfigInterface, opts ...secretsmanager.GenerateOption) (*corev1.Secret, error) {
+	options := &secretsmanager.GenerateOptions{}
 	if err := options.ApplyOptions(m, config, opts); err != nil {
 		return nil, err
 	}
