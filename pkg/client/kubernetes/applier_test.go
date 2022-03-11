@@ -191,6 +191,9 @@ spec:
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "test-service",
 							Namespace: "test-ns",
+							Annotations: map[string]string{
+								"loadbalancer.openstack.org/load-balancer-id": "09199d61-4cca-4c7d-8d9c-405ba7680dbe",
+							},
 						},
 						Spec: corev1.ServiceSpec{
 							ClusterIP: "1.2.3.4",
@@ -209,6 +212,7 @@ spec:
 
 					new = old.DeepCopy()
 					new.Spec.ClusterIP = ""
+					new.Annotations = map[string]string{}
 					expected = old.DeepCopy()
 					expected.ResourceVersion = "2"
 				})

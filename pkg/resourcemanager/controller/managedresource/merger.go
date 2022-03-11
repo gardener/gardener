@@ -300,6 +300,25 @@ func mergeService(scheme *runtime.Scheme, oldObj, newObj runtime.Object) error {
 		newService.Spec.Type = corev1.ServiceTypeClusterIP
 	}
 
+	if len(oldService.Annotations) > 0 {
+		mergedAnnotations := map[string]string{}
+		for annotation, value := range oldService.Annotations {
+			for _, keepAnnotation := range keepServiceAnnotations() {
+				if strings.HasPrefix(annotation, keepAnnotation) {
+					mergedAnnotations[annotation] = value
+				}
+			}
+		}
+
+		if len(newService.Annotations) > 0 {
+			for annotation, value := range newService.Annotations {
+				mergedAnnotations[annotation] = value
+			}
+		}
+
+		newService.Annotations = mergedAnnotations
+	}
+
 	switch newService.Spec.Type {
 	case corev1.ServiceTypeLoadBalancer, corev1.ServiceTypeNodePort:
 		// do not override ports
@@ -408,4 +427,8 @@ func dropReferenceAnnotations(annotations map[string]string) map[string]string {
 		}
 	}
 	return out
+}
+
+func keepServiceAnnotations() []string {
+	return []string{"loadbalancer.openstack.org"}
 }
