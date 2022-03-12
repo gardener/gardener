@@ -139,8 +139,10 @@ var _ = Describe("Resources", func() {
 
 				Expect(secret).To(Equal(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ref-" + resource.Name,
-						Namespace: seedNamespace,
+						Name:        "ref-" + resource.Name,
+						Namespace:   seedNamespace,
+						Labels:      resource.Labels,
+						Annotations: resource.Annotations,
 					},
 					Type: resource.Type,
 					Data: resource.Data,
@@ -159,8 +161,6 @@ var _ = Describe("Resources", func() {
 			Expect(botanist.DeployReferencedResources(ctx)).To(Succeed())
 
 			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(resourceInSeed), resourceInSeed)).To(Succeed())
-			Expect(resourceInSeed.Labels).To(BeNil())
-			Expect(resourceInSeed.Annotations).To(BeNil())
 			Expect(resourceInSeed.Finalizers).To(BeEmpty())
 		})
 	})
