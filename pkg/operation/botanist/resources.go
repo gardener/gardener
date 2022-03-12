@@ -46,7 +46,7 @@ func (b *Botanist) DeployReferencedResources(ctx context.Context) error {
 			return fmt.Errorf("object not found %v", resource.ResourceRef)
 		}
 
-		obj = unstructuredutils.FilterMetadata(obj, "finalizers", "labels", "annotations")
+		obj = unstructuredutils.FilterMetadata(obj, "finalizers")
 
 		// Create an unstructured object and append it to the slice
 		unstructuredObj := &unstructured.Unstructured{Object: obj}
@@ -59,17 +59,7 @@ func (b *Botanist) DeployReferencedResources(ctx context.Context) error {
 		o := unstructuredObj.DeepCopy()
 		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKeyFromObject(o), o); err == nil {
 			patch := client.MergeFrom(o.DeepCopy())
-
-			o.SetLabels(nil)
 			o.SetFinalizers(nil)
-			annotations := o.GetAnnotations()
-			for k := range annotations {
-				if k != "resources.gardener.cloud/description" && k != "resources.gardener.cloud/origin" {
-					delete(annotations, k)
-				}
-			}
-			o.SetAnnotations(annotations)
-
 			if err := b.K8sSeedClient.Client().Patch(ctx, o, patch); err != nil {
 				return err
 			}
