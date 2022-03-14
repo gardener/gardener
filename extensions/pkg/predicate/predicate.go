@@ -61,7 +61,7 @@ func AddTypePredicate(predicates []predicate.Predicate, extensionTypes ...string
 	return append(resultPredicates, predicate.Or(orPreds...))
 }
 
-// HasPurpose filters the incoming Controlplanes  for the given spec.purpose
+// HasPurpose filters the incoming ControlPlanes for the given spec.purpose.
 func HasPurpose(purpose extensionsv1alpha1.Purpose) predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		controlPlane, ok := obj.(*extensionsv1alpha1.ControlPlane)
