@@ -306,7 +306,7 @@ NODENAME=
 if [[ -s "/var/lib/kubelet/nodename" ]]; then
   NODENAME="$(cat "/var/lib/kubelet/nodename")"
 elif [[ -f "/var/lib/kubelet/kubeconfig-real" ]]; then
-  NODENAME="$(/opt/bin/kubectl --kubeconfig="/var/lib/kubelet/kubeconfig-real" get node -l "kubernetes.io/hostname=$(hostname | tr '[:upper:]' '[:lower:]')" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ end }}")"
+  NODENAME="$(/opt/bin/kubectl --kubeconfig="/var/lib/kubelet/kubeconfig-real" get nodes -l "kubernetes.io/hostname=$(hostname | tr '[:upper:]' '[:lower:]')" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ end }}")"
   echo "$NODENAME" > "/var/lib/kubelet/nodename"
 fi
 
