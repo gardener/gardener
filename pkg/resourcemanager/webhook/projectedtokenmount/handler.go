@@ -64,7 +64,7 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 		return admission.Errored(http.StatusUnprocessableEntity, err)
 	}
 
-	log := h.logger.WithValues("pod", client.ObjectKeyFromObject(pod))
+	log := h.logger.WithValues("pod", kutil.ObjectKeyForCreateWebhooks(pod))
 
 	if len(pod.Spec.ServiceAccountName) == 0 || pod.Spec.ServiceAccountName == "default" {
 		log.Info("Pod's service account name is empty or defaulted, nothing to be done", "serviceAccountName", pod.Spec.ServiceAccountName)

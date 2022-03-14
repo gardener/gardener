@@ -16,6 +16,7 @@ package namespaces
 
 import (
 	"context"
+	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -27,8 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
-const ManagedResourceName = "shoot-core-namespaces"
+const managedResourceName = "shoot-core-namespaces"
 
 // New creates a new instance of DeployWaiter for the namespaces.
 func New(
@@ -52,15 +52,30 @@ func (n *namespaces) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, n.client, n.namespace, ManagedResourceName, true, data)
+	return managedresources.CreateForShoot(ctx, n.client, n.namespace, managedResourceName, true, data)
 }
 
 func (n *namespaces) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForShoot(ctx, n.client, n.namespace, ManagedResourceName)
+	return managedresources.DeleteForShoot(ctx, n.client, n.namespace, managedResourceName)
 }
 
-func (n *namespaces) Wait(_ context.Context) error        { return nil }
-func (n *namespaces) WaitCleanup(_ context.Context) error { return nil }
+// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
+// or deleted.
+var TimeoutWaitForManagedResource = 2 * time.Minute
+
+func (n *namespaces) Wait(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilHealthy(timeoutCtx, n.client, n.namespace, managedResourceName)
+}
+
+func (n *namespaces) WaitCleanup(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilDeleted(timeoutCtx, n.client, n.namespace, managedResourceName)
+}
 
 func (n *namespaces) computeResourcesData() (map[string][]byte, error) {
 	var (
