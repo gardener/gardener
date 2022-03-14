@@ -171,19 +171,31 @@ var _ = Describe("Garbage collector tests", func() {
 			secretList := &corev1.SecretList{}
 			g.Expect(testClient.List(ctx, secretList, client.InNamespace(testNamespace.Name), client.MatchingLabels(testLabels))).To(Succeed())
 			return secretList.Items
-		}).Should(onlyContainObject(withName("secret6")))
+		}).Should(And(
+			ContainElement(withName("secret0")),
+			ContainElement(withName("secret1")),
+			ContainElement(withName("secret2")),
+			ContainElement(withName("secret3")),
+			ContainElement(withName("secret4")),
+			ContainElement(withName("secret5")),
+			Not(ContainElement(withName("secret6"))),
+		))
 
 		Eventually(func(g Gomega) []corev1.ConfigMap {
 			configMapList := &corev1.ConfigMapList{}
 			g.Expect(testClient.List(ctx, configMapList, client.InNamespace(testNamespace.Name), client.MatchingLabels(testLabels))).To(Succeed())
 			return configMapList.Items
-		}).Should(onlyContainObject(withName("configmap0")))
+		}).Should(And(
+			Not(ContainElement(withName("configmap0"))),
+			ContainElement(withName("configmap1")),
+			ContainElement(withName("configmap2")),
+			ContainElement(withName("configmap3")),
+			ContainElement(withName("configmap4")),
+			ContainElement(withName("configmap5")),
+			ContainElement(withName("configmap6")),
+		))
 	})
 })
-
-func onlyContainObject(matchers ...gomegatypes.GomegaMatcher) gomegatypes.GomegaMatcher {
-	return ContainElements(And(matchers...))
-}
 
 func withName(name string) gomegatypes.GomegaMatcher {
 	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
