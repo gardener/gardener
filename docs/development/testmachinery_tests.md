@@ -39,8 +39,6 @@ test
 └── testmachinery # test machinery tests
    ├── gardener   # actual test cases imported by suites/gardener
    │  └── security
-   ├── landscaper
-   │  └── gardenlet
    ├── plants
    ├── shoots     # actual test cases imported by suites/shoot
    │  ├── applications
