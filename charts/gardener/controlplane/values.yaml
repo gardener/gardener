@@ -1,5 +1,3 @@
-# NOTE: When making changes to default values & validation, please adjust the API comments and validation
-# in package landscaper/pkg/controlplane/apis/imports
 global:
   # Gardener API server configuration values
   apiserver:

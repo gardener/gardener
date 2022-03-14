@@ -11,7 +11,6 @@ The only prerequisite is to register an initial cluster as a seed cluster that h
 * This gardenlet was either deployed as part of a Gardener installation using a setup tool (for example, `gardener/garden-setup`) or
 * the gardenlet was deployed manually 
   - for a step-by-step manual installation Guide see: [Deploy a Gardenlet Manually](deploy_gardenlet_manually.md))
-  - for a Gardenlet deployment using an installation tool see: [Gardenlet landscaper component](../../landscaper/pkg/gardenlet/README.md).
 
 > The initial cluster can be the garden cluster itself.
 

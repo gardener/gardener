@@ -1,8 +1,0 @@
-description: AnyJSON enhances the json.RawMessages with a dedicated openapi definition
-  so that all it is correctly generated
-type:
-- object
-- string
-- number
-- array
-- boolean
