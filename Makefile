@@ -235,6 +235,10 @@ test-cov: $(PROMTOOL)
 test-cov-clean:
 	@./hack/test-cover-clean.sh
 
+.PHONY: check-apidiff
+check-apidiff: $(GO_APIDIFF)
+	@./hack/check-apidiff.sh
+
 .PHONY: test-prometheus
 test-prometheus: $(PROMTOOL)
 	@./hack/test-prometheus.sh
