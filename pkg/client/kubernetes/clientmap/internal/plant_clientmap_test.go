@@ -123,14 +123,19 @@ var _ = Describe("PlantClientMap", func() {
 			Expect(err).To(MatchError(ContainSubstring("does not have a secretRef")))
 		})
 
-		It("should fail if NewClientFromSecret fails", func() {
+		It("should fail if NewClientFromSecretObject fails", func() {
 			fakeErr := fmt.Errorf("fake")
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: plant.Namespace, Name: plant.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Plant{})).
 				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 					plant.DeepCopyInto(obj.(*gardencorev1beta1.Plant))
 					return nil
 				})
-			internal.NewClientFromSecret = func(ctx context.Context, c client.Client, namespace, secretName string, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: plant.Namespace, Name: plant.Spec.SecretRef.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+					(&corev1.Secret{}).DeepCopyInto(obj.(*corev1.Secret))
+					return nil
+				})
+			internal.NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				return nil, fakeErr
 			}
 
@@ -145,15 +150,15 @@ var _ = Describe("PlantClientMap", func() {
 				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 					plant.DeepCopyInto(obj.(*gardencorev1beta1.Plant))
 					return nil
-				}).Times(2)
+				})
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: plant.Namespace, Name: plant.Spec.SecretRef.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).
 				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+					(&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: key.Name, Namespace: key.Namespace}}).DeepCopyInto(obj.(*corev1.Secret))
 					return nil
 				})
-			internal.NewClientFromSecret = func(ctx context.Context, c client.Client, namespace, secretName string, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
-				Expect(c).To(BeIdenticalTo(fakeGardenClient.Client()))
-				Expect(namespace).To(Equal(plant.Namespace))
-				Expect(secretName).To(Equal(plant.Spec.SecretRef.Name))
+			internal.NewClientFromSecretObject = func(secret *corev1.Secret, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
+				Expect(secret.Namespace).To(Equal(plant.Namespace))
+				Expect(secret.Name).To(Equal(plant.Spec.SecretRef.Name))
 				Expect(fns).To(ConsistOfConfigFuncs(
 					kubernetes.WithClientOptions(client.Options{
 						Scheme: kubernetes.PlantScheme,
