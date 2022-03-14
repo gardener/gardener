@@ -70,6 +70,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
+	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // Options has all the context and parameters needed to run a Gardenlet.
@@ -244,7 +245,10 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		return nil, fmt.Errorf("error instantiating zap logger: %w", err)
 	}
 
-	log.Info("Starting gardenlet...", "version", version.Get())
+	// set the logger used by sigs.k8s.io/controller-runtime
+	runtimelog.SetLogger(log)
+
+	log.Info("Starting gardenlet", "version", version.Get())
 	log.Info("Feature Gates", "featureGates", gardenletfeatures.FeatureGate.String())
 
 	if flag := flag.Lookup("v"); flag != nil {

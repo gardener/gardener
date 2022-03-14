@@ -25,8 +25,8 @@ import (
 var (
 	// NewClientFromFile is an alias to kubernetes.NewClientFromFile which allows it to be mocked for testing.
 	NewClientFromFile = kubernetes.NewClientFromFile
-	// NewClientFromSecret is an alias to kubernetes.NewClientFromSecret which allows it to be mocked for testing.
-	NewClientFromSecret = kubernetes.NewClientFromSecret
+	// NewClientFromSecretObject is an alias to kubernetes.NewClientFromSecretObject which allows it to be mocked for testing.
+	NewClientFromSecretObject = kubernetes.NewClientFromSecretObject
 	// NewClientSetWithConfig is an alias to kubernetes.NewWithConfig which allows it to be mocked for testing.
 	NewClientSetWithConfig = kubernetes.NewWithConfig
 )
