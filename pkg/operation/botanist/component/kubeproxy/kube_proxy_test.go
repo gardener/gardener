@@ -485,7 +485,7 @@ spec:
 					out += `
           limits:
             cpu: 80m
-            memory: 256Mi`
+            memory: 2Gi`
 				}
 
 				out += `
