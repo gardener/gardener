@@ -151,17 +151,12 @@ func (cm *GenericClientMap) addClientSet(ctx context.Context, key clientmap.Clie
 		return entry, nil
 	}
 
-	cm.log.Info("Creating new ClientSet", "key", key.Key())
-	cs, err := cm.factory.NewClientSet(ctx, key)
+	cs, hash, err := cm.factory.NewClientSet(ctx, key)
 	if err != nil {
 		return nil, fmt.Errorf("error creating new ClientSet for key %q: %w", key.Key(), err)
 	}
 
-	// save hash of client set configuration to detect if it should be recreated later on
-	hash, err := cm.factory.CalculateClientSetHash(ctx, key)
-	if err != nil {
-		return nil, fmt.Errorf("error calculating ClientSet hash for key %q: %w", key.Key(), err)
-	}
+	cm.log.Info("Created new ClientSet", "key", key.Key(), "hash", hash)
 
 	entry := &clientMapEntry{
 		clientSet:      cs,
