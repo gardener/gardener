@@ -663,7 +663,7 @@ func NewKubeconfig(contextName string, cluster clientcmdv1.Cluster, authInfo cli
 func ObjectKeyForCreateWebhooks(obj client.Object) client.ObjectKey {
 	namespace := obj.GetNamespace()
 	if len(namespace) == 0 {
-		namespace = "default"
+		namespace = metav1.NamespaceDefault
 	}
 
 	name := obj.GetName()
