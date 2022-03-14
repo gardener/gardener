@@ -87,6 +87,84 @@ var _ = Describe("Predicate", func() {
 		})
 	})
 
+	Describe("#HasPurpose", func() {
+		var (
+			object        *extensionsv1alpha1.ControlPlane
+			purposeFoo    = extensionsv1alpha1.Purpose("foo")
+			purposeNormal = extensionsv1alpha1.Normal
+
+			createEvent  event.CreateEvent
+			updateEvent  event.UpdateEvent
+			deleteEvent  event.DeleteEvent
+			genericEvent event.GenericEvent
+		)
+
+		BeforeEach(func() {
+			object = &extensionsv1alpha1.ControlPlane{}
+			createEvent = event.CreateEvent{
+				Object: object,
+			}
+			updateEvent = event.UpdateEvent{
+				ObjectOld: object,
+				ObjectNew: object,
+			}
+			deleteEvent = event.DeleteEvent{
+				Object: object,
+			}
+			genericEvent = event.GenericEvent{
+				Object: object,
+			}
+		})
+
+		It("should return true because purpose is 'normal' and spec is nil", func() {
+			predicate := HasPurpose(purposeNormal)
+
+			Expect(predicate.Create(createEvent)).To(BeTrue())
+			Expect(predicate.Update(updateEvent)).To(BeTrue())
+			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+			Expect(predicate.Generic(genericEvent)).To(BeTrue())
+		})
+
+		It("should return true because purpose is 'normal' and spec is 'normal'", func() {
+			object.Spec.Purpose = &purposeNormal
+			predicate := HasPurpose(purposeNormal)
+
+			Expect(predicate.Create(createEvent)).To(BeTrue())
+			Expect(predicate.Update(updateEvent)).To(BeTrue())
+			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+			Expect(predicate.Generic(genericEvent)).To(BeTrue())
+		})
+
+		It("should return false because purpose is not 'normal' and spec is nil", func() {
+			predicate := HasPurpose(purposeFoo)
+
+			Expect(predicate.Create(createEvent)).To(BeFalse())
+			Expect(predicate.Update(updateEvent)).To(BeFalse())
+			Expect(predicate.Delete(deleteEvent)).To(BeFalse())
+			Expect(predicate.Generic(genericEvent)).To(BeFalse())
+		})
+
+		It("should return false because purpose does not match", func() {
+			object.Spec.Purpose = &purposeFoo
+			predicate := HasPurpose(extensionsv1alpha1.Exposure)
+
+			Expect(predicate.Create(createEvent)).To(BeFalse())
+			Expect(predicate.Update(updateEvent)).To(BeFalse())
+			Expect(predicate.Delete(deleteEvent)).To(BeFalse())
+			Expect(predicate.Generic(genericEvent)).To(BeFalse())
+		})
+
+		It("should return true because purpose matches", func() {
+			object.Spec.Purpose = &purposeFoo
+			predicate := HasPurpose(purposeFoo)
+
+			Expect(predicate.Create(createEvent)).To(BeTrue())
+			Expect(predicate.Update(updateEvent)).To(BeTrue())
+			Expect(predicate.Delete(deleteEvent)).To(BeTrue())
+			Expect(predicate.Generic(genericEvent)).To(BeTrue())
+		})
+	})
+
 	Describe("#ClusterShootProviderType", func() {
 		It("should match the type", func() {
 			var (
