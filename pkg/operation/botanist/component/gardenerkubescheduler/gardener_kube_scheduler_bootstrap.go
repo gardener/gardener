@@ -26,6 +26,7 @@ import (
 	schedulerconfigv20 "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/v20"
 	schedulerconfigv21 "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/v21"
 	schedulerconfigv22 "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/v22"
+	schedulerconfigv23 "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/v23"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -35,6 +36,7 @@ import (
 	schedulerconfigv20v1beta1 "github.com/gardener/gardener/third_party/kube-scheduler/v20/v1beta1"
 	schedulerconfigv21v1beta1 "github.com/gardener/gardener/third_party/kube-scheduler/v21/v1beta1"
 	schedulerconfigv22v1beta2 "github.com/gardener/gardener/third_party/kube-scheduler/v22/v1beta2"
+	schedulerconfigv23v1beta3 "github.com/gardener/gardener/third_party/kube-scheduler/v23/v1beta3"
 
 	"github.com/Masterminds/semver"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -69,98 +71,141 @@ func Bootstrap(
 
 	switch {
 	case version.ConstraintK8sEqual118.Check(seedVersion):
-		config, err = schedulerconfigv18.NewConfigurator(Name, Name, &schedulerconfigv18v1alpha2.KubeSchedulerConfiguration{
-			Profiles: []schedulerconfigv18v1alpha2.KubeSchedulerProfile{{
-				SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
-				Plugins: &schedulerconfigv18v1alpha2.Plugins{
-					Score: &schedulerconfigv18v1alpha2.PluginSet{
-						Disabled: []schedulerconfigv18v1alpha2.Plugin{
-							{Name: "NodeResourcesLeastAllocated"},
-							{Name: "NodeResourcesBalancedAllocation"},
-						},
-						Enabled: []schedulerconfigv18v1alpha2.Plugin{
-							{Name: "NodeResourcesMostAllocated"},
-						},
-					},
-				},
-			}},
-		})
-	case version.ConstraintK8sEqual119.Check(seedVersion):
-		config, err = schedulerconfigv19.NewConfigurator(Name, Name, &schedulerconfigv19v1beta1.KubeSchedulerConfiguration{
-			Profiles: []schedulerconfigv19v1beta1.KubeSchedulerProfile{{
-				SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
-				Plugins: &schedulerconfigv19v1beta1.Plugins{
-					Score: &schedulerconfigv19v1beta1.PluginSet{
-						Disabled: []schedulerconfigv19v1beta1.Plugin{
-							{Name: "NodeResourcesLeastAllocated"},
-							{Name: "NodeResourcesBalancedAllocation"},
-						},
-						Enabled: []schedulerconfigv19v1beta1.Plugin{
-							{Name: "NodeResourcesMostAllocated"},
-						},
-					},
-				},
-			}},
-		})
-	case version.ConstraintK8sEqual120.Check(seedVersion):
-		config, err = schedulerconfigv20.NewConfigurator(Name, Name, &schedulerconfigv20v1beta1.KubeSchedulerConfiguration{
-			Profiles: []schedulerconfigv20v1beta1.KubeSchedulerProfile{{
-				SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
-				Plugins: &schedulerconfigv20v1beta1.Plugins{
-					Score: &schedulerconfigv20v1beta1.PluginSet{
-						Disabled: []schedulerconfigv20v1beta1.Plugin{
-							{Name: "NodeResourcesLeastAllocated"},
-							{Name: "NodeResourcesBalancedAllocation"},
-						},
-						Enabled: []schedulerconfigv20v1beta1.Plugin{
-							{Name: "NodeResourcesMostAllocated"},
-						},
-					},
-				},
-			}},
-		})
-	case version.ConstraintK8sEqual121.Check(seedVersion):
-		config, err = schedulerconfigv21.NewConfigurator(Name, Name, &schedulerconfigv21v1beta1.KubeSchedulerConfiguration{
-			Profiles: []schedulerconfigv21v1beta1.KubeSchedulerProfile{{
-				SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
-				Plugins: &schedulerconfigv21v1beta1.Plugins{
-					Score: &schedulerconfigv21v1beta1.PluginSet{
-						Disabled: []schedulerconfigv21v1beta1.Plugin{
-							{Name: "NodeResourcesLeastAllocated"},
-							{Name: "NodeResourcesBalancedAllocation"},
-						},
-						Enabled: []schedulerconfigv21v1beta1.Plugin{
-							{Name: "NodeResourcesMostAllocated"},
-						},
-					},
-				},
-			}},
-		})
-	case version.ConstraintK8sEqual122.Check(seedVersion):
-		config, err = schedulerconfigv22.NewConfigurator(Name, Name, &schedulerconfigv22v1beta2.KubeSchedulerConfiguration{
-			Profiles: []schedulerconfigv22v1beta2.KubeSchedulerProfile{{
-				SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
-				PluginConfig: []schedulerconfigv22v1beta2.PluginConfig{
-					{
-						Name: "NodeResourcesFit",
-						Args: runtime.RawExtension{
-							Object: &schedulerconfigv22v1beta2.NodeResourcesFitArgs{
-								ScoringStrategy: &schedulerconfigv22v1beta2.ScoringStrategy{
-									Type: schedulerconfigv22v1beta2.MostAllocated,
-								},
+		schedulerConfig := &schedulerconfigv18v1alpha2.KubeSchedulerConfiguration{
+			Profiles: []schedulerconfigv18v1alpha2.KubeSchedulerProfile{
+				{
+					SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
+					Plugins: &schedulerconfigv18v1alpha2.Plugins{
+						Score: &schedulerconfigv18v1alpha2.PluginSet{
+							Disabled: []schedulerconfigv18v1alpha2.Plugin{
+								{Name: "NodeResourcesLeastAllocated"},
+								{Name: "NodeResourcesBalancedAllocation"},
+							},
+							Enabled: []schedulerconfigv18v1alpha2.Plugin{
+								{Name: "NodeResourcesMostAllocated"},
 							},
 						},
 					},
 				},
-				Plugins: &schedulerconfigv22v1beta2.Plugins{
-					Score: schedulerconfigv22v1beta2.PluginSet{
-						Disabled: []schedulerconfigv22v1beta2.Plugin{
-							{Name: "NodeResourcesBalancedAllocation"},
+			},
+		}
+		config, err = schedulerconfigv18.NewConfigurator(Name, Name, schedulerConfig)
+	case version.ConstraintK8sEqual119.Check(seedVersion):
+		schedulerConfig := &schedulerconfigv19v1beta1.KubeSchedulerConfiguration{
+			Profiles: []schedulerconfigv19v1beta1.KubeSchedulerProfile{
+				{
+					SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
+					Plugins: &schedulerconfigv19v1beta1.Plugins{
+						Score: &schedulerconfigv19v1beta1.PluginSet{
+							Disabled: []schedulerconfigv19v1beta1.Plugin{
+								{Name: "NodeResourcesLeastAllocated"},
+								{Name: "NodeResourcesBalancedAllocation"},
+							},
+							Enabled: []schedulerconfigv19v1beta1.Plugin{
+								{Name: "NodeResourcesMostAllocated"},
+							},
 						},
 					},
 				},
-			}},
-		})
+			},
+		}
+		config, err = schedulerconfigv19.NewConfigurator(Name, Name, schedulerConfig)
+	case version.ConstraintK8sEqual120.Check(seedVersion):
+		schedulerConfig := &schedulerconfigv20v1beta1.KubeSchedulerConfiguration{
+			Profiles: []schedulerconfigv20v1beta1.KubeSchedulerProfile{
+				{
+					SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
+					Plugins: &schedulerconfigv20v1beta1.Plugins{
+						Score: &schedulerconfigv20v1beta1.PluginSet{
+							Disabled: []schedulerconfigv20v1beta1.Plugin{
+								{Name: "NodeResourcesLeastAllocated"},
+								{Name: "NodeResourcesBalancedAllocation"},
+							},
+							Enabled: []schedulerconfigv20v1beta1.Plugin{
+								{Name: "NodeResourcesMostAllocated"},
+							},
+						},
+					},
+				},
+			},
+		}
+		config, err = schedulerconfigv20.NewConfigurator(Name, Name, schedulerConfig)
+	case version.ConstraintK8sEqual121.Check(seedVersion):
+		schedulerConfig := &schedulerconfigv21v1beta1.KubeSchedulerConfiguration{
+			Profiles: []schedulerconfigv21v1beta1.KubeSchedulerProfile{
+				{
+					SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
+					Plugins: &schedulerconfigv21v1beta1.Plugins{
+						Score: &schedulerconfigv21v1beta1.PluginSet{
+							Disabled: []schedulerconfigv21v1beta1.Plugin{
+								{Name: "NodeResourcesLeastAllocated"},
+								{Name: "NodeResourcesBalancedAllocation"},
+							},
+							Enabled: []schedulerconfigv21v1beta1.Plugin{
+								{Name: "NodeResourcesMostAllocated"},
+							},
+						},
+					},
+				},
+			},
+		}
+		config, err = schedulerconfigv21.NewConfigurator(Name, Name, schedulerConfig)
+	case version.ConstraintK8sEqual122.Check(seedVersion):
+		schedulerConfig := &schedulerconfigv22v1beta2.KubeSchedulerConfiguration{
+			Profiles: []schedulerconfigv22v1beta2.KubeSchedulerProfile{
+				{
+					SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
+					PluginConfig: []schedulerconfigv22v1beta2.PluginConfig{
+						{
+							Name: "NodeResourcesFit",
+							Args: runtime.RawExtension{
+								Object: &schedulerconfigv22v1beta2.NodeResourcesFitArgs{
+									ScoringStrategy: &schedulerconfigv22v1beta2.ScoringStrategy{
+										Type: schedulerconfigv22v1beta2.MostAllocated,
+									},
+								},
+							},
+						},
+					},
+					Plugins: &schedulerconfigv22v1beta2.Plugins{
+						Score: schedulerconfigv22v1beta2.PluginSet{
+							Disabled: []schedulerconfigv22v1beta2.Plugin{
+								{Name: "NodeResourcesBalancedAllocation"},
+							},
+						},
+					},
+				},
+			},
+		}
+		config, err = schedulerconfigv22.NewConfigurator(Name, Name, schedulerConfig)
+	case version.ConstraintK8sEqual123.Check(seedVersion):
+		schedulerConfig := &schedulerconfigv23v1beta3.KubeSchedulerConfiguration{
+			Profiles: []schedulerconfigv23v1beta3.KubeSchedulerProfile{
+				{
+					SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
+					PluginConfig: []schedulerconfigv23v1beta3.PluginConfig{
+						{
+							Name: "NodeResourcesFit",
+							Args: runtime.RawExtension{
+								Object: &schedulerconfigv23v1beta3.NodeResourcesFitArgs{
+									ScoringStrategy: &schedulerconfigv23v1beta3.ScoringStrategy{
+										Type: schedulerconfigv23v1beta3.MostAllocated,
+									},
+								},
+							},
+						},
+					},
+					Plugins: &schedulerconfigv23v1beta3.Plugins{
+						Score: schedulerconfigv23v1beta3.PluginSet{
+							Disabled: []schedulerconfigv23v1beta3.Plugin{
+								{Name: "NodeResourcesBalancedAllocation"},
+							},
+						},
+					},
+				},
+			},
+		}
+		config, err = schedulerconfigv23.NewConfigurator(Name, Name, schedulerConfig)
 	default:
 		supportedVersion = false
 	}
