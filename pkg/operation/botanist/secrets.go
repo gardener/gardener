@@ -189,16 +189,11 @@ func (b *Botanist) getOrGenerateGenericTokenKubeconfig(ctx context.Context) erro
 
 func (b *Botanist) syncShootCredentialToGarden(
 	ctx context.Context,
-	seedSecretName string,
 	nameSuffix string,
-	annotations map[string]string,
 	labels map[string]string,
+	annotations map[string]string,
+	data map[string][]byte,
 ) error {
-	seedSecret, err := b.SecretsManager.Get(seedSecretName)
-	if err != nil {
-		return err
-	}
-
 	gardenSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      gutil.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, nameSuffix),
@@ -206,14 +201,14 @@ func (b *Botanist) syncShootCredentialToGarden(
 		},
 	}
 
-	_, err = controllerutils.GetAndCreateOrStrategicMergePatch(ctx, b.K8sGardenClient.Client(), gardenSecret, func() error {
+	_, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, b.K8sGardenClient.Client(), gardenSecret, func() error {
 		gardenSecret.OwnerReferences = []metav1.OwnerReference{
 			*metav1.NewControllerRef(b.Shoot.GetInfo(), gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot")),
 		}
 		gardenSecret.Annotations = annotations
 		gardenSecret.Labels = labels
 		gardenSecret.Type = corev1.SecretTypeOpaque
-		gardenSecret.Data = seedSecret.Data
+		gardenSecret.Data = data
 		return nil
 	})
 	return err
