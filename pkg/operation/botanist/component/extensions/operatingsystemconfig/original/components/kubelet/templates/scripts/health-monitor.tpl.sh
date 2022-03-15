@@ -46,7 +46,7 @@ function kubelet_monitoring {
       continue
     fi
 
-    node_object="$(kubectl get nodes -l kubernetes.io/hostname=$(hostname) -o json)"
+    node_object="$(kubectl get nodes -l kubernetes.io/hostname=$(hostname | tr '[:upper:]' '[:lower:]') -o json)"
     node_status="$(echo $node_object | jq -r '.items[0].status')"
     if [[ -z "$node_status" ]] || [[ "$node_status" == "null" ]]; then
       echo "Node object for this hostname not found in the system, waiting."
