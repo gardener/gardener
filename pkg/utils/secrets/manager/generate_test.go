@@ -476,6 +476,90 @@ var _ = Describe("Generate", func() {
 					}
 				})
 			})
+
+			Context("ssh-keypair", func() {
+				var (
+					oldData = map[string][]byte{
+						"id_rsa":     []byte("private-key"),
+						"id_rsa.pub": []byte("public key"),
+					}
+					config *secretutils.RSASecretConfig
+				)
+
+				BeforeEach(func() {
+					config = &secretutils.RSASecretConfig{
+						Name:       "ssh-keypair",
+						Bits:       4096,
+						UsedForSSH: true,
+					}
+				})
+
+				It("should generate a new ssh keypair if old secret does not exist", func() {
+					By("generating secret")
+					secret, err := m.Generate(ctx, config)
+					Expect(err).NotTo(HaveOccurred())
+
+					By("verifying new keypair was generated")
+					Expect(secret.Data).NotTo(Equal(oldData))
+				})
+
+				It("should keep the existing ssh keypair if old secret still exists", func() {
+					By("creating existing secret with old password")
+					existingSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "ssh-keypair",
+							Namespace: namespace,
+						},
+						Type: corev1.SecretTypeOpaque,
+						Data: oldData,
+					}
+					Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
+
+					By("generating secret")
+					secret, err := m.Generate(ctx, config)
+					Expect(err).NotTo(HaveOccurred())
+
+					By("verifying old password was kept")
+					Expect(secret.Data).To(Equal(oldData))
+				})
+
+				It("should make the manager adopt the old ssh keypair if it exists", func() {
+					By("creating existing secret with old password")
+					existingSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "ssh-keypair",
+							Namespace: namespace,
+						},
+						Type: corev1.SecretTypeOpaque,
+						Data: oldData,
+					}
+					Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
+
+					By("creating existing old secret")
+					existingOldSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "ssh-keypair.old",
+							Namespace: namespace,
+						},
+						Type: corev1.SecretTypeOpaque,
+					}
+					Expect(fakeClient.Create(ctx, existingOldSecret)).To(Succeed())
+
+					By("generating secret")
+					_, err := m.Generate(ctx, config)
+					Expect(err).NotTo(HaveOccurred())
+
+					By("verifying old ssh keypair was adopted")
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(existingOldSecret), existingOldSecret)).To(Succeed())
+					Expect(existingOldSecret.Immutable).To(PointTo(BeTrue()))
+					Expect(existingOldSecret.Labels).To(Equal(map[string]string{
+						"name":                          "ssh-keypair",
+						"managed-by":                    "secrets-manager",
+						"persist":                       "true",
+						"last-rotation-initiation-time": "",
+					}))
+				})
+			})
 		})
 	})
 })
