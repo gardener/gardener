@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/infodata"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -120,6 +119,10 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 		if shootStatus.Credentials.Rotation.Kubeconfig != nil && shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime != nil {
 			rotation[kubeapiserver.SecretStaticTokenName] = shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime.Time
 			rotation[kubeapiserver.SecretBasicAuthName] = shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime.Time
+		}
+
+		if shootStatus.Credentials.Rotation.SSHKeypair != nil && shootStatus.Credentials.Rotation.SSHKeypair.LastInitiationTime != nil {
+			rotation[v1beta1constants.SecretNameSSHKeyPair] = shootStatus.Credentials.Rotation.SSHKeypair.LastInitiationTime.Time
 		}
 	}
 
@@ -323,13 +326,6 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			gardenerResourceDataList.Delete(name)
 		}
 
-		switch b.Shoot.GetInfo().Annotations[v1beta1constants.GardenerOperation] {
-		case v1beta1constants.ShootOperationRotateSSHKeypair:
-			if err := b.rotateSSHKeypairSecrets(ctx, &gardenerResourceDataList); err != nil {
-				return err
-			}
-		}
-
 		if b.Shoot.GetInfo().DeletionTimestamp == nil {
 			if b.Shoot.ReversedVPNEnabled {
 				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList,
@@ -437,39 +433,6 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 
 	for _, name := range b.AllSecretKeys() {
 		b.StoreCheckSum(name, utils.ComputeSecretChecksum(b.LoadSecret(name).Data))
-	}
-
-	// copy ssh-keypair.old secret to shoot namespace in seed
-	oldSSHKeyPair, err := infodata.GetInfoData(gardenerResourceDataList, v1beta1constants.SecretNameOldSSHKeyPair)
-	if err != nil {
-		return err
-	}
-	if oldSSHKeyPair != nil {
-		secretConfig := &secrets.RSASecretConfig{
-			Name:       v1beta1constants.SecretNameOldSSHKeyPair,
-			Bits:       4096,
-			UsedForSSH: true,
-		}
-
-		oldSSHKeyPairData, err := secretConfig.GenerateFromInfoData(oldSSHKeyPair)
-		if err != nil {
-			return err
-		}
-
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      v1beta1constants.SecretNameOldSSHKeyPair,
-				Namespace: b.Shoot.SeedNamespace,
-			},
-		}
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), secret, func() error {
-			secret.Type = corev1.SecretTypeOpaque
-			secret.Data = oldSSHKeyPairData.SecretData()
-			return nil
-		}); err != nil {
-			return err
-		}
-		b.StoreSecret(v1beta1constants.SecretNameOldSSHKeyPair, secret)
 	}
 
 	wildcardCert, err := seed.GetWildcardCertificate(ctx, b.K8sSeedClient.Client())
@@ -586,31 +549,6 @@ func (b *Botanist) deleteSecrets(ctx context.Context, gardenerResourceDataList *
 		gardenerResourceDataList.Delete(secretName)
 	}
 	return nil
-}
-
-func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
-	currentSecret := gardenerResourceDataList.Get(v1beta1constants.SecretNameSSHKeyPair)
-	if currentSecret == nil {
-		b.Logger.Debugf("No %s Secret loaded, not rotating keypair.", v1beta1constants.SecretNameSSHKeyPair)
-		return nil
-	}
-
-	// copy current key to old secret
-	oldSecret := currentSecret.DeepCopy()
-	oldSecret.Name = v1beta1constants.SecretNameOldSSHKeyPair
-	gardenerResourceDataList.Upsert(oldSecret)
-
-	if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.SecretNameSSHKeyPair, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
-		return err
-	}
-
-	gardenerResourceDataList.Delete(v1beta1constants.SecretNameSSHKeyPair)
-
-	// remove operation annotation
-	return b.Shoot.UpdateInfo(ctx, b.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
-		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
-		return nil
-	})
 }
 
 func getExpiredCerts(gardenerResourceDataList gardencorev1alpha1helper.GardenerResourceDataList, renewalWindow time.Duration, secretNames ...string) ([]string, error) {
