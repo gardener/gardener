@@ -46,18 +46,18 @@ type SeedClientSetFactory struct {
 }
 
 // CalculateClientSetHash always returns "" and nil.
-func (f *SeedClientSetFactory) CalculateClientSetHash(ctx context.Context, k clientmap.ClientSetKey) (string, error) {
+func (f *SeedClientSetFactory) CalculateClientSetHash(_ context.Context, _ clientmap.ClientSetKey) (string, error) {
 	return "", nil
 }
 
 // NewClientSet creates a new ClientSet for a Seed cluster.
-func (f *SeedClientSetFactory) NewClientSet(ctx context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, error) {
+func (f *SeedClientSetFactory) NewClientSet(_ context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, string, error) {
 	_, ok := k.(SeedClientSetKey)
 	if !ok {
-		return nil, fmt.Errorf("unsupported ClientSetKey: expected %T, but got %T", SeedClientSetKey(""), k)
+		return nil, "", fmt.Errorf("unsupported ClientSetKey: expected %T, but got %T", SeedClientSetKey(""), k)
 	}
 
-	return NewClientFromFile(
+	clientSet, err := NewClientFromFile(
 		"",
 		f.ClientConnectionConfig.Kubeconfig,
 		kubernetes.WithClientConnectionOptions(f.ClientConnectionConfig),
@@ -71,6 +71,11 @@ func (f *SeedClientSetFactory) NewClientSet(ctx context.Context, k clientmap.Cli
 			&eventsv1.Event{},
 		),
 	)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return clientSet, "", nil
 }
 
 // SeedClientSetKey is a ClientSetKey for a Seed cluster.
