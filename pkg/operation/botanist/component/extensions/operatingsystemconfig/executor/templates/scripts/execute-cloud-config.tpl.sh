@@ -171,32 +171,41 @@ else
   rm -f "{{ .pathBootstrapToken }}"
 fi
 
-NODENAME=
-ANNOTATION_RESTART_SYSTEMD_SERVICES="worker.gardener.cloud/restart-systemd-services"
-
 # Try to find Node object for this machine if already registered to the cluster.
+NODENAME=
+if [[ -s "{{ .pathNodeName }}" ]]; then
+  NODENAME="$(cat "{{ .pathNodeName }}")"
+elif [[ -f "{{ .pathKubeletKubeconfigReal }}" ]]; then
+  {{`NODENAME="$(`}}{{ .pathBinaries }}{{`/kubectl --kubeconfig="`}}{{ .pathKubeletKubeconfigReal }}{{`" get nodes -l "kubernetes.io/hostname=$(hostname | tr '[:upper:]' '[:lower:]')" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ end }}")"`}}
+  echo "$NODENAME" > "{{ .pathNodeName }}"
+fi
+
+# Check if node is annotated with information about to-be-restarted systemd services
+ANNOTATION_RESTART_SYSTEMD_SERVICES="worker.gardener.cloud/restart-systemd-services"
 if [[ -f "{{ .pathKubeletKubeconfigReal }}" ]]; then
-  {{`NODE="$(`}}{{ .pathBinaries }}{{`/kubectl --kubeconfig="`}}{{ .pathKubeletKubeconfigReal }}{{`" get node -l "kubernetes.io/hostname=$(hostname)" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ if (index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\") }} {{ index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ end }}{{ end }}")"`}}
+  if [[ ! -z "$NODENAME" ]]; then
+    {{`SYSTEMD_SERVICES_TO_RESTART="$(`}}{{ .pathBinaries }}{{`/kubectl --kubeconfig="`}}{{ .pathKubeletKubeconfigReal }}{{`" get node "$NODENAME" -o go-template="{{ if index .metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ index .metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ end }}")"`}}
 
-  if [[ ! -z "$NODE" ]]; then
-    NODENAME="$(echo "$NODE" | awk '{print $1}')"
-    SYSTEMD_SERVICES_TO_RESTART="$(echo "$NODE" | awk '{print $2}')"
-  fi
+    # Restart systemd services if requested
+    if [[ ! -z "$SYSTEMD_SERVICES_TO_RESTART" ]]; then
+      restart_ccd=n
+      for service in $(echo "$SYSTEMD_SERVICES_TO_RESTART" | sed "s/,/ /g"); do
+        if [[ ${service} == {{ .cloudConfigDownloaderName }}* ]]; then
+          restart_ccd=y
+          continue
+        fi
 
-  # Restart systemd services if requested
-  restart_ccd=n
-  for service in $(echo "$SYSTEMD_SERVICES_TO_RESTART" | sed "s/,/ /g"); do
-    if [[ ${service} == {{ .cloudConfigDownloaderName }}* ]]; then
-      restart_ccd=y
-      continue
+        echo "Restarting systemd service $service due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
+        systemctl restart "$service" || true
+      done
+
+      {{ .pathBinaries }}/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "${ANNOTATION_RESTART_SYSTEMD_SERVICES}-"
+
+      if [[ ${restart_ccd} == "y" ]]; then
+        echo "Restarting systemd service {{ .unitNameCloudConfigDownloader }} due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
+        systemctl restart "{{ .unitNameCloudConfigDownloader }}" || true
+      fi
     fi
-    echo "Restarting systemd service $service due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
-    systemctl restart "$service" || true
-  done
-  {{ .pathBinaries }}/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "${ANNOTATION_RESTART_SYSTEMD_SERVICES}-"
-  if [[ ${restart_ccd} == "y" ]]; then
-    echo "Restarting systemd service {{ .unitNameCloudConfigDownloader }} due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
-    systemctl restart "{{ .unitNameCloudConfigDownloader }}" || true
   fi
 
   # If the time difference from the last execution till now is smaller than the node-specific delay then we exit early
