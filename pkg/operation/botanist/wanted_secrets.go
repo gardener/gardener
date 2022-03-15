@@ -198,13 +198,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 			PasswordLength: 32,
 		},
 
-		// Secret definition for ssh-keypair
-		&secrets.RSASecretConfig{
-			Name:       v1beta1constants.SecretNameSSHKeyPair,
-			Bits:       4096,
-			UsedForSSH: true,
-		},
-
 		// Secret definition for service-account-key
 		&secrets.RSASecretConfig{
 			Name:       v1beta1constants.SecretNameServiceAccountKey,

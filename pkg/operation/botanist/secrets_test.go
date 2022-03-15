@@ -36,6 +36,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -43,8 +44,12 @@ import (
 
 var _ = Describe("Secrets", func() {
 	var (
-		ctx           = context.TODO()
-		namespace     = "shoot--foo--bar"
+		ctx = context.TODO()
+
+		shootName       = "bar"
+		gardenNamespace = "garden-foo"
+		seedNamespace   = "shoot--foo--bar"
+
 		caSecretNames = []string{
 			"ca",
 			"ca-etcd",
@@ -54,49 +59,107 @@ var _ = Describe("Secrets", func() {
 			"ca-vpn",
 		}
 
-		fakeClient         client.Client
-		fakeSeedInterface  kubernetes.Interface
+		fakeGardenClient    client.Client
+		fakeGardenInterface kubernetes.Interface
+
+		fakeSeedClient    client.Client
+		fakeSeedInterface kubernetes.Interface
+
 		fakeSecretsManager secretsmanager.Interface
-		botanist           *Botanist
+
+		botanist *Botanist
 	)
 
 	BeforeEach(func() {
-		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		fakeSeedInterface = fakeclientset.NewClientSetBuilder().WithClient(fakeClient).Build()
-		fakeSecretsManager = fakesecretsmanager.New(fakeClient, namespace)
+		fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		fakeGardenInterface = fakeclientset.NewClientSetBuilder().WithClient(fakeGardenClient).Build()
+
+		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		fakeSeedInterface = fakeclientset.NewClientSetBuilder().WithClient(fakeSeedClient).Build()
+
+		fakeSecretsManager = fakesecretsmanager.New(fakeSeedClient, seedNamespace)
+
 		botanist = &Botanist{
 			Operation: &operation.Operation{
-				K8sSeedClient:  fakeSeedInterface,
-				SecretsManager: fakeSecretsManager,
+				K8sGardenClient: fakeGardenInterface,
+				K8sSeedClient:   fakeSeedInterface,
+				SecretsManager:  fakeSecretsManager,
 				Shoot: &shootpkg.Shoot{
-					SeedNamespace: namespace,
+					SeedNamespace: seedNamespace,
 				},
 			},
 		}
-		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
+		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      shootName,
+				Namespace: gardenNamespace,
+			},
+		})
+		botanist.SetShootState(&gardencorev1alpha1.ShootState{})
 	})
 
 	Describe("#InitializeSecretsManagement", func() {
 		Context("when shoot is not in restoration phase", func() {
-			It("should get or generate the certificate authorities", func() {
+			It("should generate the certificate authorities", func() {
 				Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
 
 				for _, name := range caSecretNames {
 					secret := &corev1.Secret{}
-					Expect(fakeClient.Get(ctx, kutil.Key(namespace, name), secret)).To(Succeed())
+					Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace, name), secret)).To(Succeed())
 					verifyCASecret(name, secret, And(HaveKey("ca.crt"), HaveKey("ca.key")))
 				}
 			})
 
-			It("should get or generate the generic token kubeconfig", func() {
+			It("should generate the generic token kubeconfig", func() {
 				Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
 
 				cluster := &extensionsv1alpha1.Cluster{}
-				Expect(fakeClient.Get(ctx, kutil.Key(namespace), cluster)).To(Succeed())
+				Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace), cluster)).To(Succeed())
 				Expect(cluster.Annotations).To(HaveKey("generic-token-kubeconfig.secret.gardener.cloud/name"))
 
 				secret := &corev1.Secret{}
-				Expect(fakeClient.Get(ctx, kutil.Key(namespace, cluster.Annotations["generic-token-kubeconfig.secret.gardener.cloud/name"]), secret)).To(Succeed())
+				Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace, cluster.Annotations["generic-token-kubeconfig.secret.gardener.cloud/name"]), secret)).To(Succeed())
+			})
+
+			It("should generate the ssh keypair and sync it to the garden", func() {
+				Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
+
+				secretList := &corev1.SecretList{}
+				Expect(fakeSeedClient.List(ctx, secretList, client.InNamespace(seedNamespace), client.MatchingLabels{
+					"name":       "ssh-keypair",
+					"managed-by": "secrets-manager",
+				})).To(Succeed())
+				Expect(secretList.Items).To(HaveLen(1))
+				Expect(secretList.Items[0].Immutable).To(PointTo(BeTrue()))
+				Expect(secretList.Items[0].Labels).To(And(
+					HaveKeyWithValue("name", "ssh-keypair"),
+					HaveKeyWithValue("managed-by", "secrets-manager"),
+					HaveKeyWithValue("persist", "true"),
+					HaveKeyWithValue("rotation-strategy", "keepold"),
+					HaveKey("checksum-of-config"),
+					HaveKey("last-rotation-initiation-time"),
+				))
+
+				gardenSecret := &corev1.Secret{}
+				Expect(fakeGardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ssh-keypair"), gardenSecret)).To(Succeed())
+				Expect(gardenSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "ssh-keypair"))
+			})
+
+			It("should also sync the old ssh-keypair secret to the garden", func() {
+				Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
+
+				gardenSecret := &corev1.Secret{}
+				Expect(fakeGardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ssh-keypair.old"), gardenSecret)).To(Succeed())
+				Expect(gardenSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "ssh-keypair"))
+			})
+
+			It("should delete the legacy ssh-keypair secret", func() {
+				legacySecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ssh-keypair", Namespace: seedNamespace}}
+				Expect(fakeSeedClient.Create(ctx, legacySecret)).To(Succeed())
+
+				Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
+
+				Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret), &corev1.Secret{})).To(BeNotFoundError())
 			})
 		})
 
@@ -156,31 +219,31 @@ var _ = Describe("Secrets", func() {
 				By("verifying existing CA secrets got restored")
 				for _, name := range caSecretNames[:1] {
 					secret := &corev1.Secret{}
-					Expect(fakeClient.Get(ctx, kutil.Key(namespace, name), secret)).To(Succeed())
+					Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace, name), secret)).To(Succeed())
 					verifyCASecret(name, secret, Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
 				}
 
 				By("verifying missing CA secrets got generated")
 				for _, name := range caSecretNames[2:] {
 					secret := &corev1.Secret{}
-					Expect(fakeClient.Get(ctx, kutil.Key(namespace, name), secret)).To(Succeed())
+					Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace, name), secret)).To(Succeed())
 					verifyCASecret(name, secret, And(HaveKey("ca.crt"), HaveKey("ca.key")))
 				}
 
 				By("verifying non-CA secrets got restored")
 				secret := &corev1.Secret{}
-				Expect(fakeClient.Get(ctx, kutil.Key(namespace, "non-ca-secret"), secret)).To(Succeed())
+				Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace, "non-ca-secret"), secret)).To(Succeed())
 				Expect(secret.Labels).To(Equal(map[string]string{"managed-by": "secrets-manager", "manager-identity": fakesecretsmanager.ManagerIdentity}))
 				Expect(secret.Data).To(Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
 
 				By("verifying external secrets got restored")
-				Expect(fakeClient.Get(ctx, kutil.Key(namespace, "extension-foo-secret"), secret)).To(Succeed())
+				Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace, "extension-foo-secret"), secret)).To(Succeed())
 				Expect(secret.Labels).To(Equal(map[string]string{"managed-by": "secrets-manager", "manager-identity": "extension-foo"}))
 				Expect(secret.Data).To(Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
 
 				By("verifying unrelated data not to be restored")
-				Expect(fakeClient.Get(ctx, kutil.Key(namespace, "secret-without-labels"), &corev1.Secret{})).To(BeNotFoundError())
-				Expect(fakeClient.Get(ctx, kutil.Key(namespace, "some-other-data"), &corev1.Secret{})).To(BeNotFoundError())
+				Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace, "secret-without-labels"), &corev1.Secret{})).To(BeNotFoundError())
+				Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace, "some-other-data"), &corev1.Secret{})).To(BeNotFoundError())
 			})
 		})
 	})
