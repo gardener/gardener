@@ -21,6 +21,7 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
@@ -30,6 +31,8 @@ import (
 	mockoperatingsystemconfig "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/mock"
 	mockworker "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/golang/mock/gomock"
@@ -40,12 +43,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("Worker", func() {
 	var (
 		ctrl                  *gomock.Controller
 		c                     *mockclient.MockClient
+		fakeClient            client.Client
+		sm                    secretsmanager.Interface
 		worker                *mockworker.MockInterface
 		operatingSystemConfig *mockoperatingsystemconfig.MockInterface
 		infrastructure        *mockinfrastructure.MockInterface
@@ -54,7 +60,6 @@ var _ = Describe("Worker", func() {
 		ctx                                   = context.TODO()
 		fakeErr                               = fmt.Errorf("fake")
 		shootState                            = &gardencorev1alpha1.ShootState{}
-		sshPublicKey                          = []byte("key")
 		infrastructureProviderStatus          = &runtime.RawExtension{Raw: []byte("infrastatus")}
 		workerNameToOperatingSystemConfigMaps = map[string]*operatingsystemconfig.OperatingSystemConfigs{"foo": {}}
 		labelSelectorCloudConfigRole          = client.MatchingLabels{"gardener.cloud/role": "cloud-config"}
@@ -63,22 +68,26 @@ var _ = Describe("Worker", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		sm = fakesecretsmanager.New(fakeClient, "namespace")
 		worker = mockworker.NewMockInterface(ctrl)
 		operatingSystemConfig = mockoperatingsystemconfig.NewMockInterface(ctrl)
 		infrastructure = mockinfrastructure.NewMockInterface(ctrl)
-		botanist = &Botanist{Operation: &operation.Operation{
-			Shoot: &shootpkg.Shoot{
-				Components: &shootpkg.Components{
-					Extensions: &shootpkg.Extensions{
-						Infrastructure:        infrastructure,
-						OperatingSystemConfig: operatingSystemConfig,
-						Worker:                worker,
+		botanist = &Botanist{
+			Operation: &operation.Operation{
+				SecretsManager: sm,
+				Shoot: &shootpkg.Shoot{
+					Components: &shootpkg.Components{
+						Extensions: &shootpkg.Extensions{
+							Infrastructure:        infrastructure,
+							OperatingSystemConfig: operatingSystemConfig,
+							Worker:                worker,
+						},
 					},
 				},
 			},
-		}}
+		}
 		botanist.SetShootState(shootState)
-		botanist.StoreSecret("ssh-keypair", &corev1.Secret{Data: map[string][]byte{"id_rsa.pub": sshPublicKey}})
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 	})
 
@@ -91,7 +100,7 @@ var _ = Describe("Worker", func() {
 			infrastructure.EXPECT().ProviderStatus().Return(infrastructureProviderStatus)
 			operatingSystemConfig.EXPECT().WorkerNameToOperatingSystemConfigsMap().Return(workerNameToOperatingSystemConfigMaps)
 
-			worker.EXPECT().SetSSHPublicKey(sshPublicKey)
+			worker.EXPECT().SetSSHPublicKey(gomock.Any())
 			worker.EXPECT().SetInfrastructureProviderStatus(infrastructureProviderStatus)
 			worker.EXPECT().SetWorkerNameToOperatingSystemConfigsMap(workerNameToOperatingSystemConfigMaps)
 		})
