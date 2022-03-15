@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v22_test
+package v23_test
 
 import (
 	"testing"
 
-	v22 "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/v22"
-	"github.com/gardener/gardener/third_party/kube-scheduler/v22/v1beta2"
+	v23 "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/v23"
+	"github.com/gardener/gardener/third_party/kube-scheduler/v23/v1beta3"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -27,12 +27,12 @@ import (
 
 func TestConfigurator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component GardenerKubeScheduler v22 Suite")
+	RunSpecs(t, "Botanist Component GardenerKubeScheduler v23 Suite")
 }
 
 var _ = Describe("NewConfigurator", func() {
 	It("should not return nil", func() {
-		c, err := v22.NewConfigurator("baz", "test", &v1beta2.KubeSchedulerConfiguration{})
+		c, err := v23.NewConfigurator("baz", "test", &v1beta3.KubeSchedulerConfiguration{})
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c).NotTo(BeNil())
@@ -43,8 +43,8 @@ var _ = Describe("Config", func() {
 	var output string
 
 	JustBeforeEach(func() {
-		c, err := v22.NewConfigurator("baz", "test", &v1beta2.KubeSchedulerConfiguration{
-			Profiles: []v1beta2.KubeSchedulerProfile{
+		c, err := v23.NewConfigurator("baz", "test", &v1beta3.KubeSchedulerConfiguration{
+			Profiles: []v1beta3.KubeSchedulerProfile{
 				{
 					SchedulerName: pointer.String("test"),
 				},
@@ -59,7 +59,7 @@ var _ = Describe("Config", func() {
 	})
 
 	It("returns correct config", func() {
-		Expect(output).To(Equal(`apiVersion: kubescheduler.config.k8s.io/v1beta2
+		Expect(output).To(Equal(`apiVersion: kubescheduler.config.k8s.io/v1beta3
 clientConnection:
   acceptContentTypes: ""
   burst: 0
