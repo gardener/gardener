@@ -411,6 +411,55 @@ var _ = Describe("Worker", func() {
 				Spec: *expectedWorkerSpec,
 			}))
 		})
+		It("should initialize nodeTemplate from cloudProfile, when machineType updated for worker pool", func() {
+			defer test.WithVars(&worker.TimeNow, mockNow.Do)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			newValues := *values
+			newValues.Workers = []gardencorev1beta1.Worker{
+				values.Workers[1],
+			}
+			newValues.MachineTypes = machineTypes
+
+			expectedWorkerSpec := wSpec.DeepCopy()
+			expectedWorkerSpec.Pools = []extensionsv1alpha1.WorkerPool{
+				wSpec.Pools[1],
+			}
+
+			existingWorker := w.DeepCopy()
+			existingWorker.Spec.Pools = []extensionsv1alpha1.WorkerPool{
+				wSpec.Pools[1],
+			}
+			existingWorker.Spec.Pools[0].MachineType = worker1MachineType
+
+			Expect(c.Create(ctx, existingWorker)).To(Succeed(), "creating worker succeeds")
+
+			defaultDepWaiter = worker.New(log, c, &newValues, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+			obj := &extensionsv1alpha1.Worker{}
+
+			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(obj).To(DeepEqual(&extensionsv1alpha1.Worker{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
+					Kind:       extensionsv1alpha1.WorkerResource,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+					Annotations: map[string]string{
+						"gardener.cloud/operation": "reconcile",
+						"gardener.cloud/timestamp": now.UTC().String(),
+					},
+					ResourceVersion: "2",
+				},
+				Spec: *expectedWorkerSpec,
+			}))
+		})
+
 	})
 
 	Describe("#Wait", func() {
