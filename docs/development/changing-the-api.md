@@ -32,7 +32,7 @@ Most Gardener components have a component configuration that follows similar pri
 Those component configurations are defined in `pkg/{controllermanager,gardenlet,scheduler},pkg/apis/config`.
 Hence, the above checklist also applies for changes to those APIs.
 However, since these APIs are only used internally and only during the deployment of Gardener the guidelines with respect to changes and backwards-compatibility are slightly relaxed.
-If necessary then it is allowed to remove fields without a proper deprecation period if the release note uses the `action operator` keywords.
+If necessary then it is allowed to remove fields without a proper deprecation period if the release note uses the `breaking operator` keywords.
 
 In addition to the above checklist:
 
