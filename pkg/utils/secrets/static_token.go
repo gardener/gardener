@@ -26,10 +26,6 @@ import (
 const (
 	// DataKeyStaticTokenCSV is the key in a secret data holding the CSV format of a secret.
 	DataKeyStaticTokenCSV = "static_tokens.csv"
-	// DataKeyUserID is the key in a secret data holding the userID.
-	DataKeyUserID = "userID"
-	// DataKeyGroups is the key in a secret data holding the groups.
-	DataKeyGroups = "groups"
 	// DataKeyToken is the key in a secret data holding the token.
 	DataKeyToken = "token"
 )
