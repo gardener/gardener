@@ -109,9 +109,9 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		command       = c.computeCommand()
 	)
 
-	genericTokenKubeconfigSecret, err := c.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
-	if err != nil {
-		return err
+	genericTokenKubeconfigSecret, found := c.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 	}
 
 	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c.client, serviceAccount, func() error {

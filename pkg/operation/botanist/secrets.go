@@ -157,9 +157,9 @@ func (b *Botanist) restoreSecretsFromShootStateForSecretsManagerAdoption(ctx con
 }
 
 func (b *Botanist) getOrGenerateGenericTokenKubeconfig(ctx context.Context) error {
-	clusterCABundleSecret, err := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
-	if err != nil {
-		return err
+	clusterCABundleSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
 
 	config := &secretutils.KubeconfigSecretConfig{

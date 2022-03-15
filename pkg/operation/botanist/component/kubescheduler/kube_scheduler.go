@@ -127,14 +127,14 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	genericTokenKubeconfigSecret, err := k.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
-	if err != nil {
-		return err
+	genericTokenKubeconfigSecret, found := k.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 	}
 
-	clientCASecret, err := k.secretsManager.Get(v1beta1constants.SecretNameCACluster)
-	if err != nil {
-		return err
+	clientCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
 
 	componentConfigYAML, err := k.computeComponentConfig()
