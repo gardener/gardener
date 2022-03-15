@@ -106,7 +106,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return reconcile.Result{}, fmt.Errorf("could not fetch ManagedResource: %+v", err)
 	}
 
-	if mr.Annotations[resourcesv1alpha1.Mode] == resourcesv1alpha1.ModeIgnore {
+	if ignoreMode(mr) && mr.DeletionTimestamp == nil {
 		log.Info("Skipping reconciliation due to ignore mode")
 		return reconcile.Result{}, nil
 	}
