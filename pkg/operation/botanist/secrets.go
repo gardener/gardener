@@ -100,13 +100,16 @@ func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
 		}
 	}
 
-	for _, config := range b.wantedCertificateAuthorities() {
-		if _, err := b.SecretsManager.Generate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld)); err != nil {
+	for _, generateFn := range []func(context.Context) error{
+		b.generateCertificateAuthorities,
+		b.generateGenericTokenKubeconfig,
+	} {
+		if err := generateFn(ctx); err != nil {
 			return err
 		}
 	}
 
-	return b.getOrGenerateGenericTokenKubeconfig(ctx)
+	return nil
 }
 
 func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
@@ -156,7 +159,17 @@ func (b *Botanist) restoreSecretsFromShootStateForSecretsManagerAdoption(ctx con
 	return flow.Parallel(fns...)(ctx)
 }
 
-func (b *Botanist) getOrGenerateGenericTokenKubeconfig(ctx context.Context) error {
+func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
+	for _, config := range b.wantedCertificateAuthorities() {
+		if _, err := b.SecretsManager.Generate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (b *Botanist) generateGenericTokenKubeconfig(ctx context.Context) error {
 	clusterCABundleSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
