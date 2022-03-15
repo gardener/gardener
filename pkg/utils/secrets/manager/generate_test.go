@@ -16,6 +16,8 @@ package manager
 
 import (
 	"context"
+	"crypto/rsa"
+	"io"
 	"time"
 
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -30,6 +32,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
+
+var (
+	oldGenerateRandomString func(int) (string, error)
+	oldGenerateKey          func(io.Reader, int) (*rsa.PrivateKey, error)
+)
+
+var _ = BeforeSuite(func() {
+	oldGenerateRandomString = secretutils.GenerateRandomString
+	secretutils.GenerateRandomString = secretutils.FakeGenerateRandomString
+
+	oldGenerateKey = secretutils.GenerateKey
+	secretutils.GenerateKey = secretutils.FakeGenerateKey
+})
+
+var _ = AfterSuite(func() {
+	secretutils.GenerateRandomString = oldGenerateRandomString
+
+	secretutils.GenerateKey = oldGenerateKey
+})
 
 var _ = Describe("Generate", func() {
 	var (

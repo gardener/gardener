@@ -19,7 +19,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/infodata"
 )
 
@@ -74,7 +73,7 @@ func (s *StaticTokenSecretConfig) GenerateInfoData() (infodata.InfoData, error) 
 	tokens := make(map[string]string)
 
 	for username := range s.Tokens {
-		token, err := utils.GenerateRandomString(128)
+		token, err := GenerateRandomString(128)
 		if err != nil {
 			return nil, err
 		}
@@ -133,7 +132,7 @@ func (s *StaticTokenSecretConfig) GenerateStaticToken() (*StaticToken, error) {
 	tokens := make([]Token, 0, len(s.Tokens))
 
 	for _, tokenConfig := range s.Tokens {
-		token, err := utils.GenerateRandomString(128)
+		token, err := GenerateRandomString(128)
 		if err != nil {
 			return nil, err
 		}

@@ -16,6 +16,8 @@ package botanist_test
 
 import (
 	"context"
+	"crypto/rsa"
+	"io"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -27,6 +29,7 @@ import (
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -40,6 +43,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+)
+
+var (
+	oldGenerateKey func(io.Reader, int) (*rsa.PrivateKey, error)
+
+	_ = BeforeSuite(func() {
+		oldGenerateKey = secretutils.GenerateKey
+		secretutils.GenerateKey = secretutils.FakeGenerateKey
+	})
+	_ = AfterSuite(func() {
+		secretutils.GenerateKey = oldGenerateKey
+	})
 )
 
 var _ = Describe("Secrets", func() {
