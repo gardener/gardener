@@ -83,7 +83,10 @@ spec:
             cpu: 30m
             memory: 200Mi
         ports:
-        - containerPort: 8080
+        - name: server
+          containerPort: 8080
+        - name: metrics
+          containerPort: 8943
 {{- if not .Values.updater.createServiceAccount }}
       volumes:
       - name: shoot-access
