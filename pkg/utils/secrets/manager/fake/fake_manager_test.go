@@ -49,8 +49,8 @@ var _ = Describe("FakeManager", func() {
 
 	DescribeTable("#Get",
 		func(expectedSecretName string, opts ...secretsmanager.GetOption) {
-			secret, err := m.Get(name, opts...)
-			Expect(err).NotTo(HaveOccurred())
+			secret, found := m.Get(name, opts...)
+			Expect(found).To(BeTrue())
 			Expect(secret).To(Equal(&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      expectedSecretName,

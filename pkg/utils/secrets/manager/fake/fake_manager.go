@@ -47,7 +47,7 @@ func New(client client.Client, namespace string) *fakeManager {
 	}
 }
 
-func (m *fakeManager) Get(name string, opts ...secretsmanager.GetOption) (*corev1.Secret, error) {
+func (m *fakeManager) Get(name string, opts ...secretsmanager.GetOption) (*corev1.Secret, bool) {
 	options := &secretsmanager.GetOptions{}
 	options.ApplyOptions(opts)
 
@@ -62,7 +62,7 @@ func (m *fakeManager) Get(name string, opts ...secretsmanager.GetOption) (*corev
 			Namespace: m.namespace,
 		},
 		Data: map[string][]byte{"data-for": []byte(name)},
-	}, nil
+	}, true
 }
 
 func (m *fakeManager) Generate(ctx context.Context, config secretutils.ConfigInterface, opts ...secretsmanager.GenerateOption) (*corev1.Secret, error) {
