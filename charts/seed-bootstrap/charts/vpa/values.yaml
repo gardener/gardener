@@ -7,7 +7,6 @@ global:
 
 labels:
   gardener.cloud/role: vpa
-  networking.gardener.cloud/from-prometheus: allowed
 
 clusterType: seed
 

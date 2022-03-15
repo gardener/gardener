@@ -31,6 +31,7 @@ spec:
 {{- end }}
       labels:
         app: vpa-updater
+        networking.gardener.cloud/from-prometheus: allowed
 {{ toYaml .Values.labels | indent 8 }}
 {{- if .Values.updater.podLabels }}
 {{ toYaml .Values.updater.podLabels | indent 8 }}
