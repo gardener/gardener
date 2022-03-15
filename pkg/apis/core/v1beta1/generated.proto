@@ -2168,6 +2168,10 @@ message ShootCredentialsRotation {
   // Kubeconfig contains information about the kubeconfig credential rotation.
   // +optional
   optional ShootKubeconfigRotation kubeconfig = 2;
+
+  // SSHKeypair contains information about the ssh-keypair credential rotation.
+  // +optional
+  optional ShootSSHKeypairRotation sshKeypair = 3;
 }
 
 // ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
@@ -2216,6 +2220,17 @@ message ShootNetworks {
   // Services is the CIDR of the service network.
   // +optional
   optional string services = 2;
+}
+
+// ShootSSHKeypairRotation contains information about the ssh-keypair credential rotation.
+message ShootSSHKeypairRotation {
+  // LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 1;
+
+  // LastCompletionTime is the most recent time when the ssh-keypair credential rotation was successfully completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
 }
 
 // ShootSpec is the specification of a Shoot.
