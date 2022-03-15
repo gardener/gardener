@@ -21,4 +21,4 @@ spec:
       -ginkgo.focus="\[RELEASE\]"
       -ginkgo.skip="\[SERIAL\]|\[DISRUPTIVE\]"
 
-  image: eu.gcr.io/gardener-project/3rd/golang:1.17.7
+  image: eu.gcr.io/gardener-project/3rd/golang:1.17.8
