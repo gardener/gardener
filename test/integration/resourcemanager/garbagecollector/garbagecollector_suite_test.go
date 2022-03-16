@@ -12,17 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package health_test
+package garbagecollector_test
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 	"time"
 
 	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
-	healthcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/health"
-	resourcemanagerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/go-logr/logr"
@@ -39,16 +37,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestHealthController(t *testing.T) {
+func TestGarbageCollector(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Health Controller Integration Test Suite")
+	RunSpecs(t, "Garbage Collector Integration Test Suite")
 }
-
-const (
-	// testID is used for generating test namespace names
-	testID        = "health-controller-test"
-	testFinalizer = "gardener.cloud/" + testID
-)
 
 var (
 	ctx       = context.Background()
@@ -69,12 +61,7 @@ var _ = BeforeSuite(func() {
 	log = logf.Log.WithName("test")
 
 	By("starting test environment")
-	testEnv = &envtest.Environment{
-		CRDInstallOptions: envtest.CRDInstallOptions{
-			Paths: []string{filepath.Join("..", "..", "..", "..", "example", "resource-manager", "10-crd-resources.gardener.cloud_managedresources.yaml")},
-		},
-		ErrorIfCRDPathMissing: true,
-	}
+	testEnv = &envtest.Environment{}
 
 	restConfig, err := testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
@@ -96,8 +83,7 @@ var _ = BeforeSuite(func() {
 	By("creating test namespace")
 	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
-			GenerateName: testID + "-",
+			Name: "garbagecollector-tests",
 		},
 	}
 	Expect(testClient.Create(ctx, testNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
@@ -126,12 +112,10 @@ var _ = BeforeSuite(func() {
 	Expect(mgr.Add(targetClusterOpts.Completed().Cluster)).To(Succeed())
 
 	By("registering controller")
-	Expect(healthcontroller.AddToManagerWithOptions(mgr, healthcontroller.ControllerConfig{
-		MaxConcurrentWorkers: 5,
-		SyncPeriod:           500 * time.Millisecond, // gotta go fast during tests
-
-		ClassFilter:   *resourcemanagerpredicate.NewClassFilter(""),
-		TargetCluster: targetClusterOpts.Completed().Cluster,
+	Expect(garbagecollector.AddToManagerWithOptions(mgr, garbagecollector.ControllerConfig{
+		SyncPeriod:            time.Second,
+		TargetCluster:         targetClusterOpts.Completed().Cluster,
+		MinimumObjectLifetime: 0,
 	})).To(Succeed())
 
 	By("starting manager")
