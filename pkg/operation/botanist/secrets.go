@@ -119,6 +119,9 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 		}
 	}
 
+	// CA rotation start time is not added here for now. Otherwise, the CAs would actually get rotated already,
+	// which can only be done once all components have been adapted.
+
 	return rotation
 }
 

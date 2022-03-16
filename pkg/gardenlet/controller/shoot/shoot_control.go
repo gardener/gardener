@@ -679,6 +679,7 @@ func (r *shootReconciler) updateShootStatusOperationStart(ctx context.Context, g
 		mustRemoveOperationAnnotation = true
 		v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.ShootCARotation) {
 			rotation.Phase = gardencorev1beta1.RotationPreparing
+			rotation.LastInitiationTime = &now
 		})
 
 	case v1beta1constants.ShootOperationRotateCAComplete:
