@@ -22,7 +22,10 @@
 ifeq ($(strip $(shell go list -m)),github.com/gardener/gardener)
 TOOLS_PKG_PATH             := hack/tools
 else
-TOOLS_PKG_PATH             := $(shell go list -tags tools -f '{{ .Dir }}' github.com/gardener/gardener/hack/tools)
+# dependency on github.com/gardener/gardener/hack/tools is optional and only needed if other projects want to reuse
+# install-promtool.sh or logcheck. If they don't use it and the project doesn't depend on the package, silence the error
+# to minimize confusion.
+TOOLS_PKG_PATH             := $(shell go list -tags tools -f '{{ .Dir }}' github.com/gardener/gardener/hack/tools 2>/dev/null)
 endif
 
 TOOLS_BIN_DIR              := $(TOOLS_DIR)/bin
