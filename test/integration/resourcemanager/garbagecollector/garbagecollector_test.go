@@ -172,12 +172,14 @@ var _ = Describe("Garbage collector tests", func() {
 			g.Expect(testClient.List(ctx, secretList, client.InNamespace(testNamespace.Name), client.MatchingLabels(testLabels))).To(Succeed())
 			return secretList.Items
 		}).Should(And(
-			ContainElement(withName("secret0")),
-			ContainElement(withName("secret1")),
-			ContainElement(withName("secret2")),
-			ContainElement(withName("secret3")),
-			ContainElement(withName("secret4")),
-			ContainElement(withName("secret5")),
+			ContainElements(
+				withName("secret0"),
+				withName("secret1"),
+				withName("secret2"),
+				withName("secret3"),
+				withName("secret4"),
+				withName("secret5"),
+			),
 			Not(ContainElement(withName("secret6"))),
 		))
 
@@ -187,12 +189,14 @@ var _ = Describe("Garbage collector tests", func() {
 			return configMapList.Items
 		}).Should(And(
 			Not(ContainElement(withName("configmap0"))),
-			ContainElement(withName("configmap1")),
-			ContainElement(withName("configmap2")),
-			ContainElement(withName("configmap3")),
-			ContainElement(withName("configmap4")),
-			ContainElement(withName("configmap5")),
-			ContainElement(withName("configmap6")),
+			ContainElements(
+				withName("configmap1"),
+				withName("configmap2"),
+				withName("configmap3"),
+				withName("configmap4"),
+				withName("configmap5"),
+				withName("configmap6"),
+			),
 		))
 	})
 })
