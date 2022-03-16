@@ -93,9 +93,10 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 			managerpredicate.ClassChangedPredicate(),
 			// start health checks immediately after MR has been reconciled
 			managerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesApplied, managerpredicate.DefaultConditionChange),
+			managerpredicate.NoLongerIgnored(),
 		),
 		predicate.Or(
-			managerpredicate.NotIgnoreMode(),
+			managerpredicate.NotIgnored(),
 			predicateutils.IsDeleting(),
 		),
 	); err != nil {

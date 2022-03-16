@@ -93,6 +93,42 @@ var _ = Describe("Health controller tests", func() {
 		})
 	})
 
+	Context("ignore mode", func() {
+		BeforeEach(func() {
+			metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, resourcesv1alpha1.Ignore, "true")
+		})
+
+		JustBeforeEach(func() {
+			By("set ManagedResource to be applied successfully")
+			patch := client.MergeFrom(managedResource.DeepCopy())
+			setCondition(managedResource, resourcesv1alpha1.ResourcesApplied, gardencorev1beta1.ConditionTrue)
+			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
+		})
+
+		It("does not touch ManagedResource if it is ignored", func() {
+			Consistently(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				return managedResource.Status.Conditions
+			}).ShouldNot(
+				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy)),
+			)
+		})
+
+		It("sets ManagedResource to healthy if it no longer ignored", func() {
+			By("update ManagedResource and remove ignore mode")
+			patch := client.MergeFrom(managedResource.DeepCopy())
+			delete(managedResource.Annotations, resourcesv1alpha1.Ignore)
+			Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
+
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				return managedResource.Status.Conditions
+			}).Should(
+				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionTrue)),
+			)
+		})
+	})
+
 	Context("ManagedResource in deletion", func() {
 		JustBeforeEach(func() {
 			By("marking ManagedResource for deletion")

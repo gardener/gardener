@@ -100,10 +100,10 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 			predicate.GenerationChangedPredicate{},
 			managerpredicate.HasOperationAnnotation(),
 			managerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesHealthy, managerpredicate.ConditionChangedToUnhealthy),
-			managerpredicate.IgnoreModeRemoved(),
+			managerpredicate.NoLongerIgnored(),
 		),
 		predicate.Or(
-			managerpredicate.NotIgnoreMode(),
+			managerpredicate.NotIgnored(),
 			predicateutils.IsDeleting(),
 		),
 	); err != nil {
@@ -113,7 +113,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	if err := c.Watch(
 		&source.Kind{Type: &corev1.Secret{}},
 		mapper.EnqueueRequestsFrom(SecretToManagedResourceMapper(conf.ClassFilter, predicate.Or(
-			managerpredicate.NotIgnoreMode(),
+			managerpredicate.NotIgnored(),
 			predicateutils.IsDeleting(),
 		)), mapper.UpdateWithOldAndNew),
 	); err != nil {

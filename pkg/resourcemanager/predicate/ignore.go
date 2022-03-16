@@ -21,22 +21,22 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-// NotIgnoreMode returns a predicate that detects if the object has the resources.gardener.cloud/mode=Ignore annotation.
-func NotIgnoreMode() predicate.Predicate {
+// NotIgnored returns a predicate that detects if the object has the resources.gardener.cloud/mode=Ignore annotation.
+func NotIgnored() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		return !hasIgnoreMode(obj)
+		return !isIgnored(obj)
 	})
 }
 
-// IgnoreModeRemoved returns a predicate that detects if resources.gardener.cloud/mode=Ignore annotation was removed
+// NoLongerIgnored returns a predicate that detects if resources.gardener.cloud/ignore=true annotation was removed
 // during an update.
-func IgnoreModeRemoved() predicate.Predicate {
+func NoLongerIgnored() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			return true
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return hasIgnoreMode(e.ObjectOld) && !hasIgnoreMode(e.ObjectNew)
+			return isIgnored(e.ObjectOld) && !isIgnored(e.ObjectNew)
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			return true
@@ -47,6 +47,6 @@ func IgnoreModeRemoved() predicate.Predicate {
 	}
 }
 
-func hasIgnoreMode(obj client.Object) bool {
-	return obj.GetAnnotations()[resourcesv1alpha1.Mode] == resourcesv1alpha1.ModeIgnore
+func isIgnored(obj client.Object) bool {
+	return obj.GetAnnotations()[resourcesv1alpha1.Ignore] == "true"
 }

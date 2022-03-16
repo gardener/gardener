@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-var _ = Describe("ignore mode", func() {
+var _ = Describe("ignore", func() {
 	var (
 		managedResource *resourcesv1alpha1.ManagedResource
 		predicate       predicate.Predicate
@@ -36,9 +36,9 @@ var _ = Describe("ignore mode", func() {
 		managedResource = &resourcesv1alpha1.ManagedResource{}
 	})
 
-	Describe("#NotIgnoreMode", func() {
+	Describe("#NotIgnored", func() {
 		BeforeEach(func() {
-			predicate = NotIgnoreMode()
+			predicate = NotIgnored()
 		})
 
 		Context("#Create", func() {
@@ -47,7 +47,7 @@ var _ = Describe("ignore mode", func() {
 			})
 
 			It("should not match because ignore mode annotation", func() {
-				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/mode", "Ignore")
+				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/ignore", "true")
 
 				Expect(predicate.Create(event.CreateEvent{Object: managedResource})).To(BeFalse())
 			})
@@ -59,7 +59,7 @@ var _ = Describe("ignore mode", func() {
 			})
 
 			It("should not match because ignore mode annotation", func() {
-				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/mode", "Ignore")
+				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/ignore", "true")
 
 				Expect(predicate.Update(event.UpdateEvent{ObjectNew: managedResource})).To(BeFalse())
 			})
@@ -71,7 +71,7 @@ var _ = Describe("ignore mode", func() {
 			})
 
 			It("should not match because ignore mode annotation", func() {
-				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/mode", "Ignore")
+				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/ignore", "true")
 
 				Expect(predicate.Delete(event.DeleteEvent{Object: managedResource})).To(BeFalse())
 			})
@@ -83,16 +83,16 @@ var _ = Describe("ignore mode", func() {
 			})
 
 			It("should not match because ignore mode annotation", func() {
-				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/mode", "Ignore")
+				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/ignore", "true")
 
 				Expect(predicate.Generic(event.GenericEvent{Object: managedResource})).To(BeFalse())
 			})
 		})
 	})
 
-	Describe("#IgnoreModeRemoved()", func() {
+	Describe("#NoLongerIgnored", func() {
 		BeforeEach(func() {
-			predicate = IgnoreModeRemoved()
+			predicate = NoLongerIgnored()
 		})
 
 		Context("#Create", func() {
@@ -103,14 +103,14 @@ var _ = Describe("ignore mode", func() {
 
 		Context("#Update", func() {
 			DescribeTable("#Update",
-				func(oldHasIgnoreMode, newHasIgnoreMode bool, matcher gomegatypes.GomegaMatcher) {
+				func(oldIgnored, newIgnored bool, matcher gomegatypes.GomegaMatcher) {
 					old := managedResource.DeepCopy()
 
-					if oldHasIgnoreMode {
-						metav1.SetMetaDataAnnotation(&old.ObjectMeta, "resources.gardener.cloud/mode", "Ignore")
+					if oldIgnored {
+						metav1.SetMetaDataAnnotation(&old.ObjectMeta, "resources.gardener.cloud/ignore", "true")
 					}
-					if newHasIgnoreMode {
-						metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/mode", "Ignore")
+					if newIgnored {
+						metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/ignore", "true")
 					}
 
 					Expect(predicate.Update(event.UpdateEvent{
