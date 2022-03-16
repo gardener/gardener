@@ -161,6 +161,8 @@ type ShootCredentials struct {
 type ShootCredentialsRotation struct {
 	// CertificateAuthorities contains information about the certificate authority credential rotation.
 	CertificateAuthorities *ShootCARotation
+	// Kubeconfig contains information about the kubeconfig credential rotation.
+	Kubeconfig *ShootKubeconfigRotation
 }
 
 // ShootCARotation contains information about the certificate authority credential rotation.
@@ -169,6 +171,14 @@ type ShootCARotation struct {
 	Phase ShootCredentialsRotationPhase
 	// LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
 	// completed.
+	LastCompletionTime *metav1.Time
+}
+
+// ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
+type ShootKubeconfigRotation struct {
+	// LastInitiationTime is the most recent time when the kubeconfig credential rotation was initiated.
+	LastInitiationTime *metav1.Time
+	// LastCompletionTime is the most recent time when the kubeconfig credential rotation was successfully completed.
 	LastCompletionTime *metav1.Time
 }
 

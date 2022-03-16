@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -30,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
@@ -92,6 +95,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	return kubeapiserver.New(
 		b.K8sSeedClient,
 		b.Shoot.SeedNamespace,
+		b.SecretsManager,
 		kubeapiserver.Values{
 			AdmissionPlugins:               admissionPlugins,
 			AnonymousAuthenticationEnabled: gardencorev1beta1helper.ShootWantsAnonymousAuthentication(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer),
@@ -411,11 +415,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		KubeAPIServerToKubelet: component.Secret{Name: kubeapiserver.SecretNameKubeAPIServerToKubelet, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameKubeAPIServerToKubelet)},
 		Server:                 component.Secret{Name: kubeapiserver.SecretNameServer, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameServer)},
 		ServiceAccountKey:      component.Secret{Name: v1beta1constants.SecretNameServiceAccountKey, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameServiceAccountKey)},
-		StaticToken:            component.Secret{Name: kubeapiserver.SecretNameStaticToken, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameStaticToken)},
-	}
-
-	if values.BasicAuthenticationEnabled {
-		secrets.BasicAuthentication = &component.Secret{Name: kubeapiserver.SecretNameBasicAuth, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameBasicAuth)}
 	}
 
 	if values.VPN.ReversedVPNEnabled {
@@ -428,10 +427,12 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSecrets(secrets)
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSNIConfig(b.computeKubeAPIServerSNIConfig())
-	b.Shoot.Components.ControlPlane.KubeAPIServer.SetProbeToken(b.APIServerHealthCheckToken)
 
 	externalHostname := b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetExternalHostname(externalHostname)
+
+	externalServer := b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, false)
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetExternalServer(externalServer)
 
 	serviceAccountConfig, err := b.computeKubeAPIServerServiceAccountConfig(ctx, b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer, externalHostname)
 	if err != nil {
@@ -443,7 +444,27 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		return err
 	}
 
+	if err := b.syncShootCredentialToGarden(
+		ctx,
+		kubeapiserver.SecretNameUserKubeconfig,
+		gutil.ShootProjectSecretSuffixKubeconfig,
+		map[string]string{"url": "https://" + externalServer},
+		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleKubeconfig},
+	); err != nil {
+		return err
+	}
+
 	// TODO(rfranzke): Remove in a future release.
+	if err := b.SaveGardenerResourceDataInShootState(ctx, func(gardenerResourceData *[]gardencorev1alpha1.GardenerResourceData) error {
+		gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(*gardenerResourceData)
+		gardenerResourceDataList.Delete("static-token")
+		gardenerResourceDataList.Delete("kube-apiserver-basic-auth")
+		*gardenerResourceData = gardenerResourceDataList
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "audit-policy-config"}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-admission-config"}},

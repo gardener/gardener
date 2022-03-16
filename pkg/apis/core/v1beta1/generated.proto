@@ -2158,6 +2158,21 @@ message ShootCredentialsRotation {
   // CertificateAuthorities contains information about the certificate authority credential rotation.
   // +optional
   optional ShootCARotation certificateAuthorities = 1;
+
+  // Kubeconfig contains information about the kubeconfig credential rotation.
+  // +optional
+  optional ShootKubeconfigRotation kubeconfig = 2;
+}
+
+// ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
+message ShootKubeconfigRotation {
+  // LastInitiationTime is the most recent time when the kubeconfig credential rotation was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 1;
+
+  // LastCompletionTime is the most recent time when the kubeconfig credential rotation was successfully completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
 }
 
 // ShootList is a list of Shoot objects.

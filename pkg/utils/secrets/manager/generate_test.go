@@ -325,6 +325,156 @@ var _ = Describe("Generate", func() {
 				Expect(newClientSecret).NotTo(Equal(clientSecret))
 			})
 		})
+
+		Context("backwards compatibility", func() {
+			Context("kube-apiserver basic auth", func() {
+				var (
+					userName    = "admin"
+					oldPassword = "old-basic-auth-password"
+					config      *secretutils.BasicAuthSecretConfig
+				)
+
+				BeforeEach(func() {
+					config = &secretutils.BasicAuthSecretConfig{
+						Name:           "kube-apiserver-basic-auth",
+						Format:         secretutils.BasicAuthFormatCSV,
+						Username:       userName,
+						PasswordLength: 32,
+					}
+				})
+
+				It("should generate a new password if old secret does not exist", func() {
+					By("generating secret")
+					secret, err := m.Generate(ctx, config)
+					Expect(err).NotTo(HaveOccurred())
+
+					By("verifying new password was generated")
+					basicAuth, err := secretutils.LoadBasicAuthFromCSV("", secret.Data[secretutils.DataKeyCSV])
+					Expect(err).NotTo(HaveOccurred())
+					Expect(basicAuth.Password).NotTo(Equal(oldPassword))
+				})
+
+				It("should keep the existing password if old secret still exists", func() {
+					oldBasicAuth := &secretutils.BasicAuth{
+						Format:   secretutils.BasicAuthFormatCSV,
+						Username: userName,
+						Password: oldPassword,
+					}
+
+					By("creating existing secret with old password")
+					existingSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "kube-apiserver-basic-auth",
+							Namespace: namespace,
+						},
+						Type: corev1.SecretTypeOpaque,
+						Data: oldBasicAuth.SecretData(),
+					}
+					Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
+
+					By("generating secret")
+					secret, err := m.Generate(ctx, config)
+					Expect(err).NotTo(HaveOccurred())
+
+					By("verifying old password was kept")
+					basicAuth, err := secretutils.LoadBasicAuthFromCSV("", secret.Data[secretutils.DataKeyCSV])
+					Expect(err).NotTo(HaveOccurred())
+					Expect(basicAuth.Password).To(Equal(oldPassword))
+				})
+			})
+
+			Context("kube-apiserver static token", func() {
+				var (
+					user1, user2                 = "user1", "user2"
+					oldUser1Token, oldUser2Token = "old-static-token-1", "old-static-token-2"
+					user1Token                   = secretutils.TokenConfig{
+						Username: user1,
+						UserID:   user1,
+						Groups:   []string{"my-group1"},
+					}
+					user2Token = secretutils.TokenConfig{
+						Username: user2,
+						UserID:   user2,
+					}
+
+					config *secretutils.StaticTokenSecretConfig
+				)
+
+				BeforeEach(func() {
+					config = &secretutils.StaticTokenSecretConfig{
+						Name: "kube-apiserver-static-token",
+						Tokens: map[string]secretutils.TokenConfig{
+							user1: user1Token,
+							user2: user2Token,
+						},
+					}
+				})
+
+				It("should generate new tokens if old secret does not exist", func() {
+					By("generating secret")
+					secret, err := m.Generate(ctx, config)
+					Expect(err).NotTo(HaveOccurred())
+
+					By("verifying new tokens were generated")
+					staticToken, err := secretutils.LoadStaticTokenFromCSV("", secret.Data[secretutils.DataKeyStaticTokenCSV])
+					Expect(err).NotTo(HaveOccurred())
+					for _, token := range staticToken.Tokens {
+						if token.Username == user1 {
+							Expect(token.Token).NotTo(Equal(oldUser1Token))
+						}
+						if token.Username == user2 {
+							Expect(token.Token).NotTo(Equal(oldUser2Token))
+						}
+					}
+				})
+
+				It("should generate keep the old tokens if old secret does still exist", func() {
+					oldBasicAuth := &secretutils.StaticToken{
+						Tokens: []secretutils.Token{
+							{
+								Username: user1Token.Username,
+								UserID:   user1Token.UserID,
+								Groups:   user1Token.Groups,
+								Token:    oldUser1Token,
+							},
+							{
+								Username: user2Token.Username,
+								UserID:   user2Token.UserID,
+								Groups:   user2Token.Groups,
+								Token:    oldUser2Token,
+							},
+						},
+					}
+
+					By("creating existing secret with old password")
+					existingSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "static-token",
+							Namespace: namespace,
+						},
+						Type: corev1.SecretTypeOpaque,
+						Data: oldBasicAuth.SecretData(),
+					}
+					Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
+
+					By("generating secret")
+					secret, err := m.Generate(ctx, config)
+					Expect(err).NotTo(HaveOccurred())
+
+					By("verifying new tokens were generated")
+					staticToken, err := secretutils.LoadStaticTokenFromCSV("", secret.Data[secretutils.DataKeyStaticTokenCSV])
+					Expect(err).NotTo(HaveOccurred())
+					for _, token := range staticToken.Tokens {
+						if token.Username == user1 {
+							Expect(token.Token).To(Equal(oldUser1Token))
+						}
+						if token.Username == user2 {
+							Expect(token.Token).To(Equal(oldUser2Token))
+						}
+					}
+				})
+			})
+		})
 	})
 })
 

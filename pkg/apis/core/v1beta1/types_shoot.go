@@ -202,6 +202,9 @@ type ShootCredentialsRotation struct {
 	// CertificateAuthorities contains information about the certificate authority credential rotation.
 	// +optional
 	CertificateAuthorities *ShootCARotation `json:"certificateAuthorities,omitempty" protobuf:"bytes,1,opt,name=certificateAuthorities"`
+	// Kubeconfig contains information about the kubeconfig credential rotation.
+	// +optional
+	Kubeconfig *ShootKubeconfigRotation `json:"kubeconfig,omitempty" protobuf:"bytes,2,opt,name=kubeconfig"`
 }
 
 // ShootCARotation contains information about the certificate authority credential rotation.
@@ -210,6 +213,16 @@ type ShootCARotation struct {
 	Phase ShootCredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
 	// LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
 	// completed.
+	// +optional
+	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
+}
+
+// ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
+type ShootKubeconfigRotation struct {
+	// LastInitiationTime is the most recent time when the kubeconfig credential rotation was initiated.
+	// +optional
+	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,1,opt,name=lastInitiationTime"`
+	// LastCompletionTime is the most recent time when the kubeconfig credential rotation was successfully completed.
 	// +optional
 	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
 }

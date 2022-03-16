@@ -86,7 +86,15 @@ func (m *manager) generateAndCreate(ctx context.Context, config secretutils.Conf
 		return nil, err
 	}
 
-	secret := Secret(objectMeta, data.SecretData())
+	// For backwards-compatibility, we need to keep some of the existing secrets (cluster-admin token, basic auth
+	// password, etc.).
+	// TODO(rfranzke): Remove this code in the future
+	dataMap, err := m.keepExistingSecretsIfNeeded(ctx, config.GetName(), data.SecretData())
+	if err != nil {
+		return nil, err
+	}
+
+	secret := Secret(objectMeta, dataMap)
 	if err := m.client.Create(ctx, secret); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
 			return nil, err
@@ -99,6 +107,61 @@ func (m *manager) generateAndCreate(ctx context.Context, config secretutils.Conf
 
 	m.logger.Info("Generated new secret", "configName", config.GetName(), "secretName", secret.Name)
 	return secret, nil
+}
+
+func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName string, newData map[string][]byte) (map[string][]byte, error) {
+	existingSecret := &corev1.Secret{}
+
+	switch configName {
+	case "kube-apiserver-basic-auth":
+		if err := m.client.Get(ctx, kutil.Key(m.namespace, "kube-apiserver-basic-auth"), existingSecret); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, err
+			}
+			return newData, nil
+		}
+
+		existingBasicAuth, err := secretutils.LoadBasicAuthFromCSV("", existingSecret.Data[secretutils.DataKeyCSV])
+		if err != nil {
+			return nil, err
+		}
+		newBasicAuth, err := secretutils.LoadBasicAuthFromCSV("", newData[secretutils.DataKeyCSV])
+		if err != nil {
+			return nil, err
+		}
+
+		newBasicAuth.Password = existingBasicAuth.Password
+		return newBasicAuth.SecretData(), nil
+
+	case "kube-apiserver-static-token":
+		if err := m.client.Get(ctx, kutil.Key(m.namespace, "static-token"), existingSecret); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, err
+			}
+			return newData, nil
+		}
+
+		existingStaticToken, err := secretutils.LoadStaticTokenFromCSV("", existingSecret.Data[secretutils.DataKeyStaticTokenCSV])
+		if err != nil {
+			return nil, err
+		}
+		newStaticToken, err := secretutils.LoadStaticTokenFromCSV("", newData[secretutils.DataKeyStaticTokenCSV])
+		if err != nil {
+			return nil, err
+		}
+
+		for i, token := range newStaticToken.Tokens {
+			for _, existingToken := range existingStaticToken.Tokens {
+				if existingToken.Username == token.Username {
+					newStaticToken.Tokens[i].Token = existingToken.Token
+					break
+				}
+			}
+		}
+		return newStaticToken.SecretData(), nil
+	}
+
+	return newData, nil
 }
 
 func (m *manager) storeOldSecrets(ctx context.Context, name, currentSecretName string) error {

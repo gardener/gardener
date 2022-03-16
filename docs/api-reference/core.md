@@ -8946,6 +8946,20 @@ ShootCARotation
 <p>CertificateAuthorities contains information about the certificate authority credential rotation.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>kubeconfig</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootKubeconfigRotation">
+ShootKubeconfigRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Kubeconfig contains information about the kubeconfig credential rotation.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ShootCredentialsRotationPhase">ShootCredentialsRotationPhase
@@ -8957,6 +8971,53 @@ ShootCARotation
 <p>
 <p>ShootCredentialsRotationPhase is a string alias.</p>
 </p>
+<h3 id="core.gardener.cloud/v1beta1.ShootKubeconfigRotation">ShootKubeconfigRotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotation">ShootCredentialsRotation</a>)
+</p>
+<p>
+<p>ShootKubeconfigRotation contains information about the kubeconfig credential rotation.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>lastInitiationTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationTime is the most recent time when the kubeconfig credential rotation was initiated.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastCompletionTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastCompletionTime is the most recent time when the kubeconfig credential rotation was successfully completed.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ShootMachineImage">ShootMachineImage
 </h3>
 <p>

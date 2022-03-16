@@ -34,37 +34,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apiserver/pkg/authentication/user"
 )
-
-var basicAuthSecretAPIServer = &secrets.BasicAuthSecretConfig{
-	Name:           kubeapiserver.SecretNameBasicAuth,
-	Format:         secrets.BasicAuthFormatCSV,
-	Username:       "admin",
-	PasswordLength: 32,
-}
-
-func (b *Botanist) generateStaticTokenConfig() *secrets.StaticTokenSecretConfig {
-	return &secrets.StaticTokenSecretConfig{
-		Name: kubeapiserver.SecretNameStaticToken,
-		Tokens: map[string]secrets.TokenConfig{
-			common.KubecfgUsername: {
-				Username: common.KubecfgUsername,
-				UserID:   common.KubecfgUsername,
-				Groups:   []string{user.SystemPrivilegedGroup},
-			},
-			common.KubeAPIServerHealthCheck: {
-				Username: common.KubeAPIServerHealthCheck,
-				UserID:   common.KubeAPIServerHealthCheck,
-			},
-		},
-	}
-}
 
 // generateWantedSecrets returns a list of Secret configuration objects satisfying the secret config interface,
 // each containing their specific configuration for the creation of certificates (server/client), RSA key pairs, basic
 // authentication credentials, etc.
-func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.BasicAuth, staticToken *secrets.StaticToken, certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error) {
+func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error) {
 	var (
 		apiServerIPAddresses = []net.IP{
 			net.ParseIP("127.0.0.1"),
@@ -104,9 +79,8 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 	secretList := []secrets.ConfigInterface{
 		// Secret definition for kube-apiserver
 		&secrets.ControlPlaneSecretConfig{
+			Name: kubeapiserver.SecretNameServer,
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: kubeapiserver.SecretNameServer,
-
 				CommonName:   v1beta1constants.DeploymentNameKubeAPIServer,
 				Organization: nil,
 				DNSNames:     apiServerCertDNSNames,
@@ -118,9 +92,8 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		},
 		// Secret definition for kube-apiserver to kubelets communication
 		&secrets.ControlPlaneSecretConfig{
+			Name: kubeapiserver.SecretNameKubeAPIServerToKubelet,
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: kubeapiserver.SecretNameKubeAPIServerToKubelet,
-
 				CommonName:   kubeapiserver.UserName,
 				Organization: nil,
 				DNSNames:     nil,
@@ -133,9 +106,8 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 
 		// Secret definition for kube-aggregator
 		&secrets.ControlPlaneSecretConfig{
+			Name: kubeapiserver.SecretNameKubeAggregator,
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: kubeapiserver.SecretNameKubeAggregator,
-
 				CommonName:   "system:kube-aggregator",
 				Organization: nil,
 				DNSNames:     nil,
@@ -148,9 +120,8 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 
 		// Secret definition for kube-controller-manager server
 		&secrets.ControlPlaneSecretConfig{
+			Name: kubecontrollermanager.SecretNameServer,
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: kubecontrollermanager.SecretNameServer,
-
 				CommonName:   v1beta1constants.DeploymentNameKubeControllerManager,
 				Organization: nil,
 				DNSNames:     kubeControllerManagerCertDNSNames,
@@ -178,9 +149,8 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		// TODO(rfranzke): Delete this in a future release once all monitoring configurations of extensions have been
 		// adapted.
 		&secrets.ControlPlaneSecretConfig{
+			Name: "prometheus",
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "prometheus",
-
 				CommonName:   "gardener.cloud:monitoring:prometheus",
 				Organization: []string{"gardener.cloud:monitoring"},
 				DNSNames:     nil,
@@ -198,9 +168,8 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 
 		// Secret definition for prometheus to kubelets communication
 		&secrets.ControlPlaneSecretConfig{
+			Name: "prometheus-kubelet",
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "prometheus-kubelet",
-
 				CommonName:   "gardener.cloud:monitoring:prometheus",
 				Organization: []string{"gardener.cloud:monitoring"},
 				DNSNames:     nil,
@@ -325,31 +294,6 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		},
 	}
 
-	// Secret definition for kubecfg
-	var kubecfgToken *secrets.Token
-	if staticToken != nil {
-		var err error
-		kubecfgToken, err = staticToken.GetTokenForUsername(common.KubecfgUsername)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
-		CertificateSecretConfig: &secrets.CertificateSecretConfig{
-			Name:      common.KubecfgSecretName,
-			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-		},
-
-		BasicAuth: basicAuthAPIServer,
-		Token:     kubecfgToken,
-
-		KubeConfigRequests: []secrets.KubeConfigRequest{{
-			ClusterName:   b.Shoot.SeedNamespace,
-			APIServerHost: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, false),
-		}},
-	})
-
 	if b.isShootNodeLoggingEnabled() {
 		// Secret definition for loki (ingress)
 		secretList = append(secretList, &secrets.CertificateSecretConfig{
@@ -369,9 +313,8 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(b.Seed.GetInfo().Spec.Settings) {
 		// Secret definitions for dependency-watchdog-internal and external probes
 		secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
+			Name: kubeapiserver.DependencyWatchdogInternalProbeSecretName,
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: kubeapiserver.DependencyWatchdogInternalProbeSecretName,
-
 				CommonName:   dependencywatchdog.UserName,
 				Organization: nil,
 				DNSNames:     nil,
@@ -385,9 +328,8 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(false),
 			}},
 		}, &secrets.ControlPlaneSecretConfig{
+			Name: kubeapiserver.DependencyWatchdogExternalProbeSecretName,
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: kubeapiserver.DependencyWatchdogExternalProbeSecretName,
-
 				CommonName:   dependencywatchdog.UserName,
 				Organization: nil,
 				DNSNames:     nil,

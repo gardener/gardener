@@ -137,6 +137,10 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 		})
 		framework.ExpectNoError(err)
 
+		framework.ExpectNoError(f.GetShoot(ctx, f.Shoot))
+		gomega.Expect(f.Shoot.Status.Credentials.Rotation.Kubeconfig.LastInitiationTime).NotTo(gomega.BeNil())
+		gomega.Expect(f.Shoot.Status.Credentials.Rotation.Kubeconfig.LastCompletionTime).NotTo(gomega.BeNil())
+
 		newKubeconfig, err := framework.GetObjectFromSecret(ctx, f.GardenClient, f.ProjectNamespace, secretName, framework.KubeconfigSecretKeyName)
 		framework.ExpectNoError(err)
 

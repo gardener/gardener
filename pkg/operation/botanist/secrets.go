@@ -112,6 +112,13 @@ func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
 func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 	rotation := make(map[string]time.Time)
 
+	if shootStatus := b.Shoot.GetInfo().Status; shootStatus.Credentials != nil && shootStatus.Credentials.Rotation != nil {
+		if shootStatus.Credentials.Rotation.Kubeconfig != nil && shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime != nil {
+			rotation[kubeapiserver.SecretStaticTokenName] = shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime.Time
+			rotation[kubeapiserver.SecretBasicAuthName] = shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime.Time
+		}
+	}
+
 	return rotation
 }
 
@@ -177,6 +184,38 @@ func (b *Botanist) getOrGenerateGenericTokenKubeconfig(ctx context.Context) erro
 	return err
 }
 
+func (b *Botanist) syncShootCredentialToGarden(
+	ctx context.Context,
+	seedSecretName string,
+	nameSuffix string,
+	annotations map[string]string,
+	labels map[string]string,
+) error {
+	seedSecret, err := b.SecretsManager.Get(seedSecretName)
+	if err != nil {
+		return err
+	}
+
+	gardenSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      gutil.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, nameSuffix),
+			Namespace: b.Shoot.GetInfo().Namespace,
+		},
+	}
+
+	_, err = controllerutils.GetAndCreateOrStrategicMergePatch(ctx, b.K8sGardenClient.Client(), gardenSecret, func() error {
+		gardenSecret.OwnerReferences = []metav1.OwnerReference{
+			*metav1.NewControllerRef(b.Shoot.GetInfo(), gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot")),
+		}
+		gardenSecret.Annotations = annotations
+		gardenSecret.Labels = labels
+		gardenSecret.Type = corev1.SecretTypeOpaque
+		gardenSecret.Data = seedSecret.Data
+		return nil
+	})
+	return err
+}
+
 func (b *Botanist) fetchCertificateAuthoritiesForLegacySecretsManager(ctx context.Context, legacySecretsManager *shootsecrets.SecretsManager, addToDeployedSecrets bool) (map[string]*secretutils.Certificate, error) {
 	cas := make(map[string]*secretutils.Certificate)
 
@@ -227,11 +266,6 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 		}
 
 		switch b.Shoot.GetInfo().Annotations[v1beta1constants.GardenerOperation] {
-		case v1beta1constants.ShootOperationRotateKubeconfigCredentials:
-			if err := b.rotateKubeconfigSecrets(ctx, &gardenerResourceDataList); err != nil {
-				return err
-			}
-
 		case v1beta1constants.ShootOperationRotateSSHKeypair:
 			if err := b.rotateSSHKeypairSecrets(ctx, &gardenerResourceDataList); err != nil {
 				return err
@@ -291,23 +325,10 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			}
 		}
 
-		shootWantsBasicAuth := gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo())
-		shootHasBasicAuth := gardenerResourceDataList.Get(kubeapiserver.SecretNameBasicAuth) != nil
-		if shootWantsBasicAuth != shootHasBasicAuth {
-			if err := b.deleteBasicAuthDependantSecrets(ctx, &gardenerResourceDataList); err != nil {
-				return err
-			}
-		}
-
 		secretsManager := shootsecrets.NewSecretsManager(
 			gardenerResourceDataList,
-			b.generateStaticTokenConfig(),
 			b.generateWantedSecretConfigs,
 		)
-
-		if shootWantsBasicAuth {
-			secretsManager = secretsManager.WithAPIServerBasicAuthConfig(basicAuthSecretAPIServer)
-		}
 
 		// For backwards-compatibility, we need to make the CAs known to the legacy secret manager.
 		// TODO(rfranzke): This can be removed in a future release once all secrets where adapted.
@@ -337,13 +358,8 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 
 	secretsManager := shootsecrets.NewSecretsManager(
 		gardenerResourceDataList,
-		b.generateStaticTokenConfig(),
 		b.generateWantedSecretConfigs,
 	)
-
-	if gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo()) {
-		secretsManager.WithAPIServerBasicAuthConfig(basicAuthSecretAPIServer)
-	}
 
 	// For backwards-compatibility, we need to make the CAs known to the legacy secret manager.
 	// TODO(rfranzke): This can be removed in a future release once all secrets where adapted.
@@ -354,10 +370,6 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 	secretsManager = secretsManager.WithCertificateAuthorities(cas)
 
 	if err := secretsManager.WithExistingSecrets(existingSecrets).Deploy(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace); err != nil {
-		return err
-	}
-
-	if err := b.storeAPIServerHealthCheckToken(secretsManager.StaticToken); err != nil {
 		return err
 	}
 
@@ -518,24 +530,6 @@ func (b *Botanist) deleteSecrets(ctx context.Context, gardenerResourceDataList *
 	return nil
 }
 
-func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
-	secrets := []string{
-		kubeapiserver.SecretNameStaticToken,
-		kubeapiserver.SecretNameBasicAuth,
-		common.KubecfgSecretName,
-	}
-
-	if err := b.deleteSecrets(ctx, gardenerResourceDataList, secrets...); err != nil {
-		return err
-	}
-
-	// remove operation annotation
-	return b.Shoot.UpdateInfo(ctx, b.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
-		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
-		return nil
-	})
-}
-
 func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
 	currentSecret := gardenerResourceDataList.Get(v1beta1constants.SecretNameSSHKeyPair)
 	if currentSecret == nil {
@@ -559,20 +553,6 @@ func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResource
 		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 		return nil
 	})
-}
-
-func (b *Botanist) deleteBasicAuthDependantSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
-	return b.deleteSecrets(ctx, gardenerResourceDataList, kubeapiserver.SecretNameBasicAuth, common.KubecfgSecretName)
-}
-
-func (b *Botanist) storeAPIServerHealthCheckToken(staticToken *secretutils.StaticToken) error {
-	kubeAPIServerHealthCheckToken, err := staticToken.GetTokenForUsername(common.KubeAPIServerHealthCheck)
-	if err != nil {
-		return err
-	}
-
-	b.APIServerHealthCheckToken = kubeAPIServerHealthCheckToken.Token
-	return nil
 }
 
 func getExpiredCerts(gardenerResourceDataList gardencorev1alpha1helper.GardenerResourceDataList, renewalWindow time.Duration, secretNames ...string) ([]string, error) {
@@ -612,21 +592,10 @@ type projectSecret struct {
 // the project namespace in the Garden cluster and the monitoring credentials for the
 // user-facing monitoring stack are also copied.
 func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
-	kubecfgURL := gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain)
-	if b.Shoot.ExternalClusterDomain != nil {
-		kubecfgURL = gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain)
-	}
-
 	// Secrets which are created by Gardener itself are usually excluded from informers to improve performance.
 	// Hence, if new secrets are synced to the Garden cluster, please consider adding the used `gardener.cloud/role`
 	// label value to the `v1beta1constants.ControlPlaneSecretRoles` list.
 	projectSecrets := []projectSecret{
-		{
-			secretName:  common.KubecfgSecretName,
-			suffix:      gutil.ShootProjectSecretSuffixKubeconfig,
-			annotations: map[string]string{"url": "https://" + kubecfgURL},
-			labels:      map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleKubeconfig},
-		},
 		{
 			secretName: v1beta1constants.SecretNameSSHKeyPair,
 			suffix:     gutil.ShootProjectSecretSuffixSSHKeypair,

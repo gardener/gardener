@@ -217,8 +217,8 @@ func (b *Botanist) reconcileGardenerResourceManagerBootstrapKubeconfigSecret(ctx
 	}
 
 	controlPlaneSecret, err := (&secretutils.ControlPlaneSecretConfig{
+		Name: bootstrapKubeconfigSecret.Name,
 		CertificateSecretConfig: &secretutils.CertificateSecretConfig{
-			Name:         bootstrapKubeconfigSecret.Name,
 			CommonName:   "gardener.cloud:system:gardener-resource-manager",
 			Organization: []string{user.SystemPrivilegedGroup},
 			SigningCA:    caCertificate,

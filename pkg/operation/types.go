@@ -62,25 +62,24 @@ type Operation struct {
 	shootState      atomic.Value
 	shootStateMutex sync.Mutex
 
-	Config                    *config.GardenletConfiguration
-	Logger                    logrus.FieldLogger
-	GardenerInfo              *gardencorev1beta1.Gardener
-	GardenClusterIdentity     string
-	ImageVector               imagevector.ImageVector
-	Garden                    *garden.Garden
-	Seed                      *seed.Seed
-	Shoot                     *shoot.Shoot
-	ManagedSeed               *seedmanagementv1alpha1.ManagedSeed
-	ManagedSeedAPIServer      *gardencorev1beta1helper.ShootedSeedAPIServer
-	ClientMap                 clientmap.ClientMap
-	K8sGardenClient           kubernetes.Interface
-	K8sSeedClient             kubernetes.Interface
-	K8sShootClient            kubernetes.Interface
-	APIServerAddress          string
-	APIServerClusterIP        string
-	APIServerHealthCheckToken string
-	SeedNamespaceObject       *corev1.Namespace
-	ExposureClassHandler      *config.ExposureClassHandler
+	Config                *config.GardenletConfiguration
+	Logger                logrus.FieldLogger
+	GardenerInfo          *gardencorev1beta1.Gardener
+	GardenClusterIdentity string
+	ImageVector           imagevector.ImageVector
+	Garden                *garden.Garden
+	Seed                  *seed.Seed
+	Shoot                 *shoot.Shoot
+	ManagedSeed           *seedmanagementv1alpha1.ManagedSeed
+	ManagedSeedAPIServer  *gardencorev1beta1helper.ShootedSeedAPIServer
+	ClientMap             clientmap.ClientMap
+	K8sGardenClient       kubernetes.Interface
+	K8sSeedClient         kubernetes.Interface
+	K8sShootClient        kubernetes.Interface
+	APIServerAddress      string
+	APIServerClusterIP    string
+	SeedNamespaceObject   *corev1.Namespace
+	ExposureClassHandler  *config.ExposureClassHandler
 
 	// ControlPlaneWildcardCert is a wildcard tls certificate which is issued for the seed's ingress domain.
 	ControlPlaneWildcardCert *corev1.Secret

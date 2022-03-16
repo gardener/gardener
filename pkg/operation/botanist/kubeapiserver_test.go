@@ -19,6 +19,7 @@ import (
 	"net"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -35,7 +36,11 @@ import (
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -60,19 +65,21 @@ var _ = Describe("KubeAPIServer", func() {
 		k8sGardenClient kubernetes.Interface
 		c               client.Client
 		k8sSeedClient   kubernetes.Interface
+		sm              secretsmanager.Interface
 		botanist        *Botanist
 		kubeAPIServer   *mockkubeapiserver.MockInterface
 
 		ctx                   = context.TODO()
-		projectNamespace      = "garden-my-project"
-		shootNamespace        = "shoot--foo--bar"
-		internalClusterDomain = "foo.bar.com"
+		projectNamespace      = "garden-foo"
+		seedNamespace         = "shoot--foo--bar"
+		shootName             = "bar"
+		internalClusterDomain = "internal.foo.bar.com"
+		externalClusterDomain = "external.foo.bar.com"
 		podNetwork            *net.IPNet
 		serviceNetwork        *net.IPNet
 		podNetworkCIDR        = "10.0.1.0/24"
 		serviceNetworkCIDR    = "10.0.2.0/24"
 		nodeNetworkCIDR       = "10.0.3.0/24"
-		healthCheckToken      = "some-token"
 		apiServerClusterIP    = "1.2.3.4"
 	)
 
@@ -91,20 +98,24 @@ var _ = Describe("KubeAPIServer", func() {
 		_, serviceNetwork, err = net.ParseCIDR(serviceNetworkCIDR)
 		Expect(err).NotTo(HaveOccurred())
 
+		sm = fakesecretsmanager.New(c, seedNamespace)
+
 		kubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
 		botanist = &Botanist{
 			Operation: &operation.Operation{
 				K8sGardenClient: k8sGardenClient,
 				K8sSeedClient:   k8sSeedClient,
+				SecretsManager:  sm,
 				Garden:          &gardenpkg.Garden{},
 				Shoot: &shootpkg.Shoot{
-					SeedNamespace: shootNamespace,
+					SeedNamespace: seedNamespace,
 					Components: &shootpkg.Components{
 						ControlPlane: &shootpkg.ControlPlane{
 							KubeAPIServer: kubeAPIServer,
 						},
 					},
 					InternalClusterDomain: internalClusterDomain,
+					ExternalClusterDomain: &externalClusterDomain,
 					Networks: &shootpkg.Networks{
 						Pods:     podNetwork,
 						Services: serviceNetwork,
@@ -116,17 +127,21 @@ var _ = Describe("KubeAPIServer", func() {
 					{Name: "kube-apiserver"},
 					{Name: "vpn-seed"},
 				},
-				APIServerHealthCheckToken: healthCheckToken,
-				APIServerClusterIP:        apiServerClusterIP,
+				APIServerClusterIP: apiServerClusterIP,
 			},
 		}
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      shootName,
+				Namespace: projectNamespace,
+			},
 			Spec: gardencorev1beta1.ShootSpec{
 				Networking: gardencorev1beta1.Networking{
 					Nodes: &nodeNetworkCIDR,
 				},
 			},
 		})
+		botanist.SetShootState(&gardencorev1alpha1.ShootState{})
 	})
 
 	AfterEach(func() {
@@ -932,8 +947,8 @@ var _ = Describe("KubeAPIServer", func() {
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(&expectedReplicas)
 				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-				kubeAPIServer.EXPECT().SetProbeToken(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
@@ -962,7 +977,7 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
-							Namespace: shootNamespace,
+							Namespace: seedNamespace,
 						},
 						Spec: appsv1.DeploymentSpec{
 							Replicas: pointer.Int32(3),
@@ -978,7 +993,7 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
-							Namespace: shootNamespace,
+							Namespace: seedNamespace,
 						},
 						Spec: appsv1.DeploymentSpec{
 							Replicas: pointer.Int32(0),
@@ -1014,8 +1029,8 @@ var _ = Describe("KubeAPIServer", func() {
 				}
 				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-				kubeAPIServer.EXPECT().SetProbeToken(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
@@ -1032,7 +1047,7 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
-							Namespace: shootNamespace,
+							Namespace: seedNamespace,
 						},
 						Spec: appsv1.DeploymentSpec{
 							Template: corev1.PodTemplateSpec{
@@ -1054,7 +1069,7 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
-							Namespace: shootNamespace,
+							Namespace: seedNamespace,
 						},
 						Spec: appsv1.DeploymentSpec{
 							Template: corev1.PodTemplateSpec{
@@ -1085,7 +1100,6 @@ var _ = Describe("KubeAPIServer", func() {
 					KubeAPIServerToKubelet: component.Secret{Name: "kube-apiserver-kubelet", Checksum: botanist.LoadCheckSum("kube-apiserver-kubelet")},
 					Server:                 component.Secret{Name: "kube-apiserver", Checksum: botanist.LoadCheckSum("kube-apiserver")},
 					ServiceAccountKey:      component.Secret{Name: "service-account-key", Checksum: botanist.LoadCheckSum("service-account-key")},
-					StaticToken:            component.Secret{Name: "static-token", Checksum: botanist.LoadCheckSum("static-token")},
 				}
 				mutateSecrets(&secrets)
 
@@ -1093,8 +1107,8 @@ var _ = Describe("KubeAPIServer", func() {
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 				kubeAPIServer.EXPECT().SetSecrets(secrets)
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-				kubeAPIServer.EXPECT().SetProbeToken(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
@@ -1115,39 +1129,16 @@ var _ = Describe("KubeAPIServer", func() {
 					s.VPNSeedServerTLSAuth = &component.Secret{Name: "vpn-seed-server-tlsauth", Checksum: botanist.LoadCheckSum("vpn-seed-server-tlsauth")}
 				},
 			),
-			Entry("basic auth enabled",
-				kubeapiserver.Values{BasicAuthenticationEnabled: true, VPN: kubeapiserver.VPNConfig{ReversedVPNEnabled: true}},
-				func(s *kubeapiserver.Secrets) {
-					s.BasicAuthentication = &component.Secret{Name: "kube-apiserver-basic-auth", Checksum: botanist.LoadCheckSum("kube-apiserver-basic-auth")}
-					s.HTTPProxy = &component.Secret{Name: "kube-apiserver-http-proxy", Checksum: botanist.LoadCheckSum("kube-apiserver-http-proxy")}
-					s.VPNSeedServerTLSAuth = &component.Secret{Name: "vpn-seed-server-tlsauth", Checksum: botanist.LoadCheckSum("vpn-seed-server-tlsauth")}
-				},
-			),
 		)
 
 		Describe("ExternalHostname", func() {
-			It("should set the external hostname to the out-of-cluster address", func() {
+			It("should set the external hostname to the out-of-cluster address (internal domain)", func() {
 				kubeAPIServer.EXPECT().GetValues()
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-				kubeAPIServer.EXPECT().SetProbeToken(gomock.Any())
-				kubeAPIServer.EXPECT().SetExternalHostname("api.foo.bar.com")
-				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
-				kubeAPIServer.EXPECT().Deploy(ctx)
-
-				Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
-			})
-		})
-
-		Describe("ProbeToken", func() {
-			It("should have the correct probe token", func() {
-				kubeAPIServer.EXPECT().GetValues()
-				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
-				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
-				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-				kubeAPIServer.EXPECT().SetProbeToken(healthCheckToken)
-				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+				kubeAPIServer.EXPECT().SetExternalHostname("api." + internalClusterDomain)
+				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
@@ -1183,8 +1174,8 @@ var _ = Describe("KubeAPIServer", func() {
 					kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 					kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 					kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-					kubeAPIServer.EXPECT().SetProbeToken(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+					kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 					if !expectError {
 						kubeAPIServer.EXPECT().SetServiceAccountConfig(expectedConfig)
 						kubeAPIServer.EXPECT().Deploy(ctx)
@@ -1424,8 +1415,8 @@ var _ = Describe("KubeAPIServer", func() {
 					kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 					kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 					kubeAPIServer.EXPECT().SetSNIConfig(expectedConfig)
-					kubeAPIServer.EXPECT().SetProbeToken(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+					kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 					kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 					kubeAPIServer.EXPECT().Deploy(ctx)
 
@@ -1499,6 +1490,42 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 			)
 		})
+
+		Describe("ExternalServer", func() {
+			It("should set the external server to the out-of-cluster address (no internal domain)", func() {
+				kubeAPIServer.EXPECT().GetValues()
+				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
+				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+				kubeAPIServer.EXPECT().SetExternalServer("api." + externalClusterDomain)
+				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
+				kubeAPIServer.EXPECT().Deploy(ctx)
+
+				Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
+			})
+		})
+
+		It("should sync the kubeconfig to the garden project namespace", func() {
+			kubeAPIServer.EXPECT().GetValues()
+			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+			kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
+			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+			kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
+			kubeAPIServer.EXPECT().Deploy(ctx)
+
+			Expect(gc.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(BeNotFoundError())
+
+			Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
+
+			kubeconfigSecret := &corev1.Secret{}
+			Expect(gc.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), kubeconfigSecret)).To(Succeed())
+			Expect(kubeconfigSecret.Annotations).To(HaveKeyWithValue("url", "https://api."+externalClusterDomain))
+			Expect(kubeconfigSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "kubeconfig"))
+			Expect(kubeconfigSecret.Data).To(Equal(map[string][]byte{"data-for": []byte("user-kubeconfig")}))
+		})
 	})
 
 	Describe("#DeleteKubeAPIServer", func() {
@@ -1518,7 +1545,7 @@ var _ = Describe("KubeAPIServer", func() {
 			Expect(botanist.DeleteKubeAPIServer(ctx)).To(Succeed())
 
 			shootClient, err = clientMap.GetClient(ctx, keys.ForShoot(botanist.Shoot.GetInfo()))
-			Expect(err).To(MatchError("clientSet for key \"/\" not found"))
+			Expect(err).To(MatchError(`clientSet for key "` + botanist.Shoot.GetInfo().Namespace + `/` + botanist.Shoot.GetInfo().Name + `" not found`))
 			Expect(shootClient).To(BeNil())
 
 			Expect(botanist.K8sShootClient).To(BeNil())
@@ -1526,7 +1553,7 @@ var _ = Describe("KubeAPIServer", func() {
 	})
 
 	Describe("#ScaleKubeAPIServerToOne", func() {
-		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: shootNamespace}}
+		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: seedNamespace}}
 
 		It("should scale the KAPI deployment", func() {
 			Expect(c.Create(ctx, deployment)).To(Succeed())

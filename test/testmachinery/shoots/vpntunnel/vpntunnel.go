@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
@@ -52,11 +53,9 @@ const (
 )
 
 var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
-
 	f := framework.NewShootFramework(nil)
 
 	f.Beta().CIt("should get container logs from logging-pod", func(ctx context.Context) {
-
 		ginkgo.By("Deploy the logging-pod")
 		loggerParams := map[string]interface{}{
 			"LoggerName":          deploymentName,
@@ -78,7 +77,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Get kubeconfig and extract token")
-		data, err := framework.GetObjectFromSecret(ctx, f.SeedClient, f.ShootSeedNamespace(), "kubecfg", framework.KubeconfigSecretKeyName)
+		data, err := framework.GetObjectFromSecret(ctx, f.GardenClient, f.Shoot.Namespace, f.Shoot.Name+"."+gutil.ShootProjectSecretSuffixKubeconfig, framework.KubeconfigSecretKeyName)
 		framework.ExpectNoError(err)
 		lines := strings.Split(string(data), "\n")
 		var token string
@@ -100,7 +99,13 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 			i := 0
 			for ; i < maxIterations; i++ {
 				f.Logger.Infof("Using %s address for %d. iteration", f.Shoot.Status.AdvertisedAddresses[0].Name, i+1)
-				reader, err := podExecutor.Execute(ctx, pod.Namespace, pod.Name, "net-curl", fmt.Sprintf("curl -k -v -XGET  -H \"Accept: application/json, */*\" -H \"Authorization: Bearer %s\" \"%s/api/v1/namespaces/%s/pods/%s/log?container=logger\"", token, f.Shoot.Status.AdvertisedAddresses[0].URL, pod.Namespace, pod.Name))
+				reader, err := podExecutor.Execute(
+					ctx,
+					pod.Namespace,
+					pod.Name,
+					"net-curl",
+					fmt.Sprintf("curl -k -v -XGET  -H \"Accept: application/json, */*\" -H \"Authorization: Bearer %s\" \"%s/api/v1/namespaces/%s/pods/%s/log?container=logger\"", token, f.Shoot.Status.AdvertisedAddresses[0].URL, pod.Namespace, pod.Name),
+				)
 				if apierrors.IsNotFound(err) {
 					f.Logger.Infof("Aborting as pod %s was not found anymore: %s", pod.Name, err)
 					break
@@ -135,10 +140,9 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 	}, cleanupTimeout))
 
 	f.Beta().CIt("should copy data to pod", func(ctx context.Context) {
-
-		ginkgo.By("Get kubeconfig from shoot controlplane")
+		ginkgo.By("Get kubeconfig from garden project namespace")
 		kubeCfgSecret := &corev1.Secret{}
-		err := f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: "kubecfg"}, kubeCfgSecret)
+		err := f.GardenClient.Client().Get(ctx, types.NamespacedName{Namespace: f.Shoot.Namespace, Name: f.Shoot.Name + "." + gutil.ShootProjectSecretSuffixKubeconfig}, kubeCfgSecret)
 		framework.ExpectNoError(err)
 
 		testSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: copyDeployment, Namespace: namespace}}

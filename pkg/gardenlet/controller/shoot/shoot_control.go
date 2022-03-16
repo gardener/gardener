@@ -676,12 +676,22 @@ func (r *shootReconciler) updateShootStatusOperationStart(ctx context.Context, g
 
 	switch shoot.Annotations[v1beta1constants.GardenerOperation] {
 	case v1beta1constants.ShootOperationRotateCAStart:
-		v1beta1helper.SetShootCARotationPhase(shoot, gardencorev1beta1.RotationPreparing)
 		mustRemoveOperationAnnotation = true
+		v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.ShootCARotation) {
+			rotation.Phase = gardencorev1beta1.RotationPreparing
+		})
 
 	case v1beta1constants.ShootOperationRotateCAComplete:
-		v1beta1helper.SetShootCARotationPhase(shoot, gardencorev1beta1.RotationCompleting)
 		mustRemoveOperationAnnotation = true
+		v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.ShootCARotation) {
+			rotation.Phase = gardencorev1beta1.RotationCompleting
+		})
+
+	case v1beta1constants.ShootOperationRotateKubeconfigCredentials:
+		mustRemoveOperationAnnotation = true
+		v1beta1helper.MutateShootKubeconfigRotation(shoot, func(rotation *gardencorev1beta1.ShootKubeconfigRotation) {
+			rotation.LastInitiationTime = &now
+		})
 	}
 
 	if err := gardenClient.Status().Update(ctx, shoot); err != nil {
@@ -777,10 +787,21 @@ func (r *shootReconciler) patchShootStatusOperationSuccess(
 
 	switch v1beta1helper.GetShootCARotationPhase(shoot.Status.Credentials) {
 	case gardencorev1beta1.RotationPreparing:
-		shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase = gardencorev1beta1.RotationPrepared
+		v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.ShootCARotation) {
+			rotation.Phase = gardencorev1beta1.RotationPrepared
+		})
+
 	case gardencorev1beta1.RotationCompleting:
-		shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase = gardencorev1beta1.RotationCompleted
-		shoot.Status.Credentials.Rotation.CertificateAuthorities.LastCompletionTime = &now
+		v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.ShootCARotation) {
+			rotation.Phase = gardencorev1beta1.RotationCompleted
+			rotation.LastCompletionTime = &now
+		})
+	}
+
+	if v1beta1helper.IsShootKubeconfigRotationInitiationTimeAfterLastCompletionTime(shoot.Status.Credentials) {
+		v1beta1helper.MutateShootKubeconfigRotation(shoot, func(rotation *gardencorev1beta1.ShootKubeconfigRotation) {
+			rotation.LastCompletionTime = &now
+		})
 	}
 
 	return gardenClient.Status().Patch(ctx, shoot, patch)

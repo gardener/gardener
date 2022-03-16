@@ -43,6 +43,8 @@ Please note that only the token (and basic auth password, if enabled) are exchan
 kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=rotate-kubeconfig-credentials
 ```
 
+You can check the `.status.credentials.rotation.kubeconfig` field in the `Shoot` to see when the rotation was last initiated or last completed.
+
 ## Restart systemd services on particular worker nodes
 
 It is possible to make Gardener restart particular systemd services on your shoot worker nodes if needed.

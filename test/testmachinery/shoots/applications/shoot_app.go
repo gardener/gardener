@@ -36,7 +36,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/applications"
 
@@ -86,7 +86,7 @@ var _ = ginkgo.Describe("Shoot application testing", func() {
 		}
 
 		url := fmt.Sprintf("https://api.%s/api/v1/namespaces/%s/services/https:kubernetes-dashboard:/proxy", *f.Shoot.Spec.DNS.Domain, "kubernetes-dashboard")
-		dashboardToken, err := framework.GetObjectFromSecret(ctx, f.SeedClient, f.ShootSeedNamespace(), common.KubecfgSecretName, "token")
+		dashboardToken, err := framework.GetObjectFromSecret(ctx, f.GardenClient, f.Shoot.Namespace, f.Shoot.Name+"."+gutil.ShootProjectSecretSuffixKubeconfig, "token")
 		framework.ExpectNoError(err)
 
 		err = framework.TestHTTPEndpointWithToken(ctx, url, dashboardToken)
