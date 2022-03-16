@@ -25,7 +25,7 @@ import (
 
 	authenticationapi "github.com/gardener/gardener/pkg/apis/authentication"
 	gardenercore "github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -107,13 +107,7 @@ AIOz/jD6sCJ6KPr1L6mJ5w4mDX1UmjCKy3Kz4xfqxPEbMvPDTL+9TWFSlAuNtHGC
 lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 -----END RSA PRIVATE KEY-----`)
 
-		caInfoData := secrets.CertificateInfoData{
-			Certificate: caCert,
-			PrivateKey:  caKey,
-		}
-
-		caRaw, err := caInfoData.Marshal()
-		Expect(err).ToNot(HaveOccurred())
+		caRaw := []byte(`{"ca.crt":"` + utils.EncodeBase64(caCert) + `","ca.key":"` + utils.EncodeBase64(caKey) + `"}`)
 
 		shootState = &gardenercore.ShootState{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
@@ -121,7 +115,7 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 				Gardener: []gardenercore.GardenerResourceData{
 					{
 						Name: "ca",
-						Type: "certificate",
+						Type: "secret",
 						Data: runtime.RawExtension{
 							Raw: caRaw,
 						},
@@ -211,28 +205,12 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 			shoot.Status.AdvertisedAddresses = nil
 		})
 
-		It("returns error when the certificate authority key is with bad type", func() {
-			shootState.Spec.Gardener[0].Type = "bad type"
-		})
-
 		It("returns error when the certificate authority is not yet provisioned", func() {
 			shootState.Spec.Gardener = nil
 		})
 
-		It("returns error when the certificate authority is not certificate info data", func() {
-			shootState.Spec.Gardener[0].Type = "basicAuth"
-		})
-
 		It("returns error when the certificate authority contains no certificate", func() {
-			caInfoData := secrets.CertificateInfoData{
-				Certificate: []byte{1},
-				PrivateKey:  []byte{2},
-			}
-
-			caRaw, err := caInfoData.Marshal()
-			Expect(err).ToNot(HaveOccurred())
-
-			shootState.Spec.Gardener[0].Data.Raw = caRaw
+			shootState.Spec.Gardener[0].Data.Raw = []byte("{}")
 		})
 	})
 

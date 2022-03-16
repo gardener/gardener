@@ -18,6 +18,7 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"time"
@@ -27,9 +28,9 @@ import (
 	authenticationvalidation "github.com/gardener/gardener/pkg/apis/authentication/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/infodata"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -116,21 +117,19 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 		return nil, errors.NewInvalid(gvk.GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 	}
 
-	ca, err := infodata.GetInfoData(shootState.Spec.Gardener, v1beta1constants.SecretNameCACluster)
-	if err != nil {
-		return nil, errors.NewInternalError(err)
-	}
+	resourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
 
+	ca := resourceDataList.Get(v1beta1constants.SecretNameCACluster)
 	if ca == nil {
 		return nil, errors.NewInternalError(fmt.Errorf("certificate authority not yet provisioned"))
 	}
 
-	caInfoData, ok := ca.(*secrets.CertificateInfoData)
-	if !ok {
-		return nil, errors.NewInternalError(fmt.Errorf("could not convert InfoData entry ca to CertificateInfoData"))
+	data := make(map[string][]byte)
+	if err := json.Unmarshal(ca.Data.Raw, &data); err != nil {
+		return nil, errors.NewInternalError(err)
 	}
 
-	caCert, err := secrets.LoadCertificate("", caInfoData.PrivateKey, caInfoData.Certificate)
+	caCert, err := secrets.LoadCertificate("", data[secrets.DataKeyPrivateKeyCA], data[secrets.DataKeyCertificateCA])
 	if err != nil {
 		return nil, errors.NewInternalError(err)
 	}
