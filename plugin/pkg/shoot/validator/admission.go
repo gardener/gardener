@@ -369,7 +369,29 @@ func (c *validationContext) validateScheduling(a admission.Attributes, shootList
 		}
 
 		if oldSeed.Spec.Provider.Type != c.seed.Spec.Provider.Type {
-			return admission.NewForbidden(a, fmt.Errorf("cannot change Seed because cloud provider for new seed (%s) is not equal to cloud provider for old seed (%s)", c.seed.Spec.Provider.Type, oldSeed.Spec.Provider.Type))
+			return admission.NewForbidden(a, fmt.Errorf("cannot change seed because cloud provider for new seed (%s) is not equal to cloud provider for old seed (%s)", c.seed.Spec.Provider.Type, oldSeed.Spec.Provider.Type))
+		}
+
+		if c.shoot.Status.LastOperation != nil && c.shoot.Status.LastOperation.State != core.LastOperationStateSucceeded {
+			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because the last operation has not finished successfully yet: operation %s, state %s", c.shoot.Status.LastOperation.Type, c.shoot.Status.LastOperation.State))
+		}
+
+		if isShootInMigrationOrRestorePhase(c.shoot) && !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
+			return admission.NewForbidden(a, fmt.Errorf("cannot change shoot spec during %s operation that is in state %s", c.shoot.Status.LastOperation.Type, c.shoot.Status.LastOperation.State))
+		}
+
+		if err := func() error {
+			oldSeedName := c.oldShoot.Spec.SeedName
+			c.oldShoot.Spec.SeedName = c.shoot.Spec.SeedName
+			defer func() {
+				c.oldShoot.Spec.SeedName = oldSeedName
+			}()
+			if !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
+				return admission.NewForbidden(a, fmt.Errorf("seed name cannot be changed simultaneously with other changes to the shoot.spec"))
+			}
+			return nil
+		}(); err != nil {
+			return err
 		}
 	}
 
@@ -416,9 +438,7 @@ func getNumberOfShootsOnSeed(shootLister corelisters.ShootLister, seedName strin
 
 func (c *validationContext) validateDeletion(a admission.Attributes) error {
 	if a.GetOperation() == admission.Delete {
-		if c.shoot.Status.LastOperation != nil &&
-			((c.shoot.Status.LastOperation.Type == core.LastOperationTypeRestore && c.shoot.Status.LastOperation.State != core.LastOperationStateSucceeded) ||
-				c.shoot.Status.LastOperation.Type == core.LastOperationTypeMigrate) {
+		if isShootInMigrationOrRestorePhase(c.shoot) {
 			return admission.NewForbidden(a, fmt.Errorf("cannot mark shoot for deletion during %s operation that is in state %s", c.shoot.Status.LastOperation.Type, c.shoot.Status.LastOperation.State))
 		}
 	}
@@ -1231,4 +1251,10 @@ func addDeploymentTasks(shoot *core.Shoot, tasks ...string) {
 		shoot.ObjectMeta.Annotations = make(map[string]string)
 	}
 	controllerutils.AddTasks(shoot.ObjectMeta.Annotations, tasks...)
+}
+
+func isShootInMigrationOrRestorePhase(shoot *core.Shoot) bool {
+	return shoot.Status.LastOperation != nil &&
+		(shoot.Status.LastOperation.Type == core.LastOperationTypeRestore && shoot.Status.LastOperation.State != core.LastOperationStateSucceeded ||
+			shoot.Status.LastOperation.Type == core.LastOperationTypeMigrate)
 }
