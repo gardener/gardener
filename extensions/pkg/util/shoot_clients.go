@@ -16,6 +16,7 @@ package util
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -30,6 +31,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 // ShootClients bundles together several clients for the shoot cluster.
@@ -85,7 +87,6 @@ func NewClientForShoot(ctx context.Context, c client.Client, namespace string, o
 	} else {
 		err = c.Get(ctx, kutil.Key(namespace, v1beta1constants.SecretNameGardener), gardenerSecret)
 	}
-
 	if err != nil {
 		return nil, nil, err
 	}
@@ -94,6 +95,15 @@ func NewClientForShoot(ctx context.Context, c client.Client, namespace string, o
 	if err != nil {
 		return nil, nil, err
 	}
+
+	if opts.Mapper == nil {
+		mapper, err := apiutil.NewDynamicRESTMapper(shootRESTConfig, apiutil.WithLazyDiscovery)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to create new DynamicRESTMapper: %w", err)
+		}
+		opts.Mapper = mapper
+	}
+
 	shootClient, err := client.New(shootRESTConfig, opts)
 	if err != nil {
 		return nil, nil, err

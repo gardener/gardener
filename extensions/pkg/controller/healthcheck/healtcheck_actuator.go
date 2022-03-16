@@ -112,7 +112,6 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, request type
 		wg          sync.WaitGroup
 	)
 
-	wg.Add(len(a.healthChecks))
 	for _, hc := range a.healthChecks {
 		// clone to avoid problems during parallel execution
 		check := hc.HealthCheck.DeepCopy()
@@ -139,6 +138,7 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, request type
 
 		check.SetLoggerSuffix(a.provider, a.extensionKind)
 
+		wg.Add(1)
 		go func(ctx context.Context, request types.NamespacedName, check HealthCheck, preCheckFunc PreCheckFunc, healthConditionType string) {
 			defer wg.Done()
 
