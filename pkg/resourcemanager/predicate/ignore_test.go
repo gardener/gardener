@@ -42,11 +42,11 @@ var _ = Describe("ignore", func() {
 		})
 
 		Context("#Create", func() {
-			It("should match because no ignore mode annotation", func() {
+			It("should match because no ignore annotation present", func() {
 				Expect(predicate.Create(event.CreateEvent{Object: managedResource})).To(BeTrue())
 			})
 
-			It("should not match because ignore mode annotation", func() {
+			It("should not match because ignore annotation is present", func() {
 				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/ignore", "true")
 
 				Expect(predicate.Create(event.CreateEvent{Object: managedResource})).To(BeFalse())
@@ -54,11 +54,11 @@ var _ = Describe("ignore", func() {
 		})
 
 		Context("#Update", func() {
-			It("should match because no ignore mode annotation", func() {
+			It("should match because no ignore annotation present", func() {
 				Expect(predicate.Update(event.UpdateEvent{ObjectNew: managedResource})).To(BeTrue())
 			})
 
-			It("should not match because ignore mode annotation", func() {
+			It("should not match because ignore annotation is present", func() {
 				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/ignore", "true")
 
 				Expect(predicate.Update(event.UpdateEvent{ObjectNew: managedResource})).To(BeFalse())
@@ -66,11 +66,11 @@ var _ = Describe("ignore", func() {
 		})
 
 		Describe("#Delete", func() {
-			It("should match because no ignore mode annotation", func() {
+			It("should match because no ignore annotation present", func() {
 				Expect(predicate.Delete(event.DeleteEvent{Object: managedResource})).To(BeTrue())
 			})
 
-			It("should not match because ignore mode annotation", func() {
+			It("should not match because ignore annotation is present", func() {
 				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/ignore", "true")
 
 				Expect(predicate.Delete(event.DeleteEvent{Object: managedResource})).To(BeFalse())
@@ -78,11 +78,11 @@ var _ = Describe("ignore", func() {
 		})
 
 		Describe("#Generic", func() {
-			It("should match because no ignore mode annotation", func() {
+			It("should match because no ignore annotation present", func() {
 				Expect(predicate.Generic(event.GenericEvent{Object: managedResource})).To(BeTrue())
 			})
 
-			It("should not match because ignore mode annotation", func() {
+			It("should not match because ignore annotation is present", func() {
 				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, "resources.gardener.cloud/ignore", "true")
 
 				Expect(predicate.Generic(event.GenericEvent{Object: managedResource})).To(BeFalse())

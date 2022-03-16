@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-// NotIgnored returns a predicate that detects if the object has the resources.gardener.cloud/mode=Ignore annotation.
+// NotIgnored returns a predicate that detects if the object has the resources.gardener.cloud/ignore=true annotation.
 func NotIgnored() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		return !isIgnored(obj)

@@ -93,7 +93,7 @@ var _ = Describe("Health controller tests", func() {
 		})
 	})
 
-	Context("ignore mode", func() {
+	Context("ignore annotation", func() {
 		BeforeEach(func() {
 			metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, resourcesv1alpha1.Ignore, "true")
 		})
@@ -115,7 +115,7 @@ var _ = Describe("Health controller tests", func() {
 		})
 
 		It("sets ManagedResource to healthy if it no longer ignored", func() {
-			By("update ManagedResource and remove ignore mode")
+			By("update ManagedResource and remove ignore annotation")
 			patch := client.MergeFrom(managedResource.DeepCopy())
 			delete(managedResource.Annotations, resourcesv1alpha1.Ignore)
 			Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
