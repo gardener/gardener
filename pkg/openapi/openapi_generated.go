@@ -6920,6 +6920,12 @@ func schema_pkg_apis_core_v1alpha1_ShootCARotation(ref common.ReferenceCallback)
 							Format:      "",
 						},
 					},
+					"lastInitiationTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
 					"lastCompletionTime": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully completed.",
@@ -14035,6 +14041,12 @@ func schema_pkg_apis_core_v1beta1_ShootCARotation(ref common.ReferenceCallback) 
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"lastInitiationTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 					"lastCompletionTime": {

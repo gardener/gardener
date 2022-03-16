@@ -4946,6 +4946,7 @@ func Convert_core_ShootAdvertisedAddress_To_v1beta1_ShootAdvertisedAddress(in *c
 
 func autoConvert_v1beta1_ShootCARotation_To_core_ShootCARotation(in *ShootCARotation, out *core.ShootCARotation, s conversion.Scope) error {
 	out.Phase = core.ShootCredentialsRotationPhase(in.Phase)
+	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
 	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
 	return nil
 }
@@ -4957,6 +4958,7 @@ func Convert_v1beta1_ShootCARotation_To_core_ShootCARotation(in *ShootCARotation
 
 func autoConvert_core_ShootCARotation_To_v1beta1_ShootCARotation(in *core.ShootCARotation, out *ShootCARotation, s conversion.Scope) error {
 	out.Phase = ShootCredentialsRotationPhase(in.Phase)
+	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
 	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
 	return nil
 }

@@ -2140,6 +2140,10 @@ message ShootCARotation {
   // Phase describes the phase of the certificate authority credential rotation.
   optional string phase = 1;
 
+  // LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
+
   // LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
   // completed.
   // +optional
