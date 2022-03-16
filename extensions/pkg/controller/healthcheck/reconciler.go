@@ -77,6 +77,9 @@ func (r *reconciler) InjectClient(client client.Client) error {
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.syncPeriod.Duration/2)
+	defer cancel()
+
 	extension := r.registeredExtension.getExtensionObjFunc()
 
 	if err := r.client.Get(ctx, request.NamespacedName, extension); err != nil {
