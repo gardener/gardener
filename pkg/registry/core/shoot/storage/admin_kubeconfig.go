@@ -143,8 +143,8 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 	authName := fmt.Sprintf("%s--%s", shoot.Namespace, shoot.Name)
 
 	cpsc := secrets.ControlPlaneSecretConfig{
+		Name: authName,
 		CertificateSecretConfig: &secrets.CertificateSecretConfig{
-			Name:         authName,
 			CommonName:   userInfo.GetName(),
 			Organization: []string{user.SystemPrivilegedGroup},
 			CertType:     secrets.ClientCert,

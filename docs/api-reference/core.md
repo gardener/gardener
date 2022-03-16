@@ -8999,7 +8999,7 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <em>(Optional)</em>
-<p>LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.</p>
+<p>LastInitiationTime is the most recent time when the kubeconfig credential rotation was initiated.</p>
 </td>
 </tr>
 <tr>
@@ -9013,8 +9013,7 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <em>(Optional)</em>
-<p>LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
-completed.</p>
+<p>LastCompletionTime is the most recent time when the kubeconfig credential rotation was successfully completed.</p>
 </td>
 </tr>
 </tbody>

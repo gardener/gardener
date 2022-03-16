@@ -2166,12 +2166,11 @@ message ShootCredentialsRotation {
 
 // ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
 message ShootKubeconfigRotation {
-  // LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+  // LastInitiationTime is the most recent time when the kubeconfig credential rotation was initiated.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 1;
 
-  // LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
-  // completed.
+  // LastCompletionTime is the most recent time when the kubeconfig credential rotation was successfully completed.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
 }

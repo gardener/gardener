@@ -7092,13 +7092,13 @@ func schema_pkg_apis_core_v1alpha1_ShootKubeconfigRotation(ref common.ReferenceC
 				Properties: map[string]spec.Schema{
 					"lastInitiationTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.",
+							Description: "LastInitiationTime is the most recent time when the kubeconfig credential rotation was initiated.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 					"lastCompletionTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully completed.",
+							Description: "LastCompletionTime is the most recent time when the kubeconfig credential rotation was successfully completed.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
@@ -14109,13 +14109,13 @@ func schema_pkg_apis_core_v1beta1_ShootKubeconfigRotation(ref common.ReferenceCa
 				Properties: map[string]spec.Schema{
 					"lastInitiationTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.",
+							Description: "LastInitiationTime is the most recent time when the kubeconfig credential rotation was initiated.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 					"lastCompletionTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully completed.",
+							Description: "LastCompletionTime is the most recent time when the kubeconfig credential rotation was successfully completed.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
