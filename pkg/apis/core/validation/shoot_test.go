@@ -2352,7 +2352,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
+					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.maintenance.timeWindow"),
 				}))))
 			})
@@ -2364,7 +2364,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
+					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.maintenance.timeWindow"),
 				}))))
 			})

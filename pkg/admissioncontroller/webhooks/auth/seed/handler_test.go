@@ -54,7 +54,7 @@ var _ = Describe("Handler", func() {
 
 			handler(respRecorder, req)
 
-			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{"creationTimestamp":null},"spec":{},"status":{"allowed":false,"evaluationError":"400 request body is empty"}}
+			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{"creationTimestamp":null},"spec":{},"status":{"allowed":false,"evaluationError":"422 request body is empty"}}
 `))
 		})
 

@@ -69,7 +69,7 @@ func ValidateProjectSpec(projectSpec *core.ProjectSpec, fldPath *field.Path) fie
 	allErrs := field.ErrorList{}
 
 	if projectSpec.Namespace != nil && *projectSpec.Namespace == core.GardenerSeedLeaseNamespace {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("namespace"), fmt.Sprintf("Project namespace %s is reserved by Gardener", core.GardenerSeedLeaseNamespace)))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"), projectSpec.Namespace, fmt.Sprintf("Project namespace %s is reserved by Gardener", core.GardenerSeedLeaseNamespace)))
 	}
 	ownerFound := false
 
@@ -254,7 +254,7 @@ func ValidateProjectStatusUpdate(newProject, oldProject *core.Project) field.Err
 	allErrs := field.ErrorList{}
 
 	if len(oldProject.Status.Phase) > 0 && len(newProject.Status.Phase) == 0 {
-		allErrs = append(allErrs, field.Forbidden(field.NewPath("status").Child("phase"), "phase cannot be updated to an empty string"))
+		allErrs = append(allErrs, field.Invalid(field.NewPath("status").Child("phase"), newProject.Status.Phase, "phase cannot be updated to an empty string"))
 	}
 
 	return allErrs
