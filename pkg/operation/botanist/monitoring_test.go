@@ -232,10 +232,18 @@ var _ = Describe("Monitoring", func() {
 			legacySecret2 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "monitoring-ingress-credentials-users"}}
 			Expect(fakeSeedClient.Create(ctx, legacySecret2)).To(Succeed())
 
+			legacySecret3 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "grafana-users-basic-auth"}}
+			Expect(fakeSeedClient.Create(ctx, legacySecret3)).To(Succeed())
+
+			legacySecret4 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "grafana-operators-basic-auth"}}
+			Expect(fakeSeedClient.Create(ctx, legacySecret4)).To(Succeed())
+
 			Expect(botanist.DeploySeedGrafana(ctx)).To(Succeed())
 
 			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret1), &corev1.Secret{})).To(BeNotFoundError())
 			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret2), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret3), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret4), &corev1.Secret{})).To(BeNotFoundError())
 		})
 	})
 })

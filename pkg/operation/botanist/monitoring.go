@@ -501,11 +501,11 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		ingressTLSSecretName = ingressTLSSecret.Name
 	}
 
-	if err := b.deployGrafanaCharts(ctx, common.GrafanaOperatorsRole, operatorsDashboards.String(), basicAuth, common.GrafanaOperatorsPrefix, ingressTLSSecretName); err != nil {
+	if err := b.deployGrafanaCharts(ctx, credentialsSecret, common.GrafanaOperatorsRole, operatorsDashboards.String(), common.GrafanaOperatorsPrefix, ingressTLSSecretName); err != nil {
 		return err
 	}
 
-	return b.deployGrafanaCharts(ctx, common.GrafanaUsersRole, usersDashboards.String(), basicAuthUsers, common.GrafanaUsersPrefix, ingressTLSSecretName)
+	return b.deployGrafanaCharts(ctx, credentialsUsersSecret, common.GrafanaUsersRole, usersDashboards.String(), common.GrafanaUsersPrefix, ingressTLSSecretName)
 }
 
 func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretKeys []string) (map[string]interface{}, error) {
@@ -585,7 +585,7 @@ func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretK
 	return configs, nil
 }
 
-func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, basicAuth, subDomain, ingressTLSSecretName string) error {
+func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *corev1.Secret, role, dashboards, subDomain, ingressTLSSecretName string) error {
 	ingressClass, err := seed.ComputeNginxIngressClass(b.Seed, b.Seed.GetInfo().Status.KubernetesVersion)
 	if err != nil {
 		return err
@@ -593,8 +593,8 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 
 	values, err := b.InjectSeedShootImages(map[string]interface{}{
 		"ingress": map[string]interface{}{
-			"class":           ingressClass,
-			"basicAuthSecret": basicAuth,
+			"class":          ingressClass,
+			"authSecretName": credentialsSecret.Name,
 			"hosts": []map[string]interface{}{
 				{
 					"hostName":   b.ComputeIngressHost(subDomain),
@@ -628,6 +628,8 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-tls"}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "monitoring-ingress-credentials", Namespace: b.Shoot.SeedNamespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "monitoring-ingress-credentials-users", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "grafana-users-basic-auth", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "grafana-operators-basic-auth", Namespace: b.Shoot.SeedNamespace}},
 	)
 }
 
