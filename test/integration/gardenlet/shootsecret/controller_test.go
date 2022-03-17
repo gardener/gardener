@@ -230,6 +230,30 @@ var _ = Describe("ShootSecret controller tests", func() {
 		}).Should(BeNotFoundError())
 	})
 
+	It("should sync external secrets to the shootstate", func() {
+		By("creating external secret")
+		secret := newRelevantSecret("secret-extension", seedNamespace.Name)
+		metav1.SetMetaDataLabel(&secret.ObjectMeta, secretsmanager.LabelKeyManagerIdentity, "extension")
+		Expect(testClient.Create(ctx, secret)).To(Succeed())
+
+		By("verifying secret did get synced to shootstate")
+		Eventually(func(g Gomega) []gardencorev1alpha1.GardenerResourceData {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shootState), shootState)).To(Succeed())
+			return shootState.Spec.Gardener
+		}).Should(containData(
+			withName(secret.Name),
+			withType("secret"),
+			withLabels(secret.Labels),
+			withData(secret.Data),
+		))
+
+		By("verifying secret has finalizers")
+		Eventually(func(g Gomega) []string {
+			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			return secret.Finalizers
+		}).Should(ConsistOf("gardenlet.gardener.cloud/secret-controller"))
+	})
+
 	It("should do nothing if the secret does not belong to a shoot namespace", func() {
 		By("removing shoot label from seed namespace")
 		patch := client.MergeFrom(seedNamespace.DeepCopy())
@@ -335,10 +359,14 @@ func newRelevantSecret(name, namespace string) *corev1.Secret {
 			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
-				secretsmanager.LabelKeyManagedBy: secretsmanager.LabelValueSecretsManager,
-				secretsmanager.LabelKeyPersist:   secretsmanager.LabelValueTrue,
+				secretsmanager.LabelKeyManagedBy:       secretsmanager.LabelValueSecretsManager,
+				secretsmanager.LabelKeyManagerIdentity: "test",
+				secretsmanager.LabelKeyPersist:         secretsmanager.LabelValueTrue,
 			},
 		},
 		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			"some": []byte("data"),
+		},
 	}
 }
