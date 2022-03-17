@@ -53,7 +53,7 @@ LOGCHECK_DIR := $(TOOLS_DIR)/logcheck
 
 .PHONY: dev-setup
 dev-setup:
-	@if [[ "$(DEV_SETUP_WITH_WEBHOOKS)" == "true" ]]; then ./hack/local-development/dev-setup --with-webhooks; else ./hack/local-development/dev-setup; fi
+	@if [ "$(DEV_SETUP_WITH_WEBHOOKS)" = "true" ]; then ./hack/local-development/dev-setup --with-webhooks; else ./hack/local-development/dev-setup; fi
 
 .PHONY: dev-setup-register-gardener
 dev-setup-register-gardener:
