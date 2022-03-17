@@ -6,7 +6,7 @@ metadata:
     kubernetes.io/ingress.class: {{ .Values.global.ingressClass }}
 {{- end }}
     nginx.ingress.kubernetes.io/auth-realm: Authentication Required
-    nginx.ingress.kubernetes.io/auth-secret: aggregate-prometheus-basic-auth
+    nginx.ingress.kubernetes.io/auth-secret: {{ .Values.ingress.authSecretName }}
     nginx.ingress.kubernetes.io/auth-type: basic
   name: aggregate-prometheus
   namespace: {{ .Release.Namespace }}
