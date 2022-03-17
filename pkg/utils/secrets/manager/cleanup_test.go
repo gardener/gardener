@@ -30,9 +30,13 @@ import (
 )
 
 var _ = Describe("Cleanup", func() {
+	const (
+		testIdentity = "test"
+		namespace    = "shoot--foo--bar"
+	)
+
 	var (
-		ctx       = context.TODO()
-		namespace = "shoot--foo--bar"
+		ctx = context.TODO()
 
 		m          *manager
 		fakeClient client.Client
@@ -40,8 +44,29 @@ var _ = Describe("Cleanup", func() {
 
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-		m = New(logr.Discard(), fakeClient, namespace, "test", nil).(*manager)
+		m = New(logr.Discard(), fakeClient, namespace, testIdentity, nil).(*manager)
 	})
+
+	secretList := func(identity string) []*corev1.Secret {
+		secrets := []*corev1.Secret{
+			{ObjectMeta: metav1.ObjectMeta{Name: "secret1", Labels: map[string]string{"name": "first"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "secret2", Labels: map[string]string{"name": "first"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "secret3", Labels: map[string]string{"name": "first-bundle", "bundle-for": "first"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "secret4", Labels: map[string]string{"name": "second"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "secret5", Labels: map[string]string{"name": "third"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "secret6", Labels: map[string]string{"name": "third"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "secret7", Labels: map[string]string{"name": "fourth"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "secret8", Labels: map[string]string{"name": "fifth"}}},
+		}
+
+		for i := range secrets {
+			secrets[i].Namespace = namespace
+			secrets[i].Labels["managed-by"] = "secrets-manager"
+			secrets[i].Labels["manager-identity"] = identity
+		}
+
+		return secrets
+	}
 
 	Describe("#Cleanup", func() {
 		It("should do nothing because there are no secrets", func() {
@@ -49,21 +74,8 @@ var _ = Describe("Cleanup", func() {
 		})
 
 		It("should delete all secrets not part of the internal store", func() {
-			secrets := []*corev1.Secret{
-				{ObjectMeta: metav1.ObjectMeta{Name: "secret1", Labels: map[string]string{"name": "first"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "secret2", Labels: map[string]string{"name": "first"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "secret3", Labels: map[string]string{"name": "first-bundle", "bundle-for": "first"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "secret4", Labels: map[string]string{"name": "second"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "secret5", Labels: map[string]string{"name": "third"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "secret6", Labels: map[string]string{"name": "third"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "secret7", Labels: map[string]string{"name": "fourth"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "secret8", Labels: map[string]string{"name": "fifth"}}},
-			}
-
+			secrets := secretList(testIdentity)
 			for i := range secrets {
-				secrets[i].Namespace = namespace
-				secrets[i].Labels["managed-by"] = "secrets-manager"
-
 				Expect(fakeClient.Create(ctx, secrets[i])).To(Succeed())
 			}
 
@@ -84,6 +96,19 @@ var _ = Describe("Cleanup", func() {
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secrets[5]), &corev1.Secret{})).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secrets[6]), &corev1.Secret{})).To(BeNotFoundError())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secrets[7]), &corev1.Secret{})).To(BeNotFoundError())
+		})
+
+		It("should not touch secrets from other manager instance", func() {
+			secrets := secretList(testIdentity + "other")
+			for i := range secrets {
+				Expect(fakeClient.Create(ctx, secrets[i])).To(Succeed())
+			}
+
+			Expect(m.Cleanup(ctx)).To(Succeed())
+
+			for i := range secrets {
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secrets[i]), &corev1.Secret{})).To(Succeed())
+			}
 		})
 	})
 })
