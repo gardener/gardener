@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/klog"
@@ -165,6 +166,18 @@ var _ = Describe("Defaults", func() {
 				SetObjectDefaults_GardenletConfiguration(obj)
 
 				Expect(obj.LeaderElection).To(Equal(expectedLeaderElection))
+			})
+		})
+
+		Describe("Logging settings", func() {
+			It("should correctly default Logging configuration", func() {
+				SetObjectDefaults_GardenletConfiguration(obj)
+				Expect(obj.Logging).NotTo(BeNil())
+				Expect(obj.Logging.Enabled).To(PointTo(Equal(false)))
+				Expect(obj.Logging.Loki).NotTo(BeNil())
+				Expect(obj.Logging.Loki.Enabled).To(PointTo(Equal(false)))
+				Expect(obj.Logging.Loki.Garden).NotTo(BeNil())
+				Expect(obj.Logging.Loki.Garden.Storage).To(PointTo(Equal(resource.MustParse("100Gi"))))
 			})
 		})
 	})

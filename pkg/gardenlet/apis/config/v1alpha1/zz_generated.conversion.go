@@ -28,6 +28,7 @@ import (
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	config "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	corev1 "k8s.io/api/core/v1"
+	resource "k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -852,6 +853,7 @@ func autoConvert_v1alpha1_GardenLoki_To_config_GardenLoki(in *GardenLoki, out *c
 	} else {
 		out.Priority = nil
 	}
+	out.Storage = (*resource.Quantity)(unsafe.Pointer(in.Storage))
 	return nil
 }
 
@@ -868,6 +870,7 @@ func autoConvert_config_GardenLoki_To_v1alpha1_GardenLoki(in *config.GardenLoki,
 	} else {
 		out.Priority = nil
 	}
+	out.Storage = (*resource.Quantity)(unsafe.Pointer(in.Storage))
 	return nil
 }
 

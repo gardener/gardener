@@ -78,6 +78,10 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 		obj.Server.HTTPS.Port = 2720
 	}
 
+	if obj.Logging == nil {
+		obj.Logging = &Logging{}
+	}
+
 	// TODO: consider enabling profiling by default (like in k8s components)
 
 	if obj.SNI == nil {
@@ -455,5 +459,24 @@ func SetDefaults_SNIIngress(obj *SNIIngress) {
 			v1beta1constants.LabelApp: DefaultIngressGatewayAppLabelValue,
 			"istio":                   "ingressgateway",
 		}
+	}
+}
+
+// SetDefaults_Logging sets defaults for the Logging stack.
+func SetDefaults_Logging(obj *Logging) {
+	if obj.Enabled == nil {
+		obj.Enabled = pointer.BoolPtr(false)
+	}
+	if obj.Loki == nil {
+		obj.Loki = &Loki{}
+	}
+	if obj.Loki.Enabled == nil {
+		obj.Loki.Enabled = obj.Enabled
+	}
+	if obj.Loki.Garden == nil {
+		obj.Loki.Garden = &GardenLoki{}
+	}
+	if obj.Loki.Garden.Storage == nil {
+		obj.Loki.Garden.Storage = &DefaultCentralLokiStorage
 	}
 }

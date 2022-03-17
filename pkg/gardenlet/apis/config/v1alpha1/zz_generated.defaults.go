@@ -98,6 +98,9 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 	if in.LeaderElection != nil {
 		SetDefaults_LeaderElectionConfiguration(in.LeaderElection)
 	}
+	if in.Logging != nil {
+		SetDefaults_Logging(in.Logging)
+	}
 	if in.SNI != nil {
 		SetDefaults_SNI(in.SNI)
 		if in.SNI.Ingress != nil {

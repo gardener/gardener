@@ -84,3 +84,39 @@ func WaitUntilDeploymentScaledToDesiredReplicas(ctx context.Context, client clie
 		return retry.MinorError(fmt.Errorf("deployment %q currently has '%d' replicas. Desired: %d", key.Name, deployment.Status.AvailableReplicas, desiredReplicas))
 	})
 }
+
+// WaitUntilStatefulSetScaledToDesiredReplicas waits for the number of available replicas to be equal to the StatefulSet's desired replicas count.
+func WaitUntilStatefulSetScaledToDesiredReplicas(ctx context.Context, client client.Client, key types.NamespacedName, desiredReplicas int32) error {
+	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
+		statefulSet := &appsv1.StatefulSet{}
+		if err := client.Get(ctx, key, statefulSet); err != nil {
+			return retry.SevereError(err)
+		}
+
+		if statefulSet.Generation != statefulSet.Status.ObservedGeneration {
+			return retry.MinorError(fmt.Errorf("statefullSet %q not observed at latest generation (%d/%d)", key.Name,
+				statefulSet.Status.ObservedGeneration, statefulSet.Generation))
+		}
+
+		if statefulSet.Spec.Replicas == nil || *statefulSet.Spec.Replicas != desiredReplicas {
+			if statefulSet.Spec.Replicas == nil {
+				return retry.SevereError(fmt.Errorf("waiting for statefulSet %q to scale failed. spec.replicas is nill. Generation %d", key.Name, statefulSet.Generation))
+			}
+			return retry.SevereError(fmt.Errorf("waiting for statefulSet %q to scale failed. spec.replicas does not match the desired replicas", key.Name))
+		}
+
+		if statefulSet.Status.Replicas == desiredReplicas && statefulSet.Status.AvailableReplicas == desiredReplicas {
+			return retry.Ok()
+		}
+
+		return retry.MinorError(fmt.Errorf("statefulSet %q currently has '%d' replicas. Desired: %d", key.Name, statefulSet.Status.AvailableReplicas, desiredReplicas))
+	})
+}
+
+// ScaleStatefulSetAndWaitUntilScaled scales a StatefulSet and wait until is scaled.
+func ScaleStatefulSetAndWaitUntilScaled(ctx context.Context, c client.Client, key client.ObjectKey, replicas int32) error {
+	if err := ScaleStatefulSet(ctx, c, key, replicas); err != nil {
+		return err
+	}
+	return WaitUntilStatefulSetScaledToDesiredReplicas(ctx, c, key, replicas)
+}
