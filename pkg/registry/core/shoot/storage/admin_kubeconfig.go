@@ -129,7 +129,12 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 		return nil, errors.NewInternalError(err)
 	}
 
-	caCert, err := secrets.LoadCertificate("", data[secrets.DataKeyPrivateKeyCA], data[secrets.DataKeyCertificateCA])
+	keyPrivateKey, keyCertificate := secrets.DataKeyPrivateKeyCA, secrets.DataKeyCertificateCA
+	if ca.Type == "certificate" {
+		keyPrivateKey, keyCertificate = "privateKey", "certificate"
+	}
+
+	caCert, err := secrets.LoadCertificate("", data[keyPrivateKey], data[keyCertificate])
 	if err != nil {
 		return nil, errors.NewInternalError(err)
 	}

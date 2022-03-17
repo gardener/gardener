@@ -27,6 +27,8 @@ import (
 	gardenercore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/utils"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,9 +38,6 @@ import (
 	registryrest "k8s.io/apiserver/pkg/registry/rest"
 	configlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	configv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Admin Kubeconfig", func() {
@@ -51,6 +50,7 @@ var _ = Describe("Admin Kubeconfig", func() {
 		ctx              context.Context
 		obj              *authenticationapi.AdminKubeconfigRequest
 		caCert           []byte
+		caKey            []byte
 		createValidation registryrest.ValidateObjectFunc
 	)
 
@@ -79,7 +79,7 @@ OnM7+5534rkP8/eIX58QFcVibjM34BfqNQgHW5vFXobYoIX2wfMysLZVESYQdU9P
 C3KRaS8COePkaiH/NUjuIjyTXzhvJqmFbH730vABpcKi01eQMMjtRkPlWIEqUHoG
 QbU6uberp2QAQA==
 -----END CERTIFICATE-----`)
-		caKey := []byte(`-----BEGIN RSA PRIVATE KEY-----
+		caKey = []byte(`-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAuxbyNToBQ/W31anrE5MBiGOsQ8aLE/6IKP1xJfleRKGlU1g1
 6bAKqkM0560oAC0VAySlyjWKx+4Hzvps1j79sLlgKtimvOWNL4RgBv794P9qFRGd
 dfLT3J8GsZMy+vq2LwEvkOqUOqEe7ex6QgxJ52twKzXR0NySCXiWCGhFKgJp3f8s
@@ -214,68 +214,77 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 		})
 	})
 
-	It("returns kubeconfig successfully", func() {
-		actual, err := akcREST.Create(ctx, name, obj, nil, nil)
+	Context("request succeeds", func() {
+		AfterEach(func() {
+			actual, err := akcREST.Create(ctx, name, obj, nil, nil)
 
-		Expect(err).ToNot(HaveOccurred())
-		Expect(actual).ToNot(BeNil())
-		Expect(actual).To(BeAssignableToTypeOf(&authenticationapi.AdminKubeconfigRequest{}))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(actual).ToNot(BeNil())
+			Expect(actual).To(BeAssignableToTypeOf(&authenticationapi.AdminKubeconfigRequest{}))
 
-		akcr := actual.(*authenticationapi.AdminKubeconfigRequest)
+			akcr := actual.(*authenticationapi.AdminKubeconfigRequest)
 
-		Expect(akcr.Status.ExpirationTimestamp.Time).To(Equal(time.Unix(10, 0).Add(time.Minute * 11)))
+			Expect(akcr.Status.ExpirationTimestamp.Time).To(Equal(time.Unix(10, 0).Add(time.Minute * 11)))
 
-		config := &configv1.Config{}
-		Expect(runtime.DecodeInto(configlatest.Codec, akcr.Status.Kubeconfig, config)).To(Succeed())
+			config := &configv1.Config{}
+			Expect(runtime.DecodeInto(configlatest.Codec, akcr.Status.Kubeconfig, config)).To(Succeed())
 
-		Expect(config.Clusters).To(ConsistOf(
-			configv1.NamedCluster{
-				Name: "baz--test-external",
-				Cluster: configv1.Cluster{
-					Server:                   "https://foo.bar.external:9443",
-					CertificateAuthorityData: caCert,
+			Expect(config.Clusters).To(ConsistOf(
+				configv1.NamedCluster{
+					Name: "baz--test-external",
+					Cluster: configv1.Cluster{
+						Server:                   "https://foo.bar.external:9443",
+						CertificateAuthorityData: caCert,
+					},
 				},
-			},
-			configv1.NamedCluster{
-				Name: "baz--test-internal",
-				Cluster: configv1.Cluster{
-					Server:                   "https://foo.bar.internal:9443",
-					CertificateAuthorityData: caCert,
+				configv1.NamedCluster{
+					Name: "baz--test-internal",
+					Cluster: configv1.Cluster{
+						Server:                   "https://foo.bar.internal:9443",
+						CertificateAuthorityData: caCert,
+					},
 				},
-			},
-		))
+			))
 
-		Expect(config.Contexts).To(ConsistOf(
-			configv1.NamedContext{
-				Name: "baz--test-external",
-				Context: configv1.Context{
-					Cluster:  "baz--test-external",
-					AuthInfo: "baz--test-external",
+			Expect(config.Contexts).To(ConsistOf(
+				configv1.NamedContext{
+					Name: "baz--test-external",
+					Context: configv1.Context{
+						Cluster:  "baz--test-external",
+						AuthInfo: "baz--test-external",
+					},
 				},
-			},
-			configv1.NamedContext{
-				Name: "baz--test-internal",
-				Context: configv1.Context{
-					Cluster:  "baz--test-internal",
-					AuthInfo: "baz--test-external",
+				configv1.NamedContext{
+					Name: "baz--test-internal",
+					Context: configv1.Context{
+						Cluster:  "baz--test-internal",
+						AuthInfo: "baz--test-external",
+					},
 				},
-			},
-		))
-		Expect(config.CurrentContext).To(Equal("baz--test-external"))
+			))
+			Expect(config.CurrentContext).To(Equal("baz--test-external"))
 
-		Expect(config.AuthInfos).To(HaveLen(1))
-		Expect(config.AuthInfos[0].Name).To(Equal("baz--test-external"))
-		Expect(config.AuthInfos[0].AuthInfo.ClientCertificateData).ToNot(BeEmpty())
-		Expect(config.AuthInfos[0].AuthInfo.ClientKeyData).ToNot(BeEmpty())
+			Expect(config.AuthInfos).To(HaveLen(1))
+			Expect(config.AuthInfos[0].Name).To(Equal("baz--test-external"))
+			Expect(config.AuthInfos[0].AuthInfo.ClientCertificateData).ToNot(BeEmpty())
+			Expect(config.AuthInfos[0].AuthInfo.ClientKeyData).ToNot(BeEmpty())
 
-		certPem, _ := pem.Decode(config.AuthInfos[0].AuthInfo.ClientCertificateData)
-		cert, err := x509.ParseCertificate(certPem.Bytes)
-		Expect(err).ToNot(HaveOccurred())
+			certPem, _ := pem.Decode(config.AuthInfos[0].AuthInfo.ClientCertificateData)
+			cert, err := x509.ParseCertificate(certPem.Bytes)
+			Expect(err).ToNot(HaveOccurred())
 
-		Expect(cert.Subject.CommonName).To(Equal(userName))
-		Expect(cert.Subject.Organization).To(ConsistOf("system:masters"))
-		Expect(cert.NotAfter.Unix()).To(Equal(akcr.Status.ExpirationTimestamp.Time.Unix())) // certificates do not have nano seconds in them
-		Expect(cert.NotBefore.UTC()).To(Equal(time.Unix(10, 0).UTC()))
+			Expect(cert.Subject.CommonName).To(Equal(userName))
+			Expect(cert.Subject.Organization).To(ConsistOf("system:masters"))
+			Expect(cert.NotAfter.Unix()).To(Equal(akcr.Status.ExpirationTimestamp.Time.Unix())) // certificates do not have nano seconds in them
+			Expect(cert.NotBefore.UTC()).To(Equal(time.Unix(10, 0).UTC()))
+		})
+
+		It("ca is stored as secret data type", func() {})
+
+		It("ca is stored as certificate data type", func() {
+			shootState.Spec.Gardener[0].Type = "certificate"
+			shootState.Spec.Gardener[0].Data.Raw = []byte(`{"certificate":"` + utils.EncodeBase64(caCert) + `","privateKey":"` + utils.EncodeBase64(caKey) + `"}`)
+		})
 	})
 })
 
