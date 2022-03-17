@@ -32,6 +32,7 @@ spec:
 {{- end }}
       labels:
         app: vpa-recommender
+        networking.gardener.cloud/from-prometheus: allowed
 {{ toYaml .Values.labels | indent 8 }}
 {{- if .Values.admissionController.podLabels }}
 {{ toYaml .Values.admissionController.podLabels | indent 8 }}

@@ -31,6 +31,7 @@ spec:
 {{- end }}
       labels:
         app: vpa-updater
+        networking.gardener.cloud/from-prometheus: allowed
 {{ toYaml .Values.labels | indent 8 }}
 {{- if .Values.updater.podLabels }}
 {{ toYaml .Values.updater.podLabels | indent 8 }}
@@ -83,7 +84,10 @@ spec:
             cpu: 30m
             memory: 200Mi
         ports:
-        - containerPort: 8080
+        - name: server
+          containerPort: 8080
+        - name: metrics
+          containerPort: 8943
 {{- if not .Values.updater.createServiceAccount }}
       volumes:
       - name: shoot-access

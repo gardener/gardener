@@ -18,6 +18,10 @@ spec:
           app: prometheus
           gardener.cloud/role: monitoring
           role: monitoring
+    - podSelector:
+        matchLabels:
+          app: seed-prometheus
+          role: monitoring
     ports:
     - port: metrics
       protocol: TCP
