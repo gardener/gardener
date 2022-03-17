@@ -1,6 +1,6 @@
 # General conventions
 
-All the extensions that are registered to Gardener are deployed to the seed clusters (at the moment, every extension is installed to every seed cluster, however, in the future Gardener will be more smart to determine which extensions needs to be placed into which seed).
+All the extensions that are registered to Gardener are deployed to the seed clusters, on which they are required (also see [ControllerRegistration](controllerregistration.md)).
 
 Some of these extensions might need to create global resources in the seed (e.g., `ClusterRole`s), i.e., it's important to have a naming scheme to avoid conflicts as it cannot be checked or validated upfront that two extensions don't use the same names.
 
@@ -32,11 +32,10 @@ nodeSelector:
   worker.gardener.cloud/system-components: "true"
 ```
 
-## How to create certificates/kubeconfigs for the shoot cluster?
+## How to create certificates for the shoot cluster?
 
-Gardener creates several certificate authorities (CA) that are used to create server/client certificates for various components.
+Gardener creates several certificate authorities (CA) that are used to create server certificates for various components.
 For example, the shoot's etcd has its own CA, the kube-aggregator has its own CA as well, and both are different to the actual cluster's CA.
 
-These CAs are stored as `Secret`s in the shoot namespace (see [this](https://github.com/gardener/gardener/blob/master/pkg/apis/core/v1beta1/constants/types_constants.go) for the actual names).
-Extension controllers may use them to create further certificates/kubeconfigs for potential other components they need to deploy to the seed or shoot.
-[These utility functions](https://github.com/gardener/gardener/tree/master/pkg/utils/secrets) should help with the creation and management.
+Extensions should do the same and generate dedicated CAs for their components (e.g. for signing a server certificate for cloud-controller-manager). They should not depend on the CA secrets managed by gardenlet.
+You can take a look at the [Secrets Management document](../development/secrets_management.md) for more details on how this can be achieved.

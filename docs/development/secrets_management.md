@@ -81,6 +81,7 @@ External components that want to reuse the `SecretsManager` should consider the 
   The given identity is added as a value for the `manager-identity` label on managed `Secret`s. 
   This label is used by the `Cleanup` function to select only those `Secret`s that are actually managed by the particular `SecretManager` instance. This is done to prevent removing still needed `Secret`s that are managed by other instances.
 - Generate dedicated CAs for signing certificates instead of depending on CAs managed by gardenlet.
+- Names of `Secret`s managed by external `SecretsManager` instances must not conflict with `Secret` names from other instances (e.g. gardenlet).
 - For CAs that should be rotated in lock-step with the Shoot CAs managed by gardenlet, components need to pass information about the last rotation initiation time and the current rotation phase to the `SecretsManager` upon initialization.
   The relevant information can be retrieved from the `Cluster` resource under `.spec.shoot.status.credentials.rotation.certificateAuthorities`.
 - Independent of the specific identity, secrets marked with the `Persist` option are automatically saved in the `ShootState` resource by gardenlet and are also restored by gardenlet on Control Plane Migration to the new Seed.
