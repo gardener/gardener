@@ -15,6 +15,7 @@
 package shoot_maintenance_test
 
 import (
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -176,6 +177,22 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 		logger.Infof("Delete CloudProfile %s", cloudProfile.Name)
 		Expect(testClient.Delete(ctx, cloudProfile)).To(Succeed())
+	})
+
+	It("should add task annotations", func() {
+		By("trigger maintenance")
+		Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+
+		waitForShootToBeMaintained(shoot)
+
+		By("ensuring task annotations are present")
+		Expect(shoot.Annotations).To(HaveKey("shoot.gardener.cloud/tasks"))
+		Expect(strings.Split(shoot.Annotations["shoot.gardener.cloud/tasks"], ",")).To(And(
+			ContainElement("deployInfrastructure"),
+			ContainElement("deployDNSRecordInternal"),
+			ContainElement("deployDNSRecordExternal"),
+			ContainElement("deployDNSRecordIngress"),
+		))
 	})
 
 	It("should unset the Shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion field", func() {

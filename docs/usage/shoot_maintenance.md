@@ -80,10 +80,10 @@ If you hibernate or wake-up your shoot then Gardener gets active right away.
 
 The shoot maintenance controller triggers special operations that are performed as part of the shoot reconciliation.
 
-### Infrastructure Reconciliation
+### `Infrastructure` and `DNSRecord` Reconciliation
 
-The reconciliation of the `Infrastructure` extension resource is only demanded during the shoot's maintenance time window.
-The rationale behind it is to prevent the Gardenlets from sending too many requests against the cloud provider APIs, especially if a user has many shoot clusters in the same cloud provider account.
+The reconciliation of the `Infrastructure` and `DNSRecord` extension resources is only demanded during the shoot's maintenance time window.
+The rationale behind it is to prevent sending too many requests against the cloud provider APIs, especially on large landscapes or if a user has many shoot clusters in the same cloud provider account.
 
 ### Restart Control Plane Controllers
 

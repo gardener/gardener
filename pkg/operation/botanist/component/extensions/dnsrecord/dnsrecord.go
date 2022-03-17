@@ -65,9 +65,13 @@ type Values struct {
 	Name string
 	// SecretName is the name of the secret referenced by the DNSRecord resource.
 	SecretName string
-	// ReconcileOnChange specifies that the DNSRecord resource should only be reconciled when first created or if its desired state has changed compared to the current one.
-	// This mode is used for owner DNS records to avoid competing reconciliations during the control plane migration "bad case" scenario.
-	ReconcileOnChange bool
+	// ReconcileOnlyOnChangeOrError specifies that the DNSRecord resource should only be reconciled when first created
+	// or if its last operation was not successful or if its desired state has changed compared to the current one.
+	ReconcileOnlyOnChangeOrError bool
+	// AnnotateOperation indicates if the DNSRecord resource shall be annotated with the respective
+	// "gardener.cloud/operation" (forcing a reconciliation or restoration). If this is false then the DNSRecord object
+	// will be created/updated but the extension controller will not act upon it.
+	AnnotateOperation bool
 	// Type is the type of the DNSRecord provider.
 	Type string
 	// SecretData is the secret data of the DNSRecord (containing provider credentials, etc.)
@@ -140,8 +144,10 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 	}
 
 	mutateFn := func() error {
-		metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-		metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+		if c.values.AnnotateOperation {
+			metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerOperation, operation)
+			metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+		}
 
 		c.dnsRecord.Spec = extensionsv1alpha1.DNSRecordSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -161,7 +167,7 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 		return nil
 	}
 
-	if c.values.ReconcileOnChange {
+	if c.values.ReconcileOnlyOnChangeOrError {
 		if err := c.client.Get(ctx, client.ObjectKeyFromObject(c.dnsRecord), c.dnsRecord); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return nil, err
