@@ -22,6 +22,7 @@ import (
 	gardenerconstantsv1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
@@ -94,10 +95,16 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	if err := c.Watch(
 		&source.Kind{Type: &resourcesv1alpha1.ManagedResource{}},
 		&handler.EnqueueRequestForObject{},
-		conf.ClassFilter, predicate.Or(
+		conf.ClassFilter,
+		predicate.Or(
 			predicate.GenerationChangedPredicate{},
 			managerpredicate.HasOperationAnnotation(),
 			managerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesHealthy, managerpredicate.ConditionChangedToUnhealthy),
+			managerpredicate.NoLongerIgnored(),
+		),
+		predicate.Or(
+			managerpredicate.NotIgnored(),
+			predicateutils.IsDeleting(),
 		),
 	); err != nil {
 		return fmt.Errorf("unable to watch ManagedResources: %w", err)
@@ -105,7 +112,10 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 
 	if err := c.Watch(
 		&source.Kind{Type: &corev1.Secret{}},
-		mapper.EnqueueRequestsFrom(SecretToManagedResourceMapper(conf.ClassFilter), mapper.UpdateWithOldAndNew),
+		mapper.EnqueueRequestsFrom(SecretToManagedResourceMapper(conf.ClassFilter, predicate.Or(
+			managerpredicate.NotIgnored(),
+			predicateutils.IsDeleting(),
+		)), mapper.UpdateWithOldAndNew),
 	); err != nil {
 		return fmt.Errorf("unable to watch Secrets mapping to ManagedResources: %w", err)
 	}

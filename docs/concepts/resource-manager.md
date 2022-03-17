@@ -103,6 +103,12 @@ spec:
 
 In this example the label `foo=bar` will be injected into the `Deployment` as well as into all created `ReplicaSet`s and `Pod`s.
 
+#### Preventing Reconciliations
+
+If a ManagedResource is annotated with `resources.gardener.cloud/ignore=true` then it will be skipped entirely by the controller (no reconciliations or deletions of managed resources at all).
+However, when the ManagedResource itself is deleted (for example when a shoot is deleted) then the annotation is not respected and all resources will be deleted as usual.
+This feature can be helpful to temporarily patch/change resources managed as part of such ManagedResource.
+
 #### Modes
 
 The gardener-resource-manager can manage a resource in different modes. The supported modes are:
