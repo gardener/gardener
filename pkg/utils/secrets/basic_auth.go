@@ -18,7 +18,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/infodata"
+
 	"k8s.io/apiserver/pkg/authentication/user"
 )
 
@@ -37,6 +39,8 @@ const (
 	DataKeyUserName = "username"
 	// DataKeyPassword is the key in a secret data holding the password.
 	DataKeyPassword = "password"
+	// DataKeySHA1Auth is the key in a secret data holding the sha1-schemed credentials pair as string.
+	DataKeySHA1Auth = "auth"
 )
 
 // BasicAuthSecretConfig contains the specification for a to-be-generated basic authentication secret.
@@ -138,6 +142,7 @@ func (b *BasicAuth) SecretData() map[string][]byte {
 	case BasicAuthFormatNormal:
 		data[DataKeyUserName] = []byte(b.Username)
 		data[DataKeyPassword] = []byte(b.Password)
+		data[DataKeySHA1Auth] = utils.CreateSHA1Secret(data[DataKeyUserName], data[DataKeyPassword])
 
 		fallthrough
 

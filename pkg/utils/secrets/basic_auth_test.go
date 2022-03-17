@@ -138,6 +138,7 @@ var _ = Describe("Basic Auth Secrets", func() {
 				DataKeyUserName: []byte("admin"),
 				DataKeyPassword: []byte("foo"),
 				DataKeyCSV:      []byte("foo,admin,admin,system:masters"),
+				DataKeySHA1Auth: []byte("YWRtaW46e1NIQX1DKzdIdGVvL0Q5dkpYUTNVZnp4YnduWGFpak09"),
 			}
 
 			expectedCSVFormatData = map[string][]byte{
