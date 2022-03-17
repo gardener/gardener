@@ -47,8 +47,11 @@ const (
 	// (public and private key) that can be used to SSH into the shoot nodes.
 	SecretNameSSHKeyPair = "ssh-keypair"
 	// SecretNameServiceAccountKey is a constant for the name of a Kubernetes secret object that contains a
-	// PEM-encoded private RSA or ECDSA key used by the Kube Controller Manager to sign service account tokens
+	// PEM-encoded private RSA or ECDSA key used by the Kube Controller Manager to sign service account tokens.
 	SecretNameServiceAccountKey = "service-account-key"
+	// SecretNameObservabilityIngress is a constant for the name of a Kubernetes secret object that contains the ingress
+	// credentials for observability components.
+	SecretNameObservabilityIngress = "observability-ingress"
 
 	// SecretNameGardener is a constant for the name of a Kubernetes secret object that contains the client
 	// certificate and a kubeconfig for a shoot cluster. It is used by Gardener and can be used by extension

@@ -70,11 +70,4 @@ const (
 
 	// GardenLokiPriorityClassName is the name of the PriorityClass for the Loki in the garden namespace
 	GardenLokiPriorityClassName = "garden-loki"
-
-	// MonitoringIngressCredentials is a constant for the name of a secret containing the monitoring credentials for
-	// operators monitoring for shoots.
-	MonitoringIngressCredentials = "monitoring-ingress-credentials"
-	// MonitoringIngressCredentialsUsers is a constant for the name of a secret containing the monitoring credentials
-	// for users monitoring for shoots.
-	MonitoringIngressCredentialsUsers = "monitoring-ingress-credentials-users"
 )
