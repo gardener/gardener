@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -216,8 +215,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				"enabled": b.Shoot.ReversedVPNEnabled,
 			},
 			"ingress": map[string]interface{}{
-				"class":           ingressClass,
-				"basicAuthSecret": basicAuth,
+				"class":          ingressClass,
+				"authSecretName": credentialsSecret.Name,
 				"hosts": []map[string]interface{}{
 					{
 						"hostName":   b.ComputePrometheusHost(),
@@ -348,7 +347,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		"kube-state-metrics-shoot": kubeStateMetricsShoot,
 	}
 
-	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-monitoring", "charts", "core"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(coreValues)); err != nil {
+	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "core"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(coreValues)); err != nil {
 		return err
 	}
 
@@ -424,7 +423,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-monitoring", "charts", "alertmanager"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(alertManagerValues)); err != nil {
+		if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "alertmanager"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(alertManagerValues)); err != nil {
 			return err
 		}
 	} else {
@@ -435,6 +434,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
 		// TODO(rfranzke): Remove in a future release.
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-basic-auth", Namespace: b.Shoot.SeedNamespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics", Namespace: b.Shoot.SeedNamespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-tls", Namespace: b.Shoot.SeedNamespace}},
 	)
