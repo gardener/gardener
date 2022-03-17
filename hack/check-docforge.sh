@@ -16,10 +16,10 @@
 
 set -e
 
-docCommitHash="12922abea4c5afa207cc9c09b18414cd2348890c"
+docCommitHash="6a018dc6a0307e64192ab48dcb90034dd0c5102a"
 
 echo "> Check Docforge Manifest"
-repoPath=${1-"$(readlink -f $(dirname ${0})/..)"}
+repoPath=${1-"$(readlink -f "$(dirname "${0}")/..")"}
 manifestPath=${2-"${repoPath}/.docforge/manifest.yaml"}
 diffDirs=${3-".docforge/;docs/"}
 repoName=${4-"gardener"}
@@ -31,9 +31,9 @@ function cleanup {
 }
 trap cleanup EXIT ERR INT TERM
 
-curl https://raw.githubusercontent.com/gardener/documentation/${docCommitHash}/.ci/check-manifest --output ${tmpDir}/check-manifest-script.sh && chmod +x ${tmpDir}/check-manifest-script.sh
-curl https://raw.githubusercontent.com/gardener/documentation/${docCommitHash}/.ci/check-manifest-config --output ${tmpDir}/manifest-config
+curl https://raw.githubusercontent.com/gardener/documentation/${docCommitHash}/.ci/check-manifest --output "${tmpDir}/check-manifest-script.sh" && chmod +x "${tmpDir}/check-manifest-script.sh"
+curl https://raw.githubusercontent.com/gardener/documentation/${docCommitHash}/.ci/check-manifest-config --output "${tmpDir}/manifest-config"
 scriptPath="${tmpDir}/check-manifest-script.sh"
 configPath="${tmpDir}/manifest-config"
 
-${scriptPath} --repo-path ${repoPath} --repo-name ${repoName} --use-token ${useToken} --manifest-path ${manifestPath} --diff-dirs ${diffDirs} --config-path ${configPath}
+${scriptPath} --repo-path "${repoPath}" --repo-name "${repoName}" --use-token "${useToken}" --manifest-path "${manifestPath}" --diff-dirs "${diffDirs}" --config-path "${configPath}"
