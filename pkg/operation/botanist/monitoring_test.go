@@ -37,6 +37,7 @@ import (
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -61,6 +62,9 @@ var _ = Describe("Monitoring", func() {
 	var (
 		ctrl *gomock.Controller
 
+		fakeGardenClient client.Client
+		k8sGardenClient  kubernetes.Interface
+
 		fakeSeedClient client.Client
 		k8sSeedClient  kubernetes.Interface
 
@@ -78,19 +82,25 @@ var _ = Describe("Monitoring", func() {
 
 		botanist *Botanist
 
-		ctx           = context.TODO()
-		seedNamespace = "shoot--foo--bar"
+		ctx              = context.TODO()
+		projectNamespace = "garden-foo"
+		seedNamespace    = "shoot--foo--bar"
+		shootName        = "bar"
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
+		fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
 		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{corev1.SchemeGroupVersion, appsv1.SchemeGroupVersion})
 		renderer := cr.NewWithServerVersion(&version.Info{GitVersion: "1.2.3"})
 		chartApplier = kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(fakeSeedClient, mapper))
 
+		k8sGardenClient = fake.NewClientSetBuilder().
+			WithClient(fakeGardenClient).
+			Build()
 		k8sSeedClient = fake.NewClientSetBuilder().
 			WithClient(fakeSeedClient).
 			WithChartApplier(chartApplier).
@@ -109,6 +119,7 @@ var _ = Describe("Monitoring", func() {
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
+				K8sGardenClient: k8sGardenClient,
 				K8sSeedClient:   k8sSeedClient,
 				SecretsManager:  sm,
 				Config:          &config.GardenletConfiguration{},
@@ -155,6 +166,10 @@ var _ = Describe("Monitoring", func() {
 		})
 
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      shootName,
+				Namespace: projectNamespace,
+			},
 			Status: gardencorev1beta1.ShootStatus{
 				TechnicalID: seedNamespace,
 			},
@@ -244,6 +259,20 @@ var _ = Describe("Monitoring", func() {
 			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret2), &corev1.Secret{})).To(BeNotFoundError())
 			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret3), &corev1.Secret{})).To(BeNotFoundError())
 			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret4), &corev1.Secret{})).To(BeNotFoundError())
+		})
+
+		It("should sync the ingress credentials for the users observability to the garden project namespace", func() {
+			defer test.WithVar(&ChartsPath, filepath.Join("..", "..", "..", "charts"))()
+
+			Expect(fakeGardenClient.Get(ctx, kutil.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(BeNotFoundError())
+
+			Expect(botanist.DeploySeedGrafana(ctx)).To(Succeed())
+
+			secret := &corev1.Secret{}
+			Expect(fakeGardenClient.Get(ctx, kutil.Key(projectNamespace, shootName+".monitoring"), secret)).To(Succeed())
+			Expect(secret.Annotations).To(HaveKeyWithValue("url", "https://gu-foo--bar."))
+			Expect(secret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "monitoring"))
+			Expect(secret.Data).To(And(HaveKey("username"), HaveKey("password"), HaveKey("auth"), HaveKey("basic_auth.csv")))
 		})
 	})
 })

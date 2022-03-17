@@ -508,7 +508,17 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		return err
 	}
 
-	return b.deployGrafanaCharts(ctx, credentialsUsersSecret, grafanaUsersRole, usersDashboards.String(), common.GrafanaUsersPrefix, ingressTLSSecretName)
+	if err := b.deployGrafanaCharts(ctx, credentialsUsersSecret, grafanaUsersRole, usersDashboards.String(), common.GrafanaUsersPrefix, ingressTLSSecretName); err != nil {
+		return err
+	}
+
+	return b.syncShootCredentialToGarden(
+		ctx,
+		gutil.ShootProjectSecretSuffixMonitoring,
+		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring},
+		map[string]string{"url": "https://" + b.ComputeGrafanaUsersHost()},
+		credentialsUsersSecret.Data,
+	)
 }
 
 func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretKeys []string) (map[string]interface{}, error) {
