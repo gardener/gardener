@@ -42,17 +42,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// GetSecretKeysWithPrefix returns a list of keys of the given map <m> which are prefixed with <kind>.
-func GetSecretKeysWithPrefix(kind string, m map[string]*corev1.Secret) []string {
-	var result []string
-	for key := range m {
-		if strings.HasPrefix(key, kind) {
-			result = append(result, key)
-		}
-	}
-	return result
-}
-
 // FilterEntriesByPrefix returns a list of strings which begin with the given prefix.
 func FilterEntriesByPrefix(prefix string, entries []string) []string {
 	var result []string

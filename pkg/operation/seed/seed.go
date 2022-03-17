@@ -720,26 +720,17 @@ func RunReconcileSeedFlow(
 		"storage": seed.GetValidVolumeSize("1Gi"),
 	}
 
-	alertingSMTPKeys := common.GetSecretKeysWithPrefix(v1beta1constants.GardenRoleAlerting, secrets)
-
-	if seedWantsAlertmanager(alertingSMTPKeys, secrets) {
-		emailConfigs := make([]map[string]interface{}, 0, len(alertingSMTPKeys))
-		for _, key := range alertingSMTPKeys {
-			if string(secrets[key].Data["auth_type"]) == "smtp" {
-				secret := secrets[key]
-				emailConfigs = append(emailConfigs, map[string]interface{}{
-					"to":            string(secret.Data["to"]),
-					"from":          string(secret.Data["from"]),
-					"smarthost":     string(secret.Data["smarthost"]),
-					"auth_username": string(secret.Data["auth_username"]),
-					"auth_identity": string(secret.Data["auth_identity"]),
-					"auth_password": string(secret.Data["auth_password"]),
-				})
-				alertManagerConfig["enabled"] = true
-				alertManagerConfig["emailConfigs"] = emailConfigs
-				break
-			}
+	if alertingSMTPSecret, ok := secrets[v1beta1constants.GardenRoleAlerting]; ok && string(alertingSMTPSecret.Data["auth_type"]) == "smtp" {
+		emailConfig := map[string]interface{}{
+			"to":            string(alertingSMTPSecret.Data["to"]),
+			"from":          string(alertingSMTPSecret.Data["from"]),
+			"smarthost":     string(alertingSMTPSecret.Data["smarthost"]),
+			"auth_username": string(alertingSMTPSecret.Data["auth_username"]),
+			"auth_identity": string(alertingSMTPSecret.Data["auth_identity"]),
+			"auth_password": string(alertingSMTPSecret.Data["auth_password"]),
 		}
+		alertManagerConfig["enabled"] = true
+		alertManagerConfig["emailConfigs"] = []map[string]interface{}{emailConfig}
 	} else {
 		alertManagerConfig["enabled"] = false
 		if err := common.DeleteAlertmanager(ctx, seedClient, v1beta1constants.GardenNamespace); err != nil {
@@ -1483,15 +1474,6 @@ func (s *Seed) GetValidVolumeSize(size string) string {
 	}
 
 	return size
-}
-
-func seedWantsAlertmanager(keys []string, secrets map[string]*corev1.Secret) bool {
-	for _, key := range keys {
-		if string(secrets[key].Data["auth_type"]) == "smtp" {
-			return true
-		}
-	}
-	return false
 }
 
 // GetWildcardCertificate gets the wildcard certificate for the seed's ingress domain.
