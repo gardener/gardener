@@ -177,6 +177,7 @@ func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string, l
 		numberOfInternalDomainSecrets       = 0
 		numberOfOpenVPNDiffieHellmanSecrets = 0
 		numberOfAlertingSecrets             = 0
+		numberOfGlobalMonitoringSecrets     = 0
 	)
 
 	secretList := &corev1.SecretList{}
@@ -244,6 +245,7 @@ func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string, l
 			monitoringSecret := secret
 			secretsMap[v1beta1constants.GardenRoleGlobalMonitoring] = &monitoringSecret
 			logInfo = append(logInfo, fmt.Sprintf("monitoring basic auth secret %q", secret.Name))
+			numberOfGlobalMonitoringSecrets++
 		}
 
 		// Retrieving basic auth secret for remote write monitoring with a label
@@ -291,6 +293,10 @@ func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string, l
 	// is provided then no alerts will be sent.
 	if numberOfAlertingSecrets > 1 {
 		return nil, fmt.Errorf("can only accept at most one alerting secret, but found %d", numberOfAlertingSecrets)
+	}
+
+	if numberOfGlobalMonitoringSecrets > 1 {
+		return nil, fmt.Errorf("can only accept at most one global monitoring secret, but found %d", numberOfGlobalMonitoringSecrets)
 	}
 
 	log.Infof("Found secrets in namespace %q: %s", namespace, strings.Join(logInfo, ", "))
