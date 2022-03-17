@@ -411,6 +411,7 @@ var _ = Describe("Worker", func() {
 				Spec: *expectedWorkerSpec,
 			}))
 		})
+
 		It("should initialize nodeTemplate from cloudProfile, when machineType updated for worker pool", func() {
 			defer test.WithVars(&worker.TimeNow, mockNow.Do)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
@@ -438,9 +439,7 @@ var _ = Describe("Worker", func() {
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 			obj := &extensionsv1alpha1.Worker{}
-
-			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj)).To(Succeed())
 
 			Expect(obj).To(DeepEqual(&extensionsv1alpha1.Worker{
 				TypeMeta: metav1.TypeMeta{
