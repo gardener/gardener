@@ -40,7 +40,7 @@ var _ = Describe("Cleanup", func() {
 
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-		m = New(logr.Discard(), fakeClient, namespace, nil).(*manager)
+		m = New(logr.Discard(), fakeClient, namespace, "test", nil).(*manager)
 	})
 
 	Describe("#Cleanup", func() {

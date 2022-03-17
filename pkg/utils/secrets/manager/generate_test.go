@@ -42,7 +42,7 @@ var _ = Describe("Generate", func() {
 
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-		m = New(logr.Discard(), fakeClient, namespace, nil).(*manager)
+		m = New(logr.Discard(), fakeClient, namespace, "test", nil).(*manager)
 	})
 
 	Describe("#Generate", func() {
@@ -101,7 +101,7 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
 				By("changing last rotation initiation time and generate again")
-				m = New(logr.Discard(), fakeClient, namespace, map[string]time.Time{name: time.Now()}).(*manager)
+				m = New(logr.Discard(), fakeClient, namespace, "test", map[string]time.Time{name: time.Now()}).(*manager)
 
 				newSecret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
@@ -198,8 +198,9 @@ var _ = Describe("Generate", func() {
 				By("finding created bundle secret")
 				secretList := &corev1.SecretList{}
 				Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
-					"managed-by": "secrets-manager",
-					"bundle-for": name,
+					"managed-by":       "secrets-manager",
+					"manager-identity": "test",
+					"bundle-for":       name,
 				})).To(Succeed())
 				Expect(secretList.Items).To(HaveLen(1))
 
@@ -223,7 +224,7 @@ var _ = Describe("Generate", func() {
 				oldBundleSecret := secretInfos.bundle.obj
 
 				By("changing secret config and generate again")
-				m = New(logr.Discard(), fakeClient, namespace, map[string]time.Time{name: time.Now()}).(*manager)
+				m = New(logr.Discard(), fakeClient, namespace, "test", map[string]time.Time{name: time.Now()}).(*manager)
 				newSecret, err := m.Generate(ctx, config, Rotate(KeepOld))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newSecret)
@@ -231,8 +232,9 @@ var _ = Describe("Generate", func() {
 				By("finding created bundle secret")
 				secretList := &corev1.SecretList{}
 				Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
-					"managed-by": "secrets-manager",
-					"bundle-for": name,
+					"managed-by":       "secrets-manager",
+					"manager-identity": "test",
+					"bundle-for":       name,
 				})).To(Succeed())
 				Expect(secretList.Items).To(HaveLen(2))
 
@@ -283,7 +285,7 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, serverSecret)
 
 				By("rotating CA")
-				m = New(logr.Discard(), fakeClient, namespace, map[string]time.Time{caName: time.Now()}).(*manager)
+				m = New(logr.Discard(), fakeClient, namespace, "test", map[string]time.Time{caName: time.Now()}).(*manager)
 				newCASecret, err := m.Generate(ctx, caConfig, Rotate(KeepOld))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newCASecret)
@@ -310,7 +312,7 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, clientSecret)
 
 				By("rotating CA")
-				m = New(logr.Discard(), fakeClient, namespace, map[string]time.Time{caName: time.Now()}).(*manager)
+				m = New(logr.Discard(), fakeClient, namespace, "test", map[string]time.Time{caName: time.Now()}).(*manager)
 				newCASecret, err := m.Generate(ctx, caConfig, Rotate(KeepOld))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, newCASecret)

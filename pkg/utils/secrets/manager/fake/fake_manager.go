@@ -28,6 +28,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// ManagerIdentity is the fake secret manager's identity.
+const ManagerIdentity = "fake"
+
 type fakeManager struct {
 	client    client.Client
 	namespace string
@@ -68,7 +71,7 @@ func (m *fakeManager) Generate(ctx context.Context, config secretutils.ConfigInt
 		return nil, err
 	}
 
-	objectMeta, err := secretsmanager.ObjectMeta(m.namespace, config, "", nil, &options.Persist, nil)
+	objectMeta, err := secretsmanager.ObjectMeta(m.namespace, ManagerIdentity, config, "", nil, &options.Persist, nil)
 	if err != nil {
 		return nil, err
 	}
