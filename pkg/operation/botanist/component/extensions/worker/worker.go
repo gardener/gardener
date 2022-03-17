@@ -207,9 +207,9 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			workerPoolKubernetesVersion = *workerPool.Kubernetes.Version
 		}
 
-		nodeTemplate, prevMachineType := w.findExistingNodeTemplateByName(ctx, obj, workerPool.Name)
+		nodeTemplate, machineType := w.findNodeTemplateAndMachineTypeByPoolName(ctx, obj, workerPool.Name)
 
-		if nodeTemplate == nil || prevMachineType != workerPool.Machine.Type {
+		if nodeTemplate == nil || machineType != workerPool.Machine.Type {
 			// initializing nodeTemplate by fetching details from cloudprofile, if present there
 			if machineDetails := gardencorev1beta1helper.FindMachineTypeByName(w.values.MachineTypes, workerPool.Machine.Type); machineDetails != nil {
 				nodeTemplate = &extensionsv1alpha1.NodeTemplate{
@@ -370,7 +370,7 @@ func (w *worker) MachineDeployments() []extensionsv1alpha1.MachineDeployment {
 	return w.machineDeployments
 }
 
-func (w *worker) findExistingNodeTemplateByName(ctx context.Context, obj *extensionsv1alpha1.Worker, poolName string) (*extensionsv1alpha1.NodeTemplate, string) {
+func (w *worker) findNodeTemplateAndMachineTypeByPoolName(ctx context.Context, obj *extensionsv1alpha1.Worker, poolName string) (*extensionsv1alpha1.NodeTemplate, string) {
 	for _, pool := range obj.Spec.Pools {
 		if pool.Name == poolName {
 			return pool.NodeTemplate, pool.MachineType
