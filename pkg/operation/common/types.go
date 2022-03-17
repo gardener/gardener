@@ -28,12 +28,6 @@ const (
 	// GrafanaUsersPrefix is a constant for a prefix used for the users Grafana instance.
 	GrafanaUsersPrefix = "gu"
 
-	// GrafanaOperatorsRole is a constant for the operators role.
-	GrafanaOperatorsRole = "operators"
-
-	// GrafanaUsersRole is a constant for the users role.
-	GrafanaUsersRole = "users"
-
 	// PrometheusPrefix is a constant for a prefix used for the Prometheus instance.
 	PrometheusPrefix = "p"
 

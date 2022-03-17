@@ -51,6 +51,9 @@ import (
 const (
 	secretNameIngressOperators = v1beta1constants.SecretNameObservabilityIngress
 	secretNameIngressUsers     = v1beta1constants.SecretNameObservabilityIngress + "-users"
+
+	grafanaOperatorsRole = "operators"
+	grafanaUsersRole     = "users"
 )
 
 func observabilityIngressSecretConfig(name string) *secrets.BasicAuthSecretConfig {
@@ -501,11 +504,11 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		ingressTLSSecretName = ingressTLSSecret.Name
 	}
 
-	if err := b.deployGrafanaCharts(ctx, credentialsSecret, common.GrafanaOperatorsRole, operatorsDashboards.String(), common.GrafanaOperatorsPrefix, ingressTLSSecretName); err != nil {
+	if err := b.deployGrafanaCharts(ctx, credentialsSecret, grafanaOperatorsRole, operatorsDashboards.String(), common.GrafanaOperatorsPrefix, ingressTLSSecretName); err != nil {
 		return err
 	}
 
-	return b.deployGrafanaCharts(ctx, credentialsUsersSecret, common.GrafanaUsersRole, usersDashboards.String(), common.GrafanaUsersPrefix, ingressTLSSecretName)
+	return b.deployGrafanaCharts(ctx, credentialsUsersSecret, grafanaUsersRole, usersDashboards.String(), common.GrafanaUsersPrefix, ingressTLSSecretName)
 }
 
 func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretKeys []string) (map[string]interface{}, error) {
@@ -635,11 +638,11 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *c
 
 // DeleteGrafana will delete all grafana instances from the seed cluster.
 func (b *Botanist) DeleteGrafana(ctx context.Context) error {
-	if err := common.DeleteGrafanaByRole(ctx, b.K8sSeedClient, b.Shoot.SeedNamespace, common.GrafanaOperatorsRole); err != nil {
+	if err := common.DeleteGrafanaByRole(ctx, b.K8sSeedClient, b.Shoot.SeedNamespace, grafanaOperatorsRole); err != nil {
 		return err
 	}
 
-	return common.DeleteGrafanaByRole(ctx, b.K8sSeedClient, b.Shoot.SeedNamespace, common.GrafanaUsersRole)
+	return common.DeleteGrafanaByRole(ctx, b.K8sSeedClient, b.Shoot.SeedNamespace, grafanaUsersRole)
 }
 
 // DeleteSeedMonitoring will delete the monitoring stack from the Seed cluster to avoid phantom alerts
