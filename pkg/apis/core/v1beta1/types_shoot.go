@@ -211,6 +211,9 @@ type ShootCredentialsRotation struct {
 type ShootCARotation struct {
 	// Phase describes the phase of the certificate authority credential rotation.
 	Phase ShootCredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
+	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+	// +optional
+	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
 	// LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
 	// completed.
 	// +optional

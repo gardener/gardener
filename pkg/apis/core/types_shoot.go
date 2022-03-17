@@ -169,6 +169,8 @@ type ShootCredentialsRotation struct {
 type ShootCARotation struct {
 	// Phase describes the phase of the certificate authority credential rotation.
 	Phase ShootCredentialsRotationPhase
+	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+	LastInitiationTime *metav1.Time
 	// LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
 	// completed.
 	LastCompletionTime *metav1.Time

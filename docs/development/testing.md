@@ -69,6 +69,12 @@ make gardener-up
 make test-e2e-local  # alternatively: make test-e2e-local-fast
 ```
 
+If you want to run a specific set of e2e test cases, you can also execute them using `./hack/test-e2e-local.sh` directly in combination with [ginkgo label filters](https://onsi.github.io/ginkgo/#spec-labels). For example:
+
+```bash
+./hack/test-e2e-local.sh --label-filter "Shoot && ca-rotation"
+```
+
 Also see: [developing Gardener locally](getting_started_locally.md) and [deploying Gardener locally](../deployment/getting_started_locally.md).
 
 ## Test Machinery Tests

@@ -8867,6 +8867,20 @@ ShootCredentialsRotationPhase
 </tr>
 <tr>
 <td>
+<code>lastInitiationTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>lastCompletionTime</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">

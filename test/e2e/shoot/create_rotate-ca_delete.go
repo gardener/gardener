@@ -52,7 +52,8 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 		Eventually(func(g Gomega) bool {
 			g.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot)).To(Succeed())
 			return helper.GetShootCARotationPhase(f.Shoot.Status.Credentials) == gardencorev1beta1.RotationPreparing &&
-				!metav1.HasAnnotation(f.Shoot.ObjectMeta, v1beta1constants.GardenerOperation)
+				!metav1.HasAnnotation(f.Shoot.ObjectMeta, v1beta1constants.GardenerOperation) &&
+				time.Now().UTC().Sub(f.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time.UTC()) <= time.Minute
 		}).Should(BeTrue())
 
 		Expect(f.WaitForShootToBeReconciled(ctx, f.Shoot)).To(Succeed())
