@@ -191,9 +191,13 @@ var _ = Describe("Monitoring", func() {
 			legacySecret1 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "prometheus-basic-auth"}}
 			Expect(fakeSeedClient.Create(ctx, legacySecret1)).To(Succeed())
 
+			legacySecret2 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "alertmanager-basic-auth"}}
+			Expect(fakeSeedClient.Create(ctx, legacySecret2)).To(Succeed())
+
 			Expect(botanist.DeploySeedMonitoring(ctx)).To(Succeed())
 
 			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret1), &corev1.Secret{})).To(BeNotFoundError())
+			Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret2), &corev1.Secret{})).To(BeNotFoundError())
 		})
 	})
 

@@ -407,8 +407,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 		alertManagerValues, err := b.InjectSeedShootImages(map[string]interface{}{
 			"ingress": map[string]interface{}{
-				"class":           ingressClass,
-				"basicAuthSecret": basicAuthUsers,
+				"class":          ingressClass,
+				"authSecretName": credentialsUsersSecret.Name,
 				"hosts": []map[string]interface{}{
 					{
 						"hostName":   b.ComputeAlertManagerHost(),
@@ -435,6 +435,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
 		// TODO(rfranzke): Remove in a future release.
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-basic-auth", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-basic-auth", Namespace: b.Shoot.SeedNamespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics", Namespace: b.Shoot.SeedNamespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-tls", Namespace: b.Shoot.SeedNamespace}},
 	)
