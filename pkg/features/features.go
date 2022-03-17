@@ -138,6 +138,24 @@ const (
 	// owner: @rfranzke
 	// alpha: v1.42.0
 	ShootCARotation featuregate.Feature = "ShootCARotation"
+
+	// ShootMaxTokenExpirationOverwrite makes the Gardener API server overwriting values in the
+	// `.spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration` field of Shoot specifications to
+	// - be at least 720h (30d) when the current value is lower
+	// - be at most 2160h (90d) when the current value is higher
+	// before persisting the object to etcd.
+	// owner: @rfranzke
+	// alpha: v1.43.0
+	ShootMaxTokenExpirationOverwrite featuregate.Feature = "ShootMaxTokenExpirationOverwrite"
+
+	// ShootMaxTokenExpirationValidation enables validations on Gardener API server that enforce that the value of the
+	// `.spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration` field
+	// - is at least 720h (30d).
+	// - is at most 2160h (90d).
+	// Only enable this after ShootMaxTokenExpirationOverwrite is enabled and all shoots got updated accordingly.
+	// owner: @rfranzke
+	// alpha: v1.43.0
+	ShootMaxTokenExpirationValidation featuregate.Feature = "ShootMaxTokenExpirationValidation"
 )
 
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
@@ -159,6 +177,8 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ForceRestore:                               {Default: false, PreRelease: featuregate.Alpha},
 	DisableDNSProviderManagement:               {Default: false, PreRelease: featuregate.Alpha},
 	ShootCARotation:                            {Default: false, PreRelease: featuregate.Alpha},
+	ShootMaxTokenExpirationOverwrite:           {Default: false, PreRelease: featuregate.Alpha},
+	ShootMaxTokenExpirationValidation:          {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

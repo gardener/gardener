@@ -798,8 +798,20 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured bool, fldPa
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "extendTokenExpiration"), "this field is only available in Kubernetes v1.19+"))
 			}
 
-			if kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration != nil && kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration < 0 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), *kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration, "can not be negative"))
+			if kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration != nil {
+				if kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration < 0 {
+					allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), *kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration, "can not be negative"))
+				}
+
+				if utilfeature.DefaultFeatureGate.Enabled(features.ShootMaxTokenExpirationValidation) {
+					if duration := kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration; duration > 0 && duration < 720*time.Hour {
+						allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), "must be at least 720h (30d)"))
+					}
+
+					if duration := kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration; duration > 2160*time.Hour {
+						allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), "must be at most 2160h (90d)"))
+					}
+				}
 			}
 
 			geqKubernetes122, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.22")

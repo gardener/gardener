@@ -207,7 +207,7 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 	if err := gutil.
 		NewShootAccessSecret(downloader.SecretName, o.values.Namespace).
 		WithTargetSecret(downloader.SecretName, metav1.NamespaceSystem).
-		WithTokenExpirationDuration("2160h").
+		WithTokenExpirationDuration("720h").
 		Reconcile(ctx, o.client); err != nil {
 		return err
 	}

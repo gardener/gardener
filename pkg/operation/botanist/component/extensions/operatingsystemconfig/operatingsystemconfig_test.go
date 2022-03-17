@@ -319,7 +319,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Expect(secret.Annotations).To(Equal(map[string]string{
 					"serviceaccount.resources.gardener.cloud/name":                      "cloud-config-downloader",
 					"serviceaccount.resources.gardener.cloud/namespace":                 "kube-system",
-					"serviceaccount.resources.gardener.cloud/token-expiration-duration": "2160h",
+					"serviceaccount.resources.gardener.cloud/token-expiration-duration": "720h",
 					"token-requestor.resources.gardener.cloud/target-secret-name":       "cloud-config-downloader",
 					"token-requestor.resources.gardener.cloud/target-secret-namespace":  "kube-system",
 				}))
@@ -452,7 +452,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Annotations: map[string]string{
 							"serviceaccount.resources.gardener.cloud/name":                      "cloud-config-downloader",
 							"serviceaccount.resources.gardener.cloud/namespace":                 "kube-system",
-							"serviceaccount.resources.gardener.cloud/token-expiration-duration": "2160h",
+							"serviceaccount.resources.gardener.cloud/token-expiration-duration": "720h",
 							"token-requestor.resources.gardener.cloud/target-secret-name":       "cloud-config-downloader",
 							"token-requestor.resources.gardener.cloud/target-secret-namespace":  "kube-system",
 						},

@@ -1686,6 +1686,38 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
+			Context("when ShootMaxTokenExpirationValidation=true", func() {
+				It("should forbid too low values for the max token duration", func() {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationValidation, true)()
+
+					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+						MaxTokenExpiration: &metav1.Duration{Duration: time.Hour},
+					}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration"),
+					}))))
+				})
+
+				It("should forbid too high values for the max token duration", func() {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationValidation, true)()
+
+					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+						MaxTokenExpiration: &metav1.Duration{Duration: 3000 * time.Hour},
+					}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration"),
+					}))))
+				})
+			})
+
 			It("should not allow too specify the 'extend' flag if kubernetes is lower than 1.19", func() {
 				shoot.Spec.Kubernetes.Version = "1.18.9"
 				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{

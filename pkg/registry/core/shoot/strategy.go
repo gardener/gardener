@@ -17,6 +17,7 @@ package shoot
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -26,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -57,6 +59,10 @@ func (shootStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 
 	shoot.Generation = 1
 	shoot.Status = core.ShootStatus{}
+
+	if utilfeature.DefaultFeatureGate.Enabled(features.ShootMaxTokenExpirationOverwrite) {
+		overwriteMaxTokenExpiration(shoot)
+	}
 }
 
 func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
@@ -66,6 +72,27 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
+	}
+
+	if utilfeature.DefaultFeatureGate.Enabled(features.ShootMaxTokenExpirationOverwrite) {
+		// Note that this must be executed after `mustIncreaseGeneration` is called, otherwise we might trigger a
+		// reconciliation outside of the maintenance time window because the spec might change in below call.
+		overwriteMaxTokenExpiration(newShoot)
+	}
+}
+
+func overwriteMaxTokenExpiration(shoot *core.Shoot) {
+	if shoot.Spec.Kubernetes.KubeAPIServer != nil &&
+		shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig != nil &&
+		shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration != nil {
+
+		if shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration < 720*time.Hour {
+			shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration = &metav1.Duration{Duration: 720 * time.Hour}
+		}
+
+		if shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration > 2160*time.Hour {
+			shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration = &metav1.Duration{Duration: 2160 * time.Hour}
+		}
 	}
 }
 
