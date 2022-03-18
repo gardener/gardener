@@ -36,7 +36,7 @@ This `Secret` has multiple keys:
 - `kubeconfig`: the completed kubeconfig
 - `token`: token for `system:cluster-admin` user
 - `username`/`password`: basic auth credentials (if enabled via `Shoot.spec.kubernetes.kubeAPIServer.enableBasicAuthentication`)
-- `ca.crt`: the CA bundle for establishing trust to the API server (same as in the [Cluster CA secret](#cluster-certificate-authority))
+- `ca.crt`: the CA bundle for establishing trust to the API server (same as in the [Cluster CA bundle secret](#cluster-certificate-authority-bundle))
 
 ---
 **NOTE**
@@ -55,17 +55,16 @@ These client certificates are not revocable and thus a full credential rotation 
 
 You can check the `.status.credentials.rotation.kubeconfig` field in the `Shoot` to see when the rotation was last initiated or last completed.
 
-#### Cluster Certificate Authority
+#### Cluster Certificate Authority Bundle
 
 *Name*: `<shoot-name>.ca-cluster`
 
-*Description*: Certificate Authority (CA) public key of the Cluster (`Secret` key: `ca.crt`).
+*Description*: Certificate Authority (CA) bundle of the Cluster (`Secret` key: `ca.crt`).
 
-This CA is used for signing serving certificates of the Shoot's API server. Hence, the public key contained in this `Secret` can be used to verify the API server's identity when communicating with its public endpoint (e.g. as `certificate-authority-data` in a Kubeconfig).
-This is the same public key that is also contained in the Kubeconfig's `certificate-authority-data` field.
+This bundle contains one or multiple CAs which are used for signing serving certificates of the Shoot's API server. Hence, the certificates contained in this `Secret` can be used to verify the API server's identity when communicating with its public endpoint (e.g. as `certificate-authority-data` in a Kubeconfig).
+This is the same certificate that is also contained in the Kubeconfig's `certificate-authority-data` field.
 
 *Rotation*: Not supported yet, but work is in progress. See [gardener/gardener#3292](https://github.com/gardener/gardener/issues/3292) and [GEP-18](https://github.com/gardener/gardener/blob/release-v1.42/docs/proposals/18-shoot-CA-rotation.md) for more details.
-During an ongoing CA rotation operation, this `Secret` contains a certificate bundle of both the old and the new CA certificate.
 
 #### Monitoring
 
