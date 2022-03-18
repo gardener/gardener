@@ -20,6 +20,8 @@ import (
 	"strings"
 
 	"github.com/gardener/gardener/pkg/utils"
+
+	"k8s.io/apimachinery/pkg/util/clock"
 )
 
 var (
@@ -62,4 +64,7 @@ fgsCgYEAzBjM5L4kKcyF5mC1v6NyEaQB8Cve3gfFatLfFrjNwHbvdY5PEa/x0NqS
 i/WyG5dokMowEJSvpCBwHbAYMLlNK7oMUpXlqcRoYo24U6Mwj68=
 -----END RSA PRIVATE KEY-----`))
 	}
+
+	// Clock is an alias for clock.RealClock. Exposed for testing.
+	Clock clock.Clock = clock.RealClock{}
 )
