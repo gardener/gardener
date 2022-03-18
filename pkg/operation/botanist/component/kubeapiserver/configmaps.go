@@ -27,9 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
@@ -45,28 +42,6 @@ const (
 	configMapEgressSelectorNamePrefix = "kube-apiserver-egress-selector-config"
 	configMapEgressSelectorDataKey    = "egress-selector-configuration.yaml"
 )
-
-var (
-	scheme *runtime.Scheme
-	codec  runtime.Codec
-)
-
-func init() {
-	scheme = runtime.NewScheme()
-	utilruntime.Must(apiserverv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(auditv1.AddToScheme(scheme))
-
-	var (
-		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{
-			Yaml:   true,
-			Pretty: false,
-			Strict: false,
-		})
-		versions = schema.GroupVersions([]schema.GroupVersion{apiserverv1alpha1.SchemeGroupVersion, auditv1.SchemeGroupVersion})
-	)
-
-	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
-}
 
 func (k *kubeAPIServer) emptyConfigMap(name string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: k.namespace}}
@@ -172,8 +147,8 @@ func (k *kubeAPIServer) reconcileConfigMapEgressSelector(ctx context.Context, co
 	if err != nil {
 		return err
 	}
-	configMap.Data = map[string]string{configMapEgressSelectorDataKey: string(data)}
 
+	configMap.Data = map[string]string{configMapEgressSelectorDataKey: string(data)}
 	utilruntime.Must(kutil.MakeUnique(configMap))
 
 	return kutil.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
