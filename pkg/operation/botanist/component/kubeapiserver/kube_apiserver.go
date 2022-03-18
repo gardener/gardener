@@ -529,8 +529,6 @@ type Secrets struct {
 	CAFrontProxy component.Secret
 	// Etcd is the client certificate for the kube-apiserver to talk to etcd.
 	Etcd component.Secret
-	// EtcdEncryptionConfig is the configuration containing information how to encrypt the etcd data.
-	EtcdEncryptionConfig component.Secret
 	// HTTPProxy is the client certificate for the http proxy to talk to the kube-apiserver..
 	// Only relevant if VPNConfig.ReversedVPNEnabled is true.
 	HTTPProxy *component.Secret
@@ -564,7 +562,6 @@ func (s *Secrets) all() map[string]secret {
 		"CAEtcd":                 {Secret: &s.CAEtcd},
 		"CAFrontProxy":           {Secret: &s.CAFrontProxy},
 		"Etcd":                   {Secret: &s.Etcd},
-		"EtcdEncryptionConfig":   {Secret: &s.EtcdEncryptionConfig},
 		"HTTPProxy":              {Secret: s.HTTPProxy, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
 		"KubeAggregator":         {Secret: &s.KubeAggregator},
 		"KubeAPIServerToKubelet": {Secret: &s.KubeAPIServerToKubelet},

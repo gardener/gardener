@@ -40,10 +40,6 @@ const (
 	// which is used to sign service accounts.
 	SecretServiceAccountSigningKeyDataKeySigningKey = "signing-key"
 
-	// SecretEtcdEncryptionConfigurationDataKey is a constant for a key in the data map that contains the config
-	// which is used to encrypt etcd data.
-	SecretEtcdEncryptionConfigurationDataKey = "encryption-configuration.yaml"
-
 	// SecretStaticTokenName is a constant for the name of the static-token secret.
 	SecretStaticTokenName = "kube-apiserver-static-token"
 	// SecretBasicAuthName is a constant for the name of the basic-auth secret.

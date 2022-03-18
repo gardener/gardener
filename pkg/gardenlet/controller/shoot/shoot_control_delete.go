@@ -287,16 +287,6 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ControlPlane.Wait).DoIf(cleanupShootResources && controlPlaneDeploymentNeeded),
 			Dependencies: flow.NewTaskIDs(deployControlPlane),
 		})
-		generateEncryptionConfigurationMetaData = g.Add(flow.Task{
-			Name:         "Generating etcd encryption configuration",
-			Fn:           flow.TaskFn(botanist.GenerateEncryptionConfiguration).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
-		})
-		createOrUpdateETCDEncryptionConfiguration = g.Add(flow.Task{
-			Name:         "Applying etcd encryption configuration",
-			Fn:           flow.TaskFn(botanist.ApplyEncryptionConfiguration).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists, generateEncryptionConfigurationMetaData),
-		})
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name: "Deploying Kubernetes API server",
 			Fn:   flow.TaskFn(botanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources),
@@ -306,7 +296,6 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 				waitUntilEtcdReady,
 				waitUntilKubeAPIServerServiceIsReady,
 				waitUntilControlPlaneReady,
-				createOrUpdateETCDEncryptionConfiguration,
 			).InsertIf(!staticNodesCIDR),
 		})
 		scaleUpKubeAPIServer = g.Add(flow.Task{

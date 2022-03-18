@@ -46,7 +46,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
-	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/operation/garden"
 
 	"github.com/Masterminds/semver"
@@ -94,8 +93,7 @@ type Shoot struct {
 	ExposureClass              *gardencorev1alpha1.ExposureClass
 	BackupEntryName            string
 
-	Components     *Components
-	ETCDEncryption *etcdencryption.EncryptionConfig
+	Components *Components
 }
 
 // Components contains different components deployed in the Shoot cluster.

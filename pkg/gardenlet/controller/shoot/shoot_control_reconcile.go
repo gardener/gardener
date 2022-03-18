@@ -290,21 +290,6 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Fn:           botanist.Shoot.Components.Extensions.ControlPlane.Wait,
 			Dependencies: flow.NewTaskIDs(deployControlPlane),
 		})
-		generateEncryptionConfigurationMetaData = g.Add(flow.Task{
-			Name:         "Generating etcd encryption configuration",
-			Fn:           botanist.GenerateEncryptionConfiguration,
-			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists),
-		})
-		persistETCDEncryptionConfiguration = g.Add(flow.Task{
-			Name:         "Persisting etcd encryption configuration in ShootState",
-			Fn:           botanist.PersistEncryptionConfiguration,
-			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists, generateEncryptionConfigurationMetaData),
-		})
-		createOrUpdateETCDEncryptionConfiguration = g.Add(flow.Task{
-			Name:         "Applying etcd encryption configuration",
-			Fn:           botanist.ApplyEncryptionConfiguration,
-			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists, generateEncryptionConfigurationMetaData, persistETCDEncryptionConfiguration),
-		})
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name: "Deploying Kubernetes API server",
 			Fn:   flow.TaskFn(botanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -314,7 +299,6 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 				waitUntilEtcdReady,
 				waitUntilKubeAPIServerServiceIsReady,
 				waitUntilControlPlaneReady,
-				createOrUpdateETCDEncryptionConfiguration,
 			).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{

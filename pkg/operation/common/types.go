@@ -22,27 +22,6 @@ const (
 	// VPNTunnel dictates that VPN is used as a tunnel between seed and shoot networks.
 	VPNTunnel string = "vpn-shoot"
 
-	// EtcdEncryptionChecksumLabelName is the name of the label which is added to the shoot
-	// secrets after rewriting them to ensure that successfully rewritten secrets are not
-	// (unnecessarily) rewritten during each reconciliation.
-	EtcdEncryptionChecksumLabelName = "shoot.gardener.cloud/etcd-encryption-configuration-checksum"
-
-	// EtcdEncryptionForcePlaintextAnnotationName is the name of the annotation with which to annotate
-	// the EncryptionConfiguration secret to force the decryption of shoot secrets
-	EtcdEncryptionForcePlaintextAnnotationName = "shoot.gardener.cloud/etcd-encryption-force-plaintext-secrets"
-
-	// EtcdEncryptionEncryptedResourceSecrets is the name of the secret resource to be encrypted
-	EtcdEncryptionEncryptedResourceSecrets = "secrets"
-
-	// EtcdEncryptionKeyPrefix is the prefix for the key name of the EncryptionConfiguration's key
-	EtcdEncryptionKeyPrefix = "key"
-
-	// EtcdEncryptionKeySecretLen is the expected length in bytes of the EncryptionConfiguration's key
-	EtcdEncryptionKeySecretLen = 32
-
-	// ETCDEncryptionConfigDataName is the name of ShootState data entry holding the current key and encryption state used to encrypt shoot resources
-	ETCDEncryptionConfigDataName = "etcdEncryptionConfiguration"
-
 	// GrafanaOperatorsPrefix is a constant for a prefix used for the operators Grafana instance.
 	GrafanaOperatorsPrefix = "go"
 

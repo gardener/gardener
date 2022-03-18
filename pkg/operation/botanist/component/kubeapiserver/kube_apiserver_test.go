@@ -89,8 +89,6 @@ var _ = Describe("KubeAPIServer", func() {
 		secretChecksumEtcd                   = "12345"
 		secretNameHTTPProxy                  = "HttpProxy-secret"
 		secretChecksumHTTPProxy              = "12345"
-		secretNameEtcdEncryptionConfig       = "EtcdEncryptionConfig-secret"
-		secretChecksumEtcdEncryptionConfig   = "12345"
 		secretNameKubeAggregator             = "KubeAggregator-secret"
 		secretChecksumKubeAggregator         = "12345"
 		secretNameKubeAPIServerToKubelet     = "KubeAPIServerToKubelet-secret"
@@ -138,7 +136,6 @@ var _ = Describe("KubeAPIServer", func() {
 			CAFrontProxy:           component.Secret{Name: secretNameCAFrontProxy, Checksum: secretChecksumCAFrontProxy},
 			Etcd:                   component.Secret{Name: secretNameEtcd, Checksum: secretChecksumEtcd},
 			HTTPProxy:              &component.Secret{Name: secretNameHTTPProxy, Checksum: secretChecksumHTTPProxy},
-			EtcdEncryptionConfig:   component.Secret{Name: secretNameEtcdEncryptionConfig, Checksum: secretChecksumEtcdEncryptionConfig},
 			KubeAggregator:         component.Secret{Name: secretNameKubeAggregator, Checksum: secretChecksumKubeAggregator},
 			KubeAPIServerToKubelet: component.Secret{Name: secretNameKubeAPIServerToKubelet, Checksum: secretChecksumKubeAPIServerToKubelet},
 			Server:                 component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
@@ -234,9 +231,6 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("Etcd missing",
 					"Etcd", func(s *Secrets) { s.Etcd.Name = "" }, Values{},
-				),
-				Entry("EtcdEncryptionConfig missing",
-					"EtcdEncryptionConfig", func(s *Secrets) { s.EtcdEncryptionConfig.Name = "" }, Values{},
 				),
 				Entry("KubeAggregator missing",
 					"KubeAggregator", func(s *Secrets) { s.KubeAggregator.Name = "" }, Values{},
@@ -1494,7 +1488,6 @@ rules:
 						"checksum/secret-" + secretNameKubeAggregator:           secretChecksumKubeAggregator,
 						"checksum/secret-" + secretNameCAFrontProxy:             secretChecksumCAFrontProxy,
 						"checksum/secret-" + secretNameKubeAPIServerToKubelet:   secretChecksumKubeAPIServerToKubelet,
-						"checksum/secret-" + secretNameEtcdEncryptionConfig:     secretChecksumEtcdEncryptionConfig,
 						"checksum/secret-" + secretNameServer:                   secretChecksumServer,
 						"checksum/secret-" + secretNameVPNSeedTLSAuth:           secretChecksumVPNSeedTLSAuth,
 						"reference.resources.gardener.cloud/secret-7e9b40c7":    secretNameServiceAccountKey,

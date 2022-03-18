@@ -38,9 +38,6 @@ import (
 )
 
 const (
-	// SecretNameEtcdEncryption is the name of the secret which contains the EncryptionConfiguration. The
-	// EncryptionConfiguration contains a key which the kube-apiserver uses for encrypting selected etcd content.
-	SecretNameEtcdEncryption = "etcd-encryption-secret"
 	// SecretNameHTTPProxy is the name of the secret for the http proxy.
 	SecretNameHTTPProxy = "kube-apiserver-http-proxy"
 	// SecretNameKubeAggregator is the name of the secret for the kube-aggregator when talking to the kube-apiserver.
@@ -451,7 +448,7 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, fmt.Sprintf("--etcd-keyfile=%s/%s", volumeMountPathEtcdClient, secrets.DataKeyPrivateKey))
 	out = append(out, fmt.Sprintf("--etcd-servers=https://%s:%d", etcd.ServiceName(v1beta1constants.ETCDRoleMain), etcd.PortEtcdClient))
 	out = append(out, fmt.Sprintf("--etcd-servers-overrides=/events#https://%s:%d", etcd.ServiceName(v1beta1constants.ETCDRoleEvents), etcd.PortEtcdClient))
-	out = append(out, fmt.Sprintf("--encryption-provider-config=%s/%s", volumeMountPathEtcdEncryptionConfig, SecretEtcdEncryptionConfigurationDataKey))
+	out = append(out, fmt.Sprintf("--encryption-provider-config=%s/%s", volumeMountPathEtcdEncryptionConfig, secretETCDEncryptionConfigurationDataKey))
 	out = append(out, "--external-hostname="+k.values.ExternalHostname)
 
 	if k.values.EventTTL != nil {
