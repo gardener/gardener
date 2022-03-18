@@ -377,11 +377,6 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Fn:           flow.TaskFn(botanist.InitializeDesiredShootClients).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilControlPlaneExposureReady, waitUntilControlPlaneExposureDeleted, deployInternalDomainDNSRecord, deployGardenerAccess),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Rewriting Shoot secrets if EncryptionConfiguration has changed",
-			Fn:           flow.TaskFn(botanist.RewriteShootSecretsIfEncryptionConfigurationChanged).DoIf(!o.Shoot.HibernationEnabled).RetryUntilTimeout(defaultInterval, 15*time.Minute),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, ensureShootStateExists, createOrUpdateETCDEncryptionConfiguration),
-		})
 		deployKubeScheduler = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes scheduler",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeScheduler.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout),

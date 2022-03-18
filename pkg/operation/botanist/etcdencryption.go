@@ -17,7 +17,6 @@ package botanist
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
@@ -31,11 +30,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GenerateEncryptionConfiguration generates new encryption configuration data or syncs it from the etcd encryption configuration secret if it already exists.
@@ -109,65 +104,6 @@ func confChecksum(conf *apiserverconfigv1.EncryptionConfiguration) (string, erro
 	}
 
 	return utils.ComputeSHA256Hex(data), nil
-}
-
-// RewriteShootSecretsIfEncryptionConfigurationChanged rewrites the secrets in the Shoot if the etcd
-// encryption configuration changed. Rewriting here means that a patch request is sent that forces
-// the etcd to encrypt them with the new configuration.
-func (b *Botanist) RewriteShootSecretsIfEncryptionConfigurationChanged(ctx context.Context) error {
-	if !b.Shoot.ETCDEncryption.RewriteResources {
-		return nil
-	}
-
-	checksum := b.LoadCheckSum(kubeapiserver.SecretNameEtcdEncryption)
-	shortChecksum := kutil.TruncateLabelValue(checksum)
-
-	// Add checksum label to all secrets in shoot so that they get rewritten now, and also so that we don't rewrite them again in
-	// case this function fails for some reason.
-	notCurrentChecksum, err := labels.NewRequirement(common.EtcdEncryptionChecksumLabelName, selection.NotEquals, []string{shortChecksum})
-	if err != nil {
-		return err
-	}
-	if errorList := b.updateShootLabelsForEtcdEncryption(ctx, notCurrentChecksum, func(m metav1.Object) {
-		kutil.SetMetaDataLabel(m, common.EtcdEncryptionChecksumLabelName, shortChecksum)
-	}); len(errorList) > 0 {
-		return fmt.Errorf("could not add checksum label for all shoot secrets: %+v", errorList)
-	}
-	b.Logger.Info("Successfully updated all secrets in the shoot after etcd encryption config changed")
-
-	// Remove checksum label from all secrets in shoot again.
-	hasChecksumLabelKey, err := labels.NewRequirement(common.EtcdEncryptionChecksumLabelName, selection.Exists, nil)
-	if err != nil {
-		return err
-	}
-	if errorList := b.updateShootLabelsForEtcdEncryption(ctx, hasChecksumLabelKey, func(m metav1.Object) {
-		delete(m.GetLabels(), common.EtcdEncryptionChecksumLabelName)
-	}); len(errorList) > 0 {
-		return fmt.Errorf("could not remove checksum label from all shoot secrets: %+v", errorList)
-	}
-	b.Logger.Info("Successfully removed all added secret labels in the shoot after etcd encryption config changed")
-
-	b.Shoot.ETCDEncryption.RewriteResources = false
-	return b.persistEncryptionConfigInShootState(ctx)
-}
-
-func (b *Botanist) updateShootLabelsForEtcdEncryption(ctx context.Context, labelRequirement *labels.Requirement, mutateLabelsFunc func(m metav1.Object)) []error {
-	secretList := &corev1.SecretList{}
-	if err := b.K8sShootClient.Client().List(ctx, secretList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(*labelRequirement)}); err != nil {
-		return []error{err}
-	}
-	var errorList []error
-	for _, s := range secretList.Items {
-		secretCopy := s.DeepCopy()
-		mutateLabelsFunc(&s)
-		patch := client.MergeFrom(secretCopy)
-
-		if err := b.K8sShootClient.Client().Patch(ctx, &s, patch); err != nil {
-			errorList = append(errorList, err)
-		}
-	}
-
-	return errorList
 }
 
 func (b *Botanist) persistEncryptionConfigInShootState(ctx context.Context) error {
