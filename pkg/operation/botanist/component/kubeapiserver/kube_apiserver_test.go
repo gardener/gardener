@@ -107,6 +107,10 @@ var _ = Describe("KubeAPIServer", func() {
 		secretChecksumVPNSeedServerTLSAuth   = "12345"
 		secrets                              Secrets
 
+		secretNameAdmissionConfig      = "kube-apiserver-admission-config-e38ff146"
+		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-235f7353"
+		configMapNameAuditPolicy       = "audit-policy-config-f5b578b4"
+
 		deployment                           *appsv1.Deployment
 		horizontalPodAutoscaler              *autoscalingv2beta1.HorizontalPodAutoscaler
 		verticalPodAutoscaler                *autoscalingv1beta2.VerticalPodAutoscaler
@@ -1437,15 +1441,15 @@ rules:
 						"reference.resources.gardener.cloud/secret-91c30740":    secretNameCAEtcd,
 						"reference.resources.gardener.cloud/secret-9282d44f":    secretNameCAFrontProxy,
 						"reference.resources.gardener.cloud/secret-c16f0542":    secretNameEtcd,
-						"reference.resources.gardener.cloud/secret-7e1cfe53":    secretNameEtcdEncryptionConfig,
 						"reference.resources.gardener.cloud/secret-274d0dbb":    secretNameKubeAPIServerToKubelet,
 						"reference.resources.gardener.cloud/secret-2e310c99":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-e2878235":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-9f3de87f":    secretNameVPNSeed,
 						"reference.resources.gardener.cloud/secret-e638c9f3":    secretNameVPNSeedTLSAuth,
 						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
-						"reference.resources.gardener.cloud/configmap-130aa219": "kube-apiserver-admission-config-e38ff146",
-						"reference.resources.gardener.cloud/configmap-d4419cd4": "audit-policy-config-f5b578b4",
+						"reference.resources.gardener.cloud/secret-b1b53288":    secretNameETCDEncryptionConfig,
+						"reference.resources.gardener.cloud/configmap-130aa219": secretNameAdmissionConfig,
+						"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
 					}))
 				})
 
@@ -1498,15 +1502,15 @@ rules:
 						"reference.resources.gardener.cloud/secret-91c30740":    secretNameCAEtcd,
 						"reference.resources.gardener.cloud/secret-9282d44f":    secretNameCAFrontProxy,
 						"reference.resources.gardener.cloud/secret-c16f0542":    secretNameEtcd,
-						"reference.resources.gardener.cloud/secret-7e1cfe53":    secretNameEtcdEncryptionConfig,
 						"reference.resources.gardener.cloud/secret-274d0dbb":    secretNameKubeAPIServerToKubelet,
 						"reference.resources.gardener.cloud/secret-2e310c99":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-e2878235":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-9f3de87f":    secretNameVPNSeed,
 						"reference.resources.gardener.cloud/secret-e638c9f3":    secretNameVPNSeedTLSAuth,
 						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
-						"reference.resources.gardener.cloud/configmap-130aa219": "kube-apiserver-admission-config-e38ff146",
-						"reference.resources.gardener.cloud/configmap-d4419cd4": "audit-policy-config-f5b578b4",
+						"reference.resources.gardener.cloud/secret-b1b53288":    secretNameETCDEncryptionConfig,
+						"reference.resources.gardener.cloud/configmap-130aa219": secretNameAdmissionConfig,
+						"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
 					}))
 					Expect(deployment.Spec.Template.Labels).To(Equal(map[string]string{
 						"gardener.cloud/role":              "controlplane",
@@ -1903,7 +1907,7 @@ rules:
 								VolumeSource: corev1.VolumeSource{
 									ConfigMap: &corev1.ConfigMapVolumeSource{
 										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "audit-policy-config-f5b578b4",
+											Name: configMapNameAuditPolicy,
 										},
 									},
 								},
@@ -1913,7 +1917,7 @@ rules:
 								VolumeSource: corev1.VolumeSource{
 									ConfigMap: &corev1.ConfigMapVolumeSource{
 										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "kube-apiserver-admission-config-e38ff146",
+											Name: secretNameAdmissionConfig,
 										},
 									},
 								},
@@ -1986,7 +1990,7 @@ rules:
 								Name: "etcd-encryption-secret",
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
-										SecretName: secretNameEtcdEncryptionConfig,
+										SecretName: secretNameETCDEncryptionConfig,
 									},
 								},
 							},

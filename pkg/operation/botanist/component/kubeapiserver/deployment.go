@@ -121,6 +121,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	configMapAuditPolicy *corev1.ConfigMap,
 	configMapAdmission *corev1.ConfigMap,
 	configMapEgressSelector *corev1.ConfigMap,
+	secretETCDEncryptionConfiguration *corev1.Secret,
 	secretOIDCCABundle *corev1.Secret,
 	secretServiceAccountSigningKey *corev1.Secret,
 	secretStaticToken *corev1.Secret,
@@ -379,7 +380,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameEtcdEncryptionConfig,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: k.secrets.EtcdEncryptionConfig.Name,
+									SecretName: secretETCDEncryptionConfiguration.Name,
 								},
 							},
 						},

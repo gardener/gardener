@@ -339,6 +339,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		configMapAuditPolicy,
 		configMapAdmission,
 		configMapEgressSelector,
+		secretETCDEncryptionConfiguration,
 		secretOIDCCABundle,
 		secretServiceAccountSigningKey,
 		secretStaticToken,
