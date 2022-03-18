@@ -23,7 +23,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"gopkg.in/yaml.v3"
 	"k8s.io/utils/pointer"
 )
 
@@ -32,6 +31,7 @@ var _ = Describe("Promtail", func() {
 		var (
 			cABundle           = "malskjdvbfnasufbaus"
 			clusterDomain      = "testClusterDomain.com"
+			apiServerURL       = "https://api.test-cluster.com"
 			promtailImageName  = "Promtail"
 			promtailRepository = "github.com/promtail"
 			promtailImageTag   = "v0.1.0"
@@ -52,13 +52,8 @@ var _ = Describe("Promtail", func() {
 				},
 				LokiIngress:     lokiIngress,
 				PromtailEnabled: true,
+				APIServerURL:    apiServerURL,
 			}
-
-			conf := defaultConfig
-			conf.Client.Url = "https://" + lokiIngress + "/loki/api/v1/push"
-			conf.Client.TLSConfig.ServerName = lokiIngress
-			configYaml, err := yaml.Marshal(&conf)
-			Expect(err).To(BeNil())
 
 			units, files, err := New().Config(ctx)
 			Expect(err).To(BeNil())
@@ -71,6 +66,7 @@ var _ = Describe("Promtail", func() {
 					Content: pointer.String(`[Unit]
 Description=promtail daemon
 Documentation=https://grafana.com/docs/loki/latest/clients/promtail/
+After=promtail-fetch-token.service
 [Install]
 WantedBy=multi-user.target
 [Service]
@@ -85,6 +81,7 @@ MemorySwapMax=0
 Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
+ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname)"
 ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh ` + promtailRepository + ":" + promtailImageTag + " -c " + "\"cp /usr/bin/promtail /opt/bin\"" + `
 ExecStartPre=/bin/sh ` + PathSetActiveJournalFileScript + `
 ExecStart=/opt/bin/promtail -config.file=` + PathConfig),
@@ -114,7 +111,96 @@ ExecStart=/var/lib/promtail/scripts/fetch-token.sh`),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
-							Data:     utils.EncodeBase64(configYaml),
+							Data: utils.EncodeBase64([]byte(`server:
+  disable: true
+  log_level: info
+  http_listen_port: 3001
+client:
+  url: https://ingress.loki.testClusterDomain/loki/api/v1/push
+  bearer_token_file: /var/lib/promtail/auth-token
+  tls_config:
+    ca_file: /var/lib/promtail/ca.crt
+    server_name: ingress.loki.testClusterDomain
+positions:
+  filename: /var/log/positions.yaml
+scrape_configs:
+- job_name: journal
+  journal:
+    json: false
+    labels:
+      job: systemd-journal
+    max_age: 12h
+    path: /var/log/journal
+  relabel_configs:
+  - action: drop
+    regex: ^localhost$
+    source_labels: ['__journal__hostname']
+  - source_labels: ['__journal__systemd_unit']
+    target_label: unit
+  - source_labels: ['__journal__hostname']
+    target_label: nodename
+  - source_labels: ['__journal_syslog_identifier']
+    target_label: syslog_identifier
+- job_name: kubernetes-pods-name
+  pipeline_stages:
+  - cri: {}
+  - labeldrop:
+    - filename
+  kubernetes_sd_configs:
+  - role: pod
+    api_server: https://api.test-cluster.com
+    tls_config:
+      server_name: api.test-cluster.com
+      ca_file: /var/lib/promtail/ca.crt
+    bearer_token_file: /var/lib/promtail/auth-token
+  relabel_configs:
+  - action: drop
+    regex: ''
+    separator: ''
+    source_labels:
+    - __meta_kubernetes_pod_label_gardener_cloud_role
+    - __meta_kubernetes_pod_label_origin
+  - action: replace
+    regex: '.+'
+    replacement: "gardener"
+    source_labels: ['__meta_kubernetes_pod_label_gardener_cloud_role']
+    target_label: __meta_kubernetes_pod_label_origin
+  - action: keep
+    regex: 'gardener'
+    source_labels: ['__meta_kubernetes_pod_label_origin']
+  - action: replace
+    regex: ''
+    replacement: 'default'
+    source_labels: ['__meta_kubernetes_pod_label_gardener_cloud_role']
+    target_label: __meta_kubernetes_pod_label_gardener_cloud_role
+  - source_labels: ['__meta_kubernetes_pod_node_name']
+    target_label: '__host__'
+  - source_labels: ['__meta_kubernetes_pod_node_name']
+    target_label: 'nodename'
+  - action: replace
+    source_labels: ['__meta_kubernetes_namespace']
+    target_label: namespace_name
+  - action: replace
+    source_labels: ['__meta_kubernetes_pod_name']
+    target_label: pod_name
+  - action: replace
+    source_labels: ['__meta_kubernetes_pod_uid']
+    target_label: pod_uid
+  - action: replace
+    source_labels: ['__meta_kubernetes_pod_container_name']
+    target_label: container_name
+  - replacement: /var/log/pods/*$1/*.log
+    separator: /
+    source_labels:
+    - __meta_kubernetes_pod_uid
+    - __meta_kubernetes_pod_container_name
+    target_label: __path__
+  - source_labels: ['__meta_kubernetes_pod_label_gardener_cloud_role']
+    target_label: gardener_cloud_role
+  - source_labels: ['__meta_kubernetes_pod_label_origin']
+    replacement: 'shoot_system'
+    target_label: origin
+`)),
 						},
 					},
 				},
@@ -195,6 +281,7 @@ exit $?
 					Content: pointer.String(`[Unit]
 Description=promtail daemon
 Documentation=https://grafana.com/docs/loki/latest/clients/promtail/
+After=promtail-fetch-token.service
 [Install]
 WantedBy=multi-user.target
 [Service]
@@ -209,6 +296,7 @@ MemorySwapMax=0
 Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
+ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname)"
 ExecStartPre=/bin/systemctl disable promtail.service
 ExecStartPre=/bin/sh -c "echo 'service does not have configuration'"
 ExecStart=/bin/sh -c "echo service promtail.service is removed!; while true; do sleep 86400; done"`),

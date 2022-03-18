@@ -49,7 +49,6 @@ require (
 	gonum.org/v1/gonum v0.8.2
 	google.golang.org/genproto v0.0.0-20220107163113-42d7afdf6368 // indirect
 	gopkg.in/yaml.v2 v2.4.0
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	istio.io/api v0.0.0-20211118170605-3f0f902cdfd1
 	istio.io/client-go v1.12.0
 	k8s.io/api v0.23.3

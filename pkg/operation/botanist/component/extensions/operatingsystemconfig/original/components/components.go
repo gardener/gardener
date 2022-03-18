@@ -44,4 +44,5 @@ type Context struct {
 	SSHPublicKeys           []string
 	LokiIngress             string
 	PromtailEnabled         bool
+	APIServerURL            string
 }
