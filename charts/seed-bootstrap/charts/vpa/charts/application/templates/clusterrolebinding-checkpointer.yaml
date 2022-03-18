@@ -4,7 +4,7 @@ kind: ClusterRoleBinding
 metadata:
   name: gardener.cloud:vpa:{{ include "vpa.rbac-name-infix" . }}:checkpoint-actor
   labels:
-  {{ toYaml .Values.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
   annotations:
     resources.gardener.cloud/delete-on-invalid-update: "true"
 roleRef:
