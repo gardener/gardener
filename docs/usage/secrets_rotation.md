@@ -32,6 +32,12 @@ To put it in use, a cloudprovider secret is bound to one more namespaces (and th
 
 *Description*: Admin Kubeconfig provided by Gardener for the managed shoot cluster.
 
+This `Secret` has multiple keys:
+- `kubeconfig`: the completed kubeconfig
+- `token`: token for `system:cluster-admin` user
+- `username`/`password`: basic auth credentials (if enabled via `Shoot.spec.kubernetes.kubeAPIServer.enableBasicAuthentication`)
+- `ca.crt`: the CA bundle for establishing trust to the API server (same as in the [Cluster CA secret](#cluster-certificate-authority))
+
 ---
 **NOTE**
 
@@ -65,7 +71,7 @@ During an ongoing CA rotation operation, this `Secret` contains a certificate bu
 
 *Name*: `<shoot-name>.monitoring`
 
-*Description*: Username/password for accessing the user Grafana instance of a shoot cluster.
+*Description*: Username/password for accessing the user Grafana instance of a shoot cluster (`Secret` keys: `username`/`password`).
 
 *Rotation*: Not supported yet.
 
@@ -74,7 +80,7 @@ During an ongoing CA rotation operation, this `Secret` contains a certificate bu
 *Name*: `<shoot-name>.ssh-keypair`
 
 *Description*: SSH-Keypair that is propagated to the worker nodes of the shoot cluster.
-The private key can be used to establish an SSH connection to the workers for troubleshooting purposes.
+The private key can be used to establish an SSH connection to the workers for troubleshooting purposes (`Secret` keys: `id_rsa`/`id_rsa.pub`).
 
 *Rotation*: Keypair can be rotated by annotating the shoot resource with `gardener.cloud/operation: rotate-ssh-keypair`.
 Propagating the new keypair to all worker nodes may take longer than the initiated reconciliation of the shoot.

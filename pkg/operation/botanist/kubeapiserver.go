@@ -35,6 +35,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -449,12 +450,21 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", kubeapiserver.SecretNameUserKubeconfig)
 	}
 
+	// add CA bundle as ca.crt to kubeconfig secret for backwards-compatibility
+	caBundleSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+	}
+
+	kubeconfigSecretData := userKubeconfigSecret.DeepCopy().Data
+	kubeconfigSecretData[secretutils.DataKeyCertificateCA] = caBundleSecret.Data[secretutils.DataKeyCertificateBundle]
+
 	if err := b.syncShootCredentialToGarden(
 		ctx,
 		gutil.ShootProjectSecretSuffixKubeconfig,
 		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleKubeconfig},
 		map[string]string{"url": "https://" + externalServer},
-		userKubeconfigSecret.Data,
+		kubeconfigSecretData,
 	); err != nil {
 		return err
 	}
