@@ -263,6 +263,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		networkPolicyAllowFromShootAPIServer = k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer)
 		networkPolicyAllowToShootAPIServer   = k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer)
 		networkPolicyAllowKubeAPIServer      = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
+		secretETCDEncryptionConfiguration    = k.emptySecret(secretETCDEncryptionConfigurationNamePrefix)
 		secretOIDCCABundle                   = k.emptySecret(secretOIDCCABundleNamePrefix)
 		secretServiceAccountSigningKey       = k.emptySecret(secretServiceAccountSigningKeyNamePrefix)
 		configMapAdmission                   = k.emptyConfigMap(configMapAdmissionNamePrefix)
@@ -295,6 +296,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	if err := k.reconcileNetworkPolicyAllowKubeAPIServer(ctx, networkPolicyAllowKubeAPIServer); err != nil {
+		return err
+	}
+
+	if err := k.reconcileSecretETCDEncryptionConfiguration(ctx, secretETCDEncryptionConfiguration); err != nil {
 		return err
 	}
 

@@ -48,6 +48,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
@@ -59,6 +60,7 @@ import (
 
 var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVar(&secretutils.GenerateRandomString, secretutils.FakeGenerateRandomString))
+	DeferCleanup(test.WithVar(&secretutils.Clock, clock.NewFakeClock(time.Time{})))
 })
 
 var _ = Describe("KubeAPIServer", func() {
@@ -113,8 +115,6 @@ var _ = Describe("KubeAPIServer", func() {
 		networkPolicyAllowFromShootAPIServer *networkingv1.NetworkPolicy
 		networkPolicyAllowToShootAPIServer   *networkingv1.NetworkPolicy
 		networkPolicyAllowKubeAPIServer      *networkingv1.NetworkPolicy
-		secretOIDCCABundle                   *corev1.Secret
-		secretServiceAccountSigningKey       *corev1.Secret
 		configMapAdmission                   *corev1.ConfigMap
 		configMapAuditPolicy                 *corev1.ConfigMap
 		configMapEgressSelector              *corev1.ConfigMap
@@ -1077,28 +1077,31 @@ subjects:
 					kapi = New(kubernetesInterface, namespace, sm, Values{OIDC: oidcConfig, Version: version})
 					kapi.SetSecrets(secrets)
 
-					secretOIDCCABundle = &corev1.Secret{
+					expectedSecretOIDCCABundle := &corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-oidc-cabundle", Namespace: namespace},
 						Data:       map[string][]byte{"ca.crt": []byte(caBundle)},
 					}
-					Expect(kutil.MakeUnique(secretOIDCCABundle)).To(Succeed())
+					Expect(kutil.MakeUnique(expectedSecretOIDCCABundle)).To(Succeed())
 
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretOIDCCABundle), secretOIDCCABundle)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, secretOIDCCABundle.Name)))
+					actualSecretOIDCCABundle := &corev1.Secret{}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretOIDCCABundle), actualSecretOIDCCABundle)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, expectedSecretOIDCCABundle.Name)))
+
 					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretOIDCCABundle), secretOIDCCABundle)).To(Succeed())
-					Expect(secretOIDCCABundle).To(DeepEqual(&corev1.Secret{
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretOIDCCABundle), actualSecretOIDCCABundle)).To(Succeed())
+					Expect(actualSecretOIDCCABundle).To(DeepEqual(&corev1.Secret{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: corev1.SchemeGroupVersion.String(),
 							Kind:       "Secret",
 						},
 						ObjectMeta: metav1.ObjectMeta{
-							Name:            secretOIDCCABundle.Name,
-							Namespace:       secretOIDCCABundle.Namespace,
+							Name:            expectedSecretOIDCCABundle.Name,
+							Namespace:       expectedSecretOIDCCABundle.Namespace,
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
 						Immutable: pointer.Bool(true),
-						Data:      secretOIDCCABundle.Data,
+						Data:      expectedSecretOIDCCABundle.Data,
 					}))
 				})
 
@@ -1111,29 +1114,82 @@ subjects:
 					kapi = New(kubernetesInterface, namespace, sm, Values{ServiceAccount: serviceAccountConfig, Version: version})
 					kapi.SetSecrets(secrets)
 
-					secretServiceAccountSigningKey = &corev1.Secret{
+					expectedSecretServiceAccountSigningKey := &corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-sa-signing-key", Namespace: namespace},
 						Data:       map[string][]byte{"signing-key": signingKey},
 					}
-					Expect(kutil.MakeUnique(secretServiceAccountSigningKey)).To(Succeed())
+					Expect(kutil.MakeUnique(expectedSecretServiceAccountSigningKey)).To(Succeed())
 
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretServiceAccountSigningKey), secretServiceAccountSigningKey)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, secretServiceAccountSigningKey.Name)))
+					actualSecretServiceAccountSigningKey := &corev1.Secret{}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretServiceAccountSigningKey), actualSecretServiceAccountSigningKey)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, expectedSecretServiceAccountSigningKey.Name)))
+
 					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretServiceAccountSigningKey), secretServiceAccountSigningKey)).To(Succeed())
-					Expect(secretServiceAccountSigningKey).To(DeepEqual(&corev1.Secret{
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretServiceAccountSigningKey), actualSecretServiceAccountSigningKey)).To(Succeed())
+					Expect(actualSecretServiceAccountSigningKey).To(DeepEqual(&corev1.Secret{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: corev1.SchemeGroupVersion.String(),
 							Kind:       "Secret",
 						},
 						ObjectMeta: metav1.ObjectMeta{
-							Name:            secretServiceAccountSigningKey.Name,
-							Namespace:       secretServiceAccountSigningKey.Namespace,
+							Name:            expectedSecretServiceAccountSigningKey.Name,
+							Namespace:       expectedSecretServiceAccountSigningKey.Namespace,
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
 						Immutable: pointer.Bool(true),
-						Data:      secretServiceAccountSigningKey.Data,
+						Data:      expectedSecretServiceAccountSigningKey.Data,
 					}))
+				})
+
+				It("should successfully deploy the ETCD encryption configuration secret resource", func() {
+					etcdEncryptionConfiguration := `apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+- providers:
+  - aescbc:
+      keys:
+      - name: key-62135596800
+        secret: ________________________________
+  - identity: {}
+  resources:
+  - secrets
+`
+
+					expectedSecretETCDEncryptionConfiguration := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-etcd-encryption-configuration", Namespace: namespace},
+						Data:       map[string][]byte{"encryption-configuration.yaml": []byte(etcdEncryptionConfiguration)},
+					}
+					Expect(kutil.MakeUnique(expectedSecretETCDEncryptionConfiguration)).To(Succeed())
+
+					actualSecretETCDEncryptionConfiguration := &corev1.Secret{}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, expectedSecretETCDEncryptionConfiguration.Name)))
+
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
+					Expect(actualSecretETCDEncryptionConfiguration).To(DeepEqual(&corev1.Secret{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "Secret",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            expectedSecretETCDEncryptionConfiguration.Name,
+							Namespace:       expectedSecretETCDEncryptionConfiguration.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: pointer.Bool(true),
+						Data:      expectedSecretETCDEncryptionConfiguration.Data,
+					}))
+
+					secretList := &corev1.SecretList{}
+					Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+						"name":       "kube-apiserver-etcd-encryption-key",
+						"managed-by": "secrets-manager",
+					})).To(Succeed())
+					Expect(secretList.Items).To(HaveLen(1))
+					Expect(secretList.Items[0].Labels).To(HaveKeyWithValue("persist", "true"))
 				})
 			})
 
