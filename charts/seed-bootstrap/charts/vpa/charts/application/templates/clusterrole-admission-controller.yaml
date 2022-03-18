@@ -5,7 +5,7 @@ kind: ClusterRole
 metadata:
   name: gardener.cloud:vpa:{{ include "vpa.rbac-name-infix" . }}:admission-controller
   labels:
-  {{ toYaml .Values.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 rules:
   - apiGroups:
       - ""
