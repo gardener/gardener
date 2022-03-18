@@ -8976,6 +8976,20 @@ ShootKubeconfigRotation
 <p>Kubeconfig contains information about the kubeconfig credential rotation.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>sshKeypair</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootSSHKeypairRotation">
+ShootSSHKeypairRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SSHKeypair contains information about the ssh-keypair credential rotation.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ShootCredentialsRotationPhase">ShootCredentialsRotationPhase
@@ -9144,6 +9158,53 @@ string
 <p>
 <p>ShootPurpose is a type alias for string.</p>
 </p>
+<h3 id="core.gardener.cloud/v1beta1.ShootSSHKeypairRotation">ShootSSHKeypairRotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotation">ShootCredentialsRotation</a>)
+</p>
+<p>
+<p>ShootSSHKeypairRotation contains information about the ssh-keypair credential rotation.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>lastInitiationTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastCompletionTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastCompletionTime is the most recent time when the ssh-keypair credential rotation was successfully completed.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ShootSpec">ShootSpec
 </h3>
 <p>

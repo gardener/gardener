@@ -637,9 +637,9 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 					ReadOnly:  true,
 				})
 			} else if r.secrets.shootAccess != nil {
-				genericTokenKubeconfigSecret, err := r.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
-				if err != nil {
-					return err
+				genericTokenKubeconfigSecret, found := r.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+				if !found {
+					return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 				}
 
 				utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, r.secrets.shootAccess.Secret.Name))

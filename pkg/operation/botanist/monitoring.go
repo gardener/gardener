@@ -150,9 +150,9 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
-	genericTokenKubeconfigSecret, err := b.SecretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
-	if err != nil {
-		return err
+	genericTokenKubeconfigSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 	}
 
 	var (

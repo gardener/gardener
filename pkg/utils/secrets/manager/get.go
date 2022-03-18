@@ -15,18 +15,16 @@
 package manager
 
 import (
-	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
 )
 
-func (m *manager) Get(name string, opts ...GetOption) (*corev1.Secret, error) {
+func (m *manager) Get(name string, opts ...GetOption) (*corev1.Secret, bool) {
 	options := &GetOptions{}
 	options.ApplyOptions(opts)
 
 	secrets, found := m.getFromStore(name)
 	if !found {
-		return nil, fmt.Errorf("secrets for name %q not found in internal store", name)
+		return nil, false
 	}
 
 	class := bundle
@@ -38,17 +36,17 @@ func (m *manager) Get(name string, opts ...GetOption) (*corev1.Secret, error) {
 
 	switch class {
 	case current:
-		return secrets.current.obj, nil
+		return secrets.current.obj, true
 	case old:
 		if secrets.old == nil {
-			return nil, fmt.Errorf("there is no old object for the secret with name %q", name)
+			return nil, false
 		}
-		return secrets.old.obj, nil
+		return secrets.old.obj, true
 	default:
 		if secrets.bundle == nil {
-			return nil, fmt.Errorf("there is no bundle object for the secret with name %q", name)
+			return nil, false
 		}
-		return secrets.bundle.obj, nil
+		return secrets.bundle.obj, true
 	}
 }
 

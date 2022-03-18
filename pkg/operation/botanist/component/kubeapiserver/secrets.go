@@ -16,6 +16,7 @@ package kubeapiserver
 
 import (
 	"context"
+	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -126,11 +127,12 @@ func (k *kubeAPIServer) reconcileSecretStaticToken(ctx context.Context) (*corev1
 }
 
 func (k *kubeAPIServer) reconcileSecretUserKubeconfig(ctx context.Context, secretStaticToken, secretBasicAuth *corev1.Secret) error {
-	caBundleSecret, err := k.secretsManager.Get(v1beta1constants.SecretNameCACluster)
-	if err != nil {
-		return err
+	caBundleSecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
 
+	var err error
 	var basicAuth *secretutils.BasicAuth
 	if secretBasicAuth != nil {
 		basicAuth, err = secretutils.LoadBasicAuthFromCSV(SecretBasicAuthName, secretBasicAuth.Data[secretutils.DataKeyCSV])

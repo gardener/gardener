@@ -187,7 +187,7 @@ func (s *CertificateSecretConfig) GenerateCertificate() (*Certificate, error) {
 
 	// If no cert type is given then we only return a certificate object that contains the CA.
 	if s.CertType != "" {
-		privateKey, err := generateRSAPrivateKey(2048)
+		privateKey, err := GenerateKey(rand.Reader, 2048)
 		if err != nil {
 			return nil, err
 		}

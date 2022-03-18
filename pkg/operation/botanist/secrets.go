@@ -17,6 +17,7 @@ package botanist
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -35,14 +36,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/infodata"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/clock"
@@ -100,13 +99,11 @@ func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
 		}
 	}
 
-	for _, config := range b.wantedCertificateAuthorities() {
-		if _, err := b.SecretsManager.Generate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld)); err != nil {
-			return err
-		}
-	}
-
-	return b.getOrGenerateGenericTokenKubeconfig(ctx)
+	return flow.Sequential(
+		b.generateCertificateAuthorities,
+		b.generateGenericTokenKubeconfig,
+		b.generateSSHKeypair,
+	)(ctx)
 }
 
 func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
@@ -116,6 +113,10 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 		if shootStatus.Credentials.Rotation.Kubeconfig != nil && shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime != nil {
 			rotation[kubeapiserver.SecretStaticTokenName] = shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime.Time
 			rotation[kubeapiserver.SecretBasicAuthName] = shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime.Time
+		}
+
+		if shootStatus.Credentials.Rotation.SSHKeypair != nil && shootStatus.Credentials.Rotation.SSHKeypair.LastInitiationTime != nil {
+			rotation[v1beta1constants.SecretNameSSHKeyPair] = shootStatus.Credentials.Rotation.SSHKeypair.LastInitiationTime.Time
 		}
 	}
 
@@ -156,10 +157,20 @@ func (b *Botanist) restoreSecretsFromShootStateForSecretsManagerAdoption(ctx con
 	return flow.Parallel(fns...)(ctx)
 }
 
-func (b *Botanist) getOrGenerateGenericTokenKubeconfig(ctx context.Context) error {
-	clusterCABundleSecret, err := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
-	if err != nil {
-		return err
+func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
+	for _, config := range b.wantedCertificateAuthorities() {
+		if _, err := b.SecretsManager.Generate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (b *Botanist) generateGenericTokenKubeconfig(ctx context.Context) error {
+	clusterCABundleSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
 
 	config := &secretutils.KubeconfigSecretConfig{
@@ -187,18 +198,59 @@ func (b *Botanist) getOrGenerateGenericTokenKubeconfig(ctx context.Context) erro
 	return err
 }
 
-func (b *Botanist) syncShootCredentialToGarden(
-	ctx context.Context,
-	seedSecretName string,
-	nameSuffix string,
-	annotations map[string]string,
-	labels map[string]string,
-) error {
-	seedSecret, err := b.SecretsManager.Get(seedSecretName)
+func (b *Botanist) generateSSHKeypair(ctx context.Context) error {
+	sshKeypairSecret, err := b.SecretsManager.Generate(ctx, &secrets.RSASecretConfig{
+		Name:       v1beta1constants.SecretNameSSHKeyPair,
+		Bits:       4096,
+		UsedForSSH: true,
+	}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld))
 	if err != nil {
 		return err
 	}
 
+	if err := b.syncShootCredentialToGarden(
+		ctx,
+		gutil.ShootProjectSecretSuffixSSHKeypair,
+		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSSHKeyPair},
+		nil,
+		sshKeypairSecret.Data,
+	); err != nil {
+		return err
+	}
+
+	if sshKeypairSecretOld, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair, secretsmanager.Old); found {
+		if err := b.syncShootCredentialToGarden(
+			ctx,
+			gutil.ShootProjectSecretSuffixOldSSHKeypair,
+			map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSSHKeyPair},
+			nil,
+			sshKeypairSecretOld.Data,
+		); err != nil {
+			return err
+		}
+	}
+
+	// TODO(rfranzke): Remove in a future release.
+	if err := b.SaveGardenerResourceDataInShootState(ctx, func(gardenerResourceData *[]gardencorev1alpha1.GardenerResourceData) error {
+		gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(*gardenerResourceData)
+		gardenerResourceDataList.Delete("ssh-keypair")
+		*gardenerResourceData = gardenerResourceDataList
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove this in a future release.
+	return kutil.DeleteObject(ctx, b.K8sSeedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ssh-keypair", Namespace: b.Shoot.SeedNamespace}})
+}
+
+func (b *Botanist) syncShootCredentialToGarden(
+	ctx context.Context,
+	nameSuffix string,
+	labels map[string]string,
+	annotations map[string]string,
+	data map[string][]byte,
+) error {
 	gardenSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      gutil.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, nameSuffix),
@@ -206,14 +258,14 @@ func (b *Botanist) syncShootCredentialToGarden(
 		},
 	}
 
-	_, err = controllerutils.GetAndCreateOrStrategicMergePatch(ctx, b.K8sGardenClient.Client(), gardenSecret, func() error {
+	_, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, b.K8sGardenClient.Client(), gardenSecret, func() error {
 		gardenSecret.OwnerReferences = []metav1.OwnerReference{
 			*metav1.NewControllerRef(b.Shoot.GetInfo(), gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot")),
 		}
 		gardenSecret.Annotations = annotations
 		gardenSecret.Labels = labels
 		gardenSecret.Type = corev1.SecretTypeOpaque
-		gardenSecret.Data = seedSecret.Data
+		gardenSecret.Data = data
 		return nil
 	})
 	return err
@@ -266,13 +318,6 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			"kube-scheduler-server",
 		} {
 			gardenerResourceDataList.Delete(name)
-		}
-
-		switch b.Shoot.GetInfo().Annotations[v1beta1constants.GardenerOperation] {
-		case v1beta1constants.ShootOperationRotateSSHKeypair:
-			if err := b.rotateSSHKeypairSecrets(ctx, &gardenerResourceDataList); err != nil {
-				return err
-			}
 		}
 
 		if b.Shoot.GetInfo().DeletionTimestamp == nil {
@@ -382,39 +427,6 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 
 	for _, name := range b.AllSecretKeys() {
 		b.StoreCheckSum(name, utils.ComputeSecretChecksum(b.LoadSecret(name).Data))
-	}
-
-	// copy ssh-keypair.old secret to shoot namespace in seed
-	oldSSHKeyPair, err := infodata.GetInfoData(gardenerResourceDataList, v1beta1constants.SecretNameOldSSHKeyPair)
-	if err != nil {
-		return err
-	}
-	if oldSSHKeyPair != nil {
-		secretConfig := &secrets.RSASecretConfig{
-			Name:       v1beta1constants.SecretNameOldSSHKeyPair,
-			Bits:       4096,
-			UsedForSSH: true,
-		}
-
-		oldSSHKeyPairData, err := secretConfig.GenerateFromInfoData(oldSSHKeyPair)
-		if err != nil {
-			return err
-		}
-
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      v1beta1constants.SecretNameOldSSHKeyPair,
-				Namespace: b.Shoot.SeedNamespace,
-			},
-		}
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), secret, func() error {
-			secret.Type = corev1.SecretTypeOpaque
-			secret.Data = oldSSHKeyPairData.SecretData()
-			return nil
-		}); err != nil {
-			return err
-		}
-		b.StoreSecret(v1beta1constants.SecretNameOldSSHKeyPair, secret)
 	}
 
 	wildcardCert, err := seed.GetWildcardCertificate(ctx, b.K8sSeedClient.Client())
@@ -533,31 +545,6 @@ func (b *Botanist) deleteSecrets(ctx context.Context, gardenerResourceDataList *
 	return nil
 }
 
-func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
-	currentSecret := gardenerResourceDataList.Get(v1beta1constants.SecretNameSSHKeyPair)
-	if currentSecret == nil {
-		b.Logger.Debugf("No %s Secret loaded, not rotating keypair.", v1beta1constants.SecretNameSSHKeyPair)
-		return nil
-	}
-
-	// copy current key to old secret
-	oldSecret := currentSecret.DeepCopy()
-	oldSecret.Name = v1beta1constants.SecretNameOldSSHKeyPair
-	gardenerResourceDataList.Upsert(oldSecret)
-
-	if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.SecretNameSSHKeyPair, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
-		return err
-	}
-
-	gardenerResourceDataList.Delete(v1beta1constants.SecretNameSSHKeyPair)
-
-	// remove operation annotation
-	return b.Shoot.UpdateInfo(ctx, b.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
-		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
-		return nil
-	})
-}
-
 func getExpiredCerts(gardenerResourceDataList gardencorev1alpha1helper.GardenerResourceDataList, renewalWindow time.Duration, secretNames ...string) ([]string, error) {
 	var expiredCerts []string
 
@@ -600,30 +587,11 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 	// label value to the `v1beta1constants.ControlPlaneSecretRoles` list.
 	projectSecrets := []projectSecret{
 		{
-			secretName: v1beta1constants.SecretNameSSHKeyPair,
-			suffix:     gutil.ShootProjectSecretSuffixSSHKeypair,
-			labels:     map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSSHKeyPair},
-		},
-		{
 			secretName:  "monitoring-ingress-credentials-users",
 			suffix:      gutil.ShootProjectSecretSuffixMonitoring,
 			annotations: map[string]string{"url": "https://" + b.ComputeGrafanaUsersHost()},
 			labels:      map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring},
 		},
-	}
-
-	// ssh-keypair.old secret will be synced to the Garden cluster if it is present in shoot namespace in seed.
-	oldSecret := &corev1.Secret{}
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.SecretNameOldSSHKeyPair), oldSecret); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
-	} else {
-		projectSecrets = append(projectSecrets, projectSecret{
-			secretName: v1beta1constants.SecretNameOldSSHKeyPair,
-			suffix:     gutil.ShootProjectSecretSuffixOldSSHKeypair,
-			labels:     map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSSHKeyPair},
-		})
 	}
 
 	var fns []flow.TaskFn

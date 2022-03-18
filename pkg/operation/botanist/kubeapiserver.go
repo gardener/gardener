@@ -444,12 +444,17 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		return err
 	}
 
+	userKubeconfigSecret, found := b.SecretsManager.Get(kubeapiserver.SecretNameUserKubeconfig)
+	if !found {
+		return fmt.Errorf("secret %q not found", kubeapiserver.SecretNameUserKubeconfig)
+	}
+
 	if err := b.syncShootCredentialToGarden(
 		ctx,
-		kubeapiserver.SecretNameUserKubeconfig,
 		gutil.ShootProjectSecretSuffixKubeconfig,
-		map[string]string{"url": "https://" + externalServer},
 		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleKubeconfig},
+		map[string]string{"url": "https://" + externalServer},
+		userKubeconfigSecret.Data,
 	); err != nil {
 		return err
 	}

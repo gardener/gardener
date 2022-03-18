@@ -152,9 +152,9 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return fmt.Errorf("missing ServiceAccountKey secret information")
 	}
 
-	genericTokenKubeconfigSecret, err := k.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
-	if err != nil {
-		return err
+	genericTokenKubeconfigSecret, found := k.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 	}
 
 	var (

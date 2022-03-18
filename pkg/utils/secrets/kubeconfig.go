@@ -15,6 +15,8 @@
 package secrets
 
 import (
+	"errors"
+
 	"github.com/gardener/gardener/pkg/utils/infodata"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -26,7 +28,7 @@ import (
 // DataKeyKubeconfig is the key in a secret data holding the kubeconfig.
 const DataKeyKubeconfig = "kubeconfig"
 
-// KubeconfigSecretConfig is configuration for certificate bundles.
+// KubeconfigSecretConfig is configuration for kubeconfig secrets.
 type KubeconfigSecretConfig struct {
 	Name        string
 	ContextName string
@@ -64,17 +66,17 @@ func (s *KubeconfigSecretConfig) Generate() (DataInterface, error) {
 
 // GenerateInfoData implements ConfigInterface.
 func (s *KubeconfigSecretConfig) GenerateInfoData() (infodata.InfoData, error) {
-	return nil, nil
+	return nil, errors.New("not implemented")
 }
 
 // GenerateFromInfoData implements ConfigInterface.
 func (s *KubeconfigSecretConfig) GenerateFromInfoData(_ infodata.InfoData) (DataInterface, error) {
-	return nil, nil
+	return nil, errors.New("not implemented")
 }
 
 // LoadFromSecretData implements infodata.Loader.
 func (s *KubeconfigSecretConfig) LoadFromSecretData(_ map[string][]byte) (infodata.InfoData, error) {
-	return nil, nil
+	return nil, errors.New("not implemented")
 }
 
 // SecretData computes the data map which can be used in a Kubernetes secret.

@@ -20,49 +20,62 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	mockinfrastructure "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
+
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("Infrastructure", func() {
 	var (
 		ctrl           *gomock.Controller
 		infrastructure *mockinfrastructure.MockInterface
-		botanist       *Botanist
 
-		ctx          = context.TODO()
-		fakeErr      = fmt.Errorf("fake")
-		shootState   = &gardencorev1alpha1.ShootState{}
-		sshPublicKey = []byte("key")
+		fakeClient client.Client
+		sm         secretsmanager.Interface
+		botanist   *Botanist
+
+		ctx        = context.TODO()
+		fakeErr    = fmt.Errorf("fake")
+		shootState = &gardencorev1alpha1.ShootState{}
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		infrastructure = mockinfrastructure.NewMockInterface(ctrl)
-		botanist = &Botanist{Operation: &operation.Operation{
-			Shoot: &shootpkg.Shoot{
-				Components: &shootpkg.Components{
-					Extensions: &shootpkg.Extensions{
-						Infrastructure: infrastructure,
+
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		sm = fakesecretsmanager.New(fakeClient, "namespace")
+
+		botanist = &Botanist{
+			Operation: &operation.Operation{
+				SecretsManager: sm,
+				Shoot: &shootpkg.Shoot{
+					Components: &shootpkg.Components{
+						Extensions: &shootpkg.Extensions{
+							Infrastructure: infrastructure,
+						},
 					},
 				},
 			},
-		}}
+		}
 		botanist.SetShootState(shootState)
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
-		botanist.StoreSecret("ssh-keypair", &corev1.Secret{Data: map[string][]byte{"id_rsa.pub": sshPublicKey}})
 	})
 
 	AfterEach(func() {
@@ -71,7 +84,7 @@ var _ = Describe("Infrastructure", func() {
 
 	Describe("#DeployInfrastructure", func() {
 		BeforeEach(func() {
-			infrastructure.EXPECT().SetSSHPublicKey(sshPublicKey)
+			infrastructure.EXPECT().SetSSHPublicKey(gomock.Any())
 		})
 
 		Context("deploy", func() {

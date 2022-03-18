@@ -18,12 +18,12 @@ import (
 	"context"
 	"fmt"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -36,6 +36,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 
 	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
@@ -46,13 +48,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("operatingsystemconfig", func() {
 	var (
 		ctrl                  *gomock.Controller
 		operatingSystemConfig *mockoperatingsystemconfig.MockInterface
-		botanist              *Botanist
+
+		fakeClient client.Client
+		sm         secretsmanager.Interface
+
+		botanist *Botanist
 
 		ctx        = context.TODO()
 		fakeErr    = fmt.Errorf("fake")
@@ -63,8 +70,6 @@ var _ = Describe("operatingsystemconfig", func() {
 		caKubelet         = []byte("ca-kubelet")
 		caCloudProfile    = "ca-cloud-profile"
 		shootDomain       = "shoot.domain.com"
-		sshPublicKey      = []byte("ssh-public-key")
-		sshPublicKeyOld   = []byte("ssh-public-key-old")
 		kubernetesVersion = "1.2.3"
 		ingressDomain     = "seed-test.ingress.domain.com"
 	)
@@ -72,24 +77,29 @@ var _ = Describe("operatingsystemconfig", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		operatingSystemConfig = mockoperatingsystemconfig.NewMockInterface(ctrl)
-		botanist = &Botanist{Operation: &operation.Operation{
-			APIServerAddress: apiServerAddress,
-			Shoot: &shootpkg.Shoot{
-				CloudProfile: &gardencorev1beta1.CloudProfile{},
-				Components: &shootpkg.Components{
-					Extensions: &shootpkg.Extensions{
-						OperatingSystemConfig: operatingSystemConfig,
+
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		sm = fakesecretsmanager.New(fakeClient, "namespace")
+
+		botanist = &Botanist{
+			Operation: &operation.Operation{
+				APIServerAddress: apiServerAddress,
+				SecretsManager:   sm,
+				Shoot: &shootpkg.Shoot{
+					CloudProfile: &gardencorev1beta1.CloudProfile{},
+					Components: &shootpkg.Components{
+						Extensions: &shootpkg.Extensions{
+							OperatingSystemConfig: operatingSystemConfig,
+						},
 					},
+					InternalClusterDomain: shootDomain,
+					Purpose:               "development",
 				},
-				InternalClusterDomain: shootDomain,
-				Purpose:               "development",
+				Seed: &seedpkg.Seed{},
 			},
-			Seed: &seedpkg.Seed{},
-		}}
+		}
 		botanist.StoreSecret(v1beta1constants.SecretNameCACluster, &corev1.Secret{Data: map[string][]byte{"ca.crt": ca}})
 		botanist.StoreSecret(v1beta1constants.SecretNameCAKubelet, &corev1.Secret{Data: map[string][]byte{"ca.crt": caKubelet}})
-		botanist.StoreSecret(v1beta1constants.SecretNameSSHKeyPair, &corev1.Secret{Data: map[string][]byte{"id_rsa.pub": sshPublicKey}})
-		botanist.StoreSecret(v1beta1constants.SecretNameOldSSHKeyPair, &corev1.Secret{Data: map[string][]byte{"id_rsa.pub": sshPublicKeyOld}})
 		botanist.SetShootState(shootState)
 		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 			Spec: gardencorev1beta1.SeedSpec{
@@ -117,7 +127,7 @@ var _ = Describe("operatingsystemconfig", func() {
 				operatingSystemConfig.EXPECT().SetAPIServerURL(fmt.Sprintf("https://%s", apiServerAddress))
 				operatingSystemConfig.EXPECT().SetCABundle(pointer.String("\n" + string(ca)))
 				operatingSystemConfig.EXPECT().SetKubeletCACertificate(string(caKubelet))
-				operatingSystemConfig.EXPECT().SetSSHPublicKeys([]string{string(sshPublicKey), string(sshPublicKeyOld)})
+				operatingSystemConfig.EXPECT().SetSSHPublicKeys(gomock.AssignableToTypeOf([]string{}))
 
 				operatingSystemConfig.EXPECT().Deploy(ctx)
 				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
@@ -128,7 +138,7 @@ var _ = Describe("operatingsystemconfig", func() {
 			BeforeEach(func() {
 				operatingSystemConfig.EXPECT().SetAPIServerURL(fmt.Sprintf("https://api.%s", shootDomain))
 				operatingSystemConfig.EXPECT().SetKubeletCACertificate(string(caKubelet))
-				operatingSystemConfig.EXPECT().SetSSHPublicKeys([]string{string(sshPublicKey), string(sshPublicKeyOld)})
+				operatingSystemConfig.EXPECT().SetSSHPublicKeys(gomock.AssignableToTypeOf([]string{}))
 			})
 
 			It("should deploy successfully (no CA)", func() {
@@ -191,7 +201,7 @@ var _ = Describe("operatingsystemconfig", func() {
 			BeforeEach(func() {
 				operatingSystemConfig.EXPECT().SetAPIServerURL(fmt.Sprintf("https://api.%s", shootDomain))
 				operatingSystemConfig.EXPECT().SetKubeletCACertificate(string(caKubelet))
-				operatingSystemConfig.EXPECT().SetSSHPublicKeys([]string{string(sshPublicKey), string(sshPublicKeyOld)})
+				operatingSystemConfig.EXPECT().SetSSHPublicKeys(gomock.AssignableToTypeOf([]string{}))
 
 				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 					Status: gardencorev1beta1.ShootStatus{

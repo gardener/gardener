@@ -66,4 +66,6 @@ The private key can be used to establish an SSH connection to the workers for tr
 
 *Rotation*: Keypair can be rotated by annotating the shoot resource with `gardener.cloud/operation: rotate-ssh-keypair`.
 Propagating the new keypair to all worker nodes may take longer than the initiated reconciliation of the shoot.
-The previous keypair can still be found in the `<shoot-name>.ssh-keypair.old` secret. 
+The previous keypair can still be found in the `<shoot-name>.ssh-keypair.old` secret and is still valid until the next rotation. 
+
+You can check the `.status.credentials.rotation.sshKeypair` field in the `Shoot` to see when the rotation was last initiated or last completed.

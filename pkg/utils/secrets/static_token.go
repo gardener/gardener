@@ -19,17 +19,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/infodata"
 )
 
 const (
 	// DataKeyStaticTokenCSV is the key in a secret data holding the CSV format of a secret.
 	DataKeyStaticTokenCSV = "static_tokens.csv"
-	// DataKeyUserID is the key in a secret data holding the userID.
-	DataKeyUserID = "userID"
-	// DataKeyGroups is the key in a secret data holding the groups.
-	DataKeyGroups = "groups"
 	// DataKeyToken is the key in a secret data holding the token.
 	DataKeyToken = "token"
 )
@@ -78,7 +73,7 @@ func (s *StaticTokenSecretConfig) GenerateInfoData() (infodata.InfoData, error) 
 	tokens := make(map[string]string)
 
 	for username := range s.Tokens {
-		token, err := utils.GenerateRandomString(128)
+		token, err := GenerateRandomString(128)
 		if err != nil {
 			return nil, err
 		}
@@ -137,7 +132,7 @@ func (s *StaticTokenSecretConfig) GenerateStaticToken() (*StaticToken, error) {
 	tokens := make([]Token, 0, len(s.Tokens))
 
 	for _, tokenConfig := range s.Tokens {
-		token, err := utils.GenerateRandomString(128)
+		token, err := GenerateRandomString(128)
 		if err != nil {
 			return nil, err
 		}

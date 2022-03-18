@@ -32,6 +32,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -91,10 +92,16 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetCABundle(b.getOperatingSystemConfigCABundle())
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetKubeletCACertificate(string(b.LoadSecret(v1beta1constants.SecretNameCAKubelet).Data[secrets.DataKeyCertificateCA]))
 
-	publicKeys := []string{string(b.LoadSecret(v1beta1constants.SecretNameSSHKeyPair).Data[secrets.DataKeySSHAuthorizedKeys])}
-	if secret := b.LoadSecret(v1beta1constants.SecretNameOldSSHKeyPair); secret != nil {
-		publicKeys = append(publicKeys, string(secret.Data[secrets.DataKeySSHAuthorizedKeys]))
+	sshKeypairSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameSSHKeyPair)
 	}
+	publicKeys := []string{string(sshKeypairSecret.Data[secrets.DataKeySSHAuthorizedKeys])}
+
+	if sshKeypairSecretOld, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair, secretsmanager.Old); found {
+		publicKeys = append(publicKeys, string(sshKeypairSecretOld.Data[secrets.DataKeySSHAuthorizedKeys]))
+	}
+
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetSSHPublicKeys(publicKeys)
 
 	if b.isRestorePhase() {
