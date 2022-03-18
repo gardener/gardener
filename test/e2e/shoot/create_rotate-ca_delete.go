@@ -18,9 +18,12 @@ import (
 	"context"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -33,11 +36,21 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 	f.Shoot = defaultShoot("rotate-ca-")
 
 	It("Create Shoot, Rotate CA and Delete Shoot", Label("ca-rotation"), func() {
-		By("Create Shoot")
 		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
+
+		By("Create Shoot")
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
+
+		By("Verify old CA secret")
+		var oldCACert []byte
+		Eventually(func(g Gomega) {
+			secret := &corev1.Secret{}
+			g.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(f.Shoot.Name, gutil.ShootProjectSecretSuffixCACluster)}, secret)).To(Succeed())
+			g.Expect(secret.Data).To(HaveKeyWithValue("ca.crt", Not(BeEmpty())))
+			oldCACert = secret.Data["ca.crt"]
+		}).Should(Succeed(), "old CA cert should be synced to garden")
 
 		By("Start CA rotation")
 		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
@@ -63,6 +76,17 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 		}).Should(Succeed())
 		Expect(f.Shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase).To(Equal(gardencorev1beta1.RotationPrepared), "ca rotation phase should be 'Prepared'")
 
+		By("Verify CA bundle secret")
+		var caBundle []byte
+		Eventually(func(g Gomega) {
+			secret := &corev1.Secret{}
+			g.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(f.Shoot.Name, gutil.ShootProjectSecretSuffixCACluster)}, secret)).To(Succeed())
+			// For now, there is only one CA cert in the bundle, as the CA is not actually rotated yet
+			// TODO: verify the old CA cert is still in there and a new is added, once the CA is actually rotated
+			g.Expect(secret.Data).To(HaveKeyWithValue("ca.crt", oldCACert))
+			caBundle = secret.Data["ca.crt"]
+		}).Should(Succeed(), "CA bundle should be synced to garden")
+
 		By("Complete CA rotation")
 		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
 		defer cancel()
@@ -86,6 +110,17 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 			return helper.GetShootCARotationPhase(f.Shoot.Status.Credentials) == gardencorev1beta1.RotationCompleted &&
 				time.Now().UTC().Sub(f.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastCompletionTime.Time.UTC()) <= time.Minute
 		}).Should(BeTrue())
+
+		By("Verify new CA secret")
+		var newCACert []byte
+		Eventually(func(g Gomega) {
+			secret := &corev1.Secret{}
+			g.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(f.Shoot.Name, gutil.ShootProjectSecretSuffixCACluster)}, secret)).To(Succeed())
+			// For now, the secret will still contain the old CA cert, as the CA is not actually rotated yet
+			// TODO: verify that only the new CA cert of the bundle is kept, once the CA is actually rotated
+			g.Expect(secret.Data).To(HaveKeyWithValue("ca.crt", caBundle))
+			newCACert = secret.Data["ca.crt"]
+		}).Should(Succeed(), "new CA cert should be synced to garden")
 
 		By("Delete Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
