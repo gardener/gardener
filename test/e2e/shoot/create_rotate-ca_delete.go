@@ -50,6 +50,8 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 			g.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(f.Shoot.Name, gutil.ShootProjectSecretSuffixCACluster)}, secret)).To(Succeed())
 			g.Expect(secret.Data).To(HaveKeyWithValue("ca.crt", Not(BeEmpty())))
 			oldCACert = secret.Data["ca.crt"]
+
+			verifyCABundleInKubeconfigSecret(ctx, g, f.GardenClient.Client(), client.ObjectKeyFromObject(f.Shoot), oldCACert)
 		}).Should(Succeed(), "old CA cert should be synced to garden")
 
 		By("Start CA rotation")
@@ -85,6 +87,8 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 			// TODO: verify the old CA cert is still in there and a new is added, once the CA is actually rotated
 			g.Expect(secret.Data).To(HaveKeyWithValue("ca.crt", oldCACert))
 			caBundle = secret.Data["ca.crt"]
+
+			verifyCABundleInKubeconfigSecret(ctx, g, f.GardenClient.Client(), client.ObjectKeyFromObject(f.Shoot), caBundle)
 		}).Should(Succeed(), "CA bundle should be synced to garden")
 
 		By("Complete CA rotation")
@@ -120,6 +124,8 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 			// TODO: verify that only the new CA cert of the bundle is kept, once the CA is actually rotated
 			g.Expect(secret.Data).To(HaveKeyWithValue("ca.crt", caBundle))
 			newCACert = secret.Data["ca.crt"]
+
+			verifyCABundleInKubeconfigSecret(ctx, g, f.GardenClient.Client(), client.ObjectKeyFromObject(f.Shoot), newCACert)
 		}).Should(Succeed(), "new CA cert should be synced to garden")
 
 		By("Delete Shoot")
@@ -128,3 +134,10 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
 	})
 })
+
+func verifyCABundleInKubeconfigSecret(ctx context.Context, g Gomega, c client.Reader, shootKey client.ObjectKey, expectedBundle []byte) {
+	secret := &corev1.Secret{}
+	shootKey.Name = gutil.ComputeShootProjectSecretName(shootKey.Name, gutil.ShootProjectSecretSuffixCACluster)
+	g.Expect(c.Get(ctx, shootKey, secret)).To(Succeed())
+	g.Expect(secret.Data).To(HaveKeyWithValue("ca.crt", expectedBundle))
+}
