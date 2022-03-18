@@ -37,7 +37,7 @@ var _ = Describe("Manager", func() {
 		It("should generate the expected object meta for a never-rotated CA cert secret", func() {
 			config := &secretutils.CertificateSecretConfig{Name: configName}
 
-			meta, err := ObjectMeta(namespace, config, "", nil, nil, nil)
+			meta, err := ObjectMeta(namespace, "test", config, "", nil, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(meta).To(Equal(metav1.ObjectMeta{
@@ -46,6 +46,7 @@ var _ = Describe("Manager", func() {
 				Labels: map[string]string{
 					"name":                          configName,
 					"managed-by":                    "secrets-manager",
+					"manager-identity":              "test",
 					"checksum-of-config":            "1645436262831067767",
 					"last-rotation-initiation-time": "",
 				},
@@ -55,7 +56,7 @@ var _ = Describe("Manager", func() {
 		It("should generate the expected object meta for a rotated CA cert secret", func() {
 			config := &secretutils.CertificateSecretConfig{Name: configName}
 
-			meta, err := ObjectMeta(namespace, config, lastRotationInitiationTime, nil, nil, nil)
+			meta, err := ObjectMeta(namespace, "test", config, lastRotationInitiationTime, nil, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(meta).To(Equal(metav1.ObjectMeta{
@@ -64,6 +65,7 @@ var _ = Describe("Manager", func() {
 				Labels: map[string]string{
 					"name":                          configName,
 					"managed-by":                    "secrets-manager",
+					"manager-identity":              "test",
 					"checksum-of-config":            "1645436262831067767",
 					"last-rotation-initiation-time": "1646060228",
 				},
@@ -77,12 +79,13 @@ var _ = Describe("Manager", func() {
 					SigningCA: &secretutils.Certificate{},
 				}
 
-				meta, err := ObjectMeta(namespace, config, lastRotationInitiationTime, signingCAChecksum, persist, bundleFor)
+				meta, err := ObjectMeta(namespace, "test", config, lastRotationInitiationTime, signingCAChecksum, persist, bundleFor)
 				Expect(err).NotTo(HaveOccurred())
 
 				labels := map[string]string{
 					"name":                          configName,
 					"managed-by":                    "secrets-manager",
+					"manager-identity":              "test",
 					"checksum-of-config":            "17861245496710117091",
 					"last-rotation-initiation-time": "1646060228",
 				}

@@ -83,6 +83,7 @@ var _ = Describe("FakeManager", func() {
 				Labels: map[string]string{
 					"name":                          name,
 					"managed-by":                    "secrets-manager",
+					"manager-identity":              "fake",
 					"checksum-of-config":            configChecksum,
 					"last-rotation-initiation-time": "",
 					"rotation-strategy":             "inplace",
@@ -123,6 +124,7 @@ var _ = Describe("FakeManager", func() {
 					Labels: map[string]string{
 						"name":                          name,
 						"managed-by":                    "secrets-manager",
+						"manager-identity":              "fake",
 						"checksum-of-config":            configChecksum,
 						"last-rotation-initiation-time": "",
 						"rotation-strategy":             "keepold",

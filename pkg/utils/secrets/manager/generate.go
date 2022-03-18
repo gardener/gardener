@@ -40,7 +40,7 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 		bundleFor = pointer.String(strings.TrimSuffix(config.GetName(), nameSuffixBundle))
 	}
 
-	objectMeta, err := ObjectMeta(m.namespace, config, m.lastRotationInitiationTimes[config.GetName()], options.signingCAChecksum, &options.Persist, bundleFor)
+	objectMeta, err := ObjectMeta(m.namespace, m.identity, config, m.lastRotationInitiationTimes[config.GetName()], options.signingCAChecksum, &options.Persist, bundleFor)
 	if err != nil {
 		return nil, err
 	}
@@ -167,8 +167,9 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 func (m *manager) storeOldSecrets(ctx context.Context, name, currentSecretName string) error {
 	secretList := &corev1.SecretList{}
 	if err := m.client.List(ctx, secretList, client.InNamespace(m.namespace), client.MatchingLabels{
-		LabelKeyName:      name,
-		LabelKeyManagedBy: LabelValueSecretsManager,
+		LabelKeyName:            name,
+		LabelKeyManagedBy:       LabelValueSecretsManager,
+		LabelKeyManagerIdentity: m.identity,
 	}); err != nil {
 		return err
 	}

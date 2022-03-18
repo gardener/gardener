@@ -33,8 +33,11 @@ import (
 const (
 	// LabelKeyName is a constant for a key of a label on a Secret describing the name.
 	LabelKeyName = "name"
-	// LabelKeyManagedBy is a constant for a key of a label on a Secret describing whose managing it.
+	// LabelKeyManagedBy is a constant for a key of a label on a Secret describing who is managing it.
 	LabelKeyManagedBy = "managed-by"
+	// LabelKeyManagerIdentity is a constant for a key of a label on a Secret describing which secret manager instance
+	// is managing it.
+	LabelKeyManagerIdentity = "manager-identity"
 	// LabelKeyChecksumConfig is a constant for a key of a label on a Secret describing the checksum of the
 	// configuration used to create the data.
 	LabelKeyChecksumConfig = "checksum-of-config"
@@ -66,6 +69,7 @@ type (
 		namespace                   string
 		lastRotationInitiationTimes nameToUnixTime
 		store                       secretStore
+		identity                    string
 	}
 
 	nameToUnixTime map[string]string
@@ -94,7 +98,7 @@ const (
 )
 
 // New returns a new manager for secrets in a given namespace.
-func New(logger logr.Logger, client client.Client, namespace string, secretNamesToTimes map[string]time.Time) Interface {
+func New(logger logr.Logger, client client.Client, namespace string, identity string, secretNamesToTimes map[string]time.Time) Interface {
 	lastRotationInitiationTimes := make(map[string]string)
 
 	for name, time := range secretNamesToTimes {
@@ -107,6 +111,7 @@ func New(logger logr.Logger, client client.Client, namespace string, secretNames
 		namespace:                   namespace,
 		store:                       make(secretStore),
 		lastRotationInitiationTimes: lastRotationInitiationTimes,
+		identity:                    identity,
 	}
 }
 
@@ -166,6 +171,7 @@ func computeSecretInfo(obj *corev1.Secret) (secretInfo, error) {
 // ObjectMeta returns the object meta based on the given settings.
 func ObjectMeta(
 	namespace string,
+	managerIdentity string,
 	config secretutils.ConfigInterface,
 	lastRotationInitiationTime string,
 	signingCAChecksum *string,
@@ -183,6 +189,7 @@ func ObjectMeta(
 	labels := map[string]string{
 		LabelKeyName:                       config.GetName(),
 		LabelKeyManagedBy:                  LabelValueSecretsManager,
+		LabelKeyManagerIdentity:            managerIdentity,
 		LabelKeyChecksumConfig:             strconv.FormatUint(configHash, 10),
 		LabelKeyLastRotationInitiationTime: lastRotationInitiationTime,
 	}

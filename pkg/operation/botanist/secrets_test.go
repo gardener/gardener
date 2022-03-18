@@ -28,7 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -63,7 +63,7 @@ var _ = Describe("Secrets", func() {
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeSeedInterface = fakeclientset.NewClientSetBuilder().WithClient(fakeClient).Build()
-		fakeSecretsManager = fake.New(fakeClient, namespace)
+		fakeSecretsManager = fakesecretsmanager.New(fakeClient, namespace)
 		botanist = &Botanist{
 			Operation: &operation.Operation{
 				K8sSeedClient:  fakeSeedInterface,
@@ -118,20 +118,26 @@ var _ = Describe("Secrets", func() {
 							{
 								Name:   "ca",
 								Type:   "secret",
-								Labels: map[string]string{"managed-by": "secrets-manager"},
+								Labels: map[string]string{"managed-by": "secrets-manager", "manager-identity": fakesecretsmanager.ManagerIdentity},
 								Data:   runtime.RawExtension{Raw: rawData("data-for", "ca")},
 							},
 							{
 								Name:   "ca-etcd",
 								Type:   "secret",
-								Labels: map[string]string{"managed-by": "secrets-manager"},
+								Labels: map[string]string{"managed-by": "secrets-manager", "manager-identity": fakesecretsmanager.ManagerIdentity},
 								Data:   runtime.RawExtension{Raw: rawData("data-for", "ca-etcd")},
 							},
 							{
 								Name:   "non-ca-secret",
 								Type:   "secret",
-								Labels: map[string]string{"managed-by": "secrets-manager"},
+								Labels: map[string]string{"managed-by": "secrets-manager", "manager-identity": fakesecretsmanager.ManagerIdentity},
 								Data:   runtime.RawExtension{Raw: rawData("data-for", "non-ca-secret")},
+							},
+							{
+								Name:   "extension-foo-secret",
+								Type:   "secret",
+								Labels: map[string]string{"managed-by": "secrets-manager", "manager-identity": "extension-foo"},
+								Data:   runtime.RawExtension{Raw: rawData("data-for", "extension-foo-secret")},
 							},
 							{
 								Name: "secret-without-labels",
@@ -164,7 +170,12 @@ var _ = Describe("Secrets", func() {
 				By("verifying non-CA secrets got restored")
 				secret := &corev1.Secret{}
 				Expect(fakeClient.Get(ctx, kutil.Key(namespace, "non-ca-secret"), secret)).To(Succeed())
-				Expect(secret.Labels).To(Equal(map[string]string{"managed-by": "secrets-manager"}))
+				Expect(secret.Labels).To(Equal(map[string]string{"managed-by": "secrets-manager", "manager-identity": fakesecretsmanager.ManagerIdentity}))
+				Expect(secret.Data).To(Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
+
+				By("verifying external secrets got restored")
+				Expect(fakeClient.Get(ctx, kutil.Key(namespace, "extension-foo-secret"), secret)).To(Succeed())
+				Expect(secret.Labels).To(Equal(map[string]string{"managed-by": "secrets-manager", "manager-identity": "extension-foo"}))
 				Expect(secret.Data).To(Equal(map[string][]byte{"data-for": []byte(secret.Name)}))
 
 				By("verifying unrelated data not to be restored")
@@ -180,6 +191,7 @@ func verifyCASecret(name string, secret *corev1.Secret, dataMatcher gomegatypes.
 	Expect(secret.Labels).To(And(
 		HaveKeyWithValue("name", name),
 		HaveKeyWithValue("managed-by", "secrets-manager"),
+		HaveKeyWithValue("manager-identity", fakesecretsmanager.ManagerIdentity),
 		HaveKeyWithValue("persist", "true"),
 		HaveKeyWithValue("rotation-strategy", "keepold"),
 		HaveKey("checksum-of-config"),

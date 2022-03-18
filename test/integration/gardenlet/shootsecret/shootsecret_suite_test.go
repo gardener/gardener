@@ -41,7 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-func TestShootRetry(t *testing.T) {
+func TestShootSecret(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "ShootSecret Controller Integration Test Suite")
 }

@@ -1,10 +1,12 @@
 # Secrets Management for Seed and Shoot Cluster
 
-🚧️ Please note that the work in the new secrets management is ongoing and hence not yet completed.
+> 🚧️ Please note that the work in the new secrets management is ongoing and hence not yet completed.
 Accordingly, expect adaptations to this document and implementation details.
 
 The gardenlet needs to create quite some amount of credentials (certificates, private keys, passwords, etc.) for seed and shoot clusters in order to ensure secure deployments.
 Such credentials typically should be rotated regularly, and they potentially need to be persisted such that they don't get lost in case of a control plane migration or a lost seed cluster.
+
+## SecretsManager Introduction
 
 These requirements can be covered by using the `SecretsManager` package maintained in [`pkg/utils/secrets/manager`](pkg/utils/secrets/manager).
 It is built on top of the `ConfigInterface` and `DataInterface` interfaces part of [`pkg/utils/secrets`](pkg/utils/secrets) and provides the following functions:
@@ -68,6 +70,21 @@ if err != nil {
 ```
 
 As explained above, this returns the bundle secret for the CA `my-ca` which might potentially contain both the current and the old CA (in case of rotation/regeneration).
+
+## Reusing the SecretsManager in Other Components
+
+While the `SecretsManager` is primarily used by gardenlet, it can be reused by other components (e.g. extensions) as well for managing secrets that are specific to the component or extension. For example, provider extensions might use their own `SecretsManager` instance for managing the serving certificate of `cloud-controller-manager`.
+
+External components that want to reuse the `SecretsManager` should consider the following aspects:
+
+- On initialization of a `SecretsManager`, pass an `identity` specific to the component, for example the extension name (gardenlet uses `gardenlet` as the `SecretsManager`'s identity). 
+  The given identity is added as a value for the `manager-identity` label on managed `Secret`s. 
+  This label is used by the `Cleanup` function to select only those `Secret`s that are actually managed by the particular `SecretManager` instance. This is done to prevent removing still needed `Secret`s that are managed by other instances.
+- Generate dedicated CAs for signing certificates instead of depending on CAs managed by gardenlet.
+- Names of `Secret`s managed by external `SecretsManager` instances must not conflict with `Secret` names from other instances (e.g. gardenlet).
+- For CAs that should be rotated in lock-step with the Shoot CAs managed by gardenlet, components need to pass information about the last rotation initiation time and the current rotation phase to the `SecretsManager` upon initialization.
+  The relevant information can be retrieved from the `Cluster` resource under `.spec.shoot.status.credentials.rotation.certificateAuthorities`.
+- Independent of the specific identity, secrets marked with the `Persist` option are automatically saved in the `ShootState` resource by gardenlet and are also restored by gardenlet on Control Plane Migration to the new Seed.
 
 ## Implementation Details
 

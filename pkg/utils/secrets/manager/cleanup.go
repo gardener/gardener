@@ -26,7 +26,8 @@ import (
 func (m *manager) Cleanup(ctx context.Context) error {
 	secretList := &corev1.SecretList{}
 	if err := m.client.List(ctx, secretList, client.InNamespace(m.namespace), client.MatchingLabels{
-		LabelKeyManagedBy: LabelValueSecretsManager,
+		LabelKeyManagedBy:       LabelValueSecretsManager,
+		LabelKeyManagerIdentity: m.identity,
 	}); err != nil {
 		return err
 	}
