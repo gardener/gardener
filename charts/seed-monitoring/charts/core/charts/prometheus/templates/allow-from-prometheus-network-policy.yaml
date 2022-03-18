@@ -22,6 +22,9 @@ spec:
         matchLabels:
           app: seed-prometheus
           role: monitoring
+      namespaceSelector:
+        matchLabels:
+          role: garden
     ports:
     - port: metrics
       protocol: TCP
