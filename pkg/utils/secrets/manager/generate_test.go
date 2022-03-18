@@ -335,6 +335,65 @@ var _ = Describe("Generate", func() {
 		})
 
 		Context("backwards compatibility", func() {
+			Context("etcd encryption key", func() {
+				var (
+					oldKey    = []byte("old-key")
+					oldSecret = []byte("old-secret")
+					config    *secretutils.ETCDEncryptionKeySecretConfig
+				)
+
+				BeforeEach(func() {
+					config = &secretutils.ETCDEncryptionKeySecretConfig{
+						Name:         "kube-apiserver-etcd-encryption-key",
+						SecretLength: 32,
+					}
+				})
+
+				It("should generate a new encryption key secret if old secret does not exist", func() {
+					By("generating secret")
+					secret, err := m.Generate(ctx, config)
+					Expect(err).NotTo(HaveOccurred())
+
+					By("verifying new key and secret were generated")
+					Expect(secret.Data["key"]).NotTo(Equal(oldKey))
+					Expect(secret.Data["secret"]).NotTo(Equal(oldSecret))
+				})
+
+				It("should keep the existing encryption key and secret if old secret still exists", func() {
+					oldEncryptionConfiguration := `apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+- providers:
+  - aescbc:
+      keys:
+      - name: ` + string(oldKey) + `
+        secret: ` + string(oldSecret) + `
+  - identity: {}
+  resources:
+  - secrets
+`
+
+					By("creating existing secret with old encryption configuration")
+					existingSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "etcd-encryption-secret",
+							Namespace: namespace,
+						},
+						Type: corev1.SecretTypeOpaque,
+						Data: map[string][]byte{"encryption-configuration.yaml": []byte(oldEncryptionConfiguration)},
+					}
+					Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
+
+					By("generating secret")
+					secret, err := m.Generate(ctx, config)
+					Expect(err).NotTo(HaveOccurred())
+
+					By("verifying old key and secret were kept")
+					Expect(secret.Data["key"]).To(Equal(oldKey))
+					Expect(secret.Data["secret"]).To(Equal(oldSecret))
+				})
+			})
+
 			Context("kube-apiserver basic auth", func() {
 				var (
 					userName    = "admin"

@@ -27,6 +27,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -214,6 +219,49 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 		}
 
 		return existingSecret.Data, nil
+
+	case "kube-apiserver-etcd-encryption-key":
+		if err := m.client.Get(ctx, kutil.Key(m.namespace, "etcd-encryption-secret"), existingSecret); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, err
+			}
+			return newData, nil
+		}
+
+		scheme := runtime.NewScheme()
+		if err := apiserverconfigv1.AddToScheme(scheme); err != nil {
+			return nil, err
+		}
+
+		ser := json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
+		versions := schema.GroupVersions([]schema.GroupVersion{apiserverconfigv1.SchemeGroupVersion})
+		codec := serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
+
+		encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{}
+		if _, _, err := codec.Decode(existingSecret.Data["encryption-configuration.yaml"], nil, encryptionConfiguration); err != nil {
+			return nil, err
+		}
+
+		var existingEncryptionKey, existingEncryptionSecret []byte
+
+		if len(encryptionConfiguration.Resources) != 0 {
+			for _, provider := range encryptionConfiguration.Resources[0].Providers {
+				if provider.AESCBC != nil && len(provider.AESCBC.Keys) != 0 {
+					existingEncryptionKey = []byte(provider.AESCBC.Keys[0].Name)
+					existingEncryptionSecret = []byte(provider.AESCBC.Keys[0].Secret)
+					break
+				}
+			}
+		}
+
+		if existingEncryptionKey == nil || existingEncryptionSecret == nil {
+			return nil, fmt.Errorf("old etcd encryption key could not found be retrieved")
+		}
+
+		return map[string][]byte{
+			secretutils.DataKeyEncryptionKeyName: existingEncryptionKey,
+			secretutils.DataKeyEncryptionSecret:  existingEncryptionSecret,
+		}, nil
 	}
 
 	return newData, nil
