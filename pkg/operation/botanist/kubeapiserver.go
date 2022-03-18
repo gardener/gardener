@@ -474,6 +474,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(*gardenerResourceData)
 		gardenerResourceDataList.Delete("static-token")
 		gardenerResourceDataList.Delete("kube-apiserver-basic-auth")
+		gardenerResourceDataList.Delete("etcdEncryptionConfiguration")
 		*gardenerResourceData = gardenerResourceDataList
 		return nil
 	}); err != nil {
@@ -486,6 +487,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-egress-selector-configuration"}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-oidc-cabundle"}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-service-account-signing-key"}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "etcd-encryption-secret"}},
 	)
 }
 

@@ -1529,6 +1529,24 @@ var _ = Describe("KubeAPIServer", func() {
 				HaveKeyWithValue("data-for", []byte("user-kubeconfig")),
 			))
 		})
+
+		It("should delete the old etcd encryption config secret", func() {
+			kubeAPIServer.EXPECT().GetValues()
+			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+			kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
+			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+			kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
+			kubeAPIServer.EXPECT().Deploy(ctx)
+
+			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "etcd-encryption-secret"}}
+			Expect(c.Create(ctx, secret)).To(Succeed())
+
+			Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(secret), &corev1.Secret{})).To(BeNotFoundError())
+		})
 	})
 
 	Describe("#DeleteKubeAPIServer", func() {
