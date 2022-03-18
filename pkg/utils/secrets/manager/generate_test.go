@@ -16,11 +16,10 @@ package manager
 
 import (
 	"context"
-	"crypto/rsa"
-	"io"
 	"time"
 
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -33,23 +32,9 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-var (
-	oldGenerateRandomString func(int) (string, error)
-	oldGenerateKey          func(io.Reader, int) (*rsa.PrivateKey, error)
-)
-
 var _ = BeforeSuite(func() {
-	oldGenerateRandomString = secretutils.GenerateRandomString
-	secretutils.GenerateRandomString = secretutils.FakeGenerateRandomString
-
-	oldGenerateKey = secretutils.GenerateKey
-	secretutils.GenerateKey = secretutils.FakeGenerateKey
-})
-
-var _ = AfterSuite(func() {
-	secretutils.GenerateRandomString = oldGenerateRandomString
-
-	secretutils.GenerateKey = oldGenerateKey
+	DeferCleanup(test.WithVar(&secretutils.GenerateRandomString, secretutils.FakeGenerateRandomString))
+	DeferCleanup(test.WithVar(&secretutils.GenerateKey, secretutils.FakeGenerateKey))
 })
 
 var _ = Describe("Generate", func() {
@@ -576,6 +561,7 @@ var _ = Describe("Generate", func() {
 					Expect(existingOldSecret.Labels).To(Equal(map[string]string{
 						"name":                          "ssh-keypair",
 						"managed-by":                    "secrets-manager",
+						"manager-identity":              "test",
 						"persist":                       "true",
 						"last-rotation-initiation-time": "",
 					}))

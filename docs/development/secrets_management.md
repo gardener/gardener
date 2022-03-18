@@ -21,7 +21,7 @@ It is built on top of the `ConfigInterface` and `DataInterface` interfaces part 
   - `Rotate(rotationStrategy)`: This specifies the strategy in case this secret is to be rotated or regenerated (either `InPlace` which immediately forgets about the old secret, or `KeepOld` which keeps the old secret in the system).
   - `IgnoreOldSecrets()`: This specifies whether old secrets should be considered and loaded (which is done by default). It should be used when old secrets are no longer important and can be "forgotten" (e.g. in ["phase 2" (`t2`) of the CA certificate rotation](../proposals/18-shoot-CA-rotation.md#rotation-sequence-for-cluster-and-client-ca)).
 
-- `Get(string, ...GetOption) (*corev1.Secret, error)`
+- `Get(string, ...GetOption) (*corev1.Secret, bool)`
 
   This method retrieves the current secret for the given name.
   In case the secret in question is a certificate authority secret then it retrieves the bundle secret by default.
@@ -63,9 +63,9 @@ As explained above, the caller does not need to care about the rotation or the p
 In case a CA certificate is needed by some component then it can be retrieved as follows:
 
 ```go
-caSecret, err := k.secretsManager.Get("my-ca")
+caSecret, found := k.secretsManager.Get("my-ca")
 if err != nil {
-    return err
+    return fmt.Errorf("secret my-ca not found")
 }
 ```
 

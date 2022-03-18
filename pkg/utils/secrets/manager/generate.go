@@ -181,6 +181,7 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 			patch := client.MergeFrom(existingSecretOld.DeepCopy())
 			metav1.SetMetaDataLabel(&existingSecretOld.ObjectMeta, LabelKeyName, configName)
 			metav1.SetMetaDataLabel(&existingSecretOld.ObjectMeta, LabelKeyManagedBy, LabelValueSecretsManager)
+			metav1.SetMetaDataLabel(&existingSecretOld.ObjectMeta, LabelKeyManagerIdentity, m.identity)
 			metav1.SetMetaDataLabel(&existingSecretOld.ObjectMeta, LabelKeyPersist, LabelValueTrue)
 			metav1.SetMetaDataLabel(&existingSecretOld.ObjectMeta, LabelKeyLastRotationInitiationTime, "")
 			existingSecretOld.Immutable = pointer.Bool(true)
@@ -195,8 +196,9 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 			if err := retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (done bool, err error) {
 				secretList := &corev1.SecretList{}
 				if err := m.client.List(ctx, secretList, client.InNamespace(m.namespace), client.MatchingLabels{
-					LabelKeyName:      configName,
-					LabelKeyManagedBy: LabelValueSecretsManager,
+					LabelKeyName:            configName,
+					LabelKeyManagedBy:       LabelValueSecretsManager,
+					LabelKeyManagerIdentity: m.identity,
 				}); err != nil {
 					return retry.SevereError(err)
 				}

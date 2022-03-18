@@ -57,17 +57,9 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-var (
-	oldGenerateRandomString func(int) (string, error)
-
-	_ = BeforeSuite(func() {
-		oldGenerateRandomString = secretutils.GenerateRandomString
-		secretutils.GenerateRandomString = secretutils.FakeGenerateRandomString
-	})
-	_ = AfterSuite(func() {
-		secretutils.GenerateRandomString = oldGenerateRandomString
-	})
-)
+var _ = BeforeSuite(func() {
+	DeferCleanup(test.WithVar(&secretutils.GenerateRandomString, secretutils.FakeGenerateRandomString))
+})
 
 var _ = Describe("KubeAPIServer", func() {
 	var (

@@ -99,17 +99,11 @@ func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
 		}
 	}
 
-	for _, generateFn := range []func(context.Context) error{
+	return flow.Sequential(
 		b.generateCertificateAuthorities,
 		b.generateGenericTokenKubeconfig,
 		b.generateSSHKeypair,
-	} {
-		if err := generateFn(ctx); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	)(ctx)
 }
 
 func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
