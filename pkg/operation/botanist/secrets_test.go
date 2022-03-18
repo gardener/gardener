@@ -106,7 +106,7 @@ var _ = Describe("Secrets", func() {
 
 	Describe("#InitializeSecretsManagement", func() {
 		Context("when shoot is not in restoration phase", func() {
-			It("should generate the certificate authorities", func() {
+			It("should generate the certificate authorities and sync the cluster CA to the garden", func() {
 				Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
 
 				for _, name := range caSecretNames {
@@ -114,6 +114,10 @@ var _ = Describe("Secrets", func() {
 					Expect(fakeSeedClient.Get(ctx, kutil.Key(seedNamespace, name), secret)).To(Succeed())
 					verifyCASecret(name, secret, And(HaveKey("ca.crt"), HaveKey("ca.key")))
 				}
+
+				gardenSecret := &corev1.Secret{}
+				Expect(fakeGardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ca-cluster"), gardenSecret)).To(Succeed())
+				Expect(gardenSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "ca-cluster"))
 			})
 
 			It("should generate the generic token kubeconfig", func() {

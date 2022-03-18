@@ -167,6 +167,8 @@ func GetShootNameFromOwnerReferences(objectMeta metav1.Object) string {
 const (
 	// ShootProjectSecretSuffixKubeconfig is a constant for a shoot project secret with suffix 'kubeconfig'.
 	ShootProjectSecretSuffixKubeconfig = "kubeconfig"
+	// ShootProjectSecretSuffixCACluster is a constant for a shoot project secret with suffix 'ca-cluster'.
+	ShootProjectSecretSuffixCACluster = "ca-cluster"
 	// ShootProjectSecretSuffixSSHKeypair is a constant for a shoot project secret with suffix 'ssh-keypair'.
 	ShootProjectSecretSuffixSSHKeypair = v1beta1constants.SecretNameSSHKeyPair
 	// ShootProjectSecretSuffixOldSSHKeypair is a constant for a shoot project secret with suffix 'ssh-keypair.old'.
