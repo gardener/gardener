@@ -567,7 +567,7 @@ func (v *vpnShoot) getVolumes(secret, secretTLSAuth, secretDH *corev1.Secret) []
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secret.Name,
-					DefaultMode: pointer.Int32(400),
+					DefaultMode: pointer.Int32(0400),
 				},
 			},
 		},
@@ -576,7 +576,7 @@ func (v *vpnShoot) getVolumes(secret, secretTLSAuth, secretDH *corev1.Secret) []
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretTLSAuth.Name,
-					DefaultMode: pointer.Int32(400),
+					DefaultMode: pointer.Int32(0400),
 				},
 			},
 		},
@@ -587,7 +587,7 @@ func (v *vpnShoot) getVolumes(secret, secretTLSAuth, secretDH *corev1.Secret) []
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretDH.Name,
-					DefaultMode: pointer.Int32(400),
+					DefaultMode: pointer.Int32(0400),
 				},
 			},
 		})

@@ -364,17 +364,17 @@ spec:
       volumes:
       - name: vpn-shoot
         secret:
-          defaultMode: 400
+          defaultMode: 256
           secretName: ` + secretNameTest + `
       - name: vpn-shoot-tlsauth
         secret:
-          defaultMode: 400
+          defaultMode: 256
           secretName: ` + secretNameTLSAuthTest
 				if !reversedVPNEnabled {
 					out += `
       - name: vpn-shoot-dh
         secret:
-          defaultMode: 400
+          defaultMode: 256
           secretName: ` + secretNameDHTest
 				}
 				out += `
