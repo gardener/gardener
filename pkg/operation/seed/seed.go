@@ -461,7 +461,7 @@ func RunReconcileSeedFlow(
 	}
 
 	if vpaEnabled {
-		if err := vpa.NewCRD(applier).Deploy(ctx); err != nil {
+		if err := vpa.NewCRD(applier, nil).Deploy(ctx); err != nil {
 			return err
 		}
 	}

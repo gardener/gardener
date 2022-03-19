@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -27,7 +28,6 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -35,49 +35,65 @@ import (
 
 var _ = Describe("CRD", func() {
 	var (
-		ctx         context.Context
-		c           client.Client
+		ctx         = context.TODO()
 		crdDeployer component.Deployer
 	)
-
-	BeforeEach(func() {
-		ctx = context.TODO()
-
-		s := runtime.NewScheme()
-		Expect(apiextensionsv1.AddToScheme(s)).To(Succeed())
-
-		c = fake.NewClientBuilder().WithScheme(s).Build()
-
-		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{apiextensionsv1.SchemeGroupVersion})
-		mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
-
-		applier := kubernetes.NewApplier(c, mapper)
-
-		crdDeployer = NewCRD(applier)
-	})
 
 	JustBeforeEach(func() {
 		Expect(crdDeployer.Deploy(ctx)).To(Succeed(), "VPA CRD deployment succeeds")
 	})
 
-	DescribeTable("CRD is deployed",
-		func(crdName string) {
-			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
-		},
+	Context("with applier", func() {
+		var c client.Client
 
-		Entry("VerticalPodAutoscaler", "verticalpodautoscalers.autoscaling.k8s.io"),
-		Entry("VerticalPodAutoscalerCheckpoints", "verticalpodautoscalercheckpoints.autoscaling.k8s.io"),
-	)
+		BeforeEach(func() {
+			c = fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
-	DescribeTable("should re-create CRD if it is deleted",
-		func(crdName string) {
-			Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}, &client.DeleteOptions{})).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
-			Expect(crdDeployer.Deploy(ctx)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
-		},
+			mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{apiextensionsv1.SchemeGroupVersion})
+			mapper.Add(apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)
+			applier := kubernetes.NewApplier(c, mapper)
 
-		Entry("VerticalPodAutoscaler", "verticalpodautoscalers.autoscaling.k8s.io"),
-		Entry("VerticalPodAutoscalerCheckpoints", "verticalpodautoscalercheckpoints.autoscaling.k8s.io"),
-	)
+			crdDeployer = NewCRD(applier, nil)
+		})
+
+		DescribeTable("CRD is deployed",
+			func(crdName string) {
+				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			},
+
+			Entry("VerticalPodAutoscaler", "verticalpodautoscalers.autoscaling.k8s.io"),
+			Entry("VerticalPodAutoscalerCheckpoints", "verticalpodautoscalercheckpoints.autoscaling.k8s.io"),
+		)
+
+		DescribeTable("should re-create CRD if it is deleted",
+			func(crdName string) {
+				Expect(c.Delete(ctx, &apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}, &client.DeleteOptions{})).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(BeNotFoundError())
+				Expect(crdDeployer.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: crdName}, &apiextensionsv1.CustomResourceDefinition{})).To(Succeed())
+			},
+
+			Entry("VerticalPodAutoscaler", "verticalpodautoscalers.autoscaling.k8s.io"),
+			Entry("VerticalPodAutoscalerCheckpoints", "verticalpodautoscalercheckpoints.autoscaling.k8s.io"),
+		)
+	})
+
+	Context("with registry", func() {
+		var registry *managedresources.Registry
+
+		BeforeEach(func() {
+			registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+
+			crdDeployer = NewCRD(nil, registry)
+		})
+
+		DescribeTable("CRD is added to registry",
+			func(filename string) {
+				Expect(registry.SerializedObjects()).To(HaveKeyWithValue(filename, Not(BeEmpty())))
+			},
+
+			Entry("VerticalPodAutoscaler", "crd-verticalpodautoscalers.yaml"),
+			Entry("VerticalPodAutoscalerCheckpoints", "crd-verticalpodautoscalercheckpoints.yaml"),
+		)
+	})
 })
