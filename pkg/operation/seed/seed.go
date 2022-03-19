@@ -53,6 +53,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
@@ -453,13 +454,16 @@ func RunReconcileSeedFlow(
 		"hvpa": map[string]interface{}{
 			"enabled": hvpaEnabled,
 		},
-		"vpa": map[string]interface{}{
-			"enabled": vpaEnabled,
-		},
 	})
 
 	if err := chartApplier.Apply(ctx, filepath.Join(charts.Path, seedBoostrapCRDsChartName), v1beta1constants.GardenNamespace, seedBoostrapCRDsChartName, crdsChartValues); err != nil {
 		return err
+	}
+
+	if vpaEnabled {
+		if err := vpa.NewCRD(applier).Deploy(ctx); err != nil {
+			return err
+		}
 	}
 
 	if err := crds.NewExtensionsCRD(applier).Deploy(ctx); err != nil {

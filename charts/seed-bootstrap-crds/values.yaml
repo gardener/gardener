@@ -2,8 +2,3 @@ hvpa:
   enabled: false
   labels:
     gardener.cloud/role: hvpa
-
-vpa:
-  enabled: false
-  labels:
-    gardener.cloud/role: vpa
