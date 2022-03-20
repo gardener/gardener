@@ -77,20 +77,22 @@ var _ = Describe("Strategy", func() {
 				secretBinding.Provider = nil
 
 				errorList := secretbindingregistry.Strategy.Validate(context.TODO(), secretBinding)
-				Expect(errorList).To(HaveLen(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("provider"),
-				}))
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("provider"),
+					})),
+				))
 
 				secretBinding.Provider = &core.SecretBindingProvider{}
 
 				errorList = secretbindingregistry.Strategy.Validate(context.TODO(), secretBinding)
-				Expect(errorList).To(HaveLen(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("provider.type"),
-				}))
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("provider.type"),
+					})),
+				))
 			})
 
 			It("should allow creating SecretBinding when provider is valid", func() {

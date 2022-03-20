@@ -101,20 +101,20 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 			secretBinding.Provider = &core.SecretBindingProvider{}
 
 			errorList := ValidateSecretBinding(secretBinding)
-
-			Expect(errorList).To(HaveLen(3))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("metadata.name"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("metadata.namespace"),
-			}))
-			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("secretRef.name"),
-			}))
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("metadata.name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("metadata.namespace"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("secretRef.name"),
+				})),
+			))
 		})
 
 		It("should forbid empty stated Quota names", func() {
@@ -124,11 +124,12 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 
 			errorList := ValidateSecretBinding(secretBinding)
 
-			Expect(errorList).To(HaveLen(1))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("quotas[0].name"),
-			}))
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("quotas[0].name"),
+				})),
+			))
 		})
 	})
 
@@ -158,15 +159,16 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 
 			errorList := ValidateSecretBindingUpdate(newSecretBinding, secretBinding)
 
-			Expect(errorList).To(HaveLen(2))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("secretRef"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("quotas"),
-			}))
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("secretRef"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("quotas"),
+				})),
+			))
 		})
 
 		Context("when SecretBindingProviderValidation=false", func() {
@@ -203,11 +205,12 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 
 				errorList := ValidateSecretBindingUpdate(newSecretBinding, secretBinding)
 
-				Expect(errorList).To(HaveLen(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("provider"),
-				}))
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("provider"),
+					})),
+				))
 			})
 
 			It("should allow updating the SecretBinding provider when the field is not set", func() {
@@ -267,18 +270,20 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, true)()
 
 				errorList := ValidateSecretBindingProvider(nil)
-				Expect(errorList).To(HaveLen(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("provider"),
-				}))
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("provider"),
+					})),
+				))
 
 				errorList = ValidateSecretBindingProvider(&core.SecretBindingProvider{})
-				Expect(errorList).To(HaveLen(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("provider.type"),
-				}))
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("provider.type"),
+					})),
+				))
 			})
 
 			It("should succeed when provider is valid", func() {
