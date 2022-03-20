@@ -19,7 +19,10 @@ import (
 )
 
 // ValuesUpdater is a set of configuration values for the vpa-updater.
-type ValuesUpdater struct{}
+type ValuesUpdater struct {
+	// Image is the container image.
+	Image string
+}
 
 func (v *vpa) deployUpdaterResources(ctx context.Context) error {
 	return nil

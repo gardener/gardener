@@ -19,7 +19,10 @@ import (
 )
 
 // ValuesAdmissionController is a set of configuration values for the vpa-admission-controller.
-type ValuesAdmissionController struct{}
+type ValuesAdmissionController struct {
+	// Image is the container image.
+	Image string
+}
 
 func (v *vpa) deployAdmissionControllerResources(ctx context.Context) error {
 	return nil

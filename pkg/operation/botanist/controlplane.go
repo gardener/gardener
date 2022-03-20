@@ -41,8 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// DeployVerticalPodAutoscaler deploys the VPA into the shoot namespace in the seed.
-func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
+func (b *Botanist) oldDeployVerticalPodAutoscaler(ctx context.Context) error {
 	if !b.Shoot.WantsVerticalPodAutoscaler {
 		return common.DeleteVpa(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, true)
 	}

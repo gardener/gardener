@@ -19,7 +19,10 @@ import (
 )
 
 // ValuesExporter is a set of configuration values for the vpa-exporter.
-type ValuesExporter struct{}
+type ValuesExporter struct {
+	// Image is the container image.
+	Image string
+}
 
 func (v *vpa) deployExporterResources(ctx context.Context) error {
 	return nil

@@ -109,6 +109,7 @@ type Components struct {
 
 // ControlPlane contains references to K8S control plane components.
 type ControlPlane struct {
+	ClusterAutoscaler     clusterautoscaler.Interface
 	EtcdMain              etcd.Interface
 	EtcdEvents            etcd.Interface
 	EtcdCopyBackupsTask   etcdcopybackupstask.Interface
@@ -118,8 +119,8 @@ type ControlPlane struct {
 	KubeAPIServer         kubeapiserver.Interface
 	KubeScheduler         kubescheduler.Interface
 	KubeControllerManager kubecontrollermanager.Interface
-	ClusterAutoscaler     clusterautoscaler.Interface
 	ResourceManager       resourcemanager.Interface
+	VerticalPodAutoscaler component.DeployWaiter
 	VPNSeedServer         vpnseedserver.Interface
 }
 

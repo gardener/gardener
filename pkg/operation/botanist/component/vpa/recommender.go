@@ -19,7 +19,10 @@ import (
 )
 
 // ValuesRecommender is a set of configuration values for the vpa-recommender.
-type ValuesRecommender struct{}
+type ValuesRecommender struct {
+	// Image is the container image.
+	Image string
+}
 
 func (v *vpa) deployRecommenderResources(ctx context.Context) error {
 	return nil
