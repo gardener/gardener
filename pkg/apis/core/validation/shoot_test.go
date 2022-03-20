@@ -1114,7 +1114,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))))
 				})
 
-				It("should not allow ivalid total number of worker nodes", func() {
+				It("should not allow invalid total number of worker nodes", func() {
 					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(24)
 					shoot.Spec.Networking.Pods = pointer.String("100.96.0.0/16")
 					worker1.Maximum = 128

@@ -43,7 +43,10 @@ func (secretBindingStrategy) PrepareForCreate(ctx context.Context, obj runtime.O
 
 func (secretBindingStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	binding := obj.(*core.SecretBinding)
-	return validation.ValidateSecretBinding(binding)
+	allErrs := field.ErrorList{}
+	allErrs = append(allErrs, validation.ValidateSecretBinding(binding)...)
+	allErrs = append(allErrs, validation.ValidateSecretBindingProvider(binding.Provider)...)
+	return allErrs
 }
 
 func (secretBindingStrategy) Canonicalize(obj runtime.Object) {

@@ -33,7 +33,6 @@ func ValidateSecretBinding(binding *core.SecretBinding) field.ErrorList {
 	for i, quota := range binding.Quotas {
 		allErrs = append(allErrs, validateObjectReferenceOptionalNamespace(quota, field.NewPath("quotas").Index(i))...)
 	}
-	allErrs = append(allErrs, validateSecretBindingProvider(binding.Provider, field.NewPath("provider"))...)
 
 	return allErrs
 }
@@ -49,6 +48,28 @@ func ValidateSecretBindingUpdate(newBinding, oldBinding *core.SecretBinding) fie
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newBinding.Provider, oldBinding.Provider, field.NewPath("provider"))...)
 	}
 	allErrs = append(allErrs, ValidateSecretBinding(newBinding)...)
+
+	return allErrs
+}
+
+// ValidateSecretBindingProvider validates a SecretBindingProvider object.
+func ValidateSecretBindingProvider(provider *core.SecretBindingProvider) field.ErrorList {
+	var (
+		allErrs = field.ErrorList{}
+		fldPath = field.NewPath("provider")
+	)
+
+	if provider == nil {
+		if utilfeature.DefaultFeatureGate.Enabled(features.SecretBindingProviderValidation) {
+			allErrs = append(allErrs, field.Required(fldPath, "must specify a provider"))
+		}
+
+		return allErrs
+	}
+
+	if len(provider.Type) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "must specify a provider type"))
+	}
 
 	return allErrs
 }
@@ -78,24 +99,6 @@ func validateSecretReferenceOptionalNamespace(ref corev1.SecretReference, fldPat
 
 	if len(ref.Name) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
-	}
-
-	return allErrs
-}
-
-func validateSecretBindingProvider(provider *core.SecretBindingProvider, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if provider == nil {
-		if utilfeature.DefaultFeatureGate.Enabled(features.SecretBindingProviderValidation) {
-			allErrs = append(allErrs, field.Required(fldPath, "must specify a provider"))
-		}
-
-		return allErrs
-	}
-
-	if len(provider.Type) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "must specify a provider type"))
 	}
 
 	return allErrs
