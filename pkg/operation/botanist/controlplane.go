@@ -42,10 +42,6 @@ import (
 )
 
 func (b *Botanist) oldDeployVerticalPodAutoscaler(ctx context.Context) error {
-	if !b.Shoot.WantsVerticalPodAutoscaler {
-		return common.DeleteVpa(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, true)
-	}
-
 	for _, name := range []string{
 		v1beta1constants.DeploymentNameVPAAdmissionController,
 		v1beta1constants.DeploymentNameVPARecommender,

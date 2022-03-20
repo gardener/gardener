@@ -326,7 +326,9 @@ func RunReconcileSeedFlow(
 			return fmt.Errorf("VPA is required for seed cluster: %s", err)
 		}
 
-		if err := common.DeleteVpa(ctx, seedClient, v1beta1constants.GardenNamespace, false); client.IgnoreNotFound(err) != nil {
+		vpa := vpa.New(seedClient, v1beta1constants.GardenNamespace, vpa.Values{ClusterType: vpa.ClusterTypeSeed})
+
+		if err := component.OpDestroyAndWait(vpa).Destroy(ctx); err != nil {
 			return err
 		}
 	}
@@ -1105,7 +1107,11 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	vpnAuthzServer, err := defaultExternalAuthzServer(ctx, seedClient, kubernetesVersion.String(), imageVector)
+	vpa, err := defaultVerticalPodAutoscaler(seedClient, imageVector)
+	if err != nil {
+		return err
+	}
+	vpnAuthzServer, err := defaultVPNAuthzServer(ctx, seedClient, kubernetesVersion.String(), imageVector)
 	if err != nil {
 		return err
 	}
@@ -1157,6 +1163,10 @@ func runCreateSeedFlow(
 			Fn:   dwdProbe.Deploy,
 		})
 		_ = g.Add(flow.Task{
+			Name: "Deploying Kubernetes vertical pod autoscaler",
+			Fn:   vpa.Deploy,
+		})
+		_ = g.Add(flow.Task{
 			Name: "Deploying VPN authorization server",
 			Fn:   vpnAuthzServer.Deploy,
 		})
@@ -1203,8 +1213,10 @@ func RunDeleteSeedFlow(
 		clusterIdentity = clusteridentity.NewForSeed(seedClient, v1beta1constants.GardenNamespace, "")
 		dwdEndpoint     = dependencywatchdog.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
 		dwdProbe        = dependencywatchdog.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
+		vpa             = vpa.New(seedClient, v1beta1constants.GardenNamespace, vpa.Values{ClusterType: vpa.ClusterTypeSeed})
 		vpnAuthzServer  = vpnauthzserver.New(seedClient, v1beta1constants.GardenNamespace, "", 1)
 	)
+
 	scheduler, err := gardenerkubescheduler.Bootstrap(seedClient, v1beta1constants.GardenNamespace, nil, kubernetesVersion)
 	if err != nil {
 		return err
@@ -1259,7 +1271,11 @@ func RunDeleteSeedFlow(
 			Name: "Destroy dependency-watchdog-probe",
 			Fn:   component.OpDestroyAndWait(dwdProbe).Destroy,
 		})
-		destroyExtAuthzServer = g.Add(flow.Task{
+		destroyVPA = g.Add(flow.Task{
+			Name: "Destroy Kubernetes vertical pod autoscaler",
+			Fn:   component.OpDestroyAndWait(vpa).Destroy,
+		})
+		destroyVPNAuthzServer = g.Add(flow.Task{
 			Name: "Destroy VPN authorization server",
 			Fn:   component.OpDestroyAndWait(vpnAuthzServer).Destroy,
 		})
@@ -1276,7 +1292,8 @@ func RunDeleteSeedFlow(
 				destroyNetworkPolicies,
 				destroyDWDEndpoint,
 				destroyDWDProbe,
-				destroyExtAuthzServer,
+				destroyVPA,
+				destroyVPNAuthzServer,
 				noControllerInstallations,
 			),
 		})

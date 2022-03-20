@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -240,7 +241,49 @@ func defaultDependencyWatchdogs(
 	return
 }
 
-func defaultExternalAuthzServer(
+func defaultVerticalPodAutoscaler(c client.Client, imageVector imagevector.ImageVector) (component.DeployWaiter, error) {
+	imageAdmissionController, err := imageVector.FindImage(images.ImageNameVpaAdmissionController)
+	if err != nil {
+		return nil, err
+	}
+
+	imageExporter, err := imageVector.FindImage(images.ImageNameVpaExporter)
+	if err != nil {
+		return nil, err
+	}
+
+	imageRecommender, err := imageVector.FindImage(images.ImageNameVpaRecommender)
+	if err != nil {
+		return nil, err
+	}
+
+	imageUpdater, err := imageVector.FindImage(images.ImageNameVpaUpdater)
+	if err != nil {
+		return nil, err
+	}
+
+	return vpa.New(
+		c,
+		v1beta1constants.GardenNamespace,
+		vpa.Values{
+			ClusterType: vpa.ClusterTypeSeed,
+			AdmissionController: vpa.ValuesAdmissionController{
+				Image: imageAdmissionController.String(),
+			},
+			Exporter: vpa.ValuesExporter{
+				Image: imageExporter.String(),
+			},
+			Recommender: vpa.ValuesRecommender{
+				Image: imageRecommender.String(),
+			},
+			Updater: vpa.ValuesUpdater{
+				Image: imageUpdater.String(),
+			},
+		},
+	), nil
+}
+
+func defaultVPNAuthzServer(
 	ctx context.Context,
 	c client.Client,
 	seedVersion string,
