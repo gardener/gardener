@@ -57,29 +57,31 @@ func NewRegistry(scheme *runtime.Scheme, codec serializer.CodecFactory, serializ
 
 // Add adds the given object to the registry. It computes a filename based on its type, namespace, and name. It serializes
 // the object to YAML and stores both representations (object and serialization) in the registry.
-func (r *Registry) Add(obj client.Object) error {
-	if obj == nil || reflect.ValueOf(obj) == reflect.Zero(reflect.TypeOf(obj)) {
-		return nil
-	}
+func (r *Registry) Add(objs ...client.Object) error {
+	for _, obj := range objs {
+		if obj == nil || reflect.ValueOf(obj) == reflect.Zero(reflect.TypeOf(obj)) {
+			continue
+		}
 
-	objectName, err := r.objectName(obj)
-	if err != nil {
-		return err
-	}
-	filename := objectName + ".yaml"
+		objectName, err := r.objectName(obj)
+		if err != nil {
+			return err
+		}
+		filename := objectName + ".yaml"
 
-	if _, ok := r.nameToObject[filename]; ok {
-		return fmt.Errorf("duplicate filename in registry: %q", filename)
-	}
+		if _, ok := r.nameToObject[filename]; ok {
+			return fmt.Errorf("duplicate filename in registry: %q", filename)
+		}
 
-	serializationYAML, err := runtime.Encode(r.codec, obj)
-	if err != nil {
-		return err
-	}
+		serializationYAML, err := runtime.Encode(r.codec, obj)
+		if err != nil {
+			return err
+		}
 
-	r.nameToObject[filename] = &object{
-		obj:           obj,
-		serialization: serializationYAML,
+		r.nameToObject[filename] = &object{
+			obj:           obj,
+			serialization: serializationYAML,
+		}
 	}
 
 	return nil
@@ -101,10 +103,8 @@ func (r *Registry) SerializedObjects() map[string][]byte {
 
 // AddAllAndSerialize calls Add() for all the given objects before calling SerializedObjects().
 func (r *Registry) AddAllAndSerialize(objects ...client.Object) (map[string][]byte, error) {
-	for _, resource := range objects {
-		if err := r.Add(resource); err != nil {
-			return nil, err
-		}
+	if err := r.Add(objects...); err != nil {
+		return nil, err
 	}
 	return r.SerializedObjects(), nil
 }
