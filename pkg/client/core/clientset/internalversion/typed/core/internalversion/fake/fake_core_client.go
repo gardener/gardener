@@ -80,10 +80,6 @@ func (c *FakeCore) Shoots(namespace string) internalversion.ShootInterface {
 	return &FakeShoots{c, namespace}
 }
 
-func (c *FakeCore) ShootExtensionStatuses(namespace string) internalversion.ShootExtensionStatusInterface {
-	return &FakeShootExtensionStatuses{c, namespace}
-}
-
 func (c *FakeCore) ShootStates(namespace string) internalversion.ShootStateInterface {
 	return &FakeShootStates{c, namespace}
 }

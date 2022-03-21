@@ -34,7 +34,6 @@ import (
 	secretbindingstore "github.com/gardener/gardener/pkg/registry/core/secretbinding/storage"
 	seedstore "github.com/gardener/gardener/pkg/registry/core/seed/storage"
 	shootstore "github.com/gardener/gardener/pkg/registry/core/shoot/storage"
-	shootextensionstatusstore "github.com/gardener/gardener/pkg/registry/core/shootextensionstatus/storage"
 	shootstatestore "github.com/gardener/gardener/pkg/registry/core/shootstate/storage"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -116,9 +115,6 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	if shootStorage.AdminKubeconfig != nil {
 		storage["shoots/adminkubeconfig"] = shootStorage.AdminKubeconfig
 	}
-
-	shootExtensionStatusStorage := shootextensionstatusstore.NewStorage(restOptionsGetter)
-	storage["shootextensionstatuses"] = shootExtensionStatusStorage.ShootExtensionStatus
 
 	return storage
 }

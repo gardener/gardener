@@ -739,23 +739,6 @@ message ExtensionResourceState {
   repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.NamedResourceReference resources = 5;
 }
 
-// ExtensionStatus contains the kind, the type, the optional purpose and the last observed status
-// of an extension controller.
-message ExtensionStatus {
-  // Kind of the extension resource
-  optional string kind = 1;
-
-  // Type of the extension resource. This field is immutable.
-  optional string type = 2;
-
-  // Purpose of the extension resource
-  // +optional
-  optional string purpose = 3;
-
-  // Status contains the status of the extension resource
-  optional k8s.io.apimachinery.pkg.runtime.RawExtension status = 4;
-}
-
 // Gardener holds the information about the Gardener version that operated a resource.
 message Gardener {
   // ID is the Docker container id of the Gardener which last acted on a resource.
@@ -2256,29 +2239,6 @@ message ShootCredentialsRotation {
   // SSHKeypair contains information about the ssh-keypair credential rotation.
   // +optional
   optional ShootSSHKeypairRotation sshKeypair = 3;
-}
-
-// ShootExtensionStatus holds the status information of extensions of a Shoot cluster
-message ShootExtensionStatus {
-  // Standard object metadata.
-  // Designed to have an owner reference to the associated Shoot resource
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
-
-  // Statuses holds a list of statuses of extension controllers.
-  // +optional
-  repeated ExtensionStatus statuses = 2;
-}
-
-// ShootExtensionStatusList is a list of ShootExtensionStatus objects.
-message ShootExtensionStatusList {
-  // Standard list object metadata.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
-
-  // Items is a list of ShootExtensionStatus.
-  // +optional
-  repeated ShootExtensionStatus items = 2;
 }
 
 // ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
