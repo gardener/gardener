@@ -372,26 +372,17 @@ func (c *validationContext) validateScheduling(a admission.Attributes, shootList
 			return admission.NewForbidden(a, fmt.Errorf("cannot change seed because cloud provider for new seed (%s) is not equal to cloud provider for old seed (%s)", c.seed.Spec.Provider.Type, oldSeed.Spec.Provider.Type))
 		}
 
-		if c.shoot.Status.LastOperation != nil && c.shoot.Status.LastOperation.State != core.LastOperationStateSucceeded {
-			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because the last operation has not finished successfully yet: operation %s, state %s", c.shoot.Status.LastOperation.Type, c.shoot.Status.LastOperation.State))
+		oldShootSpec := c.oldShoot.Spec
+		oldShootSpec.SeedName = c.shoot.Spec.SeedName
+		if !reflect.DeepEqual(oldShootSpec, c.shoot.Spec) {
+			return admission.NewForbidden(a, fmt.Errorf("seed name cannot be changed simultaneously with other changes to the shoot.spec"))
 		}
-
+	} else if !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
+		if wasShootRescheduledToNewSeed(c.shoot) {
+			return admission.NewForbidden(a, fmt.Errorf("shoot spec cannot be changed because shoot has been rescheduled to a new seed"))
+		}
 		if isShootInMigrationOrRestorePhase(c.shoot) && !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
 			return admission.NewForbidden(a, fmt.Errorf("cannot change shoot spec during %s operation that is in state %s", c.shoot.Status.LastOperation.Type, c.shoot.Status.LastOperation.State))
-		}
-
-		if err := func() error {
-			oldSeedName := c.oldShoot.Spec.SeedName
-			c.oldShoot.Spec.SeedName = c.shoot.Spec.SeedName
-			defer func() {
-				c.oldShoot.Spec.SeedName = oldSeedName
-			}()
-			if !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
-				return admission.NewForbidden(a, fmt.Errorf("seed name cannot be changed simultaneously with other changes to the shoot.spec"))
-			}
-			return nil
-		}(); err != nil {
-			return err
 		}
 	}
 
@@ -1253,8 +1244,19 @@ func addDeploymentTasks(shoot *core.Shoot, tasks ...string) {
 	controllerutils.AddTasks(shoot.ObjectMeta.Annotations, tasks...)
 }
 
+// wasShootRescheduledToNewSeed returns true if the shoot.Spec.SeedName has been changed, but the migration operation has not started yet.
+func wasShootRescheduledToNewSeed(shoot *core.Shoot) bool {
+	return shoot.Status.LastOperation != nil &&
+		shoot.Status.LastOperation.Type != core.LastOperationTypeMigrate &&
+		shoot.Spec.SeedName != nil &&
+		shoot.Status.SeedName != nil &&
+		*shoot.Spec.SeedName != *shoot.Status.SeedName
+}
+
+// isShootInMigrationOrRestorePhase returns true if the shoot is currently being migrated or restored.
 func isShootInMigrationOrRestorePhase(shoot *core.Shoot) bool {
 	return shoot.Status.LastOperation != nil &&
-		(shoot.Status.LastOperation.Type == core.LastOperationTypeRestore && shoot.Status.LastOperation.State != core.LastOperationStateSucceeded ||
+		(shoot.Status.LastOperation.Type == core.LastOperationTypeRestore &&
+			shoot.Status.LastOperation.State != core.LastOperationStateSucceeded ||
 			shoot.Status.LastOperation.Type == core.LastOperationTypeMigrate)
 }

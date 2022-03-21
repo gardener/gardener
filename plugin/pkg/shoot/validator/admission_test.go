@@ -2591,51 +2591,56 @@ var _ = Describe("validator", func() {
 
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("should fail to change Seed name, because the lastOperation is not in state Succeeded", func() {
-				shoot.Status.LastOperation = &core.LastOperation{
-					Type:  core.LastOperationTypeReconcile,
-					State: core.LastOperationStateProcessing,
-				}
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).To(HaveOccurred())
+				Expect(err).To(BeForbiddenError())
 			})
 
 			It("should fail to change Seed name when other values in the Shoot's spec are changed as well", func() {
-				shoot.Spec.Kubernetes.Version = "1.24"
-				oldShoot.Spec.Kubernetes.Version = "1.23"
+				shoot.Spec.Kubernetes.Version = "1.6.4"
+				oldShoot.Spec.Kubernetes.Version = "1.6.3"
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).To(HaveOccurred())
+				Expect(err).To(BeForbiddenError())
 			})
 
-			It("should fail to change the shoot spec if the shoot cluster is currently being migrated", func() {
-				shoot.Spec.Kubernetes.Version = "1.24"
-				shoot.Status.LastOperation = &core.LastOperation{
-					Type: core.LastOperationTypeMigrate,
-				}
-				oldShoot.Spec.Kubernetes.Version = "1.23"
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).To(HaveOccurred())
-			})
+			DescribeTable("Changing shoot spec during migration",
+				func(newSeedName *string, lastOperationType core.LastOperationType, lastOperationState core.LastOperationState, matcher types.GomegaMatcher) {
+					shoot.Status.LastOperation = &core.LastOperation{
+						Type:  lastOperationType,
+						State: lastOperationState,
+					}
 
-			It("should fail to change the shoot spec if the shoot cluster is currently being restored", func() {
-				shoot.Spec.Kubernetes.Version = "1.24"
-				shoot.Status.LastOperation = &core.LastOperation{
-					Type:  core.LastOperationTypeRestore,
-					State: core.LastOperationStateProcessing,
-				}
-				oldShoot.Spec.Kubernetes.Version = "1.23"
+					oldShoot.Spec.SeedName = &seedName
+					oldShoot.Spec.Kubernetes.Version = "1.6.3"
+
+					shoot.Spec.Kubernetes.Version = "1.6.4"
+					shoot.Status.SeedName = newSeedName
+
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+					Expect(err).To(matcher)
+				},
+				Entry("should reject if migration has not started, but seed was previously changed", &oldSeedName, core.LastOperationTypeReconcile, core.LastOperationStateSucceeded, BeForbiddenError()),
+				Entry("should reject if the shoot has lastOperation=Migrate:Processing", &oldSeedName, core.LastOperationTypeMigrate, core.LastOperationStateProcessing, BeForbiddenError()),
+				Entry("should reject if the shoot has lastOperation=Migrate:Error", &oldSeedName, core.LastOperationTypeMigrate, core.LastOperationStateError, BeForbiddenError()),
+				Entry("should reject if the shoot has lastOperation=Migrate:Succeeded", nil, core.LastOperationTypeMigrate, core.LastOperationStateSucceeded, BeForbiddenError()),
+				Entry("should reject if the shoot has lastOperation=Restore:Pending", nil, core.LastOperationTypeRestore, core.LastOperationStatePending, BeForbiddenError()),
+				Entry("should reject if the shoot has lastOperation=Restore:Processing", &seedName, core.LastOperationTypeRestore, core.LastOperationStateProcessing, BeForbiddenError()),
+				Entry("should reject if the shoot has lastOperation=Restore:Error", &seedName, core.LastOperationTypeRestore, core.LastOperationStateError, BeForbiddenError()),
+				Entry("should allow if the shoot has lastOperation=Restore:Succeeded", &seedName, core.LastOperationTypeRestore, core.LastOperationStateSucceeded, Not(HaveOccurred())),
+			)
+
+			It("should allow changes to shoot spec if nothing else has changed", func() {
+				oldShoot.Spec.SeedName = &seedName
+				shoot.Spec.Kubernetes.Version = "1.6.4"
+				oldShoot.Spec.Kubernetes.Version = "1.6.3"
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).To(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should allow changes to Seed name when nothing else has changed", func() {
+				oldShoot.Spec.SeedName = &oldSeedName
+				shoot.Spec.SeedName = &seedName
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).NotTo(HaveOccurred())
