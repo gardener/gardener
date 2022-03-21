@@ -181,6 +181,7 @@ const (
 func GetShootProjectSecretSuffixes() []string {
 	return []string{
 		ShootProjectSecretSuffixKubeconfig,
+		ShootProjectSecretSuffixCACluster,
 		ShootProjectSecretSuffixSSHKeypair,
 		ShootProjectSecretSuffixOldSSHKeypair,
 		ShootProjectSecretSuffixMonitoring,

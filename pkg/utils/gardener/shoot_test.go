@@ -283,7 +283,7 @@ var _ = Describe("Shoot", func() {
 
 	Describe("#GetShootProjectSecretSuffixes", func() {
 		It("should return the expected list", func() {
-			Expect(GetShootProjectSecretSuffixes()).To(ConsistOf("kubeconfig", "ssh-keypair", "ssh-keypair.old", "monitoring"))
+			Expect(GetShootProjectSecretSuffixes()).To(ConsistOf("kubeconfig", "ca-cluster", "ssh-keypair", "ssh-keypair.old", "monitoring"))
 		})
 	})
 
@@ -303,6 +303,7 @@ var _ = Describe("Shoot", func() {
 		Entry("unrelated suffix", "foo.bar", "", false),
 		Entry("wrong suffix delimiter", "foo:kubeconfig", "", false),
 		Entry("kubeconfig suffix", "foo.kubeconfig", "foo", true),
+		Entry("ca-cluster suffix", "baz.ca-cluster", "baz", true),
 		Entry("ssh-keypair suffix", "bar.ssh-keypair", "bar", true),
 		Entry("monitoring suffix", "baz.monitoring", "baz", true),
 	)
