@@ -348,7 +348,6 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 									corev1.ResourceMemory: resource.MustParse("150Mi"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("500m"),
 									corev1.ResourceMemory: resource.MustParse("1Gi"),
 								},
 							},

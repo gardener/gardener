@@ -140,10 +140,8 @@ spec:
               memory: 100Mi
             limits:
             {{- if .Values.global.vpaEnabled }}
-              cpu: 400m
               memory: 400Mi
             {{- else }}
-              cpu: 2000m
               memory: 2048Mi
             {{- end }}
       hostNetwork: {{ .Values.controller.hostNetwork }}

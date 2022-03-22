@@ -58,10 +58,8 @@ spec:
             memory: 5Mi
           limits:
           {{- if .Values.global.vpaEnabled }}
-            cpu: 40m
             memory: 20Mi
           {{- else }}
-            cpu: 50m
             memory: 35Mi
           {{- end }}
         ports:

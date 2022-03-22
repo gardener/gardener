@@ -400,7 +400,6 @@ spec:
           protocol: TCP
         resources:
           limits:
-            cpu: 100m
             memory: 100Mi
           requests:
             cpu: 20m
@@ -517,7 +516,6 @@ spec:
           timeoutSeconds: 1
         resources:
           limits:
-            cpu: 400m
             memory: 1500Mi
           requests:
             cpu: 100m

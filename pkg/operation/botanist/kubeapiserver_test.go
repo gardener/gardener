@@ -642,7 +642,6 @@ var _ = Describe("KubeAPIServer", func() {
 								corev1.ResourceMemory: resource.MustParse("2Gi"),
 							},
 							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("4000m"),
 								corev1.ResourceMemory: resource.MustParse("8Gi"),
 							},
 						},
@@ -884,7 +883,6 @@ var _ = Describe("KubeAPIServer", func() {
 						corev1.ResourceMemory: resource.MustParse(expectedMemoryRequest),
 					},
 					Limits: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse(expectedCPULimit),
 						corev1.ResourceMemory: resource.MustParse(expectedMemoryLimit),
 					},
 				}))
@@ -988,7 +986,6 @@ var _ = Describe("KubeAPIServer", func() {
 				corev1.ResourceMemory: resource.MustParse("2"),
 			},
 			Limits: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("3"),
 				corev1.ResourceMemory: resource.MustParse("4"),
 			},
 		}

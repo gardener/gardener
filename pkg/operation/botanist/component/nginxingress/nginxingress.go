@@ -374,7 +374,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 									corev1.ResourceMemory: resource.MustParse("20Mi"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
 									corev1.ResourceMemory: resource.MustParse("100Mi"),
 								},
 							},
@@ -499,7 +498,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 							},
 							Resources: corev1.ResourceRequirements{
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("400m"),
 									corev1.ResourceMemory: resource.MustParse("1500Mi"),
 								},
 								Requests: corev1.ResourceList{

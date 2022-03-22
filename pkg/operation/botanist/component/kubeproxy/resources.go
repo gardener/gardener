@@ -533,7 +533,6 @@ func (k *kubeProxy) computePoolResourcesData(pool WorkerPool) (map[string][]byte
 
 	if k.values.VPAEnabled {
 		daemonSet.Spec.Template.Spec.Containers[0].Resources.Limits = corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("80m"),
 			corev1.ResourceMemory: resource.MustParse("2048Mi"),
 		}
 

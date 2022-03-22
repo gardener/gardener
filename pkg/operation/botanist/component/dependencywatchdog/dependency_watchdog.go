@@ -227,7 +227,6 @@ func (d *dependencyWatchdog) Deploy(ctx context.Context) error {
 									corev1.ResourceMemory: resource.MustParse("256Mi"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("500m"),
 									corev1.ResourceMemory: resource.MustParse("512Mi"),
 								},
 							},

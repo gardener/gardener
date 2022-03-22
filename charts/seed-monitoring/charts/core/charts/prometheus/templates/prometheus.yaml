@@ -152,7 +152,6 @@ spec:
             cpu: 5m
             memory: 35Mi
           limits:
-            cpu: 50m
             memory: 128Mi
         volumeMounts:
         - name: blackbox-exporter-config-prometheus
@@ -175,7 +174,6 @@ spec:
             cpu: 5m
             memory: 25Mi
           limits:
-            cpu: 10m
             memory: 25Mi
         volumeMounts:
         - mountPath: /etc/prometheus/config

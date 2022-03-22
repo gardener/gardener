@@ -121,7 +121,6 @@ spec:
             cpu: 50m
             memory: 64Mi
           limits:
-            cpu: 350m
             memory: 256Mi
         volumeMounts:
         {{- if .Values.useTokenRequestor }}

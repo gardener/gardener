@@ -530,12 +530,10 @@ func (v *vpnShoot) getEnvVars() []corev1.EnvVar {
 func (v *vpnShoot) getResourceLimits() corev1.ResourceList {
 	if v.values.VPAEnabled {
 		return corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("400m"),
 			corev1.ResourceMemory: resource.MustParse("400Mi"),
 		}
 	}
 	return corev1.ResourceList{
-		corev1.ResourceCPU:    resource.MustParse("1"),
 		corev1.ResourceMemory: resource.MustParse("1Gi"),
 	}
 }

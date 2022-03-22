@@ -273,7 +273,6 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 									corev1.ResourceMemory: resource.MustParse("50Mi"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
 									corev1.ResourceMemory: resource.MustParse("100Mi"),
 								},
 							},

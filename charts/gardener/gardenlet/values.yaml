@@ -15,7 +15,6 @@ global:
         cpu: 100m
         memory: 100Mi
       limits:
-        cpu: 2000m
         memory: 512Mi
   # podAnnotations: # YAML formated annotations used for pod template
   # podLabels: # YAML formated labels used for pod template

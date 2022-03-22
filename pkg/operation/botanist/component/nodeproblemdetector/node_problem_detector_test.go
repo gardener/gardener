@@ -273,12 +273,10 @@ spec:
 				if vpaEnabled {
 					out += `
           limits:
-            cpu: 80m
             memory: 80Mi`
 				} else {
 					out += `
           limits:
-            cpu: 200m
             memory: 100Mi`
 				}
 				out += `

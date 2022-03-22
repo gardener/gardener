@@ -262,7 +262,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 										corev1.ResourceMemory: resource.MustParse("128Mi"),
 									},
 									Limits: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("300m"),
 										corev1.ResourceMemory: resource.MustParse("512Mi"),
 									},
 								},

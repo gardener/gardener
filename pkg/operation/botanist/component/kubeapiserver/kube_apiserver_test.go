@@ -1614,7 +1614,6 @@ rules:
 								corev1.ResourceMemory: resource.MustParse("128Mi"),
 							},
 							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("500m"),
 								corev1.ResourceMemory: resource.MustParse("1000Mi"),
 							},
 						},
@@ -1683,7 +1682,6 @@ rules:
 								corev1.ResourceMemory: resource.MustParse("128M"),
 							},
 							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("200m"),
 								corev1.ResourceMemory: resource.MustParse("500M"),
 							},
 						},
@@ -1711,7 +1709,6 @@ rules:
 									corev1.ResourceMemory: resource.MustParse("2Gi"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("2"),
 									corev1.ResourceMemory: resource.MustParse("4Gi"),
 								},
 							}

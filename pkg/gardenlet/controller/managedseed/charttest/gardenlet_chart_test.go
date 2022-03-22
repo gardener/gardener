@@ -418,7 +418,6 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					corev1.ResourceMemory: resource.MustParse("15Mi"),
 				},
 				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("900m"),
 					corev1.ResourceMemory: resource.MustParse("25Mi"),
 				},
 			},

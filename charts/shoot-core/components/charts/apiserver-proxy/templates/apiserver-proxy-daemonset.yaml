@@ -62,7 +62,6 @@ spec:
             cpu: 20m
             memory: 20Mi
           limits:
-            cpu: 200m
             memory: 200Mi
       containers:
       - name: sidecar
@@ -81,7 +80,6 @@ spec:
             cpu: 20m
             memory: 20Mi
           limits:
-            cpu: 200m
             memory: 200Mi
       - name: proxy
         image: {{ index .Values.images "apiserver-proxy" }}
@@ -101,7 +99,6 @@ spec:
             cpu: 20m
             memory: 20Mi
           limits:
-            cpu: 200m
             memory: 300Mi
         readinessProbe:
           httpGet:

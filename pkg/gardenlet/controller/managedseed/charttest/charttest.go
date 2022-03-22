@@ -942,7 +942,6 @@ func ComputeExpectedGardenletDeploymentSpec(
 						},
 						Resources: corev1.ResourceRequirements{
 							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("2000m"),
 								corev1.ResourceMemory: resource.MustParse("512Mi"),
 							},
 							Requests: corev1.ResourceList{
