@@ -37,7 +37,6 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/golang/mock/gomock"
@@ -47,6 +46,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
@@ -313,6 +313,10 @@ var _ = Describe("Etcd", func() {
 			It("should set the secrets and deploy", func() {
 				etcdMain.EXPECT().Deploy(ctx)
 				etcdEvents.EXPECT().Deploy(ctx)
+
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client-tls", Namespace: namespace}})
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-server-cert", Namespace: namespace}})
+
 				Expect(botanist.DeployEtcd(ctx)).To(Succeed())
 			})
 		})
@@ -373,6 +377,8 @@ var _ = Describe("Etcd", func() {
 				expectSetOwnerCheckConfig()
 				etcdMain.EXPECT().Deploy(ctx)
 				etcdEvents.EXPECT().Deploy(ctx)
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client-tls", Namespace: namespace}})
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-server-cert", Namespace: namespace}})
 
 				Expect(botanist.DeployEtcd(ctx)).To(Succeed())
 			})
@@ -388,6 +394,8 @@ var _ = Describe("Etcd", func() {
 				expectSetBackupConfig()
 				etcdMain.EXPECT().Deploy(ctx)
 				etcdEvents.EXPECT().Deploy(ctx)
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client-tls", Namespace: namespace}})
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-server-cert", Namespace: namespace}})
 
 				Expect(botanist.DeployEtcd(ctx)).To(Succeed())
 			})

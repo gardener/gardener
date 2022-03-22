@@ -329,6 +329,8 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			"kube-apiserver-http-proxy",
 			"kube-scheduler-server",
 			"kube-controller-manager-server",
+			"etcd-server-cert",
+			"etcd-client-tls",
 			"metrics-server",
 			"loki-tls",
 			"prometheus-tls",
