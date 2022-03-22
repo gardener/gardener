@@ -37,6 +37,7 @@ import (
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -163,6 +164,11 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 					APIGroups: []string{corev1.GroupName},
 					Resources: []string{"persistentvolumeclaims"},
 					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{policyv1beta1.GroupName},
+					Resources: []string{"poddisruptionbudgets"},
+					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 				},
 			},
 		}
