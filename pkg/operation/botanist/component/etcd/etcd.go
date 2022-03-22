@@ -31,6 +31,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 
 	"github.com/sirupsen/logrus"
@@ -124,6 +125,7 @@ func New(
 	c client.Client,
 	logger logrus.FieldLogger,
 	namespace string,
+	secretsManager secretsmanager.Interface,
 	role string,
 	class Class,
 	retainReplicas bool,
@@ -141,6 +143,7 @@ func New(
 		client:                  c,
 		logger:                  etcdLog,
 		namespace:               namespace,
+		secretsManager:          secretsManager,
 		role:                    role,
 		class:                   class,
 		retainReplicas:          retainReplicas,
@@ -160,6 +163,7 @@ type etcd struct {
 	client                  client.Client
 	logger                  logrus.FieldLogger
 	namespace               string
+	secretsManager          secretsmanager.Interface
 	role                    string
 	class                   Class
 	retainReplicas          bool

@@ -35,6 +35,8 @@ import (
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -47,8 +49,10 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("Etcd", func() {
@@ -57,6 +61,8 @@ var _ = Describe("Etcd", func() {
 		kubernetesClient kubernetes.Interface
 		c                *mockclient.MockClient
 		reader           *mockclient.MockReader
+		fakeClient       client.Client
+		sm               secretsmanager.Interface
 		botanist         *Botanist
 
 		ctx                   = context.TODO()
@@ -78,6 +84,8 @@ var _ = Describe("Etcd", func() {
 			WithClient(c).
 			WithAPIReader(reader).
 			Build()
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+		sm = fake.New(fakeClient, namespace)
 		botanist = &Botanist{Operation: &operation.Operation{}}
 	})
 
@@ -89,6 +97,7 @@ var _ = Describe("Etcd", func() {
 		var hvpaEnabled = true
 
 		BeforeEach(func() {
+			botanist.SecretsManager = sm
 			botanist.K8sSeedClient = kubernetesClient
 			botanist.Seed = &seedpkg.Seed{}
 			botanist.Shoot = &shootpkg.Shoot{
@@ -131,6 +140,7 @@ var _ = Describe("Etcd", func() {
 							expectedClient:                  Equal(c),
 							expectedLogger:                  BeNil(),
 							expectedNamespace:               Equal(namespace),
+							expectedSecretsManager:          Equal(sm),
 							expectedRole:                    Equal(role),
 							expectedClass:                   Equal(class),
 							expectedRetainReplicas:          BeFalse(),
@@ -169,6 +179,7 @@ var _ = Describe("Etcd", func() {
 					expectedClient:                  Equal(c),
 					expectedLogger:                  BeNil(),
 					expectedNamespace:               Equal(namespace),
+					expectedSecretsManager:          Equal(sm),
 					expectedRole:                    Equal(role),
 					expectedClass:                   Equal(class),
 					expectedRetainReplicas:          BeFalse(),
@@ -199,6 +210,7 @@ var _ = Describe("Etcd", func() {
 					expectedClient:                  Equal(c),
 					expectedLogger:                  BeNil(),
 					expectedNamespace:               Equal(namespace),
+					expectedSecretsManager:          Equal(sm),
 					expectedRole:                    Equal(role),
 					expectedClass:                   Equal(class),
 					expectedRetainReplicas:          BeFalse(),
@@ -473,6 +485,7 @@ type newEtcdValidator struct {
 	expectedClient                  gomegatypes.GomegaMatcher
 	expectedLogger                  gomegatypes.GomegaMatcher
 	expectedNamespace               gomegatypes.GomegaMatcher
+	expectedSecretsManager          gomegatypes.GomegaMatcher
 	expectedRole                    gomegatypes.GomegaMatcher
 	expectedClass                   gomegatypes.GomegaMatcher
 	expectedRetainReplicas          gomegatypes.GomegaMatcher
@@ -485,6 +498,7 @@ func (v *newEtcdValidator) NewEtcd(
 	client client.Client,
 	logger logrus.FieldLogger,
 	namespace string,
+	secretsManager secretsmanager.Interface,
 	role string,
 	class etcd.Class,
 	retainReplicas bool,
@@ -494,6 +508,7 @@ func (v *newEtcdValidator) NewEtcd(
 	Expect(client).To(v.expectedClient)
 	Expect(logger).To(v.expectedLogger)
 	Expect(namespace).To(v.expectedNamespace)
+	Expect(secretsManager).To(v.expectedSecretsManager)
 	Expect(role).To(v.expectedRole)
 	Expect(class).To(v.expectedClass)
 	Expect(retainReplicas).To(v.expectedRetainReplicas)

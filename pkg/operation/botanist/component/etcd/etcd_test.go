@@ -29,6 +29,8 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -49,8 +51,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("Etcd", func() {
@@ -61,10 +65,12 @@ var _ = Describe("Etcd", func() {
 	})
 
 	var (
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
-		etcd Interface
-		log  logrus.FieldLogger
+		ctrl       *gomock.Controller
+		c          *mockclient.MockClient
+		fakeClient client.Client
+		sm         secretsmanager.Interface
+		etcd       Interface
+		log        logrus.FieldLogger
 
 		ctx                     = context.TODO()
 		fakeErr                 = fmt.Errorf("fake err")
@@ -475,8 +481,10 @@ var _ = Describe("Etcd", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+		sm = fake.New(fakeClient, testNamespace)
 		log = logger.NewNopLogger()
-		etcd = New(c, log, testNamespace, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
+		etcd = New(c, log, testNamespace, sm, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
 	})
 
 	AfterEach(func() {
@@ -652,7 +660,7 @@ var _ = Describe("Etcd", func() {
 					retainReplicas         = true
 				)
 
-				etcd = New(c, log, testNamespace, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
+				etcd = New(c, log, testNamespace, sm, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
 				setSecretsAndHVPAConfig()
 
 				gomock.InOrder(
@@ -708,7 +716,7 @@ var _ = Describe("Etcd", func() {
 					retainReplicas         = true
 				)
 
-				etcd = New(c, log, testNamespace, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
+				etcd = New(c, log, testNamespace, sm, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
 				setSecretsAndHVPAConfig()
 
 				gomock.InOrder(
@@ -911,7 +919,7 @@ var _ = Describe("Etcd", func() {
 						updateMode = hvpav1alpha1.UpdateModeOff
 					}
 
-					etcd = New(c, log, testNamespace, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
+					etcd = New(c, log, testNamespace, sm, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
 					getSetSecretsAndHVPAConfigFunc(updateMode)()
 
 					gomock.InOrder(

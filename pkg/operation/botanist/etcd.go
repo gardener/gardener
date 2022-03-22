@@ -56,6 +56,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		b.K8sSeedClient.Client(),
 		b.Logger,
 		b.Shoot.SeedNamespace,
+		b.SecretsManager,
 		role,
 		class,
 		b.Shoot.HibernationEnabled,

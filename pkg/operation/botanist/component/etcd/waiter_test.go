@@ -19,6 +19,8 @@ import (
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -48,6 +50,7 @@ var _ = Describe("#Wait", func() {
 	var (
 		ctrl    *gomock.Controller
 		c       client.Client
+		sm      secretsmanager.Interface
 		log     logrus.FieldLogger
 		mockNow *mocktime.MockNow
 		now     time.Time
@@ -68,12 +71,14 @@ var _ = Describe("#Wait", func() {
 		now = time.Now()
 
 		s := runtime.NewScheme()
+		Expect(corev1.AddToScheme(s)).To(Succeed())
 		Expect(appsv1.AddToScheme(s)).To(Succeed())
 		Expect(networkingv1.AddToScheme(s)).To(Succeed())
 		Expect(hvpav1alpha1.AddToScheme(s)).To(Succeed())
 		Expect(druidv1alpha1.AddToScheme(s)).To(Succeed())
 		c = fake.NewClientBuilder().WithScheme(s).Build()
 
+		sm = fakesecretsmanager.New(c, testNamespace)
 		log = logger.NewNopLogger()
 
 		waiter = &retryfake.Ops{MaxAttempts: 1}
@@ -82,7 +87,7 @@ var _ = Describe("#Wait", func() {
 			&retry.UntilTimeout, waiter.UntilTimeout,
 		)
 
-		etcd = New(c, log, testNamespace, testRole, ClassNormal, false, "12Gi", pointer.String("abcd"))
+		etcd = New(c, log, testNamespace, sm, testRole, ClassNormal, false, "12Gi", pointer.String("abcd"))
 		etcd.SetSecrets(Secrets{
 			CA:     component.Secret{Name: "ca", Checksum: "abcdef"},
 			Server: component.Secret{Name: "server", Checksum: "abcdef"},
