@@ -89,8 +89,7 @@ var _ = Describe("#Wait", func() {
 
 		etcd = New(c, log, testNamespace, sm, testRole, ClassNormal, false, "12Gi", pointer.String("abcd"))
 		etcd.SetSecrets(Secrets{
-			CA:     component.Secret{Name: "ca", Checksum: "abcdef"},
-			Server: component.Secret{Name: "server", Checksum: "abcdef"},
+			CA: component.Secret{Name: "ca", Checksum: "abcdef"},
 		})
 		etcd.SetHVPAConfig(&HVPAConfig{
 			Enabled: true,

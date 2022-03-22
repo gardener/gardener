@@ -250,11 +250,9 @@ var _ = Describe("Etcd", func() {
 		var (
 			etcdMain, etcdEvents *mocketcd.MockInterface
 
-			secretNameCA     = "ca-etcd"
-			secretNameServer = "etcd-server-cert"
-			checksumCA       = "1234"
-			checksumServer   = "5678"
-			shootUID         = types.UID("uuid")
+			secretNameCA = "ca-etcd"
+			checksumCA   = "1234"
+			shootUID     = types.UID("uuid")
 		)
 
 		BeforeEach(func() {
@@ -262,7 +260,6 @@ var _ = Describe("Etcd", func() {
 
 			botanist.K8sSeedClient = kubernetesClient
 			botanist.StoreCheckSum(secretNameCA, checksumCA)
-			botanist.StoreCheckSum(secretNameServer, checksumServer)
 			botanist.Seed = &seedpkg.Seed{}
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
@@ -293,12 +290,10 @@ var _ = Describe("Etcd", func() {
 			})
 
 			etcdMain.EXPECT().SetSecrets(etcd.Secrets{
-				CA:     component.Secret{Name: secretNameCA, Checksum: checksumCA},
-				Server: component.Secret{Name: secretNameServer, Checksum: checksumServer},
+				CA: component.Secret{Name: secretNameCA, Checksum: checksumCA},
 			})
 			etcdEvents.EXPECT().SetSecrets(etcd.Secrets{
-				CA:     component.Secret{Name: secretNameCA, Checksum: checksumCA},
-				Server: component.Secret{Name: secretNameServer, Checksum: checksumServer},
+				CA: component.Secret{Name: secretNameCA, Checksum: checksumCA},
 			})
 		})
 

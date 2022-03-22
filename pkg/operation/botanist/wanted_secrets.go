@@ -20,7 +20,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
@@ -33,13 +32,6 @@ import (
 // each containing their specific configuration for the creation of certificates (server/client), RSA key pairs, basic
 // authentication credentials, etc.
 func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error) {
-	var (
-		etcdCertDNSNames = append(
-			b.Shoot.Components.ControlPlane.EtcdMain.ServiceDNSNames(),
-			b.Shoot.Components.ControlPlane.EtcdEvents.ServiceDNSNames()...,
-		)
-	)
-
 	secretList := []secrets.ConfigInterface{
 		// Secret definition for monitoring
 		&secrets.BasicAuthSecretConfig{
@@ -57,19 +49,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 
 			Username:       "admin",
 			PasswordLength: 32,
-		},
-
-		// Secret definition for etcd server
-		&secrets.CertificateSecretConfig{
-			Name: etcd.SecretNameServer,
-
-			CommonName:   "etcd-server",
-			Organization: nil,
-			DNSNames:     etcdCertDNSNames,
-			IPAddresses:  nil,
-
-			CertType:  secrets.ServerClientCert,
-			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCAETCD],
 		},
 	}
 

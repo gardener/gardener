@@ -63,10 +63,9 @@ const (
 
 	// SecretNameCA is the name of the secret containing the CA certificate and key for the etcd.
 	SecretNameCA = v1beta1constants.SecretNameCAETCD
-	// SecretNameServer is the name of the secret containing the server certificate and key for the etcd.
-	SecretNameServer = "etcd-server-cert"
 	// SecretNameClient is the name of the secret containing the client certificate and key for the etcd.
-	SecretNameClient = "etcd-client"
+	SecretNameClient       = "etcd-client"
+	secretNamePrefixServer = "etcd-server-"
 
 	// LabelAppValue is the value of a label whose key is 'app'.
 	LabelAppValue = "etcd-statefulset"
@@ -103,8 +102,6 @@ func ServiceName(role string) string {
 type Interface interface {
 	component.DeployWaiter
 	component.MonitoringComponent
-	// ServiceDNSNames returns the service DNS names for the etcd.
-	ServiceDNSNames() []string
 	// Snapshot triggers the backup-restore sidecar to perform a full snapshot in case backup configuration is provided.
 	Snapshot(context.Context, kubernetes.PodExecutor) error
 	// SetSecrets sets the secrets.
@@ -183,9 +180,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	if e.secrets.CA.Name == "" || e.secrets.CA.Checksum == "" {
 		return fmt.Errorf("missing CA secret information")
 	}
-	if e.secrets.Server.Name == "" || e.secrets.Server.Checksum == "" {
-		return fmt.Errorf("missing server secret information")
-	}
 
 	var (
 		existingEtcd *druidv1alpha1.Etcd
@@ -236,8 +230,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 
 		annotations = map[string]string{
-			"checksum/secret-etcd-ca":          e.secrets.CA.Checksum,
-			"checksum/secret-etcd-server-cert": e.secrets.Server.Checksum,
+			"checksum/secret-etcd-ca": e.secrets.CA.Checksum,
 		}
 		metrics             = druidv1alpha1.Basic
 		volumeClaimTemplate = e.etcd.Name
@@ -255,6 +248,17 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			corev1.ResourceCPU:    resource.MustParse("200m"),
 			corev1.ResourceMemory: resource.MustParse("700M"),
 		}
+	}
+
+	serverSecret, err := e.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+		Name:                        secretNamePrefixServer + e.role,
+		CommonName:                  "etcd-server",
+		DNSNames:                    e.serviceDNSNames(),
+		CertType:                    secretutils.ServerClientCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return err
 	}
 
 	clientSecret, err := e.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
@@ -352,7 +356,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					},
 				},
 				ServerTLSSecretRef: corev1.SecretReference{
-					Name:      e.secrets.Server.Name,
+					Name:      serverSecret.Name,
 					Namespace: e.namespace,
 				},
 				ClientTLSSecretRef: corev1.SecretReference{
@@ -618,7 +622,7 @@ func (e *etcd) Snapshot(ctx context.Context, podExecutor kubernetes.PodExecutor)
 	return err
 }
 
-func (e *etcd) ServiceDNSNames() []string {
+func (e *etcd) serviceDNSNames() []string {
 	return append(
 		[]string{fmt.Sprintf("etcd-%s-local", e.role)},
 		kutil.DNSNamesForService(fmt.Sprintf("etcd-%s-client", e.role), e.namespace)...,
@@ -738,8 +742,6 @@ func (e *etcd) computeFullSnapshotSchedule(existingEtcd *druidv1alpha1.Etcd) *st
 type Secrets struct {
 	// CA is a secret containing the CA certificate and key.
 	CA component.Secret
-	// Server is a secret containing the server certificate and key.
-	Server component.Secret
 }
 
 // BackupConfig contains information for configuring the backup-restore sidecar so that it takes regularly backups of

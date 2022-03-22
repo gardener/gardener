@@ -124,20 +124,6 @@ func (mr *MockInterfaceMockRecorder) ScrapeConfigs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScrapeConfigs", reflect.TypeOf((*MockInterface)(nil).ScrapeConfigs))
 }
 
-// ServiceDNSNames mocks base method.
-func (m *MockInterface) ServiceDNSNames() []string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ServiceDNSNames")
-	ret0, _ := ret[0].([]string)
-	return ret0
-}
-
-// ServiceDNSNames indicates an expected call of ServiceDNSNames.
-func (mr *MockInterfaceMockRecorder) ServiceDNSNames() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceDNSNames", reflect.TypeOf((*MockInterface)(nil).ServiceDNSNames))
-}
-
 // SetBackupConfig mocks base method.
 func (m *MockInterface) SetBackupConfig(arg0 *etcd.BackupConfig) {
 	m.ctrl.T.Helper()

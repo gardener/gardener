@@ -80,14 +80,12 @@ var _ = Describe("Etcd", func() {
 		storageCapacityQuantity = resource.MustParse(storageCapacity)
 		defragmentationSchedule = "abcd"
 
-		secretNameCA         = "ca-etcd"
-		secretNameServer     = "etcd-server-tls"
-		secretNameClient     = "etcd-client"
-		secretChecksumCA     = "1234"
-		secretChecksumServer = "5678"
-		secrets              = Secrets{
-			CA:     component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
-			Server: component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
+		secretNameCA     = "ca-etcd"
+		secretNameServer = "etcd-server-" + testRole
+		secretNameClient = "etcd-client"
+		secretChecksumCA = "1234"
+		secrets          = Secrets{
+			CA: component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
 		}
 
 		maintenanceTimeWindow = gardencorev1beta1.MaintenanceTimeWindow{
@@ -228,8 +226,7 @@ var _ = Describe("Etcd", func() {
 					Replicas:          replicas,
 					PriorityClassName: pointer.String("gardener-shoot-controlplane"),
 					Annotations: map[string]string{
-						"checksum/secret-etcd-ca":          secretChecksumCA,
-						"checksum/secret-etcd-server-cert": secretChecksumServer,
+						"checksum/secret-etcd-ca": secretChecksumCA,
 					},
 					Labels: map[string]string{
 						"garden.sapcloud.io/role":          "controlplane",
@@ -492,11 +489,6 @@ var _ = Describe("Etcd", func() {
 		Context("missing secret information", func() {
 			It("should return an error because the CA secret information is not provided", func() {
 				Expect(etcd.Deploy(ctx)).To(MatchError(ContainSubstring("missing CA secret information")))
-			})
-
-			It("should return an error because the server secret information is not provided", func() {
-				etcd.SetSecrets(Secrets{CA: component.Secret{Name: secretNameCA, Checksum: secretChecksumCA}})
-				Expect(etcd.Deploy(ctx)).To(MatchError(ContainSubstring("missing server secret information")))
 			})
 		})
 
@@ -1122,18 +1114,6 @@ var _ = Describe("Etcd", func() {
 			)
 
 			Expect(etcd.Destroy(ctx)).To(MatchError(fakeErr))
-		})
-	})
-
-	Describe("#ServiceDNSNames", func() {
-		It("should return the expected DNS names", func() {
-			Expect(etcd.ServiceDNSNames()).To(ConsistOf(
-				"etcd-"+testRole+"-local",
-				"etcd-"+testRole+"-client",
-				"etcd-"+testRole+"-client."+testNamespace,
-				"etcd-"+testRole+"-client."+testNamespace+".svc",
-				"etcd-"+testRole+"-client."+testNamespace+".svc.cluster.local",
-			))
 		})
 	})
 

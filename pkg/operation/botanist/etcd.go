@@ -91,8 +91,7 @@ func getScaleDownUpdateMode(c etcd.Class, s *shoot.Shoot) *string {
 // DeployEtcd deploys the etcd main and events.
 func (b *Botanist) DeployEtcd(ctx context.Context) error {
 	secrets := etcd.Secrets{
-		CA:     component.Secret{Name: etcd.SecretNameCA, Checksum: b.LoadCheckSum(etcd.SecretNameCA)},
-		Server: component.Secret{Name: etcd.SecretNameServer, Checksum: b.LoadCheckSum(etcd.SecretNameServer)},
+		CA: component.Secret{Name: etcd.SecretNameCA, Checksum: b.LoadCheckSum(etcd.SecretNameCA)},
 	}
 
 	b.Shoot.Components.ControlPlane.EtcdMain.SetSecrets(secrets)
