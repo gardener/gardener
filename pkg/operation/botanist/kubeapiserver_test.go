@@ -1524,7 +1524,10 @@ var _ = Describe("KubeAPIServer", func() {
 			Expect(gc.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), kubeconfigSecret)).To(Succeed())
 			Expect(kubeconfigSecret.Annotations).To(HaveKeyWithValue("url", "https://api."+externalClusterDomain))
 			Expect(kubeconfigSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "kubeconfig"))
-			Expect(kubeconfigSecret.Data).To(Equal(map[string][]byte{"data-for": []byte("user-kubeconfig")}))
+			Expect(kubeconfigSecret.Data).To(And(
+				HaveKey("ca.crt"),
+				HaveKeyWithValue("data-for", []byte("user-kubeconfig")),
+			))
 		})
 	})
 

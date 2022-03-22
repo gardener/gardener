@@ -164,7 +164,18 @@ func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	caBundleSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+	}
+
+	return b.syncShootCredentialToGarden(
+		ctx,
+		gutil.ShootProjectSecretSuffixCACluster,
+		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleCACluster},
+		nil,
+		map[string][]byte{secretutils.DataKeyCertificateCA: caBundleSecret.Data[secretutils.DataKeyCertificateBundle]},
+	)
 }
 
 func (b *Botanist) generateGenericTokenKubeconfig(ctx context.Context) error {
