@@ -82,13 +82,11 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameStaticToken              = "kube-apiserver-static-token-c069a0e6"
 		secretNameCA                       = "CA-secret"
 		secretChecksumCA                   = "12345"
-		secretNameCAEtcd                   = "CAEtcd-secret"
-		secretChecksumCAEtcd               = "12345"
+		secretNameCAEtcd                   = "ca-etcd"
 		secretNameCAFrontProxy             = "CAFrontProxy-secret"
 		secretChecksumCAFrontProxy         = "12345"
 		secretNameCAVPN                    = "ca-vpn"
-		secretNameEtcd                     = "Etcd-secret"
-		secretChecksumEtcd                 = "12345"
+		secretNameEtcd                     = "etcd-client"
 		secretNameHTTPProxy                = "kube-apiserver-http-proxy"
 		secretNameKubeAggregator           = "kube-aggregator"
 		secretNameKubeAPIServerToKubelet   = "kube-apiserver-kubelet"
@@ -129,9 +127,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 		secrets = Secrets{
 			CA:                   component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
-			CAEtcd:               component.Secret{Name: secretNameCAEtcd, Checksum: secretChecksumCAEtcd},
 			CAFrontProxy:         component.Secret{Name: secretNameCAFrontProxy, Checksum: secretChecksumCAFrontProxy},
-			Etcd:                 component.Secret{Name: secretNameEtcd, Checksum: secretChecksumEtcd},
 			VPNSeed:              &component.Secret{Name: secretNameVPNSeed, Checksum: secretChecksumVPNSeed},
 			VPNSeedTLSAuth:       &component.Secret{Name: secretNameVPNSeedTLSAuth, Checksum: secretChecksumVPNSeedTLSAuth},
 			VPNSeedServerTLSAuth: &component.Secret{Name: secretNameVPNSeedServerTLSAuth, Checksum: secretChecksumVPNSeedServerTLSAuth},
@@ -215,14 +211,8 @@ var _ = Describe("KubeAPIServer", func() {
 				Entry("CA missing",
 					"CA", func(s *Secrets) { s.CA.Name = "" }, Values{},
 				),
-				Entry("CAEtcd missing",
-					"CAEtcd", func(s *Secrets) { s.CAEtcd.Name = "" }, Values{},
-				),
 				Entry("CAFrontProxy missing",
 					"CAFrontProxy", func(s *Secrets) { s.CAFrontProxy.Name = "" }, Values{},
-				),
-				Entry("Etcd missing",
-					"Etcd", func(s *Secrets) { s.Etcd.Name = "" }, Values{},
 				),
 				Entry("ReversedVPN disabled but VPNSeed missing",
 					"VPNSeed", func(s *Secrets) { s.VPNSeed = nil }, Values{VPN: VPNConfig{ReversedVPNEnabled: false}},
@@ -1412,9 +1402,9 @@ rules:
 					Expect(deployment.Annotations).To(Equal(map[string]string{
 						"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
 						"reference.resources.gardener.cloud/secret-71fba891":    secretNameCA,
-						"reference.resources.gardener.cloud/secret-91c30740":    secretNameCAEtcd,
+						"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
 						"reference.resources.gardener.cloud/secret-9282d44f":    secretNameCAFrontProxy,
-						"reference.resources.gardener.cloud/secret-c16f0542":    secretNameEtcd,
+						"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
 						"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
@@ -1458,18 +1448,16 @@ rules:
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Annotations).To(Equal(map[string]string{
-						"checksum/secret-" + secretNameCAEtcd:                   secretChecksumCAEtcd,
 						"checksum/secret-" + secretNameVPNSeedServerTLSAuth:     secretChecksumVPNSeedServerTLSAuth,
 						"checksum/secret-" + secretNameVPNSeed:                  secretChecksumVPNSeed,
 						"checksum/secret-" + secretNameCA:                       secretChecksumCA,
-						"checksum/secret-" + secretNameEtcd:                     secretChecksumEtcd,
 						"checksum/secret-" + secretNameCAFrontProxy:             secretChecksumCAFrontProxy,
 						"checksum/secret-" + secretNameVPNSeedTLSAuth:           secretChecksumVPNSeedTLSAuth,
 						"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
 						"reference.resources.gardener.cloud/secret-71fba891":    secretNameCA,
-						"reference.resources.gardener.cloud/secret-91c30740":    secretNameCAEtcd,
+						"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
 						"reference.resources.gardener.cloud/secret-9282d44f":    secretNameCAFrontProxy,
-						"reference.resources.gardener.cloud/secret-c16f0542":    secretNameEtcd,
+						"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
 						"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
@@ -1768,7 +1756,7 @@ rules:
 							"--enable-aggregator-routing=true",
 							"--enable-bootstrap-token-auth=true",
 							"--http2-max-streams-per-connection=1000",
-							"--etcd-cafile=/srv/kubernetes/etcd/ca/ca.crt",
+							"--etcd-cafile=/srv/kubernetes/etcd/ca/bundle.crt",
 							"--etcd-certfile=/srv/kubernetes/etcd/client/tls.crt",
 							"--etcd-keyfile=/srv/kubernetes/etcd/client/tls.key",
 							"--etcd-servers=https://etcd-main-client:2379",
@@ -1837,7 +1825,7 @@ rules:
 								MountPath: "/srv/kubernetes/ca-front-proxy",
 							},
 							corev1.VolumeMount{
-								Name:      "etcd-client-tls",
+								Name:      "etcd-client",
 								MountPath: "/srv/kubernetes/etcd/client",
 							},
 							corev1.VolumeMount{
@@ -1912,7 +1900,7 @@ rules:
 								},
 							},
 							corev1.Volume{
-								Name: "etcd-client-tls",
+								Name: "etcd-client",
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName: secretNameEtcd,

@@ -61,7 +61,7 @@ const (
 	volumeNameCAFrontProxy             = "ca-front-proxy"
 	volumeNameCAVPN                    = "ca-vpn"
 	volumeNameEgressSelector           = "egress-selection-config"
-	volumeNameEtcdClient               = "etcd-client-tls"
+	volumeNameEtcdClient               = "etcd-client"
 	volumeNameEtcdEncryptionConfig     = "etcd-encryption-secret"
 	volumeNameHTTPProxy                = "http-proxy"
 	volumeNameKubeAPIServerToKubelet   = "kubelet-client"
@@ -147,9 +147,19 @@ func (k *kubeAPIServer) reconcileDeployment(
 		healthCheckToken = token.Token
 	}
 
-	secretCAVPN, found := k.secretsManager.Get(v1beta1constants.SecretNameCAVPN)
+	vpnCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCAVPN)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAVPN)
+	}
+
+	etcdCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCAETCD)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
+	}
+
+	etcdClientSecret, found := k.secretsManager.Get(etcd.SecretNameClient)
+	if !found {
+		return fmt.Errorf("secret %q not found", etcd.SecretNameClient)
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), deployment, func() error {
@@ -329,7 +339,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameCAEtcd,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: k.secrets.CAEtcd.Name,
+									SecretName: etcdCASecret.Name,
 								},
 							},
 						},
@@ -345,7 +355,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameEtcdClient,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: k.secrets.Etcd.Name,
+									SecretName: etcdClientSecret.Name,
 								},
 							},
 						},
@@ -407,7 +417,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleHostCertVolumes(deployment)
 		k.handleSNISettings(deployment)
 		k.handlePodMutatorSettings(deployment)
-		k.handleVPNSettings(deployment, configMapEgressSelector, secretCAVPN, secretHTTPProxy)
+		k.handleVPNSettings(deployment, configMapEgressSelector, vpnCASecret, secretHTTPProxy)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment, secretUserProvidedServiceAccountSigningKey)
 
@@ -451,7 +461,7 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, "--enable-aggregator-routing=true")
 	out = append(out, "--enable-bootstrap-token-auth=true")
 	out = append(out, "--http2-max-streams-per-connection=1000")
-	out = append(out, fmt.Sprintf("--etcd-cafile=%s/%s", volumeMountPathCAEtcd, secrets.DataKeyCertificateCA))
+	out = append(out, fmt.Sprintf("--etcd-cafile=%s/%s", volumeMountPathCAEtcd, secrets.DataKeyCertificateBundle))
 	out = append(out, fmt.Sprintf("--etcd-certfile=%s/%s", volumeMountPathEtcdClient, secrets.DataKeyCertificate))
 	out = append(out, fmt.Sprintf("--etcd-keyfile=%s/%s", volumeMountPathEtcdClient, secrets.DataKeyPrivateKey))
 	out = append(out, fmt.Sprintf("--etcd-servers=https://%s:%d", etcd.ServiceName(v1beta1constants.ETCDRoleMain), etcd.PortEtcdClient))
@@ -657,7 +667,7 @@ func (k *kubeAPIServer) handleLifecycleSettings(deployment *appsv1.Deployment) {
 func (k *kubeAPIServer) handleVPNSettings(
 	deployment *appsv1.Deployment,
 	configMapEgressSelector *corev1.ConfigMap,
-	secretCAVPN *corev1.Secret,
+	vpnCASecret *corev1.Secret,
 	secretHTTPProxy *corev1.Secret,
 ) {
 	if !k.values.VPN.ReversedVPNEnabled {
@@ -797,7 +807,7 @@ func (k *kubeAPIServer) handleVPNSettings(
 				Name: volumeNameCAVPN,
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
-						SecretName: secretCAVPN.Name,
+						SecretName: vpnCASecret.Name,
 					},
 				},
 			},

@@ -61,8 +61,6 @@ const (
 	// Such etcds are also unsafe to evict (from the PoV of the cluster-autoscaler when trying to scale down).
 	ClassImportant Class = "important"
 
-	// SecretNameCA is the name of the secret containing the CA certificate and key for the etcd.
-	SecretNameCA = v1beta1constants.SecretNameCAETCD
 	// SecretNameClient is the name of the secret containing the client certificate and key for the etcd.
 	SecretNameClient       = "etcd-client"
 	secretNamePrefixServer = "etcd-server-"
