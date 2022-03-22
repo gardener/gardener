@@ -93,7 +93,6 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 	secrets := etcd.Secrets{
 		CA:     component.Secret{Name: etcd.SecretNameCA, Checksum: b.LoadCheckSum(etcd.SecretNameCA)},
 		Server: component.Secret{Name: etcd.SecretNameServer, Checksum: b.LoadCheckSum(etcd.SecretNameServer)},
-		Client: component.Secret{Name: etcd.SecretNameClient, Checksum: b.LoadCheckSum(etcd.SecretNameClient)},
 	}
 
 	b.Shoot.Components.ControlPlane.EtcdMain.SetSecrets(secrets)

@@ -91,7 +91,6 @@ var _ = Describe("#Wait", func() {
 		etcd.SetSecrets(Secrets{
 			CA:     component.Secret{Name: "ca", Checksum: "abcdef"},
 			Server: component.Secret{Name: "server", Checksum: "abcdef"},
-			Client: component.Secret{Name: "client", Checksum: "abcdef"},
 		})
 		etcd.SetHVPAConfig(&HVPAConfig{
 			Enabled: true,

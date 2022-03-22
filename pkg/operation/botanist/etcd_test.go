@@ -252,10 +252,8 @@ var _ = Describe("Etcd", func() {
 
 			secretNameCA     = "ca-etcd"
 			secretNameServer = "etcd-server-cert"
-			secretNameClient = "etcd-client-tls"
 			checksumCA       = "1234"
 			checksumServer   = "5678"
-			checksumClient   = "9012"
 			shootUID         = types.UID("uuid")
 		)
 
@@ -265,7 +263,6 @@ var _ = Describe("Etcd", func() {
 			botanist.K8sSeedClient = kubernetesClient
 			botanist.StoreCheckSum(secretNameCA, checksumCA)
 			botanist.StoreCheckSum(secretNameServer, checksumServer)
-			botanist.StoreCheckSum(secretNameClient, checksumClient)
 			botanist.Seed = &seedpkg.Seed{}
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
@@ -298,12 +295,10 @@ var _ = Describe("Etcd", func() {
 			etcdMain.EXPECT().SetSecrets(etcd.Secrets{
 				CA:     component.Secret{Name: secretNameCA, Checksum: checksumCA},
 				Server: component.Secret{Name: secretNameServer, Checksum: checksumServer},
-				Client: component.Secret{Name: secretNameClient, Checksum: checksumClient},
 			})
 			etcdEvents.EXPECT().SetSecrets(etcd.Secrets{
 				CA:     component.Secret{Name: secretNameCA, Checksum: checksumCA},
 				Server: component.Secret{Name: secretNameServer, Checksum: checksumServer},
-				Client: component.Secret{Name: secretNameClient, Checksum: checksumClient},
 			})
 		})
 

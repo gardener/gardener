@@ -31,6 +31,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 
@@ -65,7 +66,7 @@ const (
 	// SecretNameServer is the name of the secret containing the server certificate and key for the etcd.
 	SecretNameServer = "etcd-server-cert"
 	// SecretNameClient is the name of the secret containing the client certificate and key for the etcd.
-	SecretNameClient = "etcd-client-tls"
+	SecretNameClient = "etcd-client"
 
 	// LabelAppValue is the value of a label whose key is 'app'.
 	LabelAppValue = "etcd-statefulset"
@@ -185,14 +186,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	if e.secrets.Server.Name == "" || e.secrets.Server.Checksum == "" {
 		return fmt.Errorf("missing server secret information")
 	}
-	if e.secrets.Client.Name == "" || e.secrets.Client.Checksum == "" {
-		return fmt.Errorf("missing client secret information")
-	}
 
 	var (
-		networkPolicy = e.emptyNetworkPolicy()
-		hvpa          = e.emptyHVPA()
-
 		existingEtcd *druidv1alpha1.Etcd
 		existingSts  *appsv1.StatefulSet
 	)
@@ -220,6 +215,9 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	var (
+		networkPolicy = e.emptyNetworkPolicy()
+		hvpa          = e.emptyHVPA()
+
 		replicas = e.computeReplicas(existingEtcd)
 
 		protocolTCP             = corev1.ProtocolTCP
@@ -240,7 +238,6 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		annotations = map[string]string{
 			"checksum/secret-etcd-ca":          e.secrets.CA.Checksum,
 			"checksum/secret-etcd-server-cert": e.secrets.Server.Checksum,
-			"checksum/secret-etcd-client-tls":  e.secrets.Client.Checksum,
 		}
 		metrics             = druidv1alpha1.Basic
 		volumeClaimTemplate = e.etcd.Name
@@ -258,6 +255,16 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			corev1.ResourceCPU:    resource.MustParse("200m"),
 			corev1.ResourceMemory: resource.MustParse("700M"),
 		}
+	}
+
+	clientSecret, err := e.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+		Name:                        SecretNameClient,
+		CommonName:                  "etcd-client",
+		CertType:                    secretutils.ClientCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return err
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, networkPolicy, func() error {
@@ -349,7 +356,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					Namespace: e.namespace,
 				},
 				ClientTLSSecretRef: corev1.SecretReference{
-					Name:      e.secrets.Client.Name,
+					Name:      clientSecret.Name,
 					Namespace: e.namespace,
 				},
 			},
@@ -733,8 +740,6 @@ type Secrets struct {
 	CA component.Secret
 	// Server is a secret containing the server certificate and key.
 	Server component.Secret
-	// Client is a secret containing the client certificate and key.
-	Client component.Secret
 }
 
 // BackupConfig contains information for configuring the backup-restore sidecar so that it takes regularly backups of

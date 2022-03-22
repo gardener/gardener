@@ -82,14 +82,12 @@ var _ = Describe("Etcd", func() {
 
 		secretNameCA         = "ca-etcd"
 		secretNameServer     = "etcd-server-tls"
-		secretNameClient     = "etcd-client-cert"
+		secretNameClient     = "etcd-client"
 		secretChecksumCA     = "1234"
 		secretChecksumServer = "5678"
-		secretChecksumClient = "9012"
 		secrets              = Secrets{
 			CA:     component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
 			Server: component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
-			Client: component.Secret{Name: secretNameClient, Checksum: secretChecksumClient},
 		}
 
 		maintenanceTimeWindow = gardencorev1beta1.MaintenanceTimeWindow{
@@ -232,7 +230,6 @@ var _ = Describe("Etcd", func() {
 					Annotations: map[string]string{
 						"checksum/secret-etcd-ca":          secretChecksumCA,
 						"checksum/secret-etcd-server-cert": secretChecksumServer,
-						"checksum/secret-etcd-client-tls":  secretChecksumClient,
 					},
 					Labels: map[string]string{
 						"garden.sapcloud.io/role":          "controlplane",
@@ -500,11 +497,6 @@ var _ = Describe("Etcd", func() {
 			It("should return an error because the server secret information is not provided", func() {
 				etcd.SetSecrets(Secrets{CA: component.Secret{Name: secretNameCA, Checksum: secretChecksumCA}})
 				Expect(etcd.Deploy(ctx)).To(MatchError(ContainSubstring("missing server secret information")))
-			})
-
-			It("should return an error because the client secret information is not provided", func() {
-				etcd.SetSecrets(Secrets{CA: component.Secret{Name: secretNameCA, Checksum: secretChecksumCA}, Server: component.Secret{Name: secretNameServer, Checksum: secretChecksumServer}})
-				Expect(etcd.Deploy(ctx)).To(MatchError(ContainSubstring("missing client secret information")))
 			})
 		})
 

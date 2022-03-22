@@ -71,19 +71,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 			CertType:  secrets.ServerClientCert,
 			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCAETCD],
 		},
-
-		// Secret definition for etcd server
-		&secrets.CertificateSecretConfig{
-			Name: etcd.SecretNameClient,
-
-			CommonName:   "etcd-client",
-			Organization: nil,
-			DNSNames:     nil,
-			IPAddresses:  nil,
-
-			CertType:  secrets.ClientCert,
-			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCAETCD],
-		},
 	}
 
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(b.Seed.GetInfo().Spec.Settings) {
