@@ -160,18 +160,6 @@ func (mr *MockInterfaceMockRecorder) SetOwnerCheckConfig(arg0 interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOwnerCheckConfig", reflect.TypeOf((*MockInterface)(nil).SetOwnerCheckConfig), arg0)
 }
 
-// SetSecrets mocks base method.
-func (m *MockInterface) SetSecrets(arg0 etcd.Secrets) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetSecrets", arg0)
-}
-
-// SetSecrets indicates an expected call of SetSecrets.
-func (mr *MockInterfaceMockRecorder) SetSecrets(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSecrets", reflect.TypeOf((*MockInterface)(nil).SetSecrets), arg0)
-}
-
 // Snapshot mocks base method.
 func (m *MockInterface) Snapshot(arg0 context.Context, arg1 kubernetes.PodExecutor) error {
 	m.ctrl.T.Helper()

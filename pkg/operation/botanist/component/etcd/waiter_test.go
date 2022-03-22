@@ -39,7 +39,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/logger"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -88,9 +87,6 @@ var _ = Describe("#Wait", func() {
 		)
 
 		etcd = New(c, log, testNamespace, sm, testRole, ClassNormal, false, "12Gi", pointer.String("abcd"))
-		etcd.SetSecrets(Secrets{
-			CA: component.Secret{Name: "ca", Checksum: "abcdef"},
-		})
 		etcd.SetHVPAConfig(&HVPAConfig{
 			Enabled: true,
 			MaintenanceTimeWindow: gardencorev1beta1.MaintenanceTimeWindow{

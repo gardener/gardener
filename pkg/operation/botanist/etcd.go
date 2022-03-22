@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -90,13 +89,6 @@ func getScaleDownUpdateMode(c etcd.Class, s *shoot.Shoot) *string {
 
 // DeployEtcd deploys the etcd main and events.
 func (b *Botanist) DeployEtcd(ctx context.Context) error {
-	secrets := etcd.Secrets{
-		CA: component.Secret{Name: etcd.SecretNameCA, Checksum: b.LoadCheckSum(etcd.SecretNameCA)},
-	}
-
-	b.Shoot.Components.ControlPlane.EtcdMain.SetSecrets(secrets)
-	b.Shoot.Components.ControlPlane.EtcdEvents.SetSecrets(secrets)
-
 	if b.Seed.GetInfo().Spec.Backup != nil {
 		secret := &corev1.Secret{}
 		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.BackupSecretName), secret); err != nil {

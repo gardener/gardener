@@ -104,8 +104,6 @@ type Interface interface {
 	component.MonitoringComponent
 	// Snapshot triggers the backup-restore sidecar to perform a full snapshot in case backup configuration is provided.
 	Snapshot(context.Context, kubernetes.PodExecutor) error
-	// SetSecrets sets the secrets.
-	SetSecrets(Secrets)
 	// SetBackupConfig sets the backup configuration.
 	SetBackupConfig(config *BackupConfig)
 	// SetHVPAConfig sets the HVPA configuration.
@@ -170,17 +168,12 @@ type etcd struct {
 
 	etcd *druidv1alpha1.Etcd
 
-	secrets          Secrets
 	backupConfig     *BackupConfig
 	hvpaConfig       *HVPAConfig
 	ownerCheckConfig *OwnerCheckConfig
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
-	if e.secrets.CA.Name == "" || e.secrets.CA.Checksum == "" {
-		return fmt.Errorf("missing CA secret information")
-	}
-
 	var (
 		existingEtcd *druidv1alpha1.Etcd
 		existingSts  *appsv1.StatefulSet
@@ -229,9 +222,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			Policy:  &compressionPolicy,
 		}
 
-		annotations = map[string]string{
-			"checksum/secret-etcd-ca": e.secrets.CA.Checksum,
-		}
+		annotations         map[string]string
 		metrics             = druidv1alpha1.Basic
 		volumeClaimTemplate = e.etcd.Name
 		minAllowed          = corev1.ResourceList{
@@ -241,13 +232,18 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	)
 
 	if e.class == ClassImportant {
-		annotations["cluster-autoscaler.kubernetes.io/safe-to-evict"] = "false"
+		annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
 		metrics = druidv1alpha1.Extensive
 		volumeClaimTemplate = e.role + "-etcd"
 		minAllowed = corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("200m"),
 			corev1.ResourceMemory: resource.MustParse("700M"),
 		}
+	}
+
+	etcdCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCD)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
 	}
 
 	serverSecret, err := e.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
@@ -351,17 +347,18 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			TLS: &druidv1alpha1.TLSConfig{
 				TLSCASecretRef: druidv1alpha1.SecretReference{
 					SecretReference: corev1.SecretReference{
-						Name:      e.secrets.CA.Name,
-						Namespace: e.namespace,
+						Name:      etcdCASecret.Name,
+						Namespace: etcdCASecret.Namespace,
 					},
+					DataKey: pointer.String(secretutils.DataKeyCertificateBundle),
 				},
 				ServerTLSSecretRef: corev1.SecretReference{
 					Name:      serverSecret.Name,
-					Namespace: e.namespace,
+					Namespace: serverSecret.Namespace,
 				},
 				ClientTLSSecretRef: corev1.SecretReference{
 					Name:      clientSecret.Name,
-					Namespace: e.namespace,
+					Namespace: clientSecret.Namespace,
 				},
 			},
 			ServerPort:              &PortEtcdServer,
@@ -637,7 +634,6 @@ func (e *etcd) Get(ctx context.Context) (*druidv1alpha1.Etcd, error) {
 	return e.etcd, nil
 }
 
-func (e *etcd) SetSecrets(secrets Secrets)                 { e.secrets = secrets }
 func (e *etcd) SetBackupConfig(backupConfig *BackupConfig) { e.backupConfig = backupConfig }
 func (e *etcd) SetHVPAConfig(hvpaConfig *HVPAConfig)       { e.hvpaConfig = hvpaConfig }
 func (e *etcd) SetOwnerCheckConfig(ownerCheckConfig *OwnerCheckConfig) {
@@ -736,12 +732,6 @@ func (e *etcd) computeFullSnapshotSchedule(existingEtcd *druidv1alpha1.Etcd) *st
 		fullSnapshotSchedule = existingEtcd.Spec.Backup.FullSnapshotSchedule
 	}
 	return fullSnapshotSchedule
-}
-
-// Secrets is collection of secrets for the etcd.
-type Secrets struct {
-	// CA is a secret containing the CA certificate and key.
-	CA component.Secret
 }
 
 // BackupConfig contains information for configuring the backup-restore sidecar so that it takes regularly backups of

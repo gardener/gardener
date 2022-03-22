@@ -29,7 +29,6 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	mocketcd "github.com/gardener/gardener/pkg/operation/botanist/component/etcd/mock"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
@@ -249,17 +248,13 @@ var _ = Describe("Etcd", func() {
 	Describe("#DeployEtcd", func() {
 		var (
 			etcdMain, etcdEvents *mocketcd.MockInterface
-
-			secretNameCA = "ca-etcd"
-			checksumCA   = "1234"
-			shootUID     = types.UID("uuid")
+			shootUID             = types.UID("uuid")
 		)
 
 		BeforeEach(func() {
 			etcdMain, etcdEvents = mocketcd.NewMockInterface(ctrl), mocketcd.NewMockInterface(ctrl)
 
 			botanist.K8sSeedClient = kubernetesClient
-			botanist.StoreCheckSum(secretNameCA, checksumCA)
 			botanist.Seed = &seedpkg.Seed{}
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
@@ -287,13 +282,6 @@ var _ = Describe("Etcd", func() {
 					TechnicalID: namespace,
 					UID:         shootUID,
 				},
-			})
-
-			etcdMain.EXPECT().SetSecrets(etcd.Secrets{
-				CA: component.Secret{Name: secretNameCA, Checksum: checksumCA},
-			})
-			etcdEvents.EXPECT().SetSecrets(etcd.Secrets{
-				CA: component.Secret{Name: secretNameCA, Checksum: checksumCA},
 			})
 		})
 
