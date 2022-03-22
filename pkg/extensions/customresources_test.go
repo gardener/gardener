@@ -240,7 +240,7 @@ var _ = Describe("extensions", func() {
 
 		It("should return error if ready func returns error", func() {
 			fakeError := &specialWrappingError{
-				error: gardencorev1beta1helper.NewErrorWithCodes("foo", gardencorev1beta1.ErrorInfraUnauthorized),
+				error: gardencorev1beta1helper.NewErrorWithCodes(errors.New("foo"), gardencorev1beta1.ErrorInfraUnauthorized),
 			}
 
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating worker succeeds")

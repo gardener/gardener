@@ -109,7 +109,7 @@ func CheckDNSObject(obj client.Object) error {
 			// faster, without retrying until the entire timeout is elapsed.
 			// This is the same behavior as in other extension components which leverage health.CheckExtensionObject, where
 			// ErrorWithCodes is returned if status.lastError is set (no matter if status.lastError.codes contains error codes).
-			err = retry.RetriableError(gardencorev1beta1helper.DetermineError(err, ""))
+			err = retry.RetriableError(gardencorev1beta1helper.DetermineError(err))
 		}
 		return &errorWithDNSState{underlying: err, state: state}
 	}

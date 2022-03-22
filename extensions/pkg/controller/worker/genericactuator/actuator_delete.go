@@ -108,7 +108,7 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 
 	// Wait until all machine resources have been properly deleted.
 	if err := a.waitUntilMachineResourcesDeleted(ctx, logger, worker, workerDelegate); err != nil {
-		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Failed while waiting for all machine resources to be deleted: '%s'", err.Error()))
+		return gardencorev1beta1helper.DetermineError(fmt.Errorf("Failed while waiting for all machine resources to be deleted: %w", err))
 	}
 
 	// Wait until the machine class credentials secret has been released.

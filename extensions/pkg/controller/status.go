@@ -143,7 +143,8 @@ func (s *statusUpdater) ErrorCustom(ctx context.Context, obj extensionsv1alpha1.
 	// instead of adding key-value pairs ourselves here
 	s.logger.Error(fmt.Errorf(errDescription), "Error", s.logKeysAndValues(obj)...) //nolint:logcheck
 
-	lastOp, lastErr := ReconcileError(lastOperationType, errDescription, 50, gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err, err.Error()))...)
+	// TODO(shafeeqes): Drop DetermineError usage here, once all the extensions have their own error code detection.
+	lastOp, lastErr := ReconcileError(lastOperationType, errDescription, 50, gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err))...)
 
 	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
 	obj.GetExtensionStatus().SetObservedGeneration(obj.GetGeneration())

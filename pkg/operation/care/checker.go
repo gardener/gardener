@@ -161,7 +161,7 @@ func (b *HealthChecker) checkEtcds(condition gardencorev1beta1.Condition, object
 			)
 
 			if lastError := object.Status.LastError; lastError != nil {
-				codes = gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(errors.New(*lastError), ""))
+				codes = gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(errors.New(*lastError)))
 				message = fmt.Sprintf("%s (%s)", message, *lastError)
 			}
 
@@ -198,7 +198,7 @@ func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, nodes 
 		if err := health.CheckNode(&object); err != nil {
 			var (
 				message = fmt.Sprintf("Node %q in worker group %q is unhealthy: %v", object.Name, workerGroupName, err)
-				codes   = gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err, ""))
+				codes   = gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err))
 			)
 
 			c := b.FailedCondition(condition, "NodeUnhealthy", message, codes...)

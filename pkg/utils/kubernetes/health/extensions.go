@@ -62,7 +62,7 @@ func ExtensionOperationHasBeenUpdatedSince(lastUpdateTime v1.Time) Func {
 // checkExtensionObject checks if an extension Object is healthy or not.
 func checkExtensionObject(generation int64, observedGeneration int64, annotations map[string]string, lastError *gardencorev1beta1.LastError, lastOperation *gardencorev1beta1.LastOperation) error {
 	if lastError != nil {
-		return v1beta1helper.NewErrorWithCodes(fmt.Sprintf("error during reconciliation: %s", lastError.Description), lastError.Codes...)
+		return v1beta1helper.NewErrorWithCodes(fmt.Errorf("error during reconciliation: %s", lastError.Description), lastError.Codes...)
 	}
 
 	if observedGeneration != generation {
