@@ -3896,7 +3896,7 @@ bool
 <td>
 <em>(Optional)</em>
 <p>Enabled specifies whether the Shoot needs to be hibernated or not. If it is true, the Shoot&rsquo;s desired state is to be hibernated.
-If it is false or nil, the Shoot&rsquo;s desired state is to be awaken.</p>
+If it is false or nil, the Shoot&rsquo;s desired state is to be awakened.</p>
 </td>
 </tr>
 <tr>

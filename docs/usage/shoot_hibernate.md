@@ -35,7 +35,7 @@ To scale up everything where it was before hibernation, Gardener doesn’t delet
 
 ## Hibernate your cluster manually
 
-The `.spec.hibernation.enabled` field specifies whether the cluster needs to be hibernated or not. If the field is set to `true`, the cluster's desired state is to be hibernated. If it is set to `false` or not specified at all, the cluster's desired state is to be awaken.
+The `.spec.hibernation.enabled` field specifies whether the cluster needs to be hibernated or not. If the field is set to `true`, the cluster's desired state is to be hibernated. If it is set to `false` or not specified at all, the cluster's desired state is to be awakened.
 
 To hibernate your cluster you can run the following `kubectl` command:
 ```
