@@ -26,7 +26,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	"github.com/onsi/gomega/types"
 	gomegatypes "github.com/onsi/gomega/types"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -51,7 +50,7 @@ var _ = Describe("helper", func() {
 		)
 
 		DescribeTable("#UpdatedCondition",
-			func(condition gardencorev1beta1.Condition, status gardencorev1beta1.ConditionStatus, reason, message string, codes []gardencorev1beta1.ErrorCode, matcher types.GomegaMatcher) {
+			func(condition gardencorev1beta1.Condition, status gardencorev1beta1.ConditionStatus, reason, message string, codes []gardencorev1beta1.ErrorCode, matcher gomegatypes.GomegaMatcher) {
 				updated := UpdatedCondition(condition, status, reason, message, codes...)
 
 				Expect(updated).To(matcher)
@@ -1038,7 +1037,7 @@ var _ = Describe("helper", func() {
 	)
 
 	DescribeTable("#FindPrimaryDNSProvider",
-		func(providers []gardencorev1beta1.DNSProvider, matcher types.GomegaMatcher) {
+		func(providers []gardencorev1beta1.DNSProvider, matcher gomegatypes.GomegaMatcher) {
 			Expect(FindPrimaryDNSProvider(providers)).To(matcher)
 		},
 
