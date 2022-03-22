@@ -255,7 +255,7 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 		}
 
 		if existingEncryptionKey == nil || existingEncryptionSecret == nil {
-			return nil, fmt.Errorf("old etcd encryption key could not found be retrieved")
+			return nil, fmt.Errorf("old etcd encryption key or secret was not found")
 		}
 
 		return map[string][]byte{
