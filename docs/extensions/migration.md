@@ -4,7 +4,7 @@
 
 ## Overall Principles
 
-The following principles should always be upheld: 
+The following principles should always be upheld:
 
 * All state maintained by the extension that is external from the seed cluster, for example infrastructure resources in a cloud provider, DNS entries, etc., should be kept during the migration. No such state should be deleted and then recreated, as this might cause disruption in the availability of the shoot cluster.
 * All Kubernetes resources maintained by the extension in the shoot cluster itself should also be kept during the migration. No such resources should be deleted and then recreated.
@@ -24,13 +24,13 @@ All resources in the source seed that have been created by an extension controll
 
 For many custom resources, for example MCM resources, the above requirement means in practice that any finalizers should be removed before deleting the resource, in addition to ensuring that the resource deletion is not reconciled by its respective controller if there is no finalizer. For managed resources, the above requirement means in practice that the `spec.keepObjects` field should be set to `true` before deleting the extension resource.
 
-Here it is assumed that any resources that contain state needed by the extension controller can be safely deleted, since any such state has been saved as described in [Saving and Restoring Extension States](#saving-and-restoring-extension-states) at the end of the last successful reconciliation.  
+Here it is assumed that any resources that contain state needed by the extension controller can be safely deleted, since any such state has been saved as described in [Saving and Restoring Extension States](#saving-and-restoring-extension-states) at the end of the last successful reconciliation.
 
 ## Saving and Restoring Extension States
 
-Some extension controllers create and maintain their own state when reconciling extension resources. For example, most infrastructure controllers use Terraform and maintain the terraform state in a special config map in the shoot namespace. This state must be properly migrated to the new seed cluster during control plane migration, so that subsequent reconciliations in the new seed could find and use it appropriately. 
+Some extension controllers create and maintain their own state when reconciling extension resources. For example, most infrastructure controllers use Terraform and maintain the terraform state in a special config map in the shoot namespace. This state must be properly migrated to the new seed cluster during control plane migration, so that subsequent reconciliations in the new seed could find and use it appropriately.
 
-All extension controllers that require such state migration must save their state in the `status.state` field of their extension resource at the end of a successful reconciliation. They must also restore their state from that same field upon reconciling an extension resource when the current operation is `restore`, as specified by the `gardener.cloud/operation` annotation, before performing the actual reconciliation. 
+All extension controllers that require such state migration must save their state in the `status.state` field of their extension resource at the end of a successful reconciliation. They must also restore their state from that same field upon reconciling an extension resource when the current operation is `restore`, as specified by the `gardener.cloud/operation` annotation, before performing the actual reconciliation.
 
 As an example, an infrastructure controller that uses Terraform must save the terraform state in the `status.state` field of the `Infrastructure` resource. An `Infrastructure` resource with a properly saved state might look as follows:
 
@@ -73,9 +73,13 @@ In addition, extension controllers that use [referenced resources](referenced-re
 
 Most extension controller implementations follow a common pattern where a generic `Reconciler` implementation delegates to an `Actuator` interface that contains the methods `Reconcile` and `Delete`, provided by the extension. The two new methods `Migrate` and `Restore` have been added to all such `Actuator` interfaces, see [the infrastructure `Actuator` interface](https://github.com/gardener/gardener/blob/master/extensions/pkg/controller/infrastructure/actuator.go) as an example. These methods are called by the generic reconcilers for the [migrate and restore operations](#migrate-and-restore-operations) respectively, and should be implemented by the extension according to the above guidelines.
 
+### Owner Checks
+
+The so called "bad case" scenario for control plane migration proposed in [GEP-17](../proposals/17-shoot-control-plane-migration-bad-case.md) introduced the requirement for extension controllers to check whether they are currently operating in the source or destination seed during reconciliations to avoid the case in which controllers from different seeds can operate on the same IaaS resources (split brain scenario). To that end a special "owner checking" mechanism has been added to the `Reconciler` implementations of all extension controllers. For an example usage of this mechanism see [the infrastructure Reconciler implementation](https://github.com/gardener/gardener/blob/7ac4b04feec409f3e5a5208cd06af9a10c755337/extensions/pkg/controller/infrastructure/reconciler.go#L109-L121). The purpose of the owner check is to interrupt reconciliations of extension controllers that do not operate in the seed that is currently configured to host the shoot's control plane. Note that `Migrate` operations must not be interrupted, as they are required to clean up kubernetes resources left in the shoot's control plane namespace and do not act on IaaS resources.
+
 ### Extension Controllers Based on Generic Actuators
 
-In practice, the implementation of many extension controllers (for example, the controlplane and worker controllers in most provider extensions) are based on a *generic `Actuator` implementation* that only delegates to extension methods for behavior that is truly provider specific. In all such cases, the `Migrate` and `Restore` methods have already been implemented properly in the generic actuators and there is nothing more to do in the extension itself. 
+In practice, the implementation of many extension controllers (for example, the controlplane and worker controllers in most provider extensions) are based on a *generic `Actuator` implementation* that only delegates to extension methods for behavior that is truly provider specific. In all such cases, the `Migrate` and `Restore` methods have already been implemented properly in the generic actuators and there is nothing more to do in the extension itself.
 
 In some rare cases, extension controllers based on a generic actuator might still introduce a custom `Actuator` implementation to override some of the generic actuator methods in order to enhance or change their behavior in a certain way. In such cases, the `Migrate` and `Restore` methods might need to be overridden as well, see the [Azure controlplane controller](https://github.com/gardener/gardener-extension-provider-azure/tree/master/pkg/controller/controlplane) as an example.
 
