@@ -55,12 +55,15 @@ func CheckDaemonSet(daemonSet *appsv1.DaemonSet) error {
 		return fmt.Errorf("misscheduled pods found (%d)", daemonSet.Status.NumberMisscheduled)
 	}
 
-	if maxUnavailable := daemonSetMaxUnavailable(daemonSet); daemonSet.Status.NumberUnavailable > maxUnavailable {
-		return fmt.Errorf("too many unavailable pods found (%d/%d, only max. %d unavailable pods allowed)", daemonSet.Status.NumberUnavailable, daemonSet.Status.CurrentNumberScheduled, maxUnavailable)
-	}
-
-	if daemonSet.Status.NumberReady < daemonSet.Status.DesiredNumberScheduled {
-		return fmt.Errorf("unready pods found (%d/%d), %d pods updated", daemonSet.Status.NumberReady, daemonSet.Status.DesiredNumberScheduled, daemonSet.Status.UpdatedNumberScheduled)
+	// Check if DaemonSet rollout is ongoing.
+	if daemonSet.Status.UpdatedNumberScheduled < daemonSet.Status.DesiredNumberScheduled {
+		if maxUnavailable := daemonSetMaxUnavailable(daemonSet); daemonSet.Status.NumberUnavailable > maxUnavailable {
+			return fmt.Errorf("too many unavailable pods found (%d/%d, only max. %d unavailable pods allowed)", daemonSet.Status.NumberUnavailable, daemonSet.Status.CurrentNumberScheduled, maxUnavailable)
+		}
+	} else {
+		if daemonSet.Status.NumberUnavailable > 0 {
+			return fmt.Errorf("too many unavailable pods found (%d/%d)", daemonSet.Status.NumberUnavailable, daemonSet.Status.CurrentNumberScheduled)
+		}
 	}
 
 	return nil

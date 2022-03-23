@@ -42,6 +42,22 @@ var _ = Describe("Daemonset", func() {
 		Entry("misscheduled pods", &appsv1.DaemonSet{
 			Status: appsv1.DaemonSetStatus{NumberMisscheduled: 1},
 		}, HaveOccurred()),
+		Entry("too many unavailable pods during rollout", &appsv1.DaemonSet{
+			Spec: appsv1.DaemonSetSpec{UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
+				Type: appsv1.RollingUpdateDaemonSetStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateDaemonSet{
+					MaxUnavailable: &oneUnavailable,
+				},
+			}},
+			Status: appsv1.DaemonSetStatus{
+				DesiredNumberScheduled: 3,
+				CurrentNumberScheduled: 3,
+				NumberUnavailable:      2,
+				NumberReady:            1,
+				NumberAvailable:        1,
+				UpdatedNumberScheduled: 2,
+			},
+		}, HaveOccurred()),
 		Entry("too many unavailable pods", &appsv1.DaemonSet{
 			Spec: appsv1.DaemonSetSpec{UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
 				Type: appsv1.RollingUpdateDaemonSetStrategyType,
@@ -56,17 +72,27 @@ var _ = Describe("Daemonset", func() {
 				NumberReady:            0,
 			},
 		}, HaveOccurred()),
-		Entry("too less ready pods", &appsv1.DaemonSet{
-			Status: appsv1.DaemonSetStatus{
-				DesiredNumberScheduled: 1,
-				CurrentNumberScheduled: 1,
-			},
-		}, HaveOccurred()),
 		Entry("healthy", &appsv1.DaemonSet{
 			Status: appsv1.DaemonSetStatus{
 				DesiredNumberScheduled: 1,
 				CurrentNumberScheduled: 1,
 				NumberReady:            1,
+			},
+		}, BeNil()),
+		Entry("healthy with allowed unavailable pods during rollout", &appsv1.DaemonSet{
+			Spec: appsv1.DaemonSetSpec{UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
+				Type: appsv1.RollingUpdateDaemonSetStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateDaemonSet{
+					MaxUnavailable: &oneUnavailable,
+				},
+			}},
+			Status: appsv1.DaemonSetStatus{
+				DesiredNumberScheduled: 3,
+				CurrentNumberScheduled: 3,
+				NumberUnavailable:      1,
+				NumberReady:            2,
+				NumberAvailable:        2,
+				UpdatedNumberScheduled: 1,
 			},
 		}, BeNil()),
 	)

@@ -271,6 +271,7 @@ var _ = Describe("CheckHealth", func() {
 				Status: appsv1.DaemonSetStatus{
 					DesiredNumberScheduled: 1,
 					CurrentNumberScheduled: 1,
+					NumberUnavailable:      1,
 				},
 			}
 		})
