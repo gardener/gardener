@@ -42,7 +42,7 @@ var _ = Describe("Shoot container runtime testing", func() {
 		}
 
 		if !supportsContainerD(f.CloudProfile.Spec.MachineImages, workerImage) {
-			message := fmt.Sprintf("machine image '%s/%s' does not support containerd", workerImage.Name, *workerImage.Version)
+			message := fmt.Sprintf("machine image '%s@%s' does not support containerd", workerImage.Name, *workerImage.Version)
 			Skip(message)
 		}
 
