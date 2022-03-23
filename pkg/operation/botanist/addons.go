@@ -361,6 +361,15 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	if err != nil {
 		return nil, err
 	}
+
+	// set additionalArgs for node-exporter
+	if b.Config.Monitoring != nil &&
+		b.Config.Monitoring.Shoot != nil &&
+		b.Config.Monitoring.Shoot.NodeExporter != nil &&
+		len(b.Config.Monitoring.Shoot.NodeExporter.AdditionalArgs) != 0 {
+		nodeExporter["additionalArgs"] = b.Config.Monitoring.Shoot.NodeExporter.AdditionalArgs
+	}
+
 	blackboxExporter, err := b.InjectShootShootImages(blackboxExporterConfig, images.ImageNameBlackboxExporter)
 	if err != nil {
 		return nil, err

@@ -35,6 +35,22 @@ port: 9090
 additionalScrapeConfigs: ""
 additionalRules: ""
 
+additionalAllowedMetrics:
+  alertManager: []
+  cAdvisor: []
+  cloudControllerManager: []
+  kubeStateMetrics: []
+  machineControllerManager: []
+  nodeExporter: []
+  prometheus: []
+  blackboxExporter: []
+  vpa: []
+  hvpa: []
+  vpn: []
+  loki: []
+  apiserverProxy: []
+  reversedVPN: []
+
 allowedMetrics:
   alertManager:
   - alertmanager_config_hash

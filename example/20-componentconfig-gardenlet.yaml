@@ -185,3 +185,9 @@ etcdConfig:
 #         max_backoff: 60s
 #     externalLabels: # add additional labels to metrics to identify it on the central instance
 #       additional: label
+#      nodeExporter:
+#        additionalArgs: # add additional for node exporter to enable more collectors
+#          - "--collector.diskstats"
+#      additionalAllowedMetrics: add additional allowed metrics to the prometheus config
+#        nodeExporter:
+#          - "node_disk_io_now"

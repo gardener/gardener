@@ -153,7 +153,7 @@ data:
         regex: ^/system\.slice/(.+)\.service$
         target_label: container
         replacement: '${1}'
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.cAdvisor | indent 6 }}
+{{ include "prometheus.keep-metrics.metric-relabel-config" (concat .Values.allowedMetrics.cAdvisor .Values.additionalAllowedMetrics.cAdvisor | uniq ) | indent 6 }}
       # We want to keep only metrics in kube-system namespace
       - source_labels: [ namespace ]
         action: keep
@@ -213,7 +213,7 @@ data:
       - source_labels: [ pod ]
         regex: ^.+\.tf-pod.+$
         action: drop
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubeStateMetrics | indent 6 }}
+{{ include "prometheus.keep-metrics.metric-relabel-config" (concat .Values.allowedMetrics.kubeStateMetrics .Values.additionalAllowedMetrics.kubeStateMetrics | uniq ) | indent 6 }}
 
     - job_name: kube-state-metrics-seed
       honor_labels: false
@@ -245,7 +245,7 @@ data:
       - source_labels: [ pod ]
         regex: ^.+\.tf-pod.+$
         action: drop
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubeStateMetrics | indent 6 }}
+{{ include "prometheus.keep-metrics.metric-relabel-config" (concat .Values.allowedMetrics.kubeStateMetrics .Values.additionalAllowedMetrics.kubeStateMetrics | uniq ) | indent 6 }}
 
     - job_name: 'annotated-seed-service-endpoints'
       honor_labels: false
@@ -278,7 +278,7 @@ data:
       - source_labels: [ __meta_kubernetes_pod_name ]
         target_label: pod
       metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.alertManager | indent 6 }}
+{{ include "prometheus.keep-metrics.metric-relabel-config" (concat .Values.allowedMetrics.alertManager .Values.additionalAllowedMetrics.alertManager | uniq ) | indent 6 }}
 {{- end }}
 
     - job_name: prometheus
@@ -299,7 +299,7 @@ data:
       - source_labels: [ __meta_kubernetes_pod_name ]
         target_label: pod
       metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.prometheus | indent 6 }}
+{{ include "prometheus.keep-metrics.metric-relabel-config" (concat .Values.allowedMetrics.prometheus .Values.additionalAllowedMetrics.prometheus | uniq ) | indent 6 }}
 
     - job_name: node-exporter
       honor_labels: false
@@ -332,7 +332,7 @@ data:
         target_label: __metrics_path__
         replacement: /api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics
       metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.nodeExporter | indent 6 }}
+{{ include "prometheus.keep-metrics.metric-relabel-config" (concat .Values.allowedMetrics.nodeExporter .Values.additionalAllowedMetrics.nodeExporter | uniq ) | indent 6 }}
 
 {{- if .Values.shoot.sniEnabled }}
     - job_name: apiserver-proxy
@@ -364,7 +364,7 @@ data:
         target_label: __metrics_path__
         replacement: /api/v1/namespaces/kube-system/pods/${1}:${2}/proxy/metrics
       metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.apiserverProxy | indent 6 }}
+{{ include "prometheus.keep-metrics.metric-relabel-config" (concat .Values.allowedMetrics.apiserverProxy .Values.additionalAllowedMetrics.apiserverProxy | uniq ) | indent 6 }}
       # we don't care about admin metrics
       - source_labels: [ envoy_cluster_name ]
         regex: ^uds_admin$
@@ -405,7 +405,7 @@ data:
         replacement: 127.0.0.1:9115
         action: replace
       metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.vpn | indent 6 }}
+{{ include "prometheus.keep-metrics.metric-relabel-config" (concat .Values.allowedMetrics.vpn .Values.additionalAllowedMetrics.vpn | uniq ) | indent 6 }}
 
     - job_name: blackbox-apiserver
       params:
@@ -462,7 +462,7 @@ data:
         target_label: instance
         action: replace
       metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.blackboxExporter | indent 8 }}
+{{ include "prometheus.keep-metrics.metric-relabel-config" (concat .Values.allowedMetrics.blackboxExporter .Values.additionalAllowedMetrics.blackboxExporter | uniq ) | indent 8 }}
 
     - job_name: 'vpa-exporter'
       kubernetes_sd_configs:
@@ -477,7 +477,7 @@ data:
         action: keep
         regex: vpa-exporter;metrics;garden
       metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.vpa | indent 6 }}
+{{ include "prometheus.keep-metrics.metric-relabel-config" (concat .Values.allowedMetrics.vpa .Values.additionalAllowedMetrics.vpa | uniq ) | indent 6 }}
       - source_labels: [ namespace ]
         action: keep
         regex: ^{{ .Release.Namespace }}$
@@ -496,7 +496,7 @@ data:
         action: keep
         regex: hvpa-controller;metrics;garden
       metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.hvpa | indent 6 }}
+{{ include "prometheus.keep-metrics.metric-relabel-config" (concat .Values.allowedMetrics.hvpa .Values.additionalAllowedMetrics.hvpa | uniq ) | indent 6 }}
       - source_labels: [ namespace ]
         action: keep
         regex: ^{{ .Release.Namespace }}$
@@ -521,7 +521,7 @@ data:
       - source_labels: [ __meta_kubernetes_pod_name ]
         target_label: pod
       metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.loki | indent 6 }}
+{{ include "prometheus.keep-metrics.metric-relabel-config" (concat .Values.allowedMetrics.loki .Values.additionalAllowedMetrics.loki | uniq ) | indent 6 }}
 {{- end }}
 
 {{- if  (index .Values.rules.optional "lokiTelegraf" ).enabled }}
@@ -563,7 +563,7 @@ data:
         action: keep
         regex: vpn-seed-server;metrics
       metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.reversedVPN | indent 6 }}
+{{ include "prometheus.keep-metrics.metric-relabel-config" (concat .Values.allowedMetrics.reversedVPN .Values.additionalAllowedMetrics.reversedVPN | uniq ) | indent 6 }}
 {{- end }}
 
 {{- if .Values.additionalScrapeConfigs }}

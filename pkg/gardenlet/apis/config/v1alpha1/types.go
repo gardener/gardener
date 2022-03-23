@@ -648,6 +648,19 @@ type ShootMonitoringConfig struct {
 	// ExternalLabels is optional and sets additional external labels for the monitoring stack.
 	// +optional
 	ExternalLabels map[string]string `json:"externalLabels,omitempty"`
+	// AdditionalAllowedMetrics is optional and sets additional allowed metrics witch are scraped by the monitoring stack.
+	// +optional
+	AdditionalAllowedMetrics map[string][]string `json:"additionalAllowedMetrics,omitempty"`
+	// NodeExporter is optional and sets additional settings for the node exporter.
+	// +optional
+	NodeExporter *NodeExporterConfig `json:"nodeExporter,omitempty"`
+}
+
+// NodeExporterConfig contains settings for the shoot monitoring stack.
+type NodeExporterConfig struct {
+	// AdditionalArgs is optional and sets additional arguments for the node exporter.
+	// +optional
+	AdditionalArgs []string `json:"additionalArgs,omitempty"`
 }
 
 // RemoteWriteMonitoringConfig contains settings for the remote write setting for monitoring stack.

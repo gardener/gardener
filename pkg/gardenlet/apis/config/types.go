@@ -535,6 +535,16 @@ type ShootMonitoringConfig struct {
 	RemoteWrite *RemoteWriteMonitoringConfig
 	// ExternalLabels is optional and sets additional external labels for the monitoring stack.
 	ExternalLabels map[string]string
+	// AdditionalAllowedMetrics is optional and sets additional allowed metrics witch are scraped by the monitoring stack.
+	AdditionalAllowedMetrics map[string][]string
+	// NodeExporter is optional and sets additional settings for the node exporter.
+	NodeExporter *NodeExporterConfig
+}
+
+// NodeExporterConfig contains settings for the shoot monitoring stack.
+type NodeExporterConfig struct {
+	// AdditionalArgs is optional and sets additional arguments for the node exporter.
+	AdditionalArgs []string
 }
 
 // RemoteWriteMonitoringConfig contains settings for the remote write setting for monitoring stack.

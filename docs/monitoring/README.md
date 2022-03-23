@@ -50,6 +50,32 @@ Deployed in the shoot control plane namespace. Important scrape targets:
 
 **Purpose**: Monitor all relevant components belonging to a shoot cluster managed by Gardener. Shoot owners can view the metrics in Grafana dashboards and receive [alerts](user_alerts.md) based on these metrics. Gardener operators will receive a different set of [alerts](operator_alerts.md). For alerting internals refer to [this](alerting.md) document.
 
+#### Add additional allowed metrics to Shoot Prometheus
+
+In the Shoot Prometheus is an allowed metrics list configured (it is defined in the helm chart: [charts/seed-monitoring/charts/core/charts/prometheus/values.yaml](../../charts/seed-monitoring/charts/core/charts/prometheus/values.yaml)). Additional allowed metrics can be configured in the `GardenletConfiguration` under `monitoring.shoot.additionalAllowedMetrics`. 
+
+Example:
+```
+monitoring:
+  shoot:
+     additionalAllowedMetrics: add additional allowed metrics to the prometheus config
+       nodeExporter:
+         - "node_disk_io_now"
+```
+
+#### Add additional collectors/args to Shoot node-exporter
+
+The node-exporter each Shoot has a defined set of collectors enabled (it is defined in the helm chart: [charts/seed-monitoring/charts/core/charts/prometheus/values.yaml](../../charts/shoot-core/components/charts/monitoring/values.yaml)). To add additional collectors or node-exporter arguments the setting `monitoring.shoot.nodeExporter.additionalArgs` in the `GardenletConfiguration` can be used.
+
+Example:
+```
+monitoring:
+  shoot:
+     nodeExporter:
+       additionalArgs: # add additional for node exporter to enable more collectors
+         - "--collector.diskstats"
+```
+
 ## Collect all Shoot Prometheus with remote write
 
 An optional collection of all Shoot Prometheus metrics to a central prometheus (or cortex) instance is possible with the `monitoring.shoot` setting in `GardenletConfiguration`:

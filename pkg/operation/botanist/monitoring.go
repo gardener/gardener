@@ -277,6 +277,13 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		prometheusConfig["externalLabels"] = b.Config.Monitoring.Shoot.ExternalLabels
 	}
 
+	// set additionalAllowedMetrics
+	if b.Config.Monitoring != nil &&
+		b.Config.Monitoring.Shoot != nil &&
+		len(b.Config.Monitoring.Shoot.AdditionalAllowedMetrics) != 0 {
+		prometheusConfig["additionalAllowedMetrics"] = b.Config.Monitoring.Shoot.AdditionalAllowedMetrics
+	}
+
 	prometheus, err := b.InjectSeedShootImages(prometheusConfig, prometheusImages...)
 	if err != nil {
 		return err
