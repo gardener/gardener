@@ -596,6 +596,12 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Spec.SystemComponents).To(Equal(&SystemComponents{CoreDNS: &CoreDNS{Autoscaling: &CoreDNSAutoscaling{Mode: CoreDNSAutoscalingModeHorizontal}}}))
 		})
+
+		It("should default the enableAdminKubeconfig field", func() {
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.EnableAdminKubeconfig).To(PointTo(BeTrue()))
+		})
 	})
 
 	Describe("#SetDefaults_Maintenance", func() {

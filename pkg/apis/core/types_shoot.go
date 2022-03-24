@@ -380,6 +380,8 @@ type Kubernetes struct {
 	Version string
 	// VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
 	VerticalPodAutoscaler *VerticalPodAutoscaler
+	// EnableAdminKubeconfig indicates whether static token kubeconfig secret will be created for shoot (default: true).
+	EnableAdminKubeconfig *bool
 }
 
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
