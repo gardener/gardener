@@ -107,14 +107,14 @@ var _ = Describe("Etcd", func() {
 			})
 
 			computeUpdateMode := func(class etcd.Class, purpose gardencorev1beta1.ShootPurpose) string {
-				if class == etcd.ClassImportant && purpose == gardencorev1beta1.ShootPurposeProduction {
+				if class == etcd.ClassImportant && (purpose == gardencorev1beta1.ShootPurposeProduction || purpose == gardencorev1beta1.ShootPurposeInfrastructure) {
 					return hvpav1alpha1.UpdateModeOff
 				}
 				return hvpav1alpha1.UpdateModeMaintenanceWindow
 			}
 
 			for _, etcdClass := range []etcd.Class{etcd.ClassNormal, etcd.ClassImportant} {
-				for _, shootPurpose := range []gardencorev1beta1.ShootPurpose{gardencorev1beta1.ShootPurposeEvaluation, gardencorev1beta1.ShootPurposeProduction} {
+				for _, shootPurpose := range []gardencorev1beta1.ShootPurpose{gardencorev1beta1.ShootPurposeEvaluation, gardencorev1beta1.ShootPurposeProduction, gardencorev1beta1.ShootPurposeInfrastructure} {
 					var (
 						class   = etcdClass
 						purpose = shootPurpose
