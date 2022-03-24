@@ -363,28 +363,18 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(0))
+				Expect(managedResourceSecret.Data).To(HaveLen(3))
 
-				By("checking vpa-exporter resources")
+				By("checking vpa-exporter application resources")
+				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceAccountExporter)))
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_exporter.yaml"])).To(Equal(serialize(clusterRoleExporter)))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_exporter.yaml"])).To(Equal(serialize(clusterRoleBindingExporter)))
+
+				By("checking vpa-exporter runtime resources")
 				service := &corev1.Service{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceExporter), service)).To(Succeed())
 				serviceExporter.ResourceVersion = "1"
 				Expect(service).To(Equal(serviceExporter))
-
-				serviceAccount := &corev1.ServiceAccount{}
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAccountExporter), serviceAccount)).To(Succeed())
-				serviceAccountExporter.ResourceVersion = "1"
-				Expect(serviceAccount).To(Equal(serviceAccountExporter))
-
-				clusterRole := &rbacv1.ClusterRole{}
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleExporter), clusterRole)).To(Succeed())
-				clusterRoleExporter.ResourceVersion = "1"
-				Expect(clusterRole).To(Equal(clusterRoleExporter))
-
-				clusterRoleBinding := &rbacv1.ClusterRoleBinding{}
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBindingExporter), clusterRoleBinding)).To(Succeed())
-				clusterRoleBindingExporter.ResourceVersion = "1"
-				Expect(clusterRoleBinding).To(Equal(clusterRoleBindingExporter))
 
 				deployment := &appsv1.Deployment{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentExporter), deployment)).To(Succeed())
@@ -427,11 +417,8 @@ var _ = Describe("VPA", func() {
 				Expect(c.Create(ctx, managedResource)).To(Succeed())
 				Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
 
-				By("creating vpa-exporter resources")
+				By("creating vpa-exporter runtime resources")
 				Expect(c.Create(ctx, serviceExporter)).To(Succeed())
-				Expect(c.Create(ctx, serviceAccountExporter)).To(Succeed())
-				Expect(c.Create(ctx, clusterRoleExporter)).To(Succeed())
-				Expect(c.Create(ctx, clusterRoleBindingExporter)).To(Succeed())
 				Expect(c.Create(ctx, deploymentExporter)).To(Succeed())
 				Expect(c.Create(ctx, vpaExporter)).To(Succeed())
 
@@ -440,11 +427,8 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 
-				By("checking vpa-exporter resources")
+				By("checking vpa-exporter runtime resources")
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceExporter), &corev1.Service{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAccountExporter), &corev1.ServiceAccount{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleExporter), &rbacv1.ClusterRole{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBindingExporter), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentExporter), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaExporter), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 			})

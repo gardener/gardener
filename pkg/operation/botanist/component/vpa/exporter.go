@@ -15,10 +15,8 @@
 package vpa
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -30,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -44,7 +41,7 @@ type ValuesExporter struct {
 	Image string
 }
 
-func (v *vpa) exporterObjectsToMutationsFns() map[client.Object]func() {
+func (v *vpa) exporterResourceConfigs() resourceConfigs {
 	var (
 		service            = v.emptyService(exporter)
 		serviceAccount     = v.emptyServiceAccount(exporter)
@@ -54,47 +51,14 @@ func (v *vpa) exporterObjectsToMutationsFns() map[client.Object]func() {
 		vpa                = v.emptyVerticalPodAutoscaler(exporter + "-vpa")
 	)
 
-	return map[client.Object]func(){
-		service:            func() { v.reconcileExporterService(service) },
-		serviceAccount:     func() { v.reconcileExporterServiceAccount(serviceAccount) },
-		clusterRole:        func() { v.reconcileExporterClusterRole(clusterRole) },
-		clusterRoleBinding: func() { v.reconcileExporterClusterRoleBinding(clusterRoleBinding, clusterRole, serviceAccount) },
-		deployment:         func() { v.reconcileExporterDeployment(deployment, serviceAccount) },
-		vpa:                func() { v.reconcileExporterVPA(vpa, deployment) },
+	return resourceConfigs{
+		{obj: service, class: runtime, mutateFn: func() { v.reconcileExporterService(service) }},
+		{obj: deployment, class: runtime, mutateFn: func() { v.reconcileExporterDeployment(deployment, serviceAccount) }},
+		{obj: vpa, class: runtime, mutateFn: func() { v.reconcileExporterVPA(vpa, deployment) }},
+		{obj: serviceAccount, class: application, mutateFn: func() { v.reconcileExporterServiceAccount(serviceAccount) }},
+		{obj: clusterRole, class: application, mutateFn: func() { v.reconcileExporterClusterRole(clusterRole) }},
+		{obj: clusterRoleBinding, class: application, mutateFn: func() { v.reconcileExporterClusterRoleBinding(clusterRoleBinding, clusterRole, serviceAccount) }},
 	}
-}
-
-func (v *vpa) deployExporterResources(ctx context.Context) error {
-	if v.values.ClusterType == ClusterTypeSeed {
-		for obj, mutateFn := range v.exporterObjectsToMutationsFns() {
-			mutateFn()
-
-			if err := v.registry.Add(obj); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}
-
-	for obj, mutateFn := range v.exporterObjectsToMutationsFns() {
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, obj, func() error {
-			mutateFn()
-			return nil
-		}); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (v *vpa) destroyExporterResources(ctx context.Context) error {
-	if v.values.ClusterType == ClusterTypeSeed {
-		return nil
-	}
-
-	return kutil.DeleteObjects(ctx, v.client, objsFromMap(v.exporterObjectsToMutationsFns())...)
 }
 
 func (v *vpa) reconcileExporterService(service *corev1.Service) {

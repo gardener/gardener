@@ -14,20 +14,12 @@
 
 package vpa
 
-import (
-	"context"
-)
-
 // ValuesRecommender is a set of configuration values for the vpa-recommender.
 type ValuesRecommender struct {
 	// Image is the container image.
 	Image string
 }
 
-func (v *vpa) deployRecommenderResources(ctx context.Context) error {
-	return nil
-}
-
-func (v *vpa) destroyRecommenderResources(ctx context.Context) error {
-	return nil
+func (v *vpa) recommenderResourceConfigs() resourceConfigs {
+	return resourceConfigs{}
 }

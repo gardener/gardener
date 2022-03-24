@@ -20,9 +20,9 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
@@ -94,17 +94,23 @@ const (
 )
 
 func (v *vpa) Deploy(ctx context.Context) error {
-	if err := flow.Sequential(
-		v.deployAdmissionControllerResources,
-		v.deployExporterResources,
-		v.deployRecommenderResources,
-		v.deployUpdaterResources,
-		v.deployGeneralResources,
-	)(ctx); err != nil {
-		return err
-	}
+	allResources := mergeResourceConfigs(
+		v.admissionControllerResourceConfigs(),
+		v.exporterResourceConfigs(),
+		v.recommenderResourceConfigs(),
+		v.updaterResourceConfigs(),
+		v.generalResourceConfigs(),
+	)
 
 	if v.values.ClusterType == ClusterTypeSeed {
+		for _, r := range allResources {
+			r.mutateFn()
+
+			if err := v.registry.Add(r.obj); err != nil {
+				return err
+			}
+		}
+
 		if err := managedresources.CreateForSeed(ctx, v.client, v.namespace, v.managedResourceName(), false, v.registry.SerializedObjects()); err != nil {
 			return err
 		}
@@ -114,6 +120,24 @@ func (v *vpa) Deploy(ctx context.Context) error {
 			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:exporter"}},
 			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:exporter"}},
 		)
+	}
+
+	for _, r := range allResources {
+		switch r.class {
+		case application:
+			r.mutateFn()
+			if err := v.registry.Add(r.obj); err != nil {
+				return err
+			}
+
+		case runtime:
+			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, r.obj, func() error {
+				r.mutateFn()
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
 	}
 
 	return managedresources.CreateForShoot(ctx, v.client, v.namespace, v.managedResourceName(), false, v.registry.SerializedObjects())
@@ -128,13 +152,13 @@ func (v *vpa) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	return flow.Sequential(
-		v.destroyUpdaterResources,
-		v.destroyRecommenderResources,
-		v.destroyExporterResources,
-		v.destroyAdmissionControllerResources,
-		v.destroyGeneralResources,
-	)(ctx)
+	return kutil.DeleteObjects(ctx, v.client, allRuntimeObjects(
+		v.admissionControllerResourceConfigs(),
+		v.exporterResourceConfigs(),
+		v.recommenderResourceConfigs(),
+		v.updaterResourceConfigs(),
+		v.generalResourceConfigs(),
+	)...)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -208,11 +232,48 @@ func getAllLabels(appValue string) map[string]string {
 	return utils.MergeStringMaps(getAppLabel(appValue), getRoleLabel())
 }
 
-func objsFromMap(m map[client.Object]func()) []client.Object {
+type resourceConfig struct {
+	obj      client.Object
+	class    class
+	mutateFn func()
+}
+
+type class uint8
+
+const (
+	runtime class = iota
+	application
+)
+
+type resourceConfigs []resourceConfig
+
+func (r resourceConfigs) allRuntimeObjects() []client.Object {
 	var out []client.Object
 
-	for obj := range m {
-		out = append(out, obj)
+	for _, o := range r {
+		if o.class == runtime {
+			out = append(out, o.obj)
+		}
+	}
+
+	return out
+}
+
+func allRuntimeObjects(configsLists ...resourceConfigs) []client.Object {
+	var out []client.Object
+
+	for _, list := range configsLists {
+		out = append(out, list.allRuntimeObjects()...)
+	}
+
+	return out
+}
+
+func mergeResourceConfigs(configsLists ...resourceConfigs) resourceConfigs {
+	var out resourceConfigs
+
+	for _, list := range configsLists {
+		out = append(out, list...)
 	}
 
 	return out

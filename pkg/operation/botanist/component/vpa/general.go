@@ -14,14 +14,6 @@
 
 package vpa
 
-import (
-	"context"
-)
-
-func (v *vpa) deployGeneralResources(ctx context.Context) error {
-	return nil
-}
-
-func (v *vpa) destroyGeneralResources(ctx context.Context) error {
-	return nil
+func (v *vpa) generalResourceConfigs() resourceConfigs {
+	return resourceConfigs{}
 }
