@@ -239,6 +239,7 @@ rules:
   - update
   - patch
   - delete
+  - deletecollection
 - apiGroups:
   - ""
   resources:

@@ -158,7 +158,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				{
 					APIGroups: []string{coordinationv1.GroupName},
 					Resources: []string{"leases"},
-					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
+					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"},
 				},
 				{
 					APIGroups: []string{corev1.GroupName},
