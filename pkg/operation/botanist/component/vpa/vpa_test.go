@@ -56,7 +56,8 @@ var _ = Describe("VPA", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		serviceExporter *corev1.Service
+		serviceExporter        *corev1.Service
+		serviceAccountExporter *corev1.ServiceAccount
 	)
 
 	BeforeEach(func() {
@@ -88,6 +89,17 @@ var _ = Describe("VPA", func() {
 					TargetPort: intstr.FromInt(9570),
 				}},
 			},
+		}
+		serviceAccountExporter = &corev1.ServiceAccount{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "ServiceAccount",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "vpa-exporter",
+				Namespace: namespace,
+			},
+			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 	})
 
@@ -141,8 +153,9 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(1))
+				Expect(managedResourceSecret.Data).To(HaveLen(2))
 				Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceExporter)))
+				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceAccountExporter)))
 			})
 		})
 
@@ -188,6 +201,11 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceExporter), service)).To(Succeed())
 				serviceExporter.ResourceVersion = "1"
 				Expect(service).To(Equal(serviceExporter))
+
+				serviceAccount := &corev1.ServiceAccount{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAccountExporter), serviceAccount)).To(Succeed())
+				serviceAccountExporter.ResourceVersion = "1"
+				Expect(serviceAccount).To(Equal(serviceAccountExporter))
 			})
 		})
 	})
@@ -222,6 +240,7 @@ var _ = Describe("VPA", func() {
 
 				By("creating vpa-exporter resources")
 				Expect(c.Create(ctx, serviceExporter)).To(Succeed())
+				Expect(c.Create(ctx, serviceAccountExporter)).To(Succeed())
 
 				Expect(component.Destroy(ctx)).To(Succeed())
 
@@ -230,6 +249,7 @@ var _ = Describe("VPA", func() {
 
 				By("checking vpa-exporter resources")
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceExporter), &corev1.Service{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAccountExporter), &corev1.ServiceAccount{})).To(BeNotFoundError())
 			})
 		})
 	})

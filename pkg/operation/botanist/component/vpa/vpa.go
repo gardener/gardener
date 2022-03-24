@@ -153,6 +153,10 @@ func (v *vpa) emptyService(name string) *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: v.namespace}}
 }
 
+func (v *vpa) emptyServiceAccount(name string) *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: v.namespace}}
+}
+
 func getLabels(appValue string) map[string]string {
 	return map[string]string{v1beta1constants.LabelApp: appValue}
 }

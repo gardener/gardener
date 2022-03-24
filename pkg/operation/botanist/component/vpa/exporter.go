@@ -22,6 +22,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -36,21 +38,35 @@ type ValuesExporter struct {
 }
 
 func (v *vpa) deployExporterResources(ctx context.Context) error {
-	service := v.emptyService(exporter)
+	var (
+		service        = v.emptyService(exporter)
+		serviceAccount = v.emptyServiceAccount(exporter)
+
+		objToMutateFn = map[client.Object]func(){
+			service:        func() { v.reconcileExporterService(service) },
+			serviceAccount: func() { v.reconcileExporterServiceAccount(serviceAccount) },
+		}
+	)
 
 	if v.values.ClusterType == ClusterTypeSeed {
-		v.reconcileExporterService(service)
+		for obj, mutateFn := range objToMutateFn {
+			mutateFn()
 
-		return v.registry.Add(
-			service,
-		)
+			if err := v.registry.Add(obj); err != nil {
+				return err
+			}
+		}
+
+		return nil
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, service, func() error {
-		v.reconcileExporterService(service)
-		return nil
-	}); err != nil {
-		return err
+	for obj, mutateFn := range objToMutateFn {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, obj, func() error {
+			mutateFn()
+			return nil
+		}); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -63,6 +79,7 @@ func (v *vpa) destroyExporterResources(ctx context.Context) error {
 
 	return kutil.DeleteObjects(ctx, v.client,
 		v.emptyService(exporter),
+		v.emptyServiceAccount(exporter),
 	)
 }
 
@@ -83,4 +100,8 @@ func (v *vpa) reconcileExporterService(service *corev1.Service) {
 		},
 	}
 	service.Spec.Ports = kutil.ReconcileServicePorts(service.Spec.Ports, desiredPorts, corev1.ServiceTypeClusterIP)
+}
+
+func (v *vpa) reconcileExporterServiceAccount(serviceAccount *corev1.ServiceAccount) {
+	serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
 }
