@@ -54,6 +54,7 @@ spec:
 {{ toYaml .Values.global.apiserver.podLabels | indent 8 }}
         {{- end }}
     spec:
+      priorityClassName: gardener-controlplane
       {{- if not .Values.global.deployment.virtualGarden.enabled }}
       serviceAccountName: {{ required ".Values.global.apiserver.serviceAccountName is required" .Values.global.apiserver.serviceAccountName }}
       {{- else if and .Values.global.deployment.virtualGarden.enabled .Values.global.deployment.virtualGarden.apiserver.user.name }}
