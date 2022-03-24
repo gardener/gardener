@@ -37,7 +37,7 @@ all related objects, e.g. the backing `StatefulSet`.
 Gardenlet maintains [HVPA](https://github.com/gardener/hvpa-controller/blob/master/config/samples/autoscaling_v1alpha1_hvpa.yaml)
 objects for etcd `StatefulSet`s if the corresponding [feature gate](../deployment/feature_gates.md) is enabled. This enables
 a vertical scaling for `etcd`. Downscaling is handled more pessimistic to prevent many subsequent `etcd` restarts. Thus,
-for `production` clusters downscaling is deactivated and for all other clusters lower advertised requests/limits are only
+for `production` and `infrastructure` clusters downscaling is deactivated and for all other clusters lower advertised requests/limits are only
 applied during a shoot's maintenance time window.
 
 ## Backup

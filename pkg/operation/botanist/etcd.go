@@ -28,6 +28,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -37,6 +38,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 )
 
 // NewEtcd is a function exposed for testing.
@@ -65,19 +67,23 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
 
-	scaleDownUpdateMode := hvpav1alpha1.UpdateModeMaintenanceWindow
-	if (class == etcd.ClassImportant && b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction) ||
-		(metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled)) {
-		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
-	}
-
 	e.SetHVPAConfig(&etcd.HVPAConfig{
 		Enabled:               hvpaEnabled,
 		MaintenanceTimeWindow: *b.Shoot.GetInfo().Spec.Maintenance.TimeWindow,
-		ScaleDownUpdateMode:   &scaleDownUpdateMode,
+		ScaleDownUpdateMode:   getScaleDownUpdateMode(class, b.Shoot),
 	})
 
 	return e, nil
+}
+
+func getScaleDownUpdateMode(c etcd.Class, s *shoot.Shoot) *string {
+	if c == etcd.ClassImportant && (s.Purpose == gardencorev1beta1.ShootPurposeProduction || s.Purpose == gardencorev1beta1.ShootPurposeInfrastructure) {
+		return pointer.String(hvpav1alpha1.UpdateModeOff)
+	}
+	if metav1.HasAnnotation(s.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
+		return pointer.String(hvpav1alpha1.UpdateModeOff)
+	}
+	return pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow)
 }
 
 // DeployEtcd deploys the etcd main and events.
