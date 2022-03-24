@@ -175,6 +175,7 @@ spec:
         - --port=10250
         - --tls-cert-dir=/srv/gardener-seed-admission-controller
         - --allow-invalid-extension-resources=false
+        - --metrics-bind-address=:8080
         - --health-bind-address=:8081
         image: ` + image + `
         imagePullPolicy: IfNotPresent
@@ -186,6 +187,9 @@ spec:
           initialDelaySeconds: 5
         name: gardener-seed-admission-controller
         ports:
+        - containerPort: 8080
+          name: metrics
+          protocol: TCP
         - containerPort: 10250
         readinessProbe:
           httpGet:
@@ -243,6 +247,10 @@ metadata:
   namespace: shoot--foo--bar
 spec:
   ports:
+  - name: metrics
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
   - name: health
     port: 8081
     protocol: TCP
