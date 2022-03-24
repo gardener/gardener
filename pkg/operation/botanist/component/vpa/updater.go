@@ -15,6 +15,8 @@
 package vpa
 
 import (
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/utils/pointer"
@@ -32,11 +34,13 @@ type ValuesUpdater struct {
 
 func (v *vpa) updaterResourceConfigs() resourceConfigs {
 	var (
-		clusterRole = v.emptyClusterRole("evictioner")
+		clusterRole        = v.emptyClusterRole("evictioner")
+		clusterRoleBinding = v.emptyClusterRoleBinding("evictioner")
 	)
 
 	configs := resourceConfigs{
 		{obj: clusterRole, class: application, mutateFn: func() { v.reconcileUpdaterClusterRole(clusterRole) }},
+		{obj: clusterRoleBinding, class: application, mutateFn: func() { v.reconcileUpdaterClusterRoleBinding(clusterRoleBinding, clusterRole, updater) }},
 	}
 
 	if v.values.ClusterType == ClusterTypeSeed {
@@ -66,4 +70,19 @@ func (v *vpa) reconcileUpdaterClusterRole(clusterRole *rbacv1.ClusterRole) {
 			Verbs:     []string{"create"},
 		},
 	}
+}
+
+func (v *vpa) reconcileUpdaterClusterRoleBinding(clusterRoleBinding *rbacv1.ClusterRoleBinding, clusterRole *rbacv1.ClusterRole, serviceAccountName string) {
+	clusterRoleBinding.Labels = getRoleLabel()
+	clusterRoleBinding.Annotations = map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"}
+	clusterRoleBinding.RoleRef = rbacv1.RoleRef{
+		APIGroup: rbacv1.GroupName,
+		Kind:     "ClusterRole",
+		Name:     clusterRole.Name,
+	}
+	clusterRoleBinding.Subjects = []rbacv1.Subject{{
+		Kind:      rbacv1.ServiceAccountKind,
+		Name:      serviceAccountName,
+		Namespace: v.serviceAccountNamespace(),
+	}}
 }

@@ -77,9 +77,10 @@ var _ = Describe("VPA", func() {
 		deploymentExporter         *appsv1.Deployment
 		vpaExporter                *vpaautoscalingv1.VerticalPodAutoscaler
 
-		serviceAccountUpdater    *corev1.ServiceAccount
-		clusterRoleUpdater       *rbacv1.ClusterRole
-		shootAccessSecretUpdater *corev1.Secret
+		serviceAccountUpdater     *corev1.ServiceAccount
+		clusterRoleUpdater        *rbacv1.ClusterRole
+		clusterRoleBindingUpdater *rbacv1.ClusterRoleBinding
+		shootAccessSecretUpdater  *corev1.Secret
 	)
 
 	BeforeEach(func() {
@@ -287,6 +288,31 @@ var _ = Describe("VPA", func() {
 				},
 			},
 		}
+		clusterRoleBindingUpdater = &rbacv1.ClusterRoleBinding{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "rbac.authorization.k8s.io/v1",
+				Kind:       "ClusterRoleBinding",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:vpa:target:evictioner",
+				Labels: map[string]string{
+					"gardener.cloud/role": "vpa",
+				},
+				Annotations: map[string]string{
+					"resources.gardener.cloud/delete-on-invalid-update": "true",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:vpa:target:evictioner",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "vpa-updater",
+				Namespace: namespace,
+			}},
+		}
 		shootAccessSecretUpdater = &corev1.Secret{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "v1",
@@ -358,16 +384,15 @@ var _ = Describe("VPA", func() {
 					},
 				}))
 
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Data).To(HaveLen(9))
+
+				By("checking vpa-exporter resources")
 				clusterRoleExporter.Name = replaceTargetSubstrings(clusterRoleExporter.Name)
 				clusterRoleBindingExporter.Name = replaceTargetSubstrings(clusterRoleBindingExporter.Name)
 				clusterRoleBindingExporter.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingExporter.RoleRef.Name)
-				clusterRoleUpdater.Name = replaceTargetSubstrings(clusterRoleUpdater.Name)
 
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(8))
-
-				By("checking vpa-exporter resources")
 				Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceExporter)))
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceAccountExporter)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_exporter.yaml"])).To(Equal(serialize(clusterRoleExporter)))
@@ -376,8 +401,13 @@ var _ = Describe("VPA", func() {
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__vpa-exporter-vpa.yaml"])).To(Equal(serialize(vpaExporter)))
 
 				By("checking vpa-updater resources")
+				clusterRoleUpdater.Name = replaceTargetSubstrings(clusterRoleUpdater.Name)
+				clusterRoleBindingUpdater.Name = replaceTargetSubstrings(clusterRoleBindingUpdater.Name)
+				clusterRoleBindingUpdater.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingUpdater.RoleRef.Name)
+
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-updater.yaml"])).To(Equal(serialize(serviceAccountUpdater)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_evictioner.yaml"])).To(Equal(serialize(clusterRoleUpdater)))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_evictioner.yaml"])).To(Equal(serialize(clusterRoleBindingUpdater)))
 			})
 
 			It("should delete the legacy resources", func() {
@@ -390,11 +420,15 @@ var _ = Describe("VPA", func() {
 				legacyUpdaterClusterRole := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:evictioner"}}
 				Expect(c.Create(ctx, legacyUpdaterClusterRole)).To(Succeed())
 
+				legacyUpdaterClusterRoleBinding := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:evictioner"}}
+				Expect(c.Create(ctx, legacyUpdaterClusterRoleBinding)).To(Succeed())
+
 				Expect(component.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyExporterClusterRole), &rbacv1.ClusterRole{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyExporterClusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyUpdaterClusterRole), &rbacv1.ClusterRole{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyUpdaterClusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 			})
 		})
 
@@ -436,7 +470,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(4))
+				Expect(managedResourceSecret.Data).To(HaveLen(5))
 
 				By("checking vpa-exporter application resources")
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceAccountExporter)))
@@ -460,14 +494,16 @@ var _ = Describe("VPA", func() {
 				Expect(vpa).To(Equal(vpaExporter))
 
 				By("checking vpa-updater application resources")
+				clusterRoleBindingUpdater.Subjects[0].Namespace = "kube-system"
+
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_evictioner.yaml"])).To(Equal(serialize(clusterRoleUpdater)))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_evictioner.yaml"])).To(Equal(serialize(clusterRoleBindingUpdater)))
 
 				By("checking vpa-updater runtime resources")
 				secret := &corev1.Secret{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(shootAccessSecretUpdater), secret)).To(Succeed())
 				shootAccessSecretUpdater.ResourceVersion = "1"
 				Expect(secret).To(Equal(shootAccessSecretUpdater))
-
 			})
 		})
 	})
