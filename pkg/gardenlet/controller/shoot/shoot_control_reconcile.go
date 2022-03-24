@@ -84,16 +84,17 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 	}
 
 	var (
-		defaultTimeout                 = 30 * time.Second
-		defaultInterval                = 5 * time.Second
-		dnsEnabled                     = !o.Shoot.DisableDNS
-		allowBackup                    = o.Seed.GetInfo().Spec.Backup != nil
-		staticNodesCIDR                = o.Shoot.GetInfo().Spec.Networking.Nodes != nil
-		useSNI                         = botanist.APIServerSNIEnabled()
-		generation                     = o.Shoot.GetInfo().Generation
-		sniPhase                       = botanist.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase
-		requestControlPlanePodsRestart = controllerutils.HasTask(o.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
-		kubeProxyEnabled               = gardencorev1beta1helper.KubeProxyEnabled(o.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
+		defaultTimeout                  = 30 * time.Second
+		defaultInterval                 = 5 * time.Second
+		dnsEnabled                      = !o.Shoot.DisableDNS
+		allowBackup                     = o.Seed.GetInfo().Spec.Backup != nil
+		staticNodesCIDR                 = o.Shoot.GetInfo().Spec.Networking.Nodes != nil
+		useSNI                          = botanist.APIServerSNIEnabled()
+		generation                      = o.Shoot.GetInfo().Generation
+		sniPhase                        = botanist.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase
+		requestControlPlanePodsRestart  = controllerutils.HasTask(o.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
+		kubeProxyEnabled                = gardencorev1beta1helper.KubeProxyEnabled(o.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
+		shootControlPlaneLoggingEnabled = botanist.Shoot.IsShootControlPlaneLoggingEnabled(botanist.Config)
 
 		g                      = flow.NewGraph(fmt.Sprintf("Shoot cluster %s", utils.IifString(isRestoring, "restoration", "reconciliation")))
 		ensureShootStateExists = g.Add(flow.Task{
@@ -330,7 +331,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		deploySeedLogging = g.Add(flow.Task{
 			Name:         "Deploying shoot logging stack in Seed",
 			Fn:           flow.TaskFn(botanist.DeploySeedLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployNamespace, deploySecrets, waitUntilGardenerResourceManagerReady),
+			Dependencies: flow.NewTaskIDs(deployNamespace, deploySecrets).InsertIf(shootControlPlaneLoggingEnabled, waitUntilGardenerResourceManagerReady),
 		})
 		deployShootNamespaces = g.Add(flow.Task{
 			Name:         "Deploying shoot namespaces system component",
