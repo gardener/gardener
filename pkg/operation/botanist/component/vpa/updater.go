@@ -16,6 +16,7 @@ package vpa
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/utils/pointer"
 )
 
@@ -30,7 +31,13 @@ type ValuesUpdater struct {
 }
 
 func (v *vpa) updaterResourceConfigs() resourceConfigs {
-	configs := resourceConfigs{}
+	var (
+		clusterRole = v.emptyClusterRole("evictioner")
+	)
+
+	configs := resourceConfigs{
+		{obj: clusterRole, class: application, mutateFn: func() { v.reconcileUpdaterClusterRole(clusterRole) }},
+	}
 
 	if v.values.ClusterType == ClusterTypeSeed {
 		serviceAccount := v.emptyServiceAccount(updater)
@@ -43,4 +50,20 @@ func (v *vpa) updaterResourceConfigs() resourceConfigs {
 func (v *vpa) reconcileUpdaterServiceAccount(serviceAccount *corev1.ServiceAccount) {
 	serviceAccount.Labels = getRoleLabel()
 	serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+}
+
+func (v *vpa) reconcileUpdaterClusterRole(clusterRole *rbacv1.ClusterRole) {
+	clusterRole.Labels = getRoleLabel()
+	clusterRole.Rules = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"apps", "extensions"},
+			Resources: []string{"replicasets"},
+			Verbs:     []string{"get"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"pods/eviction"},
+			Verbs:     []string{"create"},
+		},
+	}
 }
