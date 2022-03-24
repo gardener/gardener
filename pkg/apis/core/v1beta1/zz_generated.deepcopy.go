@@ -1935,6 +1935,11 @@ func (in *Kubernetes) DeepCopyInto(out *Kubernetes) {
 		*out = new(VerticalPodAutoscaler)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.EnableAdminKubeconfig != nil {
+		in, out := &in.EnableAdminKubeconfig, &out.EnableAdminKubeconfig
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

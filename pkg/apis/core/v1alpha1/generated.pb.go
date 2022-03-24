@@ -9019,6 +9019,16 @@ func (m *Kubernetes) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.EnableAdminKubeconfig != nil {
+		i--
+		if *m.EnableAdminKubeconfig {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x50
+	}
 	if m.VerticalPodAutoscaler != nil {
 		{
 			size, err := m.VerticalPodAutoscaler.MarshalToSizedBuffer(dAtA[:i])
@@ -15612,6 +15622,9 @@ func (m *Kubernetes) Size() (n int) {
 		l = m.VerticalPodAutoscaler.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
+	if m.EnableAdminKubeconfig != nil {
+		n += 2
+	}
 	return n
 }
 
@@ -18453,6 +18466,7 @@ func (this *Kubernetes) String() string {
 		`Kubelet:` + strings.Replace(this.Kubelet.String(), "KubeletConfig", "KubeletConfig", 1) + `,`,
 		`Version:` + fmt.Sprintf("%v", this.Version) + `,`,
 		`VerticalPodAutoscaler:` + strings.Replace(this.VerticalPodAutoscaler.String(), "VerticalPodAutoscaler", "VerticalPodAutoscaler", 1) + `,`,
+		`EnableAdminKubeconfig:` + valueToStringGenerated(this.EnableAdminKubeconfig) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -30957,6 +30971,27 @@ func (m *Kubernetes) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
+		case 10:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field EnableAdminKubeconfig", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			b := bool(v != 0)
+			m.EnableAdminKubeconfig = &b
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])
