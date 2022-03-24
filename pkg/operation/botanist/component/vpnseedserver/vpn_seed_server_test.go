@@ -164,6 +164,7 @@ var _ = Describe("VpnSeedServer", func() {
               dns_cache_config:
                 name: dynamic_forward_proxy_cache_config
                 dns_lookup_family: V4_ONLY
+                max_hosts: 8192
           - name: envoy.filters.http.router
           http_protocol_options:
             accept_http_10: true
@@ -210,6 +211,7 @@ var _ = Describe("VpnSeedServer", func() {
         dns_cache_config:
           name: dynamic_forward_proxy_cache_config
           dns_lookup_family: V4_ONLY
+          max_hosts: 8192
   - name: prometheus_stats
     connect_timeout: 0.25s
     type: static
