@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
@@ -121,6 +122,14 @@ func (v *vpa) Deploy(ctx context.Context) error {
 			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:exporter"}},
 			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:evictioner"}},
 		)
+	}
+
+	for _, name := range []string{
+		v1beta1constants.DeploymentNameVPAUpdater,
+	} {
+		if err := gutil.NewShootAccessSecret(name, v.namespace).Reconcile(ctx, v.client); err != nil {
+			return err
+		}
 	}
 
 	for _, r := range allResources {

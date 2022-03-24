@@ -77,8 +77,9 @@ var _ = Describe("VPA", func() {
 		deploymentExporter         *appsv1.Deployment
 		vpaExporter                *vpaautoscalingv1.VerticalPodAutoscaler
 
-		serviceAccountUpdater *corev1.ServiceAccount
-		clusterRoleUpdater    *rbacv1.ClusterRole
+		serviceAccountUpdater    *corev1.ServiceAccount
+		clusterRoleUpdater       *rbacv1.ClusterRole
+		shootAccessSecretUpdater *corev1.Secret
 	)
 
 	BeforeEach(func() {
@@ -286,6 +287,24 @@ var _ = Describe("VPA", func() {
 				},
 			},
 		}
+		shootAccessSecretUpdater = &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Secret",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "shoot-access-vpa-updater",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"resources.gardener.cloud/purpose": "token-requestor",
+				},
+				Annotations: map[string]string{
+					"serviceaccount.resources.gardener.cloud/name":      "vpa-updater",
+					"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
+				},
+			},
+			Type: corev1.SecretTypeOpaque,
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -442,6 +461,13 @@ var _ = Describe("VPA", func() {
 
 				By("checking vpa-updater application resources")
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_evictioner.yaml"])).To(Equal(serialize(clusterRoleUpdater)))
+
+				By("checking vpa-updater runtime resources")
+				secret := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(shootAccessSecretUpdater), secret)).To(Succeed())
+				shootAccessSecretUpdater.ResourceVersion = "1"
+				Expect(secret).To(Equal(shootAccessSecretUpdater))
+
 			})
 		})
 	})
