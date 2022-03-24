@@ -84,6 +84,7 @@ var _ = Describe("KubeAPIServer", func() {
 		nodeNetworkCIDR       = "10.0.3.0/24"
 		apiServerClusterIP    = "1.2.3.4"
 		apiServerAddress      = "5.6.7.8"
+		enableAdminKubeconfig = pointer.Bool(true)
 	)
 
 	BeforeEach(func() {
@@ -157,6 +158,9 @@ var _ = Describe("KubeAPIServer", func() {
 				},
 				Networking: gardencorev1beta1.Networking{
 					Nodes: &nodeNetworkCIDR,
+				},
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					EnableAdminKubeconfig: enableAdminKubeconfig,
 				},
 			},
 			Status: gardencorev1beta1.ShootStatus{
@@ -1251,7 +1255,8 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
 						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
-							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
+							KubeAPIServer:         &gardencorev1beta1.KubeAPIServerConfig{},
+							EnableAdminKubeconfig: enableAdminKubeconfig,
 						}
 						botanist.Shoot.SetInfo(shootCopy)
 					},
@@ -1269,6 +1274,7 @@ var _ = Describe("KubeAPIServer", func() {
 									MaxTokenExpiration:    &maxTokenExpiration,
 								},
 							},
+							EnableAdminKubeconfig: enableAdminKubeconfig,
 						}
 						botanist.Shoot.SetInfo(shootCopy)
 					},
@@ -1289,6 +1295,7 @@ var _ = Describe("KubeAPIServer", func() {
 									Issuer: pointer.String("issuer"),
 								},
 							},
+							EnableAdminKubeconfig: enableAdminKubeconfig,
 						}
 						botanist.Shoot.SetInfo(shootCopy)
 					},
@@ -1305,6 +1312,7 @@ var _ = Describe("KubeAPIServer", func() {
 									AcceptedIssuers: []string{"issuer1", "issuer2"},
 								},
 							},
+							EnableAdminKubeconfig: enableAdminKubeconfig,
 						}
 						botanist.Shoot.SetInfo(shootCopy)
 					},
@@ -1325,6 +1333,7 @@ var _ = Describe("KubeAPIServer", func() {
 									AcceptedIssuers: []string{"issuer1", "issuer2"},
 								},
 							},
+							EnableAdminKubeconfig: enableAdminKubeconfig,
 						}
 						botanist.Shoot.SetInfo(shootCopy)
 					},
@@ -1342,6 +1351,7 @@ var _ = Describe("KubeAPIServer", func() {
 							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
 								ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{},
 							},
+							EnableAdminKubeconfig: enableAdminKubeconfig,
 						}
 						botanist.Shoot.SetInfo(shootCopy)
 					},
@@ -1356,6 +1366,7 @@ var _ = Describe("KubeAPIServer", func() {
 							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
 								ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{},
 							},
+							EnableAdminKubeconfig: enableAdminKubeconfig,
 						}
 						botanist.Shoot.SetInfo(shootCopy)
 					},
@@ -1372,6 +1383,7 @@ var _ = Describe("KubeAPIServer", func() {
 									SigningKeySecret: &corev1.LocalObjectReference{
 										Name: signingKeySecret.Name,
 									},
+									EnableAdminKubeconfig: enableAdminKubeconfig,
 								},
 							},
 						}
@@ -1393,6 +1405,7 @@ var _ = Describe("KubeAPIServer", func() {
 									SigningKeySecret: &corev1.LocalObjectReference{
 										Name: signingKeySecret.Name,
 									},
+									EnableAdminKubeconfig: enableAdminKubeconfig,
 								},
 							},
 						}
@@ -1413,6 +1426,7 @@ var _ = Describe("KubeAPIServer", func() {
 									SigningKeySecret: &corev1.LocalObjectReference{
 										Name: signingKeySecret.Name,
 									},
+									EnableAdminKubeconfig: enableAdminKubeconfig,
 								},
 							},
 						}
@@ -1537,7 +1551,7 @@ var _ = Describe("KubeAPIServer", func() {
 			})
 		})
 
-		It("should sync the kubeconfig to the garden project namespace", func() {
+		It("should sync the kubeconfig to the garden project namespace when enableAdminKubeconfig is set to true", func() {
 			kubeAPIServer.EXPECT().GetValues()
 			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 			kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
@@ -1580,6 +1594,30 @@ var _ = Describe("KubeAPIServer", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(secret), &corev1.Secret{})).To(BeNotFoundError())
 		})
+	})
+
+	It("should not sync the kubeconfig to garden project namespace when enableAdminKubeconfig is set to false", func() {
+		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					EnableAdminKubeconfig: pointer.Bool(false),
+				},
+			},
+		})
+
+		kubeAPIServer.EXPECT().GetValues()
+		kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+		kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
+		kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+		kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+		kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+
+		kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
+		kubeAPIServer.EXPECT().Deploy(ctx)
+		Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
+
+		Expect(gc.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(BeNotFoundError())
+
 	})
 
 	Describe("#DeleteKubeAPIServer", func() {
