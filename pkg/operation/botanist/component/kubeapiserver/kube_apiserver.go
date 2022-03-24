@@ -35,9 +35,44 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
+	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
+	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+var (
+	scheme *runtime.Scheme
+	codec  runtime.Codec
+)
+
+func init() {
+	scheme = runtime.NewScheme()
+	utilruntime.Must(apiserverv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(apiserverconfigv1.AddToScheme(scheme))
+	utilruntime.Must(auditv1.AddToScheme(scheme))
+
+	var (
+		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{
+			Yaml:   true,
+			Pretty: false,
+			Strict: false,
+		})
+		versions = schema.GroupVersions([]schema.GroupVersion{
+			apiserverv1alpha1.SchemeGroupVersion,
+			apiserverconfigv1.SchemeGroupVersion,
+			auditv1.SchemeGroupVersion,
+		})
+	)
+
+	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
+}
 
 const (
 	// Port is the port exposed by the kube-apiserver.
@@ -228,6 +263,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		networkPolicyAllowFromShootAPIServer = k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer)
 		networkPolicyAllowToShootAPIServer   = k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer)
 		networkPolicyAllowKubeAPIServer      = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
+		secretETCDEncryptionConfiguration    = k.emptySecret(secretETCDEncryptionConfigurationNamePrefix)
 		secretOIDCCABundle                   = k.emptySecret(secretOIDCCABundleNamePrefix)
 		secretServiceAccountSigningKey       = k.emptySecret(secretServiceAccountSigningKeyNamePrefix)
 		configMapAdmission                   = k.emptyConfigMap(configMapAdmissionNamePrefix)
@@ -260,6 +296,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	if err := k.reconcileNetworkPolicyAllowKubeAPIServer(ctx, networkPolicyAllowKubeAPIServer); err != nil {
+		return err
+	}
+
+	if err := k.reconcileSecretETCDEncryptionConfiguration(ctx, secretETCDEncryptionConfiguration); err != nil {
 		return err
 	}
 
@@ -299,6 +339,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		configMapAuditPolicy,
 		configMapAdmission,
 		configMapEgressSelector,
+		secretETCDEncryptionConfiguration,
 		secretOIDCCABundle,
 		secretServiceAccountSigningKey,
 		secretStaticToken,
@@ -488,8 +529,6 @@ type Secrets struct {
 	CAFrontProxy component.Secret
 	// Etcd is the client certificate for the kube-apiserver to talk to etcd.
 	Etcd component.Secret
-	// EtcdEncryptionConfig is the configuration containing information how to encrypt the etcd data.
-	EtcdEncryptionConfig component.Secret
 	// HTTPProxy is the client certificate for the http proxy to talk to the kube-apiserver..
 	// Only relevant if VPNConfig.ReversedVPNEnabled is true.
 	HTTPProxy *component.Secret
@@ -523,7 +562,6 @@ func (s *Secrets) all() map[string]secret {
 		"CAEtcd":                 {Secret: &s.CAEtcd},
 		"CAFrontProxy":           {Secret: &s.CAFrontProxy},
 		"Etcd":                   {Secret: &s.Etcd},
-		"EtcdEncryptionConfig":   {Secret: &s.EtcdEncryptionConfig},
 		"HTTPProxy":              {Secret: s.HTTPProxy, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
 		"KubeAggregator":         {Secret: &s.KubeAggregator},
 		"KubeAPIServerToKubelet": {Secret: &s.KubeAPIServerToKubelet},

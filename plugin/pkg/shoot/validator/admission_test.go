@@ -19,6 +19,19 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -31,29 +44,20 @@ import (
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/pointer"
-
-	"github.com/gardener/gardener/pkg/apis/core"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/test"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 )
 
 var _ = Describe("validator", func() {
 	Describe("#Admit", func() {
 		var (
-			admissionHandler    *ValidateShoot
-			coreInformerFactory coreinformers.SharedInformerFactory
-			cloudProfile        core.CloudProfile
-			seed                core.Seed
-			secretBinding       core.SecretBinding
-			project             core.Project
-			shoot               core.Shoot
+			admissionHandler       *ValidateShoot
+			coreInformerFactory    coreinformers.SharedInformerFactory
+			extCoreInformerFactory extcoreinformers.SharedInformerFactory
+			cloudProfile           core.CloudProfile
+			seed                   core.Seed
+			secretBinding          core.SecretBinding
+			project                core.Project
+			shoot                  core.Shoot
+			shootState             gardencorev1alpha1.ShootState
 
 			podsCIDR     = "100.96.0.0/11"
 			servicesCIDR = "100.64.0.0/13"
@@ -252,6 +256,12 @@ var _ = Describe("validator", func() {
 					},
 				},
 			}
+			shootStateBase = gardencorev1alpha1.ShootState{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      shootBase.Name,
+					Namespace: shootBase.Namespace,
+				},
+			}
 
 			cleanup func()
 		)
@@ -262,11 +272,15 @@ var _ = Describe("validator", func() {
 			seed = seedBase
 			secretBinding = secretBindingBase
 			shoot = *shootBase.DeepCopy()
+			shootState = *shootStateBase.DeepCopy()
 
 			admissionHandler, _ = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			coreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
+
+			extCoreInformerFactory = extcoreinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetExternalCoreInformerFactory(extCoreInformerFactory)
 
 			cleanup = test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, false)
 		})
@@ -2570,6 +2584,7 @@ var _ = Describe("validator", func() {
 				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(oldSeed)).To(Succeed())
+				Expect(extCoreInformerFactory.Core().V1alpha1().ShootStates().Informer().GetStore().Add(&shootState)).To(Succeed())
 			})
 
 			It("should fail to change Seed name, because Seed doesn't have configuration for backup", func() {
@@ -2639,7 +2654,23 @@ var _ = Describe("validator", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should allow changes to Seed name when nothing else has changed", func() {
+			It("should forbid changes to Seed name when etcd encryption key is missing", func() {
+				oldShoot.Spec.SeedName = &oldSeedName
+				shoot.Spec.SeedName = &seedName
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).To(MatchError(ContainSubstring("because etcd encryption key not found in shoot state")))
+			})
+
+			It("should allow changes to Seed name when etcd encryption key is present and nothing else has changed", func() {
+				shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardencorev1alpha1.GardenerResourceData{
+					Labels: map[string]string{
+						"name":       "kube-apiserver-etcd-encryption-key",
+						"managed-by": "secrets-manager",
+					},
+				})
+				Expect(extCoreInformerFactory.Core().V1alpha1().ShootStates().Informer().GetStore().Update(&shootState)).To(Succeed())
+
 				oldShoot.Spec.SeedName = &oldSeedName
 				shoot.Spec.SeedName = &seedName
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)

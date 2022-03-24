@@ -411,7 +411,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		CAEtcd:                 component.Secret{Name: etcd.SecretNameCA, Checksum: b.LoadCheckSum(etcd.SecretNameCA)},
 		CAFrontProxy:           component.Secret{Name: v1beta1constants.SecretNameCAFrontProxy, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCAFrontProxy)},
 		Etcd:                   component.Secret{Name: etcd.SecretNameClient, Checksum: b.LoadCheckSum(etcd.SecretNameClient)},
-		EtcdEncryptionConfig:   component.Secret{Name: kubeapiserver.SecretNameEtcdEncryption, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameEtcdEncryption)},
 		KubeAggregator:         component.Secret{Name: kubeapiserver.SecretNameKubeAggregator, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameKubeAggregator)},
 		KubeAPIServerToKubelet: component.Secret{Name: kubeapiserver.SecretNameKubeAPIServerToKubelet, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameKubeAPIServerToKubelet)},
 		Server:                 component.Secret{Name: kubeapiserver.SecretNameServer, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameServer)},
@@ -474,6 +473,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(*gardenerResourceData)
 		gardenerResourceDataList.Delete("static-token")
 		gardenerResourceDataList.Delete("kube-apiserver-basic-auth")
+		gardenerResourceDataList.Delete("etcdEncryptionConfiguration")
 		*gardenerResourceData = gardenerResourceDataList
 		return nil
 	}); err != nil {
@@ -486,6 +486,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-egress-selector-configuration"}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-oidc-cabundle"}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-service-account-signing-key"}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "etcd-encryption-secret"}},
 	)
 }
 

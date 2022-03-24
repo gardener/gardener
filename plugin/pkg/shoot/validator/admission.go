@@ -27,12 +27,15 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	corev1alpha1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
@@ -70,6 +73,7 @@ type ValidateShoot struct {
 	cloudProfileLister  corelisters.CloudProfileLister
 	seedLister          corelisters.SeedLister
 	shootLister         corelisters.ShootLister
+	shootStateLister    corev1alpha1listers.ShootStateLister
 	projectLister       corelisters.ProjectLister
 	secretBindingLister corelisters.SecretBindingLister
 	readyFunc           admission.ReadyFunc
@@ -77,6 +81,7 @@ type ValidateShoot struct {
 
 var (
 	_ = admissioninitializer.WantsInternalCoreInformerFactory(&ValidateShoot{})
+	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ValidateShoot{})
 
 	readyFuncs = []admission.ReadyFunc{}
 )
@@ -121,6 +126,14 @@ func (v *ValidateShoot) SetInternalCoreInformerFactory(f coreinformers.SharedInf
 	)
 }
 
+// SetExternalCoreInformerFactory sets the external garden core informer factory.
+func (v *ValidateShoot) SetExternalCoreInformerFactory(f externalcoreinformers.SharedInformerFactory) {
+	shootStateInformer := f.Core().V1alpha1().ShootStates()
+	v.shootStateLister = shootStateInformer.Lister()
+
+	readyFuncs = append(readyFuncs, shootStateInformer.Informer().HasSynced)
+}
+
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (v *ValidateShoot) ValidateInitialization() error {
 	if v.cloudProfileLister == nil {
@@ -131,6 +144,9 @@ func (v *ValidateShoot) ValidateInitialization() error {
 	}
 	if v.shootLister == nil {
 		return errors.New("missing shoot lister")
+	}
+	if v.shootStateLister == nil {
+		return errors.New("missing shoot state lister")
 	}
 	if v.projectLister == nil {
 		return errors.New("missing project lister")
@@ -241,7 +257,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	if err := validationContext.validateProjectMembership(a); err != nil {
 		return err
 	}
-	if err := validationContext.validateScheduling(a, v.shootLister, v.seedLister); err != nil {
+	if err := validationContext.validateScheduling(a, v.shootLister, v.seedLister, v.shootStateLister); err != nil {
 		return err
 	}
 	if err := validationContext.validateDeletion(a); err != nil {
@@ -323,7 +339,7 @@ func (c *validationContext) validateProjectMembership(a admission.Attributes) er
 	return nil
 }
 
-func (c *validationContext) validateScheduling(a admission.Attributes, shootLister corelisters.ShootLister, seedLister corelisters.SeedLister) error {
+func (c *validationContext) validateScheduling(a admission.Attributes, shootLister corelisters.ShootLister, seedLister corelisters.SeedLister, shootStateLister corev1alpha1listers.ShootStateLister) error {
 	if a.GetOperation() == admission.Delete {
 		return nil
 	}
@@ -376,6 +392,27 @@ func (c *validationContext) validateScheduling(a admission.Attributes, shootList
 		oldShootSpec.SeedName = c.shoot.Spec.SeedName
 		if !reflect.DeepEqual(oldShootSpec, c.shoot.Spec) {
 			return admission.NewForbidden(a, fmt.Errorf("seed name cannot be changed simultaneously with other changes to the shoot.spec"))
+		}
+
+		// Check if ShootState contains the new etcd-encryption key after it got migrated to the new secrets manager
+		// with https://github.com/gardener/gardener/pull/5616
+		shootState, err := shootStateLister.ShootStates(c.shoot.Namespace).Get(c.shoot.Name)
+		if err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not find shoot state: %+v", err.Error()))
+		}
+
+		etcdEncryptionFound := false
+
+		for _, data := range shootState.Spec.Gardener {
+			if data.Labels[secretsmanager.LabelKeyName] == "kube-apiserver-etcd-encryption-key" &&
+				data.Labels[secretsmanager.LabelKeyManagedBy] == secretsmanager.LabelValueSecretsManager {
+				etcdEncryptionFound = true
+				break
+			}
+		}
+
+		if !etcdEncryptionFound {
+			return admission.NewForbidden(a, errors.New("cannot change seed because etcd encryption key not found in shoot state - please reconcile the shoot first"))
 		}
 	} else if !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
 		if wasShootRescheduledToNewSeed(c.shoot) {

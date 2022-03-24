@@ -25,7 +25,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 )
 
@@ -38,14 +40,14 @@ const (
 	// which is used to sign service accounts.
 	SecretServiceAccountSigningKeyDataKeySigningKey = "signing-key"
 
-	// SecretEtcdEncryptionConfigurationDataKey is a constant for a key in the data map that contains the config
-	// which is used to encrypt etcd data.
-	SecretEtcdEncryptionConfigurationDataKey = "encryption-configuration.yaml"
-
 	// SecretStaticTokenName is a constant for the name of the static-token secret.
 	SecretStaticTokenName = "kube-apiserver-static-token"
 	// SecretBasicAuthName is a constant for the name of the basic-auth secret.
 	SecretBasicAuthName = "kube-apiserver-basic-auth"
+
+	secretETCDEncryptionKeyName                 = "kube-apiserver-etcd-encryption-key"
+	secretETCDEncryptionConfigurationNamePrefix = "kube-apiserver-etcd-encryption-configuration"
+	secretETCDEncryptionConfigurationDataKey    = "encryption-configuration.yaml"
 
 	userNameClusterAdmin = "system:cluster-admin"
 	userNameHealthCheck  = "health-check"
@@ -171,4 +173,47 @@ func (k *kubeAPIServer) reconcileSecretUserKubeconfig(ctx context.Context, secre
 
 	// TODO(rfranzke): Remove this in a future release.
 	return kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kubecfg", Namespace: k.namespace}})
+}
+
+func (k *kubeAPIServer) reconcileSecretETCDEncryptionConfiguration(ctx context.Context, secret *corev1.Secret) error {
+	keySecret, err := k.secretsManager.Generate(ctx, &secretutils.ETCDEncryptionKeySecretConfig{
+		Name:         secretETCDEncryptionKeyName,
+		SecretLength: 32,
+	}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld))
+	if err != nil {
+		return err
+	}
+
+	encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{
+		Resources: []apiserverconfigv1.ResourceConfiguration{{
+			Resources: []string{
+				"secrets",
+			},
+			Providers: []apiserverconfigv1.ProviderConfiguration{
+				{
+					AESCBC: &apiserverconfigv1.AESConfiguration{
+						Keys: []apiserverconfigv1.Key{
+							{
+								Name:   string(keySecret.Data[secretutils.DataKeyEncryptionKeyName]),
+								Secret: string(keySecret.Data[secretutils.DataKeyEncryptionSecret]),
+							},
+						},
+					},
+				},
+				{
+					Identity: &apiserverconfigv1.IdentityConfiguration{},
+				},
+			},
+		}},
+	}
+
+	data, err := runtime.Encode(codec, encryptionConfiguration)
+	if err != nil {
+		return err
+	}
+
+	secret.Data = map[string][]byte{secretETCDEncryptionConfigurationDataKey: data}
+	utilruntime.Must(kutil.MakeUnique(secret))
+
+	return kutil.IgnoreAlreadyExists(k.client.Client().Create(ctx, secret))
 }
