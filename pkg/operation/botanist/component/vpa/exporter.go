@@ -40,14 +40,16 @@ type ValuesExporter struct {
 
 func (v *vpa) deployExporterResources(ctx context.Context) error {
 	var (
-		service        = v.emptyService(exporter)
-		serviceAccount = v.emptyServiceAccount(exporter)
-		clusterRole    = v.emptyClusterRole("exporter")
+		service            = v.emptyService(exporter)
+		serviceAccount     = v.emptyServiceAccount(exporter)
+		clusterRole        = v.emptyClusterRole("exporter")
+		clusterRoleBinding = v.emptyClusterRoleBinding("exporter")
 
 		objToMutateFn = map[client.Object]func(){
-			service:        func() { v.reconcileExporterService(service) },
-			serviceAccount: func() { v.reconcileExporterServiceAccount(serviceAccount) },
-			clusterRole:    func() { v.reconcileExporterClusterRole(clusterRole) },
+			service:            func() { v.reconcileExporterService(service) },
+			serviceAccount:     func() { v.reconcileExporterServiceAccount(serviceAccount) },
+			clusterRole:        func() { v.reconcileExporterClusterRole(clusterRole) },
+			clusterRoleBinding: func() { v.reconcileExporterClusterRoleBinding(clusterRoleBinding, clusterRole, serviceAccount) },
 		}
 	)
 
@@ -84,6 +86,7 @@ func (v *vpa) destroyExporterResources(ctx context.Context) error {
 		v.emptyService(exporter),
 		v.emptyServiceAccount(exporter),
 		v.emptyClusterRole("exporter"),
+		v.emptyClusterRoleBinding("exporter"),
 	)
 }
 
@@ -116,5 +119,19 @@ func (v *vpa) reconcileExporterClusterRole(clusterRole *rbacv1.ClusterRole) {
 		APIGroups: []string{"autoscaling.k8s.io"},
 		Resources: []string{"verticalpodautoscalers"},
 		Verbs:     []string{"get", "watch", "list"},
+	}}
+}
+
+func (v *vpa) reconcileExporterClusterRoleBinding(clusterRoleBinding *rbacv1.ClusterRoleBinding, clusterRole *rbacv1.ClusterRole, serviceAccount *corev1.ServiceAccount) {
+	clusterRoleBinding.Labels = getRoleLabel()
+	clusterRoleBinding.RoleRef = rbacv1.RoleRef{
+		APIGroup: rbacv1.GroupName,
+		Kind:     "ClusterRole",
+		Name:     clusterRole.Name,
+	}
+	clusterRoleBinding.Subjects = []rbacv1.Subject{{
+		Kind:      rbacv1.ServiceAccountKind,
+		Name:      serviceAccount.Name,
+		Namespace: serviceAccount.Namespace,
 	}}
 }

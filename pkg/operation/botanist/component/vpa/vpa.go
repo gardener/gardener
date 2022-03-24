@@ -110,6 +110,7 @@ func (v *vpa) Deploy(ctx context.Context) error {
 		// TODO(rfranzke): Remove in a future release.
 		return kutil.DeleteObjects(ctx, v.client,
 			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:exporter"}},
+			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:exporter"}},
 		)
 	}
 
@@ -169,6 +170,10 @@ func (v *vpa) emptyServiceAccount(name string) *corev1.ServiceAccount {
 
 func (v *vpa) emptyClusterRole(name string) *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: v.rbacNamePrefix() + name}}
+}
+
+func (v *vpa) emptyClusterRoleBinding(name string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: v.rbacNamePrefix() + name}}
 }
 
 func (v *vpa) rbacNamePrefix() string {

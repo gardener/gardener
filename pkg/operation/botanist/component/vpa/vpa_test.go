@@ -57,9 +57,10 @@ var _ = Describe("VPA", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		serviceExporter        *corev1.Service
-		serviceAccountExporter *corev1.ServiceAccount
-		clusterRoleExporter    *rbacv1.ClusterRole
+		serviceExporter            *corev1.Service
+		serviceAccountExporter     *corev1.ServiceAccount
+		clusterRoleExporter        *rbacv1.ClusterRole
+		clusterRoleBindingExporter *rbacv1.ClusterRoleBinding
 	)
 
 	BeforeEach(func() {
@@ -120,6 +121,28 @@ var _ = Describe("VPA", func() {
 				Verbs:     []string{"get", "watch", "list"},
 			}},
 		}
+		clusterRoleBindingExporter = &rbacv1.ClusterRoleBinding{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "rbac.authorization.k8s.io/v1",
+				Kind:       "ClusterRoleBinding",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:vpa:target:exporter",
+				Labels: map[string]string{
+					"gardener.cloud/role": "vpa",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:vpa:target:exporter",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "vpa-exporter",
+				Namespace: namespace,
+			}},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -171,22 +194,29 @@ var _ = Describe("VPA", func() {
 				}))
 
 				clusterRoleExporter.Name = "gardener.cloud:vpa:source:exporter"
+				clusterRoleBindingExporter.Name = "gardener.cloud:vpa:source:exporter"
+				clusterRoleBindingExporter.RoleRef.Name = "gardener.cloud:vpa:source:exporter"
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(3))
+				Expect(managedResourceSecret.Data).To(HaveLen(4))
 				Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceExporter)))
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceAccountExporter)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_exporter.yaml"])).To(Equal(serialize(clusterRoleExporter)))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_exporter.yaml"])).To(Equal(serialize(clusterRoleBindingExporter)))
 			})
 
 			It("should delete the legacy resources", func() {
 				legacyExporterClusterRole := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:exporter"}}
 				Expect(c.Create(ctx, legacyExporterClusterRole)).To(Succeed())
 
+				legacyExporterClusterRoleBinding := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:exporter"}}
+				Expect(c.Create(ctx, legacyExporterClusterRoleBinding)).To(Succeed())
+
 				Expect(component.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyExporterClusterRole), &rbacv1.ClusterRole{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyExporterClusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 			})
 		})
 
@@ -242,6 +272,11 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleExporter), clusterRole)).To(Succeed())
 				clusterRoleExporter.ResourceVersion = "1"
 				Expect(clusterRole).To(Equal(clusterRoleExporter))
+
+				clusterRoleBinding := &rbacv1.ClusterRoleBinding{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBindingExporter), clusterRoleBinding)).To(Succeed())
+				clusterRoleBindingExporter.ResourceVersion = "1"
+				Expect(clusterRoleBinding).To(Equal(clusterRoleBindingExporter))
 			})
 		})
 	})
@@ -278,6 +313,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Create(ctx, serviceExporter)).To(Succeed())
 				Expect(c.Create(ctx, serviceAccountExporter)).To(Succeed())
 				Expect(c.Create(ctx, clusterRoleExporter)).To(Succeed())
+				Expect(c.Create(ctx, clusterRoleBindingExporter)).To(Succeed())
 
 				Expect(component.Destroy(ctx)).To(Succeed())
 
@@ -288,6 +324,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceExporter), &corev1.Service{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAccountExporter), &corev1.ServiceAccount{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleExporter), &rbacv1.ClusterRole{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBindingExporter), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 			})
 		})
 	})
