@@ -66,7 +66,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 	}
 
 	scaleDownUpdateMode := hvpav1alpha1.UpdateModeMaintenanceWindow
-	if (class == etcd.ClassImportant && b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction) ||
+	if (class == etcd.ClassImportant && (b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction || b.Shoot.Purpose == gardencorev1beta1.ShootPurposeInfrastructure)) ||
 		(metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled)) {
 		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
 	}
