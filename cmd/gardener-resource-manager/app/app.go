@@ -17,6 +17,7 @@ package app
 import (
 	"context"
 	"fmt"
+	goruntime "runtime"
 	"sync"
 
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
@@ -31,6 +32,7 @@ import (
 	resourcemanagerhealthz "github.com/gardener/gardener/pkg/resourcemanager/healthz"
 	projectedtokenmountwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
+	"github.com/gardener/gardener/pkg/server/routes"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -47,6 +49,7 @@ var log = runtimelog.Log
 func NewResourceManagerCommand() *cobra.Command {
 	var (
 		managerOpts       = &resourcemanagercmd.ManagerOptions{}
+		profilingOpts     = &resourcemanagercmd.ProfilingOption{}
 		sourceClientOpts  = &resourcemanagercmd.SourceClientOptions{}
 		targetClusterOpts = &resourcemanagercmd.TargetClusterOptions{}
 
@@ -132,6 +135,15 @@ func NewResourceManagerCommand() *cobra.Command {
 					return err
 				}
 
+				if profilingOpts.EnableProfiling {
+					if err := (routes.Profiling{}).AddToManager(mgr); err != nil {
+						return fmt.Errorf("failed adding profiling handlers to manager: %w", err)
+					}
+					if profilingOpts.EnableContentionProfiling {
+						goruntime.SetBlockProfileRate(1)
+					}
+				}
+
 				// add controllers, health endpoint and webhooks to manager
 				if err := resourcemanagercmd.AddAllToManager(mgr,
 					// controllers
@@ -183,6 +195,7 @@ func NewResourceManagerCommand() *cobra.Command {
 	resourcemanagercmd.AddAllFlags(
 		cmd.Flags(),
 		managerOpts,
+		profilingOpts,
 		sourceClientOpts,
 		targetClusterOpts,
 		resourceControllerOpts,
