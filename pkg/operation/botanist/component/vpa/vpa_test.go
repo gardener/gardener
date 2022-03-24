@@ -16,13 +16,17 @@ package vpa_test
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -59,10 +63,10 @@ var _ = Describe("VPA", func() {
 		component component.DeployWaiter
 
 		imageExporter = "some-image:for-exporter"
+		imageUpdater  = "some-image:for-updater"
 
-		valuesExporter = ValuesExporter{
-			Image: imageExporter,
-		}
+		valuesExporter ValuesExporter
+		valuesUpdater  ValuesUpdater
 
 		vpaUpdateModeAuto = vpaautoscalingv1.UpdateModeAuto
 
@@ -81,10 +85,20 @@ var _ = Describe("VPA", func() {
 		clusterRoleUpdater        *rbacv1.ClusterRole
 		clusterRoleBindingUpdater *rbacv1.ClusterRoleBinding
 		shootAccessSecretUpdater  *corev1.Secret
+		deploymentUpdaterFor      func(bool, *metav1.Duration, *metav1.Duration, *int32, *float64, *float64) *appsv1.Deployment
 	)
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+
+		valuesExporter = ValuesExporter{
+			Image: imageExporter,
+		}
+		valuesUpdater = ValuesUpdater{
+			Image:    imageUpdater,
+			Replicas: 1,
+		}
+
 		component = New(c, namespace, values)
 		managedResourceName = ""
 
@@ -331,6 +345,175 @@ var _ = Describe("VPA", func() {
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
+		deploymentUpdaterFor = func(
+			withServiceAccount bool,
+			interval *metav1.Duration,
+			evictAfterOOMThreshold *metav1.Duration,
+			evictionRateBurst *int32,
+			evictionRateLimit *float64,
+			evictionTolerance *float64,
+		) *appsv1.Deployment {
+			var (
+				flagEvictionToleranceValue      = "0.500000"
+				flagEvictionRateBurstValue      = "1"
+				flagEvictionRateLimitValue      = "-1.000000"
+				flagEvictAfterOomThresholdValue = "10m0s"
+				flagUpdaterIntervalValue        = "1m0s"
+			)
+
+			if interval != nil {
+				flagUpdaterIntervalValue = interval.Duration.String()
+			}
+			if evictAfterOOMThreshold != nil {
+				flagEvictAfterOomThresholdValue = evictAfterOOMThreshold.Duration.String()
+			}
+			if evictionRateBurst != nil {
+				flagEvictionRateBurstValue = fmt.Sprintf("%d", *evictionRateBurst)
+			}
+			if evictionRateLimit != nil {
+				flagEvictionRateLimitValue = fmt.Sprintf("%f", *evictionRateLimit)
+			}
+			if evictionTolerance != nil {
+				flagEvictionToleranceValue = fmt.Sprintf("%f", *evictionTolerance)
+			}
+
+			obj := &appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "vpa-updater",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"app":                 "vpa-updater",
+						"gardener.cloud/role": "vpa",
+					},
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas:             pointer.Int32(1),
+					RevisionHistoryLimit: pointer.Int32(2),
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app": "vpa-updater",
+						},
+					},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"app":                 "vpa-updater",
+								"gardener.cloud/role": "vpa",
+								"networking.gardener.cloud/from-prometheus":    "allowed",
+								"networking.gardener.cloud/to-dns":             "allowed",
+								"networking.gardener.cloud/to-shoot-apiserver": "allowed",
+							},
+						},
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{{
+								Name:            "updater",
+								Image:           imageUpdater,
+								ImagePullPolicy: corev1.PullIfNotPresent,
+								Command:         []string{"./updater"},
+								Args: []string{
+									"--min-replicas=1",
+									fmt.Sprintf("--eviction-tolerance=%s", flagEvictionToleranceValue),
+									fmt.Sprintf("--eviction-rate-burst=%s", flagEvictionRateBurstValue),
+									fmt.Sprintf("--eviction-rate-limit=%s", flagEvictionRateLimitValue),
+									fmt.Sprintf("--evict-after-oom-threshold=%s", flagEvictAfterOomThresholdValue),
+									fmt.Sprintf("--updater-interval=%s", flagUpdaterIntervalValue),
+									"--stderrthreshold=info",
+									"--v=2",
+								},
+								Ports: []corev1.ContainerPort{
+									{
+										Name:          "server",
+										ContainerPort: 8080,
+									},
+									{
+										Name:          "metrics",
+										ContainerPort: 8943,
+									},
+								},
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("30m"),
+										corev1.ResourceMemory: resource.MustParse("200Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceMemory: resource.MustParse("4Gi"),
+									},
+								},
+							}},
+						},
+					},
+				},
+			}
+
+			if withServiceAccount {
+				obj.Spec.Template.Spec.ServiceAccountName = serviceAccountUpdater.Name
+				obj.Spec.Template.Spec.Containers[0].Env = append(obj.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+					Name: "NAMESPACE",
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{
+							FieldPath: "metadata.namespace",
+						},
+					},
+				})
+			} else {
+				obj.Labels["gardener.cloud/role"] = "controlplane"
+				obj.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
+				obj.Spec.Template.Spec.Containers[0].Env = append(obj.Spec.Template.Spec.Containers[0].Env,
+					corev1.EnvVar{
+						Name:  "KUBERNETES_SERVICE_HOST",
+						Value: "kube-apiserver",
+					},
+					corev1.EnvVar{
+						Name:  "KUBERNETES_SERVICE_PORT",
+						Value: strconv.Itoa(443),
+					},
+				)
+				obj.Spec.Template.Spec.Volumes = append(obj.Spec.Template.Spec.Volumes, corev1.Volume{
+					Name: "shoot-access",
+					VolumeSource: corev1.VolumeSource{
+						Projected: &corev1.ProjectedVolumeSource{
+							DefaultMode: pointer.Int32(420),
+							Sources: []corev1.VolumeProjection{
+								{
+									Secret: &corev1.SecretProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "ca",
+										},
+										Items: []corev1.KeyToPath{{
+											Key:  "ca.crt",
+											Path: "ca.crt",
+										}},
+									},
+								},
+								{
+									Secret: &corev1.SecretProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "shoot-access-vpa-updater",
+										},
+										Items: []corev1.KeyToPath{{
+											Key:  "token",
+											Path: "token",
+										}},
+										Optional: pointer.Bool(false),
+									},
+								},
+							},
+						},
+					},
+				})
+				obj.Spec.Template.Spec.Containers[0].VolumeMounts = append(obj.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+					Name:      "shoot-access",
+					MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+					ReadOnly:  true,
+				})
+			}
+
+			return obj
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -354,6 +537,7 @@ var _ = Describe("VPA", func() {
 				component = New(c, namespace, Values{
 					ClusterType: ClusterTypeSeed,
 					Exporter:    valuesExporter,
+					Updater:     valuesUpdater,
 				})
 				managedResourceName = "vpa"
 			})
@@ -386,7 +570,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(9))
+				Expect(managedResourceSecret.Data).To(HaveLen(10))
 
 				By("checking vpa-exporter resources")
 				clusterRoleExporter.Name = replaceTargetSubstrings(clusterRoleExporter.Name)
@@ -405,9 +589,63 @@ var _ = Describe("VPA", func() {
 				clusterRoleBindingUpdater.Name = replaceTargetSubstrings(clusterRoleBindingUpdater.Name)
 				clusterRoleBindingUpdater.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingUpdater.RoleRef.Name)
 
+				deploymentUpdater := deploymentUpdaterFor(true, nil, nil, nil, nil, nil)
+				dropNetworkingLabels(deploymentUpdater.Spec.Template.Labels)
+
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-updater.yaml"])).To(Equal(serialize(serviceAccountUpdater)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_evictioner.yaml"])).To(Equal(serialize(clusterRoleUpdater)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_evictioner.yaml"])).To(Equal(serialize(clusterRoleBindingUpdater)))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-updater.yaml"])).To(Equal(serialize(deploymentUpdater)))
+			})
+
+			It("should successfully deploy with special configuration", func() {
+				valuesUpdater.Interval = &metav1.Duration{Duration: 4 * time.Hour}
+				valuesUpdater.EvictAfterOOMThreshold = &metav1.Duration{Duration: 5 * time.Hour}
+				valuesUpdater.EvictionRateBurst = pointer.Int32(1)
+				valuesUpdater.EvictionRateLimit = pointer.Float64(2.34)
+				valuesUpdater.EvictionTolerance = pointer.Float64(5.67)
+
+				component = New(c, namespace, Values{
+					ClusterType: ClusterTypeSeed,
+					Exporter:    valuesExporter,
+					Updater:     valuesUpdater,
+				})
+
+				Expect(component.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+						Kind:       "ManagedResource",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResourceName,
+						Namespace:       namespace,
+						ResourceVersion: "1",
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						Class: pointer.String("seed"),
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResourceSecret.Name,
+						}},
+						KeepObjects: pointer.Bool(false),
+					},
+				}))
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+
+				deploymentUpdater := deploymentUpdaterFor(
+					true,
+					valuesUpdater.Interval,
+					valuesUpdater.EvictAfterOOMThreshold,
+					valuesUpdater.EvictionRateBurst,
+					valuesUpdater.EvictionRateLimit,
+					valuesUpdater.EvictionTolerance,
+				)
+				dropNetworkingLabels(deploymentUpdater.Spec.Template.Labels)
+
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-updater.yaml"])).To(Equal(serialize(deploymentUpdater)))
 			})
 
 			It("should delete the legacy resources", func() {
@@ -437,6 +675,7 @@ var _ = Describe("VPA", func() {
 				component = New(c, namespace, Values{
 					ClusterType: ClusterTypeShoot,
 					Exporter:    valuesExporter,
+					Updater:     valuesUpdater,
 				})
 				managedResourceName = "shoot-core-vpa"
 			})
@@ -504,6 +743,12 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(shootAccessSecretUpdater), secret)).To(Succeed())
 				shootAccessSecretUpdater.ResourceVersion = "1"
 				Expect(secret).To(Equal(shootAccessSecretUpdater))
+
+				deployment = &appsv1.Deployment{}
+				Expect(c.Get(ctx, kutil.Key(namespace, "vpa-updater"), deployment)).To(Succeed())
+				deploymentUpdater := deploymentUpdaterFor(false, nil, nil, nil, nil, nil)
+				deploymentUpdater.ResourceVersion = "1"
+				Expect(deployment).To(Equal(deploymentUpdater))
 			})
 		})
 	})
@@ -541,6 +786,8 @@ var _ = Describe("VPA", func() {
 				Expect(c.Create(ctx, deploymentExporter)).To(Succeed())
 				Expect(c.Create(ctx, vpaExporter)).To(Succeed())
 
+				By("creating vpa-updater runtime resources")
+				Expect(c.Create(ctx, deploymentUpdaterFor(true, nil, nil, nil, nil, nil))).To(Succeed())
 				Expect(component.Destroy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
@@ -550,6 +797,9 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceExporter), &corev1.Service{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentExporter), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaExporter), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
+
+				By("checking vpa-updater runtime resources")
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentUpdaterFor(true, nil, nil, nil, nil, nil)), &appsv1.Deployment{})).To(BeNotFoundError())
 			})
 		})
 	})
@@ -714,4 +964,16 @@ func serialize(obj client.Object) string {
 
 func replaceTargetSubstrings(in string) string {
 	return strings.Replace(in, "target", "source", -1)
+}
+
+func dropNetworkingLabels(labels map[string]string) {
+	for k := range labels {
+		if k == "networking.gardener.cloud/from-prometheus" {
+			continue
+		}
+
+		if strings.HasPrefix(k, "networking.gardener.cloud/") {
+			delete(labels, k)
+		}
+	}
 }

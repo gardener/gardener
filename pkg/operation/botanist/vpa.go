@@ -45,23 +45,39 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (component.DeployWaiter, error
 		return nil, err
 	}
 
+	var (
+		valuesAdmissionController = vpa.ValuesAdmissionController{
+			Image: imageAdmissionController.String(),
+		}
+		valuesExporter = vpa.ValuesExporter{
+			Image: imageExporter.String(),
+		}
+		valuesRecommender = vpa.ValuesRecommender{
+			Image: imageRecommender.String(),
+		}
+		valuesUpdater = vpa.ValuesUpdater{
+			Image:    imageUpdater.String(),
+			Replicas: b.Shoot.GetReplicas(1),
+		}
+	)
+
+	if vpaConfig := b.Shoot.GetInfo().Spec.Kubernetes.VerticalPodAutoscaler; vpaConfig != nil {
+		valuesUpdater.EvictAfterOOMThreshold = vpaConfig.EvictAfterOOMThreshold
+		valuesUpdater.EvictionRateBurst = vpaConfig.EvictionRateBurst
+		valuesUpdater.EvictionRateLimit = vpaConfig.EvictionRateLimit
+		valuesUpdater.EvictionTolerance = vpaConfig.EvictionTolerance
+		valuesUpdater.Interval = vpaConfig.UpdaterInterval
+	}
+
 	return vpa.New(
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		vpa.Values{
-			ClusterType: vpa.ClusterTypeShoot,
-			AdmissionController: vpa.ValuesAdmissionController{
-				Image: imageAdmissionController.String(),
-			},
-			Exporter: vpa.ValuesExporter{
-				Image: imageExporter.String(),
-			},
-			Recommender: vpa.ValuesRecommender{
-				Image: imageRecommender.String(),
-			},
-			Updater: vpa.ValuesUpdater{
-				Image: imageUpdater.String(),
-			},
+			ClusterType:         vpa.ClusterTypeShoot,
+			AdmissionController: valuesAdmissionController,
+			Exporter:            valuesExporter,
+			Recommender:         valuesRecommender,
+			Updater:             valuesUpdater,
 		},
 	), nil
 }

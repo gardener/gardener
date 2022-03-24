@@ -250,6 +250,16 @@ func getAllLabels(appValue string) map[string]string {
 	return utils.MergeStringMaps(getAppLabel(appValue), getRoleLabel())
 }
 
+func (v *vpa) getDeploymentLabels(appValue string) map[string]string {
+	if v.values.ClusterType == ClusterTypeSeed {
+		return utils.MergeStringMaps(getAppLabel(appValue), getRoleLabel())
+	}
+
+	return utils.MergeStringMaps(getAppLabel(appValue), map[string]string{
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+	})
+}
+
 type resourceConfig struct {
 	obj      client.Object
 	class    class

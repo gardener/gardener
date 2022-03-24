@@ -81,24 +81,10 @@ func (b *Botanist) oldDeployVerticalPodAutoscaler(ctx context.Context) error {
 			"recommendationMarginFraction": gardencorev1beta1.DefaultRecommendationMarginFraction,
 			"interval":                     gardencorev1beta1.DefaultRecommenderInterval,
 		}
-		updater = map[string]interface{}{
-			"replicas": b.Shoot.GetReplicas(1),
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-vpa-updater": b.LoadCheckSum("vpa-updater"),
-			},
-			"podLabels":              podLabels,
-			"createServiceAccount":   false,
-			"evictAfterOOMThreshold": gardencorev1beta1.DefaultEvictAfterOOMThreshold,
-			"evictionRateBurst":      gardencorev1beta1.DefaultEvictionRateBurst,
-			"evictionRateLimit":      gardencorev1beta1.DefaultEvictionRateLimit,
-			"evictionTolerance":      gardencorev1beta1.DefaultEvictionTolerance,
-			"interval":               gardencorev1beta1.DefaultUpdaterInterval,
-		}
 		defaultValues = map[string]interface{}{
 			"admissionController": admissionController,
 			"exporter":            exporter,
 			"recommender":         recommender,
-			"updater":             updater,
 			"deploymentLabels": map[string]interface{}{
 				v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 			},
@@ -107,21 +93,6 @@ func (b *Botanist) oldDeployVerticalPodAutoscaler(ctx context.Context) error {
 	)
 
 	if verticalPodAutoscaler := b.Shoot.GetInfo().Spec.Kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
-		if val := verticalPodAutoscaler.EvictAfterOOMThreshold; val != nil {
-			updater["evictAfterOOMThreshold"] = *val
-		}
-		if val := verticalPodAutoscaler.EvictionRateBurst; val != nil {
-			updater["evictionRateBurst"] = *val
-		}
-		if val := verticalPodAutoscaler.EvictionRateLimit; val != nil {
-			updater["evictionRateLimit"] = *val
-		}
-		if val := verticalPodAutoscaler.EvictionTolerance; val != nil {
-			updater["evictionTolerance"] = *val
-		}
-		if val := verticalPodAutoscaler.UpdaterInterval; val != nil {
-			updater["interval"] = *val
-		}
 		if val := verticalPodAutoscaler.RecommendationMarginFraction; val != nil {
 			recommender["recommendationMarginFraction"] = *val
 		}
@@ -130,7 +101,7 @@ func (b *Botanist) oldDeployVerticalPodAutoscaler(ctx context.Context) error {
 		}
 	}
 
-	values, err := b.InjectSeedShootImages(defaultValues, images.ImageNameVpaAdmissionController, images.ImageNameVpaExporter, images.ImageNameVpaRecommender, images.ImageNameVpaUpdater)
+	values, err := b.InjectSeedShootImages(defaultValues, images.ImageNameVpaAdmissionController, images.ImageNameVpaExporter, images.ImageNameVpaRecommender)
 	if err != nil {
 		return err
 	}
