@@ -16,12 +16,16 @@ package vpa
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,12 +48,14 @@ func (v *vpa) deployExporterResources(ctx context.Context) error {
 		serviceAccount     = v.emptyServiceAccount(exporter)
 		clusterRole        = v.emptyClusterRole("exporter")
 		clusterRoleBinding = v.emptyClusterRoleBinding("exporter")
+		deployment         = v.emptyDeployment(exporter)
 
 		objToMutateFn = map[client.Object]func(){
 			service:            func() { v.reconcileExporterService(service) },
 			serviceAccount:     func() { v.reconcileExporterServiceAccount(serviceAccount) },
 			clusterRole:        func() { v.reconcileExporterClusterRole(clusterRole) },
 			clusterRoleBinding: func() { v.reconcileExporterClusterRoleBinding(clusterRoleBinding, clusterRole, serviceAccount) },
+			deployment:         func() { v.reconcileExporterDeployment(deployment, serviceAccount) },
 		}
 	)
 
@@ -87,6 +93,7 @@ func (v *vpa) destroyExporterResources(ctx context.Context) error {
 		v.emptyServiceAccount(exporter),
 		v.emptyClusterRole("exporter"),
 		v.emptyClusterRoleBinding("exporter"),
+		v.emptyDeployment(exporter),
 	)
 }
 
@@ -134,4 +141,44 @@ func (v *vpa) reconcileExporterClusterRoleBinding(clusterRoleBinding *rbacv1.Clu
 		Name:      serviceAccount.Name,
 		Namespace: serviceAccount.Namespace,
 	}}
+}
+
+func (v *vpa) reconcileExporterDeployment(deployment *appsv1.Deployment, serviceAccount *corev1.ServiceAccount) {
+	deployment.Labels = getAllLabels(exporter)
+	deployment.Spec = appsv1.DeploymentSpec{
+		Replicas:             pointer.Int32(1),
+		RevisionHistoryLimit: pointer.Int32(2),
+		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(exporter)},
+		Template: corev1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: getAllLabels(exporter),
+			},
+			Spec: corev1.PodSpec{
+				ServiceAccountName: serviceAccount.Name,
+				Containers: []corev1.Container{{
+					Name:            "exporter",
+					Image:           v.values.Exporter.Image,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command: []string{
+						"/usr/local/bin/vpa-exporter",
+						fmt.Sprintf("--port=%d", exporterPortMetrics),
+					},
+					Ports: []corev1.ContainerPort{{
+						Name:          "metrics",
+						ContainerPort: exporterPortMetrics,
+						Protocol:      corev1.ProtocolTCP,
+					}},
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("30m"),
+							corev1.ResourceMemory: resource.MustParse("50Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("200Mi"),
+						},
+					},
+				}},
+			},
+		},
+	}
 }

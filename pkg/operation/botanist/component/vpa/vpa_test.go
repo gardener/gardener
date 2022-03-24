@@ -29,9 +29,11 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -53,6 +55,12 @@ var _ = Describe("VPA", func() {
 		c         client.Client
 		component component.DeployWaiter
 
+		imageExporter = "some-image:for-exporter"
+
+		valuesExporter = ValuesExporter{
+			Image: imageExporter,
+		}
+
 		managedResourceName   string
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
@@ -61,6 +69,7 @@ var _ = Describe("VPA", func() {
 		serviceAccountExporter     *corev1.ServiceAccount
 		clusterRoleExporter        *rbacv1.ClusterRole
 		clusterRoleBindingExporter *rbacv1.ClusterRoleBinding
+		deploymentExporter         *appsv1.Deployment
 	)
 
 	BeforeEach(func() {
@@ -143,6 +152,63 @@ var _ = Describe("VPA", func() {
 				Namespace: namespace,
 			}},
 		}
+		deploymentExporter = &appsv1.Deployment{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "apps/v1",
+				Kind:       "Deployment",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "vpa-exporter",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":                 "vpa-exporter",
+					"gardener.cloud/role": "vpa",
+				},
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas:             pointer.Int32(1),
+				RevisionHistoryLimit: pointer.Int32(2),
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app": "vpa-exporter",
+					},
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"app":                 "vpa-exporter",
+							"gardener.cloud/role": "vpa",
+						},
+					},
+					Spec: corev1.PodSpec{
+						ServiceAccountName: "vpa-exporter",
+						Containers: []corev1.Container{{
+							Name:            "exporter",
+							Image:           imageExporter,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command: []string{
+								"/usr/local/bin/vpa-exporter",
+								"--port=9570",
+							},
+							Ports: []corev1.ContainerPort{{
+								Name:          "metrics",
+								ContainerPort: 9570,
+								Protocol:      corev1.ProtocolTCP,
+							}},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("30m"),
+									corev1.ResourceMemory: resource.MustParse("50Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceMemory: resource.MustParse("200Mi"),
+								},
+							},
+						}},
+					},
+				},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -163,7 +229,10 @@ var _ = Describe("VPA", func() {
 	Describe("#Deploy", func() {
 		Context("cluster type seed", func() {
 			BeforeEach(func() {
-				component = New(c, namespace, Values{ClusterType: ClusterTypeSeed})
+				component = New(c, namespace, Values{
+					ClusterType: ClusterTypeSeed,
+					Exporter:    valuesExporter,
+				})
 				managedResourceName = "vpa"
 			})
 
@@ -199,11 +268,12 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(4))
+				Expect(managedResourceSecret.Data).To(HaveLen(5))
 				Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceExporter)))
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceAccountExporter)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_exporter.yaml"])).To(Equal(serialize(clusterRoleExporter)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_exporter.yaml"])).To(Equal(serialize(clusterRoleBindingExporter)))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(deploymentExporter)))
 			})
 
 			It("should delete the legacy resources", func() {
@@ -222,7 +292,10 @@ var _ = Describe("VPA", func() {
 
 		Context("cluster type shoot", func() {
 			BeforeEach(func() {
-				component = New(c, namespace, Values{ClusterType: ClusterTypeShoot})
+				component = New(c, namespace, Values{
+					ClusterType: ClusterTypeShoot,
+					Exporter:    valuesExporter,
+				})
 				managedResourceName = "shoot-core-vpa"
 			})
 
@@ -277,6 +350,11 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBindingExporter), clusterRoleBinding)).To(Succeed())
 				clusterRoleBindingExporter.ResourceVersion = "1"
 				Expect(clusterRoleBinding).To(Equal(clusterRoleBindingExporter))
+
+				deployment := &appsv1.Deployment{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentExporter), deployment)).To(Succeed())
+				deploymentExporter.ResourceVersion = "1"
+				Expect(deployment).To(Equal(deploymentExporter))
 			})
 		})
 	})
@@ -314,6 +392,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Create(ctx, serviceAccountExporter)).To(Succeed())
 				Expect(c.Create(ctx, clusterRoleExporter)).To(Succeed())
 				Expect(c.Create(ctx, clusterRoleBindingExporter)).To(Succeed())
+				Expect(c.Create(ctx, deploymentExporter)).To(Succeed())
 
 				Expect(component.Destroy(ctx)).To(Succeed())
 
@@ -325,6 +404,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAccountExporter), &corev1.ServiceAccount{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleExporter), &rbacv1.ClusterRole{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBindingExporter), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentExporter), &appsv1.Deployment{})).To(BeNotFoundError())
 			})
 		})
 	})
