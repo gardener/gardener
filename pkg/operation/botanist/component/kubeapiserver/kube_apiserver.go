@@ -158,6 +158,8 @@ type Values struct {
 	VPN VPNConfig
 	// WatchCacheSizes are the configured sizes for the watch caches.
 	WatchCacheSizes *gardencorev1beta1.WatchCacheSizes
+	// EnableAdminKubeconfig indicates whether static token kubeconfig secret will be created for shoot.
+	EnableAdminKubeconfig *bool
 }
 
 // AuditConfig contains information for configuring audit settings for the kube-apiserver.
@@ -282,6 +284,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		configMapAdmission                         = k.emptyConfigMap(configMapAdmissionNamePrefix)
 		configMapAuditPolicy                       = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
 		configMapEgressSelector                    = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
+		enableAdminKubeconfig                      = *(k.GetValues().EnableAdminKubeconfig)
 	)
 
 	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {
@@ -391,8 +394,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := k.reconcileSecretUserKubeconfig(ctx, secretStaticToken, secretBasicAuth); err != nil {
-		return err
+	if enableAdminKubeconfig {
+		if err := k.reconcileSecretUserKubeconfig(ctx, secretStaticToken, secretBasicAuth); err != nil {
+			return err
+		}
 	}
 
 	data, err := k.computeShootResourcesData()
