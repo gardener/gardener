@@ -75,6 +75,8 @@ var _ = Describe("VPA", func() {
 		clusterRoleBindingExporter *rbacv1.ClusterRoleBinding
 		deploymentExporter         *appsv1.Deployment
 		vpaExporter                *vpaautoscalingv1.VerticalPodAutoscaler
+
+		serviceAccountUpdater *corev1.ServiceAccount
 	)
 
 	BeforeEach(func() {
@@ -243,6 +245,21 @@ var _ = Describe("VPA", func() {
 				},
 			},
 		}
+
+		serviceAccountUpdater = &corev1.ServiceAccount{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "ServiceAccount",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "vpa-updater",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"gardener.cloud/role": "vpa",
+				},
+			},
+			AutomountServiceAccountToken: pointer.Bool(false),
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -302,13 +319,18 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(6))
+				Expect(managedResourceSecret.Data).To(HaveLen(7))
+
+				By("checking vpa-exporter resources")
 				Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceExporter)))
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceAccountExporter)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_exporter.yaml"])).To(Equal(serialize(clusterRoleExporter)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_exporter.yaml"])).To(Equal(serialize(clusterRoleBindingExporter)))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(deploymentExporter)))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__vpa-exporter-vpa.yaml"])).To(Equal(serialize(vpaExporter)))
+
+				By("checking vpa-updater resources")
+				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-updater.yaml"])).To(Equal(serialize(serviceAccountUpdater)))
 			})
 
 			It("should delete the legacy resources", func() {

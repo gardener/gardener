@@ -14,6 +14,15 @@
 
 package vpa
 
+import (
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
+)
+
+const (
+	updater = "vpa-updater"
+)
+
 // ValuesUpdater is a set of configuration values for the vpa-updater.
 type ValuesUpdater struct {
 	// Image is the container image.
@@ -21,5 +30,17 @@ type ValuesUpdater struct {
 }
 
 func (v *vpa) updaterResourceConfigs() resourceConfigs {
-	return resourceConfigs{}
+	configs := resourceConfigs{}
+
+	if v.values.ClusterType == ClusterTypeSeed {
+		serviceAccount := v.emptyServiceAccount(updater)
+		configs = append(configs, resourceConfig{obj: serviceAccount, class: application, mutateFn: func() { v.reconcileUpdaterServiceAccount(serviceAccount) }})
+	}
+
+	return configs
+}
+
+func (v *vpa) reconcileUpdaterServiceAccount(serviceAccount *corev1.ServiceAccount) {
+	serviceAccount.Labels = getRoleLabel()
+	serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
 }
