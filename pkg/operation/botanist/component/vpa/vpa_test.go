@@ -30,6 +30,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -58,6 +59,7 @@ var _ = Describe("VPA", func() {
 
 		serviceExporter        *corev1.Service
 		serviceAccountExporter *corev1.ServiceAccount
+		clusterRoleExporter    *rbacv1.ClusterRole
 	)
 
 	BeforeEach(func() {
@@ -100,6 +102,23 @@ var _ = Describe("VPA", func() {
 				Namespace: namespace,
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
+		}
+		clusterRoleExporter = &rbacv1.ClusterRole{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "rbac.authorization.k8s.io/v1",
+				Kind:       "ClusterRole",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:vpa:target:exporter",
+				Labels: map[string]string{
+					"gardener.cloud/role": "vpa",
+				},
+			},
+			Rules: []rbacv1.PolicyRule{{
+				APIGroups: []string{"autoscaling.k8s.io"},
+				Resources: []string{"verticalpodautoscalers"},
+				Verbs:     []string{"get", "watch", "list"},
+			}},
 		}
 	})
 
@@ -151,11 +170,23 @@ var _ = Describe("VPA", func() {
 					},
 				}))
 
+				clusterRoleExporter.Name = "gardener.cloud:vpa:source:exporter"
+
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(2))
+				Expect(managedResourceSecret.Data).To(HaveLen(3))
 				Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceExporter)))
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceAccountExporter)))
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_exporter.yaml"])).To(Equal(serialize(clusterRoleExporter)))
+			})
+
+			It("should delete the legacy resources", func() {
+				legacyExporterClusterRole := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:exporter"}}
+				Expect(c.Create(ctx, legacyExporterClusterRole)).To(Succeed())
+
+				Expect(component.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyExporterClusterRole), &rbacv1.ClusterRole{})).To(BeNotFoundError())
 			})
 		})
 
@@ -206,6 +237,11 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAccountExporter), serviceAccount)).To(Succeed())
 				serviceAccountExporter.ResourceVersion = "1"
 				Expect(serviceAccount).To(Equal(serviceAccountExporter))
+
+				clusterRole := &rbacv1.ClusterRole{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleExporter), clusterRole)).To(Succeed())
+				clusterRoleExporter.ResourceVersion = "1"
+				Expect(clusterRole).To(Equal(clusterRoleExporter))
 			})
 		})
 	})
@@ -241,6 +277,7 @@ var _ = Describe("VPA", func() {
 				By("creating vpa-exporter resources")
 				Expect(c.Create(ctx, serviceExporter)).To(Succeed())
 				Expect(c.Create(ctx, serviceAccountExporter)).To(Succeed())
+				Expect(c.Create(ctx, clusterRoleExporter)).To(Succeed())
 
 				Expect(component.Destroy(ctx)).To(Succeed())
 
@@ -250,6 +287,7 @@ var _ = Describe("VPA", func() {
 				By("checking vpa-exporter resources")
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceExporter), &corev1.Service{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAccountExporter), &corev1.ServiceAccount{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleExporter), &rbacv1.ClusterRole{})).To(BeNotFoundError())
 			})
 		})
 	})

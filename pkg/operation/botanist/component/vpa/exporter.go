@@ -21,6 +21,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,10 +42,12 @@ func (v *vpa) deployExporterResources(ctx context.Context) error {
 	var (
 		service        = v.emptyService(exporter)
 		serviceAccount = v.emptyServiceAccount(exporter)
+		clusterRole    = v.emptyClusterRole("exporter")
 
 		objToMutateFn = map[client.Object]func(){
 			service:        func() { v.reconcileExporterService(service) },
 			serviceAccount: func() { v.reconcileExporterServiceAccount(serviceAccount) },
+			clusterRole:    func() { v.reconcileExporterClusterRole(clusterRole) },
 		}
 	)
 
@@ -80,15 +83,16 @@ func (v *vpa) destroyExporterResources(ctx context.Context) error {
 	return kutil.DeleteObjects(ctx, v.client,
 		v.emptyService(exporter),
 		v.emptyServiceAccount(exporter),
+		v.emptyClusterRole("exporter"),
 	)
 }
 
 func (v *vpa) reconcileExporterService(service *corev1.Service) {
-	service.Labels = getLabelsWithRole(exporter)
+	service.Labels = getAllLabels(exporter)
 	service.Spec = corev1.ServiceSpec{
 		Type:            corev1.ServiceTypeClusterIP,
 		SessionAffinity: corev1.ServiceAffinityNone,
-		Selector:        getLabels(exporter),
+		Selector:        getAppLabel(exporter),
 	}
 
 	desiredPorts := []corev1.ServicePort{
@@ -104,4 +108,13 @@ func (v *vpa) reconcileExporterService(service *corev1.Service) {
 
 func (v *vpa) reconcileExporterServiceAccount(serviceAccount *corev1.ServiceAccount) {
 	serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+}
+
+func (v *vpa) reconcileExporterClusterRole(clusterRole *rbacv1.ClusterRole) {
+	clusterRole.Labels = getRoleLabel()
+	clusterRole.Rules = []rbacv1.PolicyRule{{
+		APIGroups: []string{"autoscaling.k8s.io"},
+		Resources: []string{"verticalpodautoscalers"},
+		Verbs:     []string{"get", "watch", "list"},
+	}}
 }

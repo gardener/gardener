@@ -23,9 +23,11 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -101,8 +103,16 @@ func (v *vpa) Deploy(ctx context.Context) error {
 	}
 
 	if v.values.ClusterType == ClusterTypeSeed {
-		return managedresources.CreateForSeed(ctx, v.client, v.namespace, v.managedResourceName(), false, v.registry.SerializedObjects())
+		if err := managedresources.CreateForSeed(ctx, v.client, v.namespace, v.managedResourceName(), false, v.registry.SerializedObjects()); err != nil {
+			return err
+		}
+
+		// TODO(rfranzke): Remove in a future release.
+		return kutil.DeleteObjects(ctx, v.client,
+			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:exporter"}},
+		)
 	}
+
 	return managedresources.CreateForShoot(ctx, v.client, v.namespace, v.managedResourceName(), false, v.registry.SerializedObjects())
 }
 
@@ -157,12 +167,28 @@ func (v *vpa) emptyServiceAccount(name string) *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: v.namespace}}
 }
 
-func getLabels(appValue string) map[string]string {
+func (v *vpa) emptyClusterRole(name string) *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: v.rbacNamePrefix() + name}}
+}
+
+func (v *vpa) rbacNamePrefix() string {
+	prefix := "gardener.cloud:vpa:"
+
+	if v.values.ClusterType == ClusterTypeSeed {
+		return prefix + "source:"
+	}
+
+	return prefix + "target:"
+}
+
+func getAppLabel(appValue string) map[string]string {
 	return map[string]string{v1beta1constants.LabelApp: appValue}
 }
 
-func getLabelsWithRole(appValue string) map[string]string {
-	return utils.MergeStringMaps(getLabels(appValue), map[string]string{
-		v1beta1constants.GardenRole: "vpa",
-	})
+func getRoleLabel() map[string]string {
+	return map[string]string{v1beta1constants.GardenRole: "vpa"}
+}
+
+func getAllLabels(appValue string) map[string]string {
+	return utils.MergeStringMaps(getAppLabel(appValue), getRoleLabel())
 }
