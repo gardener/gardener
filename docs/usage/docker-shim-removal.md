@@ -2,7 +2,7 @@
 
 ## What's happening?
 With Kubernetes v1.20 the built-in dockershim [was deprecated](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.20.md#dockershim-deprecation) and is scheduled to be [removed with v1.24](https://github.com/kubernetes/enhancements/issues/2221).
-Don't Panic! The Kubernetes community has [published a blogpost](https://kubernetes.io/blog/2020/12/02/dont-panic-kubernetes-and-docker/) and an [FAQ](https://kubernetes.io/blog/2020/12/02/dockershim-faq/) with more information.
+Don't Panic! The Kubernetes community has [published a blogpost](https://kubernetes.io/blog/2020/12/02/dont-panic-kubernetes-and-docker/) and an [FAQ](https://kubernetes.io/blog/2022/02/17/dockershim-faq/) with more information.
 
 Gardener also needs to switch from using the built-in dockershim to `containerd`.
 Gardener will not change running Shoot clusters. But changes to the container runtime will be coupled to the K8s version selected by the Shoot:
