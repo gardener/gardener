@@ -1805,7 +1805,7 @@ var _ = Describe("validator", func() {
 							shoot.Spec.Provider.Workers,
 							core.Worker{
 								CRI: &core.CRI{
-									Name: core.CRINameContainerD,
+									Name: "unsupported-cri",
 									ContainerRuntimes: []core.ContainerRuntime{
 										{Type: "supported-cr-1"},
 										{Type: "supported-cr-2"},
@@ -1830,7 +1830,7 @@ var _ = Describe("validator", func() {
 										},
 										CRI: []core.CRI{
 											{
-												Name: "unsupported-cri",
+												Name: core.CRINameContainerD,
 												ContainerRuntimes: []core.ContainerRuntime{
 													{
 														Type: "supported-cr-1",
@@ -1853,6 +1853,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 						Expect(err).To(BeForbiddenError())
+						Expect(err.Error()).To(ContainSubstring("machine image 'cr-image-name@1.2.3' does not support CRI 'unsupported-cri', supported values: [containerd]"))
 					})
 
 					It("should reject unsupported CR", func() {
@@ -1905,7 +1906,7 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 						Expect(err).To(BeForbiddenError())
-						Expect(err.Error()).To(ContainSubstring("Unsupported value: core.ContainerRuntime{Type:\"unsupported-cr-1\""))
+						Expect(err.Error()).To(ContainSubstring("machine image 'cr-image-name@1.2.3' does not support container runtime 'unsupported-cr-1', supported values: [supported-cr-1 supported-cr-2"))
 					})
 				})
 

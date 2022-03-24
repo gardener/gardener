@@ -1128,11 +1128,11 @@ func validateContainerRuntimeConstraints(constraints []core.MachineImage, worker
 	if machineVersion == nil {
 		return nil
 	}
-	return validateCRI(machineVersion.CRI, worker.CRI, fldPath)
+	return validateCRI(machineVersion.CRI, worker, fldPath)
 }
 
-func validateCRI(constraints []core.CRI, cri *core.CRI, fldPath *field.Path) field.ErrorList {
-	if cri == nil {
+func validateCRI(constraints []core.CRI, worker core.Worker, fldPath *field.Path) field.ErrorList {
+	if worker.CRI == nil {
 		return nil
 	}
 
@@ -1144,20 +1144,22 @@ func validateCRI(constraints []core.CRI, cri *core.CRI, fldPath *field.Path) fie
 
 	for _, criConstraint := range constraints {
 		validCRIs = append(validCRIs, string(criConstraint.Name))
-		if cri.Name == criConstraint.Name {
+		if worker.CRI.Name == criConstraint.Name {
 			foundCRI = &criConstraint
 			break
 		}
 	}
 	if foundCRI == nil {
-		allErrors = append(allErrors, field.NotSupported(fldPath.Child("name"), cri.Name, validCRIs))
+		detail := fmt.Sprintf("machine image '%s@%s' does not support CRI '%s', supported values: %+v", worker.Machine.Image.Name, worker.Machine.Image.Version, worker.CRI.Name, validCRIs)
+		allErrors = append(allErrors, field.Invalid(fldPath.Child("name"), worker.CRI.Name, detail))
 		return allErrors
 	}
 
-	for j, runtime := range cri.ContainerRuntimes {
+	for j, runtime := range worker.CRI.ContainerRuntimes {
 		jdxPath := fldPath.Child("containerRuntimes").Index(j)
 		if ok, validValues := validateCRMembership(foundCRI.ContainerRuntimes, runtime.Type); !ok {
-			allErrors = append(allErrors, field.NotSupported(jdxPath.Child("type"), runtime, validValues))
+			detail := fmt.Sprintf("machine image '%s@%s' does not support container runtime '%s', supported values: %+v", worker.Machine.Image.Name, worker.Machine.Image.Version, runtime.Type, validValues)
+			allErrors = append(allErrors, field.Invalid(jdxPath.Child("type"), runtime.Type, detail))
 		}
 	}
 
