@@ -32,7 +32,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -51,12 +55,40 @@ var _ = Describe("VPA", func() {
 		managedResourceName   string
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
+
+		serviceExporter *corev1.Service
 	)
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		component = New(c, namespace, values)
 		managedResourceName = ""
+
+		serviceExporter = &corev1.Service{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Service",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "vpa-exporter",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"app":                 "vpa-exporter",
+					"gardener.cloud/role": "vpa",
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Type:            corev1.ServiceTypeClusterIP,
+				SessionAffinity: corev1.ServiceAffinityNone,
+				Selector:        map[string]string{"app": "vpa-exporter"},
+				Ports: []corev1.ServicePort{{
+					Name:       "metrics",
+					Protocol:   corev1.ProtocolTCP,
+					Port:       9570,
+					TargetPort: intstr.FromInt(9570),
+				}},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -109,7 +141,8 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(0))
+				Expect(managedResourceSecret.Data).To(HaveLen(1))
+				Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceExporter)))
 			})
 		})
 
@@ -149,6 +182,12 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecret.Data).To(HaveLen(0))
+
+				By("checking vpa-exporter resources")
+				service := &corev1.Service{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceExporter), service)).To(Succeed())
+				serviceExporter.ResourceVersion = "1"
+				Expect(service).To(Equal(serviceExporter))
 			})
 		})
 	})
@@ -181,10 +220,16 @@ var _ = Describe("VPA", func() {
 				Expect(c.Create(ctx, managedResource)).To(Succeed())
 				Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
 
+				By("creating vpa-exporter resources")
+				Expect(c.Create(ctx, serviceExporter)).To(Succeed())
+
 				Expect(component.Destroy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
+
+				By("checking vpa-exporter resources")
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceExporter), &corev1.Service{})).To(BeNotFoundError())
 			})
 		})
 	})
@@ -325,3 +370,24 @@ var _ = Describe("VPA", func() {
 		})
 	})
 })
+
+func serialize(obj client.Object) string {
+	var (
+		scheme        = kubernetes.SeedScheme
+		groupVersions []schema.GroupVersion
+	)
+
+	for k := range scheme.AllKnownTypes() {
+		groupVersions = append(groupVersions, k.GroupVersion())
+	}
+
+	var (
+		ser   = json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
+		codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, schema.GroupVersions(groupVersions), schema.GroupVersions(groupVersions))
+	)
+
+	serializationYAML, err := runtime.Encode(codec, obj)
+	Expect(err).NotTo(HaveOccurred())
+
+	return string(serializationYAML)
+}

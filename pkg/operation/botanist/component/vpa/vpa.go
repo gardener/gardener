@@ -18,11 +18,15 @@ import (
 	"context"
 	"time"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -143,4 +147,18 @@ func (v *vpa) managedResourceName() string {
 		return "vpa"
 	}
 	return "shoot-core-vpa"
+}
+
+func (v *vpa) emptyService(name string) *corev1.Service {
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: v.namespace}}
+}
+
+func getLabels(appValue string) map[string]string {
+	return map[string]string{v1beta1constants.LabelApp: appValue}
+}
+
+func getLabelsWithRole(appValue string) map[string]string {
+	return utils.MergeStringMaps(getLabels(appValue), map[string]string{
+		v1beta1constants.GardenRole: "vpa",
+	})
 }

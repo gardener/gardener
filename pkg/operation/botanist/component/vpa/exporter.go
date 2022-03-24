@@ -16,6 +16,17 @@ package vpa
 
 import (
 	"context"
+
+	"github.com/gardener/gardener/pkg/controllerutils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+)
+
+const (
+	exporter                  = "vpa-exporter"
+	exporterPortMetrics int32 = 9570
 )
 
 // ValuesExporter is a set of configuration values for the vpa-exporter.
@@ -25,9 +36,51 @@ type ValuesExporter struct {
 }
 
 func (v *vpa) deployExporterResources(ctx context.Context) error {
+	service := v.emptyService(exporter)
+
+	if v.values.ClusterType == ClusterTypeSeed {
+		v.reconcileExporterService(service)
+
+		return v.registry.Add(
+			service,
+		)
+	}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, service, func() error {
+		v.reconcileExporterService(service)
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (v *vpa) destroyExporterResources(ctx context.Context) error {
-	return nil
+	if v.values.ClusterType == ClusterTypeSeed {
+		return nil
+	}
+
+	return kutil.DeleteObjects(ctx, v.client,
+		v.emptyService(exporter),
+	)
+}
+
+func (v *vpa) reconcileExporterService(service *corev1.Service) {
+	service.Labels = getLabelsWithRole(exporter)
+	service.Spec = corev1.ServiceSpec{
+		Type:            corev1.ServiceTypeClusterIP,
+		SessionAffinity: corev1.ServiceAffinityNone,
+		Selector:        getLabels(exporter),
+	}
+
+	desiredPorts := []corev1.ServicePort{
+		{
+			Name:       "metrics",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       exporterPortMetrics,
+			TargetPort: intstr.FromInt(int(exporterPortMetrics)),
+		},
+	}
+	service.Spec.Ports = kutil.ReconcileServicePorts(service.Spec.Ports, desiredPorts, corev1.ServiceTypeClusterIP)
 }
