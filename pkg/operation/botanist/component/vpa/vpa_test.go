@@ -30,6 +30,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -40,6 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -61,6 +63,8 @@ var _ = Describe("VPA", func() {
 			Image: imageExporter,
 		}
 
+		vpaUpdateModeAuto = vpaautoscalingv1.UpdateModeAuto
+
 		managedResourceName   string
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
@@ -70,6 +74,7 @@ var _ = Describe("VPA", func() {
 		clusterRoleExporter        *rbacv1.ClusterRole
 		clusterRoleBindingExporter *rbacv1.ClusterRoleBinding
 		deploymentExporter         *appsv1.Deployment
+		vpaExporter                *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
 	BeforeEach(func() {
@@ -209,6 +214,35 @@ var _ = Describe("VPA", func() {
 				},
 			},
 		}
+		vpaExporter = &vpaautoscalingv1.VerticalPodAutoscaler{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "autoscaling.k8s.io/v1",
+				Kind:       "VerticalPodAutoscaler",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "vpa-exporter-vpa",
+				Namespace: namespace,
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       "vpa-exporter",
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &vpaUpdateModeAuto},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName: "*",
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("30m"),
+								corev1.ResourceMemory: resource.MustParse("50Mi"),
+							},
+						},
+					},
+				},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -268,12 +302,13 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(5))
+				Expect(managedResourceSecret.Data).To(HaveLen(6))
 				Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceExporter)))
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceAccountExporter)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_exporter.yaml"])).To(Equal(serialize(clusterRoleExporter)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_exporter.yaml"])).To(Equal(serialize(clusterRoleBindingExporter)))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(deploymentExporter)))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__vpa-exporter-vpa.yaml"])).To(Equal(serialize(vpaExporter)))
 			})
 
 			It("should delete the legacy resources", func() {
@@ -355,6 +390,11 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentExporter), deployment)).To(Succeed())
 				deploymentExporter.ResourceVersion = "1"
 				Expect(deployment).To(Equal(deploymentExporter))
+
+				vpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaExporter), vpa)).To(Succeed())
+				vpaExporter.ResourceVersion = "1"
+				Expect(vpa).To(Equal(vpaExporter))
 			})
 		})
 	})
@@ -393,6 +433,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Create(ctx, clusterRoleExporter)).To(Succeed())
 				Expect(c.Create(ctx, clusterRoleBindingExporter)).To(Succeed())
 				Expect(c.Create(ctx, deploymentExporter)).To(Succeed())
+				Expect(c.Create(ctx, vpaExporter)).To(Succeed())
 
 				Expect(component.Destroy(ctx)).To(Succeed())
 
@@ -405,6 +446,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleExporter), &rbacv1.ClusterRole{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(clusterRoleBindingExporter), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentExporter), &appsv1.Deployment{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaExporter), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 			})
 		})
 	})

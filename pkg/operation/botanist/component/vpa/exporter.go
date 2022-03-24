@@ -22,11 +22,13 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -42,25 +44,29 @@ type ValuesExporter struct {
 	Image string
 }
 
-func (v *vpa) deployExporterResources(ctx context.Context) error {
+func (v *vpa) exporterObjectsToMutationsFns() map[client.Object]func() {
 	var (
 		service            = v.emptyService(exporter)
 		serviceAccount     = v.emptyServiceAccount(exporter)
 		clusterRole        = v.emptyClusterRole("exporter")
 		clusterRoleBinding = v.emptyClusterRoleBinding("exporter")
 		deployment         = v.emptyDeployment(exporter)
-
-		objToMutateFn = map[client.Object]func(){
-			service:            func() { v.reconcileExporterService(service) },
-			serviceAccount:     func() { v.reconcileExporterServiceAccount(serviceAccount) },
-			clusterRole:        func() { v.reconcileExporterClusterRole(clusterRole) },
-			clusterRoleBinding: func() { v.reconcileExporterClusterRoleBinding(clusterRoleBinding, clusterRole, serviceAccount) },
-			deployment:         func() { v.reconcileExporterDeployment(deployment, serviceAccount) },
-		}
+		vpa                = v.emptyVerticalPodAutoscaler(exporter + "-vpa")
 	)
 
+	return map[client.Object]func(){
+		service:            func() { v.reconcileExporterService(service) },
+		serviceAccount:     func() { v.reconcileExporterServiceAccount(serviceAccount) },
+		clusterRole:        func() { v.reconcileExporterClusterRole(clusterRole) },
+		clusterRoleBinding: func() { v.reconcileExporterClusterRoleBinding(clusterRoleBinding, clusterRole, serviceAccount) },
+		deployment:         func() { v.reconcileExporterDeployment(deployment, serviceAccount) },
+		vpa:                func() { v.reconcileExporterVPA(vpa, deployment) },
+	}
+}
+
+func (v *vpa) deployExporterResources(ctx context.Context) error {
 	if v.values.ClusterType == ClusterTypeSeed {
-		for obj, mutateFn := range objToMutateFn {
+		for obj, mutateFn := range v.exporterObjectsToMutationsFns() {
 			mutateFn()
 
 			if err := v.registry.Add(obj); err != nil {
@@ -71,7 +77,7 @@ func (v *vpa) deployExporterResources(ctx context.Context) error {
 		return nil
 	}
 
-	for obj, mutateFn := range objToMutateFn {
+	for obj, mutateFn := range v.exporterObjectsToMutationsFns() {
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, obj, func() error {
 			mutateFn()
 			return nil
@@ -88,13 +94,7 @@ func (v *vpa) destroyExporterResources(ctx context.Context) error {
 		return nil
 	}
 
-	return kutil.DeleteObjects(ctx, v.client,
-		v.emptyService(exporter),
-		v.emptyServiceAccount(exporter),
-		v.emptyClusterRole("exporter"),
-		v.emptyClusterRoleBinding("exporter"),
-		v.emptyDeployment(exporter),
-	)
+	return kutil.DeleteObjects(ctx, v.client, objsFromMap(v.exporterObjectsToMutationsFns())...)
 }
 
 func (v *vpa) reconcileExporterService(service *corev1.Service) {
@@ -178,6 +178,30 @@ func (v *vpa) reconcileExporterDeployment(deployment *appsv1.Deployment, service
 						},
 					},
 				}},
+			},
+		},
+	}
+}
+
+func (v *vpa) reconcileExporterVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) {
+	updateMode := vpaautoscalingv1.UpdateModeAuto
+
+	vpa.Spec = vpaautoscalingv1.VerticalPodAutoscalerSpec{
+		TargetRef: &autoscalingv1.CrossVersionObjectReference{
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
+			Name:       deployment.Name,
+		},
+		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &updateMode},
+		ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+				{
+					ContainerName: "*",
+					MinAllowed: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("30m"),
+						corev1.ResourceMemory: resource.MustParse("50Mi"),
+					},
+				},
 			},
 		},
 	}

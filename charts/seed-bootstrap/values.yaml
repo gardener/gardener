@@ -358,17 +358,6 @@ hvpa:
 
 vpa:
   enabled: true
-  exporter:
-    replicas: 1
-    enabled: true
-    podAnnotations: {}
-    podLabels: {}
-    enableServiceAccount: true
-    enableService: true
-    port: 9570
-    servicePort: 9570
-    labels:
-      gardener.cloud/role: vpa
 
 istio:
   enabled: false
