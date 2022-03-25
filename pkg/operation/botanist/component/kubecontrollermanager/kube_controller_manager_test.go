@@ -97,7 +97,6 @@ var _ = Describe("KubeControllerManager", func() {
 		}
 
 		// checksums
-		secretChecksumServer            = "5678"
 		secretChecksumCA                = "1234"
 		secretChecksumServiceAccountKey = "1234"
 
@@ -105,6 +104,7 @@ var _ = Describe("KubeControllerManager", func() {
 		vpaName                          = "kube-controller-manager-vpa"
 		hvpaName                         = "kube-controller-manager"
 		secretName                       = "shoot-access-kube-controller-manager"
+		serviceName                      = "kube-controller-manager"
 		managedResourceName              = "shoot-core-kube-controller-manager"
 		managedResourceSecretName        = "managedresource-shoot-core-kube-controller-manager"
 	)
@@ -138,29 +138,22 @@ var _ = Describe("KubeControllerManager", func() {
 			})
 
 			Context("missing secret information", func() {
-				It("should return an error because the server secret information is not provided", func() {
-					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(ContainSubstring("missing server secret information")))
-				})
-
 				It("should return an error because the CA secret information is not provided", func() {
-					kubeControllerManager.SetSecrets(Secrets{
-						Server: component.Secret{Name: "kube-controller-manager-server", Checksum: secretChecksumServer},
-					})
+					kubeControllerManager.SetSecrets(Secrets{})
 					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(ContainSubstring("missing CA secret information")))
 				})
 
 				It("should return an error because the ServiceAccountKey secret information is not provided", func() {
 					kubeControllerManager.SetSecrets(Secrets{
-						Server: component.Secret{Name: "kube-controller-manager-server", Checksum: secretChecksumServer},
-						CA:     component.Secret{Name: "ca", Checksum: secretChecksumCA},
+						CA: component.Secret{Name: "ca", Checksum: secretChecksumCA},
 					})
 					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(ContainSubstring("missing ServiceAccountKey secret information")))
 				})
 			})
+
 			Context("secret information available", func() {
 				BeforeEach(func() {
 					kubeControllerManager.SetSecrets(Secrets{
-						Server:            component.Secret{Name: "kube-controller-manager-server", Checksum: secretChecksumServer},
 						CA:                component.Secret{Name: "ca", Checksum: secretChecksumCA},
 						ServiceAccountKey: component.Secret{Name: "service-account-key", Checksum: secretChecksumServiceAccountKey},
 					})
@@ -168,7 +161,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 				It("should fail when the service cannot be created", func() {
 					gomock.InOrder(
-						c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).Return(fakeErr),
 					)
 
@@ -177,7 +170,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 				It("should fail when the secret cannot be created", func() {
 					gomock.InOrder(
-						c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Return(fakeErr),
@@ -188,7 +181,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 				It("should fail because the deployment cannot be created", func() {
 					gomock.InOrder(
-						c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
@@ -201,7 +194,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 				It("should fail because the hvpa cannot be deleted", func() {
 					gomock.InOrder(
-						c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
@@ -215,7 +208,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 				It("should fail because the vpa cannot be created", func() {
 					gomock.InOrder(
-						c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
@@ -231,7 +224,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 				It("should fail because the managed resource secret cannot be created", func() {
 					gomock.InOrder(
-						c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
@@ -249,7 +242,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 				It("should fail because the managed resource cannot be created", func() {
 					gomock.InOrder(
-						c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
@@ -269,7 +262,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 				It("should fail because the legacy secret cannot be deleted", func() {
 					gomock.InOrder(
-						c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
@@ -282,7 +275,7 @@ var _ = Describe("KubeControllerManager", func() {
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}), gomock.Any()),
-						c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "kube-controller-manager"}}).Return(fakeErr),
+						c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "kube-controller-manager-server"}}).Return(fakeErr),
 					)
 
 					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(fakeErr))
@@ -423,7 +416,7 @@ var _ = Describe("KubeControllerManager", func() {
 				serviceFor = func(version string) *corev1.Service {
 					return &corev1.Service{
 						ObjectMeta: metav1.ObjectMeta{
-							Name:      ServiceName,
+							Name:      serviceName,
 							Namespace: namespace,
 							Labels: map[string]string{
 								"app":  "kubernetes",
@@ -472,9 +465,8 @@ var _ = Describe("KubeControllerManager", func() {
 							Template: corev1.PodTemplateSpec{
 								ObjectMeta: metav1.ObjectMeta{
 									Annotations: map[string]string{
-										"checksum/secret-ca":                             secretChecksumCA,
-										"checksum/secret-service-account-key":            secretChecksumServiceAccountKey,
-										"checksum/secret-kube-controller-manager-server": secretChecksumServer,
+										"checksum/secret-ca":                  secretChecksumCA,
+										"checksum/secret-service-account-key": secretChecksumServiceAccountKey,
 									},
 									Labels: map[string]string{
 										"app":                                "kubernetes",
@@ -535,7 +527,7 @@ var _ = Describe("KubeControllerManager", func() {
 													MountPath: "/srv/kubernetes/service-account-key",
 												},
 												{
-													Name:      "kube-controller-manager-server",
+													Name:      "server",
 													MountPath: "/var/lib/kube-controller-manager-server",
 												},
 											},
@@ -559,7 +551,7 @@ var _ = Describe("KubeControllerManager", func() {
 											},
 										},
 										{
-											Name: "kube-controller-manager-server",
+											Name: "server",
 											VolumeSource: corev1.VolumeSource{
 												Secret: &corev1.SecretVolumeSource{
 													SecretName: "kube-controller-manager-server",
@@ -652,7 +644,6 @@ subjects:
 					)
 
 					kubeControllerManager.SetSecrets(Secrets{
-						Server:            component.Secret{Name: "kube-controller-manager-server", Checksum: secretChecksumServer},
 						CA:                component.Secret{Name: "ca", Checksum: secretChecksumCA},
 						ServiceAccountKey: component.Secret{Name: "service-account-key", Checksum: secretChecksumServiceAccountKey},
 					})
@@ -664,7 +655,7 @@ subjects:
 					}
 
 					gomock.InOrder(
-						c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
 							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 								Expect(obj).To(DeepEqual(serviceFor(version)))
@@ -713,7 +704,7 @@ subjects:
 								Expect(obj).To(DeepEqual(managedResource))
 							}),
 
-						c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}),
+						c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager-server", Namespace: namespace}}),
 					)
 
 					Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
@@ -877,8 +868,8 @@ func commandForKubernetesVersion(
 		fmt.Sprintf("--horizontal-pod-autoscaler-downscale-stabilization=%s", horizontalPodAutoscalerConfig.DownscaleStabilization.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-initial-readiness-delay=%s", horizontalPodAutoscalerConfig.InitialReadinessDelay.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-cpu-initialization-period=%s", horizontalPodAutoscalerConfig.CPUInitializationPeriod.Duration.String()),
-		"--tls-cert-file=/var/lib/kube-controller-manager-server/kube-controller-manager-server.crt",
-		"--tls-private-key-file=/var/lib/kube-controller-manager-server/kube-controller-manager-server.key",
+		"--tls-cert-file=/var/lib/kube-controller-manager-server/tls.crt",
+		"--tls-private-key-file=/var/lib/kube-controller-manager-server/tls.key",
 	)
 
 	if k8sVersionGreaterEqual122, _ := versionutils.CompareVersions(version, ">=", "1.22"); k8sVersionGreaterEqual122 {
