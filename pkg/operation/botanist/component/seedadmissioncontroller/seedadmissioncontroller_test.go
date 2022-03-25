@@ -127,6 +127,20 @@ subjects:
   name: gardener-seed-admission-controller
   namespace: shoot--foo--bar
 `
+
+		priorityClassYAML = `apiVersion: scheduling.k8s.io/v1
+description: This class is used to ensure that the gardener-seed-admission-controller
+  has a high priority and is not preempted in favor of other pods.
+kind: PriorityClass
+metadata:
+  creationTimestamp: null
+  labels:
+    app: gardener
+    role: seed-admission-controller
+  name: gardener-seed-admission-controller
+value: 500
+`
+
 		deploymentYAML = `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -208,6 +222,7 @@ spec:
         - mountPath: /srv/gardener-seed-admission-controller
           name: gardener-seed-admission-controller-tls
           readOnly: true
+      priorityClassName: gardener-seed-admission-controller
       serviceAccountName: gardener-seed-admission-controller
       volumes:
       - name: gardener-seed-admission-controller-tls
@@ -444,6 +459,7 @@ status: {}
 				"clusterrolebinding____gardener-seed-admission-controller.yaml":                       []byte(clusterRoleBindingYAML),
 				"deployment__shoot--foo--bar__gardener-seed-admission-controller.yaml":                []byte(deploymentYAML),
 				"poddisruptionbudget__shoot--foo--bar__gardener-seed-admission-controller.yaml":       []byte(pdbYAML),
+				"priorityclass____gardener-seed-admission-controller.yaml":                            []byte(priorityClassYAML),
 				"secret__shoot--foo--bar__" + secretName + ".yaml":                                    []byte(secretYAML),
 				"service__shoot--foo--bar__gardener-seed-admission-controller.yaml":                   []byte(serviceYAML),
 				"serviceaccount__shoot--foo--bar__gardener-seed-admission-controller.yaml":            []byte(serviceAccountYAML),

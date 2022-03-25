@@ -40,6 +40,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -171,6 +172,16 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 			}},
 		}
 
+		priorityClass = &schedulingv1.PriorityClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   Name,
+				Labels: getLabels(),
+			},
+			Value:         500,
+			GlobalDefault: false,
+			Description:   "This class is used to ensure that the gardener-seed-admission-controller has a high priority and is not preempted in favor of other pods.",
+		}
+
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      Name,
@@ -244,6 +255,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 								},
 							},
 						},
+						PriorityClassName:  priorityClass.Name,
 						ServiceAccountName: serviceAccount.Name,
 						Containers: []corev1.Container{{
 							Name:            containerName,
@@ -359,6 +371,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 		serviceAccount,
 		clusterRole,
 		clusterRoleBinding,
+		priorityClass,
 		service,
 		secret,
 		deployment,
