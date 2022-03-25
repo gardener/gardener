@@ -205,10 +205,7 @@ var _ = Describe("ExtensionValidator", func() {
 					},
 				},
 			}
-			DNSExtension = dnsv1alpha1.DNSProviderKind
 		)
-
-		DNSExtension = extensionsv1alpha1.DNSRecordResource
 
 		var (
 			kindToTypes = []struct {
@@ -217,7 +214,7 @@ var _ = Describe("ExtensionValidator", func() {
 				{extensionsv1alpha1.ControlPlaneResource, seed.Spec.Provider.Type},
 				{extensionsv1alpha1.BackupBucketResource, seed.Spec.Backup.Provider},
 				{extensionsv1alpha1.BackupEntryResource, seed.Spec.Backup.Provider},
-				{DNSExtension, seed.Spec.DNS.Provider.Type},
+				{extensionsv1alpha1.DNSRecordResource, seed.Spec.DNS.Provider.Type},
 			}
 			registerAllExtensions = func() {
 				for _, registration := range kindToTypes {
