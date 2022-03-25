@@ -598,7 +598,7 @@ func ToNetworks(s *gardencorev1beta1.Shoot) (*Networks, error) {
 
 // ComputeRequiredExtensions compute the extension kind/type combinations that are required for the
 // reconciliation flow.
-func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *garden.Domain, useDNSRecords bool) sets.String {
+func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *garden.Domain) sets.String {
 	requiredExtensions := sets.NewString()
 
 	if seed.Spec.Backup != nil {
@@ -642,7 +642,7 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 			for _, provider := range shoot.Spec.DNS.Providers {
 				if provider.Type != nil && *provider.Type != core.DNSUnmanaged {
 					requiredExtensions.Insert(gardenerextensions.Id(dnsv1alpha1.DNSProviderKind, *provider.Type))
-					if provider.Primary != nil && *provider.Primary && useDNSRecords {
+					if provider.Primary != nil && *provider.Primary {
 						requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.DNSRecordResource, *provider.Type))
 					}
 				}
@@ -650,18 +650,12 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 		}
 
 		if internalDomain != nil && internalDomain.Provider != core.DNSUnmanaged {
-			if useDNSRecords {
-				requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.DNSRecordResource, internalDomain.Provider))
-			} else {
-				requiredExtensions.Insert(gardenerextensions.Id(dnsv1alpha1.DNSProviderKind, internalDomain.Provider))
-			}
+			requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.DNSRecordResource, internalDomain.Provider))
 		}
 
 		if externalDomain != nil && externalDomain.Provider != core.DNSUnmanaged {
 			requiredExtensions.Insert(gardenerextensions.Id(dnsv1alpha1.DNSProviderKind, externalDomain.Provider))
-			if useDNSRecords {
-				requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.DNSRecordResource, externalDomain.Provider))
-			}
+			requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.DNSRecordResource, externalDomain.Provider))
 		}
 	}
 

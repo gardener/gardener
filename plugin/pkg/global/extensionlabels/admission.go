@@ -26,12 +26,10 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	internalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	"github.com/gardener/gardener/pkg/features"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )
 
 const (
@@ -178,7 +176,7 @@ func addMetaDataLabelsSeed(seed *core.Seed) {
 		metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+seed.Spec.Backup.Provider, "true")
 	}
 
-	if seed.Spec.DNS.Provider != nil && utilfeature.DefaultFeatureGate.Enabled(features.UseDNSRecords) {
+	if seed.Spec.DNS.Provider != nil {
 		metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelExtensionDNSRecordTypePrefix+seed.Spec.DNS.Provider.Type, "true")
 	}
 }
@@ -205,9 +203,7 @@ func addMetaDataLabelsShoot(shoot *core.Shoot) {
 			if provider.Type == nil || *provider.Type == core.DNSUnmanaged {
 				continue
 			}
-			if utilfeature.DefaultFeatureGate.Enabled(features.UseDNSRecords) {
-				metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionDNSRecordTypePrefix+*provider.Type, "true")
-			}
+			metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionDNSRecordTypePrefix+*provider.Type, "true")
 		}
 	}
 	metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+shoot.Spec.Provider.Type, "true")

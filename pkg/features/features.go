@@ -89,6 +89,7 @@ const (
 	// owner: @stoyanr
 	// alpha: v1.27.0
 	// beta: v1.39.0
+	// GA: v1.44.0
 	UseDNSRecords featuregate.Feature = "UseDNSRecords"
 
 	// RotateSSHKeypairOnMaintenance enables SSH keypair rotation in the maintenance controller of the gardener-controller-manager.
@@ -168,7 +169,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	SeedKubeScheduler:             {Default: false, PreRelease: featuregate.Alpha},
 	ReversedVPN:                   {Default: true, PreRelease: featuregate.Beta},
 	AdminKubeconfigRequest:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	UseDNSRecords:                 {Default: true, PreRelease: featuregate.Beta},
+	UseDNSRecords:                 {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	RotateSSHKeypairOnMaintenance: {Default: false, PreRelease: featuregate.Alpha},
 	DenyInvalidExtensionResources: {Default: true, PreRelease: featuregate.Beta},
 	WorkerPoolKubernetesVersion:   {Default: false, PreRelease: featuregate.Alpha},

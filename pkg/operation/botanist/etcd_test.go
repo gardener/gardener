@@ -366,8 +366,6 @@ var _ = Describe("Etcd", func() {
 			})
 
 			It("should set the secrets and deploy with owner checks", func() {
-				defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, true)()
-
 				expectGetBackupSecret()
 				expectSetBackupConfig()
 				expectSetOwnerCheckConfig()
@@ -378,23 +376,11 @@ var _ = Describe("Etcd", func() {
 			})
 
 			It("should set the secrets and deploy without owner checks if they are disabled", func() {
-				defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, true)()
 				botanist.Seed.GetInfo().Spec.Settings = &gardencorev1beta1.SeedSettings{
 					OwnerChecks: &gardencorev1beta1.SeedSettingOwnerChecks{
 						Enabled: false,
 					},
 				}
-
-				expectGetBackupSecret()
-				expectSetBackupConfig()
-				etcdMain.EXPECT().Deploy(ctx)
-				etcdEvents.EXPECT().Deploy(ctx)
-
-				Expect(botanist.DeployEtcd(ctx)).To(Succeed())
-			})
-
-			It("should set the secrets and deploy without owner checks if the UseDNSRecords feature gate is disabled", func() {
-				defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, false)()
 
 				expectGetBackupSecret()
 				expectSetBackupConfig()

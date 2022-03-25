@@ -1076,9 +1076,6 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	if err := updateDNSProviderSecret(ctx, seedClient, emptyDNSProviderSecret(), secretData, seed); err != nil {
-		return err
-	}
 
 	// setup for flow graph
 	var ingressLoadBalancerAddress string
@@ -1209,9 +1206,6 @@ func RunDeleteSeedFlow(
 	if err != nil {
 		return err
 	}
-	if err := updateDNSProviderSecret(ctx, seedClient, emptyDNSProviderSecret(), secretData, seed); err != nil {
-		return err
-	}
 
 	// setup for flow graph
 	var (
@@ -1314,53 +1308,25 @@ func RunDeleteSeedFlow(
 }
 
 func deployDNSResources(ctx context.Context, dnsEntry, dnsOwner component.DeployWaiter, dnsRecord component.DeployMigrateWaiter, deployDNSProviderTask, destroyDNSProviderTask flow.TaskFn) error {
-	if gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords) {
-		if err := dnsOwner.Destroy(ctx); err != nil {
-			return err
-		}
-		if err := dnsOwner.WaitCleanup(ctx); err != nil {
-			return err
-		}
-		if err := destroyDNSProviderTask(ctx); err != nil {
-			return err
-		}
-		if err := dnsEntry.Destroy(ctx); err != nil {
-			return err
-		}
-		if err := dnsEntry.WaitCleanup(ctx); err != nil {
-			return err
-		}
-		if err := dnsRecord.Deploy(ctx); err != nil {
-			return err
-		}
-		return dnsRecord.Wait(ctx)
-	} else {
-		if err := dnsRecord.Migrate(ctx); err != nil {
-			return err
-		}
-		if err := dnsRecord.WaitMigrate(ctx); err != nil {
-			return err
-		}
-		if err := dnsRecord.Destroy(ctx); err != nil {
-			return err
-		}
-		if err := dnsRecord.WaitCleanup(ctx); err != nil {
-			return err
-		}
-		if err := dnsOwner.Deploy(ctx); err != nil {
-			return err
-		}
-		if err := dnsOwner.Wait(ctx); err != nil {
-			return err
-		}
-		if err := deployDNSProviderTask(ctx); err != nil {
-			return err
-		}
-		if err := dnsEntry.Deploy(ctx); err != nil {
-			return err
-		}
-		return dnsEntry.Wait(ctx)
+	if err := dnsOwner.Destroy(ctx); err != nil {
+		return err
 	}
+	if err := dnsOwner.WaitCleanup(ctx); err != nil {
+		return err
+	}
+	if err := destroyDNSProviderTask(ctx); err != nil {
+		return err
+	}
+	if err := dnsEntry.Destroy(ctx); err != nil {
+		return err
+	}
+	if err := dnsEntry.WaitCleanup(ctx); err != nil {
+		return err
+	}
+	if err := dnsRecord.Deploy(ctx); err != nil {
+		return err
+	}
+	return dnsRecord.Wait(ctx)
 }
 
 func destroyDNSResources(ctx context.Context, dnsEntry, dnsOwner, dnsRecord component.DeployWaiter, destroyDNSProviderTask flow.TaskFn) error {
@@ -1396,20 +1362,6 @@ func ensureNoControllerInstallations(c client.Client, seedName string) func(ctx 
 		}
 		return nil
 	}
-}
-
-// updateDNSProviderSecret updates the DNSProvider secret in the garden namespace of the seed. This is only needed
-// if the `UseDNSRecords` feature gate is not enabled.
-func updateDNSProviderSecret(ctx context.Context, seedClient client.Client, secret *corev1.Secret, secretData map[string][]byte, seed *Seed) error {
-	if dnsConfig := seed.GetInfo().Spec.DNS; dnsConfig.Provider != nil && !gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords) {
-		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, secret, func() error {
-			secret.Type = corev1.SecretTypeOpaque
-			secret.Data = secretData
-			return nil
-		})
-		return err
-	}
-	return nil
 }
 
 func deployDNSProviderTask(seedClient client.Client, dnsConfig gardencorev1beta1.SeedDNS) func(ctx context.Context) error {
