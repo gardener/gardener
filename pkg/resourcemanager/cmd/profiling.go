@@ -16,6 +16,7 @@ package cmd
 
 import "github.com/spf13/pflag"
 
+// ProfilingOption contains options needed to enable profiling.
 type ProfilingOption struct {
 	// EnableProfiling enables profiling via web interface host:port/debug/pprof/.
 	EnableProfiling bool
