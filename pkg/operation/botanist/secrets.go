@@ -326,6 +326,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			// TODO(rfranzke): Uncomment this in a future release once all monitoring configurations of extensions have been
 			// adapted.
 			// "prometheus",
+			"prometheus-kubelet",
 			"kube-scheduler-server",
 		} {
 			gardenerResourceDataList.Delete(name)

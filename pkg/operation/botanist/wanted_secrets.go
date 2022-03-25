@@ -166,20 +166,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 			}},
 		},
 
-		// Secret definition for prometheus to kubelets communication
-		&secrets.ControlPlaneSecretConfig{
-			Name: "prometheus-kubelet",
-			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				CommonName:   "gardener.cloud:monitoring:prometheus",
-				Organization: []string{"gardener.cloud:monitoring"},
-				DNSNames:     nil,
-				IPAddresses:  nil,
-
-				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCAKubelet],
-			},
-		},
-
 		// Secret definition for monitoring
 		&secrets.BasicAuthSecretConfig{
 			Name:   common.MonitoringIngressCredentials,

@@ -300,6 +300,11 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
+	// TODO(rfranzke): Remove in a future release.
+	if err := kutil.DeleteObject(ctx, b.K8sSeedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-kubelet", Namespace: b.Shoot.SeedNamespace}}); err != nil {
+		return err
+	}
+
 	// Check if we want to deploy an alertmanager into the shoot namespace.
 	if b.Shoot.WantsAlertmanager {
 		var (
