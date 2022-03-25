@@ -44,6 +44,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -67,6 +68,7 @@ const (
 	LabelValue = "gardener-resource-manager"
 
 	clusterRoleName    = "gardener-resource-manager-seed"
+	priorityClassName  = "gardener-resource-manager-seed"
 	containerName      = v1beta1constants.DeploymentNameGardenerResourceManager
 	healthPort         = 8081
 	metricsPort        = 8080
@@ -218,27 +220,34 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 		return fmt.Errorf("missing server secret information")
 	}
 
+	var fns []func(context.Context) error
 	if r.values.TargetDiffersFromSourceCluster {
 		r.secrets.shootAccess = r.newShootAccessSecret()
 		if err := r.secrets.shootAccess.WithTokenExpirationDuration("24h").Reconcile(ctx, r.client); err != nil {
 			return err
 		}
-	}
 
-	fns := []func(context.Context) error{
-		r.ensureServiceAccount,
-		r.ensureRBAC,
-		r.ensureService,
-		r.ensureDeployment,
-		r.ensurePodDisruptionBudget,
-		r.ensureVPA,
-	}
-
-	if r.values.TargetDiffersFromSourceCluster {
-		fns = append(fns, r.ensureShootResources)
-		fns = append(fns, r.ensureNetworkPolicy)
+		fns = []func(context.Context) error{
+			r.ensureServiceAccount,
+			r.ensureRBAC,
+			r.ensureService,
+			r.ensureDeployment,
+			r.ensurePodDisruptionBudget,
+			r.ensureVPA,
+			r.ensureShootResources,
+			r.ensureNetworkPolicy,
+		}
 	} else {
-		fns = append(fns, r.ensureMutatingWebhookConfiguration)
+		fns = []func(context.Context) error{
+			r.ensureServiceAccount,
+			r.ensureRBAC,
+			r.ensurePriorityClass,
+			r.ensureService,
+			r.ensureDeployment,
+			r.ensurePodDisruptionBudget,
+			r.ensureVPA,
+			r.ensureMutatingWebhookConfiguration,
+		}
 	}
 
 	for _, fn := range fns {
@@ -284,6 +293,7 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 	} else {
 		objectsToDelete = append(objectsToDelete,
 			r.emptyMutatingWebhookConfiguration(),
+			r.emptyPriorityClass(),
 			r.emptyClusterRole(),
 			r.emptyClusterRoleBinding(),
 		)
@@ -359,6 +369,22 @@ func (r *resourceManager) ensureClusterRoleBinding(ctx context.Context) error {
 
 func (r *resourceManager) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}
+}
+
+func (r *resourceManager) ensurePriorityClass(ctx context.Context) error {
+	priorityClass := r.emptyPriorityClass()
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, priorityClass, func() error {
+		priorityClass.Labels = r.getLabels()
+		priorityClass.Value = 1000
+		priorityClass.GlobalDefault = false
+		priorityClass.Description = "This class is used to ensure that the garden/gardener-resource-manager has a high priority and is not preempted in favor of other pods."
+		return nil
+	})
+	return err
+}
+
+func (r *resourceManager) emptyPriorityClass() *schedulingv1.PriorityClass {
+	return &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: priorityClassName}}
 }
 
 func (r *resourceManager) ensureRoleInWatchedNamespace(ctx context.Context, policies []rbacv1.PolicyRule) error {
@@ -500,6 +526,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 						},
 					},
 				},
+				PriorityClassName:  priorityClassName,
 				ServiceAccountName: serviceAccountName,
 				Containers: []corev1.Container{
 					{
@@ -828,7 +855,7 @@ func (r *resourceManager) emptyMutatingWebhookConfiguration() *admissionregistra
 	if r.values.TargetDiffersFromSourceCluster {
 		suffix = "-shoot"
 	}
-	return &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager" + suffix, Namespace: r.namespace}}
+	return &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager" + suffix}}
 }
 
 func (r *resourceManager) ensureShootResources(ctx context.Context) error {

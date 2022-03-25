@@ -42,6 +42,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -121,6 +122,7 @@ var _ = Describe("ResourceManager", func() {
 		updateMode                   = autoscalingv1beta2.UpdateModeAuto
 		pdb                          *policyv1beta1.PodDisruptionBudget
 		vpa                          *autoscalingv1beta2.VerticalPodAutoscaler
+		priorityClass                *schedulingv1.PriorityClass
 		mutatingWebhookConfiguration *admissionregistrationv1.MutatingWebhookConfiguration
 		managedResourceSecret        *corev1.Secret
 		managedResource              *resourcesv1alpha1.ManagedResource
@@ -406,6 +408,7 @@ var _ = Describe("ResourceManager", func() {
 								},
 							},
 						},
+						PriorityClassName:  "gardener-resource-manager-seed",
 						ServiceAccountName: "gardener-resource-manager",
 						Containers: []corev1.Container{
 							{
@@ -609,11 +612,19 @@ var _ = Describe("ResourceManager", func() {
 				},
 			},
 		}
+		priorityClass = &schedulingv1.PriorityClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "gardener-resource-manager-seed",
+				Labels: map[string]string{"app": "gardener-resource-manager"},
+			},
+			Value:         1000,
+			GlobalDefault: false,
+			Description:   "This class is used to ensure that the garden/gardener-resource-manager has a high priority and is not preempted in favor of other pods.",
+		}
 		mutatingWebhookConfiguration = &admissionregistrationv1.MutatingWebhookConfiguration{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener-resource-manager",
-				Namespace: deployNamespace,
-				Labels:    map[string]string{"app": "gardener-resource-manager"},
+				Name:   "gardener-resource-manager",
+				Labels: map[string]string{"app": "gardener-resource-manager"},
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{
 				{
@@ -703,7 +714,6 @@ metadata:
   labels:
     app: gardener-resource-manager
   name: gardener-resource-manager-shoot
-  namespace: fake-ns
 webhooks:
 - admissionReviewVersions:
   - v1beta1
@@ -795,8 +805,8 @@ subjects:
 			},
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{
-				"mutatingwebhookconfiguration__" + deployNamespace + "__gardener-resource-manager-shoot.yaml": []byte(mutatingWebhookConfigurationYAML),
-				"clusterrolebinding____gardener.cloud_target_resource-manager.yaml":                           []byte(clusterRoleBindingTargetYAML),
+				"mutatingwebhookconfiguration____gardener-resource-manager-shoot.yaml": []byte(mutatingWebhookConfigurationYAML),
+				"clusterrolebinding____gardener.cloud_target_resource-manager.yaml":    []byte(clusterRoleBindingTargetYAML),
 			},
 		}
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -1380,6 +1390,11 @@ subjects:
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(clusterRoleBinding))
 						}),
+					c.EXPECT().Get(ctx, kutil.Key("gardener-resource-manager-seed"), gomock.AssignableToTypeOf(&schedulingv1.PriorityClass{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&schedulingv1.PriorityClass{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(priorityClass))
+						}),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.Service{})).Times(2),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -1404,7 +1419,7 @@ subjects:
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(vpa))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&admissionregistrationv1.MutatingWebhookConfiguration{})),
+					c.EXPECT().Get(ctx, kutil.Key("gardener-resource-manager"), gomock.AssignableToTypeOf(&admissionregistrationv1.MutatingWebhookConfiguration{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&admissionregistrationv1.MutatingWebhookConfiguration{}), gomock.Any()).
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(mutatingWebhookConfiguration))
@@ -1588,7 +1603,8 @@ subjects:
 					c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager-seed"}}),
 					c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
 					c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
 				)
