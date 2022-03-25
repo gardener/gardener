@@ -49,7 +49,7 @@ var log = runtimelog.Log
 func NewResourceManagerCommand() *cobra.Command {
 	var (
 		managerOpts       = &resourcemanagercmd.ManagerOptions{}
-		profilingOpts     = &resourcemanagercmd.ProfilingOption{}
+		profilingOpts     = &resourcemanagercmd.ProfilingOptions{}
 		sourceClientOpts  = &resourcemanagercmd.SourceClientOptions{}
 		targetClusterOpts = &resourcemanagercmd.TargetClusterOptions{}
 

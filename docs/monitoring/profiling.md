@@ -96,9 +96,9 @@ $ curl http://localhost:2723/debug/pprof/heap > /tmp/heap-admission-controller
 $ go tool pprof /tmp/heap-admission-controller
 ```
 
-## gardener-seed-admission-controller
+## gardener-seed-admission-controller, gardener-resource-manager
 
-gardener-seed-admission-controller provides the following flags for enabling profiling handlers (disabled by default):
+gardener-seed-admission-controller and gardener-resource-manager provides the following flags for enabling profiling handlers (disabled by default):
 
 ```
 --contention-profiling    Enable lock contention profiling, if profiling is enabled
@@ -107,26 +107,10 @@ gardener-seed-admission-controller provides the following flags for enabling pro
 
 The handlers are served on the same port as configured in the `--metrics-bind-address` flag (defaults to `":8080"`) via HTTP.
 
-For example:
+For example (gardener-seed-admission-controller):
 
 ```bash
 $ curl http://localhost:8080/debug/pprof/heap > /tmp/heap-seed-admission-controller
 $ go tool pprof /tmp/heap-seed-admission-controller
 ```
 
-## gardener-resource-manager
-gardener-resource-manager provides the following flags for enabling profiling handlers (disabled by default):
-
-```
---contention-profiling    Enable lock contention profiling, if profiling is enabled
---profiling               Enable profiling via web interface host:port/debug/pprof/
-```
-
-The handlers are served on the same port as configured in the `--metrics-bind-address` flag (defaults to `":8080"`) via HTTP.
-
-For example:
-
-```bash
-$ curl http://localhost:8080/debug/pprof/heap > /tmp/heap-resource-manager
-$ go tool pprof /tmp/heap-resource-manager
-```

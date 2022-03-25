@@ -16,8 +16,8 @@ package cmd
 
 import "github.com/spf13/pflag"
 
-// ProfilingOption contains options needed to enable profiling.
-type ProfilingOption struct {
+// ProfilingOptions contains options needed to enable profiling.
+type ProfilingOptions struct {
 	// EnableProfiling enables profiling via web interface host:port/debug/pprof/.
 	EnableProfiling bool
 	// EnableContentionProfiling enable lock contention profiling, if profiling is enabled
@@ -25,7 +25,7 @@ type ProfilingOption struct {
 }
 
 // AddFlags adds the needed command line flags to the given FlagSet.
-func (p *ProfilingOption) AddFlags(fs *pflag.FlagSet) {
+func (p *ProfilingOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&p.EnableProfiling, "profiling", false, "Enable profiling via web interface host:port/debug/pprof/")
 	fs.BoolVar(&p.EnableContentionProfiling, "contention-profiling", false, "Enable lock contention profiling, if profiling is enabled")
 }
