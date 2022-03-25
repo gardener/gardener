@@ -37,12 +37,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-const (
-	// DefaultInterval is the default interval for retry operations.
-	DefaultInterval = 5 * time.Second
-	// SecretManagerIdentityGardenlet is the identity for the secret manager used inside gardenlet.
-	SecretManagerIdentityGardenlet = "gardenlet"
-)
+// DefaultInterval is the default interval for retry operations.
+const DefaultInterval = 5 * time.Second
 
 // New takes an operation object <o> and creates a new Botanist object. It checks whether the given Shoot DNS
 // domain is covered by a default domain, and if so, it sets the <DefaultDomainSecret> attribute on the Botanist
@@ -73,7 +69,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		return nil, err
 	}
 
-	o.SecretsManager = secretsmanager.New(logf.Log.WithName("secretsmanager"), b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, SecretManagerIdentityGardenlet, b.lastSecretRotationStartTimes())
+	o.SecretsManager = secretsmanager.New(logf.Log.WithName("secretsmanager"), b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.SecretManagerIdentityGardenlet, b.lastSecretRotationStartTimes())
 
 	// extension components
 	o.Shoot.Components.Extensions.ContainerRuntime = b.DefaultContainerRuntime()
