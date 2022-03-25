@@ -272,6 +272,8 @@ allowedMetrics:
   - envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_attempt
   - envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_failure
   - envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_success
+  - envoy_dns_cache_dynamic_forward_proxy_cache_config_host_overflow
+  - envoy_dns_cache_dynamic_forward_proxy_cache_config_num_hosts
   - envoy_http_downstream_cx_rx_bytes_total
   - envoy_http_downstream_cx_total
   - envoy_http_downstream_cx_tx_bytes_total
