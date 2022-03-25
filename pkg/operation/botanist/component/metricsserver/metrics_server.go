@@ -25,6 +25,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
@@ -43,17 +44,12 @@ import (
 )
 
 const (
-	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
-	ManagedResourceName = "shoot-core-metrics-server"
-	// SecretNameCA is the name of the secret containing the CA certificate and key for the metrics-server.
-	SecretNameCA = v1beta1constants.SecretNameCAMetricsServer
-	// SecretNameServer is the name of the secret containing the server certificate and key for the metrics-server.
-	SecretNameServer = "metrics-server"
-
-	deploymentName     = "metrics-server"
-	serviceName        = "metrics-server"
-	serviceAccountName = "metrics-server"
-	containerName      = "metrics-server"
+	deploymentName      = "metrics-server"
+	serviceName         = "metrics-server"
+	serviceAccountName  = "metrics-server"
+	containerName       = "metrics-server"
+	secretNameServer    = "metrics-server"
+	managedResourceName = "shoot-core-metrics-server"
 
 	servicePort   int32 = 443
 	containerPort int32 = 8443
@@ -62,26 +58,19 @@ const (
 	volumeMountPathServer = "/srv/metrics-server/tls"
 )
 
-// Interface contains functions for a metrics-server deployer.
-type Interface interface {
-	component.DeployWaiter
-	// SetSecrets sets the secrets.
-	SetSecrets(Secrets)
-	// ServiceDNSNames returns the service DNS names for the metrics-server.
-	ServiceDNSNames() []string
-}
-
 // New creates a new instance of DeployWaiter for the metrics-server.
 func New(
 	client client.Client,
 	namespace string,
+	secretsManager secretsmanager.Interface,
 	image string,
 	vpaEnabled bool,
 	kubeAPIServerHost *string,
-) Interface {
+) component.DeployWaiter {
 	return &metricsServer{
 		client:            client,
 		namespace:         namespace,
+		secretsManager:    secretsManager,
 		image:             image,
 		vpaEnabled:        vpaEnabled,
 		kubeAPIServerHost: kubeAPIServerHost,
@@ -91,52 +80,57 @@ func New(
 type metricsServer struct {
 	client            client.Client
 	namespace         string
+	secretsManager    secretsmanager.Interface
 	image             string
 	vpaEnabled        bool
 	kubeAPIServerHost *string
-
-	secrets Secrets
 }
 
 func (m *metricsServer) Deploy(ctx context.Context) error {
-	if m.secrets.CA.Name == "" || m.secrets.CA.Checksum == "" {
-		return fmt.Errorf("missing CA secret information")
-	}
-	if m.secrets.Server.Name == "" || m.secrets.Server.Checksum == "" {
-		return fmt.Errorf("missing server secret information")
-	}
-
-	data, err := m.computeResourcesData()
+	serverSecret, err := m.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+		Name:                        secretNameServer,
+		CommonName:                  "metrics-server",
+		DNSNames:                    append([]string{serviceName}, kutil.DNSNamesForService(serviceName, metav1.NamespaceSystem)...),
+		CertType:                    secrets.ServerClientCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAMetricsServer), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, m.client, m.namespace, ManagedResourceName, false, data)
+	caSecret, found := m.secretsManager.Get(v1beta1constants.SecretNameCAMetricsServer)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAMetricsServer)
+	}
+
+	data, err := m.computeResourcesData(serverSecret, caSecret)
+	if err != nil {
+		return err
+	}
+
+	if err := managedresources.CreateForShoot(ctx, m.client, m.namespace, managedResourceName, false, data); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove in a future release.
+	return kutil.DeleteObject(ctx, m.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "metrics-server", Namespace: m.namespace}})
 }
 
 func (m *metricsServer) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForShoot(ctx, m.client, m.namespace, ManagedResourceName)
+	return managedresources.DeleteForShoot(ctx, m.client, m.namespace, managedResourceName)
 }
 
 func (m *metricsServer) Wait(_ context.Context) error        { return nil }
 func (m *metricsServer) WaitCleanup(_ context.Context) error { return nil }
-func (m *metricsServer) SetSecrets(secrets Secrets)          { m.secrets = secrets }
 
-func (m *metricsServer) ServiceDNSNames() []string {
-	return append(
-		[]string{serviceName},
-		kutil.DNSNamesForService(serviceName, metav1.NamespaceSystem)...,
-	)
-}
-
-func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
+func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secret) (map[string][]byte, error) {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "metrics-server",
 			Namespace: metav1.NamespaceSystem,
 		},
 		Type: corev1.SecretTypeTLS,
-		Data: m.secrets.Server.Data,
+		Data: serverSecret.Data,
 	}
 	utilruntime.Must(kutil.MakeUnique(secret))
 
@@ -253,7 +247,7 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 				GroupPriorityMinimum: 100,
 				Version:              "v1beta1",
 				VersionPriority:      100,
-				CABundle:             m.secrets.CA.Data[secrets.DataKeyCertificateCA],
+				CABundle:             caSecret.Data[secrets.DataKeyCertificateBundle],
 			},
 		}
 
@@ -435,12 +429,4 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 
 func getLabels() map[string]string {
 	return map[string]string{"k8s-app": "metrics-server"}
-}
-
-// Secrets is collection of secrets for the metrics-server.
-type Secrets struct {
-	// CA is a secret containing the CA certificate and key.
-	CA component.Secret
-	// Server is a secret containing the server certificate and key.
-	Server component.Secret
 }
