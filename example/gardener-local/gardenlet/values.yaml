@@ -45,7 +45,6 @@ global:
         CachedRuntimeClients: true
         SeedKubeScheduler: false
         ReversedVPN: true
-        UseDNSRecords: true
         DenyInvalidExtensionResources: true
         ShootCARotation: true
       seedConfig:

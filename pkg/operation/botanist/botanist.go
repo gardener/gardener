@@ -25,8 +25,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
@@ -212,8 +210,7 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 		return err
 	}
 
-	requiredExtensions := shootpkg.ComputeRequiredExtensions(b.Shoot.GetInfo(), b.Seed.GetInfo(), controllerRegistrationList, b.Garden.InternalDomain, b.Shoot.ExternalDomain,
-		gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords))
+	requiredExtensions := shootpkg.ComputeRequiredExtensions(b.Shoot.GetInfo(), b.Seed.GetInfo(), controllerRegistrationList, b.Garden.InternalDomain, b.Shoot.ExternalDomain)
 
 	for _, controllerInstallation := range controllerInstallationList.Items {
 		if controllerInstallation.Spec.SeedRef.Name != b.Seed.GetInfo().Name {

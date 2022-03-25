@@ -25,10 +25,8 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
@@ -37,7 +35,6 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -239,8 +236,7 @@ func computeKindTypesForShoots(
 				log.Info("Could not determine external domain for shoot", "err", err, "shoot", client.ObjectKeyFromObject(shoot))
 			}
 
-			out <- shootpkg.ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain,
-				controllermanagerfeatures.FeatureGate.Enabled(features.UseDNSRecords))
+			out <- shootpkg.ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
 		}(shoot.DeepCopy())
 	}
 
@@ -269,11 +265,7 @@ func computeKindTypesForSeed(
 	}
 
 	if seed.Spec.DNS.Provider != nil {
-		if controllermanagerfeatures.FeatureGate.Enabled(features.UseDNSRecords) {
-			wantedKindTypeCombinations.Insert(extensions.Id(extensionsv1alpha1.DNSRecordResource, seed.Spec.DNS.Provider.Type))
-		} else {
-			wantedKindTypeCombinations.Insert(extensions.Id(dnsv1alpha1.DNSProviderKind, seed.Spec.DNS.Provider.Type))
-		}
+		wantedKindTypeCombinations.Insert(extensions.Id(extensionsv1alpha1.DNSRecordResource, seed.Spec.DNS.Provider.Type))
 	}
 
 	return wantedKindTypeCombinations

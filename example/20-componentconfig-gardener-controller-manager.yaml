@@ -83,5 +83,4 @@ debugging:
   enableContentionProfiling: false
 featureGates:
   CachedRuntimeClients: true
-  UseDNSRecords: true
   RotateSSHKeypairOnMaintenance: false

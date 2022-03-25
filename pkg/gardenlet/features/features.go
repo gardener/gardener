@@ -45,5 +45,5 @@ func RegisterFeatureGates() {
 
 // DisabledDNSProviderManagement returns true if `DisableDNSProviderManagement` is effective.
 func DisabledDNSProviderManagement() bool {
-	return FeatureGate.Enabled(features.UseDNSRecords) && FeatureGate.Enabled(features.DisableDNSProviderManagement)
+	return FeatureGate.Enabled(features.DisableDNSProviderManagement)
 }

@@ -18,91 +18,47 @@ import (
 	"context"
 
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 )
 
-// DeployInternalDNSResources deploys the appropriate internal DNS resources depending on whether
-// the `UseDNSRecords` feature gate is enabled or not.
-// * If the feature gate is enabled, the DNSProvider, DNSEntry, and DNSOwner resources are deleted (if they exist)
+// DeployInternalDNSResources deploys the appropriate internal DNS resources.
+// * The DNSProvider, DNSEntry, and DNSOwner resources are deleted (if they exist)
 // in the appropriate order to ensure that the DNS record is not deleted.
 // Then, the DNSRecord resource is deployed (or restored).
-// * If the feature gate is disabled, the DNSRecord resource is first migrated (so that the finalizer is removed)
-// and then deleted, again in order to ensure that the DNS record is not deleted. Then, the DNSProvider, DNSEntry,
-// and DNSOwner resources are deployed in the appropriate order for the operation (reconcile or restore).
 func (b *Botanist) DeployInternalDNSResources(ctx context.Context) error {
-	if gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords) {
-		if err := b.MigrateInternalDNS(ctx); err != nil {
-			return err
-		}
-		return b.DeployOrDestroyInternalDNSRecord(ctx)
-	} else {
-		if err := b.MigrateInternalDNSRecord(ctx); err != nil {
-			return err
-		}
-		if err := b.DestroyInternalDNSRecord(ctx); err != nil {
-			return err
-		}
-		return b.DeployInternalDNS(ctx)
+	if err := b.MigrateInternalDNS(ctx); err != nil {
+		return err
 	}
+	return b.DeployOrDestroyInternalDNSRecord(ctx)
 }
 
-// DeployExternalDNSResources deploys the appropriate external DNS resources depending on whether
-// the `UseDNSRecords` feature gate is enabled or not.
-// * If the feature gate is enabled, the DNSProvider, DNSEntry, and DNSOwner resources are deleted (if they exist)
+// DeployExternalDNSResources deploys the appropriate external DNS resources.
+// * The DNSProvider, DNSEntry, and DNSOwner resources are deleted (if they exist)
 // in the appropriate order to ensure that the DNS record is not deleted.
 // Then, the DNSRecord resource is deployed (or restored).
-// * If the feature gate is disabled, the DNSRecord resource is first migrated (so that the finalizer is removed)
-// and then deleted, again in order to ensure that the DNS record is not deleted. Then, the DNSProvider, DNSEntry,
-// and DNSOwner resources are deployed in the appropriate order for the operation (reconcile or restore).
 func (b *Botanist) DeployExternalDNSResources(ctx context.Context) error {
-	if gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords) {
-		if err := b.MigrateExternalDNS(ctx, true); err != nil {
-			return err
-		}
-		return b.DeployOrDestroyExternalDNSRecord(ctx)
-	} else {
-		if err := b.MigrateExternalDNSRecord(ctx); err != nil {
-			return err
-		}
-		if err := b.DestroyExternalDNSRecord(ctx); err != nil {
-			return err
-		}
-		return b.DeployExternalDNS(ctx)
+	if err := b.MigrateExternalDNS(ctx, true); err != nil {
+		return err
 	}
+	return b.DeployOrDestroyExternalDNSRecord(ctx)
 }
 
-// DeployIngressDNSResources deploys the appropriate ingress DNS resources depending on whether
-// the `UseDNSRecords` feature gate is enabled or not.
-// * If the feature gate is enabled, the DNSEntry and DNSOwner resources are deleted (if they exist)
+// DeployIngressDNSResources deploys the appropriate ingress DNS resources.
+// * The DNSEntry and DNSOwner resources are deleted (if they exist)
 // in the appropriate order to ensure that the DNS record is not deleted.
 // Then, the DNSRecord resource is deployed (or restored).
-// * If the feature gate is disabled, the DNSRecord resource is first migrated (so the finalizer is removed)
-// and then deleted, again in order to ensure that the DNS record is not deleted. Then, the DNSEntry
-// and DNSOwner resources are deployed in the appropriate order for the operation (reconcile or restore).
 func (b *Botanist) DeployIngressDNSResources(ctx context.Context) error {
-	if gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords) {
-		if err := b.MigrateIngressDNS(ctx); err != nil {
-			return err
-		}
-		return b.DeployOrDestroyIngressDNSRecord(ctx)
-	} else {
-		if err := b.MigrateIngressDNSRecord(ctx); err != nil {
-			return err
-		}
-		if err := b.DestroyIngressDNSRecord(ctx); err != nil {
-			return err
-		}
-		return b.DeployIngressDNS(ctx)
+	if err := b.MigrateIngressDNS(ctx); err != nil {
+		return err
 	}
+	return b.DeployOrDestroyIngressDNSRecord(ctx)
 }
 
 // DeployOwnerDNSResources deploys or deletes the owner DNSRecord resource depending on whether
-// the `UseDNSRecords` feature gate is enabled or not.
-// * If the feature gate is enabled, the DNSRecord resource is deployed (or restored).
-// * Otherwise, it is deleted (owner DNS resources can't be properly maintained without the feature gate).
+// the 'ownerChecks' setting is enabled.
+// * If the ownerChecks is enabled, the DNSRecord resource is deployed (or restored).
+// * Otherwise, it is deleted.
 func (b *Botanist) DeployOwnerDNSResources(ctx context.Context) error {
-	if gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords) && gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(b.Seed.GetInfo().Spec.Settings) {
+	if gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(b.Seed.GetInfo().Spec.Settings) {
 		return b.DeployOrDestroyOwnerDNSRecord(ctx)
 	} else {
 		return b.DestroyOwnerDNSRecord(ctx)
@@ -169,11 +125,11 @@ func (b *Botanist) MigrateIngressDNSResources(ctx context.Context) error {
 }
 
 // MigrateOwnerDNSResources migrates or deletes the owner DNSRecord resource depending on whether
-// the `UseDNSRecords` feature gate is enabled or not.
-// * If the feature gate is enabled, the DNSRecord resource is migrated.
-// * Otherwise, it is deleted (owner DNS resources can't be properly maintained without the feature gate).
+// the 'ownerChecks' setting is enabled.
+// * If the ownerChecks is enabled, the DNSRecord resource is migrated.
+// * Otherwise, it is deleted.
 func (b *Botanist) MigrateOwnerDNSResources(ctx context.Context) error {
-	if gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords) && gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(b.Seed.GetInfo().Spec.Settings) {
+	if gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(b.Seed.GetInfo().Spec.Settings) {
 		return b.MigrateOwnerDNSRecord(ctx)
 	} else {
 		return b.DestroyOwnerDNSRecord(ctx)

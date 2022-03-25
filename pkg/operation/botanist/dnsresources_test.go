@@ -133,8 +133,7 @@ var _ = Describe("dnsrecord", func() {
 	})
 
 	Describe("#DeployInternalDNSResources", func() {
-		It("should delete the DNSOwner, DNSProvider, and DNSEntry resources, and then deploy the DNSRecord resource if the feature gate is enabled", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, true)()
+		It("should delete the DNSOwner, DNSProvider, and DNSEntry resources, and then deploy the DNSRecord resource", func() {
 			gomock.InOrder(
 				internalDNSOwner.EXPECT().Destroy(ctx),
 				internalDNSOwner.EXPECT().WaitCleanup(ctx),
@@ -147,28 +146,10 @@ var _ = Describe("dnsrecord", func() {
 			)
 			Expect(b.DeployInternalDNSResources(ctx)).To(Succeed())
 		})
-
-		It("should migrate and delete the DNSRecord resource, and then deploy the DNSOwner, DNSProvider, and DNSEntry resources if the feature gate is disabled", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, false)()
-			gomock.InOrder(
-				internalDNSRecord.EXPECT().Migrate(ctx),
-				internalDNSRecord.EXPECT().WaitMigrate(ctx),
-				internalDNSRecord.EXPECT().Destroy(ctx),
-				internalDNSRecord.EXPECT().WaitCleanup(ctx),
-				internalDNSOwner.EXPECT().Deploy(ctx),
-				internalDNSOwner.EXPECT().Wait(ctx),
-				internalDNSProvider.EXPECT().Deploy(ctx),
-				internalDNSProvider.EXPECT().Wait(ctx),
-				internalDNSEntry.EXPECT().Deploy(ctx),
-				internalDNSEntry.EXPECT().Wait(ctx),
-			)
-			Expect(b.DeployInternalDNSResources(ctx)).To(Succeed())
-		})
 	})
 
 	Describe("#DeployExternalDNSResources", func() {
-		It("should delete the DNSOwner and DNSEntry resources, and then deploy the DNSProvider and DNSRecord resources if the feature gate is enabled", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, true)()
+		It("should delete the DNSOwner and DNSEntry resources, and then deploy the DNSProvider and DNSRecord resources", func() {
 			gomock.InOrder(
 				externalDNSOwner.EXPECT().Destroy(ctx),
 				externalDNSOwner.EXPECT().WaitCleanup(ctx),
@@ -181,28 +162,10 @@ var _ = Describe("dnsrecord", func() {
 			)
 			Expect(b.DeployExternalDNSResources(ctx)).To(Succeed())
 		})
-
-		It("should migrate and delete the DNSRecord resource, and then deploy the DNSOwner, DNSProvider, and DNSEntry resources if the feature gate is disabled", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, false)()
-			gomock.InOrder(
-				externalDNSRecord.EXPECT().Migrate(ctx),
-				externalDNSRecord.EXPECT().WaitMigrate(ctx),
-				externalDNSRecord.EXPECT().Destroy(ctx),
-				externalDNSRecord.EXPECT().WaitCleanup(ctx),
-				externalDNSOwner.EXPECT().Deploy(ctx),
-				externalDNSOwner.EXPECT().Wait(ctx),
-				externalDNSProvider.EXPECT().Deploy(ctx),
-				externalDNSProvider.EXPECT().Wait(ctx),
-				externalDNSEntry.EXPECT().Deploy(ctx),
-				externalDNSEntry.EXPECT().Wait(ctx),
-			)
-			Expect(b.DeployExternalDNSResources(ctx)).To(Succeed())
-		})
 	})
 
 	Describe("#DeployIngressDNSResources", func() {
-		It("should delete the DNSOwner and DNSEntry resources, and then deploy the DNSRecord resource if the feature gate is enabled", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, true)()
+		It("should delete the DNSOwner and DNSEntry resources, and then deploy the DNSRecord resource", func() {
 			gomock.InOrder(
 				ingressDNSOwner.EXPECT().Destroy(ctx),
 				ingressDNSOwner.EXPECT().WaitCleanup(ctx),
@@ -213,26 +176,10 @@ var _ = Describe("dnsrecord", func() {
 			)
 			Expect(b.DeployIngressDNSResources(ctx)).To(Succeed())
 		})
-
-		It("should migrate and delete the DNSRecord resource, and then deploy the DNSOwner and DNSEntry resources if the feature gate is disabled", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, false)()
-			gomock.InOrder(
-				ingressDNSRecord.EXPECT().Migrate(ctx),
-				ingressDNSRecord.EXPECT().WaitMigrate(ctx),
-				ingressDNSRecord.EXPECT().Destroy(ctx),
-				ingressDNSRecord.EXPECT().WaitCleanup(ctx),
-				ingressDNSOwner.EXPECT().Deploy(ctx),
-				ingressDNSOwner.EXPECT().Wait(ctx),
-				ingressDNSEntry.EXPECT().Deploy(ctx),
-				ingressDNSEntry.EXPECT().Wait(ctx),
-			)
-			Expect(b.DeployIngressDNSResources(ctx)).To(Succeed())
-		})
 	})
 
 	Describe("#DeployOwnerDNSResources", func() {
-		It("should deploy the owner DNSRecord resource if the feature gate is enabled", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, true)()
+		It("should deploy the owner DNSRecord resource", func() {
 			gomock.InOrder(
 				ownerDNSRecord.EXPECT().Deploy(ctx),
 				ownerDNSRecord.EXPECT().Wait(ctx),
@@ -240,17 +187,7 @@ var _ = Describe("dnsrecord", func() {
 			Expect(b.DeployOwnerDNSResources(ctx)).To(Succeed())
 		})
 
-		It("should delete the owner DNSRecord resource if the feature gate is disabled", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, false)()
-			gomock.InOrder(
-				ownerDNSRecord.EXPECT().Destroy(ctx),
-				ownerDNSRecord.EXPECT().WaitCleanup(ctx),
-			)
-			Expect(b.DeployOwnerDNSResources(ctx)).To(Succeed())
-		})
-
 		It("should delete the owner DNSRecord resource if owner checks are disabled", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, true)()
 			b.Seed.GetInfo().Spec.Settings = &gardencorev1beta1.SeedSettings{
 				OwnerChecks: &gardencorev1beta1.SeedSettingOwnerChecks{
 					Enabled: false,
@@ -295,7 +232,6 @@ var _ = Describe("dnsrecord", func() {
 			Expect(b.DestroyExternalDNSResources(ctx)).To(Succeed())
 		})
 		It("should delete all external DNS resources but DNSProvider if feature DisabledDNSProviderManagement is set", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, true)()
 			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.DisableDNSProviderManagement, true)()
 			gomock.InOrder(
 				externalDNSEntry.EXPECT().Destroy(ctx),
@@ -380,8 +316,7 @@ var _ = Describe("dnsrecord", func() {
 	})
 
 	Describe("#MigrateOwnerDNSResources", func() {
-		It("should migrate the owner DNSRecord resource if the feature gate is enabled", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, true)()
+		It("should migrate the owner DNSRecord resource", func() {
 			gomock.InOrder(
 				ownerDNSRecord.EXPECT().Migrate(ctx),
 				ownerDNSRecord.EXPECT().WaitMigrate(ctx),
@@ -389,17 +324,7 @@ var _ = Describe("dnsrecord", func() {
 			Expect(b.MigrateOwnerDNSResources(ctx)).To(Succeed())
 		})
 
-		It("should delete the owner DNSRecord resource if the feature gate is disabled", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, false)()
-			gomock.InOrder(
-				ownerDNSRecord.EXPECT().Destroy(ctx),
-				ownerDNSRecord.EXPECT().WaitCleanup(ctx),
-			)
-			Expect(b.MigrateOwnerDNSResources(ctx)).To(Succeed())
-		})
-
 		It("should delete the owner DNSRecord resource if owner checks are disabled", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, true)()
 			b.Seed.GetInfo().Spec.Settings = &gardencorev1beta1.SeedSettings{
 				OwnerChecks: &gardencorev1beta1.SeedSettingOwnerChecks{
 					Enabled: false,
