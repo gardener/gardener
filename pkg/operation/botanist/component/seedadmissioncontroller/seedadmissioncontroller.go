@@ -61,6 +61,7 @@ const (
 	deploymentName      = Name
 	containerName       = Name
 
+	metricsPort     = 8080
 	healthPort      = 8081
 	port            = 10250
 	volumeName      = Name + "-tls"
@@ -181,6 +182,12 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 				Selector: getLabels(),
 				Ports: []corev1.ServicePort{
 					{
+						Name:       "metrics",
+						Protocol:   corev1.ProtocolTCP,
+						Port:       metricsPort,
+						TargetPort: intstr.FromInt(metricsPort),
+					},
+					{
 						Name:       "health",
 						Port:       healthPort,
 						Protocol:   corev1.ProtocolTCP,
@@ -247,11 +254,19 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 								fmt.Sprintf("--port=%d", port),
 								fmt.Sprintf("--tls-cert-dir=%s", volumeMountPath),
 								fmt.Sprintf("--allow-invalid-extension-resources=%t", !gardenletfeatures.FeatureGate.Enabled(features.DenyInvalidExtensionResources)),
+								fmt.Sprintf("--metrics-bind-address=:%d", metricsPort),
 								fmt.Sprintf("--health-bind-address=:%d", healthPort),
 							},
-							Ports: []corev1.ContainerPort{{
-								ContainerPort: int32(port),
-							}},
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "metrics",
+									ContainerPort: metricsPort,
+									Protocol:      corev1.ProtocolTCP,
+								},
+								{
+									ContainerPort: int32(port),
+								},
+							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("20m"),
