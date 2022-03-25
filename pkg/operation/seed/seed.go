@@ -63,7 +63,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/timewindow"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
@@ -83,6 +84,7 @@ import (
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // NewBuilder returns a new Builder.
@@ -197,18 +199,7 @@ func (s *Seed) UpdateInfoStatus(ctx context.Context, c client.Client, useStrateg
 	return nil
 }
 
-const (
-	caSeed = "ca-seed"
-)
-
 var (
-	wantedCertificateAuthorities = map[string]*secretsutils.CertificateSecretConfig{
-		caSeed: {
-			Name:       caSeed,
-			CommonName: "kubernetes",
-			CertType:   secretsutils.CACert,
-		},
-	}
 	rewriteTagRegex = regexp.MustCompile(`\$tag\s+(.+?)\s+user-exposed\.\$TAG\s+true`)
 	ingressClass    string
 )
@@ -226,15 +217,11 @@ const (
 // generateWantedSecrets returns a list of Secret configuration objects satisfying the secret config intface,
 // each containing their specific configuration for the creation of certificates (server/client), RSA key pairs, basic
 // authentication credentials, etc.
-func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secretsutils.Certificate) ([]secretsutils.ConfigInterface, error) {
-	if len(certificateAuthorities) != len(wantedCertificateAuthorities) {
-		return nil, fmt.Errorf("missing certificate authorities")
-	}
-
+func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secretutils.Certificate) ([]secretutils.ConfigInterface, error) {
 	endUserCrtValidity := common.EndUserCrtValidity
 
-	secretList := []secretsutils.ConfigInterface{
-		&secretsutils.CertificateSecretConfig{
+	secretList := []secretutils.ConfigInterface{
+		&secretutils.CertificateSecretConfig{
 			Name: common.VPASecretName,
 
 			CommonName:   "vpa-webhook.garden.svc",
@@ -242,10 +229,10 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 			DNSNames:     []string{"vpa-webhook.garden.svc", "vpa-webhook"},
 			IPAddresses:  nil,
 
-			CertType:  secretsutils.ServerCert,
-			SigningCA: certificateAuthorities[caSeed],
+			CertType:  secretutils.ServerCert,
+			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCASeed],
 		},
-		&secretsutils.CertificateSecretConfig{
+		&secretutils.CertificateSecretConfig{
 			Name: common.GrafanaTLS,
 
 			CommonName:   "grafana",
@@ -253,11 +240,11 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 			DNSNames:     []string{seed.GetIngressFQDN(grafanaPrefix)},
 			IPAddresses:  nil,
 
-			CertType:  secretsutils.ServerCert,
-			SigningCA: certificateAuthorities[caSeed],
+			CertType:  secretutils.ServerCert,
+			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCASeed],
 			Validity:  &endUserCrtValidity,
 		},
-		&secretsutils.CertificateSecretConfig{
+		&secretutils.CertificateSecretConfig{
 			Name: prometheusTLS,
 
 			CommonName:   "prometheus",
@@ -265,12 +252,12 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 			DNSNames:     []string{seed.GetIngressFQDN(prometheusPrefix)},
 			IPAddresses:  nil,
 
-			CertType:  secretsutils.ServerCert,
-			SigningCA: certificateAuthorities[caSeed],
+			CertType:  secretutils.ServerCert,
+			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCASeed],
 			Validity:  &endUserCrtValidity,
 		},
 		// Secret definition for gardener-resource-manager server
-		&secretsutils.CertificateSecretConfig{
+		&secretutils.CertificateSecretConfig{
 			Name: resourcemanager.SecretNameServer,
 
 			CommonName:   v1beta1constants.DeploymentNameGardenerResourceManager,
@@ -278,8 +265,8 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 			DNSNames:     kutil.DNSNamesForService(resourcemanager.ServiceName, v1beta1constants.GardenNamespace),
 			IPAddresses:  nil,
 
-			CertType:  secretsutils.ServerCert,
-			SigningCA: certificateAuthorities[caSeed],
+			CertType:  secretutils.ServerCert,
+			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCASeed],
 		},
 	}
 
@@ -288,25 +275,44 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 
 // deployCertificates deploys CA and TLS certificates inside the garden namespace
 // It takes a map[string]*corev1.Secret object which contains secrets that have already been deployed inside that namespace to avoid duplication errors.
-func deployCertificates(ctx context.Context, seed *Seed, c client.Client, existingSecretsMap map[string]*corev1.Secret) (map[string]*corev1.Secret, error) {
-	caSecrets, certificateAuthorities, err := secretsutils.GenerateCertificateAuthorities(ctx, c, existingSecretsMap, wantedCertificateAuthorities, v1beta1constants.GardenNamespace)
+func deployCertificates(
+	ctx context.Context,
+	seed *Seed,
+	c client.Client,
+	existingSecretsMap map[string]*corev1.Secret,
+	secretsManager secretsmanager.Interface,
+) (
+	map[string]*corev1.Secret,
+	error,
+) {
+	certificateAuthorities := make(map[string]*secretutils.Certificate)
+
+	caSecret, err := secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+		Name:       v1beta1constants.SecretNameCASeed,
+		CommonName: "kubernetes",
+		CertType:   secretutils.CACert,
+	}, secretsmanager.Rotate(secretsmanager.KeepOld))
 	if err != nil {
 		return nil, err
 	}
+
+	cert, err := secretutils.LoadCertificate(caSecret.Name, caSecret.Data[secretutils.DataKeyPrivateKeyCA], caSecret.Data[secretutils.DataKeyCertificateCA])
+	if err != nil {
+		return nil, err
+	}
+	certificateAuthorities[caSecret.Name] = cert
 
 	wantedSecretsList, err := generateWantedSecrets(seed, certificateAuthorities)
 	if err != nil {
 		return nil, err
 	}
 
-	secrets, err := secretsutils.GenerateClusterSecrets(ctx, c, existingSecretsMap, wantedSecretsList, v1beta1constants.GardenNamespace)
+	secrets, err := secretutils.GenerateClusterSecrets(ctx, c, existingSecretsMap, wantedSecretsList, v1beta1constants.GardenNamespace)
 	if err != nil {
 		return nil, err
 	}
 
-	for ca, secret := range caSecrets {
-		secrets[ca] = secret
-	}
+	secrets[caSecret.Name] = caSecret
 
 	return secrets, nil
 }
@@ -323,9 +329,13 @@ func RunReconcileSeedFlow(
 	conf *config.GardenletConfiguration,
 	log logrus.FieldLogger,
 ) error {
-	applier := seedClientSet.Applier()
-	seedClient := seedClientSet.Client()
-	chartApplier := seedClientSet.ChartApplier()
+	var (
+		applier        = seedClientSet.Applier()
+		seedClient     = seedClientSet.Client()
+		chartApplier   = seedClientSet.ChartApplier()
+		secretsManager = secretsmanager.New(logf.Log.WithName("secretsmanager"), seedClient, v1beta1constants.GardenNamespace, v1beta1constants.SecretManagerIdentityGardenlet, nil)
+	)
+
 	kubernetesVersion, err := semver.NewVersion(seedClientSet.Version())
 	if err != nil {
 		return err
@@ -468,14 +478,14 @@ func RunReconcileSeedFlow(
 		existingSecretsMap[secret.ObjectMeta.Name] = &secretObj
 	}
 
-	deployedSecretsMap, err := deployCertificates(ctx, seed, seedClient, existingSecretsMap)
+	deployedSecretsMap, err := deployCertificates(ctx, seed, seedClient, existingSecretsMap, secretsManager)
 	if err != nil {
 		return err
 	}
 
 	// Deploy gardener-resource-manager first since it serves central functionality (e.g., projected token mount webhook)
 	// which is required for all other components to start-up.
-	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, imageVector, deployedSecretsMap[caSeed], deployedSecretsMap[resourcemanager.SecretNameServer])
+	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, imageVector, deployedSecretsMap[v1beta1constants.SecretNameCASeed], deployedSecretsMap[resourcemanager.SecretNameServer])
 	if err != nil {
 		return err
 	}
@@ -788,7 +798,7 @@ func RunReconcileSeedFlow(
 	)
 
 	if monitoringCredentials != nil {
-		monitoringBasicAuth = utils.CreateSHA1Secret(monitoringCredentials.Data[secretsutils.DataKeyUserName], monitoringCredentials.Data[secretsutils.DataKeyPassword])
+		monitoringBasicAuth = utils.CreateSHA1Secret(monitoringCredentials.Data[secretutils.DataKeyUserName], monitoringCredentials.Data[secretutils.DataKeyPassword])
 	}
 	applierOptions[vpaGK] = retainStatusInformation
 	applierOptions[hvpaGK] = retainStatusInformation
@@ -1003,7 +1013,7 @@ func RunReconcileSeedFlow(
 			"application": map[string]interface{}{
 				"admissionController": map[string]interface{}{
 					"controlNamespace": v1beta1constants.GardenNamespace,
-					"caCert":           deployedSecretsMap[common.VPASecretName].Data[secretsutils.DataKeyCertificateCA],
+					"caCert":           deployedSecretsMap[common.VPASecretName].Data[secretutils.DataKeyCertificateCA],
 				},
 			},
 		},

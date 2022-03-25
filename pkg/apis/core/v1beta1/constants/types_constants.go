@@ -15,6 +15,9 @@
 package constants
 
 const (
+	// SecretManagerIdentityGardenlet is the identity for the secret manager used inside gardenlet.
+	SecretManagerIdentityGardenlet = "gardenlet"
+
 	// SecretNameCACluster is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of a shoot cluster.
 	SecretNameCACluster = "ca"
@@ -33,6 +36,10 @@ const (
 	// SecretNameCAVPN is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of the VPN components of a shoot cluster.
 	SecretNameCAVPN = "ca-vpn"
+	// SecretNameCASeed is a constant for the name of a Kubernetes secret object that contains the CA
+	// certificate generated for a seed cluster.
+	SecretNameCASeed = "ca-seed"
+
 	// SecretNameCloudProvider is a constant for the name of a Kubernetes secret object that contains the provider
 	// specific credentials that shall be used to create/delete the shoot.
 	SecretNameCloudProvider = "cloudprovider"

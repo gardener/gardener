@@ -131,7 +131,7 @@ func defaultGardenerResourceManager(c client.Client, imageVector imagevector.Ima
 	})
 
 	gardenerResourceManager.SetSecrets(resourcemanager.Secrets{
-		ServerCA: component.Secret{Name: caSeed, Checksum: utils.ComputeSecretChecksum(serverCASecret.Data), Data: serverCASecret.Data},
+		ServerCA: component.Secret{Name: v1beta1constants.SecretNameCASeed, Checksum: utils.ComputeSecretChecksum(serverCASecret.Data), Data: serverCASecret.Data},
 		Server:   component.Secret{Name: resourcemanager.SecretNameServer, Checksum: utils.ComputeSecretChecksum(serverSecret.Data)},
 	})
 
