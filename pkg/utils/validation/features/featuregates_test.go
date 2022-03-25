@@ -108,6 +108,11 @@ var _ = Describe("featuregates", func() {
 				"BadValue": Equal("Foo"),
 				"Detail":   Equal("unknown feature gate Foo"),
 			})))),
+			Entry("setting non-default value for lockedfeaturegate", map[string]bool{"EndpointSlice": false}, "1.21.5", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal(field.NewPath("EndpointSlice").String()),
+				"Detail": Equal("cannot set feature gate to false, feature is locked to true"),
+			})))),
 		)
 	})
 })
