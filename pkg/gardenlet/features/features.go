@@ -42,8 +42,3 @@ func RegisterFeatureGates() {
 		features.ShootCARotation,
 	)))
 }
-
-// DisabledDNSProviderManagement returns true if `DisableDNSProviderManagement` is effective.
-func DisabledDNSProviderManagement() bool {
-	return FeatureGate.Enabled(features.DisableDNSProviderManagement)
-}

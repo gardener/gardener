@@ -231,7 +231,7 @@ var _ = Describe("dnsrecord", func() {
 			)
 			Expect(b.DestroyExternalDNSResources(ctx)).To(Succeed())
 		})
-		It("should delete all external DNS resources but DNSProvider if feature DisabledDNSProviderManagement is set", func() {
+		It("should delete all external DNS resources but DNSProvider if feature DisableDNSProviderManagement is set", func() {
 			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.DisableDNSProviderManagement, true)()
 			gomock.InOrder(
 				externalDNSEntry.EXPECT().Destroy(ctx),

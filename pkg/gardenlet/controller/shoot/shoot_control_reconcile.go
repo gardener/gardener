@@ -24,6 +24,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
@@ -532,7 +533,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying additional DNS providers",
-			Fn:           flow.TaskFn(botanist.DeployAdditionalDNSProviders).DoIf(!o.Shoot.HibernationEnabled && !gardenletfeatures.DisabledDNSProviderManagement()),
+			Fn:           flow.TaskFn(botanist.DeployAdditionalDNSProviders).DoIf(!o.Shoot.HibernationEnabled && !gardenletfeatures.FeatureGate.Enabled(features.DisableDNSProviderManagement)),
 			Dependencies: flow.NewTaskIDs(deployInternalDomainDNSRecord, deployExternalDomainDNSRecord, deployIngressDomainDNSRecord, deployOwnerDomainDNSRecord),
 		})
 		vpnLBReady = g.Add(flow.Task{

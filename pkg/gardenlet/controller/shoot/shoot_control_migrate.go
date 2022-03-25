@@ -26,6 +26,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
@@ -366,7 +367,7 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 		})
 		destroyDNSProviders = g.Add(flow.Task{
 			Name:         "Deleting DNS providers",
-			Fn:           flow.TaskFn(botanist.DeleteDNSProviders).DoIf(!gardenletfeatures.DisabledDNSProviderManagement()),
+			Fn:           flow.TaskFn(botanist.DeleteDNSProviders).DoIf(!gardenletfeatures.FeatureGate.Enabled(features.DisableDNSProviderManagement)),
 			Dependencies: flow.NewTaskIDs(migrateIngressDNSRecord, migrateExternalDNSRecord, migrateInternalDNSRecord, migrateOwnerDNSRecord),
 		})
 		createETCDSnapshot = g.Add(flow.Task{

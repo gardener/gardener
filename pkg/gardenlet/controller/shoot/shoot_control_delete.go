@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
@@ -151,7 +152,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			return err
 		}),
 		errors.ToExecute("Get additional DNS providers that are used by DNSEntry resources", func() error {
-			if !gardenletfeatures.DisabledDNSProviderManagement() {
+			if !gardenletfeatures.FeatureGate.Enabled(features.DisableDNSProviderManagement) {
 				if additionalDNSProviders, err = getUsedAdditionalDNSProviders(ctx, o); err != nil {
 					return err
 				}
@@ -251,7 +252,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Name: "Deploying additional DNS providers",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.DeployDNSProviders(ctx, additionalDNSProviders)
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace && !gardenletfeatures.DisabledDNSProviderManagement()),
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace && !gardenletfeatures.FeatureGate.Enabled(features.DisableDNSProviderManagement)),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, deployInternalDomainDNSRecord, deployOwnerDomainDNSRecord),
 		})
 		_ = g.Add(flow.Task{
@@ -616,7 +617,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		})
 		deleteDNSProviders = g.Add(flow.Task{
 			Name:         "Deleting additional DNS providers",
-			Fn:           flow.TaskFn(botanist.DeleteDNSProviders).DoIf(!gardenletfeatures.DisabledDNSProviderManagement()),
+			Fn:           flow.TaskFn(botanist.DeleteDNSProviders).DoIf(!gardenletfeatures.FeatureGate.Enabled(features.DisableDNSProviderManagement)),
 			Dependencies: flow.NewTaskIDs(destroyInternalDomainDNSRecord, destroyOwnerDomainDNSRecord),
 		})
 		destroyReferencedResources = g.Add(flow.Task{
