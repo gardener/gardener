@@ -100,14 +100,11 @@ var _ = Describe("KubeControllerManager", func() {
 			kubeAPIServer         *mockkubeapiserver.MockInterface
 			kubeControllerManager *mockkubecontrollermanager.MockInterface
 
-			secretNameServer            = "kube-controller-manager-server"
 			secretNameCA                = "ca"
 			secretNameServiceAccountKey = "service-account-key"
-			checksumServer              = "34"
 			checksumCA                  = "56"
 			checksumServiceAccountKey   = "78"
 			secrets                     = kubecontrollermanager.Secrets{
-				Server:            component.Secret{Name: secretNameServer, Checksum: checksumServer},
 				CA:                component.Secret{Name: secretNameCA, Checksum: checksumCA},
 				ServiceAccountKey: component.Secret{Name: secretNameServiceAccountKey, Checksum: checksumServiceAccountKey},
 			}
@@ -118,7 +115,6 @@ var _ = Describe("KubeControllerManager", func() {
 			kubeControllerManager = mockkubecontrollermanager.NewMockInterface(ctrl)
 
 			botanist.K8sSeedClient = kubernetesClient
-			botanist.StoreCheckSum(secretNameServer, checksumServer)
 			botanist.StoreCheckSum(secretNameCA, checksumCA)
 			botanist.StoreCheckSum(secretNameServiceAccountKey, checksumServiceAccountKey)
 			botanist.Shoot = &shootpkg.Shoot{

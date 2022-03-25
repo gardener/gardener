@@ -17,6 +17,9 @@ package kubescheduler_test
 import (
 	"testing"
 
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/test"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -25,3 +28,7 @@ func TestKubeScheduler(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Botanist Component KubeScheduler Suite")
 }
+
+var _ = BeforeSuite(func() {
+	DeferCleanup(test.WithVar(&secretutils.GenerateKey, secretutils.FakeGenerateKey))
+})

@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
@@ -53,7 +52,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 			b.Shoot.GetInfo().Status.TechnicalID,
 		}, kubernetes.DNSNamesForService("kubernetes", metav1.NamespaceDefault)...)
 
-		kubeControllerManagerCertDNSNames   = kubernetes.DNSNamesForService(kubecontrollermanager.ServiceName, b.Shoot.SeedNamespace)
 		gardenerResourceManagerCertDNSNames = kubernetes.DNSNamesForService(resourcemanager.ServiceName, b.Shoot.SeedNamespace)
 
 		etcdCertDNSNames = append(
@@ -115,20 +113,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 
 				CertType:  secrets.ClientCert,
 				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCAFrontProxy],
-			},
-		},
-
-		// Secret definition for kube-controller-manager server
-		&secrets.ControlPlaneSecretConfig{
-			Name: kubecontrollermanager.SecretNameServer,
-			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				CommonName:   v1beta1constants.DeploymentNameKubeControllerManager,
-				Organization: nil,
-				DNSNames:     kubeControllerManagerCertDNSNames,
-				IPAddresses:  nil,
-
-				CertType:  secrets.ServerCert,
-				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},
 		},
 

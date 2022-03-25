@@ -52,27 +52,20 @@ import (
 )
 
 const (
-	// ServiceName is the name of the service of the kube-controller-manager.
-	ServiceName   = "kube-controller-manager"
-	containerName = v1beta1constants.DeploymentNameKubeControllerManager
-
-	// SecretNameServer is the name of the kube-controller-manager server certificate secret.
-	SecretNameServer = "kube-controller-manager-server"
-
 	// LabelRole is a constant for the value of a label with key 'role'.
 	LabelRole = "controller-manager"
-	// portNameMetrics is a constant for the name of the metrics port of the kube-controller-manager.
-	portNameMetrics = "metrics"
 
-	// volumeMountPathCA is the volume mount path for the CA certificate used by the kube controller manager.
-	volumeMountPathCA = "/srv/kubernetes/ca"
-	// volumeMountPathServiceAccountKey is the volume mount path for the service account key that is a PEM-encoded private RSA or ECDSA key used to sign service account tokens.
-	volumeMountPathServiceAccountKey = "/srv/kubernetes/service-account-key"
-	// volumeMountPathServer is the volume mount path for the x509 TLS server certificate and key for the HTTPS server inside the kube-controller-manager (which is used for metrics and health checks).
-	volumeMountPathServer = "/var/lib/kube-controller-manager-server"
-
-	// managedResourceName is the name of the managed resource that contains the resources to be deployed into the Shoot cluster.
+	serviceName         = "kube-controller-manager"
+	containerName       = v1beta1constants.DeploymentNameKubeControllerManager
 	managedResourceName = "shoot-core-kube-controller-manager"
+	secretNameServer    = "kube-controller-manager-server"
+	portNameMetrics     = "metrics"
+
+	volumeNameServer = "server"
+
+	volumeMountPathCA                = "/srv/kubernetes/ca"
+	volumeMountPathServiceAccountKey = "/srv/kubernetes/service-account-key"
+	volumeMountPathServer            = "/var/lib/kube-controller-manager-server"
 )
 
 // Interface contains functions for a kube-controller-manager deployer.
@@ -142,14 +135,22 @@ type kubeControllerManager struct {
 }
 
 func (k *kubeControllerManager) Deploy(ctx context.Context) error {
-	if k.secrets.Server.Name == "" || k.secrets.Server.Checksum == "" {
-		return fmt.Errorf("missing server secret information")
-	}
 	if k.secrets.CA.Name == "" || k.secrets.CA.Checksum == "" {
 		return fmt.Errorf("missing CA secret information")
 	}
 	if k.secrets.ServiceAccountKey.Name == "" || k.secrets.ServiceAccountKey.Checksum == "" {
 		return fmt.Errorf("missing ServiceAccountKey secret information")
+	}
+
+	serverSecret, err := k.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+		Name:                        secretNameServer,
+		CommonName:                  v1beta1constants.DeploymentNameKubeControllerManager,
+		DNSNames:                    kutil.DNSNamesForService(serviceName, k.namespace),
+		CertType:                    secrets.ServerCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return err
 	}
 
 	genericTokenKubeconfigSecret, found := k.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -217,7 +218,6 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				Annotations: map[string]string{
 					"checksum/secret-" + k.secrets.CA.Name:                k.secrets.CA.Checksum,
 					"checksum/secret-" + k.secrets.ServiceAccountKey.Name: k.secrets.ServiceAccountKey.Checksum,
-					"checksum/secret-" + k.secrets.Server.Name:            k.secrets.Server.Checksum,
 				},
 				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 					v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleControlPlane,
@@ -267,7 +267,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 								MountPath: volumeMountPathServiceAccountKey,
 							},
 							{
-								Name:      k.secrets.Server.Name,
+								Name:      volumeNameServer,
 								MountPath: volumeMountPathServer,
 							},
 						},
@@ -291,10 +291,10 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						},
 					},
 					{
-						Name: k.secrets.Server.Name,
+						Name: volumeNameServer,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
-								SecretName: k.secrets.Server.Name,
+								SecretName: serverSecret.Name,
 							},
 						},
 					},
@@ -405,7 +405,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	}
 
 	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObject(ctx, k.seedClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: k.namespace}})
+	return kutil.DeleteObject(ctx, k.seedClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager-server", Namespace: k.namespace}})
 }
 
 func (k *kubeControllerManager) SetSecrets(secrets Secrets)      { k.secrets = secrets }
@@ -422,7 +422,7 @@ func (k *kubeControllerManager) emptyHVPA() *hvpav1alpha1.Hvpa {
 }
 
 func (k *kubeControllerManager) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ServiceName, Namespace: k.namespace}}
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: k.namespace}}
 }
 
 func (k *kubeControllerManager) emptyDeployment() *appsv1.Deployment {
@@ -521,8 +521,8 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--horizontal-pod-autoscaler-downscale-stabilization=%s", defaultHorizontalPodAutoscalerConfig.DownscaleStabilization.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-initial-readiness-delay=%s", defaultHorizontalPodAutoscalerConfig.InitialReadinessDelay.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-cpu-initialization-period=%s", defaultHorizontalPodAutoscalerConfig.CPUInitializationPeriod.Duration.String()),
-		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameServer)),
-		fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameServer)),
+		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate),
+		fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey),
 		fmt.Sprintf("--tls-cipher-suites=%s", strings.Join(kutil.TLSCipherSuites(k.version), ",")),
 		"--use-service-account-credentials=true",
 		"--v=2",
@@ -593,8 +593,6 @@ func (k *kubeControllerManager) computeResourceRequirements(ctx context.Context)
 
 // Secrets is collection of secrets for the kube-controller-manager.
 type Secrets struct {
-	// Server is a secret containing a x509 TLS server certificate and key for the HTTPS server inside the kube-controller-manager (which is used for metrics and health checks).
-	Server component.Secret
 	// CA is a secret containing a root CA x509 certificate and key that is used for the flags.
 	// --cluster-signing-cert-file
 	// --cluster-signing-key-file
