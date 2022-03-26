@@ -334,6 +334,11 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	secretHTTPProxy, err := k.reconcileSecretHTTPProxy(ctx)
+	if err != nil {
+		return err
+	}
+
 	secretKubeAggregator, err := k.reconcileSecretKubeAggregator(ctx)
 	if err != nil {
 		return err
@@ -381,6 +386,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		secretServer,
 		secretKubeletClient,
 		secretKubeAggregator,
+		secretHTTPProxy,
 	); err != nil {
 		return err
 	}
@@ -570,9 +576,6 @@ type Secrets struct {
 	CAFrontProxy component.Secret
 	// Etcd is the client certificate for the kube-apiserver to talk to etcd.
 	Etcd component.Secret
-	// HTTPProxy is the client certificate for the http proxy to talk to the kube-apiserver..
-	// Only relevant if VPNConfig.ReversedVPNEnabled is true.
-	HTTPProxy *component.Secret
 	// VPNSeed is the client certificate for the vpn-seed to talk to the kube-apiserver.
 	// Only relevant if VPNConfig.ReversedVPNEnabled is false.
 	VPNSeed *component.Secret
@@ -595,7 +598,6 @@ func (s *Secrets) all() map[string]secret {
 		"CAEtcd":               {Secret: &s.CAEtcd},
 		"CAFrontProxy":         {Secret: &s.CAFrontProxy},
 		"Etcd":                 {Secret: &s.Etcd},
-		"HTTPProxy":            {Secret: s.HTTPProxy, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
 		"VPNSeed":              {Secret: s.VPNSeed, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
 		"VPNSeedTLSAuth":       {Secret: s.VPNSeedTLSAuth, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
 		"VPNSeedServerTLSAuth": {Secret: s.VPNSeedServerTLSAuth, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},

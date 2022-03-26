@@ -224,14 +224,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 			&secrets.VPNTLSAuthConfig{
 				Name: vpnseedserver.VpnSeedServerTLSAuth,
 			},
-
-			// Secret definition for kube-apiserver http proxy client
-			&secrets.CertificateSecretConfig{
-				Name:       kubeapiserver.SecretNameHTTPProxy,
-				CommonName: "kube-apiserver-http-proxy",
-				CertType:   secrets.ClientCert,
-				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCAVPN],
-			},
 		)
 	} else {
 		secretList = append(secretList,

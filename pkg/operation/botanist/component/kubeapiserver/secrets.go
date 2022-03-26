@@ -290,3 +290,22 @@ func (k *kubeAPIServer) reconcileSecretKubeAggregator(ctx context.Context) (*cor
 	// TODO(rfranzke): Remove this in a future release.
 	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-aggregator", Namespace: k.namespace}})
 }
+
+func (k *kubeAPIServer) reconcileSecretHTTPProxy(ctx context.Context) (*corev1.Secret, error) {
+	if !k.values.VPN.ReversedVPNEnabled {
+		return nil, nil
+	}
+
+	secret, err := k.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+		Name:                        secretNameHTTPProxy,
+		CommonName:                  "kube-apiserver-http-proxy",
+		CertType:                    secretutils.ClientCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAVPN), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO(rfranzke): Remove this in a future release.
+	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-http-proxy", Namespace: k.namespace}})
+}

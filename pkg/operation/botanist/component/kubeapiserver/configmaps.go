@@ -124,7 +124,7 @@ func (k *kubeAPIServer) reconcileConfigMapEgressSelector(ctx context.Context, co
 						TCP: &apiserverv1alpha1.TCPTransport{
 							URL: fmt.Sprintf("https://%s:%d", vpnseedserver.ServiceName, vpnseedserver.EnvoyPort),
 							TLSConfig: &apiserverv1alpha1.TLSConfig{
-								CABundle:   fmt.Sprintf("%s/%s", volumeMountPathHTTPProxy, secretutils.DataKeyCertificateCA),
+								CABundle:   fmt.Sprintf("%s/%s", volumeMountPathCAVPN, secretutils.DataKeyCertificateBundle),
 								ClientCert: fmt.Sprintf("%s/%s", volumeMountPathHTTPProxy, secretutils.DataKeyCertificate),
 								ClientKey:  fmt.Sprintf("%s/%s", volumeMountPathHTTPProxy, secretutils.DataKeyPrivateKey),
 							},

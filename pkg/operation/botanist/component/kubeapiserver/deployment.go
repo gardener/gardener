@@ -38,8 +38,6 @@ import (
 )
 
 const (
-	// SecretNameHTTPProxy is the name of the secret for the http proxy.
-	SecretNameHTTPProxy = "kube-apiserver-http-proxy"
 	// SecretNameVPNSeed is the name of the secret containing the certificates for the vpn-seed.
 	SecretNameVPNSeed = "vpn-seed"
 	// SecretNameVPNSeedTLSAuth is the name of the secret containing the TLS auth for the vpn-seed.
@@ -48,6 +46,7 @@ const (
 	secretNameServer                 = "kube-apiserver"
 	secretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"
 	secretNameKubeAggregator         = "kube-aggregator"
+	secretNameHTTPProxy              = "kube-apiserver-http-proxy"
 
 	// ContainerNameKubeAPIServer is the name of the kube-apiserver container.
 	ContainerNameKubeAPIServer            = "kube-apiserver"
@@ -60,6 +59,7 @@ const (
 	volumeNameCA                       = "ca"
 	volumeNameCAEtcd                   = "ca-etcd"
 	volumeNameCAFrontProxy             = "ca-front-proxy"
+	volumeNameCAVPN                    = "ca-vpn"
 	volumeNameEgressSelector           = "egress-selection-config"
 	volumeNameEtcdClient               = "etcd-client-tls"
 	volumeNameEtcdEncryptionConfig     = "etcd-encryption-secret"
@@ -85,6 +85,7 @@ const (
 	volumeMountPathCA                       = "/srv/kubernetes/ca"
 	volumeMountPathCAEtcd                   = "/srv/kubernetes/etcd/ca"
 	volumeMountPathCAFrontProxy             = "/srv/kubernetes/ca-front-proxy"
+	volumeMountPathCAVPN                    = "/srv/kubernetes/ca-vpn"
 	volumeMountPathEgressSelector           = "/etc/kubernetes/egress"
 	volumeMountPathEtcdEncryptionConfig     = "/etc/kubernetes/etcd-encryption-secret"
 	volumeMountPathEtcdClient               = "/srv/kubernetes/etcd/client"
@@ -124,6 +125,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretServer *corev1.Secret,
 	secretKubeletClient *corev1.Secret,
 	secretKubeAggregator *corev1.Secret,
+	secretHTTPProxy *corev1.Secret,
 ) error {
 	var (
 		maxSurge       = intstr.FromString("25%")
@@ -143,6 +145,11 @@ func (k *kubeAPIServer) reconcileDeployment(
 		}
 
 		healthCheckToken = token.Token
+	}
+
+	secretCAVPN, found := k.secretsManager.Get(v1beta1constants.SecretNameCAVPN)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAVPN)
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), deployment, func() error {
@@ -400,7 +407,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleHostCertVolumes(deployment)
 		k.handleSNISettings(deployment)
 		k.handlePodMutatorSettings(deployment)
-		k.handleVPNSettings(deployment, configMapEgressSelector)
+		k.handleVPNSettings(deployment, configMapEgressSelector, secretCAVPN, secretHTTPProxy)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment, secretUserProvidedServiceAccountSigningKey)
 
@@ -647,7 +654,12 @@ func (k *kubeAPIServer) handleLifecycleSettings(deployment *appsv1.Deployment) {
 	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--shutdown-delay-duration=15s")
 }
 
-func (k *kubeAPIServer) handleVPNSettings(deployment *appsv1.Deployment, configMapEgressSelector *corev1.ConfigMap) {
+func (k *kubeAPIServer) handleVPNSettings(
+	deployment *appsv1.Deployment,
+	configMapEgressSelector *corev1.ConfigMap,
+	secretCAVPN *corev1.Secret,
+	secretHTTPProxy *corev1.Secret,
+) {
 	if !k.values.VPN.ReversedVPNEnabled {
 		deployment.Spec.Template.Spec.InitContainers = []corev1.Container{{
 			Name:  "set-iptable-rules",
@@ -769,6 +781,10 @@ func (k *kubeAPIServer) handleVPNSettings(deployment *appsv1.Deployment, configM
 		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--egress-selector-config-file=%s/%s", volumeMountPathEgressSelector, configMapEgressSelectorDataKey))
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
 			{
+				Name:      volumeNameCAVPN,
+				MountPath: volumeMountPathCAVPN,
+			},
+			{
 				Name:      volumeNameHTTPProxy,
 				MountPath: volumeMountPathHTTPProxy,
 			},
@@ -779,10 +795,18 @@ func (k *kubeAPIServer) handleVPNSettings(deployment *appsv1.Deployment, configM
 		}...)
 		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
 			{
+				Name: volumeNameCAVPN,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: secretCAVPN.Name,
+					},
+				},
+			},
+			{
 				Name: volumeNameHTTPProxy,
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
-						SecretName: k.secrets.HTTPProxy.Name,
+						SecretName: secretHTTPProxy.Name,
 					},
 				},
 			},

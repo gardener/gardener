@@ -328,6 +328,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			"kube-apiserver",
 			"kube-apiserver-kubelet",
 			"kube-aggregator",
+			"kube-apiserver-http-proxy",
 			"kube-scheduler-server",
 			"kube-controller-manager-server",
 			"metrics-server",
@@ -352,7 +353,6 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 				if gardenerResourceDataList.Get(v1beta1constants.SecretNameCAVPN) == nil {
 					if err := b.cleanupSecrets(ctx, &gardenerResourceDataList,
 						vpnseedserver.DeploymentName,
-						kubeapiserver.SecretNameHTTPProxy,
 						vpnshoot.SecretNameVPNShootClient,
 					); err != nil {
 						return err
@@ -363,7 +363,6 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 					vpnseedserver.DeploymentName,
 					vpnshoot.SecretNameVPNShootClient,
 					vpnseedserver.VpnSeedServerTLSAuth,
-					kubeapiserver.SecretNameHTTPProxy,
 				); err != nil {
 					return err
 				}

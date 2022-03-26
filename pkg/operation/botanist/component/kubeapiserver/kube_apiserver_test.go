@@ -86,10 +86,10 @@ var _ = Describe("KubeAPIServer", func() {
 		secretChecksumCAEtcd               = "12345"
 		secretNameCAFrontProxy             = "CAFrontProxy-secret"
 		secretChecksumCAFrontProxy         = "12345"
+		secretNameCAVPN                    = "ca-vpn"
 		secretNameEtcd                     = "Etcd-secret"
 		secretChecksumEtcd                 = "12345"
-		secretNameHTTPProxy                = "HttpProxy-secret"
-		secretChecksumHTTPProxy            = "12345"
+		secretNameHTTPProxy                = "kube-apiserver-http-proxy"
 		secretNameKubeAggregator           = "kube-aggregator"
 		secretNameKubeAPIServerToKubelet   = "kube-apiserver-kubelet"
 		secretNameServer                   = "kube-apiserver"
@@ -132,7 +132,6 @@ var _ = Describe("KubeAPIServer", func() {
 			CAEtcd:               component.Secret{Name: secretNameCAEtcd, Checksum: secretChecksumCAEtcd},
 			CAFrontProxy:         component.Secret{Name: secretNameCAFrontProxy, Checksum: secretChecksumCAFrontProxy},
 			Etcd:                 component.Secret{Name: secretNameEtcd, Checksum: secretChecksumEtcd},
-			HTTPProxy:            &component.Secret{Name: secretNameHTTPProxy, Checksum: secretChecksumHTTPProxy},
 			VPNSeed:              &component.Secret{Name: secretNameVPNSeed, Checksum: secretChecksumVPNSeed},
 			VPNSeedTLSAuth:       &component.Secret{Name: secretNameVPNSeedTLSAuth, Checksum: secretChecksumVPNSeedTLSAuth},
 			VPNSeedServerTLSAuth: &component.Secret{Name: secretNameVPNSeedServerTLSAuth, Checksum: secretChecksumVPNSeedServerTLSAuth},
@@ -1464,7 +1463,6 @@ rules:
 						"checksum/secret-" + secretNameVPNSeed:                  secretChecksumVPNSeed,
 						"checksum/secret-" + secretNameCA:                       secretChecksumCA,
 						"checksum/secret-" + secretNameEtcd:                     secretChecksumEtcd,
-						"checksum/secret-" + secretNameHTTPProxy:                secretChecksumHTTPProxy,
 						"checksum/secret-" + secretNameCAFrontProxy:             secretChecksumCAFrontProxy,
 						"checksum/secret-" + secretNameVPNSeedTLSAuth:           secretChecksumVPNSeedTLSAuth,
 						"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
@@ -2264,6 +2262,10 @@ rules:
 
 						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
 							corev1.VolumeMount{
+								Name:      "ca-vpn",
+								MountPath: "/srv/kubernetes/ca-vpn",
+							},
+							corev1.VolumeMount{
 								Name:      "http-proxy",
 								MountPath: "/etc/srv/kubernetes/envoy",
 							},
@@ -2274,6 +2276,14 @@ rules:
 						))
 
 						Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+							corev1.Volume{
+								Name: "ca-vpn",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: secretNameCAVPN,
+									},
+								},
+							},
 							corev1.Volume{
 								Name: "http-proxy",
 								VolumeSource: corev1.VolumeSource{
@@ -2287,7 +2297,7 @@ rules:
 								VolumeSource: corev1.VolumeSource{
 									ConfigMap: &corev1.ConfigMapVolumeSource{
 										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "kube-apiserver-egress-selector-config-6a97058a",
+											Name: "kube-apiserver-egress-selector-config-53d92abc",
 										},
 									},
 								},
@@ -2662,7 +2672,7 @@ egressSelections:
     transport:
       tcp:
         tlsConfig:
-          caBundle: /etc/srv/kubernetes/envoy/ca.crt
+          caBundle: /srv/kubernetes/ca-vpn/bundle.crt
           clientCert: /etc/srv/kubernetes/envoy/tls.crt
           clientKey: /etc/srv/kubernetes/envoy/tls.key
         url: https://vpn-seed-server:9443
