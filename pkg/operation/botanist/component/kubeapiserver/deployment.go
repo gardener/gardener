@@ -42,15 +42,13 @@ const (
 	SecretNameHTTPProxy = "kube-apiserver-http-proxy"
 	// SecretNameKubeAggregator is the name of the secret for the kube-aggregator when talking to the kube-apiserver.
 	SecretNameKubeAggregator = "kube-aggregator"
-	// SecretNameKubeAPIServerToKubelet is the name of the secret for the kube-apiserver credentials when talking to
-	// kubelets.
-	SecretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"
 	// SecretNameVPNSeed is the name of the secret containing the certificates for the vpn-seed.
 	SecretNameVPNSeed = "vpn-seed"
 	// SecretNameVPNSeedTLSAuth is the name of the secret containing the TLS auth for the vpn-seed.
 	SecretNameVPNSeedTLSAuth = "vpn-seed-tlsauth"
 
-	secretNameServer = "kube-apiserver"
+	secretNameServer                 = "kube-apiserver"
+	secretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"
 
 	// ContainerNameKubeAPIServer is the name of the kube-apiserver container.
 	ContainerNameKubeAPIServer            = "kube-apiserver"
@@ -125,6 +123,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretStaticToken *corev1.Secret,
 	secretBasicAuth *corev1.Secret,
 	secretServer *corev1.Secret,
+	secretKubeletClient *corev1.Secret,
 ) error {
 	var (
 		maxSurge       = intstr.FromString("25%")
@@ -363,7 +362,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameKubeAPIServerToKubelet,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: k.secrets.KubeAPIServerToKubelet.Name,
+									SecretName: secretKubeletClient.Name,
 								},
 							},
 						},
@@ -463,8 +462,8 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 
 	out = append(out, "--insecure-port=0")
 	out = append(out, "--kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP")
-	out = append(out, fmt.Sprintf("--kubelet-client-certificate=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameKubeAPIServerToKubelet)))
-	out = append(out, fmt.Sprintf("--kubelet-client-key=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameKubeAPIServerToKubelet)))
+	out = append(out, fmt.Sprintf("--kubelet-client-certificate=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.DataKeyCertificate))
+	out = append(out, fmt.Sprintf("--kubelet-client-key=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.DataKeyPrivateKey))
 
 	if k.values.Requests != nil {
 		if k.values.Requests.MaxNonMutatingInflight != nil {

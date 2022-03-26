@@ -46,20 +46,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 	)
 
 	secretList := []secrets.ConfigInterface{
-		// Secret definition for kube-apiserver to kubelets communication
-		&secrets.ControlPlaneSecretConfig{
-			Name: kubeapiserver.SecretNameKubeAPIServerToKubelet,
-			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				CommonName:   kubeapiserver.UserName,
-				Organization: nil,
-				DNSNames:     nil,
-				IPAddresses:  nil,
-
-				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCAKubelet],
-			},
-		},
-
 		// Secret definition for kube-aggregator
 		&secrets.ControlPlaneSecretConfig{
 			Name: kubeapiserver.SecretNameKubeAggregator,

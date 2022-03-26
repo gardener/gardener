@@ -78,31 +78,30 @@ var _ = Describe("KubeAPIServer", func() {
 		kapi                Interface
 		version             = semver.MustParse("1.22.1")
 
-		secretNameBasicAuthentication        = "kube-apiserver-basic-auth-426b1845"
-		secretNameStaticToken                = "kube-apiserver-static-token-c069a0e6"
-		secretNameCA                         = "CA-secret"
-		secretChecksumCA                     = "12345"
-		secretNameCAEtcd                     = "CAEtcd-secret"
-		secretChecksumCAEtcd                 = "12345"
-		secretNameCAFrontProxy               = "CAFrontProxy-secret"
-		secretChecksumCAFrontProxy           = "12345"
-		secretNameEtcd                       = "Etcd-secret"
-		secretChecksumEtcd                   = "12345"
-		secretNameHTTPProxy                  = "HttpProxy-secret"
-		secretChecksumHTTPProxy              = "12345"
-		secretNameKubeAggregator             = "KubeAggregator-secret"
-		secretChecksumKubeAggregator         = "12345"
-		secretNameKubeAPIServerToKubelet     = "KubeAPIServerToKubelet-secret"
-		secretChecksumKubeAPIServerToKubelet = "12345"
-		secretNameServer                     = "kube-apiserver"
-		secretNameServiceAccountKey          = "service-account-key-c37a87f6"
-		secretNameVPNSeed                    = "VPNSeed-secret"
-		secretChecksumVPNSeed                = "12345"
-		secretNameVPNSeedTLSAuth             = "VPNSeedTLSAuth-secret"
-		secretChecksumVPNSeedTLSAuth         = "12345"
-		secretNameVPNSeedServerTLSAuth       = "VPNSeedServerTLSAuth-secret"
-		secretChecksumVPNSeedServerTLSAuth   = "12345"
-		secrets                              Secrets
+		secretNameBasicAuthentication      = "kube-apiserver-basic-auth-426b1845"
+		secretNameStaticToken              = "kube-apiserver-static-token-c069a0e6"
+		secretNameCA                       = "CA-secret"
+		secretChecksumCA                   = "12345"
+		secretNameCAEtcd                   = "CAEtcd-secret"
+		secretChecksumCAEtcd               = "12345"
+		secretNameCAFrontProxy             = "CAFrontProxy-secret"
+		secretChecksumCAFrontProxy         = "12345"
+		secretNameEtcd                     = "Etcd-secret"
+		secretChecksumEtcd                 = "12345"
+		secretNameHTTPProxy                = "HttpProxy-secret"
+		secretChecksumHTTPProxy            = "12345"
+		secretNameKubeAggregator           = "KubeAggregator-secret"
+		secretChecksumKubeAggregator       = "12345"
+		secretNameKubeAPIServerToKubelet   = "kube-apiserver-kubelet"
+		secretNameServer                   = "kube-apiserver"
+		secretNameServiceAccountKey        = "service-account-key-c37a87f6"
+		secretNameVPNSeed                  = "VPNSeed-secret"
+		secretChecksumVPNSeed              = "12345"
+		secretNameVPNSeedTLSAuth           = "VPNSeedTLSAuth-secret"
+		secretChecksumVPNSeedTLSAuth       = "12345"
+		secretNameVPNSeedServerTLSAuth     = "VPNSeedServerTLSAuth-secret"
+		secretChecksumVPNSeedServerTLSAuth = "12345"
+		secrets                            Secrets
 
 		secretNameAdmissionConfig      = "kube-apiserver-admission-config-e38ff146"
 		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-235f7353"
@@ -130,16 +129,15 @@ var _ = Describe("KubeAPIServer", func() {
 		kapi = New(kubernetesInterface, namespace, sm, Values{Version: version})
 
 		secrets = Secrets{
-			CA:                     component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
-			CAEtcd:                 component.Secret{Name: secretNameCAEtcd, Checksum: secretChecksumCAEtcd},
-			CAFrontProxy:           component.Secret{Name: secretNameCAFrontProxy, Checksum: secretChecksumCAFrontProxy},
-			Etcd:                   component.Secret{Name: secretNameEtcd, Checksum: secretChecksumEtcd},
-			HTTPProxy:              &component.Secret{Name: secretNameHTTPProxy, Checksum: secretChecksumHTTPProxy},
-			KubeAggregator:         component.Secret{Name: secretNameKubeAggregator, Checksum: secretChecksumKubeAggregator},
-			KubeAPIServerToKubelet: component.Secret{Name: secretNameKubeAPIServerToKubelet, Checksum: secretChecksumKubeAPIServerToKubelet},
-			VPNSeed:                &component.Secret{Name: secretNameVPNSeed, Checksum: secretChecksumVPNSeed},
-			VPNSeedTLSAuth:         &component.Secret{Name: secretNameVPNSeedTLSAuth, Checksum: secretChecksumVPNSeedTLSAuth},
-			VPNSeedServerTLSAuth:   &component.Secret{Name: secretNameVPNSeedServerTLSAuth, Checksum: secretChecksumVPNSeedServerTLSAuth},
+			CA:                   component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
+			CAEtcd:               component.Secret{Name: secretNameCAEtcd, Checksum: secretChecksumCAEtcd},
+			CAFrontProxy:         component.Secret{Name: secretNameCAFrontProxy, Checksum: secretChecksumCAFrontProxy},
+			Etcd:                 component.Secret{Name: secretNameEtcd, Checksum: secretChecksumEtcd},
+			HTTPProxy:            &component.Secret{Name: secretNameHTTPProxy, Checksum: secretChecksumHTTPProxy},
+			KubeAggregator:       component.Secret{Name: secretNameKubeAggregator, Checksum: secretChecksumKubeAggregator},
+			VPNSeed:              &component.Secret{Name: secretNameVPNSeed, Checksum: secretChecksumVPNSeed},
+			VPNSeedTLSAuth:       &component.Secret{Name: secretNameVPNSeedTLSAuth, Checksum: secretChecksumVPNSeedTLSAuth},
+			VPNSeedServerTLSAuth: &component.Secret{Name: secretNameVPNSeedServerTLSAuth, Checksum: secretChecksumVPNSeedServerTLSAuth},
 		}
 
 		deployment = &appsv1.Deployment{
@@ -231,9 +229,6 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("KubeAggregator missing",
 					"KubeAggregator", func(s *Secrets) { s.KubeAggregator.Name = "" }, Values{},
-				),
-				Entry("KubeAPIServerToKubelet missing",
-					"KubeAPIServerToKubelet", func(s *Secrets) { s.KubeAPIServerToKubelet.Name = "" }, Values{},
 				),
 				Entry("ReversedVPN disabled but VPNSeed missing",
 					"VPNSeed", func(s *Secrets) { s.VPNSeed = nil }, Values{VPN: VPNConfig{ReversedVPNEnabled: false}},
@@ -1426,7 +1421,7 @@ rules:
 						"reference.resources.gardener.cloud/secret-91c30740":    secretNameCAEtcd,
 						"reference.resources.gardener.cloud/secret-9282d44f":    secretNameCAFrontProxy,
 						"reference.resources.gardener.cloud/secret-c16f0542":    secretNameEtcd,
-						"reference.resources.gardener.cloud/secret-274d0dbb":    secretNameKubeAPIServerToKubelet,
+						"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
 						"reference.resources.gardener.cloud/secret-2e310c99":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-9f3de87f":    secretNameVPNSeed,
@@ -1477,14 +1472,13 @@ rules:
 						"checksum/secret-" + secretNameHTTPProxy:                secretChecksumHTTPProxy,
 						"checksum/secret-" + secretNameKubeAggregator:           secretChecksumKubeAggregator,
 						"checksum/secret-" + secretNameCAFrontProxy:             secretChecksumCAFrontProxy,
-						"checksum/secret-" + secretNameKubeAPIServerToKubelet:   secretChecksumKubeAPIServerToKubelet,
 						"checksum/secret-" + secretNameVPNSeedTLSAuth:           secretChecksumVPNSeedTLSAuth,
 						"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
 						"reference.resources.gardener.cloud/secret-71fba891":    secretNameCA,
 						"reference.resources.gardener.cloud/secret-91c30740":    secretNameCAEtcd,
 						"reference.resources.gardener.cloud/secret-9282d44f":    secretNameCAFrontProxy,
 						"reference.resources.gardener.cloud/secret-c16f0542":    secretNameEtcd,
-						"reference.resources.gardener.cloud/secret-274d0dbb":    secretNameKubeAPIServerToKubelet,
+						"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
 						"reference.resources.gardener.cloud/secret-2e310c99":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-9f3de87f":    secretNameVPNSeed,
@@ -1795,8 +1789,8 @@ rules:
 							"--external-hostname="+externalHostname,
 							"--insecure-port=0",
 							"--kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP",
-							"--kubelet-client-certificate=/srv/kubernetes/apiserver-kubelet/kube-apiserver-kubelet.crt",
-							"--kubelet-client-key=/srv/kubernetes/apiserver-kubelet/kube-apiserver-kubelet.key",
+							"--kubelet-client-certificate=/srv/kubernetes/apiserver-kubelet/tls.crt",
+							"--kubelet-client-key=/srv/kubernetes/apiserver-kubelet/tls.key",
 							"--livez-grace-period=1m",
 							"--shutdown-delay-duration=15s",
 							"--profiling=false",

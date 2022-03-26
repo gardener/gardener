@@ -1069,12 +1069,11 @@ var _ = Describe("KubeAPIServer", func() {
 		DescribeTable("should correctly set the secrets",
 			func(values kubeapiserver.Values, mutateSecrets func(*kubeapiserver.Secrets)) {
 				secrets := kubeapiserver.Secrets{
-					CA:                     component.Secret{Name: "ca", Checksum: botanist.LoadCheckSum("ca")},
-					CAEtcd:                 component.Secret{Name: "ca-etcd", Checksum: botanist.LoadCheckSum("ca-etcd")},
-					CAFrontProxy:           component.Secret{Name: "ca-front-proxy", Checksum: botanist.LoadCheckSum("ca-front-proxy")},
-					Etcd:                   component.Secret{Name: "etcd-client-tls", Checksum: botanist.LoadCheckSum("etcd-client-tls")},
-					KubeAggregator:         component.Secret{Name: "kube-aggregator", Checksum: botanist.LoadCheckSum("kube-aggregator")},
-					KubeAPIServerToKubelet: component.Secret{Name: "kube-apiserver-kubelet", Checksum: botanist.LoadCheckSum("kube-apiserver-kubelet")},
+					CA:             component.Secret{Name: "ca", Checksum: botanist.LoadCheckSum("ca")},
+					CAEtcd:         component.Secret{Name: "ca-etcd", Checksum: botanist.LoadCheckSum("ca-etcd")},
+					CAFrontProxy:   component.Secret{Name: "ca-front-proxy", Checksum: botanist.LoadCheckSum("ca-front-proxy")},
+					Etcd:           component.Secret{Name: "etcd-client-tls", Checksum: botanist.LoadCheckSum("etcd-client-tls")},
+					KubeAggregator: component.Secret{Name: "kube-aggregator", Checksum: botanist.LoadCheckSum("kube-aggregator")},
 				}
 				mutateSecrets(&secrets)
 

@@ -82,10 +82,10 @@ const (
 	SecretNameUserKubeconfig = "user-kubeconfig"
 	// ServicePortName is the name of the port in the service.
 	ServicePortName = "kube-apiserver"
-	// UserName is the name of the kube-apiserver user when communicating with the kubelet.
-	UserName = "system:kube-apiserver:kubelet"
 	// UserNameVPNSeed is the user name for the vpn-seed components (used as common name in its client certificate)
 	UserNameVPNSeed = "vpn-seed"
+
+	userName = "system:kube-apiserver:kubelet"
 )
 
 // Interface contains functions for a kube-apiserver deployer.
@@ -334,6 +334,11 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	secretKubeletClient, err := k.reconcileSecretKubeletClient(ctx)
+	if err != nil {
+		return err
+	}
+
 	secretServer, err := k.reconcileSecretServer(ctx)
 	if err != nil {
 		return err
@@ -369,6 +374,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		secretStaticToken,
 		secretBasicAuth,
 		secretServer,
+		secretKubeletClient,
 	); err != nil {
 		return err
 	}
@@ -563,8 +569,6 @@ type Secrets struct {
 	HTTPProxy *component.Secret
 	// KubeAggregator is the client certificate for the kube-aggregator to talk to the kube-apiserver.
 	KubeAggregator component.Secret
-	// KubeAPIServerToKubelet is the client certificate for the kube-apiserver to talk to kubelets.
-	KubeAPIServerToKubelet component.Secret
 	// VPNSeed is the client certificate for the vpn-seed to talk to the kube-apiserver.
 	// Only relevant if VPNConfig.ReversedVPNEnabled is false.
 	VPNSeed *component.Secret
@@ -583,16 +587,15 @@ type secret struct {
 
 func (s *Secrets) all() map[string]secret {
 	return map[string]secret{
-		"CA":                     {Secret: &s.CA},
-		"CAEtcd":                 {Secret: &s.CAEtcd},
-		"CAFrontProxy":           {Secret: &s.CAFrontProxy},
-		"Etcd":                   {Secret: &s.Etcd},
-		"HTTPProxy":              {Secret: s.HTTPProxy, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
-		"KubeAggregator":         {Secret: &s.KubeAggregator},
-		"KubeAPIServerToKubelet": {Secret: &s.KubeAPIServerToKubelet},
-		"VPNSeed":                {Secret: s.VPNSeed, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
-		"VPNSeedTLSAuth":         {Secret: s.VPNSeedTLSAuth, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
-		"VPNSeedServerTLSAuth":   {Secret: s.VPNSeedServerTLSAuth, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
+		"CA":                   {Secret: &s.CA},
+		"CAEtcd":               {Secret: &s.CAEtcd},
+		"CAFrontProxy":         {Secret: &s.CAFrontProxy},
+		"Etcd":                 {Secret: &s.Etcd},
+		"HTTPProxy":            {Secret: s.HTTPProxy, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
+		"KubeAggregator":       {Secret: &s.KubeAggregator},
+		"VPNSeed":              {Secret: s.VPNSeed, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
+		"VPNSeedTLSAuth":       {Secret: s.VPNSeedTLSAuth, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
+		"VPNSeedServerTLSAuth": {Secret: s.VPNSeedServerTLSAuth, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
 	}
 }
 
