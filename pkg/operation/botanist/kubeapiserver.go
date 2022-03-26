@@ -17,6 +17,7 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"net"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
@@ -314,6 +315,35 @@ func (b *Botanist) computeKubeAPIServerImages() (kubeapiserver.Images, error) {
 	}, nil
 }
 
+func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.ServerCertificateConfig {
+	var (
+		ipAddresses = []net.IP{
+			b.Shoot.Networks.APIServer,
+		}
+		dnsNames = []string{
+			gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+			b.Shoot.GetInfo().Status.TechnicalID,
+		}
+	)
+
+	if !b.Seed.GetInfo().Spec.Settings.ShootDNS.Enabled {
+		if addr := net.ParseIP(b.APIServerAddress); addr != nil {
+			ipAddresses = append(ipAddresses, addr)
+		} else {
+			dnsNames = append(dnsNames, b.APIServerAddress)
+		}
+	}
+
+	if b.Shoot.ExternalClusterDomain != nil {
+		dnsNames = append(dnsNames, *(b.Shoot.GetInfo().Spec.DNS.Domain), gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain))
+	}
+
+	return kubeapiserver.ServerCertificateConfig{
+		ExtraIPAddresses: ipAddresses,
+		ExtraDNSNames:    dnsNames,
+	}
+}
+
 func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context, config *gardencorev1beta1.KubeAPIServerConfig, externalHostname string) (kubeapiserver.ServiceAccountConfig, error) {
 	out := kubeapiserver.ServiceAccountConfig{Issuer: "https://" + externalHostname}
 
@@ -413,7 +443,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		Etcd:                   component.Secret{Name: etcd.SecretNameClient, Checksum: b.LoadCheckSum(etcd.SecretNameClient)},
 		KubeAggregator:         component.Secret{Name: kubeapiserver.SecretNameKubeAggregator, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameKubeAggregator)},
 		KubeAPIServerToKubelet: component.Secret{Name: kubeapiserver.SecretNameKubeAPIServerToKubelet, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameKubeAPIServerToKubelet)},
-		Server:                 component.Secret{Name: kubeapiserver.SecretNameServer, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameServer)},
 	}
 
 	if values.VPN.ReversedVPNEnabled {
@@ -425,6 +454,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	}
 
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSecrets(secrets)
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetServerCertificateConfig(b.computeKubeAPIServerServerCertificateConfig())
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSNIConfig(b.computeKubeAPIServerSNIConfig())
 
 	externalHostname := b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)

@@ -325,6 +325,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			// adapted.
 			// "prometheus",
 			"prometheus-kubelet",
+			"kube-apiserver",
 			"kube-scheduler-server",
 			"kube-controller-manager-server",
 			"metrics-server",

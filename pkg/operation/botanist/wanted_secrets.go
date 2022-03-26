@@ -16,7 +16,6 @@ package botanist
 
 import (
 	"fmt"
-	"net"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -27,11 +26,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/common"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // generateWantedSecrets returns a list of Secret configuration objects satisfying the secret config interface,
@@ -39,18 +35,6 @@ import (
 // authentication credentials, etc.
 func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error) {
 	var (
-		apiServerIPAddresses = []net.IP{
-			net.ParseIP("127.0.0.1"),
-			b.Shoot.Networks.APIServer,
-		}
-		apiServerCertDNSNames = append([]string{
-			v1beta1constants.DeploymentNameKubeAPIServer,
-			fmt.Sprintf("%s.%s", v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.SeedNamespace),
-			fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.SeedNamespace),
-			gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
-			b.Shoot.GetInfo().Status.TechnicalID,
-		}, kubernetes.DNSNamesForService("kubernetes", metav1.NamespaceDefault)...)
-
 		gardenerResourceManagerCertDNSNames = kubernetes.DNSNamesForService(resourcemanager.ServiceName, b.Shoot.SeedNamespace)
 
 		etcdCertDNSNames = append(
@@ -61,32 +45,7 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 		endUserCrtValidity = common.EndUserCrtValidity
 	)
 
-	if !b.Seed.GetInfo().Spec.Settings.ShootDNS.Enabled {
-		if addr := net.ParseIP(b.APIServerAddress); addr != nil {
-			apiServerIPAddresses = append(apiServerIPAddresses, addr)
-		} else {
-			apiServerCertDNSNames = append(apiServerCertDNSNames, b.APIServerAddress)
-		}
-	}
-
-	if b.Shoot.ExternalClusterDomain != nil {
-		apiServerCertDNSNames = append(apiServerCertDNSNames, *(b.Shoot.GetInfo().Spec.DNS.Domain), gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain))
-	}
-
 	secretList := []secrets.ConfigInterface{
-		// Secret definition for kube-apiserver
-		&secrets.ControlPlaneSecretConfig{
-			Name: kubeapiserver.SecretNameServer,
-			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				CommonName:   v1beta1constants.DeploymentNameKubeAPIServer,
-				Organization: nil,
-				DNSNames:     apiServerCertDNSNames,
-				IPAddresses:  apiServerIPAddresses,
-
-				CertType:  secrets.ServerCert,
-				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-			},
-		},
 		// Secret definition for kube-apiserver to kubelets communication
 		&secrets.ControlPlaneSecretConfig{
 			Name: kubeapiserver.SecretNameKubeAPIServerToKubelet,

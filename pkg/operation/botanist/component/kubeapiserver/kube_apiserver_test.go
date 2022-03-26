@@ -94,8 +94,7 @@ var _ = Describe("KubeAPIServer", func() {
 		secretChecksumKubeAggregator         = "12345"
 		secretNameKubeAPIServerToKubelet     = "KubeAPIServerToKubelet-secret"
 		secretChecksumKubeAPIServerToKubelet = "12345"
-		secretNameServer                     = "Server-secret"
-		secretChecksumServer                 = "12345"
+		secretNameServer                     = "kube-apiserver"
 		secretNameServiceAccountKey          = "service-account-key-c37a87f6"
 		secretNameVPNSeed                    = "VPNSeed-secret"
 		secretChecksumVPNSeed                = "12345"
@@ -138,7 +137,6 @@ var _ = Describe("KubeAPIServer", func() {
 			HTTPProxy:              &component.Secret{Name: secretNameHTTPProxy, Checksum: secretChecksumHTTPProxy},
 			KubeAggregator:         component.Secret{Name: secretNameKubeAggregator, Checksum: secretChecksumKubeAggregator},
 			KubeAPIServerToKubelet: component.Secret{Name: secretNameKubeAPIServerToKubelet, Checksum: secretChecksumKubeAPIServerToKubelet},
-			Server:                 component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
 			VPNSeed:                &component.Secret{Name: secretNameVPNSeed, Checksum: secretChecksumVPNSeed},
 			VPNSeedTLSAuth:         &component.Secret{Name: secretNameVPNSeedTLSAuth, Checksum: secretChecksumVPNSeedTLSAuth},
 			VPNSeedServerTLSAuth:   &component.Secret{Name: secretNameVPNSeedServerTLSAuth, Checksum: secretChecksumVPNSeedServerTLSAuth},
@@ -236,9 +234,6 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("KubeAPIServerToKubelet missing",
 					"KubeAPIServerToKubelet", func(s *Secrets) { s.KubeAPIServerToKubelet.Name = "" }, Values{},
-				),
-				Entry("Server missing",
-					"Server", func(s *Secrets) { s.Server.Name = "" }, Values{},
 				),
 				Entry("ReversedVPN disabled but VPNSeed missing",
 					"VPNSeed", func(s *Secrets) { s.VPNSeed = nil }, Values{VPN: VPNConfig{ReversedVPNEnabled: false}},
@@ -1433,7 +1428,7 @@ rules:
 						"reference.resources.gardener.cloud/secret-c16f0542":    secretNameEtcd,
 						"reference.resources.gardener.cloud/secret-274d0dbb":    secretNameKubeAPIServerToKubelet,
 						"reference.resources.gardener.cloud/secret-2e310c99":    secretNameKubeAggregator,
-						"reference.resources.gardener.cloud/secret-e2878235":    secretNameServer,
+						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-9f3de87f":    secretNameVPNSeed,
 						"reference.resources.gardener.cloud/secret-e638c9f3":    secretNameVPNSeedTLSAuth,
 						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
@@ -1483,7 +1478,6 @@ rules:
 						"checksum/secret-" + secretNameKubeAggregator:           secretChecksumKubeAggregator,
 						"checksum/secret-" + secretNameCAFrontProxy:             secretChecksumCAFrontProxy,
 						"checksum/secret-" + secretNameKubeAPIServerToKubelet:   secretChecksumKubeAPIServerToKubelet,
-						"checksum/secret-" + secretNameServer:                   secretChecksumServer,
 						"checksum/secret-" + secretNameVPNSeedTLSAuth:           secretChecksumVPNSeedTLSAuth,
 						"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
 						"reference.resources.gardener.cloud/secret-71fba891":    secretNameCA,
@@ -1492,7 +1486,7 @@ rules:
 						"reference.resources.gardener.cloud/secret-c16f0542":    secretNameEtcd,
 						"reference.resources.gardener.cloud/secret-274d0dbb":    secretNameKubeAPIServerToKubelet,
 						"reference.resources.gardener.cloud/secret-2e310c99":    secretNameKubeAggregator,
-						"reference.resources.gardener.cloud/secret-e2878235":    secretNameServer,
+						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-9f3de87f":    secretNameVPNSeed,
 						"reference.resources.gardener.cloud/secret-e638c9f3":    secretNameVPNSeedTLSAuth,
 						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
@@ -1694,8 +1688,8 @@ rules:
 							"--host=localhost",
 							"--port=9443",
 							"--cert-dir=/srv/kubernetes/apiserver",
-							"--cert-name=kube-apiserver.crt",
-							"--key-name=kube-apiserver.key",
+							"--cert-name=tls.crt",
+							"--key-name=tls.key",
 						},
 						Resources: corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
@@ -1822,8 +1816,8 @@ rules:
 							"--service-account-key-file=/srv/kubernetes/service-account-key/id_rsa",
 							"--service-account-signing-key-file=/srv/kubernetes/service-account-key/id_rsa",
 							"--token-auth-file=/srv/kubernetes/token/static_tokens.csv",
-							"--tls-cert-file=/srv/kubernetes/apiserver/kube-apiserver.crt",
-							"--tls-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key",
+							"--tls-cert-file=/srv/kubernetes/apiserver/tls.crt",
+							"--tls-private-key-file=/srv/kubernetes/apiserver/tls.key",
 							"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
 							"--v=2",
 						))

@@ -45,12 +45,12 @@ const (
 	// SecretNameKubeAPIServerToKubelet is the name of the secret for the kube-apiserver credentials when talking to
 	// kubelets.
 	SecretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"
-	// SecretNameServer is the name of the secret for the kube-apiserver server certificates.
-	SecretNameServer = "kube-apiserver"
 	// SecretNameVPNSeed is the name of the secret containing the certificates for the vpn-seed.
 	SecretNameVPNSeed = "vpn-seed"
 	// SecretNameVPNSeedTLSAuth is the name of the secret containing the TLS auth for the vpn-seed.
 	SecretNameVPNSeedTLSAuth = "vpn-seed-tlsauth"
+
+	secretNameServer = "kube-apiserver"
 
 	// ContainerNameKubeAPIServer is the name of the kube-apiserver container.
 	ContainerNameKubeAPIServer            = "kube-apiserver"
@@ -124,6 +124,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretServiceAccountKey *corev1.Secret,
 	secretStaticToken *corev1.Secret,
 	secretBasicAuth *corev1.Secret,
+	secretServer *corev1.Secret,
 ) error {
 	var (
 		maxSurge       = intstr.FromString("25%")
@@ -386,7 +387,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameServer,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: k.secrets.Server.Name,
+									SecretName: secretServer.Name,
 								},
 							},
 						},
@@ -501,8 +502,8 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, fmt.Sprintf("--service-cluster-ip-range=%s", k.values.VPN.ServiceNetworkCIDR))
 	out = append(out, fmt.Sprintf("--secure-port=%d", Port))
 	out = append(out, fmt.Sprintf("--token-auth-file=%s/%s", volumeMountPathStaticToken, secrets.DataKeyStaticTokenCSV))
-	out = append(out, fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameServer)))
-	out = append(out, fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameServer)))
+	out = append(out, fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate))
+	out = append(out, fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey))
 	out = append(out, "--tls-cipher-suites="+strings.Join(kutil.TLSCipherSuites(k.values.Version), ","))
 	out = append(out, "--v=2")
 
@@ -894,8 +895,8 @@ func (k *kubeAPIServer) handlePodMutatorSettings(deployment *appsv1.Deployment) 
 				"--host=localhost",
 				"--port=9443",
 				"--cert-dir=" + volumeMountPathServer,
-				"--cert-name=" + secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameServer),
-				"--key-name=" + secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameServer),
+				"--cert-name=" + secrets.DataKeyCertificate,
+				"--key-name=" + secrets.DataKeyPrivateKey,
 			},
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{

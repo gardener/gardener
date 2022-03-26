@@ -17,6 +17,7 @@ package kubeapiserver
 import (
 	"context"
 	"fmt"
+	"net"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -229,4 +230,33 @@ func (k *kubeAPIServer) reconcileSecretETCDEncryptionConfiguration(ctx context.C
 	utilruntime.Must(kutil.MakeUnique(secret))
 
 	return kutil.IgnoreAlreadyExists(k.client.Client().Create(ctx, secret))
+}
+
+func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secret, error) {
+	var (
+		ipAddresses = append([]net.IP{
+			net.ParseIP("127.0.0.1"),
+		}, k.values.ServerCertificate.ExtraIPAddresses...)
+
+		dnsNames = append([]string{
+			v1beta1constants.DeploymentNameKubeAPIServer,
+			fmt.Sprintf("%s.%s", v1beta1constants.DeploymentNameKubeAPIServer, k.namespace),
+			fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, k.namespace),
+		}, kutil.DNSNamesForService("kubernetes", metav1.NamespaceDefault)...)
+	)
+
+	secret, err := k.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+		Name:                        secretNameServer,
+		CommonName:                  v1beta1constants.DeploymentNameKubeAPIServer,
+		IPAddresses:                 append(ipAddresses, k.values.ServerCertificate.ExtraIPAddresses...),
+		DNSNames:                    append(dnsNames, k.values.ServerCertificate.ExtraDNSNames...),
+		CertType:                    secretutils.ServerCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO(rfranzke): Remove this in a future release.
+	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: k.namespace}})
 }

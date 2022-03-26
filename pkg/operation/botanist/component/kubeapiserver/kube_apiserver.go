@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -102,6 +103,8 @@ type Interface interface {
 	SetAutoscalingAPIServerResources(corev1.ResourceRequirements)
 	// SetAutoscalingReplicas sets the Replicas field in the AutoscalingConfig of the Values of the deployer.
 	SetAutoscalingReplicas(*int32)
+	// SetServerCertificateConfig sets the ServerCertificateConfig field in the Values of the deployer.
+	SetServerCertificateConfig(ServerCertificateConfig)
 	// SetServiceAccountConfig sets the ServiceAccount field in the Values of the deployer.
 	SetServiceAccountConfig(ServiceAccountConfig)
 	// SetSNIConfig sets the SNI field in the Values of the deployer.
@@ -143,6 +146,8 @@ type Values struct {
 	Requests *gardencorev1beta1.KubeAPIServerRequests
 	// RuntimeConfig is the set of runtime configurations.
 	RuntimeConfig map[string]bool
+	// ServerCertificate contains configuration for the server certificate.
+	ServerCertificate ServerCertificateConfig
 	// ServiceAccount contains information for configuring ServiceAccount settings for the kube-apiserver.
 	ServiceAccount ServiceAccountConfig
 	// SNI contains information for configuring SNI settings for the kube-apiserver.
@@ -203,6 +208,14 @@ type VPNConfig struct {
 	ServiceNetworkCIDR string
 	// NodeNetworkCIDR is the CIDR of the node network.
 	NodeNetworkCIDR *string
+}
+
+// ServerCertificateConfig contains configuration for the server certificate.
+type ServerCertificateConfig struct {
+	// ExtraIPAddresses is a list of additional IP addresses to use for the SANS of the server certificate.
+	ExtraIPAddresses []net.IP
+	// ExtraDNSNames is a list of additional DNS names to use for the SANS of the server certificate.
+	ExtraDNSNames []string
 }
 
 // ServiceAccountConfig contains information for configuring ServiceAccountConfig settings for the kube-apiserver.
@@ -321,6 +334,11 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	secretServer, err := k.reconcileSecretServer(ctx)
+	if err != nil {
+		return err
+	}
+
 	secretStaticToken, err := k.reconcileSecretStaticToken(ctx)
 	if err != nil {
 		return err
@@ -350,6 +368,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		secretServiceAccountKey,
 		secretStaticToken,
 		secretBasicAuth,
+		secretServer,
 	); err != nil {
 		return err
 	}
@@ -495,6 +514,10 @@ func (k *kubeAPIServer) SetSecrets(secrets Secrets) {
 	k.secrets = secrets
 }
 
+func (k *kubeAPIServer) SetServerCertificateConfig(config ServerCertificateConfig) {
+	k.values.ServerCertificate = config
+}
+
 func (k *kubeAPIServer) SetServiceAccountConfig(config ServiceAccountConfig) {
 	k.values.ServiceAccount = config
 }
@@ -542,8 +565,6 @@ type Secrets struct {
 	KubeAggregator component.Secret
 	// KubeAPIServerToKubelet is the client certificate for the kube-apiserver to talk to kubelets.
 	KubeAPIServerToKubelet component.Secret
-	// Server is the server certificate and key for the HTTP server of kube-apiserver.
-	Server component.Secret
 	// VPNSeed is the client certificate for the vpn-seed to talk to the kube-apiserver.
 	// Only relevant if VPNConfig.ReversedVPNEnabled is false.
 	VPNSeed *component.Secret
@@ -569,7 +590,6 @@ func (s *Secrets) all() map[string]secret {
 		"HTTPProxy":              {Secret: s.HTTPProxy, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
 		"KubeAggregator":         {Secret: &s.KubeAggregator},
 		"KubeAPIServerToKubelet": {Secret: &s.KubeAPIServerToKubelet},
-		"Server":                 {Secret: &s.Server},
 		"VPNSeed":                {Secret: s.VPNSeed, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
 		"VPNSeedTLSAuth":         {Secret: s.VPNSeedTLSAuth, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
 		"VPNSeedServerTLSAuth":   {Secret: s.VPNSeedServerTLSAuth, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
