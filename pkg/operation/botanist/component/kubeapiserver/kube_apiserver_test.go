@@ -90,8 +90,7 @@ var _ = Describe("KubeAPIServer", func() {
 		secretChecksumEtcd                 = "12345"
 		secretNameHTTPProxy                = "HttpProxy-secret"
 		secretChecksumHTTPProxy            = "12345"
-		secretNameKubeAggregator           = "KubeAggregator-secret"
-		secretChecksumKubeAggregator       = "12345"
+		secretNameKubeAggregator           = "kube-aggregator"
 		secretNameKubeAPIServerToKubelet   = "kube-apiserver-kubelet"
 		secretNameServer                   = "kube-apiserver"
 		secretNameServiceAccountKey        = "service-account-key-c37a87f6"
@@ -134,7 +133,6 @@ var _ = Describe("KubeAPIServer", func() {
 			CAFrontProxy:         component.Secret{Name: secretNameCAFrontProxy, Checksum: secretChecksumCAFrontProxy},
 			Etcd:                 component.Secret{Name: secretNameEtcd, Checksum: secretChecksumEtcd},
 			HTTPProxy:            &component.Secret{Name: secretNameHTTPProxy, Checksum: secretChecksumHTTPProxy},
-			KubeAggregator:       component.Secret{Name: secretNameKubeAggregator, Checksum: secretChecksumKubeAggregator},
 			VPNSeed:              &component.Secret{Name: secretNameVPNSeed, Checksum: secretChecksumVPNSeed},
 			VPNSeedTLSAuth:       &component.Secret{Name: secretNameVPNSeedTLSAuth, Checksum: secretChecksumVPNSeedTLSAuth},
 			VPNSeedServerTLSAuth: &component.Secret{Name: secretNameVPNSeedServerTLSAuth, Checksum: secretChecksumVPNSeedServerTLSAuth},
@@ -226,9 +224,6 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("Etcd missing",
 					"Etcd", func(s *Secrets) { s.Etcd.Name = "" }, Values{},
-				),
-				Entry("KubeAggregator missing",
-					"KubeAggregator", func(s *Secrets) { s.KubeAggregator.Name = "" }, Values{},
 				),
 				Entry("ReversedVPN disabled but VPNSeed missing",
 					"VPNSeed", func(s *Secrets) { s.VPNSeed = nil }, Values{VPN: VPNConfig{ReversedVPNEnabled: false}},
@@ -1422,7 +1417,7 @@ rules:
 						"reference.resources.gardener.cloud/secret-9282d44f":    secretNameCAFrontProxy,
 						"reference.resources.gardener.cloud/secret-c16f0542":    secretNameEtcd,
 						"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
-						"reference.resources.gardener.cloud/secret-2e310c99":    secretNameKubeAggregator,
+						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-9f3de87f":    secretNameVPNSeed,
 						"reference.resources.gardener.cloud/secret-e638c9f3":    secretNameVPNSeedTLSAuth,
@@ -1470,7 +1465,6 @@ rules:
 						"checksum/secret-" + secretNameCA:                       secretChecksumCA,
 						"checksum/secret-" + secretNameEtcd:                     secretChecksumEtcd,
 						"checksum/secret-" + secretNameHTTPProxy:                secretChecksumHTTPProxy,
-						"checksum/secret-" + secretNameKubeAggregator:           secretChecksumKubeAggregator,
 						"checksum/secret-" + secretNameCAFrontProxy:             secretChecksumCAFrontProxy,
 						"checksum/secret-" + secretNameVPNSeedTLSAuth:           secretChecksumVPNSeedTLSAuth,
 						"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
@@ -1479,7 +1473,7 @@ rules:
 						"reference.resources.gardener.cloud/secret-9282d44f":    secretNameCAFrontProxy,
 						"reference.resources.gardener.cloud/secret-c16f0542":    secretNameEtcd,
 						"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
-						"reference.resources.gardener.cloud/secret-2e310c99":    secretNameKubeAggregator,
+						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-9f3de87f":    secretNameVPNSeed,
 						"reference.resources.gardener.cloud/secret-e638c9f3":    secretNameVPNSeedTLSAuth,
@@ -1794,8 +1788,8 @@ rules:
 							"--livez-grace-period=1m",
 							"--shutdown-delay-duration=15s",
 							"--profiling=false",
-							"--proxy-client-cert-file=/srv/kubernetes/aggregator/kube-aggregator.crt",
-							"--proxy-client-key-file=/srv/kubernetes/aggregator/kube-aggregator.key",
+							"--proxy-client-cert-file=/srv/kubernetes/aggregator/tls.crt",
+							"--proxy-client-key-file=/srv/kubernetes/aggregator/tls.key",
 							"--requestheader-client-ca-file=/srv/kubernetes/ca-front-proxy/ca.crt",
 							"--requestheader-extra-headers-prefix=X-Remote-Extra-",
 							"--requestheader-group-headers=X-Remote-Group",

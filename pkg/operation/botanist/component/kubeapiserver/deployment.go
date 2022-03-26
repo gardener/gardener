@@ -40,8 +40,6 @@ import (
 const (
 	// SecretNameHTTPProxy is the name of the secret for the http proxy.
 	SecretNameHTTPProxy = "kube-apiserver-http-proxy"
-	// SecretNameKubeAggregator is the name of the secret for the kube-aggregator when talking to the kube-apiserver.
-	SecretNameKubeAggregator = "kube-aggregator"
 	// SecretNameVPNSeed is the name of the secret containing the certificates for the vpn-seed.
 	SecretNameVPNSeed = "vpn-seed"
 	// SecretNameVPNSeedTLSAuth is the name of the secret containing the TLS auth for the vpn-seed.
@@ -49,6 +47,7 @@ const (
 
 	secretNameServer                 = "kube-apiserver"
 	secretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"
+	secretNameKubeAggregator         = "kube-aggregator"
 
 	// ContainerNameKubeAPIServer is the name of the kube-apiserver container.
 	ContainerNameKubeAPIServer            = "kube-apiserver"
@@ -124,6 +123,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretBasicAuth *corev1.Secret,
 	secretServer *corev1.Secret,
 	secretKubeletClient *corev1.Secret,
+	secretKubeAggregator *corev1.Secret,
 ) error {
 	var (
 		maxSurge       = intstr.FromString("25%")
@@ -370,7 +370,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameKubeAggregator,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: k.secrets.KubeAggregator.Name,
+									SecretName: secretKubeAggregator.Name,
 								},
 							},
 						},
@@ -476,8 +476,8 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	}
 
 	out = append(out, "--profiling=false")
-	out = append(out, fmt.Sprintf("--proxy-client-cert-file=%s/%s", volumeMountPathKubeAggregator, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameKubeAggregator)))
-	out = append(out, fmt.Sprintf("--proxy-client-key-file=%s/%s", volumeMountPathKubeAggregator, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameKubeAggregator)))
+	out = append(out, fmt.Sprintf("--proxy-client-cert-file=%s/%s", volumeMountPathKubeAggregator, secrets.DataKeyCertificate))
+	out = append(out, fmt.Sprintf("--proxy-client-key-file=%s/%s", volumeMountPathKubeAggregator, secrets.DataKeyPrivateKey))
 	out = append(out, fmt.Sprintf("--requestheader-client-ca-file=%s/%s", volumeMountPathCAFrontProxy, secrets.DataKeyCertificateCA))
 	out = append(out, "--requestheader-extra-headers-prefix=X-Remote-Extra-")
 	out = append(out, "--requestheader-group-headers=X-Remote-Group")
