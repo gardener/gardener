@@ -262,6 +262,16 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 			secretutils.DataKeyEncryptionKeyName: existingEncryptionKey,
 			secretutils.DataKeyEncryptionSecret:  existingEncryptionSecret,
 		}, nil
+
+	case "service-account-key":
+		if err := m.client.Get(ctx, kutil.Key(m.namespace, "service-account-key"), existingSecret); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, err
+			}
+			return newData, nil
+		}
+
+		return existingSecret.Data, nil
 	}
 
 	return newData, nil
