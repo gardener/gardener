@@ -414,7 +414,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		KubeAggregator:         component.Secret{Name: kubeapiserver.SecretNameKubeAggregator, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameKubeAggregator)},
 		KubeAPIServerToKubelet: component.Secret{Name: kubeapiserver.SecretNameKubeAPIServerToKubelet, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameKubeAPIServerToKubelet)},
 		Server:                 component.Secret{Name: kubeapiserver.SecretNameServer, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameServer)},
-		ServiceAccountKey:      component.Secret{Name: v1beta1constants.SecretNameServiceAccountKey, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameServiceAccountKey)},
 	}
 
 	if values.VPN.ReversedVPNEnabled {
@@ -474,6 +473,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		gardenerResourceDataList.Delete("static-token")
 		gardenerResourceDataList.Delete("kube-apiserver-basic-auth")
 		gardenerResourceDataList.Delete("etcdEncryptionConfiguration")
+		gardenerResourceDataList.Delete("service-account-key")
 		*gardenerResourceData = gardenerResourceDataList
 		return nil
 	}); err != nil {

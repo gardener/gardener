@@ -70,7 +70,7 @@ func (k *kubeAPIServer) reconcileSecretOIDCCABundle(ctx context.Context, secret 
 	return kutil.IgnoreAlreadyExists(k.client.Client().Create(ctx, secret))
 }
 
-func (k *kubeAPIServer) reconcileSecretServiceAccountSigningKey(ctx context.Context, secret *corev1.Secret) error {
+func (k *kubeAPIServer) reconcileSecretUserProvidedServiceAccountSigningKey(ctx context.Context, secret *corev1.Secret) error {
 	if k.values.ServiceAccount.SigningKey == nil {
 		// We don't delete the secret here as we don't know its name (as it's unique). Instead, we rely on the usual
 		// garbage collection for unique secrets/configmaps.
@@ -81,6 +81,19 @@ func (k *kubeAPIServer) reconcileSecretServiceAccountSigningKey(ctx context.Cont
 	utilruntime.Must(kutil.MakeUnique(secret))
 
 	return kutil.IgnoreAlreadyExists(k.client.Client().Create(ctx, secret))
+}
+
+func (k *kubeAPIServer) reconcileSecretServiceAccountKey(ctx context.Context) (*corev1.Secret, error) {
+	secret, err := k.secretsManager.Generate(ctx, &secretutils.RSASecretConfig{
+		Name: v1beta1constants.SecretNameServiceAccountKey,
+		Bits: 4096,
+	}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld))
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO(rfranzke): Remove this in a future release.
+	return secret, kutil.DeleteObject(ctx, k.client.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "service-account-key", Namespace: k.namespace}})
 }
 
 func (k *kubeAPIServer) reconcileSecretBasicAuth(ctx context.Context) (*corev1.Secret, error) {

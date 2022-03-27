@@ -1098,7 +1098,6 @@ var _ = Describe("KubeAPIServer", func() {
 					KubeAggregator:         component.Secret{Name: "kube-aggregator", Checksum: botanist.LoadCheckSum("kube-aggregator")},
 					KubeAPIServerToKubelet: component.Secret{Name: "kube-apiserver-kubelet", Checksum: botanist.LoadCheckSum("kube-apiserver-kubelet")},
 					Server:                 component.Secret{Name: "kube-apiserver", Checksum: botanist.LoadCheckSum("kube-apiserver")},
-					ServiceAccountKey:      component.Secret{Name: "service-account-key", Checksum: botanist.LoadCheckSum("service-account-key")},
 				}
 				mutateSecrets(&secrets)
 
