@@ -41,6 +41,15 @@ type SecretBinding struct {
 	Provider *SecretBindingProvider `json:"provider,omitempty" protobuf:"bytes,4,opt,name=provider"`
 }
 
+// GetProviderType gets the type of the provider.
+func (sb *SecretBinding) GetProviderType() string {
+	if sb.Provider == nil {
+		return ""
+	}
+
+	return sb.Provider.Type
+}
+
 // SecretBindingProvider defines the provider type of the SecretBinding.
 type SecretBindingProvider struct {
 	// Type is the type of the provider.
