@@ -75,11 +75,9 @@ var _ = Describe("ResourceManager", func() {
 
 			seedNamespace = "fake-seed-ns"
 
-			secretNameCA         = "ca"
-			secretNameServer     = "gardener-resource-manager-server"
-			secretChecksumServer = "5678"
-			secretChecksumCA     = "9012"
-			secretDataServerCA   = map[string][]byte{
+			secretNameCA     = "ca"
+			secretChecksumCA = "9012"
+			secretDataCA     = map[string][]byte{
 				"ca.crt": []byte(`-----BEGIN CERTIFICATE-----
 MIIDYDCCAkigAwIBAgIUEb00DjvE8F0HiGOlQY/B/AG1AjMwDQYJKoZIhvcNAQEL
 BQAwSDELMAkGA1UEBhMCVVMxCzAJBgNVBAgTAkNBMRYwFAYDVQQHEw1TYW4gRnJh
@@ -144,8 +142,7 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 			k8sSeedClient = fakekubernetes.NewClientSetBuilder().WithClient(c).Build()
 
 			botanist.StoreCheckSum(secretNameCA, secretChecksumCA)
-			botanist.StoreCheckSum(secretNameServer, secretChecksumServer)
-			botanist.StoreSecret(secretNameCA, &corev1.Secret{Data: secretDataServerCA})
+			botanist.StoreSecret(secretNameCA, &corev1.Secret{Data: secretDataCA})
 
 			botanist.K8sSeedClient = k8sSeedClient
 			botanist.Shoot = &shootpkg.Shoot{
@@ -166,9 +163,7 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 			})
 
 			secrets = resourcemanager.Secrets{
-				ServerCA: component.Secret{Name: secretNameCA, Checksum: secretChecksumCA, Data: secretDataServerCA},
-				Server:   component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
-				RootCA:   &component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
+				RootCA: &component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
 			}
 
 			bootstrapKubeconfigSecret = &corev1.Secret{
@@ -357,8 +352,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 						// set secrets and deploy with bootstrap kubeconfig
 						resourceManager.EXPECT().SetSecrets(&secretMatcher{
 							bootstrapKubeconfigName: &bootstrapKubeconfigSecret.Name,
-							serverCA:                secrets.ServerCA,
-							server:                  secrets.Server,
 							rootCA:                  secrets.RootCA,
 						}),
 						resourceManager.EXPECT().Deploy(ctx),
@@ -501,8 +494,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 							// set secrets and deploy with bootstrap kubeconfig
 							resourceManager.EXPECT().SetSecrets(&secretMatcher{
 								bootstrapKubeconfigName: &bootstrapKubeconfigSecret.Name,
-								serverCA:                secrets.ServerCA,
-								server:                  secrets.Server,
 								rootCA:                  secrets.RootCA,
 							}),
 							resourceManager.EXPECT().Deploy(ctx),
@@ -572,8 +563,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 						// set secrets and deploy with bootstrap kubeconfig
 						resourceManager.EXPECT().SetSecrets(&secretMatcher{
 							bootstrapKubeconfigName: &bootstrapKubeconfigSecret.Name,
-							serverCA:                secrets.ServerCA,
-							server:                  secrets.Server,
 							rootCA:                  secrets.RootCA,
 						}),
 						resourceManager.EXPECT().Deploy(ctx),
@@ -609,8 +598,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 
 type secretMatcher struct {
 	bootstrapKubeconfigName *string
-	serverCA                component.Secret
-	server                  component.Secret
 	rootCA                  *component.Secret
 }
 
@@ -624,14 +611,6 @@ func (m *secretMatcher) Matches(x interface{}) bool {
 		return false
 	}
 
-	if !apiequality.Semantic.DeepEqual(m.serverCA, req.ServerCA) {
-		return false
-	}
-
-	if !apiequality.Semantic.DeepEqual(m.server, req.Server) {
-		return false
-	}
-
 	if m.rootCA != nil && (req.RootCA == nil || !apiequality.Semantic.DeepEqual(*m.rootCA, *req.RootCA)) {
 		return false
 	}
@@ -642,8 +621,6 @@ func (m *secretMatcher) Matches(x interface{}) bool {
 func (m *secretMatcher) String() string {
 	return fmt.Sprintf(`Secret Matcher:
 bootstrapKubeconfigName: %v,
-serverCA: %v
-server: %v
 rootCA: %v
-`, m.bootstrapKubeconfigName, m.serverCA, m.server, m.rootCA)
+`, m.bootstrapKubeconfigName, m.rootCA)
 }

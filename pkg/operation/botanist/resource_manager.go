@@ -69,6 +69,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		MaxConcurrentTokenInvalidatorWorkers: pointer.Int32(5),
 		MaxConcurrentTokenRequestorWorkers:   pointer.Int32(5),
 		MaxConcurrentRootCAPublisherWorkers:  pointer.Int32(5),
+		SecretNameServerCA:                   v1beta1constants.SecretNameCACluster,
 		SyncPeriod:                           utils.DurationPtr(time.Minute),
 		TargetDiffersFromSourceCluster:       true,
 		TargetDisableCache:                   pointer.Bool(true),
@@ -105,9 +106,7 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 			},
 		}
 		secrets = resourcemanager.Secrets{
-			ServerCA: component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster), Data: b.LoadSecret(v1beta1constants.SecretNameCACluster).Data},
-			Server:   component.Secret{Name: resourcemanager.SecretNameServer, Checksum: b.LoadCheckSum(resourcemanager.SecretNameServer)},
-			RootCA:   &component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
+			RootCA: &component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
 		}
 	)
 

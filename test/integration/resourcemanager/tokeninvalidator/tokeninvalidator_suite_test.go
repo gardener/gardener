@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap/zapcore"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -113,7 +114,7 @@ func getMutatingWebhookConfigurations() []*admissionregistrationv1.MutatingWebho
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener-resource-manager",
 			},
-			Webhooks: resourcemanager.GetMutatingWebhookConfigurationWebhooks(nil, func(path string) admissionregistrationv1.WebhookClientConfig {
+			Webhooks: resourcemanager.GetMutatingWebhookConfigurationWebhooks(nil, nil, func(_ *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
 				return admissionregistrationv1.WebhookClientConfig{
 					Service: &admissionregistrationv1.ServiceReference{
 						Path: &path,

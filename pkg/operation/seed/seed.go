@@ -257,18 +257,6 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCASeed],
 			Validity:  &endUserCrtValidity,
 		},
-		// Secret definition for gardener-resource-manager server
-		&secretutils.CertificateSecretConfig{
-			Name: resourcemanager.SecretNameServer,
-
-			CommonName:   v1beta1constants.DeploymentNameGardenerResourceManager,
-			Organization: nil,
-			DNSNames:     kutil.DNSNamesForService(resourcemanager.ServiceName, v1beta1constants.GardenNamespace),
-			IPAddresses:  nil,
-
-			CertType:  secretutils.ServerCert,
-			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCASeed],
-		},
 	}
 
 	return secretList, nil
@@ -498,7 +486,7 @@ func RunReconcileSeedFlow(
 
 	// Deploy gardener-resource-manager first since it serves central functionality (e.g., projected token mount webhook)
 	// which is required for all other components to start-up.
-	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, imageVector, deployedSecretsMap[v1beta1constants.SecretNameCASeed], deployedSecretsMap[resourcemanager.SecretNameServer])
+	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, imageVector, secretsManager)
 	if err != nil {
 		return err
 	}

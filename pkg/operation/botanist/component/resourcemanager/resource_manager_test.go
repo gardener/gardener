@@ -24,7 +24,6 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
-	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -74,10 +73,9 @@ var _ = Describe("ResourceManager", func() {
 
 		// optional configuration
 		clusterIdentity                      = "foo"
-		secretNameServer                     = "server-secret"
+		secretNameServer                     = "gardener-resource-manager-server"
 		secretMountPathServer                = "/etc/gardener-resource-manager-tls"
 		secretMountPathAPIAccess             = "/var/run/secrets/kubernetes.io/serviceaccount"
-		secretChecksumServer                 = "5678"
 		secrets                              Secrets
 		alwaysUpdate                               = true
 		concurrentSyncs                      int32 = 20
@@ -100,7 +98,6 @@ var _ = Describe("ResourceManager", func() {
 		failurePolicy                              = admissionregistrationv1.Fail
 		matchPolicy                                = admissionregistrationv1.Exact
 		sideEffect                                 = admissionregistrationv1.SideEffectClassNone
-		caBundle                                   = []byte("ca-bundle")
 		networkPolicyProtocol                      = corev1.ProtocolTCP
 		networkPolicyPort                          = intstr.FromInt(serverPort)
 
@@ -133,10 +130,7 @@ var _ = Describe("ResourceManager", func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 		sm = fakesecretsmanager.New(fakeClient, deployNamespace)
 
-		secrets = Secrets{
-			Server:   component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
-			ServerCA: component.Secret{Data: map[string][]byte{"ca.crt": caBundle}},
-		}
+		secrets = Secrets{}
 		allowAll = []rbacv1.PolicyRule{{
 			APIGroups: []string{"*"},
 			Resources: []string{"*"},
@@ -374,9 +368,6 @@ var _ = Describe("ResourceManager", func() {
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{
-							"checksum/secret-" + secretNameServer: secretChecksumServer,
-						},
 						Labels: map[string]string{
 							"projected-token-mount.resources.gardener.cloud/skip": "true",
 							"networking.gardener.cloud/to-dns":                    "allowed",
@@ -637,7 +628,6 @@ var _ = Describe("ResourceManager", func() {
 						MatchLabels: map[string]string{"resources.gardener.cloud/purpose": "token-invalidator"},
 					},
 					ClientConfig: admissionregistrationv1.WebhookClientConfig{
-						CABundle: caBundle,
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
@@ -681,7 +671,6 @@ var _ = Describe("ResourceManager", func() {
 						},
 					},
 					ClientConfig: admissionregistrationv1.WebhookClientConfig{
-						CABundle: caBundle,
 						Service: &admissionregistrationv1.ServiceReference{
 							Name:      "gardener-resource-manager",
 							Namespace: deployNamespace,
@@ -709,7 +698,6 @@ webhooks:
   - v1beta1
   - v1
   clientConfig:
-    caBundle: ` + utils.EncodeBase64(caBundle) + `
     url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/invalidate-service-account-token-secret
   failurePolicy: Fail
   matchPolicy: Exact
@@ -740,7 +728,6 @@ webhooks:
   - v1beta1
   - v1
   clientConfig:
-    caBundle: ` + utils.EncodeBase64(caBundle) + `
     url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/mount-projected-service-account-token
   failurePolicy: Fail
   matchPolicy: Exact
@@ -921,7 +908,7 @@ subjects:
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(networkPolicy))
 						}),
-					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager-server"}}),
 				)
 
 				Expect(resourceManager.Deploy(ctx)).To(Succeed())
@@ -967,7 +954,7 @@ subjects:
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
-							deployment.Spec.Template.Annotations["checksum/secret-"+secretNameBootstrapKubeconfig] = secretChecksumBootstrapKubeconfig
+							metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum/secret-"+secretNameBootstrapKubeconfig, secretChecksumBootstrapKubeconfig)
 							deployment.Spec.Template.Spec.Containers[0].VolumeMounts[len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-1].Name = "kubeconfig-bootstrap"
 							deployment.Spec.Template.Spec.Volumes[len(deployment.Spec.Template.Spec.Volumes)-1] = corev1.Volume{
 								Name: "kubeconfig-bootstrap",
@@ -1004,7 +991,7 @@ subjects:
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(networkPolicy))
 						}),
-					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager-server"}}),
 				)
 
 				Expect(resourceManager.Deploy(ctx)).To(Succeed())
@@ -1299,7 +1286,7 @@ subjects:
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(networkPolicy))
 						}),
-					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager-server"}}),
 				)
 				Expect(resourceManager.Deploy(ctx)).To(Succeed())
 			})
@@ -1409,6 +1396,7 @@ subjects:
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(mutatingWebhookConfiguration))
 						}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager-server"}}),
 				)
 				Expect(resourceManager.Deploy(ctx)).To(Succeed())
 			})

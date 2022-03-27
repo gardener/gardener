@@ -40,6 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"github.com/Masterminds/semver"
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
@@ -102,7 +103,7 @@ func defaultGardenerSeedAdmissionController(c client.Client, imageVector imageve
 	return seedadmissioncontroller.New(c, v1beta1constants.GardenNamespace, image.String()), nil
 }
 
-func defaultGardenerResourceManager(c client.Client, imageVector imagevector.ImageVector, serverCASecret, serverSecret *corev1.Secret) (component.DeployWaiter, error) {
+func defaultGardenerResourceManager(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	image, err := imageVector.FindImage(images.ImageNameGardenerResourceManager)
 	if err != nil {
 		return nil, err
@@ -114,13 +115,14 @@ func defaultGardenerResourceManager(c client.Client, imageVector imagevector.Ima
 	}
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
-	gardenerResourceManager := resourcemanager.New(c, v1beta1constants.GardenNamespace, nil, image.String(), resourcemanager.Values{
+	gardenerResourceManager := resourcemanager.New(c, v1beta1constants.GardenNamespace, secretsManager, image.String(), resourcemanager.Values{
 		ConcurrentSyncs:                      pointer.Int32(20),
 		MaxConcurrentTokenInvalidatorWorkers: pointer.Int32(5),
 		MaxConcurrentRootCAPublisherWorkers:  pointer.Int32(5),
 		HealthSyncPeriod:                     utils.DurationPtr(time.Minute),
 		Replicas:                             pointer.Int32(3),
 		ResourceClass:                        pointer.String(v1beta1constants.SeedResourceManagerClass),
+		SecretNameServerCA:                   v1beta1constants.SecretNameCASeed,
 		SyncPeriod:                           utils.DurationPtr(time.Hour),
 		VPA: &resourcemanager.VPAConfig{
 			MinAllowed: corev1.ResourceList{
@@ -128,11 +130,6 @@ func defaultGardenerResourceManager(c client.Client, imageVector imagevector.Ima
 				corev1.ResourceMemory: resource.MustParse("64Mi"),
 			},
 		},
-	})
-
-	gardenerResourceManager.SetSecrets(resourcemanager.Secrets{
-		ServerCA: component.Secret{Name: v1beta1constants.SecretNameCASeed, Checksum: utils.ComputeSecretChecksum(serverCASecret.Data), Data: serverCASecret.Data},
-		Server:   component.Secret{Name: resourcemanager.SecretNameServer, Checksum: utils.ComputeSecretChecksum(serverSecret.Data)},
 	})
 
 	return gardenerResourceManager, nil
