@@ -61,7 +61,9 @@ const (
 	secretNameServer    = "kube-controller-manager-server"
 	portNameMetrics     = "metrics"
 
-	volumeNameServer = "server"
+	volumeNameServer            = "server"
+	volumeNameServiceAccountKey = "service-account-key"
+	volumeNameCA                = "ca"
 
 	volumeMountPathCA                = "/srv/kubernetes/ca"
 	volumeMountPathServiceAccountKey = "/srv/kubernetes/service-account-key"
@@ -138,9 +140,6 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	if k.secrets.CA.Name == "" || k.secrets.CA.Checksum == "" {
 		return fmt.Errorf("missing CA secret information")
 	}
-	if k.secrets.ServiceAccountKey.Name == "" || k.secrets.ServiceAccountKey.Checksum == "" {
-		return fmt.Errorf("missing ServiceAccountKey secret information")
-	}
 
 	serverSecret, err := k.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 		Name:                        secretNameServer,
@@ -156,6 +155,11 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	genericTokenKubeconfigSecret, found := k.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
+	}
+
+	serviceAccountKeySecret, found := k.secretsManager.Get(v1beta1constants.SecretNameServiceAccountKey)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameServiceAccountKey)
 	}
 
 	var (
@@ -216,8 +220,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					"checksum/secret-" + k.secrets.CA.Name:                k.secrets.CA.Checksum,
-					"checksum/secret-" + k.secrets.ServiceAccountKey.Name: k.secrets.ServiceAccountKey.Checksum,
+					"checksum/secret-" + k.secrets.CA.Name: k.secrets.CA.Checksum,
 				},
 				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 					v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleControlPlane,
@@ -259,11 +262,11 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						Resources: resourceRequirements,
 						VolumeMounts: []corev1.VolumeMount{
 							{
-								Name:      k.secrets.CA.Name,
+								Name:      volumeNameCA,
 								MountPath: volumeMountPathCA,
 							},
 							{
-								Name:      k.secrets.ServiceAccountKey.Name,
+								Name:      volumeNameServiceAccountKey,
 								MountPath: volumeMountPathServiceAccountKey,
 							},
 							{
@@ -275,7 +278,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				},
 				Volumes: []corev1.Volume{
 					{
-						Name: k.secrets.CA.Name,
+						Name: volumeNameCA,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName: k.secrets.CA.Name,
@@ -283,10 +286,10 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						},
 					},
 					{
-						Name: k.secrets.ServiceAccountKey.Name,
+						Name: volumeNameServiceAccountKey,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
-								SecretName: k.secrets.ServiceAccountKey.Name,
+								SecretName: serviceAccountKeySecret.Name,
 							},
 						},
 					},
@@ -598,7 +601,4 @@ type Secrets struct {
 	// --cluster-signing-key-file
 	// --root-ca-file
 	CA component.Secret
-	// ServiceAccountKey is a secret containing a PEM-encoded private RSA or ECDSA key used to sign service account tokens.
-	// used for the flag: --service-account-private-key-file
-	ServiceAccountKey component.Secret
 }
