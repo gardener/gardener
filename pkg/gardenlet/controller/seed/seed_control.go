@@ -284,6 +284,7 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 			log.Error(err)
 			return err
 		}
+		return nil
 	}
 
 	// Add the Gardener finalizer to the referenced Seed secret to protect it from deletion as long as the Seed resource

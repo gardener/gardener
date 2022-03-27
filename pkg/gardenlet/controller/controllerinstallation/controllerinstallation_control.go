@@ -140,8 +140,9 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, controllerInstallation *gardencorev1beta1.ControllerInstallation, log logrus.FieldLogger) (reconcile.Result, error) {
 	if !controllerutil.ContainsFinalizer(controllerInstallation, FinalizerName) {
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, controllerInstallation, FinalizerName); err != nil {
-			return reconcile.Result{}, err
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to ControllerInstallation: %w", err)
 		}
+		return reconcile.Result{}, nil
 	}
 
 	var (

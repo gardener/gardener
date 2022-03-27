@@ -107,6 +107,7 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, cloudProfile, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to CloudProfile: %w", err)
 		}
+		return reconcile.Result{}, nil
 	}
 
 	// TODO voelzmo - this migration step ensures that all MachineImageVersions in the Cloud Profile contain `docker` in their list of supported Container Runtimes

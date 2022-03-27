@@ -133,6 +133,7 @@ func (r *secretBindingReconciler) Reconcile(ctx context.Context, request reconci
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, secretBinding, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to SecretBinding: %w", err)
 		}
+		return reconcile.Result{}, nil
 	}
 
 	// Add the Gardener finalizer to the referenced SecretBinding secret to protect it from deletion as long as

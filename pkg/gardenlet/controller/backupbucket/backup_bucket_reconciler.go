@@ -97,6 +97,7 @@ func (r *reconciler) reconcileBackupBucket(ctx context.Context, gardenClient kub
 			backupBucketLogger.Errorf("Failed to ensure gardener finalizer on backupbucket: %+v", err)
 			return reconcile.Result{}, err
 		}
+		return reconcile.Result{}, nil
 	}
 
 	if updateErr := updateBackupBucketStatusProcessing(ctx, gardenClient.Client(), backupBucket, "Reconciliation of Backup Bucket state in progress.", 2); updateErr != nil {

@@ -157,6 +157,7 @@ func (r *plantReconciler) reconcile(ctx context.Context, log logr.Logger, plant 
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, plant, FinalizerName); err != nil {
 			return fmt.Errorf("failed to ensure finalizer on plant: %w", err)
 		}
+		return nil
 	}
 
 	var (
