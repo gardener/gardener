@@ -15,6 +15,9 @@
 package worker_test
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
+
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	. "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -276,6 +279,50 @@ var _ = Describe("Machines", func() {
 					},
 				})
 			})
+
+			It("when a shoot CA rotation is started (lastInitiationTime was nil)", func() {
+				initiationTime := metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
+				//c.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime = &initiationTime
+				v, err = WorkerPoolHash(*p, &extensionscontroller.Cluster{
+					Shoot: &gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							Kubernetes: gardencorev1beta1.Kubernetes{
+								Version: "1.2.3",
+							},
+						},
+						Status: gardencorev1beta1.ShootStatus{
+							Credentials: &gardencorev1beta1.ShootCredentials{
+								Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+									CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+										LastInitiationTime: &initiationTime,
+									},
+								},
+							},
+						},
+					},
+				})
+			})
+		})
+
+		It("Should change hash when CA rotation is started (LastInitiationTime not nil", func() {
+			initiationTime := metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
+			c := &extensionscontroller.Cluster{Shoot: cluster.Shoot.DeepCopy()}
+			c.Shoot.Status = gardencorev1beta1.ShootStatus{
+				Credentials: &gardencorev1beta1.ShootCredentials{
+					Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+						CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+							LastInitiationTime: &initiationTime,
+						},
+					},
+				},
+			}
+			initialHash, err := WorkerPoolHash(*p, c)
+			Expect(err).ToNot(HaveOccurred())
+			rotationTime := metav1.Time{Time: initiationTime.Add(time.Hour)}
+			c.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime = &rotationTime
+			hashAfterRotation, err := WorkerPoolHash(*p, c)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(initialHash).ToNot(Equal(hashAfterRotation))
 		})
 	})
 
