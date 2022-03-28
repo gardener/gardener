@@ -6,3 +6,4 @@ labels:
 deployNamespace: false
 ports:
   https: 10250
+priorityClassName: istiod
