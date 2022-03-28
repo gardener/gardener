@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -47,10 +48,12 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 		bundleFor = pointer.String(strings.TrimSuffix(config.GetName(), nameSuffixBundle))
 	}
 
-	objectMeta, err := ObjectMeta(m.namespace, m.identity, config, m.lastRotationInitiationTimes[config.GetName()], options.signingCAChecksum, &options.Persist, bundleFor)
+	var validUntilTime *string
+	objectMeta, err := ObjectMeta(m.namespace, m.identity, config, m.lastRotationInitiationTimes[config.GetName()], validUntilTime, options.signingCAChecksum, &options.Persist, bundleFor)
 	if err != nil {
 		return nil, err
 	}
+	desiredLabels := utils.MergeStringMaps(objectMeta.Labels)
 
 	secret := &corev1.Secret{}
 	if err := m.client.Get(ctx, kutil.Key(objectMeta.Namespace, objectMeta.Name), secret); err != nil {
@@ -80,7 +83,11 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 		}
 	}
 
-	if err := m.reconcileSecret(ctx, secret, objectMeta.Labels); err != nil {
+	if err := m.maintainLifetimeLabels(config, secret, desiredLabels); err != nil {
+		return nil, err
+	}
+
+	if err := m.reconcileSecret(ctx, secret, desiredLabels); err != nil {
 		return nil, err
 	}
 
@@ -329,6 +336,33 @@ func (m *manager) generateBundleSecret(ctx context.Context, config secretutils.C
 	}
 
 	return m.addToStore(config.GetName(), secret, bundle)
+}
+
+func (m *manager) maintainLifetimeLabels(config secretutils.ConfigInterface, secret *corev1.Secret, desiredLabels map[string]string) error {
+	desiredLabels[LabelKeyIssuedAtTime] = utils.IifString(
+		secret.Labels[LabelKeyIssuedAtTime] != "",
+		secret.Labels[LabelKeyIssuedAtTime],
+		unixTime(m.clock.Now()),
+	)
+
+	cfg, ok := config.(*secretutils.CertificateSecretConfig)
+	if !ok {
+		return nil
+	}
+
+	dataKeyCertificate := secretutils.DataKeyCertificate
+	if cfg.SigningCA == nil {
+		dataKeyCertificate = secretutils.DataKeyCertificateCA
+	}
+
+	certificate, err := utils.DecodeCertificate(secret.Data[dataKeyCertificate])
+	if err != nil {
+		return err
+	}
+
+	desiredLabels[LabelKeyIssuedAtTime] = unixTime(certificate.NotBefore)
+	desiredLabels[LabelKeyValidUntilTime] = unixTime(certificate.NotAfter)
+	return nil
 }
 
 func (m *manager) reconcileSecret(ctx context.Context, secret *corev1.Secret, labels map[string]string) error {

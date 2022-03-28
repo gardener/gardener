@@ -26,6 +26,7 @@ import (
 	"github.com/mitchellh/hashstructure/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -49,9 +50,16 @@ const (
 	LabelKeyBundleFor = "bundle-for"
 	// LabelKeyPersist is a constant for a key of a label on a Secret describing that it should get persisted.
 	LabelKeyPersist = "persist"
-	// LabelKeyLastRotationInitiationTime is a constant for a key of a value on a Secret describing the unix timestamps
+	// LabelKeyLastRotationInitiationTime is a constant for a key of a label on a Secret describing the unix timestamps
 	// of when the last secret rotation was initiated.
 	LabelKeyLastRotationInitiationTime = "last-rotation-initiation-time"
+	// LabelKeyIssuedAtTime is a constant for a key of a label on a Secret describing the time of when the secret data
+	// was created. In case the data contains a certificate it is the time part of the certificate's 'not before' field.
+	LabelKeyIssuedAtTime = "issued-at-time"
+	// LabelKeyValidUntilTime is a constant for a key of a label on a Secret describing the time of how long the secret
+	// data is valid. In case the data contains a certificate it is the time part of the certificate's 'not after'
+	// field.
+	LabelKeyValidUntilTime = "valid-until-time"
 
 	// LabelValueTrue is a constant for a value of a label on a Secret describing the value 'true'.
 	LabelValueTrue = "true"
@@ -64,12 +72,13 @@ const (
 type (
 	manager struct {
 		lock                        sync.Mutex
+		clock                       clock.Clock
+		store                       secretStore
 		logger                      logr.Logger
 		client                      client.Client
 		namespace                   string
-		lastRotationInitiationTimes nameToUnixTime
-		store                       secretStore
 		identity                    string
+		lastRotationInitiationTimes nameToUnixTime
 	}
 
 	nameToUnixTime map[string]string
@@ -98,21 +107,32 @@ const (
 )
 
 // New returns a new manager for secrets in a given namespace.
-func New(logger logr.Logger, client client.Client, namespace string, identity string, secretNamesToTimes map[string]time.Time) Interface {
-	lastRotationInitiationTimes := make(map[string]string)
+func New(
+	logger logr.Logger,
+	clock clock.Clock,
+	c client.Client,
+	namespace string,
+	identity string,
+	secretNamesToTimes map[string]time.Time,
+) (
+	Interface,
+	error,
+) {
+	m := &manager{
+		store:                       make(secretStore),
+		clock:                       clock,
+		logger:                      logger.WithValues("namespace", namespace),
+		client:                      c,
+		namespace:                   namespace,
+		identity:                    identity,
+		lastRotationInitiationTimes: make(map[string]string),
+	}
 
 	for name, time := range secretNamesToTimes {
-		lastRotationInitiationTimes[name] = strconv.FormatInt(time.UTC().Unix(), 10)
+		m.lastRotationInitiationTimes[name] = unixTime(time)
 	}
 
-	return &manager{
-		logger:                      logger.WithValues("namespace", namespace),
-		client:                      client,
-		namespace:                   namespace,
-		store:                       make(secretStore),
-		lastRotationInitiationTimes: lastRotationInitiationTimes,
-		identity:                    identity,
-	}
+	return m, nil
 }
 
 func (m *manager) addToStore(name string, secret *corev1.Secret, class secretClass) error {
@@ -174,6 +194,7 @@ func ObjectMeta(
 	managerIdentity string,
 	config secretutils.ConfigInterface,
 	lastRotationInitiationTime string,
+	validUntilTime *string,
 	signingCAChecksum *string,
 	persist *bool,
 	bundleFor *string,
@@ -196,6 +217,10 @@ func ObjectMeta(
 
 	if signingCAChecksum != nil {
 		labels[LabelKeyChecksumSigningCA] = *signingCAChecksum
+	}
+
+	if validUntilTime != nil {
+		labels[LabelKeyValidUntilTime] = *validUntilTime
 	}
 
 	if persist != nil && *persist {
@@ -249,4 +274,8 @@ func secretTypeForData(data map[string][]byte) corev1.SecretType {
 		secretType = corev1.SecretTypeTLS
 	}
 	return secretType
+}
+
+func unixTime(in time.Time) string {
+	return strconv.FormatInt(in.UTC().Unix(), 10)
 }
