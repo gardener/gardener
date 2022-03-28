@@ -15,8 +15,6 @@
 package botanist
 
 import (
-	"context"
-
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/utils/images"
@@ -26,7 +24,7 @@ import (
 )
 
 // DefaultMetricsServer returns a deployer for the metrics-server.
-func (b *Botanist) DefaultMetricsServer() (metricsserver.Interface, error) {
+func (b *Botanist) DefaultMetricsServer() (component.DeployWaiter, error) {
 	image, err := b.ImageVector.FindImage(images.ImageNameMetricsServer, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
@@ -40,18 +38,9 @@ func (b *Botanist) DefaultMetricsServer() (metricsserver.Interface, error) {
 	return metricsserver.New(
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
+		b.SecretsManager,
 		image.String(),
 		b.Shoot.WantsVerticalPodAutoscaler,
 		kubeAPIServerHost,
 	), nil
-}
-
-// DeployMetricsServer deploys the metrics-server.
-func (b *Botanist) DeployMetricsServer(ctx context.Context) error {
-	b.Shoot.Components.SystemComponents.MetricsServer.SetSecrets(metricsserver.Secrets{
-		CA:     component.Secret{Name: metricsserver.SecretNameCA, Checksum: b.LoadCheckSum(metricsserver.SecretNameCA), Data: b.LoadSecret(metricsserver.SecretNameCA).Data},
-		Server: component.Secret{Name: metricsserver.SecretNameServer, Checksum: b.LoadCheckSum(metricsserver.SecretNameServer), Data: b.LoadSecret(metricsserver.SecretNameServer).Data},
-	})
-
-	return b.Shoot.Components.SystemComponents.MetricsServer.Deploy(ctx)
 }

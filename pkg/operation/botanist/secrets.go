@@ -329,6 +329,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			"prometheus-kubelet",
 			"kube-scheduler-server",
 			"kube-controller-manager-server",
+			"metrics-server",
 		} {
 			gardenerResourceDataList.Delete(name)
 		}

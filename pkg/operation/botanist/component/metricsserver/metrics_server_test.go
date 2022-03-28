@@ -16,62 +16,41 @@ package metricsserver_test
 
 import (
 	"context"
-	"fmt"
+	"strings"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("MetricsServer", func() {
 	var (
-		ctrl          *gomock.Controller
-		c             *mockclient.MockClient
-		metricsServer Interface
+		fakeClient    client.Client
+		sm            secretsmanager.Interface
+		metricsServer component.DeployWaiter
 
 		ctx               = context.TODO()
-		fakeErr           = fmt.Errorf("fake error")
 		namespace         = "shoot--foo--bar"
 		image             = "k8s.gcr.io/metrics-server:v4.5.6"
 		kubeAPIServerHost = "foo.bar"
 
-		secretNameCA         = "ca-metrics-server"
-		secretChecksumCA     = "1234"
-		secretDataCA         = map[string][]byte{"ca.crt": []byte("bar")}
-		secretNameServer     = "metrics-server"
-		secretChecksumServer = "5678"
-		secretDataServer     = map[string][]byte{"bar": []byte("baz")}
-		secrets              = Secrets{
-			CA:     component.Secret{Name: secretNameCA, Checksum: secretChecksumCA, Data: secretDataCA},
-			Server: component.Secret{Name: secretNameServer, Checksum: secretChecksumServer, Data: secretDataServer},
-		}
-
-		secretName = "metrics-server-3a086058"
-		secretYAML = `apiVersion: v1
-data:
-  bar: YmF6
-immutable: true
-kind: Secret
-metadata:
-  creationTimestamp: null
-  labels:
-    resources.gardener.cloud/garbage-collectable-reference: "true"
-  name: ` + secretName + `
-  namespace: kube-system
-type: kubernetes.io/tls
-`
 		serviceYAML = `apiVersion: v1
 kind: Service
 metadata:
@@ -96,7 +75,6 @@ metadata:
   creationTimestamp: null
   name: v1beta1.metrics.k8s.io
 spec:
-  caBundle: YmFy
   group: metrics.k8s.io
   groupPriorityMinimum: 100
   service:
@@ -204,7 +182,8 @@ metadata:
   namespace: kube-system
 `
 
-		deploymentYAMLWithoutHostEnv = `apiVersion: apps/v1
+		deploymentYAMLFor = func(secretName string, withHostEnv bool) string {
+			out := `apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
@@ -249,102 +228,16 @@ spec:
         - --kubelet-insecure-tls
         - --kubelet-preferred-address-types=InternalIP,InternalDNS,ExternalDNS,ExternalIP,Hostname
         - --tls-cert-file=/srv/metrics-server/tls/tls.crt
-        - --tls-private-key-file=/srv/metrics-server/tls/tls.key
-        image: ` + image + `
-        imagePullPolicy: IfNotPresent
-        livenessProbe:
-          failureThreshold: 1
-          httpGet:
-            path: /livez
-            port: 8443
-            scheme: HTTPS
-          initialDelaySeconds: 30
-          periodSeconds: 30
-        name: metrics-server
-        readinessProbe:
-          failureThreshold: 1
-          httpGet:
-            path: /readyz
-            port: 8443
-            scheme: HTTPS
-          initialDelaySeconds: 5
-          periodSeconds: 10
-        resources:
-          limits:
-            cpu: 500m
-            memory: 1Gi
-          requests:
-            cpu: 50m
-            memory: 150Mi
-        volumeMounts:
-        - mountPath: /srv/metrics-server/tls
-          name: metrics-server
-      dnsPolicy: Default
-      nodeSelector:
-        worker.gardener.cloud/system-components: "true"
-      priorityClassName: system-cluster-critical
-      securityContext:
-        fsGroup: 65534
-        runAsUser: 65534
-      serviceAccountName: metrics-server
-      tolerations:
-      - key: CriticalAddonsOnly
-        operator: Exists
-      volumes:
-      - name: metrics-server
-        secret:
-          secretName: ` + secretName + `
-status: {}
-`
-		deploymentYAMLWithHostEnv = `apiVersion: apps/v1
-kind: Deployment
-metadata:
-  annotations:
-    ` + references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName + `
-  creationTimestamp: null
-  labels:
-    gardener.cloud/role: system-component
-    k8s-app: metrics-server
-    origin: gardener
-  name: metrics-server
-  namespace: kube-system
-spec:
-  revisionHistoryLimit: 1
-  selector:
-    matchLabels:
-      k8s-app: metrics-server
-  strategy:
-    rollingUpdate:
-      maxUnavailable: 0
-  template:
-    metadata:
-      annotations:
-        ` + references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName + `
-        security.gardener.cloud/trigger: rollout
-      creationTimestamp: null
-      labels:
-        gardener.cloud/role: system-component
-        k8s-app: metrics-server
-        networking.gardener.cloud/from-seed: allowed
-        networking.gardener.cloud/to-apiserver: allowed
-        networking.gardener.cloud/to-dns: allowed
-        networking.gardener.cloud/to-kubelet: allowed
-        origin: gardener
-    spec:
-      containers:
-      - command:
-        - /metrics-server
-        - --authorization-always-allow-paths=/livez,/readyz
-        - --profiling=false
-        - --cert-dir=/home/certdir
-        - --secure-port=8443
-        - --kubelet-insecure-tls
-        - --kubelet-preferred-address-types=InternalIP,InternalDNS,ExternalDNS,ExternalIP,Hostname
-        - --tls-cert-file=/srv/metrics-server/tls/tls.crt
-        - --tls-private-key-file=/srv/metrics-server/tls/tls.key
+        - --tls-private-key-file=/srv/metrics-server/tls/tls.key`
+
+			if withHostEnv {
+				out += `
         env:
         - name: KUBERNETES_SERVICE_HOST
-          value: ` + kubeAPIServerHost + `
+          value: ` + kubeAPIServerHost
+			}
+
+			out += `
         image: ` + image + `
         imagePullPolicy: IfNotPresent
         livenessProbe:
@@ -391,6 +284,9 @@ spec:
           secretName: ` + secretName + `
 status: {}
 `
+
+			return out
+		}
 
 		managedResourceName       = "shoot-core-metrics-server"
 		managedResourceSecretName = "managedresource-shoot-core-metrics-server"
@@ -400,160 +296,149 @@ status: {}
 	)
 
 	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		sm = fakesecretsmanager.New(fakeClient, namespace)
 
-		metricsServer = New(c, namespace, image, false, nil)
+		metricsServer = New(fakeClient, namespace, sm, image, false, nil)
 
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      managedResourceSecretName,
 				Namespace: namespace,
 			},
-			Type: corev1.SecretTypeOpaque,
-			Data: map[string][]byte{
-				"apiservice____v1beta1.metrics.k8s.io.yaml":                       []byte(apiServiceYAML),
-				"clusterrole____system_metrics-server.yaml":                       []byte(clusterRoleYAML),
-				"clusterrolebinding____system_metrics-server.yaml":                []byte(clusterRoleBindingYAML),
-				"clusterrolebinding____metrics-server_system_auth-delegator.yaml": []byte(clusterRoleBindingAuthDelegatorYAML),
-				"deployment__kube-system__metrics-server.yaml":                    []byte(deploymentYAMLWithoutHostEnv),
-				"rolebinding__kube-system__metrics-server-auth-reader.yaml":       []byte(roleBindingYAML),
-				"secret__kube-system__" + secretName + ".yaml":                    []byte(secretYAML),
-				"service__kube-system__metrics-server.yaml":                       []byte(serviceYAML),
-				"serviceaccount__kube-system__metrics-server.yaml":                []byte(serviceAccountYAML),
-			},
 		}
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      managedResourceName,
 				Namespace: namespace,
-				Labels:    map[string]string{"origin": "gardener"},
-			},
-			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				SecretRefs: []corev1.LocalObjectReference{
-					{Name: managedResourceSecretName},
-				},
-				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-				KeepObjects:  pointer.Bool(false),
 			},
 		}
 	})
 
-	AfterEach(func() {
-		ctrl.Finish()
-	})
-
 	Describe("#Deploy", func() {
-		Context("missing secret information", func() {
-			It("should return an error because the CA secret information is not provided", func() {
-				Expect(metricsServer.Deploy(ctx)).To(MatchError(ContainSubstring("missing CA secret information")))
-			})
+		It("should successfully deploy all resources (w/o VPA, w/o host env)", func() {
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 
-			It("should return an error because the Server secret information is not provided", func() {
-				metricsServer.SetSecrets(Secrets{CA: component.Secret{Name: secretNameCA, Checksum: secretChecksumCA}})
-				Expect(metricsServer.Deploy(ctx)).To(MatchError(ContainSubstring("missing server secret information")))
-			})
+			Expect(metricsServer.Deploy(ctx)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+			Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+					Kind:       "ManagedResource",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            managedResource.Name,
+					Namespace:       managedResource.Namespace,
+					ResourceVersion: "1",
+					Labels:          map[string]string{"origin": "gardener"},
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+					SecretRefs: []corev1.LocalObjectReference{{
+						Name: managedResourceSecret.Name,
+					}},
+					KeepObjects: pointer.Bool(false),
+				},
+			}))
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+			Expect(managedResourceSecret.Data).To(HaveLen(9))
+			Expect(string(managedResourceSecret.Data["apiservice____v1beta1.metrics.k8s.io.yaml"])).To(Equal(apiServiceYAML))
+			Expect(string(managedResourceSecret.Data["clusterrole____system_metrics-server.yaml"])).To(Equal(clusterRoleYAML))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____system_metrics-server.yaml"])).To(Equal(clusterRoleBindingYAML))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____metrics-server_system_auth-delegator.yaml"])).To(Equal(clusterRoleBindingAuthDelegatorYAML))
+			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__metrics-server-auth-reader.yaml"])).To(Equal(roleBindingYAML))
+			Expect(string(managedResourceSecret.Data["service__kube-system__metrics-server.yaml"])).To(Equal(serviceYAML))
+			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__metrics-server.yaml"])).To(Equal(serviceAccountYAML))
+
+			var secretName string
+			for key := range managedResourceSecret.Data {
+				if strings.HasPrefix(key, "secret__kube-system__") {
+					secretName = strings.TrimSuffix(strings.TrimPrefix(key, "secret__kube-system__"), ".yaml")
+					break
+				}
+			}
+
+			Expect(string(managedResourceSecret.Data["deployment__kube-system__metrics-server.yaml"])).To(Equal(deploymentYAMLFor(secretName, false)))
+
+			secret := &corev1.Secret{}
+			Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["secret__kube-system__"+secretName+".yaml"], secret)).To(Succeed())
+			Expect(secret.Immutable).To(PointTo(BeTrue()))
+			Expect(secret.Data).NotTo(BeEmpty())
+			Expect(secret.Labels).To(HaveKeyWithValue("resources.gardener.cloud/garbage-collectable-reference", "true"))
 		})
 
-		Context("secret information available", func() {
-			BeforeEach(func() {
-				metricsServer.SetSecrets(secrets)
-			})
+		It("should successfully deploy all resources (w/ VPA, w/ host env)", func() {
+			metricsServer = New(fakeClient, namespace, sm, image, true, &kubeAPIServerHost)
 
-			It("should fail because the managed resource secret cannot be updated", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
-				)
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 
-				Expect(metricsServer.Deploy(ctx)).To(MatchError(fakeErr))
-			})
+			Expect(metricsServer.Deploy(ctx)).To(Succeed())
 
-			It("should fail because the managed resource cannot be updated", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
-				)
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+			Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+					Kind:       "ManagedResource",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            managedResource.Name,
+					Namespace:       managedResource.Namespace,
+					ResourceVersion: "1",
+					Labels:          map[string]string{"origin": "gardener"},
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+					SecretRefs: []corev1.LocalObjectReference{{
+						Name: managedResourceSecret.Name,
+					}},
+					KeepObjects: pointer.Bool(false),
+				},
+			}))
 
-				Expect(metricsServer.Deploy(ctx)).To(MatchError(fakeErr))
-			})
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+			Expect(managedResourceSecret.Data).To(HaveLen(10))
+			Expect(string(managedResourceSecret.Data["apiservice____v1beta1.metrics.k8s.io.yaml"])).To(Equal(apiServiceYAML))
+			Expect(string(managedResourceSecret.Data["clusterrole____system_metrics-server.yaml"])).To(Equal(clusterRoleYAML))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____system_metrics-server.yaml"])).To(Equal(clusterRoleBindingYAML))
+			Expect(string(managedResourceSecret.Data["clusterrolebinding____metrics-server_system_auth-delegator.yaml"])).To(Equal(clusterRoleBindingAuthDelegatorYAML))
+			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__metrics-server-auth-reader.yaml"])).To(Equal(roleBindingYAML))
+			Expect(string(managedResourceSecret.Data["service__kube-system__metrics-server.yaml"])).To(Equal(serviceYAML))
+			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__metrics-server.yaml"])).To(Equal(serviceAccountYAML))
+			Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__metrics-server.yaml"])).To(Equal(vpaYAML))
 
-			It("should successfully deploy all resources (w/o VPA, w/o host env)", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(managedResourceSecret))
-					}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(managedResource))
-					}),
-				)
+			var secretName string
+			for key := range managedResourceSecret.Data {
+				if strings.HasPrefix(key, "secret__kube-system__") {
+					secretName = strings.TrimSuffix(strings.TrimPrefix(key, "secret__kube-system__"), ".yaml")
+					break
+				}
+			}
 
-				Expect(metricsServer.Deploy(ctx)).To(Succeed())
-			})
+			Expect(string(managedResourceSecret.Data["deployment__kube-system__metrics-server.yaml"])).To(Equal(deploymentYAMLFor(secretName, true)))
 
-			It("should successfully deploy all resources (w/ VPA, w/ host env)", func() {
-				metricsServer = New(c, namespace, image, true, &kubeAPIServerHost)
-				metricsServer.SetSecrets(secrets)
-
-				managedResourceSecret.Data["deployment__kube-system__metrics-server.yaml"] = []byte(deploymentYAMLWithHostEnv)
-				managedResourceSecret.Data["verticalpodautoscaler__kube-system__metrics-server.yaml"] = []byte(vpaYAML)
-
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(managedResourceSecret))
-					}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(managedResource))
-					}),
-				)
-
-				Expect(metricsServer.Deploy(ctx)).To(Succeed())
-			})
+			secret := &corev1.Secret{}
+			Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["secret__kube-system__"+secretName+".yaml"], secret)).To(Succeed())
+			Expect(secret.Immutable).To(PointTo(BeTrue()))
+			Expect(secret.Data).NotTo(BeEmpty())
+			Expect(secret.Labels).To(HaveKeyWithValue("resources.gardener.cloud/garbage-collectable-reference", "true"))
 		})
 	})
 
 	Describe("#Destroy", func() {
-		var managedResourceToDelete *resourcesv1alpha1.ManagedResource
-
-		BeforeEach(func() {
-			managedResourceToDelete = &resourcesv1alpha1.ManagedResource{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      managedResourceName,
-					Namespace: namespace,
-				},
-			}
-		})
-
-		It("should fail because the managed resource cannot be deleted", func() {
-			gomock.InOrder(
-				c.EXPECT().Delete(ctx, managedResourceToDelete).Return(fakeErr),
-			)
-
-			Expect(metricsServer.Destroy(ctx)).To(MatchError(fakeErr))
-		})
-
-		It("should fail because the managed resource secret cannot be deleted", func() {
-			gomock.InOrder(
-				c.EXPECT().Delete(ctx, managedResourceToDelete),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceSecretName}}).Return(fakeErr),
-			)
-
-			Expect(metricsServer.Destroy(ctx)).To(MatchError(fakeErr))
-		})
-
 		It("should successfully delete all the resources", func() {
-			gomock.InOrder(
-				c.EXPECT().Delete(ctx, managedResourceToDelete),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceSecretName}}),
-			)
+			Expect(fakeClient.Create(ctx, managedResource)).To(Succeed())
+			Expect(fakeClient.Create(ctx, managedResourceSecret)).To(Succeed())
 
 			Expect(metricsServer.Destroy(ctx)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 		})
 	})
 
@@ -569,3 +454,11 @@ status: {}
 		})
 	})
 })
+
+func newCodec() runtime.Codec {
+	var groupVersions []schema.GroupVersion
+	for k := range kubernetes.ShootScheme.AllKnownTypes() {
+		groupVersions = append(groupVersions, k.GroupVersion())
+	}
+	return kubernetes.ShootCodec.CodecForVersions(kubernetes.ShootSerializer, kubernetes.ShootSerializer, schema.GroupVersions(groupVersions), schema.GroupVersions(groupVersions))
+}

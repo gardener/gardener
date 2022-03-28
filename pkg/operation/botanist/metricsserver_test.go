@@ -15,18 +15,12 @@
 package botanist_test
 
 import (
-	"context"
-	"fmt"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
-	mockmetricsserver "github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -34,7 +28,6 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 )
 
 var _ = Describe("MetricsServer", func() {
@@ -82,53 +75,6 @@ var _ = Describe("MetricsServer", func() {
 			metricsServer, err := botanist.DefaultMetricsServer()
 			Expect(metricsServer).To(BeNil())
 			Expect(err).To(HaveOccurred())
-		})
-	})
-
-	Describe("#DeployMetricsServer", func() {
-		var (
-			metricsServer *mockmetricsserver.MockInterface
-
-			ctx     = context.TODO()
-			fakeErr = fmt.Errorf("fake err")
-
-			secretCAName         = "ca-metrics-server"
-			secretCAChecksum     = "1234"
-			secretServerName     = "metrics-server"
-			secretServerChecksum = "5678"
-		)
-
-		BeforeEach(func() {
-			metricsServer = mockmetricsserver.NewMockInterface(ctrl)
-
-			botanist.StoreCheckSum(secretCAName, secretCAChecksum)
-			botanist.StoreCheckSum(secretServerName, secretServerChecksum)
-			botanist.StoreSecret(secretCAName, &corev1.Secret{})
-			botanist.StoreSecret(secretServerName, &corev1.Secret{})
-			botanist.Shoot = &shootpkg.Shoot{
-				Components: &shootpkg.Components{
-					SystemComponents: &shootpkg.SystemComponents{
-						MetricsServer: metricsServer,
-					},
-				},
-			}
-		})
-
-		BeforeEach(func() {
-			metricsServer.EXPECT().SetSecrets(metricsserver.Secrets{
-				CA:     component.Secret{Name: secretCAName, Checksum: secretCAChecksum},
-				Server: component.Secret{Name: secretServerName, Checksum: secretServerChecksum},
-			})
-		})
-
-		It("should set the secrets and deploy", func() {
-			metricsServer.EXPECT().Deploy(ctx)
-			Expect(botanist.DeployMetricsServer(ctx)).To(Succeed())
-		})
-
-		It("should fail when the deploy function fails", func() {
-			metricsServer.EXPECT().Deploy(ctx).Return(fakeErr)
-			Expect(botanist.DeployMetricsServer(ctx)).To(Equal(fakeErr))
 		})
 	})
 })

@@ -41,7 +41,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
@@ -146,7 +145,7 @@ type SystemComponents struct {
 	ClusterIdentity     clusteridentity.Interface
 	CoreDNS             coredns.Interface
 	KubeProxy           kubeproxy.Interface
-	MetricsServer       metricsserver.Interface
+	MetricsServer       component.DeployWaiter
 	Namespaces          component.DeployWaiter
 	NodeLocalDNS        nodelocaldns.Interface
 	NodeProblemDetector component.DeployWaiter

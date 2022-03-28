@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
@@ -199,19 +198,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 
 			CertType:  secrets.ClientCert,
 			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCAETCD],
-		},
-
-		// Secret definition for metrics-server
-		&secrets.CertificateSecretConfig{
-			Name: metricsserver.SecretNameServer,
-
-			CommonName:   "metrics-server",
-			Organization: nil,
-			DNSNames:     b.Shoot.Components.SystemComponents.MetricsServer.ServiceDNSNames(),
-			IPAddresses:  nil,
-
-			CertType:  secrets.ServerClientCert,
-			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCAMetricsServer],
 		},
 
 		// Secret definition for alertmanager (ingress)
