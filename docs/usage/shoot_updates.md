@@ -85,6 +85,7 @@ The complete list of fields that trigger a rolling update:
 * `.spec.provider.workers[].providerConfig`
 * `.spec.provider.workers[].cri.name`
 * `.spec.provider.workers[].kubernetes.version` (except for patch version changes)
+* `.status.credentials.rotation.certificateAuthorities.lastInitiationTime` (changed by gardener when a shoot CA rotation is initiated)
 
 Generally, the provider extension controllers might have additional constraints for changes leading to rolling updates, so please consult the respective documentation as well.
 
