@@ -38,8 +38,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 			b.Shoot.Components.ControlPlane.EtcdMain.ServiceDNSNames(),
 			b.Shoot.Components.ControlPlane.EtcdEvents.ServiceDNSNames()...,
 		)
-
-		endUserCrtValidity = common.EndUserCrtValidity
 	)
 
 	secretList := []secrets.ConfigInterface{
@@ -106,20 +104,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 
 			CertType:  secrets.ClientCert,
 			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCAETCD],
-		},
-
-		// Secret definition for grafana (ingress)
-		&secrets.CertificateSecretConfig{
-			Name: common.GrafanaTLS,
-
-			CommonName:   "grafana",
-			Organization: []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:     b.ComputeGrafanaHosts(),
-			IPAddresses:  nil,
-
-			CertType:  secrets.ServerCert,
-			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-			Validity:  &endUserCrtValidity,
 		},
 	}
 

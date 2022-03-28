@@ -62,9 +62,6 @@ const (
 	// IstioNamespace is the istio-system namespace
 	IstioNamespace = "istio-system"
 
-	// GrafanaTLS is the name of the secret resource which holds the TLS certificate for Grafana.
-	GrafanaTLS = "grafana-tls"
-
 	// EndUserCrtValidity is the time period a user facing certificate is valid.
 	EndUserCrtValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
 

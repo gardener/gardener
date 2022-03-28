@@ -235,7 +235,7 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCASeed],
 		},
 		&secretutils.CertificateSecretConfig{
-			Name: common.GrafanaTLS,
+			Name: "grafana-tls",
 
 			CommonName:   "grafana",
 			Organization: []string{"gardener.cloud:monitoring:ingress"},

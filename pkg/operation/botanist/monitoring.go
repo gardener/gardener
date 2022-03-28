@@ -449,11 +449,29 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		}
 	}
 
-	if err := b.deployGrafanaCharts(ctx, common.GrafanaOperatorsRole, operatorsDashboards.String(), basicAuth, common.GrafanaOperatorsPrefix); err != nil {
+	var ingressTLSSecretName string
+	if b.ControlPlaneWildcardCert != nil {
+		ingressTLSSecretName = b.ControlPlaneWildcardCert.GetName()
+	} else {
+		ingressTLSSecret, err := b.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+			Name:         "grafana-tls",
+			CommonName:   "grafana",
+			Organization: []string{"gardener.cloud:monitoring:ingress"},
+			DNSNames:     b.ComputeGrafanaHosts(),
+			CertType:     secrets.ServerCert,
+			Validity:     &ingressTLSCertificateValidity,
+		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
+		if err != nil {
+			return err
+		}
+		ingressTLSSecretName = ingressTLSSecret.Name
+	}
+
+	if err := b.deployGrafanaCharts(ctx, common.GrafanaOperatorsRole, operatorsDashboards.String(), basicAuth, common.GrafanaOperatorsPrefix, ingressTLSSecretName); err != nil {
 		return err
 	}
 
-	return b.deployGrafanaCharts(ctx, common.GrafanaUsersRole, usersDashboards.String(), basicAuthUsers, common.GrafanaUsersPrefix)
+	return b.deployGrafanaCharts(ctx, common.GrafanaUsersRole, usersDashboards.String(), basicAuthUsers, common.GrafanaUsersPrefix, ingressTLSSecretName)
 }
 
 func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretKeys []string) (map[string]interface{}, error) {
@@ -533,19 +551,7 @@ func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretK
 	return configs, nil
 }
 
-func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, basicAuth, subDomain string) error {
-	grafanaTLSOverride := common.GrafanaTLS
-	if b.ControlPlaneWildcardCert != nil {
-		grafanaTLSOverride = b.ControlPlaneWildcardCert.GetName()
-	}
-
-	hosts := []map[string]interface{}{
-		{
-			"hostName":   b.ComputeIngressHost(subDomain),
-			"secretName": grafanaTLSOverride,
-		},
-	}
-
+func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, basicAuth, subDomain, ingressTLSSecretName string) error {
 	ingressClass, err := seed.ComputeNginxIngressClass(b.Seed, b.Seed.GetInfo().Status.KubernetesVersion)
 	if err != nil {
 		return err
@@ -555,7 +561,12 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 		"ingress": map[string]interface{}{
 			"class":           ingressClass,
 			"basicAuthSecret": basicAuth,
-			"hosts":           hosts,
+			"hosts": []map[string]interface{}{
+				{
+					"hostName":   b.ComputeIngressHost(subDomain),
+					"secretName": ingressTLSSecretName,
+				},
+			},
 		},
 		"replicas": b.Shoot.GetReplicas(1),
 		"role":     role,
@@ -579,14 +590,7 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 	}
 
 	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-operators-dashboard-providers"}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-operators-datasources"}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-operators-dashboards"}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-users-dashboard-providers"}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-users-datasources"}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-users-dashboards"}},
-	)
+	return kutil.DeleteObject(ctx, b.K8sSeedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-tls"}})
 }
 
 // DeleteGrafana will delete all grafana instances from the seed cluster.
