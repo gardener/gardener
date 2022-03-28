@@ -153,6 +153,8 @@ scrape_configs:
       server_name: api.test-cluster.com
       ca_file: /var/lib/promtail/ca.crt
     bearer_token_file: /var/lib/promtail/auth-token
+    namespaces:
+      names: ['kube-system']
   relabel_configs:
   - action: drop
     regex: ''
