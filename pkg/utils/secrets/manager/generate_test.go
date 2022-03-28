@@ -53,7 +53,7 @@ var _ = Describe("Generate", func() {
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 
-		mgr, err := New(logr.Discard(), fakeClock, fakeClient, namespace, identity, nil)
+		mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, nil)
 		Expect(err).NotTo(HaveOccurred())
 		m = mgr.(*manager)
 	})
@@ -146,7 +146,7 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
 				By("changing last rotation initiation time and generate again")
-				mgr, err := New(logr.Discard(), fakeClock, fakeClient, namespace, identity, map[string]time.Time{name: time.Now()})
+				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, map[string]time.Time{name: time.Now()})
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
 
@@ -305,7 +305,7 @@ var _ = Describe("Generate", func() {
 				oldBundleSecret := secretInfos.bundle.obj
 
 				By("changing secret config and generate again")
-				mgr, err := New(logr.Discard(), fakeClock, fakeClient, namespace, identity, map[string]time.Time{name: time.Now()})
+				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, map[string]time.Time{name: time.Now()})
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
 
@@ -415,7 +415,7 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, serverSecret)
 
 				By("rotating CA")
-				mgr, err := New(logr.Discard(), fakeClock, fakeClient, namespace, identity, map[string]time.Time{name: time.Now()})
+				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, map[string]time.Time{name: time.Now()})
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
 
@@ -444,7 +444,7 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, clientSecret)
 
 				By("rotating CA")
-				mgr, err := New(logr.Discard(), fakeClock, fakeClient, namespace, identity, map[string]time.Time{caName: time.Now()})
+				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, map[string]time.Time{caName: time.Now()})
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
 

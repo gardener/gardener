@@ -80,6 +80,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
@@ -330,11 +331,23 @@ func RunReconcileSeedFlow(
 	log logrus.FieldLogger,
 ) error {
 	var (
-		applier        = seedClientSet.Applier()
-		seedClient     = seedClientSet.Client()
-		chartApplier   = seedClientSet.ChartApplier()
-		secretsManager = secretsmanager.New(logf.Log.WithName("secretsmanager"), seedClient, v1beta1constants.GardenNamespace, v1beta1constants.SecretManagerIdentityGardenlet, nil)
+		applier      = seedClientSet.Applier()
+		seedClient   = seedClientSet.Client()
+		chartApplier = seedClientSet.ChartApplier()
 	)
+
+	secretsManager, err := secretsmanager.New(
+		ctx,
+		logf.Log.WithName("secretsmanager"),
+		clock.RealClock{},
+		seedClient,
+		v1beta1constants.GardenNamespace,
+		v1beta1constants.SecretManagerIdentityGardenlet,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
 
 	kubernetesVersion, err := semver.NewVersion(seedClientSet.Version())
 	if err != nil {

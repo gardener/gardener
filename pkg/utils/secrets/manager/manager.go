@@ -15,6 +15,7 @@
 package manager
 
 import (
+	"context"
 	"strconv"
 	"sync"
 	"time"
@@ -108,6 +109,7 @@ const (
 
 // New returns a new manager for secrets in a given namespace.
 func New(
+	ctx context.Context,
 	logger logr.Logger,
 	clock clock.Clock,
 	c client.Client,
@@ -128,11 +130,76 @@ func New(
 		lastRotationInitiationTimes: make(map[string]string),
 	}
 
+	if err := m.initialize(ctx, secretNamesToTimes); err != nil {
+		return nil, err
+	}
+
+	return m, nil
+}
+
+func (m *manager) listSecrets(ctx context.Context) (*corev1.SecretList, error) {
+	secretList := &corev1.SecretList{}
+	return secretList, m.client.List(ctx, secretList, client.InNamespace(m.namespace), client.MatchingLabels{
+		LabelKeyManagedBy:       LabelValueSecretsManager,
+		LabelKeyManagerIdentity: m.identity,
+	})
+}
+
+func (m *manager) initialize(ctx context.Context, secretNamesToTimes map[string]time.Time) error {
+	secretList, err := m.listSecrets(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, secret := range secretList.Items {
+		// Read existing last-rotatation-initiation-time labels on secrets and store them in our internal times map
+		if secret.Labels[LabelKeyLastRotationInitiationTime] != "" {
+			m.lastRotationInitiationTimes[secret.Labels[LabelKeyName]] = secret.Labels[LabelKeyLastRotationInitiationTime]
+		}
+
+		// Check if secret must be automatically renewed because it is about to expire
+		mustRenew, err := m.mustAutoRenewSecret(secret)
+		if err != nil {
+			return err
+		}
+
+		if mustRenew {
+			m.logger.Info("Preparing secret for automatic renewal", "secret", secret.Name, "issuedAt", secret.Labels[LabelKeyIssuedAtTime], "validUntil", secret.Labels[LabelKeyValidUntilTime])
+			m.lastRotationInitiationTimes[secret.Labels[LabelKeyName]] = unixTime(m.clock.Now())
+		}
+	}
+
+	// If the user has provided last rotation initiation times then use those.
 	for name, time := range secretNamesToTimes {
 		m.lastRotationInitiationTimes[name] = unixTime(time)
 	}
 
-	return m, nil
+	return nil
+}
+
+func (m *manager) mustAutoRenewSecret(secret corev1.Secret) (bool, error) {
+	if secret.Labels[LabelKeyIssuedAtTime] == "" || secret.Labels[LabelKeyValidUntilTime] == "" {
+		return false, nil
+	}
+
+	issuedAtUnix, err := strconv.ParseInt(secret.Labels[LabelKeyIssuedAtTime], 10, 64)
+	if err != nil {
+		panic(err)
+	}
+
+	validUntilUnix, err := strconv.ParseInt(secret.Labels[LabelKeyValidUntilTime], 10, 64)
+	if err != nil {
+		panic(err)
+	}
+
+	var (
+		issuedAt   = time.Unix(issuedAtUnix, 0)
+		validUntil = time.Unix(validUntilUnix, 0)
+		validity   = validUntil.Sub(issuedAt)
+		renewAfter = issuedAt.Add(validity * 80 / 100)
+	)
+
+	return m.clock.Now().UTC().After(renewAfter), nil
 }
 
 func (m *manager) addToStore(name string, secret *corev1.Secret, class secretClass) error {
