@@ -243,22 +243,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 		},
 	}
 
-	if b.isShootNodeLoggingEnabled() {
-		// Secret definition for loki (ingress)
-		secretList = append(secretList, &secrets.CertificateSecretConfig{
-			Name: common.LokiTLS,
-
-			CommonName:   b.ComputeLokiHost(),
-			Organization: []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:     b.ComputeLokiHosts(),
-			IPAddresses:  nil,
-
-			CertType:  secrets.ServerCert,
-			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-			Validity:  &endUserCrtValidity,
-		})
-	}
-
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(b.Seed.GetInfo().Spec.Settings) {
 		// Secret definitions for dependency-watchdog-internal and external probes
 		secretList = append(secretList, &secrets.ControlPlaneSecretConfig{

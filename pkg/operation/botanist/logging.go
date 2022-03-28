@@ -30,6 +30,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/images"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -82,13 +84,27 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	}
 
 	if b.isShootNodeLoggingEnabled() {
+		validity := common.EndUserCrtValidity
+
+		credentialsSecret, err := b.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+			Name:         "loki-tls",
+			CommonName:   b.ComputeLokiHost(),
+			Organization: []string{"gardener.cloud:monitoring:ingress"},
+			DNSNames:     b.ComputeLokiHosts(),
+			CertType:     secrets.ServerCert,
+			Validity:     &validity,
+		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
+		if err != nil {
+			return err
+		}
+
 		lokiValues["rbacSidecarEnabled"] = true
 		lokiValues["ingress"] = map[string]interface{}{
 			"class": ingressClass,
 			"hosts": []map[string]interface{}{
 				{
 					"hostName":    b.ComputeLokiHost(),
-					"secretName":  common.LokiTLS,
+					"secretName":  credentialsSecret.Name,
 					"serviceName": "loki",
 					"servicePort": 8080,
 					"backendPath": "/loki/api/v1/push",
@@ -132,6 +148,8 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "curator-sg-credentials"}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "sg-admin-client"}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "admin-sg-credentials"}},
+		// TODO(rfranzke): Remove in a future release.
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "loki-tls"}},
 	)
 }
 
@@ -151,7 +169,6 @@ func (b *Botanist) destroyShootNodeLogging(ctx context.Context) error {
 	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
 		&extensionsv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: b.Shoot.SeedNamespace}},
 		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: common.LokiTLS, Namespace: b.Shoot.SeedNamespace}},
 		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-prometheus-to-loki-telegraf", Namespace: b.Shoot.SeedNamespace}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: b.Shoot.SeedNamespace}},
 	)
