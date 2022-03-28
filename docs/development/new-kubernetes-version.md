@@ -56,9 +56,10 @@ Run the [`.ci/check-and-release`](https://github.com/gardener/hyperkube/blob/mas
 - Maintain the Kubernetes feature gates used for validation of `Shoot` resources:
   - The feature gates are maintained in [this](https://github.com/gardener/gardener/blob/master/pkg/utils/validation/features/featuregates.go) file.
   - To maintain this list for new Kubernetes versions, run `hack/compare-k8s-feature-gates.sh <old-version> <new-version>` (e.g. `hack/compare-k8s-feature-gates.sh v1.22 v1.23`).
-  - It will present 2 lists of feature gates: those added and those removed in `<new-version>` compared to `<old-version>`.
+  - It will present 3 lists of feature gates: those added and those removed in `<new-version>` compared to `<old-version>` and feature gates that got locked to default in `<new-version>`.
   - Add all added feature gates to the map with `<new-version>` as `AddedInVersion` and no `RemovedInVersion`.
   - For any removed feature gates, add `<new-version>` as RemovedInVersion to the already existing feature gate in the map.
+  - For feature gates locked to default, add `<new-version>` as LockedToDefaultInVersion to the already existing feature gate in the map.
   - See [this](https://github.com/gardener/gardener/pull/5255/commits/97923b0604300ff805def8eae981ed388d5e4a83) example commit.
 - Maintain the `ServiceAccount` names for the controllers part of `kube-controller-manager`:
   - The names are maintained in [this](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/component/shootsystem/shootsystem.go) file.

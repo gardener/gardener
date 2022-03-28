@@ -41,8 +41,8 @@ out_dir=dev/temp
 mkdir -p "${out_dir}"
 
 for version in "${versions[@]}"; do
-  rm -f "${out_dir}/featuregates-${version}.txt"
-  touch "${out_dir}/featuregates-${version}.txt"
+  rm -f "${out_dir}/featuregates-${version}.txt" "${out_dir}/locked-featuregates-${version}.txt"
+  touch "${out_dir}/featuregates-${version}.txt" "${out_dir}/locked-featuregates-${version}.txt"
 
   for file in "${files[@]}"; do
     { wget -q -O - "https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/${file}" || echo; } > "${out_dir}/kube_features.go"
@@ -50,10 +50,16 @@ for version in "${versions[@]}"; do
     while read constant; do
       grep -E "${constant} featuregate.Feature = \".*\"" "${out_dir}/kube_features.go" | awk '{print $4}' | { grep -Eo '[A-Z]\w+' || true; } >> "${out_dir}/featuregates-${version}.txt"
     done < "${out_dir}/constants.txt"
-    rm -f "${out_dir}/kube_features.go" "${out_dir}/constants.txt"
+
+    grep -E '{Default: .*, PreRelease: .*, LockToDefault: .*},' "${out_dir}/kube_features.go" | awk '{print $1}' | { grep -Eo '[A-Z]\w+' || true; } > "${out_dir}/locked_features.txt"
+    while read feature; do
+      grep -E "${feature} featuregate.Feature = \".*\"" "${out_dir}/kube_features.go" | awk '{print $4}' | { grep -Eo '[A-Z]\w+' || true; } >> "${out_dir}/locked-featuregates-${version}.txt"
+    done < "${out_dir}/locked_features.txt"
+    rm -f "${out_dir}/kube_features.go" "${out_dir}/constants.txt" "${out_dir}/locked_features.txt"
   done
 
   sort -u -o "${out_dir}/featuregates-${version}.txt" "${out_dir}/featuregates-${version}.txt"
+  sort -u -o "${out_dir}/locked-featuregates-${version}.txt" "${out_dir}/locked-featuregates-${version}.txt"
 done
 
 echo "Feature gates added in $2 compared to $1:"
@@ -61,3 +67,7 @@ diff "${out_dir}/featuregates-$1.txt" "${out_dir}/featuregates-$2.txt" | grep '>
 echo
 echo "Feature gates removed in $2 compared to $1:"
 diff "${out_dir}/featuregates-$1.txt" "${out_dir}/featuregates-$2.txt" | grep '<' | awk '{print $2}'
+echo
+echo "Feature gates locked to default in $2 compared to $1:"
+diff "${out_dir}/locked-featuregates-$1.txt" "${out_dir}/locked-featuregates-$2.txt" | grep '>' | awk '{print $2}'
+echo
