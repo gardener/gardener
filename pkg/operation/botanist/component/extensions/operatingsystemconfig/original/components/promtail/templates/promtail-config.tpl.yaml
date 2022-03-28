@@ -40,6 +40,8 @@ scrape_configs:
       server_name: {{ .APIServerHostname }}
       ca_file: {{ .pathCACert }}
     bearer_token_file: {{ .pathAuthToken }}
+    namespaces:
+      names: ['kube-system']
   relabel_configs:
   - action: drop
     regex: ''
