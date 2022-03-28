@@ -49,6 +49,10 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 	}
 
 	var validUntilTime *string
+	if options.Validity > 0 {
+		validUntilTime = pointer.String(unixTime(m.clock.Now().Add(options.Validity)))
+	}
+
 	objectMeta, err := ObjectMeta(m.namespace, m.identity, config, m.lastRotationInitiationTimes[config.GetName()], validUntilTime, options.signingCAChecksum, &options.Persist, bundleFor)
 	if err != nil {
 		return nil, err
@@ -400,6 +404,8 @@ type GenerateOptions struct {
 	RotationStrategy rotationStrategy
 	// IgnoreOldSecrets specifies whether old secrets should be loaded to the internal store.
 	IgnoreOldSecrets bool
+	// Validity specifies for how long the secret should be valid.
+	Validity time.Duration
 
 	signingCAChecksum *string
 	isBundleSecret    bool
@@ -482,6 +488,14 @@ func Rotate(strategy rotationStrategy) GenerateOption {
 func IgnoreOldSecrets() GenerateOption {
 	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
 		options.IgnoreOldSecrets = true
+		return nil
+	}
+}
+
+// Validity returns a function which sets the 'Validity' field to the provided value.
+func Validity(v time.Duration) GenerateOption {
+	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
+		options.Validity = v
 		return nil
 	}
 }

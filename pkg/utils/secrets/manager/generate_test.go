@@ -103,6 +103,22 @@ var _ = Describe("Generate", func() {
 				))
 			})
 
+			It("should maintain the lifetime labels (w/ validity)", func() {
+				By("generating new secret")
+				secret, err := m.Generate(ctx, config, Validity(time.Hour))
+				Expect(err).NotTo(HaveOccurred())
+
+				By("reading created secret from system")
+				foundSecret := &corev1.Secret{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), foundSecret)).To(Succeed())
+
+				By("verifying labels")
+				Expect(foundSecret.Labels).To(And(
+					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
+					HaveKeyWithValue("valid-until-time", strconv.FormatInt(fakeClock.Now().Add(time.Hour).Unix(), 10)),
+				))
+			})
+
 			It("should generate a new secret when the config changes", func() {
 				By("generating new secret")
 				secret, err := m.Generate(ctx, config)
@@ -260,6 +276,21 @@ var _ = Describe("Generate", func() {
 				))
 			})
 
+			It("should maintain the lifetime labels (w/ custom validity)", func() {
+				By("generating new secret")
+				config.Clock = fakeClock
+				secret, err := m.Generate(ctx, config, Validity(time.Hour))
+				Expect(err).NotTo(HaveOccurred())
+
+				By("reading created secret from system")
+				foundSecret := &corev1.Secret{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), foundSecret)).To(Succeed())
+
+				By("verifying labels")
+				Expect(foundSecret.Labels).To(And(
+					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
+					HaveKeyWithValue("valid-until-time", strconv.FormatInt(fakeClock.Now().AddDate(10, 0, 0).Unix(), 10)),
+				))
 			})
 
 			It("should rotate a CA secret and add old and new to the corresponding bundle", func() {
@@ -327,6 +358,29 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should maintain the lifetime labels (w/o custom validity)", func() {
+				By("generating new CA secret")
+				caSecret, err := m.Generate(ctx, caConfig)
+				Expect(err).NotTo(HaveOccurred())
+				expectSecretWasCreated(ctx, fakeClient, caSecret)
+
+				By("generating new server secret")
+				serverConfig.Clock = fakeClock
+				serverSecret, err := m.Generate(ctx, serverConfig, SignedByCA(caName))
+				Expect(err).NotTo(HaveOccurred())
+				expectSecretWasCreated(ctx, fakeClient, serverSecret)
+
+				By("reading created secret from system")
+				foundSecret := &corev1.Secret{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(serverSecret), foundSecret)).To(Succeed())
+
+				By("verifying labels")
+				Expect(foundSecret.Labels).To(And(
+					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
+					HaveKeyWithValue("valid-until-time", strconv.FormatInt(fakeClock.Now().AddDate(10, 0, 0).Unix(), 10)),
+				))
+			})
+
+			It("should maintain the lifetime labels (w/ custom validity)", func() {
 				By("generating new CA secret")
 				caSecret, err := m.Generate(ctx, caConfig)
 				Expect(err).NotTo(HaveOccurred())
