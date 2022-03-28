@@ -16,6 +16,7 @@ package extensionlabels_test
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	internalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
@@ -87,7 +88,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 			Expect(seed.ObjectMeta.Labels).To(Equal(expectedLabels))
 		})
 
-		It("should add all the correct labels on updation", func() {
+		It("should add all the correct labels on update", func() {
 			newSeed := seed.DeepCopy()
 			newSeed.Spec.Backup = &core.SeedBackup{
 				Provider: providerType2,
@@ -105,6 +106,50 @@ var _ = Describe("ExtensionLabels tests", func() {
 			}
 
 			Expect(newSeed.ObjectMeta.Labels).To(Equal(expectedLabels))
+		})
+	})
+
+	Context("SecretBinding", func() {
+		const (
+			providerType1 = "provider-type-1"
+			providerType2 = "provider-type-2"
+			providerType3 = "provider-type-3"
+		)
+
+		DescribeTable("should add all the correct labels on creation",
+			func(secretBinding *core.SecretBinding, expectedLabels map[string]string) {
+				attrs := admission.NewAttributesRecord(secretBinding, nil, core.Kind("SecretBinding").WithVersion("version"), "", secretBinding.Name, core.Resource("SecretBinding").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(secretBinding.ObjectMeta.Labels).To(Equal(expectedLabels))
+			},
+			Entry("when provider is nil", &core.SecretBinding{Provider: nil}, nil),
+			Entry("when provider is set", &core.SecretBinding{Provider: &core.SecretBindingProvider{Type: providerType1}}, map[string]string{"provider.extensions.gardener.cloud/" + providerType1: "true"}),
+		)
+
+		It("should add all the correct labels on update", func() {
+			secretBinding := &core.SecretBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-secretbinding",
+				},
+			}
+			newSecretBinding := secretBinding.DeepCopy()
+			newSecretBinding.Provider = &core.SecretBindingProvider{
+				Type: fmt.Sprintf("%s,%s", providerType2, providerType3),
+			}
+
+			attrs := admission.NewAttributesRecord(newSecretBinding, secretBinding, core.Kind("SecretBinding").WithVersion("version"), "", secretBinding.Name, core.Resource("SecretBinding").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+			err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+
+			expectedLabels := map[string]string{
+				"provider.extensions.gardener.cloud/" + providerType2: "true",
+				"provider.extensions.gardener.cloud/" + providerType3: "true",
+			}
+
+			Expect(newSecretBinding.ObjectMeta.Labels).To(Equal(expectedLabels))
 		})
 	})
 
@@ -211,7 +256,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 			Expect(shoot.ObjectMeta.Labels).To(Equal(expectedLabels))
 		})
 
-		It("should add all the correct labels on updation", func() {
+		It("should add all the correct labels on update", func() {
 			worker := core.Worker{
 				Machine: core.Machine{
 					Image: &core.ShootMachineImage{
@@ -299,7 +344,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 			Expect(cloudProfile.ObjectMeta.Labels).To(Equal(expectedLabels))
 		})
 
-		It("should add all the correct labels on updation", func() {
+		It("should add all the correct labels on update", func() {
 			newCloudProfile := cloudProfile.DeepCopy()
 			newCloudProfile.Spec.Type = providerType2
 
@@ -394,7 +439,7 @@ var _ = Describe("ExtensionLabels tests", func() {
 			Expect(backupEntry.ObjectMeta.Labels).To(Equal(expectedLabels))
 		})
 
-		It("should add all the correct labels on updation", func() {
+		It("should add all the correct labels on update", func() {
 			backupBucket2 := &core.BackupBucket{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-backupbucket-2",
