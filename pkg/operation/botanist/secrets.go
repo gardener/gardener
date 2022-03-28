@@ -331,6 +331,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			"kube-controller-manager-server",
 			"metrics-server",
 			"loki-tls",
+			"prometheus-tls",
 			"gardener-resource-manager-server",
 		} {
 			gardenerResourceDataList.Delete(name)

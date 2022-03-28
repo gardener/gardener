@@ -134,16 +134,22 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
-	prometheusTLSOverride := common.PrometheusTLS
+	var prometheusIngressTLSSecretName string
 	if b.ControlPlaneWildcardCert != nil {
-		prometheusTLSOverride = b.ControlPlaneWildcardCert.GetName()
-	}
-
-	hosts := []map[string]interface{}{
-		{
-			"hostName":   b.ComputePrometheusHost(),
-			"secretName": prometheusTLSOverride,
-		},
+		prometheusIngressTLSSecretName = b.ControlPlaneWildcardCert.GetName()
+	} else {
+		ingressTLSSecret, err := b.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+			Name:         "prometheus-tls",
+			CommonName:   "prometheus",
+			Organization: []string{"gardener.cloud:monitoring:ingress"},
+			DNSNames:     b.ComputePrometheusHosts(),
+			CertType:     secrets.ServerCert,
+			Validity:     &ingressTLSCertificateValidity,
+		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
+		if err != nil {
+			return err
+		}
+		prometheusIngressTLSSecretName = ingressTLSSecret.Name
 	}
 
 	ingressClass, err := seed.ComputeNginxIngressClass(b.Seed, b.Seed.GetInfo().Status.KubernetesVersion)
@@ -185,7 +191,12 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"ingress": map[string]interface{}{
 				"class":           ingressClass,
 				"basicAuthSecret": basicAuth,
-				"hosts":           hosts,
+				"hosts": []map[string]interface{}{
+					{
+						"hostName":   b.ComputePrometheusHost(),
+						"secretName": prometheusIngressTLSSecretName,
+					},
+				},
 			},
 			"namespace": map[string]interface{}{
 				"uid": b.SeedNamespaceObject.UID,
@@ -318,6 +329,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	if err := kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: b.Shoot.SeedNamespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-kubelet", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-tls", Namespace: b.Shoot.SeedNamespace}},
 	); err != nil {
 		return err
 	}

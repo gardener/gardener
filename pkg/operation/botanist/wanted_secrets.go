@@ -135,20 +135,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			Validity:  &endUserCrtValidity,
 		},
-
-		// Secret definition for prometheus (ingress)
-		&secrets.CertificateSecretConfig{
-			Name: common.PrometheusTLS,
-
-			CommonName:   "prometheus",
-			Organization: []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:     b.ComputePrometheusHosts(),
-			IPAddresses:  nil,
-
-			CertType:  secrets.ServerCert,
-			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-			Validity:  &endUserCrtValidity,
-		},
 	}
 
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(b.Seed.GetInfo().Spec.Settings) {
