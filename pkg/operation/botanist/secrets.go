@@ -332,6 +332,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			"metrics-server",
 			"loki-tls",
 			"prometheus-tls",
+			"alertmanager-tls",
 			"gardener-resource-manager-server",
 		} {
 			gardenerResourceDataList.Delete(name)

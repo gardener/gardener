@@ -361,23 +361,34 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			}
 		}
 
-		alertManagerTLSOverride := common.AlertManagerTLS
+		var alertManagerIngressTLSSecretName string
 		if b.ControlPlaneWildcardCert != nil {
-			alertManagerTLSOverride = b.ControlPlaneWildcardCert.GetName()
-		}
-
-		hosts := []map[string]interface{}{
-			{
-				"hostName":   b.ComputeAlertManagerHost(),
-				"secretName": alertManagerTLSOverride,
-			},
+			alertManagerIngressTLSSecretName = b.ControlPlaneWildcardCert.GetName()
+		} else {
+			ingressTLSSecret, err := b.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+				Name:         "alertmanager-tls",
+				CommonName:   "alertmanager",
+				Organization: []string{"gardener.cloud:monitoring:ingress"},
+				DNSNames:     b.ComputeAlertManagerHosts(),
+				CertType:     secrets.ServerCert,
+				Validity:     &ingressTLSCertificateValidity,
+			}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
+			if err != nil {
+				return err
+			}
+			alertManagerIngressTLSSecretName = ingressTLSSecret.Name
 		}
 
 		alertManagerValues, err := b.InjectSeedShootImages(map[string]interface{}{
 			"ingress": map[string]interface{}{
 				"class":           ingressClass,
 				"basicAuthSecret": basicAuthUsers,
-				"hosts":           hosts,
+				"hosts": []map[string]interface{}{
+					{
+						"hostName":   b.ComputeAlertManagerHost(),
+						"secretName": alertManagerIngressTLSSecretName,
+					},
+				},
 			},
 			"replicas":     b.Shoot.GetReplicas(1),
 			"storage":      b.Seed.GetValidVolumeSize("1Gi"),
@@ -398,6 +409,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
 		// TODO(rfranzke): Remove in a future release.
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-tls", Namespace: b.Shoot.SeedNamespace}},
 	)
 }
 

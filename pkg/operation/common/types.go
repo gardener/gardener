@@ -62,8 +62,6 @@ const (
 	// IstioNamespace is the istio-system namespace
 	IstioNamespace = "istio-system"
 
-	// AlertManagerTLS is the name of the secret resource which holds the TLS certificate for Alert Manager.
-	AlertManagerTLS = "alertmanager-tls"
 	// GrafanaTLS is the name of the secret resource which holds the TLS certificate for Grafana.
 	GrafanaTLS = "grafana-tls"
 

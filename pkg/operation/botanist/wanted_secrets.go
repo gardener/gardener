@@ -108,20 +108,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCAETCD],
 		},
 
-		// Secret definition for alertmanager (ingress)
-		&secrets.CertificateSecretConfig{
-			Name: common.AlertManagerTLS,
-
-			CommonName:   "alertmanager",
-			Organization: []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:     b.ComputeAlertManagerHosts(),
-			IPAddresses:  nil,
-
-			CertType:  secrets.ServerCert,
-			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-			Validity:  &endUserCrtValidity,
-		},
-
 		// Secret definition for grafana (ingress)
 		&secrets.CertificateSecretConfig{
 			Name: common.GrafanaTLS,
