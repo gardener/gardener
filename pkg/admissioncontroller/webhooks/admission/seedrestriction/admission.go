@@ -40,6 +40,7 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -181,12 +182,48 @@ func (h *handler) admitBackupEntry(ctx context.Context, seedName string, request
 		return resp
 	}
 
+	if strings.HasPrefix(backupEntry.Name, v1beta1constants.BackupSourcePrefix) {
+		return h.admitSourceBackupEntry(ctx, backupEntry)
+	}
+
 	backupBucket := &gardencorev1beta1.BackupBucket{}
 	if err := h.cacheReader.Get(ctx, kutil.Key(backupEntry.Spec.BucketName), backupBucket); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
 	return h.admit(seedName, backupBucket.Spec.SeedName)
+}
+
+func (h *handler) admitSourceBackupEntry(ctx context.Context, backupEntry *gardencorev1beta1.BackupEntry) admission.Response {
+	// The source BackupEntry is created during the restore phase of control plane migration
+	// so allow creations only if the shoot that owns the BackupEntry is currently being restored.
+	shootName := gutil.GetShootNameFromOwnerReferences(backupEntry)
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := h.cacheReader.Get(ctx, kutil.Key(backupEntry.Namespace, shootName), shoot); err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+
+	if shoot.Status.LastOperation == nil || shoot.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeRestore ||
+		shoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateProcessing {
+		return admission.Errored(http.StatusForbidden, fmt.Errorf("creation of source BackupEntry is only allowed during shoot Restore operation (shoot: %s)", shootName))
+	}
+
+	// When the source BackupEntry is created it's spec is the same as that of the shoot's original BackupEntry.
+	// The original BackupEntry is modified after the source BackupEntry has been deployed and successfully reconciled.
+	shootBackupEntryName := strings.TrimPrefix(backupEntry.Name, fmt.Sprintf("%s-", v1beta1constants.BackupSourcePrefix))
+	shootBackupEntry := &gardencorev1beta1.BackupEntry{}
+	if err := h.cacheReader.Get(ctx, kutil.Key(backupEntry.Namespace, shootBackupEntryName), shootBackupEntry); err != nil {
+		if apierrors.IsNotFound(err) {
+			return admission.Errored(http.StatusForbidden, fmt.Errorf("could not find original BackupEntry %s: %w", shootBackupEntryName, err))
+		}
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+
+	if !apiequality.Semantic.DeepEqual(backupEntry.Spec, shootBackupEntry.Spec) {
+		return admission.Errored(http.StatusForbidden, fmt.Errorf("specification of source BackupEntry must equal specification of original BackupEntry %s", shootBackupEntryName))
+	}
+
+	return admission.Allowed("")
 }
 
 func (h *handler) admitBastion(seedName string, request admission.Request) admission.Response {
