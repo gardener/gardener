@@ -527,19 +527,6 @@ func RunReconcileSeedFlow(
 
 	lokiValues["enabled"] = loggingEnabled
 
-	// TODO(ialidzhikov): Remove in a future release.
-	if err := kutil.DeleteObjects(ctx, seedClient,
-		// Follow-up of https://github.com/gardener/gardener/pull/5010 (loki ServiceAccount got removed and was never
-		// used).
-		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "loki"}},
-		// Follow-up of https://github.com/gardener/gardener/pull/2515 (Secrets related to the old logging stack were
-		// not deleted).
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "kibana-tls"}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "fluentd-es-sg-credentials"}},
-	); err != nil {
-		return err
-	}
-
 	if loggingEnabled {
 		// check if loki is disabled in gardenlet config
 		if !gardenlethelper.IsLokiEnabled(conf) {
