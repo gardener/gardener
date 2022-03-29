@@ -584,9 +584,6 @@ type Secrets struct {
 	CA component.Secret
 	// CAFrontProxy is the certificate authority for the front-proxy.
 	CAFrontProxy component.Secret
-	// VPNSeedServerTLSAuth is the TLS auth information for the vpn-seed server.
-	// Only relevant if VPNConfig.ReversedVPNEnabled is true.
-	VPNSeedServerTLSAuth *component.Secret
 }
 
 type secret struct {
@@ -596,9 +593,8 @@ type secret struct {
 
 func (s *Secrets) all() map[string]secret {
 	return map[string]secret{
-		"CA":                   {Secret: &s.CA},
-		"CAFrontProxy":         {Secret: &s.CAFrontProxy},
-		"VPNSeedServerTLSAuth": {Secret: s.VPNSeedServerTLSAuth, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
+		"CA":           {Secret: &s.CA},
+		"CAFrontProxy": {Secret: &s.CAFrontProxy},
 	}
 }
 

@@ -79,25 +79,23 @@ var _ = Describe("KubeAPIServer", func() {
 		kapi                Interface
 		version             = semver.MustParse("1.22.1")
 
-		secretNameBasicAuthentication      = "kube-apiserver-basic-auth-426b1845"
-		secretNameStaticToken              = "kube-apiserver-static-token-c069a0e6"
-		secretNameCA                       = "CA-secret"
-		secretChecksumCA                   = "12345"
-		secretNameCAEtcd                   = "ca-etcd"
-		secretNameCAFrontProxy             = "CAFrontProxy-secret"
-		secretChecksumCAFrontProxy         = "12345"
-		secretNameCAVPN                    = "ca-vpn"
-		secretNameEtcd                     = "etcd-client"
-		secretNameHTTPProxy                = "kube-apiserver-http-proxy"
-		secretNameKubeAggregator           = "kube-aggregator"
-		secretNameKubeAPIServerToKubelet   = "kube-apiserver-kubelet"
-		secretNameServer                   = "kube-apiserver"
-		secretNameServiceAccountKey        = "service-account-key-c37a87f6"
-		secretNameVPNSeed                  = "vpn-seed"
-		secretNameVPNSeedTLSAuth           = "vpn-seed-tlsauth-de1d12a3"
-		secretNameVPNSeedServerTLSAuth     = "VPNSeedServerTLSAuth-secret"
-		secretChecksumVPNSeedServerTLSAuth = "12345"
-		secrets                            Secrets
+		secretNameBasicAuthentication    = "kube-apiserver-basic-auth-426b1845"
+		secretNameStaticToken            = "kube-apiserver-static-token-c069a0e6"
+		secretNameCA                     = "CA-secret"
+		secretChecksumCA                 = "12345"
+		secretNameCAEtcd                 = "ca-etcd"
+		secretNameCAFrontProxy           = "CAFrontProxy-secret"
+		secretChecksumCAFrontProxy       = "12345"
+		secretNameCAVPN                  = "ca-vpn"
+		secretNameEtcd                   = "etcd-client"
+		secretNameHTTPProxy              = "kube-apiserver-http-proxy"
+		secretNameKubeAggregator         = "kube-aggregator"
+		secretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"
+		secretNameServer                 = "kube-apiserver"
+		secretNameServiceAccountKey      = "service-account-key-c37a87f6"
+		secretNameVPNSeed                = "vpn-seed"
+		secretNameVPNSeedTLSAuth         = "vpn-seed-tlsauth-de1d12a3"
+		secrets                          Secrets
 
 		secretNameAdmissionConfig      = "kube-apiserver-admission-config-e38ff146"
 		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-235f7353"
@@ -125,9 +123,8 @@ var _ = Describe("KubeAPIServer", func() {
 		kapi = New(kubernetesInterface, namespace, sm, Values{Version: version})
 
 		secrets = Secrets{
-			CA:                   component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
-			CAFrontProxy:         component.Secret{Name: secretNameCAFrontProxy, Checksum: secretChecksumCAFrontProxy},
-			VPNSeedServerTLSAuth: &component.Secret{Name: secretNameVPNSeedServerTLSAuth, Checksum: secretChecksumVPNSeedServerTLSAuth},
+			CA:           component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
+			CAFrontProxy: component.Secret{Name: secretNameCAFrontProxy, Checksum: secretChecksumCAFrontProxy},
 		}
 
 		deployment = &appsv1.Deployment{
@@ -210,9 +207,6 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("CAFrontProxy missing",
 					"CAFrontProxy", func(s *Secrets) { s.CAFrontProxy.Name = "" }, Values{},
-				),
-				Entry("ReversedVPN enabled but VPNSeedServerTLSAuth missing",
-					"VPNSeedServerTLSAuth", func(s *Secrets) { s.VPNSeedServerTLSAuth = nil }, Values{VPN: VPNConfig{ReversedVPNEnabled: true}},
 				),
 			)
 		})
@@ -1439,7 +1433,6 @@ rules:
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Annotations).To(Equal(map[string]string{
-						"checksum/secret-" + secretNameVPNSeedServerTLSAuth:     secretChecksumVPNSeedServerTLSAuth,
 						"checksum/secret-" + secretNameCA:                       secretChecksumCA,
 						"checksum/secret-" + secretNameCAFrontProxy:             secretChecksumCAFrontProxy,
 						"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
