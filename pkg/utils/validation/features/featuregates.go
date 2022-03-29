@@ -26,9 +26,11 @@ import (
 // Extracted from https://raw.githubusercontent.com/kubernetes/kubernetes/release-${version}/pkg/features/kube_features.go.
 // To maintain this list for each new Kubernetes version:
 // * Run hack/compare-k8s-feature-gates.sh <old-version> <new-version> (e.g. 'hack/compare-k8s-feature-gates.sh 1.22 1.23').
-//   It will present 2 lists of feature gates: those added and those removed in <new-version> compared to <old-version>.
+//   It will present 3 lists of feature gates: those added and those removed in <new-version> compared to <old-version> and
+//   feature gates that got locked to default in `<new-version>`.
 // * Add all added feature gates to the map with <new-version> as AddedInVersion and no RemovedInVersion.
 // * For any removed feature gates, add <new-version> as RemovedInVersion to the already existing feature gate in the map.
+// * For feature gates locked to default, add `<new-version>` as LockedToDefaultInVersion to the already existing feature gate in the map.
 var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	// These are special feature gates to toggle all alpha or beta feature gates on and off.
 	// They were introduced in version 1.17 (although they are absent from the corresponding kube_features.go file).
@@ -72,12 +74,12 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"CSIMigrationvSphereComplete":                    {AddedInVersion: "1.19", RemovedInVersion: "1.22"},
 	"CSINodeInfo":                                    {RemovedInVersion: "1.21"},
 	"CSIPersistentVolume":                            {RemovedInVersion: "1.16"},
-	"CSIServiceAccountToken":                         {AddedInVersion: "1.20"},
+	"CSIServiceAccountToken":                         {Default: true, AddedInVersion: "1.20", LockedToDefaultInVersion: "1.22"},
 	"CSIStorageCapacity":                             {AddedInVersion: "1.19"},
-	"CSIVolumeFSGroupPolicy":                         {AddedInVersion: "1.19"},
+	"CSIVolumeFSGroupPolicy":                         {Default: true, AddedInVersion: "1.19", LockedToDefaultInVersion: "1.23"},
 	"CSIVolumeHealth":                                {AddedInVersion: "1.21"},
 	"CSRDuration":                                    {AddedInVersion: "1.22"},
-	"ConfigurableFSGroupPolicy":                      {AddedInVersion: "1.18"},
+	"ConfigurableFSGroupPolicy":                      {Default: true, AddedInVersion: "1.18", LockedToDefaultInVersion: "1.23"},
 	"ControllerManagerLeaderMigration":               {AddedInVersion: "1.21"}, // Missing from docu?
 	"CronJobControllerV2":                            {AddedInVersion: "1.20", RemovedInVersion: "1.23"},
 	"CustomCPUCFSQuotaPeriod":                        {},
@@ -103,9 +105,9 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"DynamicKubeletConfig":                           {},
 	"EfficientWatchResumption":                       {AddedInVersion: "1.20"},
 	"EnableAggregatedDiscoveryTimeout":               {AddedInVersion: "1.16", RemovedInVersion: "1.17"},
-	"EndpointSlice":                                  {AddedInVersion: "1.16"},
-	"EndpointSliceNodeName":                          {AddedInVersion: "1.20"},
-	"EndpointSliceProxying":                          {AddedInVersion: "1.18"},
+	"EndpointSlice":                                  {Default: true, AddedInVersion: "1.16", LockedToDefaultInVersion: "1.21"},
+	"EndpointSliceNodeName":                          {Default: true, AddedInVersion: "1.20", LockedToDefaultInVersion: "1.21"},
+	"EndpointSliceProxying":                          {Default: true, AddedInVersion: "1.18", LockedToDefaultInVersion: "1.22"},
 	"EndpointSliceTerminatingCondition":              {AddedInVersion: "1.20"},
 	"EphemeralContainers":                            {AddedInVersion: "1.16"},
 	"EvenPodsSpread":                                 {AddedInVersion: "1.16", RemovedInVersion: "1.21"},
@@ -119,18 +121,18 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"ExternalPolicyForExternalIP":                    {AddedInVersion: "1.18", RemovedInVersion: "1.22"}, // Missing from docu?
 	"GCERegionalPersistentDisk":                      {RemovedInVersion: "1.17"},
 	"GRPCContainerProbe":                             {AddedInVersion: "1.23"},
-	"GenericEphemeralVolume":                         {AddedInVersion: "1.19"},
+	"GenericEphemeralVolume":                         {Default: true, AddedInVersion: "1.19", LockedToDefaultInVersion: "1.23"},
 	"GracefulNodeShutdown":                           {AddedInVersion: "1.20"},
 	"GracefulNodeShutdownBasedOnPodPriority":         {AddedInVersion: "1.23"},
 	"HonorPVReclaimPolicy":                           {AddedInVersion: "1.23"},
 	"HPAContainerMetrics":                            {AddedInVersion: "1.20"},
 	"HPAScaleToZero":                                 {AddedInVersion: "1.16"},
-	"HugePageStorageMediumSize":                      {AddedInVersion: "1.18"},
+	"HugePageStorageMediumSize":                      {Default: true, AddedInVersion: "1.18", LockedToDefaultInVersion: "1.22"},
 	"HugePages":                                      {RemovedInVersion: "1.16"},
 	"HyperVContainer":                                {RemovedInVersion: "1.21"},
-	"IPv6DualStack":                                  {AddedInVersion: "1.16"},
+	"IPv6DualStack":                                  {Default: true, AddedInVersion: "1.16", LockedToDefaultInVersion: "1.23"},
 	"IdentifyPodOS":                                  {AddedInVersion: "1.23"},
-	"ImmutableEphemeralVolumes":                      {AddedInVersion: "1.18"},
+	"ImmutableEphemeralVolumes":                      {Default: true, AddedInVersion: "1.18", LockedToDefaultInVersion: "1.21"},
 	"InTreePluginAWSUnregister":                      {AddedInVersion: "1.21"}, // Missing from docu?
 	"InTreePluginAzureDiskUnregister":                {AddedInVersion: "1.21"}, // Missing from docu?
 	"InTreePluginAzureFileUnregister":                {AddedInVersion: "1.21"}, // Missing from docu?
@@ -140,7 +142,7 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"InTreePluginRBDUnregister":                      {AddedInVersion: "1.23"},
 	"InTreePluginvSphereUnregister":                  {AddedInVersion: "1.21"}, // Missing from docu?
 	"IndexedJob":                                     {AddedInVersion: "1.21"},
-	"IngressClassNamespacedParams":                   {AddedInVersion: "1.21"},
+	"IngressClassNamespacedParams":                   {Default: true, AddedInVersion: "1.21", LockedToDefaultInVersion: "1.23"},
 	"JobMutableNodeSchedulingDirectives":             {AddedInVersion: "1.23"},
 	"JobReadyPods":                                   {AddedInVersion: "1.23"},
 	"JobTrackingWithFinalizers":                      {AddedInVersion: "1.22"},
@@ -158,7 +160,7 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"MigrationRBD":                                   {AddedInVersion: "1.23"},
 	"MixedProtocolLBService":                         {AddedInVersion: "1.20"},
 	"MountContainers":                                {RemovedInVersion: "1.17"},
-	"NamespaceDefaultLabelName":                      {AddedInVersion: "1.21"},
+	"NamespaceDefaultLabelName":                      {Default: true, AddedInVersion: "1.21", LockedToDefaultInVersion: "1.22"},
 	"NetworkPolicyEndPort":                           {AddedInVersion: "1.21"},
 	"NodeDisruptionExclusion":                        {AddedInVersion: "1.16", RemovedInVersion: "1.22"},
 	"NodeLease":                                      {RemovedInVersion: "1.23"},
@@ -170,7 +172,7 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"PodAndContainerStatsFromCRI":                    {AddedInVersion: "1.23"},
 	"PodAffinityNamespaceSelector":                   {AddedInVersion: "1.21"},
 	"PodDeletionCost":                                {AddedInVersion: "1.21"},
-	"PodDisruptionBudget":                            {AddedInVersion: "1.17"}, // Docu says 1.3?
+	"PodDisruptionBudget":                            {Default: true, AddedInVersion: "1.17", LockedToDefaultInVersion: "1.21"}, // Docu says 1.3?
 	"PodOverhead":                                    {AddedInVersion: "1.16"},
 	"PodPriority":                                    {RemovedInVersion: "1.18"},
 	"PodReadinessGates":                              {RemovedInVersion: "1.16"},
@@ -192,11 +194,11 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"RotateKubeletClientCertificate":                 {RemovedInVersion: "1.21"},
 	"RotateKubeletServerCertificate":                 {},
 	"RunAsGroup":                                     {RemovedInVersion: "1.22"},
-	"RuntimeClass":                                   {},
+	"RuntimeClass":                                   {Default: true, LockedToDefaultInVersion: "1.20"},
 	"SCTPSupport":                                    {RemovedInVersion: "1.22"},
 	"ScheduleDaemonSetPods":                          {RemovedInVersion: "1.18"},
 	"SeccompDefault":                                 {AddedInVersion: "1.22"},
-	"SelectorIndex":                                  {AddedInVersion: "1.18"}, // Missing from docu?
+	"SelectorIndex":                                  {Default: true, AddedInVersion: "1.18", LockedToDefaultInVersion: "1.20"}, // Missing from docu?
 	"ServerSideApply":                                {},
 	"ServerSideFieldValidation":                      {AddedInVersion: "1.23"},
 	"ServiceAccountIssuerDiscovery":                  {AddedInVersion: "1.18", RemovedInVersion: "1.23"},
@@ -207,12 +209,12 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"ServiceLoadBalancerFinalizer":                   {RemovedInVersion: "1.20"},
 	"ServiceNodeExclusion":                           {RemovedInVersion: "1.22"},
 	"ServiceTopology":                                {AddedInVersion: "1.17", RemovedInVersion: "1.22"},
-	"SetHostnameAsFQDN":                              {AddedInVersion: "1.19"},
+	"SetHostnameAsFQDN":                              {Default: true, AddedInVersion: "1.19", LockedToDefaultInVersion: "1.22"},
 	"SizeMemoryBackedVolumes":                        {AddedInVersion: "1.20"},
 	"StartupProbe":                                   {AddedInVersion: "1.16", RemovedInVersion: "1.23"},
 	"StatefulSetAutoDeletePVC":                       {AddedInVersion: "1.23"},
 	"StatefulSetMinReadySeconds":                     {AddedInVersion: "1.22"},
-	"StorageObjectInUseProtection":                   {},
+	"StorageObjectInUseProtection":                   {Default: true, LockedToDefaultInVersion: "1.23"},
 	"StorageVersionAPI":                              {AddedInVersion: "1.20"},
 	"StorageVersionHash":                             {},
 	"StreamingProxyRedirects":                        {},
@@ -221,7 +223,7 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"SupportPodPidsLimit":                            {RemovedInVersion: "1.23"},
 	"SuspendJob":                                     {AddedInVersion: "1.21"},
 	"Sysctls":                                        {RemovedInVersion: "1.23"},
-	"TTLAfterFinished":                               {},
+	"TTLAfterFinished":                               {Default: true, LockedToDefaultInVersion: "1.23"},
 	"TaintBasedEvictions":                            {RemovedInVersion: "1.20"},
 	"TaintNodesByCondition":                          {RemovedInVersion: "1.18"},
 	"TokenRequest":                                   {RemovedInVersion: "1.21"},
@@ -235,11 +237,11 @@ var featureGateVersionRanges = map[string]*FeatureGateVersionRange{
 	"VolumeSnapshotDataSource":                       {RemovedInVersion: "1.22"},
 	"VolumeSubpath":                                  {},
 	"VolumeSubpathEnvExpansion":                      {RemovedInVersion: "1.19"},
-	"WarningHeaders":                                 {AddedInVersion: "1.19"},
-	"WatchBookmark":                                  {},
+	"WarningHeaders":                                 {Default: true, AddedInVersion: "1.19", LockedToDefaultInVersion: "1.22"},
+	"WatchBookmark":                                  {Default: true, LockedToDefaultInVersion: "1.17"},
 	"WinDSR":                                         {},
 	"WinOverlay":                                     {},
-	"WindowsEndpointSliceProxying":                   {AddedInVersion: "1.19"},
+	"WindowsEndpointSliceProxying":                   {Default: true, AddedInVersion: "1.19", LockedToDefaultInVersion: "1.22"},
 	"WindowsGMSA":                                    {RemovedInVersion: "1.21"},
 	"WindowsHostProcessContainers":                   {AddedInVersion: "1.22"},
 	"WindowsRunAsUserName":                           {AddedInVersion: "1.16", RemovedInVersion: "1.21"},
@@ -258,8 +260,10 @@ func IsFeatureGateSupported(featureGate, version string) (bool, error) {
 
 // FeatureGateVersionRange represents a version range of type [AddedInVersion, RemovedInVersion).
 type FeatureGateVersionRange struct {
-	AddedInVersion   string
-	RemovedInVersion string
+	Default                  bool
+	AddedInVersion           string
+	LockedToDefaultInVersion string
+	RemovedInVersion         string
 }
 
 // Contains returns true if the range contains the given version, false otherwise.
@@ -280,6 +284,17 @@ func (r *FeatureGateVersionRange) Contains(version string) (bool, error) {
 	return utilsversion.CheckVersionMeetsConstraint(version, constraint)
 }
 
+func isFeatureLockedToDefault(featureGate, version string) (bool, error) {
+	var constraint string
+	vr := featureGateVersionRanges[featureGate]
+	if vr.LockedToDefaultInVersion != "" {
+		constraint = fmt.Sprintf(">= %s", vr.LockedToDefaultInVersion)
+		return utilsversion.CheckVersionMeetsConstraint(version, constraint)
+	}
+
+	return false, nil
+}
+
 // ValidateFeatureGates validates the given Kubernetes feature gates against the given Kubernetes version.
 func ValidateFeatureGates(featureGates map[string]bool, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
@@ -290,6 +305,13 @@ func ValidateFeatureGates(featureGates map[string]bool, version string, fldPath 
 			allErrs = append(allErrs, field.Invalid(fldPath.Child(featureGate), featureGate, err.Error()))
 		} else if !supported {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child(featureGate), fmt.Sprintf("not supported in Kubernetes version %s", version)))
+		} else {
+			isLockedToDefault, err := isFeatureLockedToDefault(featureGate, version)
+			if err != nil {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child(featureGate), featureGate, err.Error()))
+			} else if isLockedToDefault && featureGates[featureGate] != featureGateVersionRanges[featureGate].Default {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child(featureGate), fmt.Sprintf("cannot set feature gate to %v, feature is locked to %v", featureGates[featureGate], featureGateVersionRanges[featureGate].Default)))
+			}
 		}
 	}
 
