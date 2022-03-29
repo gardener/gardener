@@ -133,7 +133,6 @@ func (r *reconciler) reconcileBastion(
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, bastion, finalizerName); err != nil {
 			return fmt.Errorf("failed ensure %q finalizer on bastion: %w", finalizerName, err)
 		}
-		// the patch above already triggers a reconcile, so we can stop here
 		return nil
 	}
 
