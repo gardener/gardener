@@ -50,17 +50,14 @@ const (
 	// RoleProbe is a constant for the 'probe' role of the dependency-watchdog.
 	RoleProbe Role = "probe"
 
-	// UserName is the user name for client certificates of the dependency-watchdog.
-	UserName = "gardener.cloud:system:dependency-watchdog"
-
 	name            = "dependency-watchdog"
 	volumeName      = "config"
 	volumeMountPath = "/etc/dependency-watchdog/config"
 	configFileName  = "dep-config.yaml"
 )
 
-// Values contains dependency-watchdog values.
-type Values struct {
+// BootstrapperValues contains dependency-watchdog values.
+type BootstrapperValues struct {
 	Role Role
 	ValuesEndpoint
 	ValuesProbe
@@ -77,42 +74,42 @@ type ValuesProbe struct {
 	ProbeDependantsList scalerapi.ProbeDependantsList
 }
 
-// New creates a new instance of DeployWaiter for the dependency-watchdog.
-func New(
+// NewBootstrapper creates a new instance of DeployWaiter for the dependency-watchdog.
+func NewBootstrapper(
 	client client.Client,
 	namespace string,
-	values Values,
+	values BootstrapperValues,
 ) component.DeployWaiter {
-	return &dependencyWatchdog{
+	return &bootstrapper{
 		client:    client,
 		namespace: namespace,
 		values:    values,
 	}
 }
 
-type dependencyWatchdog struct {
+type bootstrapper struct {
 	client    client.Client
 	namespace string
-	values    Values
+	values    BootstrapperValues
 }
 
-func (d *dependencyWatchdog) Deploy(ctx context.Context) error {
+func (b *bootstrapper) Deploy(ctx context.Context) error {
 	var (
 		config              string
 		vpaMinAllowedMemory string
 		err                 error
 	)
 
-	switch d.values.Role {
+	switch b.values.Role {
 	case RoleEndpoint:
-		config, err = restarterapi.Encode(&d.values.ValuesEndpoint.ServiceDependants)
+		config, err = restarterapi.Encode(&b.values.ValuesEndpoint.ServiceDependants)
 		if err != nil {
 			return err
 		}
 		vpaMinAllowedMemory = "25Mi"
 
 	case RoleProbe:
-		config, err = scalerapi.Encode(&d.values.ValuesProbe.ProbeDependantsList)
+		config, err = scalerapi.Encode(&b.values.ValuesProbe.ProbeDependantsList)
 		if err != nil {
 			return err
 		}
@@ -121,9 +118,9 @@ func (d *dependencyWatchdog) Deploy(ctx context.Context) error {
 
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      d.name() + "-config",
-			Namespace: d.namespace,
-			Labels:    map[string]string{v1beta1constants.LabelApp: d.name()},
+			Name:      b.name() + "-config",
+			Namespace: b.namespace,
+			Labels:    map[string]string{v1beta1constants.LabelApp: b.name()},
 		},
 		Data: map[string]string{configFileName: config},
 	}
@@ -134,22 +131,22 @@ func (d *dependencyWatchdog) Deploy(ctx context.Context) error {
 
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      d.name(),
-				Namespace: d.namespace,
+				Name:      b.name(),
+				Namespace: b.namespace,
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: fmt.Sprintf("gardener.cloud:%s:cluster-role", d.name()),
+				Name: fmt.Sprintf("gardener.cloud:%s:cluster-role", b.name()),
 			},
-			Rules: d.clusterRoleRules(),
+			Rules: b.clusterRoleRules(),
 		}
 
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: fmt.Sprintf("gardener.cloud:%s:cluster-role-binding", d.name()),
+				Name: fmt.Sprintf("gardener.cloud:%s:cluster-role-binding", b.name()),
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
@@ -165,8 +162,8 @@ func (d *dependencyWatchdog) Deploy(ctx context.Context) error {
 
 		role = &rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("gardener.cloud:%s:role", d.name()),
-				Namespace: d.namespace,
+				Name:      fmt.Sprintf("gardener.cloud:%s:role", b.name()),
+				Namespace: b.namespace,
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
@@ -179,8 +176,8 @@ func (d *dependencyWatchdog) Deploy(ctx context.Context) error {
 
 		roleBinding = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("gardener.cloud:%s:role-binding", d.name()),
-				Namespace: d.namespace,
+				Name:      fmt.Sprintf("gardener.cloud:%s:role-binding", b.name()),
+				Namespace: b.namespace,
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
@@ -196,26 +193,30 @@ func (d *dependencyWatchdog) Deploy(ctx context.Context) error {
 
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      d.name(),
-				Namespace: d.namespace,
-				Labels:    d.getLabels(),
+				Name:      b.name(),
+				Namespace: b.namespace,
+				Labels:    b.getLabels(),
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             pointer.Int32(1),
 				RevisionHistoryLimit: pointer.Int32(2),
-				Selector:             &metav1.LabelSelector{MatchLabels: d.getLabels()},
+				Selector:             &metav1.LabelSelector{MatchLabels: b.getLabels()},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Labels: d.podLabels(),
+						Annotations: map[string]string{
+							// TODO(rfranzke): Remove in a future release.
+							"security.gardener.cloud/trigger": "rollout",
+						},
+						Labels: b.podLabels(),
 					},
 					Spec: corev1.PodSpec{
 						ServiceAccountName:            serviceAccount.Name,
 						TerminationGracePeriodSeconds: pointer.Int64(5),
 						Containers: []corev1.Container{{
 							Name:            name,
-							Image:           d.values.Image,
+							Image:           b.values.Image,
 							ImagePullPolicy: corev1.PullIfNotPresent,
-							Command:         d.containerCommand(),
+							Command:         b.containerCommand(),
 							Ports: []corev1.ContainerPort{{
 								Name:          "metrics",
 								ContainerPort: 9643,
@@ -254,8 +255,8 @@ func (d *dependencyWatchdog) Deploy(ctx context.Context) error {
 		updateMode = autoscalingv1beta2.UpdateModeAuto
 		vpa        = &autoscalingv1beta2.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      d.name() + "-vpa",
-				Namespace: d.namespace,
+				Name:      b.name() + "-vpa",
+				Namespace: b.namespace,
 			},
 			Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
@@ -295,41 +296,41 @@ func (d *dependencyWatchdog) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, d.client, d.namespace, d.name(), false, resources)
+	return managedresources.CreateForSeed(ctx, b.client, b.namespace, b.name(), false, resources)
 }
 
-func (d *dependencyWatchdog) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, d.client, d.namespace, d.name())
+func (b *bootstrapper) Destroy(ctx context.Context) error {
+	return managedresources.DeleteForSeed(ctx, b.client, b.namespace, b.name())
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
 // or deleted.
 var TimeoutWaitForManagedResource = 2 * time.Minute
 
-func (d *dependencyWatchdog) Wait(ctx context.Context) error {
+func (b *bootstrapper) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, d.client, d.namespace, d.name())
+	return managedresources.WaitUntilHealthy(timeoutCtx, b.client, b.namespace, b.name())
 }
 
-func (d *dependencyWatchdog) WaitCleanup(ctx context.Context) error {
+func (b *bootstrapper) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, d.client, d.namespace, d.name())
+	return managedresources.WaitUntilDeleted(timeoutCtx, b.client, b.namespace, b.name())
 }
 
-func (d *dependencyWatchdog) name() string {
-	return fmt.Sprintf("%s-%s", name, d.values.Role)
+func (b *bootstrapper) name() string {
+	return fmt.Sprintf("%s-%s", name, b.values.Role)
 }
 
-func (d *dependencyWatchdog) getLabels() map[string]string {
-	return map[string]string{v1beta1constants.LabelRole: d.name()}
+func (b *bootstrapper) getLabels() map[string]string {
+	return map[string]string{v1beta1constants.LabelRole: b.name()}
 }
 
-func (d *dependencyWatchdog) clusterRoleRules() []rbacv1.PolicyRule {
-	switch d.values.Role {
+func (b *bootstrapper) clusterRoleRules() []rbacv1.PolicyRule {
+	switch b.values.Role {
 	case RoleEndpoint:
 		return []rbacv1.PolicyRule{
 			{
@@ -389,16 +390,16 @@ func (d *dependencyWatchdog) clusterRoleRules() []rbacv1.PolicyRule {
 	return nil
 }
 
-func (d *dependencyWatchdog) podLabels() map[string]string {
-	switch d.values.Role {
+func (b *bootstrapper) podLabels() map[string]string {
+	switch b.values.Role {
 	case RoleEndpoint:
-		return utils.MergeStringMaps(d.getLabels(), map[string]string{
+		return utils.MergeStringMaps(b.getLabels(), map[string]string{
 			v1beta1constants.LabelNetworkPolicyToDNS:           v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToSeedAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 
 	case RoleProbe:
-		return utils.MergeStringMaps(d.getLabels(), map[string]string{
+		return utils.MergeStringMaps(b.getLabels(), map[string]string{
 			v1beta1constants.LabelNetworkPolicyToDNS:                v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToSeedAPIServer:      v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToAllShootAPIServers: v1beta1constants.LabelNetworkPolicyAllowed,
@@ -410,13 +411,13 @@ func (d *dependencyWatchdog) podLabels() map[string]string {
 	return nil
 }
 
-func (d *dependencyWatchdog) containerCommand() []string {
-	switch d.values.Role {
+func (b *bootstrapper) containerCommand() []string {
+	switch b.values.Role {
 	case RoleEndpoint:
 		return []string{
 			"/usr/local/bin/dependency-watchdog",
 			fmt.Sprintf("--config-file=%s/%s", volumeMountPath, configFileName),
-			"--deployed-namespace=" + d.namespace,
+			"--deployed-namespace=" + b.namespace,
 			"--watch-duration=5m",
 		}
 
@@ -425,7 +426,7 @@ func (d *dependencyWatchdog) containerCommand() []string {
 			"/usr/local/bin/dependency-watchdog",
 			"probe",
 			fmt.Sprintf("--config-file=%s/%s", volumeMountPath, configFileName),
-			"--deployed-namespace=" + d.namespace,
+			"--deployed-namespace=" + b.namespace,
 			"--qps=20.0",
 			"--burst=100",
 			"--v=4",
