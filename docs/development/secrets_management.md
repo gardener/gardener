@@ -60,7 +60,7 @@ if err != nil {
 ```
 
 As explained above, the caller does not need to care about the renewal, rotation or the persistence of this secret - all of these concerns are handled by the secrets manager.
-Automatic renewal of secrets happens when their validity  approaches 80%. 
+Automatic renewal of secrets happens when their validity  approaches 80% or less than `10d` are left until expiration.
 
 In case a CA certificate is needed by some component then it can be retrieved as follows:
 

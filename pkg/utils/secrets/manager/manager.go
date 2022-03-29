@@ -184,22 +184,24 @@ func (m *manager) mustAutoRenewSecret(secret corev1.Secret) (bool, error) {
 
 	issuedAtUnix, err := strconv.ParseInt(secret.Labels[LabelKeyIssuedAtTime], 10, 64)
 	if err != nil {
-		panic(err)
+		return false, err
 	}
 
 	validUntilUnix, err := strconv.ParseInt(secret.Labels[LabelKeyValidUntilTime], 10, 64)
 	if err != nil {
-		panic(err)
+		return false, err
 	}
 
 	var (
-		issuedAt   = time.Unix(issuedAtUnix, 0)
-		validUntil = time.Unix(validUntilUnix, 0)
+		issuedAt   = time.Unix(issuedAtUnix, 0).UTC()
+		validUntil = time.Unix(validUntilUnix, 0).UTC()
 		validity   = validUntil.Sub(issuedAt)
-		renewAfter = issuedAt.Add(validity * 80 / 100)
+		now        = m.clock.Now().UTC()
 	)
 
-	return m.clock.Now().UTC().After(renewAfter), nil
+	// Renew if 80% of the validity has been reached or if the secret expires in less than 10d.
+	return now.After(issuedAt.Add(validity*80/100)) ||
+		now.After(validUntil.Add(-10*24*time.Hour)), nil
 }
 
 func (m *manager) addToStore(name string, secret *corev1.Secret, class secretClass) error {

@@ -57,7 +57,7 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 	if err != nil {
 		return nil, err
 	}
-	desiredLabels := utils.MergeStringMaps(objectMeta.Labels)
+	desiredLabels := utils.MergeStringMaps(objectMeta.Labels) // copy labels map
 
 	secret := &corev1.Secret{}
 	if err := m.client.Get(ctx, kutil.Key(objectMeta.Namespace, objectMeta.Name), secret); err != nil {
@@ -343,11 +343,11 @@ func (m *manager) generateBundleSecret(ctx context.Context, config secretutils.C
 }
 
 func (m *manager) maintainLifetimeLabels(config secretutils.ConfigInterface, secret *corev1.Secret, desiredLabels map[string]string) error {
-	desiredLabels[LabelKeyIssuedAtTime] = utils.IifString(
-		secret.Labels[LabelKeyIssuedAtTime] != "",
-		secret.Labels[LabelKeyIssuedAtTime],
-		unixTime(m.clock.Now()),
-	)
+	issuedAt := secret.Labels[LabelKeyIssuedAtTime]
+	if issuedAt == "" {
+		issuedAt = unixTime(m.clock.Now())
+	}
+	desiredLabels[LabelKeyIssuedAtTime] = issuedAt
 
 	cfg, ok := config.(*secretutils.CertificateSecretConfig)
 	if !ok {
@@ -492,7 +492,8 @@ func IgnoreOldSecrets() GenerateOption {
 	}
 }
 
-// Validity returns a function which sets the 'Validity' field to the provided value.
+// Validity returns a function which sets the 'Validity' field to the provided value. Note that the value is ignored in
+// case Generate is called with a certificate secret configuration.
 func Validity(v time.Duration) GenerateOption {
 	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
 		options.Validity = v

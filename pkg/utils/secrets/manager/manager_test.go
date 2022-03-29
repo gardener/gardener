@@ -113,7 +113,7 @@ var _ = Describe("Manager", func() {
 			}))
 		})
 
-		It("should create a new instance and auto-renew a secret which is about to expire", func() {
+		It("should create a new instance and auto-renew a secret which is about to expire (at least 80% validity reached)", func() {
 			fakeClock = clock.NewFakeClock(time.Date(2000, 1, 1, 1, 1, 1, 1, time.UTC))
 
 			existingSecret := &corev1.Secret{
@@ -139,7 +139,7 @@ var _ = Describe("Manager", func() {
 			Expect(m.lastRotationInitiationTimes).To(Equal(nameToUnixTime{"secret1": strconv.FormatInt(fakeClock.Now().Unix(), 10)}))
 		})
 
-		It("should create a new instance and NOT auto-renew a secret since it's still valid for a longer time", func() {
+		It("should create a new instance and auto-renew a secret which is about to expire (at most 10d left until expiration)", func() {
 			fakeClock = clock.NewFakeClock(time.Date(2000, 1, 1, 1, 1, 1, 1, time.UTC))
 
 			existingSecret := &corev1.Secret{
@@ -153,6 +153,32 @@ var _ = Describe("Manager", func() {
 						"last-rotation-initiation-time": "-100",
 						"issued-at-time":                strconv.FormatInt(fakeClock.Now().Add(-24*time.Hour).Unix(), 10),
 						"valid-until-time":              strconv.FormatInt(fakeClock.Now().Add(24*time.Hour).Unix(), 10),
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
+
+			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, nil)
+			Expect(err).NotTo(HaveOccurred())
+			m = mgr.(*manager)
+
+			Expect(m.lastRotationInitiationTimes).To(Equal(nameToUnixTime{"secret1": strconv.FormatInt(fakeClock.Now().Unix(), 10)}))
+		})
+
+		It("should create a new instance and NOT auto-renew a secret since it's still valid for a longer time", func() {
+			fakeClock = clock.NewFakeClock(time.Date(2000, 1, 1, 1, 1, 1, 1, time.UTC))
+
+			existingSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret1",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"name":                          "secret1",
+						"managed-by":                    "secrets-manager",
+						"manager-identity":              identity,
+						"last-rotation-initiation-time": "-100",
+						"issued-at-time":                strconv.FormatInt(fakeClock.Now().Add(-24*time.Hour).Unix(), 10),
+						"valid-until-time":              strconv.FormatInt(fakeClock.Now().Add(11*24*time.Hour).Unix(), 10),
 					},
 				},
 			}
