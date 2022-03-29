@@ -339,6 +339,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			"vpn-shoot",
 			"vpn-shoot-client",
 			"vpn-seed-server-tlsauth",
+			"vpn-seed",
 		} {
 			gardenerResourceDataList.Delete(name)
 		}
@@ -346,7 +347,6 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 		if b.Shoot.GetInfo().DeletionTimestamp == nil {
 			if b.Shoot.ReversedVPNEnabled {
 				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList,
-					kubeapiserver.SecretNameVPNSeed,
 					kubeapiserver.SecretNameVPNSeedTLSAuth,
 				); err != nil {
 					return err

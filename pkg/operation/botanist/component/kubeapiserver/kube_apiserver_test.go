@@ -92,8 +92,7 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameKubeAPIServerToKubelet   = "kube-apiserver-kubelet"
 		secretNameServer                   = "kube-apiserver"
 		secretNameServiceAccountKey        = "service-account-key-c37a87f6"
-		secretNameVPNSeed                  = "VPNSeed-secret"
-		secretChecksumVPNSeed              = "12345"
+		secretNameVPNSeed                  = "vpn-seed"
 		secretNameVPNSeedTLSAuth           = "VPNSeedTLSAuth-secret"
 		secretChecksumVPNSeedTLSAuth       = "12345"
 		secretNameVPNSeedServerTLSAuth     = "VPNSeedServerTLSAuth-secret"
@@ -128,7 +127,6 @@ var _ = Describe("KubeAPIServer", func() {
 		secrets = Secrets{
 			CA:                   component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
 			CAFrontProxy:         component.Secret{Name: secretNameCAFrontProxy, Checksum: secretChecksumCAFrontProxy},
-			VPNSeed:              &component.Secret{Name: secretNameVPNSeed, Checksum: secretChecksumVPNSeed},
 			VPNSeedTLSAuth:       &component.Secret{Name: secretNameVPNSeedTLSAuth, Checksum: secretChecksumVPNSeedTLSAuth},
 			VPNSeedServerTLSAuth: &component.Secret{Name: secretNameVPNSeedServerTLSAuth, Checksum: secretChecksumVPNSeedServerTLSAuth},
 		}
@@ -213,9 +211,6 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("CAFrontProxy missing",
 					"CAFrontProxy", func(s *Secrets) { s.CAFrontProxy.Name = "" }, Values{},
-				),
-				Entry("ReversedVPN disabled but VPNSeed missing",
-					"VPNSeed", func(s *Secrets) { s.VPNSeed = nil }, Values{VPN: VPNConfig{ReversedVPNEnabled: false}},
 				),
 				Entry("ReversedVPN disabled but VPNSeedTLSAuth missing",
 					"VPNSeedTLSAuth", func(s *Secrets) { s.VPNSeedTLSAuth = nil }, Values{VPN: VPNConfig{ReversedVPNEnabled: false}},
@@ -1408,7 +1403,7 @@ rules:
 						"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
-						"reference.resources.gardener.cloud/secret-9f3de87f":    secretNameVPNSeed,
+						"reference.resources.gardener.cloud/secret-1c730dbc":    secretNameVPNSeed,
 						"reference.resources.gardener.cloud/secret-e638c9f3":    secretNameVPNSeedTLSAuth,
 						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
 						"reference.resources.gardener.cloud/secret-b1b53288":    secretNameETCDEncryptionConfig,
@@ -1449,7 +1444,6 @@ rules:
 
 					Expect(deployment.Spec.Template.Annotations).To(Equal(map[string]string{
 						"checksum/secret-" + secretNameVPNSeedServerTLSAuth:     secretChecksumVPNSeedServerTLSAuth,
-						"checksum/secret-" + secretNameVPNSeed:                  secretChecksumVPNSeed,
 						"checksum/secret-" + secretNameCA:                       secretChecksumCA,
 						"checksum/secret-" + secretNameCAFrontProxy:             secretChecksumCAFrontProxy,
 						"checksum/secret-" + secretNameVPNSeedTLSAuth:           secretChecksumVPNSeedTLSAuth,
@@ -1461,7 +1455,7 @@ rules:
 						"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
-						"reference.resources.gardener.cloud/secret-9f3de87f":    secretNameVPNSeed,
+						"reference.resources.gardener.cloud/secret-1c730dbc":    secretNameVPNSeed,
 						"reference.resources.gardener.cloud/secret-e638c9f3":    secretNameVPNSeedTLSAuth,
 						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
 						"reference.resources.gardener.cloud/secret-b1b53288":    secretNameETCDEncryptionConfig,

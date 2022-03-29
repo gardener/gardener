@@ -99,14 +99,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 		)
 	} else {
 		secretList = append(secretList,
-			// Secret definition for vpn-seed (OpenVPN client side)
-			&secrets.CertificateSecretConfig{
-				Name:       kubeapiserver.SecretNameVPNSeed,
-				CommonName: kubeapiserver.UserNameVPNSeed,
-				CertType:   secrets.ClientCert,
-				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
-			},
-
 			&secrets.VPNTLSAuthConfig{
 				Name: kubeapiserver.SecretNameVPNSeedTLSAuth,
 			},
