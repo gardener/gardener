@@ -16,6 +16,7 @@ package gardeneraccess
 
 import (
 	"context"
+	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -24,6 +25,8 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,32 +34,28 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
-const ManagedResourceName = "shoot-core-gardeneraccess"
+const managedResourceName = "shoot-core-gardeneraccess"
 
 // New creates a new instance of the deployer for GardenerAccess.
 func New(
 	client client.Client,
 	namespace string,
+	secretsManager secretsmanager.Interface,
 	values Values,
-) Interface {
+) component.Deployer {
 	return &gardener{
-		client:    client,
-		namespace: namespace,
-		values:    values,
+		client:         client,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		values:         values,
 	}
 }
 
-// Interface contains functions for deploying access credentials for shoot clusters.
-type Interface interface {
-	component.Deployer
-	SetCACertificate([]byte)
-}
-
 type gardener struct {
-	client    client.Client
-	namespace string
-	values    Values
+	client         client.Client
+	namespace      string
+	secretsManager secretsmanager.Interface
+	values         Values
 }
 
 // Values contains configurations for the component.
@@ -65,8 +64,6 @@ type Values struct {
 	ServerOutOfCluster string
 	// ServerInCluster is the in-cluster address of a kube-apiserver.
 	ServerInCluster string
-
-	caCertificate []byte
 }
 
 type accessNameToServer struct {
@@ -83,10 +80,19 @@ func (g *gardener) Deploy(ctx context.Context) error {
 		serviceAccountNames = make([]string, 0, len(accessNamesToServers))
 	)
 
+	caSecret, found := g.secretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+	}
+
 	for _, v := range accessNamesToServers {
 		var (
 			shootAccessSecret = gutil.NewShootAccessSecret(v.name, g.namespace).WithNameOverride(v.name)
-			kubeconfig        = kutil.NewKubeconfig(g.namespace, clientcmdv1.Cluster{Server: v.server, CertificateAuthorityData: g.values.caCertificate}, clientcmdv1.AuthInfo{Token: ""})
+			kubeconfig        = kutil.NewKubeconfig(
+				g.namespace,
+				clientcmdv1.Cluster{Server: v.server, CertificateAuthorityData: caSecret.Data[secretutils.DataKeyCertificateBundle]},
+				clientcmdv1.AuthInfo{Token: ""},
+			)
 		)
 
 		serviceAccountNames = append(serviceAccountNames, shootAccessSecret.ServiceAccountName)
@@ -111,14 +117,12 @@ func (g *gardener) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, g.client, g.namespace, ManagedResourceName, true, data)
+	return managedresources.CreateForShoot(ctx, g.client, g.namespace, managedResourceName, true, data)
 }
 
 func (g *gardener) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForShoot(ctx, g.client, g.namespace, ManagedResourceName)
+	return managedresources.DeleteForShoot(ctx, g.client, g.namespace, managedResourceName)
 }
-
-func (g *gardener) SetCACertificate(caCert []byte) { g.values.caCertificate = caCert }
 
 func (g *gardener) computeResourcesData(serviceAccountNames ...string) (map[string][]byte, error) {
 	var (

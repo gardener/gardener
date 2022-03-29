@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/gardeneraccess"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
@@ -104,7 +103,7 @@ type Components struct {
 	NetworkPolicies   component.Deployer
 	SystemComponents  *SystemComponents
 	Logging           *Logging
-	GardenerAccess    gardeneraccess.Interface
+	GardenerAccess    component.Deployer
 }
 
 // ControlPlane contains references to K8S control plane components.
