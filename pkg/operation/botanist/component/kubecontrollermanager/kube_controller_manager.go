@@ -569,9 +569,6 @@ func (k *kubeControllerManager) computeResourceRequirements(ctx context.Context)
 			corev1.ResourceCPU:    resource.MustParse("100m"),
 			corev1.ResourceMemory: resource.MustParse("128Mi"),
 		},
-		Limits: corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse("512Mi"),
-		},
 	}
 
 	if k.hvpaConfig == nil || !k.hvpaConfig.Enabled {

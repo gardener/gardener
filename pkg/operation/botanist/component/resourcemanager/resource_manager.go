@@ -527,9 +527,6 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 								corev1.ResourceCPU:    resource.MustParse("23m"),
 								corev1.ResourceMemory: resource.MustParse("47Mi"),
 							},
-							Limits: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("512Mi"),
-							},
 						},
 						LivenessProbe: &corev1.Probe{
 							ProbeHandler: corev1.ProbeHandler{

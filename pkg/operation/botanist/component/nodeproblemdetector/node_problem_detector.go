@@ -438,12 +438,12 @@ func (c *nodeProblemDetector) computeResourcesData() (map[string][]byte, error) 
 func (c *nodeProblemDetector) getResourceLimits() corev1.ResourceList {
 	if c.values.VPAEnabled {
 		return corev1.ResourceList{
-			corev1.ResourceMemory: resource.MustParse("80Mi"),
+			corev1.ResourceMemory: resource.MustParse("120Mi"),
 		}
 	}
 
 	return corev1.ResourceList{
-		corev1.ResourceMemory: resource.MustParse("100Mi"),
+		corev1.ResourceMemory: resource.MustParse("500Mi"),
 	}
 }
 

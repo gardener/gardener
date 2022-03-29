@@ -80,7 +80,7 @@ spec:
             cpu: 20m
             memory: 20Mi
           limits:
-            memory: 200Mi
+            memory: 90Mi
       - name: proxy
         image: {{ index .Values.images "apiserver-proxy" }}
         imagePullPolicy: IfNotPresent
@@ -99,7 +99,7 @@ spec:
             cpu: 20m
             memory: 20Mi
           limits:
-            memory: 300Mi
+            memory: 1Gi
         readinessProbe:
           httpGet:
             path: /ready

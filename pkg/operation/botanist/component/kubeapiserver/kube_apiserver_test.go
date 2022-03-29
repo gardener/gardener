@@ -1614,7 +1614,7 @@ rules:
 								corev1.ResourceMemory: resource.MustParse("128Mi"),
 							},
 							Limits: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("1000Mi"),
+								corev1.ResourceMemory: resource.MustParse("128Mi"),
 							},
 						},
 						SecurityContext: &corev1.SecurityContext{

@@ -51,13 +51,13 @@ replicas: 1
 resources:
   loki:
     limits:
-      memory: 512Mi
+      memory: 10Gi
     requests:
       cpu: 200m
       memory: 300Mi
   curator:
     limits:
-      memory: 200Mi
+      memory: 700Mi
     requests:
       cpu: 10m
       memory: 12Mi
@@ -69,7 +69,7 @@ resources:
       memory: 50Mi
   telegraf:
     limits:
-      memory: 100Mi
+      memory: 350Mi
     requests:
       cpu: 5m
       memory: 35Mi

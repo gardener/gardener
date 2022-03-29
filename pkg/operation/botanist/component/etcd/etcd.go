@@ -672,17 +672,11 @@ func (e *etcd) computeContainerResources(existingSts *appsv1.StatefulSet) (*core
 				corev1.ResourceCPU:    resource.MustParse("300m"),
 				corev1.ResourceMemory: resource.MustParse("1G"),
 			},
-			Limits: corev1.ResourceList{
-				corev1.ResourceMemory: resource.MustParse("6G"),
-			},
 		}
 		resourcesBackupRestore = &corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("23m"),
 				corev1.ResourceMemory: resource.MustParse("128Mi"),
-			},
-			Limits: corev1.ResourceList{
-				corev1.ResourceMemory: resource.MustParse("10G"),
 			},
 		}
 	)

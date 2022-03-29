@@ -219,9 +219,6 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 								corev1.ResourceCPU:    resource.MustParse("100m"),
 								corev1.ResourceMemory: resource.MustParse("300Mi"),
 							},
-							Limits: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("3000Mi"),
-							},
 						},
 					},
 				},

@@ -142,7 +142,7 @@ spec:
             {{- if .Values.global.vpaEnabled }}
               memory: 400Mi
             {{- else }}
-              memory: 2048Mi
+              memory: 4Gi
             {{- end }}
       hostNetwork: {{ .Values.controller.hostNetwork }}
     {{- if .Values.controller.nodeSelector }}

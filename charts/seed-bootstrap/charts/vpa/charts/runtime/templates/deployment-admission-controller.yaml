@@ -80,7 +80,7 @@ spec:
 {{- end }}
         resources:
           limits:
-            memory: 500Mi
+            memory: 3Gi
           requests:
             cpu: 30m
             memory: 200Mi
