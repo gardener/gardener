@@ -21,9 +21,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
@@ -84,19 +82,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 				APIServerHost: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
 			}},
 		})
-	}
-
-	if b.Shoot.ReversedVPNEnabled {
-		secretList = append(secretList,
-			// Secret definition for vpn-seed-server (OpenVPN server side)
-			&secrets.CertificateSecretConfig{
-				Name:       "vpn-seed-server",
-				CommonName: "vpn-seed-server",
-				DNSNames:   kubernetes.DNSNamesForService(vpnseedserver.ServiceName, b.Shoot.SeedNamespace),
-				CertType:   secrets.ServerCert,
-				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCAVPN],
-			},
-		)
 	}
 
 	if b.Shoot.WantsVerticalPodAutoscaler {

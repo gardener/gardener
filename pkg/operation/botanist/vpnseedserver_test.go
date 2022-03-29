@@ -120,10 +120,8 @@ var _ = Describe("VPNSeedServer", func() {
 			ctx     = context.TODO()
 			fakeErr = fmt.Errorf("fake err")
 
-			secretNameServer     = vpnseedserver.DeploymentName
-			secretChecksumServer = "5678"
-			secretNameDH         = v1beta1constants.GardenRoleOpenVPNDiffieHellman
-			secretChecksumDH     = "9012"
+			secretNameDH     = v1beta1constants.GardenRoleOpenVPNDiffieHellman
+			secretChecksumDH = "9012"
 
 			namespaceUID = types.UID("1234")
 		)
@@ -131,9 +129,7 @@ var _ = Describe("VPNSeedServer", func() {
 		BeforeEach(func() {
 			vpnSeedServer = mockvpnseedserver.NewMockInterface(ctrl)
 
-			botanist.StoreCheckSum(secretNameServer, secretChecksumServer)
 			botanist.StoreCheckSum(secretNameDH, secretChecksumDH)
-			botanist.StoreSecret(secretNameServer, &corev1.Secret{})
 			botanist.StoreSecret(secretNameDH, &corev1.Secret{})
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
@@ -162,7 +158,6 @@ var _ = Describe("VPNSeedServer", func() {
 
 		BeforeEach(func() {
 			vpnSeedServer.EXPECT().SetSecrets(vpnseedserver.Secrets{
-				Server:           component.Secret{Name: vpnseedserver.DeploymentName, Checksum: secretChecksumServer},
 				DiffieHellmanKey: component.Secret{Name: secretNameDH, Checksum: secretChecksumDH},
 			})
 			vpnSeedServer.EXPECT().SetSeedNamespaceObjectUID(namespaceUID)
