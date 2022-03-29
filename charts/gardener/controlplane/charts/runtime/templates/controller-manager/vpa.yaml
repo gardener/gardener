@@ -1,5 +1,5 @@
 {{- if .Values.global.controller.vpa }}
-apiVersion: autoscaling.k8s.io/v1beta2
+apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: gardener-controller-manager-vpa
@@ -17,4 +17,5 @@ spec:
         minAllowed:
           cpu: 30m
           memory: 300Mi
+        controlledValues: RequestsOnly
 {{- end }}

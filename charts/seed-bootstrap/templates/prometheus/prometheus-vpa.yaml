@@ -1,5 +1,5 @@
 {{ if not .Values.hvpa.enabled }}
-apiVersion: "autoscaling.k8s.io/v1beta2"
+apiVersion: "autoscaling.k8s.io/v1"
 kind: VerticalPodAutoscaler
 metadata:
   name: prometheus-vpa
@@ -11,4 +11,8 @@ spec:
     name: prometheus
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      controlledValues: RequestsOnly
 {{ end }}

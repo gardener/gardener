@@ -338,7 +338,7 @@ status:
   disruptionsAllowed: 0
   expectedPods: 0
 `
-			vpaYAML = `apiVersion: autoscaling.k8s.io/v1beta2
+			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null
@@ -348,6 +348,7 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: '*'
+      controlledValues: RequestsOnly
       minAllowed:
         cpu: 25m
         memory: 100Mi

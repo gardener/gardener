@@ -43,7 +43,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/version"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -68,7 +68,7 @@ var _ = Describe("istiod", func() {
 		Expect(policyv1beta1.AddToScheme(s)).ToNot(HaveOccurred())
 		Expect(networkingv1beta1.AddToScheme(s)).NotTo(HaveOccurred())
 		Expect(networkingv1alpha3.AddToScheme(s)).NotTo(HaveOccurred())
-		Expect(autoscalingv1beta2.AddToScheme(s)).NotTo(HaveOccurred())
+		Expect(vpaautoscalingv1.AddToScheme(s)).NotTo(HaveOccurred())
 		Expect(autoscalingv1.AddToScheme(s)).NotTo(HaveOccurred())
 
 		c = fake.NewClientBuilder().WithScheme(s).Build()
@@ -158,10 +158,11 @@ var _ = Describe("istiod", func() {
 	})
 
 	Describe("vertical pod autoscaler", func() {
-		var vpa *autoscalingv1beta2.VerticalPodAutoscaler
+		var vpa *vpaautoscalingv1.VerticalPodAutoscaler
+		var controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
 		JustBeforeEach(func() {
-			vpa = &autoscalingv1beta2.VerticalPodAutoscaler{}
+			vpa = &vpaautoscalingv1.VerticalPodAutoscaler{}
 
 			Expect(c.Get(
 				ctx,
@@ -180,17 +181,18 @@ var _ = Describe("istiod", func() {
 
 		It("has auto policy", func() {
 			Expect(vpa.Spec.UpdatePolicy).ToNot(BeNil())
-			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(PointTo(Equal(autoscalingv1beta2.UpdateModeAuto)))
+			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(PointTo(Equal(vpaautoscalingv1.UpdateModeAuto)))
 		})
 
 		It("has only works on memory", func() {
 			Expect(vpa.Spec.ResourcePolicy).ToNot(BeNil())
-			Expect(vpa.Spec.ResourcePolicy.ContainerPolicies).To(ConsistOf(autoscalingv1beta2.ContainerResourcePolicy{
+			Expect(vpa.Spec.ResourcePolicy.ContainerPolicies).To(ConsistOf(vpaautoscalingv1.ContainerResourcePolicy{
 				ContainerName: "discovery",
 				MinAllowed: corev1.ResourceList{
 					corev1.ResourceMemory: resource.MustParse("128Mi"),
 					corev1.ResourceCPU:    resource.MustParse("100m"),
 				},
+				ControlledValues: &controlledValues,
 			}))
 		})
 	})

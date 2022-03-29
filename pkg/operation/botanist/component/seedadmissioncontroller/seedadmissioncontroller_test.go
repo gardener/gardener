@@ -400,7 +400,7 @@ webhooks:
   sideEffects: None
   timeoutSeconds: 10
 `
-		vpaYAML = `apiVersion: autoscaling.k8s.io/v1beta2
+		vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null
@@ -410,6 +410,10 @@ metadata:
   name: gardener-seed-admission-controller-vpa
   namespace: shoot--foo--bar
 spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      controlledValues: RequestsOnly
   targetRef:
     apiVersion: apps/v1
     kind: Deployment

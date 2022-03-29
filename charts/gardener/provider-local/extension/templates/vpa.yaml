@@ -1,5 +1,5 @@
 {{- if .Values.vpa.enabled}}
-apiVersion: "autoscaling.k8s.io/v1beta2"
+apiVersion: "autoscaling.k8s.io/v1"
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ include "name" . }}-vpa
@@ -12,6 +12,7 @@ spec:
       minAllowed:
         cpu: {{ required ".Values.vpa.resourcePolicy.minAllowed.cpu is required" .Values.vpa.resourcePolicy.minAllowed.cpu }}
         memory: {{ required ".Values.vpa.resourcePolicy.minAllowed.memory is required" .Values.vpa.resourcePolicy.minAllowed.memory }}
+      controlledValues: RequestsOnly
   {{- end }}
   targetRef:
     apiVersion: apps/v1

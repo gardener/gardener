@@ -325,7 +325,7 @@ status:
 `
 				return out
 			}
-			vpaYAML = `apiVersion: autoscaling.k8s.io/v1beta2
+			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null
@@ -335,6 +335,7 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: '*'
+      controlledValues: RequestsOnly
       minAllowed:
         cpu: 10m
         memory: 20Mi

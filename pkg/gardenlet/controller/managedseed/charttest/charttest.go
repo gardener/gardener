@@ -32,7 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	baseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/klog"
@@ -51,7 +51,7 @@ import (
 
 // ValidateGardenletChartVPA validates the vpa of the Gardenlet chart.
 func ValidateGardenletChartVPA(ctx context.Context, c client.Client) {
-	vpa := &autoscalingv1beta2.VerticalPodAutoscaler{
+	vpa := &vpaautoscalingv1.VerticalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gardenlet-vpa",
 			Namespace: "garden",
@@ -64,21 +64,23 @@ func ValidateGardenletChartVPA(ctx context.Context, c client.Client) {
 		vpa,
 	)).ToNot(HaveOccurred())
 
-	auto := autoscalingv1beta2.UpdateModeAuto
-	expectedSpec := autoscalingv1beta2.VerticalPodAutoscalerSpec{
+	auto := vpaautoscalingv1.UpdateModeAuto
+	controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+	expectedSpec := vpaautoscalingv1.VerticalPodAutoscalerSpec{
 		TargetRef: &autoscalingv1.CrossVersionObjectReference{
 			APIVersion: "apps/v1",
 			Kind:       "Deployment",
 			Name:       "gardenlet",
 		},
-		UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{UpdateMode: &auto},
-		ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &auto},
+		ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 			{
 				ContainerName: "*",
 				MinAllowed: corev1.ResourceList{
 					"cpu":    resource.MustParse("50m"),
 					"memory": resource.MustParse("200Mi"),
 				},
+				ControlledValues: &controlledValues,
 			},
 		}},
 	}

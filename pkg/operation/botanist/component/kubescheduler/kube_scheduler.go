@@ -43,7 +43,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -157,7 +157,8 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		shootAccessSecret = k.newShootAccessSecret()
 		deployment        = k.emptyDeployment()
 
-		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
+		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
+		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
 		port           int32 = 10259
 		probeURIScheme       = corev1.URISchemeHTTPS
@@ -316,17 +317,18 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			Kind:       "Deployment",
 			Name:       v1beta1constants.DeploymentNameKubeScheduler,
 		}
-		vpa.Spec.UpdatePolicy = &autoscalingv1beta2.PodUpdatePolicy{
+		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
 			UpdateMode: &vpaUpdateMode,
 		}
-		vpa.Spec.ResourcePolicy = &autoscalingv1beta2.PodResourcePolicy{
-			ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
+			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
-					ContainerName: autoscalingv1beta2.DefaultContainerResourcePolicy,
+					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
 					MinAllowed: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse("20m"),
 						corev1.ResourceMemory: resource.MustParse("50Mi"),
 					},
+					ControlledValues: &controlledValues,
 				},
 			},
 		}
@@ -354,8 +356,8 @@ func (k *kubeScheduler) Destroy(_ context.Context) error     { return nil }
 func (k *kubeScheduler) Wait(_ context.Context) error        { return nil }
 func (k *kubeScheduler) WaitCleanup(_ context.Context) error { return nil }
 
-func (k *kubeScheduler) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
-	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "kube-scheduler-vpa", Namespace: k.namespace}}
+func (k *kubeScheduler) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
+	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "kube-scheduler-vpa", Namespace: k.namespace}}
 }
 
 func (k *kubeScheduler) emptyService() *corev1.Service {

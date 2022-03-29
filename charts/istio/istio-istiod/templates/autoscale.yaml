@@ -1,4 +1,4 @@
-apiVersion: autoscaling.k8s.io/v1beta2
+apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: istiod
@@ -18,3 +18,4 @@ spec:
         minAllowed:
           memory: 128Mi
           cpu: 100m
+        controlledValues: RequestsOnly

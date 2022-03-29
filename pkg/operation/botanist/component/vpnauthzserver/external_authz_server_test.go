@@ -38,7 +38,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -58,7 +58,8 @@ var _ = Describe("ExtAuthzServer", func() {
 		maxSurge                   = intstr.FromInt(100)
 		maxUnavailable             = intstr.FromInt(0)
 		maxUnavailablePDB          = intstr.FromInt(1)
-		vpaUpdateMode              = autoscalingv1beta2.UpdateModeAuto
+		vpaUpdateMode              = vpaautoscalingv1.UpdateModeAuto
+		controlledValues           = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
 		deploymentName = "reversed-vpn-auth-server"
 		serviceName    = "reversed-vpn-auth-server"
@@ -68,7 +69,7 @@ var _ = Describe("ExtAuthzServer", func() {
 		expectedDestinationRule     *istionetworkingv1beta1.DestinationRule
 		expectedService             *corev1.Service
 		expectedVirtualService      *istionetworkingv1beta1.VirtualService
-		expectedVpa                 *autoscalingv1beta2.VerticalPodAutoscaler
+		expectedVpa                 *vpaautoscalingv1.VerticalPodAutoscaler
 		expectedPodDisruptionBudget *policyv1beta1.PodDisruptionBudget
 		expectedPriorityClass       *schedulingv1.PriorityClass
 	)
@@ -80,7 +81,7 @@ var _ = Describe("ExtAuthzServer", func() {
 		Expect(istionetworkingv1alpha3.AddToScheme(s)).To(Succeed())
 		Expect(corev1.AddToScheme(s)).To(Succeed())
 		Expect(appsv1.AddToScheme(s)).To(Succeed())
-		Expect(autoscalingv1beta2.AddToScheme(s)).To(Succeed())
+		Expect(vpaautoscalingv1.AddToScheme(s)).To(Succeed())
 		Expect(policyv1beta1.AddToScheme(s)).To(Succeed())
 		Expect(schedulingv1.AddToScheme(s)).To(Succeed())
 
@@ -271,26 +272,27 @@ var _ = Describe("ExtAuthzServer", func() {
 			},
 		}
 
-		expectedVpa = &autoscalingv1beta2.VerticalPodAutoscaler{
+		expectedVpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace, ResourceVersion: "1"},
-			TypeMeta:   metav1.TypeMeta{Kind: "VerticalPodAutoscaler", APIVersion: "autoscaling.k8s.io/v1beta2"},
-			Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
+			TypeMeta:   metav1.TypeMeta{Kind: "VerticalPodAutoscaler", APIVersion: "autoscaling.k8s.io/v1"},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 					Kind:       "Deployment",
 					Name:       "reversed-vpn-auth-server",
 				},
-				UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 					UpdateMode: &vpaUpdateMode,
 				},
-				ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
-					ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName: "reversed-vpn-auth-server",
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("100m"),
 								corev1.ResourceMemory: resource.MustParse("100Mi"),
 							},
+							ControlledValues: &controlledValues,
 						},
 					},
 				},
@@ -346,7 +348,7 @@ var _ = Describe("ExtAuthzServer", func() {
 			Expect(c.Get(ctx, kutil.Key(expectedVirtualService.Namespace, expectedVirtualService.Name), actualVirtualService)).To(Succeed())
 			Expect(actualVirtualService).To(DeepEqual(expectedVirtualService))
 
-			actualVpa := &autoscalingv1beta2.VerticalPodAutoscaler{}
+			actualVpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
 			Expect(c.Get(ctx, kutil.Key(expectedVpa.Namespace, expectedVpa.Name), actualVpa)).To(Succeed())
 			Expect(actualVpa).To(DeepEqual(expectedVpa))
 
@@ -364,7 +366,7 @@ var _ = Describe("ExtAuthzServer", func() {
 			Expect(c.Get(ctx, kutil.Key(expectedDestinationRule.Namespace, expectedDestinationRule.Name), &istionetworkingv1beta1.DestinationRule{})).To(Succeed())
 			Expect(c.Get(ctx, kutil.Key(expectedService.Namespace, expectedService.Name), &corev1.Service{})).To(Succeed())
 			Expect(c.Get(ctx, kutil.Key(expectedVirtualService.Namespace, expectedVirtualService.Name), &istionetworkingv1beta1.VirtualService{})).To(Succeed())
-			Expect(c.Get(ctx, kutil.Key(expectedVpa.Namespace, expectedVpa.Name), &autoscalingv1beta2.VerticalPodAutoscaler{})).To(Succeed())
+			Expect(c.Get(ctx, kutil.Key(expectedVpa.Namespace, expectedVpa.Name), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(Succeed())
 			Expect(c.Get(ctx, kutil.Key(expectedPodDisruptionBudget.Namespace, expectedPodDisruptionBudget.Name), &policyv1beta1.PodDisruptionBudget{})).To(Succeed())
 
 			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
@@ -373,7 +375,7 @@ var _ = Describe("ExtAuthzServer", func() {
 			Expect(c.Get(ctx, kutil.Key(expectedDestinationRule.Namespace, expectedDestinationRule.Name), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, kutil.Key(expectedService.Namespace, expectedService.Name), &corev1.Service{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, kutil.Key(expectedVirtualService.Namespace, expectedVirtualService.Name), &istionetworkingv1beta1.VirtualService{})).To(BeNotFoundError())
-			Expect(c.Get(ctx, kutil.Key(expectedVpa.Namespace, expectedVpa.Name), &autoscalingv1beta2.VerticalPodAutoscaler{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, kutil.Key(expectedVpa.Namespace, expectedVpa.Name), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, kutil.Key(expectedPodDisruptionBudget.Namespace, expectedPodDisruptionBudget.Name), &policyv1beta1.PodDisruptionBudget{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, kutil.Key(expectedPriorityClass.Name), &schedulingv1.PriorityClass{})).To(BeNotFoundError())
 		})

@@ -31,7 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	autoscalerv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -185,20 +185,20 @@ var _ = Describe("utils", func() {
 			var (
 				vpaGVK schema.GroupVersionKind
 
-				currentVPA             *autoscalerv1beta2.VerticalPodAutoscaler
+				currentVPA             *vpaautoscalingv1.VerticalPodAutoscaler
 				currentVPAUnstructured *unstructured.Unstructured
 			)
 
 			BeforeEach(func() {
-				vpaGVK = autoscalerv1beta2.SchemeGroupVersion.WithKind("VerticalPodAutoscaler")
+				vpaGVK = vpaautoscalingv1.SchemeGroupVersion.WithKind("VerticalPodAutoscaler")
 				obj.SetGroupVersionKind(vpaGVK)
 
-				currentVPA = &autoscalerv1beta2.VerticalPodAutoscaler{
+				currentVPA = &vpaautoscalingv1.VerticalPodAutoscaler{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      name,
 						Namespace: namespace,
 					},
-					Spec: autoscalerv1beta2.VerticalPodAutoscalerSpec{
+					Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 						TargetRef: &autoscalingv1.CrossVersionObjectReference{
 							APIVersion: "apps/v1",
 							Kind:       "Deployment",
@@ -209,14 +209,14 @@ var _ = Describe("utils", func() {
 
 				currentVPAUnstructured = &unstructured.Unstructured{}
 				tmpScheme := runtime.NewScheme()
-				Expect(autoscalerv1beta2.AddToScheme(tmpScheme)).To(Succeed(), "should be able to add autoscaler types to temporary scheme")
+				Expect(vpaautoscalingv1.AddToScheme(tmpScheme)).To(Succeed(), "should be able to add autoscaler types to temporary scheme")
 				Expect(tmpScheme.Convert(currentVPA, currentVPAUnstructured, nil)).To(Succeed(), "should be able to convert VPA to unstructured")
 			})
 
 			It("should fallback to an unstructured get request and correctly create the object", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, gomock.AssignableToTypeOf(&unstructured.Unstructured{})).
-						Return(apierrors.NewNotFound(autoscalerv1beta2.Resource("verticalpodautoscalers"), name)),
+						Return(apierrors.NewNotFound(vpaautoscalingv1.Resource("verticalpodautoscalers"), name)),
 					c.EXPECT().Create(ctx, obj),
 				)
 

@@ -46,6 +46,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -169,16 +170,27 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		shootAccessSecret = k.newShootAccessSecret()
 		deployment        = k.emptyDeployment()
 
-		port              int32 = 10257
-		probeURIScheme          = corev1.URISchemeHTTPS
-		command                 = k.computeCommand(port)
-		vpaResourcePolicy       = &autoscalingv1beta2.PodResourcePolicy{
+		port               int32 = 10257
+		probeURIScheme           = corev1.URISchemeHTTPS
+		command                  = k.computeCommand(port)
+		hvpaResourcePolicy       = &autoscalingv1beta2.PodResourcePolicy{
 			ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{{
 				ContainerName: containerName,
 				MinAllowed: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("100m"),
 					corev1.ResourceMemory: resource.MustParse("100Mi"),
 				},
+			}},
+		}
+		controlledValues  = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		vpaResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
+			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+				ContainerName: containerName,
+				MinAllowed: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("100m"),
+					corev1.ResourceMemory: resource.MustParse("100Mi"),
+				},
+				ControlledValues: &controlledValues,
 			}},
 		}
 	)
@@ -360,7 +372,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						Labels: vpaLabels,
 					},
 					Spec: hvpav1alpha1.VpaTemplateSpec{
-						ResourcePolicy: vpaResourcePolicy,
+						ResourcePolicy: hvpaResourcePolicy,
 					},
 				},
 			}
@@ -385,7 +397,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		vpaUpdateMode := autoscalingv1beta2.UpdateModeAuto
+		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient, vpa, func() error {
 			vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
@@ -393,7 +405,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				Kind:       "Deployment",
 				Name:       v1beta1constants.DeploymentNameKubeControllerManager,
 			}
-			vpa.Spec.UpdatePolicy = &autoscalingv1beta2.PodUpdatePolicy{
+			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
 				UpdateMode: &vpaUpdateMode,
 			}
 			vpa.Spec.ResourcePolicy = vpaResourcePolicy
@@ -416,8 +428,8 @@ func (k *kubeControllerManager) SetShootClient(c client.Client)  { k.shootClient
 func (k *kubeControllerManager) SetReplicaCount(replicas int32)  { k.replicas = replicas }
 func (k *kubeControllerManager) Destroy(_ context.Context) error { return nil }
 
-func (k *kubeControllerManager) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
-	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager-vpa", Namespace: k.namespace}}
+func (k *kubeControllerManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
+	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager-vpa", Namespace: k.namespace}}
 }
 
 func (k *kubeControllerManager) emptyHVPA() *hvpav1alpha1.Hvpa {

@@ -277,7 +277,7 @@ subjects:
   name: etcd-druid
   namespace: ` + namespace + `
 `
-			vpaYAML = `apiVersion: autoscaling.k8s.io/v1beta2
+			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null
@@ -289,6 +289,7 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: '*'
+      controlledValues: RequestsOnly
       minAllowed:
         cpu: 50m
         memory: 100M
