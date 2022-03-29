@@ -80,7 +80,7 @@ var _ = Describe("KubeAPIServer", func() {
 		enableAdminKubeconfig = pointer.Bool(true)
 
 		secretNameBasicAuthentication      = "kube-apiserver-basic-auth-426b1845"
-		secretNameStaticToken              = "kube-apiserver-static-token-c069a0e6"
+		secretNameStaticToken              = "kube-apiserver-static-token-b71daf19"
 		secretNameCA                       = "CA-secret"
 		secretChecksumCA                   = "12345"
 		secretNameCAEtcd                   = "CAEtcd-secret"

@@ -471,7 +471,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		return err
 	}
 
-	if *(b.Shoot.GetInfo().Spec.Kubernetes.EnableAdminKubeconfig) {
+	if enableAdminKubeconfig := b.Shoot.GetInfo().Spec.Kubernetes.EnableAdminKubeconfig; enableAdminKubeconfig == nil || *enableAdminKubeconfig {
 		userKubeconfigSecret, found := b.SecretsManager.Get(kubeapiserver.SecretNameUserKubeconfig)
 		if !found {
 			return fmt.Errorf("secret %q not found", kubeapiserver.SecretNameUserKubeconfig)
@@ -497,7 +497,9 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		}
 	} else {
 		secretName := gutil.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, gutil.ShootProjectSecretSuffixKubeconfig)
-		return kutil.DeleteObject(ctx, b.K8sSeedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}})
+		if err := kutil.DeleteObject(ctx, b.K8sSeedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}}); err != nil {
+			return nil
+		}
 	}
 
 	// TODO(rfranzke): Remove in a future release.

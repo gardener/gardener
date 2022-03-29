@@ -284,7 +284,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		configMapAdmission                         = k.emptyConfigMap(configMapAdmissionNamePrefix)
 		configMapAuditPolicy                       = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
 		configMapEgressSelector                    = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
-		enableAdminKubeconfig                      = *(k.GetValues().EnableAdminKubeconfig)
 	)
 
 	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {
@@ -394,7 +393,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if enableAdminKubeconfig {
+	if pointer.BoolDeref(k.values.EnableAdminKubeconfig, true) {
 		if err := k.reconcileSecretUserKubeconfig(ctx, secretStaticToken, secretBasicAuth); err != nil {
 			return err
 		}

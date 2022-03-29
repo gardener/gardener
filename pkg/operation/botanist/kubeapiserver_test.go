@@ -1594,30 +1594,30 @@ var _ = Describe("KubeAPIServer", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(secret), &corev1.Secret{})).To(BeNotFoundError())
 		})
-	})
 
-	It("should not sync the kubeconfig to garden project namespace when enableAdminKubeconfig is set to false", func() {
-		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-			Spec: gardencorev1beta1.ShootSpec{
-				Kubernetes: gardencorev1beta1.Kubernetes{
-					EnableAdminKubeconfig: pointer.Bool(false),
+		It("should not sync the kubeconfig to garden project namespace when enableAdminKubeconfig is set to false", func() {
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						EnableAdminKubeconfig: pointer.Bool(false),
+					},
 				},
-			},
+			})
+
+			kubeAPIServer.EXPECT().GetValues()
+			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+			kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
+			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+
+			kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
+			kubeAPIServer.EXPECT().Deploy(ctx)
+			Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
+
+			Expect(gc.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(BeNotFoundError())
+
 		})
-
-		kubeAPIServer.EXPECT().GetValues()
-		kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
-		kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
-		kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-		kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
-		kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
-
-		kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
-		kubeAPIServer.EXPECT().Deploy(ctx)
-		Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
-
-		Expect(gc.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(BeNotFoundError())
-
 	})
 
 	Describe("#DeleteKubeAPIServer", func() {
