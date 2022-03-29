@@ -460,6 +460,27 @@ var _ = Describe("Generate", func() {
 				By("verifying client secret is changed")
 				Expect(newClientSecret).NotTo(Equal(clientSecret))
 			})
+
+			It("should also accept ControlPlaneSecretConfigs", func() {
+				By("generating new CA secret")
+				caSecret, err := m.Generate(ctx, caConfig)
+				Expect(err).NotTo(HaveOccurred())
+				expectSecretWasCreated(ctx, fakeClient, caSecret)
+
+				By("generating new control plane secret")
+				controlPlaneSecretConfig := &secretutils.ControlPlaneSecretConfig{
+					Name:                    "control-plane-secret",
+					CertificateSecretConfig: serverConfig,
+					KubeConfigRequests: []secretutils.KubeConfigRequest{{
+						ClusterName:   namespace,
+						APIServerHost: "some-host",
+					}},
+				}
+
+				serverSecret, err := m.Generate(ctx, controlPlaneSecretConfig, SignedByCA(caName))
+				Expect(err).NotTo(HaveOccurred())
+				expectSecretWasCreated(ctx, fakeClient, serverSecret)
+			})
 		})
 
 		Context("backwards compatibility", func() {

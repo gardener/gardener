@@ -450,8 +450,13 @@ func SignedByCA(name string) GenerateOption {
 			return nil
 		}
 
-		certificateConfig, ok := config.(*secretutils.CertificateSecretConfig)
-		if !ok {
+		var certificateConfig *secretutils.CertificateSecretConfig
+		switch cfg := config.(type) {
+		case *secretutils.CertificateSecretConfig:
+			certificateConfig = cfg
+		case *secretutils.ControlPlaneSecretConfig:
+			certificateConfig = cfg.CertificateSecretConfig
+		default:
 			return fmt.Errorf("could not apply option to %T, expected *secrets.CertificateSecretConfig", config)
 		}
 
