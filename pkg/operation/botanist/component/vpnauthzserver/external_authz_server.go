@@ -77,8 +77,7 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 		pdb             = a.emptyPDB()
 		pc              = a.emptyPC()
 
-		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
-		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		vpaUpdateMode = vpaautoscalingv1.UpdateModeAuto
 	)
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, pc, func() error {
@@ -241,7 +240,6 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 						corev1.ResourceCPU:    resource.MustParse("100m"),
 						corev1.ResourceMemory: resource.MustParse("100Mi"),
 					},
-					ControlledValues: &controlledValues,
 				},
 			},
 		}

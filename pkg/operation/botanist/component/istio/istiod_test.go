@@ -159,7 +159,6 @@ var _ = Describe("istiod", func() {
 
 	Describe("vertical pod autoscaler", func() {
 		var vpa *vpaautoscalingv1.VerticalPodAutoscaler
-		var controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
 		JustBeforeEach(func() {
 			vpa = &vpaautoscalingv1.VerticalPodAutoscaler{}
@@ -192,7 +191,6 @@ var _ = Describe("istiod", func() {
 					corev1.ResourceMemory: resource.MustParse("128Mi"),
 					corev1.ResourceCPU:    resource.MustParse("100m"),
 				},
-				ControlledValues: &controlledValues,
 			}))
 		})
 	})

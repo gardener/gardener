@@ -200,9 +200,8 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			},
 		}
 
-		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
-		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		vpa              = &vpaautoscalingv1.VerticalPodAutoscaler{
+		vpaUpdateMode = vpaautoscalingv1.UpdateModeAuto
+		vpa           = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      druidVPAName,
 				Namespace: b.namespace,
@@ -224,7 +223,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 							corev1.ResourceCPU:    resource.MustParse("50m"),
 							corev1.ResourceMemory: resource.MustParse("100M"),
 						},
-						ControlledValues: &controlledValues,
 					}},
 				},
 			},

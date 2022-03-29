@@ -11,8 +11,4 @@ spec:
     name: prometheus
   updatePolicy:
     updateMode: "Auto"
-  resourcePolicy:
-    containerPolicies:
-    - containerName: '*'
-      controlledValues: RequestsOnly
 {{ end }}

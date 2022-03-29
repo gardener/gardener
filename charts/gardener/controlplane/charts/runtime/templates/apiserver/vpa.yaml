@@ -24,6 +24,5 @@ spec:
         minAllowed:
           cpu: 50m
           memory: 256Mi
-        controlledValues: RequestsOnly
 {{- end }}
 {{- end }}

@@ -11,8 +11,4 @@ spec:
     name: aggregate-prometheus
   updatePolicy:
     updateMode: "Auto"
-  resourcePolicy:
-    containerPolicies:
-    - containerName: '*'
-      controlledValues: RequestsOnly
 {{ end }}

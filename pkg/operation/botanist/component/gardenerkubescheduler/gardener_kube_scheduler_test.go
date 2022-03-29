@@ -548,7 +548,6 @@ var _ = Describe("New", func() {
 			It("vpa is created", func() {
 				const key = "verticalpodautoscaler__test-namespace__gardener-kube-scheduler.yaml"
 				updateMode := vpaautoscalingv1.UpdateModeAuto
-				controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 				actual := &vpaautoscalingv1.VerticalPodAutoscaler{}
 				expected := &vpaautoscalingv1.VerticalPodAutoscaler{
 					ObjectMeta: metav1.ObjectMeta{
@@ -564,12 +563,6 @@ var _ = Describe("New", func() {
 						},
 						UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 							UpdateMode: &updateMode,
-						},
-						ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-							ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-								ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
-								ControlledValues: &controlledValues,
-							}},
 						},
 					},
 				}

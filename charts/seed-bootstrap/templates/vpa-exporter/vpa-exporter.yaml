@@ -10,7 +10,3 @@ spec:
     name: vpa-exporter
   updatePolicy:
     updateMode: "Auto"
-  resourcePolicy:
-    containerPolicies:
-    - containerName: '*'
-      controlledValues: RequestsOnly

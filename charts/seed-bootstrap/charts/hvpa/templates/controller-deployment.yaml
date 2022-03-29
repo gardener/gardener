@@ -88,4 +88,3 @@ spec:
         minAllowed:
           cpu: 100m
           memory: 128Mi
-        controlledValues: RequestsOnly

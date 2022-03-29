@@ -252,9 +252,8 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			},
 		}
 
-		updateMode       = vpaautoscalingv1.UpdateModeAuto
-		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		vpa              = &vpaautoscalingv1.VerticalPodAutoscaler{
+		updateMode = vpaautoscalingv1.UpdateModeAuto
+		vpa        = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      b.name() + "-vpa",
 				Namespace: b.namespace,
@@ -275,7 +274,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 							corev1.ResourceCPU:    resource.MustParse("25m"),
 							corev1.ResourceMemory: resource.MustParse(vpaMinAllowedMemory),
 						},
-						ControlledValues: &controlledValues,
 					}},
 				},
 			},

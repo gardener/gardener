@@ -513,9 +513,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
-		updateMode       = vpaautoscalingv1.UpdateModeAuto
-		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		vpa              = &vpaautoscalingv1.VerticalPodAutoscaler{
+		updateMode = vpaautoscalingv1.UpdateModeAuto
+		vpa        = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      controllerName,
 				Namespace: n.namespace,
@@ -537,7 +536,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 								corev1.ResourceCPU:    resource.MustParse("25m"),
 								corev1.ResourceMemory: resource.MustParse("100Mi"),
 							},
-							ControlledValues: &controlledValues,
 						},
 					},
 				},

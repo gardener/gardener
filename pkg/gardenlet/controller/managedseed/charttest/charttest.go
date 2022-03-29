@@ -65,7 +65,6 @@ func ValidateGardenletChartVPA(ctx context.Context, c client.Client) {
 	)).ToNot(HaveOccurred())
 
 	auto := vpaautoscalingv1.UpdateModeAuto
-	controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 	expectedSpec := vpaautoscalingv1.VerticalPodAutoscalerSpec{
 		TargetRef: &autoscalingv1.CrossVersionObjectReference{
 			APIVersion: "apps/v1",
@@ -80,7 +79,6 @@ func ValidateGardenletChartVPA(ctx context.Context, c client.Client) {
 					"cpu":    resource.MustParse("50m"),
 					"memory": resource.MustParse("200Mi"),
 				},
-				ControlledValues: &controlledValues,
 			},
 		}},
 	}

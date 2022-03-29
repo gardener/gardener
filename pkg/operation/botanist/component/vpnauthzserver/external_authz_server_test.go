@@ -59,7 +59,6 @@ var _ = Describe("ExtAuthzServer", func() {
 		maxUnavailable             = intstr.FromInt(0)
 		maxUnavailablePDB          = intstr.FromInt(1)
 		vpaUpdateMode              = vpaautoscalingv1.UpdateModeAuto
-		controlledValues           = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
 		deploymentName = "reversed-vpn-auth-server"
 		serviceName    = "reversed-vpn-auth-server"
@@ -292,7 +291,6 @@ var _ = Describe("ExtAuthzServer", func() {
 								corev1.ResourceCPU:    resource.MustParse("100m"),
 								corev1.ResourceMemory: resource.MustParse("100Mi"),
 							},
-							ControlledValues: &controlledValues,
 						},
 					},
 				},

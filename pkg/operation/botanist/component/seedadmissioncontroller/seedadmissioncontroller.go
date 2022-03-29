@@ -329,9 +329,8 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 			},
 		}
 
-		updateMode       = vpaautoscalingv1.UpdateModeAuto
-		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		vpa              = &vpaautoscalingv1.VerticalPodAutoscaler{
+		updateMode = vpaautoscalingv1.UpdateModeAuto
+		vpa        = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      Name + "-vpa",
 				Namespace: g.namespace,
@@ -345,12 +344,6 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 					UpdateMode: &updateMode,
-				},
-				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-						ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
-						ControlledValues: &controlledValues,
-					}},
 				},
 			},
 		}

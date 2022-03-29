@@ -334,9 +334,8 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 				Namespace: k.namespace,
 			}},
 		}
-		webhook          = GetMutatingWebhookConfig(*k.webhookClientConfig)
-		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		vpa              = &vpaautoscalingv1.VerticalPodAutoscaler{
+		webhook = GetMutatingWebhookConfig(*k.webhookClientConfig)
+		vpa     = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      Name,
 				Namespace: k.namespace,
@@ -350,12 +349,6 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 				},
 				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 					UpdateMode: &updateMode,
-				},
-				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
-					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
-						ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
-						ControlledValues: &controlledValues,
-					}},
 				},
 			},
 		}

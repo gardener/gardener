@@ -410,10 +410,6 @@ metadata:
   name: gardener-seed-admission-controller-vpa
   namespace: shoot--foo--bar
 spec:
-  resourcePolicy:
-    containerPolicies:
-    - containerName: '*'
-      controlledValues: RequestsOnly
   targetRef:
     apiVersion: apps/v1
     kind: Deployment

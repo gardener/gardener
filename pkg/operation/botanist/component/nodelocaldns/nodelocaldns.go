@@ -490,7 +490,6 @@ ip6.arpa:53 {
 
 	if c.values.VPAEnabled {
 		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
-		controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "node-local-dns",
@@ -513,7 +512,6 @@ ip6.arpa:53 {
 								corev1.ResourceCPU:    resource.MustParse("10m"),
 								corev1.ResourceMemory: resource.MustParse("20Mi"),
 							},
-							ControlledValues: &controlledValues,
 						},
 					},
 				},
