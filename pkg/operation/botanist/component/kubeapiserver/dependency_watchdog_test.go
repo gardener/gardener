@@ -63,8 +63,8 @@ var _ = Describe("DependencyWatchdog", func() {
 			Expect(config).To(ConsistOf(scalerapi.ProbeDependants{
 				Name: "shoot-kube-apiserver",
 				Probe: &scalerapi.ProbeConfig{
-					External:      &scalerapi.ProbeDetails{KubeconfigSecretName: "dependency-watchdog-external-probe"},
-					Internal:      &scalerapi.ProbeDetails{KubeconfigSecretName: "dependency-watchdog-internal-probe"},
+					External:      &scalerapi.ProbeDetails{KubeconfigSecretName: "shoot-access-dependency-watchdog-external-probe"},
+					Internal:      &scalerapi.ProbeDetails{KubeconfigSecretName: "shoot-access-dependency-watchdog-internal-probe"},
 					PeriodSeconds: pointer.Int32(30),
 				},
 				DependantScales: []*scalerapi.DependantScaleDetails{

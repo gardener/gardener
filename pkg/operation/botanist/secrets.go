@@ -24,7 +24,6 @@ import (
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
@@ -314,6 +313,8 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 		// Remove legacy secrets from ShootState.
 		// TODO(rfranzke): Remove in a future version.
 		for _, name := range []string{
+			"dependency-watchdog-internal-probe",
+			"dependency-watchdog-external-probe",
 			"gardener",
 			"gardener-internal",
 			"kube-controller-manager",
@@ -343,14 +344,6 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			"vpn-seed-server",
 		} {
 			gardenerResourceDataList.Delete(name)
-		}
-
-		if b.Shoot.GetInfo().DeletionTimestamp == nil {
-			if !gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(b.Seed.GetInfo().Spec.Settings) {
-				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList, kubeapiserver.DependencyWatchdogInternalProbeSecretName, kubeapiserver.DependencyWatchdogExternalProbeSecretName); err != nil {
-					return err
-				}
-			}
 		}
 
 		secretsManager := shootsecrets.NewSecretsManager(

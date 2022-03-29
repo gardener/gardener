@@ -18,9 +18,6 @@ import (
 	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )
@@ -47,41 +44,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 			Username:       "admin",
 			PasswordLength: 32,
 		},
-	}
-
-	if gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(b.Seed.GetInfo().Spec.Settings) {
-		// Secret definitions for dependency-watchdog-internal and external probes
-		secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
-			Name: kubeapiserver.DependencyWatchdogInternalProbeSecretName,
-			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				CommonName:   dependencywatchdog.UserName,
-				Organization: nil,
-				DNSNames:     nil,
-				IPAddresses:  nil,
-
-				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-			},
-			KubeConfigRequests: []secrets.KubeConfigRequest{{
-				ClusterName:   b.Shoot.SeedNamespace,
-				APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(false),
-			}},
-		}, &secrets.ControlPlaneSecretConfig{
-			Name: kubeapiserver.DependencyWatchdogExternalProbeSecretName,
-			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				CommonName:   dependencywatchdog.UserName,
-				Organization: nil,
-				DNSNames:     nil,
-				IPAddresses:  nil,
-
-				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-			},
-			KubeConfigRequests: []secrets.KubeConfigRequest{{
-				ClusterName:   b.Shoot.SeedNamespace,
-				APIServerHost: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
-			}},
-		})
 	}
 
 	if b.Shoot.WantsVerticalPodAutoscaler {
