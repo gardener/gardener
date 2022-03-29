@@ -96,10 +96,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 				CertType:   secrets.ServerCert,
 				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCAVPN],
 			},
-
-			&secrets.VPNTLSAuthConfig{
-				Name: vpnseedserver.VpnSeedServerTLSAuth,
-			},
 		)
 	} else {
 		secretList = append(secretList,

@@ -120,12 +120,10 @@ var _ = Describe("VPNSeedServer", func() {
 			ctx     = context.TODO()
 			fakeErr = fmt.Errorf("fake err")
 
-			secretNameTLSAuth     = vpnseedserver.VpnSeedServerTLSAuth
-			secretChecksumTLSAuth = "1234"
-			secretNameServer      = vpnseedserver.DeploymentName
-			secretChecksumServer  = "5678"
-			secretNameDH          = v1beta1constants.GardenRoleOpenVPNDiffieHellman
-			secretChecksumDH      = "9012"
+			secretNameServer     = vpnseedserver.DeploymentName
+			secretChecksumServer = "5678"
+			secretNameDH         = v1beta1constants.GardenRoleOpenVPNDiffieHellman
+			secretChecksumDH     = "9012"
 
 			namespaceUID = types.UID("1234")
 		)
@@ -133,10 +131,8 @@ var _ = Describe("VPNSeedServer", func() {
 		BeforeEach(func() {
 			vpnSeedServer = mockvpnseedserver.NewMockInterface(ctrl)
 
-			botanist.StoreCheckSum(secretNameTLSAuth, secretChecksumTLSAuth)
 			botanist.StoreCheckSum(secretNameServer, secretChecksumServer)
 			botanist.StoreCheckSum(secretNameDH, secretChecksumDH)
-			botanist.StoreSecret(secretNameTLSAuth, &corev1.Secret{})
 			botanist.StoreSecret(secretNameServer, &corev1.Secret{})
 			botanist.StoreSecret(secretNameDH, &corev1.Secret{})
 			botanist.Shoot = &shootpkg.Shoot{
@@ -166,7 +162,6 @@ var _ = Describe("VPNSeedServer", func() {
 
 		BeforeEach(func() {
 			vpnSeedServer.EXPECT().SetSecrets(vpnseedserver.Secrets{
-				TLSAuth:          component.Secret{Name: secretNameTLSAuth, Checksum: secretChecksumTLSAuth},
 				Server:           component.Secret{Name: vpnseedserver.DeploymentName, Checksum: secretChecksumServer},
 				DiffieHellmanKey: component.Secret{Name: secretNameDH, Checksum: secretChecksumDH},
 			})

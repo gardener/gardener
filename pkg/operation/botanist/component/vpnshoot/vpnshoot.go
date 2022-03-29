@@ -16,6 +16,7 @@ package vpnshoot
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -199,9 +201,24 @@ func (v *vpnShoot) WaitCleanup(ctx context.Context) error {
 }
 
 func (v *vpnShoot) computeResourcesData(secretVPNShoot *corev1.Secret) (map[string][]byte, error) {
-	secretNameSuffix := "client"
-	if !v.values.ReversedVPN.Enabled {
+	var (
+		secretNameSuffix string
+
+		secretVPNSeedServerTLSAuth *corev1.Secret
+		found                      bool
+	)
+
+	if v.values.ReversedVPN.Enabled {
+		secretNameSuffix = "client"
+
+		secretVPNSeedServerTLSAuth, found = v.secretsManager.Get(vpnseedserver.SecretNameTLSAuth)
+		if !found {
+			return nil, fmt.Errorf("secret %q not found", vpnseedserver.SecretNameTLSAuth)
+		}
+	} else {
 		secretNameSuffix = "server"
+
+		secretVPNSeedServerTLSAuth = &corev1.Secret{Data: v.secrets.TLSAuth.Data}
 	}
 
 	var (
@@ -213,7 +230,7 @@ func (v *vpnShoot) computeResourcesData(secretVPNShoot *corev1.Secret) (map[stri
 				Namespace: metav1.NamespaceSystem,
 			},
 			Type: corev1.SecretTypeOpaque,
-			Data: v.secrets.TLSAuth.Data,
+			Data: secretVPNSeedServerTLSAuth.Data,
 		}
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{

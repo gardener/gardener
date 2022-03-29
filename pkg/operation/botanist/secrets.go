@@ -338,6 +338,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			"gardener-resource-manager-server",
 			"vpn-shoot",
 			"vpn-shoot-client",
+			"vpn-seed-server-tlsauth",
 		} {
 			gardenerResourceDataList.Delete(name)
 		}
@@ -364,7 +365,6 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			} else {
 				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList,
 					vpnseedserver.DeploymentName,
-					vpnseedserver.VpnSeedServerTLSAuth,
 				); err != nil {
 					return err
 				}

@@ -71,18 +71,16 @@ var _ = Describe("VPNShoot", func() {
 		openVPNPort       int32 = 8132
 		reversedVPNHeader       = "outbound|1194||vpn-seed-server.shoot--project--shoot-name.svc.cluster.local"
 
-		secretNameDH          = "vpn-shoot-dh"
-		secretChecksumDH      = "5678"
-		secretDataDH          = map[string][]byte{"foo": []byte("dash")}
-		secretNameTLSAuth     = "vpn-shoot-tlsauth"
-		secretChecksumTLSAuth = "9012"
-		secretDataTLSAuth     = map[string][]byte{"dot": []byte("bus")}
+		secretNameDH     = "vpn-shoot-dh"
+		secretChecksumDH = "5678"
+		secretDataDH     = map[string][]byte{"foo": []byte("dash")}
+		secretNameDHTest = "vpn-shoot-dh-" + utils.ComputeSecretChecksum(secretDataDH)[:8]
 
-		secretNameTLSAuthTest = "vpn-shoot-tlsauth-" + utils.ComputeSecretChecksum(secretDataTLSAuth)[:8]
-		secretNameDHTest      = "vpn-shoot-dh-" + utils.ComputeSecretChecksum(secretDataDH)[:8]
+		secretDataTLSAuthLegacyVPN = map[string][]byte{"dot": []byte("bus")}
+		secretNameTLSAuthLegacyVPN = "vpn-shoot-tlsauth-" + utils.ComputeSecretChecksum(secretDataTLSAuthLegacyVPN)[:8]
 
 		secrets = Secrets{
-			TLSAuth: component.Secret{Name: secretNameTLSAuth, Checksum: secretChecksumTLSAuth, Data: secretDataTLSAuth},
+			TLSAuth: component.Secret{Name: secretNameTLSAuthLegacyVPN, Data: secretDataTLSAuthLegacyVPN},
 		}
 
 		values = Values{
@@ -141,7 +139,7 @@ metadata:
   creationTimestamp: null
   labels:
     resources.gardener.cloud/garbage-collectable-reference: "true"
-  name: ` + secretNameTLSAuthTest + `
+  name: ` + secretNameTLSAuthLegacyVPN + `
   namespace: kube-system
 type: Opaque
 `
@@ -251,13 +249,12 @@ spec:
     updateMode: Auto
 status: {}
 `
-			deploymentFor = func(secretNameClient string, reversedVPNEnabled, vpaEnabled bool) *appsv1.Deployment {
+			deploymentFor = func(secretNameClient, secretNameTLSAuth string, reversedVPNEnabled, vpaEnabled bool) *appsv1.Deployment {
 				var (
 					intStrMax, intStrZero = intstr.FromString("100%"), intstr.FromString("0%")
 
 					annotations = map[string]string{
-						references.AnnotationKey(references.KindSecret, secretNameClient):      secretNameClient,
-						references.AnnotationKey(references.KindSecret, secretNameTLSAuthTest): secretNameTLSAuthTest,
+						references.AnnotationKey(references.KindSecret, secretNameClient): secretNameClient,
 					}
 
 					env = []corev1.EnvVar{
@@ -304,7 +301,7 @@ status: {}
 							Name: "vpn-shoot-tlsauth",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName:  secretNameTLSAuthTest,
+									SecretName:  secretNameTLSAuth,
 									DefaultMode: pointer.Int32(0400),
 								},
 							},
@@ -313,6 +310,8 @@ status: {}
 				)
 
 				if reversedVPNEnabled {
+					annotations[references.AnnotationKey(references.KindSecret, secretNameTLSAuth)] = secretNameTLSAuth
+
 					env = append(env,
 						corev1.EnvVar{
 							Name:  "ENDPOINT",
@@ -328,6 +327,7 @@ status: {}
 						},
 					)
 				} else {
+					annotations[references.AnnotationKey(references.KindSecret, secretNameTLSAuthLegacyVPN)] = secretNameTLSAuthLegacyVPN
 					annotations[references.AnnotationKey(references.KindSecret, secretNameDHTest)] = secretNameDHTest
 
 					volumeMounts = append(volumeMounts, corev1.VolumeMount{
@@ -521,10 +521,13 @@ status:
 
 			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-vpn.yaml"])).To(Equal(networkPolicyYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__vpn-shoot.yaml"])).To(Equal(serviceAccountYAML))
-			Expect(string(managedResourceSecret.Data["secret__kube-system__"+secretNameTLSAuthTest+".yaml"])).To(Equal(secretTLSAuthYAML))
 			Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.vpn-shoot.yaml"])).To(Equal(podSecurityPolicyYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_vpn-shoot.yaml"])).To(Equal(clusterRolePSPYAML))
 			Expect(string(managedResourceSecret.Data["rolebinding__kube-system__gardener.cloud_psp_vpn-shoot.yaml"])).To(Equal(roleBindingPSPYAML))
+
+			if !values.ReversedVPN.Enabled {
+				Expect(string(managedResourceSecret.Data["secret__kube-system__"+secretNameTLSAuthLegacyVPN+".yaml"])).To(Equal(secretTLSAuthYAML))
+			}
 		})
 
 		Context("VPNShoot with ReversedVPN not enabled", func() {
@@ -550,7 +553,7 @@ status:
 
 					deployment := &appsv1.Deployment{}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
-					Expect(deployment).To(Equal(deploymentFor(secretNameClient, values.ReversedVPN.Enabled, values.VPAEnabled)))
+					Expect(deployment).To(Equal(deploymentFor(secretNameClient, secretNameTLSAuthLegacyVPN, values.ReversedVPN.Enabled, values.VPAEnabled)))
 				})
 			})
 
@@ -566,7 +569,7 @@ status:
 
 					deployment := &appsv1.Deployment{}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
-					Expect(deployment).To(Equal(deploymentFor(secretNameClient, values.ReversedVPN.Enabled, values.VPAEnabled)))
+					Expect(deployment).To(Equal(deploymentFor(secretNameClient, secretNameTLSAuthLegacyVPN, values.ReversedVPN.Enabled, values.VPAEnabled)))
 				})
 			})
 		})
@@ -582,12 +585,14 @@ status:
 				})
 
 				It("should successfully deploy all resources", func() {
-					secretNameClient := expectVPNShootSecret(managedResourceSecret.Data, values.ReversedVPN.Enabled)
+					var (
+						secretNameClient  = expectVPNShootSecret(managedResourceSecret.Data, values.ReversedVPN.Enabled)
+						secretNameTLSAuth = expectTLSAuthSecret(managedResourceSecret.Data)
+					)
 
 					deployment := &appsv1.Deployment{}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
-
-					Expect(deployment).To(Equal(deploymentFor(secretNameClient, values.ReversedVPN.Enabled, values.VPAEnabled)))
+					Expect(deployment).To(Equal(deploymentFor(secretNameClient, secretNameTLSAuth, values.ReversedVPN.Enabled, values.VPAEnabled)))
 				})
 			})
 
@@ -599,11 +604,14 @@ status:
 				It("should successfully deploy all resources", func() {
 					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__vpn-shoot.yaml"])).To(Equal(vpaYAML))
 
-					secretNameClient := expectVPNShootSecret(managedResourceSecret.Data, values.ReversedVPN.Enabled)
+					var (
+						secretNameClient  = expectVPNShootSecret(managedResourceSecret.Data, values.ReversedVPN.Enabled)
+						secretNameTLSAuth = expectTLSAuthSecret(managedResourceSecret.Data)
+					)
 
 					deployment := &appsv1.Deployment{}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
-					Expect(deployment).To(Equal(deploymentFor(secretNameClient, values.ReversedVPN.Enabled, values.VPAEnabled)))
+					Expect(deployment).To(Equal(deploymentFor(secretNameClient, secretNameTLSAuth, values.ReversedVPN.Enabled, values.VPAEnabled)))
 				})
 			})
 		})
@@ -720,14 +728,20 @@ status:
 })
 
 func expectVPNShootSecret(data map[string][]byte, reversedVPNEnabled bool) string {
-	var (
-		secretName string
-		suffix     = "client"
-	)
-
+	suffix := "client"
 	if !reversedVPNEnabled {
 		suffix = "server"
 	}
+
+	return expectSecret(data, suffix)
+}
+
+func expectTLSAuthSecret(data map[string][]byte) string {
+	return expectSecret(data, "tlsauth")
+}
+
+func expectSecret(data map[string][]byte, suffix string) string {
+	var secretName string
 
 	for key := range data {
 		if strings.HasPrefix(key, "secret__kube-system__vpn-shoot-"+suffix) {

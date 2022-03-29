@@ -79,9 +79,7 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 func (b *Botanist) DeployVPNShoot(ctx context.Context) error {
 	secrets := vpnshoot.Secrets{}
 
-	if b.Shoot.ReversedVPNEnabled {
-		secrets.TLSAuth = component.Secret{Name: vpnseedserver.VpnSeedServerTLSAuth, Checksum: b.LoadCheckSum(vpnseedserver.VpnSeedServerTLSAuth), Data: b.LoadSecret(vpnseedserver.VpnSeedServerTLSAuth).Data}
-	} else {
+	if !b.Shoot.ReversedVPNEnabled {
 		checkSumDH := diffieHellmanKeyChecksum
 		openvpnDiffieHellmanSecret := map[string][]byte{"dh2048.pem": []byte(DefaultDiffieHellmanKey)}
 		if dh := b.LoadSecret(v1beta1constants.GardenRoleOpenVPNDiffieHellman); dh != nil {
