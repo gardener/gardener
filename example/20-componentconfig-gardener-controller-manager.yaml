@@ -82,4 +82,4 @@ debugging:
   enableProfiling: false
   enableContentionProfiling: false
 featureGates:
-  RotateSSHKeypairOnMaintenance: false
+  RotateSSHKeypairOnMaintenance: true
