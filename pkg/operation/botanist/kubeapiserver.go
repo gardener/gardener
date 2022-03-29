@@ -434,8 +434,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 
 	if values.VPN.ReversedVPNEnabled {
 		secrets.VPNSeedServerTLSAuth = &component.Secret{Name: vpnseedserver.SecretNameTLSAuth, Checksum: b.LoadCheckSum(vpnseedserver.SecretNameTLSAuth)}
-	} else {
-		secrets.VPNSeedTLSAuth = &component.Secret{Name: kubeapiserver.SecretNameVPNSeedTLSAuth, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameVPNSeedTLSAuth)}
 	}
 
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSecrets(secrets)

@@ -97,12 +97,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCAVPN],
 			},
 		)
-	} else {
-		secretList = append(secretList,
-			&secrets.VPNTLSAuthConfig{
-				Name: kubeapiserver.SecretNameVPNSeedTLSAuth,
-			},
-		)
 	}
 
 	if b.Shoot.WantsVerticalPodAutoscaler {

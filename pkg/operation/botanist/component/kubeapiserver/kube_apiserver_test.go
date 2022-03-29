@@ -61,6 +61,7 @@ import (
 var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVar(&secretutils.GenerateRandomString, secretutils.FakeGenerateRandomString))
 	DeferCleanup(test.WithVar(&secretutils.GenerateKey, secretutils.FakeGenerateKey))
+	DeferCleanup(test.WithVar(&secretutils.GenerateVPNKey, secretutils.FakeGenerateVPNKey))
 	DeferCleanup(test.WithVar(&secretutils.Clock, clock.NewFakeClock(time.Time{})))
 })
 
@@ -93,8 +94,7 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameServer                   = "kube-apiserver"
 		secretNameServiceAccountKey        = "service-account-key-c37a87f6"
 		secretNameVPNSeed                  = "vpn-seed"
-		secretNameVPNSeedTLSAuth           = "VPNSeedTLSAuth-secret"
-		secretChecksumVPNSeedTLSAuth       = "12345"
+		secretNameVPNSeedTLSAuth           = "vpn-seed-tlsauth-de1d12a3"
 		secretNameVPNSeedServerTLSAuth     = "VPNSeedServerTLSAuth-secret"
 		secretChecksumVPNSeedServerTLSAuth = "12345"
 		secrets                            Secrets
@@ -127,7 +127,6 @@ var _ = Describe("KubeAPIServer", func() {
 		secrets = Secrets{
 			CA:                   component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
 			CAFrontProxy:         component.Secret{Name: secretNameCAFrontProxy, Checksum: secretChecksumCAFrontProxy},
-			VPNSeedTLSAuth:       &component.Secret{Name: secretNameVPNSeedTLSAuth, Checksum: secretChecksumVPNSeedTLSAuth},
 			VPNSeedServerTLSAuth: &component.Secret{Name: secretNameVPNSeedServerTLSAuth, Checksum: secretChecksumVPNSeedServerTLSAuth},
 		}
 
@@ -211,9 +210,6 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("CAFrontProxy missing",
 					"CAFrontProxy", func(s *Secrets) { s.CAFrontProxy.Name = "" }, Values{},
-				),
-				Entry("ReversedVPN disabled but VPNSeedTLSAuth missing",
-					"VPNSeedTLSAuth", func(s *Secrets) { s.VPNSeedTLSAuth = nil }, Values{VPN: VPNConfig{ReversedVPNEnabled: false}},
 				),
 				Entry("ReversedVPN enabled but VPNSeedServerTLSAuth missing",
 					"VPNSeedServerTLSAuth", func(s *Secrets) { s.VPNSeedServerTLSAuth = nil }, Values{VPN: VPNConfig{ReversedVPNEnabled: true}},
@@ -1404,7 +1400,7 @@ rules:
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-1c730dbc":    secretNameVPNSeed,
-						"reference.resources.gardener.cloud/secret-e638c9f3":    secretNameVPNSeedTLSAuth,
+						"reference.resources.gardener.cloud/secret-2fb65543":    secretNameVPNSeedTLSAuth,
 						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
 						"reference.resources.gardener.cloud/secret-b1b53288":    secretNameETCDEncryptionConfig,
 						"reference.resources.gardener.cloud/configmap-130aa219": secretNameAdmissionConfig,
@@ -1446,7 +1442,6 @@ rules:
 						"checksum/secret-" + secretNameVPNSeedServerTLSAuth:     secretChecksumVPNSeedServerTLSAuth,
 						"checksum/secret-" + secretNameCA:                       secretChecksumCA,
 						"checksum/secret-" + secretNameCAFrontProxy:             secretChecksumCAFrontProxy,
-						"checksum/secret-" + secretNameVPNSeedTLSAuth:           secretChecksumVPNSeedTLSAuth,
 						"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
 						"reference.resources.gardener.cloud/secret-71fba891":    secretNameCA,
 						"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
@@ -1456,7 +1451,7 @@ rules:
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
 						"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
 						"reference.resources.gardener.cloud/secret-1c730dbc":    secretNameVPNSeed,
-						"reference.resources.gardener.cloud/secret-e638c9f3":    secretNameVPNSeedTLSAuth,
+						"reference.resources.gardener.cloud/secret-2fb65543":    secretNameVPNSeedTLSAuth,
 						"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
 						"reference.resources.gardener.cloud/secret-b1b53288":    secretNameETCDEncryptionConfig,
 						"reference.resources.gardener.cloud/configmap-130aa219": secretNameAdmissionConfig,

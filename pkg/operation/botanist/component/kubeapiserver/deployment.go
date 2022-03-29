@@ -128,6 +128,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretKubeAggregator *corev1.Secret,
 	secretHTTPProxy *corev1.Secret,
 	secretLegacyVPNSeed *corev1.Secret,
+	secretLegacyVPNSeedTLSAuth *corev1.Secret,
 ) error {
 	var (
 		maxSurge       = intstr.FromString("25%")
@@ -419,7 +420,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleHostCertVolumes(deployment)
 		k.handleSNISettings(deployment)
 		k.handlePodMutatorSettings(deployment)
-		k.handleVPNSettings(deployment, configMapEgressSelector, vpnCASecret, secretHTTPProxy, secretLegacyVPNSeed)
+		k.handleVPNSettings(deployment, configMapEgressSelector, vpnCASecret, secretHTTPProxy, secretLegacyVPNSeed, secretLegacyVPNSeedTLSAuth)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment, secretUserProvidedServiceAccountSigningKey)
 
@@ -672,6 +673,7 @@ func (k *kubeAPIServer) handleVPNSettings(
 	vpnCASecret *corev1.Secret,
 	secretHTTPProxy *corev1.Secret,
 	secretLegacyVPNSeed *corev1.Secret,
+	secretLegacyVPNSeedTLSAuth *corev1.Secret,
 ) {
 	if !k.values.VPN.ReversedVPNEnabled {
 		deployment.Spec.Template.Spec.InitContainers = []corev1.Container{{
@@ -785,7 +787,7 @@ func (k *kubeAPIServer) handleVPNSettings(
 			{
 				Name: volumeNameVPNSeedTLSAuth,
 				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{SecretName: k.secrets.VPNSeedTLSAuth.Name},
+					Secret: &corev1.SecretVolumeSource{SecretName: secretLegacyVPNSeedTLSAuth.Name},
 				},
 			},
 		}...)

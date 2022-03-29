@@ -76,12 +76,9 @@ var _ = Describe("VPNShoot", func() {
 		secretDataDH     = map[string][]byte{"foo": []byte("dash")}
 		secretNameDHTest = "vpn-shoot-dh-" + utils.ComputeSecretChecksum(secretDataDH)[:8]
 
-		secretDataTLSAuthLegacyVPN = map[string][]byte{"dot": []byte("bus")}
-		secretNameTLSAuthLegacyVPN = "vpn-shoot-tlsauth-" + utils.ComputeSecretChecksum(secretDataTLSAuthLegacyVPN)[:8]
+		secretNameTLSAuthLegacyVPN = "vpn-shoot-tlsauth-03c727cf"
 
-		secrets = Secrets{
-			TLSAuth: component.Secret{Name: secretNameTLSAuthLegacyVPN, Data: secretDataTLSAuthLegacyVPN},
-		}
+		secrets = Secrets{}
 
 		values = Values{
 			Image: image,
@@ -132,7 +129,7 @@ type: Opaque
 `
 			secretTLSAuthYAML = `apiVersion: v1
 data:
-  dot: YnVz
+  data-for: dnBuLXNlZWQtdGxzYXV0aA==
 immutable: true
 kind: Secret
 metadata:
@@ -249,11 +246,12 @@ spec:
     updateMode: Auto
 status: {}
 `
-			deploymentFor = func(secretNameClient, secretNameTLSAuth string, reversedVPNEnabled, vpaEnabled bool) *appsv1.Deployment {
+			deploymentFor = func(secretNameCA, secretNameClient, secretNameTLSAuth string, reversedVPNEnabled, vpaEnabled bool) *appsv1.Deployment {
 				var (
 					intStrMax, intStrZero = intstr.FromString("100%"), intstr.FromString("0%")
 
 					annotations = map[string]string{
+						references.AnnotationKey(references.KindSecret, secretNameCA):     secretNameCA,
 						references.AnnotationKey(references.KindSecret, secretNameClient): secretNameClient,
 					}
 
@@ -291,9 +289,38 @@ status: {}
 						{
 							Name: "vpn-shoot",
 							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName:  secretNameClient,
-									DefaultMode: pointer.Int32(0400),
+								Projected: &corev1.ProjectedVolumeSource{
+									DefaultMode: pointer.Int32(420),
+									Sources: []corev1.VolumeProjection{
+										{
+											Secret: &corev1.SecretProjection{
+												LocalObjectReference: corev1.LocalObjectReference{
+													Name: secretNameCA,
+												},
+												Items: []corev1.KeyToPath{{
+													Key:  "bundle.crt",
+													Path: "ca.crt",
+												}},
+											},
+										},
+										{
+											Secret: &corev1.SecretProjection{
+												LocalObjectReference: corev1.LocalObjectReference{
+													Name: secretNameClient,
+												},
+												Items: []corev1.KeyToPath{
+													{
+														Key:  "tls.crt",
+														Path: "tls.crt",
+													},
+													{
+														Key:  "tls.key",
+														Path: "tls.key",
+													},
+												},
+											},
+										},
+									},
 								},
 							},
 						},
@@ -550,10 +577,11 @@ status:
 
 				It("should successfully deploy all resources", func() {
 					secretNameClient := expectVPNShootSecret(managedResourceSecret.Data, values.ReversedVPN.Enabled)
+					secretNameCA := expectCASecret(managedResourceSecret.Data)
 
 					deployment := &appsv1.Deployment{}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
-					Expect(deployment).To(Equal(deploymentFor(secretNameClient, secretNameTLSAuthLegacyVPN, values.ReversedVPN.Enabled, values.VPAEnabled)))
+					Expect(deployment).To(Equal(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuthLegacyVPN, values.ReversedVPN.Enabled, values.VPAEnabled)))
 				})
 			})
 
@@ -566,10 +594,11 @@ status:
 					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__vpn-shoot.yaml"])).To(Equal(vpaYAML))
 
 					secretNameClient := expectVPNShootSecret(managedResourceSecret.Data, values.ReversedVPN.Enabled)
+					secretNameCA := expectCASecret(managedResourceSecret.Data)
 
 					deployment := &appsv1.Deployment{}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
-					Expect(deployment).To(Equal(deploymentFor(secretNameClient, secretNameTLSAuthLegacyVPN, values.ReversedVPN.Enabled, values.VPAEnabled)))
+					Expect(deployment).To(Equal(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuthLegacyVPN, values.ReversedVPN.Enabled, values.VPAEnabled)))
 				})
 			})
 		})
@@ -587,12 +616,13 @@ status:
 				It("should successfully deploy all resources", func() {
 					var (
 						secretNameClient  = expectVPNShootSecret(managedResourceSecret.Data, values.ReversedVPN.Enabled)
+						secretNameCA      = expectCASecret(managedResourceSecret.Data)
 						secretNameTLSAuth = expectTLSAuthSecret(managedResourceSecret.Data)
 					)
 
 					deployment := &appsv1.Deployment{}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
-					Expect(deployment).To(Equal(deploymentFor(secretNameClient, secretNameTLSAuth, values.ReversedVPN.Enabled, values.VPAEnabled)))
+					Expect(deployment).To(Equal(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.ReversedVPN.Enabled, values.VPAEnabled)))
 				})
 			})
 
@@ -606,12 +636,13 @@ status:
 
 					var (
 						secretNameClient  = expectVPNShootSecret(managedResourceSecret.Data, values.ReversedVPN.Enabled)
+						secretNameCA      = expectCASecret(managedResourceSecret.Data)
 						secretNameTLSAuth = expectTLSAuthSecret(managedResourceSecret.Data)
 					)
 
 					deployment := &appsv1.Deployment{}
 					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
-					Expect(deployment).To(Equal(deploymentFor(secretNameClient, secretNameTLSAuth, values.ReversedVPN.Enabled, values.VPAEnabled)))
+					Expect(deployment).To(Equal(deploymentFor(secretNameCA, secretNameClient, secretNameTLSAuth, values.ReversedVPN.Enabled, values.VPAEnabled)))
 				})
 			})
 		})
@@ -734,6 +765,10 @@ func expectVPNShootSecret(data map[string][]byte, reversedVPNEnabled bool) strin
 	}
 
 	return expectSecret(data, suffix)
+}
+
+func expectCASecret(data map[string][]byte) string {
+	return expectSecret(data, "ca")
 }
 
 func expectTLSAuthSecret(data map[string][]byte) string {

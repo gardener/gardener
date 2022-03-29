@@ -340,18 +340,13 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			"vpn-shoot-client",
 			"vpn-seed-server-tlsauth",
 			"vpn-seed",
+			"vpn-seed-tlsauth",
 		} {
 			gardenerResourceDataList.Delete(name)
 		}
 
 		if b.Shoot.GetInfo().DeletionTimestamp == nil {
 			if b.Shoot.ReversedVPNEnabled {
-				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList,
-					kubeapiserver.SecretNameVPNSeedTLSAuth,
-				); err != nil {
-					return err
-				}
-
 				// Delete existing VPN-related secrets which were not signed with the newly introduced ca-vpn so that
 				// they get regenerated.
 				// TODO(rfranzke): Remove in a future version.

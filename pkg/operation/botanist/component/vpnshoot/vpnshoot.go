@@ -58,8 +58,7 @@ const (
 	containerName       = "vpn-shoot"
 	serviceName         = "vpn-shoot"
 
-	secretNameTLSAuth = "vpn-shoot-tlsauth"
-	secretNameDH      = "vpn-shoot-dh"
+	secretNameDH = "vpn-shoot-dh"
 
 	volumeName        = "vpn-shoot"
 	volumeNameTLSAuth = "vpn-shoot-tlsauth"
@@ -150,11 +149,17 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 
 	if !v.values.ReversedVPN.Enabled {
 		config = &secretutils.CertificateSecretConfig{
-			Name:       "vpn-shoot-server",
-			CommonName: "vpn-shoot-server",
-			CertType:   secretutils.ServerCert,
+			Name:                        "vpn-shoot-server",
+			CommonName:                  "vpn-shoot-server",
+			CertType:                    secretutils.ServerCert,
+			SkipPublishingCACertificate: true,
 		}
 		signingCA = v1beta1constants.SecretNameCACluster
+	}
+
+	secretCA, found := v.secretsManager.Get(signingCA)
+	if !found {
+		return fmt.Errorf("secret %q not found", signingCA)
 	}
 
 	secret, err := v.secretsManager.Generate(ctx, config, secretsmanager.SignedByCA(signingCA), secretsmanager.Rotate(secretsmanager.InPlace))
@@ -162,7 +167,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	data, err := v.computeResourcesData(secret)
+	data, err := v.computeResourcesData(secretCA, secret)
 	if err != nil {
 		return err
 	}
@@ -175,6 +180,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 	return kutil.DeleteObjects(ctx, v.client,
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpn-shoot", Namespace: v.namespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpn-shoot-client", Namespace: v.namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpn-shoot-server", Namespace: v.namespace}},
 	)
 }
 
@@ -200,9 +206,10 @@ func (v *vpnShoot) WaitCleanup(ctx context.Context) error {
 	return managedresources.WaitUntilDeleted(timeoutCtx, v.client, v.namespace, managedResourceName)
 }
 
-func (v *vpnShoot) computeResourcesData(secretVPNShoot *corev1.Secret) (map[string][]byte, error) {
+func (v *vpnShoot) computeResourcesData(secretCAVPN, secretVPNShoot *corev1.Secret) (map[string][]byte, error) {
 	var (
-		secretNameSuffix string
+		secretNameSuffix  string
+		secretNameTLSAuth string
 
 		secretVPNSeedServerTLSAuth *corev1.Secret
 		found                      bool
@@ -210,23 +217,31 @@ func (v *vpnShoot) computeResourcesData(secretVPNShoot *corev1.Secret) (map[stri
 
 	if v.values.ReversedVPN.Enabled {
 		secretNameSuffix = "client"
-
-		secretVPNSeedServerTLSAuth, found = v.secretsManager.Get(vpnseedserver.SecretNameTLSAuth)
-		if !found {
-			return nil, fmt.Errorf("secret %q not found", vpnseedserver.SecretNameTLSAuth)
-		}
+		secretNameTLSAuth = vpnseedserver.SecretNameTLSAuth
 	} else {
 		secretNameSuffix = "server"
+		secretNameTLSAuth = kubeapiserver.SecretNameVPNSeedTLSAuth
+	}
 
-		secretVPNSeedServerTLSAuth = &corev1.Secret{Data: v.secrets.TLSAuth.Data}
+	secretVPNSeedServerTLSAuth, found = v.secretsManager.Get(secretNameTLSAuth)
+	if !found {
+		return nil, fmt.Errorf("secret %q not found", secretNameTLSAuth)
 	}
 
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
+		secretCA = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "vpn-shoot-ca",
+				Namespace: metav1.NamespaceSystem,
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: secretCAVPN.Data,
+		}
 		secretTLSAuth = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      secretNameTLSAuth,
+				Name:      "vpn-shoot-tlsauth",
 				Namespace: metav1.NamespaceSystem,
 			},
 			Type: corev1.SecretTypeOpaque,
@@ -246,6 +261,7 @@ func (v *vpnShoot) computeResourcesData(secretVPNShoot *corev1.Secret) (map[stri
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
 	)
 
+	utilruntime.Must(kutil.MakeUnique(secretCA))
 	utilruntime.Must(kutil.MakeUnique(secretTLSAuth))
 	utilruntime.Must(kutil.MakeUnique(secret))
 
@@ -473,7 +489,7 @@ func (v *vpnShoot) computeResourcesData(secretVPNShoot *corev1.Secret) (map[stri
 								VolumeMounts: v.getVolumeMounts(),
 							},
 						},
-						Volumes: v.getVolumes(secret, secretTLSAuth, secretDH),
+						Volumes: v.getVolumes(secretCA, secret, secretTLSAuth, secretDH),
 					},
 				},
 			},
@@ -514,6 +530,7 @@ func (v *vpnShoot) computeResourcesData(secretVPNShoot *corev1.Secret) (map[stri
 
 	return registry.AddAllAndSerialize(
 		secret,
+		secretCA,
 		secretTLSAuth,
 		secretDH,
 		serviceAccount,
@@ -531,8 +548,6 @@ func (v *vpnShoot) computeResourcesData(secretVPNShoot *corev1.Secret) (map[stri
 
 // Secrets is collection of secrets for the vpn-shoot.
 type Secrets struct {
-	// TLSAuth is a secret containing the tls auth credentials.
-	TLSAuth component.Secret
 	// DH is a secret containing the Diffie-Hellman credentials.
 	DH *component.Secret
 }
@@ -610,14 +625,43 @@ func (v *vpnShoot) getVolumeMounts() []corev1.VolumeMount {
 	return volumeMounts
 }
 
-func (v *vpnShoot) getVolumes(secret, secretTLSAuth, secretDH *corev1.Secret) []corev1.Volume {
+func (v *vpnShoot) getVolumes(secretCA, secret, secretTLSAuth, secretDH *corev1.Secret) []corev1.Volume {
 	volumes := []corev1.Volume{
 		{
 			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName:  secret.Name,
-					DefaultMode: pointer.Int32(0400),
+				Projected: &corev1.ProjectedVolumeSource{
+					DefaultMode: pointer.Int32(420),
+					Sources: []corev1.VolumeProjection{
+						{
+							Secret: &corev1.SecretProjection{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: secretCA.Name,
+								},
+								Items: []corev1.KeyToPath{{
+									Key:  secretutils.DataKeyCertificateBundle,
+									Path: "ca.crt",
+								}},
+							},
+						},
+						{
+							Secret: &corev1.SecretProjection{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: secret.Name,
+								},
+								Items: []corev1.KeyToPath{
+									{
+										Key:  secretutils.DataKeyCertificate,
+										Path: secretutils.DataKeyCertificate,
+									},
+									{
+										Key:  secretutils.DataKeyPrivateKey,
+										Path: secretutils.DataKeyPrivateKey,
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
