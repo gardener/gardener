@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shootsecrets"
 	"github.com/gardener/gardener/pkg/utils"
@@ -337,6 +336,8 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			"alertmanager-tls",
 			"grafana-tls",
 			"gardener-resource-manager-server",
+			"vpn-shoot",
+			"vpn-shoot-client",
 		} {
 			gardenerResourceDataList.Delete(name)
 		}
@@ -346,7 +347,6 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList,
 					kubeapiserver.SecretNameVPNSeed,
 					kubeapiserver.SecretNameVPNSeedTLSAuth,
-					vpnshoot.SecretNameVPNShoot,
 				); err != nil {
 					return err
 				}
@@ -357,7 +357,6 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 				if gardenerResourceDataList.Get(v1beta1constants.SecretNameCAVPN) == nil {
 					if err := b.cleanupSecrets(ctx, &gardenerResourceDataList,
 						vpnseedserver.DeploymentName,
-						vpnshoot.SecretNameVPNShootClient,
 					); err != nil {
 						return err
 					}
@@ -365,7 +364,6 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			} else {
 				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList,
 					vpnseedserver.DeploymentName,
-					vpnshoot.SecretNameVPNShootClient,
 					vpnseedserver.VpnSeedServerTLSAuth,
 				); err != nil {
 					return err

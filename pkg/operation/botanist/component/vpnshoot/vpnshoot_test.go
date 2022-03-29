@@ -16,7 +16,6 @@ package vpnshoot_test
 
 import (
 	"context"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -29,15 +28,22 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -51,6 +57,7 @@ var _ = Describe("VPNShoot", func() {
 		image               = "some-image:some-tag"
 
 		c        client.Client
+		sm       secretsmanager.Interface
 		vpnShoot Interface
 
 		managedResource       *resourcesv1alpha1.ManagedResource
@@ -64,9 +71,6 @@ var _ = Describe("VPNShoot", func() {
 		openVPNPort       int32 = 8132
 		reversedVPNHeader       = "outbound|1194||vpn-seed-server.shoot--project--shoot-name.svc.cluster.local"
 
-		secretNameServer      = "vpn-shoot"
-		secretChecksumServer  = "2345"
-		secretDataServer      = map[string][]byte{"bar": []byte("boo")}
 		secretNameDH          = "vpn-shoot-dh"
 		secretChecksumDH      = "5678"
 		secretDataDH          = map[string][]byte{"foo": []byte("dash")}
@@ -74,12 +78,10 @@ var _ = Describe("VPNShoot", func() {
 		secretChecksumTLSAuth = "9012"
 		secretDataTLSAuth     = map[string][]byte{"dot": []byte("bus")}
 
-		secretNameTest        = "vpn-shoot-" + utils.ComputeSecretChecksum(secretDataServer)[:8]
 		secretNameTLSAuthTest = "vpn-shoot-tlsauth-" + utils.ComputeSecretChecksum(secretDataTLSAuth)[:8]
 		secretNameDHTest      = "vpn-shoot-dh-" + utils.ComputeSecretChecksum(secretDataDH)[:8]
 
 		secrets = Secrets{
-			Server:  component.Secret{Name: secretNameServer, Checksum: secretChecksumServer, Data: secretDataServer},
 			TLSAuth: component.Secret{Name: secretNameTLSAuth, Checksum: secretChecksumTLSAuth, Data: secretDataTLSAuth},
 		}
 
@@ -100,6 +102,7 @@ var _ = Describe("VPNShoot", func() {
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		sm = fakesecretsmanager.New(c, namespace)
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      managedResourceName,
@@ -116,19 +119,6 @@ var _ = Describe("VPNShoot", func() {
 
 	Describe("#Deploy", func() {
 		var (
-			secretYAML = `apiVersion: v1
-data:
-  bar: Ym9v
-immutable: true
-kind: Secret
-metadata:
-  creationTimestamp: null
-  labels:
-    resources.gardener.cloud/garbage-collectable-reference: "true"
-  name: ` + secretNameTest + `
-  namespace: kube-system
-type: Opaque
-`
 			secretDHYAML = `apiVersion: v1
 data:
   foo: ZGFzaA==
@@ -261,124 +251,188 @@ spec:
     updateMode: Auto
 status: {}
 `
-			deploymentYAMLFor = func(reversedVPNEnabled, vpaEnabled bool) string {
-				out := `apiVersion: apps/v1
-kind: Deployment
-metadata:
-  annotations:
-    ` + utils.Indent(getAnnotations(reversedVPNEnabled, secretNameTest, secretNameDHTest, secretNameTLSAuthTest), 4)
-				out += `
-  creationTimestamp: null
-  labels:
-    app: vpn-shoot
-    gardener.cloud/role: system-component
-    origin: gardener
-  name: vpn-shoot
-  namespace: kube-system
-spec:
-  replicas: 1
-  revisionHistoryLimit: 2
-  selector:
-    matchLabels:
-      app: vpn-shoot
-  strategy:
-    rollingUpdate:
-      maxSurge: 100%
-      maxUnavailable: 0%
-    type: RollingUpdate
-  template:
-    metadata:
-      annotations:
-        ` + utils.Indent(getAnnotations(reversedVPNEnabled, secretNameTest, secretNameDHTest, secretNameTLSAuthTest), 8) + `
-        security.gardener.cloud/trigger: rollout`
-				out += `
-      creationTimestamp: null
-      labels:
-        app: vpn-shoot
-        gardener.cloud/role: system-component
-        origin: gardener
-        type: tunnel
-    spec:
-      automountServiceAccountToken: false
-      containers:
-      - env:
-        - name: SERVICE_NETWORK
-          value: ` + serviceNetwork + `
-        - name: POD_NETWORK
-          value: ` + podNetwork + `
-        - name: NODE_NETWORK
-          value: ` + nodeNetwork
+			deploymentFor = func(secretNameClient string, reversedVPNEnabled, vpaEnabled bool) *appsv1.Deployment {
+				var (
+					intStrMax, intStrZero = intstr.FromString("100%"), intstr.FromString("0%")
+
+					annotations = map[string]string{
+						references.AnnotationKey(references.KindSecret, secretNameClient):      secretNameClient,
+						references.AnnotationKey(references.KindSecret, secretNameTLSAuthTest): secretNameTLSAuthTest,
+					}
+
+					env = []corev1.EnvVar{
+						{
+							Name:  "SERVICE_NETWORK",
+							Value: serviceNetwork,
+						},
+						{
+							Name:  "POD_NETWORK",
+							Value: podNetwork,
+						},
+						{
+							Name:  "NODE_NETWORK",
+							Value: nodeNetwork,
+						},
+					}
+
+					limits = corev1.ResourceList{
+						corev1.ResourceMemory: resource.MustParse("120Mi"),
+					}
+
+					volumeMounts = []corev1.VolumeMount{
+						{
+							Name:      "vpn-shoot",
+							MountPath: "/srv/secrets/vpn-shoot",
+						},
+						{
+							Name:      "vpn-shoot-tlsauth",
+							MountPath: "/srv/secrets/tlsauth",
+						},
+					}
+
+					volumes = []corev1.Volume{
+						{
+							Name: "vpn-shoot",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  secretNameClient,
+									DefaultMode: pointer.Int32(0400),
+								},
+							},
+						},
+						{
+							Name: "vpn-shoot-tlsauth",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName:  secretNameTLSAuthTest,
+									DefaultMode: pointer.Int32(0400),
+								},
+							},
+						},
+					}
+				)
+
 				if reversedVPNEnabled {
-					out += `
-        - name: ENDPOINT
-          value: ` + endPoint + `
-        - name: OPENVPN_PORT
-          value: "` + strconv.Itoa(int(openVPNPort)) + `"
-        - name: REVERSED_VPN_HEADER
-          value: ` + reversedVPNHeader
-				}
-				out += `
-        image: ` + image + `
-        imagePullPolicy: IfNotPresent
-        name: vpn-shoot
-        resources:`
-				if vpaEnabled {
-					out += `
-          limits:
-            memory: 100Mi`
+					env = append(env,
+						corev1.EnvVar{
+							Name:  "ENDPOINT",
+							Value: endPoint,
+						},
+						corev1.EnvVar{
+							Name:  "OPENVPN_PORT",
+							Value: strconv.Itoa(int(openVPNPort)),
+						},
+						corev1.EnvVar{
+							Name:  "REVERSED_VPN_HEADER",
+							Value: reversedVPNHeader,
+						},
+					)
 				} else {
-					out += `
-          limits:
-            memory: 120Mi`
+					annotations[references.AnnotationKey(references.KindSecret, secretNameDHTest)] = secretNameDHTest
+
+					volumeMounts = append(volumeMounts, corev1.VolumeMount{
+						Name:      "vpn-shoot-dh",
+						MountPath: "/srv/secrets/dh",
+					})
+
+					volumes = append(volumes, corev1.Volume{
+						Name: "vpn-shoot-dh",
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName:  secretNameDHTest,
+								DefaultMode: pointer.Int32(0400),
+							},
+						},
+					})
 				}
-				out += `
-          requests:
-            cpu: 100m
-            memory: 100Mi
-        securityContext:
-          capabilities:
-            add:
-            - NET_ADMIN
-          privileged: true
-        volumeMounts:
-        - mountPath: /srv/secrets/vpn-shoot
-          name: vpn-shoot
-        - mountPath: /srv/secrets/tlsauth
-          name: vpn-shoot-tlsauth`
-				if !reversedVPNEnabled {
-					out += `
-        - mountPath: /srv/secrets/dh
-          name: vpn-shoot-dh`
+
+				if vpaEnabled {
+					limits = corev1.ResourceList{
+						corev1.ResourceMemory: resource.MustParse("100Mi"),
+					}
 				}
-				out += `
-      dnsPolicy: Default
-      nodeSelector:
-        worker.gardener.cloud/system-components: "true"
-      priorityClassName: system-cluster-critical
-      serviceAccountName: vpn-shoot
-      tolerations:
-      - key: CriticalAddonsOnly
-        operator: Exists
-      volumes:
-      - name: vpn-shoot
-        secret:
-          defaultMode: 256
-          secretName: ` + secretNameTest + `
-      - name: vpn-shoot-tlsauth
-        secret:
-          defaultMode: 256
-          secretName: ` + secretNameTLSAuthTest
-				if !reversedVPNEnabled {
-					out += `
-      - name: vpn-shoot-dh
-        secret:
-          defaultMode: 256
-          secretName: ` + secretNameDHTest
+
+				obj := &appsv1.Deployment{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "apps/v1",
+						Kind:       "Deployment",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "vpn-shoot",
+						Namespace:   "kube-system",
+						Annotations: annotations,
+						Labels: map[string]string{
+							"app":                 "vpn-shoot",
+							"gardener.cloud/role": "system-component",
+							"origin":              "gardener",
+						},
+					},
+					Spec: appsv1.DeploymentSpec{
+						RevisionHistoryLimit: pointer.Int32(2),
+						Replicas:             pointer.Int32(1),
+						Strategy: appsv1.DeploymentStrategy{
+							Type: appsv1.RollingUpdateDeploymentStrategyType,
+							RollingUpdate: &appsv1.RollingUpdateDeployment{
+								MaxSurge:       &intStrMax,
+								MaxUnavailable: &intStrZero,
+							},
+						},
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app": "vpn-shoot",
+							},
+						},
+						Template: corev1.PodTemplateSpec{
+							ObjectMeta: metav1.ObjectMeta{
+								Annotations: utils.MergeStringMaps(annotations, map[string]string{
+									"security.gardener.cloud/trigger": "rollout",
+								}),
+								Labels: map[string]string{
+									"app":                 "vpn-shoot",
+									"gardener.cloud/role": "system-component",
+									"origin":              "gardener",
+									"type":                "tunnel",
+								},
+							},
+							Spec: corev1.PodSpec{
+								AutomountServiceAccountToken: pointer.Bool(false),
+								ServiceAccountName:           "vpn-shoot",
+								PriorityClassName:            "system-cluster-critical",
+								DNSPolicy:                    corev1.DNSDefault,
+								NodeSelector:                 map[string]string{"worker.gardener.cloud/system-components": "true"},
+								Tolerations: []corev1.Toleration{{
+									Key:      "CriticalAddonsOnly",
+									Operator: corev1.TolerationOpExists,
+								}},
+								Containers: []corev1.Container{
+									{
+										Name:            "vpn-shoot",
+										Image:           image,
+										ImagePullPolicy: corev1.PullIfNotPresent,
+										Env:             env,
+										SecurityContext: &corev1.SecurityContext{
+											Privileged: pointer.Bool(true),
+											Capabilities: &corev1.Capabilities{
+												Add: []corev1.Capability{"NET_ADMIN"},
+											},
+										},
+										Resources: corev1.ResourceRequirements{
+											Requests: corev1.ResourceList{
+												corev1.ResourceCPU:    resource.MustParse("100m"),
+												corev1.ResourceMemory: resource.MustParse("100Mi"),
+											},
+											Limits: limits,
+										},
+										VolumeMounts: volumeMounts,
+									},
+								},
+								Volumes: volumes,
+							},
+						},
+					},
 				}
-				out += `
-status: {}
-`
-				return out
+
+				return obj
 			}
 
 			clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
@@ -434,7 +488,7 @@ status:
 		)
 
 		JustBeforeEach(func() {
-			vpnShoot = New(c, namespace, values)
+			vpnShoot = New(c, namespace, sm, values)
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
@@ -467,7 +521,6 @@ status:
 
 			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-vpn.yaml"])).To(Equal(networkPolicyYAML))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__vpn-shoot.yaml"])).To(Equal(serviceAccountYAML))
-			Expect(string(managedResourceSecret.Data["secret__kube-system__"+secretNameTest+".yaml"])).To(Equal(secretYAML))
 			Expect(string(managedResourceSecret.Data["secret__kube-system__"+secretNameTLSAuthTest+".yaml"])).To(Equal(secretTLSAuthYAML))
 			Expect(string(managedResourceSecret.Data["podsecuritypolicy____gardener.kube-system.vpn-shoot.yaml"])).To(Equal(podSecurityPolicyYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_psp_kube-system_vpn-shoot.yaml"])).To(Equal(clusterRolePSPYAML))
@@ -492,8 +545,12 @@ status:
 					values.VPAEnabled = false
 				})
 
-				It("should succesfully deploy all resources", func() {
-					Expect(string(managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"])).To(Equal(deploymentYAMLFor(false, false)))
+				It("should successfully deploy all resources", func() {
+					secretNameClient := expectVPNShootSecret(managedResourceSecret.Data, values.ReversedVPN.Enabled)
+
+					deployment := &appsv1.Deployment{}
+					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
+					Expect(deployment).To(Equal(deploymentFor(secretNameClient, values.ReversedVPN.Enabled, values.VPAEnabled)))
 				})
 			})
 
@@ -502,9 +559,14 @@ status:
 					values.VPAEnabled = true
 				})
 
-				It("should succesfully deploy all resources", func() {
+				It("should successfully deploy all resources", func() {
 					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__vpn-shoot.yaml"])).To(Equal(vpaYAML))
-					Expect(string(managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"])).To(Equal(deploymentYAMLFor(false, true)))
+
+					secretNameClient := expectVPNShootSecret(managedResourceSecret.Data, values.ReversedVPN.Enabled)
+
+					deployment := &appsv1.Deployment{}
+					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
+					Expect(deployment).To(Equal(deploymentFor(secretNameClient, values.ReversedVPN.Enabled, values.VPAEnabled)))
 				})
 			})
 		})
@@ -519,8 +581,13 @@ status:
 					values.VPAEnabled = false
 				})
 
-				It("should succesfully deploy all resources", func() {
-					Expect(string(managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"])).To(Equal(deploymentYAMLFor(true, false)))
+				It("should successfully deploy all resources", func() {
+					secretNameClient := expectVPNShootSecret(managedResourceSecret.Data, values.ReversedVPN.Enabled)
+
+					deployment := &appsv1.Deployment{}
+					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
+
+					Expect(deployment).To(Equal(deploymentFor(secretNameClient, values.ReversedVPN.Enabled, values.VPAEnabled)))
 				})
 			})
 
@@ -529,9 +596,14 @@ status:
 					values.VPAEnabled = true
 				})
 
-				It("should succesfully deploy all resources", func() {
+				It("should successfully deploy all resources", func() {
 					Expect(string(managedResourceSecret.Data["verticalpodautoscaler__kube-system__vpn-shoot.yaml"])).To(Equal(vpaYAML))
-					Expect(string(managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"])).To(Equal(deploymentYAMLFor(true, true)))
+
+					secretNameClient := expectVPNShootSecret(managedResourceSecret.Data, values.ReversedVPN.Enabled)
+
+					deployment := &appsv1.Deployment{}
+					Expect(runtime.DecodeInto(newCodec(), managedResourceSecret.Data["deployment__kube-system__vpn-shoot.yaml"], deployment)).To(Succeed())
+					Expect(deployment).To(Equal(deploymentFor(secretNameClient, values.ReversedVPN.Enabled, values.VPAEnabled)))
 				})
 			})
 		})
@@ -539,7 +611,7 @@ status:
 
 	Describe("#Destroy", func() {
 		It("should successfully destroy all resources", func() {
-			vpnShoot = New(c, namespace, Values{})
+			vpnShoot = New(c, namespace, sm, Values{})
 			Expect(c.Create(ctx, managedResource)).To(Succeed())
 			Expect(c.Create(ctx, managedResourceSecret)).To(Succeed())
 
@@ -560,7 +632,7 @@ status:
 		)
 
 		BeforeEach(func() {
-			vpnShoot = New(c, namespace, Values{})
+			vpnShoot = New(c, namespace, sm, Values{})
 
 			fakeOps = &retryfake.Ops{MaxAttempts: 1}
 			resetVars = test.WithVars(
@@ -647,15 +719,36 @@ status:
 	})
 })
 
-func getAnnotations(reversedVPNEnabled bool, secretNameTest, secretNameDHTest, secretNameTLSAuthTest string) string {
-	annotations := []string{
-		references.AnnotationKey(references.KindSecret, secretNameTest) + `: ` + secretNameTest,
-		references.AnnotationKey(references.KindSecret, secretNameTLSAuthTest) + `: ` + secretNameTLSAuthTest,
-	}
+func expectVPNShootSecret(data map[string][]byte, reversedVPNEnabled bool) string {
+	var (
+		secretName string
+		suffix     = "client"
+	)
+
 	if !reversedVPNEnabled {
-		annotations = append(annotations, ``+references.AnnotationKey(references.KindSecret, secretNameDHTest)+`: `+secretNameDHTest+``)
+		suffix = "server"
 	}
 
-	sort.Strings(annotations)
-	return strings.Join(annotations, "\n")
+	for key := range data {
+		if strings.HasPrefix(key, "secret__kube-system__vpn-shoot-"+suffix) {
+			secretName = strings.TrimSuffix(strings.TrimPrefix(key, "secret__kube-system__"), ".yaml")
+			break
+		}
+	}
+
+	secret := &corev1.Secret{}
+	Expect(runtime.DecodeInto(newCodec(), data["secret__kube-system__"+secretName+".yaml"], secret)).To(Succeed())
+	Expect(secret.Immutable).To(PointTo(BeTrue()))
+	Expect(secret.Data).NotTo(BeEmpty())
+	Expect(secret.Labels).To(HaveKeyWithValue("resources.gardener.cloud/garbage-collectable-reference", "true"))
+
+	return secretName
+}
+
+func newCodec() runtime.Codec {
+	var groupVersions []schema.GroupVersion
+	for k := range kubernetes.ShootScheme.AllKnownTypes() {
+		groupVersions = append(groupVersions, k.GroupVersion())
+	}
+	return kubernetes.ShootCodec.CodecForVersions(kubernetes.ShootSerializer, kubernetes.ShootSerializer, schema.GroupVersions(groupVersions), schema.GroupVersions(groupVersions))
 }

@@ -22,7 +22,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -89,14 +88,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 
 	if b.Shoot.ReversedVPNEnabled {
 		secretList = append(secretList,
-			// Secret definition for vpn-shoot (OpenVPN client side)
-			&secrets.CertificateSecretConfig{
-				Name:       vpnshoot.SecretNameVPNShootClient,
-				CommonName: "vpn-shoot-client",
-				CertType:   secrets.ClientCert,
-				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCAVPN],
-			},
-
 			// Secret definition for vpn-seed-server (OpenVPN server side)
 			&secrets.CertificateSecretConfig{
 				Name:       "vpn-seed-server",
@@ -112,14 +103,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 		)
 	} else {
 		secretList = append(secretList,
-			// Secret definition for vpn-shoot (OpenVPN server side)
-			&secrets.CertificateSecretConfig{
-				Name:       vpnshoot.SecretNameVPNShoot,
-				CommonName: "vpn-shoot",
-				CertType:   secrets.ServerCert,
-				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
-			},
-
 			// Secret definition for vpn-seed (OpenVPN client side)
 			&secrets.CertificateSecretConfig{
 				Name:       kubeapiserver.SecretNameVPNSeed,
