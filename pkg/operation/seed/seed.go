@@ -207,21 +207,18 @@ var (
 )
 
 const (
-	grafanaPrefix = "g-seed"
-	grafanaTLS    = "grafana-tls"
-
+	grafanaPrefix    = "g-seed"
 	prometheusPrefix = "p-seed"
-	prometheusTLS    = "aggregate-prometheus-tls"
 
 	userExposedComponentTagPrefix = "user-exposed"
 )
 
+var ingressTLSCertificateValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
+
 // generateWantedSecrets returns a list of Secret configuration objects satisfying the secret config intface,
 // each containing their specific configuration for the creation of certificates (server/client), RSA key pairs, basic
 // authentication credentials, etc.
-func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secretutils.Certificate) ([]secretutils.ConfigInterface, error) {
-	endUserCrtValidity := common.EndUserCrtValidity
-
+func generateWantedSecrets(certificateAuthorities map[string]*secretutils.Certificate) ([]secretutils.ConfigInterface, error) {
 	secretList := []secretutils.ConfigInterface{
 		&secretutils.CertificateSecretConfig{
 			Name: common.VPASecretName,
@@ -233,30 +230,6 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 
 			CertType:  secretutils.ServerCert,
 			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCASeed],
-		},
-		&secretutils.CertificateSecretConfig{
-			Name: "grafana-tls",
-
-			CommonName:   "grafana",
-			Organization: []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:     []string{seed.GetIngressFQDN(grafanaPrefix)},
-			IPAddresses:  nil,
-
-			CertType:  secretutils.ServerCert,
-			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCASeed],
-			Validity:  &endUserCrtValidity,
-		},
-		&secretutils.CertificateSecretConfig{
-			Name: prometheusTLS,
-
-			CommonName:   "prometheus",
-			Organization: []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:     []string{seed.GetIngressFQDN(prometheusPrefix)},
-			IPAddresses:  nil,
-
-			CertType:  secretutils.ServerCert,
-			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCASeed],
-			Validity:  &endUserCrtValidity,
 		},
 	}
 
@@ -292,7 +265,7 @@ func deployCertificates(
 	}
 	certificateAuthorities[caSecret.Name] = cert
 
-	wantedSecretsList, err := generateWantedSecrets(seed, certificateAuthorities)
+	wantedSecretsList, err := generateWantedSecrets(certificateAuthorities)
 	if err != nil {
 		return nil, err
 	}
@@ -796,19 +769,46 @@ func RunReconcileSeedFlow(
 	applierOptions[hvpaGK] = retainStatusInformation
 	applierOptions[issuerGK] = retainStatusInformation
 
-	var (
-		grafanaTLSOverride    = grafanaTLS
-		prometheusTLSOverride = prometheusTLS
-	)
-
 	wildcardCert, err := GetWildcardCertificate(ctx, seedClient)
 	if err != nil {
 		return err
 	}
 
+	var (
+		grafanaIngressTLSSecretName    string
+		prometheusIngressTLSSecretName string
+	)
+
 	if wildcardCert != nil {
-		grafanaTLSOverride = wildcardCert.GetName()
-		prometheusTLSOverride = wildcardCert.GetName()
+		grafanaIngressTLSSecretName = wildcardCert.GetName()
+		prometheusIngressTLSSecretName = wildcardCert.GetName()
+	} else {
+		grafanaIngressTLSSecret, err := secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+			Name:         "grafana-tls",
+			CommonName:   "grafana",
+			Organization: []string{"gardener.cloud:monitoring:ingress"},
+			DNSNames:     []string{seed.GetIngressFQDN(grafanaPrefix)},
+			CertType:     secretutils.ServerCert,
+			Validity:     &ingressTLSCertificateValidity,
+		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCASeed))
+		if err != nil {
+			return err
+		}
+
+		prometheusIngressTLSSecret, err := secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+			Name:         "aggregate-prometheus-tls",
+			CommonName:   "prometheus",
+			Organization: []string{"gardener.cloud:monitoring:ingress"},
+			DNSNames:     []string{seed.GetIngressFQDN(prometheusPrefix)},
+			CertType:     secretutils.ServerCert,
+			Validity:     &ingressTLSCertificateValidity,
+		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCASeed))
+		if err != nil {
+			return err
+		}
+
+		grafanaIngressTLSSecretName = grafanaIngressTLSSecret.Name
+		prometheusIngressTLSSecretName = prometheusIngressTLSSecret.Name
 	}
 
 	imageVectorOverwrites := make(map[string]string, len(componentImageVectors))
@@ -978,11 +978,11 @@ func RunReconcileSeedFlow(
 			"storage":    seed.GetValidVolumeSize("20Gi"),
 			"seed":       seed.GetInfo().Name,
 			"hostName":   prometheusHost,
-			"secretName": prometheusTLSOverride,
+			"secretName": prometheusIngressTLSSecretName,
 		},
 		"grafana": map[string]interface{}{
 			"hostName":   grafanaHost,
-			"secretName": grafanaTLSOverride,
+			"secretName": grafanaIngressTLSSecretName,
 		},
 		"fluent-bit": map[string]interface{}{
 			"enabled":                           loggingEnabled,
