@@ -187,6 +187,18 @@ func computeAnnotations(spec corev1.PodSpec, additional ...string) map[string]st
 		if volume.ConfigMap != nil {
 			out[AnnotationKey(KindConfigMap, volume.ConfigMap.Name)] = volume.ConfigMap.Name
 		}
+
+		if volume.Projected != nil {
+			for _, source := range volume.Projected.Sources {
+				if source.Secret != nil {
+					out[AnnotationKey(KindSecret, source.Secret.Name)] = source.Secret.Name
+				}
+
+				if source.ConfigMap != nil {
+					out[AnnotationKey(KindConfigMap, source.ConfigMap.Name)] = source.ConfigMap.Name
+				}
+			}
+		}
 	}
 
 	for _, v := range additional {

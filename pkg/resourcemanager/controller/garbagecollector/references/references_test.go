@@ -65,11 +65,13 @@ var _ = Describe("References", func() {
 			configMap3            = "cm3"
 			configMap4            = "cm4"
 			configMap5            = "cm5"
+			configMap6            = "cm6"
 			secret1               = "secret1"
 			secret2               = "secret2"
 			secret3               = "secret3"
 			secret4               = "secret4"
 			secret5               = "secret5"
+			secret6               = "secret6"
 			additionalAnnotation1 = "foo"
 			additionalAnnotation2 = "bar"
 
@@ -168,6 +170,28 @@ var _ = Describe("References", func() {
 							},
 						},
 					},
+					{
+						VolumeSource: corev1.VolumeSource{
+							Projected: &corev1.ProjectedVolumeSource{
+								Sources: []corev1.VolumeProjection{
+									{
+										Secret: &corev1.SecretProjection{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: secret6,
+											},
+										},
+									},
+									{
+										ConfigMap: &corev1.ConfigMapProjection{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: configMap6,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
 				},
 			}
 			expectedAnnotationsWithExisting = map[string]string{
@@ -177,11 +201,13 @@ var _ = Describe("References", func() {
 				AnnotationKey(KindConfigMap, configMap3): configMap3,
 				AnnotationKey(KindConfigMap, configMap4): configMap4,
 				AnnotationKey(KindConfigMap, configMap5): configMap5,
+				AnnotationKey(KindConfigMap, configMap6): configMap6,
 				AnnotationKey(KindSecret, secret1):       secret1,
 				AnnotationKey(KindSecret, secret2):       secret2,
 				AnnotationKey(KindSecret, secret3):       secret3,
 				AnnotationKey(KindSecret, secret4):       secret4,
 				AnnotationKey(KindSecret, secret5):       secret5,
+				AnnotationKey(KindSecret, secret6):       secret6,
 				additionalAnnotation1:                    "",
 				additionalAnnotation2:                    "",
 			}
@@ -191,11 +217,13 @@ var _ = Describe("References", func() {
 				AnnotationKey(KindConfigMap, configMap3): configMap3,
 				AnnotationKey(KindConfigMap, configMap4): configMap4,
 				AnnotationKey(KindConfigMap, configMap5): configMap5,
+				AnnotationKey(KindConfigMap, configMap6): configMap6,
 				AnnotationKey(KindSecret, secret1):       secret1,
 				AnnotationKey(KindSecret, secret2):       secret2,
 				AnnotationKey(KindSecret, secret3):       secret3,
 				AnnotationKey(KindSecret, secret4):       secret4,
 				AnnotationKey(KindSecret, secret5):       secret5,
+				AnnotationKey(KindSecret, secret6):       secret6,
 				additionalAnnotation1:                    "",
 				additionalAnnotation2:                    "",
 			}
