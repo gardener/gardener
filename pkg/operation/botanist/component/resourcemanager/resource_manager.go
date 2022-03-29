@@ -624,7 +624,6 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 
 		if r.values.TargetDiffersFromSourceCluster {
 			if r.secrets.BootstrapKubeconfig != nil {
-				metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum/secret-"+r.secrets.BootstrapKubeconfig.Name, r.secrets.BootstrapKubeconfig.Checksum)
 				deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
 					Name: volumeNameBootstrapKubeconfig,
 					VolumeSource: corev1.VolumeSource{

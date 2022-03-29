@@ -915,9 +915,9 @@ subjects:
 			})
 
 			It("should successfully deploy all resources (w/ bootstrap kubeconfig)", func() {
-				secretNameBootstrapKubeconfig, secretChecksumBootstrapKubeconfig := "bootstrap-kubeconfig", "bootchecksum"
+				secretNameBootstrapKubeconfig := "bootstrap-kubeconfig"
 
-				secrets.BootstrapKubeconfig = &component.Secret{Name: secretNameBootstrapKubeconfig, Checksum: secretChecksumBootstrapKubeconfig}
+				secrets.BootstrapKubeconfig = &component.Secret{Name: secretNameBootstrapKubeconfig}
 				resourceManager = New(c, deployNamespace, sm, image, cfg)
 				resourceManager.SetSecrets(secrets)
 
@@ -954,7 +954,6 @@ subjects:
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
-							metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum/secret-"+secretNameBootstrapKubeconfig, secretChecksumBootstrapKubeconfig)
 							deployment.Spec.Template.Spec.Containers[0].VolumeMounts[len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-1].Name = "kubeconfig-bootstrap"
 							deployment.Spec.Template.Spec.Volumes[len(deployment.Spec.Template.Spec.Volumes)-1] = corev1.Volume{
 								Name: "kubeconfig-bootstrap",

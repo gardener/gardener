@@ -25,7 +25,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/utils"
@@ -36,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -98,17 +98,9 @@ var TimeoutWaitForGardenerResourceManagerBootstrapping = 2 * time.Minute
 
 // DeployGardenerResourceManager deploys the gardener-resource-manager
 func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
-	var (
-		bootstrapKubeconfigSecret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "shoot-access-gardener-resource-manager-bootstrap",
-				Namespace: b.Shoot.SeedNamespace,
-			},
-		}
-		secrets = resourcemanager.Secrets{
-			RootCA: &component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
-		}
-	)
+	secrets := resourcemanager.Secrets{
+		RootCA: &component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
+	}
 
 	if b.Shoot.Components.ControlPlane.ResourceManager.GetReplicas() == nil {
 		replicaCount, err := b.determineControllerReplicas(ctx, v1beta1constants.DeploymentNameGardenerResourceManager, 3)
@@ -124,11 +116,12 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 	}
 
 	if mustBootstrap {
-		if err := b.reconcileGardenerResourceManagerBootstrapKubeconfigSecret(ctx, bootstrapKubeconfigSecret); err != nil {
+		bootstrapKubeconfigSecret, err := b.reconcileGardenerResourceManagerBootstrapKubeconfigSecret(ctx)
+		if err != nil {
 			return err
 		}
 
-		secrets.BootstrapKubeconfig = &component.Secret{Name: bootstrapKubeconfigSecret.Name, Checksum: utils.ComputeSecretChecksum(bootstrapKubeconfigSecret.Data)}
+		secrets.BootstrapKubeconfig = &component.Secret{Name: bootstrapKubeconfigSecret.Name}
 		b.Shoot.Components.ControlPlane.ResourceManager.SetSecrets(secrets)
 
 		if err := b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx); err != nil {
@@ -141,10 +134,10 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 		if err := b.waitUntilGardenerResourceManagerBootstrapped(timeoutCtx); err != nil {
 			return err
 		}
-	}
 
-	if err := b.K8sSeedClient.Client().Delete(ctx, bootstrapKubeconfigSecret); client.IgnoreNotFound(err) != nil {
-		return err
+		if err := b.K8sSeedClient.Client().Delete(ctx, bootstrapKubeconfigSecret); client.IgnoreNotFound(err) != nil {
+			return err
+		}
 	}
 
 	secrets.BootstrapKubeconfig = nil
@@ -207,38 +200,27 @@ func (b *Botanist) mustBootstrapGardenerResourceManager(ctx context.Context) (bo
 	return false, nil
 }
 
-func (b *Botanist) reconcileGardenerResourceManagerBootstrapKubeconfigSecret(ctx context.Context, bootstrapKubeconfigSecret *corev1.Secret) error {
-	caCertificateSecret := b.LoadSecret(v1beta1constants.SecretNameCACluster)
-
-	caCertificate, err := secretutils.LoadCertificate(v1beta1constants.SecretNameCACluster, caCertificateSecret.Data[secretutils.DataKeyPrivateKeyCA], caCertificateSecret.Data[secretutils.DataKeyCertificateCA])
-	if err != nil {
-		return err
+func (b *Botanist) reconcileGardenerResourceManagerBootstrapKubeconfigSecret(ctx context.Context) (*corev1.Secret, error) {
+	caBundleSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
 
-	controlPlaneSecret, err := (&secretutils.ControlPlaneSecretConfig{
-		Name: bootstrapKubeconfigSecret.Name,
+	return b.SecretsManager.Generate(ctx, &secretutils.ControlPlaneSecretConfig{
+		Name: "shoot-access-gardener-resource-manager-bootstrap",
 		CertificateSecretConfig: &secretutils.CertificateSecretConfig{
-			CommonName:   "gardener.cloud:system:gardener-resource-manager",
-			Organization: []string{user.SystemPrivilegedGroup},
-			SigningCA:    caCertificate,
-			CertType:     secretutils.ClientCert,
-			Validity:     utils.DurationPtr(10 * time.Minute),
+			CommonName:                  "gardener.cloud:system:gardener-resource-manager",
+			Organization:                []string{user.SystemPrivilegedGroup},
+			CertType:                    secretutils.ClientCert,
+			Validity:                    utils.DurationPtr(10 * time.Minute),
+			SkipPublishingCACertificate: true,
 		},
 		KubeConfigRequests: []secretutils.KubeConfigRequest{{
 			ClusterName:   b.Shoot.SeedNamespace,
 			APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(true),
+			CAData:        caBundleSecret.Data[secretutils.DataKeyCertificateBundle],
 		}},
-	}).GenerateControlPlane()
-	if err != nil {
-		return err
-	}
-
-	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), bootstrapKubeconfigSecret, func() error {
-		bootstrapKubeconfigSecret.Type = corev1.SecretTypeOpaque
-		bootstrapKubeconfigSecret.Data = map[string][]byte{resourcesv1alpha1.DataKeyKubeconfig: controlPlaneSecret.Kubeconfig}
-		return nil
-	})
-	return err
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
 }
 
 func (b *Botanist) waitUntilGardenerResourceManagerBootstrapped(ctx context.Context) error {

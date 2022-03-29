@@ -32,6 +32,8 @@ import (
 	mockresourcemanager "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
@@ -72,6 +74,7 @@ var _ = Describe("ResourceManager", func() {
 
 			c             *mockclient.MockClient
 			k8sSeedClient kubernetes.Interface
+			sm            secretsmanager.Interface
 
 			seedNamespace = "fake-seed-ns"
 
@@ -140,11 +143,13 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 
 			c = mockclient.NewMockClient(ctrl)
 			k8sSeedClient = fakekubernetes.NewClientSetBuilder().WithClient(c).Build()
+			sm = fakesecretsmanager.New(c, seedNamespace)
 
 			botanist.StoreCheckSum(secretNameCA, secretChecksumCA)
 			botanist.StoreSecret(secretNameCA, &corev1.Secret{Data: secretDataCA})
 
 			botanist.K8sSeedClient = k8sSeedClient
+			botanist.SecretsManager = sm
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					ControlPlane: &shootpkg.ControlPlane{
@@ -168,7 +173,7 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 
 			bootstrapKubeconfigSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "shoot-access-gardener-resource-manager-bootstrap",
+					Name:      "shoot-access-gardener-resource-manager-bootstrap-905aeb60",
 					Namespace: seedNamespace,
 				},
 			}
@@ -195,13 +200,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 					gomock.InOrder(
 						// replicas are set to 0, i.e., GRM should not be scaled up
 						resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(0)),
-
-						// always delete bootstrap kubeconfig
-						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, opts ...client.DeleteOption) error {
-							Expect(obj.Name).To(Equal(bootstrapKubeconfigSecret.Name))
-							Expect(obj.Namespace).To(Equal(bootstrapKubeconfigSecret.Namespace))
-							return nil
-						}),
 
 						// set secrets
 						resourceManager.EXPECT().SetSecrets(secrets),
@@ -312,19 +310,12 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 						}),
 						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 
-						// always delete bootstrap kubeconfig
-						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, opts ...client.DeleteOption) error {
-							Expect(obj.Name).To(Equal(bootstrapKubeconfigSecret.Name))
-							Expect(obj.Namespace).To(Equal(bootstrapKubeconfigSecret.Namespace))
-							return nil
-						}),
-
 						// set secrets
 						resourceManager.EXPECT().SetSecrets(secrets),
 					)
 				})
 
-				It("should delete the bootstrap kubeconfig secret (if exists), set the secrets and deploy", func() {
+				It("should set the secrets and deploy", func() {
 					resourceManager.EXPECT().Deploy(ctx)
 					Expect(botanist.DeployGardenerResourceManager(ctx)).To(Succeed())
 				})
@@ -343,7 +334,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 
 					gomock.InOrder(
 						// create bootstrap kubeconfig
-						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(bootstrapKubeconfigSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, s *corev1.Secret, _ ...client.CreateOption) error {
 							Expect(s.Data["kubeconfig"]).NotTo(BeNil())
 							return nil
@@ -477,7 +467,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 
 				It("fails because the bootstrap kubeconfig secret cannot be created", func() {
 					gomock.InOrder(
-						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(bootstrapKubeconfigSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
 					)
 
@@ -488,7 +477,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 					BeforeEach(func() {
 						gomock.InOrder(
 							// create bootstrap kubeconfig
-							c.EXPECT().Get(ctx, client.ObjectKeyFromObject(bootstrapKubeconfigSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 							c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
 
 							// set secrets and deploy with bootstrap kubeconfig
@@ -554,7 +542,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 				It("fails because the bootstrap kubeconfig cannot be deleted", func() {
 					gomock.InOrder(
 						// create bootstrap kubeconfig
-						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(bootstrapKubeconfigSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, s *corev1.Secret, _ ...client.CreateOption) error {
 							Expect(s.Data["kubeconfig"]).NotTo(BeNil())
 							return nil
