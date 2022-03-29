@@ -359,3 +359,19 @@ func MetadataFromDescription(description, kind string) (namespace, name string) 
 	name = split[0]
 	return
 }
+
+// DeleteNonUniqueGardenletSecretsAndCms deletes left-over secrets and configmaps as the Gardenlet now uses unique cms and secrets
+// TODO(beckermax): Remove in a future version
+func DeleteNonUniqueGardenletSecretsAndCms(ctx context.Context, c client.Client) error {
+	if err := kutil.DeleteObjects(ctx, c,
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "gardenlet-imagevector-overwrite"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "gardenlet-imagevector-overwrite-components"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "gardenlet-configmap"}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "gardenlet-cert"}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "gardenlet-kubeconfig-seed"}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "gardenlet-kubeconfig-garden"}},
+	); err != nil {
+		return err
+	}
+	return nil
+}

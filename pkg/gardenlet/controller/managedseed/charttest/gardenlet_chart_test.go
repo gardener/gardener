@@ -49,6 +49,7 @@ import (
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -60,6 +61,9 @@ var (
 		"release":  "gardenlet",
 		"heritage": "Tiller",
 	}
+	expectedLabelsWithCollectableReference = utils.MergeStringMaps(expectedLabels, map[string]string{
+		"resources.gardener.cloud/garbage-collectable-reference": "true",
+	})
 )
 
 var _ = Describe("#Gardenlet Chart Test", func() {
@@ -144,6 +148,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			imageVectorOverwrite *string,
 			componentImageVectorOverwrites *string,
 			featureGates map[string]bool,
+			cmAndSecretNameToUniqueName map[string]string,
 		) {
 			gardenletValues := map[string]interface{}{
 				"enabled": true,
@@ -292,7 +297,11 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				c,
 				universalDecoder,
 				expectedGardenletConfig,
-				expectedLabels)
+				utils.MergeStringMaps(expectedLabels, map[string]string{
+					"resources.gardener.cloud/garbage-collectable-reference": "true",
+				}),
+				cmAndSecretNameToUniqueName["gardenlet-configmap"],
+			)
 
 			expectedGardenletDeploymentSpec, err := ComputeExpectedGardenletDeploymentSpec(
 				deploymentConfiguration,
@@ -303,6 +312,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				expectedLabels,
 				imageVectorOverwrite,
 				componentImageVectorOverwrites,
+				cmAndSecretNameToUniqueName,
 			)
 
 			Expect(err).ToNot(HaveOccurred())
@@ -318,52 +328,64 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				expectedLabels,
 				imageVectorOverwrite,
 				componentImageVectorOverwrites,
+				cmAndSecretNameToUniqueName,
 			)
 
 			if imageVectorOverwrite != nil {
 				cm := getEmptyImageVectorOverwriteConfigMap()
-				validateImageVectorOverwriteConfigMap(ctx, c, cm, "images_overwrite.yaml", imageVectorOverwrite)
+				validateImageVectorOverwriteConfigMap(ctx, c, cm, "images_overwrite.yaml", imageVectorOverwrite, cmAndSecretNameToUniqueName["gardenlet-imagevector-overwrite"])
 			}
 
 			if componentImageVectorOverwrites != nil {
 				cm := getEmptyImageVectorOverwriteComponentsConfigMap()
-				validateImageVectorOverwriteConfigMap(ctx, c, cm, "components.yaml", componentImageVectorOverwrites)
+				validateImageVectorOverwriteConfigMap(ctx, c, cm, "components.yaml", componentImageVectorOverwrites, cmAndSecretNameToUniqueName["gardenlet-imagevector-overwrite-components"])
 			}
 
 			if componentConfigUsesTlsServerConfig {
-				validateCertSecret(ctx, c, componentConfigTlsServerContentCert, componentConfigTlsServerContentKey)
+				validateCertSecret(ctx, c, componentConfigTlsServerContentCert, componentConfigTlsServerContentKey, cmAndSecretNameToUniqueName["gardenlet-cert"])
 			}
 
 			if gardenClientConnectionKubeconfig != nil {
 				secret := getEmptyKubeconfigGardenSecret()
-				validateKubeconfigSecret(ctx, c, secret, gardenClientConnectionKubeconfig)
+				validateKubeconfigSecret(ctx, c, secret, gardenClientConnectionKubeconfig, expectedLabelsWithCollectableReference, cmAndSecretNameToUniqueName["gardenlet-kubeconfig-garden"])
 			}
 
 			if seedClientConnectionKubeconfig != nil {
 				secret := getEmptyKubeconfigSeedSecret()
-				validateKubeconfigSecret(ctx, c, secret, seedClientConnectionKubeconfig)
+				validateKubeconfigSecret(ctx, c, secret, seedClientConnectionKubeconfig, expectedLabelsWithCollectableReference, cmAndSecretNameToUniqueName["gardenlet-kubeconfig-seed"])
 			}
 
 			if bootstrapKubeconfigContent != nil {
 				secret := getEmptyKubeconfigGardenBootstrapSecret()
-				validateKubeconfigSecret(ctx, c, secret, bootstrapKubeconfigContent)
+				validateKubeconfigSecret(ctx, c, secret, bootstrapKubeconfigContent, expectedLabels, "gardenlet-kubeconfig-bootstrap")
 			}
 
 			if deploymentConfiguration != nil && deploymentConfiguration.VPA != nil && *deploymentConfiguration.VPA {
 				ValidateGardenletChartVPA(ctx, c)
 			}
 		},
-		Entry("verify the default values for the Gardenlet chart & the Gardenlet component config", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil),
-		Entry("verify Gardenlet with component config with TLS server configuration", pointer.String("dummy cert content"), pointer.String("dummy key content"), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil),
-		Entry("verify Gardenlet with component config having the Garden client connection kubeconfig set", nil, nil, pointer.String("dummy garden kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil, nil),
-		Entry("verify Gardenlet with component config having the Seed client connection kubeconfig set", nil, nil, nil, pointer.String("dummy seed kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil),
+		Entry("verify the default values for the Gardenlet chart & the Gardenlet component config", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-8ea3e69f"}),
+		Entry("verify Gardenlet with component config with TLS server configuration", pointer.String("dummy cert content"), pointer.String("dummy key content"), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{
+			"gardenlet-configmap": "gardenlet-configmap-a46bcda8",
+			"gardenlet-cert":      "gardenlet-cert-4a9a9f55",
+		}),
+		Entry("verify Gardenlet with component config having the Garden client connection kubeconfig set", nil, nil, pointer.String("dummy garden kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{
+			"gardenlet-configmap":         "gardenlet-configmap-ebd48da4",
+			"gardenlet-kubeconfig-garden": "gardenlet-kubeconfig-garden-8c9ae097",
+		}),
+		Entry("verify Gardenlet with component config having the Seed client connection kubeconfig set", nil, nil, nil, pointer.String("dummy seed kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil, map[string]string{
+			"gardenlet-configmap":       "gardenlet-configmap-73650a46",
+			"gardenlet-kubeconfig-seed": "gardenlet-kubeconfig-seed-662d92ae",
+		}),
 		Entry("verify Gardenlet with component config having a Bootstrap kubeconfig set", nil, nil, nil, nil, &corev1.SecretReference{
 			Name:      "gardenlet-kubeconfig-bootstrap",
 			Namespace: "garden",
 		}, &corev1.SecretReference{
 			Name:      "gardenlet-kubeconfig",
 			Namespace: gardencorev1beta1constants.GardenNamespace,
-		}, pointer.String("dummy bootstrap kubeconfig"), nil, nil, nil, nil, nil),
+		}, pointer.String("dummy bootstrap kubeconfig"), nil, nil, nil, nil, nil, map[string]string{
+			"gardenlet-configmap": "gardenlet-configmap-40a3098f",
+		}),
 		Entry("verify that the SeedConfig is set in the component config Config Map", nil, nil, nil, nil, nil, nil, nil,
 			&gardenletconfigv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
@@ -371,19 +393,23 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 						Name: "sweet-seed",
 					},
 				},
-			}, nil, nil, nil, nil),
-
-		Entry("verify deployment with image vector override", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, pointer.String("dummy-override-content"), nil),
-
-		Entry("verify deployment with component image vector override", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, pointer.String("dummy-override-content"), nil),
+			}, nil, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-5d1e7559"}),
+		Entry("verify deployment with image vector override", nil, nil, nil, nil, nil, nil, nil, nil, nil, pointer.String("dummy-override-content"), nil, nil, map[string]string{
+			"gardenlet-configmap":             "gardenlet-configmap-8ea3e69f",
+			"gardenlet-imagevector-overwrite": "gardenlet-imagevector-overwrite-32ecb769",
+		}),
+		Entry("verify deployment with component image vector override", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, pointer.String("dummy-override-content"), nil, map[string]string{
+			"gardenlet-configmap":                        "gardenlet-configmap-8ea3e69f",
+			"gardenlet-imagevector-overwrite-components": "gardenlet-imagevector-overwrite-components-53f94952",
+		}),
 
 		Entry("verify deployment with replica count", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			ReplicaCount: pointer.Int32(2),
-		}, nil, nil, nil),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-8ea3e69f"}),
 
 		Entry("verify deployment with service account", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			ServiceAccountName: pointer.String("ax"),
-		}, nil, nil, nil),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-8ea3e69f"}),
 
 		Entry("verify deployment with resources", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			Resources: &corev1.ResourceRequirements{
@@ -396,19 +422,19 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					corev1.ResourceMemory: resource.MustParse("25Mi"),
 				},
 			},
-		}, nil, nil, nil),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-8ea3e69f"}),
 
 		Entry("verify deployment with pod labels", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			PodLabels: map[string]string{
 				"x": "y",
 			},
-		}, nil, nil, nil),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-8ea3e69f"}),
 
 		Entry("verify deployment with pod annotations", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			PodAnnotations: map[string]string{
 				"x": "y",
 			},
-		}, nil, nil, nil),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-8ea3e69f"}),
 
 		Entry("verify deployment with additional volumes", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			AdditionalVolumes: []corev1.Volume{
@@ -417,7 +443,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					VolumeSource: corev1.VolumeSource{},
 				},
 			},
-		}, nil, nil, nil),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-8ea3e69f"}),
 
 		Entry("verify deployment with additional volume mounts", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			AdditionalVolumeMounts: []corev1.VolumeMount{
@@ -425,7 +451,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					Name: "a",
 				},
 			},
-		}, nil, nil, nil),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-8ea3e69f"}),
 
 		Entry("verify deployment with env variables", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			Env: []corev1.EnvVar{
@@ -434,18 +460,18 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					Value: "XY",
 				},
 			},
-		}, nil, nil, nil),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-8ea3e69f"}),
 
 		Entry("verify deployment with VPA enabled", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			VPA: pointer.Bool(true),
-		}, nil, nil, nil),
-		Entry("verify Gardenlet RBACs when ManagedIstio is enabled", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]bool{string(features.ManagedIstio): true}),
-		Entry("verify Gardenlet RBACs when APIServerSNI is enabled", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]bool{string(features.APIServerSNI): true}),
-		Entry("verify Gardenlet RBACs when APIServerSNI is disabled", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]bool{string(features.APIServerSNI): false}),
+		}, nil, nil, nil, map[string]string{"gardenlet-configmap": "gardenlet-configmap-8ea3e69f"}),
+		Entry("verify Gardenlet RBACs when ManagedIstio is enabled", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]bool{string(features.ManagedIstio): true}, map[string]string{"gardenlet-configmap": "gardenlet-configmap-83deee42"}),
+		Entry("verify Gardenlet RBACs when APIServerSNI is enabled", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]bool{string(features.APIServerSNI): true}, map[string]string{"gardenlet-configmap": "gardenlet-configmap-cdc69b1c"}),
+		Entry("verify Gardenlet RBACs when APIServerSNI is disabled", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]bool{string(features.APIServerSNI): false}, map[string]string{"gardenlet-configmap": "gardenlet-configmap-364a4384"}),
 	)
 })
 
-func validateKubeconfigSecret(ctx context.Context, c client.Client, secret *corev1.Secret, kubeconfig *string) {
+func validateKubeconfigSecret(ctx context.Context, c client.Client, secret *corev1.Secret, kubeconfig *string, expectedLabels map[string]string, name string) {
 	expectedSecret := *secret
 	expectedSecret.Labels = expectedLabels
 	expectedSecret.Type = corev1.SecretTypeOpaque
@@ -455,7 +481,7 @@ func validateKubeconfigSecret(ctx context.Context, c client.Client, secret *core
 
 	Expect(c.Get(
 		ctx,
-		kutil.Key(secret.Namespace, secret.Name),
+		kutil.Key(secret.Namespace, name),
 		secret,
 	)).ToNot(HaveOccurred())
 	Expect(secret.Labels).To(Equal(expectedSecret.Labels))
@@ -463,10 +489,10 @@ func validateKubeconfigSecret(ctx context.Context, c client.Client, secret *core
 	Expect(secret.Type).To(Equal(expectedSecret.Type))
 }
 
-func validateCertSecret(ctx context.Context, c client.Client, cert *string, key *string) {
+func validateCertSecret(ctx context.Context, c client.Client, cert *string, key *string, uniqueName string) {
 	secret := getEmptyCertSecret()
 	expectedSecret := getEmptyCertSecret()
-	expectedSecret.Labels = expectedLabels
+	expectedSecret.Labels = expectedLabelsWithCollectableReference
 	expectedSecret.Type = corev1.SecretTypeOpaque
 	expectedSecret.Data = map[string][]byte{
 		"gardenlet.crt": []byte(*cert),
@@ -475,7 +501,7 @@ func validateCertSecret(ctx context.Context, c client.Client, cert *string, key 
 
 	Expect(c.Get(
 		ctx,
-		kutil.Key(secret.Namespace, secret.Name),
+		kutil.Key(secret.Namespace, uniqueName),
 		secret,
 	)).ToNot(HaveOccurred())
 	Expect(secret.Labels).To(Equal(expectedSecret.Labels))
@@ -483,16 +509,16 @@ func validateCertSecret(ctx context.Context, c client.Client, cert *string, key 
 	Expect(secret.Type).To(Equal(expectedSecret.Type))
 }
 
-func validateImageVectorOverwriteConfigMap(ctx context.Context, c client.Client, cm *corev1.ConfigMap, cmKey string, content *string) {
+func validateImageVectorOverwriteConfigMap(ctx context.Context, c client.Client, cm *corev1.ConfigMap, cmKey string, content *string, uniqueName string) {
 	expectedCm := *cm
-	expectedCm.Labels = expectedLabels
+	expectedCm.Labels = expectedLabelsWithCollectableReference
 	expectedCm.Data = map[string]string{
 		cmKey: fmt.Sprintf("%s\n", *content),
 	}
 
 	Expect(c.Get(
 		ctx,
-		kutil.Key(cm.Namespace, cm.Name),
+		kutil.Key(cm.Namespace, uniqueName),
 		cm,
 	)).ToNot(HaveOccurred())
 

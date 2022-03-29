@@ -157,6 +157,9 @@ func (a *actuator) Reconcile(ctx context.Context, ms *seedmanagementv1alpha1.Man
 		if err := a.deployGardenlet(ctx, shootClient, ms, seed, gardenletConfig, shoot); err != nil {
 			return status, false, fmt.Errorf("could not deploy gardenlet into shoot %s: %w", kutil.ObjectName(shoot), err)
 		}
+		if err := bootstraputil.DeleteNonUniqueGardenletSecretsAndCms(ctx, shootClient.Client()); err != nil {
+			return status, false, fmt.Errorf("could not delete legacy non-unique secrets and configmaps %s: %w", ms.Name, err)
+		}
 	}
 
 	updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionTrue, gardencorev1beta1.EventReconciled,
