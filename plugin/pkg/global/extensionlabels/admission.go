@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	internalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
@@ -110,7 +111,7 @@ func (e *ExtensionLabels) ValidateInitialization() error {
 
 var _ admission.MutationInterface = &ExtensionLabels{}
 
-// Admit add extension labels to resources.
+// Admit adds extension labels to resources.
 func (e *ExtensionLabels) Admit(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
 	if err := e.waitUntilReady(a); err != nil {
 		return fmt.Errorf("err while waiting for ready %w", err)
@@ -125,6 +126,15 @@ func (e *ExtensionLabels) Admit(ctx context.Context, a admission.Attributes, o a
 
 		removeLabels(&seed.ObjectMeta)
 		addMetaDataLabelsSeed(seed)
+
+	case core.Kind("SecretBinding"):
+		secretBinding, ok := a.GetObject().(*core.SecretBinding)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert resource into SecretBinding object")
+		}
+
+		removeLabels(&secretBinding.ObjectMeta)
+		addMetaDataLabelsSecretBinding(secretBinding)
 
 	case core.Kind("Shoot"):
 		shoot, ok := a.GetObject().(*core.Shoot)
@@ -178,6 +188,15 @@ func addMetaDataLabelsSeed(seed *core.Seed) {
 
 	if seed.Spec.DNS.Provider != nil {
 		metav1.SetMetaDataLabel(&seed.ObjectMeta, v1beta1constants.LabelExtensionDNSRecordTypePrefix+seed.Spec.DNS.Provider.Type, "true")
+	}
+}
+
+func addMetaDataLabelsSecretBinding(secretBinding *core.SecretBinding) {
+	if secretBinding.Provider != nil {
+		types := gardencorehelper.GetSecretBindingTypes(secretBinding)
+		for _, t := range types {
+			metav1.SetMetaDataLabel(&secretBinding.ObjectMeta, v1beta1constants.LabelExtensionProviderTypePrefix+t, "true")
+		}
 	}
 }
 
