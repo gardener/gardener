@@ -22,7 +22,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -35,8 +34,6 @@ import (
 // authentication credentials, etc.
 func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error) {
 	var (
-		gardenerResourceManagerCertDNSNames = kubernetes.DNSNamesForService(resourcemanager.ServiceName, b.Shoot.SeedNamespace)
-
 		etcdCertDNSNames = append(
 			b.Shoot.Components.ControlPlane.EtcdMain.ServiceDNSNames(),
 			b.Shoot.Components.ControlPlane.EtcdEvents.ServiceDNSNames()...,
@@ -46,19 +43,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 	)
 
 	secretList := []secrets.ConfigInterface{
-		// Secret definition for gardener-resource-manager server
-		&secrets.CertificateSecretConfig{
-			Name: resourcemanager.SecretNameServer,
-
-			CommonName:   v1beta1constants.DeploymentNameGardenerResourceManager,
-			Organization: nil,
-			DNSNames:     gardenerResourceManagerCertDNSNames,
-			IPAddresses:  nil,
-
-			CertType:  secrets.ServerCert,
-			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-		},
-
 		// Secret definition for prometheus
 		// TODO(rfranzke): Delete this in a future release once all monitoring configurations of extensions have been
 		// adapted.

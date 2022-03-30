@@ -32,6 +32,8 @@ import (
 	mockresourcemanager "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
@@ -72,14 +74,13 @@ var _ = Describe("ResourceManager", func() {
 
 			c             *mockclient.MockClient
 			k8sSeedClient kubernetes.Interface
+			sm            secretsmanager.Interface
 
 			seedNamespace = "fake-seed-ns"
 
-			secretNameCA         = "ca"
-			secretNameServer     = "gardener-resource-manager-server"
-			secretChecksumServer = "5678"
-			secretChecksumCA     = "9012"
-			secretDataServerCA   = map[string][]byte{
+			secretNameCA     = "ca"
+			secretChecksumCA = "9012"
+			secretDataCA     = map[string][]byte{
 				"ca.crt": []byte(`-----BEGIN CERTIFICATE-----
 MIIDYDCCAkigAwIBAgIUEb00DjvE8F0HiGOlQY/B/AG1AjMwDQYJKoZIhvcNAQEL
 BQAwSDELMAkGA1UEBhMCVVMxCzAJBgNVBAgTAkNBMRYwFAYDVQQHEw1TYW4gRnJh
@@ -142,12 +143,13 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 
 			c = mockclient.NewMockClient(ctrl)
 			k8sSeedClient = fakekubernetes.NewClientSetBuilder().WithClient(c).Build()
+			sm = fakesecretsmanager.New(c, seedNamespace)
 
 			botanist.StoreCheckSum(secretNameCA, secretChecksumCA)
-			botanist.StoreCheckSum(secretNameServer, secretChecksumServer)
-			botanist.StoreSecret(secretNameCA, &corev1.Secret{Data: secretDataServerCA})
+			botanist.StoreSecret(secretNameCA, &corev1.Secret{Data: secretDataCA})
 
 			botanist.K8sSeedClient = k8sSeedClient
+			botanist.SecretsManager = sm
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					ControlPlane: &shootpkg.ControlPlane{
@@ -166,14 +168,12 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 			})
 
 			secrets = resourcemanager.Secrets{
-				ServerCA: component.Secret{Name: secretNameCA, Checksum: secretChecksumCA, Data: secretDataServerCA},
-				Server:   component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
-				RootCA:   &component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
+				RootCA: &component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
 			}
 
 			bootstrapKubeconfigSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "shoot-access-gardener-resource-manager-bootstrap",
+					Name:      "shoot-access-gardener-resource-manager-bootstrap-905aeb60",
 					Namespace: seedNamespace,
 				},
 			}
@@ -200,13 +200,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 					gomock.InOrder(
 						// replicas are set to 0, i.e., GRM should not be scaled up
 						resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(0)),
-
-						// always delete bootstrap kubeconfig
-						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, opts ...client.DeleteOption) error {
-							Expect(obj.Name).To(Equal(bootstrapKubeconfigSecret.Name))
-							Expect(obj.Namespace).To(Equal(bootstrapKubeconfigSecret.Namespace))
-							return nil
-						}),
 
 						// set secrets
 						resourceManager.EXPECT().SetSecrets(secrets),
@@ -317,19 +310,12 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 						}),
 						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 
-						// always delete bootstrap kubeconfig
-						c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, opts ...client.DeleteOption) error {
-							Expect(obj.Name).To(Equal(bootstrapKubeconfigSecret.Name))
-							Expect(obj.Namespace).To(Equal(bootstrapKubeconfigSecret.Namespace))
-							return nil
-						}),
-
 						// set secrets
 						resourceManager.EXPECT().SetSecrets(secrets),
 					)
 				})
 
-				It("should delete the bootstrap kubeconfig secret (if exists), set the secrets and deploy", func() {
+				It("should set the secrets and deploy", func() {
 					resourceManager.EXPECT().Deploy(ctx)
 					Expect(botanist.DeployGardenerResourceManager(ctx)).To(Succeed())
 				})
@@ -348,7 +334,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 
 					gomock.InOrder(
 						// create bootstrap kubeconfig
-						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(bootstrapKubeconfigSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, s *corev1.Secret, _ ...client.CreateOption) error {
 							Expect(s.Data["kubeconfig"]).NotTo(BeNil())
 							return nil
@@ -357,8 +342,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 						// set secrets and deploy with bootstrap kubeconfig
 						resourceManager.EXPECT().SetSecrets(&secretMatcher{
 							bootstrapKubeconfigName: &bootstrapKubeconfigSecret.Name,
-							serverCA:                secrets.ServerCA,
-							server:                  secrets.Server,
 							rootCA:                  secrets.RootCA,
 						}),
 						resourceManager.EXPECT().Deploy(ctx),
@@ -484,7 +467,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 
 				It("fails because the bootstrap kubeconfig secret cannot be created", func() {
 					gomock.InOrder(
-						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(bootstrapKubeconfigSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
 					)
 
@@ -495,14 +477,11 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 					BeforeEach(func() {
 						gomock.InOrder(
 							// create bootstrap kubeconfig
-							c.EXPECT().Get(ctx, client.ObjectKeyFromObject(bootstrapKubeconfigSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 							c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
 
 							// set secrets and deploy with bootstrap kubeconfig
 							resourceManager.EXPECT().SetSecrets(&secretMatcher{
 								bootstrapKubeconfigName: &bootstrapKubeconfigSecret.Name,
-								serverCA:                secrets.ServerCA,
-								server:                  secrets.Server,
 								rootCA:                  secrets.RootCA,
 							}),
 							resourceManager.EXPECT().Deploy(ctx),
@@ -563,7 +542,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 				It("fails because the bootstrap kubeconfig cannot be deleted", func() {
 					gomock.InOrder(
 						// create bootstrap kubeconfig
-						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(bootstrapKubeconfigSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
 						c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, s *corev1.Secret, _ ...client.CreateOption) error {
 							Expect(s.Data["kubeconfig"]).NotTo(BeNil())
 							return nil
@@ -572,8 +550,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 						// set secrets and deploy with bootstrap kubeconfig
 						resourceManager.EXPECT().SetSecrets(&secretMatcher{
 							bootstrapKubeconfigName: &bootstrapKubeconfigSecret.Name,
-							serverCA:                secrets.ServerCA,
-							server:                  secrets.Server,
 							rootCA:                  secrets.RootCA,
 						}),
 						resourceManager.EXPECT().Deploy(ctx),
@@ -609,8 +585,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 
 type secretMatcher struct {
 	bootstrapKubeconfigName *string
-	serverCA                component.Secret
-	server                  component.Secret
 	rootCA                  *component.Secret
 }
 
@@ -624,14 +598,6 @@ func (m *secretMatcher) Matches(x interface{}) bool {
 		return false
 	}
 
-	if !apiequality.Semantic.DeepEqual(m.serverCA, req.ServerCA) {
-		return false
-	}
-
-	if !apiequality.Semantic.DeepEqual(m.server, req.Server) {
-		return false
-	}
-
 	if m.rootCA != nil && (req.RootCA == nil || !apiequality.Semantic.DeepEqual(*m.rootCA, *req.RootCA)) {
 		return false
 	}
@@ -642,8 +608,6 @@ func (m *secretMatcher) Matches(x interface{}) bool {
 func (m *secretMatcher) String() string {
 	return fmt.Sprintf(`Secret Matcher:
 bootstrapKubeconfigName: %v,
-serverCA: %v
-server: %v
 rootCA: %v
-`, m.bootstrapKubeconfigName, m.serverCA, m.server, m.rootCA)
+`, m.bootstrapKubeconfigName, m.rootCA)
 }

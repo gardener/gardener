@@ -55,25 +55,23 @@ import (
 )
 
 const (
-	// ServiceName is the name of the service of the gardener-resource-manager.
-	ServiceName = "gardener-resource-manager"
 	// ManagedResourceName is the name for the ManagedResource containing resources deployed to the shoot cluster.
 	ManagedResourceName = "shoot-core-gardener-resource-manager"
-	// SecretNameServer is the name of the gardener-resource-manager server certificate secret.
-	SecretNameServer = "gardener-resource-manager-server"
 	// SecretNameShootAccess is the name of the shoot access secret for the gardener-resource-manager.
 	SecretNameShootAccess = gutil.SecretNamePrefixShootAccess + v1beta1constants.DeploymentNameGardenerResourceManager
 	// LabelValue is a constant for the value of the 'app' label on Kubernetes resources.
 	LabelValue = "gardener-resource-manager"
 
+	serviceName        = "gardener-resource-manager"
+	secretNameServer   = "gardener-resource-manager-server"
 	clusterRoleName    = "gardener-resource-manager-seed"
+	roleName           = "gardener-resource-manager"
+	serviceAccountName = "gardener-resource-manager"
 	containerName      = v1beta1constants.DeploymentNameGardenerResourceManager
 	healthPort         = 8081
 	metricsPort        = 8080
 	serverPort         = 10250
 	serverServicePort  = 443
-	roleName           = "gardener-resource-manager"
-	serviceAccountName = "gardener-resource-manager"
 
 	volumeNameBootstrapKubeconfig  = "kubeconfig-bootstrap"
 	volumeNameCerts                = "tls"
@@ -193,6 +191,8 @@ type Values struct {
 	ResourceClass *string
 	// RetryPeriod configures the retry period for leader election
 	RetryPeriod *time.Duration
+	// SecretNameServerCA is the name of the server CA secret.
+	SecretNameServerCA string
 	// SyncPeriod configures the duration of how often existing resources should be synced
 	SyncPeriod *time.Duration
 	// TargetDiffersFromSourceCluster states whether the target cluster is a different one than the source cluster
@@ -214,10 +214,6 @@ type VPAConfig struct {
 }
 
 func (r *resourceManager) Deploy(ctx context.Context) error {
-	if r.secrets.Server.Name == "" || r.secrets.Server.Checksum == "" {
-		return fmt.Errorf("missing server secret information")
-	}
-
 	if r.values.TargetDiffersFromSourceCluster {
 		r.secrets.shootAccess = r.newShootAccessSecret()
 		if err := r.secrets.shootAccess.WithTokenExpirationDuration("24h").Reconcile(ctx, r.client); err != nil {
@@ -248,11 +244,7 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 	}
 
 	// TODO(rfranzke): Remove in a future release.
-	if r.values.TargetDiffersFromSourceCluster && pointer.Int32Deref(r.values.Replicas, 0) > 0 {
-		return kutil.DeleteObject(ctx, r.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: r.namespace}})
-	}
-
-	return nil
+	return kutil.DeleteObject(ctx, r.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager-server", Namespace: r.namespace}})
 }
 
 func (r *resourceManager) Destroy(ctx context.Context) error {
@@ -447,7 +439,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 }
 
 func (r *resourceManager) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ServiceName, Namespace: r.namespace}}
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: r.namespace}}
 }
 
 // TODO(rfranzke): Remove this special handling when we only support seed clusters of at least K8s 1.20.
@@ -469,6 +461,17 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 	deployment := r.emptyDeployment()
 
 	rootCAVolumeSourceName, err := r.getRootCAVolumeSourceName(ctx)
+	if err != nil {
+		return err
+	}
+
+	secretServer, err := r.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+		Name:                        secretNameServer,
+		CommonName:                  v1beta1constants.DeploymentNameGardenerResourceManager,
+		DNSNames:                    kutil.DNSNamesForService(serviceName, r.namespace),
+		CertType:                    secrets.ServerCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(r.values.SecretNameServerCA), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return err
 	}
@@ -553,75 +556,74 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 							},
 							InitialDelaySeconds: 10,
 						},
-						VolumeMounts: []corev1.VolumeMount{{
-							Name:      volumeNameAPIServerAccess,
-							MountPath: volumeMountPathAPIServerAccess,
-							ReadOnly:  true,
-						}},
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      volumeNameAPIServerAccess,
+								MountPath: volumeMountPathAPIServerAccess,
+								ReadOnly:  true,
+							},
+							{
+								MountPath: volumeMountPathCerts,
+								Name:      volumeNameCerts,
+								ReadOnly:  true,
+							},
+						},
 					},
 				},
-				Volumes: []corev1.Volume{{
-					Name: volumeNameAPIServerAccess,
-					VolumeSource: corev1.VolumeSource{
-						Projected: &corev1.ProjectedVolumeSource{
-							DefaultMode: pointer.Int32(420),
-							Sources: []corev1.VolumeProjection{
-								{
-									ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
-										ExpirationSeconds: pointer.Int64(60 * 60 * 12),
-										Path:              "token",
-									},
-								},
-								{
-									Secret: &corev1.SecretProjection{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: rootCAVolumeSourceName,
+				Volumes: []corev1.Volume{
+					{
+						Name: volumeNameAPIServerAccess,
+						VolumeSource: corev1.VolumeSource{
+							Projected: &corev1.ProjectedVolumeSource{
+								DefaultMode: pointer.Int32(420),
+								Sources: []corev1.VolumeProjection{
+									{
+										ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
+											ExpirationSeconds: pointer.Int64(60 * 60 * 12),
+											Path:              "token",
 										},
-										Items: []corev1.KeyToPath{{
-											Key:  "ca.crt",
-											Path: "ca.crt",
-										}},
 									},
-								},
-								{
-									DownwardAPI: &corev1.DownwardAPIProjection{
-										Items: []corev1.DownwardAPIVolumeFile{{
-											FieldRef: &corev1.ObjectFieldSelector{
-												APIVersion: "v1",
-												FieldPath:  "metadata.namespace",
+									{
+										Secret: &corev1.SecretProjection{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: rootCAVolumeSourceName,
 											},
-											Path: "namespace",
-										}},
+											Items: []corev1.KeyToPath{{
+												Key:  "ca.crt",
+												Path: "ca.crt",
+											}},
+										},
+									},
+									{
+										DownwardAPI: &corev1.DownwardAPIProjection{
+											Items: []corev1.DownwardAPIVolumeFile{{
+												FieldRef: &corev1.ObjectFieldSelector{
+													APIVersion: "v1",
+													FieldPath:  "metadata.namespace",
+												},
+												Path: "namespace",
+											}},
+										},
 									},
 								},
 							},
 						},
 					},
-				}},
-			},
-		}
-
-		if r.secrets.Server.Name != "" {
-			metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum/secret-"+r.secrets.Server.Name, r.secrets.Server.Checksum)
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-				Name: volumeNameCerts,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName:  r.secrets.Server.Name,
-						DefaultMode: pointer.Int32(420),
+					{
+						Name: volumeNameCerts,
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName:  secretServer.Name,
+								DefaultMode: pointer.Int32(420),
+							},
+						},
 					},
 				},
-			})
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-				MountPath: volumeMountPathCerts,
-				Name:      volumeNameCerts,
-				ReadOnly:  true,
-			})
+			},
 		}
 
 		if r.values.TargetDiffersFromSourceCluster {
 			if r.secrets.BootstrapKubeconfig != nil {
-				metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum/secret-"+r.secrets.BootstrapKubeconfig.Name, r.secrets.BootstrapKubeconfig.Checksum)
 				deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
 					Name: volumeNameBootstrapKubeconfig,
 					VolumeSource: corev1.VolumeSource{
@@ -737,9 +739,7 @@ func (r *resourceManager) computeCommand() []string {
 		cmd = append(cmd, "--target-disable-cache")
 	}
 	cmd = append(cmd, fmt.Sprintf("--port=%d", serverPort))
-	if r.secrets.Server.Name != "" {
-		cmd = append(cmd, fmt.Sprintf("--tls-cert-dir=%s", volumeMountPathCerts))
-	}
+	cmd = append(cmd, fmt.Sprintf("--tls-cert-dir=%s", volumeMountPathCerts))
 	if r.values.TargetDiffersFromSourceCluster {
 		cmd = append(cmd, "--target-kubeconfig="+gutil.PathGenericKubeconfig)
 	}
@@ -815,9 +815,14 @@ func (r *resourceManager) emptyPodDisruptionBudget() *policyv1beta1.PodDisruptio
 func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context) error {
 	mutatingWebhookConfiguration := r.emptyMutatingWebhookConfiguration()
 
+	secretServerCA, found := r.secretsManager.Get(r.values.SecretNameServerCA)
+	if !found {
+		return fmt.Errorf("secret %q not found", r.values.SecretNameServerCA)
+	}
+
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, mutatingWebhookConfiguration, func() error {
 		mutatingWebhookConfiguration.Labels = appLabel()
-		mutatingWebhookConfiguration.Webhooks = GetMutatingWebhookConfigurationWebhooks(r.buildWebhookNamespaceSelector(), r.buildWebhookClientConfig)
+		mutatingWebhookConfiguration.Webhooks = GetMutatingWebhookConfigurationWebhooks(r.buildWebhookNamespaceSelector(), secretServerCA, r.buildWebhookClientConfig)
 		return nil
 	})
 	return err
@@ -832,6 +837,11 @@ func (r *resourceManager) emptyMutatingWebhookConfiguration() *admissionregistra
 }
 
 func (r *resourceManager) ensureShootResources(ctx context.Context) error {
+	secretServerCA, found := r.secretsManager.Get(r.values.SecretNameServerCA)
+	if !found {
+		return fmt.Errorf("secret %q not found", r.values.SecretNameServerCA)
+	}
+
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
@@ -856,7 +866,7 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 	)
 
 	mutatingWebhookConfiguration.Labels = appLabel()
-	mutatingWebhookConfiguration.Webhooks = GetMutatingWebhookConfigurationWebhooks(r.buildWebhookNamespaceSelector(), r.buildWebhookClientConfig)
+	mutatingWebhookConfiguration.Webhooks = GetMutatingWebhookConfigurationWebhooks(r.buildWebhookNamespaceSelector(), secretServerCA, r.buildWebhookClientConfig)
 
 	data, err := registry.AddAllAndSerialize(
 		mutatingWebhookConfiguration,
@@ -917,7 +927,7 @@ func (r *resourceManager) newShootAccessSecret() *gutil.ShootAccessSecret {
 
 // GetMutatingWebhookConfigurationWebhooks returns the MutatingWebhooks for the resourcemanager component for reuse
 // between the component and integration tests.
-func GetMutatingWebhookConfigurationWebhooks(namespaceSelector *metav1.LabelSelector, buildClientConfigFn func(string) admissionregistrationv1.WebhookClientConfig) []admissionregistrationv1.MutatingWebhook {
+func GetMutatingWebhookConfigurationWebhooks(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) []admissionregistrationv1.MutatingWebhook {
 	var (
 		failurePolicy = admissionregistrationv1.Fail
 		matchPolicy   = admissionregistrationv1.Exact
@@ -942,7 +952,7 @@ func GetMutatingWebhookConfigurationWebhooks(namespaceSelector *metav1.LabelSele
 			ObjectSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{resourcesv1alpha1.ResourceManagerPurpose: resourcesv1alpha1.LabelPurposeTokenInvalidation},
 			},
-			ClientConfig:            buildClientConfigFn(tokeninvalidator.WebhookPath),
+			ClientConfig:            buildClientConfigFn(secretServerCA, tokeninvalidator.WebhookPath),
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 			FailurePolicy:           &failurePolicy,
 			MatchPolicy:             &matchPolicy,
@@ -973,7 +983,7 @@ func GetMutatingWebhookConfigurationWebhooks(namespaceSelector *metav1.LabelSele
 					},
 				},
 			},
-			ClientConfig:            buildClientConfigFn(projectedtokenmount.WebhookPath),
+			ClientConfig:            buildClientConfigFn(secretServerCA, projectedtokenmount.WebhookPath),
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 			FailurePolicy:           &failurePolicy,
 			MatchPolicy:             &matchPolicy,
@@ -998,14 +1008,14 @@ func (r *resourceManager) buildWebhookNamespaceSelector() *metav1.LabelSelector 
 	}
 }
 
-func (r *resourceManager) buildWebhookClientConfig(path string) admissionregistrationv1.WebhookClientConfig {
-	clientConfig := admissionregistrationv1.WebhookClientConfig{CABundle: r.secrets.ServerCA.Data[secrets.DataKeyCertificateCA]}
+func (r *resourceManager) buildWebhookClientConfig(secretServerCA *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
+	clientConfig := admissionregistrationv1.WebhookClientConfig{CABundle: secretServerCA.Data[secrets.DataKeyCertificateBundle]}
 
 	if r.values.TargetDiffersFromSourceCluster {
-		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s.%s:%d%s", ServiceName, r.namespace, serverServicePort, path))
+		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s.%s:%d%s", serviceName, r.namespace, serverServicePort, path))
 	} else {
 		clientConfig.Service = &admissionregistrationv1.ServiceReference{
-			Name:      ServiceName,
+			Name:      serviceName,
 			Namespace: r.namespace,
 			Path:      &path,
 		}
@@ -1099,12 +1109,6 @@ type Secrets struct {
 	// BootstrapKubeconfig is the kubeconfig of the gardener-resource-manager used during the bootstrapping process. Its
 	// token requestor controller will request a JWT token for itself with this kubeconfig.
 	BootstrapKubeconfig *component.Secret
-	// ServerCA is a secret containing a CA certificate which was used to sign the server certificate provided in the
-	// 'Server' secret.
-	ServerCA component.Secret
-	// Server is a secret containing a x509 TLS server certificate and key for the HTTPS server inside the
-	// gardener-resource-manager (which is used for webhooks).
-	Server component.Secret
 	// RootCA is a secret containing the root CA secret of the target cluster.
 	RootCA *component.Secret
 
