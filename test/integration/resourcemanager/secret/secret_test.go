@@ -74,7 +74,7 @@ var _ = Describe("Secret controller tests", func() {
 			}).Should(BeNotFoundError())
 		})
 
-		It("should successfully add finalizer to all the secrets reference by managed resource", func() {
+		It("should successfully add finalizer to all the secrets which are referenced by ManagedResources", func() {
 			Eventually(func(g Gomega) []string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 				return secret.ObjectMeta.Finalizers
@@ -83,7 +83,7 @@ var _ = Describe("Secret controller tests", func() {
 			)
 		})
 
-		It("should remove finalizer from secret which are no longer referenced by any managed resource", func() {
+		It("should remove finalizer from secrets which are no longer referenced by any ManagedResource", func() {
 			By("update ManagedResource to reference some other secret")
 			patch := client.MergeFrom(managedResource.DeepCopy())
 			managedResource.Spec.SecretRefs[0].Name = "bar"
@@ -97,7 +97,7 @@ var _ = Describe("Secret controller tests", func() {
 			)
 		})
 
-		It("should do nothing if there is no MR refrencing the secret", func() {
+		It("should do nothing if there is no ManagedResource referencing the secret", func() {
 			secret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "bar",
