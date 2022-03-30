@@ -91,7 +91,7 @@ type WeightBasedScalingInterval struct {
 	// VpaWeight defines the weight (in percentage) to be given to VPA's recommendationd for the interval of number of replicas provided
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
-	VpaWeight VpaWeight `json:"vpaWeight,omitempty"`
+	VpaWeight int32 `json:"vpaWeight,omitempty"`
 	// StartReplicaCount is the number of replicas from which VpaWeight is applied to VPA scaling
 	// If this field is not provided, it will default to minReplicas of HPA
 	// +optional
@@ -158,6 +158,7 @@ type ScaleParams struct {
 // VpaTemplate defines the template for VPA
 type VpaTemplate struct {
 	// Metadata of the pods created from this template.
+	// +kubebuilder:validation:XPreserveUnknownFields
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -169,6 +170,7 @@ type VpaTemplate struct {
 // HpaTemplate defines the template for HPA
 type HpaTemplate struct {
 	// Metadata of the pods created from this template.
+	// +kubebuilder:validation:XPreserveUnknownFields
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -233,14 +235,11 @@ type ChangeParams struct {
 	Percentage *int32 `json:"percentage,omitempty"`
 }
 
-// VpaWeight - weight to provide to VPA scaling
-type VpaWeight int32
-
 const (
 	// VpaOnly - only vertical scaling
-	VpaOnly VpaWeight = 100
+	VpaOnly int32 = 100
 	// HpaOnly - only horizontal scaling
-	HpaOnly VpaWeight = 0
+	HpaOnly int32 = 0
 )
 
 // LastError has detailed information of the error
@@ -270,8 +269,8 @@ type HvpaStatus struct {
 	// Current VPA UpdatePolicy set in the spec
 	VpaScaleDownUpdatePolicy *UpdatePolicy `json:"vpaScaleDownUpdatePolicy,omitempty"`
 
-	HpaWeight VpaWeight `json:"hpaWeight,omitempty"`
-	VpaWeight VpaWeight `json:"vpaWeight,omitempty"`
+	HpaWeight int32 `json:"hpaWeight,omitempty"`
+	VpaWeight int32 `json:"vpaWeight,omitempty"`
 
 	// Override scale up stabilization window
 	OverrideScaleUpStabilization bool `json:"overrideScaleUpStabilization,omitempty"`
