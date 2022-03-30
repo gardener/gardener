@@ -191,6 +191,9 @@ global:
     #     enableBackupCompaction: false
     #     eventsThreshold: 1000000
     #     activeDeadlineDuration: "3h"
+    #   backupLeaderElection:
+    #     reelectionPeriod: 5s
+    #     etcdConnectionTimeout: 5s
     # seedConfig: {}
     # logging:
     #   enabled: false

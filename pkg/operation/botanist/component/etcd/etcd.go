@@ -24,6 +24,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/monitoring"
 	"github.com/gardener/gardener/pkg/utils"
@@ -378,6 +379,13 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			e.etcd.Spec.Backup.FullSnapshotSchedule = e.computeFullSnapshotSchedule(existingEtcd)
 			e.etcd.Spec.Backup.DeltaSnapshotPeriod = &deltaSnapshotPeriod
 			e.etcd.Spec.Backup.DeltaSnapshotMemoryLimit = &deltaSnapshotMemoryLimit
+
+			if e.backupConfig.LeaderElection != nil {
+				e.etcd.Spec.Backup.LeaderElection = &druidv1alpha1.LeaderElectionSpec{
+					EtcdConnectionTimeout: e.backupConfig.LeaderElection.EtcdConnectionTimeout,
+					ReelectionPeriod:      e.backupConfig.LeaderElection.ReelectionPeriod,
+				}
+			}
 		}
 
 		if e.ownerCheckConfig != nil {
@@ -746,6 +754,8 @@ type BackupConfig struct {
 	Prefix string
 	// FullSnapshotSchedule is a cron schedule that declares how frequent full snapshots shall be taken.
 	FullSnapshotSchedule string
+	// LeaderElection contains configuration for the leader election for the etcd backup-restore sidecar.
+	LeaderElection *gardenletconfig.ETCDBackupLeaderElection
 }
 
 // HVPAConfig contains information for configuring the HVPA object for the etcd.

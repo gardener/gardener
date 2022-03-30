@@ -22,6 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -98,6 +99,9 @@ var _ = Describe("Etcd", func() {
 			Enabled: pointer.Bool(true),
 			Policy:  &compressionPolicy,
 		}
+		backupLeaderElectionEtcdConnectionTimeout = &metav1.Duration{Duration: 10 * time.Second}
+		backupLeaderElectionReelectionPeriod      = &metav1.Duration{Duration: 11 * time.Second}
+
 		updateModeAuto     = hvpav1alpha1.UpdateModeAuto
 		containerPolicyOff = autoscalingv1beta2.ContainerScalingModeOff
 		metricsBasic       = druidv1alpha1.Basic
@@ -309,6 +313,13 @@ var _ = Describe("Etcd", func() {
 				obj.Spec.Backup.FullSnapshotSchedule = &fullSnapshotSchedule
 				obj.Spec.Backup.DeltaSnapshotPeriod = &deltaSnapshotPeriod
 				obj.Spec.Backup.DeltaSnapshotMemoryLimit = &deltaSnapshotMemoryLimit
+
+				if backupConfig.LeaderElection != nil {
+					obj.Spec.Backup.LeaderElection = &druidv1alpha1.LeaderElectionSpec{
+						EtcdConnectionTimeout: backupLeaderElectionEtcdConnectionTimeout,
+						ReelectionPeriod:      backupLeaderElectionReelectionPeriod,
+					}
+				}
 			}
 
 			return obj
@@ -948,6 +959,10 @@ var _ = Describe("Etcd", func() {
 					Prefix:               "prefix",
 					Container:            "bucket",
 					FullSnapshotSchedule: "1234",
+					LeaderElection: &gardenletconfig.ETCDBackupLeaderElection{
+						EtcdConnectionTimeout: backupLeaderElectionEtcdConnectionTimeout,
+						ReelectionPeriod:      backupLeaderElectionReelectionPeriod,
+					},
 				}
 
 				BeforeEach(func() {

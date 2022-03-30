@@ -575,6 +575,9 @@ type ETCDConfig struct {
 	// BackupCompactionController contains config specific to backup compaction controller
 	// +optional
 	BackupCompactionController *BackupCompactionController `json:"backupCompactionController,omitempty"`
+	// BackupLeaderElection contains configuration for the leader election for the etcd backup-restore sidecar.
+	// +optional
+	BackupLeaderElection *ETCDBackupLeaderElection `json:"backupLeaderElection,omitempty"`
 }
 
 // ETCDController contains config specific to ETCD controller
@@ -611,6 +614,16 @@ type BackupCompactionController struct {
 	// Defaults to 3 hours
 	// +optional
 	ActiveDeadlineDuration *metav1.Duration `json:"activeDeadlineDuration,omitempty"`
+}
+
+// ETCDBackupLeaderElection contains configuration for the leader election for the etcd backup-restore sidecar.
+type ETCDBackupLeaderElection struct {
+	// ReelectionPeriod defines the Period after which leadership status of corresponding etcd is checked.
+	// +optional
+	ReelectionPeriod *metav1.Duration `json:"reelectionPeriod,omitempty"`
+	// EtcdConnectionTimeout defines the timeout duration for etcd client connection during leader election.
+	// +optional
+	EtcdConnectionTimeout *metav1.Duration `json:"etcdConnectionTimeout,omitempty"`
 }
 
 // ExposureClassHandler contains configuration for an exposure class handler.
