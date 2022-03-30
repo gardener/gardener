@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shootsecrets"
 	"github.com/gardener/gardener/pkg/utils"
@@ -44,7 +43,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/clock"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -375,19 +373,6 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			}
 		}
 
-		// Trigger replacement of operator/user facing certificates if required
-		expiredTLSSecrets, err := getExpiredCerts(gardenerResourceDataList, common.CrtRenewalWindow, common.IngressTLSSecretNames...)
-		if err != nil {
-			return err
-		}
-
-		if len(expiredTLSSecrets) > 0 {
-			b.Logger.Infof("Deleting secrets for certificate rotation: %v", expiredTLSSecrets)
-			if err := b.deleteSecrets(ctx, &gardenerResourceDataList, expiredTLSSecrets...); err != nil {
-				return err
-			}
-		}
-
 		secretsManager := shootsecrets.NewSecretsManager(
 			gardenerResourceDataList,
 			b.generateWantedSecretConfigs,
@@ -546,44 +531,6 @@ func (b *Botanist) fetchExistingSecrets(ctx context.Context) (map[string]*corev1
 	}
 
 	return existingSecretsMap, nil
-}
-
-// deleteSecrets removes the given secrets from the shoot namespace in the seed
-// as well as removes it from the given `gardenerResourceDataList`.
-func (b *Botanist) deleteSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList, secretNames ...string) error {
-	for _, secretName := range secretNames {
-		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-		gardenerResourceDataList.Delete(secretName)
-	}
-	return nil
-}
-
-func getExpiredCerts(gardenerResourceDataList gardencorev1alpha1helper.GardenerResourceDataList, renewalWindow time.Duration, secretNames ...string) ([]string, error) {
-	var expiredCerts []string
-
-	for _, secretName := range secretNames {
-		data := gardenerResourceDataList.Get(secretName)
-		if data == nil {
-			continue
-		}
-
-		certObj := &secretutils.CertificateJSONData{}
-		if err := json.Unmarshal(data.Data.Raw, certObj); err != nil {
-			return nil, err
-		}
-
-		expired, err := secretutils.CertificateIsExpired(clock.RealClock{}, certObj.Certificate, renewalWindow)
-		if err != nil {
-			return nil, err
-		}
-
-		if expired {
-			expiredCerts = append(expiredCerts, secretName)
-		}
-	}
-	return expiredCerts, nil
 }
 
 type projectSecret struct {

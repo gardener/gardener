@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/clock"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -44,7 +45,10 @@ var _ = Describe("Cleanup", func() {
 
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-		m = New(logr.Discard(), fakeClient, namespace, testIdentity, nil).(*manager)
+
+		mgr, err := New(ctx, logr.Discard(), clock.RealClock{}, fakeClient, namespace, testIdentity, nil)
+		Expect(err).NotTo(HaveOccurred())
+		m = mgr.(*manager)
 	})
 
 	secretList := func(identity string) []*corev1.Secret {

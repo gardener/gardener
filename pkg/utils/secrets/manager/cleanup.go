@@ -19,16 +19,12 @@ import (
 
 	"github.com/gardener/gardener/pkg/utils/flow"
 
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (m *manager) Cleanup(ctx context.Context) error {
-	secretList := &corev1.SecretList{}
-	if err := m.client.List(ctx, secretList, client.InNamespace(m.namespace), client.MatchingLabels{
-		LabelKeyManagedBy:       LabelValueSecretsManager,
-		LabelKeyManagerIdentity: m.identity,
-	}); err != nil {
+	secretList, err := m.listSecrets(ctx)
+	if err != nil {
 		return err
 	}
 

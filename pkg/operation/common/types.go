@@ -72,9 +72,6 @@ const (
 	// EndUserCrtValidity is the time period a user facing certificate is valid.
 	EndUserCrtValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
 
-	// CrtRenewalWindow is the time window in which certificates are supposed to be replaced before they expire.
-	CrtRenewalWindow = 30 * 24 * time.Hour
-
 	// ShootDNSIngressName is a constant for the DNS resources used for the shoot ingress addon.
 	ShootDNSIngressName = "ingress"
 
@@ -88,11 +85,3 @@ const (
 	// for users monitoring for shoots.
 	MonitoringIngressCredentialsUsers = "monitoring-ingress-credentials-users"
 )
-
-// IngressTLSSecretNames are the secrets which contain operator or user facing x509 certificates.
-// These are usually exposed via an `Ingress` in the shoot control plane.
-var IngressTLSSecretNames = []string{
-	AlertManagerTLS,
-	GrafanaTLS,
-	PrometheusTLS,
-}

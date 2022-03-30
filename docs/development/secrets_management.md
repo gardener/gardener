@@ -4,7 +4,7 @@
 Accordingly, expect adaptations to this document and implementation details.
 
 The gardenlet needs to create quite some amount of credentials (certificates, private keys, passwords, etc.) for seed and shoot clusters in order to ensure secure deployments.
-Such credentials typically should be rotated regularly, and they potentially need to be persisted such that they don't get lost in case of a control plane migration or a lost seed cluster.
+Such credentials typically should be renewed automatically when their validity expires, rotated regularly, and they potentially need to be persisted such that they don't get lost in case of a control plane migration or a lost seed cluster.
 
 ## SecretsManager Introduction
 
@@ -20,6 +20,7 @@ It is built on top of the `ConfigInterface` and `DataInterface` interfaces part 
   - `Persist()`: This marks the secret such that it gets persisted in the `ShootState` resource in the garden cluster. Consequently, it should only be used for secrets related to a shoot cluster.
   - `Rotate(rotationStrategy)`: This specifies the strategy in case this secret is to be rotated or regenerated (either `InPlace` which immediately forgets about the old secret, or `KeepOld` which keeps the old secret in the system).
   - `IgnoreOldSecrets()`: This specifies whether old secrets should be considered and loaded (which is done by default). It should be used when old secrets are no longer important and can be "forgotten" (e.g. in ["phase 2" (`t2`) of the CA certificate rotation](../proposals/18-shoot-CA-rotation.md#rotation-sequence-for-cluster-and-client-ca)).
+  - `Validity(time.Duration)`: This specifies how long the secret should be valid. For certificate secret configurations, the manager will automatically deduce this information from the generated certificate.
 
 - `Get(string, ...GetOption) (*corev1.Secret, bool)`
 
@@ -58,13 +59,14 @@ if err != nil {
 }
 ```
 
-As explained above, the caller does not need to care about the rotation or the persistence of this secret - all of these concerns are handled by the secrets manager.
+As explained above, the caller does not need to care about the renewal, rotation or the persistence of this secret - all of these concerns are handled by the secrets manager.
+Automatic renewal of secrets happens when their validity  approaches 80% or less than `10d` are left until expiration.
 
 In case a CA certificate is needed by some component then it can be retrieved as follows:
 
 ```go
 caSecret, found := k.secretsManager.Get("my-ca")
-if err != nil {
+if !found {
     return fmt.Errorf("secret my-ca not found")
 }
 ```

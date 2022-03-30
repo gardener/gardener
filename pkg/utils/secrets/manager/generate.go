@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -47,10 +48,16 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 		bundleFor = pointer.String(strings.TrimSuffix(config.GetName(), nameSuffixBundle))
 	}
 
-	objectMeta, err := ObjectMeta(m.namespace, m.identity, config, m.lastRotationInitiationTimes[config.GetName()], options.signingCAChecksum, &options.Persist, bundleFor)
+	var validUntilTime *string
+	if options.Validity > 0 {
+		validUntilTime = pointer.String(unixTime(m.clock.Now().Add(options.Validity)))
+	}
+
+	objectMeta, err := ObjectMeta(m.namespace, m.identity, config, m.lastRotationInitiationTimes[config.GetName()], validUntilTime, options.signingCAChecksum, &options.Persist, bundleFor)
 	if err != nil {
 		return nil, err
 	}
+	desiredLabels := utils.MergeStringMaps(objectMeta.Labels) // copy labels map
 
 	secret := &corev1.Secret{}
 	if err := m.client.Get(ctx, kutil.Key(objectMeta.Namespace, objectMeta.Name), secret); err != nil {
@@ -80,7 +87,11 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 		}
 	}
 
-	if err := m.reconcileSecret(ctx, secret, objectMeta.Labels); err != nil {
+	if err := m.maintainLifetimeLabels(config, secret, desiredLabels); err != nil {
+		return nil, err
+	}
+
+	if err := m.reconcileSecret(ctx, secret, desiredLabels); err != nil {
 		return nil, err
 	}
 
@@ -331,6 +342,33 @@ func (m *manager) generateBundleSecret(ctx context.Context, config secretutils.C
 	return m.addToStore(config.GetName(), secret, bundle)
 }
 
+func (m *manager) maintainLifetimeLabels(config secretutils.ConfigInterface, secret *corev1.Secret, desiredLabels map[string]string) error {
+	issuedAt := secret.Labels[LabelKeyIssuedAtTime]
+	if issuedAt == "" {
+		issuedAt = unixTime(m.clock.Now())
+	}
+	desiredLabels[LabelKeyIssuedAtTime] = issuedAt
+
+	cfg, ok := config.(*secretutils.CertificateSecretConfig)
+	if !ok {
+		return nil
+	}
+
+	dataKeyCertificate := secretutils.DataKeyCertificate
+	if cfg.SigningCA == nil {
+		dataKeyCertificate = secretutils.DataKeyCertificateCA
+	}
+
+	certificate, err := utils.DecodeCertificate(secret.Data[dataKeyCertificate])
+	if err != nil {
+		return err
+	}
+
+	desiredLabels[LabelKeyIssuedAtTime] = unixTime(certificate.NotBefore)
+	desiredLabels[LabelKeyValidUntilTime] = unixTime(certificate.NotAfter)
+	return nil
+}
+
 func (m *manager) reconcileSecret(ctx context.Context, secret *corev1.Secret, labels map[string]string) error {
 	patch := client.MergeFrom(secret.DeepCopy())
 
@@ -366,6 +404,8 @@ type GenerateOptions struct {
 	RotationStrategy rotationStrategy
 	// IgnoreOldSecrets specifies whether old secrets should be loaded to the internal store.
 	IgnoreOldSecrets bool
+	// Validity specifies for how long the secret should be valid.
+	Validity time.Duration
 
 	signingCAChecksum *string
 	isBundleSecret    bool
@@ -448,6 +488,15 @@ func Rotate(strategy rotationStrategy) GenerateOption {
 func IgnoreOldSecrets() GenerateOption {
 	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
 		options.IgnoreOldSecrets = true
+		return nil
+	}
+}
+
+// Validity returns a function which sets the 'Validity' field to the provided value. Note that the value is ignored in
+// case Generate is called with a certificate secret configuration.
+func Validity(v time.Duration) GenerateOption {
+	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
+		options.Validity = v
 		return nil
 	}
 }
