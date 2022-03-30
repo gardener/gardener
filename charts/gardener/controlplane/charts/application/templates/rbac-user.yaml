@@ -385,6 +385,12 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - core.gardener.cloud
+  resources:
+  - shoots/adminkubeconfig
+  verbs:
+  - create
 
 # Cluster role setting the permissions for a project viewer. It gets bound by a RoleBinding
 # in a respective project namespace.
