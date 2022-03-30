@@ -32,7 +32,8 @@ const (
 var _ = Describe("Secret controller tests", func() {
 	var (
 		managedResource *resourcesv1alpha1.ManagedResource
-		secret          *corev1.Secret
+		secret_foo      *corev1.Secret
+		secret_bar      *corev1.Secret
 	)
 
 	BeforeEach(func() {
@@ -42,15 +43,27 @@ var _ = Describe("Secret controller tests", func() {
 				GenerateName: "test-",
 			},
 			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				SecretRefs: []corev1.LocalObjectReference{{
-					Name: "foo",
-				}},
+				SecretRefs: []corev1.LocalObjectReference{
+					{
+						Name: "foo",
+					},
+					{
+						Name: "bar",
+					},
+				},
 			},
 		}
 
-		secret = &corev1.Secret{
+		secret_foo = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
+				Namespace: testNamespace.Name,
+			},
+		}
+
+		secret_bar = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "bar",
 				Namespace: testNamespace.Name,
 			},
 		}
@@ -59,7 +72,8 @@ var _ = Describe("Secret controller tests", func() {
 	Context("Secret finalizer", func() {
 		JustBeforeEach(func() {
 			By("creating secret for test")
-			Expect(testClient.Create(ctx, secret)).To(Succeed())
+			Expect(testClient.Create(ctx, secret_foo)).To(Succeed())
+			Expect(testClient.Create(ctx, secret_bar)).To(Succeed())
 			By("creating ManagedResource for test")
 			Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 			log.Info("Created ManagedResource for test", "managedResource", client.ObjectKeyFromObject(managedResource))
@@ -67,17 +81,27 @@ var _ = Describe("Secret controller tests", func() {
 
 		AfterEach(func() {
 			Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
-			Expect(testClient.Delete(ctx, secret)).To(Or(Succeed(), BeNotFoundError()))
+			Expect(testClient.Delete(ctx, secret_foo)).To(Or(Succeed(), BeNotFoundError()))
+			Expect(testClient.Delete(ctx, secret_bar)).To(Or(Succeed(), BeNotFoundError()))
 			// Wait for clean up of the secret
 			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
+				return testClient.Get(ctx, client.ObjectKeyFromObject(secret_foo), secret_foo)
+			}).Should(BeNotFoundError())
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(secret_bar), secret_bar)
 			}).Should(BeNotFoundError())
 		})
 
 		It("should successfully add finalizer to all the secrets which are referenced by ManagedResources", func() {
 			Eventually(func(g Gomega) []string {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
-				return secret.ObjectMeta.Finalizers
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret_foo), secret_foo)).To(Succeed())
+				return secret_foo.ObjectMeta.Finalizers
+			}).Should(
+				ContainElement(finalizerName),
+			)
+			Eventually(func(g Gomega) []string {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret_bar), secret_bar)).To(Succeed())
+				return secret_bar.ObjectMeta.Finalizers
 			}).Should(
 				ContainElement(finalizerName),
 			)
@@ -86,27 +110,27 @@ var _ = Describe("Secret controller tests", func() {
 		It("should remove finalizer from secrets which are no longer referenced by any ManagedResource", func() {
 			By("update ManagedResource to reference some other secret")
 			patch := client.MergeFrom(managedResource.DeepCopy())
-			managedResource.Spec.SecretRefs[0].Name = "bar"
+			managedResource.Spec.SecretRefs[0].Name = "test"
 			Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
 
 			Eventually(func(g Gomega) []string {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
-				return secret.ObjectMeta.Finalizers
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret_foo), secret_foo)).To(Succeed())
+				return secret_foo.ObjectMeta.Finalizers
 			}).ShouldNot(
 				ContainElement(finalizerName),
 			)
 		})
 
 		It("should do nothing if there is no ManagedResource referencing the secret", func() {
-			secret = &corev1.Secret{
+			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
+					Name:      "test",
 					Namespace: testNamespace.Name,
 				},
 			}
 			Expect(testClient.Create(ctx, secret)).To(Succeed())
 
-			Eventually(func(g Gomega) []string {
+			Consistently(func(g Gomega) []string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 				return secret.ObjectMeta.Finalizers
 			}).ShouldNot(
