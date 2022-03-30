@@ -1,0 +1,30 @@
+# See the OWNERS docs at https://go.k8s.io/owners
+
+aliases:
+  gardener-reviewers:
+  - acumino
+  - ary1992
+  - BeckerMax
+  - ialidzhikov
+  - kris94
+  - plkokanov
+  - rfranzke
+  - shafeeqes
+  - stoyanr
+  - timebertt
+  - timuthy
+  gardener-approvers:
+  - acumino
+  - ary1992
+  - BeckerMax
+  - ialidzhikov
+  - kris94
+  - plkokanov
+  - rfranzke
+  - shafeeqes
+  - stoyanr
+  - timebertt
+  - timuthy
+  testmachinery-maintainers:
+  - dguendisch
+  - hendrikKahl
