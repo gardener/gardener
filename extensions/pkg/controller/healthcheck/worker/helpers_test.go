@@ -342,6 +342,38 @@ var _ = Describe("health", func() {
 			Expect(status).To(Equal(gardencorev1beta1.ConditionProgressing))
 			Expect(err).To(HaveOccurred())
 		})
+
+		It("should ignore node not managed by MCM and return progressing for a regular scale down", func() {
+			var (
+				nodeName          = "foo"
+				deletionTimestamp = metav1.Now()
+
+				machineList = &machinev1alpha1.MachineList{
+					Items: []machinev1alpha1.Machine{
+						{ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &deletionTimestamp, Labels: map[string]string{"node": nodeName}}},
+					},
+				}
+				nodeList = &corev1.NodeList{
+					Items: []corev1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{Name: nodeName},
+							Spec:       corev1.NodeSpec{Unschedulable: true},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:        "bar",
+								Annotations: map[string]string{AnnotationKeyNotManagedByMCM: "1"},
+							},
+						},
+					},
+				}
+			)
+
+			status, err := checkNodesScalingDown(machineList, nodeList, 2, 1)
+
+			Expect(status).To(Equal(gardencorev1beta1.ConditionProgressing))
+			Expect(err).To(HaveOccurred())
+		})
 	})
 
 	Describe("#getDesiredMachineCount", func() {
