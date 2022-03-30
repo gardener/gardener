@@ -45,6 +45,9 @@ get_group_package () {
   "druid.gardener.cloud")
     echo "github.com/gardener/etcd-druid/api/v1alpha1"
     ;;
+  "autoscaling.k8s.io")
+    echo "github.com/gardener/hvpa-controller/api/v1alpha1"
+    ;;
   *)
     >&2 echo "unknown group $1"
     return 1
@@ -88,4 +91,5 @@ else
   generate_group extensions.gardener.cloud
   generate_group resources.gardener.cloud
   generate_group druid.gardener.cloud
+  generate_group autoscaling.k8s.io
 fi
