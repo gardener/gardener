@@ -101,8 +101,8 @@ func (c *extensionCRDs) Deploy(ctx context.Context) error {
 		fns = append(fns, func(ctx context.Context) error {
 			return c.applier.ApplyManifest(ctx, kubernetes.NewManifestReader([]byte(r)), kubernetes.DefaultMergeFuncs)
 		})
-
 	}
+
 	return flow.Parallel(fns...)(ctx)
 }
 

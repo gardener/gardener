@@ -113,6 +113,16 @@ roleRef:
 		})
 	})
 
+	Describe("#AddSerialized", func() {
+		It("should add the serialized object", func() {
+			registry.AddSerialized(secretFilename, secretSerialized)
+
+			Expect(registry.SerializedObjects()).To(Equal(map[string][]byte{
+				secretFilename: secretSerialized,
+			}))
+		})
+	})
+
 	Describe("#AddAllAndSerialize", func() {
 		It("should add all objects and return the serialized object map", func() {
 			objectMap, err := registry.AddAllAndSerialize(secret, roleBinding)

@@ -85,6 +85,11 @@ func (r *Registry) Add(obj client.Object) error {
 	return nil
 }
 
+// AddSerialized adds the provided serialized YAML for the registry. The provided filename will be used as key.
+func (r *Registry) AddSerialized(filename string, serializationYAML []byte) {
+	r.nameToObject[filename] = &object{serialization: serializationYAML}
+}
+
 // SerializedObjects returns a map whose keys are filenames and whose values are serialized objects.
 func (r *Registry) SerializedObjects() map[string][]byte {
 	out := make(map[string][]byte, len(r.nameToObject))

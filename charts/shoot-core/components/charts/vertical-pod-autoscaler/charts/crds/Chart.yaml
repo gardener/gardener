@@ -1,1 +1,4 @@
-../../../../../../seed-bootstrap-crds/charts/vpa/Chart.yaml
+apiVersion: v1
+description: Helm chart containing CRD for the VPA resources
+name: vpa
+version: 0.1.0
