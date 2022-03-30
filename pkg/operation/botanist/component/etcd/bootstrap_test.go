@@ -342,6 +342,7 @@ spec:
         - /bin/etcd-druid
         - --enable-leader-election=true
         - --ignore-operation-annotation=false
+        - --disable-etcd-serviceaccount-automount=true
         - --workers=50
         - --custodian-workers=3
         - --compaction-workers=3
@@ -394,6 +395,7 @@ spec:
         - /bin/etcd-druid
         - --enable-leader-election=true
         - --ignore-operation-annotation=false
+        - --disable-etcd-serviceaccount-automount=true
         - --workers=50
         - --custodian-workers=3
         - --compaction-workers=3

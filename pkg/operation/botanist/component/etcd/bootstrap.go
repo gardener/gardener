@@ -326,6 +326,8 @@ func getDruidDeployCommands(gardenletConf *config.GardenletConfiguration) []stri
 	command := []string{"" + "/bin/etcd-druid"}
 	command = append(command, "--enable-leader-election=true")
 	command = append(command, "--ignore-operation-annotation=false")
+	command = append(command, "--disable-etcd-serviceaccount-automount=true")
+
 	if gardenletConf == nil {
 		// TODO(abdasgupta): Following line to add 50 workers is only for backward compatibility. Please, remove.
 		command = append(command, "--workers=50")
