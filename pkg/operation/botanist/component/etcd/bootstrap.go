@@ -37,6 +37,7 @@ import (
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -157,12 +158,17 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				{
 					APIGroups: []string{coordinationv1.GroupName},
 					Resources: []string{"leases"},
-					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
+					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"},
 				},
 				{
 					APIGroups: []string{corev1.GroupName},
 					Resources: []string{"persistentvolumeclaims"},
 					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{policyv1beta1.GroupName},
+					Resources: []string{"poddisruptionbudgets"},
+					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 				},
 			},
 		}
@@ -320,6 +326,8 @@ func getDruidDeployCommands(gardenletConf *config.GardenletConfiguration) []stri
 	command := []string{"" + "/bin/etcd-druid"}
 	command = append(command, "--enable-leader-election=true")
 	command = append(command, "--ignore-operation-annotation=false")
+	command = append(command, "--disable-etcd-serviceaccount-automount=true")
+
 	if gardenletConf == nil {
 		// TODO(abdasgupta): Following line to add 50 workers is only for backward compatibility. Please, remove.
 		command = append(command, "--workers=50")
@@ -454,11 +462,12 @@ spec:
                   type: string
                 type: object
               backup:
-                description: BackupSpec defines parametes associated with the full
-                  and delta snapshots of etcd
+                description: BackupSpec defines parameters associated with the full
+                  and delta snapshots of etcd.
                 properties:
                   compactionResources:
-                    description: 'CompactionResources defines the compute Resources required by compaction job. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                    description: 'CompactionResources defines compute Resources required
+                      by compaction job. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                     properties:
                       limits:
                         additionalProperties:
@@ -467,7 +476,8 @@ spec:
                           - type: string
                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                           x-kubernetes-int-or-string: true
-                        description: 'Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                        description: 'Limits describes the maximum amount of compute
+                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                       requests:
                         additionalProperties:
@@ -476,7 +486,10 @@ spec:
                           - type: string
                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                           x-kubernetes-int-or-string: true
-                        description: 'Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                        description: 'Requests describes the minimum amount of compute
+                          resources required. If Requests is omitted for a container,
+                          it defaults to Limits if that is explicitly specified, otherwise
+                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                         type: object
                     type: object
                   compression:
@@ -518,12 +531,6 @@ spec:
                     description: FullSnapshotSchedule defines the cron standard schedule
                       for full snapshots.
                     type: string
-                  enableProfiling:
-                    description: EnableProfiling defines if profiling should be enabled for the etcd-backup-restore-sidecar
-                    type: boolean
-                  etcdSnapshotTimeout:
-                    description: EtcdSnapshotTimeout defines the timeout duration for etcd FullSnapshot operation
-                    type: string
                   garbageCollectionPeriod:
                     description: GarbageCollectionPeriod defines the period for garbage
                       collecting old backups
@@ -538,14 +545,30 @@ spec:
                   image:
                     description: Image defines the etcd container image and tag
                     type: string
+                  leaderElection:
+                    description: LeaderElection defines parameters related to the
+                      LeaderElection configuration.
+                    properties:
+                      etcdConnectionTimeout:
+                        description: EtcdConnectionTimeout defines the timeout duration
+                          for etcd client connection during leader election.
+                        type: string
+                      reelectionPeriod:
+                        description: ReelectionPeriod defines the Period after which
+                          leadership status of corresponding etcd is checked.
+                        type: string
+                    type: object
                   ownerCheck:
-                    description: OwnerCheck defines parameters related to checking if the cluster owner, as specified in the owner DNS record, is the expected one.
+                    description: OwnerCheck defines parameters related to checking
+                      if the cluster owner, as specified in the owner DNS record,
+                      is the expected one.
                     properties:
                       dnsCacheTTL:
                         description: DNSCacheTTL is the DNS cache TTL for owner checks.
                         type: string
                       id:
-                        description: ID is the owner id value that is expected to be found in the owner DNS record.
+                        description: ID is the owner id value that is expected to
+                          be found in the owner DNS record.
                         type: string
                       interval:
                         description: Interval is the time interval between owner checks.
@@ -562,12 +585,12 @@ spec:
                     type: object
                   port:
                     description: Port define the port on which etcd-backup-restore
-                      server will exposed.
+                      server will be exposed.
                     format: int32
                     type: integer
                   resources:
-                    description: 'Resources defines the compute Resources required
-                      by backup-restore container. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                    description: 'Resources defines compute Resources required by
+                      backup-restore container. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                     properties:
                       limits:
                         additionalProperties:
@@ -597,7 +620,8 @@ spec:
                       for storing backups.
                     properties:
                       container:
-                        description: Container is the name of the container the backup is stored at.
+                        description: Container is the name of the container the backup
+                          is stored at.
                         type: string
                       prefix:
                         description: Prefix is the prefix used for the store.
@@ -606,7 +630,8 @@ spec:
                         description: Provider is the name of the backup provider.
                         type: string
                       secretRef:
-                        description: SecretRef is the reference to the secret which used to connect to the backup store.
+                        description: SecretRef is the reference to the secret which
+                          used to connect to the backup store.
                         properties:
                           name:
                             description: Name is unique within a namespace to reference
@@ -650,9 +675,12 @@ spec:
                             type: string
                         type: object
                       tlsCASecretRef:
-                        description: SecretReference represents a Secret Reference.
-                          It has enough information to retrieve secret in any namespace
+                        description: SecretReference defines a reference to a secret.
                         properties:
+                          dataKey:
+                            description: DataKey is the name of the key in the data
+                              map containing the credentials.
+                            type: string
                           name:
                             description: Name is unique within a namespace to reference
                               a secret resource.
@@ -687,8 +715,17 @@ spec:
                   clientPort:
                     format: int32
                     type: integer
+                  defragmentationSchedule:
+                    description: DefragmentationSchedule defines the cron standard
+                      schedule for defragmentation of etcd.
+                    type: string
                   etcdDefragTimeout:
-                    description: EtcdDefragTimeout defines the timeout duration for etcd defrag call
+                    description: EtcdDefragTimeout defines the timeout duration for
+                      etcd defrag call
+                    type: string
+                  heartbeatDuration:
+                    description: HeartbeatDuration defines the duration for members
+                      to send heartbeats. The default value is 10s.
                     type: string
                   image:
                     description: Image defines the etcd container image and tag
@@ -767,9 +804,12 @@ spec:
                             type: string
                         type: object
                       tlsCASecretRef:
-                        description: SecretReference represents a Secret Reference.
-                          It has enough information to retrieve secret in any namespace
+                        description: SecretReference defines a reference to a secret.
                         properties:
+                          dataKey:
+                            description: DataKey is the name of the key in the data
+                              map containing the credentials.
+                            type: string
                           name:
                             description: Name is unique within a namespace to reference
                               a secret resource.
@@ -794,6 +834,7 @@ spec:
                   shall be used for the etcd pods.
                 type: string
               replicas:
+                format: int32
                 type: integer
               selector:
                 description: 'selector is a label query over pods that should match
@@ -889,7 +930,8 @@ spec:
                 format: int32
                 type: integer
               conditions:
-                description: Conditions represents the latest available observations of an etcd's current state.
+                description: Conditions represents the latest available observations
+                  of an etcd's current state.
                 items:
                   description: Condition holds the information about the state of
                     a resource.
@@ -926,7 +968,8 @@ spec:
                   type: object
                 type: array
               currentReplicas:
-                description: CurrentReplicas is the current replica count for the etcd cluster.
+                description: CurrentReplicas is the current replica count for the
+                  etcd cluster.
                 format: int32
                 type: integer
               etcd:
@@ -944,7 +987,8 @@ spec:
                     type: string
                 type: object
               labelSelector:
-                description: LabelSelector is a label query over pods that should match the replica count. It must match the pod template's labels.
+                description: LabelSelector is a label query over pods that should
+                  match the replica count. It must match the pod template's labels.
                 properties:
                   matchExpressions:
                     description: matchExpressions is a list of label selector requirements.
@@ -993,23 +1037,27 @@ spec:
               members:
                 description: Members represents the members of the etcd cluster
                 items:
-                  description: EtcdMemberStatus holds information about a etcd cluster membership.
+                  description: EtcdMemberStatus holds information about a etcd cluster
+                    membership.
                   properties:
                     id:
                       description: ID is the ID of the etcd member.
                       type: string
                     lastTransitionTime:
-                      description: LastTransitionTime is the last time the condition's status changed.
+                      description: LastTransitionTime is the last time the condition's
+                        status changed.
                       format: date-time
                       type: string
                     name:
-                      description: Name is the name of the etcd member. It is the name of the backing Pod.
+                      description: Name is the name of the etcd member. It is the
+                        name of the backing ` + "`Pod`" + `.
                       type: string
                     reason:
                       description: The reason for the condition's last transition.
                       type: string
                     role:
-                      description: Role is the role in the etcd cluster, either Leader or Member.
+                      description: Role is the role in the etcd cluster, either ` + "`Leader`" + `.
+                        or ` + "`Member`" + `.
                       type: string
                     status:
                       description: Status of the condition, one of True, False, Unknown.
@@ -1030,7 +1078,8 @@ spec:
                 description: Ready represents the readiness of the etcd resource.
                 type: boolean
               readyReplicas:
-                description: ReadyReplicas is the count of replicas being ready in the etcd cluster.
+                description: ReadyReplicas is the count of replicas being ready in
+                  the etcd cluster.
                 format: int32
                 type: integer
               replicas:
@@ -1041,7 +1090,8 @@ spec:
                 description: ServiceName is the name of the etcd service.
                 type: string
               updatedReplicas:
-                description: UpdatedReplicas is the count of updated replicas in the etcd cluster.
+                description: UpdatedReplicas is the count of updated replicas in the
+                  etcd cluster.
                 format: int32
                 type: integer
             type: object

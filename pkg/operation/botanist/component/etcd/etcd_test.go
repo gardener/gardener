@@ -22,6 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -95,9 +96,12 @@ var _ = Describe("Etcd", func() {
 		garbageCollectionPeriod = metav1.Duration{Duration: 12 * time.Hour}
 		compressionPolicy       = druidv1alpha1.GzipCompression
 		compressionSpec         = druidv1alpha1.CompressionSpec{
-			Enabled: true,
+			Enabled: pointer.Bool(true),
 			Policy:  &compressionPolicy,
 		}
+		backupLeaderElectionEtcdConnectionTimeout = &metav1.Duration{Duration: 10 * time.Second}
+		backupLeaderElectionReelectionPeriod      = &metav1.Duration{Duration: 11 * time.Second}
+
 		updateModeAuto     = hvpav1alpha1.UpdateModeAuto
 		containerPolicyOff = autoscalingv1beta2.ContainerScalingModeOff
 		metricsBasic       = druidv1alpha1.Basic
@@ -170,7 +174,7 @@ var _ = Describe("Etcd", func() {
 		}
 		etcdObjFor = func(
 			class Class,
-			replicas int,
+			replicas int32,
 			backupConfig *BackupConfig,
 			existingDefragmentationSchedule,
 			existingBackupSchedule string,
@@ -251,9 +255,11 @@ var _ = Describe("Etcd", func() {
 					Etcd: druidv1alpha1.EtcdConfig{
 						Resources: resourcesContainerEtcd,
 						TLS: &druidv1alpha1.TLSConfig{
-							TLSCASecretRef: corev1.SecretReference{
-								Name:      secretNameCA,
-								Namespace: testNamespace,
+							TLSCASecretRef: druidv1alpha1.SecretReference{
+								SecretReference: corev1.SecretReference{
+									Name:      secretNameCA,
+									Namespace: testNamespace,
+								},
 							},
 							ServerTLSSecretRef: corev1.SecretReference{
 								Name:      secretNameServer,
@@ -307,6 +313,13 @@ var _ = Describe("Etcd", func() {
 				obj.Spec.Backup.FullSnapshotSchedule = &fullSnapshotSchedule
 				obj.Spec.Backup.DeltaSnapshotPeriod = &deltaSnapshotPeriod
 				obj.Spec.Backup.DeltaSnapshotMemoryLimit = &deltaSnapshotMemoryLimit
+
+				if backupConfig.LeaderElection != nil {
+					obj.Spec.Backup.LeaderElection = &druidv1alpha1.LeaderElectionSpec{
+						EtcdConnectionTimeout: backupLeaderElectionEtcdConnectionTimeout,
+						ReelectionPeriod:      backupLeaderElectionReelectionPeriod,
+					}
+				}
 			}
 
 			return obj
@@ -658,7 +671,7 @@ var _ = Describe("Etcd", func() {
 								Namespace: testNamespace,
 							},
 							Spec: druidv1alpha1.EtcdSpec{
-								Replicas: int(existingReplicas),
+								Replicas: existingReplicas,
 							},
 						}).DeepCopyInto(obj.(*druidv1alpha1.Etcd))
 						return nil
@@ -676,7 +689,7 @@ var _ = Describe("Etcd", func() {
 
 						Expect(obj).To(DeepEqual(etcdObjFor(
 							class,
-							int(existingReplicas),
+							existingReplicas,
 							nil,
 							"",
 							"",
@@ -714,7 +727,7 @@ var _ = Describe("Etcd", func() {
 								Namespace: testNamespace,
 							},
 							Spec: druidv1alpha1.EtcdSpec{
-								Replicas: int(existingReplicas),
+								Replicas: existingReplicas,
 							},
 							Status: druidv1alpha1.EtcdStatus{
 								Etcd: &druidv1alpha1.CrossVersionObjectReference{
@@ -737,7 +750,7 @@ var _ = Describe("Etcd", func() {
 
 						Expect(obj).To(DeepEqual(etcdObjFor(
 							class,
-							int(existingReplicas),
+							existingReplicas,
 							nil,
 							"",
 							"",
@@ -946,6 +959,10 @@ var _ = Describe("Etcd", func() {
 					Prefix:               "prefix",
 					Container:            "bucket",
 					FullSnapshotSchedule: "1234",
+					LeaderElection: &gardenletconfig.ETCDBackupLeaderElection{
+						EtcdConnectionTimeout: backupLeaderElectionEtcdConnectionTimeout,
+						ReelectionPeriod:      backupLeaderElectionReelectionPeriod,
+					},
 				}
 
 				BeforeEach(func() {

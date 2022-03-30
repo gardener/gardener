@@ -15,13 +15,24 @@
 package utils
 
 import (
+	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	// LocalProviderDefaultMountPath is the default path where the buckets directory is mounted.
+	LocalProviderDefaultMountPath = "/etc/gardener/local-backupbuckets"
+	// EtcdBackupSecretHostPath is the hostPath field in the etcd-backup secret.
+	EtcdBackupSecretHostPath = "hostPath"
 )
 
 const (
@@ -44,7 +55,7 @@ const (
 	gcs   = "GCS"
 	oss   = "OSS"
 	swift = "Swift"
-	local = "Local"
+	Local = "Local"
 	ecs   = "ECS"
 	ocs   = "OCS"
 )
@@ -154,7 +165,7 @@ func Key(namespaceOrName string, nameOpt ...string) client.ObjectKey {
 }
 
 // GetStoreValues converts the values in the StoreSpec to a map, or returns an error if the storage provider is unsupported.
-func GetStoreValues(store *druidv1alpha1.StoreSpec) (map[string]interface{}, error) {
+func GetStoreValues(ctx context.Context, client client.Client, store *druidv1alpha1.StoreSpec, namespace string) (map[string]interface{}, error) {
 	storageProvider, err := StorageProviderFromInfraProvider(store.Provider)
 	if err != nil {
 		return nil, err
@@ -163,6 +174,13 @@ func GetStoreValues(store *druidv1alpha1.StoreSpec) (map[string]interface{}, err
 		"storePrefix":     store.Prefix,
 		"storageProvider": storageProvider,
 	}
+	if strings.EqualFold(string(*store.Provider), Local) {
+		mountPath, err := getHostMountPathFromSecretRef(ctx, client, store, namespace)
+		if err != nil {
+			return nil, err
+		}
+		storeValues["storageMountPath"] = mountPath
+	}
 	if store.Container != nil {
 		storeValues["storageContainer"] = store.Container
 	}
@@ -170,6 +188,20 @@ func GetStoreValues(store *druidv1alpha1.StoreSpec) (map[string]interface{}, err
 		storeValues["storeSecret"] = store.SecretRef.Name
 	}
 	return storeValues, nil
+}
+
+func getHostMountPathFromSecretRef(ctx context.Context, client client.Client, store *druidv1alpha1.StoreSpec, namespace string) (string, error) {
+	secret := &corev1.Secret{}
+	if err := client.Get(ctx, Key(namespace, store.SecretRef.Name), secret); err != nil {
+		return "", err
+	}
+
+	hostPath, ok := secret.Data[EtcdBackupSecretHostPath]
+	if !ok {
+		return LocalProviderDefaultMountPath, nil
+	}
+
+	return string(hostPath), nil
 }
 
 // StorageProviderFromInfraProvider converts infra to object store provider.
@@ -193,8 +225,8 @@ func StorageProviderFromInfraProvider(infra *druidv1alpha1.StorageProvider) (str
 		return ecs, nil
 	case openshift, ocs:
 		return ocs, nil
-	case local:
-		return local, nil
+	case Local, druidv1alpha1.StorageProvider(strings.ToLower(Local)):
+		return Local, nil
 	default:
 		return "", fmt.Errorf("unsupported storage provider: %v", *infra)
 	}

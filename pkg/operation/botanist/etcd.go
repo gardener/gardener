@@ -25,6 +25,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
@@ -108,12 +109,18 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 			return err
 		}
 
+		var backupLeaderElection *config.ETCDBackupLeaderElection
+		if b.Config != nil && b.Config.ETCDConfig != nil {
+			backupLeaderElection = b.Config.ETCDConfig.BackupLeaderElection
+		}
+
 		b.Shoot.Components.ControlPlane.EtcdMain.SetBackupConfig(&etcd.BackupConfig{
 			Provider:             b.Seed.GetInfo().Spec.Backup.Provider,
 			SecretRefName:        v1beta1constants.BackupSecretName,
 			Prefix:               b.Shoot.BackupEntryName,
 			Container:            string(secret.Data[v1beta1constants.DataKeyBackupBucketName]),
 			FullSnapshotSchedule: snapshotSchedule,
+			LeaderElection:       backupLeaderElection,
 		})
 
 		if gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(b.Seed.GetInfo().Spec.Settings) {
@@ -169,7 +176,7 @@ func (b *Botanist) ScaleETCDToOne(ctx context.Context) error {
 	return b.scaleETCD(ctx, 1)
 }
 
-func (b *Botanist) scaleETCD(ctx context.Context, replicas int) error {
+func (b *Botanist) scaleETCD(ctx context.Context, replicas int32) error {
 	if err := b.Shoot.Components.ControlPlane.EtcdMain.Scale(ctx, replicas); err != nil {
 		return err
 	}

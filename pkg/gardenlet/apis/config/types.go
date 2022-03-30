@@ -472,6 +472,8 @@ type ETCDConfig struct {
 	CustodianController *CustodianController
 	// BackupCompactionController contains config specific to backup compaction controller
 	BackupCompactionController *BackupCompactionController
+	// BackupLeaderElection contains configuration for the leader election for the etcd backup-restore sidecar.
+	BackupLeaderElection *ETCDBackupLeaderElection
 }
 
 // ETCDController contains config specific to ETCD controller
@@ -502,6 +504,14 @@ type BackupCompactionController struct {
 	// ActiveDeadlineDuration defines duration after which a running backup compaction job will be killed
 	// Defaults to 3 hours
 	ActiveDeadlineDuration *metav1.Duration
+}
+
+// ETCDBackupLeaderElection contains configuration for the leader election for the etcd backup-restore sidecar.
+type ETCDBackupLeaderElection struct {
+	// ReelectionPeriod defines the Period after which leadership status of corresponding etcd is checked.
+	ReelectionPeriod *metav1.Duration
+	// EtcdConnectionTimeout defines the timeout duration for etcd client connection during leader election.
+	EtcdConnectionTimeout *metav1.Duration
 }
 
 // ExposureClassHandler contains configuration for an exposure class handler.

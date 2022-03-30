@@ -17,12 +17,14 @@ package botanist_test
 import (
 	"context"
 	"fmt"
+	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/features"
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
@@ -34,6 +36,7 @@ import (
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/golang/mock/gomock"
@@ -333,6 +336,9 @@ var _ = Describe("Etcd", func() {
 						"bucketName": []byte(bucketName),
 					},
 				}
+				backupLeaderElectionConfig = &gardenletconfig.ETCDBackupLeaderElection{
+					ReelectionPeriod: &metav1.Duration{Duration: 2 * time.Second},
+				}
 
 				expectGetBackupSecret = func() {
 					c.EXPECT().Get(ctx, kutil.Key(namespace, "etcd-backup"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
@@ -349,6 +355,7 @@ var _ = Describe("Etcd", func() {
 						Prefix:               namespace + "--" + string(shootUID),
 						Container:            bucketName,
 						FullSnapshotSchedule: "1 12 * * *",
+						LeaderElection:       backupLeaderElectionConfig,
 					})
 				}
 				expectSetOwnerCheckConfig = func() {
@@ -362,6 +369,11 @@ var _ = Describe("Etcd", func() {
 			BeforeEach(func() {
 				botanist.Seed.GetInfo().Spec.Backup = &gardencorev1beta1.SeedBackup{
 					Provider: backupProvider,
+				}
+				botanist.Config = &gardenletconfig.GardenletConfiguration{
+					ETCDConfig: &gardenletconfig.ETCDConfig{
+						BackupLeaderElection: backupLeaderElectionConfig,
+					},
 				}
 			})
 

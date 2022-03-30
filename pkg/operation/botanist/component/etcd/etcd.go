@@ -24,6 +24,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/monitoring"
 	"github.com/gardener/gardener/pkg/utils"
@@ -115,7 +116,7 @@ type Interface interface {
 	// SetOwnerCheckConfig sets the owner check configuration.
 	SetOwnerCheckConfig(config *OwnerCheckConfig)
 	// Scale scales the etcd resource to the given replica count.
-	Scale(context.Context, int) error
+	Scale(context.Context, int32) error
 }
 
 // New creates a new instance of DeployWaiter for the Etcd.
@@ -228,7 +229,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		garbageCollectionPeriod               = metav1.Duration{Duration: 12 * time.Hour}
 		compressionPolicy                     = druidv1alpha1.GzipCompression
 		compressionSpec                       = druidv1alpha1.CompressionSpec{
-			Enabled: true,
+			Enabled: pointer.Bool(true),
 			Policy:  &compressionPolicy,
 		}
 
@@ -333,9 +334,11 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		e.etcd.Spec.Etcd = druidv1alpha1.EtcdConfig{
 			Resources: resourcesEtcd,
 			TLS: &druidv1alpha1.TLSConfig{
-				TLSCASecretRef: corev1.SecretReference{
-					Name:      e.secrets.CA.Name,
-					Namespace: e.namespace,
+				TLSCASecretRef: druidv1alpha1.SecretReference{
+					SecretReference: corev1.SecretReference{
+						Name:      e.secrets.CA.Name,
+						Namespace: e.namespace,
+					},
 				},
 				ServerTLSSecretRef: corev1.SecretReference{
 					Name:      e.secrets.Server.Name,
@@ -376,6 +379,13 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			e.etcd.Spec.Backup.FullSnapshotSchedule = e.computeFullSnapshotSchedule(existingEtcd)
 			e.etcd.Spec.Backup.DeltaSnapshotPeriod = &deltaSnapshotPeriod
 			e.etcd.Spec.Backup.DeltaSnapshotMemoryLimit = &deltaSnapshotMemoryLimit
+
+			if e.backupConfig.LeaderElection != nil {
+				e.etcd.Spec.Backup.LeaderElection = &druidv1alpha1.LeaderElectionSpec{
+					EtcdConnectionTimeout: e.backupConfig.LeaderElection.EtcdConnectionTimeout,
+					ReelectionPeriod:      e.backupConfig.LeaderElection.ReelectionPeriod,
+				}
+			}
 		}
 
 		if e.ownerCheckConfig != nil {
@@ -619,7 +629,7 @@ func (e *etcd) SetOwnerCheckConfig(ownerCheckConfig *OwnerCheckConfig) {
 	e.ownerCheckConfig = ownerCheckConfig
 }
 
-func (e *etcd) Scale(ctx context.Context, replicas int) error {
+func (e *etcd) Scale(ctx context.Context, replicas int32) error {
 	etcdObj := &druidv1alpha1.Etcd{}
 	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), etcdObj); err != nil {
 		return err
@@ -694,7 +704,7 @@ func (e *etcd) computeContainerResources(existingSts *appsv1.StatefulSet) (*core
 	return resourcesEtcd, resourcesBackupRestore
 }
 
-func (e *etcd) computeReplicas(existingEtcd *druidv1alpha1.Etcd) int {
+func (e *etcd) computeReplicas(existingEtcd *druidv1alpha1.Etcd) int32 {
 	if !e.retainReplicas {
 		return 1
 	}
@@ -744,6 +754,8 @@ type BackupConfig struct {
 	Prefix string
 	// FullSnapshotSchedule is a cron schedule that declares how frequent full snapshots shall be taken.
 	FullSnapshotSchedule string
+	// LeaderElection contains configuration for the leader election for the etcd backup-restore sidecar.
+	LeaderElection *gardenletconfig.ETCDBackupLeaderElection
 }
 
 // HVPAConfig contains information for configuring the HVPA object for the etcd.
