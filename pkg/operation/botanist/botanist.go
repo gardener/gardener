@@ -39,6 +39,8 @@ import (
 // DefaultInterval is the default interval for retry operations.
 const DefaultInterval = 5 * time.Second
 
+var ingressTLSCertificateValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
+
 // New takes an operation object <o> and creates a new Botanist object. It checks whether the given Shoot DNS
 // domain is covered by a default domain, and if so, it sets the <DefaultDomainSecret> attribute on the Botanist
 // object.

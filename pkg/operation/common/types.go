@@ -62,13 +62,6 @@ const (
 	// IstioNamespace is the istio-system namespace
 	IstioNamespace = "istio-system"
 
-	// AlertManagerTLS is the name of the secret resource which holds the TLS certificate for Alert Manager.
-	AlertManagerTLS = "alertmanager-tls"
-	// GrafanaTLS is the name of the secret resource which holds the TLS certificate for Grafana.
-	GrafanaTLS = "grafana-tls"
-	// PrometheusTLS is the name of the secret resource which holds the TLS certificate for Prometheus.
-	PrometheusTLS = "prometheus-tls"
-
 	// EndUserCrtValidity is the time period a user facing certificate is valid.
 	EndUserCrtValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
 
