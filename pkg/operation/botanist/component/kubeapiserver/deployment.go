@@ -38,19 +38,15 @@ import (
 )
 
 const (
-	// SecretNameHTTPProxy is the name of the secret for the http proxy.
-	SecretNameHTTPProxy = "kube-apiserver-http-proxy"
-	// SecretNameKubeAggregator is the name of the secret for the kube-aggregator when talking to the kube-apiserver.
-	SecretNameKubeAggregator = "kube-aggregator"
-	// SecretNameKubeAPIServerToKubelet is the name of the secret for the kube-apiserver credentials when talking to
-	// kubelets.
-	SecretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"
-	// SecretNameServer is the name of the secret for the kube-apiserver server certificates.
-	SecretNameServer = "kube-apiserver"
 	// SecretNameVPNSeed is the name of the secret containing the certificates for the vpn-seed.
 	SecretNameVPNSeed = "vpn-seed"
 	// SecretNameVPNSeedTLSAuth is the name of the secret containing the TLS auth for the vpn-seed.
 	SecretNameVPNSeedTLSAuth = "vpn-seed-tlsauth"
+
+	secretNameServer                 = "kube-apiserver"
+	secretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"
+	secretNameKubeAggregator         = "kube-aggregator"
+	secretNameHTTPProxy              = "kube-apiserver-http-proxy"
 
 	// ContainerNameKubeAPIServer is the name of the kube-apiserver container.
 	ContainerNameKubeAPIServer            = "kube-apiserver"
@@ -63,6 +59,7 @@ const (
 	volumeNameCA                       = "ca"
 	volumeNameCAEtcd                   = "ca-etcd"
 	volumeNameCAFrontProxy             = "ca-front-proxy"
+	volumeNameCAVPN                    = "ca-vpn"
 	volumeNameEgressSelector           = "egress-selection-config"
 	volumeNameEtcdClient               = "etcd-client-tls"
 	volumeNameEtcdEncryptionConfig     = "etcd-encryption-secret"
@@ -88,6 +85,7 @@ const (
 	volumeMountPathCA                       = "/srv/kubernetes/ca"
 	volumeMountPathCAEtcd                   = "/srv/kubernetes/etcd/ca"
 	volumeMountPathCAFrontProxy             = "/srv/kubernetes/ca-front-proxy"
+	volumeMountPathCAVPN                    = "/srv/kubernetes/ca-vpn"
 	volumeMountPathEgressSelector           = "/etc/kubernetes/egress"
 	volumeMountPathEtcdEncryptionConfig     = "/etc/kubernetes/etcd-encryption-secret"
 	volumeMountPathEtcdClient               = "/srv/kubernetes/etcd/client"
@@ -124,6 +122,10 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretServiceAccountKey *corev1.Secret,
 	secretStaticToken *corev1.Secret,
 	secretBasicAuth *corev1.Secret,
+	secretServer *corev1.Secret,
+	secretKubeletClient *corev1.Secret,
+	secretKubeAggregator *corev1.Secret,
+	secretHTTPProxy *corev1.Secret,
 ) error {
 	var (
 		maxSurge       = intstr.FromString("25%")
@@ -143,6 +145,11 @@ func (k *kubeAPIServer) reconcileDeployment(
 		}
 
 		healthCheckToken = token.Token
+	}
+
+	secretCAVPN, found := k.secretsManager.Get(v1beta1constants.SecretNameCAVPN)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAVPN)
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), deployment, func() error {
@@ -362,7 +369,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameKubeAPIServerToKubelet,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: k.secrets.KubeAPIServerToKubelet.Name,
+									SecretName: secretKubeletClient.Name,
 								},
 							},
 						},
@@ -370,7 +377,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameKubeAggregator,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: k.secrets.KubeAggregator.Name,
+									SecretName: secretKubeAggregator.Name,
 								},
 							},
 						},
@@ -386,7 +393,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameServer,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: k.secrets.Server.Name,
+									SecretName: secretServer.Name,
 								},
 							},
 						},
@@ -400,7 +407,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleHostCertVolumes(deployment)
 		k.handleSNISettings(deployment)
 		k.handlePodMutatorSettings(deployment)
-		k.handleVPNSettings(deployment, configMapEgressSelector)
+		k.handleVPNSettings(deployment, configMapEgressSelector, secretCAVPN, secretHTTPProxy)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment, secretUserProvidedServiceAccountSigningKey)
 
@@ -462,8 +469,8 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 
 	out = append(out, "--insecure-port=0")
 	out = append(out, "--kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP")
-	out = append(out, fmt.Sprintf("--kubelet-client-certificate=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameKubeAPIServerToKubelet)))
-	out = append(out, fmt.Sprintf("--kubelet-client-key=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameKubeAPIServerToKubelet)))
+	out = append(out, fmt.Sprintf("--kubelet-client-certificate=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.DataKeyCertificate))
+	out = append(out, fmt.Sprintf("--kubelet-client-key=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.DataKeyPrivateKey))
 
 	if k.values.Requests != nil {
 		if k.values.Requests.MaxNonMutatingInflight != nil {
@@ -476,8 +483,8 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	}
 
 	out = append(out, "--profiling=false")
-	out = append(out, fmt.Sprintf("--proxy-client-cert-file=%s/%s", volumeMountPathKubeAggregator, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameKubeAggregator)))
-	out = append(out, fmt.Sprintf("--proxy-client-key-file=%s/%s", volumeMountPathKubeAggregator, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameKubeAggregator)))
+	out = append(out, fmt.Sprintf("--proxy-client-cert-file=%s/%s", volumeMountPathKubeAggregator, secrets.DataKeyCertificate))
+	out = append(out, fmt.Sprintf("--proxy-client-key-file=%s/%s", volumeMountPathKubeAggregator, secrets.DataKeyPrivateKey))
 	out = append(out, fmt.Sprintf("--requestheader-client-ca-file=%s/%s", volumeMountPathCAFrontProxy, secrets.DataKeyCertificateCA))
 	out = append(out, "--requestheader-extra-headers-prefix=X-Remote-Extra-")
 	out = append(out, "--requestheader-group-headers=X-Remote-Group")
@@ -501,8 +508,8 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, fmt.Sprintf("--service-cluster-ip-range=%s", k.values.VPN.ServiceNetworkCIDR))
 	out = append(out, fmt.Sprintf("--secure-port=%d", Port))
 	out = append(out, fmt.Sprintf("--token-auth-file=%s/%s", volumeMountPathStaticToken, secrets.DataKeyStaticTokenCSV))
-	out = append(out, fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameServer)))
-	out = append(out, fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameServer)))
+	out = append(out, fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate))
+	out = append(out, fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey))
 	out = append(out, "--tls-cipher-suites="+strings.Join(kutil.TLSCipherSuites(k.values.Version), ","))
 	out = append(out, "--v=2")
 
@@ -647,7 +654,12 @@ func (k *kubeAPIServer) handleLifecycleSettings(deployment *appsv1.Deployment) {
 	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--shutdown-delay-duration=15s")
 }
 
-func (k *kubeAPIServer) handleVPNSettings(deployment *appsv1.Deployment, configMapEgressSelector *corev1.ConfigMap) {
+func (k *kubeAPIServer) handleVPNSettings(
+	deployment *appsv1.Deployment,
+	configMapEgressSelector *corev1.ConfigMap,
+	secretCAVPN *corev1.Secret,
+	secretHTTPProxy *corev1.Secret,
+) {
 	if !k.values.VPN.ReversedVPNEnabled {
 		deployment.Spec.Template.Spec.InitContainers = []corev1.Container{{
 			Name:  "set-iptable-rules",
@@ -769,6 +781,10 @@ func (k *kubeAPIServer) handleVPNSettings(deployment *appsv1.Deployment, configM
 		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--egress-selector-config-file=%s/%s", volumeMountPathEgressSelector, configMapEgressSelectorDataKey))
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
 			{
+				Name:      volumeNameCAVPN,
+				MountPath: volumeMountPathCAVPN,
+			},
+			{
 				Name:      volumeNameHTTPProxy,
 				MountPath: volumeMountPathHTTPProxy,
 			},
@@ -779,10 +795,18 @@ func (k *kubeAPIServer) handleVPNSettings(deployment *appsv1.Deployment, configM
 		}...)
 		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
 			{
+				Name: volumeNameCAVPN,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: secretCAVPN.Name,
+					},
+				},
+			},
+			{
 				Name: volumeNameHTTPProxy,
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
-						SecretName: k.secrets.HTTPProxy.Name,
+						SecretName: secretHTTPProxy.Name,
 					},
 				},
 			},
@@ -894,8 +918,8 @@ func (k *kubeAPIServer) handlePodMutatorSettings(deployment *appsv1.Deployment) 
 				"--host=localhost",
 				"--port=9443",
 				"--cert-dir=" + volumeMountPathServer,
-				"--cert-name=" + secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameServer),
-				"--key-name=" + secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameServer),
+				"--cert-name=" + secrets.DataKeyCertificate,
+				"--key-name=" + secrets.DataKeyPrivateKey,
 			},
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{

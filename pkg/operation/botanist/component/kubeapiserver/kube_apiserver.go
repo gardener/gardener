@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -81,10 +82,10 @@ const (
 	SecretNameUserKubeconfig = "user-kubeconfig"
 	// ServicePortName is the name of the port in the service.
 	ServicePortName = "kube-apiserver"
-	// UserName is the name of the kube-apiserver user when communicating with the kubelet.
-	UserName = "system:kube-apiserver:kubelet"
 	// UserNameVPNSeed is the user name for the vpn-seed components (used as common name in its client certificate)
 	UserNameVPNSeed = "vpn-seed"
+
+	userName = "system:kube-apiserver:kubelet"
 )
 
 // Interface contains functions for a kube-apiserver deployer.
@@ -102,6 +103,8 @@ type Interface interface {
 	SetAutoscalingAPIServerResources(corev1.ResourceRequirements)
 	// SetAutoscalingReplicas sets the Replicas field in the AutoscalingConfig of the Values of the deployer.
 	SetAutoscalingReplicas(*int32)
+	// SetServerCertificateConfig sets the ServerCertificateConfig field in the Values of the deployer.
+	SetServerCertificateConfig(ServerCertificateConfig)
 	// SetServiceAccountConfig sets the ServiceAccount field in the Values of the deployer.
 	SetServiceAccountConfig(ServiceAccountConfig)
 	// SetSNIConfig sets the SNI field in the Values of the deployer.
@@ -143,6 +146,8 @@ type Values struct {
 	Requests *gardencorev1beta1.KubeAPIServerRequests
 	// RuntimeConfig is the set of runtime configurations.
 	RuntimeConfig map[string]bool
+	// ServerCertificate contains configuration for the server certificate.
+	ServerCertificate ServerCertificateConfig
 	// ServiceAccount contains information for configuring ServiceAccount settings for the kube-apiserver.
 	ServiceAccount ServiceAccountConfig
 	// SNI contains information for configuring SNI settings for the kube-apiserver.
@@ -203,6 +208,14 @@ type VPNConfig struct {
 	ServiceNetworkCIDR string
 	// NodeNetworkCIDR is the CIDR of the node network.
 	NodeNetworkCIDR *string
+}
+
+// ServerCertificateConfig contains configuration for the server certificate.
+type ServerCertificateConfig struct {
+	// ExtraIPAddresses is a list of additional IP addresses to use for the SANS of the server certificate.
+	ExtraIPAddresses []net.IP
+	// ExtraDNSNames is a list of additional DNS names to use for the SANS of the server certificate.
+	ExtraDNSNames []string
 }
 
 // ServiceAccountConfig contains information for configuring ServiceAccountConfig settings for the kube-apiserver.
@@ -321,6 +334,26 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	secretHTTPProxy, err := k.reconcileSecretHTTPProxy(ctx)
+	if err != nil {
+		return err
+	}
+
+	secretKubeAggregator, err := k.reconcileSecretKubeAggregator(ctx)
+	if err != nil {
+		return err
+	}
+
+	secretKubeletClient, err := k.reconcileSecretKubeletClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	secretServer, err := k.reconcileSecretServer(ctx)
+	if err != nil {
+		return err
+	}
+
 	secretStaticToken, err := k.reconcileSecretStaticToken(ctx)
 	if err != nil {
 		return err
@@ -350,6 +383,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		secretServiceAccountKey,
 		secretStaticToken,
 		secretBasicAuth,
+		secretServer,
+		secretKubeletClient,
+		secretKubeAggregator,
+		secretHTTPProxy,
 	); err != nil {
 		return err
 	}
@@ -495,6 +532,10 @@ func (k *kubeAPIServer) SetSecrets(secrets Secrets) {
 	k.secrets = secrets
 }
 
+func (k *kubeAPIServer) SetServerCertificateConfig(config ServerCertificateConfig) {
+	k.values.ServerCertificate = config
+}
+
 func (k *kubeAPIServer) SetServiceAccountConfig(config ServiceAccountConfig) {
 	k.values.ServiceAccount = config
 }
@@ -535,15 +576,6 @@ type Secrets struct {
 	CAFrontProxy component.Secret
 	// Etcd is the client certificate for the kube-apiserver to talk to etcd.
 	Etcd component.Secret
-	// HTTPProxy is the client certificate for the http proxy to talk to the kube-apiserver..
-	// Only relevant if VPNConfig.ReversedVPNEnabled is true.
-	HTTPProxy *component.Secret
-	// KubeAggregator is the client certificate for the kube-aggregator to talk to the kube-apiserver.
-	KubeAggregator component.Secret
-	// KubeAPIServerToKubelet is the client certificate for the kube-apiserver to talk to kubelets.
-	KubeAPIServerToKubelet component.Secret
-	// Server is the server certificate and key for the HTTP server of kube-apiserver.
-	Server component.Secret
 	// VPNSeed is the client certificate for the vpn-seed to talk to the kube-apiserver.
 	// Only relevant if VPNConfig.ReversedVPNEnabled is false.
 	VPNSeed *component.Secret
@@ -562,17 +594,13 @@ type secret struct {
 
 func (s *Secrets) all() map[string]secret {
 	return map[string]secret{
-		"CA":                     {Secret: &s.CA},
-		"CAEtcd":                 {Secret: &s.CAEtcd},
-		"CAFrontProxy":           {Secret: &s.CAFrontProxy},
-		"Etcd":                   {Secret: &s.Etcd},
-		"HTTPProxy":              {Secret: s.HTTPProxy, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
-		"KubeAggregator":         {Secret: &s.KubeAggregator},
-		"KubeAPIServerToKubelet": {Secret: &s.KubeAPIServerToKubelet},
-		"Server":                 {Secret: &s.Server},
-		"VPNSeed":                {Secret: s.VPNSeed, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
-		"VPNSeedTLSAuth":         {Secret: s.VPNSeedTLSAuth, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
-		"VPNSeedServerTLSAuth":   {Secret: s.VPNSeedServerTLSAuth, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
+		"CA":                   {Secret: &s.CA},
+		"CAEtcd":               {Secret: &s.CAEtcd},
+		"CAFrontProxy":         {Secret: &s.CAFrontProxy},
+		"Etcd":                 {Secret: &s.Etcd},
+		"VPNSeed":              {Secret: s.VPNSeed, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
+		"VPNSeedTLSAuth":       {Secret: s.VPNSeedTLSAuth, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
+		"VPNSeedServerTLSAuth": {Secret: s.VPNSeedServerTLSAuth, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
 	}
 }
 
