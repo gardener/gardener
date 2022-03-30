@@ -22,6 +22,7 @@ import (
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
@@ -144,6 +145,9 @@ func checkNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList *c
 
 	var cordonedNodes int
 	for _, node := range nodeList.Items {
+		if metav1.HasAnnotation(node.ObjectMeta, AnnotationKeyNotManagedByMCM) && node.Annotations[AnnotationKeyNotManagedByMCM] == "1" {
+			continue
+		}
 		if node.Spec.Unschedulable {
 			machine, ok := nodeNameToMachine[node.Name]
 			if !ok {
