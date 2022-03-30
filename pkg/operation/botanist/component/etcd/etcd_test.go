@@ -95,7 +95,7 @@ var _ = Describe("Etcd", func() {
 		garbageCollectionPeriod = metav1.Duration{Duration: 12 * time.Hour}
 		compressionPolicy       = druidv1alpha1.GzipCompression
 		compressionSpec         = druidv1alpha1.CompressionSpec{
-			Enabled: true,
+			Enabled: pointer.Bool(true),
 			Policy:  &compressionPolicy,
 		}
 		updateModeAuto     = hvpav1alpha1.UpdateModeAuto
@@ -170,7 +170,7 @@ var _ = Describe("Etcd", func() {
 		}
 		etcdObjFor = func(
 			class Class,
-			replicas int,
+			replicas int32,
 			backupConfig *BackupConfig,
 			existingDefragmentationSchedule,
 			existingBackupSchedule string,
@@ -251,9 +251,11 @@ var _ = Describe("Etcd", func() {
 					Etcd: druidv1alpha1.EtcdConfig{
 						Resources: resourcesContainerEtcd,
 						TLS: &druidv1alpha1.TLSConfig{
-							TLSCASecretRef: corev1.SecretReference{
-								Name:      secretNameCA,
-								Namespace: testNamespace,
+							TLSCASecretRef: druidv1alpha1.SecretReference{
+								SecretReference: corev1.SecretReference{
+									Name:      secretNameCA,
+									Namespace: testNamespace,
+								},
 							},
 							ServerTLSSecretRef: corev1.SecretReference{
 								Name:      secretNameServer,
@@ -658,7 +660,7 @@ var _ = Describe("Etcd", func() {
 								Namespace: testNamespace,
 							},
 							Spec: druidv1alpha1.EtcdSpec{
-								Replicas: int(existingReplicas),
+								Replicas: existingReplicas,
 							},
 						}).DeepCopyInto(obj.(*druidv1alpha1.Etcd))
 						return nil
@@ -676,7 +678,7 @@ var _ = Describe("Etcd", func() {
 
 						Expect(obj).To(DeepEqual(etcdObjFor(
 							class,
-							int(existingReplicas),
+							existingReplicas,
 							nil,
 							"",
 							"",
@@ -714,7 +716,7 @@ var _ = Describe("Etcd", func() {
 								Namespace: testNamespace,
 							},
 							Spec: druidv1alpha1.EtcdSpec{
-								Replicas: int(existingReplicas),
+								Replicas: existingReplicas,
 							},
 							Status: druidv1alpha1.EtcdStatus{
 								Etcd: &druidv1alpha1.CrossVersionObjectReference{
@@ -737,7 +739,7 @@ var _ = Describe("Etcd", func() {
 
 						Expect(obj).To(DeepEqual(etcdObjFor(
 							class,
-							int(existingReplicas),
+							existingReplicas,
 							nil,
 							"",
 							"",

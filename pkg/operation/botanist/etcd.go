@@ -169,7 +169,7 @@ func (b *Botanist) ScaleETCDToOne(ctx context.Context) error {
 	return b.scaleETCD(ctx, 1)
 }
 
-func (b *Botanist) scaleETCD(ctx context.Context, replicas int) error {
+func (b *Botanist) scaleETCD(ctx context.Context, replicas int32) error {
 	if err := b.Shoot.Components.ControlPlane.EtcdMain.Scale(ctx, replicas); err != nil {
 		return err
 	}

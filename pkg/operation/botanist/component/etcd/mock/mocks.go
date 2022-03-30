@@ -96,7 +96,7 @@ func (mr *MockInterfaceMockRecorder) Get(arg0 interface{}) *gomock.Call {
 }
 
 // Scale mocks base method.
-func (m *MockInterface) Scale(arg0 context.Context, arg1 int) error {
+func (m *MockInterface) Scale(arg0 context.Context, arg1 int32) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Scale", arg0, arg1)
 	ret0, _ := ret[0].(error)
