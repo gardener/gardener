@@ -72,12 +72,11 @@ var _ = Describe("KubeAPIServer", func() {
 		vpaUpdateMode      = autoscalingv1beta2.UpdateModeOff
 		containerPolicyOff = autoscalingv1beta2.ContainerScalingModeOff
 
-		kubernetesInterface   kubernetes.Interface
-		c                     client.Client
-		sm                    secretsmanager.Interface
-		kapi                  Interface
-		version               = semver.MustParse("1.22.1")
-		enableAdminKubeconfig = pointer.Bool(true)
+		kubernetesInterface kubernetes.Interface
+		c                   client.Client
+		sm                  secretsmanager.Interface
+		kapi                Interface
+		version             = semver.MustParse("1.22.1")
 
 		secretNameBasicAuthentication      = "kube-apiserver-basic-auth-426b1845"
 		secretNameStaticToken              = "kube-apiserver-static-token-c069a0e6"
@@ -126,7 +125,7 @@ var _ = Describe("KubeAPIServer", func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		kubernetesInterface = fakekubernetes.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
 		sm = fakesecretsmanager.New(c, namespace)
-		kapi = New(kubernetesInterface, namespace, sm, Values{Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+		kapi = New(kubernetesInterface, namespace, sm, Values{Version: version})
 
 		secrets = Secrets{
 			CA:                   component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
@@ -245,7 +244,7 @@ var _ = Describe("KubeAPIServer", func() {
 			Describe("HorizontalPodAutoscaler", func() {
 				DescribeTable("should delete the HPA resource",
 					func(autoscalingConfig AutoscalingConfig) {
-						kapi = New(kubernetesInterface, namespace, sm, Values{Autoscaling: autoscalingConfig, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{Autoscaling: autoscalingConfig, Version: version})
 						kapi.SetSecrets(secrets)
 
 						Expect(c.Create(ctx, horizontalPodAutoscaler)).To(Succeed())
@@ -266,7 +265,7 @@ var _ = Describe("KubeAPIServer", func() {
 						MinReplicas: 4,
 						MaxReplicas: 6,
 					}
-					kapi = New(kubernetesInterface, namespace, sm, Values{Autoscaling: autoscalingConfig, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+					kapi = New(kubernetesInterface, namespace, sm, Values{Autoscaling: autoscalingConfig, Version: version})
 					kapi.SetSecrets(secrets)
 
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2beta1.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscaler.Name)))
@@ -313,7 +312,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 			Describe("VerticalPodAutoscaler", func() {
 				It("should delete the VPA resource", func() {
-					kapi = New(kubernetesInterface, namespace, sm, Values{Autoscaling: AutoscalingConfig{HVPAEnabled: true}, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+					kapi = New(kubernetesInterface, namespace, sm, Values{Autoscaling: AutoscalingConfig{HVPAEnabled: true}, Version: version})
 					kapi.SetSecrets(secrets)
 
 					Expect(c.Create(ctx, verticalPodAutoscaler)).To(Succeed())
@@ -324,7 +323,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 				It("should successfully deploy the VPA resource", func() {
 					autoscalingConfig := AutoscalingConfig{HVPAEnabled: false}
-					kapi = New(kubernetesInterface, namespace, sm, Values{Autoscaling: autoscalingConfig, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+					kapi = New(kubernetesInterface, namespace, sm, Values{Autoscaling: autoscalingConfig, Version: version})
 					kapi.SetSecrets(secrets)
 
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv1beta2.SchemeGroupVersion.Group, Resource: "verticalpodautoscalers"}, verticalPodAutoscaler.Name)))
@@ -357,7 +356,7 @@ var _ = Describe("KubeAPIServer", func() {
 			Describe("HVPA", func() {
 				DescribeTable("should delete the HVPA resource",
 					func(autoscalingConfig AutoscalingConfig) {
-						kapi = New(kubernetesInterface, namespace, sm, Values{Autoscaling: autoscalingConfig, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{Autoscaling: autoscalingConfig, Version: version})
 						kapi.SetSecrets(secrets)
 
 						Expect(c.Create(ctx, hvpa)).To(Succeed())
@@ -418,10 +417,9 @@ var _ = Describe("KubeAPIServer", func() {
 						expectedWeightBasedScalingIntervals []hvpav1alpha1.WeightBasedScalingInterval,
 					) {
 						kapi = New(kubernetesInterface, namespace, sm, Values{
-							Autoscaling:           autoscalingConfig,
-							SNI:                   sniConfig,
-							Version:               version,
-							EnableAdminKubeconfig: enableAdminKubeconfig,
+							Autoscaling: autoscalingConfig,
+							SNI:         sniConfig,
+							Version:     version,
 						})
 						kapi.SetSecrets(secrets)
 
@@ -860,7 +858,7 @@ var _ = Describe("KubeAPIServer", func() {
 					})
 
 					It("w/ ReversedVPN", func() {
-						kapi = New(kubernetesInterface, namespace, sm, Values{VPN: VPNConfig{ReversedVPNEnabled: true}, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{VPN: VPNConfig{ReversedVPNEnabled: true}, Version: version})
 						kapi.SetSecrets(secrets)
 
 						Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowKubeAPIServer.Name)))
@@ -1054,7 +1052,7 @@ subjects:
 						oidcConfig = &gardencorev1beta1.OIDCConfig{CABundle: &caBundle}
 					)
 
-					kapi = New(kubernetesInterface, namespace, sm, Values{OIDC: oidcConfig, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+					kapi = New(kubernetesInterface, namespace, sm, Values{OIDC: oidcConfig, Version: version})
 					kapi.SetSecrets(secrets)
 
 					expectedSecretOIDCCABundle := &corev1.Secret{
@@ -1091,7 +1089,7 @@ subjects:
 						serviceAccountConfig = ServiceAccountConfig{SigningKey: signingKey}
 					)
 
-					kapi = New(kubernetesInterface, namespace, sm, Values{ServiceAccount: serviceAccountConfig, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+					kapi = New(kubernetesInterface, namespace, sm, Values{ServiceAccount: serviceAccountConfig, Version: version})
 					kapi.SetSecrets(secrets)
 
 					expectedSecretServiceAccountSigningKey := &corev1.Secret{
@@ -1211,7 +1209,7 @@ plugins: null
 							{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("some-config-for-baz")}},
 						}
 
-						kapi = New(kubernetesInterface, namespace, sm, Values{AdmissionPlugins: admissionPlugins, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{AdmissionPlugins: admissionPlugins, Version: version})
 						kapi.SetSecrets(secrets)
 
 						configMapAdmission = &corev1.ConfigMap{
@@ -1288,7 +1286,7 @@ rules:
 							auditConfig = &AuditConfig{Policy: &policy}
 						)
 
-						kapi = New(kubernetesInterface, namespace, sm, Values{Audit: auditConfig, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{Audit: auditConfig, Version: version})
 						kapi.SetSecrets(secrets)
 
 						configMapAuditPolicy = &corev1.ConfigMap{
@@ -1319,7 +1317,7 @@ rules:
 
 				Context("egress selector", func() {
 					It("should successfully deploy the configmap resource for K8s < 1.20", func() {
-						kapi = New(kubernetesInterface, namespace, sm, Values{VPN: VPNConfig{ReversedVPNEnabled: true}, Version: semver.MustParse("1.19.0"), EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{VPN: VPNConfig{ReversedVPNEnabled: true}, Version: semver.MustParse("1.19.0")})
 						kapi.SetSecrets(secrets)
 
 						configMapEgressSelector = &corev1.ConfigMap{
@@ -1348,7 +1346,7 @@ rules:
 					})
 
 					It("should successfully deploy the configmap resource for K8s >= 1.20", func() {
-						kapi = New(kubernetesInterface, namespace, sm, Values{VPN: VPNConfig{ReversedVPNEnabled: true}, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{VPN: VPNConfig{ReversedVPNEnabled: true}, Version: version})
 						kapi.SetSecrets(secrets)
 
 						configMapEgressSelector = &corev1.ConfigMap{
@@ -1396,7 +1394,7 @@ rules:
 				})
 
 				It("should have the expected labels w/ SNI", func() {
-					kapi = New(kubernetesInterface, namespace, sm, Values{SNI: SNIConfig{Enabled: true}, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+					kapi = New(kubernetesInterface, namespace, sm, Values{SNI: SNIConfig{Enabled: true}, Version: version})
 					kapi.SetSecrets(secrets)
 					deployAndRead()
 
@@ -1436,7 +1434,7 @@ rules:
 						intStrZero            = intstr.FromInt(0)
 					)
 
-					kapi = New(kubernetesInterface, namespace, sm, Values{Autoscaling: AutoscalingConfig{Replicas: &replicas}, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+					kapi = New(kubernetesInterface, namespace, sm, Values{Autoscaling: AutoscalingConfig{Replicas: &replicas}, Version: version})
 					kapi.SetSecrets(secrets)
 					deployAndRead()
 
@@ -1520,7 +1518,7 @@ rules:
 				})
 
 				It("should have no init containers when reversed vpn is enabled", func() {
-					kapi = New(kubernetesInterface, namespace, sm, Values{VPN: VPNConfig{ReversedVPNEnabled: true}, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+					kapi = New(kubernetesInterface, namespace, sm, Values{VPN: VPNConfig{ReversedVPNEnabled: true}, Version: version})
 					kapi.SetSecrets(secrets)
 					deployAndRead()
 
@@ -1538,7 +1536,7 @@ rules:
 						}
 					)
 
-					kapi = New(kubernetesInterface, namespace, sm, Values{VPN: vpnConfig, Images: images, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+					kapi = New(kubernetesInterface, namespace, sm, Values{VPN: vpnConfig, Images: images, Version: version})
 					kapi.SetSecrets(secrets)
 					deployAndRead()
 
@@ -1664,8 +1662,7 @@ rules:
 					kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version, SNI: SNIConfig{
 						PodMutatorEnabled: true,
 						APIServerFQDN:     fqdn,
-					},
-						EnableAdminKubeconfig: enableAdminKubeconfig})
+					}})
 					kapi.SetSecrets(secrets)
 					deployAndRead()
 
@@ -1746,9 +1743,8 @@ rules:
 								MaxTokenExpiration:    &metav1.Duration{Duration: serviceAccountMaxTokenExpiration},
 								ExtendTokenExpiration: &serviceAccountExtendTokenExpiration,
 							},
-							Version:               version,
-							VPN:                   VPNConfig{ServiceNetworkCIDR: serviceNetworkCIDR},
-							EnableAdminKubeconfig: enableAdminKubeconfig,
+							Version: version,
+							VPN:     VPNConfig{ServiceNetworkCIDR: serviceNetworkCIDR},
 						})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
@@ -2072,7 +2068,7 @@ rules:
 					})
 
 					It("should properly set the anonymous auth flag if enabled", func() {
-						kapi = New(kubernetesInterface, namespace, sm, Values{AnonymousAuthenticationEnabled: true, Images: images, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{AnonymousAuthenticationEnabled: true, Images: images, Version: version})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 
@@ -2084,7 +2080,7 @@ rules:
 					It("should configure the advertise address if SNI is enabled", func() {
 						advertiseAddress := "1.2.3.4"
 
-						kapi = New(kubernetesInterface, namespace, sm, Values{SNI: SNIConfig{Enabled: true, AdvertiseAddress: advertiseAddress}, Images: images, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{SNI: SNIConfig{Enabled: true, AdvertiseAddress: advertiseAddress}, Images: images, Version: version})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 
@@ -2094,7 +2090,7 @@ rules:
 					})
 
 					It("should not configure the advertise address if SNI is enabled", func() {
-						kapi = New(kubernetesInterface, namespace, sm, Values{SNI: SNIConfig{Enabled: false, AdvertiseAddress: "foo"}, Images: images, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{SNI: SNIConfig{Enabled: false, AdvertiseAddress: "foo"}, Images: images, Version: version})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 
@@ -2108,7 +2104,7 @@ rules:
 							apiAudiences = []string{apiAudience1, apiAudience2}
 						)
 
-						kapi = New(kubernetesInterface, namespace, sm, Values{APIAudiences: apiAudiences, Images: images, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{APIAudiences: apiAudiences, Images: images, Version: version})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 
@@ -2126,7 +2122,7 @@ rules:
 					It("should configure the feature gates if provided", func() {
 						featureGates := map[string]bool{"Foo": true, "Bar": false}
 
-						kapi = New(kubernetesInterface, namespace, sm, Values{FeatureGates: featureGates, Images: images, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{FeatureGates: featureGates, Images: images, Version: version})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 
@@ -2147,7 +2143,7 @@ rules:
 							MaxMutatingInflight:    pointer.Int32(456),
 						}
 
-						kapi = New(kubernetesInterface, namespace, sm, Values{Requests: requests, Images: images, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{Requests: requests, Images: images, Version: version})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 
@@ -2169,7 +2165,7 @@ rules:
 					It("should configure the runtime config if provided", func() {
 						runtimeConfig := map[string]bool{"foo": true, "bar": false}
 
-						kapi = New(kubernetesInterface, namespace, sm, Values{RuntimeConfig: runtimeConfig, Images: images, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{RuntimeConfig: runtimeConfig, Images: images, Version: version})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 
@@ -2193,7 +2189,7 @@ rules:
 							},
 						}
 
-						kapi = New(kubernetesInterface, namespace, sm, Values{WatchCacheSizes: watchCacheSizes, Images: images, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{WatchCacheSizes: watchCacheSizes, Images: images, Version: version})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 
@@ -2215,7 +2211,7 @@ rules:
 					It("should mount the host pki directories", func() {
 						directoryOrCreate := corev1.HostPathDirectoryOrCreate
 
-						kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 
@@ -2287,7 +2283,7 @@ rules:
 						legacySecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "kube-apiserver-basic-auth"}}
 						Expect(c.Create(ctx, legacySecret)).To(Succeed())
 
-						kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version, BasicAuthenticationEnabled: true, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version, BasicAuthenticationEnabled: true})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 
@@ -2315,7 +2311,7 @@ rules:
 					})
 
 					It("should not configure the settings related to the basic auth secret if disabled", func() {
-						kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version, BasicAuthenticationEnabled: false, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version, BasicAuthenticationEnabled: false})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 
@@ -2325,7 +2321,7 @@ rules:
 					})
 
 					It("should properly configure the settings related to reversed vpn if enabled", func() {
-						kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version, VPN: VPNConfig{ReversedVPNEnabled: true}, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version, VPN: VPNConfig{ReversedVPNEnabled: true}})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 
@@ -2379,7 +2375,7 @@ rules:
 					})
 
 					It("should not configure the settings related to reversed vpn if disabled", func() {
-						kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version, VPN: VPNConfig{ReversedVPNEnabled: false}, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version, VPN: VPNConfig{ReversedVPNEnabled: false}})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 
@@ -2401,7 +2397,7 @@ rules:
 							RequiredClaims: map[string]string{"one": "two", "three": "four"},
 						}
 
-						kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version, OIDC: oidc, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version, OIDC: oidc})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 
@@ -2441,7 +2437,7 @@ rules:
 					})
 
 					It("should properly configure the settings related ot the service account signing key if provided", func() {
-						kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version, ServiceAccount: ServiceAccountConfig{SigningKey: []byte("")}, EnableAdminKubeconfig: enableAdminKubeconfig})
+						kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: version, ServiceAccount: ServiceAccountConfig{SigningKey: []byte("")}})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 

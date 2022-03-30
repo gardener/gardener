@@ -1114,7 +1114,6 @@ message Kubernetes {
   // +optional
   optional VerticalPodAutoscaler verticalPodAutoscaler = 9;
 
-  // TODO(ary92) : Later this field will be removed and user will need to authenticate via OIDC client.
   // EnableAdminKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster
   // (default: true).
   // +optional

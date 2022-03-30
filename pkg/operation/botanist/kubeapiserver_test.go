@@ -84,7 +84,6 @@ var _ = Describe("KubeAPIServer", func() {
 		nodeNetworkCIDR       = "10.0.3.0/24"
 		apiServerClusterIP    = "1.2.3.4"
 		apiServerAddress      = "5.6.7.8"
-		enableAdminKubeconfig = pointer.Bool(true)
 	)
 
 	BeforeEach(func() {
@@ -158,9 +157,6 @@ var _ = Describe("KubeAPIServer", func() {
 				},
 				Networking: gardencorev1beta1.Networking{
 					Nodes: &nodeNetworkCIDR,
-				},
-				Kubernetes: gardencorev1beta1.Kubernetes{
-					EnableAdminKubeconfig: enableAdminKubeconfig,
 				},
 			},
 			Status: gardencorev1beta1.ShootStatus{
@@ -1255,8 +1251,7 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
 						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
-							KubeAPIServer:         &gardencorev1beta1.KubeAPIServerConfig{},
-							EnableAdminKubeconfig: enableAdminKubeconfig,
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
 						}
 						botanist.Shoot.SetInfo(shootCopy)
 					},
@@ -1274,7 +1269,6 @@ var _ = Describe("KubeAPIServer", func() {
 									MaxTokenExpiration:    &maxTokenExpiration,
 								},
 							},
-							EnableAdminKubeconfig: enableAdminKubeconfig,
 						}
 						botanist.Shoot.SetInfo(shootCopy)
 					},
@@ -1295,7 +1289,6 @@ var _ = Describe("KubeAPIServer", func() {
 									Issuer: pointer.String("issuer"),
 								},
 							},
-							EnableAdminKubeconfig: enableAdminKubeconfig,
 						}
 						botanist.Shoot.SetInfo(shootCopy)
 					},
@@ -1312,7 +1305,6 @@ var _ = Describe("KubeAPIServer", func() {
 									AcceptedIssuers: []string{"issuer1", "issuer2"},
 								},
 							},
-							EnableAdminKubeconfig: enableAdminKubeconfig,
 						}
 						botanist.Shoot.SetInfo(shootCopy)
 					},
@@ -1333,7 +1325,6 @@ var _ = Describe("KubeAPIServer", func() {
 									AcceptedIssuers: []string{"issuer1", "issuer2"},
 								},
 							},
-							EnableAdminKubeconfig: enableAdminKubeconfig,
 						}
 						botanist.Shoot.SetInfo(shootCopy)
 					},
@@ -1351,7 +1342,6 @@ var _ = Describe("KubeAPIServer", func() {
 							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
 								ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{},
 							},
-							EnableAdminKubeconfig: enableAdminKubeconfig,
 						}
 						botanist.Shoot.SetInfo(shootCopy)
 					},
@@ -1366,7 +1356,6 @@ var _ = Describe("KubeAPIServer", func() {
 							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
 								ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{},
 							},
-							EnableAdminKubeconfig: enableAdminKubeconfig,
 						}
 						botanist.Shoot.SetInfo(shootCopy)
 					},
@@ -1385,7 +1374,6 @@ var _ = Describe("KubeAPIServer", func() {
 									},
 								},
 							},
-							EnableAdminKubeconfig: enableAdminKubeconfig,
 						}
 						botanist.Shoot.SetInfo(shootCopy)
 					},
@@ -1407,7 +1395,6 @@ var _ = Describe("KubeAPIServer", func() {
 									},
 								},
 							},
-							EnableAdminKubeconfig: enableAdminKubeconfig,
 						}
 						botanist.Shoot.SetInfo(shootCopy)
 					},
@@ -1428,7 +1415,6 @@ var _ = Describe("KubeAPIServer", func() {
 									},
 								},
 							},
-							EnableAdminKubeconfig: enableAdminKubeconfig,
 						}
 						botanist.Shoot.SetInfo(shootCopy)
 					},
