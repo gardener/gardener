@@ -208,7 +208,7 @@ spec:
       #	adapted.
       - name: prometheus-client-cert
         secret:
-          secretName: prometheus
+          secretName: {{ .Values.secretNameClientCert }}
       - name: shoot-access
         secret:
           secretName: shoot-access-prometheus

@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/images"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -150,6 +151,18 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
+	// TODO(rfranzke): Delete this in a future release once all monitoring configurations of extensions have been
+	// adapted and some migration grace period has passed.
+	prometheusClientSecret, err := b.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+		Name:         "prometheus",
+		CommonName:   "gardener.cloud:monitoring:prometheus",
+		Organization: []string{"gardener.cloud:monitoring"},
+		CertType:     secrets.ClientCert,
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return err
+	}
+
 	genericTokenKubeconfigSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -161,7 +174,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"services": b.Shoot.Networks.Services.String(),
 		}
 		prometheusConfig = map[string]interface{}{
-			"kubernetesVersion": b.Shoot.GetInfo().Spec.Kubernetes.Version,
+			"secretNameClientCert": prometheusClientSecret.Name,
+			"kubernetesVersion":    b.Shoot.GetInfo().Spec.Kubernetes.Version,
 			"nodeLocalDNS": map[string]interface{}{
 				"enabled": b.Shoot.NodeLocalDNSEnabled,
 			},
@@ -301,7 +315,10 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	}
 
 	// TODO(rfranzke): Remove in a future release.
-	if err := kutil.DeleteObject(ctx, b.K8sSeedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-kubelet", Namespace: b.Shoot.SeedNamespace}}); err != nil {
+	if err := kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-kubelet", Namespace: b.Shoot.SeedNamespace}},
+	); err != nil {
 		return err
 	}
 
@@ -369,9 +386,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
 		// TODO(rfranzke): Remove in a future release.
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics", Namespace: b.Shoot.SeedNamespace}},
-		// TODO(rfranzke): Uncomment this in a future release once all monitoring configurations of extensions have been
-		// adapted.
-		//&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus", Namespace: b.Shoot.SeedNamespace}},
 	)
 }
 
