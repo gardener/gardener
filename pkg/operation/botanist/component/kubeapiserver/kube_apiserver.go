@@ -255,20 +255,20 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	var (
-		deployment                           = k.emptyDeployment()
-		podDisruptionBudget                  = k.emptyPodDisruptionBudget()
-		horizontalPodAutoscaler              = k.emptyHorizontalPodAutoscaler()
-		verticalPodAutoscaler                = k.emptyVerticalPodAutoscaler()
-		hvpa                                 = k.emptyHVPA()
-		networkPolicyAllowFromShootAPIServer = k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer)
-		networkPolicyAllowToShootAPIServer   = k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer)
-		networkPolicyAllowKubeAPIServer      = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
-		secretETCDEncryptionConfiguration    = k.emptySecret(secretETCDEncryptionConfigurationNamePrefix)
-		secretOIDCCABundle                   = k.emptySecret(secretOIDCCABundleNamePrefix)
-		secretServiceAccountSigningKey       = k.emptySecret(secretServiceAccountSigningKeyNamePrefix)
-		configMapAdmission                   = k.emptyConfigMap(configMapAdmissionNamePrefix)
-		configMapAuditPolicy                 = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
-		configMapEgressSelector              = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
+		deployment                                 = k.emptyDeployment()
+		podDisruptionBudget                        = k.emptyPodDisruptionBudget()
+		horizontalPodAutoscaler                    = k.emptyHorizontalPodAutoscaler()
+		verticalPodAutoscaler                      = k.emptyVerticalPodAutoscaler()
+		hvpa                                       = k.emptyHVPA()
+		networkPolicyAllowFromShootAPIServer       = k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer)
+		networkPolicyAllowToShootAPIServer         = k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer)
+		networkPolicyAllowKubeAPIServer            = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
+		secretETCDEncryptionConfiguration          = k.emptySecret(secretETCDEncryptionConfigurationNamePrefix)
+		secretOIDCCABundle                         = k.emptySecret(secretOIDCCABundleNamePrefix)
+		secretUserProvidedServiceAccountSigningKey = k.emptySecret(secretServiceAccountSigningKeyNamePrefix)
+		configMapAdmission                         = k.emptyConfigMap(configMapAdmissionNamePrefix)
+		configMapAuditPolicy                       = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
+		configMapEgressSelector                    = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
 	)
 
 	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {
@@ -307,7 +307,12 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := k.reconcileSecretServiceAccountSigningKey(ctx, secretServiceAccountSigningKey); err != nil {
+	if err := k.reconcileSecretUserProvidedServiceAccountSigningKey(ctx, secretUserProvidedServiceAccountSigningKey); err != nil {
+		return err
+	}
+
+	secretServiceAccountKey, err := k.reconcileSecretServiceAccountKey(ctx)
+	if err != nil {
 		return err
 	}
 
@@ -341,7 +346,8 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		configMapEgressSelector,
 		secretETCDEncryptionConfiguration,
 		secretOIDCCABundle,
-		secretServiceAccountSigningKey,
+		secretUserProvidedServiceAccountSigningKey,
+		secretServiceAccountKey,
 		secretStaticToken,
 		secretBasicAuth,
 	); err != nil {
@@ -538,8 +544,6 @@ type Secrets struct {
 	KubeAPIServerToKubelet component.Secret
 	// Server is the server certificate and key for the HTTP server of kube-apiserver.
 	Server component.Secret
-	// ServiceAccountKey is key for service accounts.
-	ServiceAccountKey component.Secret
 	// VPNSeed is the client certificate for the vpn-seed to talk to the kube-apiserver.
 	// Only relevant if VPNConfig.ReversedVPNEnabled is false.
 	VPNSeed *component.Secret
@@ -566,7 +570,6 @@ func (s *Secrets) all() map[string]secret {
 		"KubeAggregator":         {Secret: &s.KubeAggregator},
 		"KubeAPIServerToKubelet": {Secret: &s.KubeAPIServerToKubelet},
 		"Server":                 {Secret: &s.Server},
-		"ServiceAccountKey":      {Secret: &s.ServiceAccountKey},
 		"VPNSeed":                {Secret: s.VPNSeed, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
 		"VPNSeedTLSAuth":         {Secret: s.VPNSeedTLSAuth, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
 		"VPNSeedServerTLSAuth":   {Secret: s.VPNSeedServerTLSAuth, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},

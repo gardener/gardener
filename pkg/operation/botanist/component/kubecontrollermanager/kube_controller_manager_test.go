@@ -97,8 +97,7 @@ var _ = Describe("KubeControllerManager", func() {
 		}
 
 		// checksums
-		secretChecksumCA                = "1234"
-		secretChecksumServiceAccountKey = "1234"
+		secretChecksumCA = "1234"
 
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
 		vpaName                          = "kube-controller-manager-vpa"
@@ -142,20 +141,12 @@ var _ = Describe("KubeControllerManager", func() {
 					kubeControllerManager.SetSecrets(Secrets{})
 					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(ContainSubstring("missing CA secret information")))
 				})
-
-				It("should return an error because the ServiceAccountKey secret information is not provided", func() {
-					kubeControllerManager.SetSecrets(Secrets{
-						CA: component.Secret{Name: "ca", Checksum: secretChecksumCA},
-					})
-					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(ContainSubstring("missing ServiceAccountKey secret information")))
-				})
 			})
 
 			Context("secret information available", func() {
 				BeforeEach(func() {
 					kubeControllerManager.SetSecrets(Secrets{
-						CA:                component.Secret{Name: "ca", Checksum: secretChecksumCA},
-						ServiceAccountKey: component.Secret{Name: "service-account-key", Checksum: secretChecksumServiceAccountKey},
+						CA: component.Secret{Name: "ca", Checksum: secretChecksumCA},
 					})
 				})
 
@@ -465,8 +456,7 @@ var _ = Describe("KubeControllerManager", func() {
 							Template: corev1.PodTemplateSpec{
 								ObjectMeta: metav1.ObjectMeta{
 									Annotations: map[string]string{
-										"checksum/secret-ca":                  secretChecksumCA,
-										"checksum/secret-service-account-key": secretChecksumServiceAccountKey,
+										"checksum/secret-ca": secretChecksumCA,
 									},
 									Labels: map[string]string{
 										"app":                                "kubernetes",
@@ -644,8 +634,7 @@ subjects:
 					)
 
 					kubeControllerManager.SetSecrets(Secrets{
-						CA:                component.Secret{Name: "ca", Checksum: secretChecksumCA},
-						ServiceAccountKey: component.Secret{Name: "service-account-key", Checksum: secretChecksumServiceAccountKey},
+						CA: component.Secret{Name: "ca", Checksum: secretChecksumCA},
 					})
 
 					kubeControllerManager.SetReplicaCount(replicas)

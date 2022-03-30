@@ -120,7 +120,8 @@ func (k *kubeAPIServer) reconcileDeployment(
 	configMapEgressSelector *corev1.ConfigMap,
 	secretETCDEncryptionConfiguration *corev1.Secret,
 	secretOIDCCABundle *corev1.Secret,
-	secretServiceAccountSigningKey *corev1.Secret,
+	secretUserProvidedServiceAccountSigningKey *corev1.Secret,
+	secretServiceAccountKey *corev1.Secret,
 	secretStaticToken *corev1.Secret,
 	secretBasicAuth *corev1.Secret,
 ) error {
@@ -345,7 +346,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameServiceAccountKey,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: k.secrets.ServiceAccountKey.Name,
+									SecretName: secretServiceAccountKey.Name,
 								},
 							},
 						},
@@ -401,7 +402,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handlePodMutatorSettings(deployment)
 		k.handleVPNSettings(deployment, configMapEgressSelector)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
-		k.handleServiceAccountSigningKeySettings(deployment, secretServiceAccountSigningKey)
+		k.handleServiceAccountSigningKeySettings(deployment, secretUserProvidedServiceAccountSigningKey)
 
 		utilruntime.Must(references.InjectAnnotations(deployment))
 		return nil

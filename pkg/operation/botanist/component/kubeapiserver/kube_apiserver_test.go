@@ -60,6 +60,7 @@ import (
 
 var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVar(&secretutils.GenerateRandomString, secretutils.FakeGenerateRandomString))
+	DeferCleanup(test.WithVar(&secretutils.GenerateKey, secretutils.FakeGenerateKey))
 	DeferCleanup(test.WithVar(&secretutils.Clock, clock.NewFakeClock(time.Time{})))
 })
 
@@ -95,8 +96,7 @@ var _ = Describe("KubeAPIServer", func() {
 		secretChecksumKubeAPIServerToKubelet = "12345"
 		secretNameServer                     = "Server-secret"
 		secretChecksumServer                 = "12345"
-		secretNameServiceAccountKey          = "ServiceAccountKey-secret"
-		secretChecksumServiceAccountKey      = "12345"
+		secretNameServiceAccountKey          = "service-account-key-c37a87f6"
 		secretNameVPNSeed                    = "VPNSeed-secret"
 		secretChecksumVPNSeed                = "12345"
 		secretNameVPNSeedTLSAuth             = "VPNSeedTLSAuth-secret"
@@ -139,7 +139,6 @@ var _ = Describe("KubeAPIServer", func() {
 			KubeAggregator:         component.Secret{Name: secretNameKubeAggregator, Checksum: secretChecksumKubeAggregator},
 			KubeAPIServerToKubelet: component.Secret{Name: secretNameKubeAPIServerToKubelet, Checksum: secretChecksumKubeAPIServerToKubelet},
 			Server:                 component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
-			ServiceAccountKey:      component.Secret{Name: secretNameServiceAccountKey, Checksum: secretChecksumServiceAccountKey},
 			VPNSeed:                &component.Secret{Name: secretNameVPNSeed, Checksum: secretChecksumVPNSeed},
 			VPNSeedTLSAuth:         &component.Secret{Name: secretNameVPNSeedTLSAuth, Checksum: secretChecksumVPNSeedTLSAuth},
 			VPNSeedServerTLSAuth:   &component.Secret{Name: secretNameVPNSeedServerTLSAuth, Checksum: secretChecksumVPNSeedServerTLSAuth},
@@ -240,9 +239,6 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("Server missing",
 					"Server", func(s *Secrets) { s.Server.Name = "" }, Values{},
-				),
-				Entry("ServiceAccountKey missing",
-					"ServiceAccountKey", func(s *Secrets) { s.ServiceAccountKey.Name = "" }, Values{},
 				),
 				Entry("ReversedVPN disabled but VPNSeed missing",
 					"VPNSeed", func(s *Secrets) { s.VPNSeed = nil }, Values{VPN: VPNConfig{ReversedVPNEnabled: false}},
@@ -1430,7 +1426,7 @@ rules:
 					deployAndRead()
 
 					Expect(deployment.Annotations).To(Equal(map[string]string{
-						"reference.resources.gardener.cloud/secret-7e9b40c7":    secretNameServiceAccountKey,
+						"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
 						"reference.resources.gardener.cloud/secret-71fba891":    secretNameCA,
 						"reference.resources.gardener.cloud/secret-91c30740":    secretNameCAEtcd,
 						"reference.resources.gardener.cloud/secret-9282d44f":    secretNameCAFrontProxy,
@@ -1479,7 +1475,6 @@ rules:
 
 					Expect(deployment.Spec.Template.Annotations).To(Equal(map[string]string{
 						"checksum/secret-" + secretNameCAEtcd:                   secretChecksumCAEtcd,
-						"checksum/secret-" + secretNameServiceAccountKey:        secretChecksumServiceAccountKey,
 						"checksum/secret-" + secretNameVPNSeedServerTLSAuth:     secretChecksumVPNSeedServerTLSAuth,
 						"checksum/secret-" + secretNameVPNSeed:                  secretChecksumVPNSeed,
 						"checksum/secret-" + secretNameCA:                       secretChecksumCA,
@@ -1490,7 +1485,7 @@ rules:
 						"checksum/secret-" + secretNameKubeAPIServerToKubelet:   secretChecksumKubeAPIServerToKubelet,
 						"checksum/secret-" + secretNameServer:                   secretChecksumServer,
 						"checksum/secret-" + secretNameVPNSeedTLSAuth:           secretChecksumVPNSeedTLSAuth,
-						"reference.resources.gardener.cloud/secret-7e9b40c7":    secretNameServiceAccountKey,
+						"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
 						"reference.resources.gardener.cloud/secret-71fba891":    secretNameCA,
 						"reference.resources.gardener.cloud/secret-91c30740":    secretNameCAEtcd,
 						"reference.resources.gardener.cloud/secret-9282d44f":    secretNameCAFrontProxy,

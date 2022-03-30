@@ -754,6 +754,49 @@ resources:
 					}))
 				})
 			})
+
+			Context("service account key", func() {
+				var (
+					oldData = map[string][]byte{"id_rsa": []byte("some-old-key")}
+					config  *secretutils.RSASecretConfig
+				)
+
+				BeforeEach(func() {
+					config = &secretutils.RSASecretConfig{
+						Name: "service-account-key",
+						Bits: 4096,
+					}
+				})
+
+				It("should generate a new key if old secret does not exist", func() {
+					By("generating secret")
+					secret, err := m.Generate(ctx, config)
+					Expect(err).NotTo(HaveOccurred())
+
+					By("verifying new key was generated")
+					Expect(secret.Data).NotTo(Equal(oldData))
+				})
+
+				It("should keep the existing key if old secret still exists", func() {
+					By("creating existing secret with old key")
+					existingSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "service-account-key",
+							Namespace: namespace,
+						},
+						Type: corev1.SecretTypeOpaque,
+						Data: oldData,
+					}
+					Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
+
+					By("generating secret")
+					secret, err := m.Generate(ctx, config)
+					Expect(err).NotTo(HaveOccurred())
+
+					By("verifying old password was kept")
+					Expect(secret.Data).To(Equal(oldData))
+				})
+			})
 		})
 	})
 })

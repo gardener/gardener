@@ -167,13 +167,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 			PasswordLength: 32,
 		},
 
-		// Secret definition for service-account-key
-		&secrets.RSASecretConfig{
-			Name:       v1beta1constants.SecretNameServiceAccountKey,
-			Bits:       4096,
-			UsedForSSH: false,
-		},
-
 		// Secret definition for etcd server
 		&secrets.CertificateSecretConfig{
 			Name: etcd.SecretNameServer,
