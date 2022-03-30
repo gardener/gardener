@@ -80,7 +80,7 @@ var _ = Describe("KubeAPIServer", func() {
 		enableAdminKubeconfig = pointer.Bool(true)
 
 		secretNameBasicAuthentication      = "kube-apiserver-basic-auth-426b1845"
-		secretNameStaticToken              = "kube-apiserver-static-token-b71daf19"
+		secretNameStaticToken              = "kube-apiserver-static-token-c069a0e6"
 		secretNameCA                       = "CA-secret"
 		secretChecksumCA                   = "12345"
 		secretNameCAEtcd                   = "CAEtcd-secret"
@@ -2003,15 +2003,72 @@ rules:
 					})
 
 					It("should not generate a kubeconfig secret for the user when EnableAdminKubeconfig is set to false", func() {
-
-						kapi = New(kubernetesInterface, namespace, sm, Values{Version: version, EnableAdminKubeconfig: pointer.Bool(false)})
-						kapi.SetSecrets(secrets)
 						deployAndRead()
 
 						secretList := &corev1.SecretList{}
 						Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
 							"name": "user-kubeconfig",
+						})).To(Succeed())
+
+						kapi = New(kubernetesInterface, namespace, sm, Values{Version: version, EnableAdminKubeconfig: pointer.Bool(false)})
+						kapi.SetSecrets(secrets)
+						Expect(kapi.Deploy(ctx)).To(Succeed())
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+						secretList = &corev1.SecretList{}
+						Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+							"name": "user-kubeconfig",
 						})).To(BeNil())
+					})
+
+					It("should generate kube-apiserver-static-token without system:cluster-admin token when EnableAdminKubeconfig is set to false", func() {
+						deployAndRead()
+
+						secret := &corev1.Secret{}
+						Expect(c.Get(ctx, kutil.Key(namespace, secretNameStaticToken), secret)).To(Succeed())
+						Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+							corev1.Volume{
+								Name: "static-token",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: secretNameStaticToken,
+									},
+								},
+							},
+						))
+
+						newSecretNameStaticToken := "kube-apiserver-static-token-53d619b2"
+
+						kapi = New(kubernetesInterface, namespace, sm, Values{Version: version, EnableAdminKubeconfig: pointer.Bool(false)})
+						kapi.SetSecrets(secrets)
+						Expect(kapi.Deploy(ctx)).To(Succeed())
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+						Expect(deployment.Spec.Template.Spec.Volumes).ToNot(ContainElements(
+							corev1.Volume{
+								Name: "static-token",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: secretNameStaticToken,
+									},
+								},
+							},
+						))
+
+						Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+							corev1.Volume{
+								Name: "static-token",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: newSecretNameStaticToken,
+									},
+								},
+							},
+						))
+
+						secret = &corev1.Secret{}
+						Expect(c.Get(ctx, kutil.Key(namespace, newSecretNameStaticToken), secret)).To(Succeed())
+						Expect(secret.Data).To(HaveKey("static_tokens.csv"))
 					})
 
 					It("should properly set the anonymous auth flag if enabled", func() {
