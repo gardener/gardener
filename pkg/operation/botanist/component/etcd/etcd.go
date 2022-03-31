@@ -31,6 +31,8 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 
 	"github.com/sirupsen/logrus"
@@ -59,12 +61,9 @@ const (
 	// Such etcds are also unsafe to evict (from the PoV of the cluster-autoscaler when trying to scale down).
 	ClassImportant Class = "important"
 
-	// SecretNameCA is the name of the secret containing the CA certificate and key for the etcd.
-	SecretNameCA = v1beta1constants.SecretNameCAETCD
-	// SecretNameServer is the name of the secret containing the server certificate and key for the etcd.
-	SecretNameServer = "etcd-server-cert"
 	// SecretNameClient is the name of the secret containing the client certificate and key for the etcd.
-	SecretNameClient = "etcd-client-tls"
+	SecretNameClient       = "etcd-client"
+	secretNamePrefixServer = "etcd-server-"
 
 	// LabelAppValue is the value of a label whose key is 'app'.
 	LabelAppValue = "etcd-statefulset"
@@ -101,12 +100,8 @@ func ServiceName(role string) string {
 type Interface interface {
 	component.DeployWaiter
 	component.MonitoringComponent
-	// ServiceDNSNames returns the service DNS names for the etcd.
-	ServiceDNSNames() []string
 	// Snapshot triggers the backup-restore sidecar to perform a full snapshot in case backup configuration is provided.
 	Snapshot(context.Context, kubernetes.PodExecutor) error
-	// SetSecrets sets the secrets.
-	SetSecrets(Secrets)
 	// SetBackupConfig sets the backup configuration.
 	SetBackupConfig(config *BackupConfig)
 	// SetHVPAConfig sets the HVPA configuration.
@@ -124,6 +119,7 @@ func New(
 	c client.Client,
 	logger logrus.FieldLogger,
 	namespace string,
+	secretsManager secretsmanager.Interface,
 	role string,
 	class Class,
 	retainReplicas bool,
@@ -141,6 +137,7 @@ func New(
 		client:                  c,
 		logger:                  etcdLog,
 		namespace:               namespace,
+		secretsManager:          secretsManager,
 		role:                    role,
 		class:                   class,
 		retainReplicas:          retainReplicas,
@@ -160,6 +157,7 @@ type etcd struct {
 	client                  client.Client
 	logger                  logrus.FieldLogger
 	namespace               string
+	secretsManager          secretsmanager.Interface
 	role                    string
 	class                   Class
 	retainReplicas          bool
@@ -168,27 +166,13 @@ type etcd struct {
 
 	etcd *druidv1alpha1.Etcd
 
-	secrets          Secrets
 	backupConfig     *BackupConfig
 	hvpaConfig       *HVPAConfig
 	ownerCheckConfig *OwnerCheckConfig
 }
 
 func (e *etcd) Deploy(ctx context.Context) error {
-	if e.secrets.CA.Name == "" || e.secrets.CA.Checksum == "" {
-		return fmt.Errorf("missing CA secret information")
-	}
-	if e.secrets.Server.Name == "" || e.secrets.Server.Checksum == "" {
-		return fmt.Errorf("missing server secret information")
-	}
-	if e.secrets.Client.Name == "" || e.secrets.Client.Checksum == "" {
-		return fmt.Errorf("missing client secret information")
-	}
-
 	var (
-		networkPolicy = e.emptyNetworkPolicy()
-		hvpa          = e.emptyHVPA()
-
 		existingEtcd *druidv1alpha1.Etcd
 		existingSts  *appsv1.StatefulSet
 	)
@@ -216,6 +200,9 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	var (
+		networkPolicy = e.emptyNetworkPolicy()
+		hvpa          = e.emptyHVPA()
+
 		replicas = e.computeReplicas(existingEtcd)
 
 		protocolTCP             = corev1.ProtocolTCP
@@ -233,11 +220,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			Policy:  &compressionPolicy,
 		}
 
-		annotations = map[string]string{
-			"checksum/secret-etcd-ca":          e.secrets.CA.Checksum,
-			"checksum/secret-etcd-server-cert": e.secrets.Server.Checksum,
-			"checksum/secret-etcd-client-tls":  e.secrets.Client.Checksum,
-		}
+		annotations         map[string]string
 		metrics             = druidv1alpha1.Basic
 		volumeClaimTemplate = e.etcd.Name
 		minAllowed          = corev1.ResourceList{
@@ -247,13 +230,39 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	)
 
 	if e.class == ClassImportant {
-		annotations["cluster-autoscaler.kubernetes.io/safe-to-evict"] = "false"
+		annotations = map[string]string{"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"}
 		metrics = druidv1alpha1.Extensive
 		volumeClaimTemplate = e.role + "-etcd"
 		minAllowed = corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("200m"),
 			corev1.ResourceMemory: resource.MustParse("700M"),
 		}
+	}
+
+	etcdCASecret, found := e.secretsManager.Get(v1beta1constants.SecretNameCAETCD)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
+	}
+
+	serverSecret, err := e.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+		Name:                        secretNamePrefixServer + e.role,
+		CommonName:                  "etcd-server",
+		DNSNames:                    e.serviceDNSNames(),
+		CertType:                    secretutils.ServerClientCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return err
+	}
+
+	clientSecret, err := e.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+		Name:                        SecretNameClient,
+		CommonName:                  "etcd-client",
+		CertType:                    secretutils.ClientCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return err
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, networkPolicy, func() error {
@@ -336,17 +345,18 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			TLS: &druidv1alpha1.TLSConfig{
 				TLSCASecretRef: druidv1alpha1.SecretReference{
 					SecretReference: corev1.SecretReference{
-						Name:      e.secrets.CA.Name,
-						Namespace: e.namespace,
+						Name:      etcdCASecret.Name,
+						Namespace: etcdCASecret.Namespace,
 					},
+					DataKey: pointer.String(secretutils.DataKeyCertificateBundle),
 				},
 				ServerTLSSecretRef: corev1.SecretReference{
-					Name:      e.secrets.Server.Name,
-					Namespace: e.namespace,
+					Name:      serverSecret.Name,
+					Namespace: serverSecret.Namespace,
 				},
 				ClientTLSSecretRef: corev1.SecretReference{
-					Name:      e.secrets.Client.Name,
-					Namespace: e.namespace,
+					Name:      clientSecret.Name,
+					Namespace: clientSecret.Namespace,
 				},
 			},
 			ServerPort:              &PortEtcdServer,
@@ -607,7 +617,7 @@ func (e *etcd) Snapshot(ctx context.Context, podExecutor kubernetes.PodExecutor)
 	return err
 }
 
-func (e *etcd) ServiceDNSNames() []string {
+func (e *etcd) serviceDNSNames() []string {
 	return append(
 		[]string{fmt.Sprintf("etcd-%s-local", e.role)},
 		kutil.DNSNamesForService(fmt.Sprintf("etcd-%s-client", e.role), e.namespace)...,
@@ -622,7 +632,6 @@ func (e *etcd) Get(ctx context.Context) (*druidv1alpha1.Etcd, error) {
 	return e.etcd, nil
 }
 
-func (e *etcd) SetSecrets(secrets Secrets)                 { e.secrets = secrets }
 func (e *etcd) SetBackupConfig(backupConfig *BackupConfig) { e.backupConfig = backupConfig }
 func (e *etcd) SetHVPAConfig(hvpaConfig *HVPAConfig)       { e.hvpaConfig = hvpaConfig }
 func (e *etcd) SetOwnerCheckConfig(ownerCheckConfig *OwnerCheckConfig) {
@@ -721,16 +730,6 @@ func (e *etcd) computeFullSnapshotSchedule(existingEtcd *druidv1alpha1.Etcd) *st
 		fullSnapshotSchedule = existingEtcd.Spec.Backup.FullSnapshotSchedule
 	}
 	return fullSnapshotSchedule
-}
-
-// Secrets is collection of secrets for the etcd.
-type Secrets struct {
-	// CA is a secret containing the CA certificate and key.
-	CA component.Secret
-	// Server is a secret containing the server certificate and key.
-	Server component.Secret
-	// Client is a secret containing the client certificate and key.
-	Client component.Secret
 }
 
 // BackupConfig contains information for configuring the backup-restore sidecar so that it takes regularly backups of

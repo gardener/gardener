@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/utils"
@@ -430,9 +429,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 
 	secrets := kubeapiserver.Secrets{
 		CA:           component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
-		CAEtcd:       component.Secret{Name: etcd.SecretNameCA, Checksum: b.LoadCheckSum(etcd.SecretNameCA)},
 		CAFrontProxy: component.Secret{Name: v1beta1constants.SecretNameCAFrontProxy, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCAFrontProxy)},
-		Etcd:         component.Secret{Name: etcd.SecretNameClient, Checksum: b.LoadCheckSum(etcd.SecretNameClient)},
 	}
 
 	if values.VPN.ReversedVPNEnabled {

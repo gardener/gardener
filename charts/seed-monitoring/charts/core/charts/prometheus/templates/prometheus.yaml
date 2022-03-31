@@ -201,7 +201,7 @@ spec:
           secretName: ca-etcd
       - name: etcd-client-tls
         secret:
-          secretName: etcd-client-tls
+          secretName: {{ .Values.secretNameEtcdClientCert }}
       # TODO(rfranzke): Delete this in a future release once all monitoring configurations of extensions have been
       #	adapted.
       - name: prometheus-client-cert

@@ -124,20 +124,6 @@ func (mr *MockInterfaceMockRecorder) ScrapeConfigs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScrapeConfigs", reflect.TypeOf((*MockInterface)(nil).ScrapeConfigs))
 }
 
-// ServiceDNSNames mocks base method.
-func (m *MockInterface) ServiceDNSNames() []string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ServiceDNSNames")
-	ret0, _ := ret[0].([]string)
-	return ret0
-}
-
-// ServiceDNSNames indicates an expected call of ServiceDNSNames.
-func (mr *MockInterfaceMockRecorder) ServiceDNSNames() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceDNSNames", reflect.TypeOf((*MockInterface)(nil).ServiceDNSNames))
-}
-
 // SetBackupConfig mocks base method.
 func (m *MockInterface) SetBackupConfig(arg0 *etcd.BackupConfig) {
 	m.ctrl.T.Helper()
@@ -172,18 +158,6 @@ func (m *MockInterface) SetOwnerCheckConfig(arg0 *etcd.OwnerCheckConfig) {
 func (mr *MockInterfaceMockRecorder) SetOwnerCheckConfig(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOwnerCheckConfig", reflect.TypeOf((*MockInterface)(nil).SetOwnerCheckConfig), arg0)
-}
-
-// SetSecrets mocks base method.
-func (m *MockInterface) SetSecrets(arg0 etcd.Secrets) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetSecrets", arg0)
-}
-
-// SetSecrets indicates an expected call of SetSecrets.
-func (mr *MockInterfaceMockRecorder) SetSecrets(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSecrets", reflect.TypeOf((*MockInterface)(nil).SetSecrets), arg0)
 }
 
 // Snapshot mocks base method.

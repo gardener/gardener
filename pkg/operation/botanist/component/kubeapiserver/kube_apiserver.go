@@ -570,12 +570,8 @@ func getLabels() map[string]string {
 type Secrets struct {
 	// CA is the cluster's certificate authority.
 	CA component.Secret
-	// CAEtcd is the certificate authority for the etcd.
-	CAEtcd component.Secret
 	// CAFrontProxy is the certificate authority for the front-proxy.
 	CAFrontProxy component.Secret
-	// Etcd is the client certificate for the kube-apiserver to talk to etcd.
-	Etcd component.Secret
 	// VPNSeed is the client certificate for the vpn-seed to talk to the kube-apiserver.
 	// Only relevant if VPNConfig.ReversedVPNEnabled is false.
 	VPNSeed *component.Secret
@@ -595,9 +591,7 @@ type secret struct {
 func (s *Secrets) all() map[string]secret {
 	return map[string]secret{
 		"CA":                   {Secret: &s.CA},
-		"CAEtcd":               {Secret: &s.CAEtcd},
 		"CAFrontProxy":         {Secret: &s.CAFrontProxy},
-		"Etcd":                 {Secret: &s.Etcd},
 		"VPNSeed":              {Secret: s.VPNSeed, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
 		"VPNSeedTLSAuth":       {Secret: s.VPNSeedTLSAuth, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
 		"VPNSeedServerTLSAuth": {Secret: s.VPNSeedServerTLSAuth, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},

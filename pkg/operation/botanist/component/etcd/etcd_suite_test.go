@@ -17,6 +17,9 @@ package etcd_test
 import (
 	"testing"
 
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/test"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -31,3 +34,7 @@ const (
 	testRole      = "test"
 	testROLE      = "Test"
 )
+
+var _ = BeforeSuite(func() {
+	DeferCleanup(test.WithVar(&secretutils.GenerateKey, secretutils.FakeGenerateKey))
+})

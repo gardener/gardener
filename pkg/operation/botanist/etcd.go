@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -56,6 +55,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		b.K8sSeedClient.Client(),
 		b.Logger,
 		b.Shoot.SeedNamespace,
+		b.SecretsManager,
 		role,
 		class,
 		b.Shoot.HibernationEnabled,
@@ -89,15 +89,6 @@ func getScaleDownUpdateMode(c etcd.Class, s *shoot.Shoot) *string {
 
 // DeployEtcd deploys the etcd main and events.
 func (b *Botanist) DeployEtcd(ctx context.Context) error {
-	secrets := etcd.Secrets{
-		CA:     component.Secret{Name: etcd.SecretNameCA, Checksum: b.LoadCheckSum(etcd.SecretNameCA)},
-		Server: component.Secret{Name: etcd.SecretNameServer, Checksum: b.LoadCheckSum(etcd.SecretNameServer)},
-		Client: component.Secret{Name: etcd.SecretNameClient, Checksum: b.LoadCheckSum(etcd.SecretNameClient)},
-	}
-
-	b.Shoot.Components.ControlPlane.EtcdMain.SetSecrets(secrets)
-	b.Shoot.Components.ControlPlane.EtcdEvents.SetSecrets(secrets)
-
 	if b.Seed.GetInfo().Spec.Backup != nil {
 		secret := &corev1.Secret{}
 		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.BackupSecretName), secret); err != nil {
@@ -131,10 +122,18 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 		}
 	}
 
-	return flow.Parallel(
+	if err := flow.Parallel(
 		b.Shoot.Components.ControlPlane.EtcdMain.Deploy,
 		b.Shoot.Components.ControlPlane.EtcdEvents.Deploy,
-	)(ctx)
+	)(ctx); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove in a future release.
+	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client-tls", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-server-cert", Namespace: b.Shoot.SeedNamespace}},
+	)
 }
 
 // WaitUntilEtcdsReady waits until both etcd-main and etcd-events are ready.
