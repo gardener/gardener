@@ -28,12 +28,6 @@ const (
 	// GrafanaUsersPrefix is a constant for a prefix used for the users Grafana instance.
 	GrafanaUsersPrefix = "gu"
 
-	// GrafanaOperatorsRole is a constant for the operators role.
-	GrafanaOperatorsRole = "operators"
-
-	// GrafanaUsersRole is a constant for the users role.
-	GrafanaUsersRole = "users"
-
 	// PrometheusPrefix is a constant for a prefix used for the Prometheus instance.
 	PrometheusPrefix = "p"
 
@@ -70,11 +64,4 @@ const (
 
 	// GardenLokiPriorityClassName is the name of the PriorityClass for the Loki in the garden namespace
 	GardenLokiPriorityClassName = "garden-loki"
-
-	// MonitoringIngressCredentials is a constant for the name of a secret containing the monitoring credentials for
-	// operators monitoring for shoots.
-	MonitoringIngressCredentials = "monitoring-ingress-credentials"
-	// MonitoringIngressCredentialsUsers is a constant for the name of a secret containing the monitoring credentials
-	// for users monitoring for shoots.
-	MonitoringIngressCredentialsUsers = "monitoring-ingress-credentials-users"
 )

@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -49,6 +48,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	secretNameIngressOperators = v1beta1constants.SecretNameObservabilityIngress
+	secretNameIngressUsers     = v1beta1constants.SecretNameObservabilityIngress + "-users"
+
+	grafanaOperatorsRole = "operators"
+	grafanaUsersRole     = "users"
+)
+
+func observabilityIngressSecretConfig(name string) *secrets.BasicAuthSecretConfig {
+	return &secrets.BasicAuthSecretConfig{
+		Name:           name,
+		Format:         secrets.BasicAuthFormatNormal,
+		Username:       "admin",
+		PasswordLength: 32,
+	}
+}
+
 // DeploySeedMonitoring installs the Helm release "seed-monitoring" in the Seed clusters. It comprises components
 // to monitor the Shoot cluster whose control plane runs in the Seed cluster.
 func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
@@ -56,13 +72,19 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return b.DeleteSeedMonitoring(ctx)
 	}
 
+	credentialsSecret, found := b.SecretsManager.Get(secretNameIngressOperators)
+	if !found {
+		return fmt.Errorf("secret %q not found", secretNameIngressOperators)
+	}
+
+	credentialsUsersSecret, found := b.SecretsManager.Get(secretNameIngressUsers)
+	if !found {
+		return fmt.Errorf("secret %q not found", secretNameIngressUsers)
+	}
+
 	var (
-		credentials      = b.LoadSecret(common.MonitoringIngressCredentials)
-		credentialsUsers = b.LoadSecret(common.MonitoringIngressCredentialsUsers)
-		basicAuth        = utils.CreateSHA1Secret(credentials.Data[secrets.DataKeyUserName], credentials.Data[secrets.DataKeyPassword])
-		basicAuthUsers   = utils.CreateSHA1Secret(credentialsUsers.Data[secrets.DataKeyUserName], credentialsUsers.Data[secrets.DataKeyPassword])
-		alertingRules    = strings.Builder{}
-		scrapeConfigs    = strings.Builder{}
+		alertingRules = strings.Builder{}
+		scrapeConfigs = strings.Builder{}
 	)
 
 	// Fetch component-specific monitoring configuration
@@ -196,8 +218,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				"enabled": b.Shoot.ReversedVPNEnabled,
 			},
 			"ingress": map[string]interface{}{
-				"class":           ingressClass,
-				"basicAuthSecret": basicAuth,
+				"class":          ingressClass,
+				"authSecretName": credentialsSecret.Name,
 				"hosts": []map[string]interface{}{
 					{
 						"hostName":   b.ComputePrometheusHost(),
@@ -328,7 +350,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		"kube-state-metrics-shoot": kubeStateMetricsShoot,
 	}
 
-	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-monitoring", "charts", "core"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(coreValues)); err != nil {
+	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "core"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(coreValues)); err != nil {
 		return err
 	}
 
@@ -388,8 +410,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 		alertManagerValues, err := b.InjectSeedShootImages(map[string]interface{}{
 			"ingress": map[string]interface{}{
-				"class":           ingressClass,
-				"basicAuthSecret": basicAuthUsers,
+				"class":          ingressClass,
+				"authSecretName": credentialsUsersSecret.Name,
 				"hosts": []map[string]interface{}{
 					{
 						"hostName":   b.ComputeAlertManagerHost(),
@@ -404,7 +426,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-monitoring", "charts", "alertmanager"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(alertManagerValues)); err != nil {
+		if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "alertmanager"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(alertManagerValues)); err != nil {
 			return err
 		}
 	} else {
@@ -415,6 +437,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
 		// TODO(rfranzke): Remove in a future release.
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-basic-auth", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-basic-auth", Namespace: b.Shoot.SeedNamespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics", Namespace: b.Shoot.SeedNamespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "alertmanager-tls", Namespace: b.Shoot.SeedNamespace}},
 	)
@@ -426,11 +450,17 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		return b.DeleteGrafana(ctx)
 	}
 
+	credentialsSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngressOperators), secretsmanager.Persist())
+	if err != nil {
+		return err
+	}
+
+	credentialsUsersSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngressUsers), secretsmanager.Persist())
+	if err != nil {
+		return err
+	}
+
 	var (
-		credentials         = b.LoadSecret(common.MonitoringIngressCredentials)
-		credentialsUsers    = b.LoadSecret(common.MonitoringIngressCredentialsUsers)
-		basicAuth           = utils.CreateSHA1Secret(credentials.Data[secrets.DataKeyUserName], credentials.Data[secrets.DataKeyPassword])
-		basicAuthUsers      = utils.CreateSHA1Secret(credentialsUsers.Data[secrets.DataKeyUserName], credentialsUsers.Data[secrets.DataKeyPassword])
 		operatorsDashboards = strings.Builder{}
 		usersDashboards     = strings.Builder{}
 	)
@@ -474,11 +504,21 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		ingressTLSSecretName = ingressTLSSecret.Name
 	}
 
-	if err := b.deployGrafanaCharts(ctx, common.GrafanaOperatorsRole, operatorsDashboards.String(), basicAuth, common.GrafanaOperatorsPrefix, ingressTLSSecretName); err != nil {
+	if err := b.deployGrafanaCharts(ctx, credentialsSecret, grafanaOperatorsRole, operatorsDashboards.String(), common.GrafanaOperatorsPrefix, ingressTLSSecretName); err != nil {
 		return err
 	}
 
-	return b.deployGrafanaCharts(ctx, common.GrafanaUsersRole, usersDashboards.String(), basicAuthUsers, common.GrafanaUsersPrefix, ingressTLSSecretName)
+	if err := b.deployGrafanaCharts(ctx, credentialsUsersSecret, grafanaUsersRole, usersDashboards.String(), common.GrafanaUsersPrefix, ingressTLSSecretName); err != nil {
+		return err
+	}
+
+	return b.syncShootCredentialToGarden(
+		ctx,
+		gutil.ShootProjectSecretSuffixMonitoring,
+		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring},
+		map[string]string{"url": "https://" + b.ComputeGrafanaUsersHost()},
+		credentialsUsersSecret.Data,
+	)
 }
 
 func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretKeys []string) (map[string]interface{}, error) {
@@ -558,7 +598,7 @@ func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretK
 	return configs, nil
 }
 
-func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, basicAuth, subDomain, ingressTLSSecretName string) error {
+func (b *Botanist) deployGrafanaCharts(ctx context.Context, credentialsSecret *corev1.Secret, role, dashboards, subDomain, ingressTLSSecretName string) error {
 	ingressClass, err := seed.ComputeNginxIngressClass(b.Seed, b.Seed.GetInfo().Status.KubernetesVersion)
 	if err != nil {
 		return err
@@ -566,8 +606,8 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 
 	values, err := b.InjectSeedShootImages(map[string]interface{}{
 		"ingress": map[string]interface{}{
-			"class":           ingressClass,
-			"basicAuthSecret": basicAuth,
+			"class":          ingressClass,
+			"authSecretName": credentialsSecret.Name,
 			"hosts": []map[string]interface{}{
 				{
 					"hostName":   b.ComputeIngressHost(subDomain),
@@ -592,21 +632,27 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 		return err
 	}
 
-	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-monitoring", "charts", "grafana"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(values)); err != nil {
+	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(ChartsPath, "seed-monitoring", "charts", "grafana"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(values)); err != nil {
 		return err
 	}
 
 	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObject(ctx, b.K8sSeedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-tls"}})
+	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-tls"}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "monitoring-ingress-credentials", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "monitoring-ingress-credentials-users", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "grafana-users-basic-auth", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "grafana-operators-basic-auth", Namespace: b.Shoot.SeedNamespace}},
+	)
 }
 
 // DeleteGrafana will delete all grafana instances from the seed cluster.
 func (b *Botanist) DeleteGrafana(ctx context.Context) error {
-	if err := common.DeleteGrafanaByRole(ctx, b.K8sSeedClient, b.Shoot.SeedNamespace, common.GrafanaOperatorsRole); err != nil {
+	if err := common.DeleteGrafanaByRole(ctx, b.K8sSeedClient, b.Shoot.SeedNamespace, grafanaOperatorsRole); err != nil {
 		return err
 	}
 
-	return common.DeleteGrafanaByRole(ctx, b.K8sSeedClient, b.Shoot.SeedNamespace, common.GrafanaUsersRole)
+	return common.DeleteGrafanaByRole(ctx, b.K8sSeedClient, b.Shoot.SeedNamespace, grafanaUsersRole)
 }
 
 // DeleteSeedMonitoring will delete the monitoring stack from the Seed cluster to avoid phantom alerts

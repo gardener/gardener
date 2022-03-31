@@ -359,23 +359,28 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	if monitoringSecrets := common.GetSecretKeysWithPrefix(v1beta1constants.GardenRoleGlobalMonitoring, secrets); len(monitoringSecrets) > 0 {
-		for _, key := range monitoringSecrets {
-			secret := secrets[key]
-			secretObj := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("%s-%s", "seed", secret.Name),
-					Namespace: "garden",
-				},
+	// replicate global monitoring secret (read from garden cluster) to the seed cluster's garden namespace
+	var globalMonitoringSecretSeed *corev1.Secret
+	if globalMonitoringSecretGarden, ok := secrets[v1beta1constants.GardenRoleGlobalMonitoring]; ok {
+		globalMonitoringSecretSeed = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "seed-" + globalMonitoringSecretGarden.Name,
+				Namespace: v1beta1constants.GardenNamespace,
+			},
+		}
+
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, globalMonitoringSecretSeed, func() error {
+			globalMonitoringSecretSeed.Type = globalMonitoringSecretGarden.Type
+			globalMonitoringSecretSeed.Data = globalMonitoringSecretGarden.Data
+			globalMonitoringSecretSeed.Immutable = globalMonitoringSecretGarden.Immutable
+
+			if _, ok := globalMonitoringSecretSeed.Data[secretutils.DataKeySHA1Auth]; !ok {
+				globalMonitoringSecretSeed.Data[secretutils.DataKeySHA1Auth] = utils.CreateSHA1Secret(globalMonitoringSecretGarden.Data[secretutils.DataKeyUserName], globalMonitoringSecretGarden.Data[secretutils.DataKeyPassword])
 			}
 
-			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, secretObj, func() error {
-				secretObj.Type = corev1.SecretTypeOpaque
-				secretObj.Data = secret.Data
-				return nil
-			}); err != nil {
-				return err
-			}
+			return nil
+		}); err != nil {
+			return err
 		}
 	}
 
@@ -715,26 +720,17 @@ func RunReconcileSeedFlow(
 		"storage": seed.GetValidVolumeSize("1Gi"),
 	}
 
-	alertingSMTPKeys := common.GetSecretKeysWithPrefix(v1beta1constants.GardenRoleAlerting, secrets)
-
-	if seedWantsAlertmanager(alertingSMTPKeys, secrets) {
-		emailConfigs := make([]map[string]interface{}, 0, len(alertingSMTPKeys))
-		for _, key := range alertingSMTPKeys {
-			if string(secrets[key].Data["auth_type"]) == "smtp" {
-				secret := secrets[key]
-				emailConfigs = append(emailConfigs, map[string]interface{}{
-					"to":            string(secret.Data["to"]),
-					"from":          string(secret.Data["from"]),
-					"smarthost":     string(secret.Data["smarthost"]),
-					"auth_username": string(secret.Data["auth_username"]),
-					"auth_identity": string(secret.Data["auth_identity"]),
-					"auth_password": string(secret.Data["auth_password"]),
-				})
-				alertManagerConfig["enabled"] = true
-				alertManagerConfig["emailConfigs"] = emailConfigs
-				break
-			}
+	if alertingSMTPSecret, ok := secrets[v1beta1constants.GardenRoleAlerting]; ok && string(alertingSMTPSecret.Data["auth_type"]) == "smtp" {
+		emailConfig := map[string]interface{}{
+			"to":            string(alertingSMTPSecret.Data["to"]),
+			"from":          string(alertingSMTPSecret.Data["from"]),
+			"smarthost":     string(alertingSMTPSecret.Data["smarthost"]),
+			"auth_username": string(alertingSMTPSecret.Data["auth_username"]),
+			"auth_identity": string(alertingSMTPSecret.Data["auth_identity"]),
+			"auth_password": string(alertingSMTPSecret.Data["auth_password"]),
 		}
+		alertManagerConfig["enabled"] = true
+		alertManagerConfig["emailConfigs"] = []map[string]interface{}{emailConfig}
 	} else {
 		alertManagerConfig["enabled"] = false
 		if err := common.DeleteAlertmanager(ctx, seedClient, v1beta1constants.GardenNamespace); err != nil {
@@ -754,17 +750,12 @@ func RunReconcileSeedFlow(
 			// Apply status from old Object to retain status information
 			new.Object["status"] = old.Object["status"]
 		}
-		hvpaGK                = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "Hvpa"}
-		issuerGK              = schema.GroupKind{Group: "certmanager.k8s.io", Kind: "ClusterIssuer"}
-		grafanaHost           = seed.GetIngressFQDN(grafanaPrefix)
-		prometheusHost        = seed.GetIngressFQDN(prometheusPrefix)
-		monitoringCredentials = existingSecretsMap["seed-monitoring-ingress-credentials"]
-		monitoringBasicAuth   string
+		hvpaGK         = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "Hvpa"}
+		issuerGK       = schema.GroupKind{Group: "certmanager.k8s.io", Kind: "ClusterIssuer"}
+		grafanaHost    = seed.GetIngressFQDN(grafanaPrefix)
+		prometheusHost = seed.GetIngressFQDN(prometheusPrefix)
 	)
 
-	if monitoringCredentials != nil {
-		monitoringBasicAuth = utils.CreateSHA1Secret(monitoringCredentials.Data[secretutils.DataKeyUserName], monitoringCredentials.Data[secretutils.DataKeyPassword])
-	}
 	applierOptions[vpaGK] = retainStatusInformation
 	applierOptions[hvpaGK] = retainStatusInformation
 	applierOptions[issuerGK] = retainStatusInformation
@@ -1016,7 +1007,7 @@ func RunReconcileSeedFlow(
 			"enabled": gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio),
 		},
 		"ingress": map[string]interface{}{
-			"basicAuthSecret": monitoringBasicAuth,
+			"authSecretName": globalMonitoringSecretSeed.Name,
 		},
 	})
 
@@ -1026,13 +1017,9 @@ func RunReconcileSeedFlow(
 
 	// TODO(rfranzke): Remove in a future release.
 	if err := kutil.DeleteObjects(ctx, seedClient,
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "fluent-bit-config"}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "loki-config"}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "telegraf-config"}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "nginx-ingress-controller"}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "grafana-dashboard-providers"}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "grafana-datasources"}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "grafana-dashboards"}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "seed-monitoring-ingress-credentials", Namespace: v1beta1constants.GardenNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "grafana-basic-auth", Namespace: v1beta1constants.GardenNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-basic-auth", Namespace: v1beta1constants.GardenNamespace}},
 	); err != nil {
 		return err
 	}
@@ -1487,15 +1474,6 @@ func (s *Seed) GetValidVolumeSize(size string) string {
 	}
 
 	return size
-}
-
-func seedWantsAlertmanager(keys []string, secrets map[string]*corev1.Secret) bool {
-	for _, key := range keys {
-		if string(secrets[key].Data["auth_type"]) == "smtp" {
-			return true
-		}
-	}
-	return false
 }
 
 // GetWildcardCertificate gets the wildcard certificate for the seed's ingress domain.

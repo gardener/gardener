@@ -26,25 +26,7 @@ import (
 // each containing their specific configuration for the creation of certificates (server/client), RSA key pairs, basic
 // authentication credentials, etc.
 func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error) {
-	secretList := []secrets.ConfigInterface{
-		// Secret definition for monitoring
-		&secrets.BasicAuthSecretConfig{
-			Name:   common.MonitoringIngressCredentials,
-			Format: secrets.BasicAuthFormatNormal,
-
-			Username:       "admin",
-			PasswordLength: 32,
-		},
-
-		// Secret definition for monitoring for shoot owners
-		&secrets.BasicAuthSecretConfig{
-			Name:   common.MonitoringIngressCredentialsUsers,
-			Format: secrets.BasicAuthFormatNormal,
-
-			Username:       "admin",
-			PasswordLength: 32,
-		},
-	}
+	var secretList []secrets.ConfigInterface
 
 	if b.Shoot.WantsVerticalPodAutoscaler {
 		var (
