@@ -17,7 +17,6 @@ package dependencywatchdog_test
 import (
 	"context"
 	"fmt"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -25,8 +24,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -471,6 +471,9 @@ status: {}
 			role                = Role("some-role")
 			managedResourceName = fmt.Sprintf("dependency-watchdog-%s", role)
 			managedResource     *resourcesv1alpha1.ManagedResource
+
+			fakeOps   *retryfake.Ops
+			resetVars func()
 		)
 
 		BeforeEach(func() {
@@ -481,6 +484,16 @@ status: {}
 					Namespace: namespace,
 				},
 			}
+
+			fakeOps = &retryfake.Ops{MaxAttempts: 1}
+			resetVars = test.WithVars(
+				&retry.Until, fakeOps.Until,
+				&retry.UntilTimeout, fakeOps.UntilTimeout,
+			)
+		})
+
+		AfterEach(func() {
+			resetVars()
 		})
 
 		Describe("#Wait", func() {
@@ -489,9 +502,7 @@ status: {}
 			})
 
 			It("should fail because the ManagedResource doesn't become healthy", func() {
-				oldTimeout := TimeoutWaitForManagedResource
-				defer func() { TimeoutWaitForManagedResource = oldTimeout }()
-				TimeoutWaitForManagedResource = time.Millisecond
+				fakeOps.MaxAttempts = 2
 
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
@@ -518,9 +529,7 @@ status: {}
 			})
 
 			It("should successfully wait for the managed resource to become healthy", func() {
-				oldTimeout := TimeoutWaitForManagedResource
-				defer func() { TimeoutWaitForManagedResource = oldTimeout }()
-				TimeoutWaitForManagedResource = time.Millisecond
+				fakeOps.MaxAttempts = 2
 
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
@@ -548,42 +557,15 @@ status: {}
 		})
 
 		Describe("#WaitCleanup", func() {
-			timeNowFunc := func() time.Time { return time.Time{} }
-
 			It("should fail when the wait for the managed resource deletion times out", func() {
-				oldTimeNow := gutil.TimeNow
-				defer func() { gutil.TimeNow = oldTimeNow }()
-				gutil.TimeNow = timeNowFunc
-
-				oldTimeout := TimeoutWaitForManagedResource
-				defer func() { TimeoutWaitForManagedResource = oldTimeout }()
-				TimeoutWaitForManagedResource = time.Millisecond
+				fakeOps.MaxAttempts = 2
 
 				Expect(c.Create(ctx, managedResource)).To(Succeed())
 
 				Expect(dwd.WaitCleanup(ctx)).To(MatchError(ContainSubstring("still exists")))
 			})
 
-			It("should successfully wait for the deletion", func() {
-				oldTimeNow := gutil.TimeNow
-				defer func() { gutil.TimeNow = oldTimeNow }()
-				gutil.TimeNow = timeNowFunc
-
-				oldTimeout := TimeoutWaitForManagedResource
-				defer func() { TimeoutWaitForManagedResource = oldTimeout }()
-				TimeoutWaitForManagedResource = time.Second
-
-				interval := time.Millisecond
-				oldIntervalWait := managedresources.IntervalWait
-				defer func() { managedresources.IntervalWait = oldIntervalWait }()
-				managedresources.IntervalWait = interval
-
-				go func() {
-					Expect(c.Create(ctx, managedResource)).To(Succeed())
-					time.Sleep(10 * interval)
-					Expect(c.Delete(ctx, managedResource)).To(Succeed())
-				}()
-
+			It("should not return an error when it's already removed", func() {
 				Expect(dwd.WaitCleanup(ctx)).To(Succeed())
 			})
 		})
