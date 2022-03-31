@@ -86,12 +86,11 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 		AfterEach(func() {
 			Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
-			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)
-			}, time.Minute, 5*time.Second).Should(BeNotFoundError())
-			Eventually(func() error {
-				return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
-			}, time.Minute, 5*time.Second).Should(BeNotFoundError())
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(BeNotFoundError())
+			}, time.Minute, 5*time.Second).Should(Succeed())
+
 			Expect(testClient.Delete(ctx, secretForManagedResource)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
@@ -104,20 +103,20 @@ var _ = Describe("ManagedResource controller tests", func() {
 					return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
 				}, time.Minute, time.Second).Should(Succeed())
 
-				Eventually(func() bool {
-					err := testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)
+				Eventually(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return err == nil && condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
+					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
 				}, time.Minute, time.Second).Should(BeTrue())
 			})
 
 			It("should fail to create the resource due to missing secret reference", func() {
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
-				Eventually(func() bool {
-					err := testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)
+				Eventually(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return err == nil && condition != nil && condition.Status == gardencorev1beta1.ConditionFalse && condition.Reason == "CannotReadSecret"
+					return condition != nil && condition.Status == gardencorev1beta1.ConditionFalse && condition.Reason == "CannotReadSecret"
 				}, 30*time.Second, time.Second).Should(BeTrue())
 			})
 
@@ -131,10 +130,10 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
-				Eventually(func() bool {
-					err := testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)
+				Eventually(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return err == nil && condition != nil && condition.Status == gardencorev1beta1.ConditionFalse
+					return condition != nil && condition.Status == gardencorev1beta1.ConditionFalse
 				}, 30*time.Second, time.Second).Should(BeTrue())
 			})
 		})
@@ -172,10 +171,10 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
-				Eventually(func() bool {
-					err := testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)
+				Eventually(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return err == nil && condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
+					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
 				}, time.Minute, time.Second).Should(BeTrue())
 			})
 
@@ -185,18 +184,15 @@ var _ = Describe("ManagedResource controller tests", func() {
 				updatedSecretForManagedResource.Data[newResourceDataKey] = newResourceData
 				Expect(testClient.Update(ctx, updatedSecretForManagedResource)).To(Succeed())
 
-				Eventually(func() error {
-					err := testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
-					if err != nil {
-						return err
-					}
-					return testClient.Get(ctx, client.ObjectKeyFromObject(newResource), newResource)
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(newResource), newResource)).To(Succeed())
 				}, time.Minute, 5*time.Second).Should(Succeed())
 
-				Eventually(func() bool {
-					err := testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)
+				Eventually(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return err == nil && condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
+					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
 				}, time.Minute, time.Second).Should(BeTrue())
 			})
 
@@ -229,18 +225,15 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Expect(testClient.Create(ctx, newSecretForManagedResource)).To(Succeed())
 				Expect(testClient.Update(ctx, managedResource)).To(Succeed())
 
-				Eventually(func() error {
-					err := testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
-					if err != nil {
-						return err
-					}
-					return testClient.Get(ctx, client.ObjectKeyFromObject(newConfigMap), newConfigMap)
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(newConfigMap), newConfigMap)).To(Succeed())
 				}, time.Minute, 5*time.Second).Should(Succeed())
 
-				Eventually(func() bool {
-					err := testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)
+				Eventually(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return err == nil && condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
+					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
 				}, time.Minute, time.Second).Should(BeTrue())
 			})
 
@@ -253,10 +246,10 @@ var _ = Describe("ManagedResource controller tests", func() {
 				secretForManagedResource.Data[newResourceDataKey] = newResourceData
 				Expect(testClient.Update(ctx, secretForManagedResource)).To(Succeed())
 
-				Eventually(func() bool {
-					err := testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)
+				Eventually(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return err == nil && condition != nil && condition.Status == gardencorev1beta1.ConditionFalse
+					return condition != nil && condition.Status == gardencorev1beta1.ConditionFalse
 				}, time.Minute, time.Second).Should(BeTrue())
 			})
 		})
@@ -268,7 +261,5 @@ func createSecretDataFromObject(obj runtime.Object, key string) (map[string][]by
 	if err != nil {
 		return nil, err
 	}
-	data := make(map[string][]byte)
-	data[key] = jsonObject
-	return data, nil
+	return map[string][]byte{key: jsonObject}, nil
 }
