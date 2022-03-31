@@ -19,6 +19,7 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -41,14 +42,15 @@ var _ = Describe("Resource Manager", func() {
 	})
 
 	Context("Secrets", func() {
+		var (
+			name        = "foo"
+			namespace   = "bar"
+			labels      = map[string]string{"boo": "goo"}
+			annotations = map[string]string{"a": "b"}
+		)
+
 		It("should correctly create a managed secret", func() {
-			var (
-				name        = "foo"
-				namespace   = "bar"
-				labels      = map[string]string{"boo": "goo"}
-				annotations = map[string]string{"a": "b"}
-				data        = map[string][]byte{"foo": []byte("bar")}
-			)
+			data := map[string][]byte{"foo": []byte("bar")}
 
 			Expect(
 				NewSecret(fakeClient).
@@ -78,16 +80,60 @@ var _ = Describe("Resource Manager", func() {
 				Data: data,
 			}))
 		})
+
+		It("should remove existing annotations or labels", func() {
+			var (
+				existingLabels      = map[string]string{"existing": "label"}
+				existingAnnotations = map[string]string{"existing": "annotation"}
+			)
+
+			mr := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        name,
+					Namespace:   namespace,
+					Labels:      existingLabels,
+					Annotations: existingAnnotations,
+				},
+			}
+			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
+
+			Expect(
+				NewSecret(fakeClient).
+					WithNamespacedName(namespace, name).
+					WithLabels(labels).
+					WithAnnotations(annotations).
+					Reconcile(ctx),
+			).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, kutil.Key(namespace, name), mr)).To(Succeed())
+
+			Expect(mr).To(Equal(&corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Secret",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            name,
+					Namespace:       namespace,
+					Labels:          labels,
+					Annotations:     annotations,
+					ResourceVersion: "2",
+				},
+				Type: corev1.SecretTypeOpaque,
+			}))
+		})
 	})
 
 	Context("ManagedResources", func() {
+		var (
+			name        = "foo"
+			namespace   = "bar"
+			labels      = map[string]string{"boo": "goo"}
+			annotations = map[string]string{"a": "b"}
+		)
+
 		It("should correctly create a managed resource", func() {
 			var (
-				name        = "foo"
-				namespace   = "bar"
-				labels      = map[string]string{"boo": "goo"}
-				annotations = map[string]string{"a": "b"}
-
 				resourceClass = "shoot"
 				secretRefs    = []corev1.LocalObjectReference{
 					{Name: "test1"},
@@ -142,6 +188,47 @@ var _ = Describe("Resource Manager", func() {
 					ForceOverwriteLabels:         pointer.Bool(forceOverwriteLabels),
 					KeepObjects:                  pointer.Bool(keepObjects),
 					DeletePersistentVolumeClaims: pointer.Bool(deletePersistentVolumeClaims),
+				},
+			}))
+		})
+
+		It("should keep existing annotations or labels", func() {
+			var (
+				existingLabels      = map[string]string{"existing": "label"}
+				existingAnnotations = map[string]string{"existing": "annotation"}
+			)
+
+			mr := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        name,
+					Namespace:   namespace,
+					Labels:      existingLabels,
+					Annotations: existingAnnotations,
+				},
+			}
+			Expect(fakeClient.Create(ctx, mr)).To(Succeed())
+
+			Expect(
+				NewManagedResource(fakeClient).
+					WithNamespacedName(namespace, name).
+					WithLabels(labels).
+					WithAnnotations(annotations).
+					Reconcile(ctx),
+			).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, kutil.Key(namespace, name), mr)).To(Succeed())
+
+			Expect(mr).To(Equal(&resourcesv1alpha1.ManagedResource{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "resources.gardener.cloud/v1alpha1",
+					Kind:       "ManagedResource",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            name,
+					Namespace:       namespace,
+					Labels:          utils.MergeStringMaps(existingLabels, labels),
+					Annotations:     utils.MergeStringMaps(existingAnnotations, annotations),
+					ResourceVersion: "2",
 				},
 			}))
 		})

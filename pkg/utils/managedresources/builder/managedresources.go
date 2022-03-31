@@ -29,6 +29,8 @@ import (
 type ManagedResource struct {
 	client   client.Client
 	resource *resourcesv1alpha1.ManagedResource
+
+	labels, annotations map[string]string
 }
 
 // NewManagedResource creates a new builder for a ManagedResource.
@@ -48,13 +50,13 @@ func (m *ManagedResource) WithNamespacedName(namespace, name string) *ManagedRes
 
 // WithLabels sets the labels.
 func (m *ManagedResource) WithLabels(labels map[string]string) *ManagedResource {
-	m.resource.Labels = labels
+	m.labels = labels
 	return m
 }
 
 // WithAnnotations sets the annotations.
 func (m *ManagedResource) WithAnnotations(annotations map[string]string) *ManagedResource {
-	m.resource.Annotations = annotations
+	m.annotations = annotations
 	return m
 }
 
@@ -117,8 +119,14 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 	}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, m.client, resource, func() error {
-		resource.Labels = m.resource.Labels
-		resource.Annotations = m.resource.Annotations
+		for k, v := range m.labels {
+			metav1.SetMetaDataLabel(&resource.ObjectMeta, k, v)
+		}
+
+		for k, v := range m.annotations {
+			metav1.SetMetaDataAnnotation(&resource.ObjectMeta, k, v)
+		}
+
 		resource.Spec = m.resource.Spec
 		return nil
 	})
