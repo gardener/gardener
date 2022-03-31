@@ -28,7 +28,7 @@ var _ = Describe("Monitoring", func() {
 	var component component.MonitoringComponent
 
 	BeforeEach(func() {
-		component = New(nil, "", Values{})
+		component = New(nil, "", nil, Values{})
 	})
 
 	It("should successfully test the alerting rules", func() {

@@ -28,8 +28,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shootsecrets"
 	"github.com/gardener/gardener/pkg/utils"
@@ -337,41 +335,17 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			"alertmanager-tls",
 			"grafana-tls",
 			"gardener-resource-manager-server",
+			"vpn-shoot",
+			"vpn-shoot-client",
+			"vpn-seed-server-tlsauth",
+			"vpn-seed",
+			"vpn-seed-tlsauth",
+			"vpn-seed-server",
 		} {
 			gardenerResourceDataList.Delete(name)
 		}
 
 		if b.Shoot.GetInfo().DeletionTimestamp == nil {
-			if b.Shoot.ReversedVPNEnabled {
-				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList,
-					kubeapiserver.SecretNameVPNSeed,
-					kubeapiserver.SecretNameVPNSeedTLSAuth,
-					vpnshoot.SecretNameVPNShoot,
-				); err != nil {
-					return err
-				}
-
-				// Delete existing VPN-related secrets which were not signed with the newly introduced ca-vpn so that
-				// they get regenerated.
-				// TODO(rfranzke): Remove in a future version.
-				if gardenerResourceDataList.Get(v1beta1constants.SecretNameCAVPN) == nil {
-					if err := b.cleanupSecrets(ctx, &gardenerResourceDataList,
-						vpnseedserver.DeploymentName,
-						vpnshoot.SecretNameVPNShootClient,
-					); err != nil {
-						return err
-					}
-				}
-			} else {
-				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList,
-					vpnseedserver.DeploymentName,
-					vpnshoot.SecretNameVPNShootClient,
-					vpnseedserver.VpnSeedServerTLSAuth,
-				); err != nil {
-					return err
-				}
-			}
-
 			if !gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(b.Seed.GetInfo().Spec.Settings) {
 				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList, kubeapiserver.DependencyWatchdogInternalProbeSecretName, kubeapiserver.DependencyWatchdogExternalProbeSecretName); err != nil {
 					return err

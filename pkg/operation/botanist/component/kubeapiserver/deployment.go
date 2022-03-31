@@ -38,10 +38,11 @@ import (
 )
 
 const (
-	// SecretNameVPNSeed is the name of the secret containing the certificates for the vpn-seed.
-	SecretNameVPNSeed = "vpn-seed"
+	// SecretNameServer is the name of the secret for the kube-apiserver server certificates.
+	SecretNameServer = "kube-apiserver"
 	// SecretNameVPNSeedTLSAuth is the name of the secret containing the TLS auth for the vpn-seed.
 	SecretNameVPNSeedTLSAuth = "vpn-seed-tlsauth"
+	secretNameLegacyVPNSeed  = "vpn-seed"
 
 	secretNameServer                 = "kube-apiserver"
 	secretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"
@@ -126,6 +127,8 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretKubeletClient *corev1.Secret,
 	secretKubeAggregator *corev1.Secret,
 	secretHTTPProxy *corev1.Secret,
+	secretLegacyVPNSeed *corev1.Secret,
+	secretLegacyVPNSeedTLSAuth *corev1.Secret,
 ) error {
 	var (
 		maxSurge       = intstr.FromString("25%")
@@ -417,7 +420,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleHostCertVolumes(deployment)
 		k.handleSNISettings(deployment)
 		k.handlePodMutatorSettings(deployment)
-		k.handleVPNSettings(deployment, configMapEgressSelector, vpnCASecret, secretHTTPProxy)
+		k.handleVPNSettings(deployment, configMapEgressSelector, vpnCASecret, secretHTTPProxy, secretLegacyVPNSeed, secretLegacyVPNSeedTLSAuth)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment, secretUserProvidedServiceAccountSigningKey)
 
@@ -669,6 +672,8 @@ func (k *kubeAPIServer) handleVPNSettings(
 	configMapEgressSelector *corev1.ConfigMap,
 	vpnCASecret *corev1.Secret,
 	secretHTTPProxy *corev1.Secret,
+	secretLegacyVPNSeed *corev1.Secret,
+	secretLegacyVPNSeedTLSAuth *corev1.Secret,
 ) {
 	if !k.values.VPN.ReversedVPNEnabled {
 		deployment.Spec.Template.Spec.InitContainers = []corev1.Container{{
@@ -776,13 +781,13 @@ func (k *kubeAPIServer) handleVPNSettings(
 			{
 				Name: volumeNameVPNSeed,
 				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{SecretName: k.secrets.VPNSeed.Name},
+					Secret: &corev1.SecretVolumeSource{SecretName: secretLegacyVPNSeed.Name},
 				},
 			},
 			{
 				Name: volumeNameVPNSeedTLSAuth,
 				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{SecretName: k.secrets.VPNSeedTLSAuth.Name},
+					Secret: &corev1.SecretVolumeSource{SecretName: secretLegacyVPNSeedTLSAuth.Name},
 				},
 			},
 		}...)

@@ -1074,20 +1074,6 @@ var _ = Describe("KubeAPIServer", func() {
 
 				Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
 			},
-
-			Entry("reversed vpn disabled",
-				kubeapiserver.Values{VPN: kubeapiserver.VPNConfig{ReversedVPNEnabled: false}},
-				func(s *kubeapiserver.Secrets) {
-					s.VPNSeed = &component.Secret{Name: "vpn-seed", Checksum: botanist.LoadCheckSum("vpn-seed")}
-					s.VPNSeedTLSAuth = &component.Secret{Name: "vpn-seed-tlsauth", Checksum: botanist.LoadCheckSum("vpn-seed-tlsauth")}
-				},
-			),
-			Entry("reversed vpn enabled",
-				kubeapiserver.Values{VPN: kubeapiserver.VPNConfig{ReversedVPNEnabled: true}},
-				func(s *kubeapiserver.Secrets) {
-					s.VPNSeedServerTLSAuth = &component.Secret{Name: "vpn-seed-server-tlsauth", Checksum: botanist.LoadCheckSum("vpn-seed-server-tlsauth")}
-				},
-			),
 		)
 
 		Describe("ExternalHostname", func() {

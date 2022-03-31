@@ -89,7 +89,7 @@ func (s *VPNTLSAuthConfig) generateKey() (key []byte, err error) {
 	if s.VPNTLSAuthKeyGenerator != nil {
 		key, err = s.VPNTLSAuthKeyGenerator()
 	} else {
-		key, err = generateKeyDefault()
+		key, err = GenerateVPNKey()
 	}
 	return
 }
@@ -102,7 +102,7 @@ func (v *VPNTLSAuth) SecretData() map[string][]byte {
 	return data
 }
 
-func generateKeyDefault() ([]byte, error) {
+func generateVPNKey() ([]byte, error) {
 	var (
 		out bytes.Buffer
 		cmd = exec.Command("openvpn", "--genkey", "--secret", "/dev/stdout")
