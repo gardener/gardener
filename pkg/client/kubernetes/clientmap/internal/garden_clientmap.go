@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,7 +39,7 @@ type gardenClientMap struct {
 // NewGardenClientMap creates a new gardenClientMap with the given factory.
 func NewGardenClientMap(factory *GardenClientSetFactory) clientmap.ClientMap {
 	return &gardenClientMap{
-		ClientMap: NewGenericClientMap(factory, log.WithValues("clientmap", "GardenClientMap")),
+		ClientMap: NewGenericClientMap(factory, log.WithValues("clientmap", "GardenClientMap"), clock.RealClock{}),
 	}
 }
 

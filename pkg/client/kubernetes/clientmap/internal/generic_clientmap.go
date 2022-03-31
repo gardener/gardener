@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"golang.org/x/time/rate"
+	"k8s.io/apimachinery/pkg/util/clock"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -53,6 +54,8 @@ type GenericClientMap struct {
 
 	log logr.Logger
 
+	Clock clock.Clock
+
 	// stopCh is saved on the first call to Start and is used to start the caches of newly created ClientSets.
 	stopCh  <-chan struct{}
 	started bool
@@ -70,11 +73,12 @@ type clientMapEntry struct {
 }
 
 // NewGenericClientMap creates a new GenericClientMap with the given factory and logger.
-func NewGenericClientMap(factory clientmap.ClientSetFactory, logger logr.Logger) *GenericClientMap {
+func NewGenericClientMap(factory clientmap.ClientSetFactory, logger logr.Logger, clock clock.Clock) *GenericClientMap {
 	return &GenericClientMap{
 		clientSets: make(map[clientmap.ClientSetKey]*clientMapEntry),
 		factory:    factory,
 		log:        logger,
+		Clock:      clock,
 	}
 }
 
@@ -93,7 +97,7 @@ func (cm *GenericClientMap) GetClient(ctx context.Context, key clientmap.ClientS
 	}()
 
 	if found {
-		if entry.refreshLimiter.Allow() {
+		if entry.refreshLimiter.AllowN(cm.Clock.Now(), 1) {
 			shouldRefresh, err := func() (bool, error) {
 				// refresh server version
 				oldVersion := entry.clientSet.Version()
@@ -165,7 +169,7 @@ func (cm *GenericClientMap) addClientSet(ctx context.Context, key clientmap.Clie
 	}
 
 	// avoid checking if the client should be refreshed directly after creating, by directly taking a token here
-	entry.refreshLimiter.Allow()
+	entry.refreshLimiter.AllowN(cm.Clock.Now(), 1)
 
 	// add ClientSet to map
 	cm.clientSets[key] = entry
