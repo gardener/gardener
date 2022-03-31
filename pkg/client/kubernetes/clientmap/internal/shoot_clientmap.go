@@ -20,6 +20,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/clock"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	baseconfig "k8s.io/component-base/config"
@@ -44,7 +45,7 @@ func NewShootClientMap(factory *ShootClientSetFactory) clientmap.ClientMap {
 	factory.clientKeyToSeedInfo = make(map[ShootClientSetKey]seedInfo)
 	factory.log = logger
 	return &shootClientMap{
-		ClientMap: NewGenericClientMap(factory, logger),
+		ClientMap: NewGenericClientMap(factory, logger, clock.RealClock{}),
 	}
 }
 

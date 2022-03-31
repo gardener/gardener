@@ -20,6 +20,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
+	"k8s.io/apimachinery/pkg/util/clock"
 	baseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -35,7 +36,7 @@ type seedClientMap struct {
 // NewSeedClientMap creates a new seedClientMap with the given factory.
 func NewSeedClientMap(factory *SeedClientSetFactory) clientmap.ClientMap {
 	return &seedClientMap{
-		ClientMap: NewGenericClientMap(factory, log.WithValues("clientmap", "SeedClientMap")),
+		ClientMap: NewGenericClientMap(factory, log.WithValues("clientmap", "SeedClientMap"), clock.RealClock{}),
 	}
 }
 
