@@ -147,6 +147,14 @@ deploy:
           - -ec
           - |
             echo "Wait until seed is ready"
+            for i in `seq 1 30`;
+            do
+              if kubectl get seed local 2> /dev/null; then
+                break
+              fi
+              echo "Wait until seed gets created by gardenlet"
+              sleep 2
+            done
             kubectl wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local --timeout=5m
     releases:
     - name: gardener-gardenlet
