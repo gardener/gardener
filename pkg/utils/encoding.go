@@ -133,7 +133,7 @@ func EncodeSHA1(in []byte) string {
 	return EncodeBase64(SHA1(in))
 }
 
-// CreateSHA1Secret takes a username and a password and returns a sha1-schemed credentials pair as string.
+// CreateSHA1Secret takes a username and a password and returns a sha1-schemed credentials pair as bytes.
 func CreateSHA1Secret(username, password []byte) []byte {
 	credentials := append(username, ":{SHA}"...)
 	credentials = append(credentials, EncodeSHA1(password)...)

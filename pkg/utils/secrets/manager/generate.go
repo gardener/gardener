@@ -155,7 +155,7 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 			return nil, err
 		}
 
-		if configName != "kube-apiserver-basic-auth" {
+		if configName == "observability-ingress" || configName == "observability-ingress-users" {
 			newBasicAuth.Format = secretutils.BasicAuthFormatNormal
 		}
 

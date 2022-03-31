@@ -348,10 +348,6 @@ func generateGlobalMonitoringSecret(ctx context.Context, k8sGardenClient client.
 		return nil, err
 	}
 
-	if err := secretsManager.Cleanup(ctx); err != nil {
-		return nil, err
-	}
-
 	// TODO(rfranzke): Remove in a future release.
 	if err := kutil.DeleteObject(ctx, k8sGardenClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "monitoring-ingress-credentials", Namespace: v1beta1constants.GardenNamespace}}); err != nil {
 		return nil, err

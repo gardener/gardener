@@ -185,6 +185,10 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		go eventController.Run(ctx)
 	}
 
+	if err := secretsManager.Cleanup(ctx); err != nil {
+		return err
+	}
+
 	log.Info("gardener-controller-manager initialized")
 
 	// Shutdown handling
