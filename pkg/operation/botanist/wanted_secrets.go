@@ -41,27 +41,6 @@ func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string
 	)
 
 	secretList := []secrets.ConfigInterface{
-		// Secret definition for prometheus
-		// TODO(rfranzke): Delete this in a future release once all monitoring configurations of extensions have been
-		// adapted.
-		&secrets.ControlPlaneSecretConfig{
-			Name: "prometheus",
-			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				CommonName:   "gardener.cloud:monitoring:prometheus",
-				Organization: []string{"gardener.cloud:monitoring"},
-				DNSNames:     nil,
-				IPAddresses:  nil,
-
-				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-			},
-
-			KubeConfigRequests: []secrets.KubeConfigRequest{{
-				ClusterName:   b.Shoot.SeedNamespace,
-				APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(true),
-			}},
-		},
-
 		// Secret definition for monitoring
 		&secrets.BasicAuthSecretConfig{
 			Name:   common.MonitoringIngressCredentials,
