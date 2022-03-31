@@ -20,6 +20,7 @@ ingress:
   basicAuthSecret: YWRtaW46JGFwcjEkSWRSaVM5c3MkR3U1MHMxaGUwL2Z6Tzh2elE4S1BEMQ==
 
 kubernetesVersion: 1.20.1
+secretNameEtcdClientCert: etcd-client-tls
 secretNameClientCert: prometheus
 
 reversedVPN:

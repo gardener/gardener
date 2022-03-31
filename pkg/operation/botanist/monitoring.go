@@ -29,6 +29,7 @@ import (
 	gardenlethelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
@@ -174,14 +175,20 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 	}
 
+	etcdClientSecret, found := b.SecretsManager.Get(etcd.SecretNameClient)
+	if !found {
+		return fmt.Errorf("secret %q not found", etcd.SecretNameClient)
+	}
+
 	var (
 		networks = map[string]interface{}{
 			"pods":     b.Shoot.Networks.Pods.String(),
 			"services": b.Shoot.Networks.Services.String(),
 		}
 		prometheusConfig = map[string]interface{}{
-			"secretNameClientCert": prometheusClientSecret.Name,
-			"kubernetesVersion":    b.Shoot.GetInfo().Spec.Kubernetes.Version,
+			"secretNameEtcdClientCert": etcdClientSecret.Name,
+			"secretNameClientCert":     prometheusClientSecret.Name,
+			"kubernetesVersion":        b.Shoot.GetInfo().Spec.Kubernetes.Version,
 			"nodeLocalDNS": map[string]interface{}{
 				"enabled": b.Shoot.NodeLocalDNSEnabled,
 			},
