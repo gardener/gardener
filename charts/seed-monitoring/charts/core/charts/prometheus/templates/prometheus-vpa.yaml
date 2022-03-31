@@ -1,4 +1,4 @@
-apiVersion: "autoscaling.k8s.io/v1beta2"
+apiVersion: "autoscaling.k8s.io/v1"
 kind: VerticalPodAutoscaler
 metadata:
   name: prometheus-vpa
@@ -20,3 +20,5 @@ spec:
     # https://github.com/helm/charts/issues/11447#issuecomment-464716379
     - containerName: prometheus-config-reloader
       mode: "Off"
+    - containerName: '*'
+      controlledValues: RequestsOnly

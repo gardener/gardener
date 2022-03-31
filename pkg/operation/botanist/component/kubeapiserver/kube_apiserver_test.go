@@ -51,6 +51,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/pointer"
@@ -70,7 +71,8 @@ var _ = Describe("KubeAPIServer", func() {
 		ctx = context.TODO()
 
 		namespace          = "some-namespace"
-		vpaUpdateMode      = autoscalingv1beta2.UpdateModeOff
+		vpaUpdateMode      = vpaautoscalingv1.UpdateModeOff
+		controlledValues   = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		containerPolicyOff = autoscalingv1beta2.ContainerScalingModeOff
 
 		kubernetesInterface kubernetes.Interface
@@ -103,7 +105,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 		deployment                           *appsv1.Deployment
 		horizontalPodAutoscaler              *autoscalingv2beta1.HorizontalPodAutoscaler
-		verticalPodAutoscaler                *autoscalingv1beta2.VerticalPodAutoscaler
+		verticalPodAutoscaler                *vpaautoscalingv1.VerticalPodAutoscaler
 		hvpa                                 *hvpav1alpha1.Hvpa
 		podDisruptionBudget                  *policyv1beta1.PodDisruptionBudget
 		networkPolicyAllowFromShootAPIServer *networkingv1.NetworkPolicy
@@ -139,7 +141,7 @@ var _ = Describe("KubeAPIServer", func() {
 				Namespace: namespace,
 			},
 		}
-		verticalPodAutoscaler = &autoscalingv1beta2.VerticalPodAutoscaler{
+		verticalPodAutoscaler = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "kube-apiserver-vpa",
 				Namespace: namespace,
@@ -293,7 +295,7 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Create(ctx, verticalPodAutoscaler)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(Succeed())
 					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv1beta2.SchemeGroupVersion.Group, Resource: "verticalpodautoscalers"}, verticalPodAutoscaler.Name)))
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: vpaautoscalingv1.SchemeGroupVersion.Group, Resource: "verticalpodautoscalers"}, verticalPodAutoscaler.Name)))
 				})
 
 				It("should successfully deploy the VPA resource", func() {
@@ -301,12 +303,12 @@ var _ = Describe("KubeAPIServer", func() {
 					kapi = New(kubernetesInterface, namespace, sm, Values{Autoscaling: autoscalingConfig, Version: version})
 					kapi.SetSecrets(secrets)
 
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv1beta2.SchemeGroupVersion.Group, Resource: "verticalpodautoscalers"}, verticalPodAutoscaler.Name)))
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: vpaautoscalingv1.SchemeGroupVersion.Group, Resource: "verticalpodautoscalers"}, verticalPodAutoscaler.Name)))
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(Succeed())
-					Expect(verticalPodAutoscaler).To(DeepEqual(&autoscalingv1beta2.VerticalPodAutoscaler{
+					Expect(verticalPodAutoscaler).To(DeepEqual(&vpaautoscalingv1.VerticalPodAutoscaler{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: autoscalingv1beta2.SchemeGroupVersion.String(),
+							APIVersion: vpaautoscalingv1.SchemeGroupVersion.String(),
 							Kind:       "VerticalPodAutoscaler",
 						},
 						ObjectMeta: metav1.ObjectMeta{
@@ -314,14 +316,20 @@ var _ = Describe("KubeAPIServer", func() {
 							Namespace:       verticalPodAutoscaler.Namespace,
 							ResourceVersion: "1",
 						},
-						Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
+						Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 							TargetRef: &autoscalingv1.CrossVersionObjectReference{
 								APIVersion: "apps/v1",
 								Kind:       "Deployment",
 								Name:       "kube-apiserver",
 							},
-							UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
+							UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 								UpdateMode: &vpaUpdateMode,
+							},
+							ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+								ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+									ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
+									ControlledValues: &controlledValues,
+								}},
 							},
 						},
 					}))
@@ -2428,7 +2436,7 @@ rules:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: appsv1.SchemeGroupVersion.Group, Resource: "deployments"}, deployment.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2beta1.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscaler.Name)))
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv1beta2.SchemeGroupVersion.Group, Resource: "verticalpodautoscalers"}, verticalPodAutoscaler.Name)))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: vpaautoscalingv1.SchemeGroupVersion.Group, Resource: "verticalpodautoscalers"}, verticalPodAutoscaler.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: hvpav1alpha1.SchemeGroupVersionHvpa.Group, Resource: "hvpas"}, hvpa.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: policyv1beta1.SchemeGroupVersion.Group, Resource: "poddisruptionbudgets"}, podDisruptionBudget.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowFromShootAPIServer), networkPolicyAllowFromShootAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowFromShootAPIServer.Name)))

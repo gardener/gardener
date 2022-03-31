@@ -49,7 +49,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -758,7 +758,8 @@ func (r *resourceManager) emptyServiceAccount() *corev1.ServiceAccount {
 
 func (r *resourceManager) ensureVPA(ctx context.Context) error {
 	vpa := r.emptyVPA()
-	vpaUpdateMode := autoscalingv1beta2.UpdateModeAuto
+	vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+	controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, vpa, func() error {
 		vpa.Labels = r.getLabels()
@@ -767,14 +768,15 @@ func (r *resourceManager) ensureVPA(ctx context.Context) error {
 			Kind:       "Deployment",
 			Name:       v1beta1constants.DeploymentNameGardenerResourceManager,
 		}
-		vpa.Spec.UpdatePolicy = &autoscalingv1beta2.PodUpdatePolicy{
+		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
 			UpdateMode: &vpaUpdateMode,
 		}
-		vpa.Spec.ResourcePolicy = &autoscalingv1beta2.PodResourcePolicy{
-			ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
+			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
-					ContainerName: autoscalingv1beta2.DefaultContainerResourcePolicy,
-					MinAllowed:    r.values.VPA.MinAllowed,
+					ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
+					MinAllowed:       r.values.VPA.MinAllowed,
+					ControlledValues: &controlledValues,
 				},
 			},
 		}
@@ -783,8 +785,8 @@ func (r *resourceManager) ensureVPA(ctx context.Context) error {
 	return err
 }
 
-func (r *resourceManager) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
-	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager-vpa", Namespace: r.namespace}}
+func (r *resourceManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
+	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager-vpa", Namespace: r.namespace}}
 }
 
 func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {

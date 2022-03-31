@@ -430,7 +430,7 @@ status:
 				}
 				return daemonset
 			}
-			vpaYAML = `apiVersion: autoscaling.k8s.io/v1beta2
+			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null

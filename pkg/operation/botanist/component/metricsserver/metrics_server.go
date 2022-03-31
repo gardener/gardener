@@ -37,7 +37,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -369,7 +369,7 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 			},
 		}
 
-		vpa *autoscalingv1beta2.VerticalPodAutoscaler
+		vpa *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
 	if m.kubeAPIServerHost != nil {
@@ -380,29 +380,31 @@ func (m *metricsServer) computeResourcesData(serverSecret, caSecret *corev1.Secr
 	}
 
 	if m.vpaEnabled {
-		vpaUpdateMode := autoscalingv1beta2.UpdateModeAuto
-		vpa = &autoscalingv1beta2.VerticalPodAutoscaler{
+		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+		controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "metrics-server",
 				Namespace: metav1.NamespaceSystem,
 			},
-			Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 					Kind:       "Deployment",
 					Name:       deployment.Name,
 				},
-				UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 					UpdateMode: &vpaUpdateMode,
 				},
-				ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
-					ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName: autoscalingv1beta2.DefaultContainerResourcePolicy,
+							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("50m"),
 								corev1.ResourceMemory: resource.MustParse("150Mi"),
 							},
+							ControlledValues: &controlledValues,
 						},
 					},
 				},

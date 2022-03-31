@@ -612,13 +612,17 @@ status:
 
 			vpaNameFor = daemonSetNameFor
 			vpaYAMLFor = func(pool WorkerPool) string {
-				return `apiVersion: autoscaling.k8s.io/v1beta2
+				return `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null
   name: ` + vpaNameFor(pool) + `
   namespace: kube-system
 spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      controlledValues: RequestsOnly
   targetRef:
     apiVersion: apps/v1
     kind: DaemonSet

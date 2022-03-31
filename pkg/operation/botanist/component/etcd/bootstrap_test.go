@@ -277,7 +277,7 @@ subjects:
   name: etcd-druid
   namespace: ` + namespace + `
 `
-			vpaYAML = `apiVersion: autoscaling.k8s.io/v1beta2
+			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null

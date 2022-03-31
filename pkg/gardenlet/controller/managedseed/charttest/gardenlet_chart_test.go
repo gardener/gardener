@@ -34,7 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/version"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -93,7 +93,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 		// for deletion of PDB
 		Expect(policyv1beta1.AddToScheme(s)).NotTo(HaveOccurred())
 		// for vpa
-		Expect(autoscalingv1beta2.AddToScheme(s)).NotTo(HaveOccurred())
+		Expect(vpaautoscalingv1.AddToScheme(s)).NotTo(HaveOccurred())
 
 		// create decoder for unmarshalling the GardenletConfiguration from the component gardenletconfig Config Map
 		codecs := serializer.NewCodecFactory(s)
@@ -106,7 +106,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 
 		mapper.Add(appsv1.SchemeGroupVersion.WithKind("Deployment"), meta.RESTScopeNamespace)
 		mapper.Add(corev1.SchemeGroupVersion.WithKind("ConfigMap"), meta.RESTScopeNamespace)
-		mapper.Add(autoscalingv1beta2.SchemeGroupVersion.WithKind("VerticalPodAutoscaler"), meta.RESTScopeNamespace)
+		mapper.Add(vpaautoscalingv1.SchemeGroupVersion.WithKind("VerticalPodAutoscaler"), meta.RESTScopeNamespace)
 		mapper.Add(schedulingv1.SchemeGroupVersion.WithKind("PriorityClass"), meta.RESTScopeRoot)
 		mapper.Add(rbacv1.SchemeGroupVersion.WithKind("ClusterRole"), meta.RESTScopeRoot)
 		mapper.Add(rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding"), meta.RESTScopeRoot)

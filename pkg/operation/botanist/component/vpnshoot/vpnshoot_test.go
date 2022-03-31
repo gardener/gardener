@@ -225,7 +225,7 @@ subjects:
   name: vpn-shoot
   namespace: kube-system
 `
-			vpaYAML = `apiVersion: autoscaling.k8s.io/v1beta2
+			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null
@@ -235,6 +235,7 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: '*'
+      controlledValues: RequestsOnly
       minAllowed:
         cpu: 100m
         memory: 10Mi

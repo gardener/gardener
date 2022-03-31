@@ -400,7 +400,7 @@ webhooks:
   sideEffects: None
   timeoutSeconds: 10
 `
-		vpaYAML = `apiVersion: autoscaling.k8s.io/v1beta2
+		vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null

@@ -351,7 +351,7 @@ status: {}
 				}
 
 				vpaYAMLFor = func(role Role) string {
-					out := `apiVersion: autoscaling.k8s.io/v1beta2
+					out := `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null

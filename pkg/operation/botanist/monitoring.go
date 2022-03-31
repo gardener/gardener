@@ -45,7 +45,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -625,7 +625,7 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 			},
 		},
 		gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeStateMetricsShoot, b.Shoot.SeedNamespace).Secret,
-		&autoscalingv1beta2.VerticalPodAutoscaler{
+		&vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: b.Shoot.SeedNamespace,
 				Name:      "kube-state-metrics-vpa",
@@ -687,7 +687,7 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 				Name:      "prometheus",
 			},
 		},
-		&autoscalingv1beta2.VerticalPodAutoscaler{
+		&vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: b.Shoot.SeedNamespace,
 				Name:      "prometheus-vpa",

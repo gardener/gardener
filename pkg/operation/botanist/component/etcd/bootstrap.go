@@ -45,7 +45,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -200,25 +200,25 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			},
 		}
 
-		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
-		vpa           = &autoscalingv1beta2.VerticalPodAutoscaler{
+		vpaUpdateMode = vpaautoscalingv1.UpdateModeAuto
+		vpa           = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      druidVPAName,
 				Namespace: b.namespace,
 				Labels:    labels(),
 			},
-			Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 					Kind:       "Deployment",
 					Name:       druidDeploymentName,
 				},
-				UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 					UpdateMode: &vpaUpdateMode,
 				},
-				ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
-					ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{{
-						ContainerName: autoscalingv1beta2.DefaultContainerResourcePolicy,
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+						ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
 						MinAllowed: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("50m"),
 							corev1.ResourceMemory: resource.MustParse("100M"),

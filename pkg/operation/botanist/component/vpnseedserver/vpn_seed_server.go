@@ -43,7 +43,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -192,7 +192,8 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		vpa             = v.emptyVPA()
 		igwSelectors    = v.getIngressGatewaySelectors()
 
-		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
+		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
+		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 	)
 
 	secretCAVPN, found := v.secretsManager.Get(v1beta1constants.SecretNameCAVPN)
@@ -613,17 +614,18 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 			Kind:       "Deployment",
 			Name:       DeploymentName,
 		}
-		vpa.Spec.UpdatePolicy = &autoscalingv1beta2.PodUpdatePolicy{
+		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
 			UpdateMode: &vpaUpdateMode,
 		}
-		vpa.Spec.ResourcePolicy = &autoscalingv1beta2.PodResourcePolicy{
-			ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
+			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
 					ContainerName: DeploymentName,
 					MinAllowed: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse("100m"),
 						corev1.ResourceMemory: resource.MustParse("100Mi"),
 					},
+					ControlledValues: &controlledValues,
 				},
 				{
 					ContainerName: envoyProxyContainerName,
@@ -631,6 +633,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 						corev1.ResourceCPU:    resource.MustParse("20m"),
 						corev1.ResourceMemory: resource.MustParse("20Mi"),
 					},
+					ControlledValues: &controlledValues,
 				},
 			},
 		}
@@ -696,8 +699,8 @@ func (v *vpnSeedServer) emptyDestinationRule() *networkingv1beta1.DestinationRul
 	return &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: v.namespace}}
 }
 
-func (v *vpnSeedServer) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
-	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName + "-vpa", Namespace: v.namespace}}
+func (v *vpnSeedServer) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
+	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName + "-vpa", Namespace: v.namespace}}
 }
 
 func (v *vpnSeedServer) emptyEnvoyFilter() *networkingv1alpha3.EnvoyFilter {
