@@ -116,7 +116,6 @@ spec:
             cpu: 5m
             memory: 20Mi
           limits:
-            cpu: 100m
             memory: 60Mi
         volumeMounts:
         - mountPath: /etc/alertmanager/config
@@ -136,7 +135,6 @@ spec:
             cpu: 5m
             memory: 10Mi
           limits:
-            cpu: 10m
             memory: 20Mi
         volumeMounts:
         - mountPath: /etc/alertmanager/config

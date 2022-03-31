@@ -243,7 +243,6 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 								corev1.ResourceMemory: resource.MustParse("64Mi"),
 							},
 							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("400m"),
 								corev1.ResourceMemory: resource.MustParse("512Mi"),
 							},
 						},

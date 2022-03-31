@@ -336,7 +336,6 @@ resources:
     cpu: 200m
     memory: 360Mi
   limits:
-    cpu: 350m
     memory: 760Mi
 
 #remoteWrite:

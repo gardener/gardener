@@ -7,14 +7,12 @@ prometheus:
   resources:
     prometheus:
       limits:
-        cpu: 500m
         memory: 2Gi
       requests:
         cpu: 300m
         memory: 1Gi
     prometheus-config-reloader:
       limits:
-        cpu: 20m
         memory: 50Mi
       requests:
         cpu: 10m

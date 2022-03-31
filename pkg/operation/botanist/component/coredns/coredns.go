@@ -499,7 +499,6 @@ import custom/*.server
 									corev1.ResourceMemory: resource.MustParse("15Mi"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("250m"),
 									corev1.ResourceMemory: resource.MustParse("500Mi"),
 								},
 							},
@@ -696,7 +695,6 @@ import custom/*.server
 									corev1.ResourceMemory: resource.MustParse("10Mi"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
 									corev1.ResourceMemory: resource.MustParse("50Mi"),
 								},
 							},

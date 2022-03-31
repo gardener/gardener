@@ -337,7 +337,6 @@ spec:
           timeoutSeconds: 2
         resources:
           limits:
-            cpu: 250m
             memory: 500Mi
           requests:
             cpu: 50m
@@ -541,7 +540,6 @@ spec:
         name: autoscaler
         resources:
           limits:
-            cpu: 100m
             memory: 50Mi
           requests:
             cpu: 20m

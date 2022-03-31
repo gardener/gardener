@@ -356,7 +356,6 @@ spec:
         - containerPort: 9569
         resources:
           limits:
-            cpu: 300m
             memory: 512Mi
           requests:
             cpu: 50m
@@ -412,7 +411,6 @@ spec:
         - containerPort: 9569
         resources:
           limits:
-            cpu: 300m
             memory: 512Mi
           requests:
             cpu: 50m

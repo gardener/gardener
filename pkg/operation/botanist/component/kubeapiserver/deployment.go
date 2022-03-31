@@ -731,7 +731,6 @@ func (k *kubeAPIServer) handleVPNSettings(
 					corev1.ResourceMemory: resource.MustParse("128Mi"),
 				},
 				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("500m"),
 					corev1.ResourceMemory: resource.MustParse("1000Mi"),
 				},
 			},
@@ -927,7 +926,6 @@ func (k *kubeAPIServer) handlePodMutatorSettings(deployment *appsv1.Deployment) 
 					corev1.ResourceMemory: resource.MustParse("128M"),
 				},
 				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("200m"),
 					corev1.ResourceMemory: resource.MustParse("500M"),
 				},
 			},

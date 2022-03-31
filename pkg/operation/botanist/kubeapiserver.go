@@ -211,7 +211,6 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 						corev1.ResourceMemory: resource.MustParse("2Gi"),
 					},
 					Limits: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("4000m"),
 						corev1.ResourceMemory: resource.MustParse("8Gi"),
 					},
 				}
@@ -233,7 +232,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 func resourcesRequirementsForKubeAPIServer(nodeCount int32, scalingClass string) corev1.ResourceRequirements {
 	var (
 		validScalingClasses        = sets.NewString("small", "medium", "large", "xlarge", "2xlarge")
-		cpuRequest, cpuLimit       string
+		cpuRequest                 string
 		memoryRequest, memoryLimit string
 	)
 
@@ -254,23 +253,23 @@ func resourcesRequirementsForKubeAPIServer(nodeCount int32, scalingClass string)
 
 	switch {
 	case scalingClass == "small":
-		cpuRequest, cpuLimit = "800m", "1000m"
+		cpuRequest = "800m"
 		memoryRequest, memoryLimit = "800Mi", "1200Mi"
 
 	case scalingClass == "medium":
-		cpuRequest, cpuLimit = "1000m", "1200m"
+		cpuRequest = "1000m"
 		memoryRequest, memoryLimit = "1100Mi", "1900Mi"
 
 	case scalingClass == "large":
-		cpuRequest, cpuLimit = "1200m", "1500m"
+		cpuRequest = "1200m"
 		memoryRequest, memoryLimit = "1600Mi", "3900Mi"
 
 	case scalingClass == "xlarge":
-		cpuRequest, cpuLimit = "2500m", "3000m"
+		cpuRequest = "2500m"
 		memoryRequest, memoryLimit = "5200Mi", "5900Mi"
 
 	case scalingClass == "2xlarge":
-		cpuRequest, cpuLimit = "3000m", "4000m"
+		cpuRequest = "3000m"
 		memoryRequest, memoryLimit = "5200Mi", "7800Mi"
 	}
 
@@ -280,7 +279,6 @@ func resourcesRequirementsForKubeAPIServer(nodeCount int32, scalingClass string)
 			corev1.ResourceMemory: resource.MustParse(memoryRequest),
 		},
 		Limits: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse(cpuLimit),
 			corev1.ResourceMemory: resource.MustParse(memoryLimit),
 		},
 	}

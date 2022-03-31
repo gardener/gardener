@@ -383,7 +383,6 @@ ip6.arpa:53 {
 										corev1.ResourceMemory: resource.MustParse("25Mi"),
 									},
 									Limits: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("100m"),
 										corev1.ResourceMemory: resource.MustParse("100Mi"),
 									},
 								},

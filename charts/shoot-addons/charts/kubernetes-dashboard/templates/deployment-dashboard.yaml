@@ -70,10 +70,8 @@ spec:
             memory: 50Mi
           limits:
           {{- if .Values.global.vpaEnabled }}
-            cpu: 200m
             memory: 200Mi
           {{- else }}
-            cpu: 300m
             memory: 256Mi
           {{- end }}
       volumes:

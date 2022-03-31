@@ -193,7 +193,6 @@ var _ = Describe("Etcd", func() {
 					corev1.ResourceMemory: resource.MustParse("1G"),
 				},
 				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("2300m"),
 					corev1.ResourceMemory: resource.MustParse("6G"),
 				},
 			}
@@ -207,7 +206,6 @@ var _ = Describe("Etcd", func() {
 					corev1.ResourceMemory: resource.MustParse("128Mi"),
 				},
 				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("1"),
 					corev1.ResourceMemory: resource.MustParse("10G"),
 				},
 			}

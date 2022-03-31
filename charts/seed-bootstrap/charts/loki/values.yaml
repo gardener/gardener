@@ -51,28 +51,24 @@ replicas: 1
 resources:
   loki:
     limits:
-      cpu: 450m
       memory: 512Mi
     requests:
       cpu: 200m
       memory: 300Mi
   curator:
     limits:
-      cpu: 200m
       memory: 200Mi
     requests:
       cpu: 10m
       memory: 12Mi
   kubeRBACproxy:
     limits:
-      cpu: 180m
       memory: 150Mi
     requests:
       cpu: 50m
       memory: 50Mi
   telegraf:
     limits:
-      cpu: 15m
       memory: 100Mi
     requests:
       cpu: 5m

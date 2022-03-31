@@ -76,7 +76,6 @@ spec:
             cpu: 10m
             memory: 32Mi
           limits:
-            cpu: 200m
             memory: 128Mi
       volumes:
       - name: grafana-storage

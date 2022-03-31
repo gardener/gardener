@@ -44,7 +44,6 @@ spec:
           - --v=2
         resources:
           limits:
-            cpu: 500m
             memory: 1000Mi
           requests:
             cpu: 50m
