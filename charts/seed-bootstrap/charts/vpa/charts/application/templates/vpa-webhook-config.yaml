@@ -6,7 +6,7 @@ metadata:
   name: vpa-webhook-config-{{ .Values.clusterType }}
 webhooks:
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     caBundle: {{ .Values.admissionController.caCert }}
 {{- if eq .Values.clusterType "shoot" }}

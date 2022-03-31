@@ -924,6 +924,9 @@ spec:
                                     mode:
                                       description: Whether autoscaler is enabled for
                                         the container. The default is "Auto".
+                                      enum:
+                                      - Auto
+                                      - "Off"
                                       type: string
                                   type: object
                                 type: array

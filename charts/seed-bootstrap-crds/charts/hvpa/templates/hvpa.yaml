@@ -23,13 +23,13 @@ spec:
           properties:
             apiVersion:
               description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                of an object. Servers should convert recognized schemas to the latest
+                internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
               type: string
             kind:
               description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                object represents. Servers may infer this from the endpoint the client
+                submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
               type: string
             metadata:
               type: object
@@ -166,8 +166,8 @@ spec:
                       type: object
                     selector:
                       description: 'Selector is a label query that should match HPA.
-                      Must match in order to be controlled. If empty, defaulted to
-                      labels on HPA template. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors'
+                        Must match in order to be controlled. If empty, defaulted to
+                        labels on HPA template. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors'
                       properties:
                         matchExpressions:
                           description: matchExpressions is a list of label selector
@@ -243,6 +243,49 @@ spec:
                                   on a single metric (only `type` and one other matching
                                   field should be set at once).
                                 properties:
+                                  containerResource:
+                                    description: container resource refers to a resource
+                                      metric (such as those specified in requests and
+                                      limits) known to Kubernetes describing a single
+                                      container in each pod of the current scale target
+                                      (e.g. CPU or memory). Such metrics are built in
+                                      to Kubernetes, and have special scaling options
+                                      on top of those available to normal per-pod metrics
+                                      using the "pods" source. This is an alpha feature
+                                      and can be enabled by the HPAContainerMetrics
+                                      feature flag.
+                                    properties:
+                                      container:
+                                        description: container is the name of the container
+                                          in the pods of the scaling target
+                                        type: string
+                                      name:
+                                        description: name is the name of the resource
+                                          in question.
+                                        type: string
+                                      targetAverageUtilization:
+                                        description: targetAverageUtilization is the
+                                          target value of the average of the resource
+                                          metric across all relevant pods, represented
+                                          as a percentage of the requested value of
+                                          the resource for the pods.
+                                        format: int32
+                                        type: integer
+                                      targetAverageValue:
+                                        anyOf:
+                                        - type: integer
+                                        - type: string
+                                        description: targetAverageValue is the target
+                                          value of the average of the resource metric
+                                          across all relevant pods, as a raw value (instead
+                                          of as a percentage of the request), similar
+                                          to the "pods" metric source type.
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                    required:
+                                    - container
+                                    - name
+                                    type: object
                                   external:
                                     description: external refers to a global metric
                                       that is not associated with any Kubernetes object.
@@ -412,11 +455,11 @@ spec:
                                             type: string
                                           kind:
                                             description: 'Kind of the referent; More
-                                            info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds"'
+                                              info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds"'
                                             type: string
                                           name:
                                             description: 'Name of the referent; More
-                                            info: http://kubernetes.io/docs/user-guide/identifiers#names'
+                                              info: http://kubernetes.io/docs/user-guide/identifiers#names'
                                             type: string
                                         required:
                                           - kind
@@ -552,9 +595,12 @@ spec:
                                       - name
                                     type: object
                                   type:
-                                    description: type is the type of metric source.  It
-                                      should be one of "Object", "Pods" or "Resource",
-                                      each mapping to a matching field in the object.
+                                    description: 'type is the type of metric source.  It
+                                      should be one of "ContainerResource", "External",
+                                      "Object", "Pods" or "Resource", each mapping to
+                                      a matching field in the object. Note: "ContainerResource"
+                                      type is available on when the feature-gate HPAContainerMetrics
+                                      is enabled'
                                     type: string
                                 required:
                                   - type
@@ -779,8 +825,8 @@ spec:
                       type: object
                     selector:
                       description: 'Selector is a label query that should match VPA.
-                      Must match in order to be controlled. If empty, defaulted to
-                      labels on VPA template. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors'
+                        Must match in order to be controlled. If empty, defaulted to
+                        labels on VPA template. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors'
                       properties:
                         matchExpressions:
                           description: matchExpressions is a list of label selector
@@ -878,6 +924,9 @@ spec:
                                       mode:
                                         description: Whether autoscaler is enabled for
                                           the container. The default is "Auto".
+                                        enum:
+                                          - Auto
+                                          - "Off"
                                         type: string
                                     type: object
                                   type: array
@@ -911,6 +960,8 @@ spec:
                           be given to VPA's recommendationd for the interval of number
                           of replicas provided
                         format: int32
+                        maximum: 100
+                        minimum: 0
                         type: integer
                     type: object
                   type: array
@@ -937,7 +988,6 @@ spec:
                       type: string
                   type: object
                 hpaWeight:
-                  description: VpaWeight - weight to provide to VPA scaling
                   format: int32
                   type: integer
                 lastBlockedScaling:
@@ -1262,7 +1312,6 @@ spec:
                       type: string
                   type: object
                 vpaWeight:
-                  description: VpaWeight - weight to provide to VPA scaling
                   format: int32
                   type: integer
               type: object
