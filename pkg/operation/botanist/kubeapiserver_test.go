@@ -641,9 +641,6 @@ var _ = Describe("KubeAPIServer", func() {
 								corev1.ResourceCPU:    resource.MustParse("1750m"),
 								corev1.ResourceMemory: resource.MustParse("2Gi"),
 							},
-							Limits: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("8Gi"),
-							},
 						},
 						HVPAEnabled:               false,
 						MinReplicas:               16,
@@ -875,39 +872,36 @@ var _ = Describe("KubeAPIServer", func() {
 	})
 
 	DescribeTable("#resourcesRequirementsForKubeAPIServer",
-		func(nodes int, storageClass, expectedCPURequest, expectedMemoryRequest, expectedCPULimit, expectedMemoryLimit string) {
+		func(nodes int, storageClass, expectedCPURequest, expectedMemoryRequest string) {
 			Expect(resourcesRequirementsForKubeAPIServer(int32(nodes), storageClass)).To(Equal(
 				corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse(expectedCPURequest),
 						corev1.ResourceMemory: resource.MustParse(expectedMemoryRequest),
 					},
-					Limits: corev1.ResourceList{
-						corev1.ResourceMemory: resource.MustParse(expectedMemoryLimit),
-					},
 				}))
 		},
 
 		// nodes tests
-		Entry("nodes <= 2", 2, "", "800m", "800Mi", "1000m", "1200Mi"),
-		Entry("nodes <= 10", 10, "", "1000m", "1100Mi", "1200m", "1900Mi"),
-		Entry("nodes <= 50", 50, "", "1200m", "1600Mi", "1500m", "3900Mi"),
-		Entry("nodes <= 100", 100, "", "2500m", "5200Mi", "3000m", "5900Mi"),
-		Entry("nodes > 100", 1000, "", "3000m", "5200Mi", "4000m", "7800Mi"),
+		Entry("nodes <= 2", 2, "", "800m", "800Mi"),
+		Entry("nodes <= 10", 10, "", "1000m", "1100Mi"),
+		Entry("nodes <= 50", 50, "", "1200m", "1600Mi"),
+		Entry("nodes <= 100", 100, "", "2500m", "5200Mi"),
+		Entry("nodes > 100", 1000, "", "3000m", "5200Mi"),
 
 		// scaling class tests
-		Entry("scaling class small", -1, "small", "800m", "800Mi", "1000m", "1200Mi"),
-		Entry("scaling class medium", -1, "medium", "1000m", "1100Mi", "1200m", "1900Mi"),
-		Entry("scaling class large", -1, "large", "1200m", "1600Mi", "1500m", "3900Mi"),
-		Entry("scaling class xlarge", -1, "xlarge", "2500m", "5200Mi", "3000m", "5900Mi"),
-		Entry("scaling class 2xlarge", -1, "2xlarge", "3000m", "5200Mi", "4000m", "7800Mi"),
+		Entry("scaling class small", -1, "small", "800m", "800Mi"),
+		Entry("scaling class medium", -1, "medium", "1000m", "1100Mi"),
+		Entry("scaling class large", -1, "large", "1200m", "1600Mi"),
+		Entry("scaling class xlarge", -1, "xlarge", "2500m", "5200Mi"),
+		Entry("scaling class 2xlarge", -1, "2xlarge", "3000m", "5200Mi"),
 
 		// scaling class always decides if provided
-		Entry("nodes > 100, scaling class small", 100, "small", "800m", "800Mi", "1000m", "1200Mi"),
-		Entry("nodes <= 100, scaling class medium", 100, "medium", "1000m", "1100Mi", "1200m", "1900Mi"),
-		Entry("nodes <= 50, scaling class large", 50, "large", "1200m", "1600Mi", "1500m", "3900Mi"),
-		Entry("nodes <= 10, scaling class xlarge", 10, "xlarge", "2500m", "5200Mi", "3000m", "5900Mi"),
-		Entry("nodes <= 2, scaling class 2xlarge", 2, "2xlarge", "3000m", "5200Mi", "4000m", "7800Mi"),
+		Entry("nodes > 100, scaling class small", 100, "small", "800m", "800Mi"),
+		Entry("nodes <= 100, scaling class medium", 100, "medium", "1000m", "1100Mi"),
+		Entry("nodes <= 50, scaling class large", 50, "large", "1200m", "1600Mi"),
+		Entry("nodes <= 10, scaling class xlarge", 10, "xlarge", "2500m", "5200Mi"),
+		Entry("nodes <= 2, scaling class 2xlarge", 2, "2xlarge", "3000m", "5200Mi"),
 	)
 
 	Describe("#DeployKubeAPIServer", func() {
@@ -984,9 +978,6 @@ var _ = Describe("KubeAPIServer", func() {
 			Requests: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("1"),
 				corev1.ResourceMemory: resource.MustParse("2"),
-			},
-			Limits: corev1.ResourceList{
-				corev1.ResourceMemory: resource.MustParse("4"),
 			},
 		}
 

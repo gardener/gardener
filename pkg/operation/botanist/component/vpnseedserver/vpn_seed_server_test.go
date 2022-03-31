@@ -354,7 +354,7 @@ admin:
 											corev1.ResourceMemory: resource.MustParse("100Mi"),
 										},
 										Limits: corev1.ResourceList{
-											corev1.ResourceMemory: resource.MustParse("1Gi"),
+											corev1.ResourceMemory: resource.MustParse("100Mi"),
 										},
 									},
 									VolumeMounts: []corev1.VolumeMount{
@@ -410,7 +410,7 @@ admin:
 											corev1.ResourceMemory: resource.MustParse("20Mi"),
 										},
 										Limits: corev1.ResourceList{
-											corev1.ResourceMemory: resource.MustParse("300Mi"),
+											corev1.ResourceMemory: resource.MustParse("850M"),
 										},
 									},
 									VolumeMounts: []corev1.VolumeMount{

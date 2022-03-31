@@ -113,7 +113,7 @@ spec:
           {{- if .Values.global.vpaEnabled }}
             memory: 150Mi
           {{- else }}
-            memory: 200Mi
+            memory: 250Mi
           {{- end }}
         volumeMounts:
         - name: host

@@ -229,9 +229,6 @@ var _ = Describe("KubeScheduler", func() {
 											corev1.ResourceCPU:    resource.MustParse("23m"),
 											corev1.ResourceMemory: resource.MustParse("64Mi"),
 										},
-										Limits: corev1.ResourceList{
-											corev1.ResourceMemory: resource.MustParse("512Mi"),
-										},
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{

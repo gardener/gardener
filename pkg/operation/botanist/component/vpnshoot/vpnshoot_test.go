@@ -325,11 +325,11 @@ spec:
 				if vpaEnabled {
 					out += `
           limits:
-            memory: 400Mi`
+            memory: 100Mi`
 				} else {
 					out += `
           limits:
-            memory: 1Gi`
+            memory: 120Mi`
 				}
 				out += `
           requests:

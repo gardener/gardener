@@ -502,9 +502,6 @@ var _ = Describe("KubeControllerManager", func() {
 													corev1.ResourceCPU:    resource.MustParse("100m"),
 													corev1.ResourceMemory: resource.MustParse("128Mi"),
 												},
-												Limits: corev1.ResourceList{
-													corev1.ResourceMemory: resource.MustParse("512Mi"),
-												},
 											},
 											VolumeMounts: []corev1.VolumeMount{
 												{

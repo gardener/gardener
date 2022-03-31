@@ -499,7 +499,7 @@ import custom/*.server
 									corev1.ResourceMemory: resource.MustParse("15Mi"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("500Mi"),
+									corev1.ResourceMemory: resource.MustParse("1500Mi"),
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
@@ -695,7 +695,7 @@ import custom/*.server
 									corev1.ResourceMemory: resource.MustParse("10Mi"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("50Mi"),
+									corev1.ResourceMemory: resource.MustParse("70Mi"),
 								},
 							},
 						}},

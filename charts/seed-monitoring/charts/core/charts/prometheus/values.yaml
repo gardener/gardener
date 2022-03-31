@@ -335,8 +335,6 @@ resources:
   requests:
     cpu: 200m
     memory: 360Mi
-  limits:
-    memory: 760Mi
 
 #remoteWrite:
 #  url: remoteWriteUrl
