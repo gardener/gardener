@@ -23,6 +23,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/version"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -62,7 +63,8 @@ var _ = Describe("GenericClientMap", func() {
 			csVersion = &version.Info{GitVersion: "1.18.0"}
 			cs.EXPECT().Version().Return(csVersion.GitVersion).AnyTimes()
 
-			cm = internal.NewGenericClientMap(factory, logr.Discard())
+			fakeClock := clock.NewFakeClock(time.Now())
+			cm = internal.NewGenericClientMap(factory, logr.Discard(), fakeClock)
 
 			origMaxRefreshInterval = internal.MaxRefreshInterval
 			internal.MaxRefreshInterval = 10 * time.Millisecond
@@ -126,7 +128,7 @@ var _ = Describe("GenericClientMap", func() {
 
 				By("should refresh the ClientSet's server version")
 				// let the max refresh interval pass
-				time.Sleep(internal.MaxRefreshInterval)
+				cm.Clock.Sleep(internal.MaxRefreshInterval)
 				cs.EXPECT().DiscoverVersion().Return(&version.Info{GitVersion: "1.18.1"}, nil)
 				clientSet, err := cm.GetClient(ctx, key)
 				Expect(clientSet).To(BeIdenticalTo(cs))
@@ -144,7 +146,7 @@ var _ = Describe("GenericClientMap", func() {
 
 				By("should fail to refresh the ClientSet's server version because DiscoverVersion fails")
 				// let the max refresh interval pass
-				time.Sleep(internal.MaxRefreshInterval)
+				cm.Clock.Sleep(internal.MaxRefreshInterval)
 				cs.EXPECT().DiscoverVersion().Return(nil, fmt.Errorf("fake"))
 				clientSet, err := cm.GetClient(ctx, key)
 				Expect(clientSet).To(BeNil())
@@ -161,14 +163,14 @@ var _ = Describe("GenericClientMap", func() {
 
 				By("should not refresh the ClientSet as version and hash haven't changed")
 				// let the max refresh interval pass
-				time.Sleep(internal.MaxRefreshInterval)
+				cm.Clock.Sleep(internal.MaxRefreshInterval)
 				cs.EXPECT().DiscoverVersion().Return(csVersion, nil)
 				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("hash1", nil)
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
 
 				By("should refresh the ClientSet as the hash has changed")
 				// let the max refresh interval pass again
-				time.Sleep(internal.MaxRefreshInterval)
+				cm.Clock.Sleep(internal.MaxRefreshInterval)
 				cs.EXPECT().DiscoverVersion().Return(csVersion, nil)
 				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("hash2", nil)
 
@@ -184,7 +186,7 @@ var _ = Describe("GenericClientMap", func() {
 
 				By("should fail to get the ClientSet again because CalculateClientSetHash fails")
 				// let the max refresh interval pass again
-				time.Sleep(internal.MaxRefreshInterval)
+				cm.Clock.Sleep(internal.MaxRefreshInterval)
 				cs.EXPECT().DiscoverVersion().Return(csVersion, nil)
 				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", fmt.Errorf("fake"))
 
