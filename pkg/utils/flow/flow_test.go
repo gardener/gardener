@@ -178,6 +178,29 @@ var _ = Describe("Flow", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(flow.WasCanceled(err)).To(BeTrue())
 		})
+
+		It("should process the function only when the conditional function returns true", func() {
+			results := make([]string, 0, 2)
+			var (
+				g = flow.NewGraph("foo")
+				_ = g.Add(flow.Task{Name: "a-task", Fn: flow.TaskFn(func(ctx context.Context) error {
+					results = append(results, "a-task-result")
+					return nil
+				}).DoIfFn(func() bool {
+					return true
+				})})
+				_ = g.Add(flow.Task{Name: "b-task", Fn: flow.TaskFn(func(ctx context.Context) error {
+					results = append(results, "b-task-result")
+					return nil
+				}).DoIfFn(func() bool {
+					return false
+				})})
+				f = g.Compile()
+			)
+			Expect(f.Run(ctx, flow.Opts{})).ToNot(HaveOccurred())
+			Expect(results).To(HaveLen(1))
+			Expect(results[0]).To(Equal("a-task-result"))
+		})
 	})
 
 	Describe("#Sequential", func() {

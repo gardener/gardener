@@ -53,6 +53,12 @@ func (t TaskFn) DoIf(condition bool) TaskFn {
 	return t.SkipIf(!condition)
 }
 
+// DoIfFn returns a TaskFn that will be executed if the invocation of conditionalFn is true when it is called.
+// Otherwise, it will do nothing when called.
+func (t TaskFn) DoIfFn(conditionalFn func() bool) TaskFn {
+	return t.SkipIf(!conditionalFn())
+}
+
 // Timeout returns a TaskFn that is bound to a context which times out.
 func (t TaskFn) Timeout(timeout time.Duration) TaskFn {
 	return func(ctx context.Context) error {
