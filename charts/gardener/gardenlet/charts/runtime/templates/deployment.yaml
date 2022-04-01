@@ -1,10 +1,10 @@
 {{- define "gardenlet.deployment.annotations" -}}
-reference.resources.gardener.cloud/config-{{ include "gardenlet.config.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.config.name" . }}
+reference.resources.gardener.cloud/configmap-{{ include "gardenlet.config.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.config.name" . }}
 {{- if .Values.global.gardenlet.imageVectorOverwrite }}
-reference.resources.gardener.cloud/config-{{ include "gardenlet.imagevector-overwrite.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.imagevector-overwrite.name" . }}
+reference.resources.gardener.cloud/configmap-{{ include "gardenlet.imagevector-overwrite.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.imagevector-overwrite.name" . }}
 {{- end }}
 {{- if .Values.global.gardenlet.componentImageVectorOverwrites }}
-reference.resources.gardener.cloud/config-{{ include "gardenlet.imagevector-overwrite-components.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.imagevector-overwrite-components.name" . }}
+reference.resources.gardener.cloud/configmap-{{ include "gardenlet.imagevector-overwrite-components.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.imagevector-overwrite-components.name" . }}
 {{- end }}
 {{- if .Values.global.gardenlet.config.gardenClientConnection.kubeconfig }}
 reference.resources.gardener.cloud/secret-{{ include "gardenlet.kubeconfig-garden.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.kubeconfig-garden.name" . }}
