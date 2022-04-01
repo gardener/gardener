@@ -126,7 +126,7 @@ var _ = Describe("CheckerWatchdog", func() {
 				// Take twice as long as the timeout to succeed
 				for {
 					select {
-					case <-time.After(timeout * 2):
+					case <-fakeClock.After(timeout * 2):
 						return true, nil
 					case <-ctx.Done():
 						return false, errors.New("context cancelled")

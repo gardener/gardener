@@ -101,7 +101,7 @@ func (w *checkerWatchdog) Start(ctx context.Context) {
 			case <-w.resultChan:
 				resultRequested = true
 				// If the last result is not older than w.interval, use it
-				if !time.Now().After(w.resultTime.Add(w.interval)) {
+				if !w.clock.Now().After(w.resultTime.Add(w.interval)) {
 					w.resultReadyChan <- struct{}{}
 					continue
 				}
@@ -191,5 +191,5 @@ func (w *checkerWatchdog) Result() (bool, error) {
 func (w *checkerWatchdog) setResult(result bool, err error) {
 	w.resultMutex.Lock()
 	defer w.resultMutex.Unlock()
-	w.result, w.err, w.resultTime = result, err, time.Now()
+	w.result, w.err, w.resultTime = result, err, w.clock.Now()
 }
