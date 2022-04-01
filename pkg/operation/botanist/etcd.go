@@ -130,10 +130,7 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 	}
 
 	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client-tls", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-server-cert", Namespace: b.Shoot.SeedNamespace}},
-	)
+	return kutil.DeleteObject(ctx, b.K8sSeedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-server-cert", Namespace: b.Shoot.SeedNamespace}})
 }
 
 // WaitUntilEtcdsReady waits until both etcd-main and etcd-events are ready.
