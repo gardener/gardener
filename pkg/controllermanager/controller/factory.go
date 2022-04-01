@@ -52,9 +52,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// SecretManagerIdentityControllerManager is the identity for the secret manager used inside controller-manager.
-const SecretManagerIdentityControllerManager = "controller-manager"
-
 // GardenControllerFactory contains information relevant to controllers for the Garden API group.
 type GardenControllerFactory struct {
 	cfg       *config.ControllerManagerConfiguration
@@ -88,7 +85,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to start ClientMap: %+v", err)
 	}
 
-	secretsManager, err := secretsmanager.New(ctx, logf.Log.WithName("secretsmanager"), clock.RealClock{}, gardenClientSet.Client(), v1beta1constants.GardenNamespace, SecretManagerIdentityControllerManager, nil)
+	secretsManager, err := secretsmanager.New(ctx, logf.Log.WithName("secretsmanager"), clock.RealClock{}, gardenClientSet.Client(), v1beta1constants.GardenNamespace, v1beta1constants.SecretManagerIdentityControllerManager, nil)
 	if err != nil {
 		return fmt.Errorf("failed creating new secrets manager: %w", err)
 	}

@@ -235,7 +235,28 @@ var _ = Describe("Garden", func() {
 			validateGlobalMonitoringSecret(secretList)
 		})
 
-		It("should not generate a global monitoring secret because it already exists", func() {
+		It("should generate a global monitoring secret because secret managed by secrets-manager exists", func() {
+			existingSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "observability-ingress-0da36eb1",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"gardener.cloud/role": "global-monitoring",
+						"managed-by":          "secrets-manager",
+						"manager-identity":    "controller-manager",
+					},
+				},
+			}
+			Expect(fakeGardenClient.Create(ctx, existingSecret)).To(Succeed())
+
+			Expect(BootstrapCluster(ctx, k8sGardenClient, sm)).To(Succeed())
+
+			secretList := &corev1.SecretList{}
+			Expect(fakeGardenClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{"gardener.cloud/role": "global-monitoring"})).To(Succeed())
+			validateGlobalMonitoringSecret(secretList)
+		})
+
+		It("should not generate a global monitoring secret because it is managed by human operator", func() {
 			customSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "self-managed-secret",
