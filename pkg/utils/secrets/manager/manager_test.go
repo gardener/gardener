@@ -178,7 +178,7 @@ var _ = Describe("Manager", func() {
 						"manager-identity":              identity,
 						"last-rotation-initiation-time": "-100",
 						"issued-at-time":                strconv.FormatInt(fakeClock.Now().Add(-24*time.Hour).Unix(), 10),
-						"valid-until-time":              strconv.FormatInt(fakeClock.Now().Add(11*24*time.Hour).Unix(), 10),
+						"valid-until-time":              strconv.FormatInt(fakeClock.Now().Add(15*365*24*time.Hour).Unix(), 10),
 					},
 				},
 			}

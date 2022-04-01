@@ -152,7 +152,7 @@ func (m *manager) initialize(ctx context.Context, secretNamesToTimes map[string]
 	}
 
 	for _, secret := range secretList.Items {
-		// Read existing last-rotatation-initiation-time labels on secrets and store them in our internal times map
+		// Read existing last-rotation-initiation-time labels on secrets and store them in our internal times map
 		if secret.Labels[LabelKeyLastRotationInitiationTime] != "" {
 			m.lastRotationInitiationTimes[secret.Labels[LabelKeyName]] = secret.Labels[LabelKeyLastRotationInitiationTime]
 		}
@@ -193,15 +193,15 @@ func (m *manager) mustAutoRenewSecret(secret corev1.Secret) (bool, error) {
 	}
 
 	var (
-		issuedAt   = time.Unix(issuedAtUnix, 0).UTC()
-		validUntil = time.Unix(validUntilUnix, 0).UTC()
-		validity   = validUntil.Sub(issuedAt)
-		now        = m.clock.Now().UTC()
+		validity    = validUntilUnix - issuedAtUnix
+		renewAtUnix = issuedAtUnix + validity*80/100
+		renewAt     = time.Unix(renewAtUnix, 0).UTC()
+		validUntil  = time.Unix(validUntilUnix, 0).UTC()
+		now         = m.clock.Now().UTC()
 	)
 
 	// Renew if 80% of the validity has been reached or if the secret expires in less than 10d.
-	return now.After(issuedAt.Add(validity*80/100)) ||
-		now.After(validUntil.Add(-10*24*time.Hour)), nil
+	return now.After(renewAt) || now.After(validUntil.Add(-10*24*time.Hour)), nil
 }
 
 func (m *manager) addToStore(name string, secret *corev1.Secret, class secretClass) error {
