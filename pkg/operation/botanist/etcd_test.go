@@ -314,7 +314,6 @@ var _ = Describe("Etcd", func() {
 				etcdMain.EXPECT().Deploy(ctx)
 				etcdEvents.EXPECT().Deploy(ctx)
 
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client-tls", Namespace: namespace}})
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-server-cert", Namespace: namespace}})
 
 				Expect(botanist.DeployEtcd(ctx)).To(Succeed())
@@ -377,7 +376,6 @@ var _ = Describe("Etcd", func() {
 				expectSetOwnerCheckConfig()
 				etcdMain.EXPECT().Deploy(ctx)
 				etcdEvents.EXPECT().Deploy(ctx)
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client-tls", Namespace: namespace}})
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-server-cert", Namespace: namespace}})
 
 				Expect(botanist.DeployEtcd(ctx)).To(Succeed())
@@ -394,7 +392,6 @@ var _ = Describe("Etcd", func() {
 				expectSetBackupConfig()
 				etcdMain.EXPECT().Deploy(ctx)
 				etcdEvents.EXPECT().Deploy(ctx)
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client-tls", Namespace: namespace}})
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-server-cert", Namespace: namespace}})
 
 				Expect(botanist.DeployEtcd(ctx)).To(Succeed())

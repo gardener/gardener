@@ -178,7 +178,7 @@ var _ = Describe("Manager", func() {
 						"manager-identity":              identity,
 						"last-rotation-initiation-time": "-100",
 						"issued-at-time":                strconv.FormatInt(fakeClock.Now().Add(-24*time.Hour).Unix(), 10),
-						"valid-until-time":              strconv.FormatInt(fakeClock.Now().Add(11*24*time.Hour).Unix(), 10),
+						"valid-until-time":              strconv.FormatInt(fakeClock.Now().Add(15*365*24*time.Hour).Unix(), 10),
 					},
 				},
 			}
@@ -189,6 +189,60 @@ var _ = Describe("Manager", func() {
 			m = mgr.(*manager)
 
 			Expect(m.lastRotationInitiationTimes).To(Equal(nameToUnixTime{"secret1": "-100"}))
+		})
+
+		It("should only consider the last rotation initiation time for the newest secret", func() {
+			secrets := []*corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "secret1-1",
+						Namespace:         namespace,
+						CreationTimestamp: metav1.Time{Time: time.Date(2000, 1, 3, 1, 1, 1, 1, time.UTC)},
+						Labels: map[string]string{
+							"name":                          "secret1",
+							"managed-by":                    "secrets-manager",
+							"manager-identity":              identity,
+							"last-rotation-initiation-time": "24",
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "secret1-2",
+						Namespace:         namespace,
+						CreationTimestamp: metav1.Time{Time: time.Date(2000, 1, 1, 1, 1, 1, 1, time.UTC)},
+						Labels: map[string]string{
+							"name":                          "secret1",
+							"managed-by":                    "secrets-manager",
+							"manager-identity":              identity,
+							"last-rotation-initiation-time": "12",
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "secret1-3",
+						Namespace:         namespace,
+						CreationTimestamp: metav1.Time{Time: time.Date(2000, 1, 2, 1, 1, 1, 1, time.UTC)},
+						Labels: map[string]string{
+							"name":                          "secret1",
+							"managed-by":                    "secrets-manager",
+							"manager-identity":              identity,
+							"last-rotation-initiation-time": "16",
+						},
+					},
+				},
+			}
+
+			for _, secret := range secrets {
+				Expect(fakeClient.Create(ctx, secret)).To(Succeed())
+			}
+
+			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, nil)
+			Expect(err).NotTo(HaveOccurred())
+			m = mgr.(*manager)
+
+			Expect(m.lastRotationInitiationTimes).To(Equal(nameToUnixTime{"secret1": "24"}))
 		})
 	})
 

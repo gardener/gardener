@@ -1173,14 +1173,14 @@ func VerifyGardenletDeployment(ctx context.Context,
 
 	Expect(deployment.ObjectMeta.Labels).To(DeepEqual(expectedDeployment.ObjectMeta.Labels))
 
-	assertResourceReferenceExists(uniqueName["gardenlet-configmap"], "config-", deployment.Spec.Template.Annotations)
+	assertResourceReferenceExists(uniqueName["gardenlet-configmap"], "configmap-", deployment.Spec.Template.Annotations)
 
 	if imageVectorOverwrite != nil {
-		assertResourceReferenceExists(uniqueName["gardenlet-imagevector-overwrite"], "config-", deployment.Spec.Template.Annotations)
+		assertResourceReferenceExists(uniqueName["gardenlet-imagevector-overwrite"], "configmap-", deployment.Spec.Template.Annotations)
 	}
 
 	if componentImageVectorOverwrites != nil {
-		assertResourceReferenceExists(uniqueName["gardenlet-imagevector-overwrite-components"], "config-", deployment.Spec.Template.Annotations)
+		assertResourceReferenceExists(uniqueName["gardenlet-imagevector-overwrite-components"], "configmap-", deployment.Spec.Template.Annotations)
 	}
 
 	if componentConfigHasTLSServerConfig {

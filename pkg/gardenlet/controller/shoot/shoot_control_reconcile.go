@@ -34,6 +34,9 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // runReconcileShootFlow reconciles the Shoot cluster.
@@ -640,8 +643,11 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Dependencies: flow.NewTaskIDs(deploySecrets, waitUntilKubeAPIServerIsReady, deployManagedResourcesForAddons, deployManagedResourceForCloudConfigExecutor, hibernateControlPlane),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Cleaning no longer required secrets",
-			Fn:           flow.TaskFn(botanist.SecretsManager.Cleanup).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Name: "Cleaning no longer required secrets",
+			Fn: flow.Sequential(func(ctx context.Context) error {
+				// TODO(rfranzke): Remove in a future release.
+				return kutil.DeleteObject(ctx, botanist.K8sSeedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client-tls", Namespace: botanist.Shoot.SeedNamespace}})
+			}, botanist.SecretsManager.Cleanup).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployVPA),
 		})
 	)

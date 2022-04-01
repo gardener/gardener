@@ -15,6 +15,8 @@
 package constants
 
 const (
+	// SecretManagerIdentityControllerManager is the identity for the secret manager used inside controller-manager.
+	SecretManagerIdentityControllerManager = "controller-manager"
 	// SecretManagerIdentityGardenlet is the identity for the secret manager used inside gardenlet.
 	SecretManagerIdentityGardenlet = "gardenlet"
 
