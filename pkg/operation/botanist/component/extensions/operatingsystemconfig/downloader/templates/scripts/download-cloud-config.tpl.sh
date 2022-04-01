@@ -33,7 +33,7 @@ function extractDataKeyFromSecret() {
   echo "$1" | sed -rn "s/  $2: (.*)/\1/p" | base64 -d
 }
 
-function saveToDiskSafely() {
+function writeToDiskSafely() {
   local data="$1"
   local file_path="$2"
 
@@ -70,7 +70,7 @@ if [[ -z "$TOKEN" ]]; then
   exit 1
 fi
 
-saveToDiskSafely "$TOKEN" "$PATH_CLOUDCONFIG_DOWNLOADER_TOKEN"
+writeToDiskSafely "$TOKEN" "$PATH_CLOUDCONFIG_DOWNLOADER_TOKEN"
 
 # download and run the cloud config execution script
 if ! SECRET="$(readSecretWithToken "$SECRET_NAME" "$TOKEN")"; then
