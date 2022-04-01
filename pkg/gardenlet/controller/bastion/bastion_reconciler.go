@@ -131,7 +131,7 @@ func (r *reconciler) reconcileBastion(
 	// ensure finalizer is set
 	if !controllerutil.ContainsFinalizer(bastion, finalizerName) {
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, bastion, finalizerName); err != nil {
-			return fmt.Errorf("failed ensure %q finalizer on bastion: %w", finalizerName, err)
+			return fmt.Errorf("could not add finalizer to bastion: %w", err)
 		}
 		return nil
 	}

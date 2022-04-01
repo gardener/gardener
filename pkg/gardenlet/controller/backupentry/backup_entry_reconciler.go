@@ -111,7 +111,7 @@ func (r *reconciler) reconcileBackupEntry(ctx context.Context, gardenClient kube
 
 	if !controllerutil.ContainsFinalizer(backupEntry, gardencorev1beta1.GardenerName) {
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient.Client(), backupEntry, gardencorev1beta1.GardenerName); err != nil {
-			backupEntryLogger.Errorf("Failed to ensure gardener finalizer on backupentry: %+v", err)
+			backupEntryLogger.Errorf("could not add finalizer to BackupEntry: %+v", err)
 			return reconcile.Result{}, err
 		}
 		return reconcile.Result{}, nil

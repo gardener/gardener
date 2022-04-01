@@ -94,7 +94,7 @@ func (r *reconciler) reconcileBackupBucket(ctx context.Context, gardenClient kub
 
 	if !controllerutil.ContainsFinalizer(backupBucket, gardencorev1beta1.GardenerName) {
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient.Client(), backupBucket, gardencorev1beta1.GardenerName); err != nil {
-			backupBucketLogger.Errorf("Failed to ensure gardener finalizer on backupbucket: %+v", err)
+			backupBucketLogger.Errorf("could not add finalizer to Backupbucket: %+v", err)
 			return reconcile.Result{}, err
 		}
 		return reconcile.Result{}, nil
@@ -115,7 +115,7 @@ func (r *reconciler) reconcileBackupBucket(ctx context.Context, gardenClient kub
 
 	if !controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
-			backupBucketLogger.Errorf("Failed to ensure external gardener finalizer on referred secret: %+v", err)
+			backupBucketLogger.Errorf("could not add finalizer to referenced secret: %+v", err)
 			return reconcile.Result{}, err
 		}
 	}
