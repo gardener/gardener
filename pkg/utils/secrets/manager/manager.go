@@ -151,13 +151,20 @@ func (m *manager) initialize(ctx context.Context, secretNamesToTimes map[string]
 		return err
 	}
 
+	nameToNewestSecret := make(map[string]corev1.Secret, len(secretList.Items))
+
+	// Find the newest secret in system for the respective secret names. Read their existing
+	// last-rotation-initiation-time labels and store them in our internal map.
 	for _, secret := range secretList.Items {
-		// Read existing last-rotation-initiation-time labels on secrets and store them in our internal times map
-		if secret.Labels[LabelKeyLastRotationInitiationTime] != "" {
+		oldSecret, found := nameToNewestSecret[secret.Labels[LabelKeyName]]
+		if !found || oldSecret.CreationTimestamp.Time.Before(secret.CreationTimestamp.Time) {
+			nameToNewestSecret[secret.Labels[LabelKeyName]] = *secret.DeepCopy()
 			m.lastRotationInitiationTimes[secret.Labels[LabelKeyName]] = secret.Labels[LabelKeyLastRotationInitiationTime]
 		}
+	}
 
-		// Check if secret must be automatically renewed because it is about to expire
+	// Check if the secrets must be automatically renewed because they are about to expire.
+	for name, secret := range nameToNewestSecret {
 		mustRenew, err := m.mustAutoRenewSecret(secret)
 		if err != nil {
 			return err
@@ -165,7 +172,7 @@ func (m *manager) initialize(ctx context.Context, secretNamesToTimes map[string]
 
 		if mustRenew {
 			m.logger.Info("Preparing secret for automatic renewal", "secret", secret.Name, "issuedAt", secret.Labels[LabelKeyIssuedAtTime], "validUntil", secret.Labels[LabelKeyValidUntilTime])
-			m.lastRotationInitiationTimes[secret.Labels[LabelKeyName]] = unixTime(m.clock.Now())
+			m.lastRotationInitiationTimes[name] = unixTime(m.clock.Now())
 		}
 	}
 
