@@ -1114,10 +1114,10 @@ message Kubernetes {
   // +optional
   optional VerticalPodAutoscaler verticalPodAutoscaler = 9;
 
-  // EnableAdminKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster
+  // EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster
   // (default: true).
   // +optional
-  optional bool enableAdminKubeconfig = 10;
+  optional bool enableStaticTokenKubeconfig = 10;
 }
 
 // KubernetesConfig contains common configuration fields for the control plane components.

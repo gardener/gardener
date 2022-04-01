@@ -5342,14 +5342,14 @@ VerticalPodAutoscaler
 </tr>
 <tr>
 <td>
-<code>enableAdminKubeconfig</code></br>
+<code>enableStaticTokenKubeconfig</code></br>
 <em>
 bool
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>EnableAdminKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster
+<p>EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster
 (default: true).</p>
 </td>
 </tr>

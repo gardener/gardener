@@ -118,8 +118,8 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 				ServiceNetworkCIDR: b.Shoot.Networks.Services.String(),
 				NodeNetworkCIDR:    b.Shoot.GetInfo().Spec.Networking.Nodes,
 			},
-			WatchCacheSizes:       watchCacheSizes,
-			EnableAdminKubeconfig: b.Shoot.GetInfo().Spec.Kubernetes.EnableAdminKubeconfig,
+			WatchCacheSizes:             watchCacheSizes,
+			EnableStaticTokenKubeconfig: b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig,
 		},
 	), nil
 }
@@ -471,7 +471,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		return err
 	}
 
-	if enableAdminKubeconfig := b.Shoot.GetInfo().Spec.Kubernetes.EnableAdminKubeconfig; enableAdminKubeconfig == nil || *enableAdminKubeconfig {
+	if enableStaticTokenKubeconfig := b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig; enableStaticTokenKubeconfig == nil || *enableStaticTokenKubeconfig {
 		userKubeconfigSecret, found := b.SecretsManager.Get(kubeapiserver.SecretNameUserKubeconfig)
 		if !found {
 			return fmt.Errorf("secret %q not found", kubeapiserver.SecretNameUserKubeconfig)

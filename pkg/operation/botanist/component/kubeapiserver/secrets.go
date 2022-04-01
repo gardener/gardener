@@ -131,7 +131,7 @@ func (k *kubeAPIServer) reconcileSecretStaticToken(ctx context.Context) (*corev1
 		},
 	}
 
-	if pointer.BoolDeref(k.values.EnableAdminKubeconfig, true) {
+	if pointer.BoolDeref(k.values.EnableStaticTokenKubeconfig, true) {
 		staticTokenSecretConfig.Tokens[userNameClusterAdmin] = secretutils.TokenConfig{
 			Username: userNameClusterAdmin,
 			UserID:   userNameClusterAdmin,

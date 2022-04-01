@@ -3185,7 +3185,7 @@ func autoConvert_v1beta1_Kubernetes_To_core_Kubernetes(in *Kubernetes, out *core
 	out.Kubelet = (*core.KubeletConfig)(unsafe.Pointer(in.Kubelet))
 	out.Version = in.Version
 	out.VerticalPodAutoscaler = (*core.VerticalPodAutoscaler)(unsafe.Pointer(in.VerticalPodAutoscaler))
-	out.EnableAdminKubeconfig = (*bool)(unsafe.Pointer(in.EnableAdminKubeconfig))
+	out.EnableStaticTokenKubeconfig = (*bool)(unsafe.Pointer(in.EnableStaticTokenKubeconfig))
 	return nil
 }
 
@@ -3204,7 +3204,7 @@ func autoConvert_core_Kubernetes_To_v1beta1_Kubernetes(in *core.Kubernetes, out 
 	out.Kubelet = (*KubeletConfig)(unsafe.Pointer(in.Kubelet))
 	out.Version = in.Version
 	out.VerticalPodAutoscaler = (*VerticalPodAutoscaler)(unsafe.Pointer(in.VerticalPodAutoscaler))
-	out.EnableAdminKubeconfig = (*bool)(unsafe.Pointer(in.EnableAdminKubeconfig))
+	out.EnableStaticTokenKubeconfig = (*bool)(unsafe.Pointer(in.EnableStaticTokenKubeconfig))
 	return nil
 }
 

@@ -3920,9 +3920,9 @@ func schema_pkg_apis_core_v1alpha1_Kubernetes(ref common.ReferenceCallback) comm
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.VerticalPodAutoscaler"),
 						},
 					},
-					"enableAdminKubeconfig": {
+					"enableStaticTokenKubeconfig": {
 						SchemaProps: spec.SchemaProps{
-							Description: "EnableAdminKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster (default: true).",
+							Description: "EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster (default: true).",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -10970,9 +10970,9 @@ func schema_pkg_apis_core_v1beta1_Kubernetes(ref common.ReferenceCallback) commo
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler"),
 						},
 					},
-					"enableAdminKubeconfig": {
+					"enableStaticTokenKubeconfig": {
 						SchemaProps: spec.SchemaProps{
-							Description: "EnableAdminKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster (default: true).",
+							Description: "EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster (default: true).",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
