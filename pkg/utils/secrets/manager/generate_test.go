@@ -211,6 +211,8 @@ var _ = Describe("Generate", func() {
 				By("marking secret as mutable")
 				patch := client.MergeFrom(secret.DeepCopy())
 				secret.Immutable = nil
+				// ensure that label with empty value is added by another call to Generate
+				delete(secret.Labels, "last-rotation-initiation-time")
 				Expect(fakeClient.Patch(ctx, secret, patch)).To(Succeed())
 
 				By("changing options and generate again")
@@ -220,7 +222,11 @@ var _ = Describe("Generate", func() {
 				By("verifying labels got reconciled")
 				foundSecret := &corev1.Secret{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), foundSecret)).To(Succeed())
-				Expect(foundSecret.Labels).To(HaveKeyWithValue("persist", "true"))
+				Expect(foundSecret.Labels).To(And(
+					HaveKeyWithValue("persist", "true"),
+					// ensure that label with empty value is added by another call to Generate
+					HaveKeyWithValue("last-rotation-initiation-time", ""),
+				))
 				Expect(foundSecret.Immutable).To(PointTo(BeTrue()))
 			})
 		})

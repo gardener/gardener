@@ -400,9 +400,9 @@ func (m *manager) reconcileSecret(ctx context.Context, secret *corev1.Secret, la
 		mustPatch = true
 	}
 
-	for k, v := range labels {
-		if secret.Labels[k] != v {
-			metav1.SetMetaDataLabel(&secret.ObjectMeta, k, v)
+	for k, desired := range labels {
+		if current, ok := secret.Labels[k]; !ok || current != desired {
+			metav1.SetMetaDataLabel(&secret.ObjectMeta, k, desired)
 			mustPatch = true
 		}
 	}
