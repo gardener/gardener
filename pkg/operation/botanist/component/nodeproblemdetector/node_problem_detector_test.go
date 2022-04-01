@@ -504,7 +504,6 @@ status: {}
 		})
 
 		Describe("#WaitCleanup", func() {
-
 			It("should fail when the wait for the managed resource deletion times out", func() {
 				fakeOps.MaxAttempts = 2
 
@@ -512,6 +511,7 @@ status: {}
 
 				Expect(component.WaitCleanup(ctx)).To(MatchError(ContainSubstring("still exists")))
 			})
+
 			It("should not return an error when it's already removed", func() {
 				Expect(component.WaitCleanup(ctx)).To(Succeed())
 			})
