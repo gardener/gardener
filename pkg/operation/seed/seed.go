@@ -17,6 +17,7 @@ package seed
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -382,6 +383,8 @@ func RunReconcileSeedFlow(
 		}); err != nil {
 			return err
 		}
+	} else {
+		return errors.New("global monitoring secret not found in seed namespace")
 	}
 
 	seedImages, err := imagevector.FindImages(imageVector,
