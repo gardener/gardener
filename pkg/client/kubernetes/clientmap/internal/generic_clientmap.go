@@ -54,7 +54,7 @@ type GenericClientMap struct {
 
 	log logr.Logger
 
-	Clock clock.Clock
+	clock clock.Clock
 
 	// stopCh is saved on the first call to Start and is used to start the caches of newly created ClientSets.
 	stopCh  <-chan struct{}
@@ -78,7 +78,7 @@ func NewGenericClientMap(factory clientmap.ClientSetFactory, logger logr.Logger,
 		clientSets: make(map[clientmap.ClientSetKey]*clientMapEntry),
 		factory:    factory,
 		log:        logger,
-		Clock:      clock,
+		clock:      clock,
 	}
 }
 
@@ -97,7 +97,7 @@ func (cm *GenericClientMap) GetClient(ctx context.Context, key clientmap.ClientS
 	}()
 
 	if found {
-		if entry.refreshLimiter.AllowN(cm.Clock.Now(), 1) {
+		if entry.refreshLimiter.AllowN(cm.clock.Now(), 1) {
 			shouldRefresh, err := func() (bool, error) {
 				// refresh server version
 				oldVersion := entry.clientSet.Version()
@@ -169,7 +169,7 @@ func (cm *GenericClientMap) addClientSet(ctx context.Context, key clientmap.Clie
 	}
 
 	// avoid checking if the client should be refreshed directly after creating, by directly taking a token here
-	entry.refreshLimiter.AllowN(cm.Clock.Now(), 1)
+	entry.refreshLimiter.AllowN(cm.clock.Now(), 1)
 
 	// add ClientSet to map
 	cm.clientSets[key] = entry
