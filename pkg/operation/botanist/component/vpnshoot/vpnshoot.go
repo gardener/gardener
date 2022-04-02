@@ -368,6 +368,7 @@ func (v *vpnShoot) computeResourcesData(secretCAVPN, secretVPNShoot *corev1.Secr
 				Volumes: []policyv1beta1.FSType{
 					"secret",
 					"emptyDir",
+					"projected",
 				},
 				AllowedCapabilities: []corev1.Capability{
 					"NET_ADMIN",
