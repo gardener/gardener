@@ -137,7 +137,7 @@ func EncodeSHA1(in []byte) string {
 func CreateSHA1Secret(username, password []byte) []byte {
 	credentials := append(username, ":{SHA}"...)
 	credentials = append(credentials, EncodeSHA1(password)...)
-	return []byte(EncodeBase64(credentials))
+	return credentials
 }
 
 // ComputeSHA1Hex computes the hexadecimal representation of the SHA1 hash of the given input byte
