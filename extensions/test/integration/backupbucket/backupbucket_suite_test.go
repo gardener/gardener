@@ -55,8 +55,8 @@ var _ = BeforeSuite(func() {
 	testEnv = &envtest.Environment{
 		CRDInstallOptions: envtest.CRDInstallOptions{
 			Paths: []string{
-				filepath.Join(extensionsCRDs, "crd-backupbucket.tpl.yaml"),
-				filepath.Join(extensionsCRDs, "crd-cluster.tpl.yaml"),
+				filepath.Join(extensionsCRDs, "crd-extensions.gardener.cloud_backupbuckets.yaml"),
+				filepath.Join(extensionsCRDs, "crd-extensions.gardener.cloud_clusters.yaml"),
 			},
 		},
 		ErrorIfCRDPathMissing: true,
