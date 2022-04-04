@@ -16,14 +16,18 @@ package vpa
 
 import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 )
 
 const (
-	admissionController = "vpa-admission-controller"
+	admissionController                  = "vpa-admission-controller"
+	admissionControllerServicePort int32 = 443
+	admissionControllerPort        int32 = 10250
 )
 
 // ValuesAdmissionController is a set of configuration values for the vpa-admission-controller.
@@ -36,6 +40,7 @@ func (v *vpa) admissionControllerResourceConfigs() resourceConfigs {
 	var (
 		clusterRole        = v.emptyClusterRole("admission-controller")
 		clusterRoleBinding = v.emptyClusterRoleBinding("admission-controller")
+		service            = v.emptyService("vpa-webhook")
 	)
 
 	configs := resourceConfigs{
@@ -43,6 +48,7 @@ func (v *vpa) admissionControllerResourceConfigs() resourceConfigs {
 		{obj: clusterRoleBinding, class: application, mutateFn: func() {
 			v.reconcileAdmissionControllerClusterRoleBinding(clusterRoleBinding, clusterRole, admissionController)
 		}},
+		{obj: service, class: runtime, mutateFn: func() { v.reconcileAdmissionControllerService(service) }},
 	}
 
 	if v.values.ClusterType == ClusterTypeSeed {
@@ -106,4 +112,15 @@ func (v *vpa) reconcileAdmissionControllerClusterRoleBinding(clusterRoleBinding 
 		Name:      serviceAccountName,
 		Namespace: v.serviceAccountNamespace(),
 	}}
+}
+
+func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
+	service.Spec.Selector = getAppLabel(admissionController)
+	desiredPorts := []corev1.ServicePort{
+		{
+			Port:       admissionControllerServicePort,
+			TargetPort: intstr.FromInt(int(admissionControllerPort)),
+		},
+	}
+	service.Spec.Ports = kutil.ReconcileServicePorts(service.Spec.Ports, desiredPorts, "")
 }

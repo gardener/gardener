@@ -104,6 +104,7 @@ var _ = Describe("VPA", func() {
 		clusterRoleAdmissionController        *rbacv1.ClusterRole
 		clusterRoleBindingAdmissionController *rbacv1.ClusterRoleBinding
 		shootAccessSecretAdmissionController  *corev1.Secret
+		serviceAdmissionController            *corev1.Service
 	)
 
 	BeforeEach(func() {
@@ -978,6 +979,23 @@ var _ = Describe("VPA", func() {
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
+		serviceAdmissionController = &corev1.Service{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Service",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "vpa-webhook",
+				Namespace: namespace,
+			},
+			Spec: corev1.ServiceSpec{
+				Selector: map[string]string{"app": "vpa-admission-controller"},
+				Ports: []corev1.ServicePort{{
+					Port:       443,
+					TargetPort: intstr.FromInt(10250),
+				}},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -1035,7 +1053,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(21))
+				Expect(managedResourceSecret.Data).To(HaveLen(22))
 
 				By("checking vpa-exporter resources")
 				clusterRoleExporter.Name = replaceTargetSubstrings(clusterRoleExporter.Name)
@@ -1090,6 +1108,7 @@ var _ = Describe("VPA", func() {
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(serialize(serviceAccountAdmissionController)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_admission-controller.yaml"])).To(Equal(serialize(clusterRoleAdmissionController)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_admission-controller.yaml"])).To(Equal(serialize(clusterRoleBindingAdmissionController)))
+				Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-webhook.yaml"])).To(Equal(serialize(serviceAdmissionController)))
 			})
 
 			It("should successfully deploy with special configuration", func() {
@@ -1323,6 +1342,11 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(shootAccessSecretAdmissionController), secret)).To(Succeed())
 				shootAccessSecretAdmissionController.ResourceVersion = "1"
 				Expect(secret).To(Equal(shootAccessSecretAdmissionController))
+
+				service = &corev1.Service{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAdmissionController), service)).To(Succeed())
+				serviceAdmissionController.ResourceVersion = "1"
+				Expect(service).To(Equal(serviceAdmissionController))
 			})
 		})
 	})
