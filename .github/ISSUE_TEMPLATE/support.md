@@ -1,7 +1,6 @@
 ---
 name: Support Request
 about: Support request or question relating to Gardener
-labels: kind/question
 
 ---
 
