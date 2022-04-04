@@ -113,6 +113,7 @@ var _ = Describe("VPA", func() {
 		serviceAdmissionController            *corev1.Service
 		networkPolicyAdmissionController      *networkingv1.NetworkPolicy
 		deploymentAdmissionControllerFor      func(bool) *appsv1.Deployment
+		vpaAdmissionController                *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
 	BeforeEach(func() {
@@ -1216,6 +1217,36 @@ var _ = Describe("VPA", func() {
 
 			return obj
 		}
+		vpaAdmissionController = &vpaautoscalingv1.VerticalPodAutoscaler{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "autoscaling.k8s.io/v1",
+				Kind:       "VerticalPodAutoscaler",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "vpa-admission-controller",
+				Namespace: namespace,
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       "vpa-admission-controller",
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &vpaUpdateModeAuto},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName:    "*",
+							ControlledValues: &vpaControlledValues,
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("50m"),
+								corev1.ResourceMemory: resource.MustParse("100Mi"),
+							},
+						},
+					},
+				},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -1274,7 +1305,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(23))
+				Expect(managedResourceSecret.Data).To(HaveLen(24))
 
 				By("checking vpa-exporter resources")
 				clusterRoleExporter.Name = replaceTargetSubstrings(clusterRoleExporter.Name)
@@ -1334,6 +1365,7 @@ var _ = Describe("VPA", func() {
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_admission-controller.yaml"])).To(Equal(serialize(clusterRoleBindingAdmissionController)))
 				Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-webhook.yaml"])).To(Equal(serialize(serviceAdmissionController)))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(serialize(deploymentAdmissionController)))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(serialize(vpaAdmissionController)))
 			})
 
 			It("should successfully deploy with special configuration", func() {
@@ -1585,6 +1617,11 @@ var _ = Describe("VPA", func() {
 				deploymentAdmissionController := deploymentAdmissionControllerFor(false)
 				deploymentAdmissionController.ResourceVersion = "1"
 				Expect(deployment).To(Equal(deploymentAdmissionController))
+
+				vpa = &vpaautoscalingv1.VerticalPodAutoscaler{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaAdmissionController), vpa)).To(Succeed())
+				vpaAdmissionController.ResourceVersion = "1"
+				Expect(vpa).To(Equal(vpaAdmissionController))
 			})
 		})
 	})
@@ -1634,6 +1671,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Create(ctx, serviceAdmissionController)).To(Succeed())
 				Expect(c.Create(ctx, networkPolicyAdmissionController)).To(Succeed())
 				Expect(c.Create(ctx, deploymentAdmissionControllerFor(true))).To(Succeed())
+				Expect(c.Create(ctx, vpaAdmissionController)).To(Succeed())
 
 				Expect(component.Destroy(ctx)).To(Succeed())
 
@@ -1657,6 +1695,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAdmissionController), &corev1.Service{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAdmissionController), &networkingv1.NetworkPolicy{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentAdmissionControllerFor(true)), &appsv1.Deployment{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaAdmissionController), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 			})
 		})
 	})

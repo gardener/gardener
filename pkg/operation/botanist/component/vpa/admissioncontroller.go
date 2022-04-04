@@ -25,12 +25,14 @@ import (
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 )
 
@@ -57,6 +59,7 @@ func (v *vpa) admissionControllerResourceConfigs() resourceConfigs {
 		clusterRoleBinding = v.emptyClusterRoleBinding("admission-controller")
 		service            = v.emptyService("vpa-webhook")
 		deployment         = v.emptyDeployment(admissionController)
+		vpa                = v.emptyVerticalPodAutoscaler(admissionController)
 	)
 
 	configs := resourceConfigs{
@@ -65,6 +68,7 @@ func (v *vpa) admissionControllerResourceConfigs() resourceConfigs {
 			v.reconcileAdmissionControllerClusterRoleBinding(clusterRoleBinding, clusterRole, admissionController)
 		}},
 		{obj: service, class: runtime, mutateFn: func() { v.reconcileAdmissionControllerService(service) }},
+		{obj: vpa, class: runtime, mutateFn: func() { v.reconcileAdmissionControllerVPA(vpa, deployment) }},
 	}
 
 	if v.values.ClusterType == ClusterTypeSeed {
@@ -265,4 +269,30 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 	}
 
 	injectAPIServerConnectionSpec(deployment, admissionController, serviceAccountName)
+}
+
+func (v *vpa) reconcileAdmissionControllerVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) {
+	updateMode := vpaautoscalingv1.UpdateModeAuto
+	controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+
+	vpa.Spec = vpaautoscalingv1.VerticalPodAutoscalerSpec{
+		TargetRef: &autoscalingv1.CrossVersionObjectReference{
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
+			Name:       deployment.Name,
+		},
+		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &updateMode},
+		ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+				{
+					ContainerName:    "*",
+					ControlledValues: &controlledValues,
+					MinAllowed: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("50m"),
+						corev1.ResourceMemory: resource.MustParse("100Mi"),
+					},
+				},
+			},
+		},
+	}
 }
