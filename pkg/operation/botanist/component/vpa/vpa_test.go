@@ -99,6 +99,8 @@ var _ = Describe("VPA", func() {
 		shootAccessSecretRecommender                 *corev1.Secret
 		deploymentRecommenderFor                     func(bool, *metav1.Duration, *float64) *appsv1.Deployment
 		vpaRecommender                               *vpaautoscalingv1.VerticalPodAutoscaler
+
+		serviceAccountAdmissionController *corev1.ServiceAccount
 	)
 
 	BeforeEach(func() {
@@ -876,6 +878,21 @@ var _ = Describe("VPA", func() {
 				},
 			},
 		}
+
+		serviceAccountAdmissionController = &corev1.ServiceAccount{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "ServiceAccount",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "vpa-admission-controller",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"gardener.cloud/role": "vpa",
+				},
+			},
+			AutomountServiceAccountToken: pointer.Bool(false),
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -933,7 +950,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(18))
+				Expect(managedResourceSecret.Data).To(HaveLen(19))
 
 				By("checking vpa-exporter resources")
 				clusterRoleExporter.Name = replaceTargetSubstrings(clusterRoleExporter.Name)
@@ -979,6 +996,9 @@ var _ = Describe("VPA", func() {
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_checkpoint-actor.yaml"])).To(Equal(serialize(clusterRoleBindingRecommenderCheckpointActor)))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-recommender.yaml"])).To(Equal(serialize(deploymentRecommender)))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__vpa-recommender.yaml"])).To(Equal(serialize(vpaRecommender)))
+
+				By("checking vpa-admission-controller resources")
+				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(serialize(serviceAccountAdmissionController)))
 			})
 
 			It("should successfully deploy with special configuration", func() {

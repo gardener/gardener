@@ -14,6 +14,15 @@
 
 package vpa
 
+import (
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
+)
+
+const (
+	admissionController = "vpa-admission-controller"
+)
+
 // ValuesAdmissionController is a set of configuration values for the vpa-admission-controller.
 type ValuesAdmissionController struct {
 	// Image is the container image.
@@ -21,5 +30,21 @@ type ValuesAdmissionController struct {
 }
 
 func (v *vpa) admissionControllerResourceConfigs() resourceConfigs {
-	return resourceConfigs{}
+	configs := resourceConfigs{}
+
+	if v.values.ClusterType == ClusterTypeSeed {
+		serviceAccount := v.emptyServiceAccount(admissionController)
+		configs = append(configs,
+			resourceConfig{obj: serviceAccount, class: application, mutateFn: func() { v.reconcileAdmissionControllerServiceAccount(serviceAccount) }},
+		)
+	} else {
+		configs = append(configs)
+	}
+
+	return configs
+}
+
+func (v *vpa) reconcileAdmissionControllerServiceAccount(serviceAccount *corev1.ServiceAccount) {
+	serviceAccount.Labels = getRoleLabel()
+	serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
 }
