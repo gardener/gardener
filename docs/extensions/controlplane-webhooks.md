@@ -1,3 +1,7 @@
+---
+title: ControlPlane Webhooks
+---
+
 # Controlplane customization webhooks
 
 Gardener creates the Shoot controlplane in several steps of the Shoot flow. At different point of this flow, it:
