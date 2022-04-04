@@ -32,11 +32,13 @@ type ValuesRecommender struct {
 
 func (v *vpa) recommenderResourceConfigs() resourceConfigs {
 	var (
-		clusterRole = v.emptyClusterRole("metrics-reader")
+		clusterRoleMetricsReader   = v.emptyClusterRole("metrics-reader")
+		clusterRoleCheckpointActor = v.emptyClusterRole("checkpoint-actor")
 	)
 
 	configs := resourceConfigs{
-		{obj: clusterRole, class: application, mutateFn: func() { v.reconcileRecommenderClusterRole(clusterRole) }},
+		{obj: clusterRoleMetricsReader, class: application, mutateFn: func() { v.reconcileRecommenderClusterRoleMetricsReader(clusterRoleMetricsReader) }},
+		{obj: clusterRoleCheckpointActor, class: application, mutateFn: func() { v.reconcileRecommenderClusterRoleCheckpointActor(clusterRoleCheckpointActor) }},
 	}
 
 	if v.values.ClusterType == ClusterTypeSeed {
@@ -56,12 +58,33 @@ func (v *vpa) reconcileRecommenderServiceAccount(serviceAccount *corev1.ServiceA
 	serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
 }
 
-func (v *vpa) reconcileRecommenderClusterRole(clusterRole *rbacv1.ClusterRole) {
+func (v *vpa) reconcileRecommenderClusterRoleMetricsReader(clusterRole *rbacv1.ClusterRole) {
 	clusterRole.Labels = getRoleLabel()
 	clusterRole.Rules = []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{"metrics.k8s.io"},
 			Resources: []string{"pods"},
+			Verbs:     []string{"get", "list"},
+		},
+	}
+}
+
+func (v *vpa) reconcileRecommenderClusterRoleCheckpointActor(clusterRole *rbacv1.ClusterRole) {
+	clusterRole.Labels = getRoleLabel()
+	clusterRole.Rules = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"poc.autoscaling.k8s.io"},
+			Resources: []string{"verticalpodautoscalercheckpoints"},
+			Verbs:     []string{"get", "list", "watch", "create", "patch", "delete"},
+		},
+		{
+			APIGroups: []string{"autoscaling.k8s.io"},
+			Resources: []string{"verticalpodautoscalercheckpoints"},
+			Verbs:     []string{"get", "list", "watch", "create", "patch", "delete"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"namespaces"},
 			Verbs:     []string{"get", "list"},
 		},
 	}
