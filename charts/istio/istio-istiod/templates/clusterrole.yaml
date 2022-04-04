@@ -14,6 +14,7 @@ rules:
   - get
   - list
   - watch
+  - update
   - patch
 # configuration validation webhook controller
 - apiGroups:
@@ -25,21 +26,15 @@ rules:
   - list
   - watch
   - update
-# permissions to verify the webhook is ready and rejecting
-# invalid config. We use --server-dry-run so no config is persisted.
-- apiGroups:
-  - networking.istio.io
-  verbs:
-  - create
-  resources:
-  - gateways
 # istio configuration
 - apiGroups:
-  - rbac.istio.io
+  - config.istio.io
   - security.istio.io
   - networking.istio.io
   - authentication.istio.io
+  - rbac.istio.io
   - telemetry.istio.io
+  - extensions.istio.io
   verbs:
   - get
   - watch
@@ -49,6 +44,9 @@ rules:
 - apiGroups:
   - networking.istio.io
   verbs:
+  - get
+  - watch
+  - list
   - update
   - patch
   - create
@@ -58,8 +56,13 @@ rules:
 - apiGroups:
   - networking.istio.io
   verbs:
+  - get
+  - watch
+  - list
   - update
   - patch
+  - create
+  - delete
   resources:
   - workloadentries/status
 
@@ -105,6 +108,21 @@ rules:
   - watch
 - apiGroups:
   - extensions
+  resources:
+  - ingresses/status
+  verbs:
+  - "*"
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  - ingressclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networking.k8s.io
   resources:
   - ingresses/status
   verbs:
@@ -158,12 +176,21 @@ rules:
 # Use for Kubernetes Service APIs
 - apiGroups:
   - networking.x-k8s.io
+  - gateway.networking.k8s.io
   resources:
   - "*"
   verbs:
   - get
   - watch
   - list
+- apiGroups:
+  - networking.x-k8s.io
+  - gateway.networking.k8s.io
+  resources:
+  - "*" # TODO: should be on just */status but wildcard is not supported
+  verbs:
+  - update
+  - patch
 # Needed for multicluster secret reading, possibly ingress certs in the future
 - apiGroups:
   - ''
@@ -177,6 +204,28 @@ rules:
   - extensions.istio.io
   resources:
   - wasmplugins
+  verbs:
+  - get
+  - watch
+  - list
+
+# Used for MCS serviceexport management
+- apiGroups:
+  - multicluster.x-k8s.io
+  resources:
+  - serviceexports
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+  - delete
+
+# Used for MCS serviceimport management
+- apiGroups:
+  - multicluster.x-k8s.io
+  resources:
+  - serviceimports
   verbs:
   - get
   - watch
