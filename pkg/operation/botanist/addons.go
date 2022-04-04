@@ -332,22 +332,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		verticalPodAutoscaler["application"].(map[string]interface{})["admissionController"].(map[string]interface{})["caCert"] = vpaSecret.Data[secrets.DataKeyCertificateCA]
 	}
 
-	workerPools, err := b.computeWorkerPoolsForKubeProxy(ctx)
-	if err != nil {
-		return nil, err
-	}
-	var kubeProxyWorkerPools []map[string]string
-	for _, obj := range workerPools {
-		kubeProxyWorkerPools = append(kubeProxyWorkerPools, map[string]string{
-			"name":              obj.Name,
-			"kubernetesVersion": obj.KubernetesVersion,
-			"kubeProxyImage":    obj.Image,
-		})
-	}
-	kubeProxy := map[string]interface{}{
-		"workerPools": kubeProxyWorkerPools,
-	}
-
 	if domain := b.Shoot.ExternalClusterDomain; domain != nil {
 		shootInfo["domain"] = *domain
 	}
@@ -390,7 +374,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	values := map[string]interface{}{
 		"global":          global,
 		"apiserver-proxy": common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
-		"kube-proxy":      common.GenerateAddonConfig(kubeProxy, gardencorev1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)),
 		"monitoring": common.GenerateAddonConfig(map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,

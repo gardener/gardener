@@ -3,10 +3,6 @@ dependencies:
   repository: http://localhost:10191
   version: 0.1.0
   condition: apiserver-proxy.enabled
-- name: kube-proxy
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: kube-proxy.enabled
 - name: monitoring
   repository: http://localhost:10191
   version: 0.1.0

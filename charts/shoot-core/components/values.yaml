@@ -13,8 +13,6 @@ apiserver-proxy:
   proxySeedServer:
     host: dummy.127.0.0.1.nip.io
     port: 8443
-kube-proxy:
-  enabled: true
 monitoring:
   enabled: true
   node-exporter:
