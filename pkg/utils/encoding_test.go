@@ -28,7 +28,7 @@ import (
 var _ = Describe("Encoding", func() {
 	Describe("#CreateSHA1Secret", func() {
 		It("should create the expected secret", func() {
-			Expect(CreateSHA1Secret([]byte("username"), []byte("password"))).To(Equal([]byte("dXNlcm5hbWU6e1NIQX1XNnBoNU1tNVB6OEdnaVVMYlBnekczN21qOWc9")))
+			Expect(CreateSHA1Secret([]byte("username"), []byte("password"))).To(Equal([]byte("username:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=")))
 		})
 	})
 
