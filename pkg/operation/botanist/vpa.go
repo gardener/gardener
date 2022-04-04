@@ -47,7 +47,8 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (component.DeployWaiter, error
 
 	var (
 		valuesAdmissionController = vpa.ValuesAdmissionController{
-			Image: imageAdmissionController.String(),
+			Image:    imageAdmissionController.String(),
+			Replicas: b.Shoot.GetReplicas(1),
 		}
 		valuesExporter = vpa.ValuesExporter{
 			Image: imageExporter.String(),

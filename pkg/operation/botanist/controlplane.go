@@ -16,19 +16,14 @@ package botanist
 
 import (
 	"context"
-	"path/filepath"
 	"time"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
-	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/images"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -39,41 +34,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-func (b *Botanist) oldDeployVerticalPodAutoscaler(ctx context.Context) error {
-	var (
-		podLabels = map[string]interface{}{
-			v1beta1constants.LabelNetworkPolicyToDNS:            "allowed",
-			v1beta1constants.LabelNetworkPolicyToShootAPIServer: "allowed",
-		}
-		admissionController = map[string]interface{}{
-			"replicas": b.Shoot.GetReplicas(1),
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-vpa-tls-certs":            b.LoadCheckSum(common.VPASecretName),
-				"checksum/secret-vpa-admission-controller": b.LoadCheckSum("vpa-admission-controller"),
-			},
-			"podLabels": utils.MergeMaps(podLabels, map[string]interface{}{
-				v1beta1constants.LabelNetworkPolicyFromShootAPIServer: "allowed",
-			}),
-			"createServiceAccount": false,
-		}
-		defaultValues = map[string]interface{}{
-			"admissionController": admissionController,
-			"deploymentLabels": map[string]interface{}{
-				v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-			},
-			"clusterType": "shoot",
-		}
-	)
-
-	values, err := b.InjectSeedShootImages(defaultValues, images.ImageNameVpaAdmissionController, images.ImageNameVpaExporter, images.ImageNameVpaRecommender)
-	if err != nil {
-		return err
-	}
-	values["global"] = map[string]interface{}{"images": values["images"]}
-
-	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-bootstrap", "charts", "vpa", "charts", "runtime"), b.Shoot.SeedNamespace, "vpa", kubernetes.Values(values))
-}
 
 func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentName string, defaultReplicas int32) (int32, error) {
 	isCreateOrRestoreOperation := b.Shoot.GetInfo().Status.LastOperation != nil &&

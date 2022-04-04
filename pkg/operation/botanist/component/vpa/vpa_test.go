@@ -63,13 +63,15 @@ var _ = Describe("VPA", func() {
 		c         client.Client
 		component component.DeployWaiter
 
-		imageExporter    = "some-image:for-exporter"
-		imageRecommender = "some-image:for-recommender"
-		imageUpdater     = "some-image:for-updater"
+		imageAdmissionController = "some-image:for-admission-controller"
+		imageExporter            = "some-image:for-exporter"
+		imageRecommender         = "some-image:for-recommender"
+		imageUpdater             = "some-image:for-updater"
 
-		valuesExporter    ValuesExporter
-		valuesRecommender ValuesRecommender
-		valuesUpdater     ValuesUpdater
+		valuesAdmissionController ValuesAdmissionController
+		valuesExporter            ValuesExporter
+		valuesRecommender         ValuesRecommender
+		valuesUpdater             ValuesUpdater
 
 		vpaUpdateModeAuto   = vpaautoscalingv1.UpdateModeAuto
 		vpaControlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
@@ -110,11 +112,16 @@ var _ = Describe("VPA", func() {
 		shootAccessSecretAdmissionController  *corev1.Secret
 		serviceAdmissionController            *corev1.Service
 		networkPolicyAdmissionController      *networkingv1.NetworkPolicy
+		deploymentAdmissionControllerFor      func(bool) *appsv1.Deployment
 	)
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 
+		valuesAdmissionController = ValuesAdmissionController{
+			Image:    imageAdmissionController,
+			Replicas: 4,
+		}
 		valuesExporter = ValuesExporter{
 			Image: imageExporter,
 		}
@@ -1035,6 +1042,180 @@ var _ = Describe("VPA", func() {
 				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 			},
 		}
+		deploymentAdmissionControllerFor = func(withServiceAccount bool) *appsv1.Deployment {
+			obj := &appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "vpa-admission-controller",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"app":                 "vpa-admission-controller",
+						"gardener.cloud/role": "vpa",
+					},
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas:             pointer.Int32(4),
+					RevisionHistoryLimit: pointer.Int32(2),
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app": "vpa-admission-controller",
+						},
+					},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"app":                 "vpa-admission-controller",
+								"gardener.cloud/role": "vpa",
+								"networking.gardener.cloud/from-shoot-apiserver": "allowed",
+								"networking.gardener.cloud/to-dns":               "allowed",
+								"networking.gardener.cloud/to-shoot-apiserver":   "allowed",
+							},
+						},
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{{
+								Name:            "admission-controller",
+								Image:           imageAdmissionController,
+								ImagePullPolicy: corev1.PullIfNotPresent,
+								Command:         []string{"./admission-controller"},
+								Args: []string{
+									"--v=2",
+									"--stderrthreshold=info",
+									"--client-ca-file=/etc/tls-certs/bundle.crt",
+									"--tls-cert-file=/etc/tls-certs/tls.crt",
+									"--tls-private-key=/etc/tls-certs/tls.key",
+									"--address=:8944",
+									"--port=10250",
+									"--register-webhook=false",
+								},
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("30m"),
+										corev1.ResourceMemory: resource.MustParse("200Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceMemory: resource.MustParse("3Gi"),
+									},
+								},
+								Ports: []corev1.ContainerPort{{
+									ContainerPort: 10250,
+								}},
+								VolumeMounts: []corev1.VolumeMount{{
+									Name:      "vpa-tls-certs",
+									MountPath: "/etc/tls-certs",
+									ReadOnly:  true,
+								}},
+							}},
+							Volumes: []corev1.Volume{{
+								Name: "vpa-tls-certs",
+								VolumeSource: corev1.VolumeSource{
+									Projected: &corev1.ProjectedVolumeSource{
+										DefaultMode: pointer.Int32(420),
+										Sources: []corev1.VolumeProjection{
+											{
+												Secret: &corev1.SecretProjection{
+													LocalObjectReference: corev1.LocalObjectReference{
+														Name: "ca",
+													},
+													Items: []corev1.KeyToPath{{
+														Key:  "bundle.crt",
+														Path: "bundle.crt",
+													}},
+												},
+											},
+											{
+												Secret: &corev1.SecretProjection{
+													LocalObjectReference: corev1.LocalObjectReference{
+														Name: "server-secret",
+													},
+													Items: []corev1.KeyToPath{
+														{
+															Key:  "tls.crt",
+															Path: "tls.crt",
+														},
+														{
+															Key:  "tls.key",
+															Path: "tls.key",
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							}},
+						},
+					},
+				},
+			}
+
+			if withServiceAccount {
+				obj.Spec.Template.Spec.ServiceAccountName = serviceAccountAdmissionController.Name
+				obj.Spec.Template.Spec.Containers[0].Env = append(obj.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+					Name: "NAMESPACE",
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{
+							FieldPath: "metadata.namespace",
+						},
+					},
+				})
+			} else {
+				obj.Labels["gardener.cloud/role"] = "controlplane"
+				obj.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
+				obj.Spec.Template.Spec.Containers[0].Env = append(obj.Spec.Template.Spec.Containers[0].Env,
+					corev1.EnvVar{
+						Name:  "KUBERNETES_SERVICE_HOST",
+						Value: "kube-apiserver",
+					},
+					corev1.EnvVar{
+						Name:  "KUBERNETES_SERVICE_PORT",
+						Value: strconv.Itoa(443),
+					},
+				)
+				obj.Spec.Template.Spec.Volumes = append(obj.Spec.Template.Spec.Volumes, corev1.Volume{
+					Name: "shoot-access",
+					VolumeSource: corev1.VolumeSource{
+						Projected: &corev1.ProjectedVolumeSource{
+							DefaultMode: pointer.Int32(420),
+							Sources: []corev1.VolumeProjection{
+								{
+									Secret: &corev1.SecretProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "ca",
+										},
+										Items: []corev1.KeyToPath{{
+											Key:  "ca.crt",
+											Path: "ca.crt",
+										}},
+									},
+								},
+								{
+									Secret: &corev1.SecretProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "shoot-access-vpa-admission-controller",
+										},
+										Items: []corev1.KeyToPath{{
+											Key:  "token",
+											Path: "token",
+										}},
+										Optional: pointer.Bool(false),
+									},
+								},
+							},
+						},
+					},
+				})
+				obj.Spec.Template.Spec.Containers[0].VolumeMounts = append(obj.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+					Name:      "shoot-access",
+					MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+					ReadOnly:  true,
+				})
+			}
+
+			return obj
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -1056,10 +1237,11 @@ var _ = Describe("VPA", func() {
 		Context("cluster type seed", func() {
 			BeforeEach(func() {
 				component = New(c, namespace, Values{
-					ClusterType: ClusterTypeSeed,
-					Exporter:    valuesExporter,
-					Recommender: valuesRecommender,
-					Updater:     valuesUpdater,
+					ClusterType:         ClusterTypeSeed,
+					AdmissionController: valuesAdmissionController,
+					Exporter:            valuesExporter,
+					Recommender:         valuesRecommender,
+					Updater:             valuesUpdater,
 				})
 				managedResourceName = "vpa"
 			})
@@ -1092,7 +1274,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(22))
+				Expect(managedResourceSecret.Data).To(HaveLen(23))
 
 				By("checking vpa-exporter resources")
 				clusterRoleExporter.Name = replaceTargetSubstrings(clusterRoleExporter.Name)
@@ -1144,10 +1326,14 @@ var _ = Describe("VPA", func() {
 				clusterRoleBindingAdmissionController.Name = replaceTargetSubstrings(clusterRoleBindingAdmissionController.Name)
 				clusterRoleBindingAdmissionController.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingAdmissionController.RoleRef.Name)
 
+				deploymentAdmissionController := deploymentAdmissionControllerFor(true)
+				dropNetworkingLabels(deploymentAdmissionController.Spec.Template.Labels)
+
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(serialize(serviceAccountAdmissionController)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_admission-controller.yaml"])).To(Equal(serialize(clusterRoleAdmissionController)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_admission-controller.yaml"])).To(Equal(serialize(clusterRoleBindingAdmissionController)))
 				Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-webhook.yaml"])).To(Equal(serialize(serviceAdmissionController)))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(serialize(deploymentAdmissionController)))
 			})
 
 			It("should successfully deploy with special configuration", func() {
@@ -1161,10 +1347,11 @@ var _ = Describe("VPA", func() {
 				valuesUpdater.EvictionTolerance = pointer.Float64(5.67)
 
 				component = New(c, namespace, Values{
-					ClusterType: ClusterTypeSeed,
-					Exporter:    valuesExporter,
-					Recommender: valuesRecommender,
-					Updater:     valuesUpdater,
+					ClusterType:         ClusterTypeSeed,
+					AdmissionController: valuesAdmissionController,
+					Exporter:            valuesExporter,
+					Recommender:         valuesRecommender,
+					Updater:             valuesUpdater,
 				})
 
 				Expect(component.Deploy(ctx)).To(Succeed())
@@ -1261,10 +1448,11 @@ var _ = Describe("VPA", func() {
 		Context("cluster type shoot", func() {
 			BeforeEach(func() {
 				component = New(c, namespace, Values{
-					ClusterType: ClusterTypeShoot,
-					Exporter:    valuesExporter,
-					Recommender: valuesRecommender,
-					Updater:     valuesUpdater,
+					ClusterType:         ClusterTypeShoot,
+					AdmissionController: valuesAdmissionController,
+					Exporter:            valuesExporter,
+					Recommender:         valuesRecommender,
+					Updater:             valuesUpdater,
 				})
 				managedResourceName = "shoot-core-vpa"
 			})
@@ -1391,6 +1579,12 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAdmissionController), networkPolicy)).To(Succeed())
 				networkPolicyAdmissionController.ResourceVersion = "1"
 				Expect(networkPolicy).To(Equal(networkPolicyAdmissionController))
+
+				deployment = &appsv1.Deployment{}
+				Expect(c.Get(ctx, kutil.Key(namespace, "vpa-admission-controller"), deployment)).To(Succeed())
+				deploymentAdmissionController := deploymentAdmissionControllerFor(false)
+				deploymentAdmissionController.ResourceVersion = "1"
+				Expect(deployment).To(Equal(deploymentAdmissionController))
 			})
 		})
 	})
@@ -1439,6 +1633,7 @@ var _ = Describe("VPA", func() {
 				By("creating vpa-admission-controller runtime resources")
 				Expect(c.Create(ctx, serviceAdmissionController)).To(Succeed())
 				Expect(c.Create(ctx, networkPolicyAdmissionController)).To(Succeed())
+				Expect(c.Create(ctx, deploymentAdmissionControllerFor(true))).To(Succeed())
 
 				Expect(component.Destroy(ctx)).To(Succeed())
 
@@ -1461,6 +1656,7 @@ var _ = Describe("VPA", func() {
 				By("checking vpa-admission-controller runtime resources")
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAdmissionController), &corev1.Service{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAdmissionController), &networkingv1.NetworkPolicy{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentAdmissionControllerFor(true)), &appsv1.Deployment{})).To(BeNotFoundError())
 			})
 		})
 	})

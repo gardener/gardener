@@ -15,14 +15,20 @@
 package vpa
 
 import (
+	"fmt"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
@@ -32,12 +38,17 @@ const (
 	admissionController                  = "vpa-admission-controller"
 	admissionControllerServicePort int32 = 443
 	admissionControllerPort              = 10250
+
+	volumeMountPathCertificates = "/etc/tls-certs"
+	volumeNameCertificates      = "vpa-tls-certs"
 )
 
 // ValuesAdmissionController is a set of configuration values for the vpa-admission-controller.
 type ValuesAdmissionController struct {
 	// Image is the container image.
 	Image string
+	// Replicas is the number of pod replicas.
+	Replicas int32
 }
 
 func (v *vpa) admissionControllerResourceConfigs() resourceConfigs {
@@ -45,6 +56,7 @@ func (v *vpa) admissionControllerResourceConfigs() resourceConfigs {
 		clusterRole        = v.emptyClusterRole("admission-controller")
 		clusterRoleBinding = v.emptyClusterRoleBinding("admission-controller")
 		service            = v.emptyService("vpa-webhook")
+		deployment         = v.emptyDeployment(admissionController)
 	)
 
 	configs := resourceConfigs{
@@ -59,11 +71,13 @@ func (v *vpa) admissionControllerResourceConfigs() resourceConfigs {
 		serviceAccount := v.emptyServiceAccount(admissionController)
 		configs = append(configs,
 			resourceConfig{obj: serviceAccount, class: application, mutateFn: func() { v.reconcileAdmissionControllerServiceAccount(serviceAccount) }},
+			resourceConfig{obj: deployment, class: runtime, mutateFn: func() { v.reconcileAdmissionControllerDeployment(deployment, &serviceAccount.Name) }},
 		)
 	} else {
 		networkPolicy := v.emptyNetworkPolicy("allow-kube-apiserver-to-vpa-admission-controller")
 		configs = append(configs,
 			resourceConfig{obj: networkPolicy, class: runtime, mutateFn: func() { v.reconcileAdmissionControllerNetworkPolicy(networkPolicy) }},
+			resourceConfig{obj: deployment, class: runtime, mutateFn: func() { v.reconcileAdmissionControllerDeployment(deployment, nil) }},
 		)
 	}
 
@@ -154,4 +168,101 @@ func (v *vpa) reconcileAdmissionControllerNetworkPolicy(networkPolicy *networkin
 		}},
 		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 	}
+}
+
+func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployment, serviceAccountName *string) {
+	deployment.Labels = v.getDeploymentLabels(admissionController)
+	deployment.Spec = appsv1.DeploymentSpec{
+		Replicas:             &v.values.AdmissionController.Replicas,
+		RevisionHistoryLimit: pointer.Int32(2),
+		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(admissionController)},
+		Template: corev1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: getAllLabels(admissionController),
+			},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{{
+					Name:            "admission-controller",
+					Image:           v.values.AdmissionController.Image,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command:         []string{"./admission-controller"},
+					Args: []string{
+						"--v=2",
+						"--stderrthreshold=info",
+						fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathCertificates, secretutils.DataKeyCertificateBundle),
+						fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathCertificates, secretutils.DataKeyCertificate),
+						fmt.Sprintf("--tls-private-key=%s/%s", volumeMountPathCertificates, secretutils.DataKeyPrivateKey),
+						"--address=:8944",
+						fmt.Sprintf("--port=%d", admissionControllerPort),
+						"--register-webhook=false",
+					},
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("30m"),
+							corev1.ResourceMemory: resource.MustParse("200Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("3Gi"),
+						},
+					},
+					Ports: []corev1.ContainerPort{{
+						ContainerPort: admissionControllerPort,
+					}},
+					VolumeMounts: []corev1.VolumeMount{{
+						Name:      volumeNameCertificates,
+						MountPath: volumeMountPathCertificates,
+						ReadOnly:  true,
+					}},
+				}},
+				Volumes: []corev1.Volume{{
+					Name: volumeNameCertificates,
+					VolumeSource: corev1.VolumeSource{
+						Projected: &corev1.ProjectedVolumeSource{
+							DefaultMode: pointer.Int32(420),
+							Sources: []corev1.VolumeProjection{
+								{
+									Secret: &corev1.SecretProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "ca", // TODO: use secrets manager  (subsequent commit)
+										},
+										Items: []corev1.KeyToPath{{
+											Key:  secretutils.DataKeyCertificateBundle,
+											Path: secretutils.DataKeyCertificateBundle,
+										}},
+									},
+								},
+								{
+									Secret: &corev1.SecretProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "server-secret", // TODO: use secrets manager (subsequent commit)
+										},
+										Items: []corev1.KeyToPath{
+											{
+												Key:  secretutils.DataKeyCertificate,
+												Path: secretutils.DataKeyCertificate,
+											},
+											{
+												Key:  secretutils.DataKeyPrivateKey,
+												Path: secretutils.DataKeyPrivateKey,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}},
+			},
+		},
+	}
+
+	if v.values.ClusterType == ClusterTypeShoot {
+		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
+			v1beta1constants.LabelNetworkPolicyFromShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToShootAPIServer:   v1beta1constants.LabelNetworkPolicyAllowed,
+		})
+	}
+
+	injectAPIServerConnectionSpec(deployment, admissionController, serviceAccountName)
 }

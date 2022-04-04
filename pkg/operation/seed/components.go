@@ -268,7 +268,8 @@ func defaultVerticalPodAutoscaler(c client.Client, imageVector imagevector.Image
 		vpa.Values{
 			ClusterType: vpa.ClusterTypeSeed,
 			AdmissionController: vpa.ValuesAdmissionController{
-				Image: imageAdmissionController.String(),
+				Image:    imageAdmissionController.String(),
+				Replicas: 1,
 			},
 			Exporter: vpa.ValuesExporter{
 				Image: imageExporter.String(),
