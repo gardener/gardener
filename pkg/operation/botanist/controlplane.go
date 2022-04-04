@@ -28,7 +28,6 @@ import (
 	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -42,14 +41,6 @@ import (
 )
 
 func (b *Botanist) oldDeployVerticalPodAutoscaler(ctx context.Context) error {
-	for _, name := range []string{
-		v1beta1constants.DeploymentNameVPAAdmissionController,
-	} {
-		if err := gutil.NewShootAccessSecret(name, b.Shoot.SeedNamespace).Reconcile(ctx, b.K8sSeedClient.Client()); err != nil {
-			return err
-		}
-	}
-
 	var (
 		podLabels = map[string]interface{}{
 			v1beta1constants.LabelNetworkPolicyToDNS:            "allowed",

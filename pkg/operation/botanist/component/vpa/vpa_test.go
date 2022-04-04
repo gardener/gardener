@@ -103,6 +103,7 @@ var _ = Describe("VPA", func() {
 		serviceAccountAdmissionController     *corev1.ServiceAccount
 		clusterRoleAdmissionController        *rbacv1.ClusterRole
 		clusterRoleBindingAdmissionController *rbacv1.ClusterRoleBinding
+		shootAccessSecretAdmissionController  *corev1.Secret
 	)
 
 	BeforeEach(func() {
@@ -959,6 +960,24 @@ var _ = Describe("VPA", func() {
 				Namespace: namespace,
 			}},
 		}
+		shootAccessSecretAdmissionController = &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Secret",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "shoot-access-vpa-admission-controller",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"resources.gardener.cloud/purpose": "token-requestor",
+				},
+				Annotations: map[string]string{
+					"serviceaccount.resources.gardener.cloud/name":      "vpa-admission-controller",
+					"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
+				},
+			},
+			Type: corev1.SecretTypeOpaque,
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -1298,6 +1317,12 @@ var _ = Describe("VPA", func() {
 
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_admission-controller.yaml"])).To(Equal(serialize(clusterRoleAdmissionController)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_admission-controller.yaml"])).To(Equal(serialize(clusterRoleBindingAdmissionController)))
+
+				By("checking vpa-admission-controller runtime resources")
+				secret = &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(shootAccessSecretAdmissionController), secret)).To(Succeed())
+				shootAccessSecretAdmissionController.ResourceVersion = "1"
+				Expect(secret).To(Equal(shootAccessSecretAdmissionController))
 			})
 		})
 	})

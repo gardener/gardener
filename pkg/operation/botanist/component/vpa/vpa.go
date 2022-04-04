@@ -137,6 +137,7 @@ func (v *vpa) Deploy(ctx context.Context) error {
 	}
 
 	for _, name := range []string{
+		v1beta1constants.DeploymentNameVPAAdmissionController,
 		v1beta1constants.DeploymentNameVPARecommender,
 		v1beta1constants.DeploymentNameVPAUpdater,
 	} {
