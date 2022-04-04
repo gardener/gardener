@@ -388,10 +388,9 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	}
 
 	values := map[string]interface{}{
-		"global":                 global,
-		"kube-apiserver-kubelet": common.GenerateAddonConfig(nil, true),
-		"apiserver-proxy":        common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
-		"kube-proxy":             common.GenerateAddonConfig(kubeProxy, gardencorev1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)),
+		"global":          global,
+		"apiserver-proxy": common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
+		"kube-proxy":      common.GenerateAddonConfig(kubeProxy, gardencorev1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)),
 		"monitoring": common.GenerateAddonConfig(map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
