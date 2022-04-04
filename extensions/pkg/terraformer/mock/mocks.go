@@ -336,34 +336,6 @@ func (mr *MockTerraformerMockRecorder) UseProjectedTokenMount(arg0 interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UseProjectedTokenMount", reflect.TypeOf((*MockTerraformer)(nil).UseProjectedTokenMount), arg0)
 }
 
-// UseV1 mocks base method.
-func (m *MockTerraformer) UseV1(arg0 bool) terraformer.Terraformer {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UseV1", arg0)
-	ret0, _ := ret[0].(terraformer.Terraformer)
-	return ret0
-}
-
-// UseV1 indicates an expected call of UseV1.
-func (mr *MockTerraformerMockRecorder) UseV1(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UseV1", reflect.TypeOf((*MockTerraformer)(nil).UseV1), arg0)
-}
-
-// UseV2 mocks base method.
-func (m *MockTerraformer) UseV2(arg0 bool) terraformer.Terraformer {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UseV2", arg0)
-	ret0, _ := ret[0].(terraformer.Terraformer)
-	return ret0
-}
-
-// UseV2 indicates an expected call of UseV2.
-func (mr *MockTerraformerMockRecorder) UseV2(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UseV2", reflect.TypeOf((*MockTerraformer)(nil).UseV2), arg0)
-}
-
 // WaitForCleanEnvironment mocks base method.
 func (m *MockTerraformer) WaitForCleanEnvironment(arg0 context.Context) error {
 	m.ctrl.T.Helper()
