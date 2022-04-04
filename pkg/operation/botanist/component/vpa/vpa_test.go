@@ -98,6 +98,7 @@ var _ = Describe("VPA", func() {
 		clusterRoleBindingRecommenderCheckpointActor *rbacv1.ClusterRoleBinding
 		shootAccessSecretRecommender                 *corev1.Secret
 		deploymentRecommenderFor                     func(bool, *metav1.Duration, *float64) *appsv1.Deployment
+		vpaRecommender                               *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
 	BeforeEach(func() {
@@ -845,6 +846,36 @@ var _ = Describe("VPA", func() {
 
 			return obj
 		}
+		vpaRecommender = &vpaautoscalingv1.VerticalPodAutoscaler{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "autoscaling.k8s.io/v1",
+				Kind:       "VerticalPodAutoscaler",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "vpa-recommender",
+				Namespace: namespace,
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       "vpa-recommender",
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &vpaUpdateModeAuto},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName:    "*",
+							ControlledValues: &vpaControlledValues,
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("10m"),
+								corev1.ResourceMemory: resource.MustParse("40Mi"),
+							},
+						},
+					},
+				},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -902,7 +933,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(17))
+				Expect(managedResourceSecret.Data).To(HaveLen(18))
 
 				By("checking vpa-exporter resources")
 				clusterRoleExporter.Name = replaceTargetSubstrings(clusterRoleExporter.Name)
@@ -947,6 +978,7 @@ var _ = Describe("VPA", func() {
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_checkpoint-actor.yaml"])).To(Equal(serialize(clusterRoleRecommenderCheckpointActor)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_checkpoint-actor.yaml"])).To(Equal(serialize(clusterRoleBindingRecommenderCheckpointActor)))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-recommender.yaml"])).To(Equal(serialize(deploymentRecommender)))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__vpa-recommender.yaml"])).To(Equal(serialize(vpaRecommender)))
 			})
 
 			It("should successfully deploy with special configuration", func() {
@@ -1155,6 +1187,11 @@ var _ = Describe("VPA", func() {
 				deploymentRecommender := deploymentRecommenderFor(false, nil, nil)
 				deploymentRecommender.ResourceVersion = "1"
 				Expect(deployment).To(Equal(deploymentRecommender))
+
+				vpa = &vpaautoscalingv1.VerticalPodAutoscaler{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaRecommender), vpa)).To(Succeed())
+				vpaRecommender.ResourceVersion = "1"
+				Expect(vpa).To(Equal(vpaRecommender))
 			})
 		})
 	})
@@ -1198,6 +1235,7 @@ var _ = Describe("VPA", func() {
 
 				By("creating vpa-recommender runtime resources")
 				Expect(c.Create(ctx, deploymentRecommenderFor(true, nil, nil))).To(Succeed())
+				Expect(c.Create(ctx, vpaRecommender)).To(Succeed())
 
 				Expect(component.Destroy(ctx)).To(Succeed())
 
@@ -1215,6 +1253,7 @@ var _ = Describe("VPA", func() {
 
 				By("checking vpa-recommender runtime resources")
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentRecommenderFor(true, nil, nil)), &appsv1.Deployment{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaRecommender), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 			})
 		})
 	})

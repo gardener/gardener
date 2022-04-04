@@ -23,10 +23,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 )
 
@@ -55,6 +57,7 @@ func (v *vpa) recommenderResourceConfigs() resourceConfigs {
 		clusterRoleCheckpointActor        = v.emptyClusterRole("checkpoint-actor")
 		clusterRoleBindingCheckpointActor = v.emptyClusterRoleBinding("checkpoint-actor")
 		deployment                        = v.emptyDeployment(recommender)
+		vpa                               = v.emptyVerticalPodAutoscaler(recommender)
 	)
 
 	configs := resourceConfigs{
@@ -66,6 +69,7 @@ func (v *vpa) recommenderResourceConfigs() resourceConfigs {
 		{obj: clusterRoleBindingCheckpointActor, class: application, mutateFn: func() {
 			v.reconcileRecommenderClusterRoleBinding(clusterRoleBindingCheckpointActor, clusterRoleCheckpointActor, recommender)
 		}},
+		{obj: vpa, class: runtime, mutateFn: func() { v.reconcileRecommenderVPA(vpa, deployment) }},
 	}
 
 	if v.values.ClusterType == ClusterTypeSeed {
@@ -195,4 +199,30 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 	}
 
 	injectAPIServerConnectionSpec(deployment, recommender, serviceAccountName)
+}
+
+func (v *vpa) reconcileRecommenderVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) {
+	updateMode := vpaautoscalingv1.UpdateModeAuto
+	controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+
+	vpa.Spec = vpaautoscalingv1.VerticalPodAutoscalerSpec{
+		TargetRef: &autoscalingv1.CrossVersionObjectReference{
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
+			Name:       deployment.Name,
+		},
+		UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &updateMode},
+		ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+				{
+					ContainerName:    "*",
+					ControlledValues: &controlledValues,
+					MinAllowed: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("10m"),
+						corev1.ResourceMemory: resource.MustParse("40Mi"),
+					},
+				},
+			},
+		},
+	}
 }
