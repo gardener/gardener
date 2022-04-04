@@ -30,6 +30,7 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,13 +61,16 @@ func (a *actuator) Reconcile(ctx context.Context, network *extensionsv1alpha1.Ne
 	}
 
 	var (
-		labels                = map[string]string{"app": "kindnet"}
-		fileOrCreate          = corev1.HostPathFileOrCreate
-		maxSurge              = intstr.FromInt(0)
-		maxUnavailable        = intstr.FromInt(1)
-		volumeNameCNIConfig   = "cni-cfg"
-		volumeNameXtablesLock = "xtables-lock"
-		volumeNameLibModules  = "lib-modules"
+		labels                    = map[string]string{"app": "kindnet"}
+		fileOrCreate              = corev1.HostPathFileOrCreate
+		maxSurge                  = intstr.FromInt(0)
+		maxUnavailable            = intstr.FromInt(1)
+		volumeHostPathCNIConfig   = "/etc/cni/net.d"
+		volumeHostPathXtablesLock = "/run/xtables.lock"
+		volumeHostPathLibModules  = "/lib/modules"
+		volumeNameCNIConfig       = "cni-cfg"
+		volumeNameXtablesLock     = "xtables-lock"
+		volumeNameLibModules      = "lib-modules"
 
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
@@ -100,6 +104,75 @@ func (a *actuator) Reconcile(ctx context.Context, network *extensionsv1alpha1.Ne
 				APIGroup: rbacv1.GroupName,
 				Kind:     "ClusterRole",
 				Name:     clusterRole.Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
+			}},
+		}
+
+		podSecurityPolicy = &policyv1beta1.PodSecurityPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.kube-system.kindnet",
+			},
+			Spec: policyv1beta1.PodSecurityPolicySpec{
+				Privileged: false,
+				Volumes: []policyv1beta1.FSType{
+					policyv1beta1.HostPath,
+					policyv1beta1.Projected,
+				},
+				HostNetwork: true,
+				AllowedCapabilities: []corev1.Capability{
+					"NET_ADMIN",
+					"NET_RAW",
+				},
+				AllowedHostPaths: []policyv1beta1.AllowedHostPath{
+					{PathPrefix: volumeHostPathCNIConfig},
+					{PathPrefix: volumeHostPathXtablesLock},
+					{PathPrefix: volumeHostPathLibModules},
+				},
+				RunAsUser: policyv1beta1.RunAsUserStrategyOptions{
+					Rule: policyv1beta1.RunAsUserStrategyRunAsAny,
+				},
+				SELinux: policyv1beta1.SELinuxStrategyOptions{
+					Rule: policyv1beta1.SELinuxStrategyRunAsAny,
+				},
+				SupplementalGroups: policyv1beta1.SupplementalGroupsStrategyOptions{
+					Rule: policyv1beta1.SupplementalGroupsStrategyRunAsAny,
+				},
+				FSGroup: policyv1beta1.FSGroupStrategyOptions{
+					Rule: policyv1beta1.FSGroupStrategyRunAsAny,
+				},
+			},
+		}
+
+		clusterRolePSP = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:psp:kube-system:kindnet",
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups:     []string{"policy", "extensions"},
+					ResourceNames: []string{podSecurityPolicy.Name},
+					Resources:     []string{"podsecuritypolicies"},
+					Verbs:         []string{"use"},
+				},
+			},
+		}
+
+		roleBindingPSP = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:psp:kindnet",
+				Namespace: metav1.NamespaceSystem,
+				Annotations: map[string]string{
+					resourcesv1alpha1.DeleteOnInvalidUpdate: "true",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     clusterRolePSP.Name,
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      rbacv1.ServiceAccountKind,
@@ -195,7 +268,7 @@ func (a *actuator) Reconcile(ctx context.Context, network *extensionsv1alpha1.Ne
 								Name: volumeNameCNIConfig,
 								VolumeSource: corev1.VolumeSource{
 									HostPath: &corev1.HostPathVolumeSource{
-										Path: "/etc/cni/net.d",
+										Path: volumeHostPathCNIConfig,
 									},
 								},
 							},
@@ -203,7 +276,7 @@ func (a *actuator) Reconcile(ctx context.Context, network *extensionsv1alpha1.Ne
 								Name: volumeNameXtablesLock,
 								VolumeSource: corev1.VolumeSource{
 									HostPath: &corev1.HostPathVolumeSource{
-										Path: "/run/xtables.lock",
+										Path: volumeHostPathXtablesLock,
 										Type: &fileOrCreate,
 									},
 								},
@@ -212,7 +285,7 @@ func (a *actuator) Reconcile(ctx context.Context, network *extensionsv1alpha1.Ne
 								Name: volumeNameLibModules,
 								VolumeSource: corev1.VolumeSource{
 									HostPath: &corev1.HostPathVolumeSource{
-										Path: "/lib/modules",
+										Path: volumeHostPathLibModules,
 									},
 								},
 							},
@@ -227,6 +300,9 @@ func (a *actuator) Reconcile(ctx context.Context, network *extensionsv1alpha1.Ne
 		serviceAccount,
 		clusterRole,
 		clusterRoleBinding,
+		podSecurityPolicy,
+		clusterRolePSP,
+		roleBindingPSP,
 		daemonSet,
 	)
 	if err != nil {
