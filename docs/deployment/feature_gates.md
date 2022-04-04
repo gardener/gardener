@@ -41,7 +41,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | ForceRestore                                 | `false` | `Alpha` | `1.39` |        |
 | DisableDNSProviderManagement                 | `false` | `Alpha` | `1.41` |        |
 | ShootCARotation                              | `false` | `Alpha` | `1.42` |        |
-| ShootMaxTokenExpirationOverwrite             | `false` | `Alpha` | `1.43` |        |
+| ShootMaxTokenExpirationOverwrite             | `false` | `Alpha` | `1.43` | `1.44` |
+| ShootMaxTokenExpirationOverwrite             | `true`  | `Beta`  | `1.45` |        |
 | ShootMaxTokenExpirationValidation            | `false` | `Alpha` | `1.43` |        |
 
 ## Feature gates for graduated or deprecated features
