@@ -16,6 +16,7 @@ package vpa
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/utils/pointer"
 )
 
@@ -30,7 +31,13 @@ type ValuesAdmissionController struct {
 }
 
 func (v *vpa) admissionControllerResourceConfigs() resourceConfigs {
-	configs := resourceConfigs{}
+	var (
+		clusterRole = v.emptyClusterRole("admission-controller")
+	)
+
+	configs := resourceConfigs{
+		{obj: clusterRole, class: application, mutateFn: func() { v.reconcileAdmissionControllerClusterRole(clusterRole) }},
+	}
 
 	if v.values.ClusterType == ClusterTypeSeed {
 		serviceAccount := v.emptyServiceAccount(admissionController)
@@ -47,4 +54,35 @@ func (v *vpa) admissionControllerResourceConfigs() resourceConfigs {
 func (v *vpa) reconcileAdmissionControllerServiceAccount(serviceAccount *corev1.ServiceAccount) {
 	serviceAccount.Labels = getRoleLabel()
 	serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+}
+
+func (v *vpa) reconcileAdmissionControllerClusterRole(clusterRole *rbacv1.ClusterRole) {
+	clusterRole.Labels = getRoleLabel()
+	clusterRole.Rules = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{""},
+			Resources: []string{"pods", "configmaps", "nodes", "limitranges"},
+			Verbs:     []string{"get", "list", "watch"},
+		},
+		{
+			APIGroups: []string{"admissionregistration.k8s.io"},
+			Resources: []string{"mutatingwebhookconfigurations"},
+			Verbs:     []string{"create", "delete", "get", "list"},
+		},
+		{
+			APIGroups: []string{"poc.autoscaling.k8s.io"},
+			Resources: []string{"verticalpodautoscalers"},
+			Verbs:     []string{"get", "list", "watch"},
+		},
+		{
+			APIGroups: []string{"autoscaling.k8s.io"},
+			Resources: []string{"verticalpodautoscalers"},
+			Verbs:     []string{"get", "list", "watch"},
+		},
+		{
+			APIGroups: []string{"coordination.k8s.io"},
+			Resources: []string{"leases"},
+			Verbs:     []string{"create", "update", "get", "list", "watch"},
+		},
+	}
 }
