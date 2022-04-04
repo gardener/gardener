@@ -62,11 +62,13 @@ var _ = Describe("VPA", func() {
 		c         client.Client
 		component component.DeployWaiter
 
-		imageExporter = "some-image:for-exporter"
-		imageUpdater  = "some-image:for-updater"
+		imageExporter    = "some-image:for-exporter"
+		imageRecommender = "some-image:for-recommender"
+		imageUpdater     = "some-image:for-updater"
 
-		valuesExporter ValuesExporter
-		valuesUpdater  ValuesUpdater
+		valuesExporter    ValuesExporter
+		valuesRecommender ValuesRecommender
+		valuesUpdater     ValuesUpdater
 
 		vpaUpdateModeAuto   = vpaautoscalingv1.UpdateModeAuto
 		vpaControlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
@@ -95,6 +97,7 @@ var _ = Describe("VPA", func() {
 		clusterRoleRecommenderCheckpointActor        *rbacv1.ClusterRole
 		clusterRoleBindingRecommenderCheckpointActor *rbacv1.ClusterRoleBinding
 		shootAccessSecretRecommender                 *corev1.Secret
+		deploymentRecommenderFor                     func(bool, *metav1.Duration, *float64) *appsv1.Deployment
 	)
 
 	BeforeEach(func() {
@@ -103,9 +106,13 @@ var _ = Describe("VPA", func() {
 		valuesExporter = ValuesExporter{
 			Image: imageExporter,
 		}
+		valuesRecommender = ValuesRecommender{
+			Image:    imageRecommender,
+			Replicas: 2,
+		}
 		valuesUpdater = ValuesUpdater{
 			Image:    imageUpdater,
-			Replicas: 1,
+			Replicas: 3,
 		}
 
 		component = New(c, namespace, values)
@@ -400,7 +407,7 @@ var _ = Describe("VPA", func() {
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             pointer.Int32(1),
+					Replicas:             pointer.Int32(3),
 					RevisionHistoryLimit: pointer.Int32(2),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -684,6 +691,160 @@ var _ = Describe("VPA", func() {
 			},
 			Type: corev1.SecretTypeOpaque,
 		}
+		deploymentRecommenderFor = func(
+			withServiceAccount bool,
+			interval *metav1.Duration,
+			recommendationMarginFraction *float64,
+		) *appsv1.Deployment {
+			var (
+				flagRecommendationMarginFraction = "0.150000"
+				flagRecommenderIntervalValue     = "1m0s"
+			)
+
+			if interval != nil {
+				flagRecommenderIntervalValue = interval.Duration.String()
+			}
+			if recommendationMarginFraction != nil {
+				flagRecommendationMarginFraction = fmt.Sprintf("%f", *recommendationMarginFraction)
+			}
+
+			obj := &appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "vpa-recommender",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"app":                 "vpa-recommender",
+						"gardener.cloud/role": "vpa",
+					},
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas:             pointer.Int32(2),
+					RevisionHistoryLimit: pointer.Int32(2),
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app": "vpa-recommender",
+						},
+					},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"app":                 "vpa-recommender",
+								"gardener.cloud/role": "vpa",
+								"networking.gardener.cloud/from-prometheus":    "allowed",
+								"networking.gardener.cloud/to-dns":             "allowed",
+								"networking.gardener.cloud/to-shoot-apiserver": "allowed",
+							},
+						},
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{{
+								Name:            "recommender",
+								Image:           imageRecommender,
+								ImagePullPolicy: corev1.PullIfNotPresent,
+								Command:         []string{"./recommender"},
+								Args: []string{
+									"--v=2",
+									"--stderrthreshold=info",
+									"--pod-recommendation-min-cpu-millicores=5",
+									"--pod-recommendation-min-memory-mb=10",
+									fmt.Sprintf("--recommendation-margin-fraction=%s", flagRecommendationMarginFraction),
+									fmt.Sprintf("--recommender-interval=%s", flagRecommenderIntervalValue),
+									"--kube-api-qps=100",
+									"--kube-api-burst=120",
+								},
+								Ports: []corev1.ContainerPort{
+									{
+										Name:          "server",
+										ContainerPort: 8080,
+									},
+									{
+										Name:          "metrics",
+										ContainerPort: 8942,
+									},
+								},
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("30m"),
+										corev1.ResourceMemory: resource.MustParse("200Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceMemory: resource.MustParse("4Gi"),
+									},
+								},
+							}},
+						},
+					},
+				},
+			}
+
+			if withServiceAccount {
+				obj.Spec.Template.Spec.ServiceAccountName = serviceAccountRecommender.Name
+				obj.Spec.Template.Spec.Containers[0].Env = append(obj.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+					Name: "NAMESPACE",
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{
+							FieldPath: "metadata.namespace",
+						},
+					},
+				})
+			} else {
+				obj.Labels["gardener.cloud/role"] = "controlplane"
+				obj.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
+				obj.Spec.Template.Spec.Containers[0].Env = append(obj.Spec.Template.Spec.Containers[0].Env,
+					corev1.EnvVar{
+						Name:  "KUBERNETES_SERVICE_HOST",
+						Value: "kube-apiserver",
+					},
+					corev1.EnvVar{
+						Name:  "KUBERNETES_SERVICE_PORT",
+						Value: strconv.Itoa(443),
+					},
+				)
+				obj.Spec.Template.Spec.Volumes = append(obj.Spec.Template.Spec.Volumes, corev1.Volume{
+					Name: "shoot-access",
+					VolumeSource: corev1.VolumeSource{
+						Projected: &corev1.ProjectedVolumeSource{
+							DefaultMode: pointer.Int32(420),
+							Sources: []corev1.VolumeProjection{
+								{
+									Secret: &corev1.SecretProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "ca",
+										},
+										Items: []corev1.KeyToPath{{
+											Key:  "ca.crt",
+											Path: "ca.crt",
+										}},
+									},
+								},
+								{
+									Secret: &corev1.SecretProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "shoot-access-vpa-recommender",
+										},
+										Items: []corev1.KeyToPath{{
+											Key:  "token",
+											Path: "token",
+										}},
+										Optional: pointer.Bool(false),
+									},
+								},
+							},
+						},
+					},
+				})
+				obj.Spec.Template.Spec.Containers[0].VolumeMounts = append(obj.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+					Name:      "shoot-access",
+					MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+					ReadOnly:  true,
+				})
+			}
+
+			return obj
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -707,6 +868,7 @@ var _ = Describe("VPA", func() {
 				component = New(c, namespace, Values{
 					ClusterType: ClusterTypeSeed,
 					Exporter:    valuesExporter,
+					Recommender: valuesRecommender,
 					Updater:     valuesUpdater,
 				})
 				managedResourceName = "vpa"
@@ -740,7 +902,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(16))
+				Expect(managedResourceSecret.Data).To(HaveLen(17))
 
 				By("checking vpa-exporter resources")
 				clusterRoleExporter.Name = replaceTargetSubstrings(clusterRoleExporter.Name)
@@ -776,14 +938,21 @@ var _ = Describe("VPA", func() {
 				clusterRoleBindingRecommenderCheckpointActor.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderCheckpointActor.Name)
 				clusterRoleBindingRecommenderCheckpointActor.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderCheckpointActor.RoleRef.Name)
 
+				deploymentRecommender := deploymentRecommenderFor(true, nil, nil)
+				dropNetworkingLabels(deploymentRecommender.Spec.Template.Labels)
+
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-recommender.yaml"])).To(Equal(serialize(serviceAccountRecommender)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_metrics-reader.yaml"])).To(Equal(serialize(clusterRoleRecommenderMetricsReader)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_metrics-reader.yaml"])).To(Equal(serialize(clusterRoleBindingRecommenderMetricsReader)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_checkpoint-actor.yaml"])).To(Equal(serialize(clusterRoleRecommenderCheckpointActor)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_checkpoint-actor.yaml"])).To(Equal(serialize(clusterRoleBindingRecommenderCheckpointActor)))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-recommender.yaml"])).To(Equal(serialize(deploymentRecommender)))
 			})
 
 			It("should successfully deploy with special configuration", func() {
+				valuesRecommender.Interval = &metav1.Duration{Duration: 3 * time.Hour}
+				valuesRecommender.RecommendationMarginFraction = pointer.Float64(8.91)
+
 				valuesUpdater.Interval = &metav1.Duration{Duration: 4 * time.Hour}
 				valuesUpdater.EvictAfterOOMThreshold = &metav1.Duration{Duration: 5 * time.Hour}
 				valuesUpdater.EvictionRateBurst = pointer.Int32(1)
@@ -793,6 +962,7 @@ var _ = Describe("VPA", func() {
 				component = New(c, namespace, Values{
 					ClusterType: ClusterTypeSeed,
 					Exporter:    valuesExporter,
+					Recommender: valuesRecommender,
 					Updater:     valuesUpdater,
 				})
 
@@ -830,7 +1000,15 @@ var _ = Describe("VPA", func() {
 				)
 				dropNetworkingLabels(deploymentUpdater.Spec.Template.Labels)
 
+				deploymentRecommender := deploymentRecommenderFor(
+					true,
+					valuesRecommender.Interval,
+					valuesRecommender.RecommendationMarginFraction,
+				)
+				dropNetworkingLabels(deploymentRecommender.Spec.Template.Labels)
+
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-updater.yaml"])).To(Equal(serialize(deploymentUpdater)))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-recommender.yaml"])).To(Equal(serialize(deploymentRecommender)))
 			})
 
 			It("should delete the legacy resources", func() {
@@ -876,6 +1054,7 @@ var _ = Describe("VPA", func() {
 				component = New(c, namespace, Values{
 					ClusterType: ClusterTypeShoot,
 					Exporter:    valuesExporter,
+					Recommender: valuesRecommender,
 					Updater:     valuesUpdater,
 				})
 				managedResourceName = "shoot-core-vpa"
@@ -970,6 +1149,12 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(shootAccessSecretRecommender), secret)).To(Succeed())
 				shootAccessSecretRecommender.ResourceVersion = "1"
 				Expect(secret).To(Equal(shootAccessSecretRecommender))
+
+				deployment = &appsv1.Deployment{}
+				Expect(c.Get(ctx, kutil.Key(namespace, "vpa-recommender"), deployment)).To(Succeed())
+				deploymentRecommender := deploymentRecommenderFor(false, nil, nil)
+				deploymentRecommender.ResourceVersion = "1"
+				Expect(deployment).To(Equal(deploymentRecommender))
 			})
 		})
 	})
@@ -1011,6 +1196,9 @@ var _ = Describe("VPA", func() {
 				Expect(c.Create(ctx, deploymentUpdaterFor(true, nil, nil, nil, nil, nil))).To(Succeed())
 				Expect(c.Create(ctx, vpaUpdater)).To(Succeed())
 
+				By("creating vpa-recommender runtime resources")
+				Expect(c.Create(ctx, deploymentRecommenderFor(true, nil, nil))).To(Succeed())
+
 				Expect(component.Destroy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
@@ -1024,6 +1212,9 @@ var _ = Describe("VPA", func() {
 				By("checking vpa-updater runtime resources")
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentUpdaterFor(true, nil, nil, nil, nil, nil)), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaUpdater), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
+
+				By("checking vpa-recommender runtime resources")
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentRecommenderFor(true, nil, nil)), &appsv1.Deployment{})).To(BeNotFoundError())
 			})
 		})
 	})

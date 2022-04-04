@@ -15,21 +15,37 @@
 package vpa
 
 import (
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"fmt"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
+
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
 
 const (
-	recommender = "vpa-recommender"
+	recommender                  = "vpa-recommender"
+	recommenderPortServer  int32 = 8080
+	recommenderPortMetrics int32 = 8942
 )
 
 // ValuesRecommender is a set of configuration values for the vpa-recommender.
 type ValuesRecommender struct {
+	// RecommendationMarginFraction is the fraction of usage added as the safety margin to the recommended request.
+	RecommendationMarginFraction *float64
 	// Image is the container image.
 	Image string
+	// Interval is the interval how often the recommender should run.
+	Interval *metav1.Duration
+	// Replicas is the number of pod replicas.
+	Replicas int32
 }
 
 func (v *vpa) recommenderResourceConfigs() resourceConfigs {
@@ -38,6 +54,7 @@ func (v *vpa) recommenderResourceConfigs() resourceConfigs {
 		clusterRoleBindingMetricsReader   = v.emptyClusterRoleBinding("metrics-reader")
 		clusterRoleCheckpointActor        = v.emptyClusterRole("checkpoint-actor")
 		clusterRoleBindingCheckpointActor = v.emptyClusterRoleBinding("checkpoint-actor")
+		deployment                        = v.emptyDeployment(recommender)
 	)
 
 	configs := resourceConfigs{
@@ -55,9 +72,12 @@ func (v *vpa) recommenderResourceConfigs() resourceConfigs {
 		serviceAccount := v.emptyServiceAccount(recommender)
 		configs = append(configs,
 			resourceConfig{obj: serviceAccount, class: application, mutateFn: func() { v.reconcileRecommenderServiceAccount(serviceAccount) }},
+			resourceConfig{obj: deployment, class: runtime, mutateFn: func() { v.reconcileRecommenderDeployment(deployment, &serviceAccount.Name) }},
 		)
 	} else {
-		configs = append(configs)
+		configs = append(configs,
+			resourceConfig{obj: deployment, class: runtime, mutateFn: func() { v.reconcileRecommenderDeployment(deployment, nil) }},
+		)
 	}
 
 	return configs
@@ -113,4 +133,66 @@ func (v *vpa) reconcileRecommenderClusterRoleBinding(clusterRoleBinding *rbacv1.
 		Name:      serviceAccountName,
 		Namespace: v.serviceAccountNamespace(),
 	}}
+}
+
+func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serviceAccountName *string) {
+	deployment.Labels = v.getDeploymentLabels(recommender)
+	deployment.Spec = appsv1.DeploymentSpec{
+		Replicas:             &v.values.Recommender.Replicas,
+		RevisionHistoryLimit: pointer.Int32(2),
+		Selector:             &metav1.LabelSelector{MatchLabels: getAppLabel(recommender)},
+		Template: corev1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: utils.MergeStringMaps(getAllLabels(recommender), map[string]string{
+					v1beta1constants.LabelNetworkPolicyFromPrometheus: v1beta1constants.LabelNetworkPolicyAllowed,
+				}),
+			},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{{
+					Name:            "recommender",
+					Image:           v.values.Recommender.Image,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command:         []string{"./recommender"},
+					Args: []string{
+						"--v=2",
+						"--stderrthreshold=info",
+						"--pod-recommendation-min-cpu-millicores=5",
+						"--pod-recommendation-min-memory-mb=10",
+						fmt.Sprintf("--recommendation-margin-fraction=%f", pointer.Float64Deref(v.values.Recommender.RecommendationMarginFraction, gardencorev1beta1.DefaultRecommendationMarginFraction)),
+						fmt.Sprintf("--recommender-interval=%s", durationDeref(v.values.Recommender.Interval, gardencorev1beta1.DefaultRecommenderInterval).Duration),
+						"--kube-api-qps=100",
+						"--kube-api-burst=120",
+					},
+					Ports: []corev1.ContainerPort{
+						{
+							Name:          "server",
+							ContainerPort: recommenderPortServer,
+						},
+						{
+							Name:          "metrics",
+							ContainerPort: recommenderPortMetrics,
+						},
+					},
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("30m"),
+							corev1.ResourceMemory: resource.MustParse("200Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceMemory: resource.MustParse("4Gi"),
+						},
+					},
+				}},
+			},
+		},
+	}
+
+	if v.values.ClusterType == ClusterTypeShoot {
+		deployment.Spec.Template.Labels = utils.MergeStringMaps(deployment.Spec.Template.Labels, map[string]string{
+			v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+		})
+	}
+
+	injectAPIServerConnectionSpec(deployment, recommender, serviceAccountName)
 }

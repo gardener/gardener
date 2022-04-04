@@ -16,15 +16,11 @@ package vpa
 
 import (
 	"fmt"
-	"strconv"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -187,67 +183,7 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 		})
 	}
 
-	if serviceAccountName != nil {
-		deployment.Spec.Template.Spec.ServiceAccountName = *serviceAccountName
-		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
-			Name: "NAMESPACE",
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{
-					FieldPath: "metadata.namespace",
-				},
-			},
-		})
-	} else {
-		deployment.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
-		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env,
-			corev1.EnvVar{
-				Name:  "KUBERNETES_SERVICE_HOST",
-				Value: v1beta1constants.DeploymentNameKubeAPIServer,
-			},
-			corev1.EnvVar{
-				Name:  "KUBERNETES_SERVICE_PORT",
-				Value: strconv.Itoa(kubeapiserver.Port),
-			},
-		)
-		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: "shoot-access",
-			VolumeSource: corev1.VolumeSource{
-				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: pointer.Int32(420),
-					Sources: []corev1.VolumeProjection{
-						{
-							Secret: &corev1.SecretProjection{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: v1beta1constants.SecretNameCACluster, // TODO(rfranzke): Use secrets manager for this.
-								},
-								Items: []corev1.KeyToPath{{
-									Key:  secretutils.DataKeyCertificateCA,
-									Path: "ca.crt",
-								}},
-							},
-						},
-						{
-							Secret: &corev1.SecretProjection{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: gutil.SecretNamePrefixShootAccess + updater,
-								},
-								Items: []corev1.KeyToPath{{
-									Key:  resourcesv1alpha1.DataKeyToken,
-									Path: "token",
-								}},
-								Optional: pointer.Bool(false),
-							},
-						},
-					},
-				},
-			},
-		})
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      "shoot-access",
-			MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
-			ReadOnly:  true,
-		})
-	}
+	injectAPIServerConnectionSpec(deployment, updater, serviceAccountName)
 }
 
 func (v *vpa) reconcileUpdaterVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) {
@@ -274,11 +210,4 @@ func (v *vpa) reconcileUpdaterVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, d
 			},
 		},
 	}
-}
-
-func durationDeref(ptr *metav1.Duration, def metav1.Duration) metav1.Duration {
-	if ptr != nil {
-		return *ptr
-	}
-	return def
 }

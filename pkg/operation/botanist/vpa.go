@@ -53,7 +53,8 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (component.DeployWaiter, error
 			Image: imageExporter.String(),
 		}
 		valuesRecommender = vpa.ValuesRecommender{
-			Image: imageRecommender.String(),
+			Image:    imageRecommender.String(),
+			Replicas: b.Shoot.GetReplicas(1),
 		}
 		valuesUpdater = vpa.ValuesUpdater{
 			Image:    imageUpdater.String(),
@@ -62,6 +63,9 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (component.DeployWaiter, error
 	)
 
 	if vpaConfig := b.Shoot.GetInfo().Spec.Kubernetes.VerticalPodAutoscaler; vpaConfig != nil {
+		valuesRecommender.Interval = vpaConfig.RecommenderInterval
+		valuesRecommender.RecommendationMarginFraction = vpaConfig.RecommendationMarginFraction
+
 		valuesUpdater.EvictAfterOOMThreshold = vpaConfig.EvictAfterOOMThreshold
 		valuesUpdater.EvictionRateBurst = vpaConfig.EvictionRateBurst
 		valuesUpdater.EvictionRateLimit = vpaConfig.EvictionRateLimit

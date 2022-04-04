@@ -66,39 +66,14 @@ func (b *Botanist) oldDeployVerticalPodAutoscaler(ctx context.Context) error {
 			}),
 			"createServiceAccount": false,
 		}
-		exporter = map[string]interface{}{
-			"enabled":  false,
-			"replicas": 0,
-		}
-		recommender = map[string]interface{}{
-			"replicas": b.Shoot.GetReplicas(1),
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-vpa-recommender": b.LoadCheckSum("vpa-recommender"),
-			},
-			"podLabels":                    podLabels,
-			"createServiceAccount":         false,
-			"recommendationMarginFraction": gardencorev1beta1.DefaultRecommendationMarginFraction,
-			"interval":                     gardencorev1beta1.DefaultRecommenderInterval,
-		}
 		defaultValues = map[string]interface{}{
 			"admissionController": admissionController,
-			"exporter":            exporter,
-			"recommender":         recommender,
 			"deploymentLabels": map[string]interface{}{
 				v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 			},
 			"clusterType": "shoot",
 		}
 	)
-
-	if verticalPodAutoscaler := b.Shoot.GetInfo().Spec.Kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
-		if val := verticalPodAutoscaler.RecommendationMarginFraction; val != nil {
-			recommender["recommendationMarginFraction"] = *val
-		}
-		if val := verticalPodAutoscaler.RecommenderInterval; val != nil {
-			recommender["interval"] = *val
-		}
-	}
 
 	values, err := b.InjectSeedShootImages(defaultValues, images.ImageNameVpaAdmissionController, images.ImageNameVpaExporter, images.ImageNameVpaRecommender)
 	if err != nil {

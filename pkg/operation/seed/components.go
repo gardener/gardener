@@ -274,7 +274,8 @@ func defaultVerticalPodAutoscaler(c client.Client, imageVector imagevector.Image
 				Image: imageExporter.String(),
 			},
 			Recommender: vpa.ValuesRecommender{
-				Image: imageRecommender.String(),
+				Image:    imageRecommender.String(),
+				Replicas: 1,
 			},
 			Updater: vpa.ValuesUpdater{
 				Image:    imageUpdater.String(),
