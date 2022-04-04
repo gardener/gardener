@@ -37,8 +37,11 @@ files=(
   "staging/src/k8s.io/controller-manager/pkg/features/kube_features.go"
 )
 
-out_dir=dev/temp
-mkdir -p "${out_dir}"
+out_dir=$(mktemp -d)
+function cleanup_output {
+    rm -rf "$out_dir"
+}
+trap cleanup_output EXIT
 
 for version in "${versions[@]}"; do
   rm -f "${out_dir}/featuregates-${version}.txt" "${out_dir}/locked-featuregates-${version}.txt"
