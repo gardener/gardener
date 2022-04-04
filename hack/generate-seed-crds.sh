@@ -24,7 +24,7 @@ set -o pipefail
 #     Useful for development purposes.
 #
 #     <file-name-prefix> File name prefix for manifest files (e.g. '10-crd-')
-#     -l (Optional)      If -l argument is given then the generated CRDs will have lable gardener.cloud/deletion-protected: "true"
+#     -l (Optional)      If -l argument is given then the generated CRDs will have label gardener.cloud/deletion-protected: "true"
 #     <group>            List of groups to generate (generate all if unset)
 
 if ! command -v controller-gen &> /dev/null ; then
@@ -34,7 +34,7 @@ fi
 
 output_dir="$(pwd)"
 file_name_prefix="$1"
-label=0
+add_deletion_protection_label=false
 
 get_group_package () {
   case "$1" in
@@ -82,7 +82,7 @@ generate_group () {
       mv "$crd" "$crd_out"
     fi
 
-    if [ $label -eq 1 ]; then
+    if $add_deletion_protection_label; then
       if grep -q "clusters.extensions.gardener.cloud"  "$crd_out"; then
         :
       else
@@ -100,7 +100,7 @@ generate_group () {
 
 if [ -n "${2:-}" ]; then
   if [ "${2}" == "-l" ]; then
-    label=1
+    add_deletion_protection_label=true
     if [ -n "${3:-}" ]; then
       while [ -n "${3:-}" ] ; do
         generate_group "$3"
