@@ -89,8 +89,9 @@ var _ = Describe("VPA", func() {
 		deploymentUpdaterFor      func(bool, *metav1.Duration, *metav1.Duration, *int32, *float64, *float64) *appsv1.Deployment
 		vpaUpdater                *vpaautoscalingv1.VerticalPodAutoscaler
 
-		serviceAccountRecommender *corev1.ServiceAccount
-		clusterRoleRecommender    *rbacv1.ClusterRole
+		serviceAccountRecommender    *corev1.ServiceAccount
+		clusterRoleRecommender       *rbacv1.ClusterRole
+		shootAccessSecretRecommender *corev1.Secret
 	)
 
 	BeforeEach(func() {
@@ -583,6 +584,24 @@ var _ = Describe("VPA", func() {
 				},
 			},
 		}
+		shootAccessSecretRecommender = &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Secret",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "shoot-access-vpa-recommender",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"resources.gardener.cloud/purpose": "token-requestor",
+				},
+				Annotations: map[string]string{
+					"serviceaccount.resources.gardener.cloud/name":      "vpa-recommender",
+					"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
+				},
+			},
+			Type: corev1.SecretTypeOpaque,
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -837,6 +856,12 @@ var _ = Describe("VPA", func() {
 
 				By("checking vpa-recommender application resources")
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_metrics-reader.yaml"])).To(Equal(serialize(clusterRoleRecommender)))
+
+				By("checking vpa-recommender runtime resources")
+				secret = &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(shootAccessSecretRecommender), secret)).To(Succeed())
+				shootAccessSecretRecommender.ResourceVersion = "1"
+				Expect(secret).To(Equal(shootAccessSecretRecommender))
 			})
 		})
 	})

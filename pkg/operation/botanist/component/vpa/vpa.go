@@ -127,6 +127,7 @@ func (v *vpa) Deploy(ctx context.Context) error {
 	}
 
 	for _, name := range []string{
+		v1beta1constants.DeploymentNameVPARecommender,
 		v1beta1constants.DeploymentNameVPAUpdater,
 	} {
 		if err := gutil.NewShootAccessSecret(name, v.namespace).Reconcile(ctx, v.client); err != nil {

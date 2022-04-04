@@ -44,7 +44,6 @@ import (
 func (b *Botanist) oldDeployVerticalPodAutoscaler(ctx context.Context) error {
 	for _, name := range []string{
 		v1beta1constants.DeploymentNameVPAAdmissionController,
-		v1beta1constants.DeploymentNameVPARecommender,
 	} {
 		if err := gutil.NewShootAccessSecret(name, b.Shoot.SeedNamespace).Reconcile(ctx, b.K8sSeedClient.Client()); err != nil {
 			return err
