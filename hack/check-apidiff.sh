@@ -18,20 +18,20 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-API_DIFF="hack/tools/bin/go-apidiff"
-
 tmpDir=$(mktemp -d)
 function cleanup_output {
     rm -rf "$tmpDir"
 }
+trap cleanup_output EXIT
 
 retval=0
 temp=0
 
 echo "invoking: go-apidiff master --print-compatible --repo-path=."
-echo "$("${API_DIFF}" master --print-compatible --repo-path=.)" > ${tmpDir}/output.txt
+echo "$(go-apidiff master --print-compatible --repo-path=.)" > ${tmpDir}/output.txt
 
-exported_pkg=("gardener/gardener/extensions/"
+exported_pkg=(
+"gardener/gardener/extensions/"
 "gardener/gardener/pkg/api/"
 "gardener/gardener/pkg/apis/"
 "gardener/gardener/pkg/chartrenderer/"
@@ -67,9 +67,8 @@ while IFS= read -r line; do
 done < "${tmpDir}/output.txt"
 
 if [[ $retval -eq 1 ]]; then
-    echo -e >&2 "FAIL: contains incompatible changes:\n
-$(cat ${tmpDir}/result.txt)"
+    echo >&2 "FAIL: contains incompatible changes:"
+    cat ${tmpDir}/result.txt
 fi
 
-trap cleanup_output EXIT
 exit $retval
