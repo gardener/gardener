@@ -29,6 +29,8 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -57,10 +59,14 @@ var _ = Describe("VPA", func() {
 	var (
 		ctx = context.TODO()
 
-		namespace = "some-namespace"
-		values    = Values{}
+		namespace    = "some-namespace"
+		secretNameCA = "ca"
+		values       = Values{
+			SecretNameServerCA: secretNameCA,
+		}
 
 		c         client.Client
+		sm        secretsmanager.Interface
 		component component.DeployWaiter
 
 		imageAdmissionController = "some-image:for-admission-controller"
@@ -118,6 +124,7 @@ var _ = Describe("VPA", func() {
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		sm = fakesecretsmanager.New(c, namespace)
 
 		valuesAdmissionController = ValuesAdmissionController{
 			Image:    imageAdmissionController,
@@ -135,7 +142,7 @@ var _ = Describe("VPA", func() {
 			Replicas: 3,
 		}
 
-		component = New(c, namespace, values)
+		component = New(c, namespace, sm, values)
 		managedResourceName = ""
 
 		serviceExporter = &corev1.Service{
@@ -520,7 +527,7 @@ var _ = Describe("VPA", func() {
 											Name: "ca",
 										},
 										Items: []corev1.KeyToPath{{
-											Key:  "ca.crt",
+											Key:  "bundle.crt",
 											Path: "ca.crt",
 										}},
 									},
@@ -835,7 +842,7 @@ var _ = Describe("VPA", func() {
 											Name: "ca",
 										},
 										Items: []corev1.KeyToPath{{
-											Key:  "ca.crt",
+											Key:  "bundle.crt",
 											Path: "ca.crt",
 										}},
 									},
@@ -1129,7 +1136,7 @@ var _ = Describe("VPA", func() {
 											{
 												Secret: &corev1.SecretProjection{
 													LocalObjectReference: corev1.LocalObjectReference{
-														Name: "server-secret",
+														Name: "vpa-admission-controller-server",
 													},
 													Items: []corev1.KeyToPath{
 														{
@@ -1187,7 +1194,7 @@ var _ = Describe("VPA", func() {
 											Name: "ca",
 										},
 										Items: []corev1.KeyToPath{{
-											Key:  "ca.crt",
+											Key:  "bundle.crt",
 											Path: "ca.crt",
 										}},
 									},
@@ -1267,8 +1274,9 @@ var _ = Describe("VPA", func() {
 	Describe("#Deploy", func() {
 		Context("cluster type seed", func() {
 			BeforeEach(func() {
-				component = New(c, namespace, Values{
+				component = New(c, namespace, sm, Values{
 					ClusterType:         ClusterTypeSeed,
+					SecretNameServerCA:  secretNameCA,
 					AdmissionController: valuesAdmissionController,
 					Exporter:            valuesExporter,
 					Recommender:         valuesRecommender,
@@ -1378,8 +1386,9 @@ var _ = Describe("VPA", func() {
 				valuesUpdater.EvictionRateLimit = pointer.Float64(2.34)
 				valuesUpdater.EvictionTolerance = pointer.Float64(5.67)
 
-				component = New(c, namespace, Values{
+				component = New(c, namespace, sm, Values{
 					ClusterType:         ClusterTypeSeed,
+					SecretNameServerCA:  secretNameCA,
 					AdmissionController: valuesAdmissionController,
 					Exporter:            valuesExporter,
 					Recommender:         valuesRecommender,
@@ -1462,6 +1471,9 @@ var _ = Describe("VPA", func() {
 				legacyAdmissionControllerClusterRoleBinding := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:admission-controller"}}
 				Expect(c.Create(ctx, legacyAdmissionControllerClusterRoleBinding)).To(Succeed())
 
+				legacyTLSCertsSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-tls-certs", Namespace: namespace}}
+				Expect(c.Create(ctx, legacyTLSCertsSecret)).To(Succeed())
+
 				Expect(component.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyExporterClusterRole), &rbacv1.ClusterRole{})).To(BeNotFoundError())
@@ -1474,13 +1486,15 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyRecommenderClusterRoleBindingCheckpointActor), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyAdmissionControllerClusterRole), &rbacv1.ClusterRole{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyAdmissionControllerClusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyTLSCertsSecret), &corev1.Secret{})).To(BeNotFoundError())
 			})
 		})
 
 		Context("cluster type shoot", func() {
 			BeforeEach(func() {
-				component = New(c, namespace, Values{
+				component = New(c, namespace, sm, Values{
 					ClusterType:         ClusterTypeShoot,
+					SecretNameServerCA:  secretNameCA,
 					AdmissionController: valuesAdmissionController,
 					Exporter:            valuesExporter,
 					Recommender:         valuesRecommender,
@@ -1623,13 +1637,22 @@ var _ = Describe("VPA", func() {
 				vpaAdmissionController.ResourceVersion = "1"
 				Expect(vpa).To(Equal(vpaAdmissionController))
 			})
+
+			It("should delete the legacy resources", func() {
+				legacyTLSCertsSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-tls-certs", Namespace: namespace}}
+				Expect(c.Create(ctx, legacyTLSCertsSecret)).To(Succeed())
+
+				Expect(component.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyTLSCertsSecret), &corev1.Secret{})).To(BeNotFoundError())
+			})
 		})
 	})
 
 	Describe("#Destroy", func() {
 		Context("cluster type seed", func() {
 			BeforeEach(func() {
-				component = New(c, namespace, Values{ClusterType: ClusterTypeSeed})
+				component = New(c, namespace, nil, Values{ClusterType: ClusterTypeSeed})
 				managedResourceName = "vpa"
 			})
 
@@ -1646,7 +1669,7 @@ var _ = Describe("VPA", func() {
 
 		Context("cluster type shoot", func() {
 			BeforeEach(func() {
-				component = New(c, namespace, Values{ClusterType: ClusterTypeShoot})
+				component = New(c, namespace, nil, Values{ClusterType: ClusterTypeShoot})
 				managedResourceName = "shoot-core-vpa"
 			})
 
@@ -1781,7 +1804,7 @@ var _ = Describe("VPA", func() {
 
 			Context("cluster type seed", func() {
 				BeforeEach(func() {
-					component = New(c, namespace, Values{ClusterType: ClusterTypeSeed})
+					component = New(c, namespace, nil, Values{ClusterType: ClusterTypeSeed})
 				})
 
 				tests("vpa")
@@ -1789,7 +1812,7 @@ var _ = Describe("VPA", func() {
 
 			Context("cluster type shoot", func() {
 				BeforeEach(func() {
-					component = New(c, namespace, Values{ClusterType: ClusterTypeShoot})
+					component = New(c, namespace, nil, Values{ClusterType: ClusterTypeShoot})
 				})
 
 				tests("shoot-core-vpa")
@@ -1820,7 +1843,7 @@ var _ = Describe("VPA", func() {
 
 			Context("cluster type seed", func() {
 				BeforeEach(func() {
-					component = New(c, namespace, Values{ClusterType: ClusterTypeSeed})
+					component = New(c, namespace, nil, Values{ClusterType: ClusterTypeSeed})
 				})
 
 				tests("vpa")
@@ -1828,7 +1851,7 @@ var _ = Describe("VPA", func() {
 
 			Context("cluster type shoot", func() {
 				BeforeEach(func() {
-					component = New(c, namespace, Values{ClusterType: ClusterTypeShoot})
+					component = New(c, namespace, nil, Values{ClusterType: ClusterTypeShoot})
 				})
 
 				tests("shoot-core-vpa")

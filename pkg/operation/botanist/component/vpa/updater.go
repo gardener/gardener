@@ -183,7 +183,7 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 		})
 	}
 
-	injectAPIServerConnectionSpec(deployment, updater, serviceAccountName)
+	v.injectAPIServerConnectionSpec(deployment, updater, serviceAccountName)
 }
 
 func (v *vpa) reconcileUpdaterVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) {

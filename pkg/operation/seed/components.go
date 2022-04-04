@@ -241,7 +241,7 @@ func defaultDependencyWatchdogs(
 	return
 }
 
-func defaultVerticalPodAutoscaler(c client.Client, imageVector imagevector.ImageVector) (component.DeployWaiter, error) {
+func defaultVerticalPodAutoscaler(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	imageAdmissionController, err := imageVector.FindImage(images.ImageNameVpaAdmissionController)
 	if err != nil {
 		return nil, err
@@ -265,8 +265,10 @@ func defaultVerticalPodAutoscaler(c client.Client, imageVector imagevector.Image
 	return vpa.New(
 		c,
 		v1beta1constants.GardenNamespace,
+		secretsManager,
 		vpa.Values{
-			ClusterType: vpa.ClusterTypeSeed,
+			ClusterType:        vpa.ClusterTypeSeed,
+			SecretNameServerCA: v1beta1constants.SecretNameCASeed,
 			AdmissionController: vpa.ValuesAdmissionController{
 				Image:    imageAdmissionController.String(),
 				Replicas: 1,

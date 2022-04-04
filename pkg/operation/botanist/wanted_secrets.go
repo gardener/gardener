@@ -15,10 +15,6 @@
 package botanist
 
 import (
-	"fmt"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
@@ -26,26 +22,5 @@ import (
 // each containing their specific configuration for the creation of certificates (server/client), RSA key pairs, basic
 // authentication credentials, etc.
 func (b *Botanist) generateWantedSecretConfigs(certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error) {
-	var secretList []secrets.ConfigInterface
-
-	if b.Shoot.WantsVerticalPodAutoscaler {
-		var (
-			commonName = fmt.Sprintf("vpa-webhook.%s.svc", b.Shoot.SeedNamespace)
-			dnsNames   = []string{
-				"vpa-webhook",
-				fmt.Sprintf("vpa-webhook.%s", b.Shoot.SeedNamespace),
-				commonName,
-			}
-		)
-
-		secretList = append(secretList, &secrets.CertificateSecretConfig{
-			Name:       common.VPASecretName,
-			CommonName: commonName,
-			DNSNames:   dnsNames,
-			CertType:   secrets.ServerCert,
-			SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
-		})
-	}
-
-	return secretList, nil
+	return nil, nil
 }

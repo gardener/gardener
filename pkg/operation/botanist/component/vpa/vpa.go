@@ -16,6 +16,7 @@ package vpa
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -45,12 +47,14 @@ import (
 func New(
 	client client.Client,
 	namespace string,
+	secretsManager secretsmanager.Interface,
 	values Values,
 ) component.DeployWaiter {
 	v := &vpa{
-		client:    client,
-		namespace: namespace,
-		values:    values,
+		client:         client,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		values:         values,
 	}
 
 	if values.ClusterType == ClusterTypeSeed {
@@ -63,11 +67,15 @@ func New(
 }
 
 type vpa struct {
-	client    client.Client
-	namespace string
-	values    Values
+	client         client.Client
+	namespace      string
+	secretsManager secretsmanager.Interface
+	values         Values
 
 	registry *managedresources.Registry
+
+	caSecretName     string
+	serverSecretName string
 }
 
 // Values is a set of configuration values for the VPA components.
@@ -80,6 +88,8 @@ type Values struct {
 	// resources (like Deployment, Service, etc.) are being deployed directly (with the client). All other application-
 	// related resources (like RBAC roles, CRD, etc.) are deployed as part of a ManagedResource.
 	ClusterType clusterType
+	// SecretNameServerCA is the name of the server CA secret.
+	SecretNameServerCA string
 
 	// AdmissionController is a set of configuration values for the vpa-admission-controller.
 	AdmissionController ValuesAdmissionController
@@ -101,6 +111,24 @@ const (
 )
 
 func (v *vpa) Deploy(ctx context.Context) error {
+	caSecret, found := v.secretsManager.Get(v.values.SecretNameServerCA)
+	if !found {
+		return fmt.Errorf("secret %q not found", v.values.SecretNameServerCA)
+	}
+	v.caSecretName = caSecret.Name
+
+	serverSecret, err := v.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+		Name:                        "vpa-admission-controller-server",
+		CommonName:                  fmt.Sprintf("%s.%s.svc", admissionControllerServiceName, v.namespace),
+		DNSNames:                    kutil.DNSNamesForService(admissionControllerServiceName, v.namespace),
+		CertType:                    secretutils.ServerCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v.values.SecretNameServerCA), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return err
+	}
+	v.serverSecretName = serverSecret.Name
+
 	allResources := mergeResourceConfigs(
 		v.admissionControllerResourceConfigs(),
 		v.exporterResourceConfigs(),
@@ -134,6 +162,7 @@ func (v *vpa) Deploy(ctx context.Context) error {
 			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:checkpoint-actor"}},
 			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:admission-controller"}},
 			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:admission-controller"}},
+			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-tls-certs", Namespace: v.namespace}},
 		)
 	}
 
@@ -165,7 +194,14 @@ func (v *vpa) Deploy(ctx context.Context) error {
 		}
 	}
 
-	return managedresources.CreateForShoot(ctx, v.client, v.namespace, v.managedResourceName(), false, v.registry.SerializedObjects())
+	if err := managedresources.CreateForShoot(ctx, v.client, v.namespace, v.managedResourceName(), false, v.registry.SerializedObjects()); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove in a future release.
+	return kutil.DeleteObjects(ctx, v.client,
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-tls-certs", Namespace: v.namespace}},
+	)
 }
 
 func (v *vpa) Destroy(ctx context.Context) error {
@@ -325,7 +361,7 @@ func mergeResourceConfigs(configsLists ...resourceConfigs) resourceConfigs {
 	return out
 }
 
-func injectAPIServerConnectionSpec(deployment *appsv1.Deployment, name string, serviceAccountName *string) {
+func (v *vpa) injectAPIServerConnectionSpec(deployment *appsv1.Deployment, name string, serviceAccountName *string) {
 	if serviceAccountName != nil {
 		deployment.Spec.Template.Spec.ServiceAccountName = *serviceAccountName
 		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
@@ -357,10 +393,10 @@ func injectAPIServerConnectionSpec(deployment *appsv1.Deployment, name string, s
 						{
 							Secret: &corev1.SecretProjection{
 								LocalObjectReference: corev1.LocalObjectReference{
-									Name: v1beta1constants.SecretNameCACluster, // TODO(rfranzke): Use secrets manager for this.
+									Name: v.caSecretName,
 								},
 								Items: []corev1.KeyToPath{{
-									Key:  secretutils.DataKeyCertificateCA,
+									Key:  secretutils.DataKeyCertificateBundle,
 									Path: "ca.crt",
 								}},
 							},

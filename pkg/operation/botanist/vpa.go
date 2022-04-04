@@ -17,6 +17,7 @@ package botanist
 import (
 	"context"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/utils/images"
@@ -77,8 +78,10 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (component.DeployWaiter, error
 	return vpa.New(
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
+		b.SecretsManager,
 		vpa.Values{
 			ClusterType:         vpa.ClusterTypeShoot,
+			SecretNameServerCA:  v1beta1constants.SecretNameCACluster,
 			AdmissionController: valuesAdmissionController,
 			Exporter:            valuesExporter,
 			Recommender:         valuesRecommender,

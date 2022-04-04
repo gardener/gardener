@@ -38,6 +38,7 @@ import (
 
 const (
 	admissionController                  = "vpa-admission-controller"
+	admissionControllerServiceName       = "vpa-webhook"
 	admissionControllerServicePort int32 = 443
 	admissionControllerPort              = 10250
 
@@ -57,7 +58,7 @@ func (v *vpa) admissionControllerResourceConfigs() resourceConfigs {
 	var (
 		clusterRole        = v.emptyClusterRole("admission-controller")
 		clusterRoleBinding = v.emptyClusterRoleBinding("admission-controller")
-		service            = v.emptyService("vpa-webhook")
+		service            = v.emptyService(admissionControllerServiceName)
 		deployment         = v.emptyDeployment(admissionController)
 		vpa                = v.emptyVerticalPodAutoscaler(admissionController)
 	)
@@ -227,7 +228,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 								{
 									Secret: &corev1.SecretProjection{
 										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "ca", // TODO: use secrets manager  (subsequent commit)
+											Name: v.caSecretName,
 										},
 										Items: []corev1.KeyToPath{{
 											Key:  secretutils.DataKeyCertificateBundle,
@@ -238,7 +239,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 								{
 									Secret: &corev1.SecretProjection{
 										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "server-secret", // TODO: use secrets manager (subsequent commit)
+											Name: v.serverSecretName,
 										},
 										Items: []corev1.KeyToPath{
 											{
@@ -268,7 +269,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 		})
 	}
 
-	injectAPIServerConnectionSpec(deployment, admissionController, serviceAccountName)
+	v.injectAPIServerConnectionSpec(deployment, admissionController, serviceAccountName)
 }
 
 func (v *vpa) reconcileAdmissionControllerVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) {
