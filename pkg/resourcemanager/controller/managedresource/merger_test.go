@@ -19,11 +19,13 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 
@@ -772,51 +774,47 @@ var _ = Describe("merger", func() {
 
 	Describe("#mergeCronJob", func() {
 		var (
-			old, new *batchv1.CronJob
-			s        *runtime.Scheme
+			s                               *runtime.Scheme
+			podTemplateSpec                 corev1.PodTemplateSpec
+			podTemplateSpecWithoutResources corev1.PodTemplateSpec
 		)
 
 		BeforeEach(func() {
 			s = runtime.NewScheme()
+			Expect(batchv1beta1.AddToScheme(s)).ToNot(HaveOccurred(), "schema add should succeed")
 			Expect(batchv1.AddToScheme(s)).ToNot(HaveOccurred(), "schema add should succeed")
 
-			podTemplateSpec := defaultPodTemplateSpec
+			podTemplateSpec = defaultPodTemplateSpec
 			podTemplateSpec.Labels = map[string]string{"controller-uid": "1a2b3c", "job-name": "pi"}
+			podTemplateSpecWithoutResources = defaultPodTemplateSpec
+			podTemplateSpecWithoutResources.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
+		})
 
-			old = &batchv1.CronJob{
-				ObjectMeta: metav1.ObjectMeta{},
-				Spec: batchv1.CronJobSpec{
-					JobTemplate: batchv1.JobTemplateSpec{
-						Spec: batchv1.JobSpec{
-							Selector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
-							},
-							Template: podTemplateSpec,
-						},
-					},
+		DescribeTable("should successfully merge cronjobs",
+			func(oldObj, newObj, expected runtime.Object, preserveResources bool) {
+				Expect(mergeCronJob(s, oldObj, newObj, preserveResources)).NotTo(HaveOccurred(), "merge should be successful")
+				expected.GetObjectKind().SetGroupVersionKind(schema.GroupVersionKind{})
+				Expect(newObj).To(Equal(expected))
+			},
+			Entry("should overwrite .spec.containers[*].resources if preserveResources is false and cronjobs are v1",
+				createV1CronJob(podTemplateSpec), createV1CronJob(podTemplateSpecWithoutResources), createV1CronJob(podTemplateSpecWithoutResources), false),
+			Entry("should not overwrite .spec.containers[*].resources if preserveResources is true and cronjobs are v1",
+				createV1CronJob(podTemplateSpec), createV1CronJob(podTemplateSpecWithoutResources), createV1CronJob(podTemplateSpec), true),
+			Entry("should overwrite .spec.containers[*].resources if preserveResources is false and cronjobs are v1beta1",
+				createV1beta1CronJob(podTemplateSpec), createV1beta1CronJob(podTemplateSpecWithoutResources), createV1beta1CronJob(podTemplateSpecWithoutResources), false),
+			Entry("should not overwrite .spec.containers[*].resources if preserveResources is true and cronjobs are v1beta1",
+				createV1beta1CronJob(podTemplateSpec), createV1beta1CronJob(podTemplateSpecWithoutResources), createV1beta1CronJob(podTemplateSpec), true),
+		)
+
+		It("should return error if group and version are not batch v1 nor batch v1beta1", func() {
+			old := &batchv1beta1.CronJob{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "CronJob",
+					APIVersion: "batch/v2",
 				},
 			}
-
-			new = old.DeepCopy()
-		})
-
-		It("should overwrite old .spec.containers[*].resources if preserveResources is false", func() {
-			new.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
-
-			expected := old.DeepCopy()
-			expected.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Resources = new.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Resources
-
-			Expect(mergeCronJob(s, old, new, false)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
-		})
-
-		It("should not overwrite old .spec.containers[*].resources if preserveResources is true", func() {
-			new.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{}
-
-			expected := old.DeepCopy()
-
-			Expect(mergeCronJob(s, old, new, true)).NotTo(HaveOccurred(), "merge should be successful")
-			Expect(new).To(Equal(expected))
+			new := old.DeepCopy()
+			Expect(mergeCronJob(s, old, new, true)).To(MatchError(ContainSubstring("cannot merge objects with gvk")), "merge should fail")
 		})
 	})
 
@@ -1119,4 +1117,46 @@ func addAnnotations(origin string, obj *unstructured.Unstructured) {
 	ann[descriptionAnnotation] = descriptionAnnotationText
 	ann[originAnnotation] = origin
 	obj.SetAnnotations(ann)
+}
+
+func createV1beta1CronJob(podTemplateSpec corev1.PodTemplateSpec) *batchv1beta1.CronJob {
+	cronJob := &batchv1beta1.CronJob{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CronJob",
+			APIVersion: batchv1beta1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{},
+		Spec: batchv1beta1.CronJobSpec{
+			JobTemplate: batchv1beta1.JobTemplateSpec{
+				Spec: batchv1.JobSpec{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
+					},
+					Template: podTemplateSpec,
+				},
+			},
+		},
+	}
+	return cronJob
+}
+
+func createV1CronJob(podTemplateSpec corev1.PodTemplateSpec) *batchv1.CronJob {
+	cronJob := &batchv1.CronJob{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CronJob",
+			APIVersion: batchv1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{},
+		Spec: batchv1.CronJobSpec{
+			JobTemplate: batchv1.JobTemplateSpec{
+				Spec: batchv1.JobSpec{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"controller-uid": "1a2b3c"},
+					},
+					Template: podTemplateSpec,
+				},
+			},
+		},
+	}
+	return cronJob
 }
