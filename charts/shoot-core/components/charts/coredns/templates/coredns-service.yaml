@@ -1,9 +1,0 @@
-# TODO(rfranzke): Delete this Helm chart in a future version.
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: kube-dns
-  namespace: kube-system
-  annotations:
-    resources.gardener.cloud/mode: Ignore

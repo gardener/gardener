@@ -389,7 +389,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 
 	values := map[string]interface{}{
 		"global":                 global,
-		"coredns":                common.GenerateAddonConfig(nil, true),
 		"vpn-shoot":              common.GenerateAddonConfig(nil, true),
 		"node-local-dns":         common.GenerateAddonConfig(nil, b.Shoot.NodeLocalDNSEnabled),
 		"kube-apiserver-kubelet": common.GenerateAddonConfig(nil, true),
