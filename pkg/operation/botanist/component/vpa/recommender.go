@@ -34,17 +34,21 @@ type ValuesRecommender struct {
 
 func (v *vpa) recommenderResourceConfigs() resourceConfigs {
 	var (
-		clusterRoleMetricsReader        = v.emptyClusterRole("metrics-reader")
-		clusterRoleBindingMetricsReader = v.emptyClusterRoleBinding("metrics-reader")
-		clusterRoleCheckpointActor      = v.emptyClusterRole("checkpoint-actor")
+		clusterRoleMetricsReader          = v.emptyClusterRole("metrics-reader")
+		clusterRoleBindingMetricsReader   = v.emptyClusterRoleBinding("metrics-reader")
+		clusterRoleCheckpointActor        = v.emptyClusterRole("checkpoint-actor")
+		clusterRoleBindingCheckpointActor = v.emptyClusterRoleBinding("checkpoint-actor")
 	)
 
 	configs := resourceConfigs{
 		{obj: clusterRoleMetricsReader, class: application, mutateFn: func() { v.reconcileRecommenderClusterRoleMetricsReader(clusterRoleMetricsReader) }},
 		{obj: clusterRoleBindingMetricsReader, class: application, mutateFn: func() {
-			v.reconcileRecommenderClusterRoleBindingMetricsReader(clusterRoleBindingMetricsReader, clusterRoleMetricsReader, recommender)
+			v.reconcileRecommenderClusterRoleBinding(clusterRoleBindingMetricsReader, clusterRoleMetricsReader, recommender)
 		}},
 		{obj: clusterRoleCheckpointActor, class: application, mutateFn: func() { v.reconcileRecommenderClusterRoleCheckpointActor(clusterRoleCheckpointActor) }},
+		{obj: clusterRoleBindingCheckpointActor, class: application, mutateFn: func() {
+			v.reconcileRecommenderClusterRoleBinding(clusterRoleBindingCheckpointActor, clusterRoleCheckpointActor, recommender)
+		}},
 	}
 
 	if v.values.ClusterType == ClusterTypeSeed {
@@ -75,21 +79,6 @@ func (v *vpa) reconcileRecommenderClusterRoleMetricsReader(clusterRole *rbacv1.C
 	}
 }
 
-func (v *vpa) reconcileRecommenderClusterRoleBindingMetricsReader(clusterRoleBinding *rbacv1.ClusterRoleBinding, clusterRole *rbacv1.ClusterRole, serviceAccountName string) {
-	clusterRoleBinding.Labels = getRoleLabel()
-	clusterRoleBinding.Annotations = map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"}
-	clusterRoleBinding.RoleRef = rbacv1.RoleRef{
-		APIGroup: rbacv1.GroupName,
-		Kind:     "ClusterRole",
-		Name:     clusterRole.Name,
-	}
-	clusterRoleBinding.Subjects = []rbacv1.Subject{{
-		Kind:      rbacv1.ServiceAccountKind,
-		Name:      serviceAccountName,
-		Namespace: v.serviceAccountNamespace(),
-	}}
-}
-
 func (v *vpa) reconcileRecommenderClusterRoleCheckpointActor(clusterRole *rbacv1.ClusterRole) {
 	clusterRole.Labels = getRoleLabel()
 	clusterRole.Rules = []rbacv1.PolicyRule{
@@ -109,4 +98,19 @@ func (v *vpa) reconcileRecommenderClusterRoleCheckpointActor(clusterRole *rbacv1
 			Verbs:     []string{"get", "list"},
 		},
 	}
+}
+
+func (v *vpa) reconcileRecommenderClusterRoleBinding(clusterRoleBinding *rbacv1.ClusterRoleBinding, clusterRole *rbacv1.ClusterRole, serviceAccountName string) {
+	clusterRoleBinding.Labels = getRoleLabel()
+	clusterRoleBinding.Annotations = map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"}
+	clusterRoleBinding.RoleRef = rbacv1.RoleRef{
+		APIGroup: rbacv1.GroupName,
+		Kind:     "ClusterRole",
+		Name:     clusterRole.Name,
+	}
+	clusterRoleBinding.Subjects = []rbacv1.Subject{{
+		Kind:      rbacv1.ServiceAccountKind,
+		Name:      serviceAccountName,
+		Namespace: v.serviceAccountNamespace(),
+	}}
 }
