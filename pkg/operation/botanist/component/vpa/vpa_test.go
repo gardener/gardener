@@ -89,10 +89,11 @@ var _ = Describe("VPA", func() {
 		deploymentUpdaterFor      func(bool, *metav1.Duration, *metav1.Duration, *int32, *float64, *float64) *appsv1.Deployment
 		vpaUpdater                *vpaautoscalingv1.VerticalPodAutoscaler
 
-		serviceAccountRecommender             *corev1.ServiceAccount
-		clusterRoleRecommenderMetricsReader   *rbacv1.ClusterRole
-		clusterRoleRecommenderCheckpointActor *rbacv1.ClusterRole
-		shootAccessSecretRecommender          *corev1.Secret
+		serviceAccountRecommender                  *corev1.ServiceAccount
+		clusterRoleRecommenderMetricsReader        *rbacv1.ClusterRole
+		clusterRoleBindingRecommenderMetricsReader *rbacv1.ClusterRoleBinding
+		clusterRoleRecommenderCheckpointActor      *rbacv1.ClusterRole
+		shootAccessSecretRecommender               *corev1.Secret
 	)
 
 	BeforeEach(func() {
@@ -585,6 +586,31 @@ var _ = Describe("VPA", func() {
 				},
 			},
 		}
+		clusterRoleBindingRecommenderMetricsReader = &rbacv1.ClusterRoleBinding{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "rbac.authorization.k8s.io/v1",
+				Kind:       "ClusterRoleBinding",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:vpa:target:metrics-reader",
+				Labels: map[string]string{
+					"gardener.cloud/role": "vpa",
+				},
+				Annotations: map[string]string{
+					"resources.gardener.cloud/delete-on-invalid-update": "true",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:vpa:target:metrics-reader",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "vpa-recommender",
+				Namespace: namespace,
+			}},
+		}
 		clusterRoleRecommenderCheckpointActor = &rbacv1.ClusterRole{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "rbac.authorization.k8s.io/v1",
@@ -688,7 +714,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(14))
+				Expect(managedResourceSecret.Data).To(HaveLen(15))
 
 				By("checking vpa-exporter resources")
 				clusterRoleExporter.Name = replaceTargetSubstrings(clusterRoleExporter.Name)
@@ -718,10 +744,13 @@ var _ = Describe("VPA", func() {
 
 				By("checking vpa-recommender resources")
 				clusterRoleRecommenderMetricsReader.Name = replaceTargetSubstrings(clusterRoleRecommenderMetricsReader.Name)
+				clusterRoleBindingRecommenderMetricsReader.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderMetricsReader.Name)
+				clusterRoleBindingRecommenderMetricsReader.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingRecommenderMetricsReader.RoleRef.Name)
 				clusterRoleRecommenderCheckpointActor.Name = replaceTargetSubstrings(clusterRoleRecommenderCheckpointActor.Name)
 
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-recommender.yaml"])).To(Equal(serialize(serviceAccountRecommender)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_metrics-reader.yaml"])).To(Equal(serialize(clusterRoleRecommenderMetricsReader)))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_metrics-reader.yaml"])).To(Equal(serialize(clusterRoleBindingRecommenderMetricsReader)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_checkpoint-actor.yaml"])).To(Equal(serialize(clusterRoleRecommenderCheckpointActor)))
 			})
 
@@ -791,6 +820,9 @@ var _ = Describe("VPA", func() {
 				legacyRecommenderClusterRoleMetricsReader := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:metrics-reader"}}
 				Expect(c.Create(ctx, legacyRecommenderClusterRoleMetricsReader)).To(Succeed())
 
+				legacyRecommenderClusterRoleBindingMetricsReader := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:metrics-reader"}}
+				Expect(c.Create(ctx, legacyRecommenderClusterRoleBindingMetricsReader)).To(Succeed())
+
 				legacyRecommenderClusterRoleCheckpointActor := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:checkpoint-actor"}}
 				Expect(c.Create(ctx, legacyRecommenderClusterRoleCheckpointActor)).To(Succeed())
 
@@ -801,6 +833,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyUpdaterClusterRole), &rbacv1.ClusterRole{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyUpdaterClusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyRecommenderClusterRoleMetricsReader), &rbacv1.ClusterRole{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyRecommenderClusterRoleBindingMetricsReader), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyRecommenderClusterRoleCheckpointActor), &rbacv1.ClusterRole{})).To(BeNotFoundError())
 			})
 		})
@@ -844,7 +877,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(7))
+				Expect(managedResourceSecret.Data).To(HaveLen(8))
 
 				By("checking vpa-exporter application resources")
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceAccountExporter)))
@@ -891,7 +924,10 @@ var _ = Describe("VPA", func() {
 				Expect(vpa).To(Equal(vpaUpdater))
 
 				By("checking vpa-recommender application resources")
+				clusterRoleBindingRecommenderMetricsReader.Subjects[0].Namespace = "kube-system"
+
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_metrics-reader.yaml"])).To(Equal(serialize(clusterRoleRecommenderMetricsReader)))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_metrics-reader.yaml"])).To(Equal(serialize(clusterRoleBindingRecommenderMetricsReader)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_checkpoint-actor.yaml"])).To(Equal(serialize(clusterRoleRecommenderCheckpointActor)))
 
 				By("checking vpa-recommender runtime resources")

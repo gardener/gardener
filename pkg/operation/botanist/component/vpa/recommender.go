@@ -15,6 +15,8 @@
 package vpa
 
 import (
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/utils/pointer"
@@ -32,12 +34,16 @@ type ValuesRecommender struct {
 
 func (v *vpa) recommenderResourceConfigs() resourceConfigs {
 	var (
-		clusterRoleMetricsReader   = v.emptyClusterRole("metrics-reader")
-		clusterRoleCheckpointActor = v.emptyClusterRole("checkpoint-actor")
+		clusterRoleMetricsReader        = v.emptyClusterRole("metrics-reader")
+		clusterRoleBindingMetricsReader = v.emptyClusterRoleBinding("metrics-reader")
+		clusterRoleCheckpointActor      = v.emptyClusterRole("checkpoint-actor")
 	)
 
 	configs := resourceConfigs{
 		{obj: clusterRoleMetricsReader, class: application, mutateFn: func() { v.reconcileRecommenderClusterRoleMetricsReader(clusterRoleMetricsReader) }},
+		{obj: clusterRoleBindingMetricsReader, class: application, mutateFn: func() {
+			v.reconcileRecommenderClusterRoleBindingMetricsReader(clusterRoleBindingMetricsReader, clusterRoleMetricsReader, recommender)
+		}},
 		{obj: clusterRoleCheckpointActor, class: application, mutateFn: func() { v.reconcileRecommenderClusterRoleCheckpointActor(clusterRoleCheckpointActor) }},
 	}
 
@@ -67,6 +73,21 @@ func (v *vpa) reconcileRecommenderClusterRoleMetricsReader(clusterRole *rbacv1.C
 			Verbs:     []string{"get", "list"},
 		},
 	}
+}
+
+func (v *vpa) reconcileRecommenderClusterRoleBindingMetricsReader(clusterRoleBinding *rbacv1.ClusterRoleBinding, clusterRole *rbacv1.ClusterRole, serviceAccountName string) {
+	clusterRoleBinding.Labels = getRoleLabel()
+	clusterRoleBinding.Annotations = map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"}
+	clusterRoleBinding.RoleRef = rbacv1.RoleRef{
+		APIGroup: rbacv1.GroupName,
+		Kind:     "ClusterRole",
+		Name:     clusterRole.Name,
+	}
+	clusterRoleBinding.Subjects = []rbacv1.Subject{{
+		Kind:      rbacv1.ServiceAccountKind,
+		Name:      serviceAccountName,
+		Namespace: v.serviceAccountNamespace(),
+	}}
 }
 
 func (v *vpa) reconcileRecommenderClusterRoleCheckpointActor(clusterRole *rbacv1.ClusterRole) {
