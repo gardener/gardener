@@ -1,0 +1,8 @@
+# TODO(rfranzke): Delete this Helm chart in a future version.
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gardener.cloud:vpa:target:metrics-reader
+  annotations:
+    resources.gardener.cloud/mode: Ignore

@@ -16,6 +16,7 @@ package vpa
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/utils/pointer"
 )
 
@@ -30,7 +31,13 @@ type ValuesRecommender struct {
 }
 
 func (v *vpa) recommenderResourceConfigs() resourceConfigs {
-	configs := resourceConfigs{}
+	var (
+		clusterRole = v.emptyClusterRole("metrics-reader")
+	)
+
+	configs := resourceConfigs{
+		{obj: clusterRole, class: application, mutateFn: func() { v.reconcileRecommenderClusterRole(clusterRole) }},
+	}
 
 	if v.values.ClusterType == ClusterTypeSeed {
 		serviceAccount := v.emptyServiceAccount(recommender)
@@ -47,4 +54,15 @@ func (v *vpa) recommenderResourceConfigs() resourceConfigs {
 func (v *vpa) reconcileRecommenderServiceAccount(serviceAccount *corev1.ServiceAccount) {
 	serviceAccount.Labels = getRoleLabel()
 	serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+}
+
+func (v *vpa) reconcileRecommenderClusterRole(clusterRole *rbacv1.ClusterRole) {
+	clusterRole.Labels = getRoleLabel()
+	clusterRole.Rules = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"metrics.k8s.io"},
+			Resources: []string{"pods"},
+			Verbs:     []string{"get", "list"},
+		},
+	}
 }
