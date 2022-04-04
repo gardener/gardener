@@ -147,6 +147,7 @@ const (
 	// before persisting the object to etcd.
 	// owner: @rfranzke
 	// alpha: v1.43.0
+	// beta: v1.45.0
 	ShootMaxTokenExpirationOverwrite featuregate.Feature = "ShootMaxTokenExpirationOverwrite"
 
 	// ShootMaxTokenExpirationValidation enables validations on Gardener API server that enforce that the value of the
@@ -178,7 +179,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ForceRestore:                               {Default: false, PreRelease: featuregate.Alpha},
 	DisableDNSProviderManagement:               {Default: false, PreRelease: featuregate.Alpha},
 	ShootCARotation:                            {Default: false, PreRelease: featuregate.Alpha},
-	ShootMaxTokenExpirationOverwrite:           {Default: false, PreRelease: featuregate.Alpha},
+	ShootMaxTokenExpirationOverwrite:           {Default: true, PreRelease: featuregate.Beta},
 	ShootMaxTokenExpirationValidation:          {Default: false, PreRelease: featuregate.Alpha},
 }
 
