@@ -32,7 +32,7 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 		Enabled: pointer.Bool(true),
 	}
 
-	It("Create and Delete Hibernated Shoot", func() {
+	It("Create and Delete Hibernated Shoot", Label("hibernated"), func() {
 		By("Create Shoot")
 		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
