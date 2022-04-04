@@ -22,7 +22,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 
-	rbacv1 "k8s.io/api/rbac/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -50,8 +49,6 @@ func (projectStrategy) PrepareForCreate(_ context.Context, obj runtime.Object) {
 
 	project.Generation = 1
 	project.Status = core.ProjectStatus{}
-
-	mergeDuplicateMembers(project)
 }
 
 func (projectStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Object) {
@@ -62,61 +59,6 @@ func (projectStrategy) PrepareForUpdate(_ context.Context, obj, old runtime.Obje
 	if !apiequality.Semantic.DeepEqual(oldProject.Spec, newProject.Spec) {
 		newProject.Generation = oldProject.Generation + 1
 	}
-
-	mergeDuplicateMembers(newProject)
-}
-
-// TODO: This code is needed now that we have introduced validation that forbids specifying duplicates in the
-// spec.members list (this code wasn't there before). Hence, we have to remove the duplicates now to not break the API
-// incompatibly.
-// This code can be removed in a future version.
-func mergeDuplicateMembers(project *core.Project) {
-	var (
-		oldMembersToRoles = make(map[string]map[string]struct{})
-		memberToNewRoles  = make(map[string][]string)
-		newMembers        []core.ProjectMember
-	)
-
-	for _, member := range project.Spec.Members {
-		apiGroup, kind, namespace, name, err := validation.ProjectMemberProperties(member)
-		if err != nil {
-			// No meaningful way to handle the error here
-			continue
-		}
-		id := validation.ProjectMemberId(apiGroup, kind, namespace, name)
-
-		if _, ok := oldMembersToRoles[id]; !ok {
-			newMembers = append(newMembers, core.ProjectMember{
-				Subject: rbacv1.Subject{
-					APIGroup:  apiGroup,
-					Kind:      kind,
-					Namespace: namespace,
-					Name:      name,
-				},
-			})
-			oldMembersToRoles[id] = make(map[string]struct{})
-		}
-
-		for _, role := range member.Roles {
-			if _, ok := oldMembersToRoles[id][role]; !ok {
-				memberToNewRoles[id] = append(memberToNewRoles[id], role)
-			}
-			oldMembersToRoles[id][role] = struct{}{}
-		}
-	}
-
-	for i, member := range newMembers {
-		apiGroup, kind, namespace, name, err := validation.ProjectMemberProperties(member)
-		if err != nil {
-			// No meaningful way to handle the error here
-			continue
-		}
-		id := validation.ProjectMemberId(apiGroup, kind, namespace, name)
-
-		newMembers[i].Roles = memberToNewRoles[id]
-	}
-
-	project.Spec.Members = newMembers
 }
 
 func (projectStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
