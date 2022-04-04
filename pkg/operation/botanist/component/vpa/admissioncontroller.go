@@ -15,6 +15,8 @@
 package vpa
 
 import (
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/utils/pointer"
@@ -32,11 +34,15 @@ type ValuesAdmissionController struct {
 
 func (v *vpa) admissionControllerResourceConfigs() resourceConfigs {
 	var (
-		clusterRole = v.emptyClusterRole("admission-controller")
+		clusterRole        = v.emptyClusterRole("admission-controller")
+		clusterRoleBinding = v.emptyClusterRoleBinding("admission-controller")
 	)
 
 	configs := resourceConfigs{
 		{obj: clusterRole, class: application, mutateFn: func() { v.reconcileAdmissionControllerClusterRole(clusterRole) }},
+		{obj: clusterRoleBinding, class: application, mutateFn: func() {
+			v.reconcileAdmissionControllerClusterRoleBinding(clusterRoleBinding, clusterRole, admissionController)
+		}},
 	}
 
 	if v.values.ClusterType == ClusterTypeSeed {
@@ -85,4 +91,19 @@ func (v *vpa) reconcileAdmissionControllerClusterRole(clusterRole *rbacv1.Cluste
 			Verbs:     []string{"create", "update", "get", "list", "watch"},
 		},
 	}
+}
+
+func (v *vpa) reconcileAdmissionControllerClusterRoleBinding(clusterRoleBinding *rbacv1.ClusterRoleBinding, clusterRole *rbacv1.ClusterRole, serviceAccountName string) {
+	clusterRoleBinding.Labels = getRoleLabel()
+	clusterRoleBinding.Annotations = map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"}
+	clusterRoleBinding.RoleRef = rbacv1.RoleRef{
+		APIGroup: rbacv1.GroupName,
+		Kind:     "ClusterRole",
+		Name:     clusterRole.Name,
+	}
+	clusterRoleBinding.Subjects = []rbacv1.Subject{{
+		Kind:      rbacv1.ServiceAccountKind,
+		Name:      serviceAccountName,
+		Namespace: v.serviceAccountNamespace(),
+	}}
 }

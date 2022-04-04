@@ -100,8 +100,9 @@ var _ = Describe("VPA", func() {
 		deploymentRecommenderFor                     func(bool, *metav1.Duration, *float64) *appsv1.Deployment
 		vpaRecommender                               *vpaautoscalingv1.VerticalPodAutoscaler
 
-		serviceAccountAdmissionController *corev1.ServiceAccount
-		clusterRoleAdmissionController    *rbacv1.ClusterRole
+		serviceAccountAdmissionController     *corev1.ServiceAccount
+		clusterRoleAdmissionController        *rbacv1.ClusterRole
+		clusterRoleBindingAdmissionController *rbacv1.ClusterRoleBinding
 	)
 
 	BeforeEach(func() {
@@ -933,6 +934,31 @@ var _ = Describe("VPA", func() {
 				},
 			},
 		}
+		clusterRoleBindingAdmissionController = &rbacv1.ClusterRoleBinding{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "rbac.authorization.k8s.io/v1",
+				Kind:       "ClusterRoleBinding",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:vpa:target:admission-controller",
+				Labels: map[string]string{
+					"gardener.cloud/role": "vpa",
+				},
+				Annotations: map[string]string{
+					"resources.gardener.cloud/delete-on-invalid-update": "true",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:vpa:target:admission-controller",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "vpa-admission-controller",
+				Namespace: namespace,
+			}},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -990,7 +1016,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(20))
+				Expect(managedResourceSecret.Data).To(HaveLen(21))
 
 				By("checking vpa-exporter resources")
 				clusterRoleExporter.Name = replaceTargetSubstrings(clusterRoleExporter.Name)
@@ -1039,9 +1065,12 @@ var _ = Describe("VPA", func() {
 
 				By("checking vpa-admission-controller resources")
 				clusterRoleAdmissionController.Name = replaceTargetSubstrings(clusterRoleAdmissionController.Name)
+				clusterRoleBindingAdmissionController.Name = replaceTargetSubstrings(clusterRoleBindingAdmissionController.Name)
+				clusterRoleBindingAdmissionController.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingAdmissionController.RoleRef.Name)
 
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-admission-controller.yaml"])).To(Equal(serialize(serviceAccountAdmissionController)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_admission-controller.yaml"])).To(Equal(serialize(clusterRoleAdmissionController)))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_admission-controller.yaml"])).To(Equal(serialize(clusterRoleBindingAdmissionController)))
 			})
 
 			It("should successfully deploy with special configuration", func() {
@@ -1134,6 +1163,9 @@ var _ = Describe("VPA", func() {
 				legacyAdmissionControllerClusterRole := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:admission-controller"}}
 				Expect(c.Create(ctx, legacyAdmissionControllerClusterRole)).To(Succeed())
 
+				legacyAdmissionControllerClusterRoleBinding := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:admission-controller"}}
+				Expect(c.Create(ctx, legacyAdmissionControllerClusterRoleBinding)).To(Succeed())
+
 				Expect(component.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyExporterClusterRole), &rbacv1.ClusterRole{})).To(BeNotFoundError())
@@ -1145,6 +1177,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyRecommenderClusterRoleCheckpointActor), &rbacv1.ClusterRole{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyRecommenderClusterRoleBindingCheckpointActor), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyAdmissionControllerClusterRole), &rbacv1.ClusterRole{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyAdmissionControllerClusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 			})
 		})
 
@@ -1188,7 +1221,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(10))
+				Expect(managedResourceSecret.Data).To(HaveLen(11))
 
 				By("checking vpa-exporter application resources")
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceAccountExporter)))
@@ -1261,7 +1294,10 @@ var _ = Describe("VPA", func() {
 				Expect(vpa).To(Equal(vpaRecommender))
 
 				By("checking vpa-admission-controller application resources")
+				clusterRoleBindingAdmissionController.Subjects[0].Namespace = "kube-system"
+
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_admission-controller.yaml"])).To(Equal(serialize(clusterRoleAdmissionController)))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_admission-controller.yaml"])).To(Equal(serialize(clusterRoleBindingAdmissionController)))
 			})
 		})
 	})
