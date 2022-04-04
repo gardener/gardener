@@ -37,6 +37,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -73,6 +74,9 @@ var _ = Describe("VPA", func() {
 		vpaUpdateModeAuto   = vpaautoscalingv1.UpdateModeAuto
 		vpaControlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
+		networkPolicyProtocol = corev1.ProtocolTCP
+		networkPolicyPort     = intstr.FromInt(10250)
+
 		managedResourceName   string
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
@@ -105,6 +109,7 @@ var _ = Describe("VPA", func() {
 		clusterRoleBindingAdmissionController *rbacv1.ClusterRoleBinding
 		shootAccessSecretAdmissionController  *corev1.Secret
 		serviceAdmissionController            *corev1.Service
+		networkPolicyAdmissionController      *networkingv1.NetworkPolicy
 	)
 
 	BeforeEach(func() {
@@ -996,6 +1001,40 @@ var _ = Describe("VPA", func() {
 				}},
 			},
 		}
+		networkPolicyAdmissionController = &networkingv1.NetworkPolicy{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "networking.k8s.io/v1",
+				Kind:       "NetworkPolicy",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "allow-kube-apiserver-to-vpa-admission-controller",
+				Namespace:   namespace,
+				Annotations: map[string]string{"gardener.cloud/description": "Allows Egress from pods shoot's kube-apiserver to talk to the VPA admission controller."},
+			},
+			Spec: networkingv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app":                 "kubernetes",
+						"role":                "apiserver",
+						"gardener.cloud/role": "controlplane",
+					},
+				},
+				Egress: []networkingv1.NetworkPolicyEgressRule{{
+					To: []networkingv1.NetworkPolicyPeer{{
+						PodSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app": "vpa-admission-controller",
+							},
+						},
+					}},
+					Ports: []networkingv1.NetworkPolicyPort{{
+						Protocol: &networkPolicyProtocol,
+						Port:     &networkPolicyPort,
+					}},
+				}},
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -1347,6 +1386,11 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAdmissionController), service)).To(Succeed())
 				serviceAdmissionController.ResourceVersion = "1"
 				Expect(service).To(Equal(serviceAdmissionController))
+
+				networkPolicy := &networkingv1.NetworkPolicy{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAdmissionController), networkPolicy)).To(Succeed())
+				networkPolicyAdmissionController.ResourceVersion = "1"
+				Expect(networkPolicy).To(Equal(networkPolicyAdmissionController))
 			})
 		})
 	})
@@ -1392,6 +1436,10 @@ var _ = Describe("VPA", func() {
 				Expect(c.Create(ctx, deploymentRecommenderFor(true, nil, nil))).To(Succeed())
 				Expect(c.Create(ctx, vpaRecommender)).To(Succeed())
 
+				By("creating vpa-admission-controller runtime resources")
+				Expect(c.Create(ctx, serviceAdmissionController)).To(Succeed())
+				Expect(c.Create(ctx, networkPolicyAdmissionController)).To(Succeed())
+
 				Expect(component.Destroy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
@@ -1409,6 +1457,10 @@ var _ = Describe("VPA", func() {
 				By("checking vpa-recommender runtime resources")
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentRecommenderFor(true, nil, nil)), &appsv1.Deployment{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaRecommender), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
+
+				By("checking vpa-admission-controller runtime resources")
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAdmissionController), &corev1.Service{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAdmissionController), &networkingv1.NetworkPolicy{})).To(BeNotFoundError())
 			})
 		})
 	})

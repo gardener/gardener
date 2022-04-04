@@ -15,11 +15,15 @@
 package vpa
 
 import (
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 )
@@ -27,7 +31,7 @@ import (
 const (
 	admissionController                  = "vpa-admission-controller"
 	admissionControllerServicePort int32 = 443
-	admissionControllerPort        int32 = 10250
+	admissionControllerPort              = 10250
 )
 
 // ValuesAdmissionController is a set of configuration values for the vpa-admission-controller.
@@ -57,7 +61,10 @@ func (v *vpa) admissionControllerResourceConfigs() resourceConfigs {
 			resourceConfig{obj: serviceAccount, class: application, mutateFn: func() { v.reconcileAdmissionControllerServiceAccount(serviceAccount) }},
 		)
 	} else {
-		configs = append(configs)
+		networkPolicy := v.emptyNetworkPolicy("allow-kube-apiserver-to-vpa-admission-controller")
+		configs = append(configs,
+			resourceConfig{obj: networkPolicy, class: runtime, mutateFn: func() { v.reconcileAdmissionControllerNetworkPolicy(networkPolicy) }},
+		)
 	}
 
 	return configs
@@ -119,8 +126,32 @@ func (v *vpa) reconcileAdmissionControllerService(service *corev1.Service) {
 	desiredPorts := []corev1.ServicePort{
 		{
 			Port:       admissionControllerServicePort,
-			TargetPort: intstr.FromInt(int(admissionControllerPort)),
+			TargetPort: intstr.FromInt(admissionControllerPort),
 		},
 	}
 	service.Spec.Ports = kutil.ReconcileServicePorts(service.Spec.Ports, desiredPorts, "")
+}
+
+func (v *vpa) reconcileAdmissionControllerNetworkPolicy(networkPolicy *networkingv1.NetworkPolicy) {
+	protocol := corev1.ProtocolTCP
+	port := intstr.FromInt(admissionControllerPort)
+
+	networkPolicy.Annotations = map[string]string{v1beta1constants.GardenerDescription: "Allows Egress from pods shoot's kube-apiserver to talk to the VPA admission controller."}
+	networkPolicy.Spec = networkingv1.NetworkPolicySpec{
+		PodSelector: metav1.LabelSelector{
+			MatchLabels: kubeapiserver.GetLabels(),
+		},
+		Egress: []networkingv1.NetworkPolicyEgressRule{{
+			To: []networkingv1.NetworkPolicyPeer{{
+				PodSelector: &metav1.LabelSelector{
+					MatchLabels: getAppLabel(admissionController),
+				},
+			}},
+			Ports: []networkingv1.NetworkPolicyPort{{
+				Protocol: &protocol,
+				Port:     &port,
+			}},
+		}},
+		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+	}
 }
