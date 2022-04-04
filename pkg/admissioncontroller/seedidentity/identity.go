@@ -42,10 +42,7 @@ func FromUserInfoInterface(u user.Info) (string, bool) {
 	}
 
 	seedName := strings.TrimPrefix(userName, v1beta1constants.SeedUserNamePrefix)
-	if seedName == "" ||
-		// Do no longer consider "ambiguous" gardenlets as valid users.
-		// TODO(rfranzke): Drop this in a future version.
-		seedName == "<ambiguous>" {
+	if seedName == "" {
 		return "", false
 	}
 
