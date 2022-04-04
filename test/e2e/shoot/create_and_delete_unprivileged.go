@@ -21,18 +21,14 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = defaultShoot("hibernated-")
-	f.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
-		Enabled: pointer.Bool(true),
-	}
+	f.Shoot = defaultShoot("unpriv-")
+	f.Shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
 
-	It("Create and Delete Hibernated Shoot", Label("hibernated"), func() {
+	It("Create and Delete Unprivileged Shoot", Label("unprivileged"), func() {
 		By("Create Shoot")
 		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
