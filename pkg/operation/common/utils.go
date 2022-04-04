@@ -159,10 +159,6 @@ func DeleteVpa(ctx context.Context, c client.Client, namespace string, isShoot b
 			gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameVPAUpdater, namespace).Secret,
 			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: VPASecretName, Namespace: namespace}},
 			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-vpa-admission-controller", Namespace: namespace}},
-			// TODO(rfranzke): Remove in a future release.
-			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-admission-controller", Namespace: namespace}},
-			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-recommender", Namespace: namespace}},
-			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-updater", Namespace: namespace}},
 		)
 	} else {
 		resources = append(resources,

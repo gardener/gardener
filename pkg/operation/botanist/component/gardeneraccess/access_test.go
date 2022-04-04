@@ -92,7 +92,7 @@ subjects:
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            gardenerSecretName,
 				Namespace:       namespace,
-				ResourceVersion: "2",
+				ResourceVersion: "1",
 				Annotations: map[string]string{
 					"serviceaccount.resources.gardener.cloud/name":      "gardener",
 					"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
@@ -129,7 +129,7 @@ users:
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            gardenerInternalSecretName,
 				Namespace:       namespace,
-				ResourceVersion: "2",
+				ResourceVersion: "1",
 				Annotations: map[string]string{
 					"serviceaccount.resources.gardener.cloud/name":      "gardener-internal",
 					"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
@@ -228,20 +228,18 @@ users:
 					Name:      expectedGardenerSecret.Name,
 					Namespace: expectedGardenerSecret.Namespace,
 				},
-				Data: map[string][]byte{"gardener.crt": []byte("legacy")},
 			}
 			Expect(fakeClient.Create(ctx, oldGardenerSecret)).To(Succeed())
-			expectedGardenerSecret.ResourceVersion = "3"
+			expectedGardenerSecret.ResourceVersion = "2"
 
 			oldGardenerInternalSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      expectedGardenerInternalSecret.Name,
 					Namespace: expectedGardenerInternalSecret.Namespace,
 				},
-				Data: map[string][]byte{"gardener-internal.crt": []byte("legacy")},
 			}
 			Expect(fakeClient.Create(ctx, oldGardenerInternalSecret)).To(Succeed())
-			expectedGardenerInternalSecret.ResourceVersion = "3"
+			expectedGardenerInternalSecret.ResourceVersion = "2"
 
 			Expect(access.Deploy(ctx)).To(Succeed())
 

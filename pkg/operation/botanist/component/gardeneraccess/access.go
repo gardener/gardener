@@ -20,7 +20,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -96,16 +95,6 @@ func (g *gardener) Deploy(ctx context.Context) error {
 		)
 
 		serviceAccountNames = append(serviceAccountNames, shootAccessSecret.ServiceAccountName)
-
-		// TODO(rfranzke): Remove in a future release.
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, g.client, shootAccessSecret.Secret, func() error {
-			if shootAccessSecret.Secret.Data["gardener.crt"] != nil || shootAccessSecret.Secret.Data["gardener-internal.crt"] != nil {
-				shootAccessSecret.Secret.Data = nil
-			}
-			return nil
-		}); err != nil {
-			return err
-		}
 
 		if err := shootAccessSecret.WithKubeconfig(kubeconfig).Reconcile(ctx, g.client); err != nil {
 			return err

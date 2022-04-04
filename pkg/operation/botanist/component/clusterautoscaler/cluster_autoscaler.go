@@ -264,9 +264,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObject(ctx, c.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler", Namespace: c.namespace}})
-
+	return nil
 }
 
 func getLabels() map[string]string {

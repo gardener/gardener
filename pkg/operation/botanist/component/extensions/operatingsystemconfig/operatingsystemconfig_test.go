@@ -383,15 +383,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Expect(actual).To(Equal(obj))
 				}
 			})
-
-			It("should delete the legacy downloader secret", func() {
-				secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-downloader", Namespace: namespace}}
-				Expect(c.Create(ctx, secret)).To(Succeed())
-
-				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(BeNotFoundError())
-			})
 		})
 
 		Describe("#Restore", func() {
@@ -497,8 +488,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 					metav1.SetMetaDataAnnotation(&expectedWithRestore.ObjectMeta, "gardener.cloud/operation", "restore")
 					test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
 				}
-
-				mc.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-downloader", Namespace: namespace}})
 
 				defaultDepWaiter = New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 				Expect(defaultDepWaiter.Restore(ctx, shootState)).To(Succeed())

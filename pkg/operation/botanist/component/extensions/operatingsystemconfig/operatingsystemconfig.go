@@ -225,8 +225,7 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 		return err
 	}
 
-	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObject(ctx, o.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-downloader", Namespace: o.values.Namespace}})
+	return nil
 }
 
 // Wait waits until the OperatingSystemConfig CRD is ready (deployed or restored). It also reads the produced secret

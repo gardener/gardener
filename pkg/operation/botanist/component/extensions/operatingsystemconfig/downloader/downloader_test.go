@@ -116,8 +116,6 @@ roleRef:
   kind: Role
   name: cloud-config-downloader
 subjects:
-- kind: User
-  name: cloud-config-downloader
 - kind: Group
   name: system:bootstrappers
 - kind: ServiceAccount
@@ -279,10 +277,6 @@ if ! SECRET="$(readSecretWithToken "$SECRET_NAME" "$TOKEN")"; then
   echo "Could not retrieve the cloud config script in secret with name $SECRET_NAME"
   exit 1
 fi
-
-# delete legacy credentials from disk
-# TODO(rfranzke): Delete in future release.
-rm -f "$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_CERT" "$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_KEY"
 
 CHECKSUM="$(echo "$SECRET" | sed -rn 's/    checksum\/data-script: (.*)/\1/p' | sed -e 's/^"//' -e 's/"$//')"
 echo "$CHECKSUM" > "/var/lib/cloud-config-downloader/downloaded_checksum"

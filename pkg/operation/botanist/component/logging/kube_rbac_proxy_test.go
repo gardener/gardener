@@ -58,13 +58,10 @@ var _ = Describe("KubeRBACProxy", func() {
 		managedResourceSecretName          = managedresources.SecretName(managedResourceName, true)
 		kubeRBACProxyShootAccessSecretName = "shoot-access-kube-rbac-proxy"
 		promtailShootAccessSecretName      = "shoot-access-promtail"
-		legacyKubeconfigSecretName         = "kube-rbac-proxy-kubeconfig"
 
 		kubeRBACProxyLabels = map[string]string{"app": kubeRBACProxyName}
 		promtailLabels      = map[string]string{"app": promtailName}
 		keepObjects         = false
-
-		legacyKubeconfigSecretToDelete *corev1.Secret
 	)
 
 	type newKubeRBACProxyArgs struct {
@@ -114,10 +111,6 @@ var _ = Describe("KubeRBACProxy", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
-
-		legacyKubeconfigSecretToDelete = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: legacyKubeconfigSecretName, Namespace: namespace},
-		}
 	})
 
 	Describe("#Deploy", func() {
@@ -363,7 +356,6 @@ var _ = Describe("KubeRBACProxy", func() {
 						Do(func(ctx context.Context, obj client.Object, _ ...client.UpdateOption) {
 							Expect(obj).To(DeepEqual(managedResourceToUpdate))
 						}),
-					c.EXPECT().Delete(ctx, legacyKubeconfigSecretToDelete),
 				)
 
 				Expect(kubeRBACProxyDeployer.Deploy(ctx)).To(Succeed())
@@ -442,18 +434,6 @@ var _ = Describe("KubeRBACProxy", func() {
 
 				Expect(kubeRBACProxyDeployer.Destroy(ctx)).To(MatchError(fakeErr))
 			})
-
-			It("should fail when the legacy kubeconfig secret cannot be deleted", func() {
-				gomock.InOrder(
-					c.EXPECT().Delete(ctx, managedResourceToDelete),
-					c.EXPECT().Delete(ctx, managedResourceSecretToDelete),
-					c.EXPECT().Delete(ctx, kubeRBACProxyShootAccessSecretToDelete),
-					c.EXPECT().Delete(ctx, promtailShootAccessSecretToDelete),
-					c.EXPECT().Delete(ctx, legacyKubeconfigSecretToDelete).Return(fakeErr),
-				)
-
-				Expect(kubeRBACProxyDeployer.Destroy(ctx)).To(MatchError(fakeErr))
-			})
 		})
 
 		Context("Tests expecting a success", func() {
@@ -470,7 +450,6 @@ var _ = Describe("KubeRBACProxy", func() {
 					c.EXPECT().Delete(ctx, managedResourceSecretToDelete),
 					c.EXPECT().Delete(ctx, kubeRBACProxyShootAccessSecretToDelete),
 					c.EXPECT().Delete(ctx, promtailShootAccessSecretToDelete),
-					c.EXPECT().Delete(ctx, legacyKubeconfigSecretToDelete),
 				)
 
 				Expect(kubeRBACProxyDeployer.Destroy(ctx)).To(Succeed())
