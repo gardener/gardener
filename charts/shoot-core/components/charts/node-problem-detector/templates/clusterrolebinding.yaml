@@ -1,8 +1,0 @@
-# TODO(ary92): Delete this Helm chart in a future version.
----
-kind: ClusterRoleBinding
-apiVersion: {{ include "rbacversion" . }}
-metadata:
-  name: node-problem-detector
-  annotations:
-    resources.gardener.cloud/mode: Ignore

@@ -398,7 +398,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"blackbox-exporter": blackboxExporter,
 		}, b.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting),
 		"network-policies":        networkPolicyConfig,
-		"node-problem-detector":   common.GenerateAddonConfig(nil, true),
 		"podsecuritypolicies":     common.GenerateAddonConfig(podSecurityPolicies, true),
 		"shoot-info":              common.GenerateAddonConfig(shootInfo, true),
 		"vertical-pod-autoscaler": common.GenerateAddonConfig(verticalPodAutoscaler, b.Shoot.WantsVerticalPodAutoscaler),

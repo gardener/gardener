@@ -24,8 +24,6 @@ monitoring:
       node-exporter: image-repository:image-tag
 network-policies:
   enabled: true
-node-problem-detector:
-  enabled: true
 podsecuritypolicies:
   enabled: true
   allowPrivilegedContainers: false

@@ -1,8 +1,0 @@
-# TODO(ary92): Delete this Helm chart in a future version.
----
-apiVersion: {{ include "podsecuritypolicyversion" .}}
-kind: PodSecurityPolicy
-metadata:
-  name: node-problem-detector
-  annotations:
-    resources.gardener.cloud/mode: Ignore
