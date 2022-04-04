@@ -88,6 +88,8 @@ var _ = Describe("VPA", func() {
 		shootAccessSecretUpdater  *corev1.Secret
 		deploymentUpdaterFor      func(bool, *metav1.Duration, *metav1.Duration, *int32, *float64, *float64) *appsv1.Deployment
 		vpaUpdater                *vpaautoscalingv1.VerticalPodAutoscaler
+
+		serviceAccountRecommender *corev1.ServiceAccount
 	)
 
 	BeforeEach(func() {
@@ -546,6 +548,21 @@ var _ = Describe("VPA", func() {
 				},
 			},
 		}
+
+		serviceAccountRecommender = &corev1.ServiceAccount{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "ServiceAccount",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "vpa-recommender",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"gardener.cloud/role": "vpa",
+				},
+			},
+			AutomountServiceAccountToken: pointer.Bool(false),
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -602,7 +619,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(11))
+				Expect(managedResourceSecret.Data).To(HaveLen(12))
 
 				By("checking vpa-exporter resources")
 				clusterRoleExporter.Name = replaceTargetSubstrings(clusterRoleExporter.Name)
@@ -629,6 +646,9 @@ var _ = Describe("VPA", func() {
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_evictioner.yaml"])).To(Equal(serialize(clusterRoleBindingUpdater)))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-updater.yaml"])).To(Equal(serialize(deploymentUpdater)))
 				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__vpa-updater.yaml"])).To(Equal(serialize(vpaUpdater)))
+
+				By("checking vpa-recommender resources")
+				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-recommender.yaml"])).To(Equal(serialize(serviceAccountRecommender)))
 			})
 
 			It("should successfully deploy with special configuration", func() {

@@ -14,6 +14,15 @@
 
 package vpa
 
+import (
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
+)
+
+const (
+	recommender = "vpa-recommender"
+)
+
 // ValuesRecommender is a set of configuration values for the vpa-recommender.
 type ValuesRecommender struct {
 	// Image is the container image.
@@ -21,5 +30,21 @@ type ValuesRecommender struct {
 }
 
 func (v *vpa) recommenderResourceConfigs() resourceConfigs {
-	return resourceConfigs{}
+	configs := resourceConfigs{}
+
+	if v.values.ClusterType == ClusterTypeSeed {
+		serviceAccount := v.emptyServiceAccount(recommender)
+		configs = append(configs,
+			resourceConfig{obj: serviceAccount, class: application, mutateFn: func() { v.reconcileRecommenderServiceAccount(serviceAccount) }},
+		)
+	} else {
+		configs = append(configs)
+	}
+
+	return configs
+}
+
+func (v *vpa) reconcileRecommenderServiceAccount(serviceAccount *corev1.ServiceAccount) {
+	serviceAccount.Labels = getRoleLabel()
+	serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
 }
