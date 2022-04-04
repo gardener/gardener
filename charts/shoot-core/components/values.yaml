@@ -41,7 +41,5 @@ shoot-info:
   maintenanceBegin: 210000+0000
   maintenanceEnd: 220000+0000
   extensions: shoot-dns-service,foo-bar
-vpn-shoot:
-  enabled: false
 vertical-pod-autoscaler:
   enabled: false

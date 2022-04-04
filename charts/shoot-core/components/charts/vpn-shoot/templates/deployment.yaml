@@ -1,9 +1,0 @@
-# TODO(shafeeqes): Delete this Helm chart in a future version.
----
-apiVersion: {{ include "deploymentversion" . }}
-kind: Deployment
-metadata:
-  name: vpn-shoot
-  namespace: kube-system
-  annotations:
-    resources.gardener.cloud/mode: Ignore

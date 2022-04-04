@@ -27,10 +27,6 @@ dependencies:
   repository: http://localhost:10191
   version: 0.1.0
   condition: shoot-info.enabled
-- name: vpn-shoot
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: vpn-shoot.enabled
 - name: vertical-pod-autoscaler
   repository: http://localhost:10191
   version: 0.1.0

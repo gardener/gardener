@@ -1,8 +1,0 @@
-# TODO(shafeeqes): Delete this Helm chart in a future version.
----
-apiVersion: {{ include "podsecuritypolicyversion" .}}
-kind: PodSecurityPolicy
-metadata:
-  name: gardener.kube-system.vpn-shoot
-  annotations:
-    resources.gardener.cloud/mode: Ignore
