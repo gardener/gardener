@@ -5340,6 +5340,19 @@ VerticalPodAutoscaler
 <p>VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>enableStaticTokenKubeconfig</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster
+(default: true).</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubernetesConfig">KubernetesConfig

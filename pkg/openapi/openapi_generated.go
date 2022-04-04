@@ -3920,6 +3920,13 @@ func schema_pkg_apis_core_v1alpha1_Kubernetes(ref common.ReferenceCallback) comm
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.VerticalPodAutoscaler"),
 						},
 					},
+					"enableStaticTokenKubeconfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster (default: true).",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"version"},
 			},
@@ -10961,6 +10968,13 @@ func schema_pkg_apis_core_v1beta1_Kubernetes(ref common.ReferenceCallback) commo
 						SchemaProps: spec.SchemaProps{
 							Description: "VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler"),
+						},
+					},
+					"enableStaticTokenKubeconfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster (default: true).",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 				},

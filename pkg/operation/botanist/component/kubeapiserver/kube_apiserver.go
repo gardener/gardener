@@ -158,6 +158,8 @@ type Values struct {
 	VPN VPNConfig
 	// WatchCacheSizes are the configured sizes for the watch caches.
 	WatchCacheSizes *gardencorev1beta1.WatchCacheSizes
+	// EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for shoot.
+	EnableStaticTokenKubeconfig *bool
 }
 
 // AuditConfig contains information for configuring audit settings for the kube-apiserver.
@@ -403,8 +405,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := k.reconcileSecretUserKubeconfig(ctx, secretStaticToken, secretBasicAuth); err != nil {
-		return err
+	if pointer.BoolDeref(k.values.EnableStaticTokenKubeconfig, true) {
+		if err := k.reconcileSecretUserKubeconfig(ctx, secretStaticToken, secretBasicAuth); err != nil {
+			return err
+		}
 	}
 
 	data, err := k.computeShootResourcesData()

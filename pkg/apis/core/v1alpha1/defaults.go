@@ -187,6 +187,10 @@ func SetDefaults_Shoot(obj *Shoot) {
 		obj.Spec.Kubernetes.KubeProxy.Enabled = pointer.Bool(true)
 	}
 
+	if obj.Spec.Kubernetes.EnableStaticTokenKubeconfig == nil {
+		obj.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+	}
+
 	if obj.Spec.Addons == nil {
 		obj.Spec.Addons = &Addons{}
 	}

@@ -2089,6 +2089,11 @@ func (in *Kubernetes) DeepCopyInto(out *Kubernetes) {
 		*out = new(VerticalPodAutoscaler)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.EnableStaticTokenKubeconfig != nil {
+		in, out := &in.EnableStaticTokenKubeconfig, &out.EnableStaticTokenKubeconfig
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

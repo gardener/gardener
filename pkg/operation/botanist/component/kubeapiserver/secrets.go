@@ -30,6 +30,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -120,20 +121,25 @@ func (k *kubeAPIServer) reconcileSecretBasicAuth(ctx context.Context) (*corev1.S
 }
 
 func (k *kubeAPIServer) reconcileSecretStaticToken(ctx context.Context) (*corev1.Secret, error) {
-	secret, err := k.secretsManager.Generate(ctx, &secretutils.StaticTokenSecretConfig{
+	staticTokenSecretConfig := &secretutils.StaticTokenSecretConfig{
 		Name: SecretStaticTokenName,
 		Tokens: map[string]secretutils.TokenConfig{
-			userNameClusterAdmin: {
-				Username: userNameClusterAdmin,
-				UserID:   userNameClusterAdmin,
-				Groups:   []string{user.SystemPrivilegedGroup},
-			},
 			userNameHealthCheck: {
 				Username: userNameHealthCheck,
 				UserID:   userNameHealthCheck,
 			},
 		},
-	}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace))
+	}
+
+	if pointer.BoolDeref(k.values.EnableStaticTokenKubeconfig, true) {
+		staticTokenSecretConfig.Tokens[userNameClusterAdmin] = secretutils.TokenConfig{
+			Username: userNameClusterAdmin,
+			UserID:   userNameClusterAdmin,
+			Groups:   []string{user.SystemPrivilegedGroup},
+		}
+	}
+
+	secret, err := k.secretsManager.Generate(ctx, staticTokenSecretConfig, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return nil, err
 	}

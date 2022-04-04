@@ -1192,6 +1192,11 @@ message Kubernetes {
   // VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
   // +optional
   optional VerticalPodAutoscaler verticalPodAutoscaler = 9;
+
+  // EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster
+  // (default: true).
+  // +optional
+  optional bool enableStaticTokenKubeconfig = 10;
 }
 
 // KubernetesConfig contains common configuration fields for the control plane components.

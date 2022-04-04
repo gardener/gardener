@@ -1509,7 +1509,7 @@ var _ = Describe("KubeAPIServer", func() {
 			})
 		})
 
-		It("should sync the kubeconfig to the garden project namespace", func() {
+		It("should sync the kubeconfig to the garden project namespace when enableStaticTokenKubeconfig is set to true", func() {
 			kubeAPIServer.EXPECT().GetValues()
 			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 			kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
@@ -1551,6 +1551,44 @@ var _ = Describe("KubeAPIServer", func() {
 			Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(secret), &corev1.Secret{})).To(BeNotFoundError())
+		})
+
+		It("should not sync the kubeconfig to garden project namespace when enableStaticTokenKubeconfig is set to false", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      shootName + ".kubeconfig",
+					Namespace: projectNamespace,
+				},
+			}
+			Expect(gc.Create(ctx, secret)).To(Succeed())
+
+			Expect(gc.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(Succeed())
+
+			kubeAPIServer.EXPECT().GetValues()
+			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+			kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
+			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+			kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
+			kubeAPIServer.EXPECT().Deploy(ctx)
+
+			shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+			shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+				KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+					ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+						Issuer:          pointer.String("issuer"),
+						AcceptedIssuers: []string{"issuer1", "issuer2"},
+					},
+				},
+				EnableStaticTokenKubeconfig: pointer.Bool(false),
+			}
+			botanist.Shoot.SetInfo(shootCopy)
+
+			Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
+
+			Expect(gc.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(BeNotFoundError())
 		})
 	})
 

@@ -116,7 +116,8 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 				ServiceNetworkCIDR: b.Shoot.Networks.Services.String(),
 				NodeNetworkCIDR:    b.Shoot.GetInfo().Spec.Networking.Nodes,
 			},
-			WatchCacheSizes: watchCacheSizes,
+			WatchCacheSizes:             watchCacheSizes,
+			EnableStaticTokenKubeconfig: b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig,
 		},
 	), nil
 }
@@ -451,28 +452,35 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		return err
 	}
 
-	userKubeconfigSecret, found := b.SecretsManager.Get(kubeapiserver.SecretNameUserKubeconfig)
-	if !found {
-		return fmt.Errorf("secret %q not found", kubeapiserver.SecretNameUserKubeconfig)
-	}
+	if enableStaticTokenKubeconfig := b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig; enableStaticTokenKubeconfig == nil || *enableStaticTokenKubeconfig {
+		userKubeconfigSecret, found := b.SecretsManager.Get(kubeapiserver.SecretNameUserKubeconfig)
+		if !found {
+			return fmt.Errorf("secret %q not found", kubeapiserver.SecretNameUserKubeconfig)
+		}
 
-	// add CA bundle as ca.crt to kubeconfig secret for backwards-compatibility
-	caBundleSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
-	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
-	}
+		// add CA bundle as ca.crt to kubeconfig secret for backwards-compatibility
+		caBundleSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+		if !found {
+			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+		}
 
-	kubeconfigSecretData := userKubeconfigSecret.DeepCopy().Data
-	kubeconfigSecretData[secretutils.DataKeyCertificateCA] = caBundleSecret.Data[secretutils.DataKeyCertificateBundle]
+		kubeconfigSecretData := userKubeconfigSecret.DeepCopy().Data
+		kubeconfigSecretData[secretutils.DataKeyCertificateCA] = caBundleSecret.Data[secretutils.DataKeyCertificateBundle]
 
-	if err := b.syncShootCredentialToGarden(
-		ctx,
-		gutil.ShootProjectSecretSuffixKubeconfig,
-		map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleKubeconfig},
-		map[string]string{"url": "https://" + externalServer},
-		kubeconfigSecretData,
-	); err != nil {
-		return err
+		if err := b.syncShootCredentialToGarden(
+			ctx,
+			gutil.ShootProjectSecretSuffixKubeconfig,
+			map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleKubeconfig},
+			map[string]string{"url": "https://" + externalServer},
+			kubeconfigSecretData,
+		); err != nil {
+			return err
+		}
+	} else {
+		secretName := gutil.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, gutil.ShootProjectSecretSuffixKubeconfig)
+		if err := kutil.DeleteObject(ctx, b.K8sGardenClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}}); err != nil {
+			return err
+		}
 	}
 
 	// TODO(rfranzke): Remove in a future release.
