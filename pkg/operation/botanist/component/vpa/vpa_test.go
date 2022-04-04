@@ -68,7 +68,8 @@ var _ = Describe("VPA", func() {
 		valuesExporter ValuesExporter
 		valuesUpdater  ValuesUpdater
 
-		vpaUpdateModeAuto = vpaautoscalingv1.UpdateModeAuto
+		vpaUpdateModeAuto   = vpaautoscalingv1.UpdateModeAuto
+		vpaControlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
 		managedResourceName   string
 		managedResource       *resourcesv1alpha1.ManagedResource
@@ -86,6 +87,7 @@ var _ = Describe("VPA", func() {
 		clusterRoleBindingUpdater *rbacv1.ClusterRoleBinding
 		shootAccessSecretUpdater  *corev1.Secret
 		deploymentUpdaterFor      func(bool, *metav1.Duration, *metav1.Duration, *int32, *float64, *float64) *appsv1.Deployment
+		vpaUpdater                *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
 	BeforeEach(func() {
@@ -514,6 +516,36 @@ var _ = Describe("VPA", func() {
 
 			return obj
 		}
+		vpaUpdater = &vpaautoscalingv1.VerticalPodAutoscaler{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "autoscaling.k8s.io/v1",
+				Kind:       "VerticalPodAutoscaler",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "vpa-updater",
+				Namespace: namespace,
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       "vpa-updater",
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{UpdateMode: &vpaUpdateModeAuto},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName:    "*",
+							ControlledValues: &vpaControlledValues,
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("10m"),
+								corev1.ResourceMemory: resource.MustParse("50Mi"),
+							},
+						},
+					},
+				},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -570,7 +602,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(10))
+				Expect(managedResourceSecret.Data).To(HaveLen(11))
 
 				By("checking vpa-exporter resources")
 				clusterRoleExporter.Name = replaceTargetSubstrings(clusterRoleExporter.Name)
@@ -596,6 +628,7 @@ var _ = Describe("VPA", func() {
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_evictioner.yaml"])).To(Equal(serialize(clusterRoleUpdater)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_evictioner.yaml"])).To(Equal(serialize(clusterRoleBindingUpdater)))
 				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-updater.yaml"])).To(Equal(serialize(deploymentUpdater)))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__vpa-updater.yaml"])).To(Equal(serialize(vpaUpdater)))
 			})
 
 			It("should successfully deploy with special configuration", func() {
@@ -749,6 +782,11 @@ var _ = Describe("VPA", func() {
 				deploymentUpdater := deploymentUpdaterFor(false, nil, nil, nil, nil, nil)
 				deploymentUpdater.ResourceVersion = "1"
 				Expect(deployment).To(Equal(deploymentUpdater))
+
+				vpa = &vpaautoscalingv1.VerticalPodAutoscaler{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaUpdater), vpa)).To(Succeed())
+				vpaUpdater.ResourceVersion = "1"
+				Expect(vpa).To(Equal(vpaUpdater))
 			})
 		})
 	})
@@ -788,6 +826,8 @@ var _ = Describe("VPA", func() {
 
 				By("creating vpa-updater runtime resources")
 				Expect(c.Create(ctx, deploymentUpdaterFor(true, nil, nil, nil, nil, nil))).To(Succeed())
+				Expect(c.Create(ctx, vpaUpdater)).To(Succeed())
+
 				Expect(component.Destroy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
@@ -800,6 +840,7 @@ var _ = Describe("VPA", func() {
 
 				By("checking vpa-updater runtime resources")
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentUpdaterFor(true, nil, nil, nil, nil, nil)), &appsv1.Deployment{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaUpdater), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 			})
 		})
 	})
