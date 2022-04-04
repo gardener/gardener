@@ -47,5 +47,3 @@ vpn-shoot:
   enabled: false
 vertical-pod-autoscaler:
   enabled: false
-node-local-dns:
-  enabled: false

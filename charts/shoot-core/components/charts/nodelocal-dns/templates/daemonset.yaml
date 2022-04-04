@@ -1,7 +1,0 @@
-apiVersion: {{ include "daemonsetversion" . }}
-kind: DaemonSet
-metadata:
-  name: node-local-dns
-  namespace: kube-system
-  annotations:
-    resources.gardener.cloud/mode: Ignore

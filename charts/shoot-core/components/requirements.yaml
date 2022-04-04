@@ -3,10 +3,6 @@ dependencies:
   repository: http://localhost:10191
   version: 0.1.0
   condition: apiserver-proxy.enabled
-- name: node-local-dns
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: node-local-dns.enabled
 - name: kube-apiserver-kubelet
   repository: http://localhost:10191
   version: 0.1.0
