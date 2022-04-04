@@ -15,9 +15,6 @@ spec:
       app: vpa-exporter
   template:
     metadata:
-      annotations:
-        # TODO(rfranzke): Remove in a future release.
-        security.gardener.cloud/trigger: rollout
       labels:
         app: vpa-exporter
 {{ toYaml .Values.vpa.exporter.labels | indent 8 }}

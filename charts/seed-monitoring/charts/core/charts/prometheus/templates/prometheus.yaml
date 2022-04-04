@@ -50,8 +50,6 @@ spec:
     metadata:
       annotations:
         checksum/configmap-blackbox-exporter: {{ include (print $.Template.BasePath "/blackbox-exporter-config.yaml") . | sha256sum }}
-        # TODO(rfranzke): Remove in a future release.
-        security.gardener.cloud/trigger: rollout
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}

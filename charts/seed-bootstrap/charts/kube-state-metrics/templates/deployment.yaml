@@ -20,9 +20,6 @@ spec:
       maxUnavailable: 1
   template:
     metadata:
-      annotations:
-        # TODO(rfranzke): Remove in a future release.
-        security.gardener.cloud/trigger: rollout
       labels:
         role: monitoring
         component: kube-state-metrics

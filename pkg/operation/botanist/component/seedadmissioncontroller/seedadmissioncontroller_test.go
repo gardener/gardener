@@ -153,7 +153,6 @@ spec:
     metadata:
       annotations:
         ` + references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName + `
-        security.gardener.cloud/trigger: rollout
       creationTimestamp: null
       labels:
         app: gardener

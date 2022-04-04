@@ -413,9 +413,7 @@ status: {}
 						},
 						Template: corev1.PodTemplateSpec{
 							ObjectMeta: metav1.ObjectMeta{
-								Annotations: utils.MergeStringMaps(annotations, map[string]string{
-									"security.gardener.cloud/trigger": "rollout",
-								}),
+								Annotations: annotations,
 								Labels: map[string]string{
 									"app":                 "vpn-shoot",
 									"gardener.cloud/role": "system-component",

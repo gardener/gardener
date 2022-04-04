@@ -19,8 +19,6 @@ spec:
   template:
     metadata:
       annotations:
-        # TODO(rfranzke): Remove in a future release.
-        security.gardener.cloud/trigger: rollout
 {{ include "fluent-bit.daemonset.annotations" . | indent 8 }}
       labels:
 {{ toYaml .Values.labels | indent 8 }}

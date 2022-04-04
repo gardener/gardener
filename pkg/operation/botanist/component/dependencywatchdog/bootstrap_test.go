@@ -273,7 +273,6 @@ spec:
     metadata:
       annotations:
         ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
-        security.gardener.cloud/trigger: rollout
       creationTimestamp: null`
 
 					if role == RoleEndpoint {

@@ -20,12 +20,8 @@ spec:
       app: vpa-recommender
   template:
     metadata:
-{{- if or .Values.recommender.podAnnotations .Values.recommender.createServiceAccount }}
+{{- if .Values.recommender.podAnnotations }}
       annotations:
-{{- if .Values.recommender.createServiceAccount }}
-        # TODO(rfranzke): Remove in a future release.
-        security.gardener.cloud/trigger: rollout
-{{- end }}
 {{- if .Values.recommender.podAnnotations }}
 {{ toYaml .Values.recommender.podAnnotations | indent 8 }}
 {{- end }}

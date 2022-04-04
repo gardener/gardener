@@ -203,10 +203,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				Selector:             &metav1.LabelSelector{MatchLabels: b.getLabels()},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{
-							// TODO(rfranzke): Remove in a future release.
-							"security.gardener.cloud/trigger": "rollout",
-						},
 						Labels: b.podLabels(),
 					},
 					Spec: corev1.PodSpec{

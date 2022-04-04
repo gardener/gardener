@@ -23,8 +23,6 @@ spec:
       annotations:
         sidecar.istio.io/inject: "false"
         checksum/configmap-bootstrap-config-override: {{ include (print $.Template.BasePath "/bootstrap-config-override.yaml") . | sha256sum }}
-        # TODO(rfranzke): Remove in a future release.
-        security.gardener.cloud/trigger: rollout
     spec:
       serviceAccountName: istio-ingressgateway
       securityContext:

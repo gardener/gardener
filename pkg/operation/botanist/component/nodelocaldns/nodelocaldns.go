@@ -350,8 +350,6 @@ ip6.arpa:53 {
 						Annotations: map[string]string{
 							"prometheus.io/port":   strconv.Itoa(prometheusPort),
 							"prometheus.io/scrape": strconv.FormatBool(prometheusScrape),
-							// TODO(rfranzke): Remove in a future release.
-							"security.gardener.cloud/trigger": "rollout",
 						},
 					},
 					Spec: corev1.PodSpec{

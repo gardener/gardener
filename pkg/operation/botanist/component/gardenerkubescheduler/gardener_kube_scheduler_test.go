@@ -430,8 +430,7 @@ var _ = Describe("New", func() {
 						Selector:             &metav1.LabelSelector{MatchLabels: expectedLabels},
 						Template: corev1.PodTemplateSpec{
 							ObjectMeta: metav1.ObjectMeta{
-								Labels:      expectedLabels,
-								Annotations: map[string]string{"security.gardener.cloud/trigger": "rollout"},
+								Labels: expectedLabels,
 							},
 							Spec: corev1.PodSpec{
 								Affinity: &corev1.Affinity{
@@ -634,8 +633,7 @@ var _ = Describe("New", func() {
 						Selector:             &metav1.LabelSelector{MatchLabels: expectedLabels},
 						Template: corev1.PodTemplateSpec{
 							ObjectMeta: metav1.ObjectMeta{
-								Labels:      expectedLabels,
-								Annotations: map[string]string{"security.gardener.cloud/trigger": "rollout"},
+								Labels: expectedLabels,
 							},
 							Spec: corev1.PodSpec{
 								Affinity: &corev1.Affinity{
