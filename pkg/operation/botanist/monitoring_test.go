@@ -32,6 +32,7 @@ import (
 	mockkubecontrollermanager "github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager/mock"
 	mockkubeproxy "github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy/mock"
 	mockkubescheduler "github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler/mock"
+	mockresourcemanager "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager/mock"
 	mockvpnshoot "github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot/mock"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
@@ -79,6 +80,7 @@ var _ = Describe("Monitoring", func() {
 		mockCoreDNS               *mockcoredns.MockInterface
 		mockKubeProxy             *mockkubeproxy.MockInterface
 		mockVPNShoot              *mockvpnshoot.MockInterface
+		mockResourceManager       *mockresourcemanager.MockInterface
 
 		botanist *Botanist
 
@@ -116,6 +118,7 @@ var _ = Describe("Monitoring", func() {
 		mockCoreDNS = mockcoredns.NewMockInterface(ctrl)
 		mockKubeProxy = mockkubeproxy.NewMockInterface(ctrl)
 		mockVPNShoot = mockvpnshoot.NewMockInterface(ctrl)
+		mockResourceManager = mockresourcemanager.NewMockInterface(ctrl)
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
@@ -141,6 +144,7 @@ var _ = Describe("Monitoring", func() {
 							KubeAPIServer:         mockKubeAPIServer,
 							KubeScheduler:         mockKubeScheduler,
 							KubeControllerManager: mockKubeControllerManager,
+							ResourceManager:       mockResourceManager,
 						},
 						SystemComponents: &shootpkg.SystemComponents{
 							CoreDNS:   mockCoreDNS,
@@ -198,6 +202,8 @@ var _ = Describe("Monitoring", func() {
 			mockKubeProxy.EXPECT().AlertingRules()
 			mockVPNShoot.EXPECT().ScrapeConfigs()
 			mockVPNShoot.EXPECT().AlertingRules()
+			mockResourceManager.EXPECT().ScrapeConfigs()
+			mockResourceManager.EXPECT().AlertingRules()
 		})
 
 		It("should delete the legacy ingress secrets", func() {

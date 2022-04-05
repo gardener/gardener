@@ -67,6 +67,7 @@ const (
 	clusterRoleName    = "gardener-resource-manager-seed"
 	roleName           = "gardener-resource-manager"
 	serviceAccountName = "gardener-resource-manager"
+	metricsPortName    = "metrics"
 	containerName      = v1beta1constants.DeploymentNameGardenerResourceManager
 	healthPort         = 8081
 	metricsPort        = 8080
@@ -129,6 +130,7 @@ var (
 // Interface contains functions for a gardener-resource-manager deployer.
 type Interface interface {
 	component.DeployWaiter
+	component.MonitoringComponent
 	// GetReplicas gets the Replicas field in the Values.
 	GetReplicas() *int32
 	// SetReplicas sets the Replicas field in the Values.
@@ -392,9 +394,8 @@ func (r *resourceManager) emptyRoleBindingInWatchedNamespace() *rbacv1.RoleBindi
 
 func (r *resourceManager) ensureService(ctx context.Context) error {
 	const (
-		healthPortName  = "health"
-		metricsPortName = "metrics"
-		serverPortName  = "server"
+		healthPortName = "health"
+		serverPortName = "server"
 	)
 
 	// TODO(rfranzke): This can be removed in a future version.
