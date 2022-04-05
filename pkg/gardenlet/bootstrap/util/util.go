@@ -15,6 +15,7 @@
 package util
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha512"
 	"crypto/x509"
@@ -103,6 +104,42 @@ func UpdateGardenKubeconfigSecret(ctx context.Context, certClientConfig *rest.Co
 		return nil, err
 	}
 	return kubeconfig, nil
+}
+
+// UpdateGardenKubeconfigCAIfChanged checks if the garden cluster CA given in the gardenClientConnection differs from the CA in the kubeconfig secret
+// and updates the secret to contain the new CA if that's the case.
+func UpdateGardenKubeconfigCAIfChanged(ctx context.Context, seedClient client.Client, kubeconfigAsBytes []byte, gardenClientConnection *config.GardenClientConnection) ([]byte, error) {
+	if kubeconfigAsBytes == nil {
+		return nil, fmt.Errorf("no kubeconfig given")
+	}
+	kubeconfig, err := clientcmd.Load(kubeconfigAsBytes)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse kubeconfig: %w", err)
+	}
+	curContext, ok := kubeconfig.Contexts[kubeconfig.CurrentContext]
+	if !ok {
+		return nil, fmt.Errorf("invalid kubeconfig: currently set context %s not found among contexts", kubeconfig.CurrentContext)
+	}
+	curCluster, ok := kubeconfig.Clusters[curContext.Cluster]
+	if !ok {
+		return nil, fmt.Errorf("invalid kubeconfig: currently set cluster %s not found among clusters", curContext.Cluster)
+	}
+	curAuth, ok := kubeconfig.AuthInfos[curContext.AuthInfo]
+	if !ok {
+		return nil, fmt.Errorf("invalid kubeconfig: currently set authinfo %s not found among authinfos", curContext.AuthInfo)
+	}
+	if bytes.Equal(curCluster.CertificateAuthorityData, gardenClientConnection.GardenClusterCACert) {
+		// CAs are equal, nothing to do
+		return kubeconfigAsBytes, nil
+	}
+	// extract data from existing kubeconfig and reuse UpdateGardenKubeconfigSecret function
+	return UpdateGardenKubeconfigSecret(ctx, &rest.Config{
+		Host: curCluster.Server,
+		TLSClientConfig: rest.TLSClientConfig{
+			Insecure: curCluster.InsecureSkipTLSVerify,
+			CAData:   gardenClientConnection.GardenClusterCACert,
+		},
+	}, curAuth.ClientCertificateData, curAuth.ClientKeyData, seedClient, gardenClientConnection)
 }
 
 // CreateGardenletKubeconfigWithClientCertificate creates a kubeconfig for the Gardenlet with the given client certificate.
