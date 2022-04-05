@@ -24,11 +24,13 @@ func (v *vpa) generalResourceConfigs() resourceConfigs {
 	var (
 		clusterRoleActor        = v.emptyClusterRole("actor")
 		clusterRoleBindingActor = v.emptyClusterRoleBinding("actor")
+		clusterRoleTargetReader = v.emptyClusterRole("target-reader")
 	)
 
 	return resourceConfigs{
 		{obj: clusterRoleActor, class: application, mutateFn: func() { v.reconcileGeneralClusterRoleActor(clusterRoleActor) }},
 		{obj: clusterRoleBindingActor, class: application, mutateFn: func() { v.reconcileGeneralClusterRoleBindingActor(clusterRoleBindingActor, clusterRoleActor) }},
+		{obj: clusterRoleTargetReader, class: application, mutateFn: func() { v.reconcileGeneralClusterRoleTargetReader(clusterRoleTargetReader) }},
 	}
 }
 
@@ -81,6 +83,37 @@ func (v *vpa) reconcileGeneralClusterRoleBindingActor(clusterRoleBinding *rbacv1
 			Kind:      rbacv1.ServiceAccountKind,
 			Name:      updater,
 			Namespace: v.serviceAccountNamespace(),
+		},
+	}
+}
+
+func (v *vpa) reconcileGeneralClusterRoleTargetReader(clusterRole *rbacv1.ClusterRole) {
+	clusterRole.Labels = getRoleLabel()
+	clusterRole.Rules = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"*"},
+			Resources: []string{"*/scale"},
+			Verbs:     []string{"get", "watch"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"replicationcontrollers"},
+			Verbs:     []string{"get", "list", "watch"},
+		},
+		{
+			APIGroups: []string{"apps"},
+			Resources: []string{"daemonsets", "deployments", "replicasets", "statefulsets"},
+			Verbs:     []string{"get", "list", "watch"},
+		},
+		{
+			APIGroups: []string{"batch"},
+			Resources: []string{"jobs", "cronjobs"},
+			Verbs:     []string{"get", "list", "watch"},
+		},
+		{
+			APIGroups: []string{"druid.gardener.cloud"},
+			Resources: []string{"etcds", "etcds/scale"},
+			Verbs:     []string{"get", "list", "watch"},
 		},
 	}
 }

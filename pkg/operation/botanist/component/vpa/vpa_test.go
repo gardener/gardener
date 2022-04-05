@@ -123,6 +123,7 @@ var _ = Describe("VPA", func() {
 
 		clusterRoleGeneralActor        *rbacv1.ClusterRole
 		clusterRoleBindingGeneralActor *rbacv1.ClusterRoleBinding
+		clusterRoleGeneralTargetReader *rbacv1.ClusterRole
 	)
 
 	BeforeEach(func() {
@@ -1329,6 +1330,45 @@ var _ = Describe("VPA", func() {
 				},
 			},
 		}
+		clusterRoleGeneralTargetReader = &rbacv1.ClusterRole{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "rbac.authorization.k8s.io/v1",
+				Kind:       "ClusterRole",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:vpa:target:target-reader",
+				Labels: map[string]string{
+					"gardener.cloud/role": "vpa",
+				},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"*"},
+					Resources: []string{"*/scale"},
+					Verbs:     []string{"get", "watch"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"replicationcontrollers"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"apps"},
+					Resources: []string{"daemonsets", "deployments", "replicasets", "statefulsets"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"batch"},
+					Resources: []string{"jobs", "cronjobs"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"druid.gardener.cloud"},
+					Resources: []string{"etcds", "etcds/scale"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -1388,7 +1428,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(26))
+				Expect(managedResourceSecret.Data).To(HaveLen(27))
 
 				By("checking vpa-exporter resources")
 				clusterRoleExporter.Name = replaceTargetSubstrings(clusterRoleExporter.Name)
@@ -1452,11 +1492,13 @@ var _ = Describe("VPA", func() {
 
 				By("checking general resources")
 				clusterRoleGeneralActor.Name = replaceTargetSubstrings(clusterRoleGeneralActor.Name)
+				clusterRoleGeneralTargetReader.Name = replaceTargetSubstrings(clusterRoleGeneralTargetReader.Name)
 				clusterRoleBindingGeneralActor.Name = replaceTargetSubstrings(clusterRoleBindingGeneralActor.Name)
 				clusterRoleBindingGeneralActor.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingGeneralActor.RoleRef.Name)
 
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_actor.yaml"])).To(Equal(serialize(clusterRoleGeneralActor)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_actor.yaml"])).To(Equal(serialize(clusterRoleBindingGeneralActor)))
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_target-reader.yaml"])).To(Equal(serialize(clusterRoleGeneralTargetReader)))
 			})
 
 			It("should successfully deploy with special configuration", func() {
@@ -1563,6 +1605,9 @@ var _ = Describe("VPA", func() {
 				legacyGeneralClusterRoleBindingActor := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:actor"}}
 				Expect(c.Create(ctx, legacyGeneralClusterRoleBindingActor)).To(Succeed())
 
+				legacyGeneralClusterRoleTargetReader := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:target-reader"}}
+				Expect(c.Create(ctx, legacyGeneralClusterRoleTargetReader)).To(Succeed())
+
 				Expect(component.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyExporterClusterRole), &rbacv1.ClusterRole{})).To(BeNotFoundError())
@@ -1578,6 +1623,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyTLSCertsSecret), &corev1.Secret{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyGeneralClusterRoleActor), &rbacv1.ClusterRole{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyGeneralClusterRoleBindingActor), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyGeneralClusterRoleTargetReader), &rbacv1.ClusterRole{})).To(BeNotFoundError())
 			})
 		})
 
@@ -1623,7 +1669,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(13))
+				Expect(managedResourceSecret.Data).To(HaveLen(14))
 
 				By("checking vpa-exporter application resources")
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceAccountExporter)))
@@ -1734,6 +1780,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_actor.yaml"])).To(Equal(serialize(clusterRoleGeneralActor)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_actor.yaml"])).To(Equal(serialize(clusterRoleBindingGeneralActor)))
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_target-reader.yaml"])).To(Equal(serialize(clusterRoleGeneralTargetReader)))
 			})
 
 			It("should delete the legacy resources", func() {
@@ -1980,7 +2027,7 @@ func serialize(obj client.Object) string {
 }
 
 func replaceTargetSubstrings(in string) string {
-	return strings.Replace(in, "target", "source", -1)
+	return strings.Replace(in, ":target:", ":source:", -1)
 }
 
 func dropNetworkingLabels(labels map[string]string) {
