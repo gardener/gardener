@@ -287,18 +287,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		podSecurityPolicies = map[string]interface{}{
 			"allowPrivilegedContainers": *b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers,
 		}
-		verticalPodAutoscaler = map[string]interface{}{
-			"application": map[string]interface{}{
-				"clusterType": "shoot",
-				"admissionController": map[string]interface{}{
-					"createServiceAccount": false,
-					"controlNamespace":     b.Shoot.SeedNamespace,
-				},
-				"exporter":    map[string]interface{}{"createServiceAccount": false},
-				"recommender": map[string]interface{}{"createServiceAccount": false},
-				"updater":     map[string]interface{}{"createServiceAccount": false},
-			},
-		}
 
 		shootInfo = map[string]interface{}{
 			"projectName":       b.Garden.Project.Name,
@@ -377,7 +365,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		"network-policies":        networkPolicyConfig,
 		"podsecuritypolicies":     common.GenerateAddonConfig(podSecurityPolicies, true),
 		"shoot-info":              common.GenerateAddonConfig(shootInfo, true),
-		"vertical-pod-autoscaler": common.GenerateAddonConfig(verticalPodAutoscaler, b.Shoot.WantsVerticalPodAutoscaler),
+		"vertical-pod-autoscaler": common.GenerateAddonConfig(nil, b.Shoot.WantsVerticalPodAutoscaler),
 		"cluster-identity":        map[string]interface{}{"clusterIdentity": b.Shoot.GetInfo().Status.ClusterIdentity},
 	}
 

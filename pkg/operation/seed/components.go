@@ -277,12 +277,15 @@ func defaultVerticalPodAutoscaler(c client.Client, imageVector imagevector.Image
 				Image: imageExporter.String(),
 			},
 			Recommender: vpa.ValuesRecommender{
-				Image:    imageRecommender.String(),
-				Replicas: 1,
+				Image:                        imageRecommender.String(),
+				RecommendationMarginFraction: pointer.Float64(0.05),
+				Replicas:                     1,
 			},
 			Updater: vpa.ValuesUpdater{
-				Image:    imageUpdater.String(),
-				Replicas: 1,
+				EvictionTolerance:      pointer.Float64(1.0),
+				EvictAfterOOMThreshold: &metav1.Duration{Duration: 48 * time.Hour},
+				Image:                  imageUpdater.String(),
+				Replicas:               1,
 			},
 		},
 	), nil
