@@ -342,6 +342,17 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			"vpn-seed",
 			"vpn-seed-tlsauth",
 			"vpn-seed-server",
+			"monitoring-ingress-credentials",
+			"monitoring-ingress-credentials-users",
+			"gardener-resource-manager",
+			"kube-proxy",
+			"cloud-config-downloader",
+			"kibana-tls",
+			"elasticsearch-logging-server",
+			"sg-admin-client",
+			"kibana-logging-sg-credentials",
+			"curator-sg-credentials",
+			"admin-sg-credentials",
 		} {
 			gardenerResourceDataList.Delete(name)
 		}
