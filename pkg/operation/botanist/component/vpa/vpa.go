@@ -163,6 +163,7 @@ func (v *vpa) Deploy(ctx context.Context) error {
 			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:admission-controller"}},
 			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:admission-controller"}},
 			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-tls-certs", Namespace: v.namespace}},
+			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:actor"}},
 		)
 	}
 

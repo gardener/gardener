@@ -14,6 +14,47 @@
 
 package vpa
 
+import (
+	rbacv1 "k8s.io/api/rbac/v1"
+)
+
 func (v *vpa) generalResourceConfigs() resourceConfigs {
-	return resourceConfigs{}
+	var (
+		clusterRoleActor = v.emptyClusterRole("actor")
+	)
+
+	return resourceConfigs{
+		{obj: clusterRoleActor, class: application, mutateFn: func() { v.reconcileGeneralClusterRoleActor(clusterRoleActor) }},
+	}
+}
+
+func (v *vpa) reconcileGeneralClusterRoleActor(clusterRole *rbacv1.ClusterRole) {
+	clusterRole.Labels = getRoleLabel()
+	clusterRole.Rules = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{""},
+			Resources: []string{"pods", "nodes", "limitranges"},
+			Verbs:     []string{"get", "list", "watch"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"events"},
+			Verbs:     []string{"get", "list", "watch", "create"},
+		},
+		{
+			APIGroups: []string{"poc.autoscaling.k8s.io"},
+			Resources: []string{"verticalpodautoscalers"},
+			Verbs:     []string{"get", "list", "watch", "patch"},
+		},
+		{
+			APIGroups: []string{"autoscaling.k8s.io"},
+			Resources: []string{"verticalpodautoscalers"},
+			Verbs:     []string{"get", "list", "watch", "patch"},
+		},
+		{
+			APIGroups: []string{"coordination.k8s.io"},
+			Resources: []string{"leases"},
+			Verbs:     []string{"get", "list", "watch"},
+		},
+	}
 }
