@@ -36,6 +36,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -85,6 +86,12 @@ var _ = Describe("VPA", func() {
 		networkPolicyProtocol = corev1.ProtocolTCP
 		networkPolicyPort     = intstr.FromInt(10250)
 
+		webhookFailurePolicy      = admissionregistrationv1.Ignore
+		webhookMatchPolicy        = admissionregistrationv1.Exact
+		webhookReinvocationPolicy = admissionregistrationv1.NeverReinvocationPolicy
+		webhookSideEffects        = admissionregistrationv1.SideEffectClassNone
+		webhookScope              = admissionregistrationv1.AllScopes
+
 		managedResourceName   string
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
@@ -125,6 +132,7 @@ var _ = Describe("VPA", func() {
 		clusterRoleBindingGeneralActor        *rbacv1.ClusterRoleBinding
 		clusterRoleGeneralTargetReader        *rbacv1.ClusterRole
 		clusterRoleBindingGeneralTargetReader *rbacv1.ClusterRoleBinding
+		mutatingWebhookConfiguration          *admissionregistrationv1.MutatingWebhookConfiguration
 	)
 
 	BeforeEach(func() {
@@ -1407,6 +1415,47 @@ var _ = Describe("VPA", func() {
 				},
 			},
 		}
+		mutatingWebhookConfiguration = &admissionregistrationv1.MutatingWebhookConfiguration{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "admissionregistration.k8s.io/v1",
+				Kind:       "MutatingWebhookConfiguration",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "vpa-webhook-config-target",
+			},
+			Webhooks: []admissionregistrationv1.MutatingWebhook{{
+				Name:                    "vpa.k8s.io",
+				AdmissionReviewVersions: []string{"v1"},
+				ClientConfig: admissionregistrationv1.WebhookClientConfig{
+					URL: pointer.String(fmt.Sprintf("https://vpa-webhook.%s:443", namespace)),
+				},
+				FailurePolicy:      &webhookFailurePolicy,
+				MatchPolicy:        &webhookMatchPolicy,
+				ReinvocationPolicy: &webhookReinvocationPolicy,
+				SideEffects:        &webhookSideEffects,
+				TimeoutSeconds:     pointer.Int32(10),
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{""},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"pods"},
+							Scope:       &webhookScope,
+						},
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+					},
+					{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{"autoscaling.k8s.io"},
+							APIVersions: []string{"*"},
+							Resources:   []string{"verticalpodautoscalers"},
+							Scope:       &webhookScope,
+						},
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+					},
+				},
+			}},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -1466,7 +1515,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(28))
+				Expect(managedResourceSecret.Data).To(HaveLen(29))
 
 				By("checking vpa-exporter resources")
 				clusterRoleExporter.Name = replaceTargetSubstrings(clusterRoleExporter.Name)
@@ -1535,11 +1584,20 @@ var _ = Describe("VPA", func() {
 				clusterRoleBindingGeneralActor.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingGeneralActor.RoleRef.Name)
 				clusterRoleBindingGeneralTargetReader.Name = replaceTargetSubstrings(clusterRoleBindingGeneralTargetReader.Name)
 				clusterRoleBindingGeneralTargetReader.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingGeneralTargetReader.RoleRef.Name)
+				mutatingWebhookConfiguration.Name = strings.Replace(mutatingWebhookConfiguration.Name, "-target", "-source", -1)
+				mutatingWebhookConfiguration.Webhooks[0].ClientConfig = admissionregistrationv1.WebhookClientConfig{
+					Service: &admissionregistrationv1.ServiceReference{
+						Name:      "vpa-webhook",
+						Namespace: namespace,
+						Port:      pointer.Int32(443),
+					},
+				}
 
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_actor.yaml"])).To(Equal(serialize(clusterRoleGeneralActor)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_actor.yaml"])).To(Equal(serialize(clusterRoleBindingGeneralActor)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_target-reader.yaml"])).To(Equal(serialize(clusterRoleGeneralTargetReader)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_target-reader.yaml"])).To(Equal(serialize(clusterRoleBindingGeneralTargetReader)))
+				Expect(string(managedResourceSecret.Data["mutatingwebhookconfiguration____vpa-webhook-config-source.yaml"])).To(Equal(serialize(mutatingWebhookConfiguration)))
 			})
 
 			It("should successfully deploy with special configuration", func() {
@@ -1652,6 +1710,9 @@ var _ = Describe("VPA", func() {
 				legacyGeneralClusterRoleBindingTargetReader := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:target-reader"}}
 				Expect(c.Create(ctx, legacyGeneralClusterRoleBindingTargetReader)).To(Succeed())
 
+				legacyMutatingWebhookConfiguration := &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "vpa-webhook-config-seed"}}
+				Expect(c.Create(ctx, legacyMutatingWebhookConfiguration)).To(Succeed())
+
 				Expect(component.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyExporterClusterRole), &rbacv1.ClusterRole{})).To(BeNotFoundError())
@@ -1669,6 +1730,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyGeneralClusterRoleBindingActor), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyGeneralClusterRoleTargetReader), &rbacv1.ClusterRole{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyGeneralClusterRoleBindingTargetReader), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyMutatingWebhookConfiguration), &admissionregistrationv1.MutatingWebhookConfiguration{})).To(BeNotFoundError())
 			})
 		})
 
@@ -1714,7 +1776,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(15))
+				Expect(managedResourceSecret.Data).To(HaveLen(16))
 
 				By("checking vpa-exporter application resources")
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceAccountExporter)))
@@ -1830,6 +1892,7 @@ var _ = Describe("VPA", func() {
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_actor.yaml"])).To(Equal(serialize(clusterRoleBindingGeneralActor)))
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_target-reader.yaml"])).To(Equal(serialize(clusterRoleGeneralTargetReader)))
 				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_target-reader.yaml"])).To(Equal(serialize(clusterRoleBindingGeneralTargetReader)))
+				Expect(string(managedResourceSecret.Data["mutatingwebhookconfiguration____vpa-webhook-config-target.yaml"])).To(Equal(serialize(mutatingWebhookConfiguration)))
 			})
 
 			It("should delete the legacy resources", func() {

@@ -33,6 +33,7 @@ import (
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -75,6 +76,7 @@ type vpa struct {
 	registry *managedresources.Registry
 
 	caSecretName     string
+	caBundle         []byte
 	serverSecretName string
 }
 
@@ -116,6 +118,7 @@ func (v *vpa) Deploy(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v.values.SecretNameServerCA)
 	}
 	v.caSecretName = caSecret.Name
+	v.caBundle = caSecret.Data[secretutils.DataKeyCertificateBundle]
 
 	serverSecret, err := v.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
 		Name:                        "vpa-admission-controller-server",
@@ -167,6 +170,7 @@ func (v *vpa) Deploy(ctx context.Context) error {
 			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:actor"}},
 			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:target-reader"}},
 			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:target-reader"}},
+			&admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "vpa-webhook-config-seed"}},
 		)
 	}
 
@@ -277,6 +281,15 @@ func (v *vpa) emptyVerticalPodAutoscaler(name string) *vpaautoscalingv1.Vertical
 
 func (v *vpa) emptyNetworkPolicy(name string) *networkingv1.NetworkPolicy {
 	return &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: v.namespace}}
+}
+
+func (v *vpa) emptyMutatingWebhookConfiguration() *admissionregistrationv1.MutatingWebhookConfiguration {
+	suffix := "source"
+	if v.values.ClusterType == ClusterTypeShoot {
+		suffix = "target"
+	}
+
+	return &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "vpa-webhook-config-" + suffix}}
 }
 
 func (v *vpa) rbacNamePrefix() string {
