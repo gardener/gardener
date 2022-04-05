@@ -16,29 +16,16 @@ package resourcemanager
 
 import (
 	"bytes"
-	"strings"
 	"text/template"
 
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
 const (
-	monitoringPrometheusJobName = "resourcemanager"
-
-	monitoringMetricGo                      = "go_.+"
-	monitoringMetricWorkQueue               = "workqueue_.+"
-	monitoringMetricControllerRuntime       = "controller_runtime_.+"
-	monitoringMetricRestClientRequestsTotal = "rest_client_requests_total"
+	monitoringPrometheusJobName = "gardener-resource-manager"
 )
 
 var (
-	monitoringAllowedMetrics = []string{
-		monitoringMetricGo,
-		monitoringMetricWorkQueue,
-		monitoringMetricControllerRuntime,
-		monitoringMetricRestClientRequestsTotal,
-	}
-
 	monitoringScrapeConfigTmpl = `job_name: ` + monitoringPrometheusJobName + `
 honor_labels: false
 kubernetes_sd_configs:
@@ -55,10 +42,8 @@ relabel_configs:
   regex: __meta_kubernetes_service_label_(.+)
 - source_labels: [ __meta_kubernetes_pod_name ]
   target_label: pod
-metric_relabel_configs:
-- source_labels: [ __name__ ]
-  action: keep
-  regex: ^(` + strings.Join(monitoringAllowedMetrics, "|") + `)$
+- source_labels: [ __meta_kubernetes_namespace ]
+  target_label: namespace
 `
 
 	monitoringScrapeConfigTemplate *template.Template

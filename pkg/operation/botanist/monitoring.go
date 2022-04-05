@@ -94,10 +94,10 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		b.Shoot.Components.ControlPlane.KubeAPIServer,
 		b.Shoot.Components.ControlPlane.KubeScheduler,
 		b.Shoot.Components.ControlPlane.KubeControllerManager,
+		b.Shoot.Components.ControlPlane.ResourceManager,
 		b.Shoot.Components.SystemComponents.CoreDNS,
 		b.Shoot.Components.SystemComponents.KubeProxy,
 		b.Shoot.Components.SystemComponents.VPNShoot,
-		b.Shoot.Components.ControlPlane.ResourceManager,
 	}
 
 	if b.Shoot.NodeLocalDNSEnabled {

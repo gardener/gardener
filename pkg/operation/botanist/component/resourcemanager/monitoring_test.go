@@ -22,7 +22,7 @@ import (
 )
 
 var _ = Describe("Monitoring", func() {
-	resourceManager := New(nil, "", nil, "", Values{})
+	resourceManager := New(nil, "shoot--foo--bar", nil, "", Values{})
 
 	Describe("#ScrapeConfig", func() {
 		It("should successfully test the scrape configuration", func() {
@@ -32,12 +32,12 @@ var _ = Describe("Monitoring", func() {
 })
 
 const (
-	expectedScrapeConfig = `job_name: resourcemanager
+	expectedScrapeConfig = `job_name: gardener-resource-manager
 honor_labels: false
 kubernetes_sd_configs:
 - role: endpoints
   namespaces:
-    names: []
+    names: [shoot--foo--bar]
 relabel_configs:
 - source_labels:
   - __meta_kubernetes_service_name
@@ -48,9 +48,7 @@ relabel_configs:
   regex: __meta_kubernetes_service_label_(.+)
 - source_labels: [ __meta_kubernetes_pod_name ]
   target_label: pod
-metric_relabel_configs:
-- source_labels: [ __name__ ]
-  action: keep
-  regex: ^(go_.+|workqueue_.+|controller_runtime_.+|rest_client_requests_total)$
+- source_labels: [ __meta_kubernetes_namespace ]
+  target_label: namespace
 `
 )
