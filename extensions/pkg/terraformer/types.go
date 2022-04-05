@@ -27,7 +27,6 @@ import (
 )
 
 // terraformer is a struct containing configuration parameters for the Terraform script it acts on.
-// * useV1 indicates if it should use flags compatible with terraformer@v1 (defaults to false)
 // * purpose is a one-word description depicting what the Terraformer does (e.g. 'infrastructure').
 // * namespace is the namespace in which the Terraformer will act.
 // * image is the Docker image name of the Terraformer image.
@@ -47,8 +46,6 @@ import (
 // * deadlineCleaning is the timeout to wait Terraformer Pods to be cleaned up.
 // * deadlinePod is the time to wait apply/destroy Pod to be completed.
 type terraformer struct {
-	useV1 bool
-
 	logger       logr.Logger
 	client       client.Client
 	coreV1Client corev1client.CoreV1Interface
