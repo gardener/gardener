@@ -121,7 +121,8 @@ var _ = Describe("VPA", func() {
 		deploymentAdmissionControllerFor      func(bool) *appsv1.Deployment
 		vpaAdmissionController                *vpaautoscalingv1.VerticalPodAutoscaler
 
-		clusterRoleGeneralActor *rbacv1.ClusterRole
+		clusterRoleGeneralActor        *rbacv1.ClusterRole
+		clusterRoleBindingGeneralActor *rbacv1.ClusterRoleBinding
 	)
 
 	BeforeEach(func() {
@@ -1296,6 +1297,38 @@ var _ = Describe("VPA", func() {
 				},
 			},
 		}
+		clusterRoleBindingGeneralActor = &rbacv1.ClusterRoleBinding{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "rbac.authorization.k8s.io/v1",
+				Kind:       "ClusterRoleBinding",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:vpa:target:actor",
+				Labels: map[string]string{
+					"gardener.cloud/role": "vpa",
+				},
+				Annotations: map[string]string{
+					"resources.gardener.cloud/delete-on-invalid-update": "true",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     "ClusterRole",
+				Name:     "gardener.cloud:vpa:target:actor",
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      "vpa-recommender",
+					Namespace: namespace,
+				},
+				{
+					Kind:      "ServiceAccount",
+					Name:      "vpa-updater",
+					Namespace: namespace,
+				},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -1355,7 +1388,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(25))
+				Expect(managedResourceSecret.Data).To(HaveLen(26))
 
 				By("checking vpa-exporter resources")
 				clusterRoleExporter.Name = replaceTargetSubstrings(clusterRoleExporter.Name)
@@ -1419,8 +1452,11 @@ var _ = Describe("VPA", func() {
 
 				By("checking general resources")
 				clusterRoleGeneralActor.Name = replaceTargetSubstrings(clusterRoleGeneralActor.Name)
+				clusterRoleBindingGeneralActor.Name = replaceTargetSubstrings(clusterRoleBindingGeneralActor.Name)
+				clusterRoleBindingGeneralActor.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingGeneralActor.RoleRef.Name)
 
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_actor.yaml"])).To(Equal(serialize(clusterRoleGeneralActor)))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_actor.yaml"])).To(Equal(serialize(clusterRoleBindingGeneralActor)))
 			})
 
 			It("should successfully deploy with special configuration", func() {
@@ -1524,6 +1560,9 @@ var _ = Describe("VPA", func() {
 				legacyGeneralClusterRoleActor := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:actor"}}
 				Expect(c.Create(ctx, legacyGeneralClusterRoleActor)).To(Succeed())
 
+				legacyGeneralClusterRoleBindingActor := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:actor"}}
+				Expect(c.Create(ctx, legacyGeneralClusterRoleBindingActor)).To(Succeed())
+
 				Expect(component.Deploy(ctx)).To(Succeed())
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyExporterClusterRole), &rbacv1.ClusterRole{})).To(BeNotFoundError())
@@ -1538,6 +1577,7 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyAdmissionControllerClusterRoleBinding), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyTLSCertsSecret), &corev1.Secret{})).To(BeNotFoundError())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyGeneralClusterRoleActor), &rbacv1.ClusterRole{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(legacyGeneralClusterRoleBindingActor), &rbacv1.ClusterRoleBinding{})).To(BeNotFoundError())
 			})
 		})
 
@@ -1583,7 +1623,7 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(12))
+				Expect(managedResourceSecret.Data).To(HaveLen(13))
 
 				By("checking vpa-exporter application resources")
 				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceAccountExporter)))
@@ -1689,7 +1729,11 @@ var _ = Describe("VPA", func() {
 				Expect(vpa).To(Equal(vpaAdmissionController))
 
 				By("checking general application resources")
+				clusterRoleBindingGeneralActor.Subjects[0].Namespace = "kube-system"
+				clusterRoleBindingGeneralActor.Subjects[1].Namespace = "kube-system"
+
 				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_actor.yaml"])).To(Equal(serialize(clusterRoleGeneralActor)))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_actor.yaml"])).To(Equal(serialize(clusterRoleBindingGeneralActor)))
 			})
 
 			It("should delete the legacy resources", func() {

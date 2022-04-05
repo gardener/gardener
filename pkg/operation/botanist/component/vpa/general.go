@@ -15,16 +15,20 @@
 package vpa
 
 import (
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
 func (v *vpa) generalResourceConfigs() resourceConfigs {
 	var (
-		clusterRoleActor = v.emptyClusterRole("actor")
+		clusterRoleActor        = v.emptyClusterRole("actor")
+		clusterRoleBindingActor = v.emptyClusterRoleBinding("actor")
 	)
 
 	return resourceConfigs{
 		{obj: clusterRoleActor, class: application, mutateFn: func() { v.reconcileGeneralClusterRoleActor(clusterRoleActor) }},
+		{obj: clusterRoleBindingActor, class: application, mutateFn: func() { v.reconcileGeneralClusterRoleBindingActor(clusterRoleBindingActor, clusterRoleActor) }},
 	}
 }
 
@@ -55,6 +59,28 @@ func (v *vpa) reconcileGeneralClusterRoleActor(clusterRole *rbacv1.ClusterRole) 
 			APIGroups: []string{"coordination.k8s.io"},
 			Resources: []string{"leases"},
 			Verbs:     []string{"get", "list", "watch"},
+		},
+	}
+}
+
+func (v *vpa) reconcileGeneralClusterRoleBindingActor(clusterRoleBinding *rbacv1.ClusterRoleBinding, clusterRole *rbacv1.ClusterRole) {
+	clusterRoleBinding.Labels = getRoleLabel()
+	clusterRoleBinding.Annotations = map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"}
+	clusterRoleBinding.RoleRef = rbacv1.RoleRef{
+		APIGroup: rbacv1.GroupName,
+		Kind:     "ClusterRole",
+		Name:     clusterRole.Name,
+	}
+	clusterRoleBinding.Subjects = []rbacv1.Subject{
+		{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      recommender,
+			Namespace: v.serviceAccountNamespace(),
+		},
+		{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      updater,
+			Namespace: v.serviceAccountNamespace(),
 		},
 	}
 }
