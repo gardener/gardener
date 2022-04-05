@@ -29,6 +29,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 
@@ -71,9 +72,10 @@ type ShootMigrationConfig struct {
 
 // ShootComparisonElements contains details about Machines and Nodes that will be compared during the tests
 type ShootComparisonElements struct {
-	MachineNames []string
-	MachineNodes []string
-	NodeNames    []string
+	MachineNames   []string
+	MachineNodes   []string
+	NodeNames      []string
+	SecretsDataMap map[string]map[string][]byte
 }
 
 // NewShootMigrationTest creates a new simple shoot migration test
@@ -170,6 +172,27 @@ func (t *ShootMigrationTest) GetMachineDetails(ctx context.Context, seedClient k
 	return
 }
 
+// GetPersistedSecrets uses the seedClient to fetch the data of all Secrets that have the `persist` label key set to true
+// from the Shoot's control plane namespace
+func (t *ShootMigrationTest) GetPersistedSecrets(ctx context.Context, seedClient kubernetes.Interface) (map[string]map[string][]byte, error) {
+	secretList := &corev1.SecretList{}
+	if err := seedClient.Client().List(
+		ctx,
+		secretList,
+		client.InNamespace(t.SeedShootNamespace),
+		client.MatchingLabels(map[string]string{secretsmanager.LabelKeyPersist: secretsmanager.LabelValueTrue}),
+	); err != nil {
+		return nil, err
+	}
+
+	secretsDataMap := map[string]map[string][]byte{}
+	for _, secret := range secretList.Items {
+		secretsDataMap[secret.Name] = secret.Data
+	}
+
+	return secretsDataMap, nil
+}
+
 // PopulateBeforeMigrationComparisonElements fills the ShootMigrationTest.ComparisonElementsBeforeMigration with the necessary Machine details and Node names
 func (t *ShootMigrationTest) PopulateBeforeMigrationComparisonElements(ctx context.Context) (err error) {
 	t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsBeforeMigration.MachineNodes, err = t.GetMachineDetails(ctx, t.SourceSeedClient)
@@ -177,7 +200,10 @@ func (t *ShootMigrationTest) PopulateBeforeMigrationComparisonElements(ctx conte
 		return
 	}
 	t.ComparisonElementsBeforeMigration.NodeNames, err = t.GetNodeNames(ctx, t.ShootClient)
-
+	if err != nil {
+		return
+	}
+	t.ComparisonElementsBeforeMigration.SecretsDataMap, err = t.GetPersistedSecrets(ctx, t.SourceSeedClient)
 	return
 }
 
@@ -188,7 +214,10 @@ func (t *ShootMigrationTest) PopulateAfterMigrationComparisonElements(ctx contex
 		return
 	}
 	t.ComparisonElementsAfterMigration.NodeNames, err = t.GetNodeNames(ctx, t.ShootClient)
-
+	if err != nil {
+		return
+	}
+	t.ComparisonElementsAfterMigration.SecretsDataMap, err = t.GetPersistedSecrets(ctx, t.TargetSeedClient)
 	return
 }
 
@@ -205,8 +234,18 @@ func (t *ShootMigrationTest) CompareElementsAfterMigration() error {
 	}
 	if !reflect.DeepEqual(t.ComparisonElementsAfterMigration.MachineNodes, t.ComparisonElementsAfterMigration.NodeNames) {
 		return fmt.Errorf("machine Nodes (label) %s, do not match after-migrate Nodes %s", t.ComparisonElementsAfterMigration.MachineNodes, t.ComparisonElementsAfterMigration.NodeNames)
-
 	}
+
+	differingSecrets := []string{}
+	for name, entry := range t.ComparisonElementsBeforeMigration.SecretsDataMap {
+		if !reflect.DeepEqual(entry, t.ComparisonElementsAfterMigration.SecretsDataMap[name]) {
+			differingSecrets = append(differingSecrets, name)
+		}
+	}
+	if len(differingSecrets) > 0 {
+		return fmt.Errorf("the following secrets did not have their data persisted during control plane migration: %v", differingSecrets)
+	}
+
 	return nil
 }
 
@@ -237,6 +276,11 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExclud
 
 					if err := t.ShootClient.Client().Get(ctx, client.ObjectKey{Namespace: r.Namespace, Name: r.Name}, obj); err != nil {
 						return err
+					}
+
+					// Ignore immutable objects because if their data changes, they will be recreated
+					if isImmutable, ok := obj.Object["immutable"]; ok && isImmutable == true {
+						continue
 					}
 
 					creationTimestamp := obj.GetCreationTimestamp()
