@@ -62,6 +62,7 @@ func New(
 		v.registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	} else {
 		v.registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+		v.crdDeployer = NewCRD(nil, v.registry)
 	}
 
 	return v
@@ -73,7 +74,8 @@ type vpa struct {
 	secretsManager secretsmanager.Interface
 	values         Values
 
-	registry *managedresources.Registry
+	registry    *managedresources.Registry
+	crdDeployer component.Deployer
 
 	caSecretName     string
 	caBundle         []byte
@@ -200,6 +202,10 @@ func (v *vpa) Deploy(ctx context.Context) error {
 				return err
 			}
 		}
+	}
+
+	if err := v.crdDeployer.Deploy(ctx); err != nil {
+		return err
 	}
 
 	if err := managedresources.CreateForShoot(ctx, v.client, v.namespace, v.managedResourceName(), false, v.registry.SerializedObjects()); err != nil {
