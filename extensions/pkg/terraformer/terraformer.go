@@ -383,7 +383,7 @@ func (t *terraformer) deployTerraformerPod(ctx context.Context, generateName, co
 						corev1.ResourceMemory: resource.MustParse("1.5Gi"),
 					},
 				},
-				Env:                    t.env(),
+				Env:                    t.envVars,
 				TerminationMessagePath: "/terraform-termination-log",
 			}},
 			RestartPolicy:                 corev1.RestartPolicyNever,
@@ -418,10 +418,6 @@ func getTerraformerCommand(pod *corev1.Pod) string {
 		return ""
 	}
 	return pod.Spec.Containers[0].Command[1]
-}
-
-func (t *terraformer) env() []corev1.EnvVar {
-	return t.envVars
 }
 
 // listTerraformerPods lists all pods in the Terraformer namespace which have labels 'terraformer.gardener.cloud/name'
