@@ -97,6 +97,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		b.Shoot.Components.SystemComponents.CoreDNS,
 		b.Shoot.Components.SystemComponents.KubeProxy,
 		b.Shoot.Components.SystemComponents.VPNShoot,
+		b.Shoot.Components.ControlPlane.ResourceManager,
 	}
 
 	if b.Shoot.NodeLocalDNSEnabled {
