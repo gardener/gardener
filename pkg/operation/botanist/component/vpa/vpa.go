@@ -136,13 +136,14 @@ func (v *vpa) Deploy(ctx context.Context) error {
 
 	allResources := mergeResourceConfigs(
 		v.admissionControllerResourceConfigs(),
-		v.exporterResourceConfigs(),
 		v.recommenderResourceConfigs(),
 		v.updaterResourceConfigs(),
 		v.generalResourceConfigs(),
 	)
 
 	if v.values.ClusterType == ClusterTypeSeed {
+		allResources = mergeResourceConfigs(allResources, v.exporterResourceConfigs())
+
 		for _, r := range allResources {
 			r.mutateFn()
 

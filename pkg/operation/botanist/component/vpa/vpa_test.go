@@ -1776,28 +1776,17 @@ var _ = Describe("VPA", func() {
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-				Expect(managedResourceSecret.Data).To(HaveLen(18))
+				Expect(managedResourceSecret.Data).To(HaveLen(15))
 
-				By("checking vpa-exporter application resources")
-				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceAccountExporter)))
-				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_exporter.yaml"])).To(Equal(serialize(clusterRoleExporter)))
-				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_exporter.yaml"])).To(Equal(serialize(clusterRoleBindingExporter)))
+				By("checking vpa-exporter application resources do not exist")
+				Expect(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"]).To(BeNil())
+				Expect(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_target_exporter.yaml"]).To(BeNil())
+				Expect(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_target_exporter.yaml"]).To(BeNil())
 
-				By("checking vpa-exporter runtime resources")
-				service := &corev1.Service{}
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceExporter), service)).To(Succeed())
-				serviceExporter.ResourceVersion = "1"
-				Expect(service).To(Equal(serviceExporter))
-
-				deployment := &appsv1.Deployment{}
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentExporter), deployment)).To(Succeed())
-				deploymentExporter.ResourceVersion = "1"
-				Expect(deployment).To(Equal(deploymentExporter))
-
-				vpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaExporter), vpa)).To(Succeed())
-				vpaExporter.ResourceVersion = "1"
-				Expect(vpa).To(Equal(vpaExporter))
+				By("checking vpa-exporter runtime resources do not exist")
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceExporter), &corev1.Service{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentExporter), &appsv1.Deployment{})).To(BeNotFoundError())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaExporter), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
 
 				By("checking vpa-updater application resources")
 				clusterRoleBindingUpdater.Subjects[0].Namespace = "kube-system"
@@ -1811,13 +1800,13 @@ var _ = Describe("VPA", func() {
 				shootAccessSecretUpdater.ResourceVersion = "1"
 				Expect(secret).To(Equal(shootAccessSecretUpdater))
 
-				deployment = &appsv1.Deployment{}
+				deployment := &appsv1.Deployment{}
 				Expect(c.Get(ctx, kutil.Key(namespace, "vpa-updater"), deployment)).To(Succeed())
 				deploymentUpdater := deploymentUpdaterFor(false, nil, nil, nil, nil, nil)
 				deploymentUpdater.ResourceVersion = "1"
 				Expect(deployment).To(Equal(deploymentUpdater))
 
-				vpa = &vpaautoscalingv1.VerticalPodAutoscaler{}
+				vpa := &vpaautoscalingv1.VerticalPodAutoscaler{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaUpdater), vpa)).To(Succeed())
 				vpaUpdater.ResourceVersion = "1"
 				Expect(vpa).To(Equal(vpaUpdater))
@@ -1860,7 +1849,7 @@ var _ = Describe("VPA", func() {
 				shootAccessSecretAdmissionController.ResourceVersion = "1"
 				Expect(secret).To(Equal(shootAccessSecretAdmissionController))
 
-				service = &corev1.Service{}
+				service := &corev1.Service{}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceAdmissionController), service)).To(Succeed())
 				serviceAdmissionController.ResourceVersion = "1"
 				Expect(service).To(Equal(serviceAdmissionController))
