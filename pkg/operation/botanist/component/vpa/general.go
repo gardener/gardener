@@ -22,15 +22,19 @@ import (
 
 func (v *vpa) generalResourceConfigs() resourceConfigs {
 	var (
-		clusterRoleActor        = v.emptyClusterRole("actor")
-		clusterRoleBindingActor = v.emptyClusterRoleBinding("actor")
-		clusterRoleTargetReader = v.emptyClusterRole("target-reader")
+		clusterRoleActor               = v.emptyClusterRole("actor")
+		clusterRoleBindingActor        = v.emptyClusterRoleBinding("actor")
+		clusterRoleTargetReader        = v.emptyClusterRole("target-reader")
+		clusterRoleBindingTargetReader = v.emptyClusterRoleBinding("target-reader")
 	)
 
 	return resourceConfigs{
 		{obj: clusterRoleActor, class: application, mutateFn: func() { v.reconcileGeneralClusterRoleActor(clusterRoleActor) }},
 		{obj: clusterRoleBindingActor, class: application, mutateFn: func() { v.reconcileGeneralClusterRoleBindingActor(clusterRoleBindingActor, clusterRoleActor) }},
 		{obj: clusterRoleTargetReader, class: application, mutateFn: func() { v.reconcileGeneralClusterRoleTargetReader(clusterRoleTargetReader) }},
+		{obj: clusterRoleBindingTargetReader, class: application, mutateFn: func() {
+			v.reconcileGeneralClusterRoleBindingTargetReader(clusterRoleBindingTargetReader, clusterRoleTargetReader)
+		}},
 	}
 }
 
@@ -114,6 +118,33 @@ func (v *vpa) reconcileGeneralClusterRoleTargetReader(clusterRole *rbacv1.Cluste
 			APIGroups: []string{"druid.gardener.cloud"},
 			Resources: []string{"etcds", "etcds/scale"},
 			Verbs:     []string{"get", "list", "watch"},
+		},
+	}
+}
+
+func (v *vpa) reconcileGeneralClusterRoleBindingTargetReader(clusterRoleBinding *rbacv1.ClusterRoleBinding, clusterRole *rbacv1.ClusterRole) {
+	clusterRoleBinding.Labels = getRoleLabel()
+	clusterRoleBinding.Annotations = map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"}
+	clusterRoleBinding.RoleRef = rbacv1.RoleRef{
+		APIGroup: rbacv1.GroupName,
+		Kind:     "ClusterRole",
+		Name:     clusterRole.Name,
+	}
+	clusterRoleBinding.Subjects = []rbacv1.Subject{
+		{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      admissionController,
+			Namespace: v.serviceAccountNamespace(),
+		},
+		{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      recommender,
+			Namespace: v.serviceAccountNamespace(),
+		},
+		{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      updater,
+			Namespace: v.serviceAccountNamespace(),
 		},
 	}
 }
