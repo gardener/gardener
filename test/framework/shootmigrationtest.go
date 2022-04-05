@@ -72,10 +72,10 @@ type ShootMigrationConfig struct {
 
 // ShootComparisonElements contains details about Machines and Nodes that will be compared during the tests
 type ShootComparisonElements struct {
-	MachineNames   []string
-	MachineNodes   []string
-	NodeNames      []string
-	SecretsDataMap map[string]map[string][]byte
+	MachineNames []string
+	MachineNodes []string
+	NodeNames    []string
+	SecretsMap   map[string]corev1.Secret
 }
 
 // NewShootMigrationTest creates a new simple shoot migration test
@@ -174,7 +174,7 @@ func (t *ShootMigrationTest) GetMachineDetails(ctx context.Context, seedClient k
 
 // GetPersistedSecrets uses the seedClient to fetch the data of all Secrets that have the `persist` label key set to true
 // from the Shoot's control plane namespace
-func (t *ShootMigrationTest) GetPersistedSecrets(ctx context.Context, seedClient kubernetes.Interface) (map[string]map[string][]byte, error) {
+func (t *ShootMigrationTest) GetPersistedSecrets(ctx context.Context, seedClient kubernetes.Interface) (map[string]corev1.Secret, error) {
 	secretList := &corev1.SecretList{}
 	if err := seedClient.Client().List(
 		ctx,
@@ -185,12 +185,12 @@ func (t *ShootMigrationTest) GetPersistedSecrets(ctx context.Context, seedClient
 		return nil, err
 	}
 
-	secretsDataMap := map[string]map[string][]byte{}
+	secretsMap := map[string]corev1.Secret{}
 	for _, secret := range secretList.Items {
-		secretsDataMap[secret.Name] = secret.Data
+		secretsMap[secret.Name] = secret
 	}
 
-	return secretsDataMap, nil
+	return secretsMap, nil
 }
 
 // PopulateBeforeMigrationComparisonElements fills the ShootMigrationTest.ComparisonElementsBeforeMigration with the necessary Machine details and Node names
@@ -203,7 +203,7 @@ func (t *ShootMigrationTest) PopulateBeforeMigrationComparisonElements(ctx conte
 	if err != nil {
 		return
 	}
-	t.ComparisonElementsBeforeMigration.SecretsDataMap, err = t.GetPersistedSecrets(ctx, t.SourceSeedClient)
+	t.ComparisonElementsBeforeMigration.SecretsMap, err = t.GetPersistedSecrets(ctx, t.SourceSeedClient)
 	return
 }
 
@@ -217,7 +217,7 @@ func (t *ShootMigrationTest) PopulateAfterMigrationComparisonElements(ctx contex
 	if err != nil {
 		return
 	}
-	t.ComparisonElementsAfterMigration.SecretsDataMap, err = t.GetPersistedSecrets(ctx, t.TargetSeedClient)
+	t.ComparisonElementsAfterMigration.SecretsMap, err = t.GetPersistedSecrets(ctx, t.TargetSeedClient)
 	return
 }
 
@@ -237,13 +237,14 @@ func (t *ShootMigrationTest) CompareElementsAfterMigration() error {
 	}
 
 	differingSecrets := []string{}
-	for name, entry := range t.ComparisonElementsBeforeMigration.SecretsDataMap {
-		if !reflect.DeepEqual(entry, t.ComparisonElementsAfterMigration.SecretsDataMap[name]) {
+	for name, secret := range t.ComparisonElementsBeforeMigration.SecretsMap {
+		if !reflect.DeepEqual(secret.Data, t.ComparisonElementsAfterMigration.SecretsMap[name].Data) ||
+			!reflect.DeepEqual(secret.Labels, t.ComparisonElementsAfterMigration.SecretsMap[name].Labels) {
 			differingSecrets = append(differingSecrets, name)
 		}
 	}
 	if len(differingSecrets) > 0 {
-		return fmt.Errorf("the following secrets did not have their data persisted during control plane migration: %v", differingSecrets)
+		return fmt.Errorf("the following secrets did not have their data or labels persisted during control plane migration: %v", differingSecrets)
 	}
 
 	return nil
