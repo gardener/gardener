@@ -380,6 +380,15 @@ func (f *GardenerFramework) RemoveShootAnnotation(ctx context.Context, shoot *ga
 
 // MigrateShoot changes the spec.Seed.Name of a shoot and waits for it to be migrated
 func (f *GardenerFramework) MigrateShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, prerequisites func(shoot *gardencorev1beta1.Shoot) error) error {
+	// shoot.Spec and shoot.Spec.SeedName cannot be updated at the same time, so we execute the prerequisite function here
+	if prerequisites != nil {
+		if err := f.UpdateShoot(ctx, shoot, func(shoot *gardencorev1beta1.Shoot) error {
+			return prerequisites(shoot)
+		}); err != nil {
+			return err
+		}
+	}
+
 	if err := f.UpdateShoot(ctx, shoot, func(shoot *gardencorev1beta1.Shoot) error {
 		if err := f.GetShoot(ctx, shoot); err != nil {
 			return err
@@ -387,12 +396,6 @@ func (f *GardenerFramework) MigrateShoot(ctx context.Context, shoot *gardencorev
 
 		if _, _, err := f.GetSeed(ctx, seed.Name); err != nil {
 			return err
-		}
-
-		if prerequisites != nil {
-			if err := prerequisites(shoot); err != nil {
-				return err
-			}
 		}
 
 		shoot.Spec.SeedName = &seed.Name

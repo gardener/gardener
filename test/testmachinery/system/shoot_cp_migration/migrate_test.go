@@ -208,6 +208,7 @@ func beforeMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp *a
 func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp applications.GuestBookTest, testSecret *corev1.Secret, testServiceAccount *corev1.ServiceAccount) error {
 	if ginkgo.CurrentSpecReport().Failed() {
 		t.GardenerFramework.DumpState(ctx)
+		return cleanUp(ctx, t, guestBookApp, testSecret, testServiceAccount)
 	}
 
 	ginkgo.By("Fetching the objects that will be used for comparison...")
@@ -215,7 +216,7 @@ func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp app
 		return err
 	}
 
-	ginkgo.By("Comparing all Machines and Nodes after the migration...")
+	ginkgo.By("Comparing all Machines, Nodes and persisted Secrets after the migration...")
 	if err := t.CompareElementsAfterMigration(); err != nil {
 		return err
 	}
@@ -229,7 +230,27 @@ func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp app
 		return nil
 	}
 
-	ginkgo.By("Checking if the test Secret and Service Account are migrated and cleaning them up...")
+	ginkgo.By("Checking if the test Secret and Service Account are migrated ...")
+	if err := t.ShootClient.Client().Get(ctx, client.ObjectKeyFromObject(testSecret), testSecret); err != nil {
+		return err
+	}
+	if err := t.ShootClient.Client().Get(ctx, client.ObjectKeyFromObject(testServiceAccount), testServiceAccount); err != nil {
+		return err
+	}
+
+	ginkgo.By("Testing the Guest Book Application ...")
+	guestBookApp.Test(ctx)
+
+	ginkgo.By("Checking timestamps of all resources...")
+	if err := t.CheckObjectsTimestamp(ctx, strings.Split(*mrExcludeList, ","), strings.Split(*resourcesWithGeneratedName, ",")); err != nil {
+		return err
+	}
+
+	return cleanUp(ctx, t, guestBookApp, testSecret, testServiceAccount)
+}
+
+func cleanUp(ctx context.Context, t *ShootMigrationTest, guestBookApp applications.GuestBookTest, testSecret *corev1.Secret, testServiceAccount *corev1.ServiceAccount) error {
+	ginkgo.By("Cleaning up the test Secret and Service Account ...")
 	if err := t.ShootClient.Client().Delete(ctx, testSecret); err != nil {
 		return err
 	}
@@ -237,14 +258,12 @@ func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp app
 	if err := t.ShootClient.Client().Delete(ctx, testServiceAccount); err != nil {
 		return err
 	}
-	t.GardenerFramework.Logger.Infof("ServiceAccount resource %s/%s was deleted!", testServiceAccount.Namespace, testServiceAccount.Name)
+	t.GardenerFramework.Logger.Infof("Service Account resource %s/%s was deleted!", testServiceAccount.Namespace, testServiceAccount.Name)
 
-	ginkgo.By("Testing the Guest Book Application and cleaning it up...")
-	guestBookApp.Test(ctx)
+	ginkgo.By("Cleaning up the Guest Book Application ...")
 	guestBookApp.Cleanup(ctx)
 
-	ginkgo.By("Checking timestamps of all resources...")
-	return t.CheckObjectsTimestamp(ctx, strings.Split(*mrExcludeList, ","), strings.Split(*resourcesWithGeneratedName, ","))
+	return nil
 }
 
 func initGuestBookTest(ctx context.Context, t *ShootMigrationTest) (*applications.GuestBookTest, error) {
