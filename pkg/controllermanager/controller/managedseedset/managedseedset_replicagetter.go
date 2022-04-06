@@ -25,8 +25,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
-	"github.com/gardener/gardener/pkg/features"
 )
 
 // ReplicaGetter provides a method for getting all existing replicas of a ManagedSeedSet.
@@ -71,17 +69,13 @@ func (rg *replicaGetter) GetReplicas(ctx context.Context, set *seedmanagementv1a
 		return nil, err
 	}
 
-	// If CachedRuntimeClients feature gate is enabled, cross-check number of shoots with a partial metadata list
-	// from the API server to ensure what we got from the cache is up-to-date
-	if controllermanagerfeatures.FeatureGate.Enabled(features.CachedRuntimeClients) {
-		shoots2 := &metav1.PartialObjectMetadataList{}
-		shoots2.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
-		if err := rg.client.APIReader().List(ctx, shoots2, client.InNamespace(set.Namespace), client.MatchingLabelsSelector{Selector: selector}); err != nil {
-			return nil, err
-		}
-		if len(shoots2.Items) != len(shoots.Items) {
-			return nil, fmt.Errorf("cross-checking number of shoots failed")
-		}
+	shoots2 := &metav1.PartialObjectMetadataList{}
+	shoots2.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
+	if err := rg.client.APIReader().List(ctx, shoots2, client.InNamespace(set.Namespace), client.MatchingLabelsSelector{Selector: selector}); err != nil {
+		return nil, err
+	}
+	if len(shoots2.Items) != len(shoots.Items) {
+		return nil, fmt.Errorf("cross-checking number of shoots failed")
 	}
 
 	// Map names to objects for managed seeds and seeds

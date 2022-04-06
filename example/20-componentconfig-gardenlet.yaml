@@ -112,7 +112,6 @@ featureGates:
   HVPAForShootedSeed: true
   ManagedIstio: true
   APIServerSNI: true
-  CachedRuntimeClients: true
   SeedKubeScheduler: false
   ReversedVPN: true
   DenyInvalidExtensionResources: true
