@@ -222,15 +222,15 @@ images:
 - name: vpa-admission-controller
   sourceRepository: github.com/kubernetes/autoscaler
   repository: k8s.gcr.io/autoscaling/vpa-admission-controller
-  tag: "0.9.2"
+  tag: "0.10.0"
 - name: vpa-recommender
   sourceRepository: github.com/kubernetes/autoscaler
   repository: k8s.gcr.io/autoscaling/vpa-recommender
-  tag: "0.9.2"
+  tag: "0.10.0"
 - name: vpa-updater
   sourceRepository: github.com/kubernetes/autoscaler
   repository: k8s.gcr.io/autoscaling/vpa-updater
-  tag: "0.9.2"
+  tag: "0.10.0"
 - name: vpa-exporter
   sourceRepository: github.com/gardener/vpa-exporter
   repository: eu.gcr.io/gardener-project/gardener/vpa-exporter
