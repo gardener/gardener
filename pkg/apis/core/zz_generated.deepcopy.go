@@ -4392,6 +4392,10 @@ func (in *ShootStatus) DeepCopyInto(out *ShootStatus) {
 		}
 	}
 	out.Gardener = in.Gardener
+	if in.LastHibernationTriggerTime != nil {
+		in, out := &in.LastHibernationTriggerTime, &out.LastHibernationTriggerTime
+		*out = (*in).DeepCopy()
+	}
 	if in.LastOperation != nil {
 		in, out := &in.LastOperation, &out.LastOperation
 		*out = new(LastOperation)

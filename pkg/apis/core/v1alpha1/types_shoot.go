@@ -176,6 +176,10 @@ type ShootStatus struct {
 	// Credentials contains information about the shoot credentials.
 	// +optional
 	Credentials *ShootCredentials `json:"credentials,omitempty" protobuf:"bytes,16,opt,name=credentials"`
+	// LastHibernationTriggerTime indicates the last time when the hibernation controller
+	// managed to change the hibernation settings of the cluster
+	// +optional
+	LastHibernationTriggerTime *metav1.Time `json:"lastHibernationTriggerTime,omitempty" protobuf:"bytes,17,opt,name=lastHibernationTriggerTime"`
 }
 
 // ShootCredentials contains information about the shoot credentials.

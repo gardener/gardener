@@ -122,6 +122,9 @@ type ShootStatus struct {
 	Gardener Gardener
 	// IsHibernated indicates whether the Shoot is currently hibernated.
 	IsHibernated bool
+	// LastHibernationTriggerTime indicates the last time when the hibernation controller
+	// managed to change the hibernation settings of the cluster
+	LastHibernationTriggerTime *metav1.Time
 	// LastOperation holds information about the last operation on the Shoot.
 	LastOperation *LastOperation
 	// LastErrors holds information about the last occurred error(s) during an operation.
