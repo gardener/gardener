@@ -108,30 +108,36 @@ func UpdateGardenKubeconfigSecret(ctx context.Context, certClientConfig *rest.Co
 
 // UpdateGardenKubeconfigCAIfChanged checks if the garden cluster CA given in the gardenClientConnection differs from the CA in the kubeconfig secret
 // and updates the secret to contain the new CA if that's the case.
-func UpdateGardenKubeconfigCAIfChanged(ctx context.Context, seedClient client.Client, kubeconfigAsBytes []byte, gardenClientConnection *config.GardenClientConnection) ([]byte, error) {
-	if kubeconfigAsBytes == nil {
+func UpdateGardenKubeconfigCAIfChanged(ctx context.Context, seedClient client.Client, kubeconfig []byte, gardenClientConnection *config.GardenClientConnection) ([]byte, error) {
+	if kubeconfig == nil {
 		return nil, fmt.Errorf("no kubeconfig given")
 	}
-	kubeconfig, err := clientcmd.Load(kubeconfigAsBytes)
+
+	typedKubeconfig, err := clientcmd.Load(kubeconfig)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse kubeconfig: %w", err)
 	}
-	curContext, ok := kubeconfig.Contexts[kubeconfig.CurrentContext]
+
+	curContext, ok := typedKubeconfig.Contexts[typedKubeconfig.CurrentContext]
 	if !ok {
-		return nil, fmt.Errorf("invalid kubeconfig: currently set context %s not found among contexts", kubeconfig.CurrentContext)
+		return nil, fmt.Errorf("invalid kubeconfig: currently set context %s not found among contexts", typedKubeconfig.CurrentContext)
 	}
-	curCluster, ok := kubeconfig.Clusters[curContext.Cluster]
+
+	curCluster, ok := typedKubeconfig.Clusters[curContext.Cluster]
 	if !ok {
 		return nil, fmt.Errorf("invalid kubeconfig: currently set cluster %s not found among clusters", curContext.Cluster)
 	}
-	curAuth, ok := kubeconfig.AuthInfos[curContext.AuthInfo]
+
+	curAuth, ok := typedKubeconfig.AuthInfos[curContext.AuthInfo]
 	if !ok {
 		return nil, fmt.Errorf("invalid kubeconfig: currently set authinfo %s not found among authinfos", curContext.AuthInfo)
 	}
+
 	if bytes.Equal(curCluster.CertificateAuthorityData, gardenClientConnection.GardenClusterCACert) {
 		// CAs are equal, nothing to do
-		return kubeconfigAsBytes, nil
+		return kubeconfig, nil
 	}
+
 	// extract data from existing kubeconfig and reuse UpdateGardenKubeconfigSecret function
 	return UpdateGardenKubeconfigSecret(ctx, &rest.Config{
 		Host: curCluster.Server,
