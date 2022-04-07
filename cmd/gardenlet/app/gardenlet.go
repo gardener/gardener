@@ -52,6 +52,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
+	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
@@ -302,6 +303,13 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 				"To configure the Gardenlet for bootstrapping, provide the secret containing the bootstrap kubeconfig under `.gardenClientConnection.kubeconfigSecret` and also the secret name where the created kubeconfig should be stored for further use via`.gardenClientConnection.kubeconfigSecret`")
 		}
 	} else {
+		if len(cfg.GardenClientConnection.GardenClusterCACert) != 0 {
+			kubeconfigFromBootstrap, err = bootstraputil.UpdateGardenKubeconfigCAIfChanged(ctx, seedClient.Client(), kubeconfigFromBootstrap, cfg.GardenClientConnection)
+			if err != nil {
+				return nil, fmt.Errorf("error updating CA in garden cluster kubeconfig secret: %w", err)
+			}
+		}
+
 		gardenClientCertificate, err := certificate.GetCurrentCertificate(logrusLogger, kubeconfigFromBootstrap, cfg.GardenClientConnection)
 		if err != nil {
 			return nil, err
