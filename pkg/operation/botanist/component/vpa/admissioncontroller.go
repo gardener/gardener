@@ -155,7 +155,7 @@ func (v *vpa) reconcileAdmissionControllerNetworkPolicy(networkPolicy *networkin
 	protocol := corev1.ProtocolTCP
 	port := intstr.FromInt(admissionControllerPort)
 
-	networkPolicy.Annotations = map[string]string{v1beta1constants.GardenerDescription: "Allows Egress from pods shoot's kube-apiserver to talk to the VPA admission controller."}
+	networkPolicy.Annotations = map[string]string{v1beta1constants.GardenerDescription: "Allows Egress from shoot's kube-apiserver pods to the VPA admission controller."}
 	networkPolicy.Spec = networkingv1.NetworkPolicySpec{
 		PodSelector: metav1.LabelSelector{
 			MatchLabels: kubeapiserver.GetLabels(),

@@ -230,7 +230,6 @@ func (v *vpa) Destroy(ctx context.Context) error {
 
 	return kutil.DeleteObjects(ctx, v.client, allRuntimeObjects(
 		v.admissionControllerResourceConfigs(),
-		v.exporterResourceConfigs(),
 		v.recommenderResourceConfigs(),
 		v.updaterResourceConfigs(),
 		v.generalResourceConfigs(),

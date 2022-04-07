@@ -1037,7 +1037,7 @@ var _ = Describe("VPA", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "allow-kube-apiserver-to-vpa-admission-controller",
 				Namespace:   namespace,
-				Annotations: map[string]string{"gardener.cloud/description": "Allows Egress from pods shoot's kube-apiserver to talk to the VPA admission controller."},
+				Annotations: map[string]string{"gardener.cloud/description": "Allows Egress from shoot's kube-apiserver pods to the VPA admission controller."},
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
@@ -1949,10 +1949,10 @@ var _ = Describe("VPA", func() {
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 
-				By("checking vpa-exporter runtime resources")
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceExporter), &corev1.Service{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentExporter), &appsv1.Deployment{})).To(BeNotFoundError())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaExporter), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(BeNotFoundError())
+				By("checking vpa-exporter runtime resources were not deleted")
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(serviceExporter), &corev1.Service{})).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentExporter), &appsv1.Deployment{})).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(vpaExporter), &vpaautoscalingv1.VerticalPodAutoscaler{})).To(Succeed())
 
 				By("checking vpa-updater runtime resources")
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(deploymentUpdaterFor(true, nil, nil, nil, nil, nil)), &appsv1.Deployment{})).To(BeNotFoundError())
