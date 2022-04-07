@@ -40,7 +40,6 @@ var _ = Describe("identity", func() {
 		Entry("user name prefix but no groups", &user.DefaultInfo{Name: "gardener.cloud:system:seed:foo"}, "", false),
 		Entry("user name prefix but seed group not present", &user.DefaultInfo{Name: "gardener.cloud:system:seed:foo", Groups: []string{"bar"}}, "", false),
 		Entry("user name prefix and seed group", &user.DefaultInfo{Name: "gardener.cloud:system:seed:foo", Groups: []string{"gardener.cloud:system:seeds"}}, "foo", true),
-		Entry("user name prefix and seed group (ambiguous)", &user.DefaultInfo{Name: "gardener.cloud:system:seed:<ambiguous>", Groups: []string{"gardener.cloud:system:seeds"}}, "", false),
 	)
 
 	DescribeTable("#FromAuthenticationV1UserInfo",
@@ -55,7 +54,6 @@ var _ = Describe("identity", func() {
 		Entry("user name prefix but no groups", authenticationv1.UserInfo{Username: "gardener.cloud:system:seed:foo"}, "", false),
 		Entry("user name prefix but seed group not present", authenticationv1.UserInfo{Username: "gardener.cloud:system:seed:foo", Groups: []string{"bar"}}, "", false),
 		Entry("user name prefix and seed group", authenticationv1.UserInfo{Username: "gardener.cloud:system:seed:foo", Groups: []string{"gardener.cloud:system:seeds"}}, "foo", true),
-		Entry("user name prefix and seed group (ambiguous)", authenticationv1.UserInfo{Username: "gardener.cloud:system:seed:<ambiguous>", Groups: []string{"gardener.cloud:system:seeds"}}, "", false),
 	)
 
 	DescribeTable("#FromCertificateSigningRequest",
@@ -70,6 +68,5 @@ var _ = Describe("identity", func() {
 		Entry("user name prefix but no groups", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:seed:foo"}}, "", false),
 		Entry("user name prefix but seed group not present", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:seed:foo", Organization: []string{"bar"}}}, "", false),
 		Entry("user name prefix and seed group", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:seed:foo", Organization: []string{"gardener.cloud:system:seeds"}}}, "foo", true),
-		Entry("user name prefix and seed group (ambiguous)", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:seed:<ambiguous>", Organization: []string{"gardener.cloud:system:seeds"}}}, "", false),
 	)
 })

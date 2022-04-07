@@ -24,9 +24,6 @@ spec:
 {{ toYaml .Values.labels | indent 6 }}
   template:
     metadata:
-      annotations:
-        # TODO(rfranzke): Remove in a future release.
-        security.gardener.cloud/trigger: rollout
       labels:
         app: hvpa-controller
 {{ toYaml .Values.labels | indent 8 }}

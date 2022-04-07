@@ -270,10 +270,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 					},
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
-							Annotations: map[string]string{
-								// TODO(rfranzke): Remove in a future release.
-								"security.gardener.cloud/trigger": "rollout",
-							},
 							Labels: map[string]string{
 								"app":                                "kubernetes",
 								"role":                               "cluster-autoscaler",
@@ -642,30 +638,6 @@ subjects:
 			Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
 		})
 
-		It("should fail because the legacy secret cannot be deleted", func() {
-			gomock.InOrder(
-				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceAccountName), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
-				c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingName), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}), gomock.Any()),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "cluster-autoscaler"}}).Return(fakeErr),
-			)
-
-			Expect(clusterAutoscaler.Deploy(ctx)).To(MatchError(fakeErr))
-		})
-
 		Context("should successfully deploy all the resources", func() {
 			test := func(withConfig bool) {
 				var config *gardencorev1beta1.ClusterAutoscaler
@@ -718,7 +690,6 @@ subjects:
 						Do(func(ctx context.Context, obj client.Object, _ ...client.UpdateOption) {
 							Expect(obj).To(DeepEqual(managedResource))
 						}),
-					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler", Namespace: namespace}}),
 				)
 
 				Expect(clusterAutoscaler.Deploy(ctx)).To(Succeed())

@@ -1,9 +1,0 @@
-# TODO(rfranzke): Delete this Helm chart in a future version.
----
-apiVersion: {{ include "hpaversion" . }}
-kind: HorizontalPodAutoscaler
-metadata:
-  name: coredns
-  namespace: {{ .Release.Namespace }}
-  annotations:
-    resources.gardener.cloud/mode: Ignore

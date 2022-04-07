@@ -235,11 +235,6 @@ func GenerateRBACResourcesData(secretNames []string) (map[string][]byte, error) 
 				Name:     role.Name,
 			},
 			Subjects: []rbacv1.Subject{
-				// TODO(rfranzke): Delete this subject in a future release.
-				{
-					Kind: rbacv1.UserKind,
-					Name: "cloud-config-downloader",
-				},
 				{
 					Kind: rbacv1.GroupKind,
 					Name: bootstraptokenapi.BootstrapDefaultGroup,

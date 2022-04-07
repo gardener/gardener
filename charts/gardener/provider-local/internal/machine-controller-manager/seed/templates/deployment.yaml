@@ -21,10 +21,6 @@ spec:
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
-        {{- if .Values.useProjectedTokenMount }}
-        # TODO(rfranzke): Remove in a future release.
-        security.gardener.cloud/trigger: rollout
-        {{- end }}
       labels:
         gardener.cloud/role: controlplane
         app: kubernetes

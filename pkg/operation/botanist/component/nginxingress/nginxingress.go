@@ -403,8 +403,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: getLabels(labelValueController, labelValueAddons),
 						Annotations: map[string]string{
-							// TODO(rfranzke): Remove in a future release.
-							"security.gardener.cloud/trigger": "rollout",
 							// InjectAnnotations function is not used here since the ConfigMap is not mounted as
 							// volume and hence using the function won't have any effect.
 							references.AnnotationKey(references.KindConfigMap, configMap.Name): configMap.Name,

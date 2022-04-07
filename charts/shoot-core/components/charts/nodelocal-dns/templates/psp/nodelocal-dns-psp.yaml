@@ -1,6 +1,0 @@
-apiVersion: {{ include "podsecuritypolicyversion" .}}
-kind: PodSecurityPolicy
-metadata:
-  name: gardener.kube-system.node-local-dns
-  annotations:
-    resources.gardener.cloud/mode: Ignore

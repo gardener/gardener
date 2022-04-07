@@ -1,8 +1,0 @@
-apiVersion: {{ include "rbacversion" . }}
-kind: ClusterRole
-metadata:
-  name: gardener.cloud:psp:kube-system:node-local-dns
-  labels:
-    app: node-local-dns
-  annotations:
-    resources.gardener.cloud/mode: Ignore

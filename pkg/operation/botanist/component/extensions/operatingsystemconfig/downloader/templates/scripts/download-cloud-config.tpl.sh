@@ -78,10 +78,6 @@ if ! SECRET="$(readSecretWithToken "$SECRET_NAME" "$TOKEN")"; then
   exit 1
 fi
 
-# delete legacy credentials from disk
-# TODO(rfranzke): Delete in future release.
-rm -f "$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_CERT" "$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_KEY"
-
 CHECKSUM="$(echo "$SECRET" | sed -rn 's/    {{ .annotationChecksum | replace "/" "\\/" }}: (.*)/\1/p' | sed -e 's/^"//' -e 's/"$//')"
 echo "$CHECKSUM" > "{{ .pathDownloadedChecksum }}"
 

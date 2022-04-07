@@ -332,22 +332,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		verticalPodAutoscaler["application"].(map[string]interface{})["admissionController"].(map[string]interface{})["caCert"] = vpaSecret.Data[secrets.DataKeyCertificateCA]
 	}
 
-	workerPools, err := b.computeWorkerPoolsForKubeProxy(ctx)
-	if err != nil {
-		return nil, err
-	}
-	var kubeProxyWorkerPools []map[string]string
-	for _, obj := range workerPools {
-		kubeProxyWorkerPools = append(kubeProxyWorkerPools, map[string]string{
-			"name":              obj.Name,
-			"kubernetesVersion": obj.KubernetesVersion,
-			"kubeProxyImage":    obj.Image,
-		})
-	}
-	kubeProxy := map[string]interface{}{
-		"workerPools": kubeProxyWorkerPools,
-	}
-
 	if domain := b.Shoot.ExternalClusterDomain; domain != nil {
 		shootInfo["domain"] = *domain
 	}
@@ -388,19 +372,13 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	}
 
 	values := map[string]interface{}{
-		"global":                 global,
-		"coredns":                common.GenerateAddonConfig(nil, true),
-		"vpn-shoot":              common.GenerateAddonConfig(nil, true),
-		"node-local-dns":         common.GenerateAddonConfig(nil, b.Shoot.NodeLocalDNSEnabled),
-		"kube-apiserver-kubelet": common.GenerateAddonConfig(nil, true),
-		"apiserver-proxy":        common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
-		"kube-proxy":             common.GenerateAddonConfig(kubeProxy, gardencorev1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)),
+		"global":          global,
+		"apiserver-proxy": common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
 		"monitoring": common.GenerateAddonConfig(map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
 		}, b.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting),
 		"network-policies":        networkPolicyConfig,
-		"node-problem-detector":   common.GenerateAddonConfig(nil, true),
 		"podsecuritypolicies":     common.GenerateAddonConfig(podSecurityPolicies, true),
 		"shoot-info":              common.GenerateAddonConfig(shootInfo, true),
 		"vertical-pod-autoscaler": common.GenerateAddonConfig(verticalPodAutoscaler, b.Shoot.WantsVerticalPodAutoscaler),

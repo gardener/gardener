@@ -643,13 +643,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 	}
 
 	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObjects(ctx, v.client,
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v.namespace, Name: "vpn-seed-server-envoy-config"}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v.namespace, Name: secretNameDH}},
-		&networkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: v.namespace}},
-		&networkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: v.namespace}},
-		v.emptyEnvoyFilter(),
-	)
+	return kutil.DeleteObject(ctx, v.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v.namespace, Name: secretNameDH}})
 }
 
 func (v *vpnSeedServer) Destroy(ctx context.Context) error {
@@ -661,12 +655,9 @@ func (v *vpnSeedServer) Destroy(ctx context.Context) error {
 		v.emptyDestinationRule(),
 		v.emptyService(),
 		v.emptyVPA(),
-		// TODO(rfranzke): Remove in a future release.
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v.namespace, Name: "vpn-seed-server-envoy-config"}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v.namespace, Name: secretNameDH}},
-		&networkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: v.namespace}},
-		&networkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: v.namespace}},
 		v.emptyEnvoyFilter(),
+		// TODO(rfranzke): Remove in a future release.
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v.namespace, Name: secretNameDH}},
 	)
 }
 

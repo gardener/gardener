@@ -177,10 +177,6 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					// TODO(rfranzke): Remove in a future release.
-					"security.gardener.cloud/trigger": "rollout",
-				},
 				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 					v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleControlPlane,
 					v1beta1constants.LabelPodMaintenanceRestart:         "true",
@@ -268,9 +264,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObject(ctx, c.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler", Namespace: c.namespace}})
-
+	return nil
 }
 
 func getLabels() map[string]string {
