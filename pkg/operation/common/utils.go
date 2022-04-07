@@ -322,25 +322,16 @@ func DeleteGrafanaByRole(ctx context.Context, k8sClient kubernetes.Interface, na
 		return fmt.Errorf("require kubernetes client")
 	}
 
-	if err := k8sClient.Client().DeleteAllOf(
-		ctx,
-		&appsv1.Deployment{},
-		client.InNamespace(namespace),
-		client.MatchingLabels{
-			"component": "grafana",
-			"role":      role,
-		},
-		client.PropagationPolicy(metav1.DeletePropagationForeground),
-	); client.IgnoreNotFound(err) != nil {
-		return err
-	}
-
 	deleteOptions := []client.DeleteAllOfOption{
 		client.InNamespace(namespace),
 		client.MatchingLabels{
 			"component": "grafana",
 			"role":      role,
 		},
+	}
+
+	if err := k8sClient.Client().DeleteAllOf(ctx, &appsv1.Deployment{}, append(deleteOptions, client.PropagationPolicy(metav1.DeletePropagationForeground))...); client.IgnoreNotFound(err) != nil {
+		return err
 	}
 
 	if err := k8sClient.Client().DeleteAllOf(ctx, &corev1.ConfigMap{}, deleteOptions...); client.IgnoreNotFound(err) != nil {

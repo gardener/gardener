@@ -112,12 +112,12 @@ var _ = ginkgo.Describe("Shoot worker operation testing", func() {
 			ginkgo.Skip("the test requires at least 2 different worker os images")
 		}
 
-		nodesList := &corev1.NodeList{}
-		err := f.ShootClient.Client().List(ctx, nodesList)
+		nodeList := &corev1.NodeList{}
+		err := f.ShootClient.Client().List(ctx, nodeList)
 		framework.ExpectNoError(err)
 
 		nodeImages := map[string]bool{}
-		for _, node := range nodesList.Items {
+		for _, node := range nodeList.Items {
 			if _, ok := nodeImages[node.Status.NodeInfo.OSImage]; !ok {
 				nodeImages[node.Status.NodeInfo.OSImage] = true
 			}
