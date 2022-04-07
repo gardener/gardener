@@ -36,7 +36,7 @@ import (
 	"fmt"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/gardener/gardener/test/framework"
 
@@ -112,11 +112,12 @@ var _ = ginkgo.Describe("Shoot worker operation testing", func() {
 			ginkgo.Skip("the test requires at least 2 different worker os images")
 		}
 
-		nodesList, err := f.ShootClient.Kubernetes().CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+		nodeList := &corev1.NodeList{}
+		err := f.ShootClient.Client().List(ctx, nodeList)
 		framework.ExpectNoError(err)
 
 		nodeImages := map[string]bool{}
-		for _, node := range nodesList.Items {
+		for _, node := range nodeList.Items {
 			if _, ok := nodeImages[node.Status.NodeInfo.OSImage]; !ok {
 				nodeImages[node.Status.NodeInfo.OSImage] = true
 			}

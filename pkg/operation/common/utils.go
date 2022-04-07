@@ -36,7 +36,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -323,37 +322,40 @@ func DeleteGrafanaByRole(ctx context.Context, k8sClient kubernetes.Interface, na
 		return fmt.Errorf("require kubernetes client")
 	}
 
-	listOptions := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s,%s=%s", "component", "grafana", "role", role),
+	deleteOptions := []client.DeleteAllOfOption{
+		client.InNamespace(namespace),
+		client.MatchingLabels{
+			"component": "grafana",
+			"role":      role,
+		},
 	}
 
-	deletePropagation := metav1.DeletePropagationForeground
-	if err := k8sClient.Kubernetes().AppsV1().Deployments(namespace).DeleteCollection(
+	if err := k8sClient.Client().DeleteAllOf(ctx, &appsv1.Deployment{}, append(deleteOptions, client.PropagationPolicy(metav1.DeletePropagationForeground))...); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	if err := k8sClient.Client().DeleteAllOf(ctx, &corev1.ConfigMap{}, deleteOptions...); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	if err := k8sClient.Client().DeleteAllOf(ctx, &extensionsv1beta1.Ingress{}, deleteOptions...); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	if err := k8sClient.Client().DeleteAllOf(ctx, &corev1.Secret{}, deleteOptions...); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	if err := k8sClient.Client().Delete(
 		ctx,
-		metav1.DeleteOptions{
-			PropagationPolicy: &deletePropagation,
-		}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		&corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "grafana-" + role,
+				Namespace: namespace,
+			}},
+	); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
-	if err := k8sClient.Kubernetes().CoreV1().ConfigMaps(namespace).DeleteCollection(
-		ctx, metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-
-	if err := k8sClient.Kubernetes().ExtensionsV1beta1().Ingresses(namespace).DeleteCollection(
-		ctx, metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-
-	if err := k8sClient.Kubernetes().CoreV1().Secrets(namespace).DeleteCollection(
-		ctx, metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-
-	if err := k8sClient.Kubernetes().CoreV1().Services(namespace).Delete(
-		ctx, fmt.Sprintf("grafana-%s", role), metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
 	return nil
 }
