@@ -52,7 +52,7 @@ Check out these repositories for implementations of the Gardener Extension contr
 
 - [Shoot Certificate Service](https://github.com/gardener/gardener-extension-shoot-cert-service)
 - [Shoot DNS Service](https://github.com/gardener/gardener-extension-shoot-dns-service)
-- [Shoot Openid Connect Service](https://github.com/gardener/gardener-extension-shoot-oidc-service)
+- [Shoot OpenID Connect Service](https://github.com/gardener/gardener-extension-shoot-oidc-service)
 
 If you implemented a new extension, please feel free to add it to this list!
 
