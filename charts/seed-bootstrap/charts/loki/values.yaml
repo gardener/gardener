@@ -51,7 +51,8 @@ replicas: 1
 resources:
   loki:
     limits:
-      memory: 10Gi
+# TODO(vlvasilev): After fixing the following issue https://github.com/gardener/gardener/issues/5757, set the memory limit to 10Gi.
+      memory: 3Gi
     requests:
       cpu: 200m
       memory: 300Mi
@@ -110,7 +111,7 @@ hvpa:
   enabled: false
   maxAllowed:
     cpu: 800m
-    memory: 2G
+    memory: 3Gi
   minAllowed:
     cpu: 200m
     memory: 300M
