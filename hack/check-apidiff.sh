@@ -27,8 +27,15 @@ trap cleanup_output EXIT
 retval=0
 temp=0
 
-echo "invoking: go-apidiff master --print-compatible --repo-path=."
-echo "$(go-apidiff master --print-compatible --repo-path=.)" > ${tmpDir}/output.txt
+BASE_SHA=${PULL_BASE_SHA:-} # PULL_BASE_SHA env variable is set by default in prow presubmit jobs
+
+if [ ! -z ${BASE_SHA} ]; then
+    echo "invoking: go-apidiff ${PULL_BASE_SHA} --print-compatible --repo-path=."
+    echo "$(go-apidiff ${PULL_BASE_SHA} --print-compatible --repo-path=.)" > ${tmpDir}/output.txt
+else
+    echo "invoking: go-apidiff master --print-compatible --repo-path=."
+    echo "$(go-apidiff master --print-compatible --repo-path=.)" > ${tmpDir}/output.txt
+fi
 
 exported_pkg=(
 "gardener/gardener/extensions/"
