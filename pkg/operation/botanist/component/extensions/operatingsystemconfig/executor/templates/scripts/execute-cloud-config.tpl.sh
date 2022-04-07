@@ -173,11 +173,11 @@ fi
 
 # Try to find Node object for this machine if already registered to the cluster.
 NODENAME=
-if [[ -s "{{ .pathNodeName }}" ]]; then
+if [[ -s "{{ .pathNodeName }}" ]] && [[ ! -z "$(cat "{{ .pathNodeName }}")" ]]; then
   NODENAME="$(cat "{{ .pathNodeName }}")"
 elif [[ -f "{{ .pathKubeletKubeconfigReal }}" ]]; then
   {{`NODENAME="$(`}}{{ .pathBinaries }}{{`/kubectl --kubeconfig="`}}{{ .pathKubeletKubeconfigReal }}{{`" get nodes -l "kubernetes.io/hostname=$(hostname | tr '[:upper:]' '[:lower:]')" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ end }}")"`}}
-  echo "$NODENAME" > "{{ .pathNodeName }}"
+  echo -n "$NODENAME" > "{{ .pathNodeName }}"
 fi
 
 # Check if node is annotated with information about to-be-restarted systemd services
