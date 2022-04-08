@@ -661,6 +661,36 @@ resources:
 					Expect(basicAuth.Password).To(Equal(oldPassword))
 					Expect(secret.Data).To(And(HaveKey("username"), HaveKey("password"), HaveKey("auth")))
 				})
+
+				It("should keep the existing password if old secret still exists (w/o CSV)", func() {
+					oldBasicAuth := &secretutils.BasicAuth{
+						Format:   secretutils.BasicAuthFormatNormal,
+						Username: userName,
+						Password: oldPassword,
+					}
+
+					By("creating existing secret with old password")
+					existingSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "monitoring-ingress-credentials",
+							Namespace: namespace,
+						},
+						Type: corev1.SecretTypeOpaque,
+						Data: oldBasicAuth.SecretData(),
+					}
+					delete(existingSecret.Data, secretutils.DataKeyCSV)
+					Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
+
+					By("generating secret")
+					secret, err := m.Generate(ctx, config)
+					Expect(err).NotTo(HaveOccurred())
+
+					By("verifying old password was kept")
+					basicAuth, err := secretutils.LoadBasicAuthFromCSV("", secret.Data[secretutils.DataKeyCSV])
+					Expect(err).NotTo(HaveOccurred())
+					Expect(basicAuth.Password).To(Equal(oldPassword))
+					Expect(secret.Data).To(And(HaveKey("username"), HaveKey("password"), HaveKey("auth")))
+				})
 			})
 
 			Context("shoot monitoring ingress credentials (users)", func() {
@@ -706,6 +736,36 @@ resources:
 						Type: corev1.SecretTypeOpaque,
 						Data: oldBasicAuth.SecretData(),
 					}
+					Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
+
+					By("generating secret")
+					secret, err := m.Generate(ctx, config)
+					Expect(err).NotTo(HaveOccurred())
+
+					By("verifying old password was kept")
+					basicAuth, err := secretutils.LoadBasicAuthFromCSV("", secret.Data[secretutils.DataKeyCSV])
+					Expect(err).NotTo(HaveOccurred())
+					Expect(basicAuth.Password).To(Equal(oldPassword))
+					Expect(secret.Data).To(And(HaveKey("username"), HaveKey("password"), HaveKey("auth")))
+				})
+
+				It("should keep the existing password if old secret still exists (w/o CSV)", func() {
+					oldBasicAuth := &secretutils.BasicAuth{
+						Format:   secretutils.BasicAuthFormatNormal,
+						Username: userName,
+						Password: oldPassword,
+					}
+
+					By("creating existing secret with old password")
+					existingSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "monitoring-ingress-credentials-users",
+							Namespace: namespace,
+						},
+						Type: corev1.SecretTypeOpaque,
+						Data: oldBasicAuth.SecretData(),
+					}
+					delete(existingSecret.Data, secretutils.DataKeyCSV)
 					Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
 
 					By("generating secret")
