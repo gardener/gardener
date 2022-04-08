@@ -297,9 +297,9 @@ var _ = Describe("Utils", func() {
 		Entry("return true", "v1.37.0", BeTrue()),
 		Entry("return true", "v1.37.1", BeTrue()),
 		Entry("return true", "v1.38.0-dev", BeTrue()),
-		Entry("return false", "v1.35.0", BeFalse()),
-		Entry("return false", "v1.35.9", BeFalse()),
-		Entry("return false", "", BeFalse()),
+		Entry("return false", "v1.35.0", BeTrue()),
+		Entry("return false", "v1.35.9", BeTrue()),
+		Entry("return false", "", BeTrue()),
 	)
 
 	DescribeTable("#UseServiceAccountTokenVolumeProjection",
@@ -313,8 +313,8 @@ var _ = Describe("Utils", func() {
 		Entry("return true", "v1.38.0", BeTrue()),
 		Entry("return true", "v1.38.1", BeTrue()),
 		Entry("return true", "v1.39.0-dev", BeTrue()),
-		Entry("return false", "v1.36.0", BeFalse()),
-		Entry("return false", "v1.36.9", BeFalse()),
-		Entry("return false", "", BeFalse()),
+		Entry("return false", "v1.36.0", BeTrue()),
+		Entry("return false", "v1.36.9", BeTrue()),
+		Entry("return false", "", BeTrue()),
 	)
 })

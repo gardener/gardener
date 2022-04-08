@@ -40,7 +40,7 @@ type delegateFactory struct {
 }
 
 // NewActuator creates a new Actuator that updates the status of the handled WorkerPoolConfigs.
-func NewActuator(useTokenRequestor, useProjectedTokenMount bool) worker.Actuator {
+func NewActuator() worker.Actuator {
 	delegateFactory := &delegateFactory{
 		logger: log.Log.WithName("worker-actuator"),
 	}
@@ -53,8 +53,6 @@ func NewActuator(useTokenRequestor, useProjectedTokenMount bool) worker.Actuator
 		mcmShootChart,
 		imagevector.ImageVector(),
 		extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot),
-		useTokenRequestor,
-		useProjectedTokenMount,
 	)
 }
 

@@ -61,7 +61,7 @@ func ReconcileError(t gardencorev1beta1.LastOperationType, description string, p
 
 // StatusUpdater contains functions for updating statuses of extension resources after a controller operation.
 type StatusUpdater interface {
-	//  InjectClient injects the client into the status updater.
+	// InjectClient injects the client into the status updater.
 	InjectClient(client.Client)
 	// Processing updates the last operation of an extension resource when an operation is started.
 	Processing(context.Context, extensionsv1alpha1.Object, gardencorev1beta1.LastOperationType, string) error
@@ -76,13 +76,13 @@ type UpdaterFunc func(extensionsv1alpha1.Status) error
 
 // StatusUpdaterCustom contains functions for customized updating statuses of extension resources after a controller operation.
 type StatusUpdaterCustom interface {
-	//  InjectClient injects the client into the status updater.
+	// InjectClient injects the client into the status updater.
 	InjectClient(client.Client)
-	// Processing updates the last operation of an extension resource when an operation is started.
+	// ProcessingCustom updates the last operation of an extension resource when an operation is started.
 	ProcessingCustom(context.Context, extensionsv1alpha1.Object, gardencorev1beta1.LastOperationType, string, UpdaterFunc) error
-	// Error updates the last operation of an extension resource when an operation was erroneous.
+	// ErrorCustom updates the last operation of an extension resource when an operation was erroneous.
 	ErrorCustom(context.Context, extensionsv1alpha1.Object, error, gardencorev1beta1.LastOperationType, string, UpdaterFunc) error
-	// Success updates the last operation of an extension resource when an operation was successful.
+	// SuccessCustom updates the last operation of an extension resource when an operation was successful.
 	SuccessCustom(context.Context, extensionsv1alpha1.Object, gardencorev1beta1.LastOperationType, string, UpdaterFunc) error
 }
 

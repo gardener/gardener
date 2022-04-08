@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -26,7 +25,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	"github.com/Masterminds/semver"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -161,57 +159,20 @@ func GetObjectByReference(ctx context.Context, c client.Client, ref *autoscaling
 	return c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: v1beta1constants.ReferencedResourcesPrefix + ref.Name}, obj)
 }
 
-var (
-	versionConstraintGreaterEqual136 *semver.Constraints
-	versionConstraintGreaterEqual137 *semver.Constraints
-)
-
-func init() {
-	var err error
-
-	versionConstraintGreaterEqual136, err = semver.NewConstraint(">= 1.36")
-	utilruntime.Must(err)
-	versionConstraintGreaterEqual137, err = semver.NewConstraint(">= 1.37")
-	utilruntime.Must(err)
-}
-
-func parseGardenerVersion(version string) (*semver.Version, error) {
-	v := version
-	if idx := strings.Index(v, "-"); idx >= 0 {
-		v = version[:idx]
-	}
-
-	return semver.NewVersion(v)
-}
-
 // UseTokenRequestor returns true when the provided Gardener version is large enough for supporting acquiring tokens
 // for shoot cluster control plane components running in the seed based on the TokenRequestor controller of
 // gardener-resource-manager (https://github.com/gardener/gardener/blob/master/docs/concepts/resource-manager.md#tokenrequestor).
+// Deprecated: new extension versions need to require at least Gardener version v1.36 and use the token requestor by
+// default which makes this function obsolete.
 func UseTokenRequestor(gardenerVersion string) (bool, error) {
-	if gardenerVersion == "" {
-		return false, nil
-	}
-
-	gv, err := parseGardenerVersion(gardenerVersion)
-	if err != nil {
-		return false, fmt.Errorf("could not parse Gardener version: %w", err)
-	}
-
-	return versionConstraintGreaterEqual136.Check(gv), nil
+	return true, nil
 }
 
 // UseServiceAccountTokenVolumeProjection returns true when the provided Gardener version is large enough for supporting
 // automatic token volume projection for components running in the seed and shoot clusters based on the respective
 // webhook part of gardener-resource-manager (https://github.com/gardener/gardener/blob/master/docs/concepts/resource-manager.md#auto-mounting-projected-serviceaccount-tokens).
+// Deprecated: new extension versions need to require at least Gardener version v1.37 and use projected service account
+// token volumes by default which makes this function obsolete.
 func UseServiceAccountTokenVolumeProjection(gardenerVersion string) (bool, error) {
-	if gardenerVersion == "" {
-		return false, nil
-	}
-
-	gv, err := parseGardenerVersion(gardenerVersion)
-	if err != nil {
-		return false, fmt.Errorf("could not parse Gardener version: %w", err)
-	}
-
-	return versionConstraintGreaterEqual137.Check(gv), nil
+	return true, nil
 }

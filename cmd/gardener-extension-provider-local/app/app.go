@@ -209,18 +209,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			// add common meta types to schema for controller-runtime to use v1.ListOptions
 			metav1.AddToGroupVersion(scheme, machinev1alpha1.SchemeGroupVersion)
 
-			useTokenRequestor, err := controller.UseTokenRequestor(generalOpts.Completed().GardenerVersion)
-			if err != nil {
-				return fmt.Errorf("could not determine whether token requestor should be used: %w", err)
-			}
-			localworker.DefaultAddOptions.UseTokenRequestor = useTokenRequestor
-
-			useProjectedTokenMount, err := controller.UseServiceAccountTokenVolumeProjection(generalOpts.Completed().GardenerVersion)
-			if err != nil {
-				return fmt.Errorf("could not determine whether service account token volume projection should be used: %w", err)
-			}
-			localworker.DefaultAddOptions.UseProjectedTokenMount = useProjectedTokenMount
-
 			controlPlaneCtrlOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.Controller)
 			dnsProviderCtrlOpts.Completed().Apply(&localdnsprovider.DefaultAddOptions.Controller)
 			dnsRecordCtrlOpts.Completed().Apply(&localdnsrecord.DefaultAddOptions.Controller)
