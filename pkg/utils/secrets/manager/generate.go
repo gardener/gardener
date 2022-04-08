@@ -146,10 +146,15 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 			return newData, nil
 		}
 
-		existingBasicAuth, err := secretutils.LoadBasicAuthFromCSV("", existingSecret.Data[secretutils.DataKeyCSV])
-		if err != nil {
-			return nil, err
+		existingPassword, ok := existingSecret.Data[secretutils.DataKeyPassword]
+		if !ok {
+			existingBasicAuth, err := secretutils.LoadBasicAuthFromCSV("", existingSecret.Data[secretutils.DataKeyCSV])
+			if err != nil {
+				return nil, err
+			}
+			existingPassword = []byte(existingBasicAuth.Password)
 		}
+
 		newBasicAuth, err := secretutils.LoadBasicAuthFromCSV("", newData[secretutils.DataKeyCSV])
 		if err != nil {
 			return nil, err
@@ -159,7 +164,7 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 			newBasicAuth.Format = secretutils.BasicAuthFormatNormal
 		}
 
-		newBasicAuth.Password = existingBasicAuth.Password
+		newBasicAuth.Password = string(existingPassword)
 		return newBasicAuth.SecretData(), nil
 
 	case "kube-apiserver-static-token":
