@@ -512,6 +512,10 @@ var _ = Describe("KubeControllerManager", func() {
 													MountPath: "/srv/kubernetes/ca",
 												},
 												{
+													Name:      "ca-client",
+													MountPath: "/srv/kubernetes/ca-client",
+												},
+												{
 													Name:      "service-account-key",
 													MountPath: "/srv/kubernetes/service-account-key",
 												},
@@ -528,6 +532,14 @@ var _ = Describe("KubeControllerManager", func() {
 											VolumeSource: corev1.VolumeSource{
 												Secret: &corev1.SecretVolumeSource{
 													SecretName: "ca",
+												},
+											},
+										},
+										{
+											Name: "ca-client",
+											VolumeSource: corev1.VolumeSource{
+												Secret: &corev1.SecretVolumeSource{
+													SecretName: "ca-client-current",
 												},
 											},
 										},
@@ -806,8 +818,8 @@ func commandForKubernetesVersion(
 	command = append(command,
 		fmt.Sprintf("--cluster-cidr=%s", podNetwork.String()),
 		fmt.Sprintf("--cluster-name=%s", clusterName),
-		"--cluster-signing-cert-file=/srv/kubernetes/ca/ca.crt",
-		"--cluster-signing-key-file=/srv/kubernetes/ca/ca.key",
+		"--cluster-signing-cert-file=/srv/kubernetes/ca-client/ca.crt",
+		"--cluster-signing-key-file=/srv/kubernetes/ca-client/ca.key",
 	)
 
 	if k8sVersionGreaterEqual119, _ := versionutils.CompareVersions(version, ">=", "1.19"); k8sVersionGreaterEqual119 {

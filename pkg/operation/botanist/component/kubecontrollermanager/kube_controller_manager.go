@@ -65,8 +65,10 @@ const (
 	volumeNameServer            = "server"
 	volumeNameServiceAccountKey = "service-account-key"
 	volumeNameCA                = "ca"
+	volumeNameCAClient          = "ca-client"
 
 	volumeMountPathCA                = "/srv/kubernetes/ca"
+	volumeMountPathCAClient          = "/srv/kubernetes/ca-client"
 	volumeMountPathServiceAccountKey = "/srv/kubernetes/service-account-key"
 	volumeMountPathServer            = "/var/lib/kube-controller-manager-server"
 )
@@ -151,6 +153,11 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return err
+	}
+
+	clientCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCAClient, secretsmanager.Current)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAClient)
 	}
 
 	genericTokenKubeconfigSecret, found := k.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -278,6 +285,10 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 								MountPath: volumeMountPathCA,
 							},
 							{
+								Name:      volumeNameCAClient,
+								MountPath: volumeMountPathCAClient,
+							},
+							{
 								Name:      volumeNameServiceAccountKey,
 								MountPath: volumeMountPathServiceAccountKey,
 							},
@@ -294,6 +305,14 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName: k.secrets.CA.Name,
+							},
+						},
+					},
+					{
+						Name: volumeNameCAClient,
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: clientCASecret.Name,
 							},
 						},
 					},
@@ -486,8 +505,8 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 	command = append(command,
 		fmt.Sprintf("--cluster-cidr=%s", k.podNetwork.String()),
 		fmt.Sprintf("--cluster-name=%s", k.namespace),
-		fmt.Sprintf("--cluster-signing-cert-file=%s/%s", volumeMountPathCA, secrets.DataKeyCertificateCA),
-		fmt.Sprintf("--cluster-signing-key-file=%s/%s", volumeMountPathCA, secrets.DataKeyPrivateKeyCA),
+		fmt.Sprintf("--cluster-signing-cert-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateCA),
+		fmt.Sprintf("--cluster-signing-key-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyPrivateKeyCA),
 	)
 
 	if version.ConstraintK8sGreaterEqual119.Check(k.version) {
