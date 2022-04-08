@@ -367,7 +367,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
 				return condition == nil
-			}, time.Minute, time.Second).Should(BeTrue())
+			}, 10*time.Second, time.Second).Should(BeTrue())
 		})
 	})
 
@@ -431,7 +431,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 				Consistently(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(BeNotFoundError())
-				}, time.Minute, time.Second).Should(Succeed())
+				}, 10*time.Second, time.Second).Should(Succeed())
 			})
 		})
 
@@ -495,7 +495,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 				Consistently(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(BeNotFoundError())
-				}, time.Minute, time.Second).Should(Succeed())
+				}, 10*time.Second, time.Second).Should(Succeed())
 			})
 		})
 
@@ -535,7 +535,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 				Consistently(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
-				}, time.Minute, time.Second).Should(Succeed())
+				}, 10*time.Second, time.Second).Should(Succeed())
 			})
 
 			It("should keep the object even after deletion of ManagedResource", func() {
@@ -586,7 +586,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Consistently(func(g Gomega) bool {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
 					return configMap.Data != nil && configMap.Data["foo"] == "bar"
-				}, time.Minute, time.Second).Should(BeTrue())
+				}, 10*time.Second, time.Second).Should(BeTrue())
 			})
 		})
 	})
@@ -721,7 +721,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Consistently(func(g Gomega) bool {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 					return *deployment.Spec.Replicas == int32(5)
-				}, time.Minute, time.Second).Should(BeTrue())
+				}, 10*time.Second, time.Second).Should(BeTrue())
 			})
 		})
 
@@ -812,7 +812,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Consistently(func(g Gomega) bool {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 					return compareResource(deployment.Spec.Template.Spec.Containers[0].Resources, defaultPodTemplateSpec.Spec.Containers[0].Resources)
-				}, time.Minute, time.Second).Should(BeFalse())
+				}, 10*time.Second, time.Second).Should(BeFalse())
 			})
 		})
 	})
