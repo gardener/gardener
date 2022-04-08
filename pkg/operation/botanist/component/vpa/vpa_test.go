@@ -822,14 +822,6 @@ var _ = Describe("VPA", func() {
 
 			if withServiceAccount {
 				obj.Spec.Template.Spec.ServiceAccountName = serviceAccountRecommender.Name
-				obj.Spec.Template.Spec.Containers[0].Env = append(obj.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
-					Name: "NAMESPACE",
-					ValueFrom: &corev1.EnvVarSource{
-						FieldRef: &corev1.ObjectFieldSelector{
-							FieldPath: "metadata.namespace",
-						},
-					},
-				})
 			} else {
 				obj.Labels["gardener.cloud/role"] = "controlplane"
 				obj.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)

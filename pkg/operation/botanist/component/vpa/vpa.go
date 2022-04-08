@@ -387,14 +387,17 @@ func mergeResourceConfigs(configsLists ...resourceConfigs) resourceConfigs {
 func (v *vpa) injectAPIServerConnectionSpec(deployment *appsv1.Deployment, name string, serviceAccountName *string) {
 	if serviceAccountName != nil {
 		deployment.Spec.Template.Spec.ServiceAccountName = *serviceAccountName
-		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
-			Name: "NAMESPACE",
-			ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{
-					FieldPath: "metadata.namespace",
+
+		if name != recommender {
+			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+				Name: "NAMESPACE",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.namespace",
+					},
 				},
-			},
-		})
+			})
+		}
 	} else {
 		deployment.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
 		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env,
