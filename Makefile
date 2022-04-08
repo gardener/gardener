@@ -261,6 +261,7 @@ kind-up: $(KIND)
 	$(KIND) create cluster --name gardener-local --config $(REPO_ROOT)/example/gardener-local/kind/cluster-$(KIND_ENV).yaml --kubeconfig $(REPO_ROOT)/example/gardener-local/kind/kubeconfig
 	docker exec gardener-local-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
 	cp $(REPO_ROOT)/example/gardener-local/kind/kubeconfig $(REPO_ROOT)/example/provider-local/base/kubeconfig
+	kubectl apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side --kubeconfig $(REPO_ROOT)/example/gardener-local/kind/kubeconfig
 
 kind-down: $(KIND)
 	$(KIND) delete cluster --name gardener-local
