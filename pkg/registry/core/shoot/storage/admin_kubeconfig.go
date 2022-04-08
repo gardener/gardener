@@ -119,9 +119,12 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 
 	resourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
 
-	ca := resourceDataList.Get(v1beta1constants.SecretNameCACluster)
+	ca := resourceDataList.Get(v1beta1constants.SecretNameCAClient)
 	if ca == nil {
-		return nil, errors.NewInternalError(fmt.Errorf("certificate authority not yet provisioned"))
+		ca = resourceDataList.Get(v1beta1constants.SecretNameCACluster)
+		if ca == nil {
+			return nil, errors.NewInternalError(fmt.Errorf("certificate authority not yet provisioned"))
+		}
 	}
 
 	data := make(map[string][]byte)

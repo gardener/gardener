@@ -189,7 +189,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		CommonName:   "gardener.cloud:monitoring:prometheus",
 		Organization: []string{"gardener.cloud:monitoring"},
 		CertType:     secrets.ClientCert,
-	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster), secretsmanager.Rotate(secretsmanager.InPlace))
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAClient), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return err
 	}
