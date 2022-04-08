@@ -11,7 +11,7 @@ metadata:
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
 spec:
-  maxUnavailable: {{ sub (int .Values.global.apiserver.replicaCount) 1 }}
+  maxUnavailable: 1
   selector:
     matchLabels:
       app: gardener
