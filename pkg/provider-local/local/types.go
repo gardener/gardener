@@ -32,10 +32,17 @@ const (
 
 	// MachineControllerManagerName is a constant for the name of the machine-controller-manager.
 	MachineControllerManagerName = "machine-controller-manager"
-	// MachineControllerManagerVpaName is the name of the VerticalPodAutoscaler of the machine-controller-manager deployment.
+	// MachineControllerManagerVpaName is the name of the VerticalPodAutoscaler of the machine-controller-manager
+	// deployment.
 	MachineControllerManagerVpaName = "machine-controller-manager-vpa"
-	// MachineControllerManagerMonitoringConfigName is the name of the ConfigMap containing monitoring stack configurations for machine-controller-manager.
+	// MachineControllerManagerMonitoringConfigName is the name of the ConfigMap containing monitoring stack
+	// configurations for machine-controller-manager.
 	MachineControllerManagerMonitoringConfigName = "machine-controller-manager-monitoring-config"
+
+	// LabelNetworkPolicyToIstioIngressGateway allows Egress from pods labeled with
+	// 'networking.gardener.cloud/to-istio-ingressgateway=allowed' to istio-ingressgateway pods running in
+	// 'istio-ingress' namespace.
+	LabelNetworkPolicyToIstioIngressGateway = "networking.gardener.cloud/to-istio-ingressgateway"
 )
 
 var (
