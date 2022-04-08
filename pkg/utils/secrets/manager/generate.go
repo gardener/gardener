@@ -141,6 +141,15 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 	existingSecret := &corev1.Secret{}
 
 	switch configName {
+	case "ca-client":
+		if err := m.client.Get(ctx, kutil.Key(m.namespace, "ca"), existingSecret); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, err
+			}
+			return newData, nil
+		}
+		return existingSecret.Data, nil
+
 	case "kube-apiserver-basic-auth", "observability-ingress", "observability-ingress-users":
 		oldSecretName := configName
 		if configName == "observability-ingress" {

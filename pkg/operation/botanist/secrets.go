@@ -153,6 +153,16 @@ func (b *Botanist) restoreSecretsFromShootStateForSecretsManagerAdoption(ctx con
 }
 
 func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
+	// TODO(rfranzke): Move this client CA secret configuration to the b.wantedCertificateAuthorities() function in a
+	//  future release.
+	if _, err := b.SecretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+		Name:       v1beta1constants.SecretNameCAClient,
+		CommonName: "client",
+		CertType:   secretutils.CACert,
+	}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld)); err != nil {
+		return err
+	}
+
 	for _, config := range b.wantedCertificateAuthorities() {
 		if _, err := b.SecretsManager.Generate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld), secretsmanager.IgnoreConfigChecksumForCASecretName()); err != nil {
 			return err
