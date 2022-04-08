@@ -40,14 +40,6 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
-var (
-	// UseCachedRuntimeClients is a flag for enabling cached controller-runtime clients. The CachedRuntimeClients feature
-	// gate (strictly enabled since v1.45) causes this flag to be set to true.
-	// If enabled, the client returned by Interface.Client() will be backed by Interface.Cache(), otherwise it will talk
-	// directly to the API server.
-	UseCachedRuntimeClients = false
-)
-
 const (
 	// KubeConfig is the key to the kubeconfig
 	KubeConfig = "kubeconfig"

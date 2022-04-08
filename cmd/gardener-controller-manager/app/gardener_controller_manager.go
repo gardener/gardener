@@ -32,7 +32,6 @@ import (
 	configvalidation "github.com/gardener/gardener/pkg/controllermanager/apis/config/validation"
 	"github.com/gardener/gardener/pkg/controllermanager/controller"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server"
@@ -142,7 +141,6 @@ func (o *Options) run(ctx context.Context) error {
 	if err := controllermanagerfeatures.FeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
 		return err
 	}
-	kubernetes.UseCachedRuntimeClients = controllermanagerfeatures.FeatureGate.Enabled(features.CachedRuntimeClients)
 
 	gardener, err := NewGardener(ctx, o.config)
 	if err != nil {

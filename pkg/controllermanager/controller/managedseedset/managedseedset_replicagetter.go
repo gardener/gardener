@@ -69,6 +69,7 @@ func (rg *replicaGetter) GetReplicas(ctx context.Context, set *seedmanagementv1a
 		return nil, err
 	}
 
+	// cross-check number of shoots with a partial metadata list from the API server to ensure what we got from the cache is up-to-date.
 	shoots2 := &metav1.PartialObjectMetadataList{}
 	shoots2.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 	if err := rg.client.APIReader().List(ctx, shoots2, client.InNamespace(set.Namespace), client.MatchingLabelsSelector{Selector: selector}); err != nil {

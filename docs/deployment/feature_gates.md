@@ -68,7 +68,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | UseDNSRecords                                | `true`  | `Beta`    | `1.39` | `1.43` |
 | UseDNSRecords                                | `true`  | `GA`      | `1.44` |        |
 | CachedRuntimeClients                         | `false` | `Alpha`   | `1.7`  | `1.33` |
-| CachedRuntimeClients                         | `true`  | `Beta`    | `1.34` |  `1.44`|
+| CachedRuntimeClients                         | `true`  | `Beta`    | `1.34` | `1.44` |
 | CachedRuntimeClients                         | `true`  | `GA`      | `1.45` |        |
 
 ## Using a feature
