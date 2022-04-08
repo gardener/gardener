@@ -20,7 +20,6 @@ import (
 	extensionsdnsrecordcontroller "github.com/gardener/gardener/extensions/pkg/controller/dnsrecord"
 	extensionshealthcheckcontroller "github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
 	extensionsinfrastructurecontroller "github.com/gardener/gardener/extensions/pkg/controller/infrastructure"
-	extensionsnetworkcontroller "github.com/gardener/gardener/extensions/pkg/controller/network"
 	extensionsoperatingsystmeconfgcontroller "github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig"
 	extensionsworkercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	webhookcmd "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
@@ -31,7 +30,6 @@ import (
 	dnsrecordcontroller "github.com/gardener/gardener/pkg/provider-local/controller/dnsrecord"
 	healthcheckcontroller "github.com/gardener/gardener/pkg/provider-local/controller/healthcheck"
 	infrastructurecontroller "github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
-	networkcontroller "github.com/gardener/gardener/pkg/provider-local/controller/network"
 	nodecontroller "github.com/gardener/gardener/pkg/provider-local/controller/node"
 	operatingsystemconfigcontroller "github.com/gardener/gardener/pkg/provider-local/controller/operatingsystemconfig"
 	servicecontroller "github.com/gardener/gardener/pkg/provider-local/controller/service"
@@ -51,7 +49,6 @@ func ControllerSwitchOptions() *controllercmd.SwitchOptions {
 		controllercmd.Switch(extensionsdnsrecordcontroller.ControllerName, dnsrecordcontroller.AddToManager),
 		controllercmd.Switch(extensionsinfrastructurecontroller.ControllerName, infrastructurecontroller.AddToManager),
 		controllercmd.Switch(extensionsworkercontroller.ControllerName, workercontroller.AddToManager),
-		controllercmd.Switch(extensionsnetworkcontroller.ControllerName, networkcontroller.AddToManager),
 		controllercmd.Switch(servicecontroller.ControllerName, servicecontroller.AddToManager),
 		controllercmd.Switch(nodecontroller.ControllerName, nodecontroller.AddToManager),
 		controllercmd.Switch(extensionshealthcheckcontroller.ControllerName, healthcheckcontroller.AddToManager),

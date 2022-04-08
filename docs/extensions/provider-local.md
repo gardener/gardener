@@ -99,7 +99,9 @@ This `Service` enables the `vpn-seed` containers in the `kube-apiserver` pods in
 
 #### `Network`
 
-This controller deploys a `ManagedResource` which contains the [kindnetd](https://github.com/kubernetes-sigs/kind/blob/main/images/kindnetd/README.md) `DaemonSet` which is used as CNI in the shoot clusters.
+This controller is not implemented anymore. In the initial version of `provider-local`, there was a `Network` controller deploying [kindnetd](https://github.com/kubernetes-sigs/kind/blob/main/images/kindnetd/README.md) (see https://github.com/gardener/gardener/tree/v1.44.1/pkg/provider-local/controller/network).
+However, we decided to drop it because this setup prevented us from using `NetworkPolicy`s (kindnetd does not ship a `NetworkPolicy` controller).
+In addition, we had issues with shoot clusters having more than one node (hence, we couldn't support rolling updates, see https://github.com/gardener/gardener/pull/5666/commits/491b3cd16e40e5c20ef02367fda93a34ff9465eb).
 
 #### `OperatingSystemConfig`
 

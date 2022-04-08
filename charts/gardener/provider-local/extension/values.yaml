@@ -30,8 +30,6 @@ controllers:
     concurrentSyncs: 5
   operatingsystemconfig:
     concurrentSyncs: 5
-  network:
-    concurrentSyncs: 5
   node:
     concurrentSyncs: 1
   service:
