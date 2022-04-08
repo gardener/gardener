@@ -254,6 +254,226 @@ var _ = Describe("ManagedResource controller tests", func() {
 			})
 		})
 	})
+
+	Context("#Reconciliation Modes/Annotations", func() {
+		BeforeEach(func() {
+			configMap = &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "ConfigMap",
+				}, ObjectMeta: metav1.ObjectMeta{
+					Name:      configMapName,
+					Namespace: namespaceName,
+				}}
+
+			secretForManagedResource = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretName,
+					Namespace: namespaceName,
+				},
+			}
+
+			managedResource = &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-managedresource",
+					Namespace: namespaceName,
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					Class:      pointer.String(filter.ResourceClass()),
+					SecretRefs: []corev1.LocalObjectReference{{Name: secretForManagedResource.Name}},
+				},
+			}
+
+			DeferCleanup(func() {
+				Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+				}, time.Minute, 5*time.Second).Should(Succeed())
+
+				Expect(testClient.Delete(ctx, secretForManagedResource)).To(Or(Succeed(), BeNotFoundError()))
+			})
+		})
+
+		Context("#Ignore Mode", func() {
+			It("should remove the resource from the ManagedResource status", func() {
+				configMap.SetAnnotations(map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore})
+
+				data, err := createSecretDataFromObject(configMap, "config-map.yaml")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(data).ToNot(BeNil())
+
+				secretForManagedResource.Data = data
+
+				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
+				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
+				}, time.Minute, time.Second).Should(BeTrue())
+
+				Consistently(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(BeNotFoundError())
+				}, time.Minute, time.Second).Should(Succeed())
+			})
+		})
+
+		Context("#Delete On Invalid Update", func() {
+			BeforeEach(func() {
+				configMap.SetAnnotations(map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"})
+
+				data, err := createSecretDataFromObject(configMap, "config-map.yaml")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(data).ToNot(BeNil())
+
+				secretForManagedResource.Data = data
+			})
+
+			JustBeforeEach(func() {
+				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
+				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
+				}, time.Minute, time.Second).Should(BeTrue())
+			})
+
+			It("should not delete the resource on valid update", func() {
+				configMap.Data = map[string]string{"foo": "bar"}
+				newResourceData, err := json.Marshal(configMap)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretForManagedResource), secretForManagedResource)).To(Or(Succeed(), BeNoMatchError()))
+				secretForManagedResource.Data["config-map.yaml"] = newResourceData
+				Expect(testClient.Update(ctx, secretForManagedResource)).To(Succeed())
+
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+				}, time.Minute, 5*time.Second).Should(Succeed())
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
+				}, time.Minute, time.Second).Should(BeTrue())
+			})
+
+			It("should delete the resource on invalid update", func() {
+				newConfigMap := configMap
+				newConfigMap.TypeMeta = metav1.TypeMeta{}
+				newResourceData, err := json.Marshal(newConfigMap)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretForManagedResource), secretForManagedResource)).To(Or(Succeed(), BeNoMatchError()))
+				secretForManagedResource.Data["config-map.yaml"] = newResourceData
+				Expect(testClient.Update(ctx, secretForManagedResource)).To(Succeed())
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+					return condition != nil && condition.Status == gardencorev1beta1.ConditionFalse
+				}, time.Minute, time.Second).Should(BeTrue())
+
+				Consistently(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(BeNotFoundError())
+				}, time.Minute, time.Second).Should(Succeed())
+			})
+		})
+
+		Context("#Keep Object", func() {
+			BeforeEach(func() {
+				configMap.SetAnnotations(map[string]string{resourcesv1alpha1.KeepObject: "true"})
+
+				data, err := createSecretDataFromObject(configMap, "config-map.yaml")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(data).ToNot(BeNil())
+
+				secretForManagedResource.Data = data
+			})
+
+			JustBeforeEach(func() {
+				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
+				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
+				}, time.Minute, time.Second).Should(BeTrue())
+			})
+
+			It("should keep the object in case it is removed from the MangedResource", func() {
+				managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{}
+				metav1.SetMetaDataAnnotation(&managedResource.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+
+				Expect(testClient.Update(ctx, managedResource)).To(Succeed())
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
+				}, time.Minute, time.Second).Should(BeTrue())
+
+				Consistently(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+				}, time.Minute, time.Second).Should(Succeed())
+			})
+
+			It("should keep the object even after deletion of ManagedResource", func() {
+				Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+				}, time.Minute, 5*time.Second).Should(Succeed())
+
+				Expect(testClient.Delete(ctx, secretForManagedResource)).To(Or(Succeed(), BeNotFoundError()))
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+			})
+		})
+
+		Context("#Ignore", func() {
+			BeforeEach(func() {
+				configMap.SetAnnotations(map[string]string{resourcesv1alpha1.Ignore: "true"})
+
+				data, err := createSecretDataFromObject(configMap, "config-map.yaml")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(data).ToNot(BeNil())
+
+				secretForManagedResource.Data = data
+			})
+
+			JustBeforeEach(func() {
+				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
+				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
+				}, time.Minute, time.Second).Should(BeTrue())
+			})
+
+			It("should not revert any manual update on reosurce managed by ManagedResource", func() {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Or(Succeed(), BeNoMatchError()))
+
+				configMap.Data = map[string]string{"foo": "bar"}
+				Expect(testClient.Update(ctx, configMap)).To(Succeed())
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
+				}, time.Minute, time.Second).Should(BeTrue())
+
+				Consistently(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+					return configMap.Data != nil && configMap.Data["foo"] == "bar"
+				}, time.Minute, time.Second).Should(BeTrue())
+			})
+		})
+	})
 })
 
 func createSecretDataFromObject(obj runtime.Object, key string) (map[string][]byte, error) {

@@ -36,7 +36,7 @@ const (
 	// mode that should be used to reconcile the resource.
 	Mode = "resources.gardener.cloud/mode"
 	// ModeIgnore is a constant for the value of the mode annotation describing an ignore mode.
-	// Reconciliation in ignore more removes the resource from the ManagedResource status and does not
+	// Reconciliation in ignore mode removes the resource from the ManagedResource status and does not
 	// perform any action on the cluster.
 	ModeIgnore = "Ignore"
 	// PreserveReplicas is a constant for an annotation on a resource managed by a ManagedResource. If set to
