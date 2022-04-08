@@ -18,35 +18,31 @@ The motivation for maintaining such extension is the following:
 The following enlists the current limitations of the implementation.
 Please note that all of them are no technical limitations/blockers but simply advanced scenarios that we haven't had invested yet into.
 
-1. Shoot clusters can only have one node when `.spec.networking.type=local`.
+1. Shoot clusters can only have multiple nodes, but inter-pod communication for pods on different nodes does not work.
 
-   _We use [kindnetd](https://github.com/kubernetes-sigs/kind/blob/main/images/kindnetd/README.md) as CNI plugin in shoot clusters and didn't invest into making it work with multiple worker nodes._
+   _We are using the [`networking-calico`](https://github.com/gardener/gardener-extension-networking-calico/) extension for the CNI plugin in shoot clusters, however, it doesn't seem to be configured correctly yet to support this scenario._
 
-2. `NetworkPolicy`s are not effective.
-
-   _`kindnetd` does not ship any controller for Kubernetes `NetworkPolicy`s, hence, they are not effective. Typically, the same applies for the local seed cluster unless a different CNI plugin is pro-actively installed._
-
-3. Shoot clusters don't support persistent storage.
+2. Shoot clusters don't support persistent storage.
 
    _We don't install any CSI plugin into the shoot cluster yet, hence, there is no persistent storage for shoot clusters._
 
-4. No support for ETCD backups.
+3. No support for ETCD backups.
 
    _We have not yet implemented the [`BackupBucket`](backupbucket.md)/[`BackupEntry`](backupentry.md) extension API, hence, there is no support for ETCD backups._
 
-5. No owner TXT `DNSRecord`s (hence, no ["bad-case" control plane migration](../proposals/17-shoot-control-plane-migration-bad-case.md)).
+4. No owner TXT `DNSRecord`s (hence, no ["bad-case" control plane migration](../proposals/17-shoot-control-plane-migration-bad-case.md)).
 
    _In order to realize DNS (see [Implementation Details](#implementation-details) section below), the `/etc/hosts` file is manipulated. This does not work for TXT records. In the future, we could look into using [CoreDNS](https://coredns.io/) instead._
 
-6. No load balancers for Shoot clusters.
+5. No load balancers for Shoot clusters.
 
    _We have not yet developed a `cloud-controller-manager` which could reconcile load balancer `Service`s in the shoot cluster. Hence, when the gardenlet's `ReversedVPN` feature gate is disabled then the `kube-system/vpn-shoot` `Service` must be manually patched (with `{"status": {"loadBalancer": {"ingress": [{"hostname": "vpn-shoot"}]}}}`) to make the reconciliation work._
 
-7. Only one shoot cluster possible when gardenlet's `APIServerSNI` feature gate is disabled.
+6. Only one shoot cluster possible when gardenlet's `APIServerSNI` feature gate is disabled.
 
    _When [`APIServerSNI`](../proposals/08-shoot-apiserver-via-sni.md) is disabled then gardenlet uses load balancer `Service`s in order to expose the shoot clusters' `kube-apiserver`s. Typically, local Kubernetes clusters don't support this. In this case, the local extension uses the host IP to expose the `kube-apiserver`, however, this can only be done once._
 
-8. Dependency-Watchdog cannot be enabled.
+7. Dependency-Watchdog cannot be enabled.
 
    _The `dependency-watchdog` needs to be able to resolve the shoot cluster's DNS names. It is not yet able to do so, hence, it cannot be enabled._
 
@@ -179,5 +175,4 @@ Future work could mostly focus on resolving above listed [limitations](#limitati
 - Add storage support for shoot clusters.
 - Implement a `cloud-controller-manager` and deploy it via the [`ControlPlane` controller](#controlplane).
 - Implement support for `BackupBucket` and `BackupEntry`s to enable ETCD backups for shoot clusters (based on the support for local disks in [`etcd-backup-restore`](https://github.com/gardener/etcd-backup-restore)).
-- Switch from `kindnetd` to a different CNI plugin which supports `NetworkPolicy`s.
 - Properly implement `.spec.machineTypes` in the `CloudProfile`s (i.e., configure `.spec.resources` properly for the created shoot worker machine pods).
