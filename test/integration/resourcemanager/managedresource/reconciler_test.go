@@ -310,6 +310,67 @@ var _ = Describe("ManagedResource controller tests", func() {
 		})
 	})
 
+	Context("#Resource class", func() {
+		BeforeEach(func() {
+			configMap = &corev1.ConfigMap{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "ConfigMap",
+				}, ObjectMeta: metav1.ObjectMeta{
+					Name:      configMapName,
+					Namespace: namespaceName,
+				}}
+
+			data, err := createSecretDataFromObject(configMap, "config-map.yaml")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(data).ToNot(BeNil())
+
+			secretForManagedResource = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretName,
+					Namespace: namespaceName,
+				},
+				Data: data,
+			}
+
+			managedResource = &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-managedresource",
+					Namespace: namespaceName,
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					Class:      pointer.String("test"),
+					SecretRefs: []corev1.LocalObjectReference{{Name: secretForManagedResource.Name}},
+				},
+			}
+		})
+
+		AfterEach(func() {
+			Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(BeNotFoundError())
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(BeNotFoundError())
+			}, time.Minute, 5*time.Second).Should(Succeed())
+
+			Expect(testClient.Delete(ctx, secretForManagedResource)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
+		It("controller running for default class should not reconcile ManagedResource of any other class", func() {
+			Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
+			Expect(testClient.Create(ctx, managedResource)).To(Succeed())
+
+			Consistently(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
+			}, 5*time.Second, time.Second).Should(BeNotFoundError())
+
+			Consistently(func(g Gomega) bool {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+				return condition == nil
+			}, time.Minute, time.Second).Should(BeTrue())
+		})
+	})
+
 	Context("#Reconciliation Modes/Annotations", func() {
 		BeforeEach(func() {
 			configMap = &corev1.ConfigMap{
