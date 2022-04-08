@@ -85,6 +85,7 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameStaticToken            = "kube-apiserver-static-token-c069a0e6"
 		secretNameCA                     = "CA-secret"
 		secretChecksumCA                 = "12345"
+		secretNameCAClient               = "ca-client"
 		secretNameCAEtcd                 = "ca-etcd"
 		secretNameCAFrontProxy           = "CAFrontProxy-secret"
 		secretChecksumCAFrontProxy       = "12345"
@@ -1395,6 +1396,7 @@ rules:
 					Expect(deployment.Annotations).To(Equal(map[string]string{
 						"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
 						"reference.resources.gardener.cloud/secret-71fba891":    secretNameCA,
+						"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
 						"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
 						"reference.resources.gardener.cloud/secret-9282d44f":    secretNameCAFrontProxy,
 						"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
@@ -1445,6 +1447,7 @@ rules:
 						"checksum/secret-" + secretNameCAFrontProxy:             secretChecksumCAFrontProxy,
 						"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
 						"reference.resources.gardener.cloud/secret-71fba891":    secretNameCA,
+						"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
 						"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
 						"reference.resources.gardener.cloud/secret-9282d44f":    secretNameCAFrontProxy,
 						"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
@@ -1742,7 +1745,7 @@ rules:
 							"--audit-log-maxsize=100",
 							"--audit-log-maxbackup=5",
 							"--authorization-mode=Node,RBAC",
-							"--client-ca-file=/srv/kubernetes/ca/ca.crt",
+							"--client-ca-file=/srv/kubernetes/ca-client/bundle.crt",
 							"--enable-aggregator-routing=true",
 							"--enable-bootstrap-token-auth=true",
 							"--http2-max-streams-per-connection=1000",
@@ -1805,6 +1808,10 @@ rules:
 							corev1.VolumeMount{
 								Name:      "ca",
 								MountPath: "/srv/kubernetes/ca",
+							},
+							corev1.VolumeMount{
+								Name:      "ca-client",
+								MountPath: "/srv/kubernetes/ca-client",
 							},
 							corev1.VolumeMount{
 								Name:      "ca-etcd",
@@ -1870,6 +1877,14 @@ rules:
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName: secretNameCA,
+									},
+								},
+							},
+							corev1.Volume{
+								Name: "ca-client",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: secretNameCAClient,
 									},
 								},
 							},

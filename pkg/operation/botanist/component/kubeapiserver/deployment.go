@@ -58,6 +58,7 @@ const (
 	volumeNameAuditPolicy              = "audit-policy-config"
 	volumeNameBasicAuthentication      = "basic-auth"
 	volumeNameCA                       = "ca"
+	volumeNameCAClient                 = "ca-client"
 	volumeNameCAEtcd                   = "ca-etcd"
 	volumeNameCAFrontProxy             = "ca-front-proxy"
 	volumeNameCAVPN                    = "ca-vpn"
@@ -84,6 +85,7 @@ const (
 	volumeMountPathAuditPolicy              = "/etc/kubernetes/audit"
 	volumeMountPathBasicAuthentication      = "/srv/kubernetes/auth"
 	volumeMountPathCA                       = "/srv/kubernetes/ca"
+	volumeMountPathCAClient                 = "/srv/kubernetes/ca-client"
 	volumeMountPathCAEtcd                   = "/srv/kubernetes/etcd/ca"
 	volumeMountPathCAFrontProxy             = "/srv/kubernetes/ca-front-proxy"
 	volumeMountPathCAVPN                    = "/srv/kubernetes/ca-vpn"
@@ -148,6 +150,11 @@ func (k *kubeAPIServer) reconcileDeployment(
 		}
 
 		healthCheckToken = token.Token
+	}
+
+	clientCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCAClient)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAClient)
 	}
 
 	vpnCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCAVPN)
@@ -271,6 +278,10 @@ func (k *kubeAPIServer) reconcileDeployment(
 								MountPath: volumeMountPathCA,
 							},
 							{
+								Name:      volumeNameCAClient,
+								MountPath: volumeMountPathCAClient,
+							},
+							{
 								Name:      volumeNameCAEtcd,
 								MountPath: volumeMountPathCAEtcd,
 							},
@@ -335,6 +346,14 @@ func (k *kubeAPIServer) reconcileDeployment(
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: k.secrets.CA.Name,
+								},
+							},
+						},
+						{
+							Name: volumeNameCAClient,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: clientCASecret.Name,
 								},
 							},
 						},
@@ -460,7 +479,7 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 		out = append(out, "--api-audiences="+strings.Join(k.values.APIAudiences, ","))
 	}
 
-	out = append(out, fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathCA, secrets.DataKeyCertificateCA))
+	out = append(out, fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathCAClient, secrets.DataKeyCertificateBundle))
 	out = append(out, "--enable-aggregator-routing=true")
 	out = append(out, "--enable-bootstrap-token-auth=true")
 	out = append(out, "--http2-max-streams-per-connection=1000")
