@@ -136,6 +136,55 @@ var _ = Describe("ManagedResource controller tests", func() {
 					return condition != nil && condition.Status == gardencorev1beta1.ConditionFalse
 				}, 30*time.Second, time.Second).Should(BeTrue())
 			})
+
+			It("should correctly set the condition ResourceApplied to Progressing", func() {
+				// finalizer is added so this resource can not be deleted once we remove it from the MangedResource
+				// referenced secret meanwhile adding a new resource in the refrenced secret set the ResourceApplied
+				// condition to progressing and stuck at this untill we remove finalizer from the old resource
+				configMap.Finalizers = append(configMap.Finalizers, "kubernetes")
+				data, err := createSecretDataFromObject(configMap, "config-map.yaml")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(data).ToNot(BeNil())
+
+				secretForManagedResource.Data = data
+
+				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
+				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
+				}, time.Minute, time.Second).Should(BeTrue())
+
+				newConfigMapName := "new-configmap"
+				newConfigMap := &corev1.ConfigMap{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: corev1.SchemeGroupVersion.String(),
+						Kind:       "ConfigMap",
+					}, ObjectMeta: metav1.ObjectMeta{
+						Name:      newConfigMapName,
+						Namespace: namespaceName,
+					}}
+
+				newData, err := createSecretDataFromObject(newConfigMap, fmt.Sprintf("%s.yaml", newConfigMapName))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(newData).ToNot(BeNil())
+
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretForManagedResource), secretForManagedResource)).To(Or(Succeed(), BeNoMatchError()))
+				secretForManagedResource.Data = newData
+				Expect(testClient.Update(ctx, secretForManagedResource)).To(Succeed())
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+					return condition != nil && condition.Status == gardencorev1beta1.ConditionProgressing
+				}, time.Minute, time.Second).Should(BeTrue())
+
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Or(Succeed(), BeNoMatchError()))
+				configMap.Finalizers = []string{}
+				Expect(testClient.Update(ctx, configMap)).To(Succeed())
+			})
 		})
 
 		Context("update managed resource", func() {
