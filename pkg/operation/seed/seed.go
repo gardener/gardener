@@ -247,10 +247,12 @@ func RunReconcileSeedFlow(
 	}
 
 	// Deploy dedicated CA certificate for seed cluster.
+	validity := 30 * 24 * time.Hour
 	if _, err := secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
 		Name:       v1beta1constants.SecretNameCASeed,
 		CommonName: "kubernetes",
 		CertType:   secretutils.CACert,
+		Validity:   &validity,
 	}, secretsmanager.Rotate(secretsmanager.KeepOld)); err != nil {
 		return err
 	}
