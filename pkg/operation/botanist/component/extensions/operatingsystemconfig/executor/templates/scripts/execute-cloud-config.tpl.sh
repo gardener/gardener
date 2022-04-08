@@ -15,7 +15,7 @@ PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE="{{ .pathLastDownloadedHyperkubeImage }}"
 PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBELET="{{ .pathHyperKubeImageUsedForLastCopyKubelet }}"
 PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBECTL="{{ .pathHyperKubeImageUsedForLastCopyKubectl }}"
 
-mkdir -p "{{ .pathDownloadsDirectory }}" "{{ .pathKubeletDirectory }}" "$PATH_HYPERKUBE_DOWNLOADS"
+mkdir -p "{{ .pathKubeletDirectory }}" "$PATH_HYPERKUBE_DOWNLOADS"
 
 {{ if .kubeletDataVolume -}}
 function format-data-device() {

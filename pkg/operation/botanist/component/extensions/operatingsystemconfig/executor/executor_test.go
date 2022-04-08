@@ -137,7 +137,7 @@ PATH_CLOUDCONFIG_DOWNLOADER_SERVER="/var/lib/cloud-config-downloader/credentials
 PATH_CLOUDCONFIG_DOWNLOADER_CA_CERT="/var/lib/cloud-config-downloader/credentials/ca.crt"
 PATH_CLOUDCONFIG="/var/lib/cloud-config-downloader/downloads/cloud_config"
 PATH_CLOUDCONFIG_OLD="${PATH_CLOUDCONFIG}.old"
-PATH_CHECKSUM="/var/lib/cloud-config-downloader/downloaded_checksum"
+PATH_CHECKSUM="/var/lib/cloud-config-downloader/downloads/execute-cloud-config-checksum"
 PATH_CCD_SCRIPT="/var/lib/cloud-config-downloader/download-cloud-config.sh"
 PATH_CCD_SCRIPT_CHECKSUM="/var/lib/cloud-config-downloader/download-cloud-config.md5"
 PATH_CCD_SCRIPT_CHECKSUM_OLD="${PATH_CCD_SCRIPT_CHECKSUM}.old"
@@ -148,7 +148,7 @@ PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE="/var/lib/cloud-config-downloader/downloads
 PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBELET="/opt/bin/hyperkube_image_used_for_last_copy_of_kubelet"
 PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBECTL="/opt/bin/hyperkube_image_used_for_last_copy_of_kubectl"
 
-mkdir -p "/var/lib/cloud-config-downloader/downloads" "/var/lib/kubelet" "$PATH_HYPERKUBE_DOWNLOADS"
+mkdir -p "/var/lib/kubelet" "$PATH_HYPERKUBE_DOWNLOADS"
 
 `
 

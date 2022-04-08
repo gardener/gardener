@@ -120,7 +120,6 @@ func Script(
 	values := map[string]interface{}{
 		"annotationKeyChecksum":                    AnnotationKeyChecksum,
 		"pathKubeletDirectory":                     kubelet.PathKubeletDirectory,
-		"pathDownloadsDirectory":                   downloader.PathDownloadsDirectory,
 		"pathBinaries":                             v1beta1constants.OperatingSystemConfigFilePathBinaries,
 		"pathBootstrapToken":                       downloader.PathBootstrapToken,
 		"pathCCDScript":                            downloader.PathCCDScript,
