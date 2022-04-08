@@ -146,7 +146,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 			It("should correctly set the condition ResourceApplied to Progressing", func() {
 				// finalizer is added so this resource can not be deleted once we remove it from the MangedResource
 				// referenced secret meanwhile adding a new resource in the refrenced secret set the ResourceApplied
-				// condition to progressing and stuck at this untill we remove finalizer from the old resource
+				// condition to progressing and stuck at this until we remove finalizer from the old resource
 				configMap.Finalizers = append(configMap.Finalizers, "kubernetes")
 				data, err := createSecretDataFromObject(configMap, "config-map.yaml")
 				Expect(err).ToNot(HaveOccurred())
@@ -355,7 +355,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 			Expect(testClient.Delete(ctx, secretForManagedResource)).To(Or(Succeed(), BeNotFoundError()))
 		})
 
-		It("controller running for default class should not reconcile ManagedResource of any other class", func() {
+		It("should not reconcile ManagedResource of any other class except the default class", func() {
 			Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 			Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
@@ -411,7 +411,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 		})
 
 		Context("#Ignore Mode", func() {
-			It("should remove the resource from the ManagedResource status", func() {
+			It("should not apply/create resources and remove the resource from the ManagedResource status having ignore mode annotation", func() {
 				configMap.SetAnnotations(map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore})
 
 				data, err := createSecretDataFromObject(configMap, "config-map.yaml")
@@ -550,7 +550,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 		})
 
 		Context("#Ignore", func() {
-			BeforeEach(func() {
+			It("should not revert any manual update on resource managed by ManagedResource when resource itself has ignore annotation", func() {
 				configMap.SetAnnotations(map[string]string{resourcesv1alpha1.Ignore: "true"})
 
 				data, err := createSecretDataFromObject(configMap, "config-map.yaml")
@@ -558,9 +558,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Expect(data).ToNot(BeNil())
 
 				secretForManagedResource.Data = data
-			})
 
-			JustBeforeEach(func() {
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
@@ -569,11 +567,39 @@ var _ = Describe("ManagedResource controller tests", func() {
 					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
 					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
 				}, time.Minute, time.Second).Should(BeTrue())
+
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+
+				configMap.Data = map[string]string{"foo": "bar"}
+				Expect(testClient.Update(ctx, configMap)).To(Succeed())
+
+				Eventually(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
+				}, time.Minute, time.Second).Should(BeTrue())
+
+				Consistently(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+					return configMap.Data != nil && configMap.Data["foo"] == "bar"
+				}, 10*time.Second, time.Second).Should(BeTrue())
 			})
 
-			It("should not revert any manual update on reosurce managed by ManagedResource", func() {
-				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Or(Succeed(), BeNoMatchError()))
+			It("should not revert any manual update on resources managed by ManagedResource when ManagedResource has ignore annotation", func() {
+				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
+				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
+				Eventually(func(g Gomega) bool {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
+				}, time.Minute, time.Second).Should(BeTrue())
+
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				managedResource.SetAnnotations(map[string]string{resourcesv1alpha1.Ignore: "true"})
+				Expect(testClient.Update(ctx, managedResource)).To(Succeed())
+
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
 				configMap.Data = map[string]string{"foo": "bar"}
 				Expect(testClient.Update(ctx, configMap)).To(Succeed())
 
@@ -665,7 +691,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 		})
 
 		Context("Preserve Replicas", func() {
-			It("should not preserve changes in replica if the resource don't have annotation", func() {
+			It("should not preserve changes in the number of replicas if the resource don't have preserve-replicas annotation", func() {
 				data, err := createSecretDataFromObject(deployment, "deployment.yaml")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(data).ToNot(BeNil())
@@ -694,7 +720,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				}, time.Minute, time.Second).Should(BeTrue())
 			})
 
-			It("should preserve changes in replica if the resource has annotation", func() {
+			It("should preserve changes in the number of replicas if the resource has preserve-replicas annotation", func() {
 				deployment.SetAnnotations(map[string]string{resourcesv1alpha1.PreserveReplicas: "true"})
 				data, err := createSecretDataFromObject(deployment, "deployment.yaml")
 				Expect(err).ToNot(HaveOccurred())
@@ -756,7 +782,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				}
 			})
 
-			It("should not preserve changes in resource requests and limits in Pod if the resource don't have annotation", func() {
+			It("should not preserve changes in resource requests and limits in Pod if the resource doesn't have preserve-resources annotation", func() {
 				data, err := createSecretDataFromObject(deployment, "deployment.yaml")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(data).ToNot(BeNil())
@@ -785,7 +811,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				}, time.Minute, time.Second).Should(BeTrue())
 			})
 
-			It("should preserve changes in resource requests and limits in Pod if the resource has annotation", func() {
+			It("should preserve changes in resource requests and limits in Pod if the resource has preserve-resources annotation", func() {
 				deployment.SetAnnotations(map[string]string{resourcesv1alpha1.PreserveResources: "true"})
 				data, err := createSecretDataFromObject(deployment, "deployment.yaml")
 				Expect(err).ToNot(HaveOccurred())
