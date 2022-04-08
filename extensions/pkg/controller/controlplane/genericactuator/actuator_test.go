@@ -36,8 +36,6 @@ import (
 	mocksecretsutil "github.com/gardener/gardener/pkg/utils/secrets/mock"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -52,6 +50,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 const (
@@ -258,10 +259,8 @@ var _ = Describe("Actuator", func() {
 			"replicas": 1,
 		}
 
-		shootAccessSecretsFunc             func(string) []*gutil.ShootAccessSecret
-		legacySecretNamesToCleanup         []string
-		exposureShootAccessSecretsFunc     func(string) []*gutil.ShootAccessSecret
-		legacyExposureSecretNamesToCleanup []string
+		shootAccessSecretsFunc         func(string) []*gutil.ShootAccessSecret
+		exposureShootAccessSecretsFunc func(string) []*gutil.ShootAccessSecret
 
 		errNotFound = &apierrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}}
 		logger      = log.Log.WithName("test")
@@ -278,11 +277,9 @@ var _ = Describe("Actuator", func() {
 		shootAccessSecretsFunc = func(namespace string) []*gutil.ShootAccessSecret {
 			return []*gutil.ShootAccessSecret{gutil.NewShootAccessSecret("new-cp", namespace)}
 		}
-		legacySecretNamesToCleanup = []string{"legacy-cp"}
 		exposureShootAccessSecretsFunc = func(namespace string) []*gutil.ShootAccessSecret {
 			return []*gutil.ShootAccessSecret{gutil.NewShootAccessSecret("new-cp-exposure", namespace)}
 		}
-		legacyExposureSecretNamesToCleanup = []string{"legacy-cp-exposure"}
 	})
 
 	AfterEach(func() {
@@ -395,10 +392,9 @@ var _ = Describe("Actuator", func() {
 						Type: corev1.SecretTypeOpaque,
 					}))
 				})
-			c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: legacySecretNamesToCleanup[0], Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(providerName, secrets, shootAccessSecretsFunc, legacySecretNamesToCleanup, nil, nil, nil, configChart, ccmChart, ccmShootChart, cpShootCRDsChart, storageClassesChart, nil, vp, crf, imageVector, configName, webhooks, webhookServerPort, logger)
+			a := NewActuator(providerName, secrets, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, ccmShootChart, cpShootCRDsChart, storageClassesChart, nil, vp, crf, imageVector, configName, webhooks, webhookServerPort, logger)
 			err := a.(inject.Client).InjectClient(c)
 			Expect(err).NotTo(HaveOccurred())
 			a.(*actuator).gardenerClientset = gardenerClientset
@@ -458,10 +454,9 @@ var _ = Describe("Actuator", func() {
 
 			// Handle shoot access secrets and legacy secret cleanup
 			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
-			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: legacySecretNamesToCleanup[0], Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(providerName, secrets, shootAccessSecretsFunc, legacySecretNamesToCleanup, nil, nil, nil, configChart, ccmChart, nil, cpShootCRDsChart, nil, nil, nil, nil, nil, configName, webhooks, webhookServerPort, logger)
+			a := NewActuator(providerName, secrets, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, nil, cpShootCRDsChart, nil, nil, nil, nil, nil, configName, webhooks, webhookServerPort, logger)
 			Expect(a.(inject.Client).InjectClient(client)).To(Succeed())
 
 			// Call Delete method and check the result
@@ -512,10 +507,9 @@ var _ = Describe("Actuator", func() {
 						Type: corev1.SecretTypeOpaque,
 					}))
 				})
-			c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: legacyExposureSecretNamesToCleanup[0], Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(providerName, nil, nil, nil, exposureSecrets, exposureShootAccessSecretsFunc, legacyExposureSecretNamesToCleanup, nil, nil, nil, nil, nil, cpExposureChart, vp, nil, imageVector, "", nil, 0, logger)
+			a := NewActuator(providerName, nil, nil, exposureSecrets, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, vp, nil, imageVector, "", nil, 0, logger)
 			Expect(a.(inject.Client).InjectClient(c)).To(Succeed())
 			a.(*actuator).gardenerClientset = gardenerClientset
 			a.(*actuator).chartApplier = chartApplier
@@ -542,10 +536,9 @@ var _ = Describe("Actuator", func() {
 
 			// Handle shoot access secrets and legacy secret cleanup
 			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: exposureShootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
-			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: legacyExposureSecretNamesToCleanup[0], Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(providerName, nil, nil, nil, exposureSecrets, exposureShootAccessSecretsFunc, legacyExposureSecretNamesToCleanup, nil, nil, nil, nil, nil, cpExposureChart, nil, nil, nil, "", nil, 0, logger)
+			a := NewActuator(providerName, nil, nil, exposureSecrets, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, nil, nil, nil, "", nil, 0, logger)
 			Expect(a.(inject.Client).InjectClient(client)).To(Succeed())
 
 			// Call Delete method and check the result

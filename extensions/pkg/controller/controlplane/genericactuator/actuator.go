@@ -73,8 +73,8 @@ type ValuesProvider interface {
 // the values provided by the given values provider.
 func NewActuator(
 	providerName string,
-	secrets secretutil.Interface, shootAccessSecrets func(namespace string) []*gutil.ShootAccessSecret, legacySecretNamesToCleanup []string,
-	exposureSecrets secretutil.Interface, exposureShootAccessSecrets func(namespace string) []*gutil.ShootAccessSecret, legacyExposureSecretNamesToCleanup []string,
+	secrets secretutil.Interface, shootAccessSecrets func(namespace string) []*gutil.ShootAccessSecret,
+	exposureSecrets secretutil.Interface, exposureShootAccessSecrets func(namespace string) []*gutil.ShootAccessSecret,
 	configChart, controlPlaneChart, controlPlaneShootChart, controlPlaneShootCRDsChart, storageClassesChart, controlPlaneExposureChart chart.Interface,
 	vp ValuesProvider,
 	chartRendererFactory extensionscontroller.ChartRendererFactory,
@@ -87,13 +87,11 @@ func NewActuator(
 	return &actuator{
 		providerName: providerName,
 
-		secrets:                    secrets,
-		shootAccessSecretsFunc:     shootAccessSecrets,
-		legacySecretNamesToCleanup: legacySecretNamesToCleanup,
+		secrets:                secrets,
+		shootAccessSecretsFunc: shootAccessSecrets,
 
-		exposureSecrets:                    exposureSecrets,
-		exposureShootAccessSecretsFunc:     exposureShootAccessSecrets,
-		legacyExposureSecretNamesToCleanup: legacyExposureSecretNamesToCleanup,
+		exposureSecrets:                exposureSecrets,
+		exposureShootAccessSecretsFunc: exposureShootAccessSecrets,
 
 		configChart:                configChart,
 		controlPlaneChart:          controlPlaneChart,
@@ -116,14 +114,12 @@ type actuator struct {
 	providerName string
 
 	// Deprecated: Use 'shootAccessSecretsFunc' instead.
-	secrets                    secretutil.Interface
-	shootAccessSecretsFunc     func(namespace string) []*gutil.ShootAccessSecret
-	legacySecretNamesToCleanup []string
+	secrets                secretutil.Interface
+	shootAccessSecretsFunc func(namespace string) []*gutil.ShootAccessSecret
 
 	// Deprecated: Use 'exposureShootAccessSecretsFunc' instead.
-	exposureSecrets                    secretutil.Interface
-	exposureShootAccessSecretsFunc     func(namespace string) []*gutil.ShootAccessSecret
-	legacyExposureSecretNamesToCleanup []string
+	exposureSecrets                secretutil.Interface
+	exposureShootAccessSecretsFunc func(namespace string) []*gutil.ShootAccessSecret
 
 	configChart                chart.Interface
 	controlPlaneChart          chart.Interface
@@ -240,12 +236,6 @@ func (a *actuator) reconcileControlPlaneExposure(
 	version := cluster.Shoot.Spec.Kubernetes.Version
 	if err := a.controlPlaneExposureChart.Apply(ctx, a.chartApplier, cp.Namespace, a.imageVector, a.gardenerClientset.Version(), version, values); err != nil {
 		return false, fmt.Errorf("could not apply control plane exposure chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
-	}
-
-	for _, name := range a.legacyExposureSecretNamesToCleanup {
-		if err := kutil.DeleteObject(ctx, a.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: cp.Namespace}}); err != nil {
-			return false, fmt.Errorf("could not delete legacy control plane exposure secret '%s' for controlplane '%s': %w", name, kutil.ObjectName(cp), err)
-		}
 	}
 
 	return false, nil
@@ -391,12 +381,6 @@ func (a *actuator) reconcileControlPlane(
 		}
 	}
 
-	for _, name := range a.legacySecretNamesToCleanup {
-		if err := kutil.DeleteObject(ctx, a.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: cp.Namespace}}); err != nil {
-			return false, fmt.Errorf("could not delete legacy secret '%s' for controlplane '%s': %w", name, kutil.ObjectName(cp), err)
-		}
-	}
-
 	return requeue, nil
 }
 
@@ -441,12 +425,6 @@ func (a *actuator) deleteControlPlaneExposure(
 			if err := kutil.DeleteObject(ctx, a.client, shootAccessSecret.Secret); err != nil {
 				return fmt.Errorf("could not delete control plane exposure shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kutil.ObjectName(cp), err)
 			}
-		}
-	}
-
-	for _, name := range a.legacyExposureSecretNamesToCleanup {
-		if err := kutil.DeleteObject(ctx, a.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: cp.Namespace}}); err != nil {
-			return fmt.Errorf("could not delete control plane exposure legacy secret '%s' for controlplane '%s': %w", name, kutil.ObjectName(cp), err)
 		}
 	}
 
@@ -521,12 +499,6 @@ func (a *actuator) deleteControlPlane(
 			if err := kutil.DeleteObject(ctx, a.client, shootAccessSecret.Secret); err != nil {
 				return fmt.Errorf("could not delete shoot access secret '%s' for controlplane '%s': %w", shootAccessSecret.Secret.Name, kutil.ObjectName(cp), err)
 			}
-		}
-	}
-
-	for _, name := range a.legacySecretNamesToCleanup {
-		if err := kutil.DeleteObject(ctx, a.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: cp.Namespace}}); err != nil {
-			return fmt.Errorf("could not delete legacy secret '%s' for controlplane '%s': %w", name, kutil.ObjectName(cp), err)
 		}
 	}
 
