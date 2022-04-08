@@ -53,7 +53,17 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 		validUntilTime = pointer.String(unixTime(m.clock.Now().Add(options.Validity)))
 	}
 
-	objectMeta, err := ObjectMeta(m.namespace, m.identity, config, m.lastRotationInitiationTimes[config.GetName()], validUntilTime, options.signingCAChecksum, &options.Persist, bundleFor)
+	objectMeta, err := ObjectMeta(
+		m.namespace,
+		m.identity,
+		config,
+		options.IgnoreConfigChecksumForCASecretName,
+		m.lastRotationInitiationTimes[config.GetName()],
+		validUntilTime,
+		options.signingCAChecksum,
+		&options.Persist,
+		bundleFor,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -432,6 +442,9 @@ type GenerateOptions struct {
 	IgnoreOldSecrets bool
 	// Validity specifies for how long the secret should be valid.
 	Validity time.Duration
+	// IgnoreConfigChecksumForCASecretName specifies whether the secret config checksum should be ignored when
+	// computing the secret name for CA secrets.
+	IgnoreConfigChecksumForCASecretName bool
 
 	signingCAChecksum *string
 	isBundleSecret    bool
@@ -528,6 +541,15 @@ func IgnoreOldSecrets() GenerateOption {
 func Validity(v time.Duration) GenerateOption {
 	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
 		options.Validity = v
+		return nil
+	}
+}
+
+// IgnoreConfigChecksumForCASecretName returns a function which sets the 'IgnoreConfigChecksumForCASecretName' field to
+// true.
+func IgnoreConfigChecksumForCASecretName() GenerateOption {
+	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
+		options.IgnoreConfigChecksumForCASecretName = true
 		return nil
 	}
 }

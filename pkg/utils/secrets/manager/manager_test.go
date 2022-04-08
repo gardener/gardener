@@ -253,43 +253,31 @@ var _ = Describe("Manager", func() {
 			lastRotationInitiationTime = "1646060228"
 		)
 
-		It("should generate the expected object meta for a never-rotated CA cert secret", func() {
-			config := &secretutils.CertificateSecretConfig{Name: configName}
+		DescribeTable("check different label options",
+			func(ignoreChecksum bool, expectedName string, lastRotationInitiationTime string) {
+				config := &secretutils.CertificateSecretConfig{Name: configName}
 
-			meta, err := ObjectMeta(namespace, "test", config, "", nil, nil, nil, nil)
-			Expect(err).NotTo(HaveOccurred())
+				meta, err := ObjectMeta(namespace, "test", config, ignoreChecksum, lastRotationInitiationTime, nil, nil, nil, nil)
+				Expect(err).NotTo(HaveOccurred())
 
-			Expect(meta).To(Equal(metav1.ObjectMeta{
-				Name:      configName,
-				Namespace: namespace,
-				Labels: map[string]string{
-					"name":                          configName,
-					"managed-by":                    "secrets-manager",
-					"manager-identity":              "test",
-					"checksum-of-config":            "1645436262831067767",
-					"last-rotation-initiation-time": "",
-				},
-			}))
-		})
+				Expect(meta).To(Equal(metav1.ObjectMeta{
+					Name:      expectedName,
+					Namespace: namespace,
+					Labels: map[string]string{
+						"name":                          configName,
+						"managed-by":                    "secrets-manager",
+						"manager-identity":              "test",
+						"checksum-of-config":            "1645436262831067767",
+						"last-rotation-initiation-time": lastRotationInitiationTime,
+					},
+				}))
+			},
 
-		It("should generate the expected object meta for a rotated CA cert secret", func() {
-			config := &secretutils.CertificateSecretConfig{Name: configName}
-
-			meta, err := ObjectMeta(namespace, "test", config, lastRotationInitiationTime, nil, nil, nil, nil)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(meta).To(Equal(metav1.ObjectMeta{
-				Name:      configName + "-76711",
-				Namespace: namespace,
-				Labels: map[string]string{
-					"name":                          configName,
-					"managed-by":                    "secrets-manager",
-					"manager-identity":              "test",
-					"checksum-of-config":            "1645436262831067767",
-					"last-rotation-initiation-time": "1646060228",
-				},
-			}))
-		})
+			Entry("config checksum ignored, no rotation", true, configName, ""),
+			Entry("config checksum ignored, rotation", true, configName+"-76711", lastRotationInitiationTime),
+			Entry("config checksum considered, no rotation", false, configName+"-fd0a3f24", ""),
+			Entry("config checksum considered, rotation", false, configName+"-fd0a3f24-76711", lastRotationInitiationTime),
+		)
 
 		DescribeTable("check different label options",
 			func(nameInfix string, signingCAChecksum *string, validUntilTime *string, persist *bool, bundleFor *string, extraLabels map[string]string) {
@@ -298,7 +286,7 @@ var _ = Describe("Manager", func() {
 					SigningCA: &secretutils.Certificate{},
 				}
 
-				meta, err := ObjectMeta(namespace, "test", config, lastRotationInitiationTime, validUntilTime, signingCAChecksum, persist, bundleFor)
+				meta, err := ObjectMeta(namespace, "test", config, false, lastRotationInitiationTime, validUntilTime, signingCAChecksum, persist, bundleFor)
 				Expect(err).NotTo(HaveOccurred())
 
 				labels := map[string]string{

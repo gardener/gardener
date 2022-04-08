@@ -246,6 +246,7 @@ var _ = Describe("Generate", func() {
 				By("generating new secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
+				Expect(secret.Name).To(Equal(name + "-cb09286a"))
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
 				By("finding created bundle secret")
@@ -297,6 +298,14 @@ var _ = Describe("Generate", func() {
 					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
 					HaveKeyWithValue("valid-until-time", strconv.FormatInt(fakeClock.Now().AddDate(10, 0, 0).Unix(), 10)),
 				))
+			})
+
+			It("should generate a new CA secret and ignore the config checksum for its name", func() {
+				By("generating new secret")
+				secret, err := m.Generate(ctx, config, IgnoreConfigChecksumForCASecretName())
+				Expect(err).NotTo(HaveOccurred())
+				expectSecretWasCreated(ctx, fakeClient, secret)
+				Expect(secret.Name).To(Equal(name))
 			})
 
 			It("should rotate a CA secret and add old and new to the corresponding bundle", func() {

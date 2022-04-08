@@ -269,6 +269,7 @@ func ObjectMeta(
 	namespace string,
 	managerIdentity string,
 	config secretutils.ConfigInterface,
+	ignoreConfigChecksumForCASecretName bool,
 	lastRotationInitiationTime string,
 	validUntilTime *string,
 	signingCAChecksum *string,
@@ -308,20 +309,19 @@ func ObjectMeta(
 	}
 
 	return metav1.ObjectMeta{
-		Name:      computeSecretName(config, labels),
+		Name:      computeSecretName(config, labels, ignoreConfigChecksumForCASecretName),
 		Namespace: namespace,
 		Labels:    labels,
 	}, nil
 }
 
-func computeSecretName(config secretutils.ConfigInterface, labels map[string]string) string {
+func computeSecretName(config secretutils.ConfigInterface, labels map[string]string, ignoreConfigChecksumForCASecretName bool) string {
 	name := config.GetName()
 
-	// For backwards-compatibility we need to keep the static names of the CA secrets so that components relying on them
-	// don't break.
-	// TODO(rfranzke): The outer constraint can be removed in the future once we adapted all components relying on the
-	//  constant CA secret names, i.e., in this case we can always use 'GenerateName'.
-	if cfg, ok := config.(*secretutils.CertificateSecretConfig); !ok || cfg.SigningCA != nil {
+	// For backwards-compatibility, we might need to keep the static names of the CA secrets so that external components
+	// (like extensions, etc.) relying on them don't break. This is why it is possible to opt out of the fact that the
+	// config checksum is considered for the name computation.
+	if cfg, ok := config.(*secretutils.CertificateSecretConfig); !ok || cfg.SigningCA != nil || !ignoreConfigChecksumForCASecretName {
 		if infix := labels[LabelKeyChecksumConfig] + labels[LabelKeyChecksumSigningCA]; len(infix) > 0 {
 			name += "-" + utils.ComputeSHA256Hex([]byte(infix))[:8]
 		}
