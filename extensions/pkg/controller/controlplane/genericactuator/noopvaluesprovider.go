@@ -19,6 +19,7 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 // NoopValuesProvider provides no-op implementation of ValuesProvider. This can be anonymously composed by actual ValuesProviders for convenience.
@@ -32,12 +33,12 @@ func (vp NoopValuesProvider) GetConfigChartValues(context.Context, *extensionsv1
 }
 
 // GetControlPlaneChartValues returns the values for the control plane chart applied by this actuator.
-func (vp NoopValuesProvider) GetControlPlaneChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster, map[string]string, bool) (map[string]interface{}, error) {
+func (vp NoopValuesProvider) GetControlPlaneChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster, secretsmanager.Reader, map[string]string, bool) (map[string]interface{}, error) {
 	return nil, nil
 }
 
 // GetControlPlaneShootChartValues returns the values for the control plane shoot chart applied by this actuator.
-func (vp NoopValuesProvider) GetControlPlaneShootChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster, map[string]string) (map[string]interface{}, error) {
+func (vp NoopValuesProvider) GetControlPlaneShootChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster, secretsmanager.Reader, map[string]string) (map[string]interface{}, error) {
 	return nil, nil
 }
 
@@ -52,6 +53,6 @@ func (vp NoopValuesProvider) GetStorageClassesChartValues(context.Context, *exte
 }
 
 // GetControlPlaneExposureChartValues returns the values for the control plane exposure chart applied by this actuator.
-func (vp NoopValuesProvider) GetControlPlaneExposureChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster, map[string]string) (map[string]interface{}, error) {
+func (vp NoopValuesProvider) GetControlPlaneExposureChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster, secretsmanager.Reader, map[string]string) (map[string]interface{}, error) {
 	return nil, nil
 }

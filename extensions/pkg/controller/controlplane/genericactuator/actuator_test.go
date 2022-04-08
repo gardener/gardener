@@ -16,12 +16,22 @@ package genericactuator
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
+	"strings"
 	"testing"
+	"time"
+
+	"github.com/go-logr/logr"
+	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
+	"k8s.io/apimachinery/pkg/util/clock"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	mockgenericactuator "github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator/mock"
 	mockextensionscontroller "github.com/gardener/gardener/extensions/pkg/controller/mock"
+	extensionssecretsmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
 	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -33,7 +43,9 @@ import (
 	mockchartutil "github.com/gardener/gardener/pkg/utils/chart/mocks"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	mocksecretsutil "github.com/gardener/gardener/pkg/utils/secrets/mock"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/golang/mock/gomock"
@@ -60,6 +72,10 @@ const (
 	cloudProviderConfigName = "cloud-provider-config"
 	chartName               = "chartName"
 	renderedContent         = "renderedContent"
+	providerName            = "provider-test"
+
+	caNameControlPlane         = "ca-" + providerName + "-controlplane"
+	caNameControlPlaneExposure = caNameControlPlane + "-exposure"
 
 	seedVersion  = "1.20.0"
 	shootVersion = "1.20.0"
@@ -68,19 +84,29 @@ const (
 var (
 	vFalse, vTrue = false, true
 	pFalse, pTrue = &vFalse, &vTrue
+
+	fakeClock *clock.FakeClock
 )
 
-func TestControlplane(t *testing.T) {
+func TestControlPlane(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Controlplane Generic Actuator Suite")
+	RunSpecs(t, "ControlPlane Generic Actuator Suite")
 }
+
+var _ = BeforeSuite(func() {
+	DeferCleanup(test.WithVars(
+		&secretutils.GenerateRandomString, secretutils.FakeGenerateRandomString,
+		&secretutils.GenerateKey, secretutils.FakeGenerateKey,
+	))
+})
 
 var _ = Describe("Actuator", func() {
 	var (
-		ctrl *gomock.Controller
+		ctrl              *gomock.Controller
+		fakeClient        client.Client
+		newSecretsManager newSecretsManagerFunc
 
 		ctx               = context.TODO()
-		providerName      = "provider-test"
 		providerType      = "test"
 		webhookServerPort = 443
 
@@ -99,19 +125,6 @@ var _ = Describe("Actuator", func() {
 						Version: shootVersion,
 					},
 				},
-			},
-		}
-
-		deployedSecrets = map[string]*corev1.Secret{
-			"cloud-controller-manager": {
-				ObjectMeta: metav1.ObjectMeta{Name: "cloud-controller-manager", Namespace: namespace},
-				Data:       map[string][]byte{"a": []byte("b")},
-			},
-		}
-		deployedExposureSecrets = map[string]*corev1.Secret{
-			"lb-readvertiser": {
-				ObjectMeta: metav1.ObjectMeta{Name: "lb-readvertiser", Namespace: namespace},
-				Data:       map[string][]byte{"a": []byte("b")},
 			},
 		}
 
@@ -225,14 +238,17 @@ var _ = Describe("Actuator", func() {
 		checksums = map[string]string{
 			v1beta1constants.SecretNameCloudProvider: "8bafb35ff1ac60275d62e1cbd495aceb511fb354f74a20f7d06ecb48b3a68432",
 			cloudProviderConfigName:                  "08a7bc7fe8f59b055f173145e211760a83f02cf89635cef26ebb351378635606",
-			"cloud-controller-manager":               "3d791b164a808638da9a8df03924be2a41e34cd664e42231c00fe369e3588272",
+			caNameControlPlane:                       "bfcf386778c8d3313168d622fc1e2d28d9b6265759e3f505e3cffa5848206dd1",
+			"cloud-controller-manager":               "48b5661ff7d535ac5cb2c3e4efc47918cc702ff0ebf84772150310ebc3c943ac",
 		}
 		checksumsNoConfig = map[string]string{
 			v1beta1constants.SecretNameCloudProvider: "8bafb35ff1ac60275d62e1cbd495aceb511fb354f74a20f7d06ecb48b3a68432",
-			"cloud-controller-manager":               "3d791b164a808638da9a8df03924be2a41e34cd664e42231c00fe369e3588272",
+			caNameControlPlane:                       "bfcf386778c8d3313168d622fc1e2d28d9b6265759e3f505e3cffa5848206dd1",
+			"cloud-controller-manager":               "48b5661ff7d535ac5cb2c3e4efc47918cc702ff0ebf84772150310ebc3c943ac",
 		}
 		exposureChecksums = map[string]string{
-			"lb-readvertiser": "3d791b164a808638da9a8df03924be2a41e34cd664e42231c00fe369e3588272",
+			caNameControlPlaneExposure: "3162cd2e6ef1a654fb98ca96af809d7c3341de0e2fa95b64ce8b53accaf45e57",
+			"lb-readvertiser":          "81ef59b177361b751734e9d7540331a9110428d5c58f2c5334b45ac6c4ceb39f",
 		}
 
 		configChartValues = map[string]interface{}{
@@ -268,6 +284,15 @@ var _ = Describe("Actuator", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
+		fakeClient = fakeclient.NewClientBuilder().Build()
+		newSecretsManager = func(ctx context.Context, logger logr.Logger, clock clock.Clock, c client.Client, cluster *extensionscontroller.Cluster, identity string, secretConfigs []extensionssecretsmanager.SecretConfigWithOptions) (secretsmanager.Interface, error) {
+			// use fake clock and client, pass on the rest
+			return extensionssecretsmanager.SecretsManagerForCluster(ctx, logger, fakeClock, fakeClient, cluster, identity, secretConfigs)
+		}
+
+		deterministicReader := strings.NewReader(strings.Repeat("-", 10000))
+		DeferCleanup(test.WithVar(&rand.Reader, deterministicReader))
+		fakeClock = clock.NewFakeClock(time.Unix(1649848746, 0))
 
 		cp = &extensionsv1alpha1.ControlPlane{
 			ObjectMeta: metav1.ObjectMeta{Name: "control-plane", Namespace: namespace},
@@ -339,9 +364,7 @@ var _ = Describe("Actuator", func() {
 			crf := mockextensionscontroller.NewMockChartRendererFactory(ctrl)
 			crf.EXPECT().NewChartRendererForShoot(shootVersion).Return(chartRenderer, nil)
 
-			// Create mock secrets and charts
-			secrets := mocksecretsutil.NewMockInterface(ctrl)
-			secrets.EXPECT().Deploy(ctx, gomock.Any(), gardenerClientset, namespace).Return(deployedSecrets, nil)
+			// Create mock charts
 			var configChart chart.Interface
 			if configName != "" {
 				configChartMock := mockchartutil.NewMockInterface(ctrl)
@@ -366,8 +389,8 @@ var _ = Describe("Actuator", func() {
 			if configName != "" {
 				vp.EXPECT().GetConfigChartValues(ctx, cp, cluster).Return(configChartValues, nil)
 			}
-			vp.EXPECT().GetControlPlaneChartValues(ctx, cp, cluster, checksums, false).Return(controlPlaneChartValues, nil)
-			vp.EXPECT().GetControlPlaneShootChartValues(ctx, cp, cluster, checksums).Return(controlPlaneShootChartValues, nil)
+			vp.EXPECT().GetControlPlaneChartValues(ctx, cp, cluster, gomock.Any(), checksums, false).Return(controlPlaneChartValues, nil)
+			vp.EXPECT().GetControlPlaneShootChartValues(ctx, cp, cluster, gomock.Any(), checksums).Return(controlPlaneShootChartValues, nil)
 			if withShootCRDsChart {
 				vp.EXPECT().GetControlPlaneShootCRDsChartValues(ctx, cp, cluster).Return(controlPlaneShootCRDsChartValues, nil)
 			}
@@ -394,16 +417,22 @@ var _ = Describe("Actuator", func() {
 				})
 
 			// Create actuator
-			a := NewActuator(providerName, secrets, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, ccmShootChart, cpShootCRDsChart, storageClassesChart, nil, vp, crf, imageVector, configName, webhooks, webhookServerPort, logger)
+			a := NewActuator(providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, ccmShootChart, cpShootCRDsChart, storageClassesChart, nil, vp, crf, imageVector, configName, webhooks, webhookServerPort, logger)
 			err := a.(inject.Client).InjectClient(c)
 			Expect(err).NotTo(HaveOccurred())
 			a.(*actuator).gardenerClientset = gardenerClientset
 			a.(*actuator).chartApplier = chartApplier
+			a.(*actuator).newSecretsManager = newSecretsManager
 
 			// Call Reconcile method and check the result
 			requeue, err := a.Reconcile(ctx, cp, cluster)
 			Expect(requeue).To(Equal(false))
 			Expect(err).NotTo(HaveOccurred())
+
+			expectSecretsManagedBySecretsManager(fakeClient, "wanted secrets should get created",
+				"ca-provider-test-controlplane-b01ab5b3", "ca-provider-test-controlplane-bundle-264279f5",
+				"cloud-controller-manager-87d232df",
+			)
 		},
 		Entry("should deploy secrets and apply charts with correct parameters", cloudProviderConfigName, checksums, []admissionregistrationv1.MutatingWebhook{{}}, true),
 		Entry("should deploy secrets and apply charts with correct parameters (no config)", "", checksumsNoConfig, []admissionregistrationv1.MutatingWebhook{{}}, true),
@@ -433,9 +462,7 @@ var _ = Describe("Actuator", func() {
 			client.EXPECT().Get(gomock.Any(), resourceKeyStorageClassesChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deletedMRForStorageClassesChart.Name))
 			client.EXPECT().Get(gomock.Any(), resourceKeyCPShootChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deletedMRForCPShootChart.Name))
 
-			// Create mock secrets and charts
-			secrets := mocksecretsutil.NewMockInterface(ctrl)
-			secrets.EXPECT().Delete(ctx, gomock.Any(), namespace).Return(nil)
+			// Create mock charts
 			var configChart chart.Interface
 			if configName != "" {
 				configChartMock := mockchartutil.NewMockInterface(ctrl)
@@ -456,11 +483,14 @@ var _ = Describe("Actuator", func() {
 			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(providerName, secrets, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, nil, cpShootCRDsChart, nil, nil, nil, nil, nil, configName, webhooks, webhookServerPort, logger)
+			a := NewActuator(providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, nil, cpShootCRDsChart, nil, nil, nil, nil, nil, configName, webhooks, webhookServerPort, logger)
 			Expect(a.(inject.Client).InjectClient(client)).To(Succeed())
+			a.(*actuator).newSecretsManager = newSecretsManager
 
 			// Call Delete method and check the result
 			Expect(a.Delete(ctx, cp, cluster)).To(Succeed())
+
+			expectSecretsManagedBySecretsManager(fakeClient, "all secrets managed by SecretsManager should get cleaned up")
 		},
 		Entry("should delete secrets and charts", cloudProviderConfigName, []admissionregistrationv1.MutatingWebhook{{}}, true),
 		Entry("should delete secrets and charts (no config)", "", []admissionregistrationv1.MutatingWebhook{{}}, true),
@@ -478,15 +508,13 @@ var _ = Describe("Actuator", func() {
 			gardenerClientset.EXPECT().Version().Return(seedVersion)
 			chartApplier := mockkubernetes.NewMockChartApplier(ctrl)
 
-			// Create mock secrets and charts
-			exposureSecrets := mocksecretsutil.NewMockInterface(ctrl)
-			exposureSecrets.EXPECT().Deploy(ctx, gomock.Any(), gardenerClientset, namespace).Return(deployedExposureSecrets, nil)
+			// Create mock charts
 			cpExposureChart := mockchartutil.NewMockInterface(ctrl)
 			cpExposureChart.EXPECT().Apply(ctx, chartApplier, namespace, imageVector, seedVersion, shootVersion, controlPlaneExposureChartValues).Return(nil)
 
 			// Create mock values provider
 			vp := mockgenericactuator.NewMockValuesProvider(ctrl)
-			vp.EXPECT().GetControlPlaneExposureChartValues(ctx, cpExposure, cluster, exposureChecksums).Return(controlPlaneExposureChartValues, nil)
+			vp.EXPECT().GetControlPlaneExposureChartValues(ctx, cpExposure, cluster, gomock.Any(), exposureChecksums).Return(controlPlaneExposureChartValues, nil)
 
 			// Handle shoot access secrets and legacy secret cleanup
 			c.EXPECT().Get(ctx, kutil.Key(namespace, exposureShootAccessSecretsFunc(namespace)[0].Secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
@@ -509,15 +537,21 @@ var _ = Describe("Actuator", func() {
 				})
 
 			// Create actuator
-			a := NewActuator(providerName, nil, nil, exposureSecrets, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, vp, nil, imageVector, "", nil, 0, logger)
+			a := NewActuator(providerName, nil, nil, getSecretsConfigsExposure, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, vp, nil, imageVector, "", nil, 0, logger)
 			Expect(a.(inject.Client).InjectClient(c)).To(Succeed())
 			a.(*actuator).gardenerClientset = gardenerClientset
 			a.(*actuator).chartApplier = chartApplier
+			a.(*actuator).newSecretsManager = newSecretsManager
 
 			// Call Reconcile method and check the result
 			requeue, err := a.Reconcile(ctx, cpExposure, cluster)
 			Expect(requeue).To(Equal(false))
 			Expect(err).NotTo(HaveOccurred())
+
+			expectSecretsManagedBySecretsManager(fakeClient, "wanted secrets should get created",
+				"ca-provider-test-controlplane-exposure-708d12fb", "ca-provider-test-controlplane-exposure-bundle-fec10245",
+				"lb-readvertiser-29ec35bb",
+			)
 		},
 		Entry("should deploy secrets and apply charts with correct parameters"),
 	)
@@ -527,10 +561,7 @@ var _ = Describe("Actuator", func() {
 			// Create mock clients
 			client := mockclient.NewMockClient(ctrl)
 
-			// Create mock secrets and charts
-			exposureSecrets := mocksecretsutil.NewMockInterface(ctrl)
-			exposureSecrets.EXPECT().Delete(ctx, gomock.Any(), namespace).Return(nil)
-
+			// Create mock charts
 			cpExposureChart := mockchartutil.NewMockInterface(ctrl)
 			cpExposureChart.EXPECT().Delete(ctx, client, namespace).Return(nil)
 
@@ -538,11 +569,14 @@ var _ = Describe("Actuator", func() {
 			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: exposureShootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(providerName, nil, nil, exposureSecrets, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, nil, nil, nil, "", nil, 0, logger)
+			a := NewActuator(providerName, nil, nil, getSecretsConfigsExposure, exposureShootAccessSecretsFunc, nil, nil, nil, nil, nil, cpExposureChart, nil, nil, nil, "", nil, 0, logger)
 			Expect(a.(inject.Client).InjectClient(client)).To(Succeed())
+			a.(*actuator).newSecretsManager = newSecretsManager
 
 			// Call Delete method and check the result
 			Expect(a.Delete(ctx, cpExposure, cluster)).To(Succeed())
+
+			expectSecretsManagedBySecretsManager(fakeClient, "all secrets managed by SecretsManager should get cleaned up")
 		},
 		Entry("should delete secrets and charts"),
 	)
@@ -721,4 +755,78 @@ func computeClusterWithShoot(name string, shootSpec gardencorev1beta1.ShootSpec)
 			Shoot: runtime.RawExtension{Raw: shootJSON},
 		},
 	}
+}
+
+func getSecretsConfigs(namespace string) []extensionssecretsmanager.SecretConfigWithOptions {
+	return []extensionssecretsmanager.SecretConfigWithOptions{
+		{
+			Config: &secretutils.CertificateSecretConfig{
+				Name:       caNameControlPlane,
+				CommonName: caNameControlPlane,
+				CertType:   secretutils.CACert,
+				Clock:      fakeClock,
+			},
+			Options: []secretsmanager.GenerateOption{secretsmanager.Persist()},
+		},
+		{
+			Config: &secretutils.CertificateSecretConfig{
+				Name:       "cloud-controller-manager",
+				CommonName: "cloud-controller-manager",
+				DNSNames:   kutil.DNSNamesForService("cloud-controller-manager", namespace),
+				CertType:   secretutils.ServerCert,
+				Clock:      fakeClock,
+			},
+			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlane)},
+		},
+	}
+}
+
+func getSecretsConfigsExposure(namespace string) []extensionssecretsmanager.SecretConfigWithOptions {
+	return []extensionssecretsmanager.SecretConfigWithOptions{
+		{
+			Config: &secretutils.CertificateSecretConfig{
+				Name:       caNameControlPlaneExposure,
+				CommonName: caNameControlPlaneExposure,
+				CertType:   secretutils.CACert,
+				Clock:      fakeClock,
+			},
+			Options: []secretsmanager.GenerateOption{secretsmanager.Persist()},
+		},
+		{
+			Config: &secretutils.CertificateSecretConfig{
+				Name:       "lb-readvertiser",
+				CommonName: "lb-readvertiser",
+				DNSNames:   kutil.DNSNamesForService("lb-readvertiser", namespace),
+				CertType:   secretutils.ServerCert,
+				Clock:      fakeClock,
+			},
+			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlaneExposure)},
+		},
+	}
+}
+
+var (
+	objectIdentifier = Identifier(func(obj interface{}) string {
+		switch o := obj.(type) {
+		case corev1.Secret:
+			return o.GetName()
+		}
+		return obj.(client.Object).GetName()
+	})
+	alwaysMatch = And()
+)
+
+func consistOfObjects(names ...string) gomegatypes.GomegaMatcher {
+	elements := make(Elements, len(names))
+	for _, name := range names {
+		elements[name] = alwaysMatch
+	}
+
+	return MatchAllElements(objectIdentifier, elements)
+}
+
+func expectSecretsManagedBySecretsManager(c client.Reader, description string, secretNames ...string) {
+	secretList := &corev1.SecretList{}
+	ExpectWithOffset(1, c.List(context.Background(), secretList, client.MatchingLabels{"managed-by": "secrets-manager"})).To(Succeed())
+	ExpectWithOffset(1, secretList.Items).To(consistOfObjects(secretNames...), description)
 }
