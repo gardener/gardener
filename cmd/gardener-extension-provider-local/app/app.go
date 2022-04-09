@@ -33,7 +33,6 @@ import (
 	localdnsrecord "github.com/gardener/gardener/pkg/provider-local/controller/dnsrecord"
 	localhealthcheck "github.com/gardener/gardener/pkg/provider-local/controller/healthcheck"
 	localinfrastructure "github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
-	localnetwork "github.com/gardener/gardener/pkg/provider-local/controller/network"
 	localnode "github.com/gardener/gardener/pkg/provider-local/controller/node"
 	localservice "github.com/gardener/gardener/pkg/provider-local/controller/service"
 	localworker "github.com/gardener/gardener/pkg/provider-local/controller/worker"
@@ -119,11 +118,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			MaxConcurrentReconciles: 5,
 		}
 
-		// options for the network controller
-		networkCtrlOpts = &controllercmd.ControllerOptions{
-			MaxConcurrentReconciles: 5,
-		}
-
 		// options for the infrastructure controller
 		infraCtrlOpts = &controllercmd.ControllerOptions{
 			MaxConcurrentReconciles: 5,
@@ -160,7 +154,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			controllercmd.PrefixOption("service-", serviceCtrlOpts),
 			controllercmd.PrefixOption("node-", nodeCtrlOpts),
 			controllercmd.PrefixOption("operatingsystemconfig-", operatingSystemConfigCtrlOpts),
-			controllercmd.PrefixOption("network-", networkCtrlOpts),
 			controllercmd.PrefixOption("healthcheck-", healthCheckCtrlOpts),
 			controllerSwitches,
 			reconcileOpts,
@@ -223,7 +216,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			dnsRecordCtrlOpts.Completed().Apply(&localdnsrecord.DefaultAddOptions.Controller)
 			healthCheckCtrlOpts.Completed().Apply(&localhealthcheck.DefaultAddOptions.Controller)
 			infraCtrlOpts.Completed().Apply(&localinfrastructure.DefaultAddOptions.Controller)
-			networkCtrlOpts.Completed().Apply(&localnetwork.DefaultAddOptions.Controller)
 			operatingSystemConfigCtrlOpts.Completed().Apply(&oscommon.DefaultAddOptions.Controller)
 			serviceCtrlOpts.Completed().Apply(&localservice.DefaultAddOptions)
 			nodeCtrlOpts.Completed().Apply(&localnode.DefaultAddOptions)
@@ -232,7 +224,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			reconcileOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation)
 			reconcileOpts.Completed().Apply(&localdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation)
 			reconcileOpts.Completed().Apply(&localinfrastructure.DefaultAddOptions.IgnoreOperationAnnotation)
-			reconcileOpts.Completed().Apply(&localnetwork.DefaultAddOptions.IgnoreOperationAnnotation)
 			reconcileOpts.Completed().Apply(&oscommon.DefaultAddOptions.IgnoreOperationAnnotation)
 			reconcileOpts.Completed().Apply(&localworker.DefaultAddOptions.IgnoreOperationAnnotation)
 

@@ -28,5 +28,6 @@ nodes:
         readOnly: true
         pathType: File
 networking:
+  disableDefaultCNI: true # disable kindnet since we install calico for network policy support
   podSubnet: 10.1.0.0/16
   serviceSubnet: 10.2.0.0/16

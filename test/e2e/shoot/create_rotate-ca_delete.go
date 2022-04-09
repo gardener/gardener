@@ -35,7 +35,7 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 	f := defaultShootCreationFramework()
 	f.Shoot = defaultShoot("rotate-ca-")
 
-	It("Create Shoot, Rotate CA and Delete Shoot", Pending, Label("ca-rotation"), func() {
+	It("Create Shoot, Rotate CA and Delete Shoot", Label("ca-rotation"), func() {
 		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
 
