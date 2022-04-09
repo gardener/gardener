@@ -16,261 +16,281 @@ package extensionresources
 
 import (
 	"context"
-	"fmt"
-	"net/http"
-	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	druidvalidation "github.com/gardener/etcd-druid/api/validation"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/extensions/validation"
 
-	"github.com/go-logr/logr"
-	admissionv1 "k8s.io/api/admission/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
-	// WebhookPath is the HTTP handler path for this admission webhook handler.
-	WebhookPath = "/webhooks/validate-extension-resources"
-
-	// HandlerName is the name of this admission webhook handler.
-	HandlerName = "extension_resources"
+	// BackupBucketWebhookPath is the HTTP handler path for this admission webhook handler for BackupBucket.
+	BackupBucketWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-backupbucket"
+	// BackupEntryWebhookPath is the HTTP handler path for this admission webhook handler for BackupEntry.
+	BackupEntryWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-backupentry"
+	// BastionWebhookPath is the HTTP handler path for this admission webhook handler for Bastion.
+	BastionWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-bastion"
+	// ContainerRuntimeWebhookPath is the HTTP handler path for this admission webhook handler for ContainerRuntime.
+	ContainerRuntimeWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-containerruntime"
+	// ControlPlaneWebhookPath is the HTTP handler path for this admission webhook handler for ControlPlane.
+	ControlPlaneWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-controlplane"
+	// DNSRecordWebhookPath is the HTTP handler path for this admission webhook handler DNSRecord.
+	DNSRecordWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-dnsrecord"
+	// EtcdWebhookPath is the HTTP handler path for this admission webhook handler for Etcd.
+	EtcdWebhookPath = "/validate-druid-gardener-cloud-v1alpha1-etcd"
+	// ExtensionWebhookPath is the HTTP handler path for this admission webhook handler for Extension.
+	ExtensionWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-extension"
+	// InfrastructureWebhookPath is the HTTP handler path for this admission webhook handler Infrastructure.
+	InfrastructureWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-infrastructure"
+	// NetworkWebhookPath is the HTTP handler path for this admission webhook handler for Network.
+	NetworkWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-network"
+	// OperatingSystemConfigWebhookPath is the HTTP handler path for this admission webhook handler for OperatingSystemConfig.
+	OperatingSystemConfigWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-operatingsystemconfig"
+	// WorkerWebhookPath is the HTTP handler path for this admission webhook handler for Worker.
+	WorkerWebhookPath = "/validate-extensions-gardener-cloud-v1alpha1-worker"
 )
 
-// New creates a new webhook handler validating CREATE and UPDATE requests for extension resources.
-func New(logger logr.Logger) *handler {
-	artifacts := map[metav1.GroupVersionResource]*artifact{
-		gvr("backupbuckets"): {
-			newObject: func() client.Object { return new(extensionsv1alpha1.BackupBucket) },
-			validateCreateResource: func(n, _ client.Object) field.ErrorList {
-				return validation.ValidateBackupBucket(n.(*extensionsv1alpha1.BackupBucket))
-			},
-			validateUpdateResource: func(n, o client.Object) field.ErrorList {
-				return validation.ValidateBackupBucketUpdate(n.(*extensionsv1alpha1.BackupBucket), o.(*extensionsv1alpha1.BackupBucket))
-			},
-		},
-
-		gvr("backupentries"): {
-			newObject: func() client.Object { return new(extensionsv1alpha1.BackupEntry) },
-			validateCreateResource: func(n, o client.Object) field.ErrorList {
-				return validation.ValidateBackupEntry(n.(*extensionsv1alpha1.BackupEntry))
-			},
-			validateUpdateResource: func(n, o client.Object) field.ErrorList {
-				return validation.ValidateBackupEntryUpdate(n.(*extensionsv1alpha1.BackupEntry), o.(*extensionsv1alpha1.BackupEntry))
-			},
-		},
-
-		gvr("bastions"): {
-			newObject: func() client.Object { return new(extensionsv1alpha1.Bastion) },
-			validateCreateResource: func(n, o client.Object) field.ErrorList {
-				return validation.ValidateBastion(n.(*extensionsv1alpha1.Bastion))
-			},
-			validateUpdateResource: func(n, o client.Object) field.ErrorList {
-				return validation.ValidateBastionUpdate(n.(*extensionsv1alpha1.Bastion), o.(*extensionsv1alpha1.Bastion))
-			},
-		},
-
-		gvr("containerruntimes"): {
-			newObject: func() client.Object { return new(extensionsv1alpha1.ContainerRuntime) },
-			validateCreateResource: func(n, o client.Object) field.ErrorList {
-				return validation.ValidateContainerRuntime(n.(*extensionsv1alpha1.ContainerRuntime))
-			},
-			validateUpdateResource: func(n, o client.Object) field.ErrorList {
-				return validation.ValidateContainerRuntimeUpdate(n.(*extensionsv1alpha1.ContainerRuntime), o.(*extensionsv1alpha1.ContainerRuntime))
-			},
-		},
-
-		gvr("controlplanes"): {
-			newObject: func() client.Object { return new(extensionsv1alpha1.ControlPlane) },
-			validateCreateResource: func(n, _ client.Object) field.ErrorList {
-				return validation.ValidateControlPlane(n.(*extensionsv1alpha1.ControlPlane))
-			},
-			validateUpdateResource: func(n, o client.Object) field.ErrorList {
-				return validation.ValidateControlPlaneUpdate(n.(*extensionsv1alpha1.ControlPlane), o.(*extensionsv1alpha1.ControlPlane))
-			},
-		},
-
-		gvr("dnsrecords"): {
-			newObject: func() client.Object { return new(extensionsv1alpha1.DNSRecord) },
-			validateCreateResource: func(n, _ client.Object) field.ErrorList {
-				return validation.ValidateDNSRecord(n.(*extensionsv1alpha1.DNSRecord))
-			},
-			validateUpdateResource: func(n, o client.Object) field.ErrorList {
-				return validation.ValidateDNSRecordUpdate(n.(*extensionsv1alpha1.DNSRecord), o.(*extensionsv1alpha1.DNSRecord))
-			},
-		},
-
-		gvrDruid("etcds"): {
-			newObject: func() client.Object { return new(druidv1alpha1.Etcd) },
-			validateCreateResource: func(n, _ client.Object) field.ErrorList {
-				return druidvalidation.ValidateEtcd(n.(*druidv1alpha1.Etcd))
-			},
-			validateUpdateResource: func(n, o client.Object) field.ErrorList {
-				return druidvalidation.ValidateEtcdUpdate(n.(*druidv1alpha1.Etcd), o.(*druidv1alpha1.Etcd))
-			},
-		},
-
-		gvr("extensions"): {
-			newObject: func() client.Object { return new(extensionsv1alpha1.Extension) },
-			validateCreateResource: func(n, _ client.Object) field.ErrorList {
-				return validation.ValidateExtension(n.(*extensionsv1alpha1.Extension))
-			},
-			validateUpdateResource: func(n, o client.Object) field.ErrorList {
-				return validation.ValidateExtensionUpdate(n.(*extensionsv1alpha1.Extension), o.(*extensionsv1alpha1.Extension))
-			},
-		},
-
-		gvr("infrastructures"): {
-			newObject: func() client.Object { return new(extensionsv1alpha1.Infrastructure) },
-			validateCreateResource: func(n, _ client.Object) field.ErrorList {
-				return validation.ValidateInfrastructure(n.(*extensionsv1alpha1.Infrastructure))
-			},
-			validateUpdateResource: func(n, o client.Object) field.ErrorList {
-				return validation.ValidateInfrastructureUpdate(n.(*extensionsv1alpha1.Infrastructure), o.(*extensionsv1alpha1.Infrastructure))
-			},
-		},
-
-		gvr("networks"): {
-			newObject: func() client.Object { return new(extensionsv1alpha1.Network) },
-			validateCreateResource: func(n, _ client.Object) field.ErrorList {
-				return validation.ValidateNetwork(n.(*extensionsv1alpha1.Network))
-			},
-			validateUpdateResource: func(n, o client.Object) field.ErrorList {
-				return validation.ValidateNetworkUpdate(n.(*extensionsv1alpha1.Network), o.(*extensionsv1alpha1.Network))
-			},
-		},
-
-		gvr("operatingsystemconfigs"): {
-			newObject: func() client.Object { return new(extensionsv1alpha1.OperatingSystemConfig) },
-			validateCreateResource: func(n, _ client.Object) field.ErrorList {
-				return validation.ValidateOperatingSystemConfig(n.(*extensionsv1alpha1.OperatingSystemConfig))
-			},
-			validateUpdateResource: func(n, o client.Object) field.ErrorList {
-				return validation.ValidateOperatingSystemConfigUpdate(n.(*extensionsv1alpha1.OperatingSystemConfig), o.(*extensionsv1alpha1.OperatingSystemConfig))
-			},
-		},
-
-		gvr("workers"): {
-			newObject: func() client.Object { return new(extensionsv1alpha1.Worker) },
-			validateCreateResource: func(n, _ client.Object) field.ErrorList {
-				return validation.ValidateWorker(n.(*extensionsv1alpha1.Worker))
-			},
-			validateUpdateResource: func(n, o client.Object) field.ErrorList {
-				return validation.ValidateWorkerUpdate(n.(*extensionsv1alpha1.Worker), o.(*extensionsv1alpha1.Worker))
-			},
-		},
+// AddWebhooks add extension's valdation webhook to manager
+func AddWebhooks(mgr manager.Manager) error {
+	if err := builder.WebhookManagedBy(mgr).WithValidator(&backupBucketValidator{}).For(&extensionsv1alpha1.BackupBucket{}).Complete(); err != nil {
+		return err
+	}
+	if err := builder.WebhookManagedBy(mgr).WithValidator(&backupEntryValidator{}).For(&extensionsv1alpha1.BackupEntry{}).Complete(); err != nil {
+		return err
+	}
+	if err := builder.WebhookManagedBy(mgr).WithValidator(&bastionValidator{}).For(&extensionsv1alpha1.Bastion{}).Complete(); err != nil {
+		return err
+	}
+	if err := builder.WebhookManagedBy(mgr).WithValidator(&containerRuntimeValidator{}).For(&extensionsv1alpha1.ContainerRuntime{}).Complete(); err != nil {
+		return err
+	}
+	if err := builder.WebhookManagedBy(mgr).WithValidator(&controlPlaneValidator{}).For(&extensionsv1alpha1.ControlPlane{}).Complete(); err != nil {
+		return err
+	}
+	if err := builder.WebhookManagedBy(mgr).WithValidator(&dnsRecordValidator{}).For(&extensionsv1alpha1.DNSRecord{}).Complete(); err != nil {
+		return err
+	}
+	if err := builder.WebhookManagedBy(mgr).WithValidator(&etcdValidator{}).For(&druidv1alpha1.Etcd{}).Complete(); err != nil {
+		return err
+	}
+	if err := builder.WebhookManagedBy(mgr).WithValidator(&extensionValidator{}).For(&extensionsv1alpha1.Extension{}).Complete(); err != nil {
+		return err
+	}
+	if err := builder.WebhookManagedBy(mgr).WithValidator(&infrastructureValidator{}).For(&extensionsv1alpha1.Infrastructure{}).Complete(); err != nil {
+		return err
+	}
+	if err := builder.WebhookManagedBy(mgr).WithValidator(&networkValidator{}).For(&extensionsv1alpha1.Network{}).Complete(); err != nil {
+		return err
+	}
+	if err := builder.WebhookManagedBy(mgr).WithValidator(&operatingSystemConfigValidator{}).For(&extensionsv1alpha1.OperatingSystemConfig{}).Complete(); err != nil {
+		return err
+	}
+	if err := builder.WebhookManagedBy(mgr).WithValidator(&workerValidator{}).For(&extensionsv1alpha1.Worker{}).Complete(); err != nil {
+		return err
 	}
 
-	h := handler{
-		logger:    logger,
-		artifacts: artifacts,
-	}
-
-	return &h
-}
-
-type handler struct {
-	decoder   *admission.Decoder
-	logger    logr.Logger
-	artifacts map[metav1.GroupVersionResource]*artifact
-}
-
-var _ admission.Handler = &handler{}
-
-func (h *handler) InjectDecoder(d *admission.Decoder) error {
-	h.decoder = d
 	return nil
 }
 
-func (h *handler) Handle(ctx context.Context, request admission.Request) admission.Response {
-	_, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	artifact, ok := h.artifacts[request.Resource]
-	if !ok {
-		return admission.Allowed("validation not found for the given resource")
-	}
-
-	switch request.Operation {
-	case admissionv1.Create:
-		return h.handleValidation(request, artifact.newObject, artifact.validateCreateResource)
-	case admissionv1.Update:
-		return h.handleValidation(request, artifact.newObject, artifact.validateUpdateResource)
-	default:
-		return admission.Allowed("operation is not CREATE or UPDATE")
-	}
-}
-
-type (
-	newObjectFunc func() client.Object
-	validateFunc  func(new, old client.Object) field.ErrorList
+var (
+	_ admission.CustomValidator = &backupBucketValidator{}
+	_ admission.CustomValidator = &backupEntryValidator{}
+	_ admission.CustomValidator = &bastionValidator{}
+	_ admission.CustomValidator = &containerRuntimeValidator{}
+	_ admission.CustomValidator = &controlPlaneValidator{}
+	_ admission.CustomValidator = &dnsRecordValidator{}
+	_ admission.CustomValidator = &etcdValidator{}
+	_ admission.CustomValidator = &extensionValidator{}
+	_ admission.CustomValidator = &infrastructureValidator{}
+	_ admission.CustomValidator = &networkValidator{}
+	_ admission.CustomValidator = &operatingSystemConfigValidator{}
+	_ admission.CustomValidator = &workerValidator{}
 )
 
-// artifact servers as a helper to setup the corresponding function.
-type artifact struct {
-	// newObject is a simple function that creates and returns a new resource.
-	newObject newObjectFunc
+type (
+	backupBucketValidator          struct{}
+	backupEntryValidator           struct{}
+	bastionValidator               struct{}
+	containerRuntimeValidator      struct{}
+	controlPlaneValidator          struct{}
+	dnsRecordValidator             struct{}
+	etcdValidator                  struct{}
+	extensionValidator             struct{}
+	infrastructureValidator        struct{}
+	networkValidator               struct{}
+	operatingSystemConfigValidator struct{}
+	workerValidator                struct{}
+)
 
-	// validateCreateResource is a wrapper function for the different create validation functions.
-	validateCreateResource validateFunc
-
-	// validateUpdateResource is a wrapper function for the different update validation functions.
-	validateUpdateResource validateFunc
+func (*backupBucketValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+	errors := validation.ValidateBackupBucket(obj.(*extensionsv1alpha1.BackupBucket))
+	return errors.ToAggregate()
 }
 
-func (h handler) handleValidation(request admission.Request, newObject newObjectFunc, validate validateFunc) admission.Response {
-	obj := newObject()
-	if err := h.decoder.DecodeRaw(request.Object, obj); err != nil {
-		h.logger.Error(err, "Could not decode object", "object", request.Object)
-		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("could not decode object %v: %w", request.Object, err))
-	}
-
-	h.logger.Info("Validating extension resource", "resource", request.Resource, "name", kutil.ObjectName(obj), "operation", request.Operation)
-
-	var oldObj client.Object
-	if len(request.OldObject.Raw) != 0 {
-		oldObj = newObject()
-		if err := h.decoder.DecodeRaw(request.OldObject, oldObj); err != nil {
-			h.logger.Error(err, "Could not decode old object", "oldObject", oldObj)
-			return admission.Errored(http.StatusBadRequest, fmt.Errorf("could not decode old object %v: %v", oldObj, err))
-		}
-	}
-
-	errors := validate(obj, oldObj)
-	if len(errors) != 0 {
-		err := apierrors.NewInvalid(schema.GroupKind{
-			Group: request.Kind.Group,
-			Kind:  request.Kind.Kind,
-		}, kutil.ObjectName(obj), errors)
-
-		h.logger.Info("Invalid extension resource detected", "operation", request.Operation, "error", err.Error())
-		return admission.Denied(err.Error())
-	}
-
-	return admission.Allowed("validation successful")
+func (*backupBucketValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+	errors := validation.ValidateBackupBucketUpdate(newObj.(*extensionsv1alpha1.BackupBucket), oldObj.(*extensionsv1alpha1.BackupBucket))
+	return errors.ToAggregate()
 }
 
-func gvr(resource string) metav1.GroupVersionResource {
-	return metav1.GroupVersionResource{
-		Group:    extensionsv1alpha1.SchemeGroupVersion.Group,
-		Version:  extensionsv1alpha1.SchemeGroupVersion.Version,
-		Resource: resource,
-	}
+func (*backupBucketValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
+	return nil
 }
 
-func gvrDruid(resource string) metav1.GroupVersionResource {
-	return metav1.GroupVersionResource{
-		Group:    druidv1alpha1.GroupVersion.Group,
-		Version:  druidv1alpha1.GroupVersion.Version,
-		Resource: resource,
-	}
+func (*backupEntryValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+	errors := validation.ValidateBackupEntry(obj.(*extensionsv1alpha1.BackupEntry))
+	return errors.ToAggregate()
+}
+
+func (*backupEntryValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+	errors := validation.ValidateBackupEntryUpdate(newObj.(*extensionsv1alpha1.BackupEntry), oldObj.(*extensionsv1alpha1.BackupEntry))
+	return errors.ToAggregate()
+}
+
+func (*backupEntryValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
+	return nil
+}
+
+func (*bastionValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+	errors := validation.ValidateBastion(obj.(*extensionsv1alpha1.Bastion))
+	return errors.ToAggregate()
+}
+
+func (*bastionValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+	errors := validation.ValidateBastionUpdate(newObj.(*extensionsv1alpha1.Bastion), oldObj.(*extensionsv1alpha1.Bastion))
+	return errors.ToAggregate()
+}
+
+func (*bastionValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
+	return nil
+}
+
+func (*containerRuntimeValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+	errors := validation.ValidateContainerRuntime(obj.(*extensionsv1alpha1.ContainerRuntime))
+	return errors.ToAggregate()
+}
+
+func (*containerRuntimeValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+	errors := validation.ValidateContainerRuntimeUpdate(newObj.(*extensionsv1alpha1.ContainerRuntime), oldObj.(*extensionsv1alpha1.ContainerRuntime))
+	return errors.ToAggregate()
+}
+
+func (*containerRuntimeValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
+	return nil
+}
+
+func (*controlPlaneValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+	errors := validation.ValidateControlPlane(obj.(*extensionsv1alpha1.ControlPlane))
+	return errors.ToAggregate()
+}
+
+func (*controlPlaneValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+	errors := validation.ValidateControlPlaneUpdate(newObj.(*extensionsv1alpha1.ControlPlane), oldObj.(*extensionsv1alpha1.ControlPlane))
+	return errors.ToAggregate()
+}
+
+func (*controlPlaneValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
+	return nil
+}
+
+func (*dnsRecordValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+	errors := validation.ValidateDNSRecord(obj.(*extensionsv1alpha1.DNSRecord))
+	return errors.ToAggregate()
+}
+
+func (*dnsRecordValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+	errors := validation.ValidateDNSRecordUpdate(newObj.(*extensionsv1alpha1.DNSRecord), oldObj.(*extensionsv1alpha1.DNSRecord))
+	return errors.ToAggregate()
+}
+
+func (*dnsRecordValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
+	return nil
+}
+
+func (*etcdValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+	errors := druidvalidation.ValidateEtcd(obj.(*druidv1alpha1.Etcd))
+	return errors.ToAggregate()
+}
+
+func (*etcdValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+	errors := druidvalidation.ValidateEtcdUpdate(newObj.(*druidv1alpha1.Etcd), oldObj.(*druidv1alpha1.Etcd))
+	return errors.ToAggregate()
+}
+
+func (*etcdValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
+	return nil
+}
+
+func (*extensionValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+	errors := validation.ValidateExtension(obj.(*extensionsv1alpha1.Extension))
+	return errors.ToAggregate()
+}
+
+func (*extensionValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+	errors := validation.ValidateExtensionUpdate(newObj.(*extensionsv1alpha1.Extension), oldObj.(*extensionsv1alpha1.Extension))
+	return errors.ToAggregate()
+}
+
+func (*extensionValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
+	return nil
+}
+
+func (*infrastructureValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+	errors := validation.ValidateInfrastructure(obj.(*extensionsv1alpha1.Infrastructure))
+	return errors.ToAggregate()
+}
+
+func (*infrastructureValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+	errors := validation.ValidateInfrastructureUpdate(newObj.(*extensionsv1alpha1.Infrastructure), oldObj.(*extensionsv1alpha1.Infrastructure))
+	return errors.ToAggregate()
+}
+
+func (*infrastructureValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
+	return nil
+}
+
+func (*networkValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+	errors := validation.ValidateNetwork(obj.(*extensionsv1alpha1.Network))
+	return errors.ToAggregate()
+}
+
+func (*networkValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+	errors := validation.ValidateNetworkUpdate(newObj.(*extensionsv1alpha1.Network), oldObj.(*extensionsv1alpha1.Network))
+	return errors.ToAggregate()
+}
+
+func (*networkValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
+	return nil
+}
+
+func (*operatingSystemConfigValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+	errors := validation.ValidateOperatingSystemConfig(obj.(*extensionsv1alpha1.OperatingSystemConfig))
+	return errors.ToAggregate()
+}
+
+func (*operatingSystemConfigValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+	errors := validation.ValidateOperatingSystemConfigUpdate(newObj.(*extensionsv1alpha1.OperatingSystemConfig), oldObj.(*extensionsv1alpha1.OperatingSystemConfig))
+	return errors.ToAggregate()
+}
+
+func (*operatingSystemConfigValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
+	return nil
+}
+
+func (*workerValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+	errors := validation.ValidateWorker(obj.(*extensionsv1alpha1.Worker))
+	return errors.ToAggregate()
+}
+
+func (*workerValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+	errors := validation.ValidateWorkerUpdate(newObj.(*extensionsv1alpha1.Worker), oldObj.(*extensionsv1alpha1.Worker))
+	return errors.ToAggregate()
+}
+
+func (*workerValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
+	return nil
 }

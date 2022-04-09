@@ -456,7 +456,175 @@ func GetValidatingWebhookConfig(caBundle []byte, webhookClientService *corev1.Se
 			SideEffects:             &sideEffect,
 			TimeoutSeconds:          pointer.Int32(10),
 		}, {
-			Name: "validation.extensions.seed.admission.core.gardener.cloud",
+			Name: "validation.extensions.backupbucket.admission.core.gardener.cloud",
+			Rules: []admissionregistrationv1.RuleWithOperations{
+				{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+						APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+						Resources: []string{
+							"backupbuckets",
+						},
+					},
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+				},
+			},
+			FailurePolicy:     &failurePolicy,
+			NamespaceSelector: &metav1.LabelSelector{},
+			ClientConfig: admissionregistrationv1.WebhookClientConfig{
+				CABundle: caBundle,
+				Service: &admissionregistrationv1.ServiceReference{
+					Name:      webhookClientService.Name,
+					Namespace: webhookClientService.Namespace,
+					Path:      pointer.String(extensionresources.BackupBucketWebhookPath),
+				},
+			},
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			MatchPolicy:             &matchPolicy,
+			SideEffects:             &sideEffect,
+			TimeoutSeconds:          pointer.Int32(10),
+		}, {
+			Name: "validation.extensions.backupentry.admission.core.gardener.cloud",
+			Rules: []admissionregistrationv1.RuleWithOperations{
+				{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+						APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+						Resources: []string{
+							"backupentries",
+						},
+					},
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+				},
+			},
+			FailurePolicy:     &failurePolicy,
+			NamespaceSelector: &metav1.LabelSelector{},
+			ClientConfig: admissionregistrationv1.WebhookClientConfig{
+				CABundle: caBundle,
+				Service: &admissionregistrationv1.ServiceReference{
+					Name:      webhookClientService.Name,
+					Namespace: webhookClientService.Namespace,
+					Path:      pointer.String(extensionresources.BackupEntryWebhookPath),
+				},
+			},
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			MatchPolicy:             &matchPolicy,
+			SideEffects:             &sideEffect,
+			TimeoutSeconds:          pointer.Int32(10),
+		}, {
+			Name: "validation.extensions.bastion.admission.core.gardener.cloud",
+			Rules: []admissionregistrationv1.RuleWithOperations{
+				{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+						APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+						Resources: []string{
+							"bastions",
+						},
+					},
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+				},
+			},
+			FailurePolicy:     &failurePolicy,
+			NamespaceSelector: &metav1.LabelSelector{},
+			ClientConfig: admissionregistrationv1.WebhookClientConfig{
+				CABundle: caBundle,
+				Service: &admissionregistrationv1.ServiceReference{
+					Name:      webhookClientService.Name,
+					Namespace: webhookClientService.Namespace,
+					Path:      pointer.String(extensionresources.BastionWebhookPath),
+				},
+			},
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			MatchPolicy:             &matchPolicy,
+			SideEffects:             &sideEffect,
+			TimeoutSeconds:          pointer.Int32(10),
+		}, {
+			Name: "validation.extensions.containerruntime.admission.core.gardener.cloud",
+			Rules: []admissionregistrationv1.RuleWithOperations{
+				{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+						APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+						Resources: []string{
+							"containerruntimes",
+						},
+					},
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+				},
+			},
+			FailurePolicy:     &failurePolicy,
+			NamespaceSelector: &metav1.LabelSelector{},
+			ClientConfig: admissionregistrationv1.WebhookClientConfig{
+				CABundle: caBundle,
+				Service: &admissionregistrationv1.ServiceReference{
+					Name:      webhookClientService.Name,
+					Namespace: webhookClientService.Namespace,
+					Path:      pointer.String(extensionresources.ContaineRruntimeWebhookPath),
+				},
+			},
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			MatchPolicy:             &matchPolicy,
+			SideEffects:             &sideEffect,
+			TimeoutSeconds:          pointer.Int32(10),
+		}, {
+			Name: "validation.extensions.controlplane.admission.core.gardener.cloud",
+			Rules: []admissionregistrationv1.RuleWithOperations{
+				{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+						APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+						Resources: []string{
+							"controlplanes",
+						},
+					},
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+				},
+			},
+			FailurePolicy:     &failurePolicy,
+			NamespaceSelector: &metav1.LabelSelector{},
+			ClientConfig: admissionregistrationv1.WebhookClientConfig{
+				CABundle: caBundle,
+				Service: &admissionregistrationv1.ServiceReference{
+					Name:      webhookClientService.Name,
+					Namespace: webhookClientService.Namespace,
+					Path:      pointer.String(extensionresources.ControlPlaneWebhookPath),
+				},
+			},
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			MatchPolicy:             &matchPolicy,
+			SideEffects:             &sideEffect,
+			TimeoutSeconds:          pointer.Int32(10),
+		}, {
+			Name: "validation.extensions.dnsrecord.admission.core.gardener.cloud",
+			Rules: []admissionregistrationv1.RuleWithOperations{
+				{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+						APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+						Resources: []string{
+							"dnsrecords",
+						},
+					},
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+				},
+			},
+			FailurePolicy:     &failurePolicy,
+			NamespaceSelector: &metav1.LabelSelector{},
+			ClientConfig: admissionregistrationv1.WebhookClientConfig{
+				CABundle: caBundle,
+				Service: &admissionregistrationv1.ServiceReference{
+					Name:      webhookClientService.Name,
+					Namespace: webhookClientService.Namespace,
+					Path:      pointer.String(extensionresources.DNSRecordWebhookPath),
+				},
+			},
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			MatchPolicy:             &matchPolicy,
+			SideEffects:             &sideEffect,
+			TimeoutSeconds:          pointer.Int32(10),
+		}, {
+			Name: "validation.extensions.etcd.admission.core.gardener.cloud",
 			Rules: []admissionregistrationv1.RuleWithOperations{
 				{
 					Rule: admissionregistrationv1.Rule{
@@ -466,21 +634,141 @@ func GetValidatingWebhookConfig(caBundle []byte, webhookClientService *corev1.Se
 					},
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
 				},
+			},
+			FailurePolicy:     &failurePolicy,
+			NamespaceSelector: &metav1.LabelSelector{},
+			ClientConfig: admissionregistrationv1.WebhookClientConfig{
+				CABundle: caBundle,
+				Service: &admissionregistrationv1.ServiceReference{
+					Name:      webhookClientService.Name,
+					Namespace: webhookClientService.Namespace,
+					Path:      pointer.String(extensionresources.EtcdWebhookPath),
+				},
+			},
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			MatchPolicy:             &matchPolicy,
+			SideEffects:             &sideEffect,
+			TimeoutSeconds:          pointer.Int32(10),
+		}, {
+			Name: "validation.extensions.extension.admission.core.gardener.cloud",
+			Rules: []admissionregistrationv1.RuleWithOperations{
 				{
 					Rule: admissionregistrationv1.Rule{
 						APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
 						APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
 						Resources: []string{
-							"backupbuckets",
-							"backupentries",
-							"bastions",
-							"containerruntimes",
-							"controlplanes",
-							"dnsrecords",
 							"extensions",
+						},
+					},
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+				},
+			},
+			FailurePolicy:     &failurePolicy,
+			NamespaceSelector: &metav1.LabelSelector{},
+			ClientConfig: admissionregistrationv1.WebhookClientConfig{
+				CABundle: caBundle,
+				Service: &admissionregistrationv1.ServiceReference{
+					Name:      webhookClientService.Name,
+					Namespace: webhookClientService.Namespace,
+					Path:      pointer.String(extensionresources.ExtensionWebhookPath),
+				},
+			},
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			MatchPolicy:             &matchPolicy,
+			SideEffects:             &sideEffect,
+			TimeoutSeconds:          pointer.Int32(10),
+		}, {
+			Name: "validation.extensions.infrastructure.admission.core.gardener.cloud",
+			Rules: []admissionregistrationv1.RuleWithOperations{
+				{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+						APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+						Resources: []string{
 							"infrastructures",
+						},
+					},
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+				},
+			},
+			FailurePolicy:     &failurePolicy,
+			NamespaceSelector: &metav1.LabelSelector{},
+			ClientConfig: admissionregistrationv1.WebhookClientConfig{
+				CABundle: caBundle,
+				Service: &admissionregistrationv1.ServiceReference{
+					Name:      webhookClientService.Name,
+					Namespace: webhookClientService.Namespace,
+					Path:      pointer.String(extensionresources.InfrastructureWebhookPath),
+				},
+			},
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			MatchPolicy:             &matchPolicy,
+			SideEffects:             &sideEffect,
+			TimeoutSeconds:          pointer.Int32(10),
+		}, {
+			Name: "validation.extensions.network.admission.core.gardener.cloud",
+			Rules: []admissionregistrationv1.RuleWithOperations{
+				{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+						APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+						Resources: []string{
 							"networks",
+						},
+					},
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+				},
+			},
+			FailurePolicy:     &failurePolicy,
+			NamespaceSelector: &metav1.LabelSelector{},
+			ClientConfig: admissionregistrationv1.WebhookClientConfig{
+				CABundle: caBundle,
+				Service: &admissionregistrationv1.ServiceReference{
+					Name:      webhookClientService.Name,
+					Namespace: webhookClientService.Namespace,
+					Path:      pointer.String(extensionresources.NetworkWebhookPath),
+				},
+			},
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			MatchPolicy:             &matchPolicy,
+			SideEffects:             &sideEffect,
+			TimeoutSeconds:          pointer.Int32(10),
+		}, {
+			Name: "validation.extensions.operatingsystemconfig.admission.core.gardener.cloud",
+			Rules: []admissionregistrationv1.RuleWithOperations{
+				{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+						APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+						Resources: []string{
 							"operatingsystemconfigs",
+						},
+					},
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+				},
+			},
+			FailurePolicy:     &failurePolicy,
+			NamespaceSelector: &metav1.LabelSelector{},
+			ClientConfig: admissionregistrationv1.WebhookClientConfig{
+				CABundle: caBundle,
+				Service: &admissionregistrationv1.ServiceReference{
+					Name:      webhookClientService.Name,
+					Namespace: webhookClientService.Namespace,
+					Path:      pointer.String(extensionresources.OperatingSystemConfigWebhookPath),
+				},
+			},
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			MatchPolicy:             &matchPolicy,
+			SideEffects:             &sideEffect,
+			TimeoutSeconds:          pointer.Int32(10),
+		}, {
+			Name: "validation.extensions.worker.admission.core.gardener.cloud",
+			Rules: []admissionregistrationv1.RuleWithOperations{
+				{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+						APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+						Resources: []string{
 							"workers",
 						},
 					},
@@ -494,7 +782,7 @@ func GetValidatingWebhookConfig(caBundle []byte, webhookClientService *corev1.Se
 				Service: &admissionregistrationv1.ServiceReference{
 					Name:      webhookClientService.Name,
 					Namespace: webhookClientService.Namespace,
-					Path:      pointer.String(extensionresources.WebhookPath),
+					Path:      pointer.String(extensionresources.WorkerWebhookPath),
 				},
 			},
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
