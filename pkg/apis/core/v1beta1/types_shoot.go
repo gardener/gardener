@@ -681,6 +681,33 @@ type KubeAPIServerConfig struct {
 	// Defaults to 1h.
 	// +optional
 	EventTTL *metav1.Duration `json:"eventTTL,omitempty" protobuf:"bytes,12,opt,name=eventTTL"`
+	// AccessControl provides authorization mechanisms for Shoot-API-Server.
+	AccessControl *AccessControl `json:"rules,omitempty" protobuf:"bytes,13,opt,name=accessControl"`
+}
+
+// AccessControl provides authorization mechanisms for Shoot-API-Server.
+// Note: The schema (incl. child structs) and documentation resembles istio's AuthorizationPolicy.
+type AccessControl struct {
+	// The action to take on the source of request.
+	Action *AuthorizationAction `json:"action,omitempty" protobuf:"bytes,1,opt,name=authorizationAction"`
+	// Origin of request to run defined authorization action against.
+	Source Source `json:"source,omitempty" protobuf:"bytes,2,opt,name=source"`
+}
+
+type AuthorizationAction string
+
+const (
+	AuthorizationAction_ALLOW AuthorizationAction = "ALLOW"
+	AuthorizationAction_DENY  AuthorizationAction = "DENY"
+)
+
+type Source struct {
+	// A list of IP blocks, populated from the source address of the IP packet.
+	// Single IP (e.g. "1.2.3.4") and CIDR (e.g. "1.2.3.0/24") are supported
+	IpBlocks []string `json:"ipBlocks,omitempty" protobuf:"bytes,1,opt,name=ipBlocks"`
+	// A list of IP blocks, populated from X-Forwarded-For header or proxy protocol.
+	// Single IP (e.g. "1.2.3.4") and CIDR (e.g. "1.2.3.0/24") are supported
+	RemoteIpBlocks []string `json:"remoteIpBlocks,omitempty" protobuf:"bytes,2,opt,name=remoteIpBlocks"`
 }
 
 // KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.

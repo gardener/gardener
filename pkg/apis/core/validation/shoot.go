@@ -846,6 +846,23 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 			}
 		}
 
+		if kubeAPIServer.AccessControl != nil {
+			// ManagedIstio in gardenlet not available
+			if !utilfeature.DefaultFeatureGate.Enabled(features.ManagedIstio) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeAPIServer", "accessControl"), *kubeAPIServer.AccessControl, "can not be utilized due to network configurations of this cluster"))
+			} else {
+				// ManagedIstio in gardenlet is available
+				// Action available, but no Source
+				if kubeAPIServer.AccessControl.Action != nil && kubeAPIServer.AccessControl.Source == nil {
+					allErrs = append(allErrs, field.Required(fldPath.Child("kubeAPIServer", "accessControl", "action"), "is required when access control action enabled"))
+				}
+				// Source available, but no Action
+				if kubeAPIServer.AccessControl.Source != nil && kubeAPIServer.AccessControl.Action == nil {
+					allErrs = append(allErrs, field.Required(fldPath.Child("kubeAPIServer", "accessControl", "source"), "is required when source for action enabled"))
+				}
+			}
+		}
+
 		allErrs = append(allErrs, featuresvalidation.ValidateFeatureGates(kubeAPIServer.FeatureGates, kubernetes.Version, fldPath.Child("kubeAPIServer", "featureGates"))...)
 	}
 

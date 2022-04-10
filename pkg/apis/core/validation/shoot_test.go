@@ -1803,6 +1803,54 @@ var _ = Describe("Shoot Validation Tests", func() {
 			}))))
 		})
 
+		It("should forbid enabling access control", func() {
+			defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ManagedIstio, false)()
+
+			action := core.AuthorizationAction_ALLOW
+			shoot.Spec.Kubernetes.KubeAPIServer.AccessControl = &core.AccessControl{
+				Action: &action,
+				Source: &core.Source{},
+			}
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.accessControl"),
+			}))))
+		})
+
+		It("should forbid enabling access control due to missing source field", func() {
+			defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ManagedIstio, true)()
+
+			action := core.AuthorizationAction_ALLOW
+			shoot.Spec.Kubernetes.KubeAPIServer.AccessControl = &core.AccessControl{
+				Action: &action,
+			}
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.accessControl.action"),
+			}))))
+		})
+
+		It("should forbid enabling access control due to missing action field", func() {
+			defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ManagedIstio, true)()
+
+			shoot.Spec.Kubernetes.KubeAPIServer.AccessControl = &core.AccessControl{
+				Source: &core.Source{},
+			}
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.accessControl.source"),
+			}))))
+		})
+
 		Context("KubeControllerManager validation", func() {
 			It("should forbid unsupported HPA configuration", func() {
 				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleStabilization = makeDurationPointer(-1 * time.Second)

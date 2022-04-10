@@ -33,8 +33,10 @@ import (
 	"github.com/Masterminds/sprig"
 	protobuftypes "github.com/gogo/protobuf/types"
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	istioapisecurityv1beta1 "istio.io/api/security/v1beta1"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	istiosecurity1beta1 "istio.io/client-go/pkg/apis/security/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -50,6 +52,7 @@ type SNIValues struct {
 	APIServerClusterIP       string
 	APIServerInternalDNSName string
 	IstioIngressGateway      IstioIngressGateway
+	AccessControl            gardencorev1beta1.AccessControl
 }
 
 // IstioIngressGateway contains the values for istio ingress gateway configuration.
@@ -99,6 +102,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		envoyFilter     = s.emptyEnvoyFilter()
 		gateway         = s.emptyGateway()
 		virtualService  = s.emptyVirtualService()
+		accessControl   = s.emptyAccessControl()
 
 		hostName        = fmt.Sprintf("%s.%s.svc.%s", v1beta1constants.DeploymentNameKubeAPIServer, s.namespace, gardencorev1beta1.DefaultDomain)
 		envoyFilterSpec bytes.Buffer
@@ -187,6 +191,30 @@ func (s *sni) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if authrActionEnum, ok := istioapisecurityv1beta1.AuthorizationPolicy_Action_value[string(*s.values.AccessControl.Action)]; ok {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, accessControl, func() error {
+			accessControl.Labels = getLabels()
+			accessControl.Spec = istioapisecurityv1beta1.AuthorizationPolicy{
+				Rules: []*istioapisecurityv1beta1.Rule{
+					&istioapisecurityv1beta1.Rule{
+						From: []*istioapisecurityv1beta1.Rule_From{
+							&istioapisecurityv1beta1.Rule_From{
+								Source: &istioapisecurityv1beta1.Source{
+									IpBlocks:       s.values.AccessControl.Source.IpBlocks,
+									RemoteIpBlocks: s.values.AccessControl.Source.RemoteIpBlocks,
+								},
+							},
+						},
+					},
+				},
+				Action: istioapisecurityv1beta1.AuthorizationPolicy_Action(authrActionEnum),
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -198,6 +226,7 @@ func (s *sni) Destroy(ctx context.Context) error {
 		s.emptyEnvoyFilter(),
 		s.emptyGateway(),
 		s.emptyVirtualService(),
+		s.emptyAccessControl(),
 	)
 }
 
@@ -218,6 +247,10 @@ func (s *sni) emptyGateway() *istionetworkingv1beta1.Gateway {
 
 func (s *sni) emptyVirtualService() *istionetworkingv1beta1.VirtualService {
 	return &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
+}
+
+func (s *sni) emptyAccessControl() *istiosecurity1beta1.AuthorizationPolicy {
+	return &istiosecurity1beta1.AuthorizationPolicy{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
 }
 
 // AnyDeployedSNI returns true if any SNI is deployed in the cluster.
