@@ -91,7 +91,7 @@ func NewShootController(
 	shootController := &Controller{
 		config: config,
 
-		shootHibernationReconciler: NewShootHibernationReconciler(logger.Logger, gardenClient.Client(), recorder),
+		shootHibernationReconciler: NewShootHibernationReconciler(gardenClient.Client(), recorder),
 		shootMaintenanceReconciler: NewShootMaintenanceReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootMaintenance, recorder),
 		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootQuota),
 		shootRetryReconciler:       NewShootRetryReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootRetry),
@@ -124,7 +124,6 @@ func NewShootController(
 	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.shootHibernationAdd,
 		UpdateFunc: shootController.shootHibernationUpdate,
-		DeleteFunc: shootController.shootHibernationDelete,
 	})
 
 	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{

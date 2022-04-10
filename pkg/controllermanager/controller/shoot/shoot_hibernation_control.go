@@ -1,7 +1,7 @@
 // Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
+// Licensed under the Apache License, Version 2.0 (the "License");
 // You may obtain a copy of the License at
 //
 //      http://www.apache.org/licenses/LICENSE-2.0
@@ -16,19 +16,23 @@ package shoot
 
 import (
 	"context"
-	"fmt"
 	"reflect"
+	"sort"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenlogger "github.com/gardener/gardener/pkg/logger"
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
+	"github.com/robfig/cron"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 func (c *Controller) shootHibernationAdd(obj interface{}) {
@@ -56,85 +60,144 @@ func (c *Controller) shootHibernationUpdate(oldObj, newObj interface{}) {
 		newSchedule = getShootHibernationSchedules(newShoot)
 	)
 
-	if !reflect.DeepEqual(oldSchedule, newSchedule) {
+	if !reflect.DeepEqual(oldSchedule, newSchedule) && len(newSchedule) > 0 {
 		key, err := cache.MetaNamespaceKeyFunc(newObj)
 		if err != nil {
 			gardenlogger.Logger.Errorf("Couldn't get key for object %+v: %v", newObj, err)
 			return
 		}
-		c.shootHibernationQueue.Add(key)
-	}
-}
-
-func (c *Controller) shootHibernationDelete(obj interface{}) {
-	shoot, ok := obj.(*gardencorev1beta1.Shoot)
-	if !ok {
-		return
-	}
-
-	if shootHasHibernationSchedules(shoot) {
-		key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
+		parsedSchedules, err := parseHibernationSchedules(newSchedule)
 		if err != nil {
-			gardenlogger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+			gardenlogger.Logger.Infof("Could not parse hibernation schedules for shoot %s: %v", client.ObjectKeyFromObject(newShoot), err)
 			return
 		}
-		c.shootHibernationQueue.Add(key)
+		requeueAfter := nextHibernationTimeDuration(parsedSchedules, TimeNow())
+		c.shootHibernationQueue.AddAfter(key, requeueAfter)
 	}
 }
 
-var (
-	// TimeNow returns the current time. Exposed for testing.
-	TimeNow = time.Now
-)
+// ControllerName is the name of the controller.
+const ControllerName = "hibernation"
+
+// TimeNow returns the current time. Exposed for testing.
+var TimeNow = time.Now
+
+// ParsedHibernationSchedule holds the loaded location, parsed cron schedule and information whether
+// the cluster should be hibernated or woken up.
+type ParsedHibernationSchedule struct {
+	Location *time.Location
+	Schedule cron.Schedule
+	Enabled  bool
+}
+
+// Next returns the next activation time in UTC, later than the given time.
+// The given time is converted in the schedule's location.
+func (s *ParsedHibernationSchedule) Next(t time.Time) time.Time {
+	return s.Schedule.Next(t.In(s.Location)).UTC()
+}
+
+// Prev returns the previous activation time in UTC that is between the two given times.
+// The times are converted in the schedule's location.
+func (s *ParsedHibernationSchedule) Prev(from, to time.Time) *time.Time {
+	t1 := s.Schedule.Next(from.In(s.Location))
+	if t1.After(to) {
+		return nil
+	}
+
+	for {
+		t2 := s.Schedule.Next(t1)
+		if t2.After(to) {
+			break
+		}
+		t1 = t2
+	}
+	inUTC := t1.UTC()
+	return &inUTC
+}
 
 // NewShootHibernationReconciler creates a new instance of a reconciler which hibernates shoots or wakes them up.
 func NewShootHibernationReconciler(
-	l logrus.FieldLogger,
 	gardenClient client.Client,
 	recorder record.EventRecorder,
 ) reconcile.Reconciler {
 	return &shootHibernationReconciler{
-		logger:       l,
 		gardenClient: gardenClient,
 		recorder:     recorder,
 	}
 }
 
 type shootHibernationReconciler struct {
-	logger       logrus.FieldLogger
 	gardenClient client.Client
 	recorder     record.EventRecorder
 }
 
 func (r *shootHibernationReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	key := fmt.Sprintf("%s/%s", request.Namespace, request.Name)
+	log := logf.FromContext(ctx).WithName(ControllerName)
 
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			log.Info("Shoot is gone, stopping reconciliation", "shoot", client.ObjectKeyFromObject(shoot))
 			return reconcile.Result{}, nil
 		}
-		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
+		log.Error(err, "Unable to retrieve shoot from store", "shoot", client.ObjectKeyFromObject(shoot))
 		return reconcile.Result{}, err
 	}
 
-	logger := r.logger.WithField("shoot-hibernation", key)
-	logger.Info("[SHOOT HIBERNATION]")
+	log = log.WithValues("shoot", client.ObjectKeyFromObject(shoot))
 
 	if shoot.DeletionTimestamp != nil {
+		log.Info("Shoot is currently being deleted, stopping reconciliation")
+		return reconcile.Result{}, nil
+	}
+	return r.reconcile(ctx, shoot, log)
+}
+
+func (r *shootHibernationReconciler) reconcile(ctx context.Context, shoot *gardencorev1beta1.Shoot, log logr.Logger) (reconcile.Result, error) {
+	schedules := getShootHibernationSchedules(shoot)
+	if schedules == nil {
+		log.Info("Hibernation schedules have been removed from shoot, stopping reconciliation")
 		return reconcile.Result{}, nil
 	}
 
-	return reconcile.Result{}, nil
+	parsedSchedules, err := parseHibernationSchedules(schedules)
+	if err != nil {
+		log.Info("Invalid hibernation schedules, stopping reconciliation")
+		return reconcile.Result{}, nil
+	}
+
+	// get the schedule which caused the current reconciliation, to check whether the shoot should be hibernated or woken up
+	mostRecentSchedule := getScheduleWithMostRecentTime(parsedSchedules, TimeNow(), shoot)
+	if mostRecentSchedule != nil {
+		patch := client.MergeFrom(shoot.DeepCopy())
+		shoot.Spec.Hibernation.Enabled = &mostRecentSchedule.Enabled
+		if err = r.gardenClient.Patch(ctx, shoot, patch); err != nil {
+			return reconcile.Result{}, err
+		}
+
+		patch = client.MergeFrom(shoot.DeepCopy())
+		hibernationTriggerTime := v1.NewTime(TimeNow())
+		shoot.Status.LastHibernationTriggerTime = &hibernationTriggerTime
+		if err = r.gardenClient.Status().Patch(ctx, shoot, patch); err != nil {
+			return reconcile.Result{}, err
+		}
+		if mostRecentSchedule.Enabled {
+			r.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationEnabled, "Hibernating cluster due to schedule")
+		} else {
+			r.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationDisabled, "Waking up cluster due to schedule")
+		}
+		log.Info("Successfully set shoot hibernation", "hibernation", mostRecentSchedule.Enabled)
+	}
+
+	requeueAfter := nextHibernationTimeDuration(parsedSchedules, TimeNow())
+	log.Info("Requeuing hibernation", "requeueAfter", requeueAfter)
+	return reconcile.Result{RequeueAfter: requeueAfter}, nil
 }
 
-// GroupHibernationSchedulesByLocation groups the given HibernationSchedules by their Location.
+// parseHibernationSchedules parses the given HibernationSchedules and returns an array of ParsedHibernationSchedules
 // If the Location of a HibernationSchedule is `nil`, it is defaulted to UTC.
-func GroupHibernationSchedulesByLocation(schedules []gardencorev1beta1.HibernationSchedule) map[string][]gardencorev1beta1.HibernationSchedule {
-	var (
-		locationToSchedules = make(map[string][]gardencorev1beta1.HibernationSchedule)
-	)
+func parseHibernationSchedules(schedules []gardencorev1beta1.HibernationSchedule) ([]ParsedHibernationSchedule, error) {
+	var parsedHibernationSchedules []ParsedHibernationSchedule
 
 	for _, schedule := range schedules {
 		var locationID string
@@ -144,10 +207,79 @@ func GroupHibernationSchedulesByLocation(schedules []gardencorev1beta1.Hibernati
 			locationID = time.UTC.String()
 		}
 
-		locationToSchedules[locationID] = append(locationToSchedules[locationID], schedule)
+		location, err := time.LoadLocation(locationID)
+		if err != nil {
+			return nil, err
+		}
+		if schedule.Start != nil {
+			parsed, err := cron.ParseStandard(*schedule.Start)
+			if err != nil {
+				return nil, err
+			}
+			parsedHibernationSchedules = append(parsedHibernationSchedules,
+				ParsedHibernationSchedule{Location: location, Schedule: parsed, Enabled: true},
+			)
+		}
+		if schedule.End != nil {
+			parsed, err := cron.ParseStandard(*schedule.End)
+			if err != nil {
+				return nil, err
+			}
+			parsedHibernationSchedules = append(parsedHibernationSchedules,
+				ParsedHibernationSchedule{Location: location, Schedule: parsed, Enabled: false},
+			)
+		}
 	}
 
-	return locationToSchedules
+	return parsedHibernationSchedules, nil
+}
+
+// nextHibernationTimeDuration returns the time duration after which to requeue the shoot based on the hibernation schedules and current time.
+func nextHibernationTimeDuration(schedules []ParsedHibernationSchedule, now time.Time) time.Duration {
+	var timestamps []time.Time
+	for _, schedule := range schedules {
+		ts := schedule.Next(now)
+		timestamps = append(timestamps, ts)
+	}
+
+	sort.Slice(timestamps, func(i, j int) bool {
+		return timestamps[i].Before(timestamps[j])
+	})
+
+	duration := timestamps[0].Sub(now)
+	return duration
+}
+
+// getScheduleWithMostRecentTime returns the ParsedHibernationSchedule that contains the schedule with the most recent previous execution time.
+func getScheduleWithMostRecentTime(schedules []ParsedHibernationSchedule, now time.Time, shoot *gardencorev1beta1.Shoot) *ParsedHibernationSchedule {
+	var startTime time.Time
+	if shoot.Status.LastHibernationTriggerTime != nil {
+		startTime = shoot.Status.LastHibernationTriggerTime.Time
+	} else {
+		// if the shoot has just been created or has never been hibernated, use the creation timestamp
+		startTime = shoot.CreationTimestamp.Time
+	}
+
+	var scheduleWithMostRecentTime *ParsedHibernationSchedule
+	for i := 0; i < len(schedules); i++ {
+		cur := schedules[i].Prev(startTime, now)
+		if cur == nil {
+			continue
+		}
+		if scheduleWithMostRecentTime == nil {
+			scheduleWithMostRecentTime = &schedules[i]
+			continue
+		}
+		mostRecentTime := scheduleWithMostRecentTime.Prev(startTime, now)
+		if mostRecentTime == nil {
+			continue
+		}
+		if cur.After(*mostRecentTime) {
+			scheduleWithMostRecentTime = &schedules[i]
+		}
+	}
+
+	return scheduleWithMostRecentTime
 }
 
 func shootHasHibernationSchedules(shoot *gardencorev1beta1.Shoot) bool {
