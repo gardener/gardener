@@ -397,6 +397,7 @@ func NewClientFromServiceAccount(ctx context.Context, k8sClient kubernetes.Inter
 			client.Options{
 				Scheme: kubernetes.GardenScheme,
 			}),
+		kubernetes.WithDisabledCachedClient(),
 	)
 }
 

@@ -28,10 +28,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
-	"github.com/gardener/gardener/pkg/features"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("ReplicaGetter", func() {
@@ -50,8 +47,6 @@ var _ = Describe("ReplicaGetter", func() {
 		shoots       []gardencorev1beta1.Shoot
 		managedSeeds []seedmanagementv1alpha1.ManagedSeed
 		seeds        []gardencorev1beta1.Seed
-
-		cleanup func()
 	)
 
 	BeforeEach(func() {
@@ -123,11 +118,9 @@ var _ = Describe("ReplicaGetter", func() {
 			},
 		}
 
-		cleanup = test.WithFeatureGate(controllermanagerfeatures.FeatureGate, features.CachedRuntimeClients, true)
 	})
 
 	AfterEach(func() {
-		cleanup()
 		ctrl.Finish()
 	})
 

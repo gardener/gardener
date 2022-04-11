@@ -258,8 +258,6 @@ global:
         http:
           bindAddress: 0.0.0.0
           port: 2718
-      featureGates:
-        CachedRuntimeClients: true
     resources: {}
 
   # General system configuration

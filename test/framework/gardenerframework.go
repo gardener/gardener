@@ -93,6 +93,7 @@ func (f *GardenerFramework) BeforeEach() {
 			Scheme: kubernetes.GardenScheme,
 		}),
 		kubernetes.WithAllowedUserFields([]string{kubernetes.AuthTokenFile}),
+		kubernetes.WithDisabledCachedClient(),
 	)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	f.GardenClient = gardenClient
