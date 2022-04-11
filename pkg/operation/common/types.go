@@ -37,9 +37,6 @@ const (
 	// LokiPrefix is a constant for a prefix used for the Loki instance.
 	LokiPrefix = "l"
 
-	// VPASecretName is the name of the secret used by VPA
-	VPASecretName = "vpa-tls-certs"
-
 	// ManagedResourceShootCoreName is the name of the shoot core managed resource.
 	ManagedResourceShootCoreName = "shoot-core"
 	// ManagedResourceAddonsName is the name of the addons managed resource.

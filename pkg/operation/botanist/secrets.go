@@ -331,6 +331,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			"etcd-server-cert",
 			"etcd-client-tls",
 			"metrics-server",
+			"vpa-tls-certs",
 			"loki-tls",
 			"prometheus-tls",
 			"alertmanager-tls",

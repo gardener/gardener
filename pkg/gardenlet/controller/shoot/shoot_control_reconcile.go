@@ -640,7 +640,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		deployVPA = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes vertical pod autoscaler",
 			Fn:           flow.TaskFn(botanist.DeployVerticalPodAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, waitUntilKubeAPIServerIsReady, deployManagedResourcesForAddons, deployManagedResourceForCloudConfigExecutor, hibernateControlPlane),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, deployManagedResourcesForAddons, deployManagedResourceForCloudConfigExecutor, hibernateControlPlane),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Cleaning no longer required secrets",

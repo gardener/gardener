@@ -16,7 +16,6 @@ package seed
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -216,71 +215,6 @@ const (
 
 var ingressTLSCertificateValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
 
-// generateWantedSecrets returns a list of Secret configuration objects satisfying the secret config intface,
-// each containing their specific configuration for the creation of certificates (server/client), RSA key pairs, basic
-// authentication credentials, etc.
-func generateWantedSecrets(certificateAuthorities map[string]*secretutils.Certificate) ([]secretutils.ConfigInterface, error) {
-	secretList := []secretutils.ConfigInterface{
-		&secretutils.CertificateSecretConfig{
-			Name: common.VPASecretName,
-
-			CommonName:   "vpa-webhook.garden.svc",
-			Organization: nil,
-			DNSNames:     []string{"vpa-webhook.garden.svc", "vpa-webhook"},
-			IPAddresses:  nil,
-
-			CertType:  secretutils.ServerCert,
-			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCASeed],
-		},
-	}
-
-	return secretList, nil
-}
-
-// deployCertificates deploys CA and TLS certificates inside the garden namespace
-// It takes a map[string]*corev1.Secret object which contains secrets that have already been deployed inside that namespace to avoid duplication errors.
-func deployCertificates(
-	ctx context.Context,
-	seed *Seed,
-	c client.Client,
-	existingSecretsMap map[string]*corev1.Secret,
-	secretsManager secretsmanager.Interface,
-) (
-	map[string]*corev1.Secret,
-	error,
-) {
-	certificateAuthorities := make(map[string]*secretutils.Certificate)
-
-	caSecret, err := secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
-		Name:       v1beta1constants.SecretNameCASeed,
-		CommonName: "kubernetes",
-		CertType:   secretutils.CACert,
-	}, secretsmanager.Rotate(secretsmanager.KeepOld))
-	if err != nil {
-		return nil, err
-	}
-
-	cert, err := secretutils.LoadCertificate(caSecret.Name, caSecret.Data[secretutils.DataKeyPrivateKeyCA], caSecret.Data[secretutils.DataKeyCertificateCA])
-	if err != nil {
-		return nil, err
-	}
-	certificateAuthorities[caSecret.Name] = cert
-
-	wantedSecretsList, err := generateWantedSecrets(certificateAuthorities)
-	if err != nil {
-		return nil, err
-	}
-
-	secrets, err := secretutils.GenerateClusterSecrets(ctx, c, existingSecretsMap, wantedSecretsList, v1beta1constants.GardenNamespace)
-	if err != nil {
-		return nil, err
-	}
-
-	secrets[caSecret.Name] = caSecret
-
-	return secrets, nil
-}
-
 // RunReconcileSeedFlow bootstraps a Seed cluster and deploys various required manifests.
 func RunReconcileSeedFlow(
 	ctx context.Context,
@@ -312,6 +246,15 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
+	// Deploy dedicated CA certificate for seed cluster.
+	if _, err := secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+		Name:       v1beta1constants.SecretNameCASeed,
+		CommonName: "kubernetes",
+		CertType:   secretutils.CACert,
+	}, secretsmanager.Rotate(secretsmanager.KeepOld)); err != nil {
+		return err
+	}
+
 	kubernetesVersion, err := semver.NewVersion(seedClientSet.Version())
 	if err != nil {
 		return err
@@ -326,7 +269,9 @@ func RunReconcileSeedFlow(
 			return fmt.Errorf("VPA is required for seed cluster: %s", err)
 		}
 
-		if err := common.DeleteVpa(ctx, seedClient, v1beta1constants.GardenNamespace, false); client.IgnoreNotFound(err) != nil {
+		vpa := vpa.New(seedClient, v1beta1constants.GardenNamespace, nil, vpa.Values{ClusterType: vpa.ClusterTypeSeed})
+
+		if err := component.OpDestroyAndWait(vpa).Destroy(ctx); err != nil {
 			return err
 		}
 	}
@@ -361,30 +306,30 @@ func RunReconcileSeedFlow(
 	}
 
 	// replicate global monitoring secret (read from garden cluster) to the seed cluster's garden namespace
-	var globalMonitoringSecretSeed *corev1.Secret
-	if globalMonitoringSecretGarden, ok := secrets[v1beta1constants.GardenRoleGlobalMonitoring]; ok {
-		globalMonitoringSecretSeed = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "seed-" + globalMonitoringSecretGarden.Name,
-				Namespace: v1beta1constants.GardenNamespace,
-			},
-		}
-
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, globalMonitoringSecretSeed, func() error {
-			globalMonitoringSecretSeed.Type = globalMonitoringSecretGarden.Type
-			globalMonitoringSecretSeed.Data = globalMonitoringSecretGarden.Data
-			globalMonitoringSecretSeed.Immutable = globalMonitoringSecretGarden.Immutable
-
-			if _, ok := globalMonitoringSecretSeed.Data[secretutils.DataKeySHA1Auth]; !ok {
-				globalMonitoringSecretSeed.Data[secretutils.DataKeySHA1Auth] = utils.CreateSHA1Secret(globalMonitoringSecretGarden.Data[secretutils.DataKeyUserName], globalMonitoringSecretGarden.Data[secretutils.DataKeyPassword])
-			}
-
-			return nil
-		}); err != nil {
-			return err
-		}
-	} else {
+	globalMonitoringSecretGarden, ok := secrets[v1beta1constants.GardenRoleGlobalMonitoring]
+	if !ok {
 		return errors.New("global monitoring secret not found in seed namespace")
+	}
+
+	globalMonitoringSecretSeed := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "seed-" + globalMonitoringSecretGarden.Name,
+			Namespace: v1beta1constants.GardenNamespace,
+		},
+	}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, globalMonitoringSecretSeed, func() error {
+		globalMonitoringSecretSeed.Type = globalMonitoringSecretGarden.Type
+		globalMonitoringSecretSeed.Data = globalMonitoringSecretGarden.Data
+		globalMonitoringSecretSeed.Immutable = globalMonitoringSecretGarden.Immutable
+
+		if _, ok := globalMonitoringSecretSeed.Data[secretutils.DataKeySHA1Auth]; !ok {
+			globalMonitoringSecretSeed.Data[secretutils.DataKeySHA1Auth] = utils.CreateSHA1Secret(globalMonitoringSecretGarden.Data[secretutils.DataKeyUserName], globalMonitoringSecretGarden.Data[secretutils.DataKeyPassword])
+		}
+
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	seedImages, err := imagevector.FindImages(imageVector,
@@ -399,10 +344,6 @@ func RunReconcileSeedFlow(
 			images.ImageNameGrafana,
 			images.ImageNamePauseContainer,
 			images.ImageNamePrometheus,
-			images.ImageNameVpaAdmissionController,
-			images.ImageNameVpaExporter,
-			images.ImageNameVpaRecommender,
-			images.ImageNameVpaUpdater,
 			images.ImageNameHvpaController,
 			images.ImageNameKubeStateMetrics,
 		},
@@ -449,23 +390,6 @@ func RunReconcileSeedFlow(
 	}
 
 	if err := crds.NewExtensionsCRD(applier).Deploy(ctx); err != nil {
-		return err
-	}
-
-	// Deploy certificates and secrets for seed components
-	existingSecrets := &corev1.SecretList{}
-	if err = seedClient.List(ctx, existingSecrets, client.InNamespace(v1beta1constants.GardenNamespace)); err != nil {
-		return err
-	}
-
-	existingSecretsMap := map[string]*corev1.Secret{}
-	for _, secret := range existingSecrets.Items {
-		secretObj := secret
-		existingSecretsMap[secret.ObjectMeta.Name] = &secretObj
-	}
-
-	deployedSecretsMap, err := deployCertificates(ctx, seed, seedClient, existingSecretsMap, secretsManager)
-	if err != nil {
 		return err
 	}
 
@@ -597,6 +521,7 @@ func RunReconcileSeedFlow(
 			kubeapiserver.CentralLoggingConfiguration,
 			kubescheduler.CentralLoggingConfiguration,
 			kubecontrollermanager.CentralLoggingConfiguration,
+			vpa.CentralLoggingConfiguration,
 			// shoot system components
 			coredns.CentralLoggingConfiguration,
 			kubeproxy.CentralLoggingConfiguration,
@@ -711,11 +636,6 @@ func RunReconcileSeedFlow(
 				}
 			}
 		}
-	}
-
-	jsonString, err := json.Marshal(deployedSecretsMap[common.VPASecretName].Data)
-	if err != nil {
-		return err
 	}
 
 	// AlertManager configuration
@@ -987,22 +907,6 @@ func RunReconcileSeedFlow(
 		},
 		"loki":         lokiValues,
 		"alertmanager": alertManagerConfig,
-		"vpa": map[string]interface{}{
-			"enabled": vpaEnabled,
-			"runtime": map[string]interface{}{
-				"admissionController": map[string]interface{}{
-					"podAnnotations": map[string]interface{}{
-						"checksum/secret-vpa-tls-certs": utils.ComputeSHA256Hex(jsonString),
-					},
-				},
-			},
-			"application": map[string]interface{}{
-				"admissionController": map[string]interface{}{
-					"controlNamespace": v1beta1constants.GardenNamespace,
-					"caCert":           deployedSecretsMap[common.VPASecretName].Data[secretutils.DataKeyCertificateCA],
-				},
-			},
-		},
 		"hvpa": map[string]interface{}{
 			"enabled": hvpaEnabled,
 		},
@@ -1039,7 +943,7 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	return runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, imageVector, imageVectorOverwrites, seed, conf, log, anySNI)
+	return runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, secretsManager, imageVector, imageVectorOverwrites, seed, conf, log, anySNI)
 }
 
 func runCreateSeedFlow(
@@ -1047,6 +951,7 @@ func runCreateSeedFlow(
 	gardenClient,
 	seedClient client.Client,
 	kubernetesVersion *semver.Version,
+	secretsManager secretsmanager.Interface,
 	imageVector imagevector.ImageVector,
 	imageVectorOverwrites map[string]string,
 	seed *Seed,
@@ -1105,7 +1010,11 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	vpnAuthzServer, err := defaultExternalAuthzServer(ctx, seedClient, kubernetesVersion.String(), imageVector)
+	vpa, err := defaultVerticalPodAutoscaler(seedClient, imageVector, secretsManager)
+	if err != nil {
+		return err
+	}
+	vpnAuthzServer, err := defaultVPNAuthzServer(ctx, seedClient, kubernetesVersion.String(), imageVector)
 	if err != nil {
 		return err
 	}
@@ -1157,6 +1066,10 @@ func runCreateSeedFlow(
 			Fn:   dwdProbe.Deploy,
 		})
 		_ = g.Add(flow.Task{
+			Name: "Deploying Kubernetes vertical pod autoscaler",
+			Fn:   vpa.Deploy,
+		})
+		_ = g.Add(flow.Task{
 			Name: "Deploying VPN authorization server",
 			Fn:   vpnAuthzServer.Deploy,
 		})
@@ -1203,8 +1116,10 @@ func RunDeleteSeedFlow(
 		clusterIdentity = clusteridentity.NewForSeed(seedClient, v1beta1constants.GardenNamespace, "")
 		dwdEndpoint     = dependencywatchdog.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
 		dwdProbe        = dependencywatchdog.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
+		vpa             = vpa.New(seedClient, v1beta1constants.GardenNamespace, nil, vpa.Values{ClusterType: vpa.ClusterTypeSeed})
 		vpnAuthzServer  = vpnauthzserver.New(seedClient, v1beta1constants.GardenNamespace, "", 1)
 	)
+
 	scheduler, err := gardenerkubescheduler.Bootstrap(seedClient, v1beta1constants.GardenNamespace, nil, kubernetesVersion)
 	if err != nil {
 		return err
@@ -1259,7 +1174,11 @@ func RunDeleteSeedFlow(
 			Name: "Destroy dependency-watchdog-probe",
 			Fn:   component.OpDestroyAndWait(dwdProbe).Destroy,
 		})
-		destroyExtAuthzServer = g.Add(flow.Task{
+		destroyVPA = g.Add(flow.Task{
+			Name: "Destroy Kubernetes vertical pod autoscaler",
+			Fn:   component.OpDestroyAndWait(vpa).Destroy,
+		})
+		destroyVPNAuthzServer = g.Add(flow.Task{
 			Name: "Destroy VPN authorization server",
 			Fn:   component.OpDestroyAndWait(vpnAuthzServer).Destroy,
 		})
@@ -1276,7 +1195,8 @@ func RunDeleteSeedFlow(
 				destroyNetworkPolicies,
 				destroyDWDEndpoint,
 				destroyDWDProbe,
-				destroyExtAuthzServer,
+				destroyVPA,
+				destroyVPNAuthzServer,
 				noControllerInstallations,
 			),
 		})

@@ -112,13 +112,6 @@ filter-kubernetes.conf: |-
 
   [FILTER]
       Name                parser
-      Match               kubernetes.*vpa-*
-      Key_Name            log
-      Parser              kubeapiserverParser
-      Reserve_Data        True
-
-  [FILTER]
-      Name                parser
       Match               kubernetes.*hvpa-controller*hvpa-controller*
       Key_Name            log
       Parser              kubeapiserverParser

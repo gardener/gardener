@@ -1,1 +1,4 @@
-../../../../../../seed-bootstrap/charts/vpa/charts/application/Chart.yaml
+apiVersion: v1
+description: A Helm chart to deploy the VPA application related resources
+name: application
+version: 0.1.0
