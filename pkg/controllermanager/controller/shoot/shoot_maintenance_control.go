@@ -208,7 +208,13 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateSSHKeypair)
 	}
 
-	controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskDeployInfrastructure)
+	controllerutils.AddTasks(shoot.Annotations,
+		v1beta1constants.ShootTaskDeployInfrastructure,
+		v1beta1constants.ShootTaskDeployDNSRecordInternal,
+		v1beta1constants.ShootTaskDeployDNSRecordExternal,
+		v1beta1constants.ShootTaskDeployDNSRecordIngress,
+	)
+
 	if utils.IsTrue(r.config.EnableShootControlPlaneRestarter) {
 		controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
 	}

@@ -16,8 +16,6 @@ rules:
   - dnsrecords/status
   - infrastructures
   - infrastructures/status
-  - networks
-  - networks/status
   - operatingsystemconfigs
   - operatingsystemconfigs/status
   - workers

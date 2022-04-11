@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/klog"
@@ -167,6 +168,18 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.LeaderElection).To(Equal(expectedLeaderElection))
 			})
 		})
+
+		Describe("Logging settings", func() {
+			It("should correctly default Logging configuration", func() {
+				SetObjectDefaults_GardenletConfiguration(obj)
+				Expect(obj.Logging).NotTo(BeNil())
+				Expect(obj.Logging.Enabled).To(PointTo(Equal(false)))
+				Expect(obj.Logging.Loki).NotTo(BeNil())
+				Expect(obj.Logging.Loki.Enabled).To(PointTo(Equal(false)))
+				Expect(obj.Logging.Loki.Garden).NotTo(BeNil())
+				Expect(obj.Logging.Loki.Garden.Storage).To(PointTo(Equal(resource.MustParse("100Gi"))))
+			})
+		})
 	})
 
 	Describe("#SetDefaults_ManagedSeedControllerConfiguration", func() {
@@ -183,6 +196,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 1 * time.Hour})))
 			Expect(obj.WaitSyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 15 * time.Second})))
 			Expect(obj.SyncJitterPeriod).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
+			Expect(obj.JitterUpdates).To(PointTo(BeFalse()))
 		})
 	})
 
@@ -236,6 +250,20 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
 			Expect(obj.GracePeriod).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Hour})))
 			Expect(obj.LastOperationStaleDuration).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
+		})
+	})
+
+	Describe("#SetDefaults_ShootSecretControllerConfiguration", func() {
+		var obj *ShootSecretControllerConfiguration
+
+		BeforeEach(func() {
+			obj = &ShootSecretControllerConfiguration{}
+		})
+
+		It("should default the configuration", func() {
+			SetDefaults_ShootSecretControllerConfiguration(obj)
+
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
 		})
 	})
 

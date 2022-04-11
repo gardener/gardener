@@ -14,7 +14,7 @@ controllers:
   secretBinding:
     concurrentSyncs: 5
   secretBindingProvider:
-    concurrentSyncs: 0
+    concurrentSyncs: 5
   seed:
     concurrentSyncs: 5
     syncPeriod: 30s
@@ -31,7 +31,6 @@ controllers:
     syncPeriod: 60m
   shootReference:
     concurrentSyncs: 5
-    protectAuditPolicyConfigMaps: true
   shootRetry:
     concurrentSyncs: 5
   # retryDuration: 10m
@@ -84,5 +83,4 @@ debugging:
   enableContentionProfiling: false
 featureGates:
   CachedRuntimeClients: true
-  UseDNSRecords: true
   RotateSSHKeypairOnMaintenance: false

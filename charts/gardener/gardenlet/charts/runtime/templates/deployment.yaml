@@ -1,4 +1,23 @@
+{{- define "gardenlet.deployment.annotations" -}}
+reference.resources.gardener.cloud/configmap-{{ include "gardenlet.config.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.config.name" . }}
+{{- if .Values.global.gardenlet.imageVectorOverwrite }}
+reference.resources.gardener.cloud/configmap-{{ include "gardenlet.imagevector-overwrite.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.imagevector-overwrite.name" . }}
+{{- end }}
+{{- if .Values.global.gardenlet.componentImageVectorOverwrites }}
+reference.resources.gardener.cloud/configmap-{{ include "gardenlet.imagevector-overwrite-components.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.imagevector-overwrite-components.name" . }}
+{{- end }}
+{{- if .Values.global.gardenlet.config.gardenClientConnection.kubeconfig }}
+reference.resources.gardener.cloud/secret-{{ include "gardenlet.kubeconfig-garden.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.kubeconfig-garden.name" . }}
+{{- end }}
+{{- if .Values.global.gardenlet.config.seedClientConnection.kubeconfig }}
+reference.resources.gardener.cloud/secret-{{ include "gardenlet.kubeconfig-seed.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.kubeconfig-seed.name" . }}
+{{- end }}
+{{- if .Values.global.gardenlet.config.server.https.tls }}
+reference.resources.gardener.cloud/secret-{{ include "gardenlet.cert.name" . | sha256sum | trunc 8 }}: {{ include "gardenlet.cert.name" . }}
+{{- end }}
+{{- end -}}
 {{- if .Values.global.gardenlet.enabled }}
+---
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
@@ -10,6 +29,8 @@ metadata:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
+  annotations:
+{{ include "gardenlet.deployment.annotations" . | indent 4 }}
 spec:
   revisionHistoryLimit: {{ required ".Values.global.gardenlet.revisionHistoryLimit is required" .Values.global.gardenlet.revisionHistoryLimit }}
   replicas: {{ required ".Values.global.gardenlet.replicaCount is required" .Values.global.gardenlet.replicaCount }}
@@ -20,27 +41,14 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/configmap-gardenlet-config: {{ include (print $.Template.BasePath "/configmap-componentconfig.yaml") . | sha256sum }}
         prometheus.io/scrape: 'true'
         prometheus.io/port: {{ .Values.global.gardenlet.config.server.https.port | quote }}
-        {{- if .Values.global.gardenlet.config.server.https.tls }}
-        checksum/secret-gardenlet-cert: {{ include (print $.Template.BasePath "/secret-cert.yaml") . | sha256sum }}
-        {{- end }}
-        {{- if .Values.global.gardenlet.imageVectorOverwrite }}
-        checksum/configmap-gardenlet-imagevector-overwrite: {{ include (print $.Template.BasePath "/configmap-imagevector-overwrite.yaml") . | sha256sum }}
-        {{- end }}
-        {{- if .Values.global.gardenlet.componentImageVectorOverwrites }}
-        checksum/configmap-gardenlet-imagevector-overwrite-components: {{ include (print $.Template.BasePath "/configmap-imagevector-overwrite-components.yaml") . | sha256sum }}
-        {{- end }}
         {{- if .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig }}
+        {{- if not .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig.secretRef }}
         checksum/secret-gardenlet-kubeconfig-garden-bootstrap: {{ include (print $.Template.BasePath "/secret-kubeconfig-garden-bootstrap.yaml") . | sha256sum }}
         {{- end }}
-        {{- if .Values.global.gardenlet.config.gardenClientConnection.kubeconfig }}
-        checksum/secret-gardenlet-kubeconfig-garden: {{ include (print $.Template.BasePath "/secret-kubeconfig-garden.yaml") . | sha256sum }}
         {{- end }}
-        {{- if .Values.global.gardenlet.config.seedClientConnection.kubeconfig }}
-        checksum/secret-gardenlet-kubeconfig-seed: {{ include (print $.Template.BasePath "/secret-kubeconfig-seed.yaml") . | sha256sum }}
-        {{- end }}
+{{ include "gardenlet.deployment.annotations" . | indent 8 }}
         {{- if .Values.global.gardenlet.podAnnotations }}
 {{ toYaml .Values.global.gardenlet.podAnnotations | indent 8 }}
         {{- end }}
@@ -180,30 +188,30 @@ spec:
       {{- if .Values.global.gardenlet.config.gardenClientConnection.kubeconfig }}
       - name: gardenlet-kubeconfig-garden
         secret:
-          secretName: gardenlet-kubeconfig-garden
+          secretName: {{ include "gardenlet.kubeconfig-garden.name" . }}
       {{- end }}
       {{- if .Values.global.gardenlet.config.seedClientConnection.kubeconfig }}
       - name: gardenlet-kubeconfig-seed
         secret:
-          secretName: gardenlet-kubeconfig-seed
+          secretName: {{ include "gardenlet.kubeconfig-seed.name" . }}
       {{- end }}
       {{- if .Values.global.gardenlet.imageVectorOverwrite }}
       - name: gardenlet-imagevector-overwrite
         configMap:
-          name: gardenlet-imagevector-overwrite
+          name: {{ include "gardenlet.imagevector-overwrite.name" . }}
       {{- end }}
       {{- if .Values.global.gardenlet.componentImageVectorOverwrites }}
       - name: gardenlet-imagevector-overwrite-components
         configMap:
-          name: gardenlet-imagevector-overwrite-components
+          name: {{ include "gardenlet.imagevector-overwrite-components.name" . }}
       {{- end }}
       - name: gardenlet-config
         configMap:
-          name: gardenlet-configmap
+          name: {{ include "gardenlet.config.name" . }}
       {{- if .Values.global.gardenlet.config.server.https.tls }}
       - name: gardenlet-cert
         secret:
-          secretName: gardenlet-cert
+          secretName: {{ include "gardenlet.cert.name" . }}
       {{- end }}
 {{- if .Values.global.gardenlet.additionalVolumes }}
 {{ toYaml .Values.global.gardenlet.additionalVolumes | indent 6 }}

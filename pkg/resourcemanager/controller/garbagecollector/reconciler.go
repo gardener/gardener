@@ -29,28 +29,25 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// Now is a function for returning the current time.
-// Exposed for testing.
-var Now = time.Now
-
 type reconciler struct {
-	log          logr.Logger
-	syncPeriod   time.Duration
-	targetReader client.Reader
-	targetWriter client.Writer
+	log                   logr.Logger
+	clock                 clock.Clock
+	syncPeriod            time.Duration
+	targetReader          client.Reader
+	targetWriter          client.Writer
+	minimumObjectLifetime time.Duration
 }
 
 func (r *reconciler) InjectLogger(l logr.Logger) error {
 	r.log = l.WithName(ControllerName)
 	return nil
 }
-
-const minimumObjectLifetime = 10 * time.Minute
 
 func (r *reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request) (reconcile.Result, error) {
 	ctx, cancel := context.WithTimeout(reconcileCtx, time.Minute)
@@ -78,7 +75,7 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 		}
 
 		for _, obj := range objList.Items {
-			if obj.CreationTimestamp.Add(minimumObjectLifetime).UTC().After(Now().UTC()) {
+			if obj.CreationTimestamp.Add(r.minimumObjectLifetime).UTC().After(r.clock.Now().UTC()) {
 				// Do not consider recently created objects for garbage collection.
 				continue
 			}

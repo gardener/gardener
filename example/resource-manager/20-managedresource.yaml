@@ -54,6 +54,8 @@ kind: ManagedResource
 metadata:
   name: example
   namespace: default
+# annotations:
+#   resources.gardener.cloud/ignore: "true"
 spec:
   secretRefs:
   - name: managedresource-example1

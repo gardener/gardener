@@ -15,17 +15,16 @@
 package features
 
 import (
+	"github.com/gardener/gardener/pkg/features"
+
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/component-base/featuregate"
 )
 
-var (
-	// FeatureGate is a shared global FeatureGate for Gardener Scheduler flags.
-	FeatureGate  = featuregate.NewFeatureGate()
-	featureGates = map[featuregate.Feature]featuregate.FeatureSpec{}
-)
+// FeatureGate is a shared global FeatureGate for Gardener Scheduler flags.
+var FeatureGate = featuregate.NewFeatureGate()
 
 // RegisterFeatureGates registers the feature gates of the Gardener Scheduler.
 func RegisterFeatureGates() {
-	utilruntime.Must(FeatureGate.Add(featureGates))
+	utilruntime.Must(FeatureGate.Add(features.GetFeatures()))
 }

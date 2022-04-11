@@ -156,6 +156,12 @@ func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontr
 		}
 	}
 
+	if status := cluster.Shoot.Status; status.Credentials != nil && status.Credentials.Rotation != nil &&
+		status.Credentials.Rotation.CertificateAuthorities != nil &&
+		status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime != nil {
+		data = append(data, status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time.String())
+	}
+
 	var result string
 	for _, v := range data {
 		result += utils.ComputeSHA256Hex([]byte(v))

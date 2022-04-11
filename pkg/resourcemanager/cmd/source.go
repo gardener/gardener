@@ -31,6 +31,17 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
+var (
+	sourceSchemeBuilder = runtime.NewSchemeBuilder(
+		kubernetesscheme.AddToScheme,
+		resourcesv1alpha1.AddToScheme,
+	)
+
+	// AddToSourceScheme registers all API types in the given scheme that resource-manager expects to be in the source
+	// cluster scheme (the Manager's scheme).
+	AddToSourceScheme = sourceSchemeBuilder.AddToScheme
+)
+
 var _ Option = &SourceClientOptions{}
 
 // SourceClientOptions contains options needed to construct the source client.
@@ -70,7 +81,8 @@ func (o *SourceClientOptions) Complete() error {
 		return fmt.Errorf("could not create discovery client: %+v", err)
 	}
 
-	scheme := getSourceScheme()
+	scheme := runtime.NewScheme()
+	utilruntime.Must(AddToSourceScheme(scheme))
 
 	cacheResyncPeriod := o.cacheResyncPeriod
 	o.sourceClient = &SourceClientConfig{
@@ -86,13 +98,6 @@ func (o *SourceClientOptions) Complete() error {
 // Completed returns the constructed source clients including a kubernetes ClientSet and Scheme.
 func (o *SourceClientOptions) Completed() *SourceClientConfig {
 	return o.sourceClient
-}
-
-func getSourceScheme() *runtime.Scheme {
-	scheme := runtime.NewScheme()
-	utilruntime.Must(kubernetesscheme.AddToScheme(scheme))
-	utilruntime.Must(resourcesv1alpha1.AddToScheme(scheme))
-	return scheme
 }
 
 func getSourceRESTConfig(kubeconfigPath string) (*rest.Config, error) {

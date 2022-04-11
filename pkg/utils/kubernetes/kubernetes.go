@@ -634,15 +634,16 @@ func CertificatesV1beta1UsagesToCertificatesV1Usages(usages []certificatesv1beta
 }
 
 // NewKubeconfig returns a new kubeconfig structure.
-func NewKubeconfig(contextName, server string, caCert []byte, authInfo clientcmdv1.AuthInfo) *clientcmdv1.Config {
+func NewKubeconfig(contextName string, cluster clientcmdv1.Cluster, authInfo clientcmdv1.AuthInfo) *clientcmdv1.Config {
+	if !strings.HasPrefix(cluster.Server, "https://") {
+		cluster.Server = "https://" + cluster.Server
+	}
+
 	return &clientcmdv1.Config{
 		CurrentContext: contextName,
 		Clusters: []clientcmdv1.NamedCluster{{
-			Name: contextName,
-			Cluster: clientcmdv1.Cluster{
-				Server:                   `https://` + server,
-				CertificateAuthorityData: caCert,
-			},
+			Name:    contextName,
+			Cluster: cluster,
 		}},
 		AuthInfos: []clientcmdv1.NamedAuthInfo{{
 			Name:     contextName,
@@ -656,4 +657,19 @@ func NewKubeconfig(contextName, server string, caCert []byte, authInfo clientcmd
 			},
 		}},
 	}
+}
+
+// ObjectKeyForCreateWebhooks creates an object key for an object handled by webhooks registered for CREATE verbs.
+func ObjectKeyForCreateWebhooks(obj client.Object) client.ObjectKey {
+	namespace := obj.GetNamespace()
+	if len(namespace) == 0 {
+		namespace = metav1.NamespaceDefault
+	}
+
+	name := obj.GetName()
+	if len(name) == 0 {
+		name = obj.GetGenerateName()
+	}
+
+	return client.ObjectKey{Namespace: namespace, Name: name}
 }

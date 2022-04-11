@@ -18,6 +18,7 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"time"
@@ -27,15 +28,17 @@ import (
 	authenticationvalidation "github.com/gardener/gardener/pkg/apis/authentication/validation"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/infodata"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/clock"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/authentication/user"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/rest"
@@ -45,7 +48,7 @@ import (
 type AdminKubeconfigREST struct {
 	shootStateStorage    getter
 	shootStorage         getter
-	now                  func() time.Time
+	clock                clock.Clock
 	maxExpirationSeconds int64
 }
 
@@ -110,24 +113,28 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 	}
 
 	if len(shoot.Status.AdvertisedAddresses) == 0 {
-		return nil, errors.NewBadRequest("no kube-apiserver advertised addresses in Shoot .status.advertisedAddresses")
+		fieldErr := field.Invalid(field.NewPath("status", "status"), shoot.Status.AdvertisedAddresses, "no kube-apiserver advertised addresses in Shoot .status.advertisedAddresses")
+		return nil, errors.NewInvalid(gvk.GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 	}
 
-	ca, err := infodata.GetInfoData(shootState.Spec.Gardener, v1beta1constants.SecretNameCACluster)
-	if err != nil {
+	resourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
+
+	ca := resourceDataList.Get(v1beta1constants.SecretNameCACluster)
+	if ca == nil {
+		return nil, errors.NewInternalError(fmt.Errorf("certificate authority not yet provisioned"))
+	}
+
+	data := make(map[string][]byte)
+	if err := json.Unmarshal(ca.Data.Raw, &data); err != nil {
 		return nil, errors.NewInternalError(err)
 	}
 
-	if ca == nil {
-		return nil, errors.NewBadRequest("certificate authority not yet provisioned")
+	keyPrivateKey, keyCertificate := secrets.DataKeyPrivateKeyCA, secrets.DataKeyCertificateCA
+	if ca.Type == "certificate" {
+		keyPrivateKey, keyCertificate = "privateKey", "certificate"
 	}
 
-	caInfoData, ok := ca.(*secrets.CertificateInfoData)
-	if !ok {
-		return nil, errors.NewInternalError(fmt.Errorf("could not convert InfoData entry ca to CertificateInfoData"))
-	}
-
-	caCert, err := secrets.LoadCertificate("", caInfoData.PrivateKey, caInfoData.Certificate)
+	caCert, err := secrets.LoadCertificate("", data[keyPrivateKey], data[keyCertificate])
 	if err != nil {
 		return nil, errors.NewInternalError(err)
 	}
@@ -140,14 +147,14 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 	authName := fmt.Sprintf("%s--%s", shoot.Namespace, shoot.Name)
 
 	cpsc := secrets.ControlPlaneSecretConfig{
+		Name: authName,
 		CertificateSecretConfig: &secrets.CertificateSecretConfig{
-			Name:         authName,
 			CommonName:   userInfo.GetName(),
 			Organization: []string{user.SystemPrivilegedGroup},
 			CertType:     secrets.ClientCert,
 			Validity:     &validity,
 			SigningCA:    caCert,
-			Now:          r.now,
+			Clock:        r.clock,
 		},
 	}
 

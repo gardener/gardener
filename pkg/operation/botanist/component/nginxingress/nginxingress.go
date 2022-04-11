@@ -37,7 +37,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -374,7 +374,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 									corev1.ResourceMemory: resource.MustParse("20Mi"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
 									corev1.ResourceMemory: resource.MustParse("100Mi"),
 								},
 							},
@@ -404,8 +403,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: getLabels(labelValueController, labelValueAddons),
 						Annotations: map[string]string{
-							// TODO(rfranzke): Remove in a future release.
-							"security.gardener.cloud/trigger": "rollout",
 							// InjectAnnotations function is not used here since the ConfigMap is not mounted as
 							// volume and hence using the function won't have any effect.
 							references.AnnotationKey(references.KindConfigMap, configMap.Name): configMap.Name,
@@ -499,7 +496,6 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 							},
 							Resources: corev1.ResourceRequirements{
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("400m"),
 									corev1.ResourceMemory: resource.MustParse("1500Mi"),
 								},
 								Requests: corev1.ResourceList{
@@ -515,25 +511,25 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
-		updateMode = autoscalingv1beta2.UpdateModeAuto
-		vpa        = &autoscalingv1beta2.VerticalPodAutoscaler{
+		updateMode = vpaautoscalingv1.UpdateModeAuto
+		vpa        = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      controllerName,
 				Namespace: n.namespace,
 			},
-			Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 					Kind:       "Deployment",
 					Name:       deploymentController.Name,
 				},
-				UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 					UpdateMode: &updateMode,
 				},
-				ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
-					ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName: autoscalingv1beta2.DefaultContainerResourcePolicy,
+							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("25m"),
 								corev1.ResourceMemory: resource.MustParse("100Mi"),

@@ -30,7 +30,7 @@ var _ = Describe("Monitoring", func() {
 	var component component.MonitoringComponent
 
 	BeforeEach(func() {
-		component = New(nil, testNS, Values{})
+		component = New(nil, testNS, nil, Values{})
 	})
 
 	It("should successfully test the scrape config", func() {
@@ -171,6 +171,10 @@ metric_relabel_configs:
     annotations:
       description: 'The API servers cumulative failure rate in logging audit events is greater than 2%.'
       summary: 'The kubernetes API server has too many failed attempts to log audit events'
+  - record: shoot:apiserver_audit_event_total:sum
+    expr: sum(rate(apiserver_audit_event_total{job="kube-apiserver"}[5m]))
+  - record: shoot:apiserver_audit_error_total:sum
+    expr: sum(rate(apiserver_audit_error_total{plugin="webhook",job="kube-apiserver"}[5m]))
   ### API latency ###
   - record: apiserver_latency_seconds:quantile
     expr: histogram_quantile(0.99, sum without (instance, pod) (rate(apiserver_request_duration_seconds_bucket[5m])))

@@ -63,17 +63,49 @@ var _ = Describe("DependencyWatchdog", func() {
 			Expect(config).To(ConsistOf(scalerapi.ProbeDependants{
 				Name: "shoot-kube-apiserver",
 				Probe: &scalerapi.ProbeConfig{
-					External:      &scalerapi.ProbeDetails{KubeconfigSecretName: "dependency-watchdog-external-probe"},
-					Internal:      &scalerapi.ProbeDetails{KubeconfigSecretName: "dependency-watchdog-internal-probe"},
+					External:      &scalerapi.ProbeDetails{KubeconfigSecretName: "shoot-access-dependency-watchdog-external-probe"},
+					Internal:      &scalerapi.ProbeDetails{KubeconfigSecretName: "shoot-access-dependency-watchdog-internal-probe"},
 					PeriodSeconds: pointer.Int32(30),
 				},
-				DependantScales: []*scalerapi.DependantScaleDetails{{
-					ScaleRef: autoscalingv1.CrossVersionObjectReference{
-						APIVersion: "apps/v1",
-						Kind:       "Deployment",
-						Name:       "kube-controller-manager",
+				DependantScales: []*scalerapi.DependantScaleDetails{
+					{
+						ScaleRef: autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "apps/v1",
+							Kind:       "Deployment",
+							Name:       "kube-controller-manager",
+						},
+						ScaleUpDelaySeconds: pointer.Int32(120),
 					},
-				}},
+					{
+						ScaleRef: autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "apps/v1",
+							Kind:       "Deployment",
+							Name:       "machine-controller-manager",
+						},
+						ScaleUpDelaySeconds: pointer.Int32(60),
+						ScaleRefDependsOn: []autoscalingv1.CrossVersionObjectReference{
+							{
+								APIVersion: "apps/v1",
+								Kind:       "Deployment",
+								Name:       "kube-controller-manager",
+							},
+						},
+					},
+					{
+						ScaleRef: autoscalingv1.CrossVersionObjectReference{
+							APIVersion: "apps/v1",
+							Kind:       "Deployment",
+							Name:       "cluster-autoscaler",
+						},
+						ScaleRefDependsOn: []autoscalingv1.CrossVersionObjectReference{
+							{
+								APIVersion: "apps/v1",
+								Kind:       "Deployment",
+								Name:       "machine-controller-manager",
+							},
+						},
+					},
+				},
 			}))
 			Expect(err).NotTo(HaveOccurred())
 		})

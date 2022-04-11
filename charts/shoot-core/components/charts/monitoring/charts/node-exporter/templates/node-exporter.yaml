@@ -111,11 +111,9 @@ spec:
             memory: 50Mi
           limits:
           {{- if .Values.global.vpaEnabled }}
-            cpu: 150m
             memory: 150Mi
           {{- else }}
-            cpu: 200m
-            memory: 200Mi
+            memory: 250Mi
           {{- end }}
         volumeMounts:
         - name: host

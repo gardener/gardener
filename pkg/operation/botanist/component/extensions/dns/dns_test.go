@@ -84,7 +84,7 @@ var _ = Describe("#CheckDNSObject", func() {
 
 					var errorWithCodes *helper.ErrorWithCodes
 					Expect(errors.As(err, &errorWithCodes)).To(BeTrue(), "state: "+state)
-					Expect(errorWithCodes.Codes()).To(ConsistOf(gardencorev1beta1.ErrorInfraInsufficientPrivileges, gardencorev1beta1.ErrorInfraUnauthorized), "state: "+state)
+					Expect(errorWithCodes.Codes()).To(ConsistOf(gardencorev1beta1.ErrorInfraUnauthorized), "state: "+state)
 				} else {
 					Expect(retry.IsRetriable(err)).To(BeFalse())
 				}

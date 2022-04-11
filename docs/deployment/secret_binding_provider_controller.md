@@ -20,3 +20,8 @@ A Gardener landscape operator can follow the following steps:
 
    The `SecretBindingProviderValidation` feature gate of Gardener API server enables set of validations for the SecretBinding provider field. It forbids creating a Shoot that has a different provider type from the referenced SecretBinding's one. It also enforces immutability on the field.
    After making sure that SecretBinding provider controller is enabled and it populated the `.provider.type` field of a majority of the SecretBindings on a Gardener landscape (the SecretBindings that are unused will have their provider type unset), a Gardener landscape operator has to disable the SecretBinding provider controller and to enable the `SecretBindingProviderValidation` feature gate of Gardener API server. To disable the SecretBinding provider controller, in the ControllerManagerConfiguration set the `controller.secretBindingProvider.concurentSyncs` field to `0`.
+
+## Implementation History
+
+- Gardener v1.38: SecretBinding resource has a new optional field `.provider.type`. SecretBinding provider controller is disabled by default. `SecretBindingProviderValidation` feature gate of Gardener API server is disabled by default.
+- Gardener v1.42: SecretBinding provider controller is enabled by default.

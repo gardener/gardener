@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,7 +39,7 @@ type gardenClientMap struct {
 // NewGardenClientMap creates a new gardenClientMap with the given factory.
 func NewGardenClientMap(factory *GardenClientSetFactory) clientmap.ClientMap {
 	return &gardenClientMap{
-		ClientMap: NewGenericClientMap(factory, log.WithValues("clientmap", "GardenClientMap")),
+		ClientMap: NewGenericClientMap(factory, log.WithValues("clientmap", "GardenClientMap"), clock.RealClock{}),
 	}
 }
 
@@ -58,10 +59,10 @@ func (f *GardenClientSetFactory) CalculateClientSetHash(context.Context, clientm
 }
 
 // NewClientSet creates a new ClientSet to the garden cluster.
-func (f *GardenClientSetFactory) NewClientSet(_ context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, error) {
+func (f *GardenClientSetFactory) NewClientSet(_ context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, string, error) {
 	_, ok := k.(GardenClientSetKey)
 	if !ok {
-		return nil, fmt.Errorf("unsupported ClientSetKey: expected %T got %T", GardenClientSetKey{}, k)
+		return nil, "", fmt.Errorf("unsupported ClientSetKey: expected %T got %T", GardenClientSetKey{}, k)
 	}
 
 	configFns := []kubernetes.ConfigFunc{
@@ -84,7 +85,12 @@ func (f *GardenClientSetFactory) NewClientSet(_ context.Context, k clientmap.Cli
 		))
 	}
 
-	return NewClientSetWithConfig(configFns...)
+	clientSet, err := NewClientSetWithConfig(configFns...)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return clientSet, "", nil
 }
 
 // GardenClientSetKey is a ClientSetKey for the garden cluster.

@@ -1,4 +1,0 @@
-apiVersion: v1
-description: RBAC for kube-apiserver to communicate with the kubelets in shoot cluster
-name: kube-apiserver-kubelet
-version: 0.1.0

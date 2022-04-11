@@ -273,13 +273,11 @@ spec:
 				if vpaEnabled {
 					out += `
           limits:
-            cpu: 80m
-            memory: 80Mi`
+            memory: 120Mi`
 				} else {
 					out += `
           limits:
-            cpu: 200m
-            memory: 100Mi`
+            memory: 500Mi`
 				}
 				out += `
           requests:
@@ -327,7 +325,7 @@ status:
 `
 				return out
 			}
-			vpaYAML = `apiVersion: autoscaling.k8s.io/v1beta2
+			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null
@@ -337,6 +335,7 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: '*'
+      controlledValues: RequestsOnly
       minAllowed:
         cpu: 10m
         memory: 20Mi
@@ -505,7 +504,6 @@ status: {}
 		})
 
 		Describe("#WaitCleanup", func() {
-
 			It("should fail when the wait for the managed resource deletion times out", func() {
 				fakeOps.MaxAttempts = 2
 
@@ -513,6 +511,7 @@ status: {}
 
 				Expect(component.WaitCleanup(ctx)).To(MatchError(ContainSubstring("still exists")))
 			})
+
 			It("should not return an error when it's already removed", func() {
 				Expect(component.WaitCleanup(ctx)).To(Succeed())
 			})

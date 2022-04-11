@@ -26,9 +26,16 @@ import (
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+)
+
+const (
+	// AnnotationKeyNotManagedByMCM is a constant for an annotation on the node resource that indicates that
+	// the node is not handled by MCM.
+	AnnotationKeyNotManagedByMCM = "node.machine.sapcloud.io/not-managed-by-mcm"
 )
 
 // DefaultHealthChecker all the information for the Worker HealthCheck.
@@ -108,12 +115,17 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 	}
 
 	var (
-		readyNodes      int
-		registeredNodes = len(nodeList.Items)
-		desiredMachines = getDesiredMachineCount(machineDeploymentList.Items)
+		readyNodes          int
+		registeredNodes     = len(nodeList.Items)
+		desiredMachines     = getDesiredMachineCount(machineDeploymentList.Items)
+		nodeNotManagedByMCM int
 	)
 
 	for _, node := range nodeList.Items {
+		if metav1.HasAnnotation(node.ObjectMeta, AnnotationKeyNotManagedByMCM) && node.Annotations[AnnotationKeyNotManagedByMCM] == "1" {
+			nodeNotManagedByMCM++
+			continue
+		}
 		if node.Spec.Unschedulable {
 			continue
 		}
@@ -123,6 +135,9 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 			}
 		}
 	}
+
+	// only nodes that are managed by MCM is considered
+	registeredNodes = registeredNodes - nodeNotManagedByMCM
 
 	machineList := &machinev1alpha1.MachineList{}
 	if registeredNodes != desiredMachines || readyNodes != desiredMachines {

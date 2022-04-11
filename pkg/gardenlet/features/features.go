@@ -21,31 +21,24 @@ import (
 	"k8s.io/component-base/featuregate"
 )
 
-var (
-	// FeatureGate is a shared global FeatureGate for Gardenlet flags.
-	FeatureGate  = featuregate.NewFeatureGate()
-	featureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-		features.HVPA:                                       {Default: false, PreRelease: featuregate.Alpha},
-		features.HVPAForShootedSeed:                         {Default: false, PreRelease: featuregate.Alpha},
-		features.ManagedIstio:                               {Default: true, PreRelease: featuregate.Beta},
-		features.APIServerSNI:                               {Default: true, PreRelease: featuregate.Beta},
-		features.CachedRuntimeClients:                       {Default: true, PreRelease: featuregate.Beta},
-		features.SeedKubeScheduler:                          {Default: false, PreRelease: featuregate.Alpha},
-		features.ReversedVPN:                                {Default: false, PreRelease: featuregate.Alpha},
-		features.UseDNSRecords:                              {Default: true, PreRelease: featuregate.Beta},
-		features.DenyInvalidExtensionResources:              {Default: false, PreRelease: featuregate.Alpha},
-		features.CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
-		features.ForceRestore:                               {Default: false, PreRelease: featuregate.Alpha},
-		features.DisableDNSProviderManagement:               {Default: false, PreRelease: featuregate.Alpha},
-	}
-)
+// FeatureGate is a shared global FeatureGate for Gardenlet flags.
+var FeatureGate = featuregate.NewFeatureGate()
 
 // RegisterFeatureGates registers the feature gates of the Gardenlet.
 func RegisterFeatureGates() {
-	utilruntime.Must(FeatureGate.Add(featureGates))
-}
-
-// DisabledDNSProviderManagement returns true if `DisableDNSProviderManagement` is effective.
-func DisabledDNSProviderManagement() bool {
-	return FeatureGate.Enabled(features.UseDNSRecords) && FeatureGate.Enabled(features.DisableDNSProviderManagement)
+	utilruntime.Must(FeatureGate.Add(features.GetFeatures(
+		features.HVPA,
+		features.HVPAForShootedSeed,
+		features.ManagedIstio,
+		features.APIServerSNI,
+		features.CachedRuntimeClients,
+		features.SeedKubeScheduler,
+		features.ReversedVPN,
+		features.UseDNSRecords,
+		features.DenyInvalidExtensionResources,
+		features.CopyEtcdBackupsDuringControlPlaneMigration,
+		features.ForceRestore,
+		features.DisableDNSProviderManagement,
+		features.ShootCARotation,
+	)))
 }

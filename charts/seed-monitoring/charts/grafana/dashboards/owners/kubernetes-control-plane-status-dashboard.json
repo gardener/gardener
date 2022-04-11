@@ -1004,7 +1004,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by(verb) (rate(apiserver_latency_seconds:quantile[$__rate_interval]) >= 0)",
+          "expr": "max by(verb) (apiserver_latency_seconds:quantile{quantile=\"0.99\"})",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{verb}}",
@@ -1016,7 +1016,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "API Server Request Latency",
+      "title": "API Server Request Latency p99",
       "tooltip": {
         "msResolution": false,
         "shared": true,
@@ -2080,7 +2080,6 @@
       "type": "row"
     }
   ],
-  "refresh": "1m",
   "schemaVersion": 27,
   "style": "dark",
   "tags": [

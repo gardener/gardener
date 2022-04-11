@@ -153,7 +153,6 @@ spec:
     metadata:
       annotations:
         ` + references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName + `
-        security.gardener.cloud/trigger: rollout
       creationTimestamp: null
       labels:
         app: gardener
@@ -174,15 +173,31 @@ spec:
         - /gardener-seed-admission-controller
         - --port=10250
         - --tls-cert-dir=/srv/gardener-seed-admission-controller
-        - --allow-invalid-extension-resources=true
+        - --allow-invalid-extension-resources=false
+        - --metrics-bind-address=:8080
+        - --health-bind-address=:8081
         image: ` + image + `
         imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+            scheme: HTTP
+          initialDelaySeconds: 5
         name: gardener-seed-admission-controller
         ports:
+        - containerPort: 8080
+          name: metrics
+          protocol: TCP
         - containerPort: 10250
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+            scheme: HTTP
+          initialDelaySeconds: 10
         resources:
           limits:
-            cpu: 100m
             memory: 100Mi
           requests:
             cpu: 20m
@@ -230,6 +245,14 @@ metadata:
   namespace: shoot--foo--bar
 spec:
   ports:
+  - name: metrics
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  - name: health
+    port: 8081
+    protocol: TCP
+    targetPort: 8081
   - name: web
     port: 443
     protocol: TCP
@@ -376,7 +399,7 @@ webhooks:
   sideEffects: None
   timeoutSeconds: 10
 `
-		vpaYAML = `apiVersion: autoscaling.k8s.io/v1beta2
+		vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null

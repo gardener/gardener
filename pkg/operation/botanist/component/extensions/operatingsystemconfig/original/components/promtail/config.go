@@ -18,6 +18,7 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
+	"net/url"
 	"text/template"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -28,7 +29,6 @@ import (
 
 	"github.com/Masterminds/sprig"
 	"github.com/gardener/gardener/pkg/utils"
-	"gopkg.in/yaml.v3"
 	"k8s.io/utils/pointer"
 )
 
@@ -37,6 +37,11 @@ var (
 	//go:embed templates/scripts/fetch-token.tpl.sh
 	tplContentFetchToken string
 	tplFetchToken        *template.Template
+
+	tplNamePromtail = "fetch-token"
+	//go:embed templates/promtail-config.tpl.yaml
+	tplContentPromtail string
+	tplPromtail        *template.Template
 )
 
 func init() {
@@ -48,6 +53,14 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	tplPromtail, err = template.
+		New(tplNamePromtail).
+		Funcs(sprig.TxtFuncMap()).
+		Parse(tplContentPromtail)
+	if err != nil {
+		panic(err)
+	}
 }
 
 const setActiveJournalFileScript = `#!/bin/bash
@@ -55,107 +68,30 @@ PERSISTANT_JOURNAL_FILE=/var/log/journal
 TEMP_JOURNAL_FILE=/run/log/journal
 if [ ! -d "$PERSISTANT_JOURNAL_FILE" ] && [ -d "$TEMP_JOURNAL_FILE" ]; then
 	sed -i -e "s|$PERSISTANT_JOURNAL_FILE|$TEMP_JOURNAL_FILE|g" ` + PathConfig + `
+elif  [ ! -d "$TEMP_JOURNAL_FILE" ] && [ -d "$PERSISTANT_JOURNAL_FILE" ]; then
+	sed -i -e "s|$TEMP_JOURNAL_FILE$|$PERSISTANT_JOURNAL_FILE|g" ` + PathConfig + `
 fi`
 
-type config struct {
-	Server        server        `yaml:"server"`
-	Client        client        `yaml:"client"`
-	Positions     positions     `yaml:"positions"`
-	ScrapeConfigs scrapeConfigs `yaml:"scrape_configs"`
-}
-
-type server struct {
-	Disable        bool   `yaml:"disable,omitempty"`
-	LogLevel       string `yaml:"log_level,omitempty"`
-	HTTPListenPort int    `yaml:"http_listen_port,omitempty"`
-}
-
-type client struct {
-	Url             string    `yaml:"url"`
-	BearerTokenFile string    `yaml:"bearer_token_file"`
-	TLSConfig       tlsConfig `yaml:"tls_config"`
-}
-
-type tlsConfig struct {
-	CAFile     string `yaml:"ca_file,omitempty"`
-	ServerName string `yaml:"server_name,omitempty"`
-}
-
-type positions struct {
-	Filename string `yaml:"filename,omitempty"`
-}
-
-type job map[string]interface{}
-type scrapeConfigs []job
-
-var defaultConfig = config{
-	Server: server{
-		Disable:        true,
-		LogLevel:       "info",
-		HTTPListenPort: ServerPort,
-	},
-	Client: client{
-		Url:             "http://localhost:3100/loki/api/v1/push",
-		BearerTokenFile: PathAuthToken,
-		TLSConfig: tlsConfig{
-			CAFile: PathCACert,
-		},
-	},
-	Positions: positions{
-		Filename: PositionFile,
-	},
-	ScrapeConfigs: scrapeConfigs{
-		{
-			"job_name": "journal",
-			"journal": map[string]interface{}{
-				"json":    false,
-				"max_age": "12h",
-				"path":    "/var/log/journal",
-				"labels": map[string]interface{}{
-					"job": "systemd-journal",
-				},
-			},
-			"relabel_configs": []map[string]interface{}{
-				{
-					"source_labels": []string{"__journal__hostname"},
-					"regex":         "^localhost$",
-					"action":        "drop",
-				},
-				{
-					"source_labels": []string{"__journal__systemd_unit"},
-					"target_label":  "unit",
-				},
-				{
-					"source_labels": []string{"__journal__hostname"},
-					"target_label":  "nodename",
-				},
-				{
-					"source_labels": []string{"__journal_syslog_identifier"},
-					"target_label":  "syslog_identifier",
-				},
-			},
-		},
-	},
-}
-
-func getPromtailConfiguration(ctx components.Context) (config, error) {
-	if ctx.LokiIngress == "" {
-		return config{}, fmt.Errorf("loki ingress url is missing for %s", ctx.ClusterDomain)
-	}
-	conf := defaultConfig
-	conf.Client.Url = "https://" + ctx.LokiIngress + "/loki/api/v1/push"
-	conf.Client.TLSConfig.ServerName = ctx.LokiIngress
-	return conf, nil
-}
-
 func getPromtailConfigurationFile(ctx components.Context) (extensionsv1alpha1.File, error) {
-	conf, err := getPromtailConfiguration(ctx)
+	var config bytes.Buffer
+
+	if ctx.LokiIngress == "" {
+		return extensionsv1alpha1.File{}, fmt.Errorf("loki ingress url is missing")
+	}
+
+	apiServerURL, err := url.Parse(ctx.APIServerURL)
 	if err != nil {
 		return extensionsv1alpha1.File{}, err
 	}
 
-	configYaml, err := yaml.Marshal(&conf)
-	if err != nil {
+	if err := tplPromtail.Execute(&config, map[string]interface{}{
+		"clientURL":         "https://" + ctx.LokiIngress + "/loki/api/v1/push",
+		"pathCACert":        PathCACert,
+		"lokiIngress":       ctx.LokiIngress,
+		"pathAuthToken":     PathAuthToken,
+		"APIServerURL":      ctx.APIServerURL,
+		"APIServerHostname": apiServerURL.Hostname(),
+	}); err != nil {
 		return extensionsv1alpha1.File{}, err
 	}
 
@@ -165,7 +101,7 @@ func getPromtailConfigurationFile(ctx components.Context) (extensionsv1alpha1.Fi
 		Content: extensionsv1alpha1.FileContent{
 			Inline: &extensionsv1alpha1.FileContentInline{
 				Encoding: "b64",
-				Data:     utils.EncodeBase64(configYaml),
+				Data:     utils.EncodeBase64(config.Bytes()),
 			},
 		},
 	}, nil
@@ -209,6 +145,7 @@ func getPromtailUnit(execStartPre, execStartPreConfig, execStart string) extensi
 		Content: pointer.String(`[Unit]
 Description=promtail daemon
 Documentation=https://grafana.com/docs/loki/latest/clients/promtail/
+After=` + unitNameFetchToken + `
 [Install]
 WantedBy=multi-user.target
 [Service]
@@ -223,6 +160,7 @@ MemorySwapMax=0
 Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
+ExecStartPre=/bin/sh -c "systemctl set-environment HOSTNAME=$(hostname)"
 ExecStartPre=` + execStartPre + `
 ExecStartPre=` + execStartPreConfig + `
 ExecStart=` + execStart),

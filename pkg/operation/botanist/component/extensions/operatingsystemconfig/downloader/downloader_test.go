@@ -116,8 +116,6 @@ roleRef:
   kind: Role
   name: cloud-config-downloader
 subjects:
-- kind: User
-  name: cloud-config-downloader
 - kind: Group
   name: system:bootstrappers
 - kind: ServiceAccount
@@ -212,27 +210,57 @@ TOKEN_SECRET_NAME="cloud-config-downloader"
 
 PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_CERT="/var/lib/cloud-config-downloader/credentials/client.crt"
 PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_KEY="/var/lib/cloud-config-downloader/credentials/client.key"
-PATH_BOOTSTRAP_TOKEN="/var/lib/cloud-config-downloader/credentials/bootstrap-token"
 PATH_CLOUDCONFIG_DOWNLOADER_TOKEN="/var/lib/cloud-config-downloader/credentials/token"
+PATH_BOOTSTRAP_TOKEN="/var/lib/cloud-config-downloader/credentials/bootstrap-token"
+PATH_EXECUTOR_SCRIPT="/var/lib/cloud-config-downloader/downloads/execute-cloud-config.sh"
+PATH_EXECUTOR_SCRIPT_CHECKSUM="/var/lib/cloud-config-downloader/downloads/execute-cloud-config-checksum"
+
+mkdir -p "/var/lib/cloud-config-downloader/downloads"
 
 function readSecret() {
   wget \
     -qO- \
-    --header         "Accept: application/yaml" \
     --ca-certificate "/var/lib/cloud-config-downloader/credentials/ca.crt" \
     "${@:2}" "$(cat "/var/lib/cloud-config-downloader/credentials/server")/api/v1/namespaces/kube-system/secrets/$1"
 }
 
+function readSecretFull() {
+  readSecret "$1" "--header=Accept: application/yaml" "${@:2}"
+}
+
+function readSecretMeta() {
+  readSecret "$1" "--header=Accept: application/yaml;as=PartialObjectMetadata;g=meta.k8s.io;v=v1,application/yaml;as=PartialObjectMetadata;g=meta.k8s.io;v=v1" "${@:2}"
+}
+
+function readSecretMetaWithToken() {
+  readSecretMeta "$1" "--header=Authorization: Bearer $2"
+}
+
 function readSecretWithToken() {
-  readSecret "$1" "--header=Authorization: Bearer $2"
+  readSecretFull "$1" "--header=Authorization: Bearer $2"
 }
 
 function readSecretWithClientCertificate() {
-  readSecret "$1" "--certificate=$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_CERT" "--private-key=$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_KEY"
+  readSecretFull "$1" "--certificate=$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_CERT" "--private-key=$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_KEY"
 }
 
 function extractDataKeyFromSecret() {
   echo "$1" | sed -rn "s/  $2: (.*)/\1/p" | base64 -d
+}
+
+function extractChecksumFromSecret() {
+  echo "$1" | sed -rn 's/    checksum\/data-script: (.*)/\1/p' | sed -e 's/^"//' -e 's/"$//'
+}
+
+function writeToDiskSafely() {
+  local data="$1"
+  local file_path="$2"
+
+  if echo "$data" > "$file_path.tmp" && ( [[ ! -f "$file_path" ]] || ! diff "$file_path" "$file_path.tmp">/dev/null ); then
+    mv "$file_path.tmp" "$file_path"
+  elif [[ -f "$file_path.tmp" ]]; then
+    rm -f "$file_path.tmp"
+  fi
 }
 
 # download shoot access token for cloud-config-downloader
@@ -260,24 +288,42 @@ if [[ -z "$TOKEN" ]]; then
   echo "Token in shoot access secret $TOKEN_SECRET_NAME is empty"
   exit 1
 fi
-echo "$TOKEN" > "$PATH_CLOUDCONFIG_DOWNLOADER_TOKEN"
+writeToDiskSafely "$TOKEN" "$PATH_CLOUDCONFIG_DOWNLOADER_TOKEN"
 
 # download and run the cloud config execution script
-if ! SECRET="$(readSecretWithToken "$SECRET_NAME" "$TOKEN")"; then
-  echo "Could not retrieve the cloud config script in secret with name $SECRET_NAME"
+if ! SECRET_META="$(readSecretMetaWithToken "$SECRET_NAME" "$TOKEN")"; then
+  echo "Could not retrieve the metadata in secret with name $SECRET_NAME"
   exit 1
 fi
+NEW_CHECKSUM="$(extractChecksumFromSecret "$SECRET_META")"
 
-# delete legacy credentials from disk
+OLD_CHECKSUM="<none>"
+if [[ -f "$PATH_EXECUTOR_SCRIPT_CHECKSUM" ]]; then
+  OLD_CHECKSUM="$(cat "$PATH_EXECUTOR_SCRIPT_CHECKSUM")"
+fi
+
+if [[ "$NEW_CHECKSUM" != "$OLD_CHECKSUM" ]]; then
+  echo "Checksum of cloud config script has changed compared to what I had downloaded earlier (new: $NEW_CHECKSUM, old: $OLD_CHECKSUM). Fetching new script..."
+
+  if ! SECRET="$(readSecretWithToken "$SECRET_NAME" "$TOKEN")"; then
+    echo "Could not retrieve the cloud config script in secret with name $SECRET_NAME"
+    exit 1
+  fi
+
+  SCRIPT="$(extractDataKeyFromSecret "$SECRET" "script")"
+  if [[ -z "$SCRIPT" ]]; then
+    echo "Script in cloud config secret $SECRET is empty"
+    exit 1
+  fi
+
+  writeToDiskSafely "$SCRIPT" "$PATH_EXECUTOR_SCRIPT" && chmod +x "$PATH_EXECUTOR_SCRIPT"
+  writeToDiskSafely "$(extractChecksumFromSecret "$SECRET")" "$PATH_EXECUTOR_SCRIPT_CHECKSUM"
+fi
+
 # TODO(rfranzke): Delete in future release.
-rm -f "$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_CERT" "$PATH_CLOUDCONFIG_DOWNLOADER_CLIENT_KEY"
+rm -f "/var/lib/cloud-config-downloader/downloads/downloaded_checksum"
 
-CHECKSUM="$(echo "$SECRET" | sed -rn 's/    checksum\/data-script: (.*)/\1/p' | sed -e 's/^"//' -e 's/"$//')"
-echo "$CHECKSUM" > "/var/lib/cloud-config-downloader/downloaded_checksum"
-
-SCRIPT="$(extractDataKeyFromSecret "$SECRET" "script")"
-echo "$SCRIPT" | bash
-
+"$PATH_EXECUTOR_SCRIPT"
 exit $?
 }
 `

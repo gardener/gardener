@@ -15,7 +15,6 @@ global:
         cpu: 100m
         memory: 100Mi
       limits:
-        cpu: 2000m
         memory: 512Mi
   # podAnnotations: # YAML formated annotations used for pod template
   # podLabels: # YAML formated labels used for pod template
@@ -36,11 +35,17 @@ global:
       # gardenClusterAddress: https://some-external-ip-address-to-garden-cluster
       # gardenClusterCACert: <base64-ca-cert>
       # bootstrapKubeconfig: # bootstrapKubeconfig contains the kubeconfig that is used to initiate the bootstrap process, i.e.,
-                             # that is used to request a client certificate for the garden cluster. The name and namespace fields
+                             # that is used to request a client certificate for the garden cluster. 
+                             # If the kubeconfig is provided inline, the name and namespace fields
                              # are a reference to a secret that will store this bootstrap kubeconfig. If `kubeconfig` is given
                              # then only this kubeconfig will be considered.
+                             # If you already have a boostrap kubeconfig you can reference it with 
+                             # secretRef.name and secretRef.namespace.
       #   name: gardenlet-kubeconfig-bootstrap
       #   namespace: garden
+      #   secretRef:
+      #     name: secretName
+      #     namespace: secretNamespace
       #   kubeconfig: |
       #     some-kubeconfig-for-bootstrapping
       # kubeconfigSecret: # kubeconfigSecret is the reference to a secret object that stores the gardenlet's kubeconfig that
@@ -102,6 +107,8 @@ global:
             duration: 1m
           - type: EveryNodeReady
             duration: 5m
+        shootSecret:
+          concurrentSyncs: 5
         shootStateSync:
           concurrentSyncs: 5
           syncPeriod: 30s
@@ -110,6 +117,7 @@ global:
           syncPeriod: 1h
           waitSyncPeriod: 15s
           syncJitterPeriod: 5m
+          jitterUpdates: false
         shootMigration:
           concurrentSyncs: 5
           syncPeriod: 1m
@@ -182,8 +190,12 @@ global:
     #     enableBackupCompaction: false
     #     eventsThreshold: 1000000
     #     activeDeadlineDuration: "3h"
+    #   backupLeaderElection:
+    #     reelectionPeriod: 5s
+    #     etcdConnectionTimeout: 5s
     # seedConfig: {}
     # logging:
+    #   enabled: false
     #   fluentBit:
     #     output: |-
     #       [Output]

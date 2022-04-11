@@ -3,22 +3,6 @@ dependencies:
   repository: http://localhost:10191
   version: 0.1.0
   condition: apiserver-proxy.enabled
-- name: coredns
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: coredns.enabled
-- name: node-local-dns
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: node-local-dns.enabled
-- name: kube-apiserver-kubelet
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: kube-apiserver-kubelet.enabled
-- name: kube-proxy
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: kube-proxy.enabled
 - name: monitoring
   repository: http://localhost:10191
   version: 0.1.0
@@ -27,10 +11,6 @@ dependencies:
   repository: http://localhost:10191
   version: 0.1.0
   condition: network-policies.enabled
-- name: node-problem-detector
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: node-problem-detector.enabled
 - name: podsecuritypolicies
   repository: http://localhost:10191
   version: 0.1.0
@@ -39,10 +19,6 @@ dependencies:
   repository: http://localhost:10191
   version: 0.1.0
   condition: shoot-info.enabled
-- name: vpn-shoot
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: vpn-shoot.enabled
 - name: vertical-pod-autoscaler
   repository: http://localhost:10191
   version: 0.1.0

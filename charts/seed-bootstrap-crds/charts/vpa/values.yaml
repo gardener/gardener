@@ -1,3 +1,0 @@
-enabled: false
-labels:
-  gardener.cloud/role: vpa

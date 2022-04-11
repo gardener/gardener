@@ -18,6 +18,10 @@ import (
 	"fmt"
 	"time"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
@@ -29,9 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
 // ControllerName is the name of the health controller.
@@ -57,7 +58,7 @@ type ControllerConfig struct {
 
 // AddToManagerWithOptions adds the controller to a Manager with the given config.
 func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
-	healthController, err := controller.New("health-controller", mgr, controller.Options{
+	healthController, err := controller.New(ControllerName, mgr, controller.Options{
 		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
 		Reconciler: &reconciler{
 			syncPeriod:   conf.SyncPeriod,
@@ -68,7 +69,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		RecoverPanic: true,
 	})
 	if err != nil {
-		return fmt.Errorf("unable to set up individual controller: %w", err)
+		return fmt.Errorf("unable to set up health controller: %w", err)
 	}
 
 	if err := healthController.Watch(
@@ -87,10 +88,16 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 				}})
 			},
 		},
-		&conf.ClassFilter, predicate.Or(
+		&conf.ClassFilter,
+		predicate.Or(
 			managerpredicate.ClassChangedPredicate(),
 			// start health checks immediately after MR has been reconciled
 			managerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesApplied, managerpredicate.DefaultConditionChange),
+			managerpredicate.NoLongerIgnored(),
+		),
+		predicate.Or(
+			managerpredicate.NotIgnored(),
+			predicateutils.IsDeleting(),
 		),
 	); err != nil {
 		return fmt.Errorf("unable to watch ManagedResources: %w", err)

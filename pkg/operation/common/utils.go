@@ -24,11 +24,9 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -36,22 +34,9 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// GetSecretKeysWithPrefix returns a list of keys of the given map <m> which are prefixed with <kind>.
-func GetSecretKeysWithPrefix(kind string, m map[string]*corev1.Secret) []string {
-	var result []string
-	for key := range m {
-		if strings.HasPrefix(key, kind) {
-			result = append(result, key)
-		}
-	}
-	return result
-}
 
 // FilterEntriesByPrefix returns a list of strings which begin with the given prefix.
 func FilterEntriesByPrefix(prefix string, entries []string) []string {
@@ -149,59 +134,6 @@ func DeleteHvpa(ctx context.Context, c client.Client, namespace string) error {
 
 	// Delete all ServiceAccounts with label "gardener.cloud/role=hvpa"
 	return c.DeleteAllOf(ctx, &corev1.ServiceAccount{}, client.InNamespace(namespace), labelSelectorHVPA)
-}
-
-// DeleteVpa delete all resources required for the VPA in the given namespace.
-func DeleteVpa(ctx context.Context, c client.Client, namespace string, isShoot bool) error {
-	resources := []client.Object{
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPAAdmissionController, Namespace: namespace}},
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPARecommender, Namespace: namespace}},
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPAUpdater, Namespace: namespace}},
-		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "vpa-webhook", Namespace: namespace}},
-		&autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPAAdmissionController, Namespace: namespace}},
-		&autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPARecommender, Namespace: namespace}},
-		&autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPAUpdater, Namespace: namespace}},
-	}
-
-	if isShoot {
-		resources = append(resources,
-			gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameVPAAdmissionController, namespace).Secret,
-			gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameVPARecommender, namespace).Secret,
-			gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameVPAUpdater, namespace).Secret,
-			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: VPASecretName, Namespace: namespace}},
-			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-vpa-admission-controller", Namespace: namespace}},
-			// TODO(rfranzke): Remove in a future release.
-			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-admission-controller", Namespace: namespace}},
-			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-recommender", Namespace: namespace}},
-			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-updater", Namespace: namespace}},
-		)
-	} else {
-		resources = append(resources,
-			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:actor"}},
-			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:admission-controller"}},
-			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:checkpoint-actor"}},
-			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:metrics-reader"}},
-			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:target-reader"}},
-			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:evictioner"}},
-			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:actor"}},
-			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:admission-controller"}},
-			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:checkpoint-actor"}},
-			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:metrics-reader"}},
-			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:target-reader"}},
-			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:evictioner"}},
-			&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "vpa-admission-controller", Namespace: namespace}},
-			&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "vpa-recommender", Namespace: namespace}},
-			&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "vpa-updater", Namespace: namespace}},
-			&admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "vpa-webhook-config-seed"}},
-		)
-	}
-
-	for _, resource := range resources {
-		if err := c.Delete(ctx, resource); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // DeleteLoki  deletes all resources of the Loki in a given namespace.
@@ -304,9 +236,10 @@ func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace 
 				Namespace: namespace,
 			},
 		},
+		// TODO(rfranzke): Remove this secret in a future release.
 		&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      AlertManagerTLS,
+				Name:      "alertmanager-tls",
 				Namespace: namespace,
 			},
 		},
@@ -333,37 +266,40 @@ func DeleteGrafanaByRole(ctx context.Context, k8sClient kubernetes.Interface, na
 		return fmt.Errorf("require kubernetes client")
 	}
 
-	listOptions := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s,%s=%s", "component", "grafana", "role", role),
+	deleteOptions := []client.DeleteAllOfOption{
+		client.InNamespace(namespace),
+		client.MatchingLabels{
+			"component": "grafana",
+			"role":      role,
+		},
 	}
 
-	deletePropagation := metav1.DeletePropagationForeground
-	if err := k8sClient.Kubernetes().AppsV1().Deployments(namespace).DeleteCollection(
+	if err := k8sClient.Client().DeleteAllOf(ctx, &appsv1.Deployment{}, append(deleteOptions, client.PropagationPolicy(metav1.DeletePropagationForeground))...); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	if err := k8sClient.Client().DeleteAllOf(ctx, &corev1.ConfigMap{}, deleteOptions...); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	if err := k8sClient.Client().DeleteAllOf(ctx, &extensionsv1beta1.Ingress{}, deleteOptions...); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	if err := k8sClient.Client().DeleteAllOf(ctx, &corev1.Secret{}, deleteOptions...); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	if err := k8sClient.Client().Delete(
 		ctx,
-		metav1.DeleteOptions{
-			PropagationPolicy: &deletePropagation,
-		}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		&corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "grafana-" + role,
+				Namespace: namespace,
+			}},
+	); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
-	if err := k8sClient.Kubernetes().CoreV1().ConfigMaps(namespace).DeleteCollection(
-		ctx, metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-
-	if err := k8sClient.Kubernetes().ExtensionsV1beta1().Ingresses(namespace).DeleteCollection(
-		ctx, metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-
-	if err := k8sClient.Kubernetes().CoreV1().Secrets(namespace).DeleteCollection(
-		ctx, metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-
-	if err := k8sClient.Kubernetes().CoreV1().Services(namespace).Delete(
-		ctx, fmt.Sprintf("grafana-%s", role), metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
 	return nil
 }

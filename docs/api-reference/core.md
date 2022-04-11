@@ -3896,7 +3896,7 @@ bool
 <td>
 <em>(Optional)</em>
 <p>Enabled specifies whether the Shoot needs to be hibernated or not. If it is true, the Shoot&rsquo;s desired state is to be hibernated.
-If it is false or nil, the Shoot&rsquo;s desired state is to be awaken.</p>
+If it is false or nil, the Shoot&rsquo;s desired state is to be awakened.</p>
 </td>
 </tr>
 <tr>
@@ -5338,6 +5338,19 @@ VerticalPodAutoscaler
 <td>
 <em>(Optional)</em>
 <p>VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>enableStaticTokenKubeconfig</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster
+(default: true).</p>
 </td>
 </tr>
 </tbody>
@@ -8726,8 +8739,8 @@ string
 <td>
 <em>(Optional)</em>
 <p>Issuer is the identifier of the service account token issuer. The issuer will assert this
-identifier in &ldquo;iss&rdquo; claim of issued tokens. This value is a string or URI.
-Defaults to URI of the API server.</p>
+identifier in &ldquo;iss&rdquo; claim of issued tokens. This value is used to generate new service account tokens.
+This value is a string or URI. Defaults to URI of the API server.</p>
 </td>
 </tr>
 <tr>
@@ -8774,7 +8787,24 @@ Kubernetes meta/v1.Duration
 <em>(Optional)</em>
 <p>MaxTokenExpiration is the maximum validity duration of a token created by the service account token issuer. If an
 otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued
-with a validity duration of this value.</p>
+with a validity duration of this value.
+This field must be within [30d,90d] when the ShootMaxTokenExpirationValidation feature gate is enabled.
+This field will be overwritten to be within [30d,90d] when the ShootMaxTokenExpirationOverwrite feature gate is enabled.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>acceptedIssuers</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.
+These values are not used to generate new service account tokens. Only useful when service account tokens are also
+issued by another external system or a change of the current issuer that is used for generating tokens is being performed.
+This field is only available for Kubernetes v1.22 or later.</p>
 </td>
 </tr>
 </tbody>
@@ -8816,6 +8846,217 @@ string
 </td>
 <td>
 <p>The URL of the API Server. e.g. <a href="https://api.foo.bar">https://api.foo.bar</a> or <a href="https://1.2.3.4">https://1.2.3.4</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ShootCARotation">ShootCARotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotation">ShootCredentialsRotation</a>)
+</p>
+<p>
+<p>ShootCARotation contains information about the certificate authority credential rotation.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>phase</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotationPhase">
+ShootCredentialsRotationPhase
+</a>
+</em>
+</td>
+<td>
+<p>Phase describes the phase of the certificate authority credential rotation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastInitiationTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastCompletionTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
+completed.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ShootCredentials">ShootCredentials
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootStatus">ShootStatus</a>)
+</p>
+<p>
+<p>ShootCredentials contains information about the shoot credentials.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>rotation</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotation">
+ShootCredentialsRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Rotation contains information about the credential rotations.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ShootCredentialsRotation">ShootCredentialsRotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentials">ShootCredentials</a>)
+</p>
+<p>
+<p>ShootCredentialsRotation contains information about the rotation of credentials.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>certificateAuthorities</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootCARotation">
+ShootCARotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CertificateAuthorities contains information about the certificate authority credential rotation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeconfig</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootKubeconfigRotation">
+ShootKubeconfigRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Kubeconfig contains information about the kubeconfig credential rotation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>sshKeypair</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootSSHKeypairRotation">
+ShootSSHKeypairRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SSHKeypair contains information about the ssh-keypair credential rotation.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ShootCredentialsRotationPhase">ShootCredentialsRotationPhase
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootCARotation">ShootCARotation</a>)
+</p>
+<p>
+<p>ShootCredentialsRotationPhase is a string alias.</p>
+</p>
+<h3 id="core.gardener.cloud/v1beta1.ShootKubeconfigRotation">ShootKubeconfigRotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotation">ShootCredentialsRotation</a>)
+</p>
+<p>
+<p>ShootKubeconfigRotation contains information about the kubeconfig credential rotation.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>lastInitiationTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationTime is the most recent time when the kubeconfig credential rotation was initiated.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastCompletionTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastCompletionTime is the most recent time when the kubeconfig credential rotation was successfully completed.</p>
 </td>
 </tr>
 </tbody>
@@ -8930,6 +9171,53 @@ string
 <p>
 <p>ShootPurpose is a type alias for string.</p>
 </p>
+<h3 id="core.gardener.cloud/v1beta1.ShootSSHKeypairRotation">ShootSSHKeypairRotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotation">ShootCredentialsRotation</a>)
+</p>
+<p>
+<p>ShootSSHKeypairRotation contains information about the ssh-keypair credential rotation.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>lastInitiationTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastCompletionTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastCompletionTime is the most recent time when the ssh-keypair credential rotation was successfully completed.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ShootSpec">ShootSpec
 </h3>
 <p>
@@ -9407,6 +9695,20 @@ Kubernetes meta/v1.Time
 <td>
 <em>(Optional)</em>
 <p>MigrationStartTime is the time when a migration to a different seed was initiated.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>credentials</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentials">
+ShootCredentials
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Credentials contains information about the shoot credentials.</p>
 </td>
 </tr>
 </tbody>

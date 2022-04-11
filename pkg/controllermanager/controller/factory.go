@@ -18,13 +18,9 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -47,6 +43,13 @@ import (
 	seedcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 	"github.com/gardener/gardener/pkg/operation/garden"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+
+	"k8s.io/apimachinery/pkg/util/clock"
+	"k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // GardenControllerFactory contains information relevant to controllers for the Garden API group.
@@ -82,7 +85,12 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to start ClientMap: %+v", err)
 	}
 
-	runtime.Must(garden.BootstrapCluster(ctx, gardenClientSet))
+	secretsManager, err := secretsmanager.New(ctx, logf.Log.WithName("secretsmanager"), clock.RealClock{}, gardenClientSet.Client(), v1beta1constants.GardenNamespace, v1beta1constants.SecretManagerIdentityControllerManager, nil)
+	if err != nil {
+		return fmt.Errorf("failed creating new secrets manager: %w", err)
+	}
+
+	runtime.Must(garden.BootstrapCluster(ctx, gardenClientSet, secretsManager))
 	log.Info("Successfully bootstrapped Garden cluster")
 
 	// Create controllers.
@@ -126,22 +134,22 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Plant controller: %w", err)
 	}
 
-	projectController, err := projectcontroller.NewProjectController(ctx, f.clientMap, f.cfg, f.recorder)
+	projectController, err := projectcontroller.NewProjectController(ctx, log, f.clientMap, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Project controller: %w", err)
 	}
 
-	quotaController, err := quotacontroller.NewQuotaController(ctx, f.clientMap, f.recorder)
+	quotaController, err := quotacontroller.NewQuotaController(ctx, log, f.clientMap, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Quota controller: %w", err)
 	}
 
-	secretBindingController, err := secretbindingcontroller.NewSecretBindingController(ctx, f.clientMap, f.recorder)
+	secretBindingController, err := secretbindingcontroller.NewSecretBindingController(ctx, log, f.clientMap, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing SecretBinding controller: %w", err)
 	}
 
-	seedController, err := seedcontroller.NewSeedController(ctx, f.clientMap, f.cfg)
+	seedController, err := seedcontroller.NewSeedController(ctx, log, f.clientMap, f.cfg)
 	if err != nil {
 		return fmt.Errorf("failed initializing Seed controller: %w", err)
 	}
@@ -172,6 +180,10 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		}
 
 		go eventController.Run(ctx)
+	}
+
+	if err := secretsManager.Cleanup(ctx); err != nil {
+		return err
 	}
 
 	log.Info("gardener-controller-manager initialized")
@@ -235,6 +247,29 @@ func addAllFieldIndexes(ctx context.Context, indexer client.FieldIndexer) error 
 		return []string{bastion.Spec.ShootRef.Name}
 	}); err != nil {
 		return fmt.Errorf("failed to add indexer to Bastion Informer: %w", err)
+	}
+
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.BackupBucket{}, gardencore.BackupBucketSeedName, func(obj client.Object) []string {
+		backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
+		if !ok {
+			return []string{""}
+		}
+		if backupBucket.Spec.SeedName == nil {
+			return []string{""}
+		}
+		return []string{*backupBucket.Spec.SeedName}
+	}); err != nil {
+		return fmt.Errorf("failed to add indexer to BackupBucket Informer: %w", err)
+	}
+
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.ControllerInstallation{}, gardencore.SeedRefName, func(obj client.Object) []string {
+		controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
+		if !ok {
+			return []string{""}
+		}
+		return []string{controllerInstallation.Spec.SeedRef.Name}
+	}); err != nil {
+		return fmt.Errorf("failed to add indexer to ControllerInstallation Informer: %w", err)
 	}
 
 	return nil

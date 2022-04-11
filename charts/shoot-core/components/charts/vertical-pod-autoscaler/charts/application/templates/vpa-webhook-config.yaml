@@ -1,0 +1,8 @@
+# TODO(rfranzke): Delete this Helm chart in a future version.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: vpa-webhook-config-target
+  annotations:
+    resources.gardener.cloud/mode: Ignore

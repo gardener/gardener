@@ -35,11 +35,13 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"github.com/Masterminds/semver"
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
@@ -102,7 +104,7 @@ func defaultGardenerSeedAdmissionController(c client.Client, imageVector imageve
 	return seedadmissioncontroller.New(c, v1beta1constants.GardenNamespace, image.String()), nil
 }
 
-func defaultGardenerResourceManager(c client.Client, imageVector imagevector.ImageVector, serverCASecret, serverSecret *corev1.Secret) (component.DeployWaiter, error) {
+func defaultGardenerResourceManager(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	image, err := imageVector.FindImage(images.ImageNameGardenerResourceManager)
 	if err != nil {
 		return nil, err
@@ -114,13 +116,14 @@ func defaultGardenerResourceManager(c client.Client, imageVector imagevector.Ima
 	}
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
-	gardenerResourceManager := resourcemanager.New(c, v1beta1constants.GardenNamespace, image.String(), resourcemanager.Values{
+	gardenerResourceManager := resourcemanager.New(c, v1beta1constants.GardenNamespace, secretsManager, image.String(), resourcemanager.Values{
 		ConcurrentSyncs:                      pointer.Int32(20),
 		MaxConcurrentTokenInvalidatorWorkers: pointer.Int32(5),
 		MaxConcurrentRootCAPublisherWorkers:  pointer.Int32(5),
 		HealthSyncPeriod:                     utils.DurationPtr(time.Minute),
 		Replicas:                             pointer.Int32(3),
 		ResourceClass:                        pointer.String(v1beta1constants.SeedResourceManagerClass),
+		SecretNameServerCA:                   v1beta1constants.SecretNameCASeed,
 		SyncPeriod:                           utils.DurationPtr(time.Hour),
 		VPA: &resourcemanager.VPAConfig{
 			MinAllowed: corev1.ResourceList{
@@ -128,11 +131,6 @@ func defaultGardenerResourceManager(c client.Client, imageVector imagevector.Ima
 				corev1.ResourceMemory: resource.MustParse("64Mi"),
 			},
 		},
-	})
-
-	gardenerResourceManager.SetSecrets(resourcemanager.Secrets{
-		ServerCA: component.Secret{Name: caSeed, Checksum: utils.ComputeSecretChecksum(serverCASecret.Data), Data: serverCASecret.Data},
-		Server:   component.Secret{Name: resourcemanager.SecretNameServer, Checksum: utils.ComputeSecretChecksum(serverSecret.Data)},
 	})
 
 	return gardenerResourceManager, nil
@@ -182,12 +180,12 @@ func defaultDependencyWatchdogs(
 	}
 
 	var (
-		dwdEndpointValues = dependencywatchdog.Values{Role: dependencywatchdog.RoleEndpoint, Image: image.String()}
-		dwdProbeValues    = dependencywatchdog.Values{Role: dependencywatchdog.RoleProbe, Image: image.String()}
+		dwdEndpointValues = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint, Image: image.String()}
+		dwdProbeValues    = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe, Image: image.String()}
 	)
 
-	dwdEndpoint = component.OpDestroy(dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dwdEndpointValues))
-	dwdProbe = component.OpDestroy(dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dwdProbeValues))
+	dwdEndpoint = component.OpDestroy(dependencywatchdog.NewBootstrapper(c, v1beta1constants.GardenNamespace, dwdEndpointValues))
+	dwdProbe = component.OpDestroy(dependencywatchdog.NewBootstrapper(c, v1beta1constants.GardenNamespace, dwdProbeValues))
 
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogEndpointEnabled(seedSettings) {
 		// Fetch component-specific dependency-watchdog configuration
@@ -214,7 +212,7 @@ func defaultDependencyWatchdogs(
 		}
 
 		dwdEndpointValues.ValuesEndpoint = dependencywatchdog.ValuesEndpoint{ServiceDependants: dependencyWatchdogEndpointConfigurations}
-		dwdEndpoint = dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dwdEndpointValues)
+		dwdEndpoint = dependencywatchdog.NewBootstrapper(c, v1beta1constants.GardenNamespace, dwdEndpointValues)
 	}
 
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(seedSettings) {
@@ -237,13 +235,63 @@ func defaultDependencyWatchdogs(
 		}
 
 		dwdProbeValues.ValuesProbe = dependencywatchdog.ValuesProbe{ProbeDependantsList: dependencyWatchdogProbeConfigurations}
-		dwdProbe = dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dwdProbeValues)
+		dwdProbe = dependencywatchdog.NewBootstrapper(c, v1beta1constants.GardenNamespace, dwdProbeValues)
 	}
 
 	return
 }
 
-func defaultExternalAuthzServer(
+func defaultVerticalPodAutoscaler(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+	imageAdmissionController, err := imageVector.FindImage(images.ImageNameVpaAdmissionController)
+	if err != nil {
+		return nil, err
+	}
+
+	imageExporter, err := imageVector.FindImage(images.ImageNameVpaExporter)
+	if err != nil {
+		return nil, err
+	}
+
+	imageRecommender, err := imageVector.FindImage(images.ImageNameVpaRecommender)
+	if err != nil {
+		return nil, err
+	}
+
+	imageUpdater, err := imageVector.FindImage(images.ImageNameVpaUpdater)
+	if err != nil {
+		return nil, err
+	}
+
+	return vpa.New(
+		c,
+		v1beta1constants.GardenNamespace,
+		secretsManager,
+		vpa.Values{
+			ClusterType:        vpa.ClusterTypeSeed,
+			SecretNameServerCA: v1beta1constants.SecretNameCASeed,
+			AdmissionController: vpa.ValuesAdmissionController{
+				Image:    imageAdmissionController.String(),
+				Replicas: 1,
+			},
+			Exporter: vpa.ValuesExporter{
+				Image: imageExporter.String(),
+			},
+			Recommender: vpa.ValuesRecommender{
+				Image:                        imageRecommender.String(),
+				RecommendationMarginFraction: pointer.Float64(0.05),
+				Replicas:                     1,
+			},
+			Updater: vpa.ValuesUpdater{
+				EvictionTolerance:      pointer.Float64(1.0),
+				EvictAfterOOMThreshold: &metav1.Duration{Duration: 48 * time.Hour},
+				Image:                  imageUpdater.String(),
+				Replicas:               1,
+			},
+		},
+	), nil
+}
+
+func defaultVPNAuthzServer(
 	ctx context.Context,
 	c client.Client,
 	seedVersion string,

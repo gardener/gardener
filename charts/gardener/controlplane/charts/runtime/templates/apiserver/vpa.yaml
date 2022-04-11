@@ -1,6 +1,6 @@
 {{- if not .Values.global.apiserver.hvpa.enabled }}
 {{- if and .Values.global.apiserver.enabled .Values.global.apiserver.vpa }}
-apiVersion: autoscaling.k8s.io/v1beta2
+apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: gardener-apiserver-vpa

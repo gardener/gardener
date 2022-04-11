@@ -38,6 +38,15 @@ type SecretBinding struct {
 	Provider *SecretBindingProvider
 }
 
+// GetProviderType gets the type of the provider.
+func (sb *SecretBinding) GetProviderType() string {
+	if sb.Provider == nil {
+		return ""
+	}
+
+	return sb.Provider.Type
+}
+
 // SecretBindingProvider defines the provider type of the SecretBinding.
 type SecretBindingProvider struct {
 	// Type is the type of the provider.

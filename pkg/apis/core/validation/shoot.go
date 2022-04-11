@@ -105,6 +105,7 @@ func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&shoot.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateNameConsecutiveHyphens(shoot.Name, field.NewPath("metadata", "name"))...)
+	allErrs = append(allErrs, validateShootOperation(shoot.Annotations[v1beta1constants.GardenerOperation], shoot, field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerOperation))...)
 	allErrs = append(allErrs, ValidateShootSpec(shoot.ObjectMeta, &shoot.Spec, field.NewPath("spec"), false)...)
 
 	return allErrs
@@ -370,7 +371,7 @@ func validateAddons(addons *core.Addons, kubernetes core.Kubernetes, purpose *co
 
 	versionGreaterOrEqual122, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.22")
 	if (helper.NginxIngressEnabled(addons) || helper.KubernetesDashboardEnabled(addons)) && versionGreaterOrEqual122 && (purpose != nil && *purpose != core.ShootPurposeEvaluation) {
-		allErrs = append(allErrs, field.Forbidden(fldPath, "addons can only be enabled on evaluation shoots for versions >= 1.22"))
+		allErrs = append(allErrs, field.Forbidden(fldPath, "for Kubernetes versions >= 1.22 addons can only be enabled on shoots with .spec.purpose=evaluation"))
 	}
 
 	if helper.NginxIngressEnabled(addons) {
@@ -402,9 +403,10 @@ func ValidateNodeCIDRMaskWithMaxPod(maxPod int32, nodeCIDRMaskSize int32) field.
 
 	free := float64(32 - nodeCIDRMaskSize)
 	// first and last ips are reserved
-	ipAdressesAvailable := int32(math.Pow(2, free) - 2)
+	// 2**32 will overflow int32 so use an unsigned
+	ipAdressesAvailable := uint32(math.Pow(2, free) - 2)
 
-	if ipAdressesAvailable < maxPod {
+	if ipAdressesAvailable < uint32(maxPod) {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("kubernetes").Child("kubeControllerManager").Child("nodeCIDRMaskSize"), nodeCIDRMaskSize, fmt.Sprintf("kubelet or kube-controller configuration incorrect. Please adjust the NodeCIDRMaskSize of the kube-controller to support the highest maxPod on any worker pool. The NodeCIDRMaskSize of '%d (default: 24)' of the kube-controller only supports '%d' ip adresses. Highest maxPod setting on kubelet is '%d (default: 110)'. Please choose a NodeCIDRMaskSize that at least supports %d ip adresses", nodeCIDRMaskSize, ipAdressesAvailable, maxPod, maxPod)))
 	}
 
@@ -440,13 +442,13 @@ func ValidateTotalNodeCountWithPodCIDR(shoot *core.Shoot) field.ErrorList {
 		return allErrs
 	}
 
-	maxNodeCount := int32(math.Pow(2, float64(nodeCIDRMaskSize-int32(cidrMask))))
+	maxNodeCount := uint32(math.Pow(2, float64(nodeCIDRMaskSize-int32(cidrMask))))
 
 	for _, worker := range shoot.Spec.Provider.Workers {
 		totalNodes += worker.Maximum
 	}
 
-	if totalNodes > maxNodeCount {
+	if uint32(totalNodes) > maxNodeCount {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec").Child("provider").Child("workers"), totalNodes, fmt.Sprintf("worker configuration incorrect. The podCIDRs in `spec.networking.pod` can only support a maximum of %d nodes. The total number of worker pool nodes should be less than %d ", maxNodeCount, maxNodeCount)))
 	}
 	return allErrs
@@ -796,8 +798,25 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured bool, fldPa
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "extendTokenExpiration"), "this field is only available in Kubernetes v1.19+"))
 			}
 
-			if kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration != nil && kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration < 0 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), *kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration, "can not be negative"))
+			if kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration != nil {
+				if kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration < 0 {
+					allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), *kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration, "can not be negative"))
+				}
+
+				if utilfeature.DefaultFeatureGate.Enabled(features.ShootMaxTokenExpirationValidation) {
+					if duration := kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration; duration > 0 && duration < 720*time.Hour {
+						allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), "must be at least 720h (30d)"))
+					}
+
+					if duration := kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration; duration > 2160*time.Hour {
+						allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), "must be at most 2160h (90d)"))
+					}
+				}
+			}
+
+			geqKubernetes122, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.22")
+			if kubeAPIServer.ServiceAccountConfig.AcceptedIssuers != nil && !geqKubernetes122 {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "acceptedIssuers"), "this field is only available in Kubernetes v1.22+"))
 			}
 		}
 
@@ -1037,11 +1056,11 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path) fie
 		} else {
 			duration := maintenanceTimeWindow.Duration()
 			if duration > core.MaintenanceTimeWindowDurationMaximum {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("timeWindow"), fmt.Sprintf("time window must not be greater than %s", core.MaintenanceTimeWindowDurationMaximum)))
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("timeWindow"), duration, fmt.Sprintf("time window must not be greater than %s", core.MaintenanceTimeWindowDurationMaximum)))
 				return allErrs
 			}
 			if duration < core.MaintenanceTimeWindowDurationMinimum {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("timeWindow"), fmt.Sprintf("time window must not be smaller than %s", core.MaintenanceTimeWindowDurationMinimum)))
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("timeWindow"), duration, fmt.Sprintf("time window must not be smaller than %s", core.MaintenanceTimeWindowDurationMinimum)))
 				return allErrs
 			}
 		}
@@ -1683,4 +1702,46 @@ func validateCoreDNS(coreDNS *core.CoreDNS, fldPath *field.Path) field.ErrorList
 	}
 
 	return allErrs
+}
+
+func validateShootOperation(operation string, shoot *core.Shoot, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if operation == "" {
+		return allErrs
+	}
+
+	if !utilfeature.DefaultFeatureGate.Enabled(features.ShootCARotation) {
+		return allErrs
+	}
+
+	switch operation {
+	case v1beta1constants.ShootOperationRotateCAStart:
+		if !isShootReadyForCARotationStart(shoot.Status.LastOperation) {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start CA rotation if shoot was not yet created successfully or is not ready for reconciliation"))
+		}
+		if phase := helper.GetShootCARotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start CA rotation if .status.credentials.rotation.certificateAuthorities.phase is not 'Completed'"))
+		}
+
+	case v1beta1constants.ShootOperationRotateCAComplete:
+		if helper.GetShootCARotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete CA rotation if .status.credentials.rotation.certificateAuthorities.phase is not 'Prepared'"))
+		}
+	}
+
+	return allErrs
+}
+
+func isShootReadyForCARotationStart(lastOperation *core.LastOperation) bool {
+	if lastOperation == nil {
+		return false
+	}
+	if lastOperation.Type == core.LastOperationTypeCreate && lastOperation.State == core.LastOperationStateSucceeded {
+		return true
+	}
+	if lastOperation.Type == core.LastOperationTypeRestore && lastOperation.State == core.LastOperationStateSucceeded {
+		return true
+	}
+	return lastOperation.Type == core.LastOperationTypeReconcile
 }

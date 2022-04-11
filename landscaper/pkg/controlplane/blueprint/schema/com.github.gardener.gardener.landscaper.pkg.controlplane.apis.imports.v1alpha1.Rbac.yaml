@@ -1,6 +1,0 @@
-description: Rbac configures common RBAC configuration
-properties:
-  seedAuthorizer:
-    $ref: blueprint://schema/com.github.gardener.gardener.landscaper.pkg.controlplane.apis.imports.v1alpha1.SeedAuthorizer.yaml
-    description: SeedAuthorizer configures RBAC for the SeedAuthorizer
-type: object

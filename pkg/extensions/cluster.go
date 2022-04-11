@@ -16,8 +16,11 @@ package extensions
 
 import (
 	"context"
+	"fmt"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -176,6 +179,51 @@ func ShootFromCluster(cluster *extensionsv1alpha1.Cluster) (*gardencorev1beta1.S
 	}
 
 	return shoot, nil
+}
+
+// GenericTokenKubeconfigSecretNameFromCluster reads the generic-token-kubeconfig.secret.gardener.cloud/name annotation
+// and returns its value. If the annotation is not present then it falls back to the deprecated
+// SecretNameGenericTokenKubeconfig.
+func GenericTokenKubeconfigSecretNameFromCluster(cluster *Cluster) string {
+	if v, ok := cluster.ObjectMeta.Annotations[v1beta1constants.AnnotationKeyGenericTokenKubeconfigSecretName]; ok {
+		return v
+	}
+	return v1beta1constants.SecretNameGenericTokenKubeconfig
+}
+
+// GetShootStateForCluster retrieves the ShootState and the Shoot resources for a given Cluster name by first fetching
+// the *extensionsv1alpha1.Cluster object in the seed, extracting the Shoot resource from it and then fetching the
+// *gardencorev1alpha1.ShootState resource from the garden.
+func GetShootStateForCluster(
+	ctx context.Context,
+	gardenClient client.Client,
+	seedClient client.Client,
+	clusterName string,
+) (
+	*gardencorev1alpha1.ShootState,
+	*gardencorev1beta1.Shoot,
+	error,
+) {
+	cluster := &extensionsv1alpha1.Cluster{}
+	if err := seedClient.Get(ctx, kutil.Key(clusterName), cluster); err != nil {
+		return nil, nil, err
+	}
+
+	shoot, err := ShootFromCluster(cluster)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if shoot == nil {
+		return nil, nil, fmt.Errorf("cluster resource %s doesn't contain shoot resource in raw format", cluster.Name)
+	}
+
+	shootState := &gardencorev1alpha1.ShootState{}
+	if err := gardenClient.Get(ctx, kutil.Key(shoot.Namespace, shoot.Name), shootState); err != nil {
+		return nil, nil, err
+	}
+
+	return shootState, shoot, nil
 }
 
 // GetShoot tries to read Gardener's Cluster extension resource in the given namespace and return the embedded Shoot resource.

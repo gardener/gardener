@@ -21,7 +21,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 	"github.com/gardener/gardener/pkg/logger"
 	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
@@ -55,7 +54,6 @@ var _ = Describe("Shoot References", func() {
 		reconciler     reconcile.Reconciler
 		shoot          gardencorev1beta1.Shoot
 		gardenClient   *fakeclientset.ClientSet
-		cfg            = &config.ShootReferenceControllerConfiguration{}
 	)
 
 	BeforeEach(func() {
@@ -78,7 +76,7 @@ var _ = Describe("Shoot References", func() {
 	})
 
 	JustBeforeEach(func() {
-		reconciler = NewShootReferenceReconciler(logger.NewNopLogger(), gardenClient, cfg)
+		reconciler = NewShootReferenceReconciler(logger.NewNopLogger(), gardenClient)
 	})
 
 	Context("Common controller tests", func() {
@@ -458,9 +456,6 @@ var _ = Describe("Shoot References", func() {
 		var configMaps []corev1.ConfigMap
 
 		BeforeEach(func() {
-			cfg.ProtectAuditPolicyConfigMaps = pointer.Bool(true)
-			reconciler = NewShootReferenceReconciler(logger.NewNopLogger(), gardenClient, cfg)
-
 			configMaps = []corev1.ConfigMap{
 				{ObjectMeta: metav1.ObjectMeta{
 					Name:      "configmap-1",

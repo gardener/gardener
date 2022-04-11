@@ -45,6 +45,7 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 		SetDefaults_ClientConnectionConfiguration(&in.ShootClientConnection.ClientConnectionConfiguration)
 	}
 	if in.Controllers != nil {
+		SetDefaults_GardenletControllerConfiguration(in.Controllers)
 		if in.Controllers.BackupBucket != nil {
 			SetDefaults_BackupBucketControllerConfiguration(in.Controllers.BackupBucket)
 		}
@@ -90,9 +91,15 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 		if in.Controllers.ManagedSeed != nil {
 			SetDefaults_ManagedSeedControllerConfiguration(in.Controllers.ManagedSeed)
 		}
+		if in.Controllers.ShootSecret != nil {
+			SetDefaults_ShootSecretControllerConfiguration(in.Controllers.ShootSecret)
+		}
 	}
 	if in.LeaderElection != nil {
 		SetDefaults_LeaderElectionConfiguration(in.LeaderElection)
+	}
+	if in.Logging != nil {
+		SetDefaults_Logging(in.Logging)
 	}
 	if in.SNI != nil {
 		SetDefaults_SNI(in.SNI)

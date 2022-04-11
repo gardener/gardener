@@ -21,23 +21,30 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
+	"k8s.io/apimachinery/pkg/util/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-const (
-	// DefaultInterval is the default interval for retry operations.
-	DefaultInterval = 5 * time.Second
+// DefaultInterval is the default interval for retry operations.
+const DefaultInterval = 5 * time.Second
+
+var (
+	// ChartsPath is an alias for charts.Path. Exposed for testing.
+	ChartsPath = charts.Path
+
+	ingressTLSCertificateValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
 )
 
 // New takes an operation object <o> and creates a new Botanist object. It checks whether the given Shoot DNS
@@ -66,6 +73,19 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 
 	if err = b.InitializeSeedClients(ctx); err != nil {
+		return nil, err
+	}
+
+	o.SecretsManager, err = secretsmanager.New(
+		ctx,
+		logf.Log.WithName("secretsmanager"),
+		clock.RealClock{},
+		b.K8sSeedClient.Client(),
+		b.Shoot.SeedNamespace,
+		v1beta1constants.SecretManagerIdentityGardenlet,
+		b.lastSecretRotationStartTimes(),
+	)
+	if err != nil {
 		return nil, err
 	}
 
@@ -107,6 +127,11 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 
 	// control plane components
+
+	o.Shoot.Components.ControlPlane.ClusterAutoscaler, err = b.DefaultClusterAutoscaler()
+	if err != nil {
+		return nil, err
+	}
 	o.Shoot.Components.ControlPlane.EtcdCopyBackupsTask = b.DefaultEtcdCopyBackupsTask()
 	o.Shoot.Components.ControlPlane.EtcdMain, err = b.DefaultEtcd(v1beta1constants.ETCDRoleMain, etcd.ClassImportant)
 	if err != nil {
@@ -135,7 +160,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
-	o.Shoot.Components.ControlPlane.ClusterAutoscaler, err = b.DefaultClusterAutoscaler()
+	o.Shoot.Components.ControlPlane.VerticalPodAutoscaler, err = b.DefaultVerticalPodAutoscaler()
 	if err != nil {
 		return nil, err
 	}
@@ -176,6 +201,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	// other components
 	o.Shoot.Components.SourceBackupEntry = b.SourceBackupEntry()
 	o.Shoot.Components.BackupEntry = b.DefaultCoreBackupEntry()
+	o.Shoot.Components.DependencyWatchdogAccess = b.DefaultDependencyWatchdogAccess()
 	o.Shoot.Components.GardenerAccess = b.DefaultGardenerAccess()
 	o.Shoot.Components.NetworkPolicies, err = b.DefaultNetworkPolicies(sniPhase)
 	if err != nil {
@@ -206,8 +232,7 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 		return err
 	}
 
-	requiredExtensions := shootpkg.ComputeRequiredExtensions(b.Shoot.GetInfo(), b.Seed.GetInfo(), controllerRegistrationList, b.Garden.InternalDomain, b.Shoot.ExternalDomain,
-		gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords))
+	requiredExtensions := shootpkg.ComputeRequiredExtensions(b.Shoot.GetInfo(), b.Seed.GetInfo(), controllerRegistrationList, b.Garden.InternalDomain, b.Shoot.ExternalDomain)
 
 	for _, controllerInstallation := range controllerInstallationList.Items {
 		if controllerInstallation.Spec.SeedRef.Name != b.Seed.GetInfo().Name {

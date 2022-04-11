@@ -26,6 +26,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	netpol "github.com/gardener/gardener/pkg/operation/botanist/addons/networkpolicy"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
@@ -136,12 +137,15 @@ func (b *Botanist) NeedsIngressDNS() bool {
 // DefaultIngressDNSRecord creates the default deployer for the ingress DNSRecord resource.
 func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
-		Name:       b.Shoot.GetInfo().Name + "-" + common.ShootDNSIngressName,
-		SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
-		Namespace:  b.Shoot.SeedNamespace,
-		TTL:        b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+		Name:              b.Shoot.GetInfo().Name + "-" + common.ShootDNSIngressName,
+		SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
+		Namespace:         b.Shoot.SeedNamespace,
+		TTL:               b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordIngress) || b.isRestorePhase(),
 	}
-	if b.NeedsIngressDNS() {
+
+	// Set component values even if the nginx-ingress addons is not enabled.
+	if b.NeedsExternalDNS() {
 		values.Type = b.Shoot.ExternalDomain.Provider
 		if b.Shoot.ExternalDomain.Zone != "" {
 			values.Zone = &b.Shoot.ExternalDomain.Zone
@@ -149,6 +153,7 @@ func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 		values.SecretData = b.Shoot.ExternalDomain.SecretData
 		values.DNSName = b.Shoot.GetIngressFQDN("*")
 	}
+
 	return extensionsdnsrecord.New(
 		b.Logger,
 		b.K8sSeedClient.Client(),
@@ -282,18 +287,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		podSecurityPolicies = map[string]interface{}{
 			"allowPrivilegedContainers": *b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers,
 		}
-		verticalPodAutoscaler = map[string]interface{}{
-			"application": map[string]interface{}{
-				"clusterType": "shoot",
-				"admissionController": map[string]interface{}{
-					"createServiceAccount": false,
-					"controlNamespace":     b.Shoot.SeedNamespace,
-				},
-				"exporter":    map[string]interface{}{"createServiceAccount": false},
-				"recommender": map[string]interface{}{"createServiceAccount": false},
-				"updater":     map[string]interface{}{"createServiceAccount": false},
-			},
-		}
 
 		shootInfo = map[string]interface{}{
 			"projectName":       b.Garden.Project.Name,
@@ -321,26 +314,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 
 	if b.Shoot.IPVSEnabled() {
 		networkPolicyConfig.NodeLocalDNS.KubeDNSClusterIP = nodelocaldns.IPVSAddress
-	}
-
-	if vpaSecret := b.LoadSecret(common.VPASecretName); vpaSecret != nil {
-		verticalPodAutoscaler["application"].(map[string]interface{})["admissionController"].(map[string]interface{})["caCert"] = vpaSecret.Data[secrets.DataKeyCertificateCA]
-	}
-
-	workerPools, err := b.computeWorkerPoolsForKubeProxy(ctx)
-	if err != nil {
-		return nil, err
-	}
-	var kubeProxyWorkerPools []map[string]string
-	for _, obj := range workerPools {
-		kubeProxyWorkerPools = append(kubeProxyWorkerPools, map[string]string{
-			"name":              obj.Name,
-			"kubernetesVersion": obj.KubernetesVersion,
-			"kubeProxyImage":    obj.Image,
-		})
-	}
-	kubeProxy := map[string]interface{}{
-		"workerPools": kubeProxyWorkerPools,
 	}
 
 	if domain := b.Shoot.ExternalClusterDomain; domain != nil {
@@ -383,22 +356,16 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	}
 
 	values := map[string]interface{}{
-		"global":                 global,
-		"coredns":                common.GenerateAddonConfig(nil, true),
-		"vpn-shoot":              common.GenerateAddonConfig(nil, true),
-		"node-local-dns":         common.GenerateAddonConfig(nil, b.Shoot.NodeLocalDNSEnabled),
-		"kube-apiserver-kubelet": common.GenerateAddonConfig(nil, true),
-		"apiserver-proxy":        common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
-		"kube-proxy":             common.GenerateAddonConfig(kubeProxy, gardencorev1beta1helper.KubeProxyEnabled(b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)),
+		"global":          global,
+		"apiserver-proxy": common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
 		"monitoring": common.GenerateAddonConfig(map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
 		}, b.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting),
 		"network-policies":        networkPolicyConfig,
-		"node-problem-detector":   common.GenerateAddonConfig(nil, true),
 		"podsecuritypolicies":     common.GenerateAddonConfig(podSecurityPolicies, true),
 		"shoot-info":              common.GenerateAddonConfig(shootInfo, true),
-		"vertical-pod-autoscaler": common.GenerateAddonConfig(verticalPodAutoscaler, b.Shoot.WantsVerticalPodAutoscaler),
+		"vertical-pod-autoscaler": common.GenerateAddonConfig(nil, b.Shoot.WantsVerticalPodAutoscaler),
 		"cluster-identity":        map[string]interface{}{"clusterIdentity": b.Shoot.GetInfo().Status.ClusterIdentity},
 	}
 

@@ -18,6 +18,7 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfig "k8s.io/component-base/config"
 	"k8s.io/klog"
@@ -137,6 +138,8 @@ type GardenletControllerConfiguration struct {
 	SeedAPIServerNetworkPolicy *SeedAPIServerNetworkPolicyControllerConfiguration
 	// ManagedSeedControllerConfiguration the configuration of the ManagedSeed controller.
 	ManagedSeed *ManagedSeedControllerConfiguration
+	// ShootSecretControllerConfiguration the configuration of the ShootSecret controller.
+	ShootSecret *ShootSecretControllerConfiguration
 }
 
 // BackupBucketControllerConfiguration defines the configuration of the BackupBucket
@@ -282,6 +285,12 @@ type ShootMigrationControllerConfiguration struct {
 	LastOperationStaleDuration *metav1.Duration
 }
 
+// ShootSecretControllerConfiguration defines the configuration of the ShootSecret controller.
+type ShootSecretControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	ConcurrentSyncs *int
+}
+
 // StaleExtensionHealthChecks defines the configuration of the check for stale extension health checks.
 type StaleExtensionHealthChecks struct {
 	// Enabled specifies whether the check for stale extensions health checks is enabled.
@@ -330,6 +339,10 @@ type ManagedSeedControllerConfiguration struct {
 	// If its value is greater than 0 then the managed seeds will not be enqueued immediately but only after a random
 	// duration between 0 and the configured value. It is defaulted to 5m.
 	SyncJitterPeriod *metav1.Duration
+	// JitterUpdates enables enqueuing managed seeds with a random duration(jitter) in case of an update to the spec.
+	// The applied jitterPeriod is taken from SyncJitterPeriod.
+	// Defaults to false.
+	JitterUpdates *bool
 }
 
 // ResourcesConfiguration defines the total capacity for seed resources and the amount reserved for use by Gardener.
@@ -363,7 +376,7 @@ type FluentBit struct {
 type Loki struct {
 	// Enabled is used to enable or disable the shoot and seed Loki.
 	// If FluentBit is used with a custom output the Loki can, Loki is maybe unused and can be disabled.
-	// If not set, by default Loki is enabled
+	// If not set, by default Loki is enabled.
 	Enabled *bool
 	// Garden contains configuration for the Loki in garden namespace.
 	Garden *GardenLoki
@@ -371,13 +384,16 @@ type Loki struct {
 
 // GardenLoki contains configuration for the Loki in garden namespace.
 type GardenLoki struct {
-	// Priority is the priority value for the Loki
+	// Priority is the priority value for the Loki.
 	Priority *int32
+	// Storage is the disk storage capacity of the central Loki.
+	// Defaults to 100Gi.
+	Storage *resource.Quantity
 }
 
 // ShootNodeLogging contains configuration for the shoot node logging.
 type ShootNodeLogging struct {
-	// ShootPurposes determines which shoots can have node logging by their purpose
+	// ShootPurposes determines which shoots can have node logging by their purpose.
 	ShootPurposes []gardencore.ShootPurpose
 }
 
@@ -385,11 +401,11 @@ type ShootNodeLogging struct {
 type Logging struct {
 	// Enabled is used to enable or disable logging stack for clusters.
 	Enabled *bool
-	// FluentBit contains configurations for the fluent-bit
+	// FluentBit contains configurations for the fluent-bit.
 	FluentBit *FluentBit
-	// Loki contains configuration for the Loki
+	// Loki contains configuration for the Loki.
 	Loki *Loki
-	// ShootNodeLogging contains configurations for the shoot node logging
+	// ShootNodeLogging contains configurations for the shoot node logging.
 	ShootNodeLogging *ShootNodeLogging
 }
 
@@ -456,6 +472,8 @@ type ETCDConfig struct {
 	CustodianController *CustodianController
 	// BackupCompactionController contains config specific to backup compaction controller
 	BackupCompactionController *BackupCompactionController
+	// BackupLeaderElection contains configuration for the leader election for the etcd backup-restore sidecar.
+	BackupLeaderElection *ETCDBackupLeaderElection
 }
 
 // ETCDController contains config specific to ETCD controller
@@ -486,6 +504,14 @@ type BackupCompactionController struct {
 	// ActiveDeadlineDuration defines duration after which a running backup compaction job will be killed
 	// Defaults to 3 hours
 	ActiveDeadlineDuration *metav1.Duration
+}
+
+// ETCDBackupLeaderElection contains configuration for the leader election for the etcd backup-restore sidecar.
+type ETCDBackupLeaderElection struct {
+	// ReelectionPeriod defines the Period after which leadership status of corresponding etcd is checked.
+	ReelectionPeriod *metav1.Duration
+	// EtcdConnectionTimeout defines the timeout duration for etcd client connection during leader election.
+	EtcdConnectionTimeout *metav1.Duration
 }
 
 // ExposureClassHandler contains configuration for an exposure class handler.

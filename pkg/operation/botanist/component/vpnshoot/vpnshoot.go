@@ -16,6 +16,7 @@ package vpnshoot
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -24,9 +25,12 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -38,30 +42,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	// labelValue is the value of a label used for the identification of vpn-shoot pods.
 	labelValue = "vpn-shoot"
-	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
-	ManagedResourceName = "shoot-core-vpn-shoot"
-	// SecretNameVPNShootClient is the constant for the shoot secret name when ReversedVPN is enabled.
-	SecretNameVPNShootClient = "vpn-shoot-client"
-	// SecretNameVPNShoot is the constant for the shoot secret name when ReversedVPN is not enabled.
-	SecretNameVPNShoot = "vpn-shoot"
 
-	servicePort    int32 = 4314
-	containerPort  int32 = 1194
-	deploymentName       = "vpn-shoot"
-	containerName        = "vpn-shoot"
-	serviceName          = "vpn-shoot"
+	servicePort   int32 = 4314
+	containerPort int32 = 1194
 
-	secretName        = "vpn-shoot"
-	secretNameTLSAuth = "vpn-shoot-tlsauth"
-	secretNameDH      = "vpn-shoot-dh"
+	managedResourceName = "shoot-core-vpn-shoot"
+	deploymentName      = "vpn-shoot"
+	containerName       = "vpn-shoot"
+	serviceName         = "vpn-shoot"
+
+	secretNameDH = "vpn-shoot-dh"
 
 	volumeName        = "vpn-shoot"
 	volumeNameTLSAuth = "vpn-shoot-tlsauth"
@@ -120,32 +117,75 @@ type Values struct {
 func New(
 	client client.Client,
 	namespace string,
+	secretsManager secretsmanager.Interface,
 	values Values,
 ) Interface {
 	return &vpnShoot{
-		client:    client,
-		namespace: namespace,
-		values:    values,
+		client:         client,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		values:         values,
 	}
 }
 
 type vpnShoot struct {
-	client    client.Client
-	namespace string
-	values    Values
-	secrets   Secrets
+	client         client.Client
+	namespace      string
+	secretsManager secretsmanager.Interface
+	values         Values
+	secrets        Secrets
 }
 
 func (v *vpnShoot) Deploy(ctx context.Context) error {
-	data, err := v.computeResourcesData()
+	var (
+		config = &secretutils.CertificateSecretConfig{
+			Name:                        "vpn-shoot-client",
+			CommonName:                  "vpn-shoot-client",
+			CertType:                    secretutils.ClientCert,
+			SkipPublishingCACertificate: true,
+		}
+		signingCA = v1beta1constants.SecretNameCAVPN
+	)
+
+	if !v.values.ReversedVPN.Enabled {
+		config = &secretutils.CertificateSecretConfig{
+			Name:                        "vpn-shoot-server",
+			CommonName:                  "vpn-shoot-server",
+			CertType:                    secretutils.ServerCert,
+			SkipPublishingCACertificate: true,
+		}
+		signingCA = v1beta1constants.SecretNameCACluster
+	}
+
+	secretCA, found := v.secretsManager.Get(signingCA)
+	if !found {
+		return fmt.Errorf("secret %q not found", signingCA)
+	}
+
+	secret, err := v.secretsManager.Generate(ctx, config, secretsmanager.SignedByCA(signingCA), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return err
 	}
-	return managedresources.CreateForShoot(ctx, v.client, v.namespace, ManagedResourceName, false, data)
+
+	data, err := v.computeResourcesData(secretCA, secret)
+	if err != nil {
+		return err
+	}
+
+	if err := managedresources.CreateForShoot(ctx, v.client, v.namespace, managedResourceName, false, data); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove in a future release.
+	return kutil.DeleteObjects(ctx, v.client,
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpn-shoot", Namespace: v.namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpn-shoot-client", Namespace: v.namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpn-shoot-server", Namespace: v.namespace}},
+	)
 }
 
 func (v *vpnShoot) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForShoot(ctx, v.client, v.namespace, ManagedResourceName)
+	return managedresources.DeleteForShoot(ctx, v.client, v.namespace, managedResourceName)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -156,35 +196,64 @@ func (v *vpnShoot) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, v.client, v.namespace, ManagedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, v.client, v.namespace, managedResourceName)
 }
 
 func (v *vpnShoot) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, v.client, v.namespace, ManagedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, v.client, v.namespace, managedResourceName)
 }
 
-func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
+func (v *vpnShoot) computeResourcesData(secretCAVPN, secretVPNShoot *corev1.Secret) (map[string][]byte, error) {
+	var (
+		secretNameSuffix  string
+		secretNameTLSAuth string
+
+		secretVPNSeedServerTLSAuth *corev1.Secret
+		found                      bool
+	)
+
+	if v.values.ReversedVPN.Enabled {
+		secretNameSuffix = "client"
+		secretNameTLSAuth = vpnseedserver.SecretNameTLSAuth
+	} else {
+		secretNameSuffix = "server"
+		secretNameTLSAuth = kubeapiserver.SecretNameVPNSeedTLSAuth
+	}
+
+	secretVPNSeedServerTLSAuth, found = v.secretsManager.Get(secretNameTLSAuth)
+	if !found {
+		return nil, fmt.Errorf("secret %q not found", secretNameTLSAuth)
+	}
+
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
-		secretTLSAuth = &corev1.Secret{
+		secretCA = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      secretNameTLSAuth,
+				Name:      "vpn-shoot-ca",
 				Namespace: metav1.NamespaceSystem,
 			},
 			Type: corev1.SecretTypeOpaque,
-			Data: v.secrets.TLSAuth.Data,
+			Data: secretCAVPN.Data,
+		}
+		secretTLSAuth = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "vpn-shoot-tlsauth",
+				Namespace: metav1.NamespaceSystem,
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: secretVPNSeedServerTLSAuth.Data,
 		}
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      secretName,
+				Name:      "vpn-shoot-" + secretNameSuffix,
 				Namespace: metav1.NamespaceSystem,
 			},
 			Type: corev1.SecretTypeOpaque,
-			Data: v.secrets.Server.Data,
+			Data: secretVPNShoot.Data,
 		}
 		secretDH           *corev1.Secret
 		service            *corev1.Service
@@ -192,6 +261,7 @@ func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
 	)
 
+	utilruntime.Must(kutil.MakeUnique(secretCA))
 	utilruntime.Must(kutil.MakeUnique(secretTLSAuth))
 	utilruntime.Must(kutil.MakeUnique(secret))
 
@@ -260,7 +330,7 @@ func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
 	var (
 		intStrMax  = intstr.FromString("100%")
 		intStrZero = intstr.FromString("0%")
-		vpa        *autoscalingv1beta2.VerticalPodAutoscaler
+		vpa        *vpaautoscalingv1.VerticalPodAutoscaler
 
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
@@ -298,6 +368,7 @@ func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
 				Volumes: []policyv1beta1.FSType{
 					"secret",
 					"emptyDir",
+					"projected",
 				},
 				AllowedCapabilities: []corev1.Capability{
 					"NET_ADMIN",
@@ -376,10 +447,6 @@ func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{
-							// TODO(rfranzke): Remove in a future release.
-							"security.gardener.cloud/trigger": "rollout",
-						},
 						Labels: map[string]string{
 							v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
 							v1beta1constants.LabelApp:       labelValue,
@@ -419,7 +486,7 @@ func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
 								VolumeMounts: v.getVolumeMounts(),
 							},
 						},
-						Volumes: v.getVolumes(secret, secretTLSAuth, secretDH),
+						Volumes: v.getVolumes(secretCA, secret, secretTLSAuth, secretDH),
 					},
 				},
 			},
@@ -428,29 +495,31 @@ func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	if v.values.VPAEnabled {
-		vpaUpdateMode := autoscalingv1beta2.UpdateModeAuto
-		vpa = &autoscalingv1beta2.VerticalPodAutoscaler{
+		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+		controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "vpn-shoot",
 				Namespace: metav1.NamespaceSystem,
 			},
-			Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 					Kind:       "Deployment",
 					Name:       deployment.Name,
 				},
-				UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 					UpdateMode: &vpaUpdateMode,
 				},
-				ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
-					ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 						{
-							ContainerName: autoscalingv1beta2.DefaultContainerResourcePolicy,
+							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
 							MinAllowed: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("100m"),
 								corev1.ResourceMemory: resource.MustParse("10Mi"),
 							},
+							ControlledValues: &controlledValues,
 						},
 					},
 				},
@@ -460,6 +529,7 @@ func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
 
 	return registry.AddAllAndSerialize(
 		secret,
+		secretCA,
 		secretTLSAuth,
 		secretDH,
 		serviceAccount,
@@ -477,12 +547,8 @@ func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
 
 // Secrets is collection of secrets for the vpn-shoot.
 type Secrets struct {
-	// TLSAuth is a secret containing the tls auth credentials.
-	TLSAuth component.Secret
 	// DH is a secret containing the Diffie-Hellman credentials.
 	DH *component.Secret
-	// Server is a secret containing the server certificate and key.
-	Server component.Secret
 }
 
 func (v *vpnShoot) SetSecrets(secrets Secrets) {
@@ -530,44 +596,71 @@ func (v *vpnShoot) getEnvVars() []corev1.EnvVar {
 func (v *vpnShoot) getResourceLimits() corev1.ResourceList {
 	if v.values.VPAEnabled {
 		return corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("400m"),
-			corev1.ResourceMemory: resource.MustParse("400Mi"),
+			corev1.ResourceMemory: resource.MustParse("100Mi"),
 		}
 	}
 	return corev1.ResourceList{
-		corev1.ResourceCPU:    resource.MustParse("1"),
-		corev1.ResourceMemory: resource.MustParse("1Gi"),
+		corev1.ResourceMemory: resource.MustParse("120Mi"),
 	}
 }
 
 func (v *vpnShoot) getVolumeMounts() []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{
-			Name:      secretName,
+			Name:      volumeName,
 			MountPath: volumeMountPathSecret,
 		},
 		{
-			Name:      secretNameTLSAuth,
+			Name:      volumeNameTLSAuth,
 			MountPath: volumeMountPathSecretTLS,
 		},
 	}
 	if !v.values.ReversedVPN.Enabled {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      secretNameDH,
+			Name:      volumeNameDH,
 			MountPath: volumeMountPathSecretDH,
 		})
 	}
 	return volumeMounts
 }
 
-func (v *vpnShoot) getVolumes(secret, secretTLSAuth, secretDH *corev1.Secret) []corev1.Volume {
+func (v *vpnShoot) getVolumes(secretCA, secret, secretTLSAuth, secretDH *corev1.Secret) []corev1.Volume {
 	volumes := []corev1.Volume{
 		{
 			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName:  secret.Name,
-					DefaultMode: pointer.Int32(400),
+				Projected: &corev1.ProjectedVolumeSource{
+					DefaultMode: pointer.Int32(420),
+					Sources: []corev1.VolumeProjection{
+						{
+							Secret: &corev1.SecretProjection{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: secretCA.Name,
+								},
+								Items: []corev1.KeyToPath{{
+									Key:  secretutils.DataKeyCertificateBundle,
+									Path: "ca.crt",
+								}},
+							},
+						},
+						{
+							Secret: &corev1.SecretProjection{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: secret.Name,
+								},
+								Items: []corev1.KeyToPath{
+									{
+										Key:  secretutils.DataKeyCertificate,
+										Path: secretutils.DataKeyCertificate,
+									},
+									{
+										Key:  secretutils.DataKeyPrivateKey,
+										Path: secretutils.DataKeyPrivateKey,
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -576,7 +669,7 @@ func (v *vpnShoot) getVolumes(secret, secretTLSAuth, secretDH *corev1.Secret) []
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretTLSAuth.Name,
-					DefaultMode: pointer.Int32(400),
+					DefaultMode: pointer.Int32(0400),
 				},
 			},
 		},
@@ -587,7 +680,7 @@ func (v *vpnShoot) getVolumes(secret, secretTLSAuth, secretDH *corev1.Secret) []
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretDH.Name,
-					DefaultMode: pointer.Int32(400),
+					DefaultMode: pointer.Int32(0400),
 				},
 			},
 		})

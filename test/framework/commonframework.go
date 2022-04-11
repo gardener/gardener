@@ -83,7 +83,7 @@ func (f *CommonFramework) BeforeEach() {
 		} else {
 			// This is the default location if the framework is running in one of the gardener/shoot suites.
 			// Otherwise the resource dir has to be adjusted
-			f.ResourcesDir, err = filepath.Abs(filepath.Join("..", "..", "framework", "resources"))
+			f.ResourcesDir, err = filepath.Abs(filepath.Join("..", "..", "..", "framework", "resources"))
 		}
 		ExpectNoError(err)
 	}
@@ -103,7 +103,7 @@ func CommonAfterSuite() {
 	// run all registered cleanup functions
 	RunCleanupActions()
 
-	resourcesDir, err := filepath.Abs(filepath.Join("..", "..", "framework", "resources"))
+	resourcesDir, err := filepath.Abs(filepath.Join("..", "..", "..", "framework", "resources"))
 	ExpectNoError(err)
 	err = os.RemoveAll(filepath.Join(resourcesDir, "charts"))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())

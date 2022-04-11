@@ -17,7 +17,10 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"net"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -26,12 +29,12 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -92,6 +95,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	return kubeapiserver.New(
 		b.K8sSeedClient,
 		b.Shoot.SeedNamespace,
+		b.SecretsManager,
 		kubeapiserver.Values{
 			AdmissionPlugins:               admissionPlugins,
 			AnonymousAuthenticationEnabled: gardencorev1beta1helper.ShootWantsAnonymousAuthentication(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer),
@@ -112,7 +116,8 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 				ServiceNetworkCIDR: b.Shoot.Networks.Services.String(),
 				NodeNetworkCIDR:    b.Shoot.GetInfo().Spec.Networking.Nodes,
 			},
-			WatchCacheSizes: watchCacheSizes,
+			WatchCacheSizes:             watchCacheSizes,
+			EnableStaticTokenKubeconfig: b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig,
 		},
 	), nil
 }
@@ -204,10 +209,6 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 						corev1.ResourceCPU:    resource.MustParse("1750m"),
 						corev1.ResourceMemory: resource.MustParse("2Gi"),
 					},
-					Limits: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("4000m"),
-						corev1.ResourceMemory: resource.MustParse("8Gi"),
-					},
 				}
 			}
 		}
@@ -226,9 +227,9 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 
 func resourcesRequirementsForKubeAPIServer(nodeCount int32, scalingClass string) corev1.ResourceRequirements {
 	var (
-		validScalingClasses        = sets.NewString("small", "medium", "large", "xlarge", "2xlarge")
-		cpuRequest, cpuLimit       string
-		memoryRequest, memoryLimit string
+		validScalingClasses = sets.NewString("small", "medium", "large", "xlarge", "2xlarge")
+		cpuRequest          string
+		memoryRequest       string
 	)
 
 	if !validScalingClasses.Has(scalingClass) {
@@ -248,34 +249,30 @@ func resourcesRequirementsForKubeAPIServer(nodeCount int32, scalingClass string)
 
 	switch {
 	case scalingClass == "small":
-		cpuRequest, cpuLimit = "800m", "1000m"
-		memoryRequest, memoryLimit = "800Mi", "1200Mi"
+		cpuRequest = "800m"
+		memoryRequest = "800Mi"
 
 	case scalingClass == "medium":
-		cpuRequest, cpuLimit = "1000m", "1200m"
-		memoryRequest, memoryLimit = "1100Mi", "1900Mi"
+		cpuRequest = "1000m"
+		memoryRequest = "1100Mi"
 
 	case scalingClass == "large":
-		cpuRequest, cpuLimit = "1200m", "1500m"
-		memoryRequest, memoryLimit = "1600Mi", "3900Mi"
+		cpuRequest = "1200m"
+		memoryRequest = "1600Mi"
 
 	case scalingClass == "xlarge":
-		cpuRequest, cpuLimit = "2500m", "3000m"
-		memoryRequest, memoryLimit = "5200Mi", "5900Mi"
+		cpuRequest = "2500m"
+		memoryRequest = "5200Mi"
 
 	case scalingClass == "2xlarge":
-		cpuRequest, cpuLimit = "3000m", "4000m"
-		memoryRequest, memoryLimit = "5200Mi", "7800Mi"
+		cpuRequest = "3000m"
+		memoryRequest = "5200Mi"
 	}
 
 	return corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse(cpuRequest),
 			corev1.ResourceMemory: resource.MustParse(memoryRequest),
-		},
-		Limits: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse(cpuLimit),
-			corev1.ResourceMemory: resource.MustParse(memoryLimit),
 		},
 	}
 }
@@ -309,6 +306,35 @@ func (b *Botanist) computeKubeAPIServerImages() (kubeapiserver.Images, error) {
 	}, nil
 }
 
+func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.ServerCertificateConfig {
+	var (
+		ipAddresses = []net.IP{
+			b.Shoot.Networks.APIServer,
+		}
+		dnsNames = []string{
+			gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+			b.Shoot.GetInfo().Status.TechnicalID,
+		}
+	)
+
+	if !b.Seed.GetInfo().Spec.Settings.ShootDNS.Enabled {
+		if addr := net.ParseIP(b.APIServerAddress); addr != nil {
+			ipAddresses = append(ipAddresses, addr)
+		} else {
+			dnsNames = append(dnsNames, b.APIServerAddress)
+		}
+	}
+
+	if b.Shoot.ExternalClusterDomain != nil {
+		dnsNames = append(dnsNames, *(b.Shoot.GetInfo().Spec.DNS.Domain), gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain))
+	}
+
+	return kubeapiserver.ServerCertificateConfig{
+		ExtraIPAddresses: ipAddresses,
+		ExtraDNSNames:    dnsNames,
+	}
+}
+
 func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context, config *gardencorev1beta1.KubeAPIServerConfig, externalHostname string) (kubeapiserver.ServiceAccountConfig, error) {
 	out := kubeapiserver.ServiceAccountConfig{Issuer: "https://" + externalHostname}
 
@@ -322,6 +348,7 @@ func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context,
 	if config.ServiceAccountConfig.Issuer != nil {
 		out.Issuer = *config.ServiceAccountConfig.Issuer
 	}
+	out.AcceptedIssuers = config.ServiceAccountConfig.AcceptedIssuers
 
 	if signingKeySecret := config.ServiceAccountConfig.SigningKeySecret; signingKeySecret != nil {
 		secret := &corev1.Secret{}
@@ -401,36 +428,19 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	}
 
 	secrets := kubeapiserver.Secrets{
-		CA:                     component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
-		CAEtcd:                 component.Secret{Name: etcd.SecretNameCA, Checksum: b.LoadCheckSum(etcd.SecretNameCA)},
-		CAFrontProxy:           component.Secret{Name: v1beta1constants.SecretNameCAFrontProxy, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCAFrontProxy)},
-		Etcd:                   component.Secret{Name: etcd.SecretNameClient, Checksum: b.LoadCheckSum(etcd.SecretNameClient)},
-		EtcdEncryptionConfig:   component.Secret{Name: kubeapiserver.SecretNameEtcdEncryption, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameEtcdEncryption)},
-		KubeAggregator:         component.Secret{Name: kubeapiserver.SecretNameKubeAggregator, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameKubeAggregator)},
-		KubeAPIServerToKubelet: component.Secret{Name: kubeapiserver.SecretNameKubeAPIServerToKubelet, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameKubeAPIServerToKubelet)},
-		Server:                 component.Secret{Name: kubeapiserver.SecretNameServer, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameServer)},
-		ServiceAccountKey:      component.Secret{Name: v1beta1constants.SecretNameServiceAccountKey, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameServiceAccountKey)},
-		StaticToken:            component.Secret{Name: kubeapiserver.SecretNameStaticToken, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameStaticToken)},
-	}
-
-	if values.BasicAuthenticationEnabled {
-		secrets.BasicAuthentication = &component.Secret{Name: kubeapiserver.SecretNameBasicAuth, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameBasicAuth)}
-	}
-
-	if values.VPN.ReversedVPNEnabled {
-		secrets.HTTPProxy = &component.Secret{Name: kubeapiserver.SecretNameHTTPProxy, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameHTTPProxy)}
-		secrets.VPNSeedServerTLSAuth = &component.Secret{Name: vpnseedserver.VpnSeedServerTLSAuth, Checksum: b.LoadCheckSum(vpnseedserver.VpnSeedServerTLSAuth)}
-	} else {
-		secrets.VPNSeed = &component.Secret{Name: kubeapiserver.SecretNameVPNSeed, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameVPNSeed)}
-		secrets.VPNSeedTLSAuth = &component.Secret{Name: kubeapiserver.SecretNameVPNSeedTLSAuth, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameVPNSeedTLSAuth)}
+		CA:           component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
+		CAFrontProxy: component.Secret{Name: v1beta1constants.SecretNameCAFrontProxy, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCAFrontProxy)},
 	}
 
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSecrets(secrets)
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetServerCertificateConfig(b.computeKubeAPIServerServerCertificateConfig())
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSNIConfig(b.computeKubeAPIServerSNIConfig())
-	b.Shoot.Components.ControlPlane.KubeAPIServer.SetProbeToken(b.APIServerHealthCheckToken)
 
 	externalHostname := b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetExternalHostname(externalHostname)
+
+	externalServer := b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, false)
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetExternalServer(externalServer)
 
 	serviceAccountConfig, err := b.computeKubeAPIServerServiceAccountConfig(ctx, b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer, externalHostname)
 	if err != nil {
@@ -442,13 +452,57 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		return err
 	}
 
+	if enableStaticTokenKubeconfig := b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig; enableStaticTokenKubeconfig == nil || *enableStaticTokenKubeconfig {
+		userKubeconfigSecret, found := b.SecretsManager.Get(kubeapiserver.SecretNameUserKubeconfig)
+		if !found {
+			return fmt.Errorf("secret %q not found", kubeapiserver.SecretNameUserKubeconfig)
+		}
+
+		// add CA bundle as ca.crt to kubeconfig secret for backwards-compatibility
+		caBundleSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+		if !found {
+			return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+		}
+
+		kubeconfigSecretData := userKubeconfigSecret.DeepCopy().Data
+		kubeconfigSecretData[secretutils.DataKeyCertificateCA] = caBundleSecret.Data[secretutils.DataKeyCertificateBundle]
+
+		if err := b.syncShootCredentialToGarden(
+			ctx,
+			gutil.ShootProjectSecretSuffixKubeconfig,
+			map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleKubeconfig},
+			map[string]string{"url": "https://" + externalServer},
+			kubeconfigSecretData,
+		); err != nil {
+			return err
+		}
+	} else {
+		secretName := gutil.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, gutil.ShootProjectSecretSuffixKubeconfig)
+		if err := kutil.DeleteObject(ctx, b.K8sGardenClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}}); err != nil {
+			return err
+		}
+	}
+
 	// TODO(rfranzke): Remove in a future release.
+	if err := b.SaveGardenerResourceDataInShootState(ctx, func(gardenerResourceData *[]gardencorev1alpha1.GardenerResourceData) error {
+		gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(*gardenerResourceData)
+		gardenerResourceDataList.Delete("static-token")
+		gardenerResourceDataList.Delete("kube-apiserver-basic-auth")
+		gardenerResourceDataList.Delete("etcdEncryptionConfiguration")
+		gardenerResourceDataList.Delete("service-account-key")
+		*gardenerResourceData = gardenerResourceDataList
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "audit-policy-config"}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-admission-config"}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-egress-selector-configuration"}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-oidc-cabundle"}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-service-account-signing-key"}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "etcd-encryption-secret"}},
 	)
 }
 

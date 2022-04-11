@@ -19,6 +19,7 @@ import (
 	"net"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -33,9 +34,14 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/mock"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
+	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -60,20 +66,24 @@ var _ = Describe("KubeAPIServer", func() {
 		k8sGardenClient kubernetes.Interface
 		c               client.Client
 		k8sSeedClient   kubernetes.Interface
+		sm              secretsmanager.Interface
 		botanist        *Botanist
 		kubeAPIServer   *mockkubeapiserver.MockInterface
 
 		ctx                   = context.TODO()
-		projectNamespace      = "garden-my-project"
-		shootNamespace        = "shoot--foo--bar"
-		internalClusterDomain = "foo.bar.com"
+		projectNamespace      = "garden-foo"
+		seedNamespace         = "shoot--foo--bar"
+		shootName             = "bar"
+		internalClusterDomain = "internal.foo.bar.com"
+		externalClusterDomain = "external.foo.bar.com"
 		podNetwork            *net.IPNet
 		serviceNetwork        *net.IPNet
+		apiServerNetwork      = net.ParseIP("10.0.4.1")
 		podNetworkCIDR        = "10.0.1.0/24"
 		serviceNetworkCIDR    = "10.0.2.0/24"
 		nodeNetworkCIDR       = "10.0.3.0/24"
-		healthCheckToken      = "some-token"
 		apiServerClusterIP    = "1.2.3.4"
+		apiServerAddress      = "5.6.7.8"
 	)
 
 	BeforeEach(func() {
@@ -91,23 +101,29 @@ var _ = Describe("KubeAPIServer", func() {
 		_, serviceNetwork, err = net.ParseCIDR(serviceNetworkCIDR)
 		Expect(err).NotTo(HaveOccurred())
 
+		sm = fakesecretsmanager.New(c, seedNamespace)
+
 		kubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
 		botanist = &Botanist{
 			Operation: &operation.Operation{
 				K8sGardenClient: k8sGardenClient,
 				K8sSeedClient:   k8sSeedClient,
+				SecretsManager:  sm,
 				Garden:          &gardenpkg.Garden{},
+				Seed:            &seedpkg.Seed{},
 				Shoot: &shootpkg.Shoot{
-					SeedNamespace: shootNamespace,
+					SeedNamespace: seedNamespace,
 					Components: &shootpkg.Components{
 						ControlPlane: &shootpkg.ControlPlane{
 							KubeAPIServer: kubeAPIServer,
 						},
 					},
 					InternalClusterDomain: internalClusterDomain,
+					ExternalClusterDomain: &externalClusterDomain,
 					Networks: &shootpkg.Networks{
-						Pods:     podNetwork,
-						Services: serviceNetwork,
+						APIServer: apiServerNetwork,
+						Pods:      podNetwork,
+						Services:  serviceNetwork,
 					},
 				},
 				ImageVector: imagevector.ImageVector{
@@ -116,17 +132,38 @@ var _ = Describe("KubeAPIServer", func() {
 					{Name: "kube-apiserver"},
 					{Name: "vpn-seed"},
 				},
-				APIServerHealthCheckToken: healthCheckToken,
-				APIServerClusterIP:        apiServerClusterIP,
+				APIServerAddress:   apiServerAddress,
+				APIServerClusterIP: apiServerClusterIP,
 			},
 		}
+
+		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
+			Spec: gardencorev1beta1.SeedSpec{
+				Settings: &gardencorev1beta1.SeedSettings{
+					ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
+						Enabled: true,
+					},
+				},
+			},
+		})
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      shootName,
+				Namespace: projectNamespace,
+			},
 			Spec: gardencorev1beta1.ShootSpec{
+				DNS: &gardencorev1beta1.DNS{
+					Domain: &externalClusterDomain,
+				},
 				Networking: gardencorev1beta1.Networking{
 					Nodes: &nodeNetworkCIDR,
 				},
 			},
+			Status: gardencorev1beta1.ShootStatus{
+				TechnicalID: seedNamespace,
+			},
 		})
+		botanist.SetShootState(&gardencorev1alpha1.ShootState{})
 	})
 
 	AfterEach(func() {
@@ -174,15 +211,13 @@ var _ = Describe("KubeAPIServer", func() {
 			})
 
 			It("should set the field to true if explicitly enabled", func() {
-				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-					Spec: gardencorev1beta1.ShootSpec{
-						Kubernetes: gardencorev1beta1.Kubernetes{
-							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-								EnableAnonymousAuthentication: pointer.Bool(true),
-							},
-						},
+				shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+				shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+						EnableAnonymousAuthentication: pointer.Bool(true),
 					},
-				})
+				}
+				botanist.Shoot.SetInfo(shootCopy)
 
 				kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 				Expect(err).NotTo(HaveOccurred())
@@ -200,15 +235,13 @@ var _ = Describe("KubeAPIServer", func() {
 			It("should set the field to the configured values", func() {
 				apiAudiences := []string{"foo", "bar"}
 
-				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-					Spec: gardencorev1beta1.ShootSpec{
-						Kubernetes: gardencorev1beta1.Kubernetes{
-							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-								APIAudiences: apiAudiences,
-							},
-						},
+				shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+				shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+						APIAudiences: apiAudiences,
 					},
-				})
+				}
+				botanist.Shoot.SetInfo(shootCopy)
 
 				kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 				Expect(err).NotTo(HaveOccurred())
@@ -218,15 +251,13 @@ var _ = Describe("KubeAPIServer", func() {
 			It("should not add gardener audience if already present", func() {
 				apiAudiences := []string{"foo", "bar", "gardener"}
 
-				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-					Spec: gardencorev1beta1.ShootSpec{
-						Kubernetes: gardencorev1beta1.Kubernetes{
-							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-								APIAudiences: apiAudiences,
-							},
-						},
+				shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+				shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+						APIAudiences: apiAudiences,
 					},
-				})
+				}
+				botanist.Shoot.SetInfo(shootCopy)
 
 				kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 				Expect(err).NotTo(HaveOccurred())
@@ -237,16 +268,14 @@ var _ = Describe("KubeAPIServer", func() {
 		Describe("AdmissionPlugins", func() {
 			DescribeTable("should have the expected admission plugins config",
 				func(configuredPlugins, expectedPlugins []gardencorev1beta1.AdmissionPlugin) {
-					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-						Spec: gardencorev1beta1.ShootSpec{
-							Kubernetes: gardencorev1beta1.Kubernetes{
-								KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-									AdmissionPlugins: configuredPlugins,
-								},
-								Version: "1.22.1",
-							},
+					shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+					shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+						KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+							AdmissionPlugins: configuredPlugins,
 						},
-					})
+						Version: "1.22.1",
+					}
+					botanist.Shoot.SetInfo(shootCopy)
 
 					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 					Expect(err).NotTo(HaveOccurred())
@@ -353,94 +382,78 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("AuditConfig is nil",
 					func() {
-						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-							Spec: gardencorev1beta1.ShootSpec{
-								Kubernetes: gardencorev1beta1.Kubernetes{
-									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
-								},
-							},
-						})
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
+						}
+						botanist.Shoot.SetInfo(shootCopy)
 					},
 					nil,
 					Not(HaveOccurred()),
 				),
 				Entry("AuditPolicy is nil",
 					func() {
-						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-							Spec: gardencorev1beta1.ShootSpec{
-								Kubernetes: gardencorev1beta1.Kubernetes{
-									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-										AuditConfig: &gardencorev1beta1.AuditConfig{},
-									},
-								},
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								AuditConfig: &gardencorev1beta1.AuditConfig{},
 							},
-						})
+						}
+						botanist.Shoot.SetInfo(shootCopy)
 					},
 					nil,
 					Not(HaveOccurred()),
 				),
 				Entry("ConfigMapRef is nil",
 					func() {
-						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-							Spec: gardencorev1beta1.ShootSpec{
-								Kubernetes: gardencorev1beta1.Kubernetes{
-									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-										AuditConfig: &gardencorev1beta1.AuditConfig{
-											AuditPolicy: &gardencorev1beta1.AuditPolicy{},
-										},
-									},
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								AuditConfig: &gardencorev1beta1.AuditConfig{
+									AuditPolicy: &gardencorev1beta1.AuditPolicy{},
 								},
 							},
-						})
+						}
+						botanist.Shoot.SetInfo(shootCopy)
 					},
 					nil,
 					Not(HaveOccurred()),
 				),
 				Entry("ConfigMapRef is provided but configmap is missing",
 					func() {
-						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: projectNamespace,
-							},
-							Spec: gardencorev1beta1.ShootSpec{
-								Kubernetes: gardencorev1beta1.Kubernetes{
-									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-										AuditConfig: &gardencorev1beta1.AuditConfig{
-											AuditPolicy: &gardencorev1beta1.AuditPolicy{
-												ConfigMapRef: &corev1.ObjectReference{
-													Name: auditPolicyConfigMap.Name,
-												},
-											},
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								AuditConfig: &gardencorev1beta1.AuditConfig{
+									AuditPolicy: &gardencorev1beta1.AuditPolicy{
+										ConfigMapRef: &corev1.ObjectReference{
+											Name: auditPolicyConfigMap.Name,
 										},
 									},
 								},
 							},
-						})
+						}
+						botanist.Shoot.SetInfo(shootCopy)
 					},
 					nil,
 					MatchError(ContainSubstring("not found")),
 				),
 				Entry("ConfigMapRef is provided but configmap is missing while shoot has a deletion timestamp",
 					func() {
-						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace:         projectNamespace,
-								DeletionTimestamp: &metav1.Time{},
-							},
-							Spec: gardencorev1beta1.ShootSpec{
-								Kubernetes: gardencorev1beta1.Kubernetes{
-									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-										AuditConfig: &gardencorev1beta1.AuditConfig{
-											AuditPolicy: &gardencorev1beta1.AuditPolicy{
-												ConfigMapRef: &corev1.ObjectReference{
-													Name: auditPolicyConfigMap.Name,
-												},
-											},
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.DeletionTimestamp = &metav1.Time{}
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								AuditConfig: &gardencorev1beta1.AuditConfig{
+									AuditPolicy: &gardencorev1beta1.AuditPolicy{
+										ConfigMapRef: &corev1.ObjectReference{
+											Name: auditPolicyConfigMap.Name,
 										},
 									},
 								},
 							},
-						})
+						}
+						botanist.Shoot.SetInfo(shootCopy)
 					},
 					&kubeapiserver.AuditConfig{},
 					Not(HaveOccurred()),
@@ -450,24 +463,19 @@ var _ = Describe("KubeAPIServer", func() {
 						auditPolicyConfigMap.Data = nil
 						Expect(gc.Create(ctx, auditPolicyConfigMap)).To(Succeed())
 
-						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: projectNamespace,
-							},
-							Spec: gardencorev1beta1.ShootSpec{
-								Kubernetes: gardencorev1beta1.Kubernetes{
-									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-										AuditConfig: &gardencorev1beta1.AuditConfig{
-											AuditPolicy: &gardencorev1beta1.AuditPolicy{
-												ConfigMapRef: &corev1.ObjectReference{
-													Name: auditPolicyConfigMap.Name,
-												},
-											},
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								AuditConfig: &gardencorev1beta1.AuditConfig{
+									AuditPolicy: &gardencorev1beta1.AuditPolicy{
+										ConfigMapRef: &corev1.ObjectReference{
+											Name: auditPolicyConfigMap.Name,
 										},
 									},
 								},
 							},
-						})
+						}
+						botanist.Shoot.SetInfo(shootCopy)
 					},
 					nil,
 					MatchError(ContainSubstring("missing '.data.policy' in audit policy configmap")),
@@ -476,24 +484,19 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						Expect(gc.Create(ctx, auditPolicyConfigMap)).To(Succeed())
 
-						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: projectNamespace,
-							},
-							Spec: gardencorev1beta1.ShootSpec{
-								Kubernetes: gardencorev1beta1.Kubernetes{
-									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-										AuditConfig: &gardencorev1beta1.AuditConfig{
-											AuditPolicy: &gardencorev1beta1.AuditPolicy{
-												ConfigMapRef: &corev1.ObjectReference{
-													Name: auditPolicyConfigMap.Name,
-												},
-											},
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								AuditConfig: &gardencorev1beta1.AuditConfig{
+									AuditPolicy: &gardencorev1beta1.AuditPolicy{
+										ConfigMapRef: &corev1.ObjectReference{
+											Name: auditPolicyConfigMap.Name,
 										},
 									},
 								},
 							},
-						})
+						}
+						botanist.Shoot.SetInfo(shootCopy)
 					},
 					&kubeapiserver.AuditConfig{
 						Policy: &policy,
@@ -638,10 +641,6 @@ var _ = Describe("KubeAPIServer", func() {
 								corev1.ResourceCPU:    resource.MustParse("1750m"),
 								corev1.ResourceMemory: resource.MustParse("2Gi"),
 							},
-							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("4000m"),
-								corev1.ResourceMemory: resource.MustParse("8Gi"),
-							},
 						},
 						HVPAEnabled:               false,
 						MinReplicas:               16,
@@ -664,15 +663,13 @@ var _ = Describe("KubeAPIServer", func() {
 			It("should set the field to the configured values", func() {
 				eventTTL := &metav1.Duration{Duration: 2 * time.Hour}
 
-				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-					Spec: gardencorev1beta1.ShootSpec{
-						Kubernetes: gardencorev1beta1.Kubernetes{
-							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-								EventTTL: eventTTL,
-							},
-						},
+				shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+				shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+						EventTTL: eventTTL,
 					},
-				})
+				}
+				botanist.Shoot.SetInfo(shootCopy)
 
 				kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 				Expect(err).NotTo(HaveOccurred())
@@ -690,17 +687,15 @@ var _ = Describe("KubeAPIServer", func() {
 			It("should set the field to the configured values", func() {
 				featureGates := map[string]bool{"foo": true, "bar": false}
 
-				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-					Spec: gardencorev1beta1.ShootSpec{
-						Kubernetes: gardencorev1beta1.Kubernetes{
-							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-								KubernetesConfig: gardencorev1beta1.KubernetesConfig{
-									FeatureGates: featureGates,
-								},
-							},
+				shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+				shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+						KubernetesConfig: gardencorev1beta1.KubernetesConfig{
+							FeatureGates: featureGates,
 						},
 					},
-				})
+				}
+				botanist.Shoot.SetInfo(shootCopy)
 
 				kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 				Expect(err).NotTo(HaveOccurred())
@@ -726,27 +721,23 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("OIDCConfig is nil",
 					func() {
-						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-							Spec: gardencorev1beta1.ShootSpec{
-								Kubernetes: gardencorev1beta1.Kubernetes{
-									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
-								},
-							},
-						})
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
+						}
+						botanist.Shoot.SetInfo(shootCopy)
 					},
 					nil,
 				),
 				Entry("OIDCConfig is not nil",
 					func() {
-						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-							Spec: gardencorev1beta1.ShootSpec{
-								Kubernetes: gardencorev1beta1.Kubernetes{
-									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-										OIDCConfig: &gardencorev1beta1.OIDCConfig{},
-									},
-								},
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								OIDCConfig: &gardencorev1beta1.OIDCConfig{},
 							},
-						})
+						}
+						botanist.Shoot.SetInfo(shootCopy)
 					},
 					&gardencorev1beta1.OIDCConfig{},
 				),
@@ -766,15 +757,13 @@ var _ = Describe("KubeAPIServer", func() {
 					MaxNonMutatingInflight: pointer.Int32(2),
 				}
 
-				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-					Spec: gardencorev1beta1.ShootSpec{
-						Kubernetes: gardencorev1beta1.Kubernetes{
-							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-								Requests: requests,
-							},
-						},
+				shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+				shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+						Requests: requests,
 					},
-				})
+				}
+				botanist.Shoot.SetInfo(shootCopy)
 
 				kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 				Expect(err).NotTo(HaveOccurred())
@@ -792,15 +781,13 @@ var _ = Describe("KubeAPIServer", func() {
 			It("should set the field to the configured values", func() {
 				runtimeConfig := map[string]bool{"foo": true, "bar": false}
 
-				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-					Spec: gardencorev1beta1.ShootSpec{
-						Kubernetes: gardencorev1beta1.Kubernetes{
-							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-								RuntimeConfig: runtimeConfig,
-							},
-						},
+				shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+				shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+						RuntimeConfig: runtimeConfig,
 					},
-				})
+				}
+				botanist.Shoot.SetInfo(shootCopy)
 
 				kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 				Expect(err).NotTo(HaveOccurred())
@@ -842,7 +829,9 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("no node network",
 					func() {
-						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Networking.Nodes = nil
+						botanist.Shoot.SetInfo(shootCopy)
 					},
 					kubeapiserver.VPNConfig{
 						ReversedVPNEnabled: false,
@@ -866,15 +855,13 @@ var _ = Describe("KubeAPIServer", func() {
 					Resources: []gardencorev1beta1.ResourceWatchCacheSize{{Resource: "foo"}},
 				}
 
-				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-					Spec: gardencorev1beta1.ShootSpec{
-						Kubernetes: gardencorev1beta1.Kubernetes{
-							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-								WatchCacheSizes: watchCacheSizes,
-							},
-						},
+				shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+				shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+						WatchCacheSizes: watchCacheSizes,
 					},
-				})
+				}
+				botanist.Shoot.SetInfo(shootCopy)
 
 				kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 				Expect(err).NotTo(HaveOccurred())
@@ -885,40 +872,36 @@ var _ = Describe("KubeAPIServer", func() {
 	})
 
 	DescribeTable("#resourcesRequirementsForKubeAPIServer",
-		func(nodes int, storageClass, expectedCPURequest, expectedMemoryRequest, expectedCPULimit, expectedMemoryLimit string) {
+		func(nodes int, storageClass, expectedCPURequest, expectedMemoryRequest string) {
 			Expect(resourcesRequirementsForKubeAPIServer(int32(nodes), storageClass)).To(Equal(
 				corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse(expectedCPURequest),
 						corev1.ResourceMemory: resource.MustParse(expectedMemoryRequest),
 					},
-					Limits: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse(expectedCPULimit),
-						corev1.ResourceMemory: resource.MustParse(expectedMemoryLimit),
-					},
 				}))
 		},
 
 		// nodes tests
-		Entry("nodes <= 2", 2, "", "800m", "800Mi", "1000m", "1200Mi"),
-		Entry("nodes <= 10", 10, "", "1000m", "1100Mi", "1200m", "1900Mi"),
-		Entry("nodes <= 50", 50, "", "1200m", "1600Mi", "1500m", "3900Mi"),
-		Entry("nodes <= 100", 100, "", "2500m", "5200Mi", "3000m", "5900Mi"),
-		Entry("nodes > 100", 1000, "", "3000m", "5200Mi", "4000m", "7800Mi"),
+		Entry("nodes <= 2", 2, "", "800m", "800Mi"),
+		Entry("nodes <= 10", 10, "", "1000m", "1100Mi"),
+		Entry("nodes <= 50", 50, "", "1200m", "1600Mi"),
+		Entry("nodes <= 100", 100, "", "2500m", "5200Mi"),
+		Entry("nodes > 100", 1000, "", "3000m", "5200Mi"),
 
 		// scaling class tests
-		Entry("scaling class small", -1, "small", "800m", "800Mi", "1000m", "1200Mi"),
-		Entry("scaling class medium", -1, "medium", "1000m", "1100Mi", "1200m", "1900Mi"),
-		Entry("scaling class large", -1, "large", "1200m", "1600Mi", "1500m", "3900Mi"),
-		Entry("scaling class xlarge", -1, "xlarge", "2500m", "5200Mi", "3000m", "5900Mi"),
-		Entry("scaling class 2xlarge", -1, "2xlarge", "3000m", "5200Mi", "4000m", "7800Mi"),
+		Entry("scaling class small", -1, "small", "800m", "800Mi"),
+		Entry("scaling class medium", -1, "medium", "1000m", "1100Mi"),
+		Entry("scaling class large", -1, "large", "1200m", "1600Mi"),
+		Entry("scaling class xlarge", -1, "xlarge", "2500m", "5200Mi"),
+		Entry("scaling class 2xlarge", -1, "2xlarge", "3000m", "5200Mi"),
 
 		// scaling class always decides if provided
-		Entry("nodes > 100, scaling class small", 100, "small", "800m", "800Mi", "1000m", "1200Mi"),
-		Entry("nodes <= 100, scaling class medium", 100, "medium", "1000m", "1100Mi", "1200m", "1900Mi"),
-		Entry("nodes <= 50, scaling class large", 50, "large", "1200m", "1600Mi", "1500m", "3900Mi"),
-		Entry("nodes <= 10, scaling class xlarge", 10, "xlarge", "2500m", "5200Mi", "3000m", "5900Mi"),
-		Entry("nodes <= 2, scaling class 2xlarge", 2, "2xlarge", "3000m", "5200Mi", "4000m", "7800Mi"),
+		Entry("nodes > 100, scaling class small", 100, "small", "800m", "800Mi"),
+		Entry("nodes <= 100, scaling class medium", 100, "medium", "1000m", "1100Mi"),
+		Entry("nodes <= 50, scaling class large", 50, "large", "1200m", "1600Mi"),
+		Entry("nodes <= 10, scaling class xlarge", 10, "xlarge", "2500m", "5200Mi"),
+		Entry("nodes <= 2, scaling class 2xlarge", 2, "2xlarge", "3000m", "5200Mi"),
 	)
 
 	Describe("#DeployKubeAPIServer", func() {
@@ -932,8 +915,9 @@ var _ = Describe("KubeAPIServer", func() {
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(&expectedReplicas)
 				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-				kubeAPIServer.EXPECT().SetProbeToken(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
@@ -962,7 +946,7 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
-							Namespace: shootNamespace,
+							Namespace: seedNamespace,
 						},
 						Spec: appsv1.DeploymentSpec{
 							Replicas: pointer.Int32(3),
@@ -978,7 +962,7 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
-							Namespace: shootNamespace,
+							Namespace: seedNamespace,
 						},
 						Spec: appsv1.DeploymentSpec{
 							Replicas: pointer.Int32(0),
@@ -995,10 +979,6 @@ var _ = Describe("KubeAPIServer", func() {
 				corev1.ResourceCPU:    resource.MustParse("1"),
 				corev1.ResourceMemory: resource.MustParse("2"),
 			},
-			Limits: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("3"),
-				corev1.ResourceMemory: resource.MustParse("4"),
-			},
 		}
 
 		DescribeTable("should correctly set the autoscaling apiserver resources",
@@ -1014,8 +994,9 @@ var _ = Describe("KubeAPIServer", func() {
 				}
 				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-				kubeAPIServer.EXPECT().SetProbeToken(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
@@ -1032,7 +1013,7 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
-							Namespace: shootNamespace,
+							Namespace: seedNamespace,
 						},
 						Spec: appsv1.DeploymentSpec{
 							Template: corev1.PodTemplateSpec{
@@ -1054,7 +1035,7 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(c.Create(ctx, &appsv1.Deployment{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "kube-apiserver",
-							Namespace: shootNamespace,
+							Namespace: seedNamespace,
 						},
 						Spec: appsv1.DeploymentSpec{
 							Template: corev1.PodTemplateSpec{
@@ -1076,16 +1057,8 @@ var _ = Describe("KubeAPIServer", func() {
 		DescribeTable("should correctly set the secrets",
 			func(values kubeapiserver.Values, mutateSecrets func(*kubeapiserver.Secrets)) {
 				secrets := kubeapiserver.Secrets{
-					CA:                     component.Secret{Name: "ca", Checksum: botanist.LoadCheckSum("ca")},
-					CAEtcd:                 component.Secret{Name: "ca-etcd", Checksum: botanist.LoadCheckSum("ca-etcd")},
-					CAFrontProxy:           component.Secret{Name: "ca-front-proxy", Checksum: botanist.LoadCheckSum("ca-front-proxy")},
-					Etcd:                   component.Secret{Name: "etcd-client-tls", Checksum: botanist.LoadCheckSum("etcd-client-tls")},
-					EtcdEncryptionConfig:   component.Secret{Name: "etcd-encryption-secret", Checksum: botanist.LoadCheckSum("etcd-encryption-secret")},
-					KubeAggregator:         component.Secret{Name: "kube-aggregator", Checksum: botanist.LoadCheckSum("kube-aggregator")},
-					KubeAPIServerToKubelet: component.Secret{Name: "kube-apiserver-kubelet", Checksum: botanist.LoadCheckSum("kube-apiserver-kubelet")},
-					Server:                 component.Secret{Name: "kube-apiserver", Checksum: botanist.LoadCheckSum("kube-apiserver")},
-					ServiceAccountKey:      component.Secret{Name: "service-account-key", Checksum: botanist.LoadCheckSum("service-account-key")},
-					StaticToken:            component.Secret{Name: "static-token", Checksum: botanist.LoadCheckSum("static-token")},
+					CA:           component.Secret{Name: "ca", Checksum: botanist.LoadCheckSum("ca")},
+					CAFrontProxy: component.Secret{Name: "ca-front-proxy", Checksum: botanist.LoadCheckSum("ca-front-proxy")},
 				}
 				mutateSecrets(&secrets)
 
@@ -1093,46 +1066,25 @@ var _ = Describe("KubeAPIServer", func() {
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 				kubeAPIServer.EXPECT().SetSecrets(secrets)
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-				kubeAPIServer.EXPECT().SetProbeToken(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
 				Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
 			},
-
-			Entry("reversed vpn disabled",
-				kubeapiserver.Values{VPN: kubeapiserver.VPNConfig{ReversedVPNEnabled: false}},
-				func(s *kubeapiserver.Secrets) {
-					s.VPNSeed = &component.Secret{Name: "vpn-seed", Checksum: botanist.LoadCheckSum("vpn-seed")}
-					s.VPNSeedTLSAuth = &component.Secret{Name: "vpn-seed-tlsauth", Checksum: botanist.LoadCheckSum("vpn-seed-tlsauth")}
-				},
-			),
-			Entry("reversed vpn enabled",
-				kubeapiserver.Values{VPN: kubeapiserver.VPNConfig{ReversedVPNEnabled: true}},
-				func(s *kubeapiserver.Secrets) {
-					s.HTTPProxy = &component.Secret{Name: "kube-apiserver-http-proxy", Checksum: botanist.LoadCheckSum("kube-apiserver-http-proxy")}
-					s.VPNSeedServerTLSAuth = &component.Secret{Name: "vpn-seed-server-tlsauth", Checksum: botanist.LoadCheckSum("vpn-seed-server-tlsauth")}
-				},
-			),
-			Entry("basic auth enabled",
-				kubeapiserver.Values{BasicAuthenticationEnabled: true, VPN: kubeapiserver.VPNConfig{ReversedVPNEnabled: true}},
-				func(s *kubeapiserver.Secrets) {
-					s.BasicAuthentication = &component.Secret{Name: "kube-apiserver-basic-auth", Checksum: botanist.LoadCheckSum("kube-apiserver-basic-auth")}
-					s.HTTPProxy = &component.Secret{Name: "kube-apiserver-http-proxy", Checksum: botanist.LoadCheckSum("kube-apiserver-http-proxy")}
-					s.VPNSeedServerTLSAuth = &component.Secret{Name: "vpn-seed-server-tlsauth", Checksum: botanist.LoadCheckSum("vpn-seed-server-tlsauth")}
-				},
-			),
 		)
 
 		Describe("ExternalHostname", func() {
-			It("should set the external hostname to the out-of-cluster address", func() {
+			It("should set the external hostname to the out-of-cluster address (internal domain)", func() {
 				kubeAPIServer.EXPECT().GetValues()
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-				kubeAPIServer.EXPECT().SetProbeToken(gomock.Any())
-				kubeAPIServer.EXPECT().SetExternalHostname("api.foo.bar.com")
+				kubeAPIServer.EXPECT().SetExternalHostname("api." + internalClusterDomain)
+				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
@@ -1140,19 +1092,86 @@ var _ = Describe("KubeAPIServer", func() {
 			})
 		})
 
-		Describe("ProbeToken", func() {
-			It("should have the correct probe token", func() {
-				kubeAPIServer.EXPECT().GetValues()
-				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
-				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
-				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-				kubeAPIServer.EXPECT().SetProbeToken(healthCheckToken)
-				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
-				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
-				kubeAPIServer.EXPECT().Deploy(ctx)
+		Describe("ServerCertificateConfig", func() {
+			DescribeTable("should have the expected ServerCertificateConfig config",
+				func(prepTest func(), expectedConfig kubeapiserver.ServerCertificateConfig) {
+					if prepTest != nil {
+						prepTest()
+					}
 
-				Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
-			})
+					kubeAPIServer.EXPECT().GetValues()
+					kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+					kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
+					kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+					kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+					kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+					kubeAPIServer.EXPECT().SetServerCertificateConfig(expectedConfig)
+					kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
+					kubeAPIServer.EXPECT().Deploy(ctx)
+
+					Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
+				},
+
+				Entry("seed enables DNS, shoot has external domain",
+					nil,
+					kubeapiserver.ServerCertificateConfig{
+						ExtraIPAddresses: []net.IP{apiServerNetwork},
+						ExtraDNSNames: []string{
+							"api." + internalClusterDomain,
+							seedNamespace,
+							externalClusterDomain,
+							"api." + externalClusterDomain,
+						},
+					},
+				),
+				Entry("seed enables DNS, shoot has no external domain",
+					func() {
+						botanist.Shoot.DisableDNS = true
+						botanist.Shoot.ExternalClusterDomain = nil
+					},
+					kubeapiserver.ServerCertificateConfig{
+						ExtraIPAddresses: []net.IP{apiServerNetwork},
+						ExtraDNSNames: []string{
+							"api." + internalClusterDomain,
+							seedNamespace,
+						},
+					},
+				),
+				Entry("seed disables DNS, api server address is IP",
+					func() {
+						seedCopy := botanist.Seed.GetInfo().DeepCopy()
+						seedCopy.Spec.Settings.ShootDNS.Enabled = false
+						botanist.Seed.SetInfo(seedCopy)
+					},
+					kubeapiserver.ServerCertificateConfig{
+						ExtraIPAddresses: []net.IP{apiServerNetwork, net.ParseIP(apiServerAddress)},
+						ExtraDNSNames: []string{
+							"api." + internalClusterDomain,
+							seedNamespace,
+							externalClusterDomain,
+							"api." + externalClusterDomain,
+						},
+					},
+				),
+				Entry("seed disables DNS, api server address is hostname",
+					func() {
+						seedCopy := botanist.Seed.GetInfo().DeepCopy()
+						seedCopy.Spec.Settings.ShootDNS.Enabled = false
+						botanist.Seed.SetInfo(seedCopy)
+						botanist.APIServerAddress = "some-hostname.com"
+					},
+					kubeapiserver.ServerCertificateConfig{
+						ExtraIPAddresses: []net.IP{apiServerNetwork},
+						ExtraDNSNames: []string{
+							"api." + internalClusterDomain,
+							seedNamespace,
+							"some-hostname.com",
+							externalClusterDomain,
+							"api." + externalClusterDomain,
+						},
+					},
+				),
+			)
 		})
 
 		Describe("ServiceAccountConfig", func() {
@@ -1183,8 +1202,9 @@ var _ = Describe("KubeAPIServer", func() {
 					kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 					kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 					kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-					kubeAPIServer.EXPECT().SetProbeToken(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+					kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+					kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
 					if !expectError {
 						kubeAPIServer.EXPECT().SetServiceAccountConfig(expectedConfig)
 						kubeAPIServer.EXPECT().Deploy(ctx)
@@ -1201,13 +1221,11 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("ServiceAccountConfig is nil",
 					func() {
-						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-							Spec: gardencorev1beta1.ShootSpec{
-								Kubernetes: gardencorev1beta1.Kubernetes{
-									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
-								},
-							},
-						})
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
+						}
+						botanist.Shoot.SetInfo(shootCopy)
 					},
 					kubeapiserver.ServiceAccountConfig{Issuer: "https://api." + internalClusterDomain},
 					false,
@@ -1215,18 +1233,16 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("Issuer is not provided",
 					func() {
-						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-							Spec: gardencorev1beta1.ShootSpec{
-								Kubernetes: gardencorev1beta1.Kubernetes{
-									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-										ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-											ExtendTokenExpiration: &extendTokenExpiration,
-											MaxTokenExpiration:    &maxTokenExpiration,
-										},
-									},
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+									ExtendTokenExpiration: &extendTokenExpiration,
+									MaxTokenExpiration:    &maxTokenExpiration,
 								},
 							},
-						})
+						}
+						botanist.Shoot.SetInfo(shootCopy)
 					},
 					kubeapiserver.ServiceAccountConfig{
 						Issuer:                "https://api." + internalClusterDomain,
@@ -1238,33 +1254,82 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("Issuer is provided",
 					func() {
-						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-							Spec: gardencorev1beta1.ShootSpec{
-								Kubernetes: gardencorev1beta1.Kubernetes{
-									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-										ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-											Issuer: pointer.String("issuer"),
-										},
-									},
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+									Issuer: pointer.String("issuer"),
 								},
 							},
-						})
+						}
+						botanist.Shoot.SetInfo(shootCopy)
 					},
 					kubeapiserver.ServiceAccountConfig{Issuer: "issuer"},
 					false,
 					Not(HaveOccurred()),
 				),
-				Entry("SigningKeySecret is nil",
+				Entry("AcceptedIssuers is provided and Issuer is not",
 					func() {
-						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-							Spec: gardencorev1beta1.ShootSpec{
-								Kubernetes: gardencorev1beta1.Kubernetes{
-									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-										ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{},
-									},
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+									AcceptedIssuers: []string{"issuer1", "issuer2"},
 								},
 							},
-						})
+						}
+						botanist.Shoot.SetInfo(shootCopy)
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:          "https://api." + internalClusterDomain,
+						AcceptedIssuers: []string{"issuer1", "issuer2"},
+					},
+					false,
+					Not(HaveOccurred()),
+				),
+				Entry("AcceptedIssuers and Issuer are provided",
+					func() {
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+									Issuer:          pointer.String("issuer"),
+									AcceptedIssuers: []string{"issuer1", "issuer2"},
+								},
+							},
+						}
+						botanist.Shoot.SetInfo(shootCopy)
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:          "issuer",
+						AcceptedIssuers: []string{"issuer1", "issuer2"},
+					},
+					false,
+					Not(HaveOccurred()),
+				),
+				Entry("AcceptedIssuers is not provided",
+					func() {
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{},
+							},
+						}
+						botanist.Shoot.SetInfo(shootCopy)
+					},
+					kubeapiserver.ServiceAccountConfig{Issuer: "https://api." + internalClusterDomain},
+					false,
+					Not(HaveOccurred()),
+				),
+				Entry("SigningKeySecret is nil",
+					func() {
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{},
+							},
+						}
+						botanist.Shoot.SetInfo(shootCopy)
 					},
 					kubeapiserver.ServiceAccountConfig{Issuer: "https://api." + internalClusterDomain},
 					false,
@@ -1272,22 +1337,17 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("SigningKeySecret is provided but secret is missing",
 					func() {
-						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: projectNamespace,
-							},
-							Spec: gardencorev1beta1.ShootSpec{
-								Kubernetes: gardencorev1beta1.Kubernetes{
-									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-										ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-											SigningKeySecret: &corev1.LocalObjectReference{
-												Name: signingKeySecret.Name,
-											},
-										},
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+									SigningKeySecret: &corev1.LocalObjectReference{
+										Name: signingKeySecret.Name,
 									},
 								},
 							},
-						})
+						}
+						botanist.Shoot.SetInfo(shootCopy)
 					},
 					nil,
 					true,
@@ -1298,22 +1358,17 @@ var _ = Describe("KubeAPIServer", func() {
 						signingKeySecret.Data = nil
 						Expect(gc.Create(ctx, signingKeySecret)).To(Succeed())
 
-						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: projectNamespace,
-							},
-							Spec: gardencorev1beta1.ShootSpec{
-								Kubernetes: gardencorev1beta1.Kubernetes{
-									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-										ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-											SigningKeySecret: &corev1.LocalObjectReference{
-												Name: signingKeySecret.Name,
-											},
-										},
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+									SigningKeySecret: &corev1.LocalObjectReference{
+										Name: signingKeySecret.Name,
 									},
 								},
 							},
-						})
+						}
+						botanist.Shoot.SetInfo(shootCopy)
 					},
 					kubeapiserver.ServiceAccountConfig{Issuer: "https://api." + internalClusterDomain},
 					true,
@@ -1323,22 +1378,17 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						Expect(gc.Create(ctx, signingKeySecret)).To(Succeed())
 
-						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: projectNamespace,
-							},
-							Spec: gardencorev1beta1.ShootSpec{
-								Kubernetes: gardencorev1beta1.Kubernetes{
-									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
-										ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-											SigningKeySecret: &corev1.LocalObjectReference{
-												Name: signingKeySecret.Name,
-											},
-										},
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+									SigningKeySecret: &corev1.LocalObjectReference{
+										Name: signingKeySecret.Name,
 									},
 								},
 							},
-						})
+						}
+						botanist.Shoot.SetInfo(shootCopy)
 					},
 					kubeapiserver.ServiceAccountConfig{
 						Issuer:     "https://api." + internalClusterDomain,
@@ -1365,8 +1415,9 @@ var _ = Describe("KubeAPIServer", func() {
 					kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 					kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 					kubeAPIServer.EXPECT().SetSNIConfig(expectedConfig)
-					kubeAPIServer.EXPECT().SetProbeToken(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+					kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+					kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
 					kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
 					kubeAPIServer.EXPECT().Deploy(ctx)
 
@@ -1391,7 +1442,8 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("SNI enabled but no need for external DNS",
 					func() {
-						botanist.Shoot.DisableDNS = false
+						botanist.Shoot.DisableDNS = true
+						botanist.Shoot.ExternalClusterDomain = nil
 						botanist.Garden.InternalDomain = &gardenpkg.Domain{}
 						botanist.Shoot.GetInfo().Spec.DNS = nil
 					},
@@ -1440,6 +1492,104 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 			)
 		})
+
+		Describe("ExternalServer", func() {
+			It("should set the external server to the out-of-cluster address (no internal domain)", func() {
+				kubeAPIServer.EXPECT().GetValues()
+				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
+				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+				kubeAPIServer.EXPECT().SetExternalServer("api." + externalClusterDomain)
+				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
+				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
+				kubeAPIServer.EXPECT().Deploy(ctx)
+
+				Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
+			})
+		})
+
+		It("should sync the kubeconfig to the garden project namespace when enableStaticTokenKubeconfig is set to true", func() {
+			kubeAPIServer.EXPECT().GetValues()
+			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+			kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
+			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+			kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
+			kubeAPIServer.EXPECT().Deploy(ctx)
+
+			Expect(gc.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(BeNotFoundError())
+
+			Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
+
+			kubeconfigSecret := &corev1.Secret{}
+			Expect(gc.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), kubeconfigSecret)).To(Succeed())
+			Expect(kubeconfigSecret.Annotations).To(HaveKeyWithValue("url", "https://api."+externalClusterDomain))
+			Expect(kubeconfigSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "kubeconfig"))
+			Expect(kubeconfigSecret.Data).To(And(
+				HaveKey("ca.crt"),
+				HaveKeyWithValue("data-for", []byte("user-kubeconfig")),
+			))
+		})
+
+		It("should delete the old etcd encryption config secret", func() {
+			kubeAPIServer.EXPECT().GetValues()
+			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+			kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
+			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+			kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
+			kubeAPIServer.EXPECT().Deploy(ctx)
+
+			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "etcd-encryption-secret"}}
+			Expect(c.Create(ctx, secret)).To(Succeed())
+
+			Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(secret), &corev1.Secret{})).To(BeNotFoundError())
+		})
+
+		It("should not sync the kubeconfig to garden project namespace when enableStaticTokenKubeconfig is set to false", func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      shootName + ".kubeconfig",
+					Namespace: projectNamespace,
+				},
+			}
+			Expect(gc.Create(ctx, secret)).To(Succeed())
+
+			Expect(gc.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(Succeed())
+
+			kubeAPIServer.EXPECT().GetValues()
+			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+			kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
+			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+			kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
+			kubeAPIServer.EXPECT().Deploy(ctx)
+
+			shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+			shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+				KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+					ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+						Issuer:          pointer.String("issuer"),
+						AcceptedIssuers: []string{"issuer1", "issuer2"},
+					},
+				},
+				EnableStaticTokenKubeconfig: pointer.Bool(false),
+			}
+			botanist.Shoot.SetInfo(shootCopy)
+
+			Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
+
+			Expect(gc.Get(ctx, kutil.Key(projectNamespace, shootName+".kubeconfig"), &corev1.Secret{})).To(BeNotFoundError())
+		})
 	})
 
 	Describe("#DeleteKubeAPIServer", func() {
@@ -1459,7 +1609,7 @@ var _ = Describe("KubeAPIServer", func() {
 			Expect(botanist.DeleteKubeAPIServer(ctx)).To(Succeed())
 
 			shootClient, err = clientMap.GetClient(ctx, keys.ForShoot(botanist.Shoot.GetInfo()))
-			Expect(err).To(MatchError("clientSet for key \"/\" not found"))
+			Expect(err).To(MatchError(`clientSet for key "` + botanist.Shoot.GetInfo().Namespace + `/` + botanist.Shoot.GetInfo().Name + `" not found`))
 			Expect(shootClient).To(BeNil())
 
 			Expect(botanist.K8sShootClient).To(BeNil())
@@ -1467,7 +1617,7 @@ var _ = Describe("KubeAPIServer", func() {
 	})
 
 	Describe("#ScaleKubeAPIServerToOne", func() {
-		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: shootNamespace}}
+		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: seedNamespace}}
 
 		It("should scale the KAPI deployment", func() {
 			Expect(c.Create(ctx, deployment)).To(Succeed())

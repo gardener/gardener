@@ -16,9 +16,6 @@ spec:
   serviceName: aggregate-prometheus
   template:
     metadata:
-      annotations:
-        # TODO(rfranzke): Remove in a future release.
-        security.gardener.cloud/trigger: rollout
       labels:
         app: aggregate-prometheus
         role: monitoring

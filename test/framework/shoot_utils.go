@@ -91,7 +91,7 @@ func (f *ShootFramework) DumpState(ctx context.Context) {
 
 	if f.Shoot != nil {
 		if err := PrettyPrintObject(f.Shoot); err != nil {
-			f.Logger.Fatalf("Cannot decode shoot %s: %s", f.Shoot.GetName(), err)
+			f.Logger.Errorf("Cannot decode shoot %s: %s", f.Shoot.GetName(), err)
 		}
 
 		isRunning, err := f.IsAPIServerRunning(ctx)

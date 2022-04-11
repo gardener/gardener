@@ -1,0 +1,91 @@
+server:
+  disable: true
+  log_level: info
+  http_listen_port: 3001
+client:
+  url: {{ .clientURL }}
+  bearer_token_file: {{ .pathAuthToken }}
+  tls_config:
+    ca_file: {{ .pathCACert }}
+    server_name: {{ .lokiIngress }}
+positions:
+  filename: /var/log/positions.yaml
+scrape_configs:
+- job_name: journal
+  journal:
+    json: false
+    labels:
+      job: systemd-journal
+    max_age: 12h
+    path: /var/log/journal
+  relabel_configs:
+  - action: drop
+    regex: ^localhost$
+    source_labels: ['__journal__hostname']
+  - source_labels: ['__journal__systemd_unit']
+    target_label: unit
+  - source_labels: ['__journal__hostname']
+    target_label: nodename
+  - source_labels: ['__journal_syslog_identifier']
+    target_label: syslog_identifier
+- job_name: kubernetes-pods-name
+  pipeline_stages:
+  - cri: {}
+  - labeldrop:
+    - filename
+  kubernetes_sd_configs:
+  - role: pod
+    api_server: {{ .APIServerURL }}
+    tls_config:
+      server_name: {{ .APIServerHostname }}
+      ca_file: {{ .pathCACert }}
+    bearer_token_file: {{ .pathAuthToken }}
+    namespaces:
+      names: ['kube-system']
+  relabel_configs:
+  - action: drop
+    regex: ''
+    separator: ''
+    source_labels:
+    - __meta_kubernetes_pod_label_gardener_cloud_role
+    - __meta_kubernetes_pod_label_origin
+  - action: replace
+    regex: '.+'
+    replacement: "gardener"
+    source_labels: ['__meta_kubernetes_pod_label_gardener_cloud_role']
+    target_label: __meta_kubernetes_pod_label_origin
+  - action: keep
+    regex: 'gardener'
+    source_labels: ['__meta_kubernetes_pod_label_origin']
+  - action: replace
+    regex: ''
+    replacement: 'default'
+    source_labels: ['__meta_kubernetes_pod_label_gardener_cloud_role']
+    target_label: __meta_kubernetes_pod_label_gardener_cloud_role
+  - source_labels: ['__meta_kubernetes_pod_node_name']
+    target_label: '__host__'
+  - source_labels: ['__meta_kubernetes_pod_node_name']
+    target_label: 'nodename'
+  - action: replace
+    source_labels: ['__meta_kubernetes_namespace']
+    target_label: namespace_name
+  - action: replace
+    source_labels: ['__meta_kubernetes_pod_name']
+    target_label: pod_name
+  - action: replace
+    source_labels: ['__meta_kubernetes_pod_uid']
+    target_label: pod_uid
+  - action: replace
+    source_labels: ['__meta_kubernetes_pod_container_name']
+    target_label: container_name
+  - replacement: /var/log/pods/*$1/*.log
+    separator: /
+    source_labels:
+    - __meta_kubernetes_pod_uid
+    - __meta_kubernetes_pod_container_name
+    target_label: __path__
+  - source_labels: ['__meta_kubernetes_pod_label_gardener_cloud_role']
+    target_label: gardener_cloud_role
+  - source_labels: ['__meta_kubernetes_pod_label_origin']
+    replacement: 'shoot_system'
+    target_label: origin

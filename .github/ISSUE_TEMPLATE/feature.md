@@ -1,7 +1,6 @@
 ---
 name: Enhancement Request
 about: Suggest an enhancement to the Gardener project
-labels: kind/enhancement
 
 ---
 

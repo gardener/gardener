@@ -57,6 +57,8 @@ controllers:
       duration: 1m
     - type: EveryNodeReady
       duration: 5m
+  shootSecret:
+    concurrentSyncs: 5
   shootStateSync:
     concurrentSyncs: 1
     syncPeriod: 30s
@@ -113,11 +115,11 @@ featureGates:
   CachedRuntimeClients: true
   SeedKubeScheduler: false
   ReversedVPN: true
-  UseDNSRecords: true
   DenyInvalidExtensionResources: true
   CopyEtcdBackupsDuringControlPlaneMigration: false
   ForceRestore: false
   DisableDNSProviderManagement: false
+  ShootCARotation: true
 # seedConfig:
 #   metadata:
 #     name: my-seed
@@ -133,6 +135,7 @@ featureGates:
 #     enabled: true
 #     garden:
 #       priority: 100
+#       storage: "100Gi"
 #   shootNodeLogging:
 #     shootPurposes:
 #     - "development"
@@ -168,6 +171,9 @@ etcdConfig:
     enableBackupCompaction: false
     eventsThreshold: 1000000
     activeDeadlineDuration: "3h"
+# backupLeaderElection:
+#   reelectionPeriod: 5s
+#   etcdConnectionTimeout: 5s
 # monitoring:
 #   shoot:
 #     remoteWrite:

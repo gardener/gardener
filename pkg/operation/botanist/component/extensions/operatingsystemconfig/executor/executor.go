@@ -120,7 +120,6 @@ func Script(
 	values := map[string]interface{}{
 		"annotationKeyChecksum":                    AnnotationKeyChecksum,
 		"pathKubeletDirectory":                     kubelet.PathKubeletDirectory,
-		"pathDownloadsDirectory":                   downloader.PathDownloadsDirectory,
 		"pathBinaries":                             v1beta1constants.OperatingSystemConfigFilePathBinaries,
 		"pathBootstrapToken":                       downloader.PathBootstrapToken,
 		"pathCCDScript":                            downloader.PathCCDScript,
@@ -138,6 +137,7 @@ func Script(
 		"pathKubeletKubeconfigBootstrap":           kubelet.PathKubeconfigBootstrap,
 		"pathKubeletKubeconfigReal":                kubelet.PathKubeconfigReal,
 		"pathLastDownloadedHyperkubeImage":         PathLastDownloadedHyperkubeImage,
+		"pathNodeName":                             kubelet.PathNodeName,
 		"pathScriptCopyKubernetesBinary":           kubelet.PathScriptCopyKubernetesBinary,
 		"bootstrapTokenPlaceholder":                downloader.BootstrapTokenPlaceholder,
 		"cloudConfigUserData":                      utils.EncodeBase64(cloudConfigUserData),

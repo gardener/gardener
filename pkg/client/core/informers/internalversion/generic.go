@@ -79,8 +79,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().Seeds().Informer()}, nil
 	case core.SchemeGroupVersion.WithResource("shoots"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().Shoots().Informer()}, nil
-	case core.SchemeGroupVersion.WithResource("shootextensionstatuses"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().ShootExtensionStatuses().Informer()}, nil
 	case core.SchemeGroupVersion.WithResource("shootstates"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Core().InternalVersion().ShootStates().Informer()}, nil
 

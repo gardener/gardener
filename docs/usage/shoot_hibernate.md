@@ -35,6 +35,8 @@ To scale up everything where it was before hibernation, Gardener doesn’t delet
 
 ## Hibernate your cluster manually
 
+The `.spec.hibernation.enabled` field specifies whether the cluster needs to be hibernated or not. If the field is set to `true`, the cluster's desired state is to be hibernated. If it is set to `false` or not specified at all, the cluster's desired state is to be awakened.
+
 To hibernate your cluster you can run the following `kubectl` command:
 ```
 $ kubectl patch shoot -n $NAMESPACE $SHOOT_NAME -p '{"spec":{"hibernation":{"enabled": true}}}'
@@ -47,4 +49,19 @@ To wake up your cluster you can run the following `kubectl` command:
 $ kubectl patch shoot -n $NAMESPACE $SHOOT_NAME -p '{"spec":{"hibernation":{"enabled": false}}}'
 ```
 
-**Hibernation schedule is also supported. More details can be found [here](../../pkg/apis/core/v1beta1/types_shoot.go#L335-L348)**
+## Create a schedule to hibernate your cluster
+
+You can specify a hibernation schedule to automatically hibernate/wake up a cluster.
+
+Let's have a look into the following example:
+
+```yaml
+  hibernation:
+    enabled: false
+    schedules:
+    - start: "0 20 * * *" # Start hibernation every day at 8PM
+      end: "0 6 * * *"    # Stop hibernation every day at 6AM
+      location: "America/Los_Angeles" # Specify a location for the cron to run in
+```
+
+The above section configures a hibernation schedule that hibernates the cluster every day at 08:00 PM and wakes it up at 06:00 AM. The `start` or `end` fields can be omitted, though at least one of them has to be specified. Hence, it is possible to configure a hibernation schedule that only hibernates or wakes up a cluster. The `location` field is the time location used to evaluate the cron expressions.

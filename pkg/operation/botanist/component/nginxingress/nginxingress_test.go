@@ -338,7 +338,7 @@ status:
   disruptionsAllowed: 0
   expectedPods: 0
 `
-			vpaYAML = `apiVersion: autoscaling.k8s.io/v1beta2
+			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null
@@ -400,7 +400,6 @@ spec:
           protocol: TCP
         resources:
           limits:
-            cpu: 100m
             memory: 100Mi
           requests:
             cpu: 20m
@@ -437,7 +436,6 @@ spec:
     metadata:
       annotations:
         ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
-        security.gardener.cloud/trigger: rollout
       creationTimestamp: null
       labels:
         app: nginx-ingress
@@ -517,7 +515,6 @@ spec:
           timeoutSeconds: 1
         resources:
           limits:
-            cpu: 400m
             memory: 1500Mi
           requests:
             cpu: 100m

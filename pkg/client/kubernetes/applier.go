@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 
@@ -146,6 +147,29 @@ var (
 				oldSvcType = string(corev1.ServiceTypeClusterIP)
 			}
 
+			annotations, found, _ := unstructured.NestedMap(oldObj.Object, "metadata", "annotations")
+			if found {
+				mergedAnnotations := make(map[string]interface{})
+				for key, value := range annotations {
+					annotation := key
+					annotationValue := value.(string)
+					for _, keepAnnotation := range keepServiceAnnotations() {
+						if strings.HasPrefix(annotation, keepAnnotation) {
+							mergedAnnotations[annotation] = annotationValue
+						}
+					}
+				}
+
+				newAnnotations, found, _ := unstructured.NestedMap(newObj.Object, "metadata", "annotations")
+				if found {
+					for key, value := range newAnnotations {
+						mergedAnnotations[key] = value.(string)
+					}
+				}
+
+				_ = unstructured.SetNestedMap(newObj.Object, mergedAnnotations, "metadata", "annotations")
+			}
+
 			switch newSvcType {
 			case string(corev1.ServiceTypeLoadBalancer), string(corev1.ServiceTypeNodePort):
 				oldPorts, found, _ := unstructured.NestedSlice(oldObj.Object, "spec", "ports")
@@ -261,6 +285,10 @@ func CopyApplierOptions(in MergeFuncs) MergeFuncs {
 	}
 
 	return out
+}
+
+func keepServiceAnnotations() []string {
+	return []string{"loadbalancer.openstack.org"}
 }
 
 func (a *defaultApplier) mergeObjects(newObj, oldObj *unstructured.Unstructured, mergeFuncs MergeFuncs) error {

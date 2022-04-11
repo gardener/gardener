@@ -28,8 +28,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
 	mockkubeproxy "github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 
 	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
@@ -49,13 +50,12 @@ var _ = Describe("KubeProxy", func() {
 		fakeSeedKubernetesInterface  kubernetes.Interface
 		fakeShootClient              client.Client
 		fakeShootKubernetesInterface kubernetes.Interface
+		sm                           secretsmanager.Interface
 		botanist                     *Botanist
 
 		namespace             = "shoot--foo--bar"
 		apiServerAddress      = "1.2.3.4"
 		internalClusterDomain = "example.com"
-		caCert                = []byte("cert")
-		caSecret              = &corev1.Secret{Data: map[string][]byte{"ca.crt": caCert}}
 
 		repositoryKubeProxyImage = "foo.bar.com/kube-proxy"
 
@@ -73,6 +73,7 @@ var _ = Describe("KubeProxy", func() {
 		fakeSeedKubernetesInterface = fakekubernetes.NewClientSetBuilder().WithClient(fakeSeedClient).Build()
 		fakeShootClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
 		fakeShootKubernetesInterface = fakekubernetes.NewClientSetBuilder().WithClient(fakeShootClient).Build()
+		sm = fakesecretsmanager.New(fakeSeedClient, namespace)
 		botanist = &Botanist{
 			Operation: &operation.Operation{
 				APIServerAddress: apiServerAddress,
@@ -98,6 +99,7 @@ var _ = Describe("KubeProxy", func() {
 				},
 				K8sSeedClient:  fakeSeedKubernetesInterface,
 				K8sShootClient: fakeShootKubernetesInterface,
+				SecretsManager: sm,
 				Shoot: &shootpkg.Shoot{
 					InternalClusterDomain: internalClusterDomain,
 					KubernetesVersion:     semver.MustParse(kubernetesVersionControlPlane),
@@ -131,7 +133,6 @@ var _ = Describe("KubeProxy", func() {
 				},
 			},
 		})
-		botanist.StoreSecret("ca", caSecret)
 	})
 
 	AfterEach(func() {
@@ -180,7 +181,6 @@ var _ = Describe("KubeProxy", func() {
 			kubeProxy.EXPECT().SetKubeconfig([]byte(`apiVersion: v1
 clusters:
 - cluster:
-    certificate-authority-data: ` + utils.EncodeBase64(caCert) + `
     server: https://api.` + internalClusterDomain + `
   name: ` + namespace + `
 contexts:

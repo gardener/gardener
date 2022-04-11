@@ -50,8 +50,6 @@ spec:
     metadata:
       annotations:
         checksum/configmap-blackbox-exporter: {{ include (print $.Template.BasePath "/blackbox-exporter-config.yaml") . | sha256sum }}
-        # TODO(rfranzke): Remove in a future release.
-        security.gardener.cloud/trigger: rollout
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
@@ -113,8 +111,6 @@ spec:
             cpu: 50m
             memory: 350Mi
         volumeMounts:
-        - mountPath: /srv/kubernetes/prometheus-kubelet
-          name: prometheus-kubelet
         - mountPath: /srv/kubernetes/etcd/ca
           name: ca-etcd
         - mountPath: /srv/kubernetes/etcd/client
@@ -154,7 +150,6 @@ spec:
             cpu: 5m
             memory: 35Mi
           limits:
-            cpu: 50m
             memory: 128Mi
         volumeMounts:
         - name: blackbox-exporter-config-prometheus
@@ -177,8 +172,7 @@ spec:
             cpu: 5m
             memory: 25Mi
           limits:
-            cpu: 10m
-            memory: 25Mi
+            memory: 40Mi
         volumeMounts:
         - mountPath: /etc/prometheus/config
           name: config
@@ -205,18 +199,15 @@ spec:
           secretName: ca-etcd
       - name: etcd-client-tls
         secret:
-          secretName: etcd-client-tls
+          secretName: {{ .Values.secretNameEtcdClientCert }}
       # TODO(rfranzke): Delete this in a future release once all monitoring configurations of extensions have been
       #	adapted.
       - name: prometheus-client-cert
         secret:
-          secretName: prometheus
+          secretName: {{ .Values.secretNameClientCert }}
       - name: shoot-access
         secret:
           secretName: shoot-access-prometheus
-      - name: prometheus-kubelet
-        secret:
-          secretName: prometheus-kubelet
       - name: blackbox-exporter-config-prometheus
         configMap:
           name: blackbox-exporter-config-prometheus

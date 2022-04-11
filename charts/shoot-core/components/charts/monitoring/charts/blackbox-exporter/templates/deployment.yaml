@@ -32,6 +32,7 @@ spec:
         networking.gardener.cloud/to-public-networks: allowed
         networking.gardener.cloud/to-apiserver: allowed
     spec:
+      serviceAccountName: blackbox-exporter
       tolerations:
       - effect: NoSchedule
         operator: Exists
@@ -57,11 +58,9 @@ spec:
             memory: 5Mi
           limits:
           {{- if .Values.global.vpaEnabled }}
-            cpu: 40m
-            memory: 20Mi
+            memory: 50Mi
           {{- else }}
-            cpu: 50m
-            memory: 35Mi
+            memory: 150Mi
           {{- end }}
         ports:
         - containerPort: 9115

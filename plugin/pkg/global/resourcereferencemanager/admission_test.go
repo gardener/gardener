@@ -20,7 +20,6 @@ import (
 	"net/http"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	corefake "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
@@ -108,7 +107,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				},
 			}
 
-			controllerDeployment = gardencore.ControllerDeployment{
+			controllerDeployment = core.ControllerDeployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: controllerDeploymentName,
 				},

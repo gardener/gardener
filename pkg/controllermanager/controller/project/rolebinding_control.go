@@ -19,8 +19,8 @@ import (
 	"strings"
 
 	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/logger"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
@@ -29,15 +29,15 @@ func (c *Controller) roleBindingUpdate(ctx context.Context, _, new interface{}) 
 }
 
 func (c *Controller) roleBindingDelete(ctx context.Context, obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
+	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
 
@@ -45,11 +45,11 @@ func (c *Controller) roleBindingDelete(ctx context.Context, obj interface{}) {
 		name == "gardener.cloud:system:project-viewer" ||
 		strings.HasPrefix(name, "gardener.cloud:extension:project:") {
 
-		logger.Logger.Debugf("[PROJECT RECONCILE] %q rolebinding modified", key)
+		c.log.V(1).Info("RoleBinding modified", "roleBinding", client.ObjectKey{Namespace: namespace, Name: name})
 
 		project, err := gutil.ProjectForNamespaceFromReader(ctx, c.gardenClient, namespace)
 		if err != nil {
-			logger.Logger.Errorf("Couldn't get list keys for object %+v: %v", obj, err)
+			c.log.Error(err, "Couldn't get Project for Namespace", "namespaceName", namespace)
 			return
 		}
 

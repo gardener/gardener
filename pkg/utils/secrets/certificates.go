@@ -28,13 +28,14 @@ import (
 	"sync"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/infodata"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/clock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // CertType is a string alias for certificate types.
@@ -81,11 +82,10 @@ type CertificateSecretConfig struct {
 	SigningCA *Certificate
 	PKCS      int
 
-	Validity *time.Duration
+	Validity                    *time.Duration
+	SkipPublishingCACertificate bool
 
-	// Now should only be set in tests.
-	// Defaults to time.Now
-	Now func() time.Time
+	Clock clock.Clock
 }
 
 // Certificate contains the private key, and the certificate. It does also contain the CA certificate
@@ -93,7 +93,8 @@ type CertificateSecretConfig struct {
 type Certificate struct {
 	Name string
 
-	CA *Certificate
+	CA                          *Certificate
+	SkipPublishingCACertificate bool
 
 	PrivateKey    *rsa.PrivateKey
 	PrivateKeyPEM []byte
@@ -134,8 +135,9 @@ func (s *CertificateSecretConfig) GenerateFromInfoData(infoData infodata.InfoDat
 		return nil, fmt.Errorf("could not convert InfoData entry %s to CertificateInfoData", s.Name)
 	}
 	certificateObj := &Certificate{
-		Name: s.Name,
-		CA:   s.SigningCA,
+		Name:                        s.Name,
+		CA:                          s.SigningCA,
+		SkipPublishingCACertificate: s.SkipPublishingCACertificate,
 
 		PrivateKeyPEM:  data.PrivateKey,
 		CertificatePEM: data.Certificate,
@@ -178,13 +180,14 @@ func (s *CertificateSecretConfig) LoadFromSecretData(secretData map[string][]byt
 // GenerateCertificate computes a CA, server, or client certificate based on the configuration.
 func (s *CertificateSecretConfig) GenerateCertificate() (*Certificate, error) {
 	certificateObj := &Certificate{
-		Name: s.Name,
-		CA:   s.SigningCA,
+		Name:                        s.Name,
+		CA:                          s.SigningCA,
+		SkipPublishingCACertificate: s.SkipPublishingCACertificate,
 	}
 
 	// If no cert type is given then we only return a certificate object that contains the CA.
 	if s.CertType != "" {
-		privateKey, err := generateRSAPrivateKey(2048)
+		privateKey, err := GenerateKey(rand.Reader, 2048)
 		if err != nil {
 			return nil, err
 		}
@@ -240,7 +243,9 @@ func (c *Certificate) SecretData() map[string][]byte {
 		// keys in the secret data.
 		data[DataKeyPrivateKey] = c.PrivateKeyPEM
 		data[DataKeyCertificate] = c.CertificatePEM
-		data[DataKeyCertificateCA] = c.CA.CertificatePEM
+		if !c.SkipPublishingCACertificate {
+			data[DataKeyCertificateCA] = c.CA.CertificatePEM
+		}
 	}
 
 	return data
@@ -289,13 +294,13 @@ func LoadCAFromSecret(ctx context.Context, k8sClient client.Client, namespace, n
 // or both, depending on the <certType> value. If <isCACert> is true, then a CA certificate is being created.
 // The certificates a valid for 10 years.
 func (s *CertificateSecretConfig) generateCertificateTemplate() *x509.Certificate {
-	nowFunc := time.Now
+	var clock clock.Clock = clock.RealClock{}
 
-	if s.Now != nil {
-		nowFunc = s.Now
+	if s.Clock != nil {
+		clock = s.Clock
 	}
 
-	now := nowFunc()
+	now := clock.Now()
 	expiration := now.AddDate(10, 0, 0) // + 10 years
 	if s.Validity != nil {
 		expiration = now.Add(*s.Validity)
@@ -483,17 +488,4 @@ func SelfGenerateTLSServerCertificate(name string, dnsNames []string, ips []net.
 	}
 
 	return certificate, caCertificate, tempDir, nil
-}
-
-// CertificateIsExpired returns `true` if the given certificate is expired.
-// The given `renewalWindow` lets the certificate expire earlier.
-func CertificateIsExpired(cert []byte, renewalWindow time.Duration) (bool, error) {
-	now := NowFunc()
-
-	x509, err := utils.DecodeCertificate(cert)
-	if err != nil {
-		return false, err
-	}
-
-	return now.After(x509.NotAfter.Add(-renewalWindow)), nil
 }

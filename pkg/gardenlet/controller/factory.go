@@ -43,6 +43,7 @@ import (
 	networkpolicycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
+	shootsecretcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shootsecret"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -166,6 +167,11 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing NetworkPolicy controller: %w", err)
 	}
 
+	secretController, err := shootsecretcontroller.NewController(ctx, gardenClientSet.Client(), seedClient, logger.Logger)
+	if err != nil {
+		return fmt.Errorf("failed initializing Secret controller: %w", err)
+	}
+
 	seedController, err := seedcontroller.NewSeedController(ctx, f.clientMap, f.healthManager, imageVector, componentImageVectors, f.identity, f.clientCertificateExpirationTimestamp, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Seed controller: %w", err)
@@ -184,6 +190,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	go controllerInstallationController.Run(controllerCtx, *f.cfg.Controllers.ControllerInstallation.ConcurrentSyncs, *f.cfg.Controllers.ControllerInstallationCare.ConcurrentSyncs)
 	go managedSeedController.Run(controllerCtx, *f.cfg.Controllers.ManagedSeed.ConcurrentSyncs)
 	go networkPolicyController.Run(controllerCtx, *f.cfg.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
+	go secretController.Run(controllerCtx, *f.cfg.Controllers.ShootSecret.ConcurrentSyncs)
 	go seedController.Run(controllerCtx, *f.cfg.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(controllerCtx, *f.cfg.Controllers.Shoot.ConcurrentSyncs, *f.cfg.Controllers.ShootCare.ConcurrentSyncs, *f.cfg.Controllers.ShootMigration.ConcurrentSyncs)
 
@@ -292,6 +299,19 @@ func addAllFieldIndexes(ctx context.Context, indexer client.FieldIndexer) error 
 		return []string{bastion.Spec.ShootRef.Name}
 	}); err != nil {
 		return fmt.Errorf("failed to add indexer to Bastion Informer: %w", err)
+	}
+
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.BackupBucket{}, gardencore.BackupBucketSeedName, func(obj client.Object) []string {
+		backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
+		if !ok {
+			return []string{""}
+		}
+		if backupBucket.Spec.SeedName == nil {
+			return []string{""}
+		}
+		return []string{*backupBucket.Spec.SeedName}
+	}); err != nil {
+		return fmt.Errorf("failed to add indexer to BackupBucket Informer: %w", err)
 	}
 
 	return nil

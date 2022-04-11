@@ -1,35 +1,3 @@
 #!/usr/bin/env bash
 
-repo_root_dir="$(dirname $0)"/..
-# Env variables provided by pipeline:
-# - BASE_DEFINITION_PATH: path to the base component descriptor provided by the CI (contains only OCI images build by CI).
-# - CTF_PATH: pipeline will check for existing CTF archive and if exists, push the archive to a private repository.
-# - COMPONENT_DESCRIPTOR_PATH:
-#   - Filepath where the CI expects only the component-descriptor.yaml.
-#   - Cannot be used with referenced resources in the component descriptor (like the Gardenlet blueprint).
-
-# call common hack script to enrich the base component descriptor
-"${repo_root_dir}"/hack/.ci/component_descriptor "${repo_root_dir}"
-
-echo "Enriching component descriptor with blueprints of Gardener landscaper components"
-
-COMPONENT_ARCHIVE_PATH="$(mktemp -d)"
-
-# Common hack script has copied the enriched component descriptor to COMPONENT_DESCRIPTOR_PATH for backwards-compatibility.
-# If the descriptor exists at this filepath, it will be uploaded to a private registry.
-# However, this mechanism does not work if there are resource references in the component descriptor (like a local blueprint).
-# Instead, we have to build a CTF.
-# Therefore, move the existing component-descriptor.yaml to the component archive directory.
-mv "${COMPONENT_DESCRIPTOR_PATH}" "${COMPONENT_ARCHIVE_PATH}/component-descriptor.yaml"
-
-# further enrich the component descriptor with the blueprints of landscaper components
-component-cli component-archive resources add \
-"${COMPONENT_ARCHIVE_PATH}" \
-"$repo_root_dir/landscaper/resources.yaml"
-
-# print component descriptor for debugging in the ci
-cat "${COMPONENT_ARCHIVE_PATH}/component-descriptor.yaml"
-
-# Create CTF tar archive at CTF_PATH based on directory in component archive layout (packed automatically)
-# Pushed by CI to private registry if CTF is found at CTF_PATH.
-component-cli ctf add "${CTF_PATH}" -f "${COMPONENT_ARCHIVE_PATH}"
+"$(dirname $0)"/../hack/.ci/component_descriptor "$(dirname $0)"/..

@@ -62,7 +62,7 @@ func (s *RSASecretConfig) Generate() (DataInterface, error) {
 
 // GenerateInfoData implements ConfigInterface.
 func (s *RSASecretConfig) GenerateInfoData() (infodata.InfoData, error) {
-	privateKey, err := generateRSAPrivateKey(s.Bits)
+	privateKey, err := GenerateKey(rand.Reader, s.Bits)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (s *RSASecretConfig) LoadFromSecretData(secretData map[string][]byte) (info
 
 // GenerateRSAKeys computes a RSA private key based on the configured number of bits.
 func (s *RSASecretConfig) GenerateRSAKeys() (*RSAKeys, error) {
-	privateKey, err := generateRSAPrivateKey(s.Bits)
+	privateKey, err := GenerateKey(rand.Reader, s.Bits)
 	if err != nil {
 		return nil, err
 	}
@@ -131,11 +131,6 @@ func (r *RSAKeys) SecretData() map[string][]byte {
 	}
 
 	return data
-}
-
-// generateRSAPrivateKey generates a RSA private for the given number of <bits>.
-func generateRSAPrivateKey(bits int) (*rsa.PrivateKey, error) {
-	return rsa.GenerateKey(rand.Reader, bits)
 }
 
 // generateSSHAuthorizedKeys takes a RSA private key <privateKey> and generates the corresponding public key.

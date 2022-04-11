@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -280,7 +279,7 @@ var _ = Describe("ManagedSeed", func() {
 
 		Context("seed template", func() {
 			BeforeEach(func() {
-				managedSeed.Spec.SeedTemplate = &gardencore.SeedTemplate{
+				managedSeed.Spec.SeedTemplate = &core.SeedTemplate{
 					Spec: core.SeedSpec{
 						Backup: &core.SeedBackup{},
 					},
@@ -294,7 +293,7 @@ var _ = Describe("ManagedSeed", func() {
 
 				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(managedSeed.Spec.SeedTemplate).To(Equal(&gardencore.SeedTemplate{
+				Expect(managedSeed.Spec.SeedTemplate).To(Equal(&core.SeedTemplate{
 					Spec: seed(false).Spec,
 				}))
 			})
@@ -316,7 +315,7 @@ var _ = Describe("ManagedSeed", func() {
 
 				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(managedSeed.Spec.SeedTemplate).To(Equal(&gardencore.SeedTemplate{
+				Expect(managedSeed.Spec.SeedTemplate).To(Equal(&core.SeedTemplate{
 					Spec: seed(true).Spec,
 				}))
 			})

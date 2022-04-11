@@ -22,6 +22,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/operations"
@@ -671,7 +672,46 @@ func (r *shootReconciler) updateShootStatusOperationStart(ctx context.Context, g
 		LastUpdateTime: now,
 	}
 
-	return gardenClient.Status().Update(ctx, shoot)
+	var mustRemoveOperationAnnotation bool
+
+	switch shoot.Annotations[v1beta1constants.GardenerOperation] {
+	case v1beta1constants.ShootOperationRotateCAStart:
+		mustRemoveOperationAnnotation = true
+		v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.ShootCARotation) {
+			rotation.Phase = gardencorev1beta1.RotationPreparing
+			rotation.LastInitiationTime = &now
+		})
+
+	case v1beta1constants.ShootOperationRotateCAComplete:
+		mustRemoveOperationAnnotation = true
+		v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.ShootCARotation) {
+			rotation.Phase = gardencorev1beta1.RotationCompleting
+		})
+
+	case v1beta1constants.ShootOperationRotateKubeconfigCredentials:
+		mustRemoveOperationAnnotation = true
+		v1beta1helper.MutateShootKubeconfigRotation(shoot, func(rotation *gardencorev1beta1.ShootKubeconfigRotation) {
+			rotation.LastInitiationTime = &now
+		})
+
+	case v1beta1constants.ShootOperationRotateSSHKeypair:
+		mustRemoveOperationAnnotation = true
+		v1beta1helper.MutateShootSSHKeypairRotation(shoot, func(rotation *gardencorev1beta1.ShootSSHKeypairRotation) {
+			rotation.LastInitiationTime = &now
+		})
+	}
+
+	if err := gardenClient.Status().Update(ctx, shoot); err != nil {
+		return err
+	}
+
+	if mustRemoveOperationAnnotation {
+		patch := client.MergeFrom(shoot.DeepCopy())
+		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
+		return gardenClient.Patch(ctx, shoot, patch)
+	}
+
+	return nil
 }
 
 func (r *shootReconciler) patchShootStatusOperationSuccess(
@@ -750,6 +790,31 @@ func (r *shootReconciler) patchShootStatusOperationSuccess(
 		Progress:       100,
 		Description:    description,
 		LastUpdateTime: now,
+	}
+
+	switch v1beta1helper.GetShootCARotationPhase(shoot.Status.Credentials) {
+	case gardencorev1beta1.RotationPreparing:
+		v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.ShootCARotation) {
+			rotation.Phase = gardencorev1beta1.RotationPrepared
+		})
+
+	case gardencorev1beta1.RotationCompleting:
+		v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.ShootCARotation) {
+			rotation.Phase = gardencorev1beta1.RotationCompleted
+			rotation.LastCompletionTime = &now
+		})
+	}
+
+	if v1beta1helper.IsShootKubeconfigRotationInitiationTimeAfterLastCompletionTime(shoot.Status.Credentials) {
+		v1beta1helper.MutateShootKubeconfigRotation(shoot, func(rotation *gardencorev1beta1.ShootKubeconfigRotation) {
+			rotation.LastCompletionTime = &now
+		})
+	}
+
+	if v1beta1helper.IsShootSSHKeypairRotationInitiationTimeAfterLastCompletionTime(shoot.Status.Credentials) {
+		v1beta1helper.MutateShootSSHKeypairRotation(shoot, func(rotation *gardencorev1beta1.ShootSSHKeypairRotation) {
+			rotation.LastCompletionTime = &now
+		})
 	}
 
 	return gardenClient.Status().Patch(ctx, shoot, patch)

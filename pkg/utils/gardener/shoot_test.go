@@ -283,7 +283,7 @@ var _ = Describe("Shoot", func() {
 
 	Describe("#GetShootProjectSecretSuffixes", func() {
 		It("should return the expected list", func() {
-			Expect(GetShootProjectSecretSuffixes()).To(ConsistOf("kubeconfig", "ssh-keypair", "ssh-keypair.old", "monitoring"))
+			Expect(GetShootProjectSecretSuffixes()).To(ConsistOf("kubeconfig", "ca-cluster", "ssh-keypair", "ssh-keypair.old", "monitoring"))
 		})
 	})
 
@@ -303,6 +303,7 @@ var _ = Describe("Shoot", func() {
 		Entry("unrelated suffix", "foo.bar", "", false),
 		Entry("wrong suffix delimiter", "foo:kubeconfig", "", false),
 		Entry("kubeconfig suffix", "foo.kubeconfig", "foo", true),
+		Entry("ca-cluster suffix", "baz.ca-cluster", "baz", true),
 		Entry("ssh-keypair suffix", "bar.ssh-keypair", "bar", true),
 		Entry("monitoring suffix", "baz.monitoring", "baz", true),
 	)
@@ -477,9 +478,10 @@ var _ = Describe("Shoot", func() {
 
 	Describe("#InjectGenericKubeconfig", func() {
 		var (
-			tokenSecretName = "tokensecret"
-			containerName1  = "container1"
-			containerName2  = "container2"
+			genericTokenKubeconfigSecretName = "generic-token-kubeconfig-12345"
+			tokenSecretName                  = "tokensecret"
+			containerName1                   = "container1"
+			containerName2                   = "container2"
 
 			podSpec = corev1.PodSpec{
 				Containers: []corev1.Container{
@@ -579,12 +581,12 @@ var _ = Describe("Shoot", func() {
 		)
 
 		It("should do nothing because object is not handled", func() {
-			Expect(InjectGenericKubeconfig(&corev1.Service{}, tokenSecretName)).To(MatchError(ContainSubstring("unhandled object type")))
+			Expect(InjectGenericKubeconfig(&corev1.Service{}, genericTokenKubeconfigSecretName, tokenSecretName)).To(MatchError(ContainSubstring("unhandled object type")))
 		})
 
 		DescribeTable("should behave properly",
 			func(obj runtime.Object, podSpec *corev1.PodSpec, expectedVolumeMountInContainer1, expectedVolumeMountInContainer2 bool, containerNames ...string) {
-				Expect(InjectGenericKubeconfig(obj, tokenSecretName, containerNames...)).To(Succeed())
+				Expect(InjectGenericKubeconfig(obj, genericTokenKubeconfigSecretName, tokenSecretName, containerNames...)).To(Succeed())
 
 				Expect(podSpec.Volumes).To(ContainElement(corev1.Volume{
 					Name: "kubeconfig",
@@ -595,7 +597,7 @@ var _ = Describe("Shoot", func() {
 								{
 									Secret: &corev1.SecretProjection{
 										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "generic-token-kubeconfig",
+											Name: genericTokenKubeconfigSecretName,
 										},
 										Items: []corev1.KeyToPath{{
 											Key:  "kubeconfig",

@@ -159,7 +159,7 @@ var _ = Describe("addons", func() {
 		ctrl.Finish()
 	})
 
-	Context("DefaultNginxIngressDNSEntry", func() {
+	Describe("#DefaultNginxIngressDNSEntry", func() {
 		It("should delete the entry when calling Deploy", func() {
 			Expect(client.Create(ctx, &dnsv1alpha1.DNSEntry{
 				ObjectMeta: metav1.ObjectMeta{Name: common.ShootDNSIngressName, Namespace: seedNamespace},
@@ -173,7 +173,7 @@ var _ = Describe("addons", func() {
 		})
 	})
 
-	Context("DefaultNginxIngressDNSOwner", func() {
+	Describe("#DefaultNginxIngressDNSOwner", func() {
 		It("should delete the owner when calling Deploy", func() {
 			Expect(client.Create(ctx, &dnsv1alpha1.DNSOwner{
 				ObjectMeta: metav1.ObjectMeta{Name: seedNamespace + "-" + common.ShootDNSIngressName},
@@ -187,7 +187,7 @@ var _ = Describe("addons", func() {
 		})
 	})
 
-	Context("SetNginxIngressAddress", func() {
+	Describe("#SetNginxIngressAddress", func() {
 		It("does nothing when DNS is disabled", func() {
 			b.Shoot.DisableDNS = true
 
@@ -259,8 +259,81 @@ var _ = Describe("addons", func() {
 		})
 	})
 
-	Context("DefaultIngressDNSRecord", func() {
+	Describe("#DefaultIngressDNSRecord", func() {
+		It("should create a component with correct values when nginx-ingress addon is enabled", func() {
+			c := b.DefaultIngressDNSRecord()
+			c.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
+			c.SetValues([]string{address})
+
+			actual := c.GetValues()
+			Expect(actual).To(DeepEqual(&dnsrecord.Values{
+				Name:       b.Shoot.GetInfo().Name + "-" + common.ShootDNSIngressName,
+				SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
+				Namespace:  seedNamespace,
+				TTL:        pointer.Int64(ttl),
+				Type:       externalProvider,
+				Zone:       pointer.String(externalZone),
+				SecretData: map[string][]byte{
+					"external-foo": []byte("external-bar"),
+				},
+				DNSName:           "*.ingress." + externalDomain,
+				RecordType:        extensionsv1alpha1.DNSRecordTypeA,
+				Values:            []string{address},
+				AnnotateOperation: false,
+			}))
+		})
+
+		DescribeTable("should set AnnotateOperation value to true",
+			func(mutateShootFn func()) {
+				mutateShootFn()
+
+				c := b.DefaultIngressDNSRecord()
+
+				Expect(c.GetValues().AnnotateOperation).To(BeTrue())
+			},
+
+			Entry("task annotation present", func() {
+				shoot := b.Shoot.GetInfo()
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "shoot.gardener.cloud/tasks", "deployDNSRecordIngress")
+				b.Shoot.SetInfo(shoot)
+			}),
+			Entry("restore phase", func() {
+				shoot := b.Shoot.GetInfo()
+				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeRestore}
+				b.Shoot.SetInfo(shoot)
+			}),
+		)
+
+		It("should create a component with correct values when nginx-ingress addon is disabled", func() {
+			b.Shoot.GetInfo().Spec.Addons.NginxIngress.Enabled = false
+
+			c := b.DefaultIngressDNSRecord()
+			c.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
+			c.SetValues([]string{address})
+
+			actual := c.GetValues()
+			Expect(actual).To(DeepEqual(&dnsrecord.Values{
+				Name:       b.Shoot.GetInfo().Name + "-" + common.ShootDNSIngressName,
+				SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
+				Namespace:  seedNamespace,
+				TTL:        pointer.Int64(ttl),
+				Type:       externalProvider,
+				Zone:       pointer.String(externalZone),
+				SecretData: map[string][]byte{
+					"external-foo": []byte("external-bar"),
+				},
+				DNSName:           "*.ingress." + externalDomain,
+				RecordType:        extensionsv1alpha1.DNSRecordTypeA,
+				Values:            []string{address},
+				AnnotateOperation: false,
+			}))
+		})
+
 		It("should create a component that creates the DNSRecord and its secret on Deploy", func() {
+			shoot := b.Shoot.GetInfo()
+			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "shoot.gardener.cloud/tasks", "deployDNSRecordIngress")
+			b.Shoot.SetInfo(shoot)
+
 			c := b.DefaultIngressDNSRecord()
 			c.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
 			c.SetValues([]string{address})

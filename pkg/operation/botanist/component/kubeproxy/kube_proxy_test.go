@@ -312,7 +312,7 @@ metadata:
   namespace: kube-system
 `
 
-			configMapCleanupScriptName = "kube-proxy-cleanup-script-a4263ada"
+			configMapCleanupScriptName = "kube-proxy-cleanup-script-56490ad9"
 			configMapCleanupScriptYAML = `apiVersion: v1
 data:
   cleanup.sh: |
@@ -322,6 +322,12 @@ data:
       echo "${KUBE_PROXY_MODE}" >"$1"
       echo "Nothing to cleanup - the mode didn't change."
       exit 0
+    fi
+
+    # Workaround kube-proxy bug when switching from ipvs to iptables mode
+    if iptables -t filter -L KUBE-NODE-PORT; then
+      echo "KUBE-NODE-PORT chain exists, flushing it..."
+      iptables -t filter -F KUBE-NODE-PORT
     fi
 
     /usr/local/bin/kube-proxy --v=2 --cleanup --config=/var/lib/kube-proxy-config/config.yaml --proxy-mode="${OLD_KUBE_PROXY_MODE}"
@@ -484,8 +490,7 @@ spec:
 				if vpaEnabled {
 					out += `
           limits:
-            cpu: 80m
-            memory: 256Mi`
+            memory: 2Gi`
 				}
 
 				out += `
@@ -613,13 +618,17 @@ status:
 
 			vpaNameFor = daemonSetNameFor
 			vpaYAMLFor = func(pool WorkerPool) string {
-				return `apiVersion: autoscaling.k8s.io/v1beta2
+				return `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null
   name: ` + vpaNameFor(pool) + `
   namespace: kube-system
 spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      controlledValues: RequestsOnly
   targetRef:
     apiVersion: apps/v1
     kind: DaemonSet

@@ -1,18 +1,5 @@
 #!/usr/bin/env bash
 
-# Configuration Options:
-#
-# COMPONENT_PREFIXES: Set the image prefix that should be used to
-#                     determine if an image is defined by another component.
-#                     Defaults to "eu.gcr.io/gardener-project/gardener"
-#
-# GENERIC_DEPENDENCIES: Set images that are generic dependencies with no specific tag.
-#                       Defaults to "hyperkube,kube-apiserver,kube-controller-manager,kube-scheduler,kube-proxy"
-#
-# COMPONENT_CLI_ARGS: Set all component-cli arguments.
-#                     This should be used with care as all defaults are overwritten.
-#
-
 set -e
 
 repo_root_dir="$1"
@@ -22,26 +9,12 @@ descriptor_out_file="${COMPONENT_DESCRIPTOR_PATH}"
 echo "Enriching component descriptor from ${BASE_DEFINITION_PATH}"
 
 if [[ -f "$repo_root_dir/charts/images.yaml" ]]; then
-  # default environment variables
-  if [[ -z "${COMPONENT_PREFIXES}" ]]; then
-    COMPONENT_PREFIXES="eu.gcr.io/gardener-project/gardener"
-  fi
-  if [[ -z "${GENERIC_DEPENDENCIES}" ]]; then
-    GENERIC_DEPENDENCIES="hyperkube,kube-apiserver,kube-controller-manager,kube-scheduler,kube-proxy"
-  fi
-
-  if [[ -z "${COMPONENT_CLI_ARGS}" ]]; then
-    COMPONENT_CLI_ARGS="
-    --comp-desc ${BASE_DEFINITION_PATH} \
-    --image-vector "$repo_root_dir/charts/images.yaml" \
-    --component-prefixes "${COMPONENT_PREFIXES}" \
-    --generic-dependencies "${GENERIC_DEPENDENCIES}" \
-    "
-  fi
-
   # translates all images defined the images.yaml into component descriptor resources.
   # For detailed documentation see https://github.com/gardener/component-cli/blob/main/docs/reference/components-cli_image-vector_add.md
-  component-cli image-vector add ${COMPONENT_CLI_ARGS}
+  component-cli image-vector add --comp-desc ${BASE_DEFINITION_PATH} \
+    --image-vector "$repo_root_dir/charts/images.yaml" \
+    --component-prefixes eu.gcr.io/gardener-project/gardener \
+    --generic-dependencies hyperkube,kube-apiserver,kube-controller-manager,kube-scheduler,kube-proxy
 fi
 
 if [[ -d "$repo_root_dir/charts/" ]]; then

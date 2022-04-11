@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestV1alpha1(t *testing.T) {
+func TestV1beta1(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "API Core V1beta1 Suite")
 }

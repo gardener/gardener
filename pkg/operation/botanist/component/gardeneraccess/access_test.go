@@ -19,8 +19,10 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/gardeneraccess"
-	"github.com/gardener/gardener/pkg/utils"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -34,8 +36,9 @@ import (
 
 var _ = Describe("Access", func() {
 	var (
-		c      client.Client
-		access Interface
+		fakeClient client.Client
+		sm         secretsmanager.Interface
+		access     component.Deployer
 
 		ctx       = context.TODO()
 		namespace = "shoot--foo--bar"
@@ -65,7 +68,6 @@ subjects:
 
 		serverOutOfCluster = "out-of-cluster"
 		serverInCluster    = "in-cluster"
-		caCert             = []byte("ca")
 
 		expectedGardenerSecret         *corev1.Secret
 		expectedGardenerInternalSecret *corev1.Secret
@@ -74,13 +76,13 @@ subjects:
 	)
 
 	BeforeEach(func() {
-		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+		sm = fakesecretsmanager.New(fakeClient, namespace)
 
-		access = New(c, namespace, Values{
+		access = New(fakeClient, namespace, sm, Values{
 			ServerOutOfCluster: serverOutOfCluster,
 			ServerInCluster:    serverInCluster,
 		})
-		access.SetCACertificate(caCert)
 
 		expectedGardenerSecret = &corev1.Secret{
 			TypeMeta: metav1.TypeMeta{
@@ -90,7 +92,7 @@ subjects:
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            gardenerSecretName,
 				Namespace:       namespace,
-				ResourceVersion: "2",
+				ResourceVersion: "1",
 				Annotations: map[string]string{
 					"serviceaccount.resources.gardener.cloud/name":      "gardener",
 					"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
@@ -103,7 +105,6 @@ subjects:
 			Data: map[string][]byte{"kubeconfig": []byte(`apiVersion: v1
 clusters:
 - cluster:
-    certificate-authority-data: ` + utils.EncodeBase64(caCert) + `
     server: https://` + serverOutOfCluster + `
   name: ` + namespace + `
 contexts:
@@ -128,7 +129,7 @@ users:
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            gardenerInternalSecretName,
 				Namespace:       namespace,
-				ResourceVersion: "2",
+				ResourceVersion: "1",
 				Annotations: map[string]string{
 					"serviceaccount.resources.gardener.cloud/name":      "gardener-internal",
 					"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
@@ -141,7 +142,6 @@ users:
 			Data: map[string][]byte{"kubeconfig": []byte(`apiVersion: v1
 clusters:
 - cluster:
-    certificate-authority-data: ` + utils.EncodeBase64(caCert) + `
     server: https://` + serverInCluster + `
   name: ` + namespace + `
 contexts:
@@ -195,10 +195,10 @@ users:
 	})
 
 	AfterEach(func() {
-		Expect(c.Delete(ctx, expectedGardenerSecret)).To(Or(Succeed(), BeNotFoundError()))
-		Expect(c.Delete(ctx, expectedGardenerInternalSecret)).To(Or(Succeed(), BeNotFoundError()))
-		Expect(c.Delete(ctx, expectedManagedResourceSecret)).To(Or(Succeed(), BeNotFoundError()))
-		Expect(c.Delete(ctx, expectedManagedResource)).To(Or(Succeed(), BeNotFoundError()))
+		Expect(fakeClient.Delete(ctx, expectedGardenerSecret)).To(Or(Succeed(), BeNotFoundError()))
+		Expect(fakeClient.Delete(ctx, expectedGardenerInternalSecret)).To(Or(Succeed(), BeNotFoundError()))
+		Expect(fakeClient.Delete(ctx, expectedManagedResourceSecret)).To(Or(Succeed(), BeNotFoundError()))
+		Expect(fakeClient.Delete(ctx, expectedManagedResource)).To(Or(Succeed(), BeNotFoundError()))
 	})
 
 	Describe("#Deploy", func() {
@@ -206,19 +206,19 @@ users:
 			Expect(access.Deploy(ctx)).To(Succeed())
 
 			reconciledGardenerSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenerSecretName, Namespace: namespace}}
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(reconciledGardenerSecret), reconciledGardenerSecret)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledGardenerSecret), reconciledGardenerSecret)).To(Succeed())
 			Expect(reconciledGardenerSecret).To(DeepEqual(expectedGardenerSecret))
 
 			reconciledGardenerInternalSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenerInternalSecretName, Namespace: namespace}}
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(reconciledGardenerInternalSecret), reconciledGardenerInternalSecret)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledGardenerInternalSecret), reconciledGardenerInternalSecret)).To(Succeed())
 			Expect(reconciledGardenerInternalSecret).To(DeepEqual(expectedGardenerInternalSecret))
 
 			reconciledManagedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretName, Namespace: namespace}}
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResourceSecret), reconciledManagedResourceSecret)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResourceSecret), reconciledManagedResourceSecret)).To(Succeed())
 			Expect(reconciledManagedResourceSecret).To(DeepEqual(expectedManagedResourceSecret))
 
 			reconciledManagedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResource), reconciledManagedResource)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledManagedResource), reconciledManagedResource)).To(Succeed())
 			Expect(reconciledManagedResource).To(DeepEqual(expectedManagedResource))
 		})
 
@@ -228,29 +228,27 @@ users:
 					Name:      expectedGardenerSecret.Name,
 					Namespace: expectedGardenerSecret.Namespace,
 				},
-				Data: map[string][]byte{"gardener.crt": []byte("legacy")},
 			}
-			Expect(c.Create(ctx, oldGardenerSecret)).To(Succeed())
-			expectedGardenerSecret.ResourceVersion = "3"
+			Expect(fakeClient.Create(ctx, oldGardenerSecret)).To(Succeed())
+			expectedGardenerSecret.ResourceVersion = "2"
 
 			oldGardenerInternalSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      expectedGardenerInternalSecret.Name,
 					Namespace: expectedGardenerInternalSecret.Namespace,
 				},
-				Data: map[string][]byte{"gardener-internal.crt": []byte("legacy")},
 			}
-			Expect(c.Create(ctx, oldGardenerInternalSecret)).To(Succeed())
-			expectedGardenerInternalSecret.ResourceVersion = "3"
+			Expect(fakeClient.Create(ctx, oldGardenerInternalSecret)).To(Succeed())
+			expectedGardenerInternalSecret.ResourceVersion = "2"
 
 			Expect(access.Deploy(ctx)).To(Succeed())
 
 			reconciledGardenerSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenerSecretName, Namespace: namespace}}
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(reconciledGardenerSecret), reconciledGardenerSecret)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledGardenerSecret), reconciledGardenerSecret)).To(Succeed())
 			Expect(reconciledGardenerSecret).To(DeepEqual(expectedGardenerSecret))
 
 			reconciledGardenerInternalSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gardenerInternalSecretName, Namespace: namespace}}
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(reconciledGardenerInternalSecret), reconciledGardenerInternalSecret)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(reconciledGardenerInternalSecret), reconciledGardenerInternalSecret)).To(Succeed())
 			Expect(reconciledGardenerInternalSecret).To(DeepEqual(expectedGardenerInternalSecret))
 		})
 	})
@@ -260,13 +258,13 @@ users:
 			expectedManagedResourceSecret.ResourceVersion = ""
 			expectedManagedResource.ResourceVersion = ""
 
-			Expect(c.Create(ctx, expectedManagedResourceSecret)).To(Succeed())
-			Expect(c.Create(ctx, expectedManagedResource)).To(Succeed())
+			Expect(fakeClient.Create(ctx, expectedManagedResourceSecret)).To(Succeed())
+			Expect(fakeClient.Create(ctx, expectedManagedResource)).To(Succeed())
 
 			Expect(access.Destroy(ctx)).To(Succeed())
 
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedManagedResourceSecret), expectedManagedResourceSecret)).To(BeNotFoundError())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedManagedResource), expectedManagedResource)).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedManagedResourceSecret), expectedManagedResourceSecret)).To(BeNotFoundError())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(expectedManagedResource), expectedManagedResource)).To(BeNotFoundError())
 		})
 	})
 })

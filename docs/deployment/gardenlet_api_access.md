@@ -1,7 +1,7 @@
 # Scoped API Access for Gardenlets
 
 By default, `gardenlet`s have administrative access in the garden cluster.
-They are able to execute any API request on any object independent of whether the object is related to the seed cluster the `gardenlet` is responsible fto.
+They are able to execute any API request on any object independent of whether the object is related to the seed cluster the `gardenlet` is responsible for.
 As RBAC is not powerful enough for fine-grained checks and for the sake of security, Gardener provides two optional but recommended configurations for your environments that scope the API access for `gardenlet`s.
 
 Similar to the [`Node` authorization mode in Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/node/), Gardener features a `SeedAuthorizer` plugin.

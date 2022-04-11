@@ -32,7 +32,7 @@ var _ = Describe("Shoot Maintenance", func() {
 	expirationDateInThePast := metav1.Time{Time: now.AddDate(0, 0, -1)}
 
 	Context("Shoot Maintenance", func() {
-		Describe("ExpirationDateExpired", func() {
+		Describe("#ExpirationDateExpired", func() {
 			It("should determine that expirationDate applies", func() {
 				applies := ExpirationDateExpired(&expirationDateInThePast)
 				Expect(applies).To(Equal(true))
@@ -44,7 +44,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			})
 		})
 
-		Describe("ForceMachineImageUpdateRequired", func() {
+		Describe("#ForceMachineImageUpdateRequired", func() {
 			var (
 				shootCurrentImage = &gardencorev1beta1.ShootMachineImage{
 					Name:    "CoreOs",
@@ -98,7 +98,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 	})
 
-	Describe("MaintainMachineImages", func() {
+	Describe("#MaintainMachineImages", func() {
 		var (
 			shootCurrentImage        *gardencorev1beta1.ShootMachineImage
 			cloudProfile             *gardencorev1beta1.CloudProfile
@@ -385,7 +385,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 	})
 
-	Describe("Maintain Kubernetes Version", func() {
+	Describe("#maintainKubernetesVersion", func() {
 		var (
 			cloudProfile          *gardencorev1beta1.CloudProfile
 			shoot                 *gardencorev1beta1.Shoot

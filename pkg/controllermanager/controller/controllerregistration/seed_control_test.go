@@ -20,14 +20,11 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/features"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/common"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/test"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/go-logr/logr"
@@ -78,25 +75,15 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 				Name: "bb1",
 			},
 			Spec: gardencorev1beta1.BackupBucketSpec{
-				Provider: gardencorev1beta1.BackupBucketProvider{
-					Type: type1,
-				},
-			},
-		}
-		backupBucket2 = &gardencorev1beta1.BackupBucket{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "bb2",
-			},
-			Spec: gardencorev1beta1.BackupBucketSpec{
 				SeedName: &seedName,
 				Provider: gardencorev1beta1.BackupBucketProvider{
 					Type: type2,
 				},
 			},
 		}
-		backupBucket3 = &gardencorev1beta1.BackupBucket{
+		backupBucket2 = &gardencorev1beta1.BackupBucket{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "bb3",
+				Name: "bb2",
 			},
 			Spec: gardencorev1beta1.BackupBucketSpec{
 				SeedName: &seedName,
@@ -109,23 +96,13 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 			Items: []gardencorev1beta1.BackupBucket{
 				*backupBucket1,
 				*backupBucket2,
-				*backupBucket3,
 			},
 		}
 		buckets = map[string]gardencorev1beta1.BackupBucket{
 			backupBucket1.Name: *backupBucket1,
 			backupBucket2.Name: *backupBucket2,
-			backupBucket3.Name: *backupBucket3,
 		}
 
-		backupEntry1 = &gardencorev1beta1.BackupEntry{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "be1",
-			},
-			Spec: gardencorev1beta1.BackupEntrySpec{
-				BucketName: backupBucket1.Name,
-			},
-		}
 		backupEntry2 = &gardencorev1beta1.BackupEntry{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "be2",
@@ -141,12 +118,11 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 			},
 			Spec: gardencorev1beta1.BackupEntrySpec{
 				SeedName:   &seedName,
-				BucketName: backupBucket2.Name,
+				BucketName: backupBucket1.Name,
 			},
 		}
 		backupEntryList = &gardencorev1beta1.BackupEntryList{
 			Items: []gardencorev1beta1.BackupEntry{
-				*backupEntry1,
 				*backupEntry2,
 				*backupEntry3,
 			},
@@ -503,18 +479,18 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 
 	Describe("#computeKindTypesForBackupBuckets", func() {
 		It("should return empty results for empty input", func() {
-			kindTypes, bs := computeKindTypesForBackupBuckets(&gardencorev1beta1.BackupBucketList{}, seedName)
+			kindTypes, bs := computeKindTypesForBackupBuckets(&gardencorev1beta1.BackupBucketList{})
 
 			Expect(kindTypes.Len()).To(BeZero())
 			Expect(bs).To(BeEmpty())
 		})
 
 		It("should correctly compute the result", func() {
-			kindTypes, bs := computeKindTypesForBackupBuckets(backupBucketList, seedName)
+			kindTypes, bs := computeKindTypesForBackupBuckets(backupBucketList)
 
 			Expect(kindTypes).To(Equal(sets.NewString(
+				extensionsv1alpha1.BackupBucketResource+"/"+backupBucket1.Spec.Provider.Type,
 				extensionsv1alpha1.BackupBucketResource+"/"+backupBucket2.Spec.Provider.Type,
-				extensionsv1alpha1.BackupBucketResource+"/"+backupBucket3.Spec.Provider.Type,
 			)))
 			Expect(bs).To(Equal(buckets))
 		})
@@ -522,17 +498,16 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 
 	Describe("#computeKindTypesForBackupEntries", func() {
 		It("should return empty results for empty input", func() {
-			kindTypes := computeKindTypesForBackupEntries(nopLogger, &gardencorev1beta1.BackupEntryList{}, nil, seedName)
+			kindTypes := computeKindTypesForBackupEntries(nopLogger, &gardencorev1beta1.BackupEntryList{}, nil)
 
 			Expect(kindTypes.Len()).To(BeZero())
 		})
 
 		It("should correctly compute the result", func() {
-			kindTypes := computeKindTypesForBackupEntries(nopLogger, backupEntryList, buckets, seedName)
+			kindTypes := computeKindTypesForBackupEntries(nopLogger, backupEntryList, buckets)
 
 			Expect(kindTypes).To(Equal(sets.NewString(
-				extensionsv1alpha1.BackupEntryResource+"/"+backupBucket1.Spec.Provider.Type,
-				extensionsv1alpha1.BackupEntryResource+"/"+backupBucket2.Spec.Provider.Type,
+				extensionsv1alpha1.BackupEntryResource + "/" + backupBucket1.Spec.Provider.Type,
 			)))
 		})
 	})
@@ -548,40 +523,7 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 			goleak.VerifyNone(GinkgoT(), ignoreCurrent)
 		})
 
-		It("should correctly compute the result for a seed without DNS taint if the feature gate is disabled", func() {
-			defer test.WithFeatureGate(controllermanagerfeatures.FeatureGate, features.UseDNSRecords, false)()
-
-			kindTypes := computeKindTypesForShoots(ctx, nopLogger, nil, shootList, seedWithShootDNSEnabled, controllerRegistrationList, internalDomain, nil)
-
-			Expect(kindTypes).To(Equal(sets.NewString(
-				// seedWithShootDNSEnabled types
-				extensionsv1alpha1.BackupBucketResource+"/"+type8,
-				extensionsv1alpha1.BackupEntryResource+"/"+type8,
-				extensionsv1alpha1.ControlPlaneResource+"/"+type11,
-
-				// shoot2 types
-				extensionsv1alpha1.ControlPlaneResource+"/"+type2,
-				extensionsv1alpha1.InfrastructureResource+"/"+type2,
-				extensionsv1alpha1.WorkerResource+"/"+type2,
-				extensionsv1alpha1.OperatingSystemConfigResource+"/"+type5,
-				extensionsv1alpha1.NetworkResource+"/"+type3,
-				extensionsv1alpha1.ExtensionResource+"/"+type4,
-
-				// shoot3 types
-				extensionsv1alpha1.ControlPlaneResource+"/"+type6,
-				extensionsv1alpha1.InfrastructureResource+"/"+type6,
-				extensionsv1alpha1.WorkerResource+"/"+type6,
-				dnsv1alpha1.DNSProviderKind+"/"+type7,
-				extensionsv1alpha1.ContainerRuntimeResource+"/"+type12,
-
-				// internal domain + globally enabled extensions
-				extensionsv1alpha1.ExtensionResource+"/"+type10,
-				dnsv1alpha1.DNSProviderKind+"/"+type9,
-			)))
-		})
-
-		It("should correctly compute the result for a seed without DNS taint if the feature gate is enabled", func() {
-			defer test.WithFeatureGate(controllermanagerfeatures.FeatureGate, features.UseDNSRecords, true)()
+		It("should correctly compute the result for a seed without DNS taint", func() {
 
 			kindTypes := computeKindTypesForShoots(ctx, nopLogger, nil, shootList, seedWithShootDNSEnabled, controllerRegistrationList, internalDomain, nil)
 
@@ -698,27 +640,7 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 	Describe("#computeKindTypesForSeed", func() {
 		var providerType = "fake-provider-type"
 
-		It("should add the DNSProvider extension if the feature gate is disabled", func() {
-			defer test.WithFeatureGate(controllermanagerfeatures.FeatureGate, features.UseDNSRecords, false)()
-
-			seed := &gardencorev1beta1.Seed{
-				Spec: gardencorev1beta1.SeedSpec{
-					DNS: gardencorev1beta1.SeedDNS{
-						Provider: &gardencorev1beta1.SeedDNSProvider{
-							Type: providerType,
-						},
-					},
-				},
-			}
-
-			expected := sets.NewString(extensions.Id(dnsv1alpha1.DNSProviderKind, providerType))
-			actual := computeKindTypesForSeed(seed)
-			Expect(actual).To(Equal(expected))
-		})
-
-		It("should add the DNSRecord extension if the feature gate is enabled", func() {
-			defer test.WithFeatureGate(controllermanagerfeatures.FeatureGate, features.UseDNSRecords, true)()
-
+		It("should add the DNSRecord extension", func() {
 			seed := &gardencorev1beta1.Seed{
 				Spec: gardencorev1beta1.SeedSpec{
 					DNS: gardencorev1beta1.SeedDNS{

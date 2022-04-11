@@ -25,9 +25,10 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -37,6 +38,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 )
 
 // NewEtcd is a function exposed for testing.
@@ -53,6 +55,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		b.K8sSeedClient.Client(),
 		b.Logger,
 		b.Shoot.SeedNamespace,
+		b.SecretsManager,
 		role,
 		class,
 		b.Shoot.HibernationEnabled,
@@ -65,32 +68,27 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
 
-	scaleDownUpdateMode := hvpav1alpha1.UpdateModeMaintenanceWindow
-	if (class == etcd.ClassImportant && b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction) ||
-		(metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled)) {
-		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
-	}
-
 	e.SetHVPAConfig(&etcd.HVPAConfig{
 		Enabled:               hvpaEnabled,
 		MaintenanceTimeWindow: *b.Shoot.GetInfo().Spec.Maintenance.TimeWindow,
-		ScaleDownUpdateMode:   &scaleDownUpdateMode,
+		ScaleDownUpdateMode:   getScaleDownUpdateMode(class, b.Shoot),
 	})
 
 	return e, nil
 }
 
+func getScaleDownUpdateMode(c etcd.Class, s *shoot.Shoot) *string {
+	if c == etcd.ClassImportant && (s.Purpose == gardencorev1beta1.ShootPurposeProduction || s.Purpose == gardencorev1beta1.ShootPurposeInfrastructure) {
+		return pointer.String(hvpav1alpha1.UpdateModeOff)
+	}
+	if metav1.HasAnnotation(s.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
+		return pointer.String(hvpav1alpha1.UpdateModeOff)
+	}
+	return pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow)
+}
+
 // DeployEtcd deploys the etcd main and events.
 func (b *Botanist) DeployEtcd(ctx context.Context) error {
-	secrets := etcd.Secrets{
-		CA:     component.Secret{Name: etcd.SecretNameCA, Checksum: b.LoadCheckSum(etcd.SecretNameCA)},
-		Server: component.Secret{Name: etcd.SecretNameServer, Checksum: b.LoadCheckSum(etcd.SecretNameServer)},
-		Client: component.Secret{Name: etcd.SecretNameClient, Checksum: b.LoadCheckSum(etcd.SecretNameClient)},
-	}
-
-	b.Shoot.Components.ControlPlane.EtcdMain.SetSecrets(secrets)
-	b.Shoot.Components.ControlPlane.EtcdEvents.SetSecrets(secrets)
-
 	if b.Seed.GetInfo().Spec.Backup != nil {
 		secret := &corev1.Secret{}
 		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.BackupSecretName), secret); err != nil {
@@ -102,15 +100,21 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 			return err
 		}
 
+		var backupLeaderElection *config.ETCDBackupLeaderElection
+		if b.Config != nil && b.Config.ETCDConfig != nil {
+			backupLeaderElection = b.Config.ETCDConfig.BackupLeaderElection
+		}
+
 		b.Shoot.Components.ControlPlane.EtcdMain.SetBackupConfig(&etcd.BackupConfig{
 			Provider:             b.Seed.GetInfo().Spec.Backup.Provider,
 			SecretRefName:        v1beta1constants.BackupSecretName,
 			Prefix:               b.Shoot.BackupEntryName,
 			Container:            string(secret.Data[v1beta1constants.DataKeyBackupBucketName]),
 			FullSnapshotSchedule: snapshotSchedule,
+			LeaderElection:       backupLeaderElection,
 		})
 
-		if gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords) && gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(b.Seed.GetInfo().Spec.Settings) {
+		if gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(b.Seed.GetInfo().Spec.Settings) {
 			b.Shoot.Components.ControlPlane.EtcdMain.SetOwnerCheckConfig(&etcd.OwnerCheckConfig{
 				Name: gutil.GetOwnerDomain(b.Shoot.InternalClusterDomain),
 				ID:   *b.Seed.GetInfo().Status.ClusterIdentity,
@@ -118,10 +122,15 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 		}
 	}
 
-	return flow.Parallel(
+	if err := flow.Parallel(
 		b.Shoot.Components.ControlPlane.EtcdMain.Deploy,
 		b.Shoot.Components.ControlPlane.EtcdEvents.Deploy,
-	)(ctx)
+	)(ctx); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove in a future release.
+	return kutil.DeleteObject(ctx, b.K8sSeedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-server-cert", Namespace: b.Shoot.SeedNamespace}})
 }
 
 // WaitUntilEtcdsReady waits until both etcd-main and etcd-events are ready.
@@ -163,7 +172,7 @@ func (b *Botanist) ScaleETCDToOne(ctx context.Context) error {
 	return b.scaleETCD(ctx, 1)
 }
 
-func (b *Botanist) scaleETCD(ctx context.Context, replicas int) error {
+func (b *Botanist) scaleETCD(ctx context.Context, replicas int32) error {
 	if err := b.Shoot.Components.ControlPlane.EtcdMain.Scale(ctx, replicas); err != nil {
 		return err
 	}

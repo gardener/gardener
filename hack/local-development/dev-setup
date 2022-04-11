@@ -18,7 +18,6 @@ set -e
 
 DEV_DIR=$(dirname "${0}")/../../dev
 EXAMPLE_DIR=$(dirname "${0}")/../../example
-LANDSCAPER_DIR=$(dirname "${0}")/../../landscaper
 
 source $(dirname "${0}")/common/helpers
 kubernetes_env="$(k8s_env)"
@@ -53,13 +52,7 @@ case "${kubernetes_env}" in
         ;;
  esac
 
-mkdir -p ${DEV_DIR}/landscaper
-
 cp ${EXAMPLE_DIR}/20-componentconfig-*.yaml ${DEV_DIR}/
-cp ${LANDSCAPER_DIR}/pkg/gardenlet/example/landscaper-gardenlet-imports.yaml ${DEV_DIR}/landscaper
-cp ${LANDSCAPER_DIR}/pkg/gardenlet/example/run-locally/landscaper-gardenlet-component-descriptor-list.yaml ${DEV_DIR}/landscaper
-cp ${LANDSCAPER_DIR}/pkg/controlplane/example/minimal_landscaper-controlplane-imports.yaml ${DEV_DIR}/landscaper/landscaper-controlplane-imports.yaml
-cp ${LANDSCAPER_DIR}/pkg/controlplane/example/run-locally/landscaper-controlplane-component-descriptor-list.yaml ${DEV_DIR}/landscaper
 
 kubectl apply -f ${EXAMPLE_DIR}/00-namespace-garden.yaml
 kubectl apply -f ${EXAMPLE_DIR}/00-namespace-garden-dev.yaml

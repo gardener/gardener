@@ -79,8 +79,8 @@ roleRef:
 	})
 
 	Describe("#Add", func() {
-		It("should successfully add the object", func() {
-			Expect(registry.Add(&corev1.Secret{})).To(Succeed())
+		It("should successfully add the objects", func() {
+			Expect(registry.Add(&corev1.Secret{}, &corev1.ConfigMap{})).To(Succeed())
 		})
 
 		It("should do nothing because the object is nil", func() {
@@ -109,6 +109,16 @@ roleRef:
 			Expect(registry.SerializedObjects()).To(Equal(map[string][]byte{
 				secretFilename:      secretSerialized,
 				roleBindingFilename: roleBindingSerialized,
+			}))
+		})
+	})
+
+	Describe("#AddSerialized", func() {
+		It("should add the serialized object", func() {
+			registry.AddSerialized(secretFilename, secretSerialized)
+
+			Expect(registry.SerializedObjects()).To(Equal(map[string][]byte{
+				secretFilename: secretSerialized,
 			}))
 		})
 	})

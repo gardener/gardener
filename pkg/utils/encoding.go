@@ -133,11 +133,11 @@ func EncodeSHA1(in []byte) string {
 	return EncodeBase64(SHA1(in))
 }
 
-// CreateSHA1Secret takes a username and a password and returns a sha1-schemed credentials pair as string.
-func CreateSHA1Secret(username, password []byte) string {
-	credentials := append([]byte(username), ":{SHA}"...)
+// CreateSHA1Secret takes a username and a password and returns a sha1-schemed credentials pair as bytes.
+func CreateSHA1Secret(username, password []byte) []byte {
+	credentials := append(username, ":{SHA}"...)
 	credentials = append(credentials, EncodeSHA1(password)...)
-	return EncodeBase64(credentials)
+	return credentials
 }
 
 // ComputeSHA1Hex computes the hexadecimal representation of the SHA1 hash of the given input byte

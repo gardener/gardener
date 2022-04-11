@@ -15,7 +15,7 @@ authEnabled: true
 annotations: {}
 
 rbacSidecarEnabled: false
-kubeRBACProxyKubeconfigCheckSum: bed9a4ef5410793c023b3551308661a1a1acafe9f93c9393714ce4f2c0134ac3
+genericTokenKubeconfigSecretName: generic-token-kubeconfig
 
 labels:
   gardener.cloud/role: logging
@@ -51,29 +51,26 @@ replicas: 1
 resources:
   loki:
     limits:
-      cpu: 450m
-      memory: 512Mi
+# TODO(vlvasilev): After fixing the following issue https://github.com/gardener/gardener/issues/5757, set the memory limit to 10Gi.
+      memory: 3Gi
     requests:
       cpu: 200m
       memory: 300Mi
   curator:
     limits:
-      cpu: 200m
-      memory: 200Mi
+      memory: 700Mi
     requests:
       cpu: 10m
       memory: 12Mi
   kubeRBACproxy:
     limits:
-      cpu: 60m
-      memory: 50Mi
+      memory: 150Mi
     requests:
-      cpu: 30m
-      memory: 15Mi 
+      cpu: 50m
+      memory: 50Mi
   telegraf:
     limits:
-      cpu: 15m
-      memory: 100Mi
+      memory: 350Mi
     requests:
       cpu: 5m
       memory: 35Mi
@@ -114,7 +111,7 @@ hvpa:
   enabled: false
   maxAllowed:
     cpu: 800m
-    memory: 2G
+    memory: 3Gi
   minAllowed:
     cpu: 200m
     memory: 300M

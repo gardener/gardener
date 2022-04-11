@@ -18,25 +18,28 @@ import (
 	"context"
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	extensionsdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DefaultExternalDNSRecord creates the default deployer for the external DNSRecord resource.
 func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
-		Name:       b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
-		SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
-		Namespace:  b.Shoot.SeedNamespace,
-		TTL:        b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+		Name:              b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
+		SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordExternalName,
+		Namespace:         b.Shoot.SeedNamespace,
+		TTL:               b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+		AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordExternal) || b.isRestorePhase(),
 	}
+
 	if b.NeedsExternalDNS() {
 		values.Type = b.Shoot.ExternalDomain.Provider
 		if b.Shoot.ExternalDomain.Zone != "" {
@@ -45,6 +48,7 @@ func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 		values.SecretData = b.Shoot.ExternalDomain.SecretData
 		values.DNSName = gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain)
 	}
+
 	return extensionsdnsrecord.New(
 		b.Logger,
 		b.K8sSeedClient.Client(),
@@ -58,11 +62,16 @@ func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 // DefaultInternalDNSRecord creates the default deployer for the internal DNSRecord resource.
 func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
-		Name:       b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
-		SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
-		Namespace:  b.Shoot.SeedNamespace,
-		TTL:        b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+		Name:                         b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
+		SecretName:                   DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
+		Namespace:                    b.Shoot.SeedNamespace,
+		TTL:                          b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+		ReconcileOnlyOnChangeOrError: b.Shoot.GetInfo().DeletionTimestamp != nil,
+		AnnotateOperation: b.Shoot.GetInfo().DeletionTimestamp != nil ||
+			controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployDNSRecordInternal) ||
+			b.isRestorePhase(),
 	}
+
 	if b.NeedsInternalDNS() {
 		values.Type = b.Garden.InternalDomain.Provider
 		if b.Garden.InternalDomain.Zone != "" {
@@ -71,6 +80,7 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 		values.SecretData = b.Garden.InternalDomain.SecretData
 		values.DNSName = gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain)
 	}
+
 	return extensionsdnsrecord.New(
 		b.Logger,
 		b.K8sSeedClient.Client(),
@@ -84,12 +94,14 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 // DefaultOwnerDNSRecord creates the default deployer for the owner DNSRecord resource.
 func (b *Botanist) DefaultOwnerDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
-		Name:              b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordOwnerName,
-		SecretName:        DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
-		Namespace:         b.Shoot.SeedNamespace,
-		ReconcileOnChange: true,
-		TTL:               b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+		Name:                         b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordOwnerName,
+		SecretName:                   DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + v1beta1constants.DNSRecordInternalName,
+		Namespace:                    b.Shoot.SeedNamespace,
+		TTL:                          b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+		ReconcileOnlyOnChangeOrError: true, // avoid competing reconciliations during the control plane migration "bad case" scenario
+		AnnotateOperation:            true,
 	}
+
 	if b.NeedsInternalDNS() {
 		values.Type = b.Garden.InternalDomain.Provider
 		if b.Garden.InternalDomain.Zone != "" {
@@ -100,6 +112,7 @@ func (b *Botanist) DefaultOwnerDNSRecord() extensionsdnsrecord.Interface {
 		values.RecordType = extensionsv1alpha1.DNSRecordTypeTXT
 		values.Values = []string{*b.Seed.GetInfo().Status.ClusterIdentity}
 	}
+
 	return extensionsdnsrecord.New(
 		b.Logger,
 		b.K8sSeedClient.Client(),

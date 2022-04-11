@@ -28,8 +28,6 @@ spec:
       {{- if .Values.controller.podAnnotations }}
 {{ toYaml .Values.controller.podAnnotations | indent 8}}
       {{- end }}
-        # TODO(rfranzke): Remove in a future release.
-        security.gardener.cloud/trigger: rollout
       labels:
         origin: gardener
         gardener.cloud/role: optional-addon
@@ -140,11 +138,9 @@ spec:
               memory: 100Mi
             limits:
             {{- if .Values.global.vpaEnabled }}
-              cpu: 400m
               memory: 400Mi
             {{- else }}
-              cpu: 2000m
-              memory: 2048Mi
+              memory: 4Gi
             {{- end }}
       hostNetwork: {{ .Values.controller.hostNetwork }}
     {{- if .Values.controller.nodeSelector }}

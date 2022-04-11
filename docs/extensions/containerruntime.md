@@ -1,3 +1,7 @@
+---
+title: ContainerRuntime
+---
+
 # Gardener Container Runtime Extension
 
 At the lowest layers of a Kubernetes node is the software that, among other things, starts and stops containers. It is called “Container Runtime”. 

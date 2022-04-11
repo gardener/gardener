@@ -18,7 +18,11 @@ import (
 	"context"
 	"fmt"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/provider-local/local"
+
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -48,6 +52,7 @@ func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) erro
 		return err
 	}
 
+	metav1.SetMetaDataLabel(&pod.ObjectMeta, local.LabelNetworkPolicyToIstioIngressGateway, v1beta1constants.LabelNetworkPolicyAllowed)
 	pod.Spec.DNSPolicy = corev1.DNSNone
 	pod.Spec.DNSConfig = &corev1.PodDNSConfig{Nameservers: []string{service.Spec.ClusterIP}}
 	return nil

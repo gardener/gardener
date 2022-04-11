@@ -36,17 +36,14 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/gardeneraccess"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
-	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/operation/garden"
 
 	"github.com/Masterminds/semver"
@@ -94,24 +91,25 @@ type Shoot struct {
 	ExposureClass              *gardencorev1alpha1.ExposureClass
 	BackupEntryName            string
 
-	Components     *Components
-	ETCDEncryption *etcdencryption.EncryptionConfig
+	Components *Components
 }
 
 // Components contains different components deployed in the Shoot cluster.
 type Components struct {
-	BackupEntry       backupentry.Interface
-	SourceBackupEntry backupentry.Interface
-	ControlPlane      *ControlPlane
-	Extensions        *Extensions
-	NetworkPolicies   component.Deployer
-	SystemComponents  *SystemComponents
-	Logging           *Logging
-	GardenerAccess    gardeneraccess.Interface
+	BackupEntry              backupentry.Interface
+	SourceBackupEntry        backupentry.Interface
+	ControlPlane             *ControlPlane
+	Extensions               *Extensions
+	NetworkPolicies          component.Deployer
+	SystemComponents         *SystemComponents
+	Logging                  *Logging
+	GardenerAccess           component.Deployer
+	DependencyWatchdogAccess component.Deployer
 }
 
 // ControlPlane contains references to K8S control plane components.
 type ControlPlane struct {
+	ClusterAutoscaler     clusterautoscaler.Interface
 	EtcdMain              etcd.Interface
 	EtcdEvents            etcd.Interface
 	EtcdCopyBackupsTask   etcdcopybackupstask.Interface
@@ -121,8 +119,8 @@ type ControlPlane struct {
 	KubeAPIServer         kubeapiserver.Interface
 	KubeScheduler         kubescheduler.Interface
 	KubeControllerManager kubecontrollermanager.Interface
-	ClusterAutoscaler     clusterautoscaler.Interface
 	ResourceManager       resourcemanager.Interface
+	VerticalPodAutoscaler component.DeployWaiter
 	VPNSeedServer         vpnseedserver.Interface
 }
 
@@ -148,7 +146,7 @@ type SystemComponents struct {
 	ClusterIdentity     clusteridentity.Interface
 	CoreDNS             coredns.Interface
 	KubeProxy           kubeproxy.Interface
-	MetricsServer       metricsserver.Interface
+	MetricsServer       component.DeployWaiter
 	Namespaces          component.DeployWaiter
 	NodeLocalDNS        nodelocaldns.Interface
 	NodeProblemDetector component.DeployWaiter

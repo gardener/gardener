@@ -35,6 +35,7 @@ spec:
 {{ toYaml .Values.global.admission.podLabels | indent 8 }}
         {{- end }}
     spec:
+      priorityClassName: gardener-controlplane
       {{- if not .Values.global.deployment.virtualGarden.enabled }}
       serviceAccountName: {{ required ".Values.global.admission.serviceAccountName is required" .Values.global.admission.serviceAccountName }}
       {{- else if and .Values.global.deployment.virtualGarden.enabled .Values.global.deployment.virtualGarden.admission.user.name }}

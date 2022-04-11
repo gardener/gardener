@@ -41,7 +41,6 @@ type CoreV1alpha1Interface interface {
 	SecretBindingsGetter
 	SeedsGetter
 	ShootsGetter
-	ShootExtensionStatusesGetter
 	ShootStatesGetter
 }
 
@@ -100,10 +99,6 @@ func (c *CoreV1alpha1Client) Seeds() SeedInterface {
 
 func (c *CoreV1alpha1Client) Shoots(namespace string) ShootInterface {
 	return newShoots(c, namespace)
-}
-
-func (c *CoreV1alpha1Client) ShootExtensionStatuses(namespace string) ShootExtensionStatusInterface {
-	return newShootExtensionStatuses(c, namespace)
 }
 
 func (c *CoreV1alpha1Client) ShootStates(namespace string) ShootStateInterface {

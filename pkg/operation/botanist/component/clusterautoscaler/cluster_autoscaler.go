@@ -29,6 +29,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -38,7 +39,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -68,25 +69,28 @@ type Interface interface {
 func New(
 	client client.Client,
 	namespace string,
+	secretsManager secretsmanager.Interface,
 	image string,
 	replicas int32,
 	config *gardencorev1beta1.ClusterAutoscaler,
 ) Interface {
 	return &clusterAutoscaler{
-		client:    client,
-		namespace: namespace,
-		image:     image,
-		replicas:  replicas,
-		config:    config,
+		client:         client,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		image:          image,
+		replicas:       replicas,
+		config:         config,
 	}
 }
 
 type clusterAutoscaler struct {
-	client    client.Client
-	namespace string
-	image     string
-	replicas  int32
-	config    *gardencorev1beta1.ClusterAutoscaler
+	client         client.Client
+	namespace      string
+	secretsManager secretsmanager.Interface
+	image          string
+	replicas       int32
+	config         *gardencorev1beta1.ClusterAutoscaler
 
 	namespaceUID       types.UID
 	machineDeployments []extensionsv1alpha1.MachineDeployment
@@ -101,9 +105,15 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		service            = c.emptyService()
 		deployment         = c.emptyDeployment()
 
-		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
-		command       = c.computeCommand()
+		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
+		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		command          = c.computeCommand()
 	)
+
+	genericTokenKubeconfigSecret, found := c.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
+	}
 
 	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c.client, serviceAccount, func() error {
 		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
@@ -167,12 +177,9 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					// TODO(rfranzke): Remove in a future release.
-					"security.gardener.cloud/trigger": "rollout",
-				},
 				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 					v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleControlPlane,
+					v1beta1constants.LabelPodMaintenanceRestart:         "true",
 					v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
 					v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 					v1beta1constants.LabelNetworkPolicyToSeedAPIServer:  v1beta1constants.LabelNetworkPolicyAllowed,
@@ -210,17 +217,13 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 								corev1.ResourceCPU:    resource.MustParse("100m"),
 								corev1.ResourceMemory: resource.MustParse("300Mi"),
 							},
-							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("1"),
-								corev1.ResourceMemory: resource.MustParse("3000Mi"),
-							},
 						},
 					},
 				},
 			},
 		}
 
-		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, shootAccessSecret.Secret.Name))
+		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))
 		return nil
 	}); err != nil {
 		return err
@@ -232,17 +235,18 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 			Kind:       "Deployment",
 			Name:       v1beta1constants.DeploymentNameClusterAutoscaler,
 		}
-		vpa.Spec.UpdatePolicy = &autoscalingv1beta2.PodUpdatePolicy{
+		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
 			UpdateMode: &vpaUpdateMode,
 		}
-		vpa.Spec.ResourcePolicy = &autoscalingv1beta2.PodResourcePolicy{
-			ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
+			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
-					ContainerName: autoscalingv1beta2.DefaultContainerResourcePolicy,
+					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
 					MinAllowed: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse("20m"),
 						corev1.ResourceMemory: resource.MustParse("50Mi"),
 					},
+					ControlledValues: &controlledValues,
 				},
 			},
 		}
@@ -260,9 +264,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObject(ctx, c.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler", Namespace: c.namespace}})
-
+	return nil
 }
 
 func getLabels() map[string]string {
@@ -302,8 +304,8 @@ func (c *clusterAutoscaler) emptyServiceAccount() *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler", Namespace: c.namespace}}
 }
 
-func (c *clusterAutoscaler) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
-	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler-vpa", Namespace: c.namespace}}
+func (c *clusterAutoscaler) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
+	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler-vpa", Namespace: c.namespace}}
 }
 
 func (c *clusterAutoscaler) emptyService() *corev1.Service {

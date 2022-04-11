@@ -20,6 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/infodata"
+
 	"k8s.io/apiserver/pkg/authentication/user"
 )
 
@@ -38,6 +39,8 @@ const (
 	DataKeyUserName = "username"
 	// DataKeyPassword is the key in a secret data holding the password.
 	DataKeyPassword = "password"
+	// DataKeySHA1Auth is the key in a secret data holding the sha1-schemed credentials pair as string.
+	DataKeySHA1Auth = "auth"
 )
 
 // BasicAuthSecretConfig contains the specification for a to-be-generated basic authentication secret.
@@ -70,7 +73,7 @@ func (s *BasicAuthSecretConfig) Generate() (DataInterface, error) {
 
 // GenerateInfoData implements ConfigInterface.
 func (s *BasicAuthSecretConfig) GenerateInfoData() (infodata.InfoData, error) {
-	password, err := utils.GenerateRandomString(s.PasswordLength)
+	password, err := GenerateRandomString(s.PasswordLength)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +113,7 @@ func (s *BasicAuthSecretConfig) LoadFromSecretData(secretData map[string][]byte)
 // GenerateBasicAuth computes a username,password and the hash of the password keypair. It uses "admin" as username and generates a
 // random password of length 32.
 func (s *BasicAuthSecretConfig) GenerateBasicAuth() (*BasicAuth, error) {
-	password, err := utils.GenerateRandomString(s.PasswordLength)
+	password, err := GenerateRandomString(s.PasswordLength)
 	if err != nil {
 		return nil, err
 	}
@@ -139,6 +142,7 @@ func (b *BasicAuth) SecretData() map[string][]byte {
 	case BasicAuthFormatNormal:
 		data[DataKeyUserName] = []byte(b.Username)
 		data[DataKeyPassword] = []byte(b.Password)
+		data[DataKeySHA1Auth] = utils.CreateSHA1Secret(data[DataKeyUserName], data[DataKeyPassword])
 
 		fallthrough
 
@@ -157,8 +161,8 @@ func LoadBasicAuthFromCSV(name string, data []byte) (*BasicAuth, error) {
 	}
 
 	return &BasicAuth{
-		Name: name,
-
+		Name:     name,
+		Format:   BasicAuthFormatCSV,
 		Username: csv[1],
 		Password: csv[0],
 	}, nil

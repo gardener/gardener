@@ -75,7 +75,7 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	if r.Body == nil {
 		err = errors.New("request body is empty")
 		h.logger.Error(err, "Bad request")
-		h.writeResponse(w, nil, Errored(http.StatusBadRequest, err))
+		h.writeResponse(w, nil, Errored(http.StatusUnprocessableEntity, err))
 		return
 	}
 

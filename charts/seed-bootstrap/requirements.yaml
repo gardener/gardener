@@ -9,10 +9,6 @@ dependencies:
   version: 0.1.0
   # needed for the logging feature gate
   condition: fluent-bit.enabled
-- name: vpa
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: vpa.enabled
 - name: hvpa
   repository: http://localhost:10191
   version: 0.1.0

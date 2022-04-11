@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -54,31 +55,31 @@ type Operation struct {
 	checkSumsMutex sync.RWMutex
 	checkSums      map[string]string
 
-	secrets      map[string]*corev1.Secret
-	secretsMutex sync.RWMutex
+	secrets        map[string]*corev1.Secret
+	secretsMutex   sync.RWMutex
+	SecretsManager secretsmanager.Interface
 
 	shootState      atomic.Value
 	shootStateMutex sync.Mutex
 
-	Config                    *config.GardenletConfiguration
-	Logger                    logrus.FieldLogger
-	GardenerInfo              *gardencorev1beta1.Gardener
-	GardenClusterIdentity     string
-	ImageVector               imagevector.ImageVector
-	Garden                    *garden.Garden
-	Seed                      *seed.Seed
-	Shoot                     *shoot.Shoot
-	ManagedSeed               *seedmanagementv1alpha1.ManagedSeed
-	ManagedSeedAPIServer      *gardencorev1beta1helper.ShootedSeedAPIServer
-	ClientMap                 clientmap.ClientMap
-	K8sGardenClient           kubernetes.Interface
-	K8sSeedClient             kubernetes.Interface
-	K8sShootClient            kubernetes.Interface
-	APIServerAddress          string
-	APIServerClusterIP        string
-	APIServerHealthCheckToken string
-	SeedNamespaceObject       *corev1.Namespace
-	ExposureClassHandler      *config.ExposureClassHandler
+	Config                *config.GardenletConfiguration
+	Logger                logrus.FieldLogger
+	GardenerInfo          *gardencorev1beta1.Gardener
+	GardenClusterIdentity string
+	ImageVector           imagevector.ImageVector
+	Garden                *garden.Garden
+	Seed                  *seed.Seed
+	Shoot                 *shoot.Shoot
+	ManagedSeed           *seedmanagementv1alpha1.ManagedSeed
+	ManagedSeedAPIServer  *gardencorev1beta1helper.ShootedSeedAPIServer
+	ClientMap             clientmap.ClientMap
+	K8sGardenClient       kubernetes.Interface
+	K8sSeedClient         kubernetes.Interface
+	K8sShootClient        kubernetes.Interface
+	APIServerAddress      string
+	APIServerClusterIP    string
+	SeedNamespaceObject   *corev1.Namespace
+	ExposureClassHandler  *config.ExposureClassHandler
 
 	// ControlPlaneWildcardCert is a wildcard tls certificate which is issued for the seed's ingress domain.
 	ControlPlaneWildcardCert *corev1.Secret

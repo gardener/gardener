@@ -17,8 +17,17 @@ package shoot
 import (
 	"context"
 	"fmt"
+	"time"
+
+	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/core/validation"
+	"github.com/gardener/gardener/pkg/features"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -27,12 +36,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
-
-	"github.com/gardener/gardener/pkg/api"
-	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/helper"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/validation"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )
 
 type shootStrategy struct {
@@ -55,6 +59,10 @@ func (shootStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 
 	shoot.Generation = 1
 	shoot.Status = core.ShootStatus{}
+
+	if utilfeature.DefaultFeatureGate.Enabled(features.ShootMaxTokenExpirationOverwrite) {
+		overwriteMaxTokenExpiration(shoot)
+	}
 }
 
 func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
@@ -64,6 +72,27 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
+	}
+
+	if utilfeature.DefaultFeatureGate.Enabled(features.ShootMaxTokenExpirationOverwrite) {
+		// Note that this must be executed after `mustIncreaseGeneration` is called, otherwise we might trigger a
+		// reconciliation outside of the maintenance time window because the spec might change in below call.
+		overwriteMaxTokenExpiration(newShoot)
+	}
+}
+
+func overwriteMaxTokenExpiration(shoot *core.Shoot) {
+	if shoot.Spec.Kubernetes.KubeAPIServer != nil &&
+		shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig != nil &&
+		shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration != nil {
+
+		if shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration < 720*time.Hour {
+			shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration = &metav1.Duration{Duration: 720 * time.Hour}
+		}
+
+		if shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration > 2160*time.Hour {
+			shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration = &metav1.Duration{Duration: 2160 * time.Hour}
+		}
 	}
 }
 
@@ -79,30 +108,41 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 	}
 
 	if lastOperation := newShoot.Status.LastOperation; lastOperation != nil {
-		mustIncrease := false
+		var (
+			mustIncrease                  bool
+			mustRemoveOperationAnnotation bool
+		)
 
 		switch lastOperation.State {
 		case core.LastOperationStateFailed:
 			// The shoot state is failed and the retry annotation is set.
 			if val, ok := newShoot.Annotations[v1beta1constants.GardenerOperation]; ok && val == v1beta1constants.ShootOperationRetry {
-				mustIncrease = true
+				mustIncrease, mustRemoveOperationAnnotation = true, true
 			}
 		default:
 			// The shoot state is not failed and the reconcile or rotate-credentials/rotate-ssh-keypair annotations are set.
 			if val, ok := newShoot.Annotations[v1beta1constants.GardenerOperation]; ok {
 				if val == v1beta1constants.GardenerOperationReconcile {
-					mustIncrease = true
+					mustIncrease, mustRemoveOperationAnnotation = true, true
 				}
 				if val == v1beta1constants.ShootOperationRotateKubeconfigCredentials || val == v1beta1constants.ShootOperationRotateSSHKeypair {
-					// We don't want to remove the annotation so that the controller-manager can pick it up and perform
+					// We don't want to remove the annotation so that the gardenlet can pick it up and perform
 					// the rotation. It has to remove the annotation after it is done.
-					return true
+					mustIncrease, mustRemoveOperationAnnotation = true, false
+				}
+				if utilfeature.DefaultFeatureGate.Enabled(features.ShootCARotation) &&
+					(val == v1beta1constants.ShootOperationRotateCAStart || val == v1beta1constants.ShootOperationRotateCAComplete) {
+					// We don't want to remove the annotation so that the gardenlet can pick it up and perform
+					// the rotation. It has to remove the annotation after it is done.
+					mustIncrease, mustRemoveOperationAnnotation = true, false
 				}
 			}
 		}
 
 		if mustIncrease {
-			delete(newShoot.Annotations, v1beta1constants.GardenerOperation)
+			if mustRemoveOperationAnnotation {
+				delete(newShoot.Annotations, v1beta1constants.GardenerOperation)
+			}
 			return true
 		}
 	}
@@ -120,10 +160,10 @@ func mustIncreaseGenerationForSpecChanges(oldShoot, newShoot *core.Shoot) bool {
 
 func (shootStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	shoot := obj.(*core.Shoot)
-	errorList := field.ErrorList{}
-	errorList = append(errorList, validation.ValidateShoot(shoot)...)
-	errorList = append(errorList, validation.ValidateTotalNodeCountWithPodCIDR(shoot)...)
-	return errorList
+	allErrs := field.ErrorList{}
+	allErrs = append(allErrs, validation.ValidateShoot(shoot)...)
+	allErrs = append(allErrs, validation.ValidateTotalNodeCountWithPodCIDR(shoot)...)
+	return allErrs
 }
 
 func (shootStrategy) Canonicalize(obj runtime.Object) {

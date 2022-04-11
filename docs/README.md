@@ -102,6 +102,7 @@
 * [Kubernetes Clients in Gardener](development/kubernetes-clients.md)
 * [Logging in Gardener Components](development/logging.md)
 * [Changing the API](development/changing-the-api.md)
+* [Secrets Management for Seed and Shoot Clusters](development/secrets_management.md)
 * [Releases, Features, Hotfixes](development/process.md)
 * [Adding New Cloud Providers](development/new-cloud-provider.md)
 * [Adding Support For A New Kubernetes Version](development/new-kubernetes-version.md)
@@ -143,6 +144,7 @@
     * [`ContainerRuntime` resource](extensions/containerruntime.md)
   * Generic (non-essential) extensions
     * [`Extension` resource](extensions/extension.md)
+  * [Extension Admission](extensions/admission.md)
 * [Provider Local](extensions/provider-local.md)
 * [Extending project roles](extensions/project-roles.md)
 * [Referenced resources](extensions/referenced-resources.md)

@@ -31,8 +31,11 @@ fi
 
 versions=("$1" "$2")
 
-out_dir=dev/temp
-mkdir -p "${out_dir}"
+out_dir=$(mktemp -d)
+function cleanup_output {
+    rm -rf "$out_dir"
+}
+trap cleanup_output EXIT
 
 kcm_dir="cmd/kube-controller-manager/app"
 ccm_dir="staging/src/k8s.io/cloud-provider/app"

@@ -15,29 +15,20 @@
 package botanist
 
 import (
-	"context"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardeneraccess"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 // DefaultGardenerAccess returns an instance of the Deployer which reconciles the resources so that GardenerAccess can access a
 // shoot cluster.
-func (b *Botanist) DefaultGardenerAccess() gardeneraccess.Interface {
+func (b *Botanist) DefaultGardenerAccess() component.Deployer {
 	return gardeneraccess.New(
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
+		b.SecretsManager,
 		gardeneraccess.Values{
 			ServerInCluster:    b.Shoot.ComputeInClusterAPIServerAddress(false),
 			ServerOutOfCluster: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
 		},
 	)
-}
-
-// DeployGardenerAccess deploys the Gardener access resources.
-func (b *Botanist) DeployGardenerAccess(ctx context.Context) error {
-	b.Shoot.Components.GardenerAccess.SetCACertificate(b.LoadSecret(v1beta1constants.SecretNameCACluster).Data[secretutils.DataKeyCertificateCA])
-
-	return b.Shoot.Components.GardenerAccess.Deploy(ctx)
 }

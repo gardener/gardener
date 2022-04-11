@@ -30,8 +30,6 @@ controllers:
     concurrentSyncs: 5
   operatingsystemconfig:
     concurrentSyncs: 5
-  network:
-    concurrentSyncs: 5
   node:
     concurrentSyncs: 1
   service:
@@ -63,6 +61,8 @@ ignoreResources: false
 webhookConfig:
   servicePort: 443
   serverPort: 10250
+
+healthPort: 8081
 
 leaderElection:
   resourceLock: leases

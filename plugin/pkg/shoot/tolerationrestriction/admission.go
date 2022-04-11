@@ -156,7 +156,7 @@ func (t *TolerationRestriction) Admit(ctx context.Context, a admission.Attribute
 func (t *TolerationRestriction) admitShoot(shoot *core.Shoot) error {
 	project, err := admissionutils.ProjectForNamespaceFromInternalLister(t.projectLister, shoot.Namespace)
 	if err != nil {
-		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced project: %+v", err.Error()))
+		return apierrors.NewInternalError(fmt.Errorf("could not find referenced project: %+v", err.Error()))
 	}
 
 	defaults := t.defaults
@@ -217,7 +217,7 @@ func (t *TolerationRestriction) validateShoot(shoot, oldShoot *core.Shoot) error
 
 	project, err := admissionutils.ProjectForNamespaceFromInternalLister(t.projectLister, shoot.Namespace)
 	if err != nil {
-		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced project: %+v", err.Error()))
+		return apierrors.NewInternalError(fmt.Errorf("could not find referenced project: %+v", err.Error()))
 	}
 
 	allowlist := t.allowlist

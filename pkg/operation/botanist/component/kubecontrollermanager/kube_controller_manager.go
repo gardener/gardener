@@ -31,8 +31,8 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/Masterminds/semver"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -45,33 +45,30 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	// ServiceName is the name of the service of the kube-controller-manager.
-	ServiceName   = "kube-controller-manager"
-	containerName = v1beta1constants.DeploymentNameKubeControllerManager
-
-	// SecretNameServer is the name of the kube-controller-manager server certificate secret.
-	SecretNameServer = "kube-controller-manager-server"
-
 	// LabelRole is a constant for the value of a label with key 'role'.
 	LabelRole = "controller-manager"
-	// portNameMetrics is a constant for the name of the metrics port of the kube-controller-manager.
-	portNameMetrics = "metrics"
 
-	// volumeMountPathCA is the volume mount path for the CA certificate used by the kube controller manager.
-	volumeMountPathCA = "/srv/kubernetes/ca"
-	// volumeMountPathServiceAccountKey is the volume mount path for the service account key that is a PEM-encoded private RSA or ECDSA key used to sign service account tokens.
-	volumeMountPathServiceAccountKey = "/srv/kubernetes/service-account-key"
-	// volumeMountPathServer is the volume mount path for the x509 TLS server certificate and key for the HTTPS server inside the kube-controller-manager (which is used for metrics and health checks).
-	volumeMountPathServer = "/var/lib/kube-controller-manager-server"
-
-	// managedResourceName is the name of the managed resource that contains the resources to be deployed into the Shoot cluster.
+	serviceName         = "kube-controller-manager"
+	containerName       = v1beta1constants.DeploymentNameKubeControllerManager
 	managedResourceName = "shoot-core-kube-controller-manager"
+	secretNameServer    = "kube-controller-manager-server"
+	portNameMetrics     = "metrics"
+
+	volumeNameServer            = "server"
+	volumeNameServiceAccountKey = "service-account-key"
+	volumeNameCA                = "ca"
+
+	volumeMountPathCA                = "/srv/kubernetes/ca"
+	volumeMountPathServiceAccountKey = "/srv/kubernetes/service-account-key"
+	volumeMountPathServer            = "/var/lib/kube-controller-manager-server"
 )
 
 // Interface contains functions for a kube-controller-manager deployer.
@@ -102,6 +99,7 @@ func New(
 	logger logrus.FieldLogger,
 	seedClient client.Client,
 	namespace string,
+	secretsManager secretsmanager.Interface,
 	version *semver.Version,
 	image string,
 	config *gardencorev1beta1.KubeControllerManagerConfig,
@@ -113,6 +111,7 @@ func New(
 		log:            logger,
 		seedClient:     seedClient,
 		namespace:      namespace,
+		secretsManager: secretsManager,
 		version:        version,
 		image:          image,
 		config:         config,
@@ -127,6 +126,7 @@ type kubeControllerManager struct {
 	seedClient     client.Client
 	shootClient    client.Client
 	namespace      string
+	secretsManager secretsmanager.Interface
 	version        *semver.Version
 	image          string
 	replicas       int32
@@ -138,14 +138,29 @@ type kubeControllerManager struct {
 }
 
 func (k *kubeControllerManager) Deploy(ctx context.Context) error {
-	if k.secrets.Server.Name == "" || k.secrets.Server.Checksum == "" {
-		return fmt.Errorf("missing server secret information")
-	}
 	if k.secrets.CA.Name == "" || k.secrets.CA.Checksum == "" {
 		return fmt.Errorf("missing CA secret information")
 	}
-	if k.secrets.ServiceAccountKey.Name == "" || k.secrets.ServiceAccountKey.Checksum == "" {
-		return fmt.Errorf("missing ServiceAccountKey secret information")
+
+	serverSecret, err := k.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+		Name:                        secretNameServer,
+		CommonName:                  v1beta1constants.DeploymentNameKubeControllerManager,
+		DNSNames:                    kutil.DNSNamesForService(serviceName, k.namespace),
+		CertType:                    secrets.ServerCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return err
+	}
+
+	genericTokenKubeconfigSecret, found := k.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
+	}
+
+	serviceAccountKeySecret, found := k.secretsManager.Get(v1beta1constants.SecretNameServiceAccountKey)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameServiceAccountKey)
 	}
 
 	var (
@@ -155,16 +170,27 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		shootAccessSecret = k.newShootAccessSecret()
 		deployment        = k.emptyDeployment()
 
-		port              int32 = 10257
-		probeURIScheme          = corev1.URISchemeHTTPS
-		command                 = k.computeCommand(port)
-		vpaResourcePolicy       = &autoscalingv1beta2.PodResourcePolicy{
+		port               int32 = 10257
+		probeURIScheme           = corev1.URISchemeHTTPS
+		command                  = k.computeCommand(port)
+		hvpaResourcePolicy       = &autoscalingv1beta2.PodResourcePolicy{
 			ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{{
 				ContainerName: containerName,
 				MinAllowed: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("100m"),
 					corev1.ResourceMemory: resource.MustParse("100Mi"),
 				},
+			}},
+		}
+		controlledValues  = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
+		vpaResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
+			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
+				ContainerName: containerName,
+				MinAllowed: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("100m"),
+					corev1.ResourceMemory: resource.MustParse("100Mi"),
+				},
+				ControlledValues: &controlledValues,
 			}},
 		}
 	)
@@ -206,9 +232,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					"checksum/secret-" + k.secrets.CA.Name:                k.secrets.CA.Checksum,
-					"checksum/secret-" + k.secrets.ServiceAccountKey.Name: k.secrets.ServiceAccountKey.Checksum,
-					"checksum/secret-" + k.secrets.Server.Name:            k.secrets.Server.Checksum,
+					"checksum/secret-" + k.secrets.CA.Name: k.secrets.CA.Checksum,
 				},
 				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 					v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleControlPlane,
@@ -250,15 +274,15 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						Resources: resourceRequirements,
 						VolumeMounts: []corev1.VolumeMount{
 							{
-								Name:      k.secrets.CA.Name,
+								Name:      volumeNameCA,
 								MountPath: volumeMountPathCA,
 							},
 							{
-								Name:      k.secrets.ServiceAccountKey.Name,
+								Name:      volumeNameServiceAccountKey,
 								MountPath: volumeMountPathServiceAccountKey,
 							},
 							{
-								Name:      k.secrets.Server.Name,
+								Name:      volumeNameServer,
 								MountPath: volumeMountPathServer,
 							},
 						},
@@ -266,7 +290,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				},
 				Volumes: []corev1.Volume{
 					{
-						Name: k.secrets.CA.Name,
+						Name: volumeNameCA,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName: k.secrets.CA.Name,
@@ -274,18 +298,18 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						},
 					},
 					{
-						Name: k.secrets.ServiceAccountKey.Name,
+						Name: volumeNameServiceAccountKey,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
-								SecretName: k.secrets.ServiceAccountKey.Name,
+								SecretName: serviceAccountKeySecret.Name,
 							},
 						},
 					},
 					{
-						Name: k.secrets.Server.Name,
+						Name: volumeNameServer,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
-								SecretName: k.secrets.Server.Name,
+								SecretName: serverSecret.Name,
 							},
 						},
 					},
@@ -293,7 +317,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			},
 		}
 
-		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, shootAccessSecret.Secret.Name))
+		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, shootAccessSecret.Secret.Name))
 		return nil
 	}); err != nil {
 		return err
@@ -348,7 +372,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						Labels: vpaLabels,
 					},
 					Spec: hvpav1alpha1.VpaTemplateSpec{
-						ResourcePolicy: vpaResourcePolicy,
+						ResourcePolicy: hvpaResourcePolicy,
 					},
 				},
 			}
@@ -373,7 +397,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		vpaUpdateMode := autoscalingv1beta2.UpdateModeAuto
+		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient, vpa, func() error {
 			vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
@@ -381,7 +405,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				Kind:       "Deployment",
 				Name:       v1beta1constants.DeploymentNameKubeControllerManager,
 			}
-			vpa.Spec.UpdatePolicy = &autoscalingv1beta2.PodUpdatePolicy{
+			vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
 				UpdateMode: &vpaUpdateMode,
 			}
 			vpa.Spec.ResourcePolicy = vpaResourcePolicy
@@ -396,7 +420,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	}
 
 	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObject(ctx, k.seedClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: k.namespace}})
+	return kutil.DeleteObject(ctx, k.seedClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager-server", Namespace: k.namespace}})
 }
 
 func (k *kubeControllerManager) SetSecrets(secrets Secrets)      { k.secrets = secrets }
@@ -404,8 +428,8 @@ func (k *kubeControllerManager) SetShootClient(c client.Client)  { k.shootClient
 func (k *kubeControllerManager) SetReplicaCount(replicas int32)  { k.replicas = replicas }
 func (k *kubeControllerManager) Destroy(_ context.Context) error { return nil }
 
-func (k *kubeControllerManager) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
-	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager-vpa", Namespace: k.namespace}}
+func (k *kubeControllerManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
+	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager-vpa", Namespace: k.namespace}}
 }
 
 func (k *kubeControllerManager) emptyHVPA() *hvpav1alpha1.Hvpa {
@@ -413,7 +437,7 @@ func (k *kubeControllerManager) emptyHVPA() *hvpav1alpha1.Hvpa {
 }
 
 func (k *kubeControllerManager) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ServiceName, Namespace: k.namespace}}
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: k.namespace}}
 }
 
 func (k *kubeControllerManager) emptyDeployment() *appsv1.Deployment {
@@ -512,8 +536,8 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--horizontal-pod-autoscaler-downscale-stabilization=%s", defaultHorizontalPodAutoscalerConfig.DownscaleStabilization.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-initial-readiness-delay=%s", defaultHorizontalPodAutoscalerConfig.InitialReadinessDelay.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-cpu-initialization-period=%s", defaultHorizontalPodAutoscalerConfig.CPUInitializationPeriod.Duration.String()),
-		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameServer)),
-		fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameServer)),
+		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate),
+		fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey),
 		fmt.Sprintf("--tls-cipher-suites=%s", strings.Join(kutil.TLSCipherSuites(k.version), ",")),
 		"--use-service-account-credentials=true",
 		"--v=2",
@@ -557,10 +581,6 @@ func (k *kubeControllerManager) computeResourceRequirements(ctx context.Context)
 			corev1.ResourceCPU:    resource.MustParse("100m"),
 			corev1.ResourceMemory: resource.MustParse("128Mi"),
 		},
-		Limits: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("400m"),
-			corev1.ResourceMemory: resource.MustParse("512Mi"),
-		},
 	}
 
 	if k.hvpaConfig == nil || !k.hvpaConfig.Enabled {
@@ -584,14 +604,9 @@ func (k *kubeControllerManager) computeResourceRequirements(ctx context.Context)
 
 // Secrets is collection of secrets for the kube-controller-manager.
 type Secrets struct {
-	// Server is a secret containing a x509 TLS server certificate and key for the HTTPS server inside the kube-controller-manager (which is used for metrics and health checks).
-	Server component.Secret
 	// CA is a secret containing a root CA x509 certificate and key that is used for the flags.
 	// --cluster-signing-cert-file
 	// --cluster-signing-key-file
 	// --root-ca-file
 	CA component.Secret
-	// ServiceAccountKey is a secret containing a PEM-encoded private RSA or ECDSA key used to sign service account tokens.
-	// used for the flag: --service-account-private-key-file
-	ServiceAccountKey component.Secret
 }

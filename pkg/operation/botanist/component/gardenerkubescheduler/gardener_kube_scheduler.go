@@ -46,7 +46,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -145,7 +145,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 	)
 
 	var (
-		updateMode   = autoscalingv1beta2.UpdateModeAuto
+		updateMode   = vpaautoscalingv1.UpdateModeAuto
 		minAvailable = intstr.FromInt(1)
 
 		namespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
@@ -196,10 +196,6 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 				Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{
-							// TODO(rfranzke): Remove in a future release.
-							"security.gardener.cloud/trigger": "rollout",
-						},
 						Labels: getLabels(),
 					},
 					Spec: corev1.PodSpec{
@@ -248,7 +244,6 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 										corev1.ResourceMemory: resource.MustParse("64Mi"),
 									},
 									Limits: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("400m"),
 										corev1.ResourceMemory: resource.MustParse("512Mi"),
 									},
 								},
@@ -336,19 +331,19 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			}},
 		}
 		webhook = GetMutatingWebhookConfig(*k.webhookClientConfig)
-		vpa     = &autoscalingv1beta2.VerticalPodAutoscaler{
+		vpa     = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      Name,
 				Namespace: k.namespace,
 				Labels:    getLabels(),
 			},
-			Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 					Kind:       "Deployment",
 					Name:       deployment.Name,
 				},
-				UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 					UpdateMode: &updateMode,
 				},
 			},

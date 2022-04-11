@@ -47,12 +47,12 @@ spec:
                   type: string
                 type: object
               backup:
-                description: BackupSpec defines parametes associated with the full
-                  and delta snapshots of etcd
+                description: BackupSpec defines parameters associated with the full
+                  and delta snapshots of etcd.
                 properties:
                   compactionResources:
-                    description: 'CompactionResources defines the compute Resources
-                      required by compaction job. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                    description: 'CompactionResources defines compute Resources required
+                      by compaction job. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                     properties:
                       limits:
                         additionalProperties:
@@ -130,6 +130,19 @@ spec:
                   image:
                     description: Image defines the etcd container image and tag
                     type: string
+                  leaderElection:
+                    description: LeaderElection defines parameters related to the
+                      LeaderElection configuration.
+                    properties:
+                      etcdConnectionTimeout:
+                        description: EtcdConnectionTimeout defines the timeout duration
+                          for etcd client connection during leader election.
+                        type: string
+                      reelectionPeriod:
+                        description: ReelectionPeriod defines the Period after which
+                          leadership status of corresponding etcd is checked.
+                        type: string
+                    type: object
                   ownerCheck:
                     description: OwnerCheck defines parameters related to checking
                       if the cluster owner, as specified in the owner DNS record,
@@ -157,12 +170,12 @@ spec:
                     type: object
                   port:
                     description: Port define the port on which etcd-backup-restore
-                      server will exposed.
+                      server will be exposed.
                     format: int32
                     type: integer
                   resources:
-                    description: 'Resources defines the compute Resources required
-                      by backup-restore container. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                    description: 'Resources defines compute Resources required by
+                      backup-restore container. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                     properties:
                       limits:
                         additionalProperties:
@@ -247,9 +260,12 @@ spec:
                             type: string
                         type: object
                       tlsCASecretRef:
-                        description: SecretReference represents a Secret Reference.
-                          It has enough information to retrieve secret in any namespace
+                        description: SecretReference defines a reference to a secret.
                         properties:
+                          dataKey:
+                            description: DataKey is the name of the key in the data
+                              map containing the credentials.
+                            type: string
                           name:
                             description: Name is unique within a namespace to reference
                               a secret resource.
@@ -291,6 +307,10 @@ spec:
                   etcdDefragTimeout:
                     description: EtcdDefragTimeout defines the timeout duration for
                       etcd defrag call
+                    type: string
+                  heartbeatDuration:
+                    description: HeartbeatDuration defines the duration for members
+                      to send heartbeats. The default value is 10s.
                     type: string
                   image:
                     description: Image defines the etcd container image and tag
@@ -369,9 +389,12 @@ spec:
                             type: string
                         type: object
                       tlsCASecretRef:
-                        description: SecretReference represents a Secret Reference.
-                          It has enough information to retrieve secret in any namespace
+                        description: SecretReference defines a reference to a secret.
                         properties:
+                          dataKey:
+                            description: DataKey is the name of the key in the data
+                              map containing the credentials.
+                            type: string
                           name:
                             description: Name is unique within a namespace to reference
                               a secret resource.
@@ -396,6 +419,7 @@ spec:
                   shall be used for the etcd pods.
                 type: string
               replicas:
+                format: int32
                 type: integer
               selector:
                 description: 'selector is a label query over pods that should match

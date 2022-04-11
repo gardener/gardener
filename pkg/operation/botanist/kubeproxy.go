@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -59,10 +60,17 @@ func (b *Botanist) DefaultKubeProxy() (kubeproxy.Interface, error) {
 
 // DeployKubeProxy deploys the kube-proxy.
 func (b *Botanist) DeployKubeProxy(ctx context.Context) error {
+	caSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+	}
+
 	kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kutil.NewKubeconfig(
 		b.Shoot.SeedNamespace,
-		b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
-		b.LoadSecret(v1beta1constants.SecretNameCACluster).Data[secrets.DataKeyCertificateCA],
+		clientcmdv1.Cluster{
+			Server:                   b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
+			CertificateAuthorityData: caSecret.Data[secrets.DataKeyCertificateBundle],
+		},
 		clientcmdv1.AuthInfo{TokenFile: "/var/run/secrets/kubernetes.io/serviceaccount/token"},
 	))
 	if err != nil {

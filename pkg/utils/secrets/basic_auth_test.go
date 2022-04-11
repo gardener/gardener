@@ -138,6 +138,7 @@ var _ = Describe("Basic Auth Secrets", func() {
 				DataKeyUserName: []byte("admin"),
 				DataKeyPassword: []byte("foo"),
 				DataKeyCSV:      []byte("foo,admin,admin,system:masters"),
+				DataKeySHA1Auth: []byte("admin:{SHA}C+7Hteo/D9vJXQ3UfzxbwnXaijM="),
 			}
 
 			expectedCSVFormatData = map[string][]byte{
@@ -164,6 +165,7 @@ var _ = Describe("Basic Auth Secrets", func() {
 				Expect(obj.Username).To(Equal("admin"))
 				Expect(obj.Password).To(Equal("foo"))
 				Expect(obj.Name).To(Equal("basicauth"))
+				Expect(obj.Format).To(Equal(BasicAuthFormatCSV))
 			})
 		})
 	})

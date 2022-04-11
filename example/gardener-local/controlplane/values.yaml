@@ -154,10 +154,11 @@ global:
         maxSize: 0
         policy: ""
     featureGates:
-      UseDNSRecords: true
       SeedChange: true
-      AdminKubeconfigRequest: true
       WorkerPoolKubernetesVersion: true
+      ShootCARotation: true
+      ShootMaxTokenExpirationOverwrite: true
+      ShootMaxTokenExpirationValidation: true
     resources: {}
 
   # Gardener admission controller configuration values
@@ -259,7 +260,6 @@ global:
           port: 2718
       featureGates:
         CachedRuntimeClients: true
-        UseDNSRecords: true
     resources: {}
 
   # General system configuration

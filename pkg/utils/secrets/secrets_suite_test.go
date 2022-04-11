@@ -16,12 +16,22 @@ package secrets_test
 
 import (
 	"testing"
+	"time"
+
+	. "github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/util/clock"
 )
 
 func TestSecrets(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Utility Secrets Suite")
 }
+
+var _ = BeforeSuite(func() {
+	DeferCleanup(test.WithVar(&GenerateRandomString, FakeGenerateRandomString))
+	DeferCleanup(test.WithVar(&Clock, clock.NewFakeClock(time.Time{})))
+})

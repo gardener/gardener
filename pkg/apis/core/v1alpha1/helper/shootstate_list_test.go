@@ -202,15 +202,22 @@ var _ = Describe("ShootStateList", func() {
 
 			It("should update a Gardener resource data in the list if it already exists", func() {
 				list := GardenerResourceDataList(shootState.Spec.Gardener)
+
+				newType := "foobar"
 				newData := runtime.RawExtension{Raw: []byte("new data")}
+				newLabels := map[string]string{"foo": "bar"}
+
 				updatedResource := &gardencorev1alpha1.GardenerResourceData{
-					Name: dataName,
-					Type: dataType,
-					Data: newData,
+					Name:   dataName,
+					Type:   newType,
+					Data:   newData,
+					Labels: newLabels,
 				}
 				list.Upsert(updatedResource)
 				Expect(len(list)).To(Equal(1))
 				Expect(list[0].Data).To(Equal(newData))
+				Expect(list[0].Type).To(Equal(newType))
+				Expect(list[0].Labels).To(Equal(newLabels))
 			})
 		})
 

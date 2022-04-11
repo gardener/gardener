@@ -1,5 +1,5 @@
 #############      builder       #############
-FROM golang:1.17.6 AS builder
+FROM golang:1.17.8 AS builder
 
 WORKDIR /go/src/github.com/gardener/gardener
 COPY . .
@@ -81,28 +81,6 @@ COPY --from=builder /go/bin/gardener-resource-manager /gardener-resource-manager
 WORKDIR /
 
 ENTRYPOINT ["/gardener-resource-manager"]
-
-############# landscaper-gardenlet #############
-FROM base AS landscaper-gardenlet
-
-COPY --from=builder /go/bin/landscaper-gardenlet /landscaper-gardenlet
-COPY charts/gardener/gardenlet /charts/gardener/gardenlet
-COPY charts/utils-templates /charts/utils-templates
-
-WORKDIR /
-
-ENTRYPOINT ["/landscaper-gardenlet"]
-
-############# landscaper-controlplane #############
-FROM base AS landscaper-controlplane
-
-COPY --from=builder /go/bin/landscaper-controlplane /landscaper-controlplane
-COPY charts/gardener/controlplane /charts/gardener/controlplane
-COPY charts/utils-templates /charts/utils-templates
-
-WORKDIR /
-
-ENTRYPOINT ["/landscaper-controlplane"]
 
 ############# gardener-extension-provider-local #############
 FROM base AS gardener-extension-provider-local

@@ -77,6 +77,8 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Controllers.SecretBinding).NotTo(BeNil())
 			Expect(obj.Controllers.SecretBinding.ConcurrentSyncs).To(Equal(5))
+			Expect(obj.Controllers.SecretBindingProvider).NotTo(BeNil())
+			Expect(obj.Controllers.SecretBindingProvider.ConcurrentSyncs).To(Equal(5))
 
 			Expect(obj.Controllers.Seed).NotTo(BeNil())
 			Expect(obj.Controllers.Seed.ConcurrentSyncs).To(Equal(5))
@@ -86,7 +88,6 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Controllers.ShootReference).NotTo(BeNil())
 			Expect(obj.Controllers.ShootReference.ConcurrentSyncs).To(Equal(5))
-			Expect(obj.Controllers.ShootReference.ProtectAuditPolicyConfigMaps).To(PointTo(BeTrue()))
 
 			Expect(obj.Controllers.ShootRetry).NotTo(BeNil())
 			Expect(obj.Controllers.ShootRetry.ConcurrentSyncs).To(Equal(5))

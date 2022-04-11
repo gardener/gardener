@@ -691,7 +691,7 @@ message Gardener {
 // Hibernation contains information whether the Shoot is suspended or not.
 message Hibernation {
   // Enabled specifies whether the Shoot needs to be hibernated or not. If it is true, the Shoot's desired state is to be hibernated.
-  // If it is false or nil, the Shoot's desired state is to be awaken.
+  // If it is false or nil, the Shoot's desired state is to be awakened.
   // +optional
   optional bool enabled = 1;
 
@@ -1113,6 +1113,11 @@ message Kubernetes {
   // VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
   // +optional
   optional VerticalPodAutoscaler verticalPodAutoscaler = 9;
+
+  // EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster
+  // (default: true).
+  // +optional
+  optional bool enableStaticTokenKubeconfig = 10;
 }
 
 // KubernetesConfig contains common configuration fields for the control plane components.
@@ -2078,8 +2083,8 @@ message SeedVolumeProvider {
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.
 message ServiceAccountConfig {
   // Issuer is the identifier of the service account token issuer. The issuer will assert this
-  // identifier in "iss" claim of issued tokens. This value is a string or URI.
-  // Defaults to URI of the API server.
+  // identifier in "iss" claim of issued tokens. This value is used to generate new service account tokens.
+  // This value is a string or URI. Defaults to URI of the API server.
   // +optional
   optional string issuer = 1;
 
@@ -2099,8 +2104,17 @@ message ServiceAccountConfig {
   // MaxTokenExpiration is the maximum validity duration of a token created by the service account token issuer. If an
   // otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued
   // with a validity duration of this value.
+  // This field must be within [30d,90d] when the ShootMaxTokenExpirationValidation feature gate is enabled.
+  // This field will be overwritten to be within [30d,90d] when the ShootMaxTokenExpirationOverwrite feature gate is enabled.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration maxTokenExpiration = 4;
+
+  // AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.
+  // These values are not used to generate new service account tokens. Only useful when service account tokens are also
+  // issued by another external system or a change of the current issuer that is used for generating tokens is being performed.
+  // This field is only available for Kubernetes v1.22 or later.
+  // +optional
+  repeated string acceptedIssuers = 5;
 }
 
 // Shoot represents a Shoot cluster created and managed by Gardener.
@@ -2126,6 +2140,54 @@ message ShootAdvertisedAddress {
 
   // The URL of the API Server. e.g. https://api.foo.bar or https://1.2.3.4
   optional string url = 2;
+}
+
+// ShootCARotation contains information about the certificate authority credential rotation.
+message ShootCARotation {
+  // Phase describes the phase of the certificate authority credential rotation.
+  optional string phase = 1;
+
+  // LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
+
+  // LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
+  // completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
+}
+
+// ShootCredentials contains information about the shoot credentials.
+message ShootCredentials {
+  // Rotation contains information about the credential rotations.
+  // +optional
+  optional ShootCredentialsRotation rotation = 1;
+}
+
+// ShootCredentialsRotation contains information about the rotation of credentials.
+message ShootCredentialsRotation {
+  // CertificateAuthorities contains information about the certificate authority credential rotation.
+  // +optional
+  optional ShootCARotation certificateAuthorities = 1;
+
+  // Kubeconfig contains information about the kubeconfig credential rotation.
+  // +optional
+  optional ShootKubeconfigRotation kubeconfig = 2;
+
+  // SSHKeypair contains information about the ssh-keypair credential rotation.
+  // +optional
+  optional ShootSSHKeypairRotation sshKeypair = 3;
+}
+
+// ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
+message ShootKubeconfigRotation {
+  // LastInitiationTime is the most recent time when the kubeconfig credential rotation was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 1;
+
+  // LastCompletionTime is the most recent time when the kubeconfig credential rotation was successfully completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
 }
 
 // ShootList is a list of Shoot objects.
@@ -2163,6 +2225,17 @@ message ShootNetworks {
   // Services is the CIDR of the service network.
   // +optional
   optional string services = 2;
+}
+
+// ShootSSHKeypairRotation contains information about the ssh-keypair credential rotation.
+message ShootSSHKeypairRotation {
+  // LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 1;
+
+  // LastCompletionTime is the most recent time when the ssh-keypair credential rotation was successfully completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
 }
 
 // ShootSpec is the specification of a Shoot.
@@ -2309,6 +2382,10 @@ message ShootStatus {
   // MigrationStartTime is the time when a migration to a different seed was initiated.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time migrationStartTime = 14;
+
+  // Credentials contains information about the shoot credentials.
+  // +optional
+  optional ShootCredentials credentials = 15;
 }
 
 // ShootTemplate is a template for creating a Shoot object.

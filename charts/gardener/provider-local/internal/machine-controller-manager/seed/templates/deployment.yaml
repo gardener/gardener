@@ -21,10 +21,6 @@ spec:
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
-        {{- if .Values.useProjectedTokenMount }}
-        # TODO(rfranzke): Remove in a future release.
-        security.gardener.cloud/trigger: rollout
-        {{- end }}
       labels:
         gardener.cloud/role: controlplane
         app: kubernetes
@@ -121,7 +117,6 @@ spec:
             cpu: 50m
             memory: 64Mi
           limits:
-            cpu: 350m
             memory: 256Mi
         volumeMounts:
         {{- if .Values.useTokenRequestor }}
@@ -143,7 +138,7 @@ spec:
               items:
               - key: kubeconfig
                 path: kubeconfig
-              name: generic-token-kubeconfig
+              name: {{ .Values.genericTokenKubeconfigSecretName }}
               optional: false
           - secret:
               items:

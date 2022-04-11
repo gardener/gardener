@@ -115,12 +115,9 @@ type OriginalValues struct {
 	Images map[string]*imagevector.Image
 	// KubeletCACertificate is the certificate authority for the kubelet.
 	KubeletCACertificate string
-	// KubeletCLIFlags is the set of configurable kubelet CLI flags. If the respective worker pool provides kubelet
-	// configuration as well then this might get overwritten.
-	KubeletCLIFlags components.ConfigurableKubeletCLIFlags
-	// KubeletConfigParameters is the set of configurable kubelet config parameters. If the respective worker pool
-	// provides kubelet configuration as well then this might get overwritten.
-	KubeletConfigParameters components.ConfigurableKubeletConfigParameters
+	// KubeletConfig is the default kubelet configuration for all worker pools. Individual worker pools might overwrite
+	// this configuration.
+	KubeletConfig *gardencorev1beta1.KubeletConfig
 	// MachineTypes is a list of machine types.
 	MachineTypes []gardencorev1beta1.MachineType
 	// SSHPublicKeys is a list of public SSH keys.
@@ -210,7 +207,7 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 	if err := gutil.
 		NewShootAccessSecret(downloader.SecretName, o.values.Namespace).
 		WithTargetSecret(downloader.SecretName, metav1.NamespaceSystem).
-		WithTokenExpirationDuration("2160h").
+		WithTokenExpirationDuration("720h").
 		Reconcile(ctx, o.client); err != nil {
 		return err
 	}
@@ -228,8 +225,7 @@ func (o *operatingSystemConfig) reconcile(ctx context.Context, reconcileFn func(
 		return err
 	}
 
-	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObject(ctx, o.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-downloader", Namespace: o.values.Namespace}})
+	return nil
 }
 
 // Wait waits until the OperatingSystemConfig CRD is ready (deployed or restored). It also reads the produced secret
@@ -476,8 +472,8 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		}
 	}
 
-	kubeletConfigParameters := o.values.KubeletConfigParameters
-	kubeletCLIFlags := o.values.KubeletCLIFlags
+	kubeletConfigParameters := components.KubeletConfigParametersFromCoreV1beta1KubeletConfig(o.values.KubeletConfig)
+	kubeletCLIFlags := components.KubeletCLIFlagsFromCoreV1beta1KubeletConfig(o.values.KubeletConfig)
 	if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil {
 		kubeletConfigParameters = components.KubeletConfigParametersFromCoreV1beta1KubeletConfig(worker.Kubernetes.Kubelet)
 		kubeletCLIFlags = components.KubeletCLIFlagsFromCoreV1beta1KubeletConfig(worker.Kubernetes.Kubelet)
@@ -614,6 +610,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			SSHPublicKeys:           d.sshPublicKeys,
 			PromtailEnabled:         d.promtailEnabled,
 			LokiIngress:             d.lokiIngressHostName,
+			APIServerURL:            d.apiServerURL,
 		})
 		if err != nil {
 			return nil, err

@@ -15,6 +15,8 @@
 package worker_test
 
 import (
+	"time"
+
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	. "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -24,6 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
@@ -78,8 +81,15 @@ var _ = Describe("Machines", func() {
 
 	Describe("#WorkerPoolHash", func() {
 		var (
-			volumeType = "fast"
-			pool       = extensionsv1alpha1.WorkerPool{
+			p                      extensionsv1alpha1.WorkerPool
+			c                      *extensionscontroller.Cluster
+			hash                   string
+			lastRotationInitiation = metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
+		)
+
+		BeforeEach(func() {
+			volumeType := "fast"
+			p = extensionsv1alpha1.WorkerPool{
 				Name:        "test-worker",
 				MachineType: "foo",
 				MachineImage: extensionsv1alpha1.MachineImage{
@@ -94,187 +104,149 @@ var _ = Describe("Machines", func() {
 					Size: "20Gi",
 				},
 			}
-			cluster = &extensionscontroller.Cluster{
+			c = &extensionscontroller.Cluster{
 				Shoot: &gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
 						Kubernetes: gardencorev1beta1.Kubernetes{
 							Version: "1.2.3",
 						},
 					},
+					Status: gardencorev1beta1.ShootStatus{
+						Credentials: &gardencorev1beta1.ShootCredentials{
+							Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+								CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
+									LastInitiationTime: &lastRotationInitiation,
+								},
+							},
+						},
+					},
 				},
 			}
 
-			hash, _ = WorkerPoolHash(pool, cluster)
-		)
-
-		var (
-			p   *extensionsv1alpha1.WorkerPool
-			v   string
-			err error
-		)
-
-		BeforeEach(func() {
-			p = pool.DeepCopy()
+			var err error
+			hash, err = WorkerPoolHash(p, c)
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		Context("hash value should not change", func() {
 			AfterEach(func() {
+				actual, err := WorkerPoolHash(p, c)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(v).To(Equal(hash))
+				Expect(actual).To(Equal(hash))
 			})
 
 			It("when changing minimum", func() {
 				p.Minimum = 1
-				v, err = WorkerPoolHash(*p, cluster)
 			})
 
 			It("when changing maximum", func() {
 				p.Maximum = 2
-				v, err = WorkerPoolHash(*p, cluster)
 			})
 
 			It("when changing max surge", func() {
 				p.MaxSurge.StrVal = "new-val"
-				v, err = WorkerPoolHash(*p, cluster)
 			})
 
 			It("when changing max unavailable", func() {
 				p.MaxUnavailable.StrVal = "new-val"
-				v, err = WorkerPoolHash(*p, cluster)
 			})
 
 			It("when changing annotations", func() {
 				p.Annotations = map[string]string{"foo": "bar"}
-				v, err = WorkerPoolHash(*p, cluster)
 			})
 
 			It("when changing labels", func() {
 				p.Labels = map[string]string{"foo": "bar"}
-				v, err = WorkerPoolHash(*p, cluster)
 			})
 
 			It("when changing taints", func() {
 				p.Taints = []corev1.Taint{{Key: "foo"}}
-				v, err = WorkerPoolHash(*p, cluster)
 			})
 
 			It("when changing name", func() {
 				p.Name = "different-name"
-				v, err = WorkerPoolHash(*p, cluster)
 			})
 
 			It("when changing user-data", func() {
 				p.UserData = []byte("new-data")
-				v, err = WorkerPoolHash(*p, cluster)
 			})
 
 			It("when changing zones", func() {
 				p.Zones = []string{"1"}
-				v, err = WorkerPoolHash(*p, cluster)
 			})
 
 			It("when changing the kubernetes patch version of the worker pool version", func() {
 				p.KubernetesVersion = pointer.String("1.2.4")
-				v, err = WorkerPoolHash(*p, cluster)
 			})
 
 			It("when changing the kubernetes patch version of the control plane version", func() {
-				v, err = WorkerPoolHash(*p, &extensionscontroller.Cluster{
-					Shoot: &gardencorev1beta1.Shoot{
-						Spec: gardencorev1beta1.ShootSpec{
-							Kubernetes: gardencorev1beta1.Kubernetes{
-								Version: "1.2.4",
-							},
-						},
-					},
-				})
+				c.Shoot.Spec.Kubernetes.Version = "1.2.4"
 			})
 
 			It("when changing CRI configuration from `nil` to `docker`", func() {
-				v, err = WorkerPoolHash(*p, &extensionscontroller.Cluster{
-					Shoot: &gardencorev1beta1.Shoot{
-						Spec: gardencorev1beta1.ShootSpec{
-							Kubernetes: gardencorev1beta1.Kubernetes{
-								Version: "1.2.4",
-							},
-							Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
-								{Name: "test-worker", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker}}}},
-						},
-					},
-				})
+				c.Shoot.Spec.Provider = gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
+					{Name: "test-worker", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker}}}}
 			})
 		})
 
 		Context("hash value should change", func() {
 			AfterEach(func() {
+				actual, err := WorkerPoolHash(p, c)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(v).NotTo(Equal(hash))
+				Expect(actual).NotTo(Equal(hash))
 			})
 
 			It("when changing machine type", func() {
 				p.MachineType = "small"
-				v, err = WorkerPoolHash(*p, cluster)
 			})
 
 			It("when changing machine image name", func() {
 				p.MachineImage.Name = "new-image"
-				v, err = WorkerPoolHash(*p, cluster)
 			})
 
 			It("when changing machine image version", func() {
 				p.MachineImage.Version = "new-version"
-				v, err = WorkerPoolHash(*p, cluster)
 			})
 
 			It("when changing volume type", func() {
 				t := "xl"
 				p.Volume.Type = &t
-				v, err = WorkerPoolHash(*p, cluster)
 			})
 
 			It("when changing volume size", func() {
 				p.Volume.Size = "100Mi"
-				v, err = WorkerPoolHash(*p, cluster)
 			})
 
 			It("when changing provider config", func() {
 				p.ProviderConfig.Raw = nil
-				v, err = WorkerPoolHash(*p, cluster)
 			})
 
 			It("when changing the kubernetes major/minor version of the worker pool version", func() {
 				p.KubernetesVersion = pointer.String("1.3.3")
-				v, err = WorkerPoolHash(*p, cluster)
 			})
 
 			It("when changing the kubernetes major/minor version of the control plane version", func() {
-				v, err = WorkerPoolHash(*p, &extensionscontroller.Cluster{
-					Shoot: &gardencorev1beta1.Shoot{
-						Spec: gardencorev1beta1.ShootSpec{
-							Kubernetes: gardencorev1beta1.Kubernetes{
-								Version: "1.3.3",
-							},
-						},
-					},
-				})
-			})
-
-			It("when adding additionalData", func() {
-				v, err = WorkerPoolHash(*p, cluster, "some-additional-data")
+				c.Shoot.Spec.Kubernetes.Version = "1.3.3"
 			})
 
 			It("when changing the CRI configurations", func() {
-				v, err = WorkerPoolHash(*p, &extensionscontroller.Cluster{
-					Shoot: &gardencorev1beta1.Shoot{
-						Spec: gardencorev1beta1.ShootSpec{
-							Kubernetes: gardencorev1beta1.Kubernetes{
-								Version: "1.2.4",
-							},
-							Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
-								{Name: "test-worker", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD}}}},
-						},
-					},
-				})
+				c.Shoot.Spec.Provider = gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
+					{Name: "test-worker", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD}}}}
+			})
+
+			It("when a shoot CA rotation is triggered", func() {
+				newRotationTime := metav1.Time{Time: lastRotationInitiation.Add(time.Hour)}
+				c.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime = &newRotationTime
+			})
+
+			It("when a shoot CA rotation is triggered for the first time (lastInitiationTime was nil)", func() {
+				var err error
+				credentialStatusWithInitiatedRotation := c.Shoot.Status.Credentials.DeepCopy()
+				c.Shoot.Status.Credentials = nil
+				hash, err = WorkerPoolHash(p, c)
+				Expect(err).ToNot(HaveOccurred())
+
+				c.Shoot.Status.Credentials = credentialStatusWithInitiatedRotation
 			})
 		})
 	})

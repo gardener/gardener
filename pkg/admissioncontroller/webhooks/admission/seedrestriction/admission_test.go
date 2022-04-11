@@ -473,6 +473,151 @@ var _ = Describe("handler", func() {
 
 					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 				})
+
+				Context("when creating a source BackupEntry", func() {
+					const (
+						shootBackupEntryName = "backupentry"
+						shootName            = "foo"
+					)
+
+					var shoot *gardencorev1beta1.Shoot
+
+					BeforeEach(func() {
+						objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupEntry{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      fmt.Sprintf("%s-%s", v1beta1constants.BackupSourcePrefix, shootBackupEntryName),
+								Namespace: namespace,
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										Name: shootName,
+										Kind: "Shoot",
+									},
+								},
+							},
+							Spec: gardencorev1beta1.BackupEntrySpec{
+								BucketName: bucketName,
+								SeedName:   &seedName,
+							},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						shoot = &gardencorev1beta1.Shoot{
+							Status: gardencorev1beta1.ShootStatus{
+								LastOperation: &gardencorev1beta1.LastOperation{
+									Type:  gardencorev1beta1.LastOperationTypeRestore,
+									State: gardencorev1beta1.LastOperationStateProcessing,
+								},
+							},
+						}
+					})
+
+					It("should forbid the request because the shoot owning the source BackupEntry could not be found", func() {
+						notFoundErr := apierrors.NewNotFound(schema.GroupResource{}, "")
+						mockCache.EXPECT().Get(ctx, kutil.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(notFoundErr)
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusInternalServerError),
+									Message: notFoundErr.Error(),
+								},
+							},
+						}))
+					})
+
+					DescribeTable("should forbid the request because a the shoot owning the source BackupEntry is not in restore phase",
+						func(lastOperation *gardencorev1beta1.LastOperation) {
+							mockCache.EXPECT().Get(ctx, kutil.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+								shoot.Status.LastOperation = lastOperation
+								shoot.DeepCopyInto(obj)
+								return nil
+							})
+
+							Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+								AdmissionResponse: admissionv1.AdmissionResponse{
+									Allowed: false,
+									Result: &metav1.Status{
+										Code:    int32(http.StatusForbidden),
+										Message: fmt.Sprintf("creation of source BackupEntry is only allowed during shoot Restore operation (shoot: %s)", shootName),
+									},
+								},
+							}))
+						},
+						Entry("lastOperation is nil", nil),
+						Entry("lastOperation is create", &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeCreate}),
+						Entry("lastOperation is reconcile", &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeReconcile}),
+						Entry("lastOperation is delete", &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeDelete}),
+						Entry("lastOperation is migrate", &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeMigrate}),
+					)
+
+					It("should forbid the request because a BackupEntry for the shoot does not exist", func() {
+						notFoundErr := apierrors.NewNotFound(schema.GroupResource{}, "")
+
+						mockCache.EXPECT().Get(ctx, kutil.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+							shoot.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(namespace, shootBackupEntryName), gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntry{})).Return(notFoundErr)
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("could not find original BackupEntry %s: %v", shootBackupEntryName, notFoundErr.Error()),
+								},
+							},
+						}))
+					})
+
+					It("should forbid the request because the source BackupEntry does not match the BackupEntry for the shoot", func() {
+						mockCache.EXPECT().Get(ctx, kutil.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+							shoot.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(namespace, shootBackupEntryName), gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntry{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupEntry) error {
+							be := &gardencorev1beta1.BackupEntry{
+								Spec: gardencorev1beta1.BackupEntrySpec{
+									BucketName: "some-different-bucket",
+									SeedName:   pointer.String("some-differnet-seedname"),
+								},
+							}
+							be.DeepCopyInto(obj)
+							return nil
+						})
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("specification of source BackupEntry must equal specification of original BackupEntry %s", shootBackupEntryName),
+								},
+							},
+						}))
+					})
+
+					It("should allow creation of source BackupEntry if a matching BackupEntry exists and shoot is in restore phase", func() {
+						mockCache.EXPECT().Get(ctx, kutil.Key(namespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+							shoot.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(namespace, shootBackupEntryName), gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntry{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupEntry) error {
+							be := &gardencorev1beta1.BackupEntry{
+								Spec: gardencorev1beta1.BackupEntrySpec{
+									BucketName: bucketName,
+									SeedName:   &seedName,
+								},
+							}
+							be.DeepCopyInto(obj)
+							return nil
+						})
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+				})
 			})
 		})
 
@@ -1414,7 +1559,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 							AdmissionResponse: admissionv1.AdmissionResponse{
 								Allowed: false,
 								Result: &metav1.Status{
-									Code:    int32(http.StatusBadRequest),
+									Code:    int32(http.StatusUnprocessableEntity),
 									Message: fmt.Sprintf("unexpected secret type: %q", secret.Type),
 								},
 							},
@@ -1431,7 +1576,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 							AdmissionResponse: admissionv1.AdmissionResponse{
 								Allowed: false,
 								Result: &metav1.Status{
-									Code:    int32(http.StatusBadRequest),
+									Code:    int32(http.StatusUnprocessableEntity),
 									Message: "\"usage-bootstrap-authentication\" must be set to 'true'",
 								},
 							},
@@ -1448,7 +1593,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 							AdmissionResponse: admissionv1.AdmissionResponse{
 								Allowed: false,
 								Result: &metav1.Status{
-									Code:    int32(http.StatusBadRequest),
+									Code:    int32(http.StatusUnprocessableEntity),
 									Message: "\"usage-bootstrap-signing\" must be set to 'true'",
 								},
 							},
@@ -1465,7 +1610,7 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 							AdmissionResponse: admissionv1.AdmissionResponse{
 								Allowed: false,
 								Result: &metav1.Status{
-									Code:    int32(http.StatusBadRequest),
+									Code:    int32(http.StatusUnprocessableEntity),
 									Message: "\"auth-extra-groups\" must not be set",
 								},
 							},

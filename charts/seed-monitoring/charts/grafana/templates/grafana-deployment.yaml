@@ -76,8 +76,7 @@ spec:
             cpu: 10m
             memory: 32Mi
           limits:
-            cpu: 200m
-            memory: 128Mi
+            memory: 400Mi
       volumes:
       - name: grafana-storage
         emptyDir: {}

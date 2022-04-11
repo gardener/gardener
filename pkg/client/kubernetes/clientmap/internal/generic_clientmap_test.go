@@ -23,6 +23,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/version"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -53,6 +54,8 @@ var _ = Describe("GenericClientMap", func() {
 			csVersion *version.Info
 
 			origMaxRefreshInterval time.Duration
+
+			fakeClock *clock.FakeClock
 		)
 
 		BeforeEach(func() {
@@ -62,7 +65,8 @@ var _ = Describe("GenericClientMap", func() {
 			csVersion = &version.Info{GitVersion: "1.18.0"}
 			cs.EXPECT().Version().Return(csVersion.GitVersion).AnyTimes()
 
-			cm = internal.NewGenericClientMap(factory, logr.Discard())
+			fakeClock = clock.NewFakeClock(time.Now())
+			cm = internal.NewGenericClientMap(factory, logr.Discard(), fakeClock)
 
 			origMaxRefreshInterval = internal.MaxRefreshInterval
 			internal.MaxRefreshInterval = 10 * time.Millisecond
@@ -75,8 +79,7 @@ var _ = Describe("GenericClientMap", func() {
 
 		Context("#GetClient", func() {
 			It("should create a new ClientSet (clientMap empty)", func() {
-				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
-				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", nil)
+				factory.EXPECT().NewClientSet(ctx, key).Return(cs, "", nil)
 
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
 
@@ -85,7 +88,7 @@ var _ = Describe("GenericClientMap", func() {
 
 			It("should failed to create a new ClientSet if factory fails", func() {
 				fakeErr := fmt.Errorf("fake")
-				factory.EXPECT().NewClientSet(ctx, key).Return(nil, fakeErr)
+				factory.EXPECT().NewClientSet(ctx, key).Return(nil, "", fakeErr)
 
 				clientSet, err := cm.GetClient(ctx, key)
 				Expect(clientSet).To(BeNil())
@@ -95,8 +98,7 @@ var _ = Describe("GenericClientMap", func() {
 			It("should create a new ClientSet and start it automatically", func() {
 				Expect(cm.Start(ctx.Done())).To(Succeed())
 
-				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
-				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", nil)
+				factory.EXPECT().NewClientSet(ctx, key).Return(cs, "", nil)
 				cs.EXPECT().Start(gomock.Any())
 				cs.EXPECT().WaitForCacheSync(gomock.Any()).Return(true)
 
@@ -108,8 +110,7 @@ var _ = Describe("GenericClientMap", func() {
 			It("should create a new ClientSet and fail because cache cannot be synced", func() {
 				Expect(cm.Start(ctx.Done())).To(Succeed())
 
-				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
-				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", nil)
+				factory.EXPECT().NewClientSet(ctx, key).Return(cs, "", nil)
 				cs.EXPECT().Start(gomock.Any())
 				cs.EXPECT().WaitForCacheSync(gomock.Any()).Return(false)
 
@@ -120,7 +121,7 @@ var _ = Describe("GenericClientMap", func() {
 
 			It("should refresh the ClientSet's server version", func() {
 				By("should create a new ClientSet")
-				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
+				factory.EXPECT().NewClientSet(ctx, key).Return(cs, "", nil)
 				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", nil).AnyTimes()
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
 
@@ -129,7 +130,7 @@ var _ = Describe("GenericClientMap", func() {
 
 				By("should refresh the ClientSet's server version")
 				// let the max refresh interval pass
-				time.Sleep(internal.MaxRefreshInterval)
+				fakeClock.Sleep(internal.MaxRefreshInterval)
 				cs.EXPECT().DiscoverVersion().Return(&version.Info{GitVersion: "1.18.1"}, nil)
 				clientSet, err := cm.GetClient(ctx, key)
 				Expect(clientSet).To(BeIdenticalTo(cs))
@@ -138,7 +139,7 @@ var _ = Describe("GenericClientMap", func() {
 
 			It("should fail to refresh the ClientSet's server version because DiscoverVersion fails", func() {
 				By("should create a new ClientSet")
-				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
+				factory.EXPECT().NewClientSet(ctx, key).Return(cs, "", nil)
 				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", nil).AnyTimes()
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
 
@@ -147,7 +148,7 @@ var _ = Describe("GenericClientMap", func() {
 
 				By("should fail to refresh the ClientSet's server version because DiscoverVersion fails")
 				// let the max refresh interval pass
-				time.Sleep(internal.MaxRefreshInterval)
+				fakeClock.Sleep(internal.MaxRefreshInterval)
 				cs.EXPECT().DiscoverVersion().Return(nil, fmt.Errorf("fake"))
 				clientSet, err := cm.GetClient(ctx, key)
 				Expect(clientSet).To(BeNil())
@@ -156,8 +157,7 @@ var _ = Describe("GenericClientMap", func() {
 
 			It("should refresh the ClientSet because of hash change", func() {
 				By("should create a new ClientSet")
-				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
-				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("hash1", nil)
+				factory.EXPECT().NewClientSet(ctx, key).Return(cs, "hash1", nil)
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
 
 				By("should not check for a hash change directly after creating the client")
@@ -165,40 +165,30 @@ var _ = Describe("GenericClientMap", func() {
 
 				By("should not refresh the ClientSet as version and hash haven't changed")
 				// let the max refresh interval pass
-				time.Sleep(internal.MaxRefreshInterval)
+				fakeClock.Sleep(internal.MaxRefreshInterval)
 				cs.EXPECT().DiscoverVersion().Return(csVersion, nil)
 				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("hash1", nil)
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
 
 				By("should refresh the ClientSet as the hash has changed")
 				// let the max refresh interval pass again
-				time.Sleep(internal.MaxRefreshInterval)
+				fakeClock.Sleep(internal.MaxRefreshInterval)
 				cs.EXPECT().DiscoverVersion().Return(csVersion, nil)
-				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("hash2", nil).Times(2)
+				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("hash2", nil)
 
 				cs2 := mockkubernetes.NewMockInterface(ctrl)
-				factory.EXPECT().NewClientSet(ctx, key).Return(cs2, nil)
+				factory.EXPECT().NewClientSet(ctx, key).Return(cs2, "hash2", nil)
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs2))
-			})
-
-			It("should fail because CalculateClientSetHash fails for new ClientSet", func() {
-				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
-				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", fmt.Errorf("fake"))
-
-				clientSet, err := cm.GetClient(ctx, key)
-				Expect(clientSet).To(BeNil())
-				Expect(err).To(MatchError(ContainSubstring("fake")))
 			})
 
 			It("should fail because CalculateClientSetHash fails for existing ClientSet", func() {
 				By("should create a new ClientSet")
-				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
-				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("hash1", nil)
+				factory.EXPECT().NewClientSet(ctx, key).Return(cs, "hash1", nil)
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
 
 				By("should fail to get the ClientSet again because CalculateClientSetHash fails")
 				// let the max refresh interval pass again
-				time.Sleep(internal.MaxRefreshInterval)
+				fakeClock.Sleep(internal.MaxRefreshInterval)
 				cs.EXPECT().DiscoverVersion().Return(csVersion, nil)
 				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", fmt.Errorf("fake"))
 
@@ -215,16 +205,14 @@ var _ = Describe("GenericClientMap", func() {
 
 			It("should delete the matching ClientSet from the ClientMap", func() {
 				By("should create a new ClientSet beforehand")
-				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
-				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", nil)
+				factory.EXPECT().NewClientSet(ctx, key).Return(cs, "", nil)
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
 
 				By("should remove the matching ClientSet")
 				Expect(cm.InvalidateClient(key)).To(Succeed())
 
 				By("should need to create a new ClientSet afterwards")
-				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
-				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", nil)
+				factory.EXPECT().NewClientSet(ctx, key).Return(cs, "", nil)
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
 			})
 
@@ -234,8 +222,7 @@ var _ = Describe("GenericClientMap", func() {
 				var clientSetStopCh <-chan struct{}
 
 				By("should create a new ClientSet beforehand and start it automatically")
-				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
-				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", nil)
+				factory.EXPECT().NewClientSet(ctx, key).Return(cs, "", nil)
 				cs.EXPECT().Start(gomock.Any()).Do(func(ctx context.Context) {
 					clientSetStopCh = ctx.Done()
 				})
@@ -247,8 +234,7 @@ var _ = Describe("GenericClientMap", func() {
 				Expect(clientSetStopCh).To(BeClosed())
 
 				By("should need to create a new ClientSet afterwards")
-				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
-				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", nil)
+				factory.EXPECT().NewClientSet(ctx, key).Return(cs, "", nil)
 				cs.EXPECT().Start(gomock.Any())
 				cs.EXPECT().WaitForCacheSync(gomock.Any()).Return(true)
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
@@ -266,8 +252,7 @@ var _ = Describe("GenericClientMap", func() {
 			})
 
 			It("should start ClientSets already contained in the ClientMap and wait for caches to sync", func() {
-				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
-				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", nil)
+				factory.EXPECT().NewClientSet(ctx, key).Return(cs, "", nil)
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
 
 				cs.EXPECT().Start(gomock.Any())
@@ -276,8 +261,7 @@ var _ = Describe("GenericClientMap", func() {
 			})
 
 			It("should fail if caches cannot be synced", func() {
-				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
-				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", nil)
+				factory.EXPECT().NewClientSet(ctx, key).Return(cs, "", nil)
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
 
 				cs.EXPECT().Start(gomock.Any())

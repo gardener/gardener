@@ -185,7 +185,7 @@ func handle(ctx context.Context, req admission.Request, m Mutator, t client.Obje
 	newObj := obj.DeepCopyObject().(client.Object)
 	if err = m.Mutate(ctx, newObj, oldObj); err != nil {
 		logger.Error(fmt.Errorf("could not process: %w", err), "Admission denied", "kind", ar.Kind.Kind, "namespace", obj.GetNamespace(), "name", obj.GetName())
-		return admission.Errored(http.StatusBadRequest, err)
+		return admission.Errored(http.StatusUnprocessableEntity, err)
 	}
 
 	_, isValidator := m.(Validator)

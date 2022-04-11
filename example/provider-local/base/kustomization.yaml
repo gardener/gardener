@@ -15,6 +15,7 @@ resources:
 - controller-registration.yaml
 - project.yaml
 - secretbinding.yaml
+- https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.23.0/example/controller-registration.yaml
 
 patchesStrategicMerge:
-- patch-controller-registration.yaml
+- patch-controller-registrations.yaml

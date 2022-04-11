@@ -16,21 +16,61 @@ package shoot_test
 
 import (
 	"context"
+	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/features"
 	shootregistry "github.com/gardener/gardener/pkg/registry/core/shoot"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Strategy", func() {
-	Context("PrepareForUpdate", func() {
+	Describe("#PrepareForCreate", func() {
+		Context("max token expiration", func() {
+			newShoot := func(duration time.Duration) *core.Shoot {
+				return &core.Shoot{
+					Spec: core.ShootSpec{
+						Kubernetes: core.Kubernetes{
+							KubeAPIServer: &core.KubeAPIServerConfig{
+								ServiceAccountConfig: &core.ServiceAccountConfig{
+									MaxTokenExpiration: &metav1.Duration{Duration: duration},
+								},
+							},
+						},
+					},
+				}
+			}
+
+			DescribeTable("ShootMaxTokenExpirationOverwrite feature gate enabled",
+				func(featureGateEnabled bool, maxTokenExpiration, expectedDuration time.Duration) {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationOverwrite, featureGateEnabled)()
+
+					shoot := newShoot(maxTokenExpiration)
+					shootregistry.Strategy.PrepareForCreate(context.TODO(), shoot)
+					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(expectedDuration))
+				},
+
+				Entry("feature gate enabled, too low value", true, time.Hour, 720*time.Hour),
+				Entry("feature gate enabled, too high value", true, 3000*time.Hour, 2160*time.Hour),
+				Entry("feature gate enabled, value within boundaries", true, 1000*time.Hour, 1000*time.Hour),
+
+				Entry("feature gate disabled too low value", false, time.Hour, time.Hour),
+				Entry("feature gate disabled too high value", false, 3000*time.Hour, 3000*time.Hour),
+				Entry("feature gate disabled value within boundaries", false, 1000*time.Hour, 1000*time.Hour),
+			)
+		})
+	})
+
+	Describe("#PrepareForUpdate", func() {
 		Context("generation increment", func() {
 			It("should not increase if new=old", func() {
 				oldShoot := &core.Shoot{}
@@ -347,6 +387,100 @@ var _ = Describe("Strategy", func() {
 				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
 			})
+
+			It("should increase when the rotate-ca-start annotation gets set and feature gate is enabled", func() {
+				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, true)()
+
+				oldShoot := &core.Shoot{
+					Status: core.ShootStatus{
+						LastOperation: &core.LastOperation{},
+					},
+				}
+				newShoot := oldShoot.DeepCopy()
+				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateCAStart}
+
+				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
+			})
+
+			It("should increase when the rotate-ca-complete annotation gets set and feature gate is enabled", func() {
+				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, true)()
+
+				oldShoot := &core.Shoot{
+					Status: core.ShootStatus{
+						LastOperation: &core.LastOperation{},
+					},
+				}
+				newShoot := oldShoot.DeepCopy()
+				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateCAComplete}
+
+				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
+			})
+
+			It("should not increase when the rotate-ca-start annotation gets set and feature gate is disabled", func() {
+				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, false)()
+
+				oldShoot := &core.Shoot{
+					Status: core.ShootStatus{
+						LastOperation: &core.LastOperation{},
+					},
+				}
+				newShoot := oldShoot.DeepCopy()
+				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateCAStart}
+
+				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
+			})
+
+			It("should not increase when the rotate-ca-complete annotation gets set and feature gate is disabled", func() {
+				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, false)()
+
+				oldShoot := &core.Shoot{
+					Status: core.ShootStatus{
+						LastOperation: &core.LastOperation{},
+					},
+				}
+				newShoot := oldShoot.DeepCopy()
+				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateCAComplete}
+
+				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
+			})
+		})
+
+		Context("max token expiration", func() {
+			newShoot := func(duration time.Duration) *core.Shoot {
+				return &core.Shoot{
+					Spec: core.ShootSpec{
+						Kubernetes: core.Kubernetes{
+							KubeAPIServer: &core.KubeAPIServerConfig{
+								ServiceAccountConfig: &core.ServiceAccountConfig{
+									MaxTokenExpiration: &metav1.Duration{Duration: duration},
+								},
+							},
+						},
+					},
+				}
+			}
+
+			DescribeTable("ShootMaxTokenExpirationOverwrite feature gate enabled",
+				func(featureGateEnabled bool, maxTokenExpiration, expectedDuration time.Duration) {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationOverwrite, featureGateEnabled)()
+
+					shoot := newShoot(maxTokenExpiration)
+					shootregistry.Strategy.PrepareForCreate(context.TODO(), shoot)
+					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(expectedDuration))
+				},
+
+				Entry("feature gate enabled, too low value", true, time.Hour, 720*time.Hour),
+				Entry("feature gate enabled, too high value", true, 3000*time.Hour, 2160*time.Hour),
+				Entry("feature gate enabled, value within boundaries", true, 1000*time.Hour, 1000*time.Hour),
+
+				Entry("feature gate disabled too low value", false, time.Hour, time.Hour),
+				Entry("feature gate disabled too high value", false, 3000*time.Hour, 3000*time.Hour),
+				Entry("feature gate disabled value within boundaries", false, 1000*time.Hour, 1000*time.Hour),
+			)
 		})
 	})
 })

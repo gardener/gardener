@@ -38,6 +38,7 @@ func newTableConvertor() rest.TableConvertor {
 		headers: []metav1beta1.TableColumnDefinition{
 			{Name: "Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
 			{Name: "Secret", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["secret"]},
+			{Name: "Provider", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["provider"]},
 			{Name: "Age", Type: "date", Description: swaggerMetadataDescriptions["creationTimestamp"]},
 		},
 	}
@@ -71,6 +72,11 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 
 		cells = append(cells, sb.Name)
 		cells = append(cells, sb.SecretRef.Namespace+"/"+sb.SecretRef.Name)
+		if provider := sb.Provider; provider != nil {
+			cells = append(cells, provider.Type)
+		} else {
+			cells = append(cells, "<none>")
+		}
 		cells = append(cells, metatable.ConvertToHumanReadableDateType(sb.CreationTimestamp))
 
 		return cells, nil

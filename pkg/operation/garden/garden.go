@@ -22,11 +22,11 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/sirupsen/logrus"
@@ -177,6 +177,7 @@ func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string, l
 		numberOfInternalDomainSecrets       = 0
 		numberOfOpenVPNDiffieHellmanSecrets = 0
 		numberOfAlertingSecrets             = 0
+		numberOfGlobalMonitoringSecrets     = 0
 	)
 
 	secretList := &corev1.SecretList{}
@@ -244,6 +245,7 @@ func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string, l
 			monitoringSecret := secret
 			secretsMap[v1beta1constants.GardenRoleGlobalMonitoring] = &monitoringSecret
 			logInfo = append(logInfo, fmt.Sprintf("monitoring basic auth secret %q", secret.Name))
+			numberOfGlobalMonitoringSecrets++
 		}
 
 		// Retrieving basic auth secret for remote write monitoring with a label
@@ -293,13 +295,17 @@ func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string, l
 		return nil, fmt.Errorf("can only accept at most one alerting secret, but found %d", numberOfAlertingSecrets)
 	}
 
+	if numberOfGlobalMonitoringSecrets > 1 {
+		return nil, fmt.Errorf("can only accept at most one global monitoring secret, but found %d", numberOfGlobalMonitoringSecrets)
+	}
+
 	log.Infof("Found secrets in namespace %q: %s", namespace, strings.Join(logInfo, ", "))
 
 	return secretsMap, nil
 }
 
 // BootstrapCluster bootstraps the Garden cluster and deploys various required manifests.
-func BootstrapCluster(ctx context.Context, k8sGardenClient kubernetes.Interface) error {
+func BootstrapCluster(ctx context.Context, k8sGardenClient kubernetes.Interface, secretsManager secretsmanager.Interface) error {
 	// Check whether the Kubernetes version of the Garden cluster is at least 1.17 (least supported K8s version of Gardener).
 	minGardenVersion := "1.17"
 	gardenVersionOK, err := version.CompareVersions(k8sGardenClient.Version(), ">=", minGardenVersion)
@@ -320,8 +326,24 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient kubernetes.Interface)
 		return err
 	}
 
-	if len(secretList.Items) < 1 {
-		if _, err = generateMonitoringSecret(ctx, k8sGardenClient); err != nil {
+	mustGenerateMonitoringSecret := true
+	for _, s := range secretList.Items {
+		legacySecret := s.Name == "monitoring-ingress-credentials" // TODO(rfranzke): Remove this line in a future version.
+		managedBySecretsManager := s.Labels[secretsmanager.LabelKeyManagedBy] == secretsmanager.LabelValueSecretsManager &&
+			s.Labels[secretsmanager.LabelKeyManagerIdentity] == v1beta1constants.SecretManagerIdentityControllerManager
+
+		if !legacySecret && !managedBySecretsManager {
+			// found a custom monitoring secret managed by a human operator
+			// keep it and don't take over responsibility for the monitoring secret
+			mustGenerateMonitoringSecret = false
+			break
+		}
+	}
+
+	// we don't want to override custom monitoring secret managed by a human operator
+	// only take over responsibility over monitoring secret if we find the legacy secret created by GCM or a new one managed by SecretsManager
+	if mustGenerateMonitoringSecret {
+		if _, err = generateGlobalMonitoringSecret(ctx, k8sGardenClient.Client(), secretsManager); err != nil {
 			return err
 		}
 	}
@@ -329,34 +351,23 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient kubernetes.Interface)
 	return nil
 }
 
-func generateMonitoringSecret(ctx context.Context, k8sGardenClient kubernetes.Interface) (*corev1.Secret, error) {
-	basicAuthSecret := &secretutils.BasicAuthSecretConfig{
-		Name:   common.MonitoringIngressCredentials,
-		Format: secretutils.BasicAuthFormatNormal,
-
+func generateGlobalMonitoringSecret(ctx context.Context, k8sGardenClient client.Client, secretsManager secretsmanager.Interface) (*corev1.Secret, error) {
+	credentialsSecret, err := secretsManager.Generate(ctx, &secretutils.BasicAuthSecretConfig{
+		Name:           v1beta1constants.SecretNameObservabilityIngress,
+		Format:         secretutils.BasicAuthFormatNormal,
 		Username:       "admin",
 		PasswordLength: 32,
-	}
-	basicAuth, err := basicAuthSecret.Generate()
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      basicAuthSecret.Name,
-			Namespace: v1beta1constants.GardenNamespace,
-		},
-	}
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k8sGardenClient.Client(), secret, func() error {
-		secret.Labels = map[string]string{
-			v1beta1constants.GardenRole: v1beta1constants.GardenRoleGlobalMonitoring,
-		}
-		secret.Type = corev1.SecretTypeOpaque
-		secret.Data = basicAuth.SecretData()
-		return nil
-	}); err != nil {
+	// TODO(rfranzke): Remove in a future release.
+	if err := kutil.DeleteObject(ctx, k8sGardenClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "monitoring-ingress-credentials", Namespace: v1beta1constants.GardenNamespace}}); err != nil {
 		return nil, err
 	}
-	return secret, nil
+
+	patch := client.MergeFrom(credentialsSecret.DeepCopy())
+	metav1.SetMetaDataLabel(&credentialsSecret.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleGlobalMonitoring)
+	return credentialsSecret, k8sGardenClient.Patch(ctx, credentialsSecret, patch)
 }

@@ -157,7 +157,7 @@ var _ = Describe("Status", func() {
 
 					Expect(lastError.Description).To(Equal(description))
 					Expect(lastError.TaskID).To(BeNil())
-					Expect(lastError.Codes).To(ConsistOf(gardencorev1beta1.ErrorInfraInsufficientPrivileges, gardencorev1beta1.ErrorInfraUnauthorized))
+					Expect(lastError.Codes).To(ConsistOf(gardencorev1beta1.ErrorInfraUnauthorized))
 				}),
 			)
 

@@ -48,48 +48,6 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 	if obj.Controllers == nil {
 		obj.Controllers = &GardenletControllerConfiguration{}
 	}
-	if obj.Controllers.BackupBucket == nil {
-		obj.Controllers.BackupBucket = &BackupBucketControllerConfiguration{}
-	}
-	if obj.Controllers.BackupEntry == nil {
-		obj.Controllers.BackupEntry = &BackupEntryControllerConfiguration{}
-	}
-	if obj.Controllers.BackupEntryMigration == nil {
-		obj.Controllers.BackupEntryMigration = &BackupEntryMigrationControllerConfiguration{}
-	}
-	if obj.Controllers.Bastion == nil {
-		obj.Controllers.Bastion = &BastionControllerConfiguration{}
-	}
-	if obj.Controllers.ControllerInstallation == nil {
-		obj.Controllers.ControllerInstallation = &ControllerInstallationControllerConfiguration{}
-	}
-	if obj.Controllers.ControllerInstallationCare == nil {
-		obj.Controllers.ControllerInstallationCare = &ControllerInstallationCareControllerConfiguration{}
-	}
-	if obj.Controllers.ControllerInstallationRequired == nil {
-		obj.Controllers.ControllerInstallationRequired = &ControllerInstallationRequiredControllerConfiguration{}
-	}
-	if obj.Controllers.Seed == nil {
-		obj.Controllers.Seed = &SeedControllerConfiguration{}
-	}
-	if obj.Controllers.Shoot == nil {
-		obj.Controllers.Shoot = &ShootControllerConfiguration{}
-	}
-	if obj.Controllers.ShootCare == nil {
-		obj.Controllers.ShootCare = &ShootCareControllerConfiguration{}
-	}
-	if obj.Controllers.ShootMigration == nil {
-		obj.Controllers.ShootMigration = &ShootMigrationControllerConfiguration{}
-	}
-	if obj.Controllers.ShootStateSync == nil {
-		obj.Controllers.ShootStateSync = &ShootStateSyncControllerConfiguration{}
-	}
-	if obj.Controllers.SeedAPIServerNetworkPolicy == nil {
-		obj.Controllers.SeedAPIServerNetworkPolicy = &SeedAPIServerNetworkPolicyControllerConfiguration{}
-	}
-	if obj.Controllers.ManagedSeed == nil {
-		obj.Controllers.ManagedSeed = &ManagedSeedControllerConfiguration{}
-	}
 
 	if obj.LeaderElection == nil {
 		obj.LeaderElection = &componentbaseconfigv1alpha1.LeaderElectionConfiguration{}
@@ -120,6 +78,10 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 		obj.Server.HTTPS.Port = 2720
 	}
 
+	if obj.Logging == nil {
+		obj.Logging = &Logging{}
+	}
+
 	// TODO: consider enabling profiling by default (like in k8s components)
 
 	if obj.SNI == nil {
@@ -147,6 +109,55 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 				v1alpha1constants.GardenRole: v1alpha1constants.GardenRoleExposureClassHandler,
 			}
 		}
+	}
+}
+
+// SetDefaults_GardenletControllerConfiguration sets defaults for the controller objects.
+func SetDefaults_GardenletControllerConfiguration(obj *GardenletControllerConfiguration) {
+	if obj.BackupBucket == nil {
+		obj.BackupBucket = &BackupBucketControllerConfiguration{}
+	}
+	if obj.BackupEntry == nil {
+		obj.BackupEntry = &BackupEntryControllerConfiguration{}
+	}
+	if obj.BackupEntryMigration == nil {
+		obj.BackupEntryMigration = &BackupEntryMigrationControllerConfiguration{}
+	}
+	if obj.Bastion == nil {
+		obj.Bastion = &BastionControllerConfiguration{}
+	}
+	if obj.ControllerInstallation == nil {
+		obj.ControllerInstallation = &ControllerInstallationControllerConfiguration{}
+	}
+	if obj.ControllerInstallationCare == nil {
+		obj.ControllerInstallationCare = &ControllerInstallationCareControllerConfiguration{}
+	}
+	if obj.ControllerInstallationRequired == nil {
+		obj.ControllerInstallationRequired = &ControllerInstallationRequiredControllerConfiguration{}
+	}
+	if obj.Seed == nil {
+		obj.Seed = &SeedControllerConfiguration{}
+	}
+	if obj.Shoot == nil {
+		obj.Shoot = &ShootControllerConfiguration{}
+	}
+	if obj.ShootCare == nil {
+		obj.ShootCare = &ShootCareControllerConfiguration{}
+	}
+	if obj.ShootMigration == nil {
+		obj.ShootMigration = &ShootMigrationControllerConfiguration{}
+	}
+	if obj.ShootSecret == nil {
+		obj.ShootSecret = &ShootSecretControllerConfiguration{}
+	}
+	if obj.ShootStateSync == nil {
+		obj.ShootStateSync = &ShootStateSyncControllerConfiguration{}
+	}
+	if obj.SeedAPIServerNetworkPolicy == nil {
+		obj.SeedAPIServerNetworkPolicy = &SeedAPIServerNetworkPolicyControllerConfiguration{}
+	}
+	if obj.ManagedSeed == nil {
+		obj.ManagedSeed = &ManagedSeedControllerConfiguration{}
 	}
 }
 
@@ -363,6 +374,13 @@ func SetDefaults_StaleExtensionHealthChecks(obj *StaleExtensionHealthChecks) {
 	}
 }
 
+// SetDefaults_ShootSecretControllerConfiguration sets defaults for the shoot secret controller.
+func SetDefaults_ShootSecretControllerConfiguration(obj *ShootSecretControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		obj.ConcurrentSyncs = pointer.Int(5)
+	}
+}
+
 // SetDefaults_ShootStateSyncControllerConfiguration sets defaults for the shoot state controller.
 func SetDefaults_ShootStateSyncControllerConfiguration(obj *ShootStateSyncControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
@@ -408,6 +426,10 @@ func SetDefaults_ManagedSeedControllerConfiguration(obj *ManagedSeedControllerCo
 		v := metav1.Duration{Duration: 5 * time.Minute}
 		obj.SyncJitterPeriod = &v
 	}
+
+	if obj.JitterUpdates == nil {
+		obj.JitterUpdates = pointer.Bool(false)
+	}
 }
 
 // SetDefaults_SNI sets defaults for SNI.
@@ -437,5 +459,24 @@ func SetDefaults_SNIIngress(obj *SNIIngress) {
 			v1beta1constants.LabelApp: DefaultIngressGatewayAppLabelValue,
 			"istio":                   "ingressgateway",
 		}
+	}
+}
+
+// SetDefaults_Logging sets defaults for the Logging stack.
+func SetDefaults_Logging(obj *Logging) {
+	if obj.Enabled == nil {
+		obj.Enabled = pointer.BoolPtr(false)
+	}
+	if obj.Loki == nil {
+		obj.Loki = &Loki{}
+	}
+	if obj.Loki.Enabled == nil {
+		obj.Loki.Enabled = obj.Enabled
+	}
+	if obj.Loki.Garden == nil {
+		obj.Loki.Garden = &GardenLoki{}
+	}
+	if obj.Loki.Garden.Storage == nil {
+		obj.Loki.Garden.Storage = &DefaultCentralLokiStorage
 	}
 }

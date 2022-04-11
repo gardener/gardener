@@ -96,7 +96,7 @@ func (mr *MockInterfaceMockRecorder) Get(arg0 interface{}) *gomock.Call {
 }
 
 // Scale mocks base method.
-func (m *MockInterface) Scale(arg0 context.Context, arg1 int) error {
+func (m *MockInterface) Scale(arg0 context.Context, arg1 int32) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Scale", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -122,20 +122,6 @@ func (m *MockInterface) ScrapeConfigs() ([]string, error) {
 func (mr *MockInterfaceMockRecorder) ScrapeConfigs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScrapeConfigs", reflect.TypeOf((*MockInterface)(nil).ScrapeConfigs))
-}
-
-// ServiceDNSNames mocks base method.
-func (m *MockInterface) ServiceDNSNames() []string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ServiceDNSNames")
-	ret0, _ := ret[0].([]string)
-	return ret0
-}
-
-// ServiceDNSNames indicates an expected call of ServiceDNSNames.
-func (mr *MockInterfaceMockRecorder) ServiceDNSNames() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceDNSNames", reflect.TypeOf((*MockInterface)(nil).ServiceDNSNames))
 }
 
 // SetBackupConfig mocks base method.
@@ -172,18 +158,6 @@ func (m *MockInterface) SetOwnerCheckConfig(arg0 *etcd.OwnerCheckConfig) {
 func (mr *MockInterfaceMockRecorder) SetOwnerCheckConfig(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOwnerCheckConfig", reflect.TypeOf((*MockInterface)(nil).SetOwnerCheckConfig), arg0)
-}
-
-// SetSecrets mocks base method.
-func (m *MockInterface) SetSecrets(arg0 etcd.Secrets) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetSecrets", arg0)
-}
-
-// SetSecrets indicates an expected call of SetSecrets.
-func (mr *MockInterfaceMockRecorder) SetSecrets(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSecrets", reflect.TypeOf((*MockInterface)(nil).SetSecrets), arg0)
 }
 
 // Snapshot mocks base method.

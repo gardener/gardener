@@ -1,0 +1,10 @@
+# TODO(rfranzke): Delete this Helm chart in a future version.
+{{- if or .Values.global.vpaEnabled .Values.enabled }}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: verticalpodautoscalers.autoscaling.k8s.io
+  annotations:
+    resources.gardener.cloud/mode: Ignore
+{{- end }}

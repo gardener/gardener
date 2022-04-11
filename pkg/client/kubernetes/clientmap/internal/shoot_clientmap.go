@@ -20,6 +20,9 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/clock"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	baseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -42,7 +45,7 @@ func NewShootClientMap(factory *ShootClientSetFactory) clientmap.ClientMap {
 	factory.clientKeyToSeedInfo = make(map[ShootClientSetKey]seedInfo)
 	factory.log = logger
 	return &shootClientMap{
-		ClientMap: NewGenericClientMap(factory, logger),
+		ClientMap: NewGenericClientMap(factory, logger, clock.RealClock{}),
 	}
 }
 
@@ -70,41 +73,60 @@ type seedInfo struct {
 
 // CalculateClientSetHash calculates a SHA256 hash of the kubeconfig in the 'gardener' secret in the Shoot's Seed namespace.
 func (f *ShootClientSetFactory) CalculateClientSetHash(ctx context.Context, k clientmap.ClientSetKey) (string, error) {
-	key, ok := k.(ShootClientSetKey)
-	if !ok {
-		return "", fmt.Errorf("unsupported ClientSetKey: expected %T got %T", ShootClientSetKey{}, k)
-	}
-
-	seedNamespace, seedClient, err := f.getSeedNamespace(ctx, key)
+	_, hash, err := f.getSecretAndComputeHash(ctx, k)
 	if err != nil {
 		return "", err
 	}
 
-	kubeconfigSecret := &corev1.Secret{}
-	if err := seedClient.Client().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: f.secretName(seedNamespace)}, kubeconfigSecret); err != nil {
-		return "", err
-	}
-
-	return utils.ComputeSHA256Hex(kubeconfigSecret.Data[kubernetes.KubeConfig]), nil
+	return hash, nil
 }
 
 // NewClientSet creates a new ClientSet for a Shoot cluster.
-func (f *ShootClientSetFactory) NewClientSet(ctx context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, error) {
-	key, ok := k.(ShootClientSetKey)
-	if !ok {
-		return nil, fmt.Errorf("unsupported ClientSetKey: expected %T got %T", ShootClientSetKey{}, k)
-	}
-
-	seedNamespace, seedClient, err := f.getSeedNamespace(ctx, key)
+func (f *ShootClientSetFactory) NewClientSet(ctx context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, string, error) {
+	kubeconfigSecret, hash, err := f.getSecretAndComputeHash(ctx, k)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return NewClientFromSecret(ctx, seedClient.Client(), seedNamespace, f.secretName(seedNamespace),
+	// Kubeconfig secrets are created with empty authinfo and it's expected that gardener-resource-manager eventually
+	// populates a token, so let's check whether the read secret already contains authinfo
+	tokenPopulated, err := isTokenPopulated(kubeconfigSecret)
+	if err != nil {
+		return nil, "", err
+	}
+	if !tokenPopulated {
+		return nil, "", fmt.Errorf("token for shoot kubeconfig was not populated yet")
+	}
+
+	clientSet, err := NewClientFromSecretObject(kubeconfigSecret,
 		kubernetes.WithClientConnectionOptions(f.ClientConnectionConfig),
 		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.ShootScheme}),
 		kubernetes.WithDisabledCachedClient(),
 	)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return clientSet, hash, nil
+}
+
+func (f *ShootClientSetFactory) getSecretAndComputeHash(ctx context.Context, k clientmap.ClientSetKey) (*corev1.Secret, string, error) {
+	key, ok := k.(ShootClientSetKey)
+	if !ok {
+		return nil, "", fmt.Errorf("unsupported ClientSetKey: expected %T got %T", ShootClientSetKey{}, k)
+	}
+
+	seedNamespace, seedClient, err := f.getSeedNamespace(ctx, key)
+	if err != nil {
+		return nil, "", err
+	}
+
+	kubeconfigSecret := &corev1.Secret{}
+	if err := seedClient.Client().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: f.secretName(seedNamespace)}, kubeconfigSecret); err != nil {
+		return nil, "", err
+	}
+
+	return kubeconfigSecret, utils.ComputeSHA256Hex(kubeconfigSecret.Data[kubernetes.KubeConfig]), nil
 }
 
 func (f *ShootClientSetFactory) secretName(seedNamespace string) string {
@@ -204,4 +226,30 @@ type ShootClientSetKey struct {
 // Key returns the string representation of the ClientSetKey.
 func (k ShootClientSetKey) Key() string {
 	return k.Namespace + "/" + k.Name
+}
+
+func isTokenPopulated(secret *corev1.Secret) (bool, error) {
+	kubeconfig := &clientcmdv1.Config{}
+	if _, _, err := clientcmdlatest.Codec.Decode(secret.Data[kubernetes.KubeConfig], nil, kubeconfig); err != nil {
+		return false, err
+	}
+
+	var userName string
+	for _, namedContext := range kubeconfig.Contexts {
+		if namedContext.Name == kubeconfig.CurrentContext {
+			userName = namedContext.Context.AuthInfo
+			break
+		}
+	}
+
+	for _, users := range kubeconfig.AuthInfos {
+		if users.Name == userName {
+			if len(users.AuthInfo.Token) > 0 {
+				return true, nil
+			}
+			return false, nil
+		}
+	}
+
+	return false, nil
 }

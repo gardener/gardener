@@ -46,7 +46,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -61,6 +61,8 @@ const (
 	deploymentName      = Name
 	containerName       = Name
 
+	metricsPort     = 8080
+	healthPort      = 8081
 	port            = 10250
 	volumeName      = Name + "-tls"
 	volumeMountPath = "/srv/gardener-seed-admission-controller"
@@ -178,12 +180,26 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 			Spec: corev1.ServiceSpec{
 				Type:     corev1.ServiceTypeClusterIP,
 				Selector: getLabels(),
-				Ports: []corev1.ServicePort{{
-					Name:       "web",
-					Port:       443,
-					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(port),
-				}},
+				Ports: []corev1.ServicePort{
+					{
+						Name:       "metrics",
+						Protocol:   corev1.ProtocolTCP,
+						Port:       metricsPort,
+						TargetPort: intstr.FromInt(metricsPort),
+					},
+					{
+						Name:       "health",
+						Port:       healthPort,
+						Protocol:   corev1.ProtocolTCP,
+						TargetPort: intstr.FromInt(healthPort),
+					},
+					{
+						Name:       "web",
+						Port:       443,
+						Protocol:   corev1.ProtocolTCP,
+						TargetPort: intstr.FromInt(port),
+					},
+				},
 			},
 		}
 
@@ -208,10 +224,6 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 				Selector: &metav1.LabelSelector{MatchLabels: getLabels()},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{
-							// TODO(rfranzke): Remove in a future release.
-							"security.gardener.cloud/trigger": "rollout",
-						},
 						Labels: getLabels(),
 					},
 					Spec: corev1.PodSpec{
@@ -238,19 +250,47 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 								fmt.Sprintf("--port=%d", port),
 								fmt.Sprintf("--tls-cert-dir=%s", volumeMountPath),
 								fmt.Sprintf("--allow-invalid-extension-resources=%t", !gardenletfeatures.FeatureGate.Enabled(features.DenyInvalidExtensionResources)),
+								fmt.Sprintf("--metrics-bind-address=:%d", metricsPort),
+								fmt.Sprintf("--health-bind-address=:%d", healthPort),
 							},
-							Ports: []corev1.ContainerPort{{
-								ContainerPort: int32(port),
-							}},
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "metrics",
+									ContainerPort: metricsPort,
+									Protocol:      corev1.ProtocolTCP,
+								},
+								{
+									ContainerPort: int32(port),
+								},
+							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
 									corev1.ResourceCPU:    resource.MustParse("20m"),
 									corev1.ResourceMemory: resource.MustParse("50Mi"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
 									corev1.ResourceMemory: resource.MustParse("100Mi"),
 								},
+							},
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/healthz",
+										Scheme: "HTTP",
+										Port:   intstr.FromInt(healthPort),
+									},
+								},
+								InitialDelaySeconds: 5,
+							},
+							ReadinessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/readyz",
+										Scheme: "HTTP",
+										Port:   intstr.FromInt(healthPort),
+									},
+								},
+								InitialDelaySeconds: 10,
 							},
 							VolumeMounts: []corev1.VolumeMount{{
 								Name:      volumeName,
@@ -285,20 +325,20 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 			},
 		}
 
-		updateMode = autoscalingv1beta2.UpdateModeAuto
-		vpa        = &autoscalingv1beta2.VerticalPodAutoscaler{
+		updateMode = vpaautoscalingv1.UpdateModeAuto
+		vpa        = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      Name + "-vpa",
 				Namespace: g.namespace,
 				Labels:    getLabels(),
 			},
-			Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 					Kind:       "Deployment",
 					Name:       deployment.Name,
 				},
-				UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 					UpdateMode: &updateMode,
 				},
 			},

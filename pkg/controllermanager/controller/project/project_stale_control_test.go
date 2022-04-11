@@ -22,7 +22,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/project"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -78,8 +77,6 @@ var _ = Describe("ProjectStaleControl", func() {
 			ctrl := gomock.NewController(GinkgoT())
 			k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
 
-			logger.Logger = logger.NewNopLogger()
-
 			project = &gardencorev1beta1.Project{
 				ObjectMeta: metav1.ObjectMeta{Name: projectName},
 				Spec:       gardencorev1beta1.ProjectSpec{Namespace: &namespaceName},
@@ -114,7 +111,7 @@ var _ = Describe("ProjectStaleControl", func() {
 			}
 			request = reconcile.Request{NamespacedName: types.NamespacedName{Name: project.Name}}
 
-			reconciler = NewProjectStaleReconciler(logger.NewNopLogger(), cfg, k8sGardenRuntimeClient)
+			reconciler = NewProjectStaleReconciler(cfg, k8sGardenRuntimeClient)
 
 			k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(project.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Project) error {
 				*obj = *project

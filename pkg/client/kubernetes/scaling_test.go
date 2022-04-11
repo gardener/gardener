@@ -16,62 +16,124 @@ package kubernetes_test
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/gardener/gardener/pkg/client/kubernetes"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/golang/mock/gomock"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
+
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("scale", func() {
 	var (
-		ctx context.Context
-		c   client.Client
-		key client.ObjectKey
+		ctrl          *gomock.Controller
+		runtimeClient *mockclient.MockClient
+		key           = client.ObjectKey{Name: "foo", Namespace: "bar"}
+		statefullSet  = &appsv1.StatefulSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      key.Name,
+				Namespace: key.Namespace,
+			},
+		}
+		deployment = &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      key.Name,
+				Namespace: key.Namespace,
+			},
+		}
+		statefullSetWith2Replicas = appsv1.StatefulSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Generation: 2,
+			},
+			Spec: appsv1.StatefulSetSpec{
+				Replicas: pointer.Int32Ptr(2),
+			},
+			Status: appsv1.StatefulSetStatus{
+				ObservedGeneration: 2,
+				Replicas:           2,
+				AvailableReplicas:  2,
+			},
+		}
 	)
 
 	BeforeEach(func() {
-		ctx = context.TODO()
-		key = client.ObjectKey{Name: "foo", Namespace: "bar"}
-		om := metav1.ObjectMeta{Name: "foo", Namespace: "bar"}
+		ctrl = gomock.NewController(GinkgoT())
+		runtimeClient = mockclient.NewMockClient(ctrl)
+	})
 
-		s := runtime.NewScheme()
-		Expect(appsv1.AddToScheme(s)).NotTo(HaveOccurred(), "adding apps to schema succeeds")
-		Expect(druidv1alpha1.AddToScheme(s)).NotTo(HaveOccurred(), "adding druid to schema succeeds")
-
-		c = fake.NewClientBuilder().WithScheme(s).WithObjects(
-			&appsv1.StatefulSet{ObjectMeta: om},
-			&appsv1.Deployment{ObjectMeta: om},
-			&druidv1alpha1.Etcd{ObjectMeta: om},
-		).Build()
+	AfterEach(func() {
+		ctrl.Finish()
 	})
 
 	Context("ScaleStatefulSet", func() {
 		It("sets scale to 2", func() {
-			Expect(ScaleStatefulSet(ctx, c, key, 2)).NotTo(HaveOccurred(), "scale succeeds")
-
-			updated := &appsv1.StatefulSet{}
-			Expect(c.Get(ctx, key, updated)).NotTo(HaveOccurred(), "could get the updated resource")
-
-			Expect(updated.Spec.Replicas).To(PointTo(BeEquivalentTo(2)), "updated replica")
+			runtimeClient.EXPECT().Patch(context.TODO(), statefullSet, getPatch(2))
+			Expect(ScaleStatefulSet(context.TODO(), runtimeClient, key, 2)).To(Succeed(), "scale succeeds")
 		})
 	})
 
 	Context("ScaleDeployment", func() {
 		It("sets scale to 2", func() {
-			Expect(ScaleDeployment(ctx, c, key, 2)).NotTo(HaveOccurred(), "scale succeeds")
+			runtimeClient.EXPECT().Patch(context.TODO(), deployment, getPatch(2))
+			Expect(ScaleDeployment(context.TODO(), runtimeClient, key, 2)).To(Succeed(), "scale succeeds")
+		})
+	})
 
-			updated := &appsv1.Deployment{}
-			Expect(c.Get(ctx, key, updated)).NotTo(HaveOccurred(), "could get the updated resource")
+	Describe("#WaitUntilDeploymentScaledToDesiredReplicas", func() {
+		It("should wait until deployment was scaled", func() {
+			runtimeClient.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(
+				func(_ context.Context, _ types.NamespacedName, deploy *appsv1.Deployment) error {
+					*deploy = appsv1.Deployment{
+						ObjectMeta: metav1.ObjectMeta{
+							Generation: 2,
+						},
+						Spec: appsv1.DeploymentSpec{
+							Replicas: pointer.Int32Ptr(2),
+						},
+						Status: appsv1.DeploymentStatus{
+							ObservedGeneration: 2,
+							Replicas:           2,
+							AvailableReplicas:  2,
+						},
+					}
+					return nil
+				})
+			Expect(WaitUntilDeploymentScaledToDesiredReplicas(context.TODO(), runtimeClient, key, 2)).To(Succeed(), "scale done")
+		})
+	})
 
-			Expect(updated.Spec.Replicas).To(PointTo(BeEquivalentTo(2)), "updated replica")
+	Describe("#WaitUntilStatefulSetScaledToDesiredReplicas", func() {
+		It("should wait until statefulset was scaled", func() {
+			runtimeClient.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).DoAndReturn(
+				func(_ context.Context, _ types.NamespacedName, deploy *appsv1.StatefulSet) error {
+					*deploy = statefullSetWith2Replicas
+					return nil
+				})
+			Expect(WaitUntilStatefulSetScaledToDesiredReplicas(context.TODO(), runtimeClient, key, 2)).To(Succeed(), "scale done")
+		})
+	})
+
+	Describe("#ScaleStatefulSetAndWaitUntilScaled", func() {
+		It("should scale and wait until statefulset was scaled", func() {
+			runtimeClient.EXPECT().Patch(context.TODO(), statefullSet, getPatch(2))
+			runtimeClient.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).DoAndReturn(
+				func(_ context.Context, _ types.NamespacedName, deploy *appsv1.StatefulSet) error {
+					*deploy = statefullSetWith2Replicas
+					return nil
+				})
+			Expect(ScaleStatefulSetAndWaitUntilScaled(context.TODO(), runtimeClient, key, 2)).To(Succeed(), "scale done")
 		})
 	})
 })
+
+func getPatch(replicas int) client.Patch {
+	return client.RawPatch(types.MergePatchType, []byte(fmt.Sprintf(`{"spec":{"replicas":%d}}`, replicas)))
+}

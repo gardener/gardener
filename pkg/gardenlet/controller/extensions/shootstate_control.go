@@ -38,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/extensions"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	unstructuredutils "github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
 )
 
@@ -81,20 +80,15 @@ func (s *ShootStateControl) CreateShootStateSyncReconcileFunc(kind string, objec
 		newState := extensionObj.GetExtensionStatus().GetState()
 		newResources := extensionObj.GetExtensionStatus().GetResources()
 
-		cluster, err := s.getClusterFromRequest(ctx, req)
+		shootState, _, err := extensions.GetShootStateForCluster(ctx, s.k8sGardenClient.Client(), s.seedClient.Client(), s.getClusterNameFromRequest(req))
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return reconcile.Result{}, nil
 			}
-			return reconcile.Result{}, fmt.Errorf("could not get cluster with name %s : %v", cluster.Name, err)
-		}
-
-		shootState, err := s.getShootStateFromCluster(ctx, cluster)
-		if err != nil {
 			return reconcile.Result{}, err
 		}
-		shootStateCopy := shootState.DeepCopy()
 
+		shootStateCopy := shootState.DeepCopy()
 		currentState, currentResources := getShootStateExtensionStateAndResources(shootState, kind, &name, purpose)
 
 		// Delete resources which are no longer present in the extension state from the ShootState.Spec.Resources list
@@ -234,7 +228,7 @@ func (s *ShootStateControl) getExtensionObject(ctx context.Context, key types.Na
 	return apiextensions.Accessor(obj)
 }
 
-func (s *ShootStateControl) getClusterFromRequest(ctx context.Context, req reconcile.Request) (*extensionsv1alpha1.Cluster, error) {
+func (s *ShootStateControl) getClusterNameFromRequest(req reconcile.Request) string {
 	var clusterName string
 	if req.Namespace == "" {
 		// Handling for cluster-scoped backupentry extension resources.
@@ -243,28 +237,5 @@ func (s *ShootStateControl) getClusterFromRequest(ctx context.Context, req recon
 		clusterName = req.Namespace
 	}
 
-	cluster := &extensionsv1alpha1.Cluster{}
-	if err := s.seedClient.Client().Get(ctx, kutil.Key(clusterName), cluster); err != nil {
-		return nil, err
-	}
-
-	return cluster, nil
-}
-
-func (s *ShootStateControl) getShootStateFromCluster(ctx context.Context, cluster *extensionsv1alpha1.Cluster) (*gardencorev1alpha1.ShootState, error) {
-	shoot, err := extensions.ShootFromCluster(cluster)
-	if err != nil {
-		return nil, err
-	}
-
-	if shoot == nil {
-		return nil, fmt.Errorf("cluster resource %s doesn't contain shoot resource in raw format", cluster.Name)
-	}
-
-	shootState := &gardencorev1alpha1.ShootState{}
-	if err := s.k8sGardenClient.Client().Get(ctx, kutil.Key(shoot.Namespace, shoot.Name), shootState); err != nil {
-		return nil, err
-	}
-
-	return shootState, nil
+	return clusterName
 }

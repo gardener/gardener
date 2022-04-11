@@ -24,7 +24,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
-	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -168,8 +167,7 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObject(ctx, k.Client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-rbac-proxy-kubeconfig", Namespace: k.Namespace}})
+	return nil
 }
 
 func (k *kubeRBACProxy) Destroy(ctx context.Context) error {
@@ -180,8 +178,6 @@ func (k *kubeRBACProxy) Destroy(ctx context.Context) error {
 	return kutil.DeleteObjects(ctx, k.Client,
 		k.newKubeRBACProxyShootAccessSecret().Secret,
 		k.newPromtailShootAccessSecret().Secret,
-		// TODO(rfranzke): Remove in a future release.
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-rbac-proxy-kubeconfig", Namespace: k.Namespace}},
 	)
 }
 

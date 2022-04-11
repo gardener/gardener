@@ -13,20 +13,12 @@ apiserver-proxy:
   proxySeedServer:
     host: dummy.127.0.0.1.nip.io
     port: 8443
-coredns:
-  enabled: true
-kube-apiserver-kubelet:
-  enabled: true
-kube-proxy:
-  enabled: true
 monitoring:
   enabled: true
   node-exporter:
     images:
       node-exporter: image-repository:image-tag
 network-policies:
-  enabled: true
-node-problem-detector:
   enabled: true
 podsecuritypolicies:
   enabled: true
@@ -45,9 +37,5 @@ shoot-info:
   maintenanceBegin: 210000+0000
   maintenanceEnd: 220000+0000
   extensions: shoot-dns-service,foo-bar
-vpn-shoot:
-  enabled: false
 vertical-pod-autoscaler:
-  enabled: false
-node-local-dns:
   enabled: false

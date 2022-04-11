@@ -16,7 +16,6 @@ package resourcemanager
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -34,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -49,33 +49,30 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	// ServiceName is the name of the service of the gardener-resource-manager.
-	ServiceName = "gardener-resource-manager"
 	// ManagedResourceName is the name for the ManagedResource containing resources deployed to the shoot cluster.
 	ManagedResourceName = "shoot-core-gardener-resource-manager"
-	// SecretName is a constant for the secret name for the gardener resource manager's kubeconfig secret.
-	SecretName = "gardener-resource-manager"
-	// SecretNameServer is the name of the gardener-resource-manager server certificate secret.
-	SecretNameServer = "gardener-resource-manager-server"
 	// SecretNameShootAccess is the name of the shoot access secret for the gardener-resource-manager.
 	SecretNameShootAccess = gutil.SecretNamePrefixShootAccess + v1beta1constants.DeploymentNameGardenerResourceManager
 	// LabelValue is a constant for the value of the 'app' label on Kubernetes resources.
 	LabelValue = "gardener-resource-manager"
 
+	serviceName        = "gardener-resource-manager"
+	secretNameServer   = "gardener-resource-manager-server"
 	clusterRoleName    = "gardener-resource-manager-seed"
+	roleName           = "gardener-resource-manager"
+	serviceAccountName = "gardener-resource-manager"
+	metricsPortName    = "metrics"
 	containerName      = v1beta1constants.DeploymentNameGardenerResourceManager
 	healthPort         = 8081
 	metricsPort        = 8080
 	serverPort         = 10250
 	serverServicePort  = 443
-	roleName           = "gardener-resource-manager"
-	serviceAccountName = "gardener-resource-manager"
 
 	volumeNameBootstrapKubeconfig  = "kubeconfig-bootstrap"
 	volumeNameCerts                = "tls"
@@ -133,6 +130,7 @@ var (
 // Interface contains functions for a gardener-resource-manager deployer.
 type Interface interface {
 	component.DeployWaiter
+	component.MonitoringComponent
 	// GetReplicas gets the Replicas field in the Values.
 	GetReplicas() *int32
 	// SetReplicas sets the Replicas field in the Values.
@@ -145,23 +143,26 @@ type Interface interface {
 func New(
 	client client.Client,
 	namespace string,
+	secretsManager secretsmanager.Interface,
 	image string,
 	values Values,
 ) Interface {
 	return &resourceManager{
-		client:    client,
-		image:     image,
-		namespace: namespace,
-		values:    values,
+		client:         client,
+		image:          image,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		values:         values,
 	}
 }
 
 type resourceManager struct {
-	client    client.Client
-	namespace string
-	image     string
-	values    Values
-	secrets   Secrets
+	client         client.Client
+	namespace      string
+	secretsManager secretsmanager.Interface
+	image          string
+	values         Values
+	secrets        Secrets
 }
 
 // Values holds the optional configuration options for the gardener resource manager
@@ -192,6 +193,8 @@ type Values struct {
 	ResourceClass *string
 	// RetryPeriod configures the retry period for leader election
 	RetryPeriod *time.Duration
+	// SecretNameServerCA is the name of the server CA secret.
+	SecretNameServerCA string
 	// SyncPeriod configures the duration of how often existing resources should be synced
 	SyncPeriod *time.Duration
 	// TargetDiffersFromSourceCluster states whether the target cluster is a different one than the source cluster
@@ -213,10 +216,6 @@ type VPAConfig struct {
 }
 
 func (r *resourceManager) Deploy(ctx context.Context) error {
-	if r.secrets.Server.Name == "" || r.secrets.Server.Checksum == "" {
-		return fmt.Errorf("missing server secret information")
-	}
-
 	if r.values.TargetDiffersFromSourceCluster {
 		r.secrets.shootAccess = r.newShootAccessSecret()
 		if err := r.secrets.shootAccess.WithTokenExpirationDuration("24h").Reconcile(ctx, r.client); err != nil {
@@ -247,11 +246,7 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 	}
 
 	// TODO(rfranzke): Remove in a future release.
-	if r.values.TargetDiffersFromSourceCluster && pointer.Int32Deref(r.values.Replicas, 0) > 0 {
-		return kutil.DeleteObject(ctx, r.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: r.namespace}})
-	}
-
-	return nil
+	return kutil.DeleteObject(ctx, r.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager-server", Namespace: r.namespace}})
 }
 
 func (r *resourceManager) Destroy(ctx context.Context) error {
@@ -261,8 +256,6 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 		r.emptyDeployment(),
 		r.emptyService(),
 		r.emptyServiceAccount(),
-		r.emptyClusterRole(),
-		r.emptyClusterRoleBinding(),
 	}
 
 	if r.values.TargetDiffersFromSourceCluster {
@@ -277,18 +270,17 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 			return err
 		}
 
-		objectsToDelete = append(objectsToDelete, r.newShootAccessSecret().Secret)
+		objectsToDelete = append(objectsToDelete,
+			r.newShootAccessSecret().Secret,
+			r.emptyRoleInWatchedNamespace(),
+			r.emptyRoleBindingInWatchedNamespace(),
+		)
 	} else {
-		objectsToDelete = append(objectsToDelete, r.emptyMutatingWebhookConfiguration())
-	}
-
-	role, err := r.emptyRoleInWatchedNamespace()
-	if err == nil {
-		objectsToDelete = append(objectsToDelete, role)
-	}
-	rb, err := r.emptyRoleBindingInWatchedNamespace()
-	if err == nil {
-		objectsToDelete = append(objectsToDelete, rb)
+		objectsToDelete = append(objectsToDelete,
+			r.emptyMutatingWebhookConfiguration(),
+			r.emptyClusterRole(),
+			r.emptyClusterRoleBinding(),
+		)
 	}
 
 	return kutil.DeleteObjects(
@@ -364,11 +356,8 @@ func (r *resourceManager) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 }
 
 func (r *resourceManager) ensureRoleInWatchedNamespace(ctx context.Context, policies []rbacv1.PolicyRule) error {
-	role, err := r.emptyRoleInWatchedNamespace()
-	if err != nil {
-		return err
-	}
-	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, role, func() error {
+	role := r.emptyRoleInWatchedNamespace()
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, role, func() error {
 		role.Labels = r.getLabels()
 		role.Rules = policies
 		return nil
@@ -376,19 +365,13 @@ func (r *resourceManager) ensureRoleInWatchedNamespace(ctx context.Context, poli
 	return err
 }
 
-func (r *resourceManager) emptyRoleInWatchedNamespace() (*rbacv1.Role, error) {
-	if r.values.WatchedNamespace == nil {
-		return nil, errors.New("creating Role in watched namespace failed - no namespace defined")
-	}
-	return &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: roleName, Namespace: *r.values.WatchedNamespace}}, nil
+func (r *resourceManager) emptyRoleInWatchedNamespace() *rbacv1.Role {
+	return &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: roleName, Namespace: *r.values.WatchedNamespace}}
 }
 
 func (r *resourceManager) ensureRoleBinding(ctx context.Context) error {
-	roleBinding, err := r.emptyRoleBindingInWatchedNamespace()
-	if err != nil {
-		return err
-	}
-	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, roleBinding, func() error {
+	roleBinding := r.emptyRoleBindingInWatchedNamespace()
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, roleBinding, func() error {
 		roleBinding.Labels = r.getLabels()
 		roleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
@@ -405,18 +388,14 @@ func (r *resourceManager) ensureRoleBinding(ctx context.Context) error {
 	return err
 }
 
-func (r *resourceManager) emptyRoleBindingInWatchedNamespace() (*rbacv1.RoleBinding, error) {
-	if r.values.WatchedNamespace == nil {
-		return nil, errors.New("creating RoleBinding in watched namespace failed - no namespace defined")
-	}
-	return &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: *r.values.WatchedNamespace}}, nil
+func (r *resourceManager) emptyRoleBindingInWatchedNamespace() *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: *r.values.WatchedNamespace}}
 }
 
 func (r *resourceManager) ensureService(ctx context.Context) error {
 	const (
-		healthPortName  = "health"
-		metricsPortName = "metrics"
-		serverPortName  = "server"
+		healthPortName = "health"
+		serverPortName = "server"
 	)
 
 	// TODO(rfranzke): This can be removed in a future version.
@@ -461,7 +440,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 }
 
 func (r *resourceManager) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ServiceName, Namespace: r.namespace}}
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: serviceName, Namespace: r.namespace}}
 }
 
 // TODO(rfranzke): Remove this special handling when we only support seed clusters of at least K8s 1.20.
@@ -483,6 +462,17 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 	deployment := r.emptyDeployment()
 
 	rootCAVolumeSourceName, err := r.getRootCAVolumeSourceName(ctx)
+	if err != nil {
+		return err
+	}
+
+	secretServer, err := r.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
+		Name:                        secretNameServer,
+		CommonName:                  v1beta1constants.DeploymentNameGardenerResourceManager,
+		DNSNames:                    kutil.DNSNamesForService(serviceName, r.namespace),
+		CertType:                    secrets.ServerCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(r.values.SecretNameServerCA), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return err
 	}
@@ -538,10 +528,6 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 								corev1.ResourceCPU:    resource.MustParse("23m"),
 								corev1.ResourceMemory: resource.MustParse("47Mi"),
 							},
-							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("400m"),
-								corev1.ResourceMemory: resource.MustParse("512Mi"),
-							},
 						},
 						LivenessProbe: &corev1.Probe{
 							ProbeHandler: corev1.ProbeHandler{
@@ -557,75 +543,84 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 							SuccessThreshold:    1,
 							TimeoutSeconds:      5,
 						},
-						VolumeMounts: []corev1.VolumeMount{{
-							Name:      volumeNameAPIServerAccess,
-							MountPath: volumeMountPathAPIServerAccess,
-							ReadOnly:  true,
-						}},
+						ReadinessProbe: &corev1.Probe{
+							ProbeHandler: corev1.ProbeHandler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path:   "/readyz",
+									Scheme: "HTTP",
+									Port:   intstr.FromInt(healthPort),
+								},
+							},
+							InitialDelaySeconds: 10,
+						},
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      volumeNameAPIServerAccess,
+								MountPath: volumeMountPathAPIServerAccess,
+								ReadOnly:  true,
+							},
+							{
+								MountPath: volumeMountPathCerts,
+								Name:      volumeNameCerts,
+								ReadOnly:  true,
+							},
+						},
 					},
 				},
-				Volumes: []corev1.Volume{{
-					Name: volumeNameAPIServerAccess,
-					VolumeSource: corev1.VolumeSource{
-						Projected: &corev1.ProjectedVolumeSource{
-							DefaultMode: pointer.Int32(420),
-							Sources: []corev1.VolumeProjection{
-								{
-									ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
-										ExpirationSeconds: pointer.Int64(60 * 60 * 12),
-										Path:              "token",
-									},
-								},
-								{
-									Secret: &corev1.SecretProjection{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: rootCAVolumeSourceName,
+				Volumes: []corev1.Volume{
+					{
+						Name: volumeNameAPIServerAccess,
+						VolumeSource: corev1.VolumeSource{
+							Projected: &corev1.ProjectedVolumeSource{
+								DefaultMode: pointer.Int32(420),
+								Sources: []corev1.VolumeProjection{
+									{
+										ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
+											ExpirationSeconds: pointer.Int64(60 * 60 * 12),
+											Path:              "token",
 										},
-										Items: []corev1.KeyToPath{{
-											Key:  "ca.crt",
-											Path: "ca.crt",
-										}},
 									},
-								},
-								{
-									DownwardAPI: &corev1.DownwardAPIProjection{
-										Items: []corev1.DownwardAPIVolumeFile{{
-											FieldRef: &corev1.ObjectFieldSelector{
-												APIVersion: "v1",
-												FieldPath:  "metadata.namespace",
+									{
+										Secret: &corev1.SecretProjection{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: rootCAVolumeSourceName,
 											},
-											Path: "namespace",
-										}},
+											Items: []corev1.KeyToPath{{
+												Key:  "ca.crt",
+												Path: "ca.crt",
+											}},
+										},
+									},
+									{
+										DownwardAPI: &corev1.DownwardAPIProjection{
+											Items: []corev1.DownwardAPIVolumeFile{{
+												FieldRef: &corev1.ObjectFieldSelector{
+													APIVersion: "v1",
+													FieldPath:  "metadata.namespace",
+												},
+												Path: "namespace",
+											}},
+										},
 									},
 								},
 							},
 						},
 					},
-				}},
-			},
-		}
-
-		if r.secrets.Server.Name != "" {
-			metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum/secret-"+r.secrets.Server.Name, r.secrets.Server.Checksum)
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-				Name: volumeNameCerts,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName:  r.secrets.Server.Name,
-						DefaultMode: pointer.Int32(420),
+					{
+						Name: volumeNameCerts,
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName:  secretServer.Name,
+								DefaultMode: pointer.Int32(420),
+							},
+						},
 					},
 				},
-			})
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-				MountPath: volumeMountPathCerts,
-				Name:      volumeNameCerts,
-				ReadOnly:  true,
-			})
+			},
 		}
 
 		if r.values.TargetDiffersFromSourceCluster {
 			if r.secrets.BootstrapKubeconfig != nil {
-				metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum/secret-"+r.secrets.BootstrapKubeconfig.Name, r.secrets.BootstrapKubeconfig.Checksum)
 				deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
 					Name: volumeNameBootstrapKubeconfig,
 					VolumeSource: corev1.VolumeSource{
@@ -641,7 +636,12 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 					ReadOnly:  true,
 				})
 			} else if r.secrets.shootAccess != nil {
-				utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, r.secrets.shootAccess.Secret.Name))
+				genericTokenKubeconfigSecret, found := r.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+				if !found {
+					return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
+				}
+
+				utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, r.secrets.shootAccess.Secret.Name))
 			}
 		}
 
@@ -736,9 +736,7 @@ func (r *resourceManager) computeCommand() []string {
 		cmd = append(cmd, "--target-disable-cache")
 	}
 	cmd = append(cmd, fmt.Sprintf("--port=%d", serverPort))
-	if r.secrets.Server.Name != "" {
-		cmd = append(cmd, fmt.Sprintf("--tls-cert-dir=%s", volumeMountPathCerts))
-	}
+	cmd = append(cmd, fmt.Sprintf("--tls-cert-dir=%s", volumeMountPathCerts))
 	if r.values.TargetDiffersFromSourceCluster {
 		cmd = append(cmd, "--target-kubeconfig="+gutil.PathGenericKubeconfig)
 	}
@@ -761,7 +759,8 @@ func (r *resourceManager) emptyServiceAccount() *corev1.ServiceAccount {
 
 func (r *resourceManager) ensureVPA(ctx context.Context) error {
 	vpa := r.emptyVPA()
-	vpaUpdateMode := autoscalingv1beta2.UpdateModeAuto
+	vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+	controlledValues := vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, vpa, func() error {
 		vpa.Labels = r.getLabels()
@@ -770,14 +769,15 @@ func (r *resourceManager) ensureVPA(ctx context.Context) error {
 			Kind:       "Deployment",
 			Name:       v1beta1constants.DeploymentNameGardenerResourceManager,
 		}
-		vpa.Spec.UpdatePolicy = &autoscalingv1beta2.PodUpdatePolicy{
+		vpa.Spec.UpdatePolicy = &vpaautoscalingv1.PodUpdatePolicy{
 			UpdateMode: &vpaUpdateMode,
 		}
-		vpa.Spec.ResourcePolicy = &autoscalingv1beta2.PodResourcePolicy{
-			ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
+			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
-					ContainerName: autoscalingv1beta2.DefaultContainerResourcePolicy,
-					MinAllowed:    r.values.VPA.MinAllowed,
+					ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
+					MinAllowed:       r.values.VPA.MinAllowed,
+					ControlledValues: &controlledValues,
 				},
 			},
 		}
@@ -786,8 +786,8 @@ func (r *resourceManager) ensureVPA(ctx context.Context) error {
 	return err
 }
 
-func (r *resourceManager) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
-	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager-vpa", Namespace: r.namespace}}
+func (r *resourceManager) emptyVPA() *vpaautoscalingv1.VerticalPodAutoscaler {
+	return &vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager-vpa", Namespace: r.namespace}}
 }
 
 func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {
@@ -814,9 +814,14 @@ func (r *resourceManager) emptyPodDisruptionBudget() *policyv1beta1.PodDisruptio
 func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context) error {
 	mutatingWebhookConfiguration := r.emptyMutatingWebhookConfiguration()
 
+	secretServerCA, found := r.secretsManager.Get(r.values.SecretNameServerCA)
+	if !found {
+		return fmt.Errorf("secret %q not found", r.values.SecretNameServerCA)
+	}
+
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, mutatingWebhookConfiguration, func() error {
 		mutatingWebhookConfiguration.Labels = appLabel()
-		mutatingWebhookConfiguration.Webhooks = GetMutatingWebhookConfigurationWebhooks(r.buildWebhookNamespaceSelector(), r.buildWebhookClientConfig)
+		mutatingWebhookConfiguration.Webhooks = GetMutatingWebhookConfigurationWebhooks(r.buildWebhookNamespaceSelector(), secretServerCA, r.buildWebhookClientConfig)
 		return nil
 	})
 	return err
@@ -831,6 +836,11 @@ func (r *resourceManager) emptyMutatingWebhookConfiguration() *admissionregistra
 }
 
 func (r *resourceManager) ensureShootResources(ctx context.Context) error {
+	secretServerCA, found := r.secretsManager.Get(r.values.SecretNameServerCA)
+	if !found {
+		return fmt.Errorf("secret %q not found", r.values.SecretNameServerCA)
+	}
+
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
@@ -855,7 +865,7 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 	)
 
 	mutatingWebhookConfiguration.Labels = appLabel()
-	mutatingWebhookConfiguration.Webhooks = GetMutatingWebhookConfigurationWebhooks(r.buildWebhookNamespaceSelector(), r.buildWebhookClientConfig)
+	mutatingWebhookConfiguration.Webhooks = GetMutatingWebhookConfigurationWebhooks(r.buildWebhookNamespaceSelector(), secretServerCA, r.buildWebhookClientConfig)
 
 	data, err := registry.AddAllAndSerialize(
 		mutatingWebhookConfiguration,
@@ -916,7 +926,7 @@ func (r *resourceManager) newShootAccessSecret() *gutil.ShootAccessSecret {
 
 // GetMutatingWebhookConfigurationWebhooks returns the MutatingWebhooks for the resourcemanager component for reuse
 // between the component and integration tests.
-func GetMutatingWebhookConfigurationWebhooks(namespaceSelector *metav1.LabelSelector, buildClientConfigFn func(string) admissionregistrationv1.WebhookClientConfig) []admissionregistrationv1.MutatingWebhook {
+func GetMutatingWebhookConfigurationWebhooks(namespaceSelector *metav1.LabelSelector, secretServerCA *corev1.Secret, buildClientConfigFn func(*corev1.Secret, string) admissionregistrationv1.WebhookClientConfig) []admissionregistrationv1.MutatingWebhook {
 	var (
 		failurePolicy = admissionregistrationv1.Fail
 		matchPolicy   = admissionregistrationv1.Exact
@@ -941,7 +951,7 @@ func GetMutatingWebhookConfigurationWebhooks(namespaceSelector *metav1.LabelSele
 			ObjectSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{resourcesv1alpha1.ResourceManagerPurpose: resourcesv1alpha1.LabelPurposeTokenInvalidation},
 			},
-			ClientConfig:            buildClientConfigFn(tokeninvalidator.WebhookPath),
+			ClientConfig:            buildClientConfigFn(secretServerCA, tokeninvalidator.WebhookPath),
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 			FailurePolicy:           &failurePolicy,
 			MatchPolicy:             &matchPolicy,
@@ -972,7 +982,7 @@ func GetMutatingWebhookConfigurationWebhooks(namespaceSelector *metav1.LabelSele
 					},
 				},
 			},
-			ClientConfig:            buildClientConfigFn(projectedtokenmount.WebhookPath),
+			ClientConfig:            buildClientConfigFn(secretServerCA, projectedtokenmount.WebhookPath),
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 			FailurePolicy:           &failurePolicy,
 			MatchPolicy:             &matchPolicy,
@@ -997,14 +1007,14 @@ func (r *resourceManager) buildWebhookNamespaceSelector() *metav1.LabelSelector 
 	}
 }
 
-func (r *resourceManager) buildWebhookClientConfig(path string) admissionregistrationv1.WebhookClientConfig {
-	clientConfig := admissionregistrationv1.WebhookClientConfig{CABundle: r.secrets.ServerCA.Data[secrets.DataKeyCertificateCA]}
+func (r *resourceManager) buildWebhookClientConfig(secretServerCA *corev1.Secret, path string) admissionregistrationv1.WebhookClientConfig {
+	clientConfig := admissionregistrationv1.WebhookClientConfig{CABundle: secretServerCA.Data[secrets.DataKeyCertificateBundle]}
 
 	if r.values.TargetDiffersFromSourceCluster {
-		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s.%s:%d%s", ServiceName, r.namespace, serverServicePort, path))
+		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s.%s:%d%s", serviceName, r.namespace, serverServicePort, path))
 	} else {
 		clientConfig.Service = &admissionregistrationv1.ServiceReference{
-			Name:      ServiceName,
+			Name:      serviceName,
 			Namespace: r.namespace,
 			Path:      &path,
 		}
@@ -1098,12 +1108,6 @@ type Secrets struct {
 	// BootstrapKubeconfig is the kubeconfig of the gardener-resource-manager used during the bootstrapping process. Its
 	// token requestor controller will request a JWT token for itself with this kubeconfig.
 	BootstrapKubeconfig *component.Secret
-	// ServerCA is a secret containing a CA certificate which was used to sign the server certificate provided in the
-	// 'Server' secret.
-	ServerCA component.Secret
-	// Server is a secret containing a x509 TLS server certificate and key for the HTTPS server inside the
-	// gardener-resource-manager (which is used for webhooks).
-	Server component.Secret
 	// RootCA is a secret containing the root CA secret of the target cluster.
 	RootCA *component.Secret
 

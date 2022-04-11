@@ -74,7 +74,7 @@ func (k *kubeAPIServer) computeShootResourcesData() (map[string][]byte, error) {
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind: rbacv1.UserKind,
-				Name: UserName,
+				Name: userName,
 			}},
 		}
 	)

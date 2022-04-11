@@ -22,38 +22,11 @@ const (
 	// VPNTunnel dictates that VPN is used as a tunnel between seed and shoot networks.
 	VPNTunnel string = "vpn-shoot"
 
-	// EtcdEncryptionChecksumLabelName is the name of the label which is added to the shoot
-	// secrets after rewriting them to ensure that successfully rewritten secrets are not
-	// (unnecessarily) rewritten during each reconciliation.
-	EtcdEncryptionChecksumLabelName = "shoot.gardener.cloud/etcd-encryption-configuration-checksum"
-
-	// EtcdEncryptionForcePlaintextAnnotationName is the name of the annotation with which to annotate
-	// the EncryptionConfiguration secret to force the decryption of shoot secrets
-	EtcdEncryptionForcePlaintextAnnotationName = "shoot.gardener.cloud/etcd-encryption-force-plaintext-secrets"
-
-	// EtcdEncryptionEncryptedResourceSecrets is the name of the secret resource to be encrypted
-	EtcdEncryptionEncryptedResourceSecrets = "secrets"
-
-	// EtcdEncryptionKeyPrefix is the prefix for the key name of the EncryptionConfiguration's key
-	EtcdEncryptionKeyPrefix = "key"
-
-	// EtcdEncryptionKeySecretLen is the expected length in bytes of the EncryptionConfiguration's key
-	EtcdEncryptionKeySecretLen = 32
-
-	// ETCDEncryptionConfigDataName is the name of ShootState data entry holding the current key and encryption state used to encrypt shoot resources
-	ETCDEncryptionConfigDataName = "etcdEncryptionConfiguration"
-
 	// GrafanaOperatorsPrefix is a constant for a prefix used for the operators Grafana instance.
 	GrafanaOperatorsPrefix = "go"
 
 	// GrafanaUsersPrefix is a constant for a prefix used for the users Grafana instance.
 	GrafanaUsersPrefix = "gu"
-
-	// GrafanaOperatorsRole is a constant for the operators role.
-	GrafanaOperatorsRole = "operators"
-
-	// GrafanaUsersRole is a constant for the users role.
-	GrafanaUsersRole = "users"
 
 	// PrometheusPrefix is a constant for a prefix used for the Prometheus instance.
 	PrometheusPrefix = "p"
@@ -63,18 +36,6 @@ const (
 
 	// LokiPrefix is a constant for a prefix used for the Loki instance.
 	LokiPrefix = "l"
-
-	// KubecfgUsername is the username for the token used for the kubeconfig the shoot.
-	KubecfgUsername = "system:cluster-admin"
-
-	// KubecfgSecretName is the name of the kubecfg secret.
-	KubecfgSecretName = "kubecfg"
-
-	// KubeAPIServerHealthCheck is a key for the kube-apiserver-health-check user.
-	KubeAPIServerHealthCheck = "kube-apiserver-health-check"
-
-	// VPASecretName is the name of the secret used by VPA
-	VPASecretName = "vpa-tls-certs"
 
 	// ManagedResourceShootCoreName is the name of the shoot core managed resource.
 	ManagedResourceShootCoreName = "shoot-core"
@@ -92,40 +53,12 @@ const (
 	// IstioNamespace is the istio-system namespace
 	IstioNamespace = "istio-system"
 
-	// AlertManagerTLS is the name of the secret resource which holds the TLS certificate for Alert Manager.
-	AlertManagerTLS = "alertmanager-tls"
-	// GrafanaTLS is the name of the secret resource which holds the TLS certificate for Grafana.
-	GrafanaTLS = "grafana-tls"
-	// PrometheusTLS is the name of the secret resource which holds the TLS certificate for Prometheus.
-	PrometheusTLS = "prometheus-tls"
-	// LokiTLS is the name of the secret resource which holds the TLS certificate for Loki.
-	LokiTLS = "loki-tls"
-
 	// EndUserCrtValidity is the time period a user facing certificate is valid.
 	EndUserCrtValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
-
-	// CrtRenewalWindow is the time window in which certificates are supposed to be replaced before they expire.
-	CrtRenewalWindow = 30 * 24 * time.Hour
 
 	// ShootDNSIngressName is a constant for the DNS resources used for the shoot ingress addon.
 	ShootDNSIngressName = "ingress"
 
 	// GardenLokiPriorityClassName is the name of the PriorityClass for the Loki in the garden namespace
 	GardenLokiPriorityClassName = "garden-loki"
-
-	// MonitoringIngressCredentials is a constant for the name of a secret containing the monitoring credentials for
-	// operators monitoring for shoots.
-	MonitoringIngressCredentials = "monitoring-ingress-credentials"
-	// MonitoringIngressCredentialsUsers is a constant for the name of a secret containing the monitoring credentials
-	// for users monitoring for shoots.
-	MonitoringIngressCredentialsUsers = "monitoring-ingress-credentials-users"
 )
-
-// IngressTLSSecretNames are the secrets which contain operator or user facing x509 certificates.
-// These are usually exposed via an `Ingress` in the shoot control plane.
-var IngressTLSSecretNames = []string{
-	AlertManagerTLS,
-	GrafanaTLS,
-	PrometheusTLS,
-	LokiTLS,
-}

@@ -35,6 +35,21 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 	return m.recorder
 }
 
+// AlertingRules mocks base method.
+func (m *MockInterface) AlertingRules() (map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AlertingRules")
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AlertingRules indicates an expected call of AlertingRules.
+func (mr *MockInterfaceMockRecorder) AlertingRules() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AlertingRules", reflect.TypeOf((*MockInterface)(nil).AlertingRules))
+}
+
 // Deploy mocks base method.
 func (m *MockInterface) Deploy(arg0 context.Context) error {
 	m.ctrl.T.Helper()
@@ -75,6 +90,21 @@ func (m *MockInterface) GetReplicas() *int32 {
 func (mr *MockInterfaceMockRecorder) GetReplicas() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReplicas", reflect.TypeOf((*MockInterface)(nil).GetReplicas))
+}
+
+// ScrapeConfigs mocks base method.
+func (m *MockInterface) ScrapeConfigs() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ScrapeConfigs")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ScrapeConfigs indicates an expected call of ScrapeConfigs.
+func (mr *MockInterfaceMockRecorder) ScrapeConfigs() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScrapeConfigs", reflect.TypeOf((*MockInterface)(nil).ScrapeConfigs))
 }
 
 // SetReplicas mocks base method.

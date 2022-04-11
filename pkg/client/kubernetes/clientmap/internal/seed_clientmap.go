@@ -20,6 +20,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
+	"k8s.io/apimachinery/pkg/util/clock"
 	baseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -35,7 +36,7 @@ type seedClientMap struct {
 // NewSeedClientMap creates a new seedClientMap with the given factory.
 func NewSeedClientMap(factory *SeedClientSetFactory) clientmap.ClientMap {
 	return &seedClientMap{
-		ClientMap: NewGenericClientMap(factory, log.WithValues("clientmap", "SeedClientMap")),
+		ClientMap: NewGenericClientMap(factory, log.WithValues("clientmap", "SeedClientMap"), clock.RealClock{}),
 	}
 }
 
@@ -46,18 +47,18 @@ type SeedClientSetFactory struct {
 }
 
 // CalculateClientSetHash always returns "" and nil.
-func (f *SeedClientSetFactory) CalculateClientSetHash(ctx context.Context, k clientmap.ClientSetKey) (string, error) {
+func (f *SeedClientSetFactory) CalculateClientSetHash(_ context.Context, _ clientmap.ClientSetKey) (string, error) {
 	return "", nil
 }
 
 // NewClientSet creates a new ClientSet for a Seed cluster.
-func (f *SeedClientSetFactory) NewClientSet(ctx context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, error) {
+func (f *SeedClientSetFactory) NewClientSet(_ context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, string, error) {
 	_, ok := k.(SeedClientSetKey)
 	if !ok {
-		return nil, fmt.Errorf("unsupported ClientSetKey: expected %T, but got %T", SeedClientSetKey(""), k)
+		return nil, "", fmt.Errorf("unsupported ClientSetKey: expected %T, but got %T", SeedClientSetKey(""), k)
 	}
 
-	return NewClientFromFile(
+	clientSet, err := NewClientFromFile(
 		"",
 		f.ClientConnectionConfig.Kubeconfig,
 		kubernetes.WithClientConnectionOptions(f.ClientConnectionConfig),
@@ -71,6 +72,11 @@ func (f *SeedClientSetFactory) NewClientSet(ctx context.Context, k clientmap.Cli
 			&eventsv1.Event{},
 		),
 	)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return clientSet, "", nil
 }
 
 // SeedClientSetKey is a ClientSetKey for a Seed cluster.

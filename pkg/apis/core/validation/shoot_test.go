@@ -1114,7 +1114,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					}))))
 				})
 
-				It("should not allow ivalid total number of worker nodes", func() {
+				It("should not allow invalid total number of worker nodes", func() {
 					shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(24)
 					shoot.Spec.Networking.Pods = pointer.String("100.96.0.0/16")
 					worker1.Maximum = 128
@@ -1686,6 +1686,38 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
+			Context("when ShootMaxTokenExpirationValidation=true", func() {
+				It("should forbid too low values for the max token duration", func() {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationValidation, true)()
+
+					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+						MaxTokenExpiration: &metav1.Duration{Duration: time.Hour},
+					}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration"),
+					}))))
+				})
+
+				It("should forbid too high values for the max token duration", func() {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationValidation, true)()
+
+					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+						MaxTokenExpiration: &metav1.Duration{Duration: 3000 * time.Hour},
+					}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration"),
+					}))))
+				})
+			})
+
 			It("should not allow too specify the 'extend' flag if kubernetes is lower than 1.19", func() {
 				shoot.Spec.Kubernetes.Version = "1.18.9"
 				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
@@ -1697,6 +1729,21 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.extendTokenExpiration"),
+				}))))
+			})
+
+			It("should not allow too specify multiple issuers if kubernetes is lower than 1.22", func() {
+				shoot.Spec.Kubernetes.Version = "1.21.9"
+				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+					Issuer:          pointer.String("issuer"),
+					AcceptedIssuers: []string{"issuer1"},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.acceptedIssuers"),
 				}))))
 			})
 		})
@@ -1785,11 +1832,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-				})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-					}))))
+				}))))
 			})
 
 			It("should fail when nodeCIDRMaskSize is out of lower boundary", func() {
@@ -1799,12 +1842,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-				})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-					})),
-				))
+				}))))
 			})
 
 			It("should succeed when nodeCIDRMaskSize is within boundaries", func() {
@@ -2346,7 +2384,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
+					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.maintenance.timeWindow"),
 				}))))
 			})
@@ -2358,7 +2396,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
+					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.maintenance.timeWindow"),
 				}))))
 			})
@@ -2453,6 +2491,195 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("incorrect core dns autoscaler", &core.SystemComponents{CoreDNS: &core.CoreDNS{Autoscaling: &core.CoreDNSAutoscaling{Mode: "dummy"}}}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeNotSupported),
 				})))),
+			)
+		})
+
+		Context("operation validation", func() {
+			It("should do nothing if the operation annotation is not set", func() {
+				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, true)()
+
+				Expect(ValidateShoot(shoot)).To(BeEmpty())
+			})
+
+			It("should do nothing if the feature gate is disabled", func() {
+				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, false)()
+
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-ca-start")
+
+				Expect(ValidateShoot(shoot)).To(BeEmpty())
+			})
+
+			DescribeTable("starting CA rotation",
+				func(allowed bool, status core.ShootStatus) {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, true)()
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-ca-start")
+					shoot.Status = status
+
+					matcher := BeEmpty()
+					if !allowed {
+						matcher = ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeForbidden),
+							"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+						})))
+					}
+
+					Expect(ValidateShoot(shoot)).To(matcher)
+				},
+
+				Entry("shoot was never created successfully", false, core.ShootStatus{}),
+				Entry("shoot is still being created", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type:  core.LastOperationTypeCreate,
+						State: core.LastOperationStateProcessing,
+					},
+				}),
+				Entry("shoot was created successfully", true, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type:  core.LastOperationTypeCreate,
+						State: core.LastOperationStateSucceeded,
+					},
+				}),
+				Entry("shoot is in reconciliation phase", true, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+				}),
+				Entry("shoot is in deletion phase", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeDelete,
+					},
+				}),
+				Entry("shoot is in migration phase", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeMigrate,
+					},
+				}),
+				Entry("shoot is in restoration phase", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeRestore,
+					},
+				}),
+				Entry("shoot was restored successfully", true, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type:  core.LastOperationTypeRestore,
+						State: core.LastOperationStateSucceeded,
+					},
+				}),
+				Entry("ca rotation phase is prepare", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationPreparing,
+							},
+						},
+					},
+				}),
+				Entry("ca rotation phase is prepared", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("ca rotation phase is complete", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationCompleting,
+							},
+						},
+					},
+				}),
+				Entry("ca rotation phase is completed", true, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationCompleted,
+							},
+						},
+					},
+				}),
+			)
+
+			DescribeTable("completing CA rotation",
+				func(allowed bool, status core.ShootStatus) {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, true)()
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-ca-complete")
+					shoot.Status = status
+
+					matcher := BeEmpty()
+					if !allowed {
+						matcher = ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeForbidden),
+							"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+						})))
+					}
+
+					Expect(ValidateShoot(shoot)).To(matcher)
+				},
+
+				Entry("ca rotation phase is prepare", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationPreparing,
+							},
+						},
+					},
+				}),
+				Entry("ca rotation phase is prepared", true, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("ca rotation phase is complete", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationCompleting,
+							},
+						},
+					},
+				}),
+				Entry("ca rotation phase is completed", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationCompleted,
+							},
+						},
+					},
+				}),
 			)
 		})
 	})

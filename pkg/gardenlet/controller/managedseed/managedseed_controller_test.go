@@ -28,6 +28,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -44,6 +45,14 @@ var _ = Describe("Controller", func() {
 		c *Controller
 
 		managedSeed *seedmanagementv1alpha1.ManagedSeed
+
+		expectAddedWithJitter = func() {
+			queue.EXPECT().AddAfter(key, gomock.AssignableToTypeOf(time.Second)).DoAndReturn(
+				func(_ interface{}, d time.Duration) {
+					Expect(d > 0 && d <= syncJitterPeriod).To(BeTrue())
+				},
+			)
+		}
 	)
 
 	BeforeEach(func() {
@@ -57,6 +66,7 @@ var _ = Describe("Controller", func() {
 				Controllers: &config.GardenletControllerConfiguration{
 					ManagedSeed: &config.ManagedSeedControllerConfiguration{
 						SyncJitterPeriod: &metav1.Duration{Duration: syncJitterPeriod},
+						JitterUpdates:    pointer.Bool(false),
 					},
 				},
 			},
@@ -87,30 +97,61 @@ var _ = Describe("Controller", func() {
 			c.managedSeedAdd(managedSeed)
 		})
 
-		It("should add the object to the queue (deletion)", func() {
+		It("should add the object to the queue without delay (deletion)", func() {
 			now := metav1.Now()
 			managedSeed.DeletionTimestamp = &now
-			managedSeed.Status.ObservedGeneration = 1
 			queue.EXPECT().Add(key)
 
 			c.managedSeedAdd(managedSeed)
 		})
 
-		It("should add the object to the queue with a jittered delay", func() {
-			managedSeed.Status.ObservedGeneration = 1
-			queue.EXPECT().AddAfter(key, gomock.AssignableToTypeOf(time.Second)).DoAndReturn(
-				func(_ interface{}, d time.Duration) {
-					Expect(d > 0 && d <= syncJitterPeriod).To(BeTrue())
-				},
-			)
+		It("should add new object to the queue without delay", func() {
+			managedSeed.Status.ObservedGeneration = 0
+			queue.EXPECT().Add(key)
 
 			c.managedSeedAdd(managedSeed)
 		})
+		Context("when the spec changed", func() {
+			BeforeEach(func() {
+				managedSeed.Generation = 2
+				managedSeed.Status.ObservedGeneration = 1
+			})
+
+			It("should add the object to the queue with a jittered delay because jitterUpdates is enabled", func() {
+				c.config.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(true)
+				expectAddedWithJitter()
+
+				c.managedSeedAdd(managedSeed)
+			})
+
+			It("should add the object to the queue without delay and jitterUpdates is disabled", func() {
+				c.config.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(false)
+
+				queue.EXPECT().Add(key)
+				c.managedSeedAdd(managedSeed)
+			})
+
+		})
+
+		It("should add the object to the queue with a jittered delay because the object generation and observed generation are equal", func() {
+			managedSeed.Generation = 2
+			managedSeed.Status.ObservedGeneration = 2
+			expectAddedWithJitter()
+
+			c.managedSeedAdd(managedSeed)
+		})
+
 	})
 
 	Describe("#managedSeedUpdate", func() {
 		It("should do nothing because the new object is not a ManagedSeed", func() {
 			c.managedSeedUpdate(nil, &gardencorev1beta1.Seed{})
+		})
+
+		It("should add the object to the queue", func() {
+			queue.EXPECT().Add(key)
+
+			c.managedSeedUpdate(nil, managedSeed)
 		})
 
 		It("should do nothing because the object generation and observed generation are equal", func() {
@@ -119,11 +160,27 @@ var _ = Describe("Controller", func() {
 			c.managedSeedUpdate(nil, managedSeed)
 		})
 
-		It("should add the object to the queue", func() {
-			queue.EXPECT().Add(key)
+		Context("when the spec changed", func() {
+			BeforeEach(func() {
+				managedSeed.Generation = 2
+				managedSeed.Status.ObservedGeneration = 1
+			})
 
-			c.managedSeedUpdate(nil, managedSeed)
+			It("should add the object to the queue with a jittered delay because jitterUpdates is enabled", func() {
+				c.config.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(true)
+				expectAddedWithJitter()
+
+				c.managedSeedUpdate(nil, managedSeed)
+			})
+
+			It("should add the object to the queue without delay and jitterUpdates is disabled", func() {
+				c.config.Controllers.ManagedSeed.JitterUpdates = pointer.Bool(false)
+
+				queue.EXPECT().Add(key)
+				c.managedSeedUpdate(nil, managedSeed)
+			})
 		})
+
 	})
 
 	Describe("#managedSeedDelete", func() {

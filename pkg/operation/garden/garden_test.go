@@ -15,18 +15,26 @@
 package garden_test
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/operation/garden"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("Garden", func() {
@@ -169,4 +177,118 @@ var _ = Describe("Garden", func() {
 		Entry("default domain", "foo.bar.com", []*Domain{defaultDomain}, Equal(defaultDomain)),
 		Entry("no default domain but with same suffix", "foo.foobar.com", []*Domain{defaultDomain}, BeNil()),
 	)
+
+	Describe("#BootstrapCluster", func() {
+		var (
+			fakeGardenClient client.Client
+			k8sGardenClient  kubernetes.Interface
+			sm               secretsmanager.Interface
+
+			ctx       = context.TODO()
+			namespace = "garden"
+		)
+
+		BeforeEach(func() {
+			fakeGardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+			k8sGardenClient = fake.NewClientSetBuilder().WithClient(fakeGardenClient).WithVersion("1.17.4").Build()
+			sm = fakesecretsmanager.New(fakeGardenClient, namespace)
+		})
+
+		It("should return an error because the garden version cannot be parsed", func() {
+			k8sGardenClient = fake.NewClientSetBuilder().WithClient(fakeGardenClient).WithVersion("").Build()
+
+			Expect(BootstrapCluster(ctx, k8sGardenClient, sm)).To(MatchError(ContainSubstring("Invalid Semantic Version")))
+		})
+
+		It("should return an error because the garden version is too low", func() {
+			k8sGardenClient = fake.NewClientSetBuilder().WithClient(fakeGardenClient).WithVersion("1.16.5").Build()
+
+			Expect(BootstrapCluster(ctx, k8sGardenClient, sm)).To(MatchError(ContainSubstring("the Kubernetes version of the Garden cluster must be at least 1.17")))
+		})
+
+		It("should generate a global monitoring secret because none exists yet", func() {
+			Expect(BootstrapCluster(ctx, k8sGardenClient, sm)).To(Succeed())
+
+			secretList := &corev1.SecretList{}
+			Expect(fakeGardenClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{"gardener.cloud/role": "global-monitoring"})).To(Succeed())
+			validateGlobalMonitoringSecret(secretList)
+		})
+
+		It("should generate a global monitoring secret because legacy secret exists", func() {
+			legacySecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "monitoring-ingress-credentials",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"gardener.cloud/role": "global-monitoring",
+					},
+				},
+			}
+			Expect(fakeGardenClient.Create(ctx, legacySecret)).To(Succeed())
+
+			Expect(BootstrapCluster(ctx, k8sGardenClient, sm)).To(Succeed())
+
+			Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(legacySecret), &corev1.Secret{})).To(BeNotFoundError())
+
+			secretList := &corev1.SecretList{}
+			Expect(fakeGardenClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{"gardener.cloud/role": "global-monitoring"})).To(Succeed())
+			validateGlobalMonitoringSecret(secretList)
+		})
+
+		It("should generate a global monitoring secret because secret managed by secrets-manager exists", func() {
+			existingSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "observability-ingress-0da36eb1",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"gardener.cloud/role": "global-monitoring",
+						"managed-by":          "secrets-manager",
+						"manager-identity":    "controller-manager",
+					},
+				},
+			}
+			Expect(fakeGardenClient.Create(ctx, existingSecret)).To(Succeed())
+
+			Expect(BootstrapCluster(ctx, k8sGardenClient, sm)).To(Succeed())
+
+			secretList := &corev1.SecretList{}
+			Expect(fakeGardenClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{"gardener.cloud/role": "global-monitoring"})).To(Succeed())
+			validateGlobalMonitoringSecret(secretList)
+		})
+
+		It("should not generate a global monitoring secret because it is managed by human operator", func() {
+			customSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "self-managed-secret",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"gardener.cloud/role": "global-monitoring",
+					},
+				},
+			}
+			Expect(fakeGardenClient.Create(ctx, customSecret)).To(Succeed())
+
+			Expect(BootstrapCluster(ctx, k8sGardenClient, sm)).To(Succeed())
+
+			Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(customSecret), &corev1.Secret{})).To(Succeed())
+
+			secretList := &corev1.SecretList{}
+			Expect(fakeGardenClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+				"name":             "observability-ingress",
+				"managed-by":       "secretsmanager",
+				"manager-identity": "fake",
+			})).To(Succeed())
+			Expect(secretList.Items).To(BeEmpty())
+		})
+	})
 })
+
+func validateGlobalMonitoringSecret(secretList *corev1.SecretList) {
+	Expect(secretList.Items).To(HaveLen(1))
+	Expect(secretList.Items[0].Name).To(HavePrefix("observability-ingress-"))
+	Expect(secretList.Items[0].Labels).To(And(
+		HaveKeyWithValue("name", "observability-ingress"),
+		HaveKeyWithValue("managed-by", "secrets-manager"),
+		HaveKeyWithValue("manager-identity", "fake"),
+	))
+}

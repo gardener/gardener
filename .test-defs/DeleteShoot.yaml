@@ -10,9 +10,9 @@ spec:
   command: [bash, -c]
   args:
   - >-
-    go test -timeout=0 -mod=vendor ./test/system/shoot_deletion
-    --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
+    go test -timeout=0 -mod=vendor ./test/testmachinery/system/shoot_deletion
+    --v -ginkgo.v -ginkgo.progress -ginkgo.no-color
     --shoot-name=$SHOOT_NAME
     --project-namespace=$PROJECT_NAMESPACE
     --kubecfg="$TM_KUBECONFIG_PATH/gardener.config"
-  image: eu.gcr.io/gardener-project/3rd/golang:1.17.6
+  image: eu.gcr.io/gardener-project/3rd/golang:1.17.8

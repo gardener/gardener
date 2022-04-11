@@ -75,18 +75,21 @@ const (
 	// ReversedVPN moves the openvpn server to the seed.
 	// owner: @ScheererJ @DockToFuture
 	// alpha: v1.22.0
+	// beta: v1.42.0
 	ReversedVPN featuregate.Feature = "ReversedVPN"
 
 	// AdminKubeconfigRequest enables the AdminKubeconfigRequest endpoint on shoot resources.
 	// owner: @petersutter
 	// alpha: v1.24.0
 	// beta: v1.39.0
+	// GA: v1.42.0
 	AdminKubeconfigRequest featuregate.Feature = "AdminKubeconfigRequest"
 
 	// UseDNSRecords enables using DNSRecords resources for Gardener DNS records instead of DNSProvider and DNSEntry resources.
 	// owner: @stoyanr
 	// alpha: v1.27.0
 	// beta: v1.39.0
+	// GA: v1.44.0
 	UseDNSRecords featuregate.Feature = "UseDNSRecords"
 
 	// RotateSSHKeypairOnMaintenance enables SSH keypair rotation in the maintenance controller of the gardener-controller-manager.
@@ -97,6 +100,7 @@ const (
 	// DenyInvalidExtensionResources causes the seed-admission-controller to deny invalid extension resources (instead of just logging validation errors).
 	// owner: @stoyanr
 	// alpha: v1.31.0
+	// beta: v1.42.0
 	DenyInvalidExtensionResources featuregate.Feature = "DenyInvalidExtensionResources"
 
 	// WorkerPoolKubernetesVersion allows to overwrite the Kubernetes version used for shoot clusters per worker pool.
@@ -130,4 +134,64 @@ const (
 	// owner: @MartinWeindel @timuthy
 	// alpha: v1.41
 	DisableDNSProviderManagement featuregate.Feature = "DisableDNSProviderManagement"
+
+	// ShootCARotation enables the automated rotation of the shoot CA certificates.
+	// owner: @rfranzke
+	// alpha: v1.42.0
+	ShootCARotation featuregate.Feature = "ShootCARotation"
+
+	// ShootMaxTokenExpirationOverwrite makes the Gardener API server overwriting values in the
+	// `.spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration` field of Shoot specifications to
+	// - be at least 720h (30d) when the current value is lower
+	// - be at most 2160h (90d) when the current value is higher
+	// before persisting the object to etcd.
+	// owner: @rfranzke
+	// alpha: v1.43.0
+	// beta: v1.45.0
+	ShootMaxTokenExpirationOverwrite featuregate.Feature = "ShootMaxTokenExpirationOverwrite"
+
+	// ShootMaxTokenExpirationValidation enables validations on Gardener API server that enforce that the value of the
+	// `.spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration` field
+	// - is at least 720h (30d).
+	// - is at most 2160h (90d).
+	// Only enable this after ShootMaxTokenExpirationOverwrite is enabled and all shoots got updated accordingly.
+	// owner: @rfranzke
+	// alpha: v1.43.0
+	ShootMaxTokenExpirationValidation featuregate.Feature = "ShootMaxTokenExpirationValidation"
 )
+
+var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
+	HVPA:                          {Default: false, PreRelease: featuregate.Alpha},
+	HVPAForShootedSeed:            {Default: false, PreRelease: featuregate.Alpha},
+	ManagedIstio:                  {Default: true, PreRelease: featuregate.Beta},
+	APIServerSNI:                  {Default: true, PreRelease: featuregate.Beta},
+	CachedRuntimeClients:          {Default: true, PreRelease: featuregate.Beta},
+	SeedChange:                    {Default: false, PreRelease: featuregate.Alpha},
+	SeedKubeScheduler:             {Default: false, PreRelease: featuregate.Alpha},
+	ReversedVPN:                   {Default: true, PreRelease: featuregate.Beta},
+	AdminKubeconfigRequest:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	UseDNSRecords:                 {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	RotateSSHKeypairOnMaintenance: {Default: false, PreRelease: featuregate.Alpha},
+	DenyInvalidExtensionResources: {Default: true, PreRelease: featuregate.Beta},
+	WorkerPoolKubernetesVersion:   {Default: false, PreRelease: featuregate.Alpha},
+	CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
+	SecretBindingProviderValidation:            {Default: false, PreRelease: featuregate.Alpha},
+	ForceRestore:                               {Default: false, PreRelease: featuregate.Alpha},
+	DisableDNSProviderManagement:               {Default: false, PreRelease: featuregate.Alpha},
+	ShootCARotation:                            {Default: false, PreRelease: featuregate.Alpha},
+	ShootMaxTokenExpirationOverwrite:           {Default: true, PreRelease: featuregate.Beta},
+	ShootMaxTokenExpirationValidation:          {Default: false, PreRelease: featuregate.Alpha},
+}
+
+// GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
+func GetFeatures(featureGates ...featuregate.Feature) map[featuregate.Feature]featuregate.FeatureSpec {
+	out := make(map[featuregate.Feature]featuregate.FeatureSpec)
+
+	for _, fg := range featureGates {
+		if spec, ok := allFeatureGates[fg]; ok {
+			out[fg] = spec
+		}
+	}
+
+	return out
+}

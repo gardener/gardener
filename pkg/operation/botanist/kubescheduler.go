@@ -15,9 +15,6 @@
 package botanist
 
 import (
-	"context"
-
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -33,18 +30,10 @@ func (b *Botanist) DefaultKubeScheduler() (kubescheduler.Interface, error) {
 	return kubescheduler.New(
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
+		b.SecretsManager,
 		b.Shoot.KubernetesVersion,
 		image.String(),
 		b.Shoot.GetReplicas(1),
 		b.Shoot.GetInfo().Spec.Kubernetes.KubeScheduler,
 	), nil
-}
-
-// DeployKubeScheduler deploys the Kubernetes scheduler.
-func (b *Botanist) DeployKubeScheduler(ctx context.Context) error {
-	b.Shoot.Components.ControlPlane.KubeScheduler.SetSecrets(kubescheduler.Secrets{
-		Server: component.Secret{Name: kubescheduler.SecretNameServer, Checksum: b.LoadCheckSum(kubescheduler.SecretNameServer)},
-	})
-
-	return b.Shoot.Components.ControlPlane.KubeScheduler.Deploy(ctx)
 }

@@ -137,7 +137,7 @@ PATH_CLOUDCONFIG_DOWNLOADER_SERVER="/var/lib/cloud-config-downloader/credentials
 PATH_CLOUDCONFIG_DOWNLOADER_CA_CERT="/var/lib/cloud-config-downloader/credentials/ca.crt"
 PATH_CLOUDCONFIG="/var/lib/cloud-config-downloader/downloads/cloud_config"
 PATH_CLOUDCONFIG_OLD="${PATH_CLOUDCONFIG}.old"
-PATH_CHECKSUM="/var/lib/cloud-config-downloader/downloaded_checksum"
+PATH_CHECKSUM="/var/lib/cloud-config-downloader/downloads/execute-cloud-config-checksum"
 PATH_CCD_SCRIPT="/var/lib/cloud-config-downloader/download-cloud-config.sh"
 PATH_CCD_SCRIPT_CHECKSUM="/var/lib/cloud-config-downloader/download-cloud-config.md5"
 PATH_CCD_SCRIPT_CHECKSUM_OLD="${PATH_CCD_SCRIPT_CHECKSUM}.old"
@@ -148,7 +148,7 @@ PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE="/var/lib/cloud-config-downloader/downloads
 PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBELET="/opt/bin/hyperkube_image_used_for_last_copy_of_kubelet"
 PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBECTL="/opt/bin/hyperkube_image_used_for_last_copy_of_kubectl"
 
-mkdir -p "/var/lib/cloud-config-downloader/downloads" "/var/lib/kubelet" "$PATH_HYPERKUBE_DOWNLOADS"
+mkdir -p "/var/lib/kubelet" "$PATH_HYPERKUBE_DOWNLOADS"
 
 `
 
@@ -301,32 +301,41 @@ else
   rm -f "/var/lib/cloud-config-downloader/credentials/bootstrap-token"
 fi
 
-NODENAME=
-ANNOTATION_RESTART_SYSTEMD_SERVICES="worker.gardener.cloud/restart-systemd-services"
-
 # Try to find Node object for this machine if already registered to the cluster.
+NODENAME=
+if [[ -s "/var/lib/kubelet/nodename" ]] && [[ ! -z "$(cat "/var/lib/kubelet/nodename")" ]]; then
+  NODENAME="$(cat "/var/lib/kubelet/nodename")"
+elif [[ -f "/var/lib/kubelet/kubeconfig-real" ]]; then
+  NODENAME="$(/opt/bin/kubectl --kubeconfig="/var/lib/kubelet/kubeconfig-real" get nodes -l "kubernetes.io/hostname=$(hostname | tr '[:upper:]' '[:lower:]')" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ end }}")"
+  echo -n "$NODENAME" > "/var/lib/kubelet/nodename"
+fi
+
+# Check if node is annotated with information about to-be-restarted systemd services
+ANNOTATION_RESTART_SYSTEMD_SERVICES="worker.gardener.cloud/restart-systemd-services"
 if [[ -f "/var/lib/kubelet/kubeconfig-real" ]]; then
-  NODE="$(/opt/bin/kubectl --kubeconfig="/var/lib/kubelet/kubeconfig-real" get node -l "kubernetes.io/hostname=$(hostname)" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ if (index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\") }} {{ index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ end }}{{ end }}")"
+  if [[ ! -z "$NODENAME" ]]; then
+    SYSTEMD_SERVICES_TO_RESTART="$(/opt/bin/kubectl --kubeconfig="/var/lib/kubelet/kubeconfig-real" get node "$NODENAME" -o go-template="{{ if index .metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ index .metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ end }}")"
 
-  if [[ ! -z "$NODE" ]]; then
-    NODENAME="$(echo "$NODE" | awk '{print $1}')"
-    SYSTEMD_SERVICES_TO_RESTART="$(echo "$NODE" | awk '{print $2}')"
-  fi
+    # Restart systemd services if requested
+    if [[ ! -z "$SYSTEMD_SERVICES_TO_RESTART" ]]; then
+      restart_ccd=n
+      for service in $(echo "$SYSTEMD_SERVICES_TO_RESTART" | sed "s/,/ /g"); do
+        if [[ ${service} == cloud-config-downloader* ]]; then
+          restart_ccd=y
+          continue
+        fi
 
-  # Restart systemd services if requested
-  restart_ccd=n
-  for service in $(echo "$SYSTEMD_SERVICES_TO_RESTART" | sed "s/,/ /g"); do
-    if [[ ${service} == cloud-config-downloader* ]]; then
-      restart_ccd=y
-      continue
+        echo "Restarting systemd service $service due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
+        systemctl restart "$service" || true
+      done
+
+      /opt/bin/kubectl --kubeconfig="/var/lib/kubelet/kubeconfig-real" annotate node "$NODENAME" "${ANNOTATION_RESTART_SYSTEMD_SERVICES}-"
+
+      if [[ ${restart_ccd} == "y" ]]; then
+        echo "Restarting systemd service cloud-config-downloader.service due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
+        systemctl restart "cloud-config-downloader.service" || true
+      fi
     fi
-    echo "Restarting systemd service $service due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
-    systemctl restart "$service" || true
-  done
-  /opt/bin/kubectl --kubeconfig="/var/lib/kubelet/kubeconfig-real" annotate node "$NODENAME" "${ANNOTATION_RESTART_SYSTEMD_SERVICES}-"
-  if [[ ${restart_ccd} == "y" ]]; then
-    echo "Restarting systemd service cloud-config-downloader.service due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
-    systemctl restart "cloud-config-downloader.service" || true
   fi
 
   # If the time difference from the last execution till now is smaller than the node-specific delay then we exit early

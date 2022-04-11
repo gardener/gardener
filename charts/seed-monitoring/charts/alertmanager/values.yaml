@@ -8,7 +8,7 @@ ingress:
     - hostName: a.seed-1.example.com
       secretName: grafana-tls
   # admin : admin base64 encoded
-  basicAuthSecret: YWRtaW46JGFwcjEkSWRSaVM5c3MkR3U1MHMxaGUwL2Z6Tzh2elE4S1BEMQ==
+  authSecretName: auth-secret-name
 
 emailConfigs: []
 replicas: 1

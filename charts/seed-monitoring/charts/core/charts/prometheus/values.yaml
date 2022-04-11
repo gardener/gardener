@@ -17,9 +17,11 @@ ingress:
   - hostName: p.seed-1.example.com
     secretName: prometheus-tls
   # admin : admin base64 encoded
-  basicAuthSecret: YWRtaW46JGFwcjEkSWRSaVM5c3MkR3U1MHMxaGUwL2Z6Tzh2elE4S1BEMQ==
+  authSecretName: auth-secret-name
 
 kubernetesVersion: 1.20.1
+secretNameEtcdClientCert: etcd-client-tls
+secretNameClientCert: prometheus
 
 reversedVPN:
   enabled: false
@@ -272,6 +274,8 @@ allowedMetrics:
   - envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_attempt
   - envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_failure
   - envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_success
+  - envoy_dns_cache_dynamic_forward_proxy_cache_config_host_overflow
+  - envoy_dns_cache_dynamic_forward_proxy_cache_config_num_hosts
   - envoy_http_downstream_cx_rx_bytes_total
   - envoy_http_downstream_cx_total
   - envoy_http_downstream_cx_tx_bytes_total
@@ -332,9 +336,6 @@ resources:
   requests:
     cpu: 200m
     memory: 360Mi
-  limits:
-    cpu: 350m
-    memory: 760Mi
 
 #remoteWrite:
 #  url: remoteWriteUrl

@@ -30,11 +30,11 @@ images:
 - name: etcd-druid
   sourceRepository: github.com/gardener/etcd-druid
   repository: eu.gcr.io/gardener-project/gardener/etcd-druid
-  tag: "v0.7.3"
+  tag: "v0.8.2"
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
-  tag: "v0.6.1"
+  tag: "v0.7.1"
 
 # Seed controlplane
 #   hyperkube is used for kubectl + kubelet binaries on the worker nodes
@@ -61,7 +61,7 @@ images:
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
-  tag: "v0.19.0"
+  tag: "v1.20.0"
 - name: vpn-seed
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed
@@ -222,15 +222,15 @@ images:
 - name: vpa-admission-controller
   sourceRepository: github.com/kubernetes/autoscaler
   repository: k8s.gcr.io/autoscaling/vpa-admission-controller
-  tag: "0.9.2"
+  tag: "0.10.0"
 - name: vpa-recommender
   sourceRepository: github.com/kubernetes/autoscaler
   repository: k8s.gcr.io/autoscaling/vpa-recommender
-  tag: "0.9.2"
+  tag: "0.10.0"
 - name: vpa-updater
   sourceRepository: github.com/kubernetes/autoscaler
   repository: k8s.gcr.io/autoscaling/vpa-updater
-  tag: "0.9.2"
+  tag: "0.10.0"
 - name: vpa-exporter
   sourceRepository: github.com/gardener/vpa-exporter
   repository: eu.gcr.io/gardener-project/gardener/vpa-exporter
@@ -252,17 +252,17 @@ images:
 - name: istio-proxy
   sourceRepository: github.com/istio/istio
   repository: gcr.io/istio-release/proxyv2
-  tag: "1.12.0-distroless"
+  tag: "1.12.5-distroless"
 - name: istio-istiod
   sourceRepository: github.com/istio/istio
   repository: gcr.io/istio-release/pilot
-  tag: "1.12.0-distroless"
+  tag: "1.12.5-distroless"
 
 # External Authorization Server for the Istio Endpoint of Reversed VPN
 - name: ext-authz-server
   sourceRepository: github.com/gardener/ext-authz-server
   repository: eu.gcr.io/gardener-project/gardener/ext-authz-server
-  tag: "0.2.0"
+  tag: "0.3.0"
 
 # API Server SNI
 - name: apiserver-proxy
@@ -272,8 +272,8 @@ images:
 - name: apiserver-proxy-sidecar
   sourceRepository: github.com/gardener/apiserver-proxy
   repository: eu.gcr.io/gardener-project/gardener/apiserver-proxy
-  tag: "v0.1.0"
+  tag: "v0.3.0"
 - name: apiserver-proxy-pod-webhook
   sourceRepository: github.com/gardener/apiserver-proxy
   repository: eu.gcr.io/gardener-project/gardener/apiserver-proxy-pod-webhook
-  tag: "v0.2.0"
+  tag: "v0.3.0"

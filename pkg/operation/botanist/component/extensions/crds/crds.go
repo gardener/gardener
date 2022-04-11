@@ -24,17 +24,17 @@ import (
 )
 
 var (
-	//go:embed templates/crd-backupbucket.tpl.yaml
+	//go:embed templates/crd-extensions.gardener.cloud_backupbuckets.yaml
 	backupBucketCRD string
-	//go:embed templates/crd-backupentry.tpl.yaml
+	//go:embed templates/crd-extensions.gardener.cloud_backupentries.yaml
 	backupEntryCRD string
-	//go:embed templates/crd-bastion.tpl.yaml
+	//go:embed templates/crd-extensions.gardener.cloud_bastions.yaml
 	bastionCRD string
-	//go:embed templates/crd-cluster.tpl.yaml
+	//go:embed templates/crd-extensions.gardener.cloud_clusters.yaml
 	clusterCRD string
-	//go:embed templates/crd-containerruntime.tpl.yaml
+	//go:embed templates/crd-extensions.gardener.cloud_containerruntimes.yaml
 	containerRuntimeCRD string
-	//go:embed templates/crd-controlplane.tpl.yaml
+	//go:embed templates/crd-extensions.gardener.cloud_controlplanes.yaml
 	controlPlaneCRD string
 	//go:embed templates/crd-dnsentry.tpl.yaml
 	dnsEntryCRD string
@@ -42,19 +42,19 @@ var (
 	dnsOwnerCRD string
 	//go:embed templates/crd-dnsprovider.tpl.yaml
 	dnsProviderCRD string
-	//go:embed templates/crd-dnsrecord.tpl.yaml
+	//go:embed templates/crd-extensions.gardener.cloud_dnsrecords.yaml
 	dnsRecordCRD string
-	//go:embed templates/crd-extension.tpl.yaml
+	//go:embed templates/crd-extensions.gardener.cloud_extensions.yaml
 	extensionCRD string
-	//go:embed templates/crd-infrastructure.tpl.yaml
+	//go:embed templates/crd-extensions.gardener.cloud_infrastructures.yaml
 	infrastructureCRD string
-	//go:embed templates/crd-managedresources.tpl.yaml
+	//go:embed templates/crd-resources.gardener.cloud_managedresources.yaml
 	managedResourcesCRD string
-	//go:embed templates/crd-network.tpl.yaml
+	//go:embed templates/crd-extensions.gardener.cloud_networks.yaml
 	networkCRD string
-	//go:embed templates/crd-operatingsystemconfig.tpl.yaml
+	//go:embed templates/crd-extensions.gardener.cloud_operatingsystemconfigs.yaml
 	operatingSystemConfigCRD string
-	//go:embed templates/crd-worker.tpl.yaml
+	//go:embed templates/crd-extensions.gardener.cloud_workers.yaml
 	workerCRD string
 
 	resources []string
@@ -101,8 +101,8 @@ func (c *extensionCRDs) Deploy(ctx context.Context) error {
 		fns = append(fns, func(ctx context.Context) error {
 			return c.applier.ApplyManifest(ctx, kubernetes.NewManifestReader([]byte(r)), kubernetes.DefaultMergeFuncs)
 		})
-
 	}
+
 	return flow.Parallel(fns...)(ctx)
 }
 

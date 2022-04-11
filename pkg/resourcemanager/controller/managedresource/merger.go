@@ -15,6 +15,7 @@
 package managedresource
 
 import (
+	"fmt"
 	"strings"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -22,6 +23,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -222,6 +224,33 @@ func mergeJob(scheme *runtime.Scheme, oldObj, newObj runtime.Object, preserveRes
 }
 
 func mergeCronJob(scheme *runtime.Scheme, oldObj, newObj runtime.Object, preserveResources bool) error {
+	switch newObj.GetObjectKind().GroupVersionKind().Version {
+	case batchv1beta1.SchemeGroupVersion.Version:
+		return mergeV1beta1CronJob(scheme, oldObj, newObj, preserveResources)
+	case batchv1.SchemeGroupVersion.Version:
+		return mergeV1CronJob(scheme, oldObj, newObj, preserveResources)
+	default:
+		return fmt.Errorf("cannot merge objects with gvk: %s", newObj.GetObjectKind().GroupVersionKind().String())
+	}
+}
+
+func mergeV1beta1CronJob(scheme *runtime.Scheme, oldObj, newObj runtime.Object, preserveResources bool) error {
+	oldCronJob := &batchv1beta1.CronJob{}
+	if err := scheme.Convert(oldObj, oldCronJob, nil); err != nil {
+		return err
+	}
+
+	newCronJob := &batchv1beta1.CronJob{}
+	if err := scheme.Convert(newObj, newCronJob, nil); err != nil {
+		return err
+	}
+
+	mergePodTemplate(&oldCronJob.Spec.JobTemplate.Spec.Template, &newCronJob.Spec.JobTemplate.Spec.Template, preserveResources)
+
+	return scheme.Convert(newCronJob, newObj, nil)
+}
+
+func mergeV1CronJob(scheme *runtime.Scheme, oldObj, newObj runtime.Object, preserveResources bool) error {
 	oldCronJob := &batchv1.CronJob{}
 	if err := scheme.Convert(oldObj, oldCronJob, nil); err != nil {
 		return err
@@ -298,6 +327,25 @@ func mergeService(scheme *runtime.Scheme, oldObj, newObj runtime.Object) error {
 
 	if newService.Spec.Type == "" {
 		newService.Spec.Type = corev1.ServiceTypeClusterIP
+	}
+
+	if len(oldService.Annotations) > 0 {
+		mergedAnnotations := map[string]string{}
+		for annotation, value := range oldService.Annotations {
+			for _, keepAnnotation := range keepServiceAnnotations() {
+				if strings.HasPrefix(annotation, keepAnnotation) {
+					mergedAnnotations[annotation] = value
+				}
+			}
+		}
+
+		if len(newService.Annotations) > 0 {
+			for annotation, value := range newService.Annotations {
+				mergedAnnotations[annotation] = value
+			}
+		}
+
+		newService.Annotations = mergedAnnotations
 	}
 
 	switch newService.Spec.Type {
@@ -408,4 +456,8 @@ func dropReferenceAnnotations(annotations map[string]string) map[string]string {
 		}
 	}
 	return out
+}
+
+func keepServiceAnnotations() []string {
+	return []string{"loadbalancer.openstack.org"}
 }

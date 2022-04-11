@@ -19,7 +19,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/utils/images"
@@ -70,6 +69,7 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 	return vpnshoot.New(
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
+		b.SecretsManager,
 		values,
 	), nil
 }
@@ -78,10 +78,7 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 func (b *Botanist) DeployVPNShoot(ctx context.Context) error {
 	secrets := vpnshoot.Secrets{}
 
-	if b.Shoot.ReversedVPNEnabled {
-		secrets.TLSAuth = component.Secret{Name: vpnseedserver.VpnSeedServerTLSAuth, Checksum: b.LoadCheckSum(vpnseedserver.VpnSeedServerTLSAuth), Data: b.LoadSecret(vpnseedserver.VpnSeedServerTLSAuth).Data}
-		secrets.Server = component.Secret{Name: vpnshoot.SecretNameVPNShootClient, Checksum: b.LoadCheckSum(vpnshoot.SecretNameVPNShootClient), Data: b.LoadSecret(vpnshoot.SecretNameVPNShootClient).Data}
-	} else {
+	if !b.Shoot.ReversedVPNEnabled {
 		checkSumDH := diffieHellmanKeyChecksum
 		openvpnDiffieHellmanSecret := map[string][]byte{"dh2048.pem": []byte(DefaultDiffieHellmanKey)}
 		if dh := b.LoadSecret(v1beta1constants.GardenRoleOpenVPNDiffieHellman); dh != nil {
@@ -89,9 +86,7 @@ func (b *Botanist) DeployVPNShoot(ctx context.Context) error {
 			checkSumDH = b.LoadCheckSum(v1beta1constants.GardenRoleOpenVPNDiffieHellman)
 		}
 
-		secrets.TLSAuth = component.Secret{Name: kubeapiserver.SecretNameVPNSeedTLSAuth, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameVPNSeedTLSAuth), Data: b.LoadSecret(kubeapiserver.SecretNameVPNSeedTLSAuth).Data}
 		secrets.DH = &component.Secret{Name: v1beta1constants.GardenRoleOpenVPNDiffieHellman, Checksum: checkSumDH, Data: openvpnDiffieHellmanSecret}
-		secrets.Server = component.Secret{Name: vpnshoot.SecretNameVPNShoot, Checksum: b.LoadCheckSum(vpnshoot.SecretNameVPNShoot), Data: b.LoadSecret(vpnshoot.SecretNameVPNShoot).Data}
 	}
 
 	b.Shoot.Components.SystemComponents.VPNShoot.SetSecrets(secrets)

@@ -167,10 +167,12 @@ func GetShootNameFromOwnerReferences(objectMeta metav1.Object) string {
 const (
 	// ShootProjectSecretSuffixKubeconfig is a constant for a shoot project secret with suffix 'kubeconfig'.
 	ShootProjectSecretSuffixKubeconfig = "kubeconfig"
+	// ShootProjectSecretSuffixCACluster is a constant for a shoot project secret with suffix 'ca-cluster'.
+	ShootProjectSecretSuffixCACluster = "ca-cluster"
 	// ShootProjectSecretSuffixSSHKeypair is a constant for a shoot project secret with suffix 'ssh-keypair'.
 	ShootProjectSecretSuffixSSHKeypair = v1beta1constants.SecretNameSSHKeyPair
 	// ShootProjectSecretSuffixOldSSHKeypair is a constant for a shoot project secret with suffix 'ssh-keypair.old'.
-	ShootProjectSecretSuffixOldSSHKeypair = v1beta1constants.SecretNameOldSSHKeyPair
+	ShootProjectSecretSuffixOldSSHKeypair = v1beta1constants.SecretNameSSHKeyPair + ".old"
 	// ShootProjectSecretSuffixMonitoring is a constant for a shoot project secret with suffix 'monitoring'.
 	ShootProjectSecretSuffixMonitoring = "monitoring"
 )
@@ -179,6 +181,7 @@ const (
 func GetShootProjectSecretSuffixes() []string {
 	return []string{
 		ShootProjectSecretSuffixKubeconfig,
+		ShootProjectSecretSuffixCACluster,
 		ShootProjectSecretSuffixSSHKeypair,
 		ShootProjectSecretSuffixOldSSHKeypair,
 		ShootProjectSecretSuffixMonitoring,
@@ -340,43 +343,43 @@ func (s *ShootAccessSecret) Reconcile(ctx context.Context, c client.Client) erro
 // object. The access secret name must be the name of a secret containing a JWT token which should be used by the
 // kubeconfig. If the object has multiple containers then the default is to inject it into all of them. If it should
 // only be done for a selection of containers then their respective names must be provided.
-func InjectGenericKubeconfig(obj runtime.Object, accessSecretName string, containerNames ...string) error {
+func InjectGenericKubeconfig(obj runtime.Object, genericKubeconfigName, accessSecretName string, containerNames ...string) error {
 	switch o := obj.(type) {
 	case *corev1.Pod:
-		injectGenericKubeconfig(&o.Spec, accessSecretName, containerNames...)
+		injectGenericKubeconfig(&o.Spec, genericKubeconfigName, accessSecretName, containerNames...)
 
 	case *appsv1.Deployment:
-		injectGenericKubeconfig(&o.Spec.Template.Spec, accessSecretName, containerNames...)
+		injectGenericKubeconfig(&o.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
 
 	case *appsv1beta2.Deployment:
-		injectGenericKubeconfig(&o.Spec.Template.Spec, accessSecretName, containerNames...)
+		injectGenericKubeconfig(&o.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
 
 	case *appsv1beta1.Deployment:
-		injectGenericKubeconfig(&o.Spec.Template.Spec, accessSecretName, containerNames...)
+		injectGenericKubeconfig(&o.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
 
 	case *appsv1.StatefulSet:
-		injectGenericKubeconfig(&o.Spec.Template.Spec, accessSecretName, containerNames...)
+		injectGenericKubeconfig(&o.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
 
 	case *appsv1beta2.StatefulSet:
-		injectGenericKubeconfig(&o.Spec.Template.Spec, accessSecretName, containerNames...)
+		injectGenericKubeconfig(&o.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
 
 	case *appsv1beta1.StatefulSet:
-		injectGenericKubeconfig(&o.Spec.Template.Spec, accessSecretName, containerNames...)
+		injectGenericKubeconfig(&o.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
 
 	case *appsv1.DaemonSet:
-		injectGenericKubeconfig(&o.Spec.Template.Spec, accessSecretName, containerNames...)
+		injectGenericKubeconfig(&o.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
 
 	case *appsv1beta2.DaemonSet:
-		injectGenericKubeconfig(&o.Spec.Template.Spec, accessSecretName, containerNames...)
+		injectGenericKubeconfig(&o.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
 
 	case *batchv1.Job:
-		injectGenericKubeconfig(&o.Spec.Template.Spec, accessSecretName, containerNames...)
+		injectGenericKubeconfig(&o.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
 
 	case *batchv1.CronJob:
-		injectGenericKubeconfig(&o.Spec.JobTemplate.Spec.Template.Spec, accessSecretName, containerNames...)
+		injectGenericKubeconfig(&o.Spec.JobTemplate.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
 
 	case *batchv1beta1.CronJob:
-		injectGenericKubeconfig(&o.Spec.JobTemplate.Spec.Template.Spec, accessSecretName, containerNames...)
+		injectGenericKubeconfig(&o.Spec.JobTemplate.Spec.Template.Spec, genericKubeconfigName, accessSecretName, containerNames...)
 
 	default:
 		return fmt.Errorf("unhandled object type %T", obj)
@@ -385,7 +388,7 @@ func InjectGenericKubeconfig(obj runtime.Object, accessSecretName string, contai
 	return nil
 }
 
-func injectGenericKubeconfig(podSpec *corev1.PodSpec, accessSecretName string, containerNames ...string) {
+func injectGenericKubeconfig(podSpec *corev1.PodSpec, genericKubeconfigName, accessSecretName string, containerNames ...string) {
 	var (
 		volume = corev1.Volume{
 			Name: "kubeconfig",
@@ -396,7 +399,7 @@ func injectGenericKubeconfig(podSpec *corev1.PodSpec, accessSecretName string, c
 						{
 							Secret: &corev1.SecretProjection{
 								LocalObjectReference: corev1.LocalObjectReference{
-									Name: v1beta1constants.SecretNameGenericTokenKubeconfig,
+									Name: genericKubeconfigName,
 								},
 								Items: []corev1.KeyToPath{{
 									Key:  secrets.DataKeyKubeconfig,

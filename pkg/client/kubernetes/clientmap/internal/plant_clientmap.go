@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -35,7 +36,7 @@ type plantClientMap struct {
 // NewPlantClientMap creates a new plantClientMap with the given factory.
 func NewPlantClientMap(factory *PlantClientSetFactory) clientmap.ClientMap {
 	return &plantClientMap{
-		ClientMap: NewGenericClientMap(factory, log.WithValues("clientmap", "PlantClientMap")),
+		ClientMap: NewGenericClientMap(factory, log.WithValues("clientmap", "PlantClientMap"), clock.RealClock{}),
 	}
 }
 
@@ -48,41 +49,50 @@ type PlantClientSetFactory struct {
 
 // CalculateClientSetHash calculates a SHA256 hash of the kubeconfig in the plant secret.
 func (f *PlantClientSetFactory) CalculateClientSetHash(ctx context.Context, k clientmap.ClientSetKey) (string, error) {
-	key, ok := k.(PlantClientSetKey)
-	if !ok {
-		return "", fmt.Errorf("unsupported ClientSetKey: expected %T got %T", PlantClientSetKey{}, k)
-	}
-
-	secretRef, gardenClient, err := f.getPlantSecretRef(ctx, key)
+	_, hash, err := f.getSecretAndComputeHash(ctx, k)
 	if err != nil {
 		return "", err
 	}
 
-	kubeconfigSecret := &corev1.Secret{}
-	if err := gardenClient.Client().Get(ctx, client.ObjectKey{Namespace: key.Namespace, Name: secretRef.Name}, kubeconfigSecret); err != nil {
-		return "", err
-	}
-
-	return utils.ComputeSHA256Hex(kubeconfigSecret.Data[kubernetes.KubeConfig]), nil
+	return hash, nil
 }
 
 // NewClientSet creates a new ClientSet for a Plant cluster.
-func (f *PlantClientSetFactory) NewClientSet(ctx context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, error) {
-	key, ok := k.(PlantClientSetKey)
-	if !ok {
-		return nil, fmt.Errorf("unsupported ClientSetKey: expected %T got %T", PlantClientSetKey{}, k)
-	}
-
-	secretRef, gardenClient, err := f.getPlantSecretRef(ctx, key)
+func (f *PlantClientSetFactory) NewClientSet(ctx context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, string, error) {
+	kubeconfigSecret, hash, err := f.getSecretAndComputeHash(ctx, k)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return NewClientFromSecret(ctx, gardenClient.Client(), key.Namespace, secretRef.Name,
+	clientSet, err := NewClientFromSecretObject(kubeconfigSecret,
 		kubernetes.WithClientOptions(client.Options{
 			Scheme: kubernetes.PlantScheme,
 		}),
 	)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return clientSet, hash, nil
+}
+
+func (f *PlantClientSetFactory) getSecretAndComputeHash(ctx context.Context, k clientmap.ClientSetKey) (*corev1.Secret, string, error) {
+	key, ok := k.(PlantClientSetKey)
+	if !ok {
+		return nil, "", fmt.Errorf("unsupported ClientSetKey: expected %T got %T", PlantClientSetKey{}, k)
+	}
+
+	secretRef, gardenClient, err := f.getPlantSecretRef(ctx, key)
+	if err != nil {
+		return nil, "", err
+	}
+
+	kubeconfigSecret := &corev1.Secret{}
+	if err := gardenClient.Client().Get(ctx, client.ObjectKey{Namespace: key.Namespace, Name: secretRef.Name}, kubeconfigSecret); err != nil {
+		return nil, "", err
+	}
+
+	return kubeconfigSecret, utils.ComputeSHA256Hex(kubeconfigSecret.Data[kubernetes.KubeConfig]), nil
 }
 
 func (f *PlantClientSetFactory) getPlantSecretRef(ctx context.Context, key PlantClientSetKey) (*corev1.LocalObjectReference, kubernetes.Interface, error) {

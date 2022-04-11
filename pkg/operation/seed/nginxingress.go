@@ -106,19 +106,22 @@ func getManagedIngressDNSOwner(k8sSeedClient client.Client, seedClusterIdentity 
 
 func getManagedIngressDNSRecord(seedClient client.Client, dnsConfig gardencorev1beta1.SeedDNS, secretData map[string][]byte, seedFQDN string, loadBalancerAddress string, log logrus.FieldLogger) component.DeployMigrateWaiter {
 	values := &dnsrecord.Values{
-		Name:       "seed-ingress",
-		SecretName: "seed-ingress",
-		Namespace:  v1beta1constants.GardenNamespace,
-		SecretData: secretData,
-		DNSName:    seedFQDN,
-		RecordType: extensionsv1alpha1helper.GetDNSRecordType(loadBalancerAddress),
+		Name:                         "seed-ingress",
+		SecretName:                   "seed-ingress",
+		Namespace:                    v1beta1constants.GardenNamespace,
+		SecretData:                   secretData,
+		DNSName:                      seedFQDN,
+		RecordType:                   extensionsv1alpha1helper.GetDNSRecordType(loadBalancerAddress),
+		ReconcileOnlyOnChangeOrError: true,
 	}
+
 	if dnsConfig.Provider != nil {
 		values.Type = dnsConfig.Provider.Type
 		if dnsConfig.Provider.Zones != nil && len(dnsConfig.Provider.Zones.Include) == 1 {
 			values.Zone = &dnsConfig.Provider.Zones.Include[0]
 		}
 	}
+
 	if loadBalancerAddress != "" {
 		values.Values = []string{loadBalancerAddress}
 	}

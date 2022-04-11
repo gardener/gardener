@@ -8,7 +8,6 @@ import (
 	context "context"
 	reflect "reflect"
 
-	kubescheduler "github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -91,18 +90,6 @@ func (m *MockInterface) ScrapeConfigs() ([]string, error) {
 func (mr *MockInterfaceMockRecorder) ScrapeConfigs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScrapeConfigs", reflect.TypeOf((*MockInterface)(nil).ScrapeConfigs))
-}
-
-// SetSecrets mocks base method.
-func (m *MockInterface) SetSecrets(arg0 kubescheduler.Secrets) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetSecrets", arg0)
-}
-
-// SetSecrets indicates an expected call of SetSecrets.
-func (mr *MockInterfaceMockRecorder) SetSecrets(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSecrets", reflect.TypeOf((*MockInterface)(nil).SetSecrets), arg0)
 }
 
 // Wait mocks base method.

@@ -294,8 +294,6 @@ status:
 								Annotations: map[string]string{
 									"prometheus.io/port":   strconv.Itoa(prometheusPort),
 									"prometheus.io/scrape": strconv.FormatBool(prometheusScrape),
-									// TODO(rfranzke): Remove in a future release.
-									"security.gardener.cloud/trigger": "rollout",
 								},
 							},
 							Spec: corev1.PodSpec{
@@ -323,7 +321,6 @@ status:
 										Image: values.Image,
 										Resources: corev1.ResourceRequirements{
 											Limits: corev1.ResourceList{
-												corev1.ResourceCPU:    resource.MustParse("100m"),
 												corev1.ResourceMemory: resource.MustParse("100Mi"),
 											},
 											Requests: corev1.ResourceList{
@@ -431,7 +428,7 @@ status:
 				}
 				return daemonset
 			}
-			vpaYAML = `apiVersion: autoscaling.k8s.io/v1beta2
+			vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null

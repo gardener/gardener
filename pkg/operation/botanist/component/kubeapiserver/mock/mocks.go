@@ -158,16 +158,16 @@ func (mr *MockInterfaceMockRecorder) SetExternalHostname(arg0 interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetExternalHostname", reflect.TypeOf((*MockInterface)(nil).SetExternalHostname), arg0)
 }
 
-// SetProbeToken mocks base method.
-func (m *MockInterface) SetProbeToken(arg0 string) {
+// SetExternalServer mocks base method.
+func (m *MockInterface) SetExternalServer(arg0 string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetProbeToken", arg0)
+	m.ctrl.Call(m, "SetExternalServer", arg0)
 }
 
-// SetProbeToken indicates an expected call of SetProbeToken.
-func (mr *MockInterfaceMockRecorder) SetProbeToken(arg0 interface{}) *gomock.Call {
+// SetExternalServer indicates an expected call of SetExternalServer.
+func (mr *MockInterfaceMockRecorder) SetExternalServer(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetProbeToken", reflect.TypeOf((*MockInterface)(nil).SetProbeToken), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetExternalServer", reflect.TypeOf((*MockInterface)(nil).SetExternalServer), arg0)
 }
 
 // SetSNIConfig mocks base method.
@@ -192,6 +192,18 @@ func (m *MockInterface) SetSecrets(arg0 kubeapiserver.Secrets) {
 func (mr *MockInterfaceMockRecorder) SetSecrets(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSecrets", reflect.TypeOf((*MockInterface)(nil).SetSecrets), arg0)
+}
+
+// SetServerCertificateConfig mocks base method.
+func (m *MockInterface) SetServerCertificateConfig(arg0 kubeapiserver.ServerCertificateConfig) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetServerCertificateConfig", arg0)
+}
+
+// SetServerCertificateConfig indicates an expected call of SetServerCertificateConfig.
+func (mr *MockInterfaceMockRecorder) SetServerCertificateConfig(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetServerCertificateConfig", reflect.TypeOf((*MockInterface)(nil).SetServerCertificateConfig), arg0)
 }
 
 // SetServiceAccountConfig mocks base method.

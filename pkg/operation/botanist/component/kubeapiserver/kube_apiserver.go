@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -28,25 +29,63 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
+	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
+	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+var (
+	scheme *runtime.Scheme
+	codec  runtime.Codec
+)
+
+func init() {
+	scheme = runtime.NewScheme()
+	utilruntime.Must(apiserverv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(apiserverconfigv1.AddToScheme(scheme))
+	utilruntime.Must(auditv1.AddToScheme(scheme))
+
+	var (
+		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{
+			Yaml:   true,
+			Pretty: false,
+			Strict: false,
+		})
+		versions = schema.GroupVersions([]schema.GroupVersion{
+			apiserverv1alpha1.SchemeGroupVersion,
+			apiserverconfigv1.SchemeGroupVersion,
+			auditv1.SchemeGroupVersion,
+		})
+	)
+
+	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
+}
+
 const (
 	// Port is the port exposed by the kube-apiserver.
 	Port = 443
+	// SecretNameUserKubeconfig is the name for the user kubeconfig.
+	SecretNameUserKubeconfig = "user-kubeconfig"
 	// ServicePortName is the name of the port in the service.
 	ServicePortName = "kube-apiserver"
-	// UserName is the name of the kube-apiserver user when communicating with the kubelet.
-	UserName = "system:kube-apiserver:kubelet"
 	// UserNameVPNSeed is the user name for the vpn-seed components (used as common name in its client certificate)
 	UserNameVPNSeed = "vpn-seed"
+
+	userName = "system:kube-apiserver:kubelet"
 )
 
 // Interface contains functions for a kube-apiserver deployer.
@@ -64,14 +103,16 @@ type Interface interface {
 	SetAutoscalingAPIServerResources(corev1.ResourceRequirements)
 	// SetAutoscalingReplicas sets the Replicas field in the AutoscalingConfig of the Values of the deployer.
 	SetAutoscalingReplicas(*int32)
+	// SetServerCertificateConfig sets the ServerCertificateConfig field in the Values of the deployer.
+	SetServerCertificateConfig(ServerCertificateConfig)
 	// SetServiceAccountConfig sets the ServiceAccount field in the Values of the deployer.
 	SetServiceAccountConfig(ServiceAccountConfig)
 	// SetSNIConfig sets the SNI field in the Values of the deployer.
 	SetSNIConfig(SNIConfig)
-	// SetProbeToken sets the ProbeToken field in the Values of the deployer.
-	SetProbeToken(string)
 	// SetExternalHostname sets the ExternalHostname field in the Values of the deployer.
 	SetExternalHostname(string)
+	// SetExternalServer sets the ExternalServer field in the Values of the deployer.
+	SetExternalServer(string)
 }
 
 // Values contains configuration values for the kube-apiserver resources.
@@ -93,18 +134,20 @@ type Values struct {
 	EventTTL *metav1.Duration
 	// ExternalHostname is the external hostname which should be exposed by the kube-apiserver.
 	ExternalHostname string
+	// ExternalServer is the external server which should be used when generating the user kubeconfig.
+	ExternalServer string
 	// FeatureGates is the set of feature gates.
 	FeatureGates map[string]bool
 	// Images is a set of container images used for the containers of the kube-apiserver pods.
 	Images Images
 	// OIDC contains information for configuring OIDC settings for the kube-apiserver.
 	OIDC *gardencorev1beta1.OIDCConfig
-	// ProbeToken is the JWT token used for {live,readi}ness probes of the kube-apiserver container.
-	ProbeToken string
 	// Requests contains configuration for the kube-apiserver requests.
 	Requests *gardencorev1beta1.KubeAPIServerRequests
 	// RuntimeConfig is the set of runtime configurations.
 	RuntimeConfig map[string]bool
+	// ServerCertificate contains configuration for the server certificate.
+	ServerCertificate ServerCertificateConfig
 	// ServiceAccount contains information for configuring ServiceAccount settings for the kube-apiserver.
 	ServiceAccount ServiceAccountConfig
 	// SNI contains information for configuring SNI settings for the kube-apiserver.
@@ -115,6 +158,8 @@ type Values struct {
 	VPN VPNConfig
 	// WatchCacheSizes are the configured sizes for the watch caches.
 	WatchCacheSizes *gardencorev1beta1.WatchCacheSizes
+	// EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for shoot.
+	EnableStaticTokenKubeconfig *bool
 }
 
 // AuditConfig contains information for configuring audit settings for the kube-apiserver.
@@ -167,10 +212,20 @@ type VPNConfig struct {
 	NodeNetworkCIDR *string
 }
 
+// ServerCertificateConfig contains configuration for the server certificate.
+type ServerCertificateConfig struct {
+	// ExtraIPAddresses is a list of additional IP addresses to use for the SANS of the server certificate.
+	ExtraIPAddresses []net.IP
+	// ExtraDNSNames is a list of additional DNS names to use for the SANS of the server certificate.
+	ExtraDNSNames []string
+}
+
 // ServiceAccountConfig contains information for configuring ServiceAccountConfig settings for the kube-apiserver.
 type ServiceAccountConfig struct {
 	// Issuer is the issuer of service accounts.
 	Issuer string
+	// AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.
+	AcceptedIssuers []string
 	// SigningKey is the key used when service accounts are signed.
 	SigningKey []byte
 	// ExtendTokenExpiration states whether the service account token expirations should be extended.
@@ -192,19 +247,21 @@ type SNIConfig struct {
 }
 
 // New creates a new instance of DeployWaiter for the kube-apiserver.
-func New(client kubernetes.Interface, namespace string, values Values) Interface {
+func New(client kubernetes.Interface, namespace string, secretsManager secretsmanager.Interface, values Values) Interface {
 	return &kubeAPIServer{
-		client:    client,
-		namespace: namespace,
-		values:    values,
+		client:         client,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		values:         values,
 	}
 }
 
 type kubeAPIServer struct {
-	client    kubernetes.Interface
-	namespace string
-	values    Values
-	secrets   Secrets
+	client         kubernetes.Interface
+	namespace      string
+	secretsManager secretsmanager.Interface
+	values         Values
+	secrets        Secrets
 }
 
 func (k *kubeAPIServer) Deploy(ctx context.Context) error {
@@ -213,19 +270,20 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	var (
-		deployment                           = k.emptyDeployment()
-		podDisruptionBudget                  = k.emptyPodDisruptionBudget()
-		horizontalPodAutoscaler              = k.emptyHorizontalPodAutoscaler()
-		verticalPodAutoscaler                = k.emptyVerticalPodAutoscaler()
-		hvpa                                 = k.emptyHVPA()
-		networkPolicyAllowFromShootAPIServer = k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer)
-		networkPolicyAllowToShootAPIServer   = k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer)
-		networkPolicyAllowKubeAPIServer      = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
-		secretOIDCCABundle                   = k.emptySecret(secretOIDCCABundleNamePrefix)
-		secretServiceAccountSigningKey       = k.emptySecret(secretServiceAccountSigningKeyNamePrefix)
-		configMapAdmission                   = k.emptyConfigMap(configMapAdmissionNamePrefix)
-		configMapAuditPolicy                 = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
-		configMapEgressSelector              = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
+		deployment                                 = k.emptyDeployment()
+		podDisruptionBudget                        = k.emptyPodDisruptionBudget()
+		horizontalPodAutoscaler                    = k.emptyHorizontalPodAutoscaler()
+		verticalPodAutoscaler                      = k.emptyVerticalPodAutoscaler()
+		hvpa                                       = k.emptyHVPA()
+		networkPolicyAllowFromShootAPIServer       = k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer)
+		networkPolicyAllowToShootAPIServer         = k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer)
+		networkPolicyAllowKubeAPIServer            = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
+		secretETCDEncryptionConfiguration          = k.emptySecret(secretETCDEncryptionConfigurationNamePrefix)
+		secretOIDCCABundle                         = k.emptySecret(secretOIDCCABundleNamePrefix)
+		secretUserProvidedServiceAccountSigningKey = k.emptySecret(secretServiceAccountSigningKeyNamePrefix)
+		configMapAdmission                         = k.emptyConfigMap(configMapAdmissionNamePrefix)
+		configMapAuditPolicy                       = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
+		configMapEgressSelector                    = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
 	)
 
 	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {
@@ -256,11 +314,50 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if err := k.reconcileSecretETCDEncryptionConfiguration(ctx, secretETCDEncryptionConfiguration); err != nil {
+		return err
+	}
+
 	if err := k.reconcileSecretOIDCCABundle(ctx, secretOIDCCABundle); err != nil {
 		return err
 	}
 
-	if err := k.reconcileSecretServiceAccountSigningKey(ctx, secretServiceAccountSigningKey); err != nil {
+	if err := k.reconcileSecretUserProvidedServiceAccountSigningKey(ctx, secretUserProvidedServiceAccountSigningKey); err != nil {
+		return err
+	}
+
+	secretServiceAccountKey, err := k.reconcileSecretServiceAccountKey(ctx)
+	if err != nil {
+		return err
+	}
+
+	secretBasicAuth, err := k.reconcileSecretBasicAuth(ctx)
+	if err != nil {
+		return err
+	}
+
+	secretHTTPProxy, err := k.reconcileSecretHTTPProxy(ctx)
+	if err != nil {
+		return err
+	}
+
+	secretKubeAggregator, err := k.reconcileSecretKubeAggregator(ctx)
+	if err != nil {
+		return err
+	}
+
+	secretKubeletClient, err := k.reconcileSecretKubeletClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	secretServer, err := k.reconcileSecretServer(ctx)
+	if err != nil {
+		return err
+	}
+
+	secretStaticToken, err := k.reconcileSecretStaticToken(ctx)
+	if err != nil {
 		return err
 	}
 
@@ -276,8 +373,42 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := k.reconcileDeployment(ctx, deployment, configMapAuditPolicy, configMapAdmission, configMapEgressSelector, secretOIDCCABundle, secretServiceAccountSigningKey); err != nil {
+	secretLegacyVPNSeed, err := k.reconcileSecretLegacyVPNSeed(ctx)
+	if err != nil {
 		return err
+	}
+
+	secretLegacyVPNSeedTLSAuth, err := k.reconcileSecretLegacyVPNSeedTLSAuth(ctx)
+	if err != nil {
+		return err
+	}
+
+	if err := k.reconcileDeployment(
+		ctx,
+		deployment,
+		configMapAuditPolicy,
+		configMapAdmission,
+		configMapEgressSelector,
+		secretETCDEncryptionConfiguration,
+		secretOIDCCABundle,
+		secretUserProvidedServiceAccountSigningKey,
+		secretServiceAccountKey,
+		secretStaticToken,
+		secretBasicAuth,
+		secretServer,
+		secretKubeletClient,
+		secretKubeAggregator,
+		secretHTTPProxy,
+		secretLegacyVPNSeed,
+		secretLegacyVPNSeedTLSAuth,
+	); err != nil {
+		return err
+	}
+
+	if pointer.BoolDeref(k.values.EnableStaticTokenKubeconfig, true) {
+		if err := k.reconcileSecretUserKubeconfig(ctx, secretStaticToken, secretBasicAuth); err != nil {
+			return err
+		}
 	}
 
 	data, err := k.computeShootResourcesData()
@@ -417,6 +548,10 @@ func (k *kubeAPIServer) SetSecrets(secrets Secrets) {
 	k.secrets = secrets
 }
 
+func (k *kubeAPIServer) SetServerCertificateConfig(config ServerCertificateConfig) {
+	k.values.ServerCertificate = config
+}
+
 func (k *kubeAPIServer) SetServiceAccountConfig(config ServiceAccountConfig) {
 	k.values.ServiceAccount = config
 }
@@ -425,12 +560,12 @@ func (k *kubeAPIServer) SetSNIConfig(config SNIConfig) {
 	k.values.SNI = config
 }
 
-func (k *kubeAPIServer) SetProbeToken(token string) {
-	k.values.ProbeToken = token
-}
-
 func (k *kubeAPIServer) SetExternalHostname(hostname string) {
 	k.values.ExternalHostname = hostname
+}
+
+func (k *kubeAPIServer) SetExternalServer(server string) {
+	k.values.ExternalServer = server
 }
 
 // GetLabels returns the labels for the kube-apiserver.
@@ -449,41 +584,10 @@ func getLabels() map[string]string {
 
 // Secrets is collection of secrets for the kube-apiserver.
 type Secrets struct {
-	// BasicAuthentication contains the basic authentication credentials.
-	// Only relevant if BasicAuthenticationEnabled is true.
-	BasicAuthentication *component.Secret
 	// CA is the cluster's certificate authority.
 	CA component.Secret
-	// CAEtcd is the certificate authority for the etcd.
-	CAEtcd component.Secret
 	// CAFrontProxy is the certificate authority for the front-proxy.
 	CAFrontProxy component.Secret
-	// Etcd is the client certificate for the kube-apiserver to talk to etcd.
-	Etcd component.Secret
-	// EtcdEncryptionConfig is the configuration containing information how to encrypt the etcd data.
-	EtcdEncryptionConfig component.Secret
-	// HTTPProxy is the client certificate for the http proxy to talk to the kube-apiserver..
-	// Only relevant if VPNConfig.ReversedVPNEnabled is true.
-	HTTPProxy *component.Secret
-	// KubeAggregator is the client certificate for the kube-aggregator to talk to the kube-apiserver.
-	KubeAggregator component.Secret
-	// KubeAPIServerToKubelet is the client certificate for the kube-apiserver to talk to kubelets.
-	KubeAPIServerToKubelet component.Secret
-	// Server is the server certificate and key for the HTTP server of kube-apiserver.
-	Server component.Secret
-	// ServiceAccountKey is key for service accounts.
-	ServiceAccountKey component.Secret
-	// StaticToken is the static token secret.
-	StaticToken component.Secret
-	// VPNSeed is the client certificate for the vpn-seed to talk to the kube-apiserver.
-	// Only relevant if VPNConfig.ReversedVPNEnabled is false.
-	VPNSeed *component.Secret
-	// VPNSeedTLSAuth is the TLS auth information for the vpn-seed.
-	// Only relevant if VPNConfig.ReversedVPNEnabled is false.
-	VPNSeedTLSAuth *component.Secret
-	// VPNSeedServerTLSAuth is the TLS auth information for the vpn-seed server.
-	// Only relevant if VPNConfig.ReversedVPNEnabled is true.
-	VPNSeedServerTLSAuth *component.Secret
 }
 
 type secret struct {
@@ -493,21 +597,8 @@ type secret struct {
 
 func (s *Secrets) all() map[string]secret {
 	return map[string]secret{
-		"BasicAuthentication":    {Secret: s.BasicAuthentication, isRequired: func(v Values) bool { return v.BasicAuthenticationEnabled }},
-		"CA":                     {Secret: &s.CA},
-		"CAEtcd":                 {Secret: &s.CAEtcd},
-		"CAFrontProxy":           {Secret: &s.CAFrontProxy},
-		"Etcd":                   {Secret: &s.Etcd},
-		"EtcdEncryptionConfig":   {Secret: &s.EtcdEncryptionConfig},
-		"HTTPProxy":              {Secret: s.HTTPProxy, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
-		"KubeAggregator":         {Secret: &s.KubeAggregator},
-		"KubeAPIServerToKubelet": {Secret: &s.KubeAPIServerToKubelet},
-		"Server":                 {Secret: &s.Server},
-		"ServiceAccountKey":      {Secret: &s.ServiceAccountKey},
-		"StaticToken":            {Secret: &s.StaticToken},
-		"VPNSeed":                {Secret: s.VPNSeed, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
-		"VPNSeedTLSAuth":         {Secret: s.VPNSeedTLSAuth, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
-		"VPNSeedServerTLSAuth":   {Secret: s.VPNSeedServerTLSAuth, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
+		"CA":           {Secret: &s.CA},
+		"CAFrontProxy": {Secret: &s.CAFrontProxy},
 	}
 }
 

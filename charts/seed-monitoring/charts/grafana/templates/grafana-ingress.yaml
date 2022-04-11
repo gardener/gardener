@@ -6,7 +6,7 @@ metadata:
     kubernetes.io/ingress.class: {{ .Values.ingress.class }}
 {{- end }}
     nginx.ingress.kubernetes.io/auth-realm: Authentication Required
-    nginx.ingress.kubernetes.io/auth-secret: grafana-{{ .Values.role }}-basic-auth
+    nginx.ingress.kubernetes.io/auth-secret: {{ .Values.ingress.authSecretName }}
     nginx.ingress.kubernetes.io/auth-type: basic
 {{- if eq .Values.role "users" }}
     nginx.ingress.kubernetes.io/configuration-snippet: "proxy_set_header X-Scope-OrgID user;"

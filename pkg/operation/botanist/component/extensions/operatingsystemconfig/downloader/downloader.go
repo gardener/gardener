@@ -102,14 +102,18 @@ const (
 	// PathBootstrapToken is the path of a file on the shoot worker nodes in which the bootstrap token for the kubelet
 	// bootstrap is stored.
 	PathBootstrapToken = PathCredentialsDirectory + "/bootstrap-token"
-	// BootstrapTokenPlaceholder is the token that is expected to be replaced by the worker controller with the actual token
+	// BootstrapTokenPlaceholder is the token that is expected to be replaced by the worker controller with the actual
+	// token.
 	BootstrapTokenPlaceholder = "<<BOOTSTRAP_TOKEN>>"
 	// PathDownloadedCloudConfig is the path on the shoot worker nodes at which the downloaded cloud-config user-data
 	// will be stored.
 	PathDownloadedCloudConfig = PathDownloadsDirectory + "/cloud_config"
+	// PathDownloadedExecutorScript is the path on the shoot worker nodes at which the downloaded executor script will
+	// be stored.
+	PathDownloadedExecutorScript = PathDownloadsDirectory + "/execute-cloud-config.sh"
 	// PathDownloadedCloudConfigChecksum is the path on the shoot worker nodes at which the checksum of the downloaded
 	// cloud-config user-data will be stored.
-	PathDownloadedCloudConfigChecksum = PathCCDDirectory + "/downloaded_checksum"
+	PathDownloadedCloudConfigChecksum = PathDownloadsDirectory + "/execute-cloud-config-checksum"
 )
 
 // Config returns the units and the files for the OperatingSystemConfig that downloads the actual cloud-config user
@@ -122,18 +126,20 @@ const (
 func Config(cloudConfigUserDataSecretName, apiServerURL string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	var ccdScript bytes.Buffer
 	if err := tpl.Execute(&ccdScript, map[string]string{
-		"secretName":                cloudConfigUserDataSecretName,
-		"tokenSecretName":           Name,
-		"pathCredentialsServer":     PathCredentialsServer,
-		"pathCredentialsCACert":     PathCredentialsCACert,
-		"pathCredentialsClientCert": PathCredentialsClientCert,
-		"pathCredentialsClientKey":  PathCredentialsClientKey,
-		"pathCredentialsToken":      PathCredentialsToken,
-		"pathBootstrapToken":        PathBootstrapToken,
-		"pathDownloadedChecksum":    PathDownloadedCloudConfigChecksum,
-		"annotationChecksum":        AnnotationKeyChecksum,
-		"dataKeyScript":             DataKeyScript,
-		"dataKeyToken":              resourcesv1alpha1.DataKeyToken,
+		"secretName":                   cloudConfigUserDataSecretName,
+		"tokenSecretName":              Name,
+		"pathCredentialsServer":        PathCredentialsServer,
+		"pathCredentialsCACert":        PathCredentialsCACert,
+		"pathCredentialsClientCert":    PathCredentialsClientCert,
+		"pathCredentialsClientKey":     PathCredentialsClientKey,
+		"pathCredentialsToken":         PathCredentialsToken,
+		"pathBootstrapToken":           PathBootstrapToken,
+		"pathDownloadedChecksum":       PathDownloadedCloudConfigChecksum,
+		"pathDownloadedExecutorScript": PathDownloadedExecutorScript,
+		"pathDownloadsDirectory":       PathDownloadsDirectory,
+		"annotationChecksum":           AnnotationKeyChecksum,
+		"dataKeyScript":                DataKeyScript,
+		"dataKeyToken":                 resourcesv1alpha1.DataKeyToken,
 	}); err != nil {
 		return nil, nil, err
 	}
@@ -235,11 +241,6 @@ func GenerateRBACResourcesData(secretNames []string) (map[string][]byte, error) 
 				Name:     role.Name,
 			},
 			Subjects: []rbacv1.Subject{
-				// TODO(rfranzke): Delete this subject in a future release.
-				{
-					Kind: rbacv1.UserKind,
-					Name: "cloud-config-downloader",
-				},
 				{
 					Kind: rbacv1.GroupKind,
 					Name: bootstraptokenapi.BootstrapDefaultGroup,

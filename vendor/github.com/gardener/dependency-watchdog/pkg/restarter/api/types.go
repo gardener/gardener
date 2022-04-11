@@ -22,6 +22,6 @@ type Service struct {
 
 // DependantPods struct captures the details needed to identify dependant pods.
 type DependantPods struct {
-	Name     string            `json:"name,omitempty"`
+	Name     string                `json:"name,omitempty"`
 	Selector *metav1.LabelSelector `json:"selector"`
 }

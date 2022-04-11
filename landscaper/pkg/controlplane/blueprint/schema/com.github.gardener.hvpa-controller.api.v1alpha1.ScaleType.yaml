@@ -1,8 +1,0 @@
-description: Allows any json. Used because the original type does not generate any
-  OpenAPI/JSONSchema specification
-type:
-- object
-- string
-- number
-- array
-- boolean

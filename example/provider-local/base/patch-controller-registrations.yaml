@@ -1,0 +1,15 @@
+apiVersion: core.gardener.cloud/v1beta1
+kind: ControllerRegistration
+metadata:
+  name: provider-local
+spec:
+  deployment:
+    policy: Always
+---
+apiVersion: core.gardener.cloud/v1beta1
+kind: ControllerRegistration
+metadata:
+  name: networking-calico
+spec:
+  deployment:
+    policy: Always

@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -47,7 +48,11 @@ func (b *Botanist) DefaultInfrastructure() infrastructure.Interface {
 // DeployInfrastructure deploys the Infrastructure custom resource and triggers the restore operation in case
 // the Shoot is in the restore phase of the control plane migration.
 func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
-	b.Shoot.Components.Extensions.Infrastructure.SetSSHPublicKey(b.LoadSecret(v1beta1constants.SecretNameSSHKeyPair).Data[secrets.DataKeySSHAuthorizedKeys])
+	sshKeypairSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameSSHKeyPair)
+	}
+	b.Shoot.Components.Extensions.Infrastructure.SetSSHPublicKey(sshKeypairSecret.Data[secrets.DataKeySSHAuthorizedKeys])
 
 	if b.isRestorePhase() {
 		return b.Shoot.Components.Extensions.Infrastructure.Restore(ctx, b.GetShootState())

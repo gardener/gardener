@@ -22,8 +22,6 @@ spec:
       annotations:
         sidecar.istio.io/inject: "false"
         checksum/istio-config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-        # TODO(rfranzke): Remove in a future release.
-        security.gardener.cloud/trigger: rollout
     spec:
       serviceAccountName: istiod
       securityContext:
@@ -100,7 +98,6 @@ spec:
             cpu: 250m
             memory: 256Mi
           limits:
-            cpu: 1000m
             memory: 2048Mi
         securityContext:
           capabilities:
@@ -133,6 +130,7 @@ spec:
       - name: config-volume
         configMap:
           name: istio
+      priorityClassName: {{ .Values.priorityClassName }}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

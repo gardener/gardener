@@ -73,14 +73,18 @@ var _ = Describe("OperatingSystemConfig", func() {
 			mockNow *mocktime.MockNow
 			now     time.Time
 
-			apiServerURL            = "https://url-to-apiserver"
-			caBundle                = pointer.String("ca-bundle")
-			clusterDNSAddress       = "cluster-dns"
-			clusterDomain           = "cluster-domain"
-			images                  = map[string]*imagevector.Image{"foo": {}}
-			kubeletCACertificate    = "kubelet-ca"
-			kubeletCLIFlags         = components.ConfigurableKubeletCLIFlags{}
-			kubeletConfigParameters = components.ConfigurableKubeletConfigParameters{}
+			apiServerURL                = "https://url-to-apiserver"
+			caBundle                    = pointer.String("ca-bundle")
+			clusterDNSAddress           = "cluster-dns"
+			clusterDomain               = "cluster-domain"
+			images                      = map[string]*imagevector.Image{"foo": {}}
+			kubeletCACertificate        = "kubelet-ca"
+			evictionHardMemoryAvailable = "100Mi"
+			kubeletConfig               = &gardencorev1beta1.KubeletConfig{
+				EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
+					MemoryAvailable: &evictionHardMemoryAvailable,
+				},
+			}
 			kubeletDataVolumeName   = "foo"
 			machineTypes            []gardencorev1beta1.MachineType
 			sshPublicKeys           = []string{"ssh-public-key", "ssh-public-key-b"}
@@ -177,16 +181,15 @@ var _ = Describe("OperatingSystemConfig", func() {
 					APIServerURL: apiServerURL,
 				},
 				OriginalValues: OriginalValues{
-					CABundle:                caBundle,
-					ClusterDNSAddress:       clusterDNSAddress,
-					ClusterDomain:           clusterDomain,
-					Images:                  images,
-					KubeletCACertificate:    kubeletCACertificate,
-					KubeletConfigParameters: kubeletConfigParameters,
-					KubeletCLIFlags:         kubeletCLIFlags,
-					MachineTypes:            machineTypes,
-					SSHPublicKeys:           sshPublicKeys,
-					PromtailEnabled:         promtailEnabled,
+					CABundle:             caBundle,
+					ClusterDNSAddress:    clusterDNSAddress,
+					ClusterDomain:        clusterDomain,
+					Images:               images,
+					KubeletConfig:        kubeletConfig,
+					KubeletCACertificate: kubeletCACertificate,
+					MachineTypes:         machineTypes,
+					SSHPublicKeys:        sshPublicKeys,
+					PromtailEnabled:      promtailEnabled,
 				},
 			}
 
@@ -219,18 +222,21 @@ var _ = Describe("OperatingSystemConfig", func() {
 					apiServerURL,
 				)
 				originalUnits, originalFiles, _ := originalConfigFn(components.Context{
-					CABundle:                caBundle,
-					ClusterDNSAddress:       clusterDNSAddress,
-					ClusterDomain:           clusterDomain,
-					CRIName:                 criName,
-					Images:                  images,
-					KubeletCACertificate:    kubeletCACertificate,
-					KubeletCLIFlags:         kubeletCLIFlags,
-					KubeletConfigParameters: kubeletConfigParameters,
-					KubeletDataVolumeName:   &kubeletDataVolumeName,
-					KubernetesVersion:       k8sVersion,
-					SSHPublicKeys:           sshPublicKeys,
-					PromtailEnabled:         promtailEnabled,
+					CABundle:             caBundle,
+					ClusterDNSAddress:    clusterDNSAddress,
+					ClusterDomain:        clusterDomain,
+					CRIName:              criName,
+					Images:               images,
+					KubeletCACertificate: kubeletCACertificate,
+					KubeletConfigParameters: components.ConfigurableKubeletConfigParameters{
+						EvictionHard: map[string]string{
+							"memory.available": evictionHardMemoryAvailable,
+						},
+					},
+					KubeletDataVolumeName: &kubeletDataVolumeName,
+					KubernetesVersion:     k8sVersion,
+					SSHPublicKeys:         sshPublicKeys,
+					PromtailEnabled:       promtailEnabled,
 				})
 
 				oscDownloader := &extensionsv1alpha1.OperatingSystemConfig{
@@ -313,7 +319,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Expect(secret.Annotations).To(Equal(map[string]string{
 					"serviceaccount.resources.gardener.cloud/name":                      "cloud-config-downloader",
 					"serviceaccount.resources.gardener.cloud/namespace":                 "kube-system",
-					"serviceaccount.resources.gardener.cloud/token-expiration-duration": "2160h",
+					"serviceaccount.resources.gardener.cloud/token-expiration-duration": "720h",
 					"token-requestor.resources.gardener.cloud/target-secret-name":       "cloud-config-downloader",
 					"token-requestor.resources.gardener.cloud/target-secret-namespace":  "kube-system",
 				}))
@@ -377,15 +383,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Expect(actual).To(Equal(obj))
 				}
 			})
-
-			It("should delete the legacy downloader secret", func() {
-				secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-downloader", Namespace: namespace}}
-				Expect(c.Create(ctx, secret)).To(Succeed())
-
-				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(BeNotFoundError())
-			})
 		})
 
 		Describe("#Restore", func() {
@@ -446,7 +443,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Annotations: map[string]string{
 							"serviceaccount.resources.gardener.cloud/name":                      "cloud-config-downloader",
 							"serviceaccount.resources.gardener.cloud/namespace":                 "kube-system",
-							"serviceaccount.resources.gardener.cloud/token-expiration-duration": "2160h",
+							"serviceaccount.resources.gardener.cloud/token-expiration-duration": "720h",
 							"token-requestor.resources.gardener.cloud/target-secret-name":       "cloud-config-downloader",
 							"token-requestor.resources.gardener.cloud/target-secret-namespace":  "kube-system",
 						},
@@ -491,8 +488,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 					metav1.SetMetaDataAnnotation(&expectedWithRestore.ObjectMeta, "gardener.cloud/operation", "restore")
 					test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
 				}
-
-				mc.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-downloader", Namespace: namespace}})
 
 				defaultDepWaiter = New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 				Expect(defaultDepWaiter.Restore(ctx, shootState)).To(Succeed())

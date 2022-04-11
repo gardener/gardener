@@ -23,8 +23,6 @@ spec:
       annotations:
         sidecar.istio.io/inject: "false"
         checksum/configmap-bootstrap-config-override: {{ include (print $.Template.BasePath "/bootstrap-config-override.yaml") . | sha256sum }}
-        # TODO(rfranzke): Remove in a future release.
-        security.gardener.cloud/trigger: rollout
     spec:
       serviceAccountName: istio-ingressgateway
       securityContext:
@@ -80,7 +78,6 @@ spec:
             cpu: 1000m
             memory: 2Gi
           limits:
-            cpu: 4000m
             memory: 8Gi
         env:
         - name: NODE_NAME
@@ -189,6 +186,7 @@ spec:
               path: istio-token
               expirationSeconds: 43200
               audience: istio-ca
+      priorityClassName: {{ .Values.priorityClassName }}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

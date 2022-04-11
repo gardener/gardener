@@ -12,10 +12,10 @@ spec:
   command: [bash, -c]
   args:
   - >-
-    go test -timeout=0 -mod=vendor ./test/system/shoot_update
-    --v -ginkgo.v -ginkgo.progress -ginkgo.noColor -verbose=debug
+    go test -timeout=0 -mod=vendor ./test/testmachinery/system/shoot_update
+    --v -ginkgo.v -ginkgo.progress -ginkgo.no-color -verbose=debug
     -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
     -shoot-name=$SHOOT_NAME
     -project-namespace=$PROJECT_NAMESPACE
     -version=$K8S_VERSION
-  image: eu.gcr.io/gardener-project/3rd/golang:1.17.6
+  image: eu.gcr.io/gardener-project/3rd/golang:1.17.8

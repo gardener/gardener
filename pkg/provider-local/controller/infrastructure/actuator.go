@@ -47,8 +47,8 @@ func NewActuator() infrastructure.Actuator {
 }
 
 func (a *actuator) Reconcile(ctx context.Context, infrastructure *extensionsv1alpha1.Infrastructure, _ *extensionscontroller.Cluster) error {
-	networkPolicy := emptyNetworkPolicy(infrastructure.Namespace)
-	networkPolicy.Spec = networkingv1.NetworkPolicySpec{
+	networkPolicyAllowToMachinePods := emptyNetworkPolicy("allow-to-machine-pods", infrastructure.Namespace)
+	networkPolicyAllowToMachinePods.Spec = networkingv1.NetworkPolicySpec{
 		Egress: []networkingv1.NetworkPolicyEgressRule{{
 			To: []networkingv1.NetworkPolicyPeer{{
 				PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}},
@@ -60,8 +60,71 @@ func (a *actuator) Reconcile(ctx context.Context, infrastructure *extensionsv1al
 		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 	}
 
-	if err := a.Client().Patch(ctx, networkPolicy, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
-		return err
+	var (
+		protocolTCP = corev1.ProtocolTCP
+		protocolUDP = corev1.ProtocolUDP
+	)
+
+	networkPolicyAllowToProviderLocalCoreDNS := emptyNetworkPolicy("allow-to-provider-local-coredns", infrastructure.Namespace)
+	networkPolicyAllowToProviderLocalCoreDNS.Spec = networkingv1.NetworkPolicySpec{
+		Egress: []networkingv1.NetworkPolicyEgressRule{{
+			To: []networkingv1.NetworkPolicyPeer{{
+				NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "gardener-extension-provider-local-coredns"}},
+				PodSelector:       &metav1.LabelSelector{MatchLabels: map[string]string{"app": "coredns"}},
+			}},
+			Ports: []networkingv1.NetworkPolicyPort{
+				{Port: intStrPtr(9053), Protocol: &protocolTCP},
+				{Port: intStrPtr(9053), Protocol: &protocolUDP},
+			},
+		}},
+		PodSelector: metav1.LabelSelector{
+			MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToDNS: v1beta1constants.LabelNetworkPolicyAllowed},
+		},
+		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+	}
+
+	networkPolicyAllowToIstioIngressGateway := emptyNetworkPolicy("allow-to-istio-ingress-gateway", infrastructure.Namespace)
+	networkPolicyAllowToIstioIngressGateway.Spec = networkingv1.NetworkPolicySpec{
+		Egress: []networkingv1.NetworkPolicyEgressRule{{
+			To: []networkingv1.NetworkPolicyPeer{{
+				NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "istio-ingress"}},
+				PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+					"app":   "istio-ingressgateway",
+					"istio": "ingressgateway",
+				}},
+			}},
+			Ports: []networkingv1.NetworkPolicyPort{
+				{Port: intStrPtr(8132), Protocol: &protocolTCP},
+				{Port: intStrPtr(8443), Protocol: &protocolTCP},
+				{Port: intStrPtr(9443), Protocol: &protocolTCP},
+			},
+		}},
+		PodSelector: metav1.LabelSelector{
+			MatchLabels: map[string]string{local.LabelNetworkPolicyToIstioIngressGateway: v1beta1constants.LabelNetworkPolicyAllowed},
+		},
+		PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+	}
+
+	networkPolicyAllowMachinePods := emptyNetworkPolicy("allow-machine-pods", infrastructure.Namespace)
+	networkPolicyAllowMachinePods.Spec = networkingv1.NetworkPolicySpec{
+		Ingress: []networkingv1.NetworkPolicyIngressRule{{
+			From: []networkingv1.NetworkPolicyPeer{
+				{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}}},
+				{PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "vpn-seed-server"}}},
+			},
+		}},
+		Egress: []networkingv1.NetworkPolicyEgressRule{{
+			To: []networkingv1.NetworkPolicyPeer{{
+				PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}},
+			}},
+		}},
+		PodSelector: metav1.LabelSelector{
+			MatchLabels: map[string]string{"app": "machine"},
+		},
+		PolicyTypes: []networkingv1.PolicyType{
+			networkingv1.PolicyTypeIngress,
+			networkingv1.PolicyTypeEgress,
+		},
 	}
 
 	service := emptyVPNShootService(infrastructure.Namespace)
@@ -75,12 +138,27 @@ func (a *actuator) Reconcile(ctx context.Context, infrastructure *extensionsv1al
 		}},
 	}
 
-	return a.Client().Patch(ctx, service, client.Apply, local.FieldOwner, client.ForceOwnership)
+	for _, obj := range []client.Object{
+		networkPolicyAllowToMachinePods,
+		networkPolicyAllowToProviderLocalCoreDNS,
+		networkPolicyAllowToIstioIngressGateway,
+		networkPolicyAllowMachinePods,
+		service,
+	} {
+		if err := a.Client().Patch(ctx, obj, client.Apply, local.FieldOwner, client.ForceOwnership); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (a *actuator) Delete(ctx context.Context, infrastructure *extensionsv1alpha1.Infrastructure, _ *extensionscontroller.Cluster) error {
 	return kutil.DeleteObjects(ctx, a.Client(),
-		emptyNetworkPolicy(infrastructure.Namespace),
+		emptyNetworkPolicy("allow-machine-pods", infrastructure.Namespace),
+		emptyNetworkPolicy("allow-to-istio-ingress-gateway", infrastructure.Namespace),
+		emptyNetworkPolicy("allow-to-provider-local-coredns", infrastructure.Namespace),
+		emptyNetworkPolicy("allow-to-machine-pods", infrastructure.Namespace),
 		emptyVPNShootService(infrastructure.Namespace),
 	)
 }
@@ -93,14 +171,14 @@ func (a *actuator) Restore(ctx context.Context, infrastructure *extensionsv1alph
 	return a.Reconcile(ctx, infrastructure, cluster)
 }
 
-func emptyNetworkPolicy(namespace string) *networkingv1.NetworkPolicy {
+func emptyNetworkPolicy(name, namespace string) *networkingv1.NetworkPolicy {
 	return &networkingv1.NetworkPolicy{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: networkingv1.SchemeGroupVersion.String(),
 			Kind:       "NetworkPolicy",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "allow-to-worker-nodes",
+			Name:      name,
 			Namespace: namespace,
 		},
 	}
@@ -117,4 +195,9 @@ func emptyVPNShootService(namespace string) *corev1.Service {
 			Name:      "vpn-shoot",
 		},
 	}
+}
+
+func intStrPtr(in int) *intstr.IntOrString {
+	out := intstr.FromInt(in)
+	return &out
 }

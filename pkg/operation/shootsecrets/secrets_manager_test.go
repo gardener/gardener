@@ -19,19 +19,18 @@ import (
 	"fmt"
 
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/operation/shootsecrets"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/infodata"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/golang/mock/gomock"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-
-	. "github.com/gardener/gardener/pkg/operation/shootsecrets"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("SecretsManager", func() {
@@ -41,10 +40,8 @@ var _ = Describe("SecretsManager", func() {
 	}
 
 	var (
-		staticTokenConfig            *secrets.StaticTokenSecretConfig
-		apiServerBasicAuthConfig     *secrets.BasicAuthSecretConfig
-		wantedCertificateAuthorities map[string]*secrets.CertificateSecretConfig
-		secretsConfigGenerator       func(basicAuthAPIServer *secrets.BasicAuth, staticToken *secrets.StaticToken, certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error)
+		cas                    map[string]*secrets.Certificate
+		secretsConfigGenerator func(certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error)
 
 		caName   = "ca1"
 		certName = "cert1"
@@ -63,37 +60,20 @@ var _ = Describe("SecretsManager", func() {
 	)
 
 	BeforeEach(func() {
-		staticTokenConfig = &secrets.StaticTokenSecretConfig{
-			Name: "static-token",
-			Tokens: map[string]secrets.TokenConfig{
-				"fooID": {
-					Username: "foo",
-					UserID:   "fooID",
-					Groups:   []string{"group1", "group2"},
-				},
-			},
-		}
+		caKey, err := utils.DecodeBase64(cakey)
+		Expect(err).NotTo(HaveOccurred())
+		caCert, err := utils.DecodeBase64(cacert)
+		Expect(err).NotTo(HaveOccurred())
+		ca, err := secrets.LoadCertificate(caName, caKey, caCert)
+		Expect(err).NotTo(HaveOccurred())
 
-		apiServerBasicAuthConfig = &secrets.BasicAuthSecretConfig{
-			Name:           "basic-auth",
-			Format:         secrets.BasicAuthFormatCSV,
-			Username:       "admin",
-			PasswordLength: 32,
-		}
+		cas = map[string]*secrets.Certificate{caName: ca}
 
-		wantedCertificateAuthorities = map[string]*secrets.CertificateSecretConfig{
-			caName: {
-				Name:       caName,
-				CommonName: caName,
-				CertType:   secrets.CACert,
-			},
-		}
-
-		secretsConfigGenerator = func(basicAuthAPIServer *secrets.BasicAuth, staticToken *secrets.StaticToken, certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error) {
+		secretsConfigGenerator = func(certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error) {
 			return []secrets.ConfigInterface{
 				&secrets.ControlPlaneSecretConfig{
+					Name: certName,
 					CertificateSecretConfig: &secrets.CertificateSecretConfig{
-						Name:       certName,
 						CommonName: certName,
 						CertType:   secrets.ServerCert,
 						SigningCA:  certificateAuthorities[caName],
@@ -105,26 +85,15 @@ var _ = Describe("SecretsManager", func() {
 
 	Describe("#Generate", func() {
 		It("should generate secrets infodata and save it into the gardener resource data list", func() {
-			secretsManager := NewSecretsManager(gardencorev1alpha1helper.GardenerResourceDataList{}, staticTokenConfig, wantedCertificateAuthorities, secretsConfigGenerator)
-			secretsManager.WithAPIServerBasicAuthConfig(apiServerBasicAuthConfig)
+			secretsManager := NewSecretsManager(gardencorev1alpha1helper.GardenerResourceDataList{}, secretsConfigGenerator).
+				WithCertificateAuthorities(cas)
+
 			err := secretsManager.Generate()
 			Expect(err).NotTo(HaveOccurred())
 
 			checkIfInfoDataUpsertedSuccessfully(secretsManager.GardenerResourceDataList,
-				ExpectedNameType{apiServerBasicAuthConfig.Name, secrets.BasicAuthDataType},
-				ExpectedNameType{staticTokenConfig.Name, secrets.StaticTokenDataType},
-				ExpectedNameType{caName, secrets.CertificateDataType},
 				ExpectedNameType{certName, secrets.CertificateDataType},
 			)
-		})
-
-		It("should not generate basic auth secret if the basic auth secret config is not added to the SecretsManager", func() {
-			secretsManager := NewSecretsManager(gardencorev1alpha1helper.GardenerResourceDataList{}, staticTokenConfig, wantedCertificateAuthorities, secretsConfigGenerator)
-			err := secretsManager.Generate()
-			Expect(err).NotTo(HaveOccurred())
-
-			basicAuthResourceData := secretsManager.GardenerResourceDataList.Get(apiServerBasicAuthConfig.Name)
-			Expect(basicAuthResourceData).To(BeNil())
 		})
 
 		It("should not overwrite secrets if they already exist in the gardener resource data list", func() {
@@ -136,66 +105,18 @@ var _ = Describe("SecretsManager", func() {
 				},
 			}
 
-			secretsManager := NewSecretsManager(resourceDataList, staticTokenConfig, wantedCertificateAuthorities, secretsConfigGenerator)
-			secretsManager.WithAPIServerBasicAuthConfig(apiServerBasicAuthConfig)
+			secretsManager := NewSecretsManager(resourceDataList, secretsConfigGenerator).
+				WithCertificateAuthorities(cas)
+
 			err := secretsManager.Generate()
 			Expect(err).NotTo(HaveOccurred())
 
 			checkIfInfoDataUpsertedSuccessfully(secretsManager.GardenerResourceDataList,
-				ExpectedNameType{apiServerBasicAuthConfig.Name, secrets.BasicAuthDataType},
-				ExpectedNameType{staticTokenConfig.Name, secrets.StaticTokenDataType},
 				ExpectedNameType{caName, secrets.CertificateDataType},
 				ExpectedNameType{certName, secrets.CertificateDataType},
 			)
 
 			Expect(*secretsManager.GardenerResourceDataList.Get(caName)).To(Equal(resourceDataList[0]))
-		})
-
-		It("should append generated static token info data with new entries if config was modified", func() {
-			resourceDataList := gardencorev1alpha1helper.GardenerResourceDataList{
-				{
-					Name: staticTokenConfig.Name,
-					Type: string(secrets.StaticTokenDataType),
-					Data: runtime.RawExtension{Raw: []byte(`{"tokens":{"fooID":"foo"}}`)},
-				},
-			}
-
-			staticTokenConfig.Tokens["barID"] = secrets.TokenConfig{
-				Username: "bar",
-				UserID:   "barID",
-				Groups:   []string{"barGroup1"},
-			}
-			secretsManager := NewSecretsManager(resourceDataList, staticTokenConfig, wantedCertificateAuthorities, secretsConfigGenerator)
-			err := secretsManager.Generate()
-			Expect(err).NotTo(HaveOccurred())
-
-			staticTokenResourceData := secretsManager.GardenerResourceDataList.Get(staticTokenConfig.Name)
-			Expect(staticTokenResourceData).NotTo(BeNil())
-			staticTokenInfoData, err := infodata.Unmarshal(staticTokenResourceData)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(len(staticTokenInfoData.(*secrets.StaticTokenInfoData).Tokens)).To(Equal(2))
-			Expect(staticTokenInfoData.(*secrets.StaticTokenInfoData).Tokens["barID"]).NotTo(Equal(""))
-			Expect(staticTokenInfoData.(*secrets.StaticTokenInfoData).Tokens["fooID"]).To(Equal("foo"))
-		})
-
-		It("should remove outdated token entries from generated static token info data", func() {
-			resourceDataList := gardencorev1alpha1helper.GardenerResourceDataList{
-				{
-					Name: staticTokenConfig.Name,
-					Type: string(secrets.StaticTokenDataType),
-					Data: runtime.RawExtension{Raw: []byte(`{"tokens":{"fooID":"foo","barID":"bar"}}`)},
-				},
-			}
-
-			secretsManager := NewSecretsManager(resourceDataList, staticTokenConfig, wantedCertificateAuthorities, secretsConfigGenerator)
-			Expect(secretsManager.Generate()).To(Succeed())
-
-			staticTokenResourceData := secretsManager.GardenerResourceDataList.Get(staticTokenConfig.Name)
-			Expect(staticTokenResourceData).NotTo(BeNil())
-			staticTokenInfoData, err := infodata.Unmarshal(staticTokenResourceData)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(len(staticTokenInfoData.(*secrets.StaticTokenInfoData).Tokens)).To(Equal(1))
-			Expect(staticTokenInfoData.(*secrets.StaticTokenInfoData).Tokens["fooID"]).To(Equal("foo"))
 		})
 	})
 
@@ -220,16 +141,6 @@ var _ = Describe("SecretsManager", func() {
 
 			gardenerResourceDataList = gardencorev1alpha1helper.GardenerResourceDataList{
 				{
-					Name: apiServerBasicAuthConfig.Name,
-					Type: string(secrets.BasicAuthDataType),
-					Data: runtime.RawExtension{Raw: []byte(`{"password":"pass"}`)},
-				},
-				{
-					Name: staticTokenConfig.Name,
-					Type: string(secrets.StaticTokenDataType),
-					Data: runtime.RawExtension{Raw: []byte(`{"tokens":{"fooID":"foo"}}`)},
-				},
-				{
 					Name: caName,
 					Type: string(secrets.CertificateDataType),
 					Data: runtime.RawExtension{Raw: []byte(fmt.Sprintf(`{"privateKey":"%s","certificate":"%s"}`, []byte(cakey), []byte(cacert)))},
@@ -242,37 +153,6 @@ var _ = Describe("SecretsManager", func() {
 			}
 
 			expectedSecrets = map[string]*corev1.Secret{
-				apiServerBasicAuthConfig.Name: {
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      apiServerBasicAuthConfig.Name,
-						Namespace: controlplaneNS,
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: map[string][]byte{
-						secrets.DataKeyCSV: []byte("pass,admin,admin,system:masters"),
-					},
-				},
-				staticTokenConfig.Name: {
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      staticTokenConfig.Name,
-						Namespace: controlplaneNS,
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: map[string][]byte{
-						secrets.DataKeyStaticTokenCSV: []byte(`foo,foo,fooID,"group1,group2"`),
-					},
-				},
-				caName: {
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      caName,
-						Namespace: controlplaneNS,
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: map[string][]byte{
-						secrets.DataKeyCertificateCA: decodedCert,
-						secrets.DataKeyPrivateKeyCA:  decodedKey,
-					},
-				},
 				certName: {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      certName,
@@ -294,13 +174,7 @@ var _ = Describe("SecretsManager", func() {
 
 		It("should deploy all required kubernetes secret objects", func() {
 			calls := []*gomock.Call{}
-			calls = append(calls, k8sClient.EXPECT().Create(context.TODO(), expectedSecrets[apiServerBasicAuthConfig.Name]))
-			calls = append(calls, k8sClient.EXPECT().Create(context.TODO(), expectedSecrets[staticTokenConfig.Name]))
-			for _, caConfig := range wantedCertificateAuthorities {
-				calls = append(calls, k8sClient.EXPECT().Create(context.TODO(), expectedSecrets[caConfig.Name]))
-			}
-
-			secretConfigs, err := secretsConfigGenerator(nil, nil, nil)
+			secretConfigs, err := secretsConfigGenerator(nil)
 			Expect(err).NotTo(HaveOccurred())
 			for _, secretConfig := range secretConfigs {
 				calls = append(calls, k8sClient.EXPECT().Create(context.TODO(), expectedSecrets[secretConfig.GetName()]))
@@ -310,56 +184,14 @@ var _ = Describe("SecretsManager", func() {
 				calls...,
 			)
 
-			secretsManager := NewSecretsManager(gardenerResourceDataList, staticTokenConfig, wantedCertificateAuthorities, secretsConfigGenerator)
-			err = secretsManager.WithExistingSecrets(map[string]*corev1.Secret{}).WithAPIServerBasicAuthConfig(apiServerBasicAuthConfig).Deploy(context.TODO(), k8sClient, controlplaneNS)
+			secretsManager := NewSecretsManager(gardenerResourceDataList, secretsConfigGenerator).
+				WithExistingSecrets(map[string]*corev1.Secret{}).
+				WithCertificateAuthorities(cas)
+
+			err = secretsManager.Deploy(context.TODO(), k8sClient, controlplaneNS)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(expectedSecrets).To(Equal(secretsManager.DeployedSecrets))
-		})
-
-		It("should update static token secret with changes from the shootstate if it already exists", func() {
-			staticTokenConfig.Tokens["barID"] = secrets.TokenConfig{
-				Username: "bar",
-				UserID:   "barID",
-				Groups:   []string{"barGroup1"},
-			}
-
-			staticTokenExistingSecret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      staticTokenConfig.Name,
-					Namespace: controlplaneNS,
-				},
-				Type: corev1.SecretTypeOpaque,
-				Data: map[string][]byte{
-					secrets.DataKeyStaticTokenCSV: []byte(`foo,foo,fooID,"group1,group2"`),
-				},
-			}
-
-			staticTokenExpectedSecret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      staticTokenConfig.Name,
-					Namespace: controlplaneNS,
-				},
-				Type: corev1.SecretTypeOpaque,
-				Data: map[string][]byte{
-					secrets.DataKeyStaticTokenCSV: []byte("bar,bar,barID,barGroup1\nfoo,foo,fooID,\"group1,group2\""),
-				},
-			}
-
-			gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList{
-				{
-					Name: staticTokenConfig.Name,
-					Type: string(secrets.StaticTokenDataType),
-					Data: runtime.RawExtension{Raw: []byte(`{"tokens":{"fooID":"foo", "barID":"bar"}}`)},
-				},
-			}
-
-			k8sClient.EXPECT().Update(context.TODO(), staticTokenExpectedSecret)
-			secretsManager := NewSecretsManager(gardenerResourceDataList, staticTokenConfig, nil, nil)
-			err := secretsManager.WithExistingSecrets(map[string]*corev1.Secret{staticTokenConfig.Name: staticTokenExistingSecret}).Deploy(context.TODO(), k8sClient, controlplaneNS)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(staticTokenExpectedSecret).To(Equal(secretsManager.DeployedSecrets[staticTokenConfig.Name]))
 		})
 	})
 })

@@ -24,8 +24,6 @@ spec:
         {{- if semverCompare "<= 1.22.x" .Capabilities.KubeVersion.GitVersion }}
         seccomp.security.alpha.kubernetes.io/pod: 'runtime/default'
         {{- end }}
-        # TODO(rfranzke): Remove in a future release.
-        security.gardener.cloud/trigger: rollout
     spec:
       containers:
       - name: dashboard-metrics-scraper

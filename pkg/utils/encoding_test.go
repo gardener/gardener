@@ -26,6 +26,12 @@ import (
 )
 
 var _ = Describe("Encoding", func() {
+	Describe("#CreateSHA1Secret", func() {
+		It("should create the expected secret", func() {
+			Expect(CreateSHA1Secret([]byte("username"), []byte("password"))).To(Equal([]byte("username:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=")))
+		})
+	})
+
 	DescribeTable("#ComputeGardenNamespace",
 		func(data []byte, csrMatcher func(*x509.CertificateRequest), errMatcher gomegatypes.GomegaMatcher) {
 			csr, err := DecodeCertificateRequest(data)

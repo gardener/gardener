@@ -43,7 +43,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -78,7 +78,7 @@ var _ = Describe("New", func() {
 		Expect(rbacv1.AddToScheme(s)).To(Succeed())
 		Expect(admissionregistrationv1.AddToScheme(s)).To(Succeed())
 		Expect(resourcesv1alpha1.AddToScheme(s)).To(Succeed())
-		Expect(autoscalingv1beta2.AddToScheme(s)).To(Succeed())
+		Expect(vpaautoscalingv1.AddToScheme(s)).To(Succeed())
 
 		codec = serializer.NewCodecFactory(s, serializer.EnableStrict)
 
@@ -430,8 +430,7 @@ var _ = Describe("New", func() {
 						Selector:             &metav1.LabelSelector{MatchLabels: expectedLabels},
 						Template: corev1.PodTemplateSpec{
 							ObjectMeta: metav1.ObjectMeta{
-								Labels:      expectedLabels,
-								Annotations: map[string]string{"security.gardener.cloud/trigger": "rollout"},
+								Labels: expectedLabels,
 							},
 							Spec: corev1.PodSpec{
 								Affinity: &corev1.Affinity{
@@ -485,7 +484,6 @@ var _ = Describe("New", func() {
 												corev1.ResourceMemory: resource.MustParse("64Mi"),
 											},
 											Limits: corev1.ResourceList{
-												corev1.ResourceCPU:    resource.MustParse("400m"),
 												corev1.ResourceMemory: resource.MustParse("512Mi"),
 											},
 										},
@@ -548,21 +546,21 @@ var _ = Describe("New", func() {
 
 			It("vpa is created", func() {
 				const key = "verticalpodautoscaler__test-namespace__gardener-kube-scheduler.yaml"
-				updateMode := autoscalingv1beta2.UpdateModeAuto
-				actual := &autoscalingv1beta2.VerticalPodAutoscaler{}
-				expected := &autoscalingv1beta2.VerticalPodAutoscaler{
+				updateMode := vpaautoscalingv1.UpdateModeAuto
+				actual := &vpaautoscalingv1.VerticalPodAutoscaler{}
+				expected := &vpaautoscalingv1.VerticalPodAutoscaler{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "gardener-kube-scheduler",
 						Namespace: deployNS,
 						Labels:    expectedLabels,
 					},
-					Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
+					Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 						TargetRef: &autoscalingv1.CrossVersionObjectReference{
 							APIVersion: appsv1.SchemeGroupVersion.String(),
 							Kind:       "Deployment",
 							Name:       "gardener-kube-scheduler",
 						},
-						UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
+						UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
 							UpdateMode: &updateMode,
 						},
 					},
@@ -635,8 +633,7 @@ var _ = Describe("New", func() {
 						Selector:             &metav1.LabelSelector{MatchLabels: expectedLabels},
 						Template: corev1.PodTemplateSpec{
 							ObjectMeta: metav1.ObjectMeta{
-								Labels:      expectedLabels,
-								Annotations: map[string]string{"security.gardener.cloud/trigger": "rollout"},
+								Labels: expectedLabels,
 							},
 							Spec: corev1.PodSpec{
 								Affinity: &corev1.Affinity{
@@ -689,7 +686,6 @@ var _ = Describe("New", func() {
 												corev1.ResourceMemory: resource.MustParse("64Mi"),
 											},
 											Limits: corev1.ResourceList{
-												corev1.ResourceCPU:    resource.MustParse("400m"),
 												corev1.ResourceMemory: resource.MustParse("512Mi"),
 											},
 										},

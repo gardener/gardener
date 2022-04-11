@@ -19,8 +19,8 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/api/core"
 	"github.com/gardener/gardener/pkg/api/extensions"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/utils/version"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -32,14 +32,14 @@ var logger = log.Log.WithName("predicate")
 // HasType filters the incoming OperatingSystemConfigs for ones that have the same type
 // as the given type.
 func HasType(typeName string) predicate.Predicate {
-	return predicateutils.FromMapper(predicateutils.MapperFunc(func(e event.GenericEvent) bool {
-		acc, err := extensions.Accessor(e.Object)
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		acc, err := extensions.Accessor(obj)
 		if err != nil {
 			return false
 		}
 
 		return acc.GetExtensionSpec().GetExtensionType() == typeName
-	}), predicateutils.CreateTrigger, predicateutils.UpdateNewTrigger, predicateutils.DeleteTrigger, predicateutils.GenericTrigger)
+	})
 }
 
 // AddTypePredicate returns a new slice which contains a type predicate and the given `predicates`.
@@ -61,10 +61,10 @@ func AddTypePredicate(predicates []predicate.Predicate, extensionTypes ...string
 	return append(resultPredicates, predicate.Or(orPreds...))
 }
 
-// HasPurpose filters the incoming Controlplanes  for the given spec.purpose
+// HasPurpose filters the incoming ControlPlanes for the given spec.purpose.
 func HasPurpose(purpose extensionsv1alpha1.Purpose) predicate.Predicate {
-	return predicateutils.FromMapper(predicateutils.MapperFunc(func(e event.GenericEvent) bool {
-		controlPlane, ok := e.Object.(*extensionsv1alpha1.ControlPlane)
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		controlPlane, ok := obj.(*extensionsv1alpha1.ControlPlane)
 		if !ok {
 			return false
 		}
@@ -79,7 +79,7 @@ func HasPurpose(purpose extensionsv1alpha1.Purpose) predicate.Predicate {
 		}
 
 		return *controlPlane.Spec.Purpose == purpose
-	}), predicateutils.CreateTrigger, predicateutils.UpdateNewTrigger, predicateutils.DeleteTrigger, predicateutils.GenericTrigger)
+	})
 }
 
 // ClusterShootProviderType is a predicate for the provider type of the shoot in the cluster resource.

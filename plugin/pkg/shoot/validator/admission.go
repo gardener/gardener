@@ -25,15 +25,17 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
-	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	corev1alpha1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
@@ -71,6 +73,7 @@ type ValidateShoot struct {
 	cloudProfileLister  corelisters.CloudProfileLister
 	seedLister          corelisters.SeedLister
 	shootLister         corelisters.ShootLister
+	shootStateLister    corev1alpha1listers.ShootStateLister
 	projectLister       corelisters.ProjectLister
 	secretBindingLister corelisters.SecretBindingLister
 	readyFunc           admission.ReadyFunc
@@ -78,6 +81,7 @@ type ValidateShoot struct {
 
 var (
 	_ = admissioninitializer.WantsInternalCoreInformerFactory(&ValidateShoot{})
+	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ValidateShoot{})
 
 	readyFuncs = []admission.ReadyFunc{}
 )
@@ -122,6 +126,14 @@ func (v *ValidateShoot) SetInternalCoreInformerFactory(f coreinformers.SharedInf
 	)
 }
 
+// SetExternalCoreInformerFactory sets the external garden core informer factory.
+func (v *ValidateShoot) SetExternalCoreInformerFactory(f externalcoreinformers.SharedInformerFactory) {
+	shootStateInformer := f.Core().V1alpha1().ShootStates()
+	v.shootStateLister = shootStateInformer.Lister()
+
+	readyFuncs = append(readyFuncs, shootStateInformer.Informer().HasSynced)
+}
+
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (v *ValidateShoot) ValidateInitialization() error {
 	if v.cloudProfileLister == nil {
@@ -132,6 +144,9 @@ func (v *ValidateShoot) ValidateInitialization() error {
 	}
 	if v.shootLister == nil {
 		return errors.New("missing shoot lister")
+	}
+	if v.shootStateLister == nil {
+		return errors.New("missing shoot state lister")
 	}
 	if v.projectLister == nil {
 		return errors.New("missing project lister")
@@ -205,27 +220,27 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 
 	cloudProfile, err := v.cloudProfileLister.Get(shoot.Spec.CloudProfileName)
 	if err != nil {
-		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced cloud profile: %+v", err.Error()))
+		return apierrors.NewInternalError(fmt.Errorf("could not find referenced cloud profile: %+v", err.Error()))
 	}
 
 	var seed *core.Seed
 	if shoot.Spec.SeedName != nil {
 		seed, err = v.seedLister.Get(*shoot.Spec.SeedName)
 		if err != nil {
-			return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced seed %q: %+v", *shoot.Spec.SeedName, err.Error()))
+			return apierrors.NewInternalError(fmt.Errorf("could not find referenced seed %q: %+v", *shoot.Spec.SeedName, err.Error()))
 		}
 	}
 
 	project, err := admissionutils.ProjectForNamespaceFromInternalLister(v.projectLister, shoot.Namespace)
 	if err != nil {
-		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced project: %+v", err.Error()))
+		return apierrors.NewInternalError(fmt.Errorf("could not find referenced project: %+v", err.Error()))
 	}
 
 	var secretBinding *core.SecretBinding
 	if utilfeature.DefaultFeatureGate.Enabled(features.SecretBindingProviderValidation) {
 		secretBinding, err = v.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.SecretBindingName)
 		if err != nil {
-			return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced secret binding: %+v", err.Error()))
+			return apierrors.NewInternalError(fmt.Errorf("could not find referenced secret binding: %+v", err.Error()))
 		}
 	}
 
@@ -242,7 +257,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	if err := validationContext.validateProjectMembership(a); err != nil {
 		return err
 	}
-	if err := validationContext.validateScheduling(a, v.shootLister, v.seedLister); err != nil {
+	if err := validationContext.validateScheduling(a, v.shootLister, v.seedLister, v.shootStateLister); err != nil {
 		return err
 	}
 	if err := validationContext.validateDeletion(a); err != nil {
@@ -294,6 +309,8 @@ func (c *validationContext) validateProjectMembership(a admission.Attributes) er
 		return nil
 	}
 
+	namePath := field.NewPath("name")
+
 	// We currently use the identifier "shoot-<project-name>-<shoot-name> in nearly all places for old Shoots, but have
 	// changed that to "shoot--<project-name>-<shoot-name>": when creating infrastructure resources, Kubernetes resources,
 	// DNS names, etc., then this identifier is used to tag/name the resources. Some of those resources have length
@@ -305,11 +322,13 @@ func (c *validationContext) validateProjectMembership(a admission.Attributes) er
 	if len(c.shoot.Name) == 0 && len(c.shoot.GenerateName) > 0 {
 		var randomLength = 5
 		if len(c.project.Name+c.shoot.GenerateName) > lengthLimit-randomLength {
-			return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot generateName and the project name must not exceed %d characters (project: %s; shoot with generateName: %s)", lengthLimit-randomLength, c.project.Name, c.shoot.GenerateName))
+			fieldErr := field.Invalid(namePath, c.shoot.Name, fmt.Sprintf("the length of the shoot generateName and the project name must not exceed %d characters (project: %s; shoot with generateName: %s)", lengthLimit-randomLength, c.project.Name, c.shoot.GenerateName))
+			return apierrors.NewInvalid(a.GetKind().GroupKind(), c.shoot.Name, field.ErrorList{fieldErr})
 		}
 	} else {
 		if len(c.project.Name+c.shoot.Name) > lengthLimit {
-			return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot name and the project name must not exceed %d characters (project: %s; shoot: %s)", lengthLimit, c.project.Name, c.shoot.Name))
+			fieldErr := field.Invalid(namePath, c.shoot.Name, fmt.Sprintf("the length of the shoot name and the project name must not exceed %d characters (project: %s; shoot: %s)", lengthLimit, c.project.Name, c.shoot.Name))
+			return apierrors.NewInvalid(a.GetKind().GroupKind(), c.shoot.Name, field.ErrorList{fieldErr})
 		}
 	}
 
@@ -320,7 +339,7 @@ func (c *validationContext) validateProjectMembership(a admission.Attributes) er
 	return nil
 }
 
-func (c *validationContext) validateScheduling(a admission.Attributes, shootLister corelisters.ShootLister, seedLister corelisters.SeedLister) error {
+func (c *validationContext) validateScheduling(a admission.Attributes, shootLister corelisters.ShootLister, seedLister corelisters.SeedLister, shootStateLister corev1alpha1listers.ShootStateLister) error {
 	if a.GetOperation() == admission.Delete {
 		return nil
 	}
@@ -355,7 +374,7 @@ func (c *validationContext) validateScheduling(a admission.Attributes, shootList
 	if shootIsBeingRescheduled {
 		oldSeed, err := seedLister.Get(*c.oldShoot.Spec.SeedName)
 		if err != nil {
-			return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced seed: %+v", err.Error()))
+			return apierrors.NewInternalError(fmt.Errorf("could not find referenced seed: %+v", err.Error()))
 		}
 
 		if oldSeed.Spec.Backup == nil {
@@ -366,7 +385,41 @@ func (c *validationContext) validateScheduling(a admission.Attributes, shootList
 		}
 
 		if oldSeed.Spec.Provider.Type != c.seed.Spec.Provider.Type {
-			return admission.NewForbidden(a, fmt.Errorf("cannot change Seed because cloud provider for new seed (%s) is not equal to cloud provider for old seed (%s)", c.seed.Spec.Provider.Type, oldSeed.Spec.Provider.Type))
+			return admission.NewForbidden(a, fmt.Errorf("cannot change seed because cloud provider for new seed (%s) is not equal to cloud provider for old seed (%s)", c.seed.Spec.Provider.Type, oldSeed.Spec.Provider.Type))
+		}
+
+		oldShootSpec := c.oldShoot.Spec
+		oldShootSpec.SeedName = c.shoot.Spec.SeedName
+		if !reflect.DeepEqual(oldShootSpec, c.shoot.Spec) {
+			return admission.NewForbidden(a, fmt.Errorf("seed name cannot be changed simultaneously with other changes to the shoot.spec"))
+		}
+
+		// Check if ShootState contains the new etcd-encryption key after it got migrated to the new secrets manager
+		// with https://github.com/gardener/gardener/pull/5616
+		shootState, err := shootStateLister.ShootStates(c.shoot.Namespace).Get(c.shoot.Name)
+		if err != nil {
+			return apierrors.NewInternalError(fmt.Errorf("could not find shoot state: %+v", err.Error()))
+		}
+
+		etcdEncryptionFound := false
+
+		for _, data := range shootState.Spec.Gardener {
+			if data.Labels[secretsmanager.LabelKeyName] == "kube-apiserver-etcd-encryption-key" &&
+				data.Labels[secretsmanager.LabelKeyManagedBy] == secretsmanager.LabelValueSecretsManager {
+				etcdEncryptionFound = true
+				break
+			}
+		}
+
+		if !etcdEncryptionFound {
+			return admission.NewForbidden(a, errors.New("cannot change seed because etcd encryption key not found in shoot state - please reconcile the shoot first"))
+		}
+	} else if !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
+		if wasShootRescheduledToNewSeed(c.shoot) {
+			return admission.NewForbidden(a, fmt.Errorf("shoot spec cannot be changed because shoot has been rescheduled to a new seed"))
+		}
+		if isShootInMigrationOrRestorePhase(c.shoot) && !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
+			return admission.NewForbidden(a, fmt.Errorf("cannot change shoot spec during %s operation that is in state %s", c.shoot.Status.LastOperation.Type, c.shoot.Status.LastOperation.State))
 		}
 	}
 
@@ -413,9 +466,7 @@ func getNumberOfShootsOnSeed(shootLister corelisters.ShootLister, seedName strin
 
 func (c *validationContext) validateDeletion(a admission.Attributes) error {
 	if a.GetOperation() == admission.Delete {
-		if c.shoot.Status.LastOperation != nil &&
-			((c.shoot.Status.LastOperation.Type == core.LastOperationTypeRestore && c.shoot.Status.LastOperation.State != core.LastOperationStateSucceeded) ||
-				c.shoot.Status.LastOperation.Type == core.LastOperationTypeMigrate) {
+		if isShootInMigrationOrRestorePhase(c.shoot) {
 			return admission.NewForbidden(a, fmt.Errorf("cannot mark shoot for deletion during %s operation that is in state %s", c.shoot.Status.LastOperation.Type, c.shoot.Status.LastOperation.State))
 		}
 	}
@@ -454,6 +505,7 @@ func (c *validationContext) validateShootHibernation(a admission.Attributes) err
 
 	if !newIsHibernated && oldIsHibernated {
 		addInfrastructureDeploymentTask(c.shoot)
+		addDNSRecordDeploymentTasks(c.shoot)
 	}
 
 	return nil
@@ -476,19 +528,27 @@ func (c *validationContext) ensureMachineImages() error {
 func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
 	if a.GetOperation() == admission.Create {
 		addInfrastructureDeploymentTask(c.shoot)
+		addDNSRecordDeploymentTasks(c.shoot)
 	}
 
 	if !reflect.DeepEqual(c.oldShoot.Spec.Provider.InfrastructureConfig, c.shoot.Spec.Provider.InfrastructureConfig) {
 		addInfrastructureDeploymentTask(c.shoot)
 	}
 
+	if !reflect.DeepEqual(c.oldShoot.Spec.DNS, c.shoot.Spec.DNS) {
+		addDNSRecordDeploymentTasks(c.shoot)
+	}
+
 	if c.shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.ShootOperationRotateSSHKeypair {
 		addInfrastructureDeploymentTask(c.shoot)
 	}
 
-	if c.shoot.Spec.Maintenance != nil && utils.IsTrue(c.shoot.Spec.Maintenance.ConfineSpecUpdateRollout) &&
+	if c.shoot.Spec.Maintenance != nil &&
+		utils.IsTrue(c.shoot.Spec.Maintenance.ConfineSpecUpdateRollout) &&
 		!apiequality.Semantic.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) &&
-		c.shoot.Status.LastOperation != nil && c.shoot.Status.LastOperation.State == core.LastOperationStateFailed {
+		c.shoot.Status.LastOperation != nil &&
+		c.shoot.Status.LastOperation.State == core.LastOperationStateFailed {
+
 		metav1.SetMetaDataAnnotation(&c.shoot.ObjectMeta, v1beta1constants.FailedShootNeedsRetryOperation, "true")
 	}
 }
@@ -575,7 +635,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 	}
 
 	if a.GetOperation() == admission.Create && utilfeature.DefaultFeatureGate.Enabled(features.SecretBindingProviderValidation) {
-		if !gardencorehelper.SecretBindingHasType(c.secretBinding, c.shoot.Spec.Provider.Type) {
+		if !helper.SecretBindingHasType(c.secretBinding, c.shoot.Spec.Provider.Type) {
 			var secretBindingProviderType string
 			if c.secretBinding.Provider != nil {
 				secretBindingProviderType = c.secretBinding.Provider.Type
@@ -1116,11 +1176,11 @@ func validateContainerRuntimeConstraints(constraints []core.MachineImage, worker
 	if machineVersion == nil {
 		return nil
 	}
-	return validateCRI(machineVersion.CRI, worker.CRI, fldPath)
+	return validateCRI(machineVersion.CRI, worker, fldPath)
 }
 
-func validateCRI(constraints []core.CRI, cri *core.CRI, fldPath *field.Path) field.ErrorList {
-	if cri == nil {
+func validateCRI(constraints []core.CRI, worker core.Worker, fldPath *field.Path) field.ErrorList {
+	if worker.CRI == nil {
 		return nil
 	}
 
@@ -1132,20 +1192,22 @@ func validateCRI(constraints []core.CRI, cri *core.CRI, fldPath *field.Path) fie
 
 	for _, criConstraint := range constraints {
 		validCRIs = append(validCRIs, string(criConstraint.Name))
-		if cri.Name == criConstraint.Name {
+		if worker.CRI.Name == criConstraint.Name {
 			foundCRI = &criConstraint
 			break
 		}
 	}
 	if foundCRI == nil {
-		allErrors = append(allErrors, field.NotSupported(fldPath.Child("name"), cri.Name, validCRIs))
+		detail := fmt.Sprintf("machine image '%s@%s' does not support CRI '%s', supported values: %+v", worker.Machine.Image.Name, worker.Machine.Image.Version, worker.CRI.Name, validCRIs)
+		allErrors = append(allErrors, field.Invalid(fldPath.Child("name"), worker.CRI.Name, detail))
 		return allErrors
 	}
 
-	for j, runtime := range cri.ContainerRuntimes {
+	for j, runtime := range worker.CRI.ContainerRuntimes {
 		jdxPath := fldPath.Child("containerRuntimes").Index(j)
 		if ok, validValues := validateCRMembership(foundCRI.ContainerRuntimes, runtime.Type); !ok {
-			allErrors = append(allErrors, field.NotSupported(jdxPath.Child("type"), runtime, validValues))
+			detail := fmt.Sprintf("machine image '%s@%s' does not support container runtime '%s', supported values: %+v", worker.Machine.Image.Name, worker.Machine.Image.Version, runtime.Type, validValues)
+			allErrors = append(allErrors, field.Invalid(jdxPath.Child("type"), runtime.Type, detail))
 		}
 	}
 
@@ -1203,8 +1265,37 @@ func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []c
 }
 
 func addInfrastructureDeploymentTask(shoot *core.Shoot) {
+	addDeploymentTasks(shoot, v1beta1constants.ShootTaskDeployInfrastructure)
+}
+
+func addDNSRecordDeploymentTasks(shoot *core.Shoot) {
+	addDeploymentTasks(shoot,
+		v1beta1constants.ShootTaskDeployDNSRecordInternal,
+		v1beta1constants.ShootTaskDeployDNSRecordExternal,
+		v1beta1constants.ShootTaskDeployDNSRecordIngress,
+	)
+}
+
+func addDeploymentTasks(shoot *core.Shoot, tasks ...string) {
 	if shoot.ObjectMeta.Annotations == nil {
 		shoot.ObjectMeta.Annotations = make(map[string]string)
 	}
-	controllerutils.AddTasks(shoot.ObjectMeta.Annotations, v1beta1constants.ShootTaskDeployInfrastructure)
+	controllerutils.AddTasks(shoot.ObjectMeta.Annotations, tasks...)
+}
+
+// wasShootRescheduledToNewSeed returns true if the shoot.Spec.SeedName has been changed, but the migration operation has not started yet.
+func wasShootRescheduledToNewSeed(shoot *core.Shoot) bool {
+	return shoot.Status.LastOperation != nil &&
+		shoot.Status.LastOperation.Type != core.LastOperationTypeMigrate &&
+		shoot.Spec.SeedName != nil &&
+		shoot.Status.SeedName != nil &&
+		*shoot.Spec.SeedName != *shoot.Status.SeedName
+}
+
+// isShootInMigrationOrRestorePhase returns true if the shoot is currently being migrated or restored.
+func isShootInMigrationOrRestorePhase(shoot *core.Shoot) bool {
+	return shoot.Status.LastOperation != nil &&
+		(shoot.Status.LastOperation.Type == core.LastOperationTypeRestore &&
+			shoot.Status.LastOperation.State != core.LastOperationStateSucceeded ||
+			shoot.Status.LastOperation.Type == core.LastOperationTypeMigrate)
 }

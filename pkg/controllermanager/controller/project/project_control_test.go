@@ -15,12 +15,12 @@
 package project
 
 import (
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/logger"
-
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 var _ = Describe("Controller", func() {
@@ -32,10 +32,10 @@ var _ = Describe("Controller", func() {
 	)
 
 	BeforeEach(func() {
-		logger.Logger = logger.NewNopLogger()
 		queue1 = &fakeQueue{}
 		queue2 = &fakeQueue{}
 		c = &Controller{
+			log:               logr.Discard(),
 			projectQueue:      queue1,
 			projectStaleQueue: queue2,
 		}

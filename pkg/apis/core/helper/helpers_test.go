@@ -87,6 +87,18 @@ var _ = Describe("helper", func() {
 		Entry("explicitly disabled", &core.KubeAPIServerConfig{EnableBasicAuthentication: &falseVar}, false),
 	)
 
+	DescribeTable("#GetShootCARotationPhase",
+		func(credentials *core.ShootCredentials, expectedPhase core.ShootCredentialsRotationPhase) {
+			Expect(GetShootCARotationPhase(credentials)).To(Equal(expectedPhase))
+		},
+
+		Entry("credentials nil", nil, core.ShootCredentialsRotationPhase("")),
+		Entry("rotation nil", &core.ShootCredentials{}, core.ShootCredentialsRotationPhase("")),
+		Entry("ca nil", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{}}, core.ShootCredentialsRotationPhase("")),
+		Entry("phase empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{CertificateAuthorities: &core.ShootCARotation{}}}, core.ShootCredentialsRotationPhase("")),
+		Entry("phase set", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{CertificateAuthorities: &core.ShootCARotation{Phase: core.RotationCompleting}}}, core.RotationCompleting),
+	)
+
 	DescribeTable("#TaintsHave",
 		func(taints []core.SeedTaint, key string, expectation bool) {
 			Expect(TaintsHave(taints, key)).To(Equal(expectation))

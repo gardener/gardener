@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestEtcdEncryption(t *testing.T) {
+func TestInfoDataSuite(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "InfoData Suite")
 }

@@ -4,14 +4,12 @@ prometheus:
   resources:
     prometheus:
       limits:
-        cpu: 500m
         memory: 2000Mi
       requests:
         cpu: 300m
         memory: 1000Mi
     prometheus-config-reloader:
       limits:
-        cpu: 20m
         memory: 50Mi
       requests:
         cpu: 10m
@@ -57,14 +55,12 @@ aggregatePrometheus:
   resources:
     prometheus:
       limits:
-        cpu: 500m
         memory: 2000Mi
       requests:
         cpu: 300m
         memory: 1000Mi
     prometheus-config-reloader:
       limits:
-        cpu: 20m
         memory: 20Mi
       requests:
         cpu: 10m
@@ -324,7 +320,7 @@ allowedMetrics:
 
 ingress:
   # admin : admin base64 encoded
-  basicAuthSecret: YWRtaW46JGFwcjEkSWRSaVM5c3MkR3U1MHMxaGUwL2Z6Tzh2elE4S1BEMQ==
+  authSecretName: auth-secret-name
 
 reserveExcessCapacity: true
 
@@ -362,17 +358,6 @@ hvpa:
 
 vpa:
   enabled: true
-  exporter:
-    replicas: 1
-    enabled: true
-    podAnnotations: {}
-    podLabels: {}
-    enableServiceAccount: true
-    enableService: true
-    port: 9570
-    servicePort: 9570
-    labels:
-      gardener.cloud/role: vpa
 
 istio:
   enabled: false

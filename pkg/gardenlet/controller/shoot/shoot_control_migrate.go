@@ -26,6 +26,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
@@ -196,15 +197,20 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 			Name: "Ensuring that ShootState exists",
 			Fn:   flow.TaskFn(botanist.EnsureShootStateExists).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
+		initializeSecretsManagement = g.Add(flow.Task{
+			Name:         "Initializing secrets management",
+			Fn:           flow.TaskFn(botanist.InitializeSecretsManagement).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
+		})
 		generateSecrets = g.Add(flow.Task{
 			Name:         "Generating secrets and saving them into ShootState",
 			Fn:           botanist.GenerateAndSaveSecrets,
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists, initializeSecretsManagement),
 		})
 		deploySecrets = g.Add(flow.Task{
 			Name:         "Deploying Shoot certificates / keys",
 			Fn:           flow.TaskFn(botanist.DeploySecrets).DoIf(nonTerminatingNamespace),
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists, generateSecrets),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists, generateSecrets, initializeSecretsManagement),
 		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
@@ -220,21 +226,6 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 			Name:         "Waiting until main and event etcd report readiness",
 			Fn:           flow.TaskFn(botanist.WaitUntilEtcdsReady).DoIf(cleanupShootResources || etcdSnapshotRequired),
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleETCDToOne),
-		})
-		generateEncryptionConfigurationMetaData = g.Add(flow.Task{
-			Name:         "Generating etcd encryption configuration",
-			Fn:           flow.TaskFn(botanist.GenerateEncryptionConfiguration).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(wakeupRequired),
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
-		})
-		persistETCDEncryptionConfiguration = g.Add(flow.Task{
-			Name:         "Persisting etcd encryption configuration in ShootState",
-			Fn:           flow.TaskFn(botanist.PersistEncryptionConfiguration).DoIf(wakeupRequired),
-			Dependencies: flow.NewTaskIDs(generateEncryptionConfigurationMetaData),
-		})
-		applyETCDEncryptionConfiguration = g.Add(flow.Task{
-			Name:         "Applying etcd encryption configuration",
-			Fn:           flow.TaskFn(botanist.ApplyEncryptionConfiguration).DoIf(wakeupRequired),
-			Dependencies: flow.NewTaskIDs(persistETCDEncryptionConfiguration),
 		})
 		// Restore the control plane in case it was already migrated to make sure all components that depend on the cloud provider secret are restarted
 		// in case it has changed. Also, it's needed for other control plane components like the kube-apiserver or kube-
@@ -252,7 +243,7 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 		wakeUpKubeAPIServer = g.Add(flow.Task{
 			Name:         "Scaling Kubernetes API Server up and waiting until ready",
 			Fn:           flow.TaskFn(botanist.WakeUpKubeAPIServer).DoIf(wakeupRequired),
-			Dependencies: flow.NewTaskIDs(deployETCD, scaleETCDToOne, applyETCDEncryptionConfiguration, waitUntilControlPlaneReady),
+			Dependencies: flow.NewTaskIDs(deployETCD, scaleETCDToOne, waitUntilControlPlaneReady),
 		})
 		ensureResourceManagerScaledUp = g.Add(flow.Task{
 			Name:         "Ensuring that the gardener resource manager is scaled to 1",
@@ -316,7 +307,7 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 		})
 		waitUntilKubeAPIServerDeleted = g.Add(flow.Task{
 			Name:         "Waiting until kube-apiserver has been deleted",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServer.WaitCleanup),
+			Fn:           botanist.Shoot.Components.ControlPlane.KubeAPIServer.WaitCleanup,
 			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
 		})
 		migrateInfrastructure = g.Add(flow.Task{
@@ -336,22 +327,22 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 		})
 		migrateIngressDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating nginx ingress DNS record",
-			Fn:           flow.TaskFn(botanist.MigrateIngressDNSResources),
+			Fn:           botanist.MigrateIngressDNSResources,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		migrateExternalDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating external domain DNS record",
-			Fn:           flow.TaskFn(botanist.MigrateExternalDNSResources),
+			Fn:           botanist.MigrateExternalDNSResources,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		migrateInternalDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.MigrateInternalDNSResources),
+			Fn:           botanist.MigrateInternalDNSResources,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		migrateOwnerDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating owner domain DNS record",
-			Fn:           flow.TaskFn(botanist.MigrateOwnerDNSResources),
+			Fn:           botanist.MigrateOwnerDNSResources,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerDeleted),
 		})
 		destroyDNSRecords = g.Add(flow.Task{
@@ -361,7 +352,7 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 		})
 		destroyDNSProviders = g.Add(flow.Task{
 			Name:         "Deleting DNS providers",
-			Fn:           flow.TaskFn(botanist.DeleteDNSProviders).DoIf(!gardenletfeatures.DisabledDNSProviderManagement()),
+			Fn:           flow.TaskFn(botanist.DeleteDNSProviders).DoIf(!gardenletfeatures.FeatureGate.Enabled(features.DisableDNSProviderManagement)),
 			Dependencies: flow.NewTaskIDs(migrateIngressDNSRecord, migrateExternalDNSRecord, migrateInternalDNSRecord, migrateOwnerDNSRecord),
 		})
 		createETCDSnapshot = g.Add(flow.Task{

@@ -503,16 +503,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ExtensionStatus)(nil), (*core.ExtensionStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_ExtensionStatus_To_core_ExtensionStatus(a.(*ExtensionStatus), b.(*core.ExtensionStatus), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*core.ExtensionStatus)(nil), (*ExtensionStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_core_ExtensionStatus_To_v1alpha1_ExtensionStatus(a.(*core.ExtensionStatus), b.(*ExtensionStatus), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*Gardener)(nil), (*core.Gardener)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_Gardener_To_core_Gardener(a.(*Gardener), b.(*core.Gardener), scope)
 	}); err != nil {
@@ -1308,23 +1298,43 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ShootExtensionStatus)(nil), (*core.ShootExtensionStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_ShootExtensionStatus_To_core_ShootExtensionStatus(a.(*ShootExtensionStatus), b.(*core.ShootExtensionStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*ShootCARotation)(nil), (*core.ShootCARotation)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ShootCARotation_To_core_ShootCARotation(a.(*ShootCARotation), b.(*core.ShootCARotation), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*core.ShootExtensionStatus)(nil), (*ShootExtensionStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_core_ShootExtensionStatus_To_v1alpha1_ShootExtensionStatus(a.(*core.ShootExtensionStatus), b.(*ShootExtensionStatus), scope)
+	if err := s.AddGeneratedConversionFunc((*core.ShootCARotation)(nil), (*ShootCARotation)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ShootCARotation_To_v1alpha1_ShootCARotation(a.(*core.ShootCARotation), b.(*ShootCARotation), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*ShootExtensionStatusList)(nil), (*core.ShootExtensionStatusList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_ShootExtensionStatusList_To_core_ShootExtensionStatusList(a.(*ShootExtensionStatusList), b.(*core.ShootExtensionStatusList), scope)
+	if err := s.AddGeneratedConversionFunc((*ShootCredentials)(nil), (*core.ShootCredentials)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ShootCredentials_To_core_ShootCredentials(a.(*ShootCredentials), b.(*core.ShootCredentials), scope)
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*core.ShootExtensionStatusList)(nil), (*ShootExtensionStatusList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_core_ShootExtensionStatusList_To_v1alpha1_ShootExtensionStatusList(a.(*core.ShootExtensionStatusList), b.(*ShootExtensionStatusList), scope)
+	if err := s.AddGeneratedConversionFunc((*core.ShootCredentials)(nil), (*ShootCredentials)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ShootCredentials_To_v1alpha1_ShootCredentials(a.(*core.ShootCredentials), b.(*ShootCredentials), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ShootCredentialsRotation)(nil), (*core.ShootCredentialsRotation)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ShootCredentialsRotation_To_core_ShootCredentialsRotation(a.(*ShootCredentialsRotation), b.(*core.ShootCredentialsRotation), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.ShootCredentialsRotation)(nil), (*ShootCredentialsRotation)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ShootCredentialsRotation_To_v1alpha1_ShootCredentialsRotation(a.(*core.ShootCredentialsRotation), b.(*ShootCredentialsRotation), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ShootKubeconfigRotation)(nil), (*core.ShootKubeconfigRotation)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ShootKubeconfigRotation_To_core_ShootKubeconfigRotation(a.(*ShootKubeconfigRotation), b.(*core.ShootKubeconfigRotation), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.ShootKubeconfigRotation)(nil), (*ShootKubeconfigRotation)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ShootKubeconfigRotation_To_v1alpha1_ShootKubeconfigRotation(a.(*core.ShootKubeconfigRotation), b.(*ShootKubeconfigRotation), scope)
 	}); err != nil {
 		return err
 	}
@@ -1355,6 +1365,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*core.ShootNetworks)(nil), (*ShootNetworks)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_core_ShootNetworks_To_v1alpha1_ShootNetworks(a.(*core.ShootNetworks), b.(*ShootNetworks), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ShootSSHKeypairRotation)(nil), (*core.ShootSSHKeypairRotation)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ShootSSHKeypairRotation_To_core_ShootSSHKeypairRotation(a.(*ShootSSHKeypairRotation), b.(*core.ShootSSHKeypairRotation), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*core.ShootSSHKeypairRotation)(nil), (*ShootSSHKeypairRotation)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ShootSSHKeypairRotation_To_v1alpha1_ShootSSHKeypairRotation(a.(*core.ShootSSHKeypairRotation), b.(*ShootSSHKeypairRotation), scope)
 	}); err != nil {
 		return err
 	}
@@ -2854,36 +2874,6 @@ func Convert_core_ExtensionResourceState_To_v1alpha1_ExtensionResourceState(in *
 	return autoConvert_core_ExtensionResourceState_To_v1alpha1_ExtensionResourceState(in, out, s)
 }
 
-func autoConvert_v1alpha1_ExtensionStatus_To_core_ExtensionStatus(in *ExtensionStatus, out *core.ExtensionStatus, s conversion.Scope) error {
-	out.Kind = in.Kind
-	out.Type = in.Type
-	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
-	if err := runtime.Convert_runtime_RawExtension_To_runtime_Object(&in.Status, &out.Status, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_v1alpha1_ExtensionStatus_To_core_ExtensionStatus is an autogenerated conversion function.
-func Convert_v1alpha1_ExtensionStatus_To_core_ExtensionStatus(in *ExtensionStatus, out *core.ExtensionStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha1_ExtensionStatus_To_core_ExtensionStatus(in, out, s)
-}
-
-func autoConvert_core_ExtensionStatus_To_v1alpha1_ExtensionStatus(in *core.ExtensionStatus, out *ExtensionStatus, s conversion.Scope) error {
-	out.Kind = in.Kind
-	out.Type = in.Type
-	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
-	if err := runtime.Convert_runtime_Object_To_runtime_RawExtension(&in.Status, &out.Status, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_core_ExtensionStatus_To_v1alpha1_ExtensionStatus is an autogenerated conversion function.
-func Convert_core_ExtensionStatus_To_v1alpha1_ExtensionStatus(in *core.ExtensionStatus, out *ExtensionStatus, s conversion.Scope) error {
-	return autoConvert_core_ExtensionStatus_To_v1alpha1_ExtensionStatus(in, out, s)
-}
-
 func autoConvert_v1alpha1_Gardener_To_core_Gardener(in *Gardener, out *core.Gardener, s conversion.Scope) error {
 	out.ID = in.ID
 	out.Name = in.Name
@@ -2912,6 +2902,7 @@ func autoConvert_v1alpha1_GardenerResourceData_To_core_GardenerResourceData(in *
 	out.Name = in.Name
 	out.Type = in.Type
 	out.Data = in.Data
+	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
 	return nil
 }
 
@@ -2924,6 +2915,7 @@ func autoConvert_core_GardenerResourceData_To_v1alpha1_GardenerResourceData(in *
 	out.Name = in.Name
 	out.Type = in.Type
 	out.Data = in.Data
+	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
 	return nil
 }
 
@@ -3386,6 +3378,7 @@ func autoConvert_v1alpha1_Kubernetes_To_core_Kubernetes(in *Kubernetes, out *cor
 	out.Kubelet = (*core.KubeletConfig)(unsafe.Pointer(in.Kubelet))
 	out.Version = in.Version
 	out.VerticalPodAutoscaler = (*core.VerticalPodAutoscaler)(unsafe.Pointer(in.VerticalPodAutoscaler))
+	out.EnableStaticTokenKubeconfig = (*bool)(unsafe.Pointer(in.EnableStaticTokenKubeconfig))
 	return nil
 }
 
@@ -3404,6 +3397,7 @@ func autoConvert_core_Kubernetes_To_v1alpha1_Kubernetes(in *core.Kubernetes, out
 	out.Kubelet = (*KubeletConfig)(unsafe.Pointer(in.Kubelet))
 	out.Version = in.Version
 	out.VerticalPodAutoscaler = (*VerticalPodAutoscaler)(unsafe.Pointer(in.VerticalPodAutoscaler))
+	out.EnableStaticTokenKubeconfig = (*bool)(unsafe.Pointer(in.EnableStaticTokenKubeconfig))
 	return nil
 }
 
@@ -5037,6 +5031,7 @@ func autoConvert_v1alpha1_ServiceAccountConfig_To_core_ServiceAccountConfig(in *
 	out.SigningKeySecret = (*v1.LocalObjectReference)(unsafe.Pointer(in.SigningKeySecret))
 	out.ExtendTokenExpiration = (*bool)(unsafe.Pointer(in.ExtendTokenExpiration))
 	out.MaxTokenExpiration = (*metav1.Duration)(unsafe.Pointer(in.MaxTokenExpiration))
+	out.AcceptedIssuers = *(*[]string)(unsafe.Pointer(&in.AcceptedIssuers))
 	return nil
 }
 
@@ -5050,6 +5045,7 @@ func autoConvert_core_ServiceAccountConfig_To_v1alpha1_ServiceAccountConfig(in *
 	out.SigningKeySecret = (*v1.LocalObjectReference)(unsafe.Pointer(in.SigningKeySecret))
 	out.ExtendTokenExpiration = (*bool)(unsafe.Pointer(in.ExtendTokenExpiration))
 	out.MaxTokenExpiration = (*metav1.Duration)(unsafe.Pointer(in.MaxTokenExpiration))
+	out.AcceptedIssuers = *(*[]string)(unsafe.Pointer(&in.AcceptedIssuers))
 	return nil
 }
 
@@ -5112,88 +5108,94 @@ func Convert_core_ShootAdvertisedAddress_To_v1alpha1_ShootAdvertisedAddress(in *
 	return autoConvert_core_ShootAdvertisedAddress_To_v1alpha1_ShootAdvertisedAddress(in, out, s)
 }
 
-func autoConvert_v1alpha1_ShootExtensionStatus_To_core_ShootExtensionStatus(in *ShootExtensionStatus, out *core.ShootExtensionStatus, s conversion.Scope) error {
-	out.ObjectMeta = in.ObjectMeta
-	if in.Statuses != nil {
-		in, out := &in.Statuses, &out.Statuses
-		*out = make([]core.ExtensionStatus, len(*in))
-		for i := range *in {
-			if err := Convert_v1alpha1_ExtensionStatus_To_core_ExtensionStatus(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.Statuses = nil
-	}
+func autoConvert_v1alpha1_ShootCARotation_To_core_ShootCARotation(in *ShootCARotation, out *core.ShootCARotation, s conversion.Scope) error {
+	out.Phase = core.ShootCredentialsRotationPhase(in.Phase)
+	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
+	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
 	return nil
 }
 
-// Convert_v1alpha1_ShootExtensionStatus_To_core_ShootExtensionStatus is an autogenerated conversion function.
-func Convert_v1alpha1_ShootExtensionStatus_To_core_ShootExtensionStatus(in *ShootExtensionStatus, out *core.ShootExtensionStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha1_ShootExtensionStatus_To_core_ShootExtensionStatus(in, out, s)
+// Convert_v1alpha1_ShootCARotation_To_core_ShootCARotation is an autogenerated conversion function.
+func Convert_v1alpha1_ShootCARotation_To_core_ShootCARotation(in *ShootCARotation, out *core.ShootCARotation, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ShootCARotation_To_core_ShootCARotation(in, out, s)
 }
 
-func autoConvert_core_ShootExtensionStatus_To_v1alpha1_ShootExtensionStatus(in *core.ShootExtensionStatus, out *ShootExtensionStatus, s conversion.Scope) error {
-	out.ObjectMeta = in.ObjectMeta
-	if in.Statuses != nil {
-		in, out := &in.Statuses, &out.Statuses
-		*out = make([]ExtensionStatus, len(*in))
-		for i := range *in {
-			if err := Convert_core_ExtensionStatus_To_v1alpha1_ExtensionStatus(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.Statuses = nil
-	}
+func autoConvert_core_ShootCARotation_To_v1alpha1_ShootCARotation(in *core.ShootCARotation, out *ShootCARotation, s conversion.Scope) error {
+	out.Phase = ShootCredentialsRotationPhase(in.Phase)
+	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
+	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
 	return nil
 }
 
-// Convert_core_ShootExtensionStatus_To_v1alpha1_ShootExtensionStatus is an autogenerated conversion function.
-func Convert_core_ShootExtensionStatus_To_v1alpha1_ShootExtensionStatus(in *core.ShootExtensionStatus, out *ShootExtensionStatus, s conversion.Scope) error {
-	return autoConvert_core_ShootExtensionStatus_To_v1alpha1_ShootExtensionStatus(in, out, s)
+// Convert_core_ShootCARotation_To_v1alpha1_ShootCARotation is an autogenerated conversion function.
+func Convert_core_ShootCARotation_To_v1alpha1_ShootCARotation(in *core.ShootCARotation, out *ShootCARotation, s conversion.Scope) error {
+	return autoConvert_core_ShootCARotation_To_v1alpha1_ShootCARotation(in, out, s)
 }
 
-func autoConvert_v1alpha1_ShootExtensionStatusList_To_core_ShootExtensionStatusList(in *ShootExtensionStatusList, out *core.ShootExtensionStatusList, s conversion.Scope) error {
-	out.ListMeta = in.ListMeta
-	if in.Items != nil {
-		in, out := &in.Items, &out.Items
-		*out = make([]core.ShootExtensionStatus, len(*in))
-		for i := range *in {
-			if err := Convert_v1alpha1_ShootExtensionStatus_To_core_ShootExtensionStatus(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.Items = nil
-	}
+func autoConvert_v1alpha1_ShootCredentials_To_core_ShootCredentials(in *ShootCredentials, out *core.ShootCredentials, s conversion.Scope) error {
+	out.Rotation = (*core.ShootCredentialsRotation)(unsafe.Pointer(in.Rotation))
 	return nil
 }
 
-// Convert_v1alpha1_ShootExtensionStatusList_To_core_ShootExtensionStatusList is an autogenerated conversion function.
-func Convert_v1alpha1_ShootExtensionStatusList_To_core_ShootExtensionStatusList(in *ShootExtensionStatusList, out *core.ShootExtensionStatusList, s conversion.Scope) error {
-	return autoConvert_v1alpha1_ShootExtensionStatusList_To_core_ShootExtensionStatusList(in, out, s)
+// Convert_v1alpha1_ShootCredentials_To_core_ShootCredentials is an autogenerated conversion function.
+func Convert_v1alpha1_ShootCredentials_To_core_ShootCredentials(in *ShootCredentials, out *core.ShootCredentials, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ShootCredentials_To_core_ShootCredentials(in, out, s)
 }
 
-func autoConvert_core_ShootExtensionStatusList_To_v1alpha1_ShootExtensionStatusList(in *core.ShootExtensionStatusList, out *ShootExtensionStatusList, s conversion.Scope) error {
-	out.ListMeta = in.ListMeta
-	if in.Items != nil {
-		in, out := &in.Items, &out.Items
-		*out = make([]ShootExtensionStatus, len(*in))
-		for i := range *in {
-			if err := Convert_core_ShootExtensionStatus_To_v1alpha1_ShootExtensionStatus(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.Items = nil
-	}
+func autoConvert_core_ShootCredentials_To_v1alpha1_ShootCredentials(in *core.ShootCredentials, out *ShootCredentials, s conversion.Scope) error {
+	out.Rotation = (*ShootCredentialsRotation)(unsafe.Pointer(in.Rotation))
 	return nil
 }
 
-// Convert_core_ShootExtensionStatusList_To_v1alpha1_ShootExtensionStatusList is an autogenerated conversion function.
-func Convert_core_ShootExtensionStatusList_To_v1alpha1_ShootExtensionStatusList(in *core.ShootExtensionStatusList, out *ShootExtensionStatusList, s conversion.Scope) error {
-	return autoConvert_core_ShootExtensionStatusList_To_v1alpha1_ShootExtensionStatusList(in, out, s)
+// Convert_core_ShootCredentials_To_v1alpha1_ShootCredentials is an autogenerated conversion function.
+func Convert_core_ShootCredentials_To_v1alpha1_ShootCredentials(in *core.ShootCredentials, out *ShootCredentials, s conversion.Scope) error {
+	return autoConvert_core_ShootCredentials_To_v1alpha1_ShootCredentials(in, out, s)
+}
+
+func autoConvert_v1alpha1_ShootCredentialsRotation_To_core_ShootCredentialsRotation(in *ShootCredentialsRotation, out *core.ShootCredentialsRotation, s conversion.Scope) error {
+	out.CertificateAuthorities = (*core.ShootCARotation)(unsafe.Pointer(in.CertificateAuthorities))
+	out.Kubeconfig = (*core.ShootKubeconfigRotation)(unsafe.Pointer(in.Kubeconfig))
+	out.SSHKeypair = (*core.ShootSSHKeypairRotation)(unsafe.Pointer(in.SSHKeypair))
+	return nil
+}
+
+// Convert_v1alpha1_ShootCredentialsRotation_To_core_ShootCredentialsRotation is an autogenerated conversion function.
+func Convert_v1alpha1_ShootCredentialsRotation_To_core_ShootCredentialsRotation(in *ShootCredentialsRotation, out *core.ShootCredentialsRotation, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ShootCredentialsRotation_To_core_ShootCredentialsRotation(in, out, s)
+}
+
+func autoConvert_core_ShootCredentialsRotation_To_v1alpha1_ShootCredentialsRotation(in *core.ShootCredentialsRotation, out *ShootCredentialsRotation, s conversion.Scope) error {
+	out.CertificateAuthorities = (*ShootCARotation)(unsafe.Pointer(in.CertificateAuthorities))
+	out.Kubeconfig = (*ShootKubeconfigRotation)(unsafe.Pointer(in.Kubeconfig))
+	out.SSHKeypair = (*ShootSSHKeypairRotation)(unsafe.Pointer(in.SSHKeypair))
+	return nil
+}
+
+// Convert_core_ShootCredentialsRotation_To_v1alpha1_ShootCredentialsRotation is an autogenerated conversion function.
+func Convert_core_ShootCredentialsRotation_To_v1alpha1_ShootCredentialsRotation(in *core.ShootCredentialsRotation, out *ShootCredentialsRotation, s conversion.Scope) error {
+	return autoConvert_core_ShootCredentialsRotation_To_v1alpha1_ShootCredentialsRotation(in, out, s)
+}
+
+func autoConvert_v1alpha1_ShootKubeconfigRotation_To_core_ShootKubeconfigRotation(in *ShootKubeconfigRotation, out *core.ShootKubeconfigRotation, s conversion.Scope) error {
+	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
+	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
+	return nil
+}
+
+// Convert_v1alpha1_ShootKubeconfigRotation_To_core_ShootKubeconfigRotation is an autogenerated conversion function.
+func Convert_v1alpha1_ShootKubeconfigRotation_To_core_ShootKubeconfigRotation(in *ShootKubeconfigRotation, out *core.ShootKubeconfigRotation, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ShootKubeconfigRotation_To_core_ShootKubeconfigRotation(in, out, s)
+}
+
+func autoConvert_core_ShootKubeconfigRotation_To_v1alpha1_ShootKubeconfigRotation(in *core.ShootKubeconfigRotation, out *ShootKubeconfigRotation, s conversion.Scope) error {
+	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
+	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
+	return nil
+}
+
+// Convert_core_ShootKubeconfigRotation_To_v1alpha1_ShootKubeconfigRotation is an autogenerated conversion function.
+func Convert_core_ShootKubeconfigRotation_To_v1alpha1_ShootKubeconfigRotation(in *core.ShootKubeconfigRotation, out *ShootKubeconfigRotation, s conversion.Scope) error {
+	return autoConvert_core_ShootKubeconfigRotation_To_v1alpha1_ShootKubeconfigRotation(in, out, s)
 }
 
 func autoConvert_v1alpha1_ShootList_To_core_ShootList(in *ShootList, out *core.ShootList, s conversion.Scope) error {
@@ -5286,6 +5288,28 @@ func autoConvert_core_ShootNetworks_To_v1alpha1_ShootNetworks(in *core.ShootNetw
 // Convert_core_ShootNetworks_To_v1alpha1_ShootNetworks is an autogenerated conversion function.
 func Convert_core_ShootNetworks_To_v1alpha1_ShootNetworks(in *core.ShootNetworks, out *ShootNetworks, s conversion.Scope) error {
 	return autoConvert_core_ShootNetworks_To_v1alpha1_ShootNetworks(in, out, s)
+}
+
+func autoConvert_v1alpha1_ShootSSHKeypairRotation_To_core_ShootSSHKeypairRotation(in *ShootSSHKeypairRotation, out *core.ShootSSHKeypairRotation, s conversion.Scope) error {
+	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
+	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
+	return nil
+}
+
+// Convert_v1alpha1_ShootSSHKeypairRotation_To_core_ShootSSHKeypairRotation is an autogenerated conversion function.
+func Convert_v1alpha1_ShootSSHKeypairRotation_To_core_ShootSSHKeypairRotation(in *ShootSSHKeypairRotation, out *core.ShootSSHKeypairRotation, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ShootSSHKeypairRotation_To_core_ShootSSHKeypairRotation(in, out, s)
+}
+
+func autoConvert_core_ShootSSHKeypairRotation_To_v1alpha1_ShootSSHKeypairRotation(in *core.ShootSSHKeypairRotation, out *ShootSSHKeypairRotation, s conversion.Scope) error {
+	out.LastInitiationTime = (*metav1.Time)(unsafe.Pointer(in.LastInitiationTime))
+	out.LastCompletionTime = (*metav1.Time)(unsafe.Pointer(in.LastCompletionTime))
+	return nil
+}
+
+// Convert_core_ShootSSHKeypairRotation_To_v1alpha1_ShootSSHKeypairRotation is an autogenerated conversion function.
+func Convert_core_ShootSSHKeypairRotation_To_v1alpha1_ShootSSHKeypairRotation(in *core.ShootSSHKeypairRotation, out *ShootSSHKeypairRotation, s conversion.Scope) error {
+	return autoConvert_core_ShootSSHKeypairRotation_To_v1alpha1_ShootSSHKeypairRotation(in, out, s)
 }
 
 func autoConvert_v1alpha1_ShootSpec_To_core_ShootSpec(in *ShootSpec, out *core.ShootSpec, s conversion.Scope) error {
@@ -5446,6 +5470,7 @@ func autoConvert_v1alpha1_ShootStatus_To_core_ShootStatus(in *ShootStatus, out *
 	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
 	out.AdvertisedAddresses = *(*[]core.ShootAdvertisedAddress)(unsafe.Pointer(&in.AdvertisedAddresses))
 	out.MigrationStartTime = (*metav1.Time)(unsafe.Pointer(in.MigrationStartTime))
+	out.Credentials = (*core.ShootCredentials)(unsafe.Pointer(in.Credentials))
 	return nil
 }
 
@@ -5466,6 +5491,7 @@ func autoConvert_core_ShootStatus_To_v1alpha1_ShootStatus(in *core.ShootStatus, 
 	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
 	out.AdvertisedAddresses = *(*[]ShootAdvertisedAddress)(unsafe.Pointer(&in.AdvertisedAddresses))
 	out.MigrationStartTime = (*metav1.Time)(unsafe.Pointer(in.MigrationStartTime))
+	out.Credentials = (*ShootCredentials)(unsafe.Pointer(in.Credentials))
 	return nil
 }
 

@@ -11,8 +11,8 @@ spec:
   command: [bash, -c]
   args:
     - >-
-      go test -timeout=0 -mod=vendor ./test/suites/shoot
-      --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
+      go test -timeout=0 -mod=vendor ./test/testmachinery/suites/shoot
+      --v -ginkgo.v -ginkgo.progress -ginkgo.no-color
       --report-file=$TM_EXPORT_PATH/report.json
       -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
       -shoot-name=$SHOOT_NAME
@@ -21,4 +21,4 @@ spec:
       -ginkgo.focus="\[RELEASE\]"
       -ginkgo.skip="\[SERIAL\]|\[DISRUPTIVE\]"
 
-  image: eu.gcr.io/gardener-project/3rd/golang:1.17.6
+  image: eu.gcr.io/gardener-project/3rd/golang:1.17.8

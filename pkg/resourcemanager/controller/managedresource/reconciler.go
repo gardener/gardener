@@ -106,6 +106,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return reconcile.Result{}, fmt.Errorf("could not fetch ManagedResource: %+v", err)
 	}
 
+	if ignore(mr) && mr.DeletionTimestamp == nil {
+		log.Info("Skipping reconciliation since ManagedResource is ignored")
+		return reconcile.Result{}, nil
+	}
+
 	action, responsible := r.class.Active(mr)
 	log.Info("Reconciling ManagedResource", "actionRequired", action, "responsible", responsible)
 

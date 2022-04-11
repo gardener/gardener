@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -29,11 +31,9 @@ import (
 	"github.com/go-logr/logr"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 type reconciler struct {
@@ -60,37 +60,30 @@ func (r *reconciler) InjectLogger(l logr.Logger) error {
 // Reconcile performs health checks.
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
-	log.Info("Starting ManagedResource health checks")
+
+	// timeout for all calls (e.g. status updates), give status updates a bit of headroom if health checks
+	// themselves run into timeouts, so that we will still update the status with that timeout error
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
 
 	mr := &resourcesv1alpha1.ManagedResource{}
 	if err := r.client.Get(ctx, req.NamespacedName, mr); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("Stopping health checks for ManagedResource, as it has been deleted")
-			return reconcile.Result{}, nil
+			return ctrl.Result{}, nil
 		}
-		return reconcile.Result{}, fmt.Errorf("could not fetch ManagedResource: %+v", err)
+		return ctrl.Result{}, fmt.Errorf("could not fetch ManagedResource: %+v", err)
 	}
 
 	// Check responsibility
 	if _, responsible := r.classFilter.Active(mr); !responsible {
 		log.Info("Stopping health checks as the responsibility changed")
-		return ctrl.Result{}, nil // Do not requeue
+		return ctrl.Result{}, nil
 	}
 
-	healthCheckCtx, cancel := context.WithTimeout(ctx, time.Minute)
-	defer cancel()
-
-	// Initialize condition based on the current status.
-	conditionResourcesHealthy := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
-
 	if !mr.DeletionTimestamp.IsZero() {
-		conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ConditionDeletionPending, "The resources are currently being deleted.")
-		if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
-			return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
-		}
-
-		log.Info("Stopping health checks for ManagedResource, as it has been deleted (deletionTimestamp is set)")
-		return reconcile.Result{}, nil
+		return r.updateStatusForDeletion(ctx, log, mr)
 	}
 
 	// skip health checks until ManagedResource has been reconciled completely successfully to prevent writing
@@ -101,8 +94,29 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{RequeueAfter: r.syncPeriod}, nil
 	}
 
+	return r.executeHealthChecks(ctx, log, mr)
+}
+
+func (r *reconciler) updateStatusForDeletion(ctx context.Context, log logr.Logger, mr *resourcesv1alpha1.ManagedResource) (ctrl.Result, error) {
+	conditionResourcesHealthy := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
+	conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ConditionDeletionPending, "The resources are currently being deleted.")
+	if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
+		return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
+	}
+
+	log.Info("Stopping health checks for ManagedResource, as it has been deleted (deletionTimestamp is set)")
+	return ctrl.Result{}, nil
+}
+
+func (r *reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, mr *resourcesv1alpha1.ManagedResource) (ctrl.Result, error) {
+	log.Info("Starting ManagedResource health checks")
+	// don't block workers if calls timeout for some reason
+	healthCheckCtx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
 	var (
-		oldConditions             = []gardencorev1beta1.Condition{conditionResourcesHealthy}
+		conditionResourcesHealthy = v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
+		oldCondition              = conditionResourcesHealthy.DeepCopy()
 		resourcesObjectReferences = mr.Status.Resources
 	)
 
@@ -110,48 +124,35 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		var (
 			objectKey = client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}
 			objectLog = log.WithValues("object", objectKey, "objectGVK", ref.GroupVersionKind())
-			obj       client.Object
 		)
 
-		// sigs.k8s.io/controller-runtime/pkg/client.DelegatingReader does not use the cache for unstructured.Unstructured
-		// objects, so we create a new object of the object's type to use the caching client
-		runtimeObject, err := r.targetScheme.New(ref.GroupVersionKind())
+		obj, err := newObjectForReference(objectLog, r.targetScheme, ref)
 		if err != nil {
-			objectLog.Info("Could not create new object of kind for health checks (probably not registered in the used scheme), falling back to unstructured request", "err", err.Error())
-
-			// fallback to unstructured requests if the object's type is not registered in the scheme
-			unstructuredObj := &unstructured.Unstructured{}
-			unstructuredObj.SetAPIVersion(ref.APIVersion)
-			unstructuredObj.SetKind(ref.Kind)
-			obj = unstructuredObj
-		} else {
-			var ok bool
-			if obj, ok = runtimeObject.(client.Object); !ok {
-				err := fmt.Errorf("expected client.Object but got %T", obj)
-				objectLog.Error(err, "Could not execute health check")
-				// do not requeue because there anyway will be another update event to fix the problem
-				return ctrl.Result{}, nil
-			}
+			log.Error(err, "Failed to construct new object for reference. This should never happen, ignoring")
+			return ctrl.Result{}, nil
 		}
 
 		if err := r.targetClient.Get(healthCheckCtx, objectKey, obj); err != nil {
-			if apierrors.IsNotFound(err) {
-				objectLog.Info("Could not get object")
-
-				var (
-					reason  = ref.Kind + "Missing"
-					message = fmt.Sprintf("Required %s %q in namespace %q is missing.", ref.Kind, ref.Name, ref.Namespace)
-				)
-
-				conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, reason, message)
-				if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
-					return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
-				}
-
-				return ctrl.Result{RequeueAfter: r.syncPeriod}, nil // We do not want to run in the exponential backoff for the condition check.
+			if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
+				return ctrl.Result{}, err
 			}
 
-			return ctrl.Result{}, err
+			var (
+				reason  = ref.Kind + "Missing"
+				message = fmt.Sprintf("Required %s %q in namespace %q is missing", ref.Kind, ref.Name, ref.Namespace)
+			)
+			if meta.IsNoMatchError(err) {
+				message = fmt.Sprintf("%s: %v", message, err)
+			}
+			objectLog.Info("Finished ManagedResource health checks", "status", "unhealthy", "reason", reason, "message", message)
+
+			conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, reason, message)
+			if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
+				return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
+			}
+
+			return ctrl.Result{RequeueAfter: r.syncPeriod}, nil
+
 		}
 
 		if checked, err := CheckHealth(healthCheckCtx, r.targetClient, obj); err != nil {
@@ -166,6 +167,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 				reason = "HealthCheckError"
 				message = fmt.Sprintf("Error executing health check for %s %q: %v", ref.Kind, objectKey.String(), err)
 				objectLog.Error(err, "Error executing health check for object")
+			} else {
+				objectLog.Info("Finished ManagedResource health checks", "status", "unhealthy", "reason", reason, "message", message)
 			}
 
 			conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, reason, message)
@@ -173,20 +176,40 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 				return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 			}
 
-			return ctrl.Result{RequeueAfter: r.syncPeriod}, nil // We do not want to run in the exponential backoff for the condition check.
+			return ctrl.Result{RequeueAfter: r.syncPeriod}, nil
 		}
 	}
 
 	conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionTrue, "ResourcesHealthy", "All resources are healthy.")
-
-	if !apiequality.Semantic.DeepEqual(oldConditions, []gardencorev1beta1.Condition{conditionResourcesHealthy}) {
+	if !apiequality.Semantic.DeepEqual(oldCondition, conditionResourcesHealthy) {
 		if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
 			return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 		}
 	}
 
-	log.Info("Finished ManagedResource health checks")
+	log.Info("Finished ManagedResource health checks", "status", "healthy")
 	return ctrl.Result{RequeueAfter: r.syncPeriod}, nil
+}
+
+func newObjectForReference(log logr.Logger, scheme *runtime.Scheme, ref resourcesv1alpha1.ObjectReference) (client.Object, error) {
+	// sigs.k8s.io/controller-runtime/pkg/client.DelegatingReader does not use the cache for unstructured.Unstructured
+	// objects, so we create a new object of the object's type to use the caching client
+	typedObject, err := scheme.New(ref.GroupVersionKind())
+	if err != nil {
+		log.Info("Could not create new object of kind for health checks (probably not registered in the used scheme), falling back to unstructured request", "err", err.Error())
+
+		// fallback to unstructured requests if the object's type is not registered in the scheme
+		unstructuredObj := &unstructured.Unstructured{}
+		unstructuredObj.SetAPIVersion(ref.APIVersion)
+		unstructuredObj.SetKind(ref.Kind)
+		return unstructuredObj, nil
+	}
+
+	if obj, ok := typedObject.(client.Object); ok {
+		return obj, nil
+	}
+
+	return nil, fmt.Errorf("expected client.Object but got %T", typedObject)
 }
 
 func updateConditions(ctx context.Context, c client.Client, mr *resourcesv1alpha1.ManagedResource, condition gardencorev1beta1.Condition) error {

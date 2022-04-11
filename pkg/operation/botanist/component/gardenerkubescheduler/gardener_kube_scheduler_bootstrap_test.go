@@ -223,10 +223,22 @@ var _ = Describe("Bootstrap", func() {
 				BeforeEach(func() {
 					version, err = semver.NewVersion("1.22.1")
 					Expect(err).ToNot(HaveOccurred())
+					configMapDataHash = "5b3d51e8"
 				})
 
 				It("has correct config", func() {
 					Expect(config).To(Equal(expectedV22Config))
+				})
+			})
+			Context("v1.23", func() {
+				BeforeEach(func() {
+					version, err = semver.NewVersion("1.23.0")
+					Expect(err).ToNot(HaveOccurred())
+					configMapDataHash = "4ac487c7"
+				})
+
+				It("has correct config", func() {
+					Expect(config).To(Equal(expectedV23Config))
 				})
 			})
 		})
@@ -294,5 +306,86 @@ profiles:
 
 	expectedV21Config = expectedV19Config
 
-	expectedV22Config = expectedV19Config
+	expectedV22Config = `apiVersion: kubescheduler.config.k8s.io/v1beta2
+clientConnection:
+  acceptContentTypes: ""
+  burst: 0
+  contentType: ""
+  kubeconfig: ""
+  qps: 0
+kind: KubeSchedulerConfiguration
+leaderElection:
+  leaderElect: true
+  leaseDuration: 15s
+  renewDeadline: 10s
+  resourceLock: leases
+  resourceName: gardener-kube-scheduler
+  resourceNamespace: gardener-kube-scheduler
+  retryPeriod: 2s
+profiles:
+- pluginConfig:
+  - args:
+      apiVersion: kubescheduler.config.k8s.io/v1beta2
+      kind: NodeResourcesFitArgs
+      scoringStrategy:
+        type: MostAllocated
+    name: NodeResourcesFit
+  plugins:
+    bind: {}
+    filter: {}
+    permit: {}
+    postBind: {}
+    postFilter: {}
+    preBind: {}
+    preFilter: {}
+    preScore: {}
+    queueSort: {}
+    reserve: {}
+    score:
+      disabled:
+      - name: NodeResourcesBalancedAllocation
+  schedulerName: gardener-shoot-controlplane-scheduler
+`
+
+	expectedV23Config = `apiVersion: kubescheduler.config.k8s.io/v1beta3
+clientConnection:
+  acceptContentTypes: ""
+  burst: 0
+  contentType: ""
+  kubeconfig: ""
+  qps: 0
+kind: KubeSchedulerConfiguration
+leaderElection:
+  leaderElect: true
+  leaseDuration: 15s
+  renewDeadline: 10s
+  resourceLock: leases
+  resourceName: gardener-kube-scheduler
+  resourceNamespace: gardener-kube-scheduler
+  retryPeriod: 2s
+profiles:
+- pluginConfig:
+  - args:
+      apiVersion: kubescheduler.config.k8s.io/v1beta3
+      kind: NodeResourcesFitArgs
+      scoringStrategy:
+        type: MostAllocated
+    name: NodeResourcesFit
+  plugins:
+    bind: {}
+    filter: {}
+    multiPoint: {}
+    permit: {}
+    postBind: {}
+    postFilter: {}
+    preBind: {}
+    preFilter: {}
+    preScore: {}
+    queueSort: {}
+    reserve: {}
+    score:
+      disabled:
+      - name: NodeResourcesBalancedAllocation
+  schedulerName: gardener-shoot-controlplane-scheduler
+`
 )

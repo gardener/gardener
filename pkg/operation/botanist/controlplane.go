@@ -16,20 +16,14 @@ package botanist
 
 import (
 	"context"
-	"path/filepath"
 	"time"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
-	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/images"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -40,119 +34,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// DeployVerticalPodAutoscaler deploys the VPA into the shoot namespace in the seed.
-func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
-	if !b.Shoot.WantsVerticalPodAutoscaler {
-		return common.DeleteVpa(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, true)
-	}
-
-	for _, name := range []string{
-		v1beta1constants.DeploymentNameVPAAdmissionController,
-		v1beta1constants.DeploymentNameVPARecommender,
-		v1beta1constants.DeploymentNameVPAUpdater,
-	} {
-		if err := gutil.NewShootAccessSecret(name, b.Shoot.SeedNamespace).Reconcile(ctx, b.K8sSeedClient.Client()); err != nil {
-			return err
-		}
-	}
-
-	var (
-		podLabels = map[string]interface{}{
-			v1beta1constants.LabelNetworkPolicyToDNS:            "allowed",
-			v1beta1constants.LabelNetworkPolicyToShootAPIServer: "allowed",
-		}
-		admissionController = map[string]interface{}{
-			"replicas": b.Shoot.GetReplicas(1),
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-vpa-tls-certs":            b.LoadCheckSum(common.VPASecretName),
-				"checksum/secret-vpa-admission-controller": b.LoadCheckSum("vpa-admission-controller"),
-			},
-			"podLabels": utils.MergeMaps(podLabels, map[string]interface{}{
-				v1beta1constants.LabelNetworkPolicyFromShootAPIServer: "allowed",
-			}),
-			"createServiceAccount": false,
-		}
-		exporter = map[string]interface{}{
-			"enabled":  false,
-			"replicas": 0,
-		}
-		recommender = map[string]interface{}{
-			"replicas": b.Shoot.GetReplicas(1),
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-vpa-recommender": b.LoadCheckSum("vpa-recommender"),
-			},
-			"podLabels":                    podLabels,
-			"createServiceAccount":         false,
-			"recommendationMarginFraction": gardencorev1beta1.DefaultRecommendationMarginFraction,
-			"interval":                     gardencorev1beta1.DefaultRecommenderInterval,
-		}
-		updater = map[string]interface{}{
-			"replicas": b.Shoot.GetReplicas(1),
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-vpa-updater": b.LoadCheckSum("vpa-updater"),
-			},
-			"podLabels":              podLabels,
-			"createServiceAccount":   false,
-			"evictAfterOOMThreshold": gardencorev1beta1.DefaultEvictAfterOOMThreshold,
-			"evictionRateBurst":      gardencorev1beta1.DefaultEvictionRateBurst,
-			"evictionRateLimit":      gardencorev1beta1.DefaultEvictionRateLimit,
-			"evictionTolerance":      gardencorev1beta1.DefaultEvictionTolerance,
-			"interval":               gardencorev1beta1.DefaultUpdaterInterval,
-		}
-		defaultValues = map[string]interface{}{
-			"admissionController": admissionController,
-			"exporter":            exporter,
-			"recommender":         recommender,
-			"updater":             updater,
-			"deploymentLabels": map[string]interface{}{
-				v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-			},
-			"clusterType": "shoot",
-		}
-	)
-
-	if verticalPodAutoscaler := b.Shoot.GetInfo().Spec.Kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
-		if val := verticalPodAutoscaler.EvictAfterOOMThreshold; val != nil {
-			updater["evictAfterOOMThreshold"] = *val
-		}
-		if val := verticalPodAutoscaler.EvictionRateBurst; val != nil {
-			updater["evictionRateBurst"] = *val
-		}
-		if val := verticalPodAutoscaler.EvictionRateLimit; val != nil {
-			updater["evictionRateLimit"] = *val
-		}
-		if val := verticalPodAutoscaler.EvictionTolerance; val != nil {
-			updater["evictionTolerance"] = *val
-		}
-		if val := verticalPodAutoscaler.UpdaterInterval; val != nil {
-			updater["interval"] = *val
-		}
-		if val := verticalPodAutoscaler.RecommendationMarginFraction; val != nil {
-			recommender["recommendationMarginFraction"] = *val
-		}
-		if val := verticalPodAutoscaler.RecommenderInterval; val != nil {
-			recommender["interval"] = *val
-		}
-	}
-
-	values, err := b.InjectSeedShootImages(defaultValues, images.ImageNameVpaAdmissionController, images.ImageNameVpaExporter, images.ImageNameVpaRecommender, images.ImageNameVpaUpdater)
-	if err != nil {
-		return err
-	}
-	values["global"] = map[string]interface{}{"images": values["images"]}
-
-	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-bootstrap", "charts", "vpa", "charts", "runtime"), b.Shoot.SeedNamespace, "vpa", kubernetes.Values(values)); err != nil {
-		return err
-	}
-
-	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-admission-controller", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-recommender", Namespace: b.Shoot.SeedNamespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-updater", Namespace: b.Shoot.SeedNamespace}},
-	)
-}
 
 func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentName string, defaultReplicas int32) (int32, error) {
 	isCreateOrRestoreOperation := b.Shoot.GetInfo().Status.LastOperation != nil &&
@@ -205,7 +86,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 
 		// TODO: check if we can remove this mitigation once there is a garbage collection for VolumeAttachments (ref https://github.com/kubernetes/kubernetes/issues/77324)
-		// Currently on hibernation Machines are forecefully deleted and machine-controller-manager does not wait volumes to be detached.
+		// Currently on hibernation Machines are forcefully deleted and machine-controller-manager does not wait volumes to be detached.
 		// In this case kube-controller-manager cannot delete the corresponding VolumeAttachment objects and they are orphaned.
 		// Such orphaned VolumeAttachments then prevent/block PV deletion. For more details see https://github.com/gardener/gardener-extension-provider-gcp/issues/172.
 		// As the Nodes are already deleted, we can delete all VolumeAttachments.

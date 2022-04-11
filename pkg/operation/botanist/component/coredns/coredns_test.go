@@ -337,8 +337,7 @@ spec:
           timeoutSeconds: 2
         resources:
           limits:
-            cpu: 250m
-            memory: 500Mi
+            memory: 1500Mi
           requests:
             cpu: 50m
             memory: 15Mi
@@ -541,8 +540,7 @@ spec:
         name: autoscaler
         resources:
           limits:
-            cpu: 100m
-            memory: 50Mi
+            memory: 70Mi
           requests:
             cpu: 20m
             memory: 10Mi
@@ -568,7 +566,7 @@ spec:
 status: {}
 `
 
-		cpaDeploymentVpaYAML = `apiVersion: autoscaling.k8s.io/v1beta2
+		cpaDeploymentVpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null
@@ -578,6 +576,7 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: '*'
+      controlledValues: RequestsOnly
       minAllowed:
         cpu: 20m
         memory: 10Mi

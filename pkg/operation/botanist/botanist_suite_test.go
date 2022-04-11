@@ -18,6 +18,8 @@ import (
 	"testing"
 
 	"github.com/gardener/gardener/pkg/gardenlet/features"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -28,3 +30,8 @@ func TestBotanist(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Botanist Suite")
 }
+
+var _ = BeforeSuite(func() {
+	DeferCleanup(test.WithVar(&secretutils.GenerateKey, secretutils.FakeGenerateKey))
+	DeferCleanup(test.WithVar(&secretutils.GenerateRandomString, secretutils.FakeGenerateRandomString))
+})
