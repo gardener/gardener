@@ -86,6 +86,7 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 		&kubeapiserverexposure.SNIValues{
 			IstioIngressGateway:      b.getIngressGatewayConfig(),
 			APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
+			AccessControl:            *b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.AccessControl,
 		},
 	))
 }
@@ -160,6 +161,7 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 			},
 			IstioIngressGateway:      b.getIngressGatewayConfig(),
 			APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
+			AccessControl:            *b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.AccessControl,
 		},
 	)
 }
