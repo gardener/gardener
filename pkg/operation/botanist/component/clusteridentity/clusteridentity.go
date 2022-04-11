@@ -29,9 +29,10 @@ import (
 )
 
 const (
-	managedResourceControlName = "cluster-identity"
+	// ManagedResourceControlName is the name of the ManagedResource containing the resource specifications.
+	ManagedResourceControlName = "cluster-identity"
 	// ShootManagedResourceName is the name of the ManagedResource containing the resource specifications.
-	ShootManagedResourceName = "shoot-core-" + managedResourceControlName
+	ShootManagedResourceName = "shoot-core-" + ManagedResourceControlName
 )
 
 // Interface contains functions for managing cluster identities.
@@ -77,7 +78,7 @@ func NewForSeed(c client.Client, namespace, identity string) Interface {
 		namespace,
 		identity,
 		managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer),
-		managedResourceControlName,
+		ManagedResourceControlName,
 		managedresources.CreateForSeed,
 		managedresources.DeleteForSeed,
 	)

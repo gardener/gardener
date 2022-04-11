@@ -148,6 +148,9 @@ func SetDefaults_GardenletControllerConfiguration(obj *GardenletControllerConfig
 	if obj.ShootCare == nil {
 		obj.ShootCare = &ShootCareControllerConfiguration{}
 	}
+	if obj.SeedCare == nil {
+		obj.SeedCare = &SeedCareControllerConfiguration{}
+	}
 	if obj.ShootMigration == nil {
 		obj.ShootMigration = &ShootMigrationControllerConfiguration{}
 	}
@@ -344,6 +347,14 @@ func SetDefaults_ShootCareControllerConfiguration(obj *ShootCareControllerConfig
 	if obj.StaleExtensionHealthChecks == nil {
 		v := StaleExtensionHealthChecks{Enabled: true}
 		obj.StaleExtensionHealthChecks = &v
+	}
+}
+
+// SetDefaults_SeedCareControllerConfiguration sets defaults for the seed care controller.
+func SetDefaults_SeedCareControllerConfiguration(obj *SeedCareControllerConfiguration) {
+	if obj.SyncPeriod == nil {
+		v := metav1.Duration{Duration: 30 * time.Second}
+		obj.SyncPeriod = &v
 	}
 }
 

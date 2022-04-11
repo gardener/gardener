@@ -89,6 +89,10 @@ var _ = Describe("Scheduler_Control", func() {
 						Type:   gardencorev1beta1.SeedBootstrapped,
 						Status: gardencorev1beta1.ConditionTrue,
 					},
+					{
+						Type:   gardencorev1beta1.SeedSystemComponentsHealthy,
+						Status: gardencorev1beta1.ConditionTrue,
+					},
 				},
 			},
 		}

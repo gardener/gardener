@@ -48,12 +48,15 @@ var _ = Describe("#FilterSeedForShootConditions", func() {
 
 		Expect(shoot.FilterSeedForShootConditions(newSeed, oldSeed, nil, false)).To(BeTrue())
 	})
+
 	It("should accept in case of deletion events", func() {
 		Expect(shoot.FilterSeedForShootConditions(newSeed, nil, nil, true)).To(BeTrue())
 	})
+
 	It("should accept in case of create events", func() {
 		Expect(shoot.FilterSeedForShootConditions(newSeed, nil, nil, false)).To(BeTrue())
 	})
+
 	It("should accept if conditions differ", func() {
 		newSeed.ResourceVersion = "1"
 		oldSeed.ResourceVersion = "2"
@@ -62,6 +65,7 @@ var _ = Describe("#FilterSeedForShootConditions", func() {
 
 		Expect(shoot.FilterSeedForShootConditions(newSeed, oldSeed, nil, false)).To(BeTrue())
 	})
+
 	It("should deny if conditions are the same", func() {
 		newSeed.ResourceVersion = "1"
 		oldSeed.ResourceVersion = "2"
@@ -69,5 +73,103 @@ var _ = Describe("#FilterSeedForShootConditions", func() {
 		oldSeed.Status.Conditions = gardenletReady
 
 		Expect(shoot.FilterSeedForShootConditions(newSeed, oldSeed, nil, false)).To(BeFalse())
+	})
+})
+
+var _ = Describe("#AddSeedConditionsToShoot", func() {
+	var (
+		seed           *gardencorev1beta1.Seed
+		shootForSeed   *gardencorev1beta1.Shoot
+		seedConditions = []gardencorev1beta1.Condition{
+			{
+				Type:   gardencorev1beta1.SeedBackupBucketsReady,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   gardencorev1beta1.SeedBootstrapped,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   gardencorev1beta1.SeedExtensionsReady,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   gardencorev1beta1.SeedGardenletReady,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   gardencorev1beta1.SeedSystemComponentsHealthy,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+		}
+		shootConditions = []gardencorev1beta1.Condition{
+			{
+				Type:   gardencorev1beta1.ShootSystemComponentsHealthy,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+		}
+	)
+
+	BeforeEach(func() {
+		seed = &gardencorev1beta1.Seed{
+			Status: gardencorev1beta1.SeedStatus{
+				Conditions: seedConditions},
+		}
+		shootForSeed = &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{
+			Conditions: shootConditions,
+		}}
+	})
+
+	It("should merge conditions successfully", func() {
+		mergedConditions := shoot.AddSeedConditionsToShoot(seed, shootForSeed)
+		Expect(mergedConditions).To(HaveLen(6))
+		Expect(mergedConditions).To(ContainElements(seedConditions))
+		Expect(mergedConditions).To(ContainElement(shootConditions[0]))
+	})
+
+	Context("when seed conditions already exist", func() {
+		BeforeEach(func() {
+			shootConditions = []gardencorev1beta1.Condition{
+				{
+					Type:   gardencorev1beta1.ShootSystemComponentsHealthy,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+				{
+					Type:   gardencorev1beta1.SeedBackupBucketsReady,
+					Status: gardencorev1beta1.ConditionFalse,
+				},
+				{
+					Type:   gardencorev1beta1.SeedBootstrapped,
+					Status: gardencorev1beta1.ConditionFalse,
+				},
+				{
+					Type:   gardencorev1beta1.SeedExtensionsReady,
+					Status: gardencorev1beta1.ConditionFalse,
+				},
+				{
+					Type:   gardencorev1beta1.SeedGardenletReady,
+					Status: gardencorev1beta1.ConditionFalse,
+				},
+				{
+					Type:   shoot.SeedSystemComponentsHealthyInShoot,
+					Status: gardencorev1beta1.ConditionFalse,
+				},
+			}
+
+			shootForSeed.Status.Conditions = shootConditions
+		})
+
+		It("should update conditions successfully", func() {
+			mergedConditions := shoot.AddSeedConditionsToShoot(seed, shootForSeed)
+			Expect(mergedConditions).To(HaveLen(6))
+			Expect(mergedConditions).To(ContainElements(seedConditions))
+			Expect(mergedConditions).To(ContainElement(shootConditions[0]))
+		})
+
+		It("should remove conditions related to seed if seed is nil", func() {
+			mergedConditions := shoot.AddSeedConditionsToShoot(nil, shootForSeed)
+			Expect(mergedConditions).To(HaveLen(1))
+			Expect(mergedConditions).To(ContainElement(shootConditions[0]))
+		})
 	})
 })

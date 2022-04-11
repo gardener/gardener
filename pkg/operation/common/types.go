@@ -50,8 +50,10 @@ const (
 	// RegistrationSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
 	RegistrationSpecHash = "registration-spec-hash"
 
-	// IstioNamespace is the istio-system namespace
+	// IstioNamespace is the istio-system namespace.
 	IstioNamespace = "istio-system"
+	// IstioIngressNamespace is the istio-ingress namespace.
+	IstioIngressNamespace = "istio-ingress"
 
 	// EndUserCrtValidity is the time period a user facing certificate is valid.
 	EndUserCrtValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176

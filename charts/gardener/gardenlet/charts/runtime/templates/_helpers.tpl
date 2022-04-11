@@ -169,6 +169,12 @@ config.yaml: |
       {{- if .Values.global.gardenlet.config.controllers.shootCare.conditionThresholds }}
 {{ toYaml .Values.global.gardenlet.config.controllers.shootCare.conditionThresholds | indent 6 }}
       {{- end }}
+    seedCare:
+        syncPeriod: {{ required ".Values.global.gardenlet.config.controllers.seedCare.syncPeriod is required" .Values.global.gardenlet.config.controllers.seedCare.syncPeriod }}
+        conditionThresholds:
+        {{- if .Values.global.gardenlet.config.controllers.seedCare.conditionThresholds }}
+{{ toYaml .Values.global.gardenlet.config.controllers.seedCare.conditionThresholds | indent 8 }}
+      {{- end }}
     {{- if .Values.global.gardenlet.config.controllers.shootSecret }}
     shootSecret:
       concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.shootSecret.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.shootSecret.concurrentSyncs }}

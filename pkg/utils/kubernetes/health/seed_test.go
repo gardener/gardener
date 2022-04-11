@@ -36,6 +36,7 @@ var _ = Describe("Seed", func() {
 					Conditions: []gardencorev1beta1.Condition{
 						{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
 						{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 					},
 				},
 			}, &gardencorev1beta1.Gardener{}, Succeed()),
@@ -45,6 +46,7 @@ var _ = Describe("Seed", func() {
 					Conditions: []gardencorev1beta1.Condition{
 						{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
 						{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 					},
 				},
 			}, &gardencorev1beta1.Gardener{ID: "thegardener"}, Succeed()),
@@ -53,6 +55,7 @@ var _ = Describe("Seed", func() {
 					Conditions: []gardencorev1beta1.Condition{
 						{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionFalse},
 						{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 					},
 				},
 			}, &gardencorev1beta1.Gardener{}, HaveOccurred()),
@@ -61,16 +64,27 @@ var _ = Describe("Seed", func() {
 					Conditions: []gardencorev1beta1.Condition{
 						{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
 						{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionFalse},
+						{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 					},
 				},
 			}, &gardencorev1beta1.Gardener{}, HaveOccurred()),
-			Entry("unhealthy due to missing both conditions", &gardencorev1beta1.Seed{}, &gardencorev1beta1.Gardener{}, HaveOccurred()),
+			Entry("unhealthy available condition (seed system components healthy)", &gardencorev1beta1.Seed{
+				Status: gardencorev1beta1.SeedStatus{
+					Conditions: []gardencorev1beta1.Condition{
+						{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionFalse},
+					},
+				},
+			}, &gardencorev1beta1.Gardener{}, HaveOccurred()),
+			Entry("unhealthy due to missing all conditions", &gardencorev1beta1.Seed{}, &gardencorev1beta1.Gardener{}, HaveOccurred()),
 			Entry("unhealthy due to non-matching identity", &gardencorev1beta1.Seed{
 				Status: gardencorev1beta1.SeedStatus{
 					Gardener: &gardencorev1beta1.Gardener{ID: "thegardener"},
 					Conditions: []gardencorev1beta1.Condition{
 						{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
 						{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 					},
 				},
 			}, &gardencorev1beta1.Gardener{}, HaveOccurred()),
@@ -82,6 +96,7 @@ var _ = Describe("Seed", func() {
 					Conditions: []gardencorev1beta1.Condition{
 						{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
 						{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 					},
 				},
 			}, &gardencorev1beta1.Gardener{}, HaveOccurred()),
@@ -99,6 +114,7 @@ var _ = Describe("Seed", func() {
 					Conditions: []gardencorev1beta1.Condition{
 						{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
 						{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 					},
 				},
 			}, &gardencorev1beta1.Gardener{Version: "1.12.8"}, Succeed()),
@@ -108,6 +124,7 @@ var _ = Describe("Seed", func() {
 					Conditions: []gardencorev1beta1.Condition{
 						{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
 						{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 					},
 				},
 			}, &gardencorev1beta1.Gardener{Version: "1.13.8"}, HaveOccurred()),
@@ -117,6 +134,7 @@ var _ = Describe("Seed", func() {
 					Conditions: []gardencorev1beta1.Condition{
 						{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
 						{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionFalse},
+						{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 					},
 				},
 			}, &gardencorev1beta1.Gardener{Version: "1.12.8"}, HaveOccurred()),
@@ -126,15 +144,27 @@ var _ = Describe("Seed", func() {
 					Conditions: []gardencorev1beta1.Condition{
 						{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionFalse},
 						{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 					},
 				},
 			}, &gardencorev1beta1.Gardener{Version: "1.12.8"}, HaveOccurred()),
-			Entry("unhealthy available condition (both conditions) and matching version", &gardencorev1beta1.Seed{
+			Entry("unhealthy available condition (seed system components healthy) and matching version", &gardencorev1beta1.Seed{
+				Status: gardencorev1beta1.SeedStatus{
+					Gardener: &gardencorev1beta1.Gardener{Version: "1.12.8"},
+					Conditions: []gardencorev1beta1.Condition{
+						{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionFalse},
+					},
+				},
+			}, &gardencorev1beta1.Gardener{Version: "1.12.8"}, HaveOccurred()),
+			Entry("unhealthy available condition (all conditions) and matching version", &gardencorev1beta1.Seed{
 				Status: gardencorev1beta1.SeedStatus{
 					Gardener: &gardencorev1beta1.Gardener{Version: "1.12.8"},
 					Conditions: []gardencorev1beta1.Condition{
 						{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionFalse},
 						{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionFalse},
+						{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionFalse},
 					},
 				},
 			}, &gardencorev1beta1.Gardener{Version: "1.12.8"}, HaveOccurred()),

@@ -57,6 +57,11 @@ controllers:
       duration: 1m
     - type: EveryNodeReady
       duration: 5m
+  seedCare:
+    syncPeriod: 30s
+    conditionThresholds:
+      - type: SystemComponentsHealthy
+        duration: 1m
   shootSecret:
     concurrentSyncs: 5
   shootStateSync:

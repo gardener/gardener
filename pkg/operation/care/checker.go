@@ -26,6 +26,11 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
@@ -541,6 +546,14 @@ func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Cond
 
 	return nil
 }
+
+var managedResourcesSeed = sets.NewString(
+	etcd.Druid,
+	seedadmissioncontroller.Name,
+	networkpolicies.ManagedResourceControlName,
+	clusteridentity.ManagedResourceControlName,
+	clusterautoscaler.ManagedResourceControlName,
+)
 
 func makeDeploymentLister(ctx context.Context, c client.Client, namespace string, selector labels.Selector) kutil.DeploymentLister {
 	var (

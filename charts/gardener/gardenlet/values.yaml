@@ -33,11 +33,11 @@ global:
       # gardenClusterAddress: https://some-external-ip-address-to-garden-cluster
       # gardenClusterCACert: <base64-ca-cert>
       # bootstrapKubeconfig: # bootstrapKubeconfig contains the kubeconfig that is used to initiate the bootstrap process, i.e.,
-                             # that is used to request a client certificate for the garden cluster. 
+                             # that is used to request a client certificate for the garden cluster.
                              # If the kubeconfig is provided inline, the name and namespace fields
                              # are a reference to a secret that will store this bootstrap kubeconfig. If `kubeconfig` is given
                              # then only this kubeconfig will be considered.
-                             # If you already have a boostrap kubeconfig you can reference it with 
+                             # If you already have a boostrap kubeconfig you can reference it with
                              # secretRef.name and secretRef.namespace.
       #   name: gardenlet-kubeconfig-bootstrap
       #   namespace: garden
@@ -105,6 +105,11 @@ global:
             duration: 1m
           - type: EveryNodeReady
             duration: 5m
+        seedCare:
+          syncPeriod: 30s
+          conditionThresholds:
+          - type: SystemComponentsHealthy
+            duration: 1m
         shootSecret:
           concurrentSyncs: 5
         shootStateSync:

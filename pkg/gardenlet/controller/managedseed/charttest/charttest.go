@@ -733,6 +733,19 @@ func ComputeExpectedGardenletConfiguration(
 					},
 				},
 			},
+			SeedCare: &gardenletconfigv1alpha1.SeedCareControllerConfiguration{
+				SyncPeriod: &metav1.Duration{
+					Duration: 30 * time.Second,
+				},
+				ConditionThresholds: []gardenletconfigv1alpha1.ConditionThreshold{
+					{
+						Type: string(gardencorev1beta1.SeedSystemComponentsHealthy),
+						Duration: metav1.Duration{
+							Duration: 1 * time.Minute,
+						},
+					},
+				},
+			},
 			ShootMigration: &gardenletconfigv1alpha1.ShootMigrationControllerConfiguration{
 				ConcurrentSyncs: &five,
 				SyncPeriod: &metav1.Duration{

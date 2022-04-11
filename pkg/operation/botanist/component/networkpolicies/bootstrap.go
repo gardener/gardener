@@ -27,7 +27,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const managedResourceControlName = "global-network-policies"
+// ManagedResourceControlName is the name of the of the global-network-policies managed resource.
+const ManagedResourceControlName = "global-network-policies"
 
 // NewBootstrapper creates a new instance of DeployWaiter for the network policies.
 func NewBootstrapper(client client.Client, namespace string, values GlobalValues) component.DeployWaiter {
@@ -64,11 +65,11 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		}
 	}
 
-	return managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceControlName, false, registry.SerializedObjects())
+	return managedresources.CreateForSeed(ctx, b.client, b.namespace, ManagedResourceControlName, false, registry.SerializedObjects())
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, b.client, b.namespace, managedResourceControlName)
+	return managedresources.DeleteForSeed(ctx, b.client, b.namespace, ManagedResourceControlName)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -79,12 +80,12 @@ func (b *bootstrapper) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, b.client, b.namespace, managedResourceControlName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, b.client, b.namespace, ManagedResourceControlName)
 }
 
 func (b *bootstrapper) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, b.client, b.namespace, managedResourceControlName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, b.client, b.namespace, ManagedResourceControlName)
 }

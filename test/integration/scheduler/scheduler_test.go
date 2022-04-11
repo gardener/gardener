@@ -230,6 +230,10 @@ func createSeed(seedName, providerType, region string) *gardencorev1beta1.Seed {
 				Type:   gardencorev1beta1.SeedGardenletReady,
 				Status: gardencorev1beta1.ConditionTrue,
 			},
+			{
+				Type:   gardencorev1beta1.SeedSystemComponentsHealthy,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
 		},
 	}
 	Expect(testClient.Status().Update(ctx, obj)).To(Succeed())
