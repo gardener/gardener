@@ -700,24 +700,26 @@ func RunReconcileSeedFlow(
 		prometheusIngressTLSSecretName = wildcardCert.GetName()
 	} else {
 		grafanaIngressTLSSecret, err := secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
-			Name:         "grafana-tls",
-			CommonName:   "grafana",
-			Organization: []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:     []string{seed.GetIngressFQDN(grafanaPrefix)},
-			CertType:     secretutils.ServerCert,
-			Validity:     &ingressTLSCertificateValidity,
+			Name:                        "grafana-tls",
+			CommonName:                  "grafana",
+			Organization:                []string{"gardener.cloud:monitoring:ingress"},
+			DNSNames:                    []string{seed.GetIngressFQDN(grafanaPrefix)},
+			CertType:                    secretutils.ServerCert,
+			Validity:                    &ingressTLSCertificateValidity,
+			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCASeed))
 		if err != nil {
 			return err
 		}
 
 		prometheusIngressTLSSecret, err := secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
-			Name:         "aggregate-prometheus-tls",
-			CommonName:   "prometheus",
-			Organization: []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:     []string{seed.GetIngressFQDN(prometheusPrefix)},
-			CertType:     secretutils.ServerCert,
-			Validity:     &ingressTLSCertificateValidity,
+			Name:                        "aggregate-prometheus-tls",
+			CommonName:                  "prometheus",
+			Organization:                []string{"gardener.cloud:monitoring:ingress"},
+			DNSNames:                    []string{seed.GetIngressFQDN(prometheusPrefix)},
+			CertType:                    secretutils.ServerCert,
+			Validity:                    &ingressTLSCertificateValidity,
+			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCASeed))
 		if err != nil {
 			return err
