@@ -472,7 +472,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 		DNSNames:                    kutil.DNSNamesForService(serviceName, r.namespace),
 		CertType:                    secrets.ServerCert,
 		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(r.values.SecretNameServerCA), secretsmanager.Rotate(secretsmanager.InPlace))
+	}, secretsmanager.SignedByCA(r.values.SecretNameServerCA, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return err
 	}

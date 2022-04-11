@@ -93,7 +93,7 @@ func (m *metricsServer) Deploy(ctx context.Context) error {
 		DNSNames:                    append([]string{serviceName}, kutil.DNSNamesForService(serviceName, metav1.NamespaceSystem)...),
 		CertType:                    secrets.ServerClientCert,
 		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAMetricsServer), secretsmanager.Rotate(secretsmanager.InPlace))
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAMetricsServer, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return err
 	}
