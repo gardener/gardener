@@ -369,15 +369,15 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 
 	f.Logger.Infof("Creating shoot %s in namespace %s", f.Shoot.GetName(), f.ProjectNamespace)
 	if err := PrettyPrintObject(f.Shoot); err != nil {
-		f.Logger.Fatalf("Cannot decode shoot %s: %s", f.Shoot.GetName(), err)
+		f.Logger.Errorf("Cannot decode shoot %s: %s", f.Shoot.GetName(), err)
 		return err
 	}
 
 	if err := f.GardenerFramework.CreateShoot(ctx, f.Shoot); err != nil {
-		f.Logger.Fatalf("Cannot create shoot %s: %s", f.Shoot.GetName(), err.Error())
+		f.Logger.Errorf("Cannot create shoot %s: %s", f.Shoot.GetName(), err.Error())
 		shootFramework, err2 := f.NewShootFramework(ctx, f.Shoot)
 		if err2 != nil {
-			f.Logger.Fatalf("Cannot dump shoot state %s: %s", f.Shoot.GetName(), err.Error())
+			f.Logger.Errorf("Cannot dump shoot state %s: %s", f.Shoot.GetName(), err.Error())
 		} else {
 			shootFramework.DumpState(ctx)
 		}
@@ -392,14 +392,14 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 	f.shootFramework = shootFramework
 
 	if err := DownloadKubeconfig(ctx, shootFramework.GardenClient, f.ProjectNamespace, shootFramework.ShootKubeconfigSecretName(), f.Config.shootKubeconfigPath); err != nil {
-		f.Logger.Fatalf("Cannot download shoot kubeconfig: %s", err.Error())
+		f.Logger.Errorf("Cannot download shoot kubeconfig: %s", err.Error())
 		return err
 	}
 
 	if seedSecretRef := shootFramework.Seed.Spec.SecretRef; seedSecretRef == nil {
 		f.Logger.Info("seed does not have secretRef set, skip constructing seed client")
 	} else if err := DownloadKubeconfig(ctx, shootFramework.GardenClient, shootFramework.Seed.Spec.SecretRef.Namespace, shootFramework.Seed.Spec.SecretRef.Name, f.Config.seedKubeconfigPath); err != nil {
-		f.Logger.Fatalf("Cannot download seed kubeconfig: %s", err.Error())
+		f.Logger.Errorf("Cannot download seed kubeconfig: %s", err.Error())
 		return err
 	}
 
