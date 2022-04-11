@@ -109,6 +109,7 @@ var _ = BeforeSuite(func() {
 	var mgrContext context.Context
 	mgrContext, mgrCancel = context.WithCancel(ctx)
 	go func() {
+		defer GinkgoRecover()
 		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
 })
