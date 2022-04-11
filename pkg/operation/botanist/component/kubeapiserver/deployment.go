@@ -157,6 +157,11 @@ func (k *kubeAPIServer) reconcileDeployment(
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAClient)
 	}
 
+	frontProxyCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCAFrontProxy)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAFrontProxy)
+	}
+
 	vpnCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCAVPN)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAVPN)
@@ -369,7 +374,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameCAFrontProxy,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: k.secrets.CAFrontProxy.Name,
+									SecretName: frontProxyCASecret.Name,
 								},
 							},
 						},
@@ -517,7 +522,7 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, "--profiling=false")
 	out = append(out, fmt.Sprintf("--proxy-client-cert-file=%s/%s", volumeMountPathKubeAggregator, secrets.DataKeyCertificate))
 	out = append(out, fmt.Sprintf("--proxy-client-key-file=%s/%s", volumeMountPathKubeAggregator, secrets.DataKeyPrivateKey))
-	out = append(out, fmt.Sprintf("--requestheader-client-ca-file=%s/%s", volumeMountPathCAFrontProxy, secrets.DataKeyCertificateCA))
+	out = append(out, fmt.Sprintf("--requestheader-client-ca-file=%s/%s", volumeMountPathCAFrontProxy, secrets.DataKeyCertificateBundle))
 	out = append(out, "--requestheader-extra-headers-prefix=X-Remote-Extra-")
 	out = append(out, "--requestheader-group-headers=X-Remote-Group")
 	out = append(out, "--requestheader-username-headers=X-Remote-User")

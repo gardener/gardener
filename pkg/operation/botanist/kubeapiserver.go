@@ -429,8 +429,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	}
 
 	secrets := kubeapiserver.Secrets{
-		CA:           component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
-		CAFrontProxy: component.Secret{Name: v1beta1constants.SecretNameCAFrontProxy, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCAFrontProxy)},
+		CA: component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
 	}
 
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSecrets(secrets)

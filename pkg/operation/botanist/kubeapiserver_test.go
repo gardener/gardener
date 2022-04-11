@@ -1057,8 +1057,7 @@ var _ = Describe("KubeAPIServer", func() {
 		DescribeTable("should correctly set the secrets",
 			func(values kubeapiserver.Values, mutateSecrets func(*kubeapiserver.Secrets)) {
 				secrets := kubeapiserver.Secrets{
-					CA:           component.Secret{Name: "ca", Checksum: botanist.LoadCheckSum("ca")},
-					CAFrontProxy: component.Secret{Name: "ca-front-proxy", Checksum: botanist.LoadCheckSum("ca-front-proxy")},
+					CA: component.Secret{Name: "ca", Checksum: botanist.LoadCheckSum("ca")},
 				}
 				mutateSecrets(&secrets)
 

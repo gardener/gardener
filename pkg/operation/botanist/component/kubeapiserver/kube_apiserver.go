@@ -586,8 +586,6 @@ func getLabels() map[string]string {
 type Secrets struct {
 	// CA is the cluster's certificate authority.
 	CA component.Secret
-	// CAFrontProxy is the certificate authority for the front-proxy.
-	CAFrontProxy component.Secret
 }
 
 type secret struct {
@@ -597,8 +595,7 @@ type secret struct {
 
 func (s *Secrets) all() map[string]secret {
 	return map[string]secret{
-		"CA":           {Secret: &s.CA},
-		"CAFrontProxy": {Secret: &s.CAFrontProxy},
+		"CA": {Secret: &s.CA},
 	}
 }
 

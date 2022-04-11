@@ -86,8 +86,7 @@ var _ = Describe("KubeAPIServer", func() {
 		secretChecksumCA                 = "12345"
 		secretNameCAClient               = "ca-client"
 		secretNameCAEtcd                 = "ca-etcd"
-		secretNameCAFrontProxy           = "CAFrontProxy-secret"
-		secretChecksumCAFrontProxy       = "12345"
+		secretNameCAFrontProxy           = "ca-front-proxy"
 		secretNameCAVPN                  = "ca-vpn"
 		secretNameEtcd                   = "etcd-client"
 		secretNameHTTPProxy              = "kube-apiserver-http-proxy"
@@ -125,8 +124,7 @@ var _ = Describe("KubeAPIServer", func() {
 		kapi = New(kubernetesInterface, namespace, sm, Values{Version: version})
 
 		secrets = Secrets{
-			CA:           component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
-			CAFrontProxy: component.Secret{Name: secretNameCAFrontProxy, Checksum: secretChecksumCAFrontProxy},
+			CA: component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
 		}
 
 		deployment = &appsv1.Deployment{
@@ -206,9 +204,6 @@ var _ = Describe("KubeAPIServer", func() {
 
 				Entry("CA missing",
 					"CA", func(s *Secrets) { s.CA.Name = "" }, Values{},
-				),
-				Entry("CAFrontProxy missing",
-					"CAFrontProxy", func(s *Secrets) { s.CAFrontProxy.Name = "" }, Values{},
 				),
 			)
 		})
@@ -1402,7 +1397,7 @@ rules:
 						"reference.resources.gardener.cloud/secret-71fba891":    secretNameCA,
 						"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
 						"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
-						"reference.resources.gardener.cloud/secret-9282d44f":    secretNameCAFrontProxy,
+						"reference.resources.gardener.cloud/secret-a92da147":    secretNameCAFrontProxy,
 						"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
 						"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
@@ -1448,12 +1443,11 @@ rules:
 
 					Expect(deployment.Spec.Template.Annotations).To(Equal(map[string]string{
 						"checksum/secret-" + secretNameCA:                       secretChecksumCA,
-						"checksum/secret-" + secretNameCAFrontProxy:             secretChecksumCAFrontProxy,
 						"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
 						"reference.resources.gardener.cloud/secret-71fba891":    secretNameCA,
 						"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
 						"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
-						"reference.resources.gardener.cloud/secret-9282d44f":    secretNameCAFrontProxy,
+						"reference.resources.gardener.cloud/secret-a92da147":    secretNameCAFrontProxy,
 						"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
 						"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
 						"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
@@ -1774,7 +1768,7 @@ rules:
 							"--profiling=false",
 							"--proxy-client-cert-file=/srv/kubernetes/aggregator/tls.crt",
 							"--proxy-client-key-file=/srv/kubernetes/aggregator/tls.key",
-							"--requestheader-client-ca-file=/srv/kubernetes/ca-front-proxy/ca.crt",
+							"--requestheader-client-ca-file=/srv/kubernetes/ca-front-proxy/bundle.crt",
 							"--requestheader-extra-headers-prefix=X-Remote-Extra-",
 							"--requestheader-group-headers=X-Remote-Group",
 							"--requestheader-username-headers=X-Remote-User",
