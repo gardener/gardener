@@ -67,7 +67,6 @@ var _ = Describe("operatingsystemconfig", func() {
 
 		apiServerAddress  = "1.2.3.4"
 		ca                = []byte("ca")
-		caKubelet         = []byte("ca-kubelet")
 		caCloudProfile    = "ca-cloud-profile"
 		shootDomain       = "shoot.domain.com"
 		kubernetesVersion = "1.2.3"
@@ -99,7 +98,6 @@ var _ = Describe("operatingsystemconfig", func() {
 			},
 		}
 		botanist.StoreSecret(v1beta1constants.SecretNameCACluster, &corev1.Secret{Data: map[string][]byte{"ca.crt": ca}})
-		botanist.StoreSecret(v1beta1constants.SecretNameCAKubelet, &corev1.Secret{Data: map[string][]byte{"ca.crt": caKubelet}})
 		botanist.SetShootState(shootState)
 		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 			Spec: gardencorev1beta1.SeedSpec{
@@ -126,7 +124,6 @@ var _ = Describe("operatingsystemconfig", func() {
 
 				operatingSystemConfig.EXPECT().SetAPIServerURL(fmt.Sprintf("https://%s", apiServerAddress))
 				operatingSystemConfig.EXPECT().SetCABundle(pointer.String("\n" + string(ca)))
-				operatingSystemConfig.EXPECT().SetKubeletCACertificate(string(caKubelet))
 				operatingSystemConfig.EXPECT().SetSSHPublicKeys(gomock.AssignableToTypeOf([]string{}))
 
 				operatingSystemConfig.EXPECT().Deploy(ctx)
@@ -137,7 +134,6 @@ var _ = Describe("operatingsystemconfig", func() {
 		Context("deploy", func() {
 			BeforeEach(func() {
 				operatingSystemConfig.EXPECT().SetAPIServerURL(fmt.Sprintf("https://api.%s", shootDomain))
-				operatingSystemConfig.EXPECT().SetKubeletCACertificate(string(caKubelet))
 				operatingSystemConfig.EXPECT().SetSSHPublicKeys(gomock.AssignableToTypeOf([]string{}))
 			})
 
@@ -200,7 +196,6 @@ var _ = Describe("operatingsystemconfig", func() {
 		Context("restore", func() {
 			BeforeEach(func() {
 				operatingSystemConfig.EXPECT().SetAPIServerURL(fmt.Sprintf("https://api.%s", shootDomain))
-				operatingSystemConfig.EXPECT().SetKubeletCACertificate(string(caKubelet))
 				operatingSystemConfig.EXPECT().SetSSHPublicKeys(gomock.AssignableToTypeOf([]string{}))
 
 				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{

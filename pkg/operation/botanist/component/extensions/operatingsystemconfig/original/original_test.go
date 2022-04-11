@@ -50,7 +50,7 @@ var _ = Describe("Original", func() {
 			caBundle                = pointer.String("cabundle")
 			criName                 = extensionsv1alpha1.CRIName("foo")
 			images                  = map[string]*imagevector.Image{}
-			kubeletCACertificate    = "kubelet-ca-certificate"
+			kubeletCABundle         = "kubelet-ca-bundle"
 			kubeletCLIFlags         = components.ConfigurableKubeletCLIFlags{}
 			kubeletConfigParameters = components.ConfigurableKubeletConfigParameters{}
 			kubeletDataVolumeName   = pointer.String("datavolname")
@@ -61,7 +61,7 @@ var _ = Describe("Original", func() {
 				CABundle:                caBundle,
 				CRIName:                 criName,
 				Images:                  images,
-				KubeletCACertificate:    kubeletCACertificate,
+				KubeletCABundle:         kubeletCABundle,
 				KubeletCLIFlags:         kubeletCLIFlags,
 				KubeletConfigParameters: kubeletConfigParameters,
 				KubeletDataVolumeName:   kubeletDataVolumeName,

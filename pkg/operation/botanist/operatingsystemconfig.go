@@ -65,6 +65,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 	return operatingsystemconfig.New(
 		b.Logger,
 		b.K8sSeedClient.Client(),
+		b.SecretsManager,
 		&operatingsystemconfig.Values{
 			Namespace:         b.Shoot.SeedNamespace,
 			KubernetesVersion: b.Shoot.KubernetesVersion,
@@ -90,7 +91,6 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetAPIServerURL(fmt.Sprintf("https://%s", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)))
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetCABundle(b.getOperatingSystemConfigCABundle())
-	b.Shoot.Components.Extensions.OperatingSystemConfig.SetKubeletCACertificate(string(b.LoadSecret(v1beta1constants.SecretNameCAKubelet).Data[secrets.DataKeyCertificateCA]))
 
 	sshKeypairSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair)
 	if !found {

@@ -130,18 +130,6 @@ func (mr *MockInterfaceMockRecorder) SetCABundle(arg0 interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCABundle", reflect.TypeOf((*MockInterface)(nil).SetCABundle), arg0)
 }
 
-// SetKubeletCACertificate mocks base method.
-func (m *MockInterface) SetKubeletCACertificate(arg0 string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetKubeletCACertificate", arg0)
-}
-
-// SetKubeletCACertificate indicates an expected call of SetKubeletCACertificate.
-func (mr *MockInterfaceMockRecorder) SetKubeletCACertificate(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetKubeletCACertificate", reflect.TypeOf((*MockInterface)(nil).SetKubeletCACertificate), arg0)
-}
-
 // SetSSHPublicKeys mocks base method.
 func (m *MockInterface) SetSSHPublicKeys(arg0 []string) {
 	m.ctrl.T.Helper()

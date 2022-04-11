@@ -36,6 +36,8 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"github.com/Masterminds/semver"
 	"github.com/sirupsen/logrus"
@@ -72,8 +74,6 @@ type Interface interface {
 	SetAPIServerURL(string)
 	// SetCABundle sets the CABundle value.
 	SetCABundle(*string)
-	// SetKubeletCACertificate sets the KubeletCACertificate value.
-	SetKubeletCACertificate(string)
 	// SetSSHPublicKeys sets the SSHPublicKeys value.
 	SetSSHPublicKeys([]string)
 	// WorkerNameToOperatingSystemConfigsMap returns a map whose key is a worker name and whose value is a structure
@@ -113,8 +113,6 @@ type OriginalValues struct {
 	ClusterDomain string
 	// Images is a map containing the necessary container images for the systemd units (hyperkube and pause-container).
 	Images map[string]*imagevector.Image
-	// KubeletCACertificate is the certificate authority for the kubelet.
-	KubeletCACertificate string
 	// KubeletConfig is the default kubelet configuration for all worker pools. Individual worker pools might overwrite
 	// this configuration.
 	KubeletConfig *gardencorev1beta1.KubeletConfig
@@ -132,14 +130,16 @@ type OriginalValues struct {
 func New(
 	logger logrus.FieldLogger,
 	client client.Client,
+	secretsManager secretsmanager.Interface,
 	values *Values,
 	waitInterval time.Duration,
 	waitSevereThreshold time.Duration,
 	waitTimeout time.Duration,
 ) Interface {
 	osc := &operatingSystemConfig{
-		client:              client,
 		logger:              logger,
+		client:              client,
+		secretsManager:      secretsManager,
 		values:              values,
 		waitInterval:        waitInterval,
 		waitSevereThreshold: waitSevereThreshold,
@@ -156,9 +156,11 @@ func New(
 }
 
 type operatingSystemConfig struct {
-	values              *Values
-	logger              logrus.FieldLogger
-	client              client.Client
+	logger         logrus.FieldLogger
+	client         client.Client
+	secretsManager secretsmanager.Interface
+	values         *Values
+
 	waitInterval        time.Duration
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
@@ -441,11 +443,6 @@ func (o *operatingSystemConfig) SetCABundle(val *string) {
 	o.values.CABundle = val
 }
 
-// SetKubeletCACertificate sets the KubeletCACertificate value.
-func (o *operatingSystemConfig) SetKubeletCACertificate(cert string) {
-	o.values.KubeletCACertificate = cert
-}
-
 // SetSSHPublicKeys sets the SSHPublicKeys value.
 func (o *operatingSystemConfig) SetSSHPublicKeys(keys []string) {
 	o.values.SSHPublicKeys = keys
@@ -470,6 +467,11 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		} else {
 			*caBundle = fmt.Sprintf("%s\n%s", *caBundle, *worker.CABundle)
 		}
+	}
+
+	kubeletCASecret, found := o.secretsManager.Get(v1beta1constants.SecretNameCAKubelet)
+	if !found {
+		return deployer{}, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAKubelet)
 	}
 
 	kubeletConfigParameters := components.KubeletConfigParametersFromCoreV1beta1KubeletConfig(o.values.KubeletConfig)
@@ -497,7 +499,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		clusterDomain:           o.values.ClusterDomain,
 		criName:                 criName,
 		images:                  o.values.Images,
-		kubeletCACertificate:    o.values.KubeletCACertificate,
+		kubeletCABundle:         string(kubeletCASecret.Data[secretutils.DataKeyCertificateBundle]),
 		kubeletConfigParameters: kubeletConfigParameters,
 		kubeletCLIFlags:         kubeletCLIFlags,
 		kubeletDataVolumeName:   worker.KubeletDataVolumeName,
@@ -555,7 +557,7 @@ type deployer struct {
 	clusterDomain           string
 	criName                 extensionsv1alpha1.CRIName
 	images                  map[string]*imagevector.Image
-	kubeletCACertificate    string
+	kubeletCABundle         string
 	kubeletConfigParameters components.ConfigurableKubeletConfigParameters
 	kubeletCLIFlags         components.ConfigurableKubeletCLIFlags
 	kubeletDataVolumeName   *string
@@ -602,7 +604,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			ClusterDomain:           d.clusterDomain,
 			CRIName:                 d.criName,
 			Images:                  d.images,
-			KubeletCACertificate:    d.kubeletCACertificate,
+			KubeletCABundle:         d.kubeletCABundle,
 			KubeletConfigParameters: d.kubeletConfigParameters,
 			KubeletCLIFlags:         d.kubeletCLIFlags,
 			KubeletDataVolumeName:   d.kubeletDataVolumeName,
