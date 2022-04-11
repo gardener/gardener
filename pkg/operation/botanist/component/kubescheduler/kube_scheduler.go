@@ -132,9 +132,9 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 	}
 
-	clientCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCACluster)
+	clientCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCAClient)
 	if !found {
-		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAClient)
 	}
 
 	componentConfigYAML, err := k.computeComponentConfig()

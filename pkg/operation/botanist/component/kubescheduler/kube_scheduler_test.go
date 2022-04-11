@@ -67,7 +67,7 @@ var _ = Describe("KubeScheduler", func() {
 		configEmpty *gardencorev1beta1.KubeSchedulerConfig
 		configFull  = &gardencorev1beta1.KubeSchedulerConfig{KubernetesConfig: gardencorev1beta1.KubernetesConfig{FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false}}, KubeMaxPDVols: pointer.String("23")}
 
-		secretNameClientCA = "ca"
+		secretNameClientCA = "ca-client"
 		secretNameServer   = "kube-scheduler-server"
 
 		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
