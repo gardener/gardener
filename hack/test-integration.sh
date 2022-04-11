@@ -18,6 +18,8 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+source $(dirname "${0}")/common.sh
+
 ENVTEST_K8S_VERSION=${ENVTEST_K8S_VERSION:-"1.23"}
 
 echo "> Installing envtest tools@${ENVTEST_K8S_VERSION} with setup-envtest if necessary"
@@ -41,4 +43,12 @@ export GOMEGA_DEFAULT_EVENTUALLY_POLLING_INTERVAL=200ms
 export GOMEGA_DEFAULT_CONSISTENTLY_DURATION=5s
 export GOMEGA_DEFAULT_CONSISTENTLY_POLLING_INTERVAL=200ms
 
-GO111MODULE=on go test -timeout=5m -mod=vendor $@ | grep -v 'no test files'
+test_flags=
+# If running in prow, we want to generate a machine-readable output file under the location specified via $ARTIFACTS.
+# This will add a JUnit view above the build log that shows an overview over successful and failed test cases.
+if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ] ; then
+  trap "collect_junit_reports \"$ARTIFACTS/junit\"" EXIT
+  test_flags="--ginkgo.junit-report=junit.xml"
+fi
+
+GO111MODULE=on go test -timeout=5m -mod=vendor $@ $test_flags | grep -v 'no test files'
