@@ -20,6 +20,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
@@ -50,6 +51,10 @@ var (
 	weekDayAt0  = "2022-04-12T00:00:00Z"
 	weekDayAt7  = "2022-04-12T07:00:00Z"
 	weekDayAt19 = "2022-04-12T19:00:00Z"
+
+	noDeadLine    = -1234 * time.Second
+	shortDeadline = 10 * time.Second
+	longDeadline  = 10 * time.Hour
 )
 
 var _ = Describe("Shoot Hibernation", func() {
@@ -105,8 +110,6 @@ var _ = Describe("Shoot Hibernation", func() {
 				mockNow *mocktime.MockNow
 				now     time.Time
 
-				reconciler reconcile.Reconciler
-
 				shoot *gardencorev1beta1.Shoot
 			)
 
@@ -126,8 +129,6 @@ var _ = Describe("Shoot Hibernation", func() {
 					},
 					Status: gardencorev1beta1.ShootStatus{},
 				}
-
-				reconciler = NewShootHibernationReconciler(c, record.NewFakeRecorder(1))
 			})
 
 			AfterEach(func() {
@@ -180,6 +181,13 @@ var _ = Describe("Shoot Hibernation", func() {
 					requeueAfter = t.expectedRequeueDurationFunc(timeNow)
 				}
 
+				By("configure hibernation reconciler")
+				config := config.ShootHibernationControllerConfiguration{}
+				if t.triggerDeadlineDuration != noDeadLine {
+					config.TriggerDeadlineDuration = &metav1.Duration{Duration: t.triggerDeadlineDuration}
+				}
+				reconciler := NewShootHibernationReconciler(c, config, record.NewFakeRecorder(1))
+
 				By("reconciling shoot resource")
 				result, err := reconciler.Reconcile(ctx,
 					reconcile.Request{
@@ -211,6 +219,7 @@ var _ = Describe("Shoot Hibernation", func() {
 							End:   &everyDayAt2,
 						},
 					},
+					triggerDeadlineDuration:     noDeadLine,
 					expectPatch:                 true,
 					expectedHibernationEnabled:  true,
 					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
@@ -224,6 +233,7 @@ var _ = Describe("Shoot Hibernation", func() {
 							End:   &everyDayAt2,
 						},
 					},
+					triggerDeadlineDuration:     noDeadLine,
 					expectPatch:                 true,
 					expectedHibernationEnabled:  false,
 					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt7, "UTC"),
@@ -237,6 +247,7 @@ var _ = Describe("Shoot Hibernation", func() {
 							End:   &everyDayAt2,
 						},
 					},
+					triggerDeadlineDuration:     noDeadLine,
 					expectPatch:                 true,
 					expectedHibernationEnabled:  true,
 					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
@@ -250,6 +261,7 @@ var _ = Describe("Shoot Hibernation", func() {
 							End:   &everyDayAt2,
 						},
 					},
+					triggerDeadlineDuration:     noDeadLine,
 					expectPatch:                 true,
 					expectedHibernationEnabled:  true,
 					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
@@ -263,6 +275,7 @@ var _ = Describe("Shoot Hibernation", func() {
 							End:   &everyDayAt2,
 						},
 					},
+					triggerDeadlineDuration:     noDeadLine,
 					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
 				}),
 				Entry("when shoot has never been hibernated and has multiple hibernation schedules and reconciliation is executed just after hibernation", testEntry{
@@ -284,6 +297,7 @@ var _ = Describe("Shoot Hibernation", func() {
 							End:   &everyDayAt7,
 						},
 					},
+					triggerDeadlineDuration:     noDeadLine,
 					expectPatch:                 true,
 					expectedHibernationEnabled:  false,
 					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyWeekDayAt19, locationEUSofia),
@@ -298,6 +312,7 @@ var _ = Describe("Shoot Hibernation", func() {
 							End:   &everyDayAt2,
 						},
 					},
+					triggerDeadlineDuration:     noDeadLine,
 					expectPatch:                 true,
 					expectedHibernationEnabled:  true,
 					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
@@ -312,11 +327,68 @@ var _ = Describe("Shoot Hibernation", func() {
 							End:   &everyDayAt2,
 						},
 					},
+					triggerDeadlineDuration:     noDeadLine,
 					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt7, "UTC"),
+				}),
+				Entry("when shoot was not hibernated and current reconciliation is within the hibernation deadline", testEntry{
+					timeNow:           timeWithOffset(weekDayAt7, 1*time.Second),
+					shootCreationTime: timeWithOffset(weekDayAt7, -24*time.Hour),
+					schedules: []gardencorev1beta1.HibernationSchedule{
+						{
+							Start: &everyDayAt7,
+							End:   &everyDayAt2,
+						},
+					},
+					triggerDeadlineDuration:     longDeadline,
+					expectPatch:                 true,
+					expectedHibernationEnabled:  true,
+					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
+				}),
+				Entry("when shoot was previously hibernated and current reconciliation is within the hibernation deadline", testEntry{
+					timeNow:                    timeWithOffset(weekDayAt7, 1*time.Second),
+					shootCreationTime:          timeWithOffset(weekDayAt7, -24*time.Hour),
+					lastHibernationTriggerTime: timeWithOffset(weekDayAt2, 0),
+					schedules: []gardencorev1beta1.HibernationSchedule{
+						{
+							Start: &everyDayAt7,
+							End:   &everyDayAt2,
+						},
+					},
+					triggerDeadlineDuration:     longDeadline,
+					expectPatch:                 true,
+					expectedHibernationEnabled:  true,
+					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
+				}),
+				Entry("when shoot was not previously hibernated and current reconciliation is outside hibernation deadline", testEntry{
+					timeNow:           timeWithOffset(weekDayAt7, shortDeadline+1*time.Second),
+					shootCreationTime: timeWithOffset(weekDayAt7, -24*time.Hour),
+					schedules: []gardencorev1beta1.HibernationSchedule{
+						{
+							Start: &everyDayAt7,
+							End:   &everyDayAt2,
+						},
+					},
+					triggerDeadlineDuration:     shortDeadline,
+					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
+				}),
+				Entry("when shoot was previously hibernated and current reconciliation is outside hibernation deadline", testEntry{
+					timeNow:                    timeWithOffset(weekDayAt7, shortDeadline+1*time.Second),
+					shootCreationTime:          timeWithOffset(weekDayAt7, -24*time.Hour),
+					lastHibernationTriggerTime: timeWithOffset(weekDayAt2, 0),
+					schedules: []gardencorev1beta1.HibernationSchedule{
+						{
+							Start: &everyDayAt7,
+							End:   &everyDayAt2,
+						},
+					},
+					triggerDeadlineDuration:     shortDeadline,
+					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
 				}),
 			)
 
 			Context("When patching shoot object returns error", func() {
+				var reconciler reconcile.Reconciler
+
 				BeforeEach(func() {
 					now = shoot.CreationTimestamp.Time.Add(12 * time.Hour)
 					shoot.Spec.Hibernation.Schedules = []gardencorev1beta1.HibernationSchedule{
@@ -329,6 +401,7 @@ var _ = Describe("Shoot Hibernation", func() {
 						shoot.DeepCopyInto(obj)
 						return nil
 					})
+					reconciler = NewShootHibernationReconciler(c, config.ShootHibernationControllerConfiguration{}, record.NewFakeRecorder(1))
 				})
 
 				It("should return error if shoot cannot be patched with new hibernation setting", func() {
@@ -377,10 +450,12 @@ var _ = Describe("Shoot Hibernation", func() {
 })
 
 type testEntry struct {
-	timeNow                     func() time.Time
-	shootCreationTime           func() time.Time
-	lastHibernationTriggerTime  func() time.Time
-	schedules                   []gardencorev1beta1.HibernationSchedule
+	timeNow                    func() time.Time
+	shootCreationTime          func() time.Time
+	lastHibernationTriggerTime func() time.Time
+	schedules                  []gardencorev1beta1.HibernationSchedule
+	triggerDeadlineDuration    time.Duration
+
 	expectPatch                 bool
 	expectedRequeueDurationFunc func(now time.Time) time.Duration
 	expectedHibernationEnabled  bool

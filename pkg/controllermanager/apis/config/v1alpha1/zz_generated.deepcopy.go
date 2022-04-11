@@ -607,6 +607,11 @@ func (in *ShootHibernationControllerConfiguration) DeepCopyInto(out *ShootHibern
 		*out = new(int)
 		**out = **in
 	}
+	if in.TriggerDeadlineDuration != nil {
+		in, out := &in.TriggerDeadlineDuration, &out.TriggerDeadlineDuration
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	return
 }
 

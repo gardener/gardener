@@ -21,6 +21,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	gardenlogger "github.com/gardener/gardener/pkg/logger"
 	"github.com/go-logr/logr"
 	"github.com/robfig/cron"
@@ -29,6 +30,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -97,8 +99,12 @@ func (s *ParsedHibernationSchedule) Next(t time.Time) time.Time {
 }
 
 // Prev returns the previous activation time in UTC that is between the two given times.
-// The times are converted in the schedule's location.
+// The times are converted in the schedule's location. It returns nil if no such activation time can be found.
 func (s *ParsedHibernationSchedule) Prev(from, to time.Time) *time.Time {
+	if from.After(to) {
+		return nil
+	}
+
 	t1 := s.Schedule.Next(from.In(s.Location))
 	if t1.After(to) {
 		return nil
@@ -118,16 +124,19 @@ func (s *ParsedHibernationSchedule) Prev(from, to time.Time) *time.Time {
 // NewShootHibernationReconciler creates a new instance of a reconciler which hibernates shoots or wakes them up.
 func NewShootHibernationReconciler(
 	gardenClient client.Client,
+	config config.ShootHibernationControllerConfiguration,
 	recorder record.EventRecorder,
 ) reconcile.Reconciler {
 	return &shootHibernationReconciler{
 		gardenClient: gardenClient,
+		config:       config,
 		recorder:     recorder,
 	}
 }
 
 type shootHibernationReconciler struct {
 	gardenClient client.Client
+	config       config.ShootHibernationControllerConfiguration
 	recorder     record.EventRecorder
 }
 
@@ -167,7 +176,7 @@ func (r *shootHibernationReconciler) reconcile(ctx context.Context, shoot *garde
 	}
 
 	// get the schedule which caused the current reconciliation, to check whether the shoot should be hibernated or woken up
-	mostRecentSchedule := getScheduleWithMostRecentTime(parsedSchedules, TimeNow(), shoot)
+	mostRecentSchedule := getScheduleWithMostRecentTime(parsedSchedules, TimeNow(), r.config.TriggerDeadlineDuration, shoot)
 	if mostRecentSchedule != nil {
 		patch := client.MergeFrom(shoot.DeepCopy())
 		shoot.Spec.Hibernation.Enabled = &mostRecentSchedule.Enabled
@@ -251,13 +260,25 @@ func nextHibernationTimeDuration(schedules []ParsedHibernationSchedule, now time
 }
 
 // getScheduleWithMostRecentTime returns the ParsedHibernationSchedule that contains the schedule with the most recent previous execution time.
-func getScheduleWithMostRecentTime(schedules []ParsedHibernationSchedule, now time.Time, shoot *gardencorev1beta1.Shoot) *ParsedHibernationSchedule {
+func getScheduleWithMostRecentTime(schedules []ParsedHibernationSchedule, now time.Time, triggerDeadlineDuration *metav1.Duration, shoot *gardencorev1beta1.Shoot) *ParsedHibernationSchedule {
 	var startTime time.Time
 	if shoot.Status.LastHibernationTriggerTime != nil {
 		startTime = shoot.Status.LastHibernationTriggerTime.Time
 	} else {
 		// if the shoot has just been created or has never been hibernated, use the creation timestamp
 		startTime = shoot.CreationTimestamp.Time
+	}
+
+	if triggerDeadlineDuration != nil {
+		triggerDeadline := now.Add(-triggerDeadlineDuration.Duration)
+
+		if triggerDeadline.After(startTime) {
+			startTime = triggerDeadline
+		}
+	}
+
+	if startTime.After(now) {
+		return nil
 	}
 
 	var scheduleWithMostRecentTime *ParsedHibernationSchedule
