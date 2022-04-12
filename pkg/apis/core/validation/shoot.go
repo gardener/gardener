@@ -252,7 +252,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, seedGotAssigned, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
 	allErrs = append(allErrs, validateKubeControllerManagerUpdate(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
-	allErrs = append(allErrs, ValidateProviderUpdate(&newSpec.Provider, &oldSpec.Provider, fldPath.Child("provider"))...)
+	allErrs = append(allErrs, validateProviderUpdate(&newSpec.Provider, &oldSpec.Provider, fldPath.Child("provider"))...)
 
 	for i, newWorker := range newSpec.Provider.Workers {
 		oldWorker := newWorker
@@ -291,18 +291,16 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	return allErrs
 }
 
-// ValidateProviderUpdate validates the specification of a Provider object.
-func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *field.Path) field.ErrorList {
+func validateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newProvider.Type, oldProvider.Type, fldPath.Child("type"))...)
-	allErrs = append(allErrs, ValidateWorkersUpdate(newProvider.Workers, oldProvider.Workers, fldPath.Child("workers"))...)
+	allErrs = append(allErrs, validateWorkersUpdate(newProvider.Workers, oldProvider.Workers, fldPath.Child("workers"))...)
 
 	return allErrs
 }
 
-// ValidateWorkersUpdate validates the specification of a Provider object.
-func ValidateWorkersUpdate(newWorkers, oldWorkers []core.Worker, fldPath *field.Path) field.ErrorList {
+func validateWorkersUpdate(newWorkers, oldWorkers []core.Worker, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	oldWorkersMap := make(map[string]core.Worker)
 	for _, w := range oldWorkers {
@@ -311,14 +309,13 @@ func ValidateWorkersUpdate(newWorkers, oldWorkers []core.Worker, fldPath *field.
 	for i, w := range newWorkers {
 		if _, ok := oldWorkersMap[w.Name]; ok {
 			oldWorker := oldWorkersMap[w.Name]
-			allErrs = append(allErrs, ValidateWorkerUpdate(&w, &oldWorker, fldPath.Index(i))...)
+			allErrs = append(allErrs, validateWorkerUpdate(&w, &oldWorker, fldPath.Index(i))...)
 		}
 	}
 	return allErrs
 }
 
-// ValidateWorkerUpdate validates the specification of a Provider object.
-func ValidateWorkerUpdate(newWorker, oldWorker *core.Worker, fldPath *field.Path) field.ErrorList {
+func validateWorkerUpdate(newWorker, oldWorker *core.Worker, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	allErrs = append(allErrs, validateCRIUpdate(newWorker.CRI, oldWorker.CRI, fldPath.Child("cri"))...)
 
