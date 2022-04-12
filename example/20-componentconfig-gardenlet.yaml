@@ -114,7 +114,6 @@ featureGates:
   APIServerSNI: true
   SeedKubeScheduler: false
   ReversedVPN: true
-  DenyInvalidExtensionResources: true
   CopyEtcdBackupsDuringControlPlaneMigration: false
   ForceRestore: false
   DisableDNSProviderManagement: false

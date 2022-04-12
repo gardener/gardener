@@ -101,6 +101,7 @@ const (
 	// owner: @stoyanr
 	// alpha: v1.31.0
 	// beta: v1.42.0
+	// GA: v1.45.0
 	DenyInvalidExtensionResources featuregate.Feature = "DenyInvalidExtensionResources"
 
 	// WorkerPoolKubernetesVersion allows to overwrite the Kubernetes version used for shoot clusters per worker pool.
@@ -172,7 +173,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	AdminKubeconfigRequest:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	UseDNSRecords:                 {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	RotateSSHKeypairOnMaintenance: {Default: false, PreRelease: featuregate.Alpha},
-	DenyInvalidExtensionResources: {Default: true, PreRelease: featuregate.Beta},
+	DenyInvalidExtensionResources: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	WorkerPoolKubernetesVersion:   {Default: false, PreRelease: featuregate.Alpha},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
 	SecretBindingProviderValidation:            {Default: false, PreRelease: featuregate.Alpha},

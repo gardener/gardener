@@ -92,8 +92,6 @@ type Options struct {
 	Port int
 	// ServerCertDir is the path to server TLS cert and key.
 	ServerCertDir string
-	// AllowInvalidExtensionResources causes the seed-admission-controller to allow invalid extension resources.
-	AllowInvalidExtensionResources bool
 	// MetricsBindAddress is the TCP address that the controller should bind to
 	// for serving prometheus metrics.
 	// It can be set to "0" to disable the metrics serving.
@@ -112,7 +110,6 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.BindAddress, "bind-address", "0.0.0.0", "Address to bind to")
 	fs.IntVar(&o.Port, "port", 9443, "Webhook server port")
 	fs.StringVar(&o.ServerCertDir, "tls-cert-dir", "", "Directory with server TLS certificate and key (must contain a tls.crt and tls.key file)")
-	fs.BoolVar(&o.AllowInvalidExtensionResources, "allow-invalid-extension-resources", false, "Allow invalid extension resources")
 	fs.StringVar(&o.MetricsBindAddress, "metrics-bind-address", ":8080", "Bind address for the metrics server")
 	fs.StringVar(&o.HealthBindAddress, "health-bind-address", ":8081", "Bind address for the health server")
 	fs.BoolVar(&o.EnableProfiling, "profiling", false, "Enable profiling via web interface host:port/debug/pprof/")
@@ -186,7 +183,7 @@ func (o *Options) Run(ctx context.Context) error {
 
 	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(runtimelog.Log.WithName(extensioncrds.HandlerName))})
 	server.Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName)})
-	server.Register(extensionresources.WebhookPath, &webhook.Admission{Handler: extensionresources.New(runtimelog.Log.WithName(extensionresources.HandlerName), o.AllowInvalidExtensionResources)})
+	server.Register(extensionresources.WebhookPath, &webhook.Admission{Handler: extensionresources.New(runtimelog.Log.WithName(extensionresources.HandlerName))})
 
 	log.Info("Starting manager")
 	if err := mgr.Start(ctx); err != nil {
