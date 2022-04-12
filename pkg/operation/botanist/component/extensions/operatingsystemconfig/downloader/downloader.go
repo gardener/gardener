@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"text/template"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -123,7 +122,7 @@ const (
 // The result of this operating system config is exactly the user-data that will be sent to the providers.
 // We must not exceed the 16 KB, so be careful when extending/changing anything in here.
 // ### !CAUTION! ###
-func Config(cloudConfigUserDataSecretName, apiServerURL string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+func Config(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	var ccdScript bytes.Buffer
 	if err := tpl.Execute(&ccdScript, map[string]string{
 		"secretName":                   cloudConfigUserDataSecretName,
@@ -180,8 +179,8 @@ WantedBy=multi-user.target`),
 			Permissions: pointer.Int32(0644),
 			Content: extensionsv1alpha1.FileContent{
 				SecretRef: &extensionsv1alpha1.FileContentSecretRef{
-					Name:    v1beta1constants.SecretNameCACluster,
-					DataKey: secrets.DataKeyCertificateCA,
+					Name:    clusterCASecretName,
+					DataKey: secrets.DataKeyCertificateBundle,
 				},
 			},
 		},

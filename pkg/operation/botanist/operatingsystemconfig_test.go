@@ -21,7 +21,6 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
@@ -66,7 +65,6 @@ var _ = Describe("operatingsystemconfig", func() {
 		shootState = &gardencorev1alpha1.ShootState{}
 
 		apiServerAddress  = "1.2.3.4"
-		ca                = []byte("ca")
 		caCloudProfile    = "ca-cloud-profile"
 		shootDomain       = "shoot.domain.com"
 		kubernetesVersion = "1.2.3"
@@ -97,7 +95,6 @@ var _ = Describe("operatingsystemconfig", func() {
 				Seed: &seedpkg.Seed{},
 			},
 		}
-		botanist.StoreSecret(v1beta1constants.SecretNameCACluster, &corev1.Secret{Data: map[string][]byte{"ca.crt": ca}})
 		botanist.SetShootState(shootState)
 		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 			Spec: gardencorev1beta1.SeedSpec{
@@ -123,7 +120,7 @@ var _ = Describe("operatingsystemconfig", func() {
 				botanist.Shoot.DisableDNS = true
 
 				operatingSystemConfig.EXPECT().SetAPIServerURL(fmt.Sprintf("https://%s", apiServerAddress))
-				operatingSystemConfig.EXPECT().SetCABundle(pointer.String("\n" + string(ca)))
+				operatingSystemConfig.EXPECT().SetCABundle(nil)
 				operatingSystemConfig.EXPECT().SetSSHPublicKeys(gomock.AssignableToTypeOf([]string{}))
 
 				operatingSystemConfig.EXPECT().Deploy(ctx)
@@ -137,24 +134,8 @@ var _ = Describe("operatingsystemconfig", func() {
 				operatingSystemConfig.EXPECT().SetSSHPublicKeys(gomock.AssignableToTypeOf([]string{}))
 			})
 
-			It("should deploy successfully (no CA)", func() {
-				botanist.LoadSecret("ca").Data["ca.crt"] = nil
-				operatingSystemConfig.EXPECT().SetCABundle(nil)
-
-				operatingSystemConfig.EXPECT().Deploy(ctx)
-				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
-			})
-
-			It("should deploy successfully (only cluster CA)", func() {
-				operatingSystemConfig.EXPECT().SetCABundle(pointer.String("\n" + string(ca)))
-
-				operatingSystemConfig.EXPECT().Deploy(ctx)
-				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
-			})
-
 			It("should deploy successfully (only CloudProfile CA)", func() {
 				botanist.Shoot.CloudProfile.Spec.CABundle = &caCloudProfile
-				botanist.LoadSecret("ca").Data["ca.crt"] = nil
 				operatingSystemConfig.EXPECT().SetCABundle(&caCloudProfile)
 
 				operatingSystemConfig.EXPECT().Deploy(ctx)
@@ -171,22 +152,14 @@ var _ = Describe("operatingsystemconfig", func() {
 						},
 					},
 				}
-				operatingSystemConfig.EXPECT().SetCABundle(pointer.StringPtr("\n" + string(ca)))
-
-				operatingSystemConfig.EXPECT().Deploy(ctx)
-				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
-			})
-
-			It("should deploy successfully (both cluster and CloudProfile CA)", func() {
-				botanist.Shoot.CloudProfile.Spec.CABundle = &caCloudProfile
-				operatingSystemConfig.EXPECT().SetCABundle(pointer.String(caCloudProfile + "\n" + string(ca)))
+				operatingSystemConfig.EXPECT().SetCABundle(nil)
 
 				operatingSystemConfig.EXPECT().Deploy(ctx)
 				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
 			})
 
 			It("should return the error during deployment", func() {
-				operatingSystemConfig.EXPECT().SetCABundle(pointer.String("\n" + string(ca)))
+				operatingSystemConfig.EXPECT().SetCABundle(nil)
 
 				operatingSystemConfig.EXPECT().Deploy(ctx).Return(fakeErr)
 				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(MatchError(fakeErr))
@@ -206,7 +179,7 @@ var _ = Describe("operatingsystemconfig", func() {
 					},
 				})
 
-				operatingSystemConfig.EXPECT().SetCABundle(pointer.String("\n" + string(ca)))
+				operatingSystemConfig.EXPECT().SetCABundle(nil)
 			})
 
 			It("should restore successfully", func() {

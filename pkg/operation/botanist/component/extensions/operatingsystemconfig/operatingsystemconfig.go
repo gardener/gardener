@@ -469,6 +469,11 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		}
 	}
 
+	clusterCASecret, found := o.secretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return deployer{}, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+	}
+
 	kubeletCASecret, found := o.secretsManager.Get(v1beta1constants.SecretNameCAKubelet)
 	if !found {
 		return deployer{}, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAKubelet)
@@ -495,6 +500,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		key:                     Key(worker.Name, kubernetesVersion),
 		apiServerURL:            o.values.APIServerURL,
 		caBundle:                caBundle,
+		clusterCASecretName:     clusterCASecret.Name,
 		clusterDNSAddress:       o.values.ClusterDNSAddress,
 		clusterDomain:           o.values.ClusterDomain,
 		criName:                 criName,
@@ -553,6 +559,7 @@ type deployer struct {
 
 	// original values
 	caBundle                *string
+	clusterCASecretName     string
 	clusterDNSAddress       string
 	clusterDomain           string
 	criName                 extensionsv1alpha1.CRIName
@@ -588,7 +595,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 	// If the purpose is 'reconcile' then its unit content as well as its configuration (certificates, etc.) is added
 	// as well so that it can be updated regularly (otherwise, these resources would only be created once during the
 	// initial VM bootstrapping phase and never touched again).
-	downloaderUnits, downloaderFiles, err := DownloaderConfigFn(d.key, d.apiServerURL)
+	downloaderUnits, downloaderFiles, err := DownloaderConfigFn(d.key, d.apiServerURL, d.clusterCASecretName)
 	if err != nil {
 		return nil, err
 	}

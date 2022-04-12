@@ -31,7 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/secrets"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	corev1 "k8s.io/api/core/v1"
@@ -89,17 +89,22 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 // DeployOperatingSystemConfig deploys the OperatingSystemConfig custom resource and triggers the restore operation in
 // case the Shoot is in the restore phase of the control plane migration.
 func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
+	clusterCASecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+	}
+
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetAPIServerURL(fmt.Sprintf("https://%s", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)))
-	b.Shoot.Components.Extensions.OperatingSystemConfig.SetCABundle(b.getOperatingSystemConfigCABundle())
+	b.Shoot.Components.Extensions.OperatingSystemConfig.SetCABundle(b.getOperatingSystemConfigCABundle(clusterCASecret.Data[secretutils.DataKeyCertificateBundle]))
 
 	sshKeypairSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameSSHKeyPair)
 	}
-	publicKeys := []string{string(sshKeypairSecret.Data[secrets.DataKeySSHAuthorizedKeys])}
+	publicKeys := []string{string(sshKeypairSecret.Data[secretutils.DataKeySSHAuthorizedKeys])}
 
 	if sshKeypairSecretOld, found := b.SecretsManager.Get(v1beta1constants.SecretNameSSHKeyPair, secretsmanager.Old); found {
-		publicKeys = append(publicKeys, string(sshKeypairSecretOld.Data[secrets.DataKeySSHAuthorizedKeys]))
+		publicKeys = append(publicKeys, string(sshKeypairSecretOld.Data[secretutils.DataKeySSHAuthorizedKeys]))
 	}
 
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetSSHPublicKeys(publicKeys)
@@ -111,20 +116,21 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 	return b.Shoot.Components.Extensions.OperatingSystemConfig.Deploy(ctx)
 }
 
-func (b *Botanist) getOperatingSystemConfigCABundle() *string {
+func (b *Botanist) getOperatingSystemConfigCABundle(clusterCABundle []byte) *string {
 	var caBundle string
 
 	if cloudProfileCaBundle := b.Shoot.CloudProfile.Spec.CABundle; cloudProfileCaBundle != nil {
 		caBundle = *cloudProfileCaBundle
 	}
 
-	if caCert, ok := b.LoadSecret(v1beta1constants.SecretNameCACluster).Data[secrets.DataKeyCertificateCA]; ok && len(caCert) != 0 {
-		caBundle = fmt.Sprintf("%s\n%s", caBundle, caCert)
+	if len(clusterCABundle) != 0 {
+		caBundle = fmt.Sprintf("%s\n%s", caBundle, clusterCABundle)
 	}
 
 	if caBundle == "" {
 		return nil
 	}
+
 	return &caBundle
 }
 

@@ -27,7 +27,7 @@ import (
 var _ = Describe("Downloader", func() {
 	Describe("#Config", func() {
 		It("should properly render the expected units and files", func() {
-			units, files, err := Config(ccdSecretName, apiServerURL)
+			units, files, err := Config(ccdSecretName, apiServerURL, clusterCASecretName)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(units).To(ConsistOf(extensionsv1alpha1.Unit{
@@ -52,8 +52,8 @@ var _ = Describe("Downloader", func() {
 					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						SecretRef: &extensionsv1alpha1.FileContentSecretRef{
-							Name:    "ca",
-							DataKey: "ca.crt",
+							Name:    clusterCASecretName,
+							DataKey: "bundle.crt",
 						},
 					},
 				},
@@ -182,8 +182,9 @@ subjects:
 })
 
 const (
-	ccdSecretName = "secret"
-	apiServerURL  = "server"
+	ccdSecretName       = "secret"
+	apiServerURL        = "server"
+	clusterCASecretName = "ca"
 
 	unitContent = `[Unit]
 Description=Downloads the actual cloud config from the Shoot API server and executes it

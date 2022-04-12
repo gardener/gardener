@@ -80,6 +80,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			apiServerURL                = "https://url-to-apiserver"
 			caBundle                    = pointer.String("ca-bundle")
+			clusterCASecretName         = "ca"
 			clusterDNSAddress           = "cluster-dns"
 			clusterDomain               = "cluster-domain"
 			images                      = map[string]*imagevector.Image{"foo": {}}
@@ -98,7 +99,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			ccdUnitContent = "ccd-unit-content"
 
-			downloaderConfigFn = func(cloudConfigUserDataSecretName, apiServerURL string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+			downloaderConfigFn = func(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 				return []extensionsv1alpha1.Unit{
 						{Name: cloudConfigUserDataSecretName},
 						{
@@ -108,6 +109,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					},
 					[]extensionsv1alpha1.File{
 						{Path: apiServerURL},
+						{Path: clusterCASecretName},
 					},
 					nil
 			}
@@ -226,6 +228,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				downloaderUnits, downloaderFiles, _ := downloaderConfigFn(
 					key,
 					apiServerURL,
+					clusterCASecretName,
 				)
 				originalUnits, originalFiles, _ := originalConfigFn(components.Context{
 					CABundle:          caBundle,
@@ -356,8 +359,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("should exclude the bootstrap token file if purpose is not provision", func() {
 				bootstrapTokenFile := extensionsv1alpha1.File{Path: "/var/lib/cloud-config-downloader/credentials/bootstrap-token"}
-				downloaderConfigFnWithBootstrapToken := func(cloudConfigUserDataSecretName, apiServerURL string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-					units, files, error := downloaderConfigFn(cloudConfigUserDataSecretName, apiServerURL)
+				downloaderConfigFnWithBootstrapToken := func(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+					units, files, error := downloaderConfigFn(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName)
 					return units, append(files, bootstrapTokenFile), error
 				}
 
