@@ -17,6 +17,7 @@ package resourcemanager_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -75,6 +76,7 @@ var _ = Describe("ResourceManager", func() {
 		clusterIdentity                      = "foo"
 		secretNameServer                     = "gardener-resource-manager-server"
 		secretMountPathServer                = "/etc/gardener-resource-manager-tls"
+		secretMountPathRootCA                = "/etc/gardener-resource-manager-root-ca"
 		secretMountPathAPIAccess             = "/var/run/secrets/kubernetes.io/serviceaccount"
 		secrets                              Secrets
 		alwaysUpdate                               = true
@@ -303,7 +305,7 @@ var _ = Describe("ResourceManager", func() {
 			fmt.Sprintf("--token-requestor-max-concurrent-workers=%v", maxConcurrentTokenRequestorWorkers),
 			fmt.Sprintf("--token-invalidator-max-concurrent-workers=%v", maxConcurrentTokenInvalidatorWorkers),
 			fmt.Sprintf("--root-ca-publisher-max-concurrent-workers=%v", maxConcurrentRootCAPublisherWorkers),
-			fmt.Sprintf("--root-ca-file=%s/ca.crt", secretMountPathAPIAccess),
+			fmt.Sprintf("--root-ca-file=%s/bundle.crt", secretMountPathRootCA),
 			fmt.Sprintf("--health-sync-period=%v", healthSyncPeriod),
 			"--leader-election=true",
 			fmt.Sprintf("--leader-election-lease-duration=%v", leaseDuration),
@@ -329,7 +331,7 @@ var _ = Describe("ResourceManager", func() {
 			fmt.Sprintf("--token-requestor-max-concurrent-workers=%v", maxConcurrentTokenRequestorWorkers),
 			fmt.Sprintf("--token-invalidator-max-concurrent-workers=%v", maxConcurrentTokenInvalidatorWorkers),
 			fmt.Sprintf("--root-ca-publisher-max-concurrent-workers=%v", maxConcurrentRootCAPublisherWorkers),
-			fmt.Sprintf("--root-ca-file=%s/ca.crt", secretMountPathAPIAccess),
+			fmt.Sprintf("--root-ca-file=%s/bundle.crt", secretMountPathRootCA),
 			fmt.Sprintf("--health-sync-period=%v", healthSyncPeriod),
 			"--leader-election=true",
 			fmt.Sprintf("--leader-election-lease-duration=%v", leaseDuration),
@@ -459,6 +461,12 @@ var _ = Describe("ResourceManager", func() {
 										Name:      "tls",
 										ReadOnly:  true,
 									},
+
+									{
+										MountPath: secretMountPathRootCA,
+										Name:      "root-ca",
+										ReadOnly:  true,
+									},
 									{
 										Name:      "kubeconfig",
 										MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
@@ -511,6 +519,15 @@ var _ = Describe("ResourceManager", func() {
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  secretNameServer,
+										DefaultMode: pointer.Int32(420),
+									},
+								},
+							},
+							{
+								Name: "root-ca",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName:  "ca",
 										DefaultMode: pointer.Int32(420),
 									},
 								},
@@ -1322,9 +1339,14 @@ subjects:
 			BeforeEach(func() {
 				clusterRole.Rules = allowAll
 
+				for i, cmd := range deployment.Spec.Template.Spec.Containers[0].Command {
+					if strings.HasPrefix(cmd, "--root-ca-file=") {
+						deployment.Spec.Template.Spec.Containers[0].Command[i] = "--root-ca-file=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+					}
+				}
 				deployment.Spec.Template.Spec.Containers[0].Command = cmd[:len(cmd)-1]
-				deployment.Spec.Template.Spec.Volumes = deployment.Spec.Template.Spec.Volumes[:len(deployment.Spec.Template.Spec.Volumes)-1]
-				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = deployment.Spec.Template.Spec.Containers[0].VolumeMounts[:len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-1]
+				deployment.Spec.Template.Spec.Volumes = deployment.Spec.Template.Spec.Volumes[:len(deployment.Spec.Template.Spec.Volumes)-2]
+				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = deployment.Spec.Template.Spec.Containers[0].VolumeMounts[:len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-2]
 				deployment.Spec.Template.Labels["gardener.cloud/role"] = "seed"
 				deployment.Spec.Template.Spec.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].PodAffinityTerm.LabelSelector.MatchLabels["gardener.cloud/role"] = "seed"
 				pdb.Spec.Selector.MatchLabels["gardener.cloud/role"] = "seed"

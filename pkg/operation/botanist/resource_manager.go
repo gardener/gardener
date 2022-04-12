@@ -98,9 +98,7 @@ var TimeoutWaitForGardenerResourceManagerBootstrapping = 2 * time.Minute
 
 // DeployGardenerResourceManager deploys the gardener-resource-manager
 func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
-	secrets := resourcemanager.Secrets{
-		RootCA: &component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
-	}
+	var secrets resourcemanager.Secrets
 
 	if b.Shoot.Components.ControlPlane.ResourceManager.GetReplicas() == nil {
 		replicaCount, err := b.determineControllerReplicas(ctx, v1beta1constants.DeploymentNameGardenerResourceManager, 3)
