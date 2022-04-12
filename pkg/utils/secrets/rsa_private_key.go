@@ -18,10 +18,9 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
-	"fmt"
 
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/infodata"
+
 	"golang.org/x/crypto/ssh"
 )
 
@@ -57,51 +56,11 @@ func (s *RSASecretConfig) GetName() string {
 
 // Generate implements ConfigInterface.
 func (s *RSASecretConfig) Generate() (DataInterface, error) {
-	return s.GenerateRSAKeys()
-}
-
-// GenerateInfoData implements ConfigInterface.
-func (s *RSASecretConfig) GenerateInfoData() (infodata.InfoData, error) {
 	privateKey, err := GenerateKey(rand.Reader, s.Bits)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewPrivateKeyInfoData(utils.EncodePrivateKey(privateKey)), nil
-}
-
-// GenerateFromInfoData implements ConfigInterface
-func (s *RSASecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (DataInterface, error) {
-	data, ok := infoData.(*PrivateKeyInfoData)
-	if !ok {
-		return nil, fmt.Errorf("could not convert InfoData entry %s to RSAPrivateKeyInfoData", s.Name)
-	}
-
-	privateKey, err := utils.DecodePrivateKey(data.PrivateKey)
-	if err != nil {
-		return nil, fmt.Errorf("could not load privateKey secret %s: %w", s.Name, err)
-	}
-
-	return s.generateWithPrivateKey(privateKey)
-}
-
-// LoadFromSecretData implements infodata.Loader
-func (s *RSASecretConfig) LoadFromSecretData(secretData map[string][]byte) (infodata.InfoData, error) {
-	privateKey := secretData[DataKeyRSAPrivateKey]
-	return NewPrivateKeyInfoData(privateKey), nil
-}
-
-// GenerateRSAKeys computes a RSA private key based on the configured number of bits.
-func (s *RSASecretConfig) GenerateRSAKeys() (*RSAKeys, error) {
-	privateKey, err := GenerateKey(rand.Reader, s.Bits)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.generateWithPrivateKey(privateKey)
-}
-
-func (s *RSASecretConfig) generateWithPrivateKey(privateKey *rsa.PrivateKey) (*RSAKeys, error) {
 	rsa := &RSAKeys{
 		Name: s.Name,
 

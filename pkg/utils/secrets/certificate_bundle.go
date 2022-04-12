@@ -14,12 +14,6 @@
 
 package secrets
 
-import (
-	"errors"
-
-	"github.com/gardener/gardener/pkg/utils/infodata"
-)
-
 // DataKeyCertificateBundle is the key in the data map for the certificate bundle.
 const DataKeyCertificateBundle = "bundle.crt"
 
@@ -54,21 +48,6 @@ func (s *CertificateBundleSecretConfig) generateBundle() []byte {
 		bundle = append(bundle, pem...)
 	}
 	return bundle
-}
-
-// GenerateInfoData implements ConfigInterface.
-func (s *CertificateBundleSecretConfig) GenerateInfoData() (infodata.InfoData, error) {
-	return nil, errors.New("not implemented")
-}
-
-// GenerateFromInfoData implements ConfigInterface.
-func (s *CertificateBundleSecretConfig) GenerateFromInfoData(_ infodata.InfoData) (DataInterface, error) {
-	return nil, errors.New("not implemented")
-}
-
-// LoadFromSecretData implements infodata.Loader.
-func (s *CertificateBundleSecretConfig) LoadFromSecretData(_ map[string][]byte) (infodata.InfoData, error) {
-	return nil, errors.New("not implemented")
 }
 
 // SecretData computes the data map which can be used in a Kubernetes secret.

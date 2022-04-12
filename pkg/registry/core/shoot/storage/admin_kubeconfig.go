@@ -164,13 +164,14 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 		})
 	}
 
-	cp, err := cpsc.GenerateControlPlane()
+	cp, err := cpsc.Generate()
 	if err != nil {
 		return nil, err
 	}
+	controlPlaneSecret := cp.(*secrets.ControlPlane)
 
-	out.Status.Kubeconfig = cp.Kubeconfig
-	out.Status.ExpirationTimestamp = metav1.Time{Time: cp.Certificate.Certificate.NotAfter}
+	out.Status.Kubeconfig = controlPlaneSecret.Kubeconfig
+	out.Status.ExpirationTimestamp = metav1.Time{Time: controlPlaneSecret.Certificate.Certificate.NotAfter}
 
 	return out, nil
 }

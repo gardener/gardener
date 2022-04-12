@@ -41,7 +41,6 @@ var _ = Describe("Basic Auth Secrets", func() {
 		var (
 			expectedBasicAuthObject *BasicAuth
 			basicAuthConfiguration  *BasicAuthSecretConfig
-			basicAuthInfoData       *BasicAuthInfoData
 		)
 
 		BeforeEach(func() {
@@ -50,10 +49,6 @@ var _ = Describe("Basic Auth Secrets", func() {
 				Format:         BasicAuthFormatCSV,
 				Username:       "admin",
 				PasswordLength: 32,
-			}
-
-			basicAuthInfoData = &BasicAuthInfoData{
-				Password: "foo",
 			}
 
 			expectedBasicAuthObject = &BasicAuth{
@@ -71,53 +66,6 @@ var _ = Describe("Basic Auth Secrets", func() {
 				compareCurrentAndExpectedBasicAuth(obj, expectedBasicAuthObject, false)
 			})
 		})
-
-		Describe("#GenerateInfoData", func() {
-			It("should generate correct BasicAuth InfoData", func() {
-				obj, err := basicAuthConfiguration.GenerateInfoData()
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(obj.TypeVersion()).To(Equal(BasicAuthDataType))
-
-				basicAuthInfoData, ok := obj.(*BasicAuthInfoData)
-				Expect(ok).To(BeTrue())
-
-				Expect(basicAuthInfoData.Password).NotTo(Equal(""))
-			})
-		})
-
-		Describe("#GenerateFromInfoData", func() {
-			It("should properly load Basic Auth object from BasicAuthInfoData", func() {
-				obj, err := basicAuthConfiguration.GenerateFromInfoData(basicAuthInfoData)
-				Expect(err).NotTo(HaveOccurred())
-
-				compareCurrentAndExpectedBasicAuth(obj, expectedBasicAuthObject, false)
-			})
-		})
-
-		DescribeTable("#LoadFromSecretData", func(secretData map[string][]byte, format, password string) {
-			if format == string(BasicAuthFormatNormal) {
-				basicAuthConfiguration.Format = BasicAuthFormatNormal
-			} else if format == string(BasicAuthFormatCSV) {
-				basicAuthConfiguration.Format = BasicAuthFormatCSV
-			}
-			obj, err := basicAuthConfiguration.LoadFromSecretData(secretData)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(obj.TypeVersion()).To(Equal(BasicAuthDataType))
-
-			basicAuthInfoData, ok := obj.(*BasicAuthInfoData)
-			Expect(ok).To(BeTrue())
-
-			Expect(basicAuthInfoData.Password).To(Equal(password))
-		},
-			Entry("Load from csv secret data", map[string][]byte{
-				DataKeyCSV: []byte("foo,admin,admin,group"),
-			}, string(BasicAuthFormatCSV), "foo"),
-			Entry("Load from normal format secret data", map[string][]byte{
-				DataKeyUserName: []byte("admin"),
-				DataKeyPassword: []byte("foo"),
-			}, string(BasicAuthFormatNormal), "foo"))
 	})
 
 	Describe("Basic Auth Object", func() {

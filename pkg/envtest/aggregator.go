@@ -63,35 +63,35 @@ func (a AggregatorConfig) clientKeyPath() string {
 }
 
 func (a AggregatorConfig) generateCerts() error {
-	caConfig := &secrets.CertificateSecretConfig{
+	ca, err := (&secrets.CertificateSecretConfig{
 		Name:       "front-proxy",
 		CommonName: "front-proxy",
 		CertType:   secrets.CACert,
-	}
-
-	ca, err := caConfig.GenerateCertificate()
+	}).Generate()
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(a.caCrtPath(), ca.CertificatePEM, 0640); err != nil {
+	caData := ca.SecretData()
+
+	if err := os.WriteFile(a.caCrtPath(), caData[secrets.DataKeyCertificateCA], 0640); err != nil {
 		return fmt.Errorf("unable to save the proxy client CA certificate to %s: %w", a.caCrtPath(), err)
 	}
 
-	clientConfig := &secrets.CertificateSecretConfig{
+	clientCert, err := (&secrets.CertificateSecretConfig{
 		Name:       "front-proxy",
 		CommonName: "front-proxy",
 		CertType:   secrets.ClientCert,
-		SigningCA:  ca,
-	}
-
-	clientCert, err := clientConfig.GenerateCertificate()
+		SigningCA:  ca.(*secrets.Certificate),
+	}).Generate()
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(a.clientCrtPath(), clientCert.CertificatePEM, 0640); err != nil {
+	clientCertData := clientCert.SecretData()
+
+	if err := os.WriteFile(a.clientCrtPath(), clientCertData[secrets.DataKeyCertificate], 0640); err != nil {
 		return fmt.Errorf("unable to save the proxy client certificate to %s: %w", a.clientCrtPath(), err)
 	}
-	if err := os.WriteFile(a.clientKeyPath(), clientCert.PrivateKeyPEM, 0640); err != nil {
+	if err := os.WriteFile(a.clientKeyPath(), clientCertData[secrets.DataKeyPrivateKey], 0640); err != nil {
 		return fmt.Errorf("unable to save the proxy client key to %s: %w", a.clientKeyPath(), err)
 	}
 
