@@ -219,12 +219,12 @@ format: $(GOIMPORTS)
 	@cd $(LOGCHECK_DIR); $(abspath $(GOIMPORTS)) -l -w .
 
 .PHONY: test
-test: $(PROMTOOL)
+test: $(REPORT_COLLECTOR) $(PROMTOOL)
 	@./hack/test.sh ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/...
 	@cd $(LOGCHECK_DIR); go test -race -timeout=2m ./... | grep -v 'no test files'
 
 .PHONY: test-integration
-test-integration: $(SETUP_ENVTEST)
+test-integration: $(REPORT_COLLECTOR) $(SETUP_ENVTEST)
 	@./hack/test-integration.sh ./extensions/test/integration/... ./test/integration/...
 
 .PHONY: test-cov

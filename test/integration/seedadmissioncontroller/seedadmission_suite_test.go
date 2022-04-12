@@ -94,6 +94,7 @@ var _ = BeforeSuite(func() {
 	server.Register(extensionresources.WebhookPath, &webhook.Admission{Handler: extensionresources.New(logger, true)})
 
 	go func() {
+		defer GinkgoRecover()
 		Expect(server.Start(ctx)).To(Succeed())
 	}()
 })

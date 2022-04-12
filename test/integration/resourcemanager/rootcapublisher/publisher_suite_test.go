@@ -90,6 +90,7 @@ var _ = BeforeSuite(func() {
 
 	By("start manager")
 	go func() {
+		defer GinkgoRecover()
 		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
 })

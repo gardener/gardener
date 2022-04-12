@@ -41,4 +41,13 @@ export GOMEGA_DEFAULT_EVENTUALLY_POLLING_INTERVAL=200ms
 export GOMEGA_DEFAULT_CONSISTENTLY_DURATION=5s
 export GOMEGA_DEFAULT_CONSISTENTLY_POLLING_INTERVAL=200ms
 
-GO111MODULE=on go test -timeout=5m -mod=vendor $@ | grep -v 'no test files'
+test_flags=
+# If running in prow, we want to generate a machine-readable output file under the location specified via $ARTIFACTS.
+# This will add a JUnit view above the build log that shows an overview over successful and failed test cases.
+if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ] ; then
+  mkdir -p "$ARTIFACTS"
+  trap "report-collector \"$ARTIFACTS/junit.xml\"" EXIT
+  test_flags="--ginkgo.junit-report=junit.xml"
+fi
+
+GO111MODULE=on go test -timeout=5m -mod=vendor $@ $test_flags | grep -v 'no test files'
