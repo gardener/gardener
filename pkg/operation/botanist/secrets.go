@@ -460,11 +460,16 @@ func (b *Botanist) reconcileGenericKubeconfigSecret(ctx context.Context) error {
 		},
 	}
 
+	clusterCASecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+	}
+
 	kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kutil.NewKubeconfig(
 		b.Shoot.SeedNamespace,
 		clientcmdv1.Cluster{
 			Server:                   b.Shoot.ComputeInClusterAPIServerAddress(true),
-			CertificateAuthorityData: b.LoadSecret(v1beta1constants.SecretNameCACluster).Data[secretutils.DataKeyCertificateCA],
+			CertificateAuthorityData: clusterCASecret.Data[secretutils.DataKeyCertificateBundle],
 		},
 		clientcmdv1.AuthInfo{TokenFile: gutil.PathShootToken},
 	))

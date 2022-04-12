@@ -334,6 +334,11 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		return nil, err
 	}
 
+	clusterCASecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+	}
+
 	apiserverProxyConfig := map[string]interface{}{
 		"advertiseIPAddress": b.APIServerClusterIP,
 		"proxySeedServer": map[string]interface{}{
@@ -341,7 +346,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"port": "8443",
 		},
 		"webhook": map[string]interface{}{
-			"caBundle": b.LoadSecret(v1beta1constants.SecretNameCACluster).Data[secrets.DataKeyCertificateCA],
+			"caBundle": clusterCASecret.Data[secrets.DataKeyCertificateBundle],
 		},
 		"podMutatorEnabled": b.APIServerSNIPodMutatorEnabled(),
 	}
