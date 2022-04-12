@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/mock"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
@@ -913,7 +912,6 @@ var _ = Describe("KubeAPIServer", func() {
 
 				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{Autoscaling: autoscalingConfig})
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(&expectedReplicas)
-				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
@@ -992,7 +990,6 @@ var _ = Describe("KubeAPIServer", func() {
 				if expectedResources != nil {
 					kubeAPIServer.EXPECT().SetAutoscalingAPIServerResources(*expectedResources)
 				}
-				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
@@ -1054,32 +1051,10 @@ var _ = Describe("KubeAPIServer", func() {
 			),
 		)
 
-		DescribeTable("should correctly set the secrets",
-			func(values kubeapiserver.Values, mutateSecrets func(*kubeapiserver.Secrets)) {
-				secrets := kubeapiserver.Secrets{
-					CA: component.Secret{Name: "ca", Checksum: botanist.LoadCheckSum("ca")},
-				}
-				mutateSecrets(&secrets)
-
-				kubeAPIServer.EXPECT().GetValues().Return(values)
-				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
-				kubeAPIServer.EXPECT().SetSecrets(secrets)
-				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
-				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
-				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
-				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
-				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
-				kubeAPIServer.EXPECT().Deploy(ctx)
-
-				Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
-			},
-		)
-
 		Describe("ExternalHostname", func() {
 			It("should set the external hostname to the out-of-cluster address (internal domain)", func() {
 				kubeAPIServer.EXPECT().GetValues()
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
-				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname("api." + internalClusterDomain)
 				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
@@ -1100,7 +1075,6 @@ var _ = Describe("KubeAPIServer", func() {
 
 					kubeAPIServer.EXPECT().GetValues()
 					kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
-					kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 					kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
@@ -1199,7 +1173,6 @@ var _ = Describe("KubeAPIServer", func() {
 
 					kubeAPIServer.EXPECT().GetValues()
 					kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
-					kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 					kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
@@ -1412,7 +1385,6 @@ var _ = Describe("KubeAPIServer", func() {
 
 					kubeAPIServer.EXPECT().GetValues()
 					kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
-					kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 					kubeAPIServer.EXPECT().SetSNIConfig(expectedConfig)
 					kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
@@ -1496,7 +1468,6 @@ var _ = Describe("KubeAPIServer", func() {
 			It("should set the external server to the out-of-cluster address (no internal domain)", func() {
 				kubeAPIServer.EXPECT().GetValues()
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
-				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalServer("api." + externalClusterDomain)
@@ -1511,7 +1482,6 @@ var _ = Describe("KubeAPIServer", func() {
 		It("should sync the kubeconfig to the garden project namespace when enableStaticTokenKubeconfig is set to true", func() {
 			kubeAPIServer.EXPECT().GetValues()
 			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
-			kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
 			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
@@ -1536,7 +1506,6 @@ var _ = Describe("KubeAPIServer", func() {
 		It("should delete the old etcd encryption config secret", func() {
 			kubeAPIServer.EXPECT().GetValues()
 			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
-			kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
 			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
@@ -1565,7 +1534,6 @@ var _ = Describe("KubeAPIServer", func() {
 
 			kubeAPIServer.EXPECT().GetValues()
 			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
-			kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
 			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())

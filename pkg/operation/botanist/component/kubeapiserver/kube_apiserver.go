@@ -96,8 +96,6 @@ type Interface interface {
 	GetAutoscalingReplicas() *int32
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
-	// SetSecrets sets the secrets.
-	SetSecrets(Secrets)
 	// SetAutoscalingAPIServerResources sets the APIServerResources field in the AutoscalingConfig of the Values of the
 	// deployer.
 	SetAutoscalingAPIServerResources(corev1.ResourceRequirements)
@@ -261,14 +259,9 @@ type kubeAPIServer struct {
 	namespace      string
 	secretsManager secretsmanager.Interface
 	values         Values
-	secrets        Secrets
 }
 
 func (k *kubeAPIServer) Deploy(ctx context.Context) error {
-	if err := k.secrets.verify(k.values); err != nil {
-		return err
-	}
-
 	var (
 		deployment                                 = k.emptyDeployment()
 		podDisruptionBudget                        = k.emptyPodDisruptionBudget()
@@ -544,10 +537,6 @@ func (k *kubeAPIServer) SetAutoscalingReplicas(replicas *int32) {
 	k.values.Autoscaling.Replicas = replicas
 }
 
-func (k *kubeAPIServer) SetSecrets(secrets Secrets) {
-	k.secrets = secrets
-}
-
 func (k *kubeAPIServer) SetServerCertificateConfig(config ServerCertificateConfig) {
 	k.values.ServerCertificate = config
 }
@@ -580,35 +569,4 @@ func getLabels() map[string]string {
 		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
 		v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
 	}
-}
-
-// Secrets is collection of secrets for the kube-apiserver.
-type Secrets struct {
-	// CA is the cluster's certificate authority.
-	CA component.Secret
-}
-
-type secret struct {
-	*component.Secret
-	isRequired func(Values) bool
-}
-
-func (s *Secrets) all() map[string]secret {
-	return map[string]secret{
-		"CA": {Secret: &s.CA},
-	}
-}
-
-func (s *Secrets) verify(values Values) error {
-	for name, secret := range s.all() {
-		if secret.isRequired != nil && !secret.isRequired(values) {
-			continue
-		}
-
-		if secret.Secret == nil || secret.Name == "" || secret.Checksum == "" {
-			return fmt.Errorf("missing information for required secret %s", name)
-		}
-	}
-
-	return nil
 }
