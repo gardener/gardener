@@ -375,19 +375,25 @@ func (m *manager) maintainLifetimeLabels(config secretutils.ConfigInterface, sec
 	}
 	desiredLabels[LabelKeyIssuedAtTime] = issuedAt
 
-	cfg, ok := config.(*secretutils.CertificateSecretConfig)
-	if !ok {
+	var dataKeyCertificate string
+	switch cfg := config.(type) {
+	case *secretutils.CertificateSecretConfig:
+		dataKeyCertificate = secretutils.DataKeyCertificate
+		if cfg.CertType == secretutils.CACert {
+			dataKeyCertificate = secretutils.DataKeyCertificateCA
+		}
+	case *secretutils.ControlPlaneSecretConfig:
+		if cfg.CertificateSecretConfig == nil {
+			return nil
+		}
+		dataKeyCertificate = secretutils.ControlPlaneSecretDataKeyCertificatePEM(config.GetName())
+	default:
 		return nil
-	}
-
-	dataKeyCertificate := secretutils.DataKeyCertificate
-	if cfg.SigningCA == nil {
-		dataKeyCertificate = secretutils.DataKeyCertificateCA
 	}
 
 	certificate, err := utils.DecodeCertificate(secret.Data[dataKeyCertificate])
 	if err != nil {
-		return err
+		return fmt.Errorf("error decoding certificate when trying to maintain lifetime labels: %w", err)
 	}
 
 	desiredLabels[LabelKeyIssuedAtTime] = unixTime(certificate.NotBefore)

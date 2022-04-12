@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 
@@ -474,6 +475,8 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, caSecret)
 
 				By("generating new control plane secret")
+				serverConfig.Clock = fakeClock
+				serverConfig.Validity = utils.DurationPtr(1337 * time.Minute)
 				controlPlaneSecretConfig := &secretutils.ControlPlaneSecretConfig{
 					Name:                    "control-plane-secret",
 					CertificateSecretConfig: serverConfig,
@@ -486,6 +489,25 @@ var _ = Describe("Generate", func() {
 				serverSecret, err := m.Generate(ctx, controlPlaneSecretConfig, SignedByCA(caName))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, serverSecret)
+
+				By("verifying labels")
+				Expect(serverSecret.Labels).To(And(
+					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
+					HaveKeyWithValue("valid-until-time", strconv.FormatInt(fakeClock.Now().Add(*serverConfig.Validity).Unix(), 10)),
+				))
+			})
+
+			It("should correctly maintain lifetime labels for ControlPlaneSecretConfigs w/o certificate secret configs", func() {
+				By("generating new control plane secret")
+				cpSecret, err := m.Generate(ctx, &secretutils.ControlPlaneSecretConfig{Name: "control-plane-secret"})
+				Expect(err).NotTo(HaveOccurred())
+				expectSecretWasCreated(ctx, fakeClient, cpSecret)
+
+				By("verifying labels")
+				Expect(cpSecret.Labels).To(And(
+					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
+					Not(HaveKey("valid-until-time")),
+				))
 			})
 		})
 
