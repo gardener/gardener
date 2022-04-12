@@ -84,6 +84,18 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.ExposureClass.ConcurrentSyncs = &v
 	}
 
+	if obj.Controllers.Plant == nil {
+		obj.Controllers.Plant = &PlantControllerConfiguration{
+			SyncPeriod: metav1.Duration{
+				Duration: 30 * time.Second,
+			},
+		}
+	}
+	if obj.Controllers.Plant.ConcurrentSyncs == nil {
+		v := 5
+		obj.Controllers.Plant.ConcurrentSyncs = &v
+	}
+
 	if obj.Controllers.Project == nil {
 		obj.Controllers.Project = &ProjectControllerConfiguration{}
 	}
@@ -122,18 +134,6 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.Quota.ConcurrentSyncs = &v
 	}
 
-	if obj.Controllers.Plant == nil {
-		obj.Controllers.Plant = &PlantControllerConfiguration{
-			SyncPeriod: metav1.Duration{
-				Duration: 30 * time.Second,
-			},
-		}
-	}
-	if obj.Controllers.Plant.ConcurrentSyncs == nil {
-		v := 5
-		obj.Controllers.Plant.ConcurrentSyncs = &v
-	}
-
 	if obj.Controllers.SecretBinding == nil {
 		obj.Controllers.SecretBinding = &SecretBindingControllerConfiguration{}
 	}
@@ -148,6 +148,26 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 	if obj.Controllers.SecretBindingProvider.ConcurrentSyncs == nil {
 		v := 5
 		obj.Controllers.SecretBindingProvider.ConcurrentSyncs = &v
+	}
+
+	if obj.Controllers.Seed == nil {
+		obj.Controllers.Seed = &SeedControllerConfiguration{
+			SyncPeriod: metav1.Duration{
+				Duration: 30 * time.Second,
+			},
+		}
+	}
+	if obj.Controllers.Seed.ConcurrentSyncs == nil {
+		v := 5
+		obj.Controllers.Seed.ConcurrentSyncs = &v
+	}
+	if obj.Controllers.Seed.MonitorPeriod == nil {
+		v := metav1.Duration{Duration: 40 * time.Second}
+		obj.Controllers.Seed.MonitorPeriod = &v
+	}
+	if obj.Controllers.Seed.ShootMonitorPeriod == nil {
+		v := metav1.Duration{Duration: 5 * obj.Controllers.Seed.MonitorPeriod.Duration}
+		obj.Controllers.Seed.ShootMonitorPeriod = &v
 	}
 
 	if obj.Controllers.ShootMaintenance.ConcurrentSyncs == nil {
@@ -195,26 +215,6 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 	if obj.Controllers.ShootStatusLabel.ConcurrentSyncs == nil {
 		v := 5
 		obj.Controllers.ShootStatusLabel.ConcurrentSyncs = &v
-	}
-
-	if obj.Controllers.Seed == nil {
-		obj.Controllers.Seed = &SeedControllerConfiguration{
-			SyncPeriod: metav1.Duration{
-				Duration: 30 * time.Second,
-			},
-		}
-	}
-	if obj.Controllers.Seed.ConcurrentSyncs == nil {
-		v := 5
-		obj.Controllers.Seed.ConcurrentSyncs = &v
-	}
-	if obj.Controllers.Seed.MonitorPeriod == nil {
-		v := metav1.Duration{Duration: 40 * time.Second}
-		obj.Controllers.Seed.MonitorPeriod = &v
-	}
-	if obj.Controllers.Seed.ShootMonitorPeriod == nil {
-		v := metav1.Duration{Duration: 5 * obj.Controllers.Seed.MonitorPeriod.Duration}
-		obj.Controllers.Seed.ShootMonitorPeriod = &v
 	}
 
 	if obj.Controllers.ManagedSeedSet == nil {
