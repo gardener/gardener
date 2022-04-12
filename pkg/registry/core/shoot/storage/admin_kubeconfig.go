@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strconv"
 	"time"
 
 	authenticationapi "github.com/gardener/gardener/pkg/apis/authentication"
@@ -31,12 +32,16 @@ import (
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -117,14 +122,32 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 		return nil, errors.NewInvalid(gvk.GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 	}
 
-	resourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
+	var (
+		resourceDataList = gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
+		ca               *gardencorev1alpha1.GardenerResourceData
+	)
 
-	ca := resourceDataList.Get(v1beta1constants.SecretNameCAClient)
+	ca, err = getCAFromResourceDataList(resourceDataList, nameCAClientReq)
+	if err != nil {
+		return nil, errors.NewInternalError(fmt.Errorf("could not find CA certificate for %s: %w", nameCAClientReq, err))
+	}
+
+	// fall back to cluster CA since not all clusters might have a client CA yet
+	if ca == nil {
+		ca, err = getCAFromResourceDataList(resourceDataList, nameCAClusterReq)
+		if err != nil {
+			return nil, errors.NewInternalError(fmt.Errorf("could not find CA certificate for %s: %w", nameCAClusterReq, err))
+		}
+	}
+
+	// fall back to constant CA name
+	// TODO(rfranzke): Delete this in a future release.
 	if ca == nil {
 		ca = resourceDataList.Get(v1beta1constants.SecretNameCACluster)
-		if ca == nil {
-			return nil, errors.NewInternalError(fmt.Errorf("certificate authority not yet provisioned"))
-		}
+	}
+
+	if ca == nil {
+		return nil, errors.NewInternalError(fmt.Errorf("certificate authority not yet provisioned"))
 	}
 
 	data := make(map[string][]byte)
@@ -191,4 +214,56 @@ func (r *AdminKubeconfigREST) GroupVersionKind(schema.GroupVersion) schema.Group
 
 type getter interface {
 	Get(ctx context.Context, name string, options *metav1.GetOptions) (runtime.Object, error)
+}
+
+var (
+	managedBySecretsManagerReq = utils.MustNewRequirement(secretsmanager.LabelKeyManagedBy, selection.Equals, secretsmanager.LabelValueSecretsManager)
+	identityGardenletReq       = utils.MustNewRequirement(secretsmanager.LabelKeyManagerIdentity, selection.Equals, v1beta1constants.SecretManagerIdentityGardenlet)
+	nameCAClientReq            = utils.MustNewRequirement(secretsmanager.LabelKeyName, selection.Equals, v1beta1constants.SecretNameCAClient)
+	nameCAClusterReq           = utils.MustNewRequirement(secretsmanager.LabelKeyName, selection.Equals, v1beta1constants.SecretNameCACluster)
+	caCertificateSelector      = labels.NewSelector().Add(managedBySecretsManagerReq).Add(identityGardenletReq)
+)
+
+func getCAFromResourceDataList(resourceDataList gardencorev1alpha1helper.GardenerResourceDataList, requirement labels.Requirement) (*gardencorev1alpha1.GardenerResourceData, error) {
+	caCerts := resourceDataList.Select(caCertificateSelector.Add(requirement))
+	if len(caCerts) == 0 {
+		return nil, nil
+	}
+
+	ca, err := findNewestCACertificate(caCerts)
+	if err != nil {
+		return nil, errors.NewInternalError(fmt.Errorf("could not find newest CA certificate for %s: %w", requirement, err))
+	}
+
+	return ca, nil
+}
+
+func findNewestCACertificate(results []*gardencorev1alpha1.GardenerResourceData) (*gardencorev1alpha1.GardenerResourceData, error) {
+	if len(results) == 1 {
+		return results[0], nil
+	}
+
+	var (
+		newestIssuedAtTime int64
+		result             *gardencorev1alpha1.GardenerResourceData
+	)
+
+	for _, data := range results {
+		issuedAtTime, ok := data.Labels[secretsmanager.LabelKeyIssuedAtTime]
+		if !ok {
+			continue
+		}
+
+		issuedAtUnix, err := strconv.ParseInt(issuedAtTime, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+
+		if issuedAtUnix > newestIssuedAtTime {
+			newestIssuedAtTime = issuedAtUnix
+			result = data.DeepCopy()
+		}
+	}
+
+	return result, nil
 }
