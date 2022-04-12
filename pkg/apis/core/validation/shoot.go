@@ -293,7 +293,43 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 
 // ValidateProviderUpdate validates the specification of a Provider object.
 func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *field.Path) field.ErrorList {
-	return apivalidation.ValidateImmutableField(newProvider.Type, oldProvider.Type, fldPath.Child("type"))
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newProvider.Type, oldProvider.Type, fldPath.Child("type"))...)
+	allErrs = append(allErrs, validateWorkersUpdate(newProvider.Workers, oldProvider.Workers, fldPath.Child("workers"))...)
+
+	return allErrs
+}
+
+func validateWorkersUpdate(newWorkers, oldWorkers []core.Worker, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	oldWorkersMap := make(map[string]core.Worker)
+	for _, w := range oldWorkers {
+		oldWorkersMap[w.Name] = w
+	}
+	for i, w := range newWorkers {
+		if _, ok := oldWorkersMap[w.Name]; ok {
+			oldWorker := oldWorkersMap[w.Name]
+			allErrs = append(allErrs, validateWorkerUpdate(&w, &oldWorker, fldPath.Index(i))...)
+		}
+	}
+	return allErrs
+}
+
+func validateWorkerUpdate(newWorker, oldWorker *core.Worker, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	allErrs = append(allErrs, validateCRIUpdate(newWorker.CRI, oldWorker.CRI, fldPath.Child("cri"))...)
+
+	return allErrs
+}
+
+func validateCRIUpdate(newCri *core.CRI, oldCri *core.CRI, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if (newCri == nil && oldCri != nil) || (newCri != nil && oldCri == nil) || (newCri != nil && oldCri != nil && newCri.Name != oldCri.Name) {
+		allErrs = append(allErrs, field.Invalid(fldPath, newCri, "can't update cri configurations"))
+	}
+	return allErrs
 }
 
 // ValidateShootStatusUpdate validates the status field of a Shoot object.
