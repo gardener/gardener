@@ -48,6 +48,7 @@ func (r *projectReconciler) reconcile(ctx context.Context, log logr.Logger, proj
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, project, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not add finalizer to Project: %w", err)
 		}
+		return reconcile.Result{}, nil
 	}
 
 	// If the project has no phase yet then we update it to be 'pending'.

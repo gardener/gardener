@@ -136,11 +136,20 @@ var _ = Describe("Reconciler", func() {
 
 	Describe("#Reconcile", func() {
 		Context("reconcile", func() {
-			It("should should add the finalizer, reconcile the ManagedSeed creation or update, and update the status (no wait)", func() {
+			It("should add the finalizer, if not present", func() {
 				expectGetManagedSeed()
 				expectPatchManagedSeed(func(ms *seedmanagementv1alpha1.ManagedSeed) {
 					Expect(ms.Finalizers).To(Equal([]string{gardencorev1beta1.GardenerName}))
 				})
+
+				result, err := reconciler.Reconcile(ctx, request)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{}))
+			})
+
+			It("should reconcile the ManagedSeed creation or update, and update the status (no wait)", func() {
+				expectGetManagedSeed()
+				managedSeed.Finalizers = []string{gardencorev1beta1.GardenerName}
 				actuator.EXPECT().Reconcile(ctx, managedSeed).Return(status, false, nil)
 				expectPatchManagedSeedStatus(func(ms *seedmanagementv1alpha1.ManagedSeed) {
 					Expect(&ms.Status).To(Equal(status))
@@ -151,11 +160,9 @@ var _ = Describe("Reconciler", func() {
 				Expect(result).To(Equal(reconcile.Result{RequeueAfter: syncPeriod}))
 			})
 
-			It("should should add the finalizer, reconcile the ManagedSeed creation or update, and update the status (wait)", func() {
+			It("should reconcile the ManagedSeed creation or update, and update the status (wait)", func() {
 				expectGetManagedSeed()
-				expectPatchManagedSeed(func(ms *seedmanagementv1alpha1.ManagedSeed) {
-					Expect(ms.Finalizers).To(Equal([]string{gardencorev1beta1.GardenerName}))
-				})
+				managedSeed.Finalizers = []string{gardencorev1beta1.GardenerName}
 				actuator.EXPECT().Reconcile(ctx, managedSeed).Return(status, true, nil)
 				expectPatchManagedSeedStatus(func(ms *seedmanagementv1alpha1.ManagedSeed) {
 					Expect(&ms.Status).To(Equal(status))

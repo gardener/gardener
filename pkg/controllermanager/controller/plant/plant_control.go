@@ -155,7 +155,7 @@ func (r *plantReconciler) reconcile(ctx context.Context, log logr.Logger, plant 
 	// Add Finalizers to Plant
 	if !controllerutil.ContainsFinalizer(plant, FinalizerName) {
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, plant, FinalizerName); err != nil {
-			return fmt.Errorf("failed to ensure finalizer on plant: %w", err)
+			return fmt.Errorf("could not add finalizer to Plant: %w", err)
 		}
 	}
 
@@ -174,7 +174,7 @@ func (r *plantReconciler) reconcile(ctx context.Context, log logr.Logger, plant 
 
 	if !controllerutil.ContainsFinalizer(kubeconfigSecret, FinalizerName) {
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, kubeconfigSecret, FinalizerName); err != nil {
-			return fmt.Errorf("failed to ensure finalizer on plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err)
+			return fmt.Errorf("could not add finalizer to plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err)
 		}
 	}
 

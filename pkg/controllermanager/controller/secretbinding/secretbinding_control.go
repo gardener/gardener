@@ -131,7 +131,7 @@ func (r *secretBindingReconciler) Reconcile(ctx context.Context, request reconci
 
 	if !controllerutil.ContainsFinalizer(secretBinding, gardencorev1beta1.GardenerName) {
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, secretBinding, gardencorev1beta1.GardenerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to SecretBinding: %w", err)
+			return reconcile.Result{}, fmt.Errorf("could not add finalizer to SecretBinding: %w", err)
 		}
 	}
 
@@ -144,7 +144,7 @@ func (r *secretBindingReconciler) Reconcile(ctx context.Context, request reconci
 
 	if !controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to Secret referenced in SecretBinding: %w", err)
+			return reconcile.Result{}, fmt.Errorf("could not add finalizer to Secret referenced in SecretBinding: %w", err)
 		}
 	}
 
