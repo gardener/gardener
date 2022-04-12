@@ -560,7 +560,7 @@ func GetValidatingWebhookConfig(caBundle []byte, webhookClientService *corev1.Se
 				Service: &admissionregistrationv1.ServiceReference{
 					Name:      webhookClientService.Name,
 					Namespace: webhookClientService.Namespace,
-					Path:      pointer.String(extensionresources.ContaineRruntimeWebhookPath),
+					Path:      pointer.String(extensionresources.ContainerRuntimeWebhookPath),
 				},
 			},
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},

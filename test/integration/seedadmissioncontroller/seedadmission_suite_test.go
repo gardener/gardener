@@ -91,8 +91,7 @@ var _ = BeforeSuite(func() {
 
 	By("setting up webhook server")
 	server := mgr.GetWebhookServer()
-	err = extensionresources.AddWebhooks(mgr)
-	Expect(err).NotTo(HaveOccurred())
+	Expect(extensionresources.AddWebhooks(mgr)).To(Succeed())
 	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(logger)})
 	server.Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName)})
 
