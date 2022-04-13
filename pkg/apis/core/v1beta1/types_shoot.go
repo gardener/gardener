@@ -683,7 +683,7 @@ type KubeAPIServerConfig struct {
 	EventTTL *metav1.Duration `json:"eventTTL,omitempty" protobuf:"bytes,12,opt,name=eventTTL"`
 	// AccessControl provides authorization mechanisms for Shoot-API-Server.
 	// +optional
-	AccessControl *AccessControl `json:"rules,omitempty" protobuf:"bytes,13,opt,name=accessControl"`
+	AccessControl *AccessControl `json:"accessControl,omitempty" protobuf:"bytes,13,opt,name=accessControl"`
 }
 
 // AccessControl provides authorization mechanisms for Shoot-API-Server.
