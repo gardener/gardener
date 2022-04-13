@@ -692,7 +692,7 @@ type AccessControl struct {
 	// The action to take on the source of request.
 	Action *AuthorizationAction `json:"action,omitempty" protobuf:"bytes,1,opt,name=authorizationAction"`
 	// Origin of request to run defined authorization action against.
-	Source Source `json:"source,omitempty" protobuf:"bytes,2,opt,name=source"`
+	Source Source `json:"source" protobuf:"bytes,2,opt,name=source"`
 }
 
 // AuthorizationAction is the operation (e.g. DENY) to apply on requests.
