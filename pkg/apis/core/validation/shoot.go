@@ -181,7 +181,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateResources(spec.Resources, fldPath.Child("resources"))...)
-	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, isDockerConfigured(spec.Provider.Workers), fldPath.Child("kubernetes"))...)
+	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, isDockerConfigured(spec.Provider.Workers), meta.DeletionTimestamp != nil, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateNetworking(spec.Networking, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
@@ -715,7 +715,7 @@ func validateResources(resources []core.NamedResourceReference, fldPath *field.P
 	return allErrs
 }
 
-func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured bool, fldPath *field.Path) field.ErrorList {
+func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDeletionTimestamp bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(kubernetes.Version) == 0 {
@@ -839,7 +839,7 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured bool, fldPa
 					allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), *kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration, "can not be negative"))
 				}
 
-				if utilfeature.DefaultFeatureGate.Enabled(features.ShootMaxTokenExpirationValidation) {
+				if utilfeature.DefaultFeatureGate.Enabled(features.ShootMaxTokenExpirationValidation) && !shootHasDeletionTimestamp {
 					if duration := kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration; duration > 0 && duration < 720*time.Hour {
 						allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), "must be at least 720h (30d)"))
 					}

@@ -36,8 +36,8 @@ import (
 var _ = Describe("Strategy", func() {
 	Describe("#PrepareForCreate", func() {
 		Context("max token expiration", func() {
-			newShoot := func(duration time.Duration) *core.Shoot {
-				return &core.Shoot{
+			newShoot := func(duration time.Duration, withDeletionTimestamp bool) *core.Shoot {
+				shoot := &core.Shoot{
 					Spec: core.ShootSpec{
 						Kubernetes: core.Kubernetes{
 							KubeAPIServer: &core.KubeAPIServerConfig{
@@ -48,24 +48,32 @@ var _ = Describe("Strategy", func() {
 						},
 					},
 				}
+
+				if withDeletionTimestamp {
+					shoot.DeletionTimestamp = &metav1.Time{}
+				}
+
+				return shoot
 			}
 
 			DescribeTable("ShootMaxTokenExpirationOverwrite feature gate enabled",
-				func(featureGateEnabled bool, maxTokenExpiration, expectedDuration time.Duration) {
+				func(featureGateEnabled bool, maxTokenExpiration, expectedDuration time.Duration, shootHasDeletionTimestamp bool) {
 					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationOverwrite, featureGateEnabled)()
 
-					shoot := newShoot(maxTokenExpiration)
+					shoot := newShoot(maxTokenExpiration, shootHasDeletionTimestamp)
 					shootregistry.Strategy.PrepareForCreate(context.TODO(), shoot)
 					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(expectedDuration))
 				},
 
-				Entry("feature gate enabled, too low value", true, time.Hour, 720*time.Hour),
-				Entry("feature gate enabled, too high value", true, 3000*time.Hour, 2160*time.Hour),
-				Entry("feature gate enabled, value within boundaries", true, 1000*time.Hour, 1000*time.Hour),
+				Entry("feature gate enabled, too low value", true, time.Hour, 720*time.Hour, false),
+				Entry("feature gate enabled, too high value", true, 3000*time.Hour, 2160*time.Hour, false),
+				Entry("feature gate enabled, value within boundaries", true, 1000*time.Hour, 1000*time.Hour, false),
+				Entry("feature gate enabled, value out of boundaries, shoot w/ deletionTimestamp", true, 5000*time.Hour, 5000*time.Hour, true),
 
-				Entry("feature gate disabled too low value", false, time.Hour, time.Hour),
-				Entry("feature gate disabled too high value", false, 3000*time.Hour, 3000*time.Hour),
-				Entry("feature gate disabled value within boundaries", false, 1000*time.Hour, 1000*time.Hour),
+				Entry("feature gate disabled, too low value", false, time.Hour, time.Hour, false),
+				Entry("feature gate disabled, too high value", false, 3000*time.Hour, 3000*time.Hour, false),
+				Entry("feature gate disabled, value within boundaries", false, 1000*time.Hour, 1000*time.Hour, false),
+				Entry("feature gate disabled, value out of boundaries, shoot w/ deletionTimestamp", false, 5000*time.Hour, 5000*time.Hour, true),
 			)
 		})
 	})
@@ -450,8 +458,8 @@ var _ = Describe("Strategy", func() {
 		})
 
 		Context("max token expiration", func() {
-			newShoot := func(duration time.Duration) *core.Shoot {
-				return &core.Shoot{
+			newShoot := func(duration time.Duration, withDeletionTimestamp bool) *core.Shoot {
+				shoot := &core.Shoot{
 					Spec: core.ShootSpec{
 						Kubernetes: core.Kubernetes{
 							KubeAPIServer: &core.KubeAPIServerConfig{
@@ -462,24 +470,34 @@ var _ = Describe("Strategy", func() {
 						},
 					},
 				}
+
+				if withDeletionTimestamp {
+					shoot.DeletionTimestamp = &metav1.Time{}
+				}
+
+				return shoot
 			}
 
 			DescribeTable("ShootMaxTokenExpirationOverwrite feature gate enabled",
-				func(featureGateEnabled bool, maxTokenExpiration, expectedDuration time.Duration) {
+				func(featureGateEnabled bool, maxTokenExpiration, expectedDuration time.Duration, shootHasDeletionTimestamp bool) {
 					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationOverwrite, featureGateEnabled)()
 
-					shoot := newShoot(maxTokenExpiration)
-					shootregistry.Strategy.PrepareForCreate(context.TODO(), shoot)
+					shoot := newShoot(maxTokenExpiration, shootHasDeletionTimestamp)
+					oldShoot := shoot.DeepCopy()
+
+					shootregistry.Strategy.PrepareForUpdate(context.TODO(), shoot, oldShoot)
 					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(expectedDuration))
 				},
 
-				Entry("feature gate enabled, too low value", true, time.Hour, 720*time.Hour),
-				Entry("feature gate enabled, too high value", true, 3000*time.Hour, 2160*time.Hour),
-				Entry("feature gate enabled, value within boundaries", true, 1000*time.Hour, 1000*time.Hour),
+				Entry("feature gate enabled, too low value", true, time.Hour, 720*time.Hour, false),
+				Entry("feature gate enabled, too high value", true, 3000*time.Hour, 2160*time.Hour, false),
+				Entry("feature gate enabled, value within boundaries", true, 1000*time.Hour, 1000*time.Hour, false),
+				Entry("feature gate enabled, value out of boundaries, shoot w/ deletionTimestamp", true, 5000*time.Hour, 5000*time.Hour, true),
 
-				Entry("feature gate disabled too low value", false, time.Hour, time.Hour),
-				Entry("feature gate disabled too high value", false, 3000*time.Hour, 3000*time.Hour),
-				Entry("feature gate disabled value within boundaries", false, 1000*time.Hour, 1000*time.Hour),
+				Entry("feature gate disabled, too low value", false, time.Hour, time.Hour, false),
+				Entry("feature gate disabled, too high value", false, 3000*time.Hour, 3000*time.Hour, false),
+				Entry("feature gate disabled, value within boundaries", false, 1000*time.Hour, 1000*time.Hour, false),
+				Entry("feature gate disabled, value out of boundaries, shoot w/ deletionTimestamp", false, 5000*time.Hour, 5000*time.Hour, true),
 			)
 		})
 	})
