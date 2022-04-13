@@ -249,7 +249,7 @@ func (s *sni) emptyVirtualService() *istionetworkingv1beta1.VirtualService {
 	return &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
 }
 
-func (s *sni) emptyAccessControl() *istiosecurity1beta1.AuthorizationPolicy {
+func (s *sni) emptyAuthorizationPolicy() *istiosecurity1beta1.AuthorizationPolicy {
 	return &istiosecurity1beta1.AuthorizationPolicy{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
 }
 
