@@ -21,4 +21,12 @@ if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ] ; then
   ginkgo_flags="--output-dir=$ARTIFACTS --junit-report=junit.xml"
 fi
 
+cat <<EOF | tee -a /etc/hosts
+
+# Manually created to access the test Gardener shoot clusters with name 'admin-kc-shoot' in the 'garden-local' namespace.
+# TODO: Remove this again when the shoot cluster access is no longer required.
+127.0.0.1 api.admin-kc-shoot.local.external.local.gardener.cloud
+127.0.0.1 api.admin-kc-shoot.local.internal.local.gardener.cloud
+EOF
+
 GO111MODULE=on ginkgo --timeout=1h $ginkgo_flags --v --progress "$@" ./test/e2e/...
