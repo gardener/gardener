@@ -694,11 +694,14 @@ type AccessControl struct {
 	Source Source `json:"source,omitempty" protobuf:"bytes,2,opt,name=source"`
 }
 
+// AuthorizationAction is the operation (e.g. DENY) to apply on requests.
 type AuthorizationAction string
 
 const (
+	// Allows the request from a source.
 	AuthorizationAction_ALLOW AuthorizationAction = "ALLOW"
-	AuthorizationAction_DENY  AuthorizationAction = "DENY"
+	// Denies the request from a source.
+	AuthorizationAction_DENY AuthorizationAction = "DENY"
 )
 
 type Source struct {
