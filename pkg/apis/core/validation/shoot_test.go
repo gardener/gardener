@@ -1743,6 +1743,19 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration"),
 					}))))
 				})
+
+				It("should accept values for the max token duration out of boundaries when deletion timestamp is set", func() {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationValidation, true)()
+
+					shoot.DeletionTimestamp = &metav1.Time{}
+					shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+						MaxTokenExpiration: &metav1.Duration{Duration: 5000 * time.Hour},
+					}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(BeEmpty())
+				})
 			})
 
 			It("should not allow too specify the 'extend' flag if kubernetes is lower than 1.19", func() {
