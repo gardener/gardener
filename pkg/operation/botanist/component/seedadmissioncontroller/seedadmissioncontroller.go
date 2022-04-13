@@ -23,8 +23,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
@@ -249,7 +247,6 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 								"/gardener-seed-admission-controller",
 								fmt.Sprintf("--port=%d", port),
 								fmt.Sprintf("--tls-cert-dir=%s", volumeMountPath),
-								fmt.Sprintf("--allow-invalid-extension-resources=%t", !gardenletfeatures.FeatureGate.Enabled(features.DenyInvalidExtensionResources)),
 								fmt.Sprintf("--metrics-bind-address=:%d", metricsPort),
 								fmt.Sprintf("--health-bind-address=:%d", healthPort),
 							},

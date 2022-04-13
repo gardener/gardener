@@ -44,10 +44,136 @@ func ValidateControllerManagerConfiguration(conf *config.ControllerManagerConfig
 
 func validateControllerManagerControllerConfiguration(conf config.ControllerManagerControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	bastionFldPath := fldPath.Child("bastion")
+	if conf.Bastion != nil {
+		allErrs = append(allErrs, validateBastionControllerConfiguration(conf.Bastion, bastionFldPath)...)
+	}
+
+	cloudProfileFldPath := fldPath.Child("cloudProfile")
+	if conf.CloudProfile != nil {
+		allErrs = append(allErrs, validateCloudProfileControllerConfiguration(conf.CloudProfile, cloudProfileFldPath)...)
+	}
+
+	controllerDeploymentFldPath := fldPath.Child("controllerDeployment")
+	if conf.ControllerDeployment != nil {
+		allErrs = append(allErrs, validateControllerDeploymentControllerConfiguration(conf.ControllerDeployment, controllerDeploymentFldPath)...)
+	}
+
+	controllerRegistrationFldPath := fldPath.Child("controllerRegistration")
+	if conf.ControllerRegistration != nil {
+		allErrs = append(allErrs, validateControllerRegistrationControllerConfiguration(conf.ControllerRegistration, controllerRegistrationFldPath)...)
+	}
+
+	eventFldPath := fldPath.Child("event")
+	if conf.Event != nil {
+		allErrs = append(allErrs, validateEventControllerConfiguration(conf.Event, eventFldPath)...)
+	}
+
+	exposureClassFldPath := fldPath.Child("exposureClass")
+	if conf.ExposureClass != nil {
+		allErrs = append(allErrs, validateExposureClassControllerConfiguration(conf.ExposureClass, exposureClassFldPath)...)
+	}
+
+	plantFldPath := fldPath.Child("plant")
+	if conf.Plant != nil {
+		allErrs = append(allErrs, validatePlantControllerConfiguration(conf.Plant, plantFldPath)...)
+	}
+
 	projectFldPath := fldPath.Child("project")
 	if conf.Project != nil {
 		allErrs = append(allErrs, validateProjectControllerConfiguration(conf.Project, projectFldPath)...)
 	}
+
+	quotaFldPath := fldPath.Child("quota")
+	if conf.Quota != nil {
+		allErrs = append(allErrs, validateQuotaControllerConfiguration(conf.Quota, quotaFldPath)...)
+	}
+
+	secretBindingFldPath := fldPath.Child("secretBinding")
+	if conf.SecretBinding != nil {
+		allErrs = append(allErrs, validateSecretBindingControllerConfiguration(conf.SecretBinding, secretBindingFldPath)...)
+	}
+
+	secretBindingProviderFldPath := fldPath.Child("secretBindingProvider")
+	if conf.SecretBindingProvider != nil {
+		allErrs = append(allErrs, validateSecretBindingProviderControllerConfiguration(conf.SecretBindingProvider, secretBindingProviderFldPath)...)
+	}
+
+	seedFldPath := fldPath.Child("seed")
+	if conf.Seed != nil {
+		allErrs = append(allErrs, validateSeedControllerConfiguration(conf.Seed, seedFldPath)...)
+	}
+
+	shootMaintenanceFldPath := fldPath.Child("shootMaintenance")
+	allErrs = append(allErrs, validateShootMaintenanceControllerConfiguration(conf.ShootMaintenance, shootMaintenanceFldPath)...)
+
+	shootQuotaFldPath := fldPath.Child("shootQuota")
+	allErrs = append(allErrs, validateShootQuotaControllerConfiguration(conf.ShootQuota, shootQuotaFldPath)...)
+
+	shootHibernationFldPath := fldPath.Child("shootHibernation")
+	allErrs = append(allErrs, validateShootHibernationControllerConfiguration(conf.ShootHibernation, shootHibernationFldPath)...)
+
+	shootReferenceFldPath := fldPath.Child("shootReference")
+	if conf.ShootReference != nil {
+		allErrs = append(allErrs, validateShootReferenceControllerConfiguration(conf.ShootReference, shootReferenceFldPath)...)
+	}
+
+	shootRetryFldPath := fldPath.Child("shootRetry")
+	if conf.ShootRetry != nil {
+		allErrs = append(allErrs, validateShootRetryControllerConfiguration(conf.ShootRetry, shootRetryFldPath)...)
+	}
+
+	shootConditionsFldPath := fldPath.Child("shootConditions")
+	if conf.ShootConditions != nil {
+		allErrs = append(allErrs, validateShootConditionsControllerConfiguration(conf.ShootConditions, shootConditionsFldPath)...)
+	}
+
+	shootStatusLabelFldPath := fldPath.Child("shootStatusLabel")
+	if conf.ShootStatusLabel != nil {
+		allErrs = append(allErrs, validateShootStatusLabelControllerConfiguration(conf.ShootStatusLabel, shootStatusLabelFldPath)...)
+	}
+
+	managedSeedSetFldPath := fldPath.Child("managedSeedSet")
+	if conf.ManagedSeedSet != nil {
+		allErrs = append(allErrs, validateManagedSeedSetControllerConfiguration(conf.ManagedSeedSet, managedSeedSetFldPath)...)
+	}
+
+	return allErrs
+}
+
+func validateBastionControllerConfiguration(conf *config.BastionControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	return allErrs
+}
+
+func validateCloudProfileControllerConfiguration(conf *config.CloudProfileControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	return allErrs
+}
+
+func validateControllerDeploymentControllerConfiguration(conf *config.ControllerDeploymentControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	return allErrs
+}
+
+func validateControllerRegistrationControllerConfiguration(conf *config.ControllerRegistrationControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	return allErrs
+}
+
+func validateEventControllerConfiguration(conf *config.EventControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	return allErrs
+}
+
+func validateExposureClassControllerConfiguration(conf *config.ExposureClassControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	return allErrs
+}
+
+func validatePlantControllerConfiguration(conf *config.PlantControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
 	return allErrs
 }
 
@@ -68,5 +194,65 @@ func validateProjectQuotaConfiguration(conf config.QuotaConfiguration, fldPath *
 		allErrs = append(allErrs, field.Required(fldPath.Child("config"), "must provide a quota config"))
 	}
 
+	return allErrs
+}
+
+func validateQuotaControllerConfiguration(conf *config.QuotaControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	return allErrs
+}
+
+func validateSecretBindingControllerConfiguration(conf *config.SecretBindingControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	return allErrs
+}
+
+func validateSecretBindingProviderControllerConfiguration(conf *config.SecretBindingProviderControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	return allErrs
+}
+
+func validateSeedControllerConfiguration(conf *config.SeedControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	return allErrs
+}
+
+func validateShootMaintenanceControllerConfiguration(conf config.ShootMaintenanceControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	return allErrs
+}
+
+func validateShootQuotaControllerConfiguration(conf config.ShootQuotaControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	return allErrs
+}
+
+func validateShootHibernationControllerConfiguration(conf config.ShootHibernationControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	return allErrs
+}
+
+func validateShootReferenceControllerConfiguration(conf *config.ShootReferenceControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	return allErrs
+}
+
+func validateShootRetryControllerConfiguration(conf *config.ShootRetryControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	return allErrs
+}
+
+func validateShootConditionsControllerConfiguration(conf *config.ShootConditionsControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	return allErrs
+}
+
+func validateShootStatusLabelControllerConfiguration(conf *config.ShootStatusLabelControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	return allErrs
+}
+
+func validateManagedSeedSetControllerConfiguration(conf *config.ManagedSeedSetControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
 	return allErrs
 }

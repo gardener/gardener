@@ -99,7 +99,7 @@ type ControllerManagerControllerConfiguration struct {
 type BastionControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 	// MaxLifetime is the maximum time a Bastion resource can exist before it is
 	// forcefully deleted (defaults to '24h').
 	MaxLifetime *metav1.Duration
@@ -110,7 +110,7 @@ type BastionControllerConfiguration struct {
 type CloudProfileControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 }
 
 // ControllerDeploymentControllerConfiguration defines the configuration of the
@@ -118,7 +118,7 @@ type CloudProfileControllerConfiguration struct {
 type ControllerDeploymentControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 }
 
 // ControllerRegistrationControllerConfiguration defines the configuration of the
@@ -126,7 +126,7 @@ type ControllerDeploymentControllerConfiguration struct {
 type ControllerRegistrationControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 }
 
 // PlantControllerConfiguration defines the configuration of the
@@ -134,7 +134,7 @@ type ControllerRegistrationControllerConfiguration struct {
 type PlantControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration
 }
@@ -143,7 +143,7 @@ type PlantControllerConfiguration struct {
 type EventControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 	// TTLNonShootEvents is the time-to-live for all non-shoot related events (defaults to `1h`).
 	TTLNonShootEvents *metav1.Duration
 }
@@ -153,7 +153,7 @@ type EventControllerConfiguration struct {
 type ExposureClassControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 }
 
 // ProjectControllerConfiguration defines the configuration of the
@@ -161,7 +161,7 @@ type ExposureClassControllerConfiguration struct {
 type ProjectControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 	// MinimumLifetimeDays is the number of days a `Project` may exist before it is being
 	// checked whether it is actively used or got stale.
 	MinimumLifetimeDays *int
@@ -191,7 +191,7 @@ type QuotaConfiguration struct {
 type QuotaControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 }
 
 // SecretBindingControllerConfiguration defines the configuration of the
@@ -199,7 +199,7 @@ type QuotaControllerConfiguration struct {
 type SecretBindingControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 }
 
 // SecretBindingProviderControllerConfiguration defines the configuration of the
@@ -207,7 +207,7 @@ type SecretBindingControllerConfiguration struct {
 type SecretBindingProviderControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 }
 
 // SeedControllerConfiguration defines the configuration of the
@@ -215,7 +215,7 @@ type SecretBindingProviderControllerConfiguration struct {
 type SeedControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 	// MonitorPeriod is the duration after the seed controller will mark the `GardenletReady`
 	// condition in `Seed` resources as `Unknown` in case the gardenlet did not send heartbeats.
 	MonitorPeriod *metav1.Duration
@@ -232,7 +232,7 @@ type SeedControllerConfiguration struct {
 type ShootMaintenanceControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 	// EnableShootControlPlaneRestarter configures whether adequate pods of the shoot control plane are restarted during maintenance.
 	EnableShootControlPlaneRestarter *bool
 	// EnableShootCoreAddonRestarter configures whether some core addons to be restarted during maintenance.
@@ -244,7 +244,7 @@ type ShootMaintenanceControllerConfiguration struct {
 type ShootQuotaControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 	// SyncPeriod is the duration how often the existing resources are reconciled
 	// (how often Shoots referenced Quota is checked).
 	SyncPeriod metav1.Duration
@@ -255,7 +255,7 @@ type ShootQuotaControllerConfiguration struct {
 type ShootHibernationControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 }
 
 // ShootReferenceControllerConfiguration defines the configuration of the
@@ -263,7 +263,7 @@ type ShootHibernationControllerConfiguration struct {
 type ShootReferenceControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// shoots.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 }
 
 // ShootRetryControllerConfiguration defines the configuration of the
@@ -271,7 +271,7 @@ type ShootReferenceControllerConfiguration struct {
 type ShootRetryControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 	// RetryPeriod is the retry period for retrying failed Shoots that match certain criterion.
 	RetryPeriod *metav1.Duration
 }
@@ -281,7 +281,7 @@ type ShootRetryControllerConfiguration struct {
 type ShootConditionsControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 }
 
 // ShootStatusLabelControllerConfiguration defines the configuration of the
@@ -289,7 +289,7 @@ type ShootConditionsControllerConfiguration struct {
 type ShootStatusLabelControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 }
 
 // ManagedSeedSetControllerConfiguration defines the configuration of the
@@ -297,7 +297,7 @@ type ShootStatusLabelControllerConfiguration struct {
 type ManagedSeedSetControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
-	ConcurrentSyncs int
+	ConcurrentSyncs *int
 	// MaxShootRetries is the maximum number of times to retry failed shoots before giving up. Defaults to 3.
 	MaxShootRetries *int
 	// SyncPeriod is the duration how often the existing resources are reconciled.

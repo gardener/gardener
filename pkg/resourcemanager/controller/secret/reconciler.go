@@ -91,7 +91,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			"finalizer", controllerFinalizer)
 
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.client, secret, controllerFinalizer); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to Secret: %w", err)
+			return reconcile.Result{}, fmt.Errorf("could not add finalizer to Secret: %w", err)
 		}
 	} else if !secretIsReferenced && hasFinalizer {
 		log.Info("Removing finalizer from Secret because it is not referenced by a ManagedResource of this class",

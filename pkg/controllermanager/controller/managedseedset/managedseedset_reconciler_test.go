@@ -126,11 +126,20 @@ var _ = Describe("Reconciler", func() {
 
 	Describe("#Reconcile", func() {
 		Context("reconcile", func() {
-			It("should add the finalizer, reconcile the ManagedSeedSet creation or update, and update the status", func() {
+			It("should add the finalizer, if not present", func() {
 				expectGetManagedSeedSet()
 				expectPatchManagedSeedSet(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(mss.Finalizers).To(Equal([]string{gardencorev1beta1.GardenerName}))
 				})
+
+				result, err := reconciler.Reconcile(ctx, request)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{}))
+			})
+
+			It("should reconcile the ManagedSeedSet creation or update, and update the status", func() {
+				expectGetManagedSeedSet()
+				set.Finalizers = []string{gardencorev1beta1.GardenerName}
 				actuator.EXPECT().Reconcile(ctx, gomock.Any(), set).Return(status, false, nil)
 				expectPatchManagedSeedSetStatus(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(&mss.Status).To(Equal(status))

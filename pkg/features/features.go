@@ -55,10 +55,10 @@ const (
 	APIServerSNI featuregate.Feature = "APIServerSNI"
 
 	// CachedRuntimeClients enables a cache in the controller-runtime clients, that Gardener uses.
-	// If disabled all controller-runtime clients will directly talk to the API server instead of relying on a cache.
 	// owner @timebertt
 	// alpha: v1.7.0
 	// beta: v1.34.0
+	// GA: v1.45.0
 	CachedRuntimeClients featuregate.Feature = "CachedRuntimeClients"
 
 	// SeedChange enables updating the `spec.seedName` field during shoot validation from a non-empty value
@@ -101,6 +101,7 @@ const (
 	// owner: @stoyanr
 	// alpha: v1.31.0
 	// beta: v1.42.0
+	// GA: v1.45.0
 	DenyInvalidExtensionResources featuregate.Feature = "DenyInvalidExtensionResources"
 
 	// WorkerPoolKubernetesVersion allows to overwrite the Kubernetes version used for shoot clusters per worker pool.
@@ -165,14 +166,14 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	HVPAForShootedSeed:            {Default: false, PreRelease: featuregate.Alpha},
 	ManagedIstio:                  {Default: true, PreRelease: featuregate.Beta},
 	APIServerSNI:                  {Default: true, PreRelease: featuregate.Beta},
-	CachedRuntimeClients:          {Default: true, PreRelease: featuregate.Beta},
+	CachedRuntimeClients:          {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	SeedChange:                    {Default: false, PreRelease: featuregate.Alpha},
 	SeedKubeScheduler:             {Default: false, PreRelease: featuregate.Alpha},
 	ReversedVPN:                   {Default: true, PreRelease: featuregate.Beta},
 	AdminKubeconfigRequest:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	UseDNSRecords:                 {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	RotateSSHKeypairOnMaintenance: {Default: false, PreRelease: featuregate.Alpha},
-	DenyInvalidExtensionResources: {Default: true, PreRelease: featuregate.Beta},
+	DenyInvalidExtensionResources: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	WorkerPoolKubernetesVersion:   {Default: false, PreRelease: featuregate.Alpha},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
 	SecretBindingProviderValidation:            {Default: false, PreRelease: featuregate.Alpha},

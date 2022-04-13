@@ -72,8 +72,9 @@ func (r *reconciler) reconcile(ctx context.Context, log logr.Logger, set *seedma
 	if !controllerutil.ContainsFinalizer(set, gardencorev1beta1.GardenerName) {
 		log.V(1).Info("Adding finalizer")
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient.Client(), set, gardencorev1beta1.GardenerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("could not ensure gardener finalizer: %w", err)
+			return reconcile.Result{}, fmt.Errorf("could not add finalizer to ManagedSeedSet: %w", err)
 		}
+		return reconcile.Result{}, nil
 	}
 
 	var status *seedmanagementv1alpha1.ManagedSeedSetStatus

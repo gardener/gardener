@@ -314,7 +314,7 @@ func RegisterConversions(s *runtime.Scheme) error {
 }
 
 func autoConvert_v1alpha1_BastionControllerConfiguration_To_config_BastionControllerConfiguration(in *BastionControllerConfiguration, out *config.BastionControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.MaxLifetime = (*v1.Duration)(unsafe.Pointer(in.MaxLifetime))
 	return nil
 }
@@ -325,7 +325,7 @@ func Convert_v1alpha1_BastionControllerConfiguration_To_config_BastionController
 }
 
 func autoConvert_config_BastionControllerConfiguration_To_v1alpha1_BastionControllerConfiguration(in *config.BastionControllerConfiguration, out *BastionControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.MaxLifetime = (*v1.Duration)(unsafe.Pointer(in.MaxLifetime))
 	return nil
 }
@@ -336,7 +336,7 @@ func Convert_config_BastionControllerConfiguration_To_v1alpha1_BastionController
 }
 
 func autoConvert_v1alpha1_CloudProfileControllerConfiguration_To_config_CloudProfileControllerConfiguration(in *CloudProfileControllerConfiguration, out *config.CloudProfileControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -346,7 +346,7 @@ func Convert_v1alpha1_CloudProfileControllerConfiguration_To_config_CloudProfile
 }
 
 func autoConvert_config_CloudProfileControllerConfiguration_To_v1alpha1_CloudProfileControllerConfiguration(in *config.CloudProfileControllerConfiguration, out *CloudProfileControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -356,7 +356,7 @@ func Convert_config_CloudProfileControllerConfiguration_To_v1alpha1_CloudProfile
 }
 
 func autoConvert_v1alpha1_ControllerDeploymentControllerConfiguration_To_config_ControllerDeploymentControllerConfiguration(in *ControllerDeploymentControllerConfiguration, out *config.ControllerDeploymentControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -366,7 +366,7 @@ func Convert_v1alpha1_ControllerDeploymentControllerConfiguration_To_config_Cont
 }
 
 func autoConvert_config_ControllerDeploymentControllerConfiguration_To_v1alpha1_ControllerDeploymentControllerConfiguration(in *config.ControllerDeploymentControllerConfiguration, out *ControllerDeploymentControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -542,7 +542,7 @@ func Convert_config_ControllerManagerControllerConfiguration_To_v1alpha1_Control
 }
 
 func autoConvert_v1alpha1_ControllerRegistrationControllerConfiguration_To_config_ControllerRegistrationControllerConfiguration(in *ControllerRegistrationControllerConfiguration, out *config.ControllerRegistrationControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -552,7 +552,7 @@ func Convert_v1alpha1_ControllerRegistrationControllerConfiguration_To_config_Co
 }
 
 func autoConvert_config_ControllerRegistrationControllerConfiguration_To_v1alpha1_ControllerRegistrationControllerConfiguration(in *config.ControllerRegistrationControllerConfiguration, out *ControllerRegistrationControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -562,7 +562,7 @@ func Convert_config_ControllerRegistrationControllerConfiguration_To_v1alpha1_Co
 }
 
 func autoConvert_v1alpha1_EventControllerConfiguration_To_config_EventControllerConfiguration(in *EventControllerConfiguration, out *config.EventControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.TTLNonShootEvents = (*v1.Duration)(unsafe.Pointer(in.TTLNonShootEvents))
 	return nil
 }
@@ -573,7 +573,7 @@ func Convert_v1alpha1_EventControllerConfiguration_To_config_EventControllerConf
 }
 
 func autoConvert_config_EventControllerConfiguration_To_v1alpha1_EventControllerConfiguration(in *config.EventControllerConfiguration, out *EventControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.TTLNonShootEvents = (*v1.Duration)(unsafe.Pointer(in.TTLNonShootEvents))
 	return nil
 }
@@ -584,7 +584,7 @@ func Convert_config_EventControllerConfiguration_To_v1alpha1_EventControllerConf
 }
 
 func autoConvert_v1alpha1_ExposureClassControllerConfiguration_To_config_ExposureClassControllerConfiguration(in *ExposureClassControllerConfiguration, out *config.ExposureClassControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -594,7 +594,7 @@ func Convert_v1alpha1_ExposureClassControllerConfiguration_To_config_ExposureCla
 }
 
 func autoConvert_config_ExposureClassControllerConfiguration_To_v1alpha1_ExposureClassControllerConfiguration(in *config.ExposureClassControllerConfiguration, out *ExposureClassControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -634,7 +634,7 @@ func Convert_config_HTTPSServer_To_v1alpha1_HTTPSServer(in *config.HTTPSServer, 
 }
 
 func autoConvert_v1alpha1_ManagedSeedSetControllerConfiguration_To_config_ManagedSeedSetControllerConfiguration(in *ManagedSeedSetControllerConfiguration, out *config.ManagedSeedSetControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.MaxShootRetries = (*int)(unsafe.Pointer(in.MaxShootRetries))
 	out.SyncPeriod = in.SyncPeriod
 	return nil
@@ -646,7 +646,7 @@ func Convert_v1alpha1_ManagedSeedSetControllerConfiguration_To_config_ManagedSee
 }
 
 func autoConvert_config_ManagedSeedSetControllerConfiguration_To_v1alpha1_ManagedSeedSetControllerConfiguration(in *config.ManagedSeedSetControllerConfiguration, out *ManagedSeedSetControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.MaxShootRetries = (*int)(unsafe.Pointer(in.MaxShootRetries))
 	out.SyncPeriod = in.SyncPeriod
 	return nil
@@ -658,7 +658,7 @@ func Convert_config_ManagedSeedSetControllerConfiguration_To_v1alpha1_ManagedSee
 }
 
 func autoConvert_v1alpha1_PlantControllerConfiguration_To_config_PlantControllerConfiguration(in *PlantControllerConfiguration, out *config.PlantControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.SyncPeriod = in.SyncPeriod
 	return nil
 }
@@ -669,7 +669,7 @@ func Convert_v1alpha1_PlantControllerConfiguration_To_config_PlantControllerConf
 }
 
 func autoConvert_config_PlantControllerConfiguration_To_v1alpha1_PlantControllerConfiguration(in *config.PlantControllerConfiguration, out *PlantControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.SyncPeriod = in.SyncPeriod
 	return nil
 }
@@ -680,7 +680,7 @@ func Convert_config_PlantControllerConfiguration_To_v1alpha1_PlantControllerConf
 }
 
 func autoConvert_v1alpha1_ProjectControllerConfiguration_To_config_ProjectControllerConfiguration(in *ProjectControllerConfiguration, out *config.ProjectControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.MinimumLifetimeDays = (*int)(unsafe.Pointer(in.MinimumLifetimeDays))
 	if in.Quotas != nil {
 		in, out := &in.Quotas, &out.Quotas
@@ -705,7 +705,7 @@ func Convert_v1alpha1_ProjectControllerConfiguration_To_config_ProjectController
 }
 
 func autoConvert_config_ProjectControllerConfiguration_To_v1alpha1_ProjectControllerConfiguration(in *config.ProjectControllerConfiguration, out *ProjectControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.MinimumLifetimeDays = (*int)(unsafe.Pointer(in.MinimumLifetimeDays))
 	if in.Quotas != nil {
 		in, out := &in.Quotas, &out.Quotas
@@ -751,7 +751,7 @@ func Convert_config_QuotaConfiguration_To_v1alpha1_QuotaConfiguration(in *config
 }
 
 func autoConvert_v1alpha1_QuotaControllerConfiguration_To_config_QuotaControllerConfiguration(in *QuotaControllerConfiguration, out *config.QuotaControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -761,7 +761,7 @@ func Convert_v1alpha1_QuotaControllerConfiguration_To_config_QuotaControllerConf
 }
 
 func autoConvert_config_QuotaControllerConfiguration_To_v1alpha1_QuotaControllerConfiguration(in *config.QuotaControllerConfiguration, out *QuotaControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -771,7 +771,7 @@ func Convert_config_QuotaControllerConfiguration_To_v1alpha1_QuotaControllerConf
 }
 
 func autoConvert_v1alpha1_SecretBindingControllerConfiguration_To_config_SecretBindingControllerConfiguration(in *SecretBindingControllerConfiguration, out *config.SecretBindingControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -781,7 +781,7 @@ func Convert_v1alpha1_SecretBindingControllerConfiguration_To_config_SecretBindi
 }
 
 func autoConvert_config_SecretBindingControllerConfiguration_To_v1alpha1_SecretBindingControllerConfiguration(in *config.SecretBindingControllerConfiguration, out *SecretBindingControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -791,7 +791,7 @@ func Convert_config_SecretBindingControllerConfiguration_To_v1alpha1_SecretBindi
 }
 
 func autoConvert_v1alpha1_SecretBindingProviderControllerConfiguration_To_config_SecretBindingProviderControllerConfiguration(in *SecretBindingProviderControllerConfiguration, out *config.SecretBindingProviderControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -801,7 +801,7 @@ func Convert_v1alpha1_SecretBindingProviderControllerConfiguration_To_config_Sec
 }
 
 func autoConvert_config_SecretBindingProviderControllerConfiguration_To_v1alpha1_SecretBindingProviderControllerConfiguration(in *config.SecretBindingProviderControllerConfiguration, out *SecretBindingProviderControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -811,7 +811,7 @@ func Convert_config_SecretBindingProviderControllerConfiguration_To_v1alpha1_Sec
 }
 
 func autoConvert_v1alpha1_SeedControllerConfiguration_To_config_SeedControllerConfiguration(in *SeedControllerConfiguration, out *config.SeedControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.MonitorPeriod = (*v1.Duration)(unsafe.Pointer(in.MonitorPeriod))
 	out.ShootMonitorPeriod = (*v1.Duration)(unsafe.Pointer(in.ShootMonitorPeriod))
 	out.SyncPeriod = in.SyncPeriod
@@ -824,7 +824,7 @@ func Convert_v1alpha1_SeedControllerConfiguration_To_config_SeedControllerConfig
 }
 
 func autoConvert_config_SeedControllerConfiguration_To_v1alpha1_SeedControllerConfiguration(in *config.SeedControllerConfiguration, out *SeedControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.MonitorPeriod = (*v1.Duration)(unsafe.Pointer(in.MonitorPeriod))
 	out.ShootMonitorPeriod = (*v1.Duration)(unsafe.Pointer(in.ShootMonitorPeriod))
 	out.SyncPeriod = in.SyncPeriod
@@ -889,7 +889,7 @@ func Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in *conf
 }
 
 func autoConvert_v1alpha1_ShootConditionsControllerConfiguration_To_config_ShootConditionsControllerConfiguration(in *ShootConditionsControllerConfiguration, out *config.ShootConditionsControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -899,7 +899,7 @@ func Convert_v1alpha1_ShootConditionsControllerConfiguration_To_config_ShootCond
 }
 
 func autoConvert_config_ShootConditionsControllerConfiguration_To_v1alpha1_ShootConditionsControllerConfiguration(in *config.ShootConditionsControllerConfiguration, out *ShootConditionsControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -909,7 +909,7 @@ func Convert_config_ShootConditionsControllerConfiguration_To_v1alpha1_ShootCond
 }
 
 func autoConvert_v1alpha1_ShootHibernationControllerConfiguration_To_config_ShootHibernationControllerConfiguration(in *ShootHibernationControllerConfiguration, out *config.ShootHibernationControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -919,7 +919,7 @@ func Convert_v1alpha1_ShootHibernationControllerConfiguration_To_config_ShootHib
 }
 
 func autoConvert_config_ShootHibernationControllerConfiguration_To_v1alpha1_ShootHibernationControllerConfiguration(in *config.ShootHibernationControllerConfiguration, out *ShootHibernationControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -929,7 +929,7 @@ func Convert_config_ShootHibernationControllerConfiguration_To_v1alpha1_ShootHib
 }
 
 func autoConvert_v1alpha1_ShootMaintenanceControllerConfiguration_To_config_ShootMaintenanceControllerConfiguration(in *ShootMaintenanceControllerConfiguration, out *config.ShootMaintenanceControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.EnableShootControlPlaneRestarter = (*bool)(unsafe.Pointer(in.EnableShootControlPlaneRestarter))
 	out.EnableShootCoreAddonRestarter = (*bool)(unsafe.Pointer(in.EnableShootCoreAddonRestarter))
 	return nil
@@ -941,7 +941,7 @@ func Convert_v1alpha1_ShootMaintenanceControllerConfiguration_To_config_ShootMai
 }
 
 func autoConvert_config_ShootMaintenanceControllerConfiguration_To_v1alpha1_ShootMaintenanceControllerConfiguration(in *config.ShootMaintenanceControllerConfiguration, out *ShootMaintenanceControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.EnableShootControlPlaneRestarter = (*bool)(unsafe.Pointer(in.EnableShootControlPlaneRestarter))
 	out.EnableShootCoreAddonRestarter = (*bool)(unsafe.Pointer(in.EnableShootCoreAddonRestarter))
 	return nil
@@ -953,7 +953,7 @@ func Convert_config_ShootMaintenanceControllerConfiguration_To_v1alpha1_ShootMai
 }
 
 func autoConvert_v1alpha1_ShootQuotaControllerConfiguration_To_config_ShootQuotaControllerConfiguration(in *ShootQuotaControllerConfiguration, out *config.ShootQuotaControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.SyncPeriod = in.SyncPeriod
 	return nil
 }
@@ -964,7 +964,7 @@ func Convert_v1alpha1_ShootQuotaControllerConfiguration_To_config_ShootQuotaCont
 }
 
 func autoConvert_config_ShootQuotaControllerConfiguration_To_v1alpha1_ShootQuotaControllerConfiguration(in *config.ShootQuotaControllerConfiguration, out *ShootQuotaControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.SyncPeriod = in.SyncPeriod
 	return nil
 }
@@ -975,7 +975,7 @@ func Convert_config_ShootQuotaControllerConfiguration_To_v1alpha1_ShootQuotaCont
 }
 
 func autoConvert_v1alpha1_ShootReferenceControllerConfiguration_To_config_ShootReferenceControllerConfiguration(in *ShootReferenceControllerConfiguration, out *config.ShootReferenceControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -985,7 +985,7 @@ func Convert_v1alpha1_ShootReferenceControllerConfiguration_To_config_ShootRefer
 }
 
 func autoConvert_config_ShootReferenceControllerConfiguration_To_v1alpha1_ShootReferenceControllerConfiguration(in *config.ShootReferenceControllerConfiguration, out *ShootReferenceControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -995,7 +995,7 @@ func Convert_config_ShootReferenceControllerConfiguration_To_v1alpha1_ShootRefer
 }
 
 func autoConvert_v1alpha1_ShootRetryControllerConfiguration_To_config_ShootRetryControllerConfiguration(in *ShootRetryControllerConfiguration, out *config.ShootRetryControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.RetryPeriod = (*v1.Duration)(unsafe.Pointer(in.RetryPeriod))
 	return nil
 }
@@ -1006,7 +1006,7 @@ func Convert_v1alpha1_ShootRetryControllerConfiguration_To_config_ShootRetryCont
 }
 
 func autoConvert_config_ShootRetryControllerConfiguration_To_v1alpha1_ShootRetryControllerConfiguration(in *config.ShootRetryControllerConfiguration, out *ShootRetryControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.RetryPeriod = (*v1.Duration)(unsafe.Pointer(in.RetryPeriod))
 	return nil
 }
@@ -1017,7 +1017,7 @@ func Convert_config_ShootRetryControllerConfiguration_To_v1alpha1_ShootRetryCont
 }
 
 func autoConvert_v1alpha1_ShootStatusLabelControllerConfiguration_To_config_ShootStatusLabelControllerConfiguration(in *ShootStatusLabelControllerConfiguration, out *config.ShootStatusLabelControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 
@@ -1027,7 +1027,7 @@ func Convert_v1alpha1_ShootStatusLabelControllerConfiguration_To_config_ShootSta
 }
 
 func autoConvert_config_ShootStatusLabelControllerConfiguration_To_v1alpha1_ShootStatusLabelControllerConfiguration(in *config.ShootStatusLabelControllerConfiguration, out *ShootStatusLabelControllerConfiguration, s conversion.Scope) error {
-	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	return nil
 }
 

@@ -42,10 +42,8 @@ global:
         HVPAForShootedSeed: true
         ManagedIstio: true
         APIServerSNI: true
-        CachedRuntimeClients: true
         SeedKubeScheduler: false
         ReversedVPN: true
-        DenyInvalidExtensionResources: true
         ShootCARotation: true
       seedConfig:
         apiVersion: core.gardener.cloud/v1beta1

@@ -182,7 +182,7 @@ spec:
         shoot:
           concurrentSyncs: 20
       featureGates:
-        CachedRuntimeClients: true
+        ...
       ...
     bootstrap: BootstrapToken
     mergeWithParent: true

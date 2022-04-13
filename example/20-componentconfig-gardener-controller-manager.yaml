@@ -82,5 +82,4 @@ debugging:
   enableProfiling: false
   enableContentionProfiling: false
 featureGates:
-  CachedRuntimeClients: true
   RotateSSHKeypairOnMaintenance: false

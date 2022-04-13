@@ -164,7 +164,6 @@ func run(ctx context.Context, o *Options) error {
 	if err := gardenletfeatures.FeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
 		return err
 	}
-	kubernetes.UseCachedRuntimeClients = gardenletfeatures.FeatureGate.Enabled(features.CachedRuntimeClients)
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ReversedVPN) && !gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
 		return fmt.Errorf("inconsistent feature gate: APIServerSNI is required for ReversedVPN (APIServerSNI: %t, ReversedVPN: %t)",

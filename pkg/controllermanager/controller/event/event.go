@@ -115,7 +115,7 @@ func (c *Controller) Run(ctx context.Context) {
 
 	c.log.Info("Event controller initialized")
 
-	for i := 0; i < c.cfg.ConcurrentSyncs; i++ {
+	for i := 0; i < *c.cfg.ConcurrentSyncs; i++ {
 		controllerutils.CreateWorker(ctx, c.eventQueue, "Event", c.reconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log))
 	}
 

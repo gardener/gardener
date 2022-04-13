@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	// DefaultClass is used a resource class is no class is specified on the command line
+	// DefaultClass is used as resource class if no class is specified on the command line
 	DefaultClass = "resources"
 
 	// FinalizerName is the finalizer base name that is injected into ManagedResources.

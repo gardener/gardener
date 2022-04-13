@@ -63,6 +63,7 @@ var _ = Describe("Scheduler tests", func() {
 
 			By("start manager")
 			go func() {
+				defer GinkgoRecover()
 				Expect(mgr.Start(mgrContext)).To(Succeed())
 			}()
 		})
@@ -109,6 +110,7 @@ var _ = Describe("Scheduler tests", func() {
 
 			By("start manager")
 			go func() {
+				defer GinkgoRecover()
 				Expect(mgr.Start(mgrContext)).To(Succeed())
 			}()
 		})

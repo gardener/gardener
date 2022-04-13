@@ -239,7 +239,7 @@ var _ = Describe("handler", func() {
 			decoder, err = admission.NewDecoder(kubernetes.SeedScheme)
 			Expect(err).NotTo(HaveOccurred())
 
-			handler = extensionresources.New(logger, false)
+			handler = extensionresources.New(logger)
 			Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 
 			request = nil

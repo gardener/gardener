@@ -282,7 +282,7 @@ func DeleteGrafanaByRole(ctx context.Context, k8sClient kubernetes.Interface, na
 		return err
 	}
 
-	if err := k8sClient.Client().DeleteAllOf(ctx, &extensionsv1beta1.Ingress{}, deleteOptions...); client.IgnoreNotFound(err) != nil {
+	if err := k8sClient.Client().DeleteAllOf(ctx, &networkingv1.Ingress{}, deleteOptions...); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
