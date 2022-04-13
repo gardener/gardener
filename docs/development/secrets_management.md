@@ -100,7 +100,7 @@ While the `SecretsManager` is primarily used by gardenlet, it can be reused by o
 
 External components that want to reuse the `SecretsManager` should consider the following aspects:
 
-- On initialization of a `SecretsManager`, pass an `identity` specific to the component, for example the extension name (gardenlet uses `gardenlet` as the `SecretsManager`'s identity). 
+- On initialization of a `SecretsManager`, pass an `identity` specific to the component, controller and purpose. For example, gardenlet's shoot controller uses `gardenlet` as the `SecretsManager`'s identity, the `worker` controller in `provider-foo` should use `provider-foo-worker` and the `controlplane` controller should use `provider-foo-controlplane-exposure` for `ControlPlane` objects of purpose `exposure`.  
   The given identity is added as a value for the `manager-identity` label on managed `Secret`s. 
   This label is used by the `Cleanup` function to select only those `Secret`s that are actually managed by the particular `SecretManager` instance. This is done to prevent removing still needed `Secret`s that are managed by other instances.
 - Generate dedicated CAs for signing certificates instead of depending on CAs managed by gardenlet.
