@@ -53,7 +53,17 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 		validUntilTime = pointer.String(unixTime(m.clock.Now().Add(options.Validity)))
 	}
 
-	objectMeta, err := ObjectMeta(m.namespace, m.identity, config, m.lastRotationInitiationTimes[config.GetName()], validUntilTime, options.signingCAChecksum, &options.Persist, bundleFor)
+	objectMeta, err := ObjectMeta(
+		m.namespace,
+		m.identity,
+		config,
+		options.IgnoreConfigChecksumForCASecretName,
+		m.lastRotationInitiationTimes[config.GetName()],
+		validUntilTime,
+		options.signingCAChecksum,
+		&options.Persist,
+		bundleFor,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -432,6 +442,9 @@ type GenerateOptions struct {
 	IgnoreOldSecrets bool
 	// Validity specifies for how long the secret should be valid.
 	Validity time.Duration
+	// IgnoreConfigChecksumForCASecretName specifies whether the secret config checksum should be ignored when
+	// computing the secret name for CA secrets.
+	IgnoreConfigChecksumForCASecretName bool
 
 	signingCAChecksum *string
 	isBundleSecret    bool
@@ -456,10 +469,44 @@ func (o *GenerateOptions) ApplyOptions(manager Interface, configInterface secret
 	return nil
 }
 
+// SignedByCAOption is some configuration that modifies options for a SignedByCA request.
+type SignedByCAOption interface {
+	// ApplyToOptions applies this configuration to the given options.
+	ApplyToOptions(*SignedByCAOptions)
+}
+
+// SignedByCAOptions are options for SignedByCA calls.
+type SignedByCAOptions struct {
+	// UseCurrentCA specifies whether the certificate should always be signed by the current CA. This option does only
+	// take effect for server certificates since they are signed by the old CA by default (if it exists). Client
+	// certificates are always signed by the current CA.
+	UseCurrentCA bool
+}
+
+// ApplyOptions applies the given update options on these options, and then returns itself (for convenient chaining).
+func (o *SignedByCAOptions) ApplyOptions(opts []SignedByCAOption) *SignedByCAOptions {
+	for _, opt := range opts {
+		opt.ApplyToOptions(o)
+	}
+	return o
+}
+
+// UseCurrentCA sets the UseCurrentCA field to 'true' in the SignedByCAOptions.
+var UseCurrentCA = useCurrentCAOption{}
+
+type useCurrentCAOption struct{}
+
+func (useCurrentCAOption) ApplyToOptions(options *SignedByCAOptions) {
+	options.UseCurrentCA = true
+}
+
 // SignedByCA returns a function which sets the 'SigningCA' field in case the ConfigInterface provided to the
 // Generate request is a CertificateSecretConfig. Additionally, in such case it stores a checksum of the signing
 // CA in the options.
-func SignedByCA(name string) GenerateOption {
+func SignedByCA(name string, opts ...SignedByCAOption) GenerateOption {
+	signedByCAOptions := &SignedByCAOptions{}
+	signedByCAOptions.ApplyOptions(opts)
+
 	return func(m Interface, config secretutils.ConfigInterface, options *GenerateOptions) error {
 		mgr, ok := m.(*manager)
 		if !ok {
@@ -484,7 +531,7 @@ func SignedByCA(name string) GenerateOption {
 		// Client certificates are always renewed immediately (hence, signed with the current CA), while server
 		// certificates are signed with the old CA until they don't exist anymore in the internal store.
 		secret := secrets.current
-		if certificateConfig.CertType == secretutils.ServerCert && secrets.old != nil {
+		if certificateConfig.CertType == secretutils.ServerCert && !signedByCAOptions.UseCurrentCA && secrets.old != nil {
 			secret = *secrets.old
 		}
 
@@ -528,6 +575,15 @@ func IgnoreOldSecrets() GenerateOption {
 func Validity(v time.Duration) GenerateOption {
 	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
 		options.Validity = v
+		return nil
+	}
+}
+
+// IgnoreConfigChecksumForCASecretName returns a function which sets the 'IgnoreConfigChecksumForCASecretName' field to
+// true.
+func IgnoreConfigChecksumForCASecretName() GenerateOption {
+	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
+		options.IgnoreConfigChecksumForCASecretName = true
 		return nil
 	}
 }

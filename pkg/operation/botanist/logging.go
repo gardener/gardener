@@ -85,12 +85,13 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 
 	if b.isShootNodeLoggingEnabled() {
 		ingressTLSSecret, err := b.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
-			Name:         "loki-tls",
-			CommonName:   b.ComputeLokiHost(),
-			Organization: []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:     b.ComputeLokiHosts(),
-			CertType:     secrets.ServerCert,
-			Validity:     &ingressTLSCertificateValidity,
+			Name:                        "loki-tls",
+			CommonName:                  b.ComputeLokiHost(),
+			Organization:                []string{"gardener.cloud:monitoring:ingress"},
+			DNSNames:                    b.ComputeLokiHosts(),
+			CertType:                    secrets.ServerCert,
+			Validity:                    &ingressTLSCertificateValidity,
+			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
 		if err != nil {
 			return err

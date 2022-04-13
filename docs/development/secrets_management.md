@@ -16,7 +16,8 @@ It is built on top of the `ConfigInterface` and `DataInterface` interfaces part 
   This method either retrieves the current secret for the given configuration or it (re)generates it in case the configuration changed, the signing CA changed (for certificate secrets), or when proactive rotation was triggered.
   If the configuration describes a certificate authority secret then this method automatically generates a bundle secret containing the current and potentially the old certificate.\
   Available `GenerateOption`s:
-  - `SignedByCA(string)`: This is only valid for certificate secrets and automatically retrieves the correct certificate authority in order to sign the provided server or client certificate.
+  - `SignedByCA(string, ...SignedByCAOption)`: This is only valid for certificate secrets and automatically retrieves the correct certificate authority in order to sign the provided server or client certificate.
+    - There is only one `SignedByCAOption`: `UseCurrentCA`. This option will sign server certificates with the new/current CA in case of a CA rotation. For more information, please refer to the ["Certificate Signing"](#certificate-signing) section below). 
   - `Persist()`: This marks the secret such that it gets persisted in the `ShootState` resource in the garden cluster. Consequently, it should only be used for secrets related to a shoot cluster.
   - `Rotate(rotationStrategy)`: This specifies the strategy in case this secret is to be rotated or regenerated (either `InPlace` which immediately forgets about the old secret, or `KeepOld` which keeps the old secret in the system).
   - `IgnoreOldSecrets()`: This specifies whether old secrets should be considered and loaded (which is done by default). It should be used when old secrets are no longer important and can be "forgotten" (e.g. in ["phase 2" (`t2`) of the CA certificate rotation](../proposals/18-shoot-CA-rotation.md#rotation-sequence-for-cluster-and-client-ca)).
@@ -72,6 +73,26 @@ if !found {
 ```
 
 As explained above, this returns the bundle secret for the CA `my-ca` which might potentially contain both the current and the old CA (in case of rotation/regeneration).
+
+### Certificate Signing
+
+By default, client certificates are always signed by the current CA while server certificate are signed by the old CA (if it exists).
+This is to ensure a smooth exchange of certificate during a CA rotation (typically has two phases, ref [GEP-18](../proposals/18-shoot-CA-rotation.md#rotation-sequence-for-cluster-and-client-ca)):
+
+- Client certificates:
+  - In phase 1, clients get new certificates as soon as possible to ensure that all clients have been adapted before phase 2.
+  - In phase 2, the respective server drops accepting certificates signed by the old CA.
+- Server certificates:
+  - In phase 1, servers still use their old/existing certificates to allow clients to update their CA bundle used for verification of the servers' certificates.
+  - In phase 2, the old CA is dropped, hence servers need to get a certificate signed by the new/current CA. At this point in time, clients have already adapted their CA bundles.    
+
+In case you control all clients and update them at the same time as the server, it is possible to make the secrets manager generate even server certificates with the new/current CA.
+This can help preventing certificate mismatches when the CA bundle is already exchanged while the server still serves with a certificate signed by a CA no longer part of the bundle.
+
+Let's consider the two following examples:
+
+1. `gardenlet` deploys a webhook server (`gardener-resource-manager`) and a corresponding `MutatingWebhookConfiguration` at the same time. In this case, the server certificate should be generated with the new/current CA to avoid above mentioned certificate mismatches during a CA rotation.
+2. `gardenlet` deploys a server (`etcd`) in one step, and a client (`kube-apiserver`) in a subsequent step. In this case, the default behaviour should apply (server certificate should be signed by old/existing CA).
 
 ## Reusing the SecretsManager in Other Components
 

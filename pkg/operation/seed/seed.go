@@ -247,10 +247,12 @@ func RunReconcileSeedFlow(
 	}
 
 	// Deploy dedicated CA certificate for seed cluster.
+	validity := 30 * 24 * time.Hour
 	if _, err := secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
 		Name:       v1beta1constants.SecretNameCASeed,
 		CommonName: "kubernetes",
 		CertType:   secretutils.CACert,
+		Validity:   &validity,
 	}, secretsmanager.Rotate(secretsmanager.KeepOld)); err != nil {
 		return err
 	}
@@ -698,24 +700,26 @@ func RunReconcileSeedFlow(
 		prometheusIngressTLSSecretName = wildcardCert.GetName()
 	} else {
 		grafanaIngressTLSSecret, err := secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
-			Name:         "grafana-tls",
-			CommonName:   "grafana",
-			Organization: []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:     []string{seed.GetIngressFQDN(grafanaPrefix)},
-			CertType:     secretutils.ServerCert,
-			Validity:     &ingressTLSCertificateValidity,
+			Name:                        "grafana-tls",
+			CommonName:                  "grafana",
+			Organization:                []string{"gardener.cloud:monitoring:ingress"},
+			DNSNames:                    []string{seed.GetIngressFQDN(grafanaPrefix)},
+			CertType:                    secretutils.ServerCert,
+			Validity:                    &ingressTLSCertificateValidity,
+			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCASeed))
 		if err != nil {
 			return err
 		}
 
 		prometheusIngressTLSSecret, err := secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
-			Name:         "aggregate-prometheus-tls",
-			CommonName:   "prometheus",
-			Organization: []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:     []string{seed.GetIngressFQDN(prometheusPrefix)},
-			CertType:     secretutils.ServerCert,
-			Validity:     &ingressTLSCertificateValidity,
+			Name:                        "aggregate-prometheus-tls",
+			CommonName:                  "prometheus",
+			Organization:                []string{"gardener.cloud:monitoring:ingress"},
+			DNSNames:                    []string{seed.GetIngressFQDN(prometheusPrefix)},
+			CertType:                    secretutils.ServerCert,
+			Validity:                    &ingressTLSCertificateValidity,
+			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCASeed))
 		if err != nil {
 			return err
@@ -943,7 +947,11 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	return runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, secretsManager, imageVector, imageVectorOverwrites, seed, conf, log, anySNI)
+	if err := runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, secretsManager, imageVector, imageVectorOverwrites, seed, conf, log, anySNI); err != nil {
+		return err
+	}
+
+	return secretsManager.Cleanup(ctx)
 }
 
 func runCreateSeedFlow(

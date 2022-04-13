@@ -163,12 +163,13 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		prometheusIngressTLSSecretName = b.ControlPlaneWildcardCert.GetName()
 	} else {
 		ingressTLSSecret, err := b.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
-			Name:         "prometheus-tls",
-			CommonName:   "prometheus",
-			Organization: []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:     b.ComputePrometheusHosts(),
-			CertType:     secrets.ServerCert,
-			Validity:     &ingressTLSCertificateValidity,
+			Name:                        "prometheus-tls",
+			CommonName:                  "prometheus",
+			Organization:                []string{"gardener.cloud:monitoring:ingress"},
+			DNSNames:                    b.ComputePrometheusHosts(),
+			CertType:                    secrets.ServerCert,
+			Validity:                    &ingressTLSCertificateValidity,
+			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
 		if err != nil {
 			return err
@@ -396,12 +397,13 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			alertManagerIngressTLSSecretName = b.ControlPlaneWildcardCert.GetName()
 		} else {
 			ingressTLSSecret, err := b.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
-				Name:         "alertmanager-tls",
-				CommonName:   "alertmanager",
-				Organization: []string{"gardener.cloud:monitoring:ingress"},
-				DNSNames:     b.ComputeAlertManagerHosts(),
-				CertType:     secrets.ServerCert,
-				Validity:     &ingressTLSCertificateValidity,
+				Name:                        "alertmanager-tls",
+				CommonName:                  "alertmanager",
+				Organization:                []string{"gardener.cloud:monitoring:ingress"},
+				DNSNames:                    b.ComputeAlertManagerHosts(),
+				CertType:                    secrets.ServerCert,
+				Validity:                    &ingressTLSCertificateValidity,
+				SkipPublishingCACertificate: true,
 			}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
 			if err != nil {
 				return err
@@ -492,12 +494,13 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		ingressTLSSecretName = b.ControlPlaneWildcardCert.GetName()
 	} else {
 		ingressTLSSecret, err := b.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
-			Name:         "grafana-tls",
-			CommonName:   "grafana",
-			Organization: []string{"gardener.cloud:monitoring:ingress"},
-			DNSNames:     b.ComputeGrafanaHosts(),
-			CertType:     secrets.ServerCert,
-			Validity:     &ingressTLSCertificateValidity,
+			Name:                        "grafana-tls",
+			CommonName:                  "grafana",
+			Organization:                []string{"gardener.cloud:monitoring:ingress"},
+			DNSNames:                    b.ComputeGrafanaHosts(),
+			CertType:                    secrets.ServerCert,
+			Validity:                    &ingressTLSCertificateValidity,
+			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
 		if err != nil {
 			return err
