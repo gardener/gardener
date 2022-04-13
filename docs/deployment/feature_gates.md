@@ -31,8 +31,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | ReversedVPN                                  | `false` | `Alpha` | `1.22` | `1.41` |
 | ReversedVPN                                  | `true`  | `Beta`  | `1.42` |        |
 | RotateSSHKeypairOnMaintenance                | `false` | `Alpha` | `1.28` |        |
-| DenyInvalidExtensionResources                | `false` | `Alpha` | `1.31` | `1.41` |
-| DenyInvalidExtensionResources                | `true`  | `Beta`  | `1.42` |        |
 | WorkerPoolKubernetesVersion                  | `false` | `Alpha` | `1.35` |        |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` |        |
 | SecretBindingProviderValidation              | `false` | `Alpha` | `1.38` |        |
@@ -70,6 +68,9 @@ The following tables are a summary of the feature gates that you can set on diff
 | CachedRuntimeClients                         | `false` | `Alpha`   | `1.7`  | `1.33` |
 | CachedRuntimeClients                         | `true`  | `Beta`    | `1.34` | `1.44` |
 | CachedRuntimeClients                         | `true`  | `GA`      | `1.45` |        |
+| DenyInvalidExtensionResources                | `false` | `Alpha`   | `1.31` | `1.41` |
+| DenyInvalidExtensionResources                | `true`  | `Beta`    | `1.42` | `1.44` |
+| DenyInvalidExtensionResources                | `true`  | `GA`      | `1.45` |        |
 
 ## Using a feature
 

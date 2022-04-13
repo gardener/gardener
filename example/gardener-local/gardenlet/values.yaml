@@ -44,7 +44,6 @@ global:
         APIServerSNI: true
         SeedKubeScheduler: false
         ReversedVPN: true
-        DenyInvalidExtensionResources: true
         ShootCARotation: true
       seedConfig:
         apiVersion: core.gardener.cloud/v1beta1

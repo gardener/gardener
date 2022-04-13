@@ -173,7 +173,6 @@ spec:
         - /gardener-seed-admission-controller
         - --port=10250
         - --tls-cert-dir=/srv/gardener-seed-admission-controller
-        - --allow-invalid-extension-resources=false
         - --metrics-bind-address=:8080
         - --health-bind-address=:8081
         image: ` + image + `
