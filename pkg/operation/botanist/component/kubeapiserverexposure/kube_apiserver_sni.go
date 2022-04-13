@@ -102,7 +102,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		envoyFilter     = s.emptyEnvoyFilter()
 		gateway         = s.emptyGateway()
 		virtualService  = s.emptyVirtualService()
-		accessControl   = s.emptyAccessControl()
+		authorizationPolicy   = s.emptyAccessControl()
 
 		hostName        = fmt.Sprintf("%s.%s.svc.%s", v1beta1constants.DeploymentNameKubeAPIServer, s.namespace, gardencorev1beta1.DefaultDomain)
 		envoyFilterSpec bytes.Buffer
