@@ -45,7 +45,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.Bastion = &BastionControllerConfiguration{}
 	}
 	if obj.Controllers.Bastion.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.Bastion.ConcurrentSyncs = &v
 	}
 	if obj.Controllers.Bastion.MaxLifetime == nil {
@@ -56,7 +56,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.CloudProfile = &CloudProfileControllerConfiguration{}
 	}
 	if obj.Controllers.CloudProfile.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.CloudProfile.ConcurrentSyncs = &v
 	}
 
@@ -64,7 +64,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.ControllerDeployment = &ControllerDeploymentControllerConfiguration{}
 	}
 	if obj.Controllers.ControllerDeployment.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.ControllerDeployment.ConcurrentSyncs = &v
 	}
 
@@ -72,7 +72,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.ControllerRegistration = &ControllerRegistrationControllerConfiguration{}
 	}
 	if obj.Controllers.ControllerRegistration.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.ControllerRegistration.ConcurrentSyncs = &v
 	}
 
@@ -80,7 +80,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.ExposureClass = &ExposureClassControllerConfiguration{}
 	}
 	if obj.Controllers.ExposureClass.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.ExposureClass.ConcurrentSyncs = &v
 	}
 
@@ -92,7 +92,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		}
 	}
 	if obj.Controllers.Plant.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.Plant.ConcurrentSyncs = &v
 	}
 
@@ -100,7 +100,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.Project = &ProjectControllerConfiguration{}
 	}
 	if obj.Controllers.Project.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.Project.ConcurrentSyncs = &v
 	}
 	if obj.Controllers.Project.MinimumLifetimeDays == nil {
@@ -130,7 +130,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.Quota = &QuotaControllerConfiguration{}
 	}
 	if obj.Controllers.Quota.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.Quota.ConcurrentSyncs = &v
 	}
 
@@ -138,7 +138,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.SecretBinding = &SecretBindingControllerConfiguration{}
 	}
 	if obj.Controllers.SecretBinding.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.SecretBinding.ConcurrentSyncs = &v
 	}
 
@@ -146,7 +146,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.SecretBindingProvider = &SecretBindingProviderControllerConfiguration{}
 	}
 	if obj.Controllers.SecretBindingProvider.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.SecretBindingProvider.ConcurrentSyncs = &v
 	}
 
@@ -158,7 +158,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		}
 	}
 	if obj.Controllers.Seed.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.Seed.ConcurrentSyncs = &v
 	}
 	if obj.Controllers.Seed.MonitorPeriod == nil {
@@ -171,17 +171,17 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 	}
 
 	if obj.Controllers.ShootMaintenance.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.ShootMaintenance.ConcurrentSyncs = &v
 	}
 
 	if obj.Controllers.ShootQuota.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.ShootQuota.ConcurrentSyncs = &v
 	}
 
 	if obj.Controllers.ShootHibernation.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.ShootHibernation.ConcurrentSyncs = &v
 	}
 
@@ -189,7 +189,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.ShootReference = &ShootReferenceControllerConfiguration{}
 	}
 	if obj.Controllers.ShootReference.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.ShootReference.ConcurrentSyncs = &v
 	}
 
@@ -197,7 +197,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.ShootRetry = &ShootRetryControllerConfiguration{}
 	}
 	if obj.Controllers.ShootRetry.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.ShootRetry.ConcurrentSyncs = &v
 	}
 
@@ -205,7 +205,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.ShootConditions = &ShootConditionsControllerConfiguration{}
 	}
 	if obj.Controllers.ShootConditions.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.ShootConditions.ConcurrentSyncs = &v
 	}
 
@@ -213,7 +213,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.ShootStatusLabel = &ShootStatusLabelControllerConfiguration{}
 	}
 	if obj.Controllers.ShootStatusLabel.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.ShootStatusLabel.ConcurrentSyncs = &v
 	}
 
@@ -225,7 +225,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		}
 	}
 	if obj.Controllers.ManagedSeedSet.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.Controllers.ManagedSeedSet.ConcurrentSyncs = &v
 	}
 
@@ -273,7 +273,7 @@ func SetDefaults_LeaderElectionConfiguration(obj *componentbaseconfigv1alpha1.Le
 // SetDefaults_EventControllerConfiguration sets defaults for the EventControllerConfiguration.
 func SetDefaults_EventControllerConfiguration(obj *EventControllerConfiguration) {
 	if obj.ConcurrentSyncs == nil {
-		v := 5
+		v := DefaultControllerConcurrentSyncs
 		obj.ConcurrentSyncs = &v
 	}
 	if obj.TTLNonShootEvents == nil {

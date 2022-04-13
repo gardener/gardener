@@ -400,6 +400,9 @@ const (
 	// ControllerManagerDefaultLockObjectName is the default lock name for leader election.
 	ControllerManagerDefaultLockObjectName = "gardener-controller-manager-leader-election"
 
+	// DefaultControllerConcurrentSyncs is a default value for concurrent syncs for controllers.
+	DefaultControllerConcurrentSyncs = 5
+
 	// DefaultDiscoveryTTL is the default ttl for the cached discovery client.
 	DefaultDiscoveryTTL = 10 * time.Second
 
