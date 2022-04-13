@@ -45,27 +45,34 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Server.HTTPS.Port).To(Equal(2719))
 
 			Expect(obj.Controllers.Bastion).NotTo(BeNil())
-			Expect(obj.Controllers.Bastion.ConcurrentSyncs).To(Equal(5))
+			Expect(obj.Controllers.Bastion.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.Controllers.Bastion.ConcurrentSyncs).To(PointTo(Equal(5)))
 			Expect(obj.Controllers.Bastion.MaxLifetime).To(PointTo(Equal(metav1.Duration{Duration: 24 * time.Hour})))
 
 			Expect(obj.Controllers.CloudProfile).NotTo(BeNil())
-			Expect(obj.Controllers.CloudProfile.ConcurrentSyncs).To(Equal(5))
+			Expect(obj.Controllers.CloudProfile.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.Controllers.CloudProfile.ConcurrentSyncs).To(PointTo(Equal(5)))
 
 			Expect(obj.Controllers.ControllerDeployment).NotTo(BeNil())
-			Expect(obj.Controllers.ControllerDeployment.ConcurrentSyncs).To(Equal(5))
+			Expect(obj.Controllers.ControllerDeployment.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.Controllers.ControllerDeployment.ConcurrentSyncs).To(PointTo(Equal(5)))
 
 			Expect(obj.Controllers.ControllerRegistration).NotTo(BeNil())
-			Expect(obj.Controllers.ControllerRegistration.ConcurrentSyncs).To(Equal(5))
+			Expect(obj.Controllers.ControllerRegistration.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.Controllers.ControllerRegistration.ConcurrentSyncs).To(PointTo(Equal(5)))
 
 			Expect(obj.Controllers.ExposureClass).NotTo(BeNil())
-			Expect(obj.Controllers.ExposureClass.ConcurrentSyncs).To(Equal(5))
+			Expect(obj.Controllers.ExposureClass.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.Controllers.ExposureClass.ConcurrentSyncs).To(PointTo(Equal(5)))
 
 			Expect(obj.Controllers.Plant).NotTo(BeNil())
-			Expect(obj.Controllers.Plant.ConcurrentSyncs).To(Equal(5))
+			Expect(obj.Controllers.Plant.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.Controllers.Plant.ConcurrentSyncs).To(PointTo(Equal(5)))
 			Expect(obj.Controllers.Plant.SyncPeriod).To(Equal(metav1.Duration{Duration: 30 * time.Second}))
 
 			Expect(obj.Controllers.Project).NotTo(BeNil())
-			Expect(obj.Controllers.Project.ConcurrentSyncs).To(Equal(5))
+			Expect(obj.Controllers.Project.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.Controllers.Project.ConcurrentSyncs).To(PointTo(Equal(5)))
 			Expect(obj.Controllers.Project.MinimumLifetimeDays).To(PointTo(Equal(30)))
 			Expect(obj.Controllers.Project.StaleGracePeriodDays).To(PointTo(Equal(14)))
 			Expect(obj.Controllers.Project.StaleExpirationTimeDays).To(PointTo(Equal(90)))
@@ -73,30 +80,47 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.Project.Quotas).To(BeNil())
 
 			Expect(obj.Controllers.Quota).NotTo(BeNil())
-			Expect(obj.Controllers.Quota.ConcurrentSyncs).To(Equal(5))
+			Expect(obj.Controllers.Quota.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.Controllers.Quota.ConcurrentSyncs).To(PointTo(Equal(5)))
 
 			Expect(obj.Controllers.SecretBinding).NotTo(BeNil())
-			Expect(obj.Controllers.SecretBinding.ConcurrentSyncs).To(Equal(5))
+			Expect(obj.Controllers.SecretBinding.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.Controllers.SecretBinding.ConcurrentSyncs).To(PointTo(Equal(5)))
 			Expect(obj.Controllers.SecretBindingProvider).NotTo(BeNil())
-			Expect(obj.Controllers.SecretBindingProvider.ConcurrentSyncs).To(Equal(5))
+			Expect(obj.Controllers.SecretBindingProvider.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.Controllers.SecretBindingProvider.ConcurrentSyncs).To(PointTo(Equal(5)))
 
 			Expect(obj.Controllers.Seed).NotTo(BeNil())
-			Expect(obj.Controllers.Seed.ConcurrentSyncs).To(Equal(5))
+			Expect(obj.Controllers.Seed.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.Controllers.Seed.ConcurrentSyncs).To(PointTo(Equal(5)))
 			Expect(obj.Controllers.Seed.SyncPeriod).To(Equal(metav1.Duration{Duration: 30 * time.Second}))
 			Expect(obj.Controllers.Seed.MonitorPeriod).To(PointTo(Equal(metav1.Duration{Duration: 40 * time.Second})))
 			Expect(obj.Controllers.Seed.ShootMonitorPeriod).To(PointTo(Equal(metav1.Duration{Duration: 200 * time.Second})))
 
+			Expect(obj.Controllers.ShootMaintenance.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.Controllers.ShootMaintenance.ConcurrentSyncs).To(PointTo(Equal(5)))
+
+			Expect(obj.Controllers.ShootQuota.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.Controllers.ShootQuota.ConcurrentSyncs).To(PointTo(Equal(5)))
+
+			Expect(obj.Controllers.ShootHibernation.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.Controllers.ShootHibernation.ConcurrentSyncs).To(PointTo(Equal(5)))
+
 			Expect(obj.Controllers.ShootReference).NotTo(BeNil())
-			Expect(obj.Controllers.ShootReference.ConcurrentSyncs).To(Equal(5))
+			Expect(obj.Controllers.ShootReference.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.Controllers.ShootReference.ConcurrentSyncs).To(PointTo(Equal(5)))
 
 			Expect(obj.Controllers.ShootRetry).NotTo(BeNil())
-			Expect(obj.Controllers.ShootRetry.ConcurrentSyncs).To(Equal(5))
+			Expect(obj.Controllers.ShootRetry.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.Controllers.ShootRetry.ConcurrentSyncs).To(PointTo(Equal(5)))
 
 			Expect(obj.Controllers.ShootConditions).NotTo(BeNil())
-			Expect(obj.Controllers.ShootConditions.ConcurrentSyncs).To(Equal(5))
+			Expect(obj.Controllers.ShootConditions.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.Controllers.ShootConditions.ConcurrentSyncs).To(PointTo(Equal(5)))
 
 			Expect(obj.Controllers.ShootStatusLabel).NotTo(BeNil())
-			Expect(obj.Controllers.ShootStatusLabel.ConcurrentSyncs).To(Equal(5))
+			Expect(obj.Controllers.ShootStatusLabel.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.Controllers.ShootStatusLabel.ConcurrentSyncs).To(PointTo(Equal(5)))
 
 			Expect(obj.LogLevel).To(Equal(logger.InfoLevel))
 			Expect(obj.LogFormat).To(Equal(logger.FormatJSON))
@@ -176,6 +200,8 @@ var _ = Describe("Defaults", func() {
 			obj := &EventControllerConfiguration{}
 
 			SetDefaults_EventControllerConfiguration(obj)
+			Expect(obj.ConcurrentSyncs).NotTo(BeNil())
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
 			Expect(obj.TTLNonShootEvents).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
 		})
 	})
