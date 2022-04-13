@@ -24,6 +24,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -57,41 +58,10 @@ const (
 
 // AddWebhooks add extension's valdation webhook to manager
 func AddWebhooks(mgr manager.Manager) error {
-	if err := builder.WebhookManagedBy(mgr).WithValidator(&backupBucketValidator{}).For(&extensionsv1alpha1.BackupBucket{}).Complete(); err != nil {
-		return err
-	}
-	if err := builder.WebhookManagedBy(mgr).WithValidator(&backupEntryValidator{}).For(&extensionsv1alpha1.BackupEntry{}).Complete(); err != nil {
-		return err
-	}
-	if err := builder.WebhookManagedBy(mgr).WithValidator(&bastionValidator{}).For(&extensionsv1alpha1.Bastion{}).Complete(); err != nil {
-		return err
-	}
-	if err := builder.WebhookManagedBy(mgr).WithValidator(&containerRuntimeValidator{}).For(&extensionsv1alpha1.ContainerRuntime{}).Complete(); err != nil {
-		return err
-	}
-	if err := builder.WebhookManagedBy(mgr).WithValidator(&controlPlaneValidator{}).For(&extensionsv1alpha1.ControlPlane{}).Complete(); err != nil {
-		return err
-	}
-	if err := builder.WebhookManagedBy(mgr).WithValidator(&dnsRecordValidator{}).For(&extensionsv1alpha1.DNSRecord{}).Complete(); err != nil {
-		return err
-	}
-	if err := builder.WebhookManagedBy(mgr).WithValidator(&etcdValidator{}).For(&druidv1alpha1.Etcd{}).Complete(); err != nil {
-		return err
-	}
-	if err := builder.WebhookManagedBy(mgr).WithValidator(&extensionValidator{}).For(&extensionsv1alpha1.Extension{}).Complete(); err != nil {
-		return err
-	}
-	if err := builder.WebhookManagedBy(mgr).WithValidator(&infrastructureValidator{}).For(&extensionsv1alpha1.Infrastructure{}).Complete(); err != nil {
-		return err
-	}
-	if err := builder.WebhookManagedBy(mgr).WithValidator(&networkValidator{}).For(&extensionsv1alpha1.Network{}).Complete(); err != nil {
-		return err
-	}
-	if err := builder.WebhookManagedBy(mgr).WithValidator(&operatingSystemConfigValidator{}).For(&extensionsv1alpha1.OperatingSystemConfig{}).Complete(); err != nil {
-		return err
-	}
-	if err := builder.WebhookManagedBy(mgr).WithValidator(&workerValidator{}).For(&extensionsv1alpha1.Worker{}).Complete(); err != nil {
-		return err
+	for obj, validator := range validators {
+		if err := builder.WebhookManagedBy(mgr).WithValidator(validator).For(obj).Complete(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -110,6 +80,21 @@ var (
 	_ admission.CustomValidator = &networkValidator{}
 	_ admission.CustomValidator = &operatingSystemConfigValidator{}
 	_ admission.CustomValidator = &workerValidator{}
+
+	validators = map[client.Object]admission.CustomValidator{
+		&extensionsv1alpha1.BackupBucket{}:          &backupBucketValidator{},
+		&extensionsv1alpha1.BackupEntry{}:           &backupEntryValidator{},
+		&extensionsv1alpha1.Bastion{}:               &bastionValidator{},
+		&extensionsv1alpha1.ContainerRuntime{}:      &containerRuntimeValidator{},
+		&extensionsv1alpha1.ControlPlane{}:          &controlPlaneValidator{},
+		&extensionsv1alpha1.DNSRecord{}:             &dnsRecordValidator{},
+		&druidv1alpha1.Etcd{}:                       &etcdValidator{},
+		&extensionsv1alpha1.Extension{}:             &extensionValidator{},
+		&extensionsv1alpha1.Infrastructure{}:        &infrastructureValidator{},
+		&extensionsv1alpha1.Network{}:               &networkValidator{},
+		&extensionsv1alpha1.OperatingSystemConfig{}: &operatingSystemConfigValidator{},
+		&extensionsv1alpha1.Worker{}:                &workerValidator{},
+	}
 )
 
 type (
