@@ -82,7 +82,8 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 }
 
 func overwriteMaxTokenExpiration(shoot *core.Shoot) {
-	if shoot.Spec.Kubernetes.KubeAPIServer != nil &&
+	if shoot.DeletionTimestamp == nil &&
+		shoot.Spec.Kubernetes.KubeAPIServer != nil &&
 		shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig != nil &&
 		shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration != nil {
 
