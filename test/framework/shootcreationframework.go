@@ -74,7 +74,8 @@ type ShootCreationFramework struct {
 
 	Shoot *gardencorev1beta1.Shoot
 
-	shootFramework *ShootFramework
+	// ShootFramework is initialized once the shoot has been created successfully
+	ShootFramework *ShootFramework
 }
 
 // NewShootCreationFramework creates a new simple Shoot creation framework
@@ -389,7 +390,8 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 	if err != nil {
 		return err
 	}
-	f.shootFramework = shootFramework
+	f.ShootFramework = shootFramework
+	f.Shoot = shootFramework.Shoot
 
 	if err := DownloadKubeconfig(ctx, shootFramework.GardenClient, f.ProjectNamespace, shootFramework.ShootKubeconfigSecretName(), f.Config.shootKubeconfigPath); err != nil {
 		f.Logger.Errorf("Cannot download shoot kubeconfig: %s", err.Error())
@@ -411,7 +413,7 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 // Verify asserts that the shoot creation was successful.
 func (f *ShootCreationFramework) Verify() {
 	var (
-		expectedTechnicalID           = fmt.Sprintf("shoot--%s--%s", f.shootFramework.Project.Name, f.Shoot.Name)
+		expectedTechnicalID           = fmt.Sprintf("shoot--%s--%s", f.ShootFramework.Project.Name, f.Shoot.Name)
 		expectedClusterIdentityPrefix = fmt.Sprintf("%s-%s", f.Shoot.Status.TechnicalID, f.Shoot.Status.UID)
 	)
 

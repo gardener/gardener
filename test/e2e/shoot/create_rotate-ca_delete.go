@@ -16,19 +16,20 @@ package shoot
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot"), func() {
@@ -53,6 +54,13 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 
 			verifyCABundleInKubeconfigSecret(ctx, g, f.GardenClient.Client(), client.ObjectKeyFromObject(f.Shoot), oldCACert)
 		}).Should(Succeed(), "old CA cert should be synced to garden")
+
+		By("Verify secrets of provider-local before rotation")
+		seedClient := f.ShootFramework.SeedClient.Client()
+		var providerLocalSecretsBefore secretConfigNamesToSecrets
+		Eventually(func(g Gomega) {
+			providerLocalSecretsBefore = verifyProviderLocalSecretsBefore(ctx, g, seedClient, f.Shoot.Status.TechnicalID)
+		}).Should(Succeed())
 
 		By("Start CA rotation")
 		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
@@ -90,6 +98,12 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 
 			verifyCABundleInKubeconfigSecret(ctx, g, f.GardenClient.Client(), client.ObjectKeyFromObject(f.Shoot), caBundle)
 		}).Should(Succeed(), "CA bundle should be synced to garden")
+
+		By("Verify secrets of provider-local after preparation")
+		var providerLocalSecretsPrepared secretConfigNamesToSecrets
+		Eventually(func(g Gomega) {
+			providerLocalSecretsPrepared = verifyProviderLocalSecretsPrepared(ctx, g, seedClient, f.Shoot.Status.TechnicalID, providerLocalSecretsBefore)
+		}).Should(Succeed())
 
 		By("Complete CA rotation")
 		ctx, cancel = context.WithTimeout(parentCtx, 10*time.Minute)
@@ -133,6 +147,11 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 			verifyCABundleInKubeconfigSecret(ctx, g, f.GardenClient.Client(), client.ObjectKeyFromObject(f.Shoot), newCACert)
 		}).Should(Succeed(), "new CA cert should be synced to garden")
 
+		By("Verify secrets of provider-local after completion")
+		Eventually(func(g Gomega) {
+			verifyProviderLocalSecretsCompleted(ctx, g, seedClient, f.Shoot.Status.TechnicalID, providerLocalSecretsPrepared)
+		}).Should(Succeed())
+
 		By("Delete Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
@@ -145,4 +164,84 @@ func verifyCABundleInKubeconfigSecret(ctx context.Context, g Gomega, c client.Re
 	shootKey.Name = gutil.ComputeShootProjectSecretName(shootKey.Name, gutil.ShootProjectSecretSuffixCACluster)
 	g.Expect(c.Get(ctx, shootKey, secret)).To(Succeed())
 	g.Expect(secret.Data).To(HaveKeyWithValue("ca.crt", expectedBundle))
+}
+
+type secretConfigNamesToSecrets map[string][]corev1.Secret
+
+func groupByName(allSecrets []corev1.Secret) secretConfigNamesToSecrets {
+	grouped := make(secretConfigNamesToSecrets)
+	for _, secret := range allSecrets {
+		grouped[secret.Labels["name"]] = append(grouped[secret.Labels["name"]], secret)
+	}
+
+	// sort by age
+	for _, secrets := range grouped {
+		sort.Slice(secrets, func(i, j int) bool {
+			return secrets[i].CreationTimestamp.Before(&secrets[j].CreationTimestamp)
+		})
+	}
+	return grouped
+}
+
+var managedByProviderLocalSecretsManager = client.MatchingLabels{
+	"managed-by":       "secrets-manager",
+	"manager-identity": "provider-local-controlplane",
+}
+
+const (
+	caProviderLocalControlPlane       = "ca-provider-local-controlplane"
+	caProviderLocalControlPlaneBundle = "ca-provider-local-controlplane-bundle"
+	providerLocalDummyServer          = "provider-local-dummy-server"
+	providerLocalDummyAuth            = "provider-local-dummy-auth"
+)
+
+func verifyProviderLocalSecretsBefore(ctx context.Context, g Gomega, c client.Reader, namespace string) secretConfigNamesToSecrets {
+	secretList := &corev1.SecretList{}
+	g.Expect(c.List(ctx, secretList, client.InNamespace(namespace), managedByProviderLocalSecretsManager)).To(Succeed())
+
+	grouped := groupByName(secretList.Items)
+	g.Expect(grouped).To(And(
+		HaveKeyWithValue(caProviderLocalControlPlane, HaveLen(1)),
+		HaveKeyWithValue(caProviderLocalControlPlaneBundle, HaveLen(1)),
+		HaveKeyWithValue(providerLocalDummyServer, HaveLen(1)),
+		HaveKeyWithValue(providerLocalDummyAuth, HaveLen(1)),
+	), "all secrets should get created, but not rotated yet")
+
+	return grouped
+}
+
+func verifyProviderLocalSecretsPrepared(ctx context.Context, g Gomega, c client.Reader, namespace string, secretsBefore secretConfigNamesToSecrets) secretConfigNamesToSecrets {
+	secretList := &corev1.SecretList{}
+	g.Expect(c.List(ctx, secretList, client.InNamespace(namespace), managedByProviderLocalSecretsManager)).To(Succeed())
+
+	grouped := groupByName(secretList.Items)
+	g.Expect(grouped).To(And(
+		HaveKeyWithValue(caProviderLocalControlPlane, HaveLen(2)),
+		HaveKeyWithValue(caProviderLocalControlPlaneBundle, HaveLen(1)),
+		HaveKeyWithValue(providerLocalDummyServer, HaveLen(1)),
+		HaveKeyWithValue(providerLocalDummyAuth, HaveLen(1)),
+	), "CA should get rotated, but old CA and server secrets are kept")
+
+	g.Expect(grouped).To(HaveKeyWithValue(caProviderLocalControlPlane, ContainElement(secretsBefore[caProviderLocalControlPlane][0])), "old CA secret should be kept")
+	g.Expect(grouped).To(HaveKeyWithValue(caProviderLocalControlPlaneBundle, Not(ContainElement(secretsBefore[caProviderLocalControlPlaneBundle][0]))), "CA bundle should have changed")
+	g.Expect(grouped).To(HaveKeyWithValue(providerLocalDummyServer, ContainElement(secretsBefore[providerLocalDummyServer][0])), "server cert should be kept (signed with old CA)")
+
+	return grouped
+}
+
+func verifyProviderLocalSecretsCompleted(ctx context.Context, g Gomega, c client.Reader, namespace string, secretsPrepared secretConfigNamesToSecrets) {
+	secretList := &corev1.SecretList{}
+	g.Expect(c.List(ctx, secretList, client.InNamespace(namespace), managedByProviderLocalSecretsManager)).To(Succeed())
+
+	grouped := groupByName(secretList.Items)
+	g.Expect(grouped).To(And(
+		HaveKeyWithValue(caProviderLocalControlPlane, HaveLen(1)),
+		HaveKeyWithValue(caProviderLocalControlPlaneBundle, HaveLen(1)),
+		HaveKeyWithValue(providerLocalDummyServer, HaveLen(1)),
+		HaveKeyWithValue(providerLocalDummyAuth, HaveLen(1)),
+	), "old CA secret should get cleaned up")
+
+	g.Expect(grouped).To(HaveKeyWithValue(caProviderLocalControlPlane, ContainElement(secretsPrepared[caProviderLocalControlPlane][1])), "new CA secret should be kept")
+	g.Expect(grouped).To(HaveKeyWithValue(caProviderLocalControlPlaneBundle, Not(ContainElement(secretsPrepared[caProviderLocalControlPlaneBundle][0]))), "CA bundle should have changed")
+	g.Expect(grouped).To(HaveKeyWithValue(providerLocalDummyServer, Not(ContainElement(secretsPrepared[providerLocalDummyServer][0]))), "server cert should have changed (signed with new CA)")
 }
