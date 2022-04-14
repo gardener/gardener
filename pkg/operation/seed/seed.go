@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -247,13 +248,27 @@ func RunReconcileSeedFlow(
 	}
 
 	// Deploy dedicated CA certificate for seed cluster.
-	validity := 30 * 24 * time.Hour
+	var (
+		validity        = 30 * 24 * time.Hour
+		generateOptions = []secretsmanager.GenerateOption{secretsmanager.Rotate(secretsmanager.KeepOld)}
+	)
+
+	caBundleIssuedAtTime, err := getIssuedAtTimeForCABundleSecret(ctx, seedClient, v1beta1constants.GardenNamespace)
+	if err != nil {
+		return err
+	}
+
+	// Forget about the old CA in case the last rotation was 24h+ ago.
+	if caBundleIssuedAtTime != nil && time.Now().UTC().Sub(*caBundleIssuedAtTime) >= 24*time.Hour {
+		generateOptions = append(generateOptions, secretsmanager.IgnoreOldSecrets())
+	}
+
 	if _, err := secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
 		Name:       v1beta1constants.SecretNameCASeed,
 		CommonName: "kubernetes",
 		CertType:   secretutils.CACert,
 		Validity:   &validity,
-	}, secretsmanager.Rotate(secretsmanager.KeepOld)); err != nil {
+	}, generateOptions...); err != nil {
 		return err
 	}
 
@@ -1570,4 +1585,27 @@ func ResizeOrDeleteLokiDataVolumeIfStorageNotTheSame(ctx context.Context, k8sCli
 
 	lokiSts := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.StatefulSetNameLoki, Namespace: v1beta1constants.GardenNamespace}}
 	return client.IgnoreNotFound(k8sClient.Delete(ctx, lokiSts))
+}
+
+func getIssuedAtTimeForCABundleSecret(ctx context.Context, seedClient client.Client, namespace string) (*time.Time, error) {
+	secretList := &corev1.SecretList{}
+	if err := seedClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+		secretsmanager.LabelKeyBundleFor:       v1beta1constants.SecretNameCASeed,
+		secretsmanager.LabelKeyManagedBy:       secretsmanager.LabelValueSecretsManager,
+		secretsmanager.LabelKeyManagerIdentity: v1beta1constants.SecretManagerIdentityGardenlet,
+	}); err != nil {
+		return nil, err
+	}
+
+	if len(secretList.Items) != 1 {
+		return nil, nil
+	}
+
+	issuedAtUnix, err := strconv.ParseInt(secretList.Items[0].Labels[secretsmanager.LabelKeyIssuedAtTime], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	issuedAtTime := time.Unix(issuedAtUnix, 0).UTC()
+	return &issuedAtTime, nil
 }
