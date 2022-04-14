@@ -20,8 +20,9 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/Masterminds/semver"
@@ -44,9 +45,12 @@ var _ = Describe("Bootstrap", func() {
 	var (
 		ctx   context.Context
 		c     client.Client
+		sm    secretsmanager.Interface
 		sched component.DeployWaiter
 		codec serializer.CodecFactory
 		image *imagevector.Image
+
+		namespace = "foo"
 	)
 
 	BeforeEach(func() {
@@ -62,17 +66,18 @@ var _ = Describe("Bootstrap", func() {
 
 		codec = serializer.NewCodecFactory(s, serializer.EnableStrict)
 		c = fake.NewClientBuilder().WithScheme(s).Build()
+		sm = fakesecretsmanager.New(c, namespace)
 	})
 
 	Context("fails", func() {
 		var err error
 
 		It("when namespace is empty", func() {
-			sched, err = Bootstrap(c, "", image, &semver.Version{})
+			sched, err = Bootstrap(c, sm, "", image, &semver.Version{})
 		})
 
 		It("when seed version is nil", func() {
-			sched, err = Bootstrap(c, "foo", image, nil)
+			sched, err = Bootstrap(c, sm, namespace, image, nil)
 		})
 
 		AfterEach(func() {
@@ -109,7 +114,7 @@ var _ = Describe("Bootstrap", func() {
 			})
 
 			It("for version with unsupported version", func() {
-				sched, err = Bootstrap(c, "foo", image, &semver.Version{})
+				sched, err = Bootstrap(c, sm, "foo", image, &semver.Version{})
 			})
 
 			It("for supported version 0.18.1, but feature gate disabled", func() {
@@ -117,7 +122,7 @@ var _ = Describe("Bootstrap", func() {
 				version, err = semver.NewVersion("1.18.1")
 				Expect(err).ToNot(HaveOccurred())
 
-				sched, err = Bootstrap(c, "foo", image, version)
+				sched, err = Bootstrap(c, sm, "foo", image, version)
 			})
 		})
 
@@ -144,13 +149,12 @@ var _ = Describe("Bootstrap", func() {
 									Name:      "gardener-seed-admission-controller",
 									Path:      pointer.String("/webhooks/default-pod-scheduler-name/gardener-shoot-controlplane-scheduler"),
 								},
-								CABundle: []byte(seedadmissioncontroller.TLSCACert),
 							},
 						}},
 					}
 				)
 
-				sched, err = Bootstrap(c, "foo", image, version)
+				sched, err = Bootstrap(c, sm, "foo", image, version)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(sched.Deploy(ctx)).To(Succeed(), "deploy is successful")

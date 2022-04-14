@@ -75,13 +75,13 @@ func defaultEtcdDruid(
 	return etcd.NewBootstrapper(c, v1beta1constants.GardenNamespace, conf, image.String(), imageVectorOverwrite), nil
 }
 
-func defaultKubeScheduler(c client.Client, imageVector imagevector.ImageVector, kubernetesVersion *semver.Version) (component.DeployWaiter, error) {
+func defaultKubeScheduler(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, kubernetesVersion *semver.Version) (component.DeployWaiter, error) {
 	image, err := imageVector.FindImage(images.ImageNameKubeScheduler, imagevector.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
 		return nil, err
 	}
 
-	scheduler, err := gardenerkubescheduler.Bootstrap(c, v1beta1constants.GardenNamespace, image, kubernetesVersion)
+	scheduler, err := gardenerkubescheduler.Bootstrap(c, secretsManager, v1beta1constants.GardenNamespace, image, kubernetesVersion)
 	if err != nil {
 		return nil, err
 	}

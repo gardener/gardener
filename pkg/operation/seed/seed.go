@@ -1010,7 +1010,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	kubeScheduler, err := defaultKubeScheduler(seedClient, imageVector, kubernetesVersion)
+	kubeScheduler, err := defaultKubeScheduler(seedClient, imageVector, secretsManager, kubernetesVersion)
 	if err != nil {
 		return err
 	}
@@ -1128,7 +1128,7 @@ func RunDeleteSeedFlow(
 		vpnAuthzServer  = vpnauthzserver.New(seedClient, v1beta1constants.GardenNamespace, "", 1)
 	)
 
-	scheduler, err := gardenerkubescheduler.Bootstrap(seedClient, v1beta1constants.GardenNamespace, nil, kubernetesVersion)
+	scheduler, err := gardenerkubescheduler.Bootstrap(seedClient, nil, v1beta1constants.GardenNamespace, nil, kubernetesVersion)
 	if err != nil {
 		return err
 	}
