@@ -111,8 +111,13 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 
 		Eventually(func(g Gomega) bool {
 			g.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(f.Shoot), f.Shoot)).To(Succeed())
+
+			// After completing CA rotation, it might take some time until all conditions are healthy again.
+			// Hence, we cannot expect the completion time to be relatively close to time.Now(). Instead we only expect, that
+			// the completion time is after the last initiation time.
+			caRotation := f.Shoot.Status.Credentials.Rotation.CertificateAuthorities
 			return helper.GetShootCARotationPhase(f.Shoot.Status.Credentials) == gardencorev1beta1.RotationCompleted &&
-				time.Now().UTC().Sub(f.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastCompletionTime.Time.UTC()) <= time.Minute
+				caRotation.LastCompletionTime.Time.UTC().After(caRotation.LastInitiationTime.Time.UTC())
 		}).Should(BeTrue())
 
 		By("Verify new CA secret")
