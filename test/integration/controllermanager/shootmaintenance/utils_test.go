@@ -43,7 +43,7 @@ func waitForShootToBeMaintained(shoot *gardencorev1beta1.Shoot) {
 	By("waiting for shoot to be maintained")
 	Eventually(func(g Gomega) bool {
 		g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
-		return metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.GardenerOperation)
+		return shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.ShootOperationMaintain
 	}).Should(BeFalse())
 }
 
