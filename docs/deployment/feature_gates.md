@@ -30,7 +30,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | SeedKubeScheduler                            | `false` | `Alpha` | `1.15` |        |
 | ReversedVPN                                  | `false` | `Alpha` | `1.22` | `1.41` |
 | ReversedVPN                                  | `true`  | `Beta`  | `1.42` |        |
-| RotateSSHKeypairOnMaintenance                | `false` | `Alpha` | `1.28` |        |
+| RotateSSHKeypairOnMaintenance                | `false` | `Alpha` | `1.28` | `1.44` |
+| RotateSSHKeypairOnMaintenance                | `true`  | `Beta`  | `1.45` |        |
 | WorkerPoolKubernetesVersion                  | `false` | `Alpha` | `1.35` |        |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` |        |
 | SecretBindingProviderValidation              | `false` | `Alpha` | `1.38` |        |
