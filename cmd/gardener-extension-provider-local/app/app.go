@@ -28,6 +28,9 @@ import (
 	webhookcmd "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	localinstall "github.com/gardener/gardener/pkg/provider-local/apis/local/install"
+	localbackupbucket "github.com/gardener/gardener/pkg/provider-local/controller/backupbucket"
+	localbackupentry "github.com/gardener/gardener/pkg/provider-local/controller/backupentry"
+	"github.com/gardener/gardener/pkg/provider-local/controller/backupoptions"
 	localcontrolplane "github.com/gardener/gardener/pkg/provider-local/controller/controlplane"
 	localdnsprovider "github.com/gardener/gardener/pkg/provider-local/controller/dnsprovider"
 	localdnsrecord "github.com/gardener/gardener/pkg/provider-local/controller/dnsrecord"
@@ -108,6 +111,12 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			APIServerSNIEnabled:     true,
 		}
 
+		// options for the local backupbucket controller
+		localBackupBucketOptions = &backupoptions.ControllerOptions{
+			BackupBucketPath:   backupoptions.DefaultBackupPath,
+			ContainerMountPath: backupoptions.DefaultContainerMountPath,
+		}
+
 		// options for the node controller
 		nodeCtrlOpts = &localnode.ControllerOptions{
 			MaxConcurrentReconciles: 1,
@@ -152,6 +161,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			controllercmd.PrefixOption("infrastructure-", infraCtrlOpts),
 			controllercmd.PrefixOption("worker-", &workerCtrlOptsUnprefixed),
 			controllercmd.PrefixOption("service-", serviceCtrlOpts),
+			controllercmd.PrefixOption("backupbucket-", localBackupBucketOptions),
 			controllercmd.PrefixOption("node-", nodeCtrlOpts),
 			controllercmd.PrefixOption("operatingsystemconfig-", operatingSystemConfigCtrlOpts),
 			controllercmd.PrefixOption("healthcheck-", healthCheckCtrlOpts),
@@ -220,6 +230,8 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			serviceCtrlOpts.Completed().Apply(&localservice.DefaultAddOptions)
 			nodeCtrlOpts.Completed().Apply(&localnode.DefaultAddOptions)
 			workerCtrlOpts.Completed().Apply(&localworker.DefaultAddOptions.Controller)
+			localBackupBucketOptions.Completed().Apply(&localbackupbucket.DefaultAddOptions)
+			localBackupBucketOptions.Completed().Apply(&localbackupentry.DefaultAddOptions)
 
 			reconcileOpts.Completed().Apply(&localcontrolplane.DefaultAddOptions.IgnoreOperationAnnotation)
 			reconcileOpts.Completed().Apply(&localdnsrecord.DefaultAddOptions.IgnoreOperationAnnotation)

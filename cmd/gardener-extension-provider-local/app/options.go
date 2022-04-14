@@ -25,6 +25,8 @@ import (
 	webhookcmd "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
 	extensioncontrolplanewebhook "github.com/gardener/gardener/extensions/pkg/webhook/controlplane"
 	extensionshootwebhook "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
+	backupbucketcontroller "github.com/gardener/gardener/pkg/provider-local/controller/backupbucket"
+	backupentrycontroller "github.com/gardener/gardener/pkg/provider-local/controller/backupentry"
 	controlplanecontroller "github.com/gardener/gardener/pkg/provider-local/controller/controlplane"
 	dnsprovidercontroller "github.com/gardener/gardener/pkg/provider-local/controller/dnsprovider"
 	dnsrecordcontroller "github.com/gardener/gardener/pkg/provider-local/controller/dnsrecord"
@@ -44,6 +46,8 @@ import (
 // ControllerSwitchOptions are the controllercmd.SwitchOptions for the provider controllers.
 func ControllerSwitchOptions() *controllercmd.SwitchOptions {
 	return controllercmd.NewSwitchOptions(
+		controllercmd.Switch(backupbucketcontroller.ControllerName, backupbucketcontroller.AddToManager),
+		controllercmd.Switch(backupentrycontroller.ControllerName, backupentrycontroller.AddToManager),
 		controllercmd.Switch(extensionscontrolplanecontroller.ControllerName, controlplanecontroller.AddToManager),
 		controllercmd.Switch(dnsprovidercontroller.ControllerName, dnsprovidercontroller.AddToManager),
 		controllercmd.Switch(extensionsdnsrecordcontroller.ControllerName, dnsrecordcontroller.AddToManager),
