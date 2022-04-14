@@ -128,7 +128,7 @@ func (v *vpa) Deploy(ctx context.Context) error {
 		DNSNames:                    kutil.DNSNamesForService(admissionControllerServiceName, v.namespace),
 		CertType:                    secretutils.ServerCert,
 		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(v.values.SecretNameServerCA), secretsmanager.Rotate(secretsmanager.InPlace))
+	}, secretsmanager.SignedByCA(v.values.SecretNameServerCA, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return err
 	}
