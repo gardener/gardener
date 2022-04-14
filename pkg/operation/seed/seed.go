@@ -1006,7 +1006,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	gardenerSeedAdmissionController, err := defaultGardenerSeedAdmissionController(seedClient, imageVector)
+	gardenerSeedAdmissionController, err := defaultGardenerSeedAdmissionController(seedClient, imageVector, secretsManager)
 	if err != nil {
 		return err
 	}
@@ -1116,7 +1116,7 @@ func RunDeleteSeedFlow(
 		dnsOwner        = getManagedIngressDNSOwner(seedClient, *seed.GetInfo().Status.ClusterIdentity)
 		dnsRecord       = getManagedIngressDNSRecord(seedClient, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), "", log)
 		autoscaler      = clusterautoscaler.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace)
-		gsac            = seedadmissioncontroller.New(seedClient, v1beta1constants.GardenNamespace, "")
+		gsac            = seedadmissioncontroller.New(seedClient, v1beta1constants.GardenNamespace, nil, "")
 		resourceManager = resourcemanager.New(seedClient, v1beta1constants.GardenNamespace, nil, "", resourcemanager.Values{})
 		nginxIngress    = nginxingress.New(seedClient, v1beta1constants.GardenNamespace, nginxingress.Values{})
 		etcdDruid       = etcd.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, conf, "", nil)

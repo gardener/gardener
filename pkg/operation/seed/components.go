@@ -89,7 +89,7 @@ func defaultKubeScheduler(c client.Client, imageVector imagevector.ImageVector, 
 	return scheduler, nil
 }
 
-func defaultGardenerSeedAdmissionController(c client.Client, imageVector imagevector.ImageVector) (component.DeployWaiter, error) {
+func defaultGardenerSeedAdmissionController(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	image, err := imageVector.FindImage(images.ImageNameGardenerSeedAdmissionController)
 	if err != nil {
 		return nil, err
@@ -101,7 +101,7 @@ func defaultGardenerSeedAdmissionController(c client.Client, imageVector imageve
 	}
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
-	return seedadmissioncontroller.New(c, v1beta1constants.GardenNamespace, image.String()), nil
+	return seedadmissioncontroller.New(c, v1beta1constants.GardenNamespace, secretsManager, image.String()), nil
 }
 
 func defaultGardenerResourceManager(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {

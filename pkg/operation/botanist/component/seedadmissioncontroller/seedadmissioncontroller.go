@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -69,18 +70,20 @@ const (
 )
 
 // New creates a new instance of DeployWaiter for the gardener-seed-admission-controller.
-func New(c client.Client, namespace string, image string) component.DeployWaiter {
+func New(c client.Client, namespace string, secretsManager secretsmanager.Interface, image string) component.DeployWaiter {
 	return &gardenerSeedAdmissionController{
-		client:    c,
-		namespace: namespace,
-		image:     image,
+		client:         c,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		image:          image,
 	}
 }
 
 type gardenerSeedAdmissionController struct {
-	client    client.Client
-	namespace string
-	image     string
+	client         client.Client
+	namespace      string
+	secretsManager secretsmanager.Interface
+	image          string
 }
 
 func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
