@@ -96,12 +96,14 @@ spec:
         resources:
 {{ toYaml .Values.resources | nindent 10 }}
 {{- end }}
-        {{- if .Values.imageVectorOverwrite }}
         volumeMounts:
+        {{- if .Values.imageVectorOverwrite }}
         - name: imagevector-overwrite
           mountPath: /charts_overwrite/
           readOnly: true
         {{- end }}
+        - name: backup-path
+          mountPath: {{ .Values.controllers.backupbucket.localDir }}
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -112,10 +114,14 @@ spec:
                 values:
                 - {{ include "labels.app.value" . }}
             topologyKey: "kubernetes.io/hostname"
-      {{- if .Values.imageVectorOverwrite }}
       volumes:
+      {{- if .Values.imageVectorOverwrite }}
       - name: imagevector-overwrite
         configMap:
           name: {{ include "name" . }}-imagevector-overwrite
           defaultMode: 420
       {{- end }}
+      - name: backup-path
+        hostPath:
+          path: {{ .Values.controllers.backupbucket.containerMountPath }}
+          type: Directory

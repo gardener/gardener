@@ -12,6 +12,8 @@ nodes:
   - hostPath: example/gardener-local/controlplane
     containerPath: /etc/gardener/controlplane
     readOnly: true
+  - hostPath: dev/local-backupbuckets
+    containerPath: /etc/gardener/local-backupbuckets
   kubeadmConfigPatches:
   - |
     kind: ClusterConfiguration
