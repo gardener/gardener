@@ -9,7 +9,6 @@ webhooks:
   clientConfig:
     caBundle: {{ .CABundle }}
     service:
-    service:
       name: unreal-service
       namespace: unreal-namespace
   failurePolicy: Fail
