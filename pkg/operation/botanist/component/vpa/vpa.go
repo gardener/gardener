@@ -92,6 +92,9 @@ type Values struct {
 	// resources (like Deployment, Service, etc.) are being deployed directly (with the client). All other application-
 	// related resources (like RBAC roles, CRD, etc.) are deployed as part of a ManagedResource.
 	ClusterType clusterType
+	// Enabled specifies if VPA is enabled. If VPA is not enabled and the cluster type is "seed", only vpa-exporter
+	// is deployed.
+	Enabled bool
 	// SecretNameServerCA is the name of the server CA secret.
 	SecretNameServerCA string
 
@@ -134,12 +137,15 @@ func (v *vpa) Deploy(ctx context.Context) error {
 	}
 	v.serverSecretName = serverSecret.Name
 
-	allResources := mergeResourceConfigs(
-		v.admissionControllerResourceConfigs(),
-		v.recommenderResourceConfigs(),
-		v.updaterResourceConfigs(),
-		v.generalResourceConfigs(),
-	)
+	var allResources resourceConfigs
+	if v.values.Enabled {
+		allResources = mergeResourceConfigs(
+			v.admissionControllerResourceConfigs(),
+			v.recommenderResourceConfigs(),
+			v.updaterResourceConfigs(),
+			v.generalResourceConfigs(),
+		)
+	}
 
 	if v.values.ClusterType == ClusterTypeSeed {
 		allResources = mergeResourceConfigs(allResources, v.exporterResourceConfigs())

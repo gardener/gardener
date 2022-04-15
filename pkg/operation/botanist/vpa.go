@@ -81,6 +81,7 @@ func (b *Botanist) DefaultVerticalPodAutoscaler() (component.DeployWaiter, error
 		b.SecretsManager,
 		vpa.Values{
 			ClusterType:         vpa.ClusterTypeShoot,
+			Enabled:             true,
 			SecretNameServerCA:  v1beta1constants.SecretNameCACluster,
 			AdmissionController: valuesAdmissionController,
 			Exporter:            valuesExporter,
