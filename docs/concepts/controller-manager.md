@@ -89,7 +89,7 @@ The component configuration of the Gardener Controller Manager offers to configu
 
 Since the other two reconcilers are unable to actively monitor the relevant objects that are used in a `Project` (`Shoot`, `Plant`, etc.), there could be a situation where the user creates and deletes objects in a short period of time. In that case the `Stale Project Reconciler` could not see that there was any activity on that project and it will still mark it as a `Stale`, even though it is actively used.
 
-The `Project Activity Reconciler` is implemented to take care of such cases. An event handler will notify the reconciler for any acitivity (Currently only for `Shoots`) and then it will update the `status.lastActivityTimestamp`. This update will also trigger the `Stale Project Reconciler`.
+The `Project Activity Reconciler` is implemented to take care of such cases. An event handler will notify the reconciler for any acitivity and then it will update the `status.lastActivityTimestamp`. This update will also trigger the `Stale Project Reconciler`.
 
 ### Event Controller
 
