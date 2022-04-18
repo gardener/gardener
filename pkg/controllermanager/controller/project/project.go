@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -45,16 +46,18 @@ type Controller struct {
 	gardenClient client.Client
 	log          logr.Logger
 
-	projectReconciler              reconcile.Reconciler
-	projectStaleReconciler         reconcile.Reconciler
-	projectShootActivityReconciler reconcile.Reconciler
-	hasSyncedFuncs                 []cache.InformerSynced
+	projectReconciler               reconcile.Reconciler
+	projectStaleReconciler          reconcile.Reconciler
+	projectShootActivityReconciler  reconcile.Reconciler
+	projectSecretActivityReconciler reconcile.Reconciler
+	hasSyncedFuncs                  []cache.InformerSynced
 
-	projectQueue              workqueue.RateLimitingInterface
-	projectStaleQueue         workqueue.RateLimitingInterface
-	projectShootActivityQueue workqueue.RateLimitingInterface
-	workerCh                  chan int
-	numberOfRunningWorkers    int
+	projectQueue               workqueue.RateLimitingInterface
+	projectStaleQueue          workqueue.RateLimitingInterface
+	projectShootActivityQueue  workqueue.RateLimitingInterface
+	projectSecretActivityQueue workqueue.RateLimitingInterface
+	workerCh                   chan int
+	numberOfRunningWorkers     int
 }
 
 // NewProjectController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
@@ -89,17 +92,23 @@ func NewProjectController(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
 	}
+	secretInformer, err := gardenClient.Cache().GetInformer(ctx, &corev1.Secret{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Secret Informer: %w", err)
+	}
 
 	projectController := &Controller{
-		gardenClient:                   gardenClient.Client(),
-		log:                            log,
-		projectReconciler:              NewProjectReconciler(config.Controllers.Project, gardenClient, recorder),
-		projectStaleReconciler:         NewProjectStaleReconciler(config.Controllers.Project, gardenClient.Client()),
-		projectShootActivityReconciler: NewShootActivityReconciler(gardenClient.Client()),
-		projectQueue:                   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
-		projectStaleQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
-		projectShootActivityQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Shoot Activity"),
-		workerCh:                       make(chan int),
+		gardenClient:                    gardenClient.Client(),
+		log:                             log,
+		projectReconciler:               NewProjectReconciler(config.Controllers.Project, gardenClient, recorder),
+		projectStaleReconciler:          NewProjectStaleReconciler(config.Controllers.Project, gardenClient.Client()),
+		projectShootActivityReconciler:  NewShootActivityReconciler(gardenClient.Client()),
+		projectSecretActivityReconciler: NewSecretActivityReconciler(gardenClient.Client()),
+		projectQueue:                    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
+		projectStaleQueue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
+		projectShootActivityQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Shoot Activity"),
+		projectSecretActivityQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Secret Activity"),
+		workerCh:                        make(chan int),
 	}
 
 	projectInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -117,10 +126,15 @@ func NewProjectController(
 		AddFunc: projectController.updateShootActivity,
 	})
 
+	secretInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		UpdateFunc: projectController.updateSecretActivity,
+	})
+
 	projectController.hasSyncedFuncs = append(projectController.hasSyncedFuncs,
 		projectInformer.HasSynced,
 		roleBindingInformer.HasSynced,
 		shootInformer.HasSynced,
+		secretInformer.HasSynced,
 	)
 
 	return projectController, nil
@@ -148,6 +162,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		controllerutils.CreateWorker(ctx, c.projectQueue, "Project", c.projectReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(projectReconcilerName)))
 		controllerutils.CreateWorker(ctx, c.projectStaleQueue, "Project Stale", c.projectStaleReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(staleReconcilerName)))
 		controllerutils.CreateWorker(ctx, c.projectShootActivityQueue, "Project Shoot Activity", c.projectShootActivityReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(shootActivityReconcilerName)))
+		controllerutils.CreateWorker(ctx, c.projectSecretActivityQueue, "Project Secret Activity", c.projectSecretActivityReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(secretActivityReconcilerName)))
 	}
 
 	// Shutdown handling
@@ -155,13 +170,18 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	c.projectQueue.ShutDown()
 	c.projectStaleQueue.ShutDown()
 	c.projectShootActivityQueue.ShutDown()
+	c.projectSecretActivityQueue.ShutDown()
 
 	for {
-		if c.projectQueue.Len() == 0 && c.projectStaleQueue.Len() == 0 && c.projectShootActivityQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
+		if c.projectQueue.Len() == 0 && c.projectStaleQueue.Len() == 0 && c.projectShootActivityQueue.Len() == 0 && c.projectSecretActivityQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running Project worker and no items left in the queues. Terminating Project controller")
 			break
 		}
-		c.log.V(1).Info("Waiting for Project workers to finish", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.projectQueue.Len()+c.projectStaleQueue.Len()+c.projectShootActivityQueue.Len())
+		c.log.V(1).Info(
+			"Waiting for Project workers to finish",
+			"numberOfRunningWorkers", c.numberOfRunningWorkers,
+			"queueLength", c.projectQueue.Len()+c.projectStaleQueue.Len()+c.projectShootActivityQueue.Len()+c.projectSecretActivityQueue.Len(),
+		)
 		time.Sleep(5 * time.Second)
 	}
 
