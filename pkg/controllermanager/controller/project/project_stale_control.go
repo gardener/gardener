@@ -173,7 +173,13 @@ func (r *projectStaleReconciler) projectInUseDueToBackupEntries(ctx context.Cont
 
 func (r *projectStaleReconciler) projectInUseDueToSecrets(ctx context.Context, namespace string) (bool, error) {
 	secretList := &corev1.SecretList{}
-	if err := r.gardenClient.List(ctx, secretList, client.InNamespace(namespace), gutil.UncontrolledSecretSelector); err != nil {
+	if err := r.gardenClient.List(
+		ctx,
+		secretList,
+		client.InNamespace(namespace),
+		gutil.UncontrolledSecretSelector,
+		client.MatchingLabels{v1beta1constants.LabelSecretBindingReference: "true"},
+	); err != nil {
 		return false, err
 	}
 
