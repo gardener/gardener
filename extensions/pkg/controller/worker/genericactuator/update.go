@@ -24,15 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// tryUpdateStatus tries to apply the given transformation function onto the given object, and to update its
-// status afterwards. It retries the status update with an exponential backoff.
-// Deprecated: This function is deprecated and will be removed in a future version. Please don't consider using it.
-// See https://github.com/gardener/gardener/blob/master/docs/development/kubernetes-clients.md#dont-retry-on-conflict
-// for more information.
-func tryUpdateStatus(ctx context.Context, backoff wait.Backoff, c client.Client, obj client.Object, transform func() error) error {
-	return tryUpdate(ctx, backoff, c, obj, c.Status().Update, transform)
-}
-
 func tryUpdate(ctx context.Context, backoff wait.Backoff, c client.Client, obj client.Object, updateFunc func(context.Context, client.Object, ...client.UpdateOption) error, transform func() error) error {
 	resetCopy := obj.DeepCopyObject()
 	return exponentialBackoff(ctx, backoff, func() (bool, error) {

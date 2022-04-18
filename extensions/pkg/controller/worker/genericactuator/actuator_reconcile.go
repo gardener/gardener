@@ -471,8 +471,14 @@ func (a *genericActuator) updateWorkerStatusMachineDeployments(ctx context.Conte
 		})
 	}
 
+	patch := client.MergeFrom(worker.DeepCopy())
+	if len(statusMachineDeployments) > 0 {
+		worker.Status.MachineDeployments = statusMachineDeployments
 	}
+	if err := a.client.Status().Patch(ctx, worker, patch); err != nil {
+		return err
 	}
+	return nil
 }
 
 // Helper functions
