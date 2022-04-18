@@ -33,8 +33,6 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	workerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
@@ -129,33 +127,6 @@ var _ = Describe("Actuator", func() {
 			Expect(reducedMDs[0]).To(Equal(mdWithStateAndMachineSets))
 		})
 	})
-
-	var (
-		conditionRollingUpdateInProgress = gardencorev1beta1.Condition{
-			Type:   extensionsv1alpha1.WorkerRollingUpdate,
-			Status: gardencorev1beta1.ConditionTrue,
-			Reason: ReasonRollingUpdateProgressing,
-		}
-		conditionNoRollingUpdate = gardencorev1beta1.Condition{
-			Type:   extensionsv1alpha1.WorkerRollingUpdate,
-			Status: gardencorev1beta1.ConditionTrue,
-			Reason: ReasonRollingUpdateProgressing,
-		}
-	)
-
-	DescribeTable("#buildRollingUpdateCondition", func(conditions []gardencorev1beta1.Condition, rollingUpdate bool, expectedConditionStatus gardencorev1beta1.ConditionStatus, expectedConditionReason string) {
-		condition, err := buildRollingUpdateCondition([]gardencorev1beta1.Condition{}, rollingUpdate)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(condition.Type).To(Equal(extensionsv1alpha1.WorkerRollingUpdate))
-		Expect(condition.Status).To(Equal(expectedConditionStatus))
-		Expect(condition.Reason).To(Equal(expectedConditionReason))
-	},
-		Entry("should update worker conditions with rolling update", []gardencorev1beta1.Condition{}, true, gardencorev1beta1.ConditionTrue, ReasonRollingUpdateProgressing),
-		Entry("should update worker conditions with rolling update with pre-existing condition", []gardencorev1beta1.Condition{conditionNoRollingUpdate}, true, gardencorev1beta1.ConditionTrue, ReasonRollingUpdateProgressing),
-
-		Entry("no rolling update", []gardencorev1beta1.Condition{}, false, gardencorev1beta1.ConditionFalse, ReasonNoRollingUpdate),
-		Entry("should update worker conditions with rolling update with pre-existing condition", []gardencorev1beta1.Condition{conditionRollingUpdateInProgress}, false, gardencorev1beta1.ConditionFalse, ReasonNoRollingUpdate),
-	)
 
 	Describe("#isMachineControllerStuck", func() {
 		var (
