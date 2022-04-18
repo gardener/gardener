@@ -30,20 +30,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const activityReconcilerName = "activity"
+const shootActivityReconcilerName = "shootActivity"
 
-// NewActivityReconciler creates a new instance of a reconciler which reconciles the LastActivityTimestamp of a project, then it calls the stale reconciler.
-func NewActivityReconciler(gardenClient client.Client) reconcile.Reconciler {
-	return &projectActivityReconciler{
+// NewShootActivityReconciler creates a new instance of a reconciler which reconciles the LastActivityTimestamp of a project, then it calls the stale reconciler.
+func NewShootActivityReconciler(gardenClient client.Client) reconcile.Reconciler {
+	return &projectShootActivityReconciler{
 		gardenClient: gardenClient,
 	}
 }
 
-type projectActivityReconciler struct {
+type projectShootActivityReconciler struct {
 	gardenClient client.Client
 }
 
-func (r *projectActivityReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+func (r *projectShootActivityReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
 	shoot := &gardencorev1beta1.Shoot{}
@@ -58,7 +58,7 @@ func (r *projectActivityReconciler) Reconcile(ctx context.Context, request recon
 	return r.reconcile(ctx, log, shoot)
 }
 
-func (r *projectActivityReconciler) reconcile(ctx context.Context, log logr.Logger, obj client.Object) (reconcile.Result, error) {
+func (r *projectShootActivityReconciler) reconcile(ctx context.Context, log logr.Logger, obj client.Object) (reconcile.Result, error) {
 	project, err := gutil.ProjectForNamespaceFromReader(ctx, r.gardenClient, obj.GetNamespace())
 	if err != nil {
 		if apierrors.IsNotFound(err) {

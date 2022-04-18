@@ -28,7 +28,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,7 +40,7 @@ var (
 	shootName     = "shoot"
 )
 
-var _ = Describe("Project Activity Reconcile", func() {
+var _ = Describe("Project Shoot Activity Reconcile", func() {
 	var (
 		project             *gardencorev1beta1.Project
 		shoot               *gardencorev1beta1.Shoot
@@ -97,7 +96,7 @@ var _ = Describe("Project Activity Reconcile", func() {
 
 		ctrl := gomock.NewController(GinkgoT())
 		k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
-		reconciler = NewActivityReconciler(k8sGardenRuntimeClient)
+		reconciler = NewShootActivityReconciler(k8sGardenRuntimeClient)
 		request = reconcile.Request{NamespacedName: types.NamespacedName{Name: shoot.Name, Namespace: shoot.Namespace}}
 		k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ProjectList{}), gomock.Any()).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ProjectList, opts client.MatchingFields) error {
 			if reflect.DeepEqual(opts[core.ProjectNamespace], *project.Spec.Namespace) {
@@ -115,10 +114,9 @@ var _ = Describe("Project Activity Reconcile", func() {
 			for _, s := range []gardencorev1beta1.Shoot{*shoot, *shootWithoutProject, *errorShoot} {
 				if reflect.DeepEqual(namespacedName.Name, s.Name) && reflect.DeepEqual(namespacedName.Namespace, s.Namespace) {
 					*obj = s
-					return nil
 				}
 			}
-			return apierrors.NewNotFound(gardencorev1beta1.Resource("Project"), "<unknown>")
+			return nil
 		})
 	})
 
@@ -156,7 +154,7 @@ var _ = Describe("Project Activity Reconcile", func() {
 			reconcileResult, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: shootWithoutProject.Name, Namespace: shootWithoutProject.Namespace}})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(reconcileResult).To(Equal(reconcile.Result{Requeue: false}))
-			Expect(shoot.CreationTimestamp).ToNot(Equal(*project.Status.LastActivityTimestamp))
+			Expect(shootWithoutProject.CreationTimestamp).ToNot(Equal(*project.Status.LastActivityTimestamp))
 		})
 	})
 
