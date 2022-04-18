@@ -105,11 +105,19 @@ func (r *secretBindingReconciler) Reconcile(ctx context.Context, request reconci
 			}
 
 			if mayReleaseSecret {
-				// Remove finalizer from referenced secret
 				secret := &corev1.Secret{}
 				if err := r.gardenClient.Get(ctx, kutil.Key(secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name), secret); err == nil {
+					// Remove finalizer from referenced secret
 					if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, secret.DeepCopy(), gardencorev1beta1.ExternalGardenerName); client.IgnoreNotFound(err) != nil {
 						return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from Secret: %w", err)
+					}
+					// Remove 'referred by a secret binding' label
+					if metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
+						patch := client.MergeFrom(secret.DeepCopy())
+						delete(secret.ObjectMeta.Labels, v1beta1constants.LabelSecretBindingReference)
+						if err := r.gardenClient.Patch(ctx, secret, patch); err != nil {
+							return reconcile.Result{}, fmt.Errorf("failed to remove referred label from Secret: %w", err)
+						}
 					}
 				} else if !apierrors.IsNotFound(err) {
 					return reconcile.Result{}, err
@@ -145,6 +153,15 @@ func (r *secretBindingReconciler) Reconcile(ctx context.Context, request reconci
 	if !controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not add finalizer to Secret referenced in SecretBinding: %w", err)
+		}
+	}
+
+	// Add 'referred by a secret binding' label
+	if !metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
+		patch := client.MergeFrom(secret.DeepCopy())
+		metav1.SetMetaDataLabel(&secret.ObjectMeta, v1beta1constants.LabelSecretBindingReference, "true")
+		if err := r.gardenClient.Patch(ctx, secret, patch); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add referred label to Secret referenced in SecretBinding: %w", err)
 		}
 	}
 
