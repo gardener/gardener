@@ -270,12 +270,6 @@ func RunReconcileSeedFlow(
 		if _, err := seedClient.RESTMapper().RESTMapping(vpaGK); err != nil {
 			return fmt.Errorf("VPA is required for seed cluster: %s", err)
 		}
-
-		vpa := vpa.New(seedClient, v1beta1constants.GardenNamespace, nil, vpa.Values{ClusterType: vpa.ClusterTypeSeed})
-
-		if err := component.OpDestroyAndWait(vpa).Destroy(ctx); err != nil {
-			return err
-		}
 	}
 
 	const (
@@ -947,7 +941,7 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	if err := runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, secretsManager, imageVector, imageVectorOverwrites, seed, conf, log, anySNI); err != nil {
+	if err := runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, secretsManager, imageVector, imageVectorOverwrites, seed, conf, log, anySNI, vpaEnabled); err != nil {
 		return err
 	}
 
@@ -965,7 +959,7 @@ func runCreateSeedFlow(
 	seed *Seed,
 	conf *config.GardenletConfiguration,
 	log logrus.FieldLogger,
-	anySNI bool,
+	anySNI, vpaEnabled bool,
 ) error {
 	secretData, err := getDNSProviderSecretData(ctx, gardenClient, seed)
 	if err != nil {
@@ -1018,7 +1012,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	vpa, err := defaultVerticalPodAutoscaler(seedClient, imageVector, secretsManager)
+	vpa, err := defaultVerticalPodAutoscaler(seedClient, imageVector, secretsManager, vpaEnabled)
 	if err != nil {
 		return err
 	}

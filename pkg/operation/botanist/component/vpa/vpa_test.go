@@ -1470,6 +1470,7 @@ var _ = Describe("VPA", func() {
 			BeforeEach(func() {
 				component = New(c, namespace, sm, Values{
 					ClusterType:         ClusterTypeSeed,
+					Enabled:             true,
 					SecretNameServerCA:  secretNameCA,
 					AdmissionController: valuesAdmissionController,
 					Exporter:            valuesExporter,
@@ -1592,6 +1593,56 @@ var _ = Describe("VPA", func() {
 				Expect(string(managedResourceSecret.Data["mutatingwebhookconfiguration____vpa-webhook-config-source.yaml"])).To(Equal(serialize(mutatingWebhookConfiguration)))
 			})
 
+			It("should successfully deploy only vpa-exporter if not enabled", func() {
+				component = New(c, namespace, sm, Values{
+					ClusterType:         ClusterTypeSeed,
+					Enabled:             false,
+					SecretNameServerCA:  secretNameCA,
+					AdmissionController: valuesAdmissionController,
+					Exporter:            valuesExporter,
+					Recommender:         valuesRecommender,
+					Updater:             valuesUpdater,
+				})
+
+				Expect(component.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+						Kind:       "ManagedResource",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResourceName,
+						Namespace:       namespace,
+						ResourceVersion: "1",
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						Class: pointer.String("seed"),
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResourceSecret.Name,
+						}},
+						KeepObjects: pointer.Bool(false),
+					},
+				}))
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Data).To(HaveLen(6))
+
+				By("checking vpa-exporter resources")
+				clusterRoleExporter.Name = replaceTargetSubstrings(clusterRoleExporter.Name)
+				clusterRoleBindingExporter.Name = replaceTargetSubstrings(clusterRoleBindingExporter.Name)
+				clusterRoleBindingExporter.RoleRef.Name = replaceTargetSubstrings(clusterRoleBindingExporter.RoleRef.Name)
+
+				Expect(string(managedResourceSecret.Data["service__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceExporter)))
+				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(serviceAccountExporter)))
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_vpa_source_exporter.yaml"])).To(Equal(serialize(clusterRoleExporter)))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_vpa_source_exporter.yaml"])).To(Equal(serialize(clusterRoleBindingExporter)))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__vpa-exporter.yaml"])).To(Equal(serialize(deploymentExporter)))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__vpa-exporter-vpa.yaml"])).To(Equal(serialize(vpaExporter)))
+			})
+
 			It("should successfully deploy with special configuration", func() {
 				valuesRecommender.Interval = &metav1.Duration{Duration: 3 * time.Hour}
 				valuesRecommender.RecommendationMarginFraction = pointer.Float64(8.91)
@@ -1604,6 +1655,7 @@ var _ = Describe("VPA", func() {
 
 				component = New(c, namespace, sm, Values{
 					ClusterType:         ClusterTypeSeed,
+					Enabled:             true,
 					SecretNameServerCA:  secretNameCA,
 					AdmissionController: valuesAdmissionController,
 					Exporter:            valuesExporter,
@@ -1730,6 +1782,7 @@ var _ = Describe("VPA", func() {
 			BeforeEach(func() {
 				component = New(c, namespace, sm, Values{
 					ClusterType:         ClusterTypeShoot,
+					Enabled:             true,
 					SecretNameServerCA:  secretNameCA,
 					AdmissionController: valuesAdmissionController,
 					Exporter:            valuesExporter,
