@@ -27,6 +27,11 @@ func TestProject(t *testing.T) {
 	RunSpecs(t, "ControllerManager Project Controller Suite")
 }
 
+var (
+	namespaceName = "namespace"
+	projectName   = "name"
+)
+
 type fakeQueue struct {
 	workqueue.RateLimitingInterface
 	items []interface{}

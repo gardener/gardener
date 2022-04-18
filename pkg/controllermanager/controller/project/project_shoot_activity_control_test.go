@@ -34,14 +34,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var (
-	namespaceName = "namespace"
-	projectName   = "name"
-	shootName     = "shoot"
-)
-
 var _ = Describe("Project Shoot Activity Reconcile", func() {
 	var (
+		shootName           = "shoot"
 		project             *gardencorev1beta1.Project
 		shoot               *gardencorev1beta1.Shoot
 		shootWithoutProject *gardencorev1beta1.Shoot
