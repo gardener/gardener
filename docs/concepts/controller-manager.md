@@ -71,7 +71,7 @@ This reconciler is enabled by default and works as following:
     1. `BackupEntry` resources.
     1. `Secret` resources that are referenced by a `SecretBinding` that is in use by a `Shoot` (not necessarily in the same namespace).
     1. `Quota` resources that are referenced by a `SecretBinding` that is in use by a `Shoot` (not necessarily in the same namespace).
-    1. The time period when the projet was used for the last time (`status.lastActivityTimestamp`) is longer than the configured `minimumLifetimeDays`
+    1. The time period when the project was used for the last time (`status.lastActivityTimestamp`) is longer than the configured `minimumLifetimeDays`
 
 If a project is considered "stale" then its `.status.staleSinceTimestamp` will be set to the time when it was first detected to be stale.
 If it gets actively used again this timestamp will be removed.

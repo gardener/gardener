@@ -25,7 +25,7 @@ import (
 var (
 	// NoControlPlaneSecretsReq is a label selector requirement to select non-control plane secrets.
 	NoControlPlaneSecretsReq = utils.MustNewRequirement(constants.GardenRole, selection.NotIn, constants.ControlPlaneSecretRoles...)
-	// UncontrolledSecretSelector is a selector for objects which are managed by operators/users and not created
+	// UncontrolledSecretSelector is a selector for objects which are managed by operators/users and not created by
 	// Gardener controllers.
 	UncontrolledSecretSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(NoControlPlaneSecretsReq)}
 )
