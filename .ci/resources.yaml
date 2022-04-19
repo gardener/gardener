@@ -7,7 +7,6 @@ access:
   type: 'ociRegistry'
   imageReference: 'eu.gcr.io/gardener-project/gardener/admission-controller:${COMPONENT_VERSION}'
 ---
----
 name: 'apiserver'
 version: '${COMPONENT_VERSION}'
 type: 'ociImage'
@@ -15,7 +14,6 @@ relation: 'local'
 access:
   type: 'ociRegistry'
   imageReference: 'eu.gcr.io/gardener-project/gardener/apiserver:${COMPONENT_VERSION}'
----
 ---
 name: 'controller-manager'
 version: '${COMPONENT_VERSION}'
@@ -25,7 +23,6 @@ access:
   type: 'ociRegistry'
   imageReference: 'eu.gcr.io/gardener-project/gardener/controller-manager:${COMPONENT_VERSION}'
 ---
----
 name: 'gardenlet'
 version: '${COMPONENT_VERSION}'
 type: 'ociImage'
@@ -33,7 +30,6 @@ relation: 'local'
 access:
   type: 'ociRegistry'
   imageReference: 'eu.gcr.io/gardener-project/gardener/gardenlet:${COMPONENT_VERSION}'
----
 ---
 name: 'resource-manager'
 version: '${COMPONENT_VERSION}'
@@ -43,7 +39,6 @@ access:
   type: 'ociRegistry'
   imageReference: 'eu.gcr.io/gardener-project/gardener/resource-manager:${COMPONENT_VERSION}'
 ---
----
 name: 'scheduler'
 version: '${COMPONENT_VERSION}'
 type: 'ociImage'
@@ -51,7 +46,6 @@ relation: 'local'
 access:
   type: 'ociRegistry'
   imageReference: 'eu.gcr.io/gardener-project/gardener/scheduler:${COMPONENT_VERSION}'
----
 ---
 name: 'seed-admission-controller'
 version: '${COMPONENT_VERSION}'
