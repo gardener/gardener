@@ -8,7 +8,7 @@ ENV GOTRACEBACK=single
 RUN apk add --update tzdata
 
 ############# builder-base #############
-FROM golang:1.17.8 AS builder-base
+FROM golang:1.17.9 AS builder-base
 
 WORKDIR /go/src/github.com/gardener/gardener
 
