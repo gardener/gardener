@@ -88,6 +88,10 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 		obj.SNI = &SNI{}
 	}
 
+	if obj.ETCDConfig == nil {
+		obj.ETCDConfig = &ETCDConfig{}
+	}
+
 	var defaultSVCName = DefaultSNIIngresServiceName
 	for i, handler := range obj.ExposureClassHandlers {
 		if obj.ExposureClassHandlers[i].SNI == nil {
@@ -478,5 +482,33 @@ func SetDefaults_Logging(obj *Logging) {
 	}
 	if obj.Loki.Garden.Storage == nil {
 		obj.Loki.Garden.Storage = &DefaultCentralLokiStorage
+	}
+}
+
+// SetDefaults_ETCDConfig sets defaults for the ETCD.
+func SetDefaults_ETCDConfig(obj *ETCDConfig) {
+	if obj.ETCDController == nil {
+		obj.ETCDController = &ETCDController{}
+	}
+	if obj.ETCDController.Workers == nil {
+		obj.ETCDController.Workers = pointer.Int64(50)
+	}
+	if obj.CustodianController == nil {
+		obj.CustodianController = &CustodianController{}
+	}
+	if obj.CustodianController.Workers == nil {
+		obj.CustodianController.Workers = pointer.Int64(10)
+	}
+	if obj.BackupCompactionController == nil {
+		obj.BackupCompactionController = &BackupCompactionController{}
+	}
+	if obj.BackupCompactionController.Workers == nil {
+		obj.BackupCompactionController.Workers = pointer.Int64(3)
+	}
+	if obj.BackupCompactionController.EnableBackupCompaction == nil {
+		obj.BackupCompactionController.EnableBackupCompaction = pointer.Bool(false)
+	}
+	if obj.BackupCompactionController.EventsThreshold == nil {
+		obj.BackupCompactionController.EventsThreshold = pointer.Int64(1000000)
 	}
 }

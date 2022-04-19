@@ -330,26 +330,13 @@ func getDruidDeployCommands(gardenletConf *config.GardenletConfiguration) []stri
 	}
 
 	config := gardenletConf.ETCDConfig
-	if config == nil {
-		// TODO(abdasgupta): Following line to add 50 workers is only for backward compatibility. Please, remove.
-		command = append(command, "--workers=50")
-		return command
-	}
-	if config.ETCDController != nil {
-		command = append(command, "--workers="+strconv.FormatInt(pointer.Int64Deref(config.ETCDController.Workers, 50), 10))
-	}
-
-	if config.CustodianController != nil {
-		command = append(command, "--custodian-workers="+strconv.FormatInt(pointer.Int64Deref(config.CustodianController.Workers, 10), 10))
-	}
-
-	if config.BackupCompactionController != nil {
-		command = append(command, "--compaction-workers="+strconv.FormatInt(pointer.Int64Deref(config.BackupCompactionController.Workers, 3), 10))
-		command = append(command, "--enable-backup-compaction="+strconv.FormatBool(pointer.BoolDeref(config.BackupCompactionController.EnableBackupCompaction, false)))
-		command = append(command, "--etcd-events-threshold="+strconv.FormatInt(pointer.Int64Deref(config.BackupCompactionController.EventsThreshold, 1000000), 10))
-		if config.BackupCompactionController.ActiveDeadlineDuration != nil {
-			command = append(command, "--active-deadline-duration="+config.BackupCompactionController.ActiveDeadlineDuration.Duration.String())
-		}
+	command = append(command, "--workers="+strconv.FormatInt(*config.ETCDController.Workers, 10))
+	command = append(command, "--custodian-workers="+strconv.FormatInt(*config.CustodianController.Workers, 10))
+	command = append(command, "--compaction-workers="+strconv.FormatInt(*config.BackupCompactionController.Workers, 10))
+	command = append(command, "--enable-backup-compaction="+strconv.FormatBool(*config.BackupCompactionController.EnableBackupCompaction))
+	command = append(command, "--etcd-events-threshold="+strconv.FormatInt(*config.BackupCompactionController.EventsThreshold, 10))
+	if config.BackupCompactionController.ActiveDeadlineDuration != nil {
+		command = append(command, "--active-deadline-duration="+config.BackupCompactionController.ActiveDeadlineDuration.Duration.String())
 	}
 
 	return command
