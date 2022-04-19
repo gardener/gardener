@@ -1091,7 +1091,7 @@ FskcKs088h3kZh8sc8pG25SCwKdEXXh7ufO3aYtEbViSAQbqIixNVdRO
 				BeforeEach(func() {
 					config = &secretutils.CertificateSecretConfig{
 						Name:       "ca-client",
-						CommonName: "client",
+						CommonName: "kubernetes-client",
 						CertType:   secretutils.CACert,
 					}
 				})

@@ -157,7 +157,7 @@ func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
 	//  future release.
 	if _, err := b.SecretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
 		Name:       v1beta1constants.SecretNameCAClient,
-		CommonName: "client",
+		CommonName: "kubernetes-client",
 		CertType:   secretutils.CACert,
 	}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld)); err != nil {
 		return err
