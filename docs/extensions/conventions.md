@@ -34,14 +34,14 @@ nodeSelector:
 
 Historically, Gardener extensions used to generate kubeconfigs with client certificates for components they deploy into the shoot control plane.
 For this, they reused the shoot cluster CA secret (`ca`) to issue new client certificates.
-With [gardener/gardener#4661](https://github.com/gardener/gardener/issues/4661) we moved away from using client certificates in favor of short-lived auto-rotated `ServiceAccount` tokens. These tokens are managed by gardener-resource-manager's [`TokenRequestor`](../concepts/resource-manager.md#tokenrequestor).
+With [gardener/gardener#4661](https://github.com/gardener/gardener/issues/4661) we moved away from using client certificates in favor of short-lived, auto-rotated `ServiceAccount` tokens. These tokens are managed by gardener-resource-manager's [`TokenRequestor`](../concepts/resource-manager.md#tokenrequestor).
 Extensions are supposed to reuse this mechanism for requesting tokens and a `generic-token-kubeconfig` for authenticating against shoot clusters.
 
-With [GEP-18](../proposals/18-shoot-CA-rotation.md) (Shoot cluster CA rotation), a dedicated CA will be used for signing client certificates ([gardener/gardener#5779](https://github.com/gardener/gardener/pull/5779)), that will be rotated when triggered by the shoot owner.
+With [GEP-18](../proposals/18-shoot-CA-rotation.md) (Shoot cluster CA rotation), a dedicated CA will be used for signing client certificates ([gardener/gardener#5779](https://github.com/gardener/gardener/pull/5779)) which will be rotated when triggered by the shoot owner.
 With this, extensions cannot reuse the `ca` secret anymore to issue client certificates.
 Hence, extensions must switch to short-lived `ServiceAccount` tokens in order to support the CA rotation feature.
 
-The `generic-token-kubeconfig` secret contains the CA bundle for establishing trust to shoot API servers. However, as the secret is immutable its name changes with the rotation of the Cluster CA.
+The `generic-token-kubeconfig` secret contains the CA bundle for establishing trust to shoot API servers. However, as the secret is immutable its name changes with the rotation of the cluster CA.
 Extensions need to look up the `generic-token-kubeconfig.secret.gardener.cloud/name` annotation on the respective [`Cluster`](./cluster.md) object in order to determine which secret contains the current CA bundle.
 The helper function `extensionscontroller.GenericTokenKubeconfigSecretNameFromCluster` can be used for this task.
 

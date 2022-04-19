@@ -46,7 +46,7 @@ type SecretConfigWithOptions struct {
 // - keeps old CA secrets during CA rotation
 // - removes old CA secrets on Cleanup() if cluster.shoot.status.credentials.rotation.certificateAuthorities.phase == Completing
 func SecretsManagerForCluster(ctx context.Context, logger logr.Logger, clock clock.Clock, c client.Client, cluster *extensionscontroller.Cluster, identity string, secretConfigs []SecretConfigWithOptions) (secretsmanager.Interface, error) {
-	sm, err := secretsmanager.New(ctx, logger, clock, c, cluster.ObjectMeta.Name, identity, LastSecretRotationStartTimesFromCluster(cluster, secretConfigs))
+	sm, err := secretsmanager.New(ctx, logger, clock, c, cluster.ObjectMeta.Name, identity, lastSecretRotationStartTimesFromCluster(cluster, secretConfigs))
 	if err != nil {
 		return nil, err
 	}
@@ -77,23 +77,23 @@ func (a secretsManager) Generate(ctx context.Context, config secretutils.ConfigI
 	return a.Interface.Generate(ctx, config, opts...)
 }
 
-// LastSecretRotationStartTimesFromCluster creates a map that maps names of secret configs to times.
+// lastSecretRotationStartTimesFromCluster creates a map that maps names of secret configs to times.
 // If cluster.shoot.status.credentials.certificateAuthorities.lastInitiationTime is set, it adds the time for all given
 // CA configs. If it's not set or no CA configs are given the map will be empty.
-func LastSecretRotationStartTimesFromCluster(cluster *extensionscontroller.Cluster, secretConfigs []SecretConfigWithOptions) map[string]time.Time {
+func lastSecretRotationStartTimesFromCluster(cluster *extensionscontroller.Cluster, secretConfigs []SecretConfigWithOptions) map[string]time.Time {
 	var (
 		secretNamesToTime    = make(map[string]time.Time)
 		caLastInitiationTime *time.Time
 	)
 
-	if shootStatus := cluster.Shoot.Status; shootStatus.Credentials != nil && shootStatus.Credentials.Rotation != nil {
-		if cas := shootStatus.Credentials.Rotation.CertificateAuthorities; cas != nil && cas.LastInitiationTime != nil {
-			timeCopy := cas.LastInitiationTime.Time
-			caLastInitiationTime = &timeCopy
-		}
+	if shootStatus := cluster.Shoot.Status; shootStatus.Credentials != nil && shootStatus.Credentials.Rotation != nil &&
+		shootStatus.Credentials.Rotation.CertificateAuthorities != nil &&
+		shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime != nil {
+		timeCopy := shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time
+		caLastInitiationTime = &timeCopy
 	}
 
-	for _, caConfig := range FilterCAConfigs(secretConfigs) {
+	for _, caConfig := range filterCAConfigs(secretConfigs) {
 		// bind CA rotation lifecycle to the cluster CA (i.e. rotate in lockstep)
 		if caLastInitiationTime != nil {
 			secretNamesToTime[caConfig.Config.GetName()] = *caLastInitiationTime
@@ -103,8 +103,8 @@ func LastSecretRotationStartTimesFromCluster(cluster *extensionscontroller.Clust
 	return secretNamesToTime
 }
 
-// FilterCAConfigs returns a list of all CA configs contained in the given list.
-func FilterCAConfigs(secretConfigs []SecretConfigWithOptions) []SecretConfigWithOptions {
+// filterCAConfigs returns a list of all CA configs contained in the given list.
+func filterCAConfigs(secretConfigs []SecretConfigWithOptions) []SecretConfigWithOptions {
 	var caConfigs []SecretConfigWithOptions
 
 	for _, config := range secretConfigs {
@@ -125,7 +125,7 @@ func GenerateAllSecrets(ctx context.Context, sm secretsmanager.Interface, secret
 	deployedSecrets := make(map[string]*corev1.Secret, len(secretConfigs))
 
 	// generate all CAs first (needed to sign other certificate configs)
-	for _, config := range FilterCAConfigs(secretConfigs) {
+	for _, config := range filterCAConfigs(secretConfigs) {
 		secret, err := sm.Generate(ctx, config.Config, config.Options...)
 		if err != nil {
 			return nil, err

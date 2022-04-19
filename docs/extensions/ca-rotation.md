@@ -1,7 +1,7 @@
 # CA Rotation in Extensions
 
-[GEP-18](../proposals/18-shoot-CA-rotation.md) adds support for automated rotation of Shoot cluster certificate authorities (CAs).
-This document outlines all requirements, that Gardener extensions need to fulfill in order to support the CA rotation feature.
+[GEP-18](../proposals/18-shoot-CA-rotation.md) proposes adding support for automated rotation of Shoot cluster certificate authorities (CAs).
+This document outlines all requirements that Gardener extensions need to fulfill in order to support the CA rotation feature.
 
 ## Requirements for Shoot Cluster CA Rotation
 
@@ -14,7 +14,7 @@ This document outlines all requirements, that Gardener extensions need to fulfil
 
 ## Utilities for Secrets Management
 
-In order to fulfill the requirements listed above, extension controllers can reuse the [`SecretsManager`](../development/secrets_management.md), that gardenlet uses to manage all shoot cluster CAs, certificates and other secrets as well.
+In order to fulfill the requirements listed above, extension controllers can reuse the [`SecretsManager`](../development/secrets_management.md) that gardenlet uses to manage all shoot cluster CAs, certificates, and other secrets as well.
 It implements the core logic for managing secrets that need to be rotated, auto-renewed etc.
 
 Additionally, there are utilities for reusing `SecretsManager` in extension controllers.
@@ -23,8 +23,12 @@ They already implement above requirements based on the `Cluster` resource and al
 For example, a simple `SecretsManager` usage in an extension controller could look like this:
 
 ```go
-// identity for SecretsManager instance in ControlPlane controller
-const identity = "provider-foo-controlplane"
+const (
+  // identity for SecretsManager instance in ControlPlane controller
+  identity = "provider-foo-controlplane"
+  // secret config name of the dedicated CA
+  caControlPlaneName = "ca-provider-foo-controlplane"
+)
 
 func Reconcile() {
   var (
@@ -36,7 +40,7 @@ func Reconcile() {
       {
         // dedicated CA for ControlPlane controller
         Config: &secretutils.CertificateSecretConfig{
-          Name:       "ca-provider-foo-controlplane",
+          Name:       caControlPlaneName,
           CommonName: "ca-provider-foo-controlplane",
           CertType:   secretutils.CACert,
         },
@@ -52,7 +56,7 @@ func Reconcile() {
           CertType:   secretutils.ServerCert,
         },
         // sign with our dedicated CA
-        Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA("ca-provider-foo-controlplane")},
+        Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caControlPlaneName)},
       },
     }
   )
@@ -70,7 +74,7 @@ func Reconcile() {
 
 Please pay attention to the following points:
 - There should be one `SecretsManager` identity per controller (and purpose if applicable) in order to prevent conflicts between different instances.
-  E.g., there should be different identities for `infrastructrue`, `worker` controller etc. and the `controlplane` controller should use dedicated `SecretsManager` identities per purpose (e.g. `provider-foo-controlplane` and `provider-foo-controlplane-exposure`).
+  E.g., there should be different identities for `Infrastructrue`, `Worker` controller etc. and the `ControlPlane` controller should use dedicated `SecretsManager` identities per purpose (e.g. `provider-foo-controlplane` and `provider-foo-controlplane-exposure`).
 - All other points in [Reusing the SecretsManager in Other Components](../development/secrets_management.md#reusing-the-secretsmanager-in-other-components)
 
 

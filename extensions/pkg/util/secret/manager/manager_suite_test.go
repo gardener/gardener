@@ -23,5 +23,5 @@ import (
 
 func TestManager(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "SecretsManager Utils Suite")
+	RunSpecs(t, "Extensions Utils SecretsManager Suite")
 }

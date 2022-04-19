@@ -217,22 +217,22 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 		})
 	})
 
-	Describe("#FilterCAConfigs", func() {
+	Describe("#filterCAConfigs", func() {
 		It("should return a list with all CA configs", func() {
-			Expect(FilterCAConfigs(secretConfigs)).To(consistOfConfigs(caConfigs...))
+			Expect(filterCAConfigs(secretConfigs)).To(consistOfConfigs(caConfigs...))
 		})
 	})
 
-	Describe("#LastSecretRotationStartTimesFromCluster", func() {
+	Describe("#lastSecretRotationStartTimesFromCluster", func() {
 		It("should not contain any times if rotation was never triggered", func() {
-			Expect(LastSecretRotationStartTimesFromCluster(cluster, secretConfigs)).To(BeEmpty())
+			Expect(lastSecretRotationStartTimesFromCluster(cluster, secretConfigs)).To(BeEmpty())
 		})
 
 		It("should add the CA rotation initiation time for all CA configs", func() {
 			v1beta1helper.MutateShootCARotation(cluster.Shoot, func(rotation *gardencorev1beta1.ShootCARotation) {
 				rotation.LastInitiationTime = &now
 			})
-			Expect(LastSecretRotationStartTimesFromCluster(cluster, secretConfigs)).To(MatchAllKeys(Keys{
+			Expect(lastSecretRotationStartTimesFromCluster(cluster, secretConfigs)).To(MatchAllKeys(Keys{
 				"my-extension-ca":   Equal(now.Time),
 				"my-extension-ca-2": Equal(now.Time),
 			}))

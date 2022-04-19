@@ -74,8 +74,8 @@ type ValuesProvider interface {
 // the values provided by the given values provider.
 func NewActuator(
 	providerName string,
-	secretsFunc func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions, shootAccessSecrets func(namespace string) []*gutil.ShootAccessSecret,
-	exposureSecretsFunc func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions, exposureShootAccessSecrets func(namespace string) []*gutil.ShootAccessSecret,
+	secretConfigs func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions, shootAccessSecrets func(namespace string) []*gutil.ShootAccessSecret,
+	exposureSecretConfigs func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions, exposureShootAccessSecrets func(namespace string) []*gutil.ShootAccessSecret,
 	configChart, controlPlaneChart, controlPlaneShootChart, controlPlaneShootCRDsChart, storageClassesChart, controlPlaneExposureChart chart.Interface,
 	vp ValuesProvider,
 	chartRendererFactory extensionscontroller.ChartRendererFactory,
@@ -88,10 +88,10 @@ func NewActuator(
 	return &actuator{
 		providerName: providerName,
 
-		secretsFunc:            secretsFunc,
+		secretConfigsFunc:      secretConfigs,
 		shootAccessSecretsFunc: shootAccessSecrets,
 
-		exposureSecretsFunc:            exposureSecretsFunc,
+		exposureSecretConfigsFunc:      exposureSecretConfigs,
 		exposureShootAccessSecretsFunc: exposureShootAccessSecrets,
 
 		configChart:                configChart,
@@ -118,10 +118,10 @@ type newSecretsManagerFunc func(context.Context, logr.Logger, clock.Clock, clien
 type actuator struct {
 	providerName string
 
-	secretsFunc            func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions
+	secretConfigsFunc      func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions
 	shootAccessSecretsFunc func(namespace string) []*gutil.ShootAccessSecret
 
-	exposureSecretsFunc            func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions
+	exposureSecretConfigsFunc      func(namespace string) []extensionssecretsmanager.SecretConfigWithOptions
 	exposureShootAccessSecretsFunc func(namespace string) []*gutil.ShootAccessSecret
 
 	configChart                chart.Interface
@@ -203,8 +203,8 @@ func (a *actuator) reconcileControlPlaneExposure(
 	}
 
 	var secretConfigs []extensionssecretsmanager.SecretConfigWithOptions
-	if a.exposureSecretsFunc != nil {
-		secretConfigs = a.exposureSecretsFunc(cp.Namespace)
+	if a.exposureSecretConfigsFunc != nil {
+		secretConfigs = a.exposureSecretConfigsFunc(cp.Namespace)
 	}
 
 	sm, err := a.newSecretsManagerForControlPlane(ctx, cp, cluster, secretConfigs)
@@ -264,8 +264,8 @@ func (a *actuator) reconcileControlPlane(
 	}
 
 	var secretConfigs []extensionssecretsmanager.SecretConfigWithOptions
-	if a.secretsFunc != nil {
-		secretConfigs = a.secretsFunc(cp.Namespace)
+	if a.secretConfigsFunc != nil {
+		secretConfigs = a.secretConfigsFunc(cp.Namespace)
 	}
 
 	sm, err := a.newSecretsManagerForControlPlane(ctx, cp, cluster, secretConfigs)
