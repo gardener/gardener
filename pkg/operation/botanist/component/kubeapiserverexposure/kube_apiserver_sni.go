@@ -102,7 +102,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		envoyFilter     = s.emptyEnvoyFilter()
 		gateway         = s.emptyGateway()
 		virtualService  = s.emptyVirtualService()
-		authorizationPolicy   = s.emptyAccessControl()
+		accessControl   = s.emptyAccessControl()
 
 		hostName        = fmt.Sprintf("%s.%s.svc.%s", v1beta1constants.DeploymentNameKubeAPIServer, s.namespace, gardencorev1beta1.DefaultDomain)
 		envoyFilterSpec bytes.Buffer
@@ -191,7 +191,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if authrActionEnum, ok := istioapisecurityv1beta1.AuthorizationPolicy_Action_value[string(*s.values.AccessControl.Action)]; ok {
+	if authrActionEnum, ok := istioapisecurityv1beta1.AuthorizationPolicy_Action_value[string(s.values.AccessControl.Action)]; ok {
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, accessControl, func() error {
 			accessControl.Labels = getLabels()
 			accessControl.Spec = istioapisecurityv1beta1.AuthorizationPolicy{
@@ -200,8 +200,8 @@ func (s *sni) Deploy(ctx context.Context) error {
 						From: []*istioapisecurityv1beta1.Rule_From{
 							&istioapisecurityv1beta1.Rule_From{
 								Source: &istioapisecurityv1beta1.Source{
-									IpBlocks:       s.values.AccessControl.Source.IpBlocks,
-									RemoteIpBlocks: s.values.AccessControl.Source.RemoteIpBlocks,
+									IpBlocks:       s.values.AccessControl.Source.IPBlocks,
+									RemoteIpBlocks: s.values.AccessControl.Source.RemoteIPBlocks,
 								},
 							},
 						},
@@ -249,7 +249,7 @@ func (s *sni) emptyVirtualService() *istionetworkingv1beta1.VirtualService {
 	return &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
 }
 
-func (s *sni) emptyAuthorizationPolicy() *istiosecurity1beta1.AuthorizationPolicy {
+func (s *sni) emptyAccessControl() *istiosecurity1beta1.AuthorizationPolicy {
 	return &istiosecurity1beta1.AuthorizationPolicy{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
 }
 

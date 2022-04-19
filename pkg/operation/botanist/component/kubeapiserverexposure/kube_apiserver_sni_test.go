@@ -238,9 +238,9 @@ var _ = Describe("#SNI", func() {
 			},
 			NamespaceUID: namespaceUID,
 			AccessControl: v1beta1.AccessControl{
-				Action: &authorization,
+				Action: authorization,
 				Source: v1beta1.Source{
-					IpBlocks: ipBlocks,
+					IPBlocks: ipBlocks,
 				},
 			},
 		})
