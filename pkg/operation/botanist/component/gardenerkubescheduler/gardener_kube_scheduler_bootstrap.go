@@ -16,7 +16,9 @@ package gardenerkubescheduler
 
 import (
 	"errors"
+	"fmt"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -30,6 +32,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
 	schedulerconfigv18v1alpha2 "github.com/gardener/gardener/third_party/kube-scheduler/v18/v1alpha2"
 	schedulerconfigv19v1beta1 "github.com/gardener/gardener/third_party/kube-scheduler/v19/v1beta1"
@@ -48,6 +52,7 @@ import (
 // Bootstrap is used to bootstrap gardener-kube-scheduler in Seed clusters.
 func Bootstrap(
 	c client.Client,
+	secretsManager secretsmanager.Interface,
 	seedAdmissionControllerNamespace string,
 	image *imagevector.Image,
 	seedVersion *semver.Version,
@@ -214,6 +219,11 @@ func Bootstrap(
 		return nil, err
 	}
 
+	caSecret, found := secretsManager.Get(v1beta1constants.SecretNameCASeed)
+	if !found {
+		return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCASeed)
+	}
+
 	scheduler, err := New(
 		c,
 		Name,
@@ -226,7 +236,7 @@ func Bootstrap(
 				Namespace: seedAdmissionControllerNamespace,
 				Path:      pointer.String(podschedulername.WebhookPath),
 			},
-			CABundle: []byte(seedadmissioncontroller.TLSCACert),
+			CABundle: caSecret.Data[secretutils.DataKeyCertificateBundle],
 		},
 	)
 	if err != nil {

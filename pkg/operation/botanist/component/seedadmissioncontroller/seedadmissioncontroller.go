@@ -24,11 +24,12 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -43,7 +44,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -69,18 +69,20 @@ const (
 )
 
 // New creates a new instance of DeployWaiter for the gardener-seed-admission-controller.
-func New(c client.Client, namespace string, image string) component.DeployWaiter {
+func New(c client.Client, namespace string, secretsManager secretsmanager.Interface, image string) component.DeployWaiter {
 	return &gardenerSeedAdmissionController{
-		client:    c,
-		namespace: namespace,
-		image:     image,
+		client:         c,
+		namespace:      namespace,
+		secretsManager: secretsManager,
+		image:          image,
 	}
 }
 
 type gardenerSeedAdmissionController struct {
-	client    client.Client
-	namespace string
-	image     string
+	client         client.Client
+	namespace      string
+	secretsManager secretsmanager.Interface
+	image          string
 }
 
 func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
@@ -89,19 +91,21 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      Name + "-tls",
-			Namespace: g.namespace,
-			Labels:    getLabels(),
-		},
-		Type: corev1.SecretTypeTLS,
-		Data: map[string][]byte{
-			corev1.TLSCertKey:       []byte(tlsServerCert),
-			corev1.TLSPrivateKeyKey: []byte(tlsServerKey),
-		},
+	caSecret, found := g.secretsManager.Get(v1beta1constants.SecretNameCASeed)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCASeed)
 	}
-	utilruntime.Must(kutil.MakeUnique(secret))
+
+	serverSecret, err := g.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
+		Name:                        Name + "-server",
+		CommonName:                  Name,
+		DNSNames:                    kutil.DNSNamesForService(Name, g.namespace),
+		CertType:                    secretutils.ServerCert,
+		SkipPublishingCACertificate: true,
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCASeed, secretsmanager.UseCurrentCA), secretsmanager.Rotate(secretsmanager.InPlace))
+	if err != nil {
+		return err
+	}
 
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
@@ -299,7 +303,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 							Name: volumeName,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: secret.Name,
+									SecretName: serverSecret.Name,
 								},
 							},
 						}},
@@ -341,18 +345,14 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 			},
 		}
 
-		caBundle                       = []byte(TLSCACert)
-		validatingWebhookConfiguration = GetValidatingWebhookConfig(caBundle, service)
+		validatingWebhookConfiguration = GetValidatingWebhookConfig(caSecret.Data[secretutils.DataKeyCertificateBundle], service)
 	)
-
-	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	resources, err := registry.AddAllAndSerialize(
 		serviceAccount,
 		clusterRole,
 		clusterRoleBinding,
 		service,
-		secret,
 		deployment,
 		podDisruptionBudget,
 		vpa,
@@ -546,78 +546,3 @@ func (g *gardenerSeedAdmissionController) getReplicas(ctx context.Context) (int3
 
 	return defaultReplicas, nil
 }
-
-const (
-	// TLSCACert is the of certificate authority of the
-	// seed admission controller server.
-	// TODO(mvladev) this cert is hard-coded.
-	// fix it in another PR.
-	TLSCACert = `-----BEGIN CERTIFICATE-----
-MIIC+jCCAeKgAwIBAgIUTp3XvhrWOVM8ZGe86YoXMV/UJ7AwDQYJKoZIhvcNAQEL
-BQAwFTETMBEGA1UEAxMKa3ViZXJuZXRlczAeFw0xOTAyMjcxNTM0MDBaFw0yNDAy
-MjYxNTM0MDBaMBUxEzARBgNVBAMTCmt1YmVybmV0ZXMwggEiMA0GCSqGSIb3DQEB
-AQUAA4IBDwAwggEKAoIBAQCyi0QGOcv2bTf3N8OLN97RwsgH6QAr8wSpAOrttBJg
-FnfnU2T1RHgxm7qd190WL8DChv0dZf76d6eSQ4ZrjjyArTzufb4DtPwg+VWq7XvF
-BNyn+2hf4SySkwd6k7XLhUTRx048IbByC4v+FEvmoLAwrc0d0G14ec6snD+7jO7e
-kykQ/NgAOL7P6kDs9z6+bOfgF0nGN+bmeWQqJejR0t+OyQDCx5/FMtUfEVR5QX80
-aeefgp3JFZb6fAw9KhLtdRV3FP0tz6hS+e4Sg0mwAAOqijZsV87kP5GYzjtcfA12
-lDYl/nb1GtVvvkQD49VnV7mDnl6mG3LCMNCNH6WlZNv3AgMBAAGjQjBAMA4GA1Ud
-DwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBSFA3LvJM21d8qs
-ZVVCe6RrTT9wiTANBgkqhkiG9w0BAQsFAAOCAQEAns/EJ3yKsjtISoteQ714r2Um
-BMPyUYTTdRHD8LZMd3RykvsacF2l2y88Nz6wJcAuoUj1h8aBDP5oXVtNmFT9jybS
-TXrRvWi+aeYdb556nEA5/a94e+cb+Ck3qy/1xgQoS457AZQODisDZNBYWkAFs2Lc
-ucpcAtXJtIthVm7FjoAHYcsrY04yAiYEJLD02TjUDXg4iGOGMkVHdmhawBDBF3Aj
-esfcqFwji6JyAKFRACPowykQONFwUSom89uYESSCJFvNCk9MJmjJ2PzDUt6CypR4
-epFdd1fXLwuwn7fvPMmJqD3HtLalX1AZmPk+BI8ezfAiVcVqnTJQMXlYPpYe9A==
------END CERTIFICATE-----`
-	tlsServerCert = `-----BEGIN CERTIFICATE-----
-MIID0zCCArugAwIBAgIUaDMrqx0VRoOmGHM1afdZt39e2tMwDQYJKoZIhvcNAQEL
-BQAwFTETMBEGA1UEAxMKa3ViZXJuZXRlczAeFw0yMDAzMTYxODE4MDBaFw0zMDAz
-MTQxODE4MDBaMC0xKzApBgNVBAMTImdhcmRlbmVyLXNlZWQtYWRtaXNzaW9uLWNv
-bnRyb2xsZXIwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDFqFORLK0P
-+h2JxhyqCK850yviF0fByRqffpHfaRyfkGt33VrFXeuhGL+suTicfhzZSWMVojk/
-9R3R8FkK02Emq544o9YY5Ho/FGwlE9s1l456dW4F7oblvw7dgcRFdO6N4h/xrVab
-5qdNORnxRIZTJ3qz1ZjgcsOwjyzJwyO9PidlG6MW0qqX9Ab+g8Px0eSP2zBhqcLV
-6uGy4gYc2+RiXfKgYCsOu+HuNb4DFVediM82J0ZYzchMe5Uqp+PYiBIAH0Xqqz36
-GW9rb5O43V5R1HSVDioFrI0EkzWYLFGxol+4TRTNA4sjPXjAJFSXDr6gy6mNYqeI
-6DbThhDPMPwtAgMBAAGjggEBMIH+MA4GA1UdDwEB/wQEAwIFoDATBgNVHSUEDDAK
-BggrBgEFBQcDATAMBgNVHRMBAf8EAjAAMB0GA1UdDgQWBBQf/8Y23xQcoH8EYnWh
-yLGZ31Bk4DAfBgNVHSMEGDAWgBSFA3LvJM21d8qsZVVCe6RrTT9wiTCBiAYDVR0R
-BIGAMH6CImdhcmRlbmVyLXNlZWQtYWRtaXNzaW9uLWNvbnRyb2xsZXKCKWdhcmRl
-bmVyLXNlZWQtYWRtaXNzaW9uLWNvbnRyb2xsZXIuZ2FyZGVugi1nYXJkZW5lci1z
-ZWVkLWFkbWlzc2lvbi1jb250cm9sbGVyLmdhcmRlbi5zdmMwDQYJKoZIhvcNAQEL
-BQADggEBALEsnx+Zcv3IME/Xs82x0PAxDuIFV4ZnGPbweCZ5JKKlAtHtrq2JTYoQ
-zHbGTj2IEpzdq04RyRqY0ejD25HWeVHcAlhSLGvKKuuMznIl6e4G/Kfmg0NLwiMK
-7jsSjpNdHnJOsPg3j3iblP0ZSY8A5p12uqMzfvKPNFK62EuyqmEfI9ec6P6wNAcZ
-R3Ejum8yCcOCZlOczOH/8ZIdIC1jlFYm4Wwzm1uUgoSk240nqhuBirWqARjJNhfu
-/0HDmy6Zs/2FlRNIWuskpNIgOtMa3A277qx2O542+UhKv2jaIXtX1BnRLTCFVyDZ
-gj5593AJYDj8QFHulFeMeh5baOkksjc=
------END CERTIFICATE-----`
-	tlsServerKey = `-----BEGIN RSA PRIVATE KEY-----
-MIIEowIBAAKCAQEAxahTkSytD/odicYcqgivOdMr4hdHwckan36R32kcn5Brd91a
-xV3roRi/rLk4nH4c2UljFaI5P/Ud0fBZCtNhJqueOKPWGOR6PxRsJRPbNZeOenVu
-Be6G5b8O3YHERXTujeIf8a1Wm+anTTkZ8USGUyd6s9WY4HLDsI8sycMjvT4nZRuj
-FtKql/QG/oPD8dHkj9swYanC1erhsuIGHNvkYl3yoGArDrvh7jW+AxVXnYjPNidG
-WM3ITHuVKqfj2IgSAB9F6qs9+hlva2+TuN1eUdR0lQ4qBayNBJM1mCxRsaJfuE0U
-zQOLIz14wCRUlw6+oMupjWKniOg204YQzzD8LQIDAQABAoIBAFfUvp2qHpUU7X9F
-W4NrLIIjhkKHWcmQ1ZW+JpACI0f8YuT2pdlCLOx/FN1pyPAxUhxz8eWxGoODJmcd
-yFN5LpiCdmJw2zhgfrn9Fzk6o5Qi7psYB3X3UlZRGgfwHAlJNqAxtUQtZGkOi5VT
-JGYDrzTQPEQhTDegh7izRpG5du4mIXqkrmzTWIwPznLRmAps0fJQuQ9WIUP0iJSt
-CMLZ0898GANcdDbE8Ta3emPe3cgJjdUTyH3zMsnJT014N0zzX+e5aXcfxCwAaN+T
-fGLaQe1PV714SIhuDo+KBSJo0K0poUA8d5lNIeetl8WD0cpAKjBzpf3CvF78cT3i
-c/ZrxIECgYEAzBnDosYxuKIk8iVTe+eTRRwZsi7svaMTnmlcc6/3q5vLb3i1z5V9
-n/CEP5ZlvikhNB/Dt3WXmgprHzQN2ljnIJn2KHkR0gWe57aCbYtGxOCijvsZGUoJ
-F2iOLfTHBsnxiNP3uzjsuceCuiSD87e0bVBJon4oz6Y7eF6kzKRGFn0CgYEA9+sj
-UYtjGZfsEYChtTObC0SLXawkzAGUgJUN1NAh2w5o9Gr61Itt+SwwhqQFQhXyW50d
-+bsck3Jk6U6Hke+h9ITUB3Hnqg3KW9L8sPYPqCBT6EQ/qZPmWOKjZTyiSjO1kKx6
-+aPM4NKZttzJOcVwQU9m19dvM3xqUfXFPkCve3ECgYAHFcHfzad+NEq6CServm8z
-T/VoZQ6cyqNstVWbQnmDgIYAWZ1eFl9lBPFiT7M6da0MZSnjHXbkxwXO8Hymnr1v
-OUj9QK6orr9EZeaDLPmI7g9WjUriwNot8Ng2qi+agbobuNf5rNEy5cUY9xmJhVAD
-F21m8aAzDR81X3uzCuTP9QKBgQCu9zfZ2PF7oohsYce+Rklpzlo9JbxibcsMZCV6
-x9jc7HKN7OJRFoXqkJE+tIsxdKOynFQHZ1JnjRhCv7VV/TTjiMrK5kyE626hF2pW
-yZGLKiWNin0ThNnQaUK/s+clTxEYpWG0xTFWicsKDw/Ewd7TeOIv+k70mx298iHe
-KXCvQQKBgGdI3bZ1xxKMWDeU5QamDaOkHeZl2SacEQ+C09/O975HLfE05+gsPYDE
-+YNg06oQlO/U9tmOvyGX+Ca6yLF/XQMq62oNlp1a0oqnWlQnv57rgKrGXcv2+6sP
-LhAfbwDR/NNiimZioPeJEGPocUq21OL5RFjj2Sz5l4NYk6Mmeyfz
------END RSA PRIVATE KEY-----`
-)
