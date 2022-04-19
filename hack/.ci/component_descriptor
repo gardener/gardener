@@ -34,6 +34,8 @@ else
   echo "Resources file ${resources_file} not found. Skip adding additional resources."
 fi
 
+echo "Enriching component descriptor from ${BASE_DEFINITION_PATH}"
+
 if [[ -f "$repo_root_dir/charts/images.yaml" ]]; then
   # translates all images defined the images.yaml into component descriptor resources.
   # For detailed documentation see https://github.com/gardener/component-cli/blob/main/docs/reference/components-cli_image-vector_add.md
