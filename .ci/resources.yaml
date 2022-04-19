@@ -1,0 +1,27 @@
+---
+name: 'gardenlet'
+version: '${COMPONENT_VERSION}'
+type: 'ociImage'
+relation: 'local'
+access:
+  type: 'ociRegistry'
+  imageReference: 'eu.gcr.io/gardener-project/gardener/gardenlet:${COMPONENT_VERSION}'
+---
+---
+name: 'gardener-seed-admission-controller'
+version: '${COMPONENT_VERSION}'
+type: 'ociImage'
+relation: 'local'
+access:
+  type: 'ociRegistry'
+  imageReference: 'eu.gcr.io/gardener-project/gardener/seed-admission-controller:${COMPONENT_VERSION}'
+---
+---
+name: 'gardener-resource-manager'
+version: '${COMPONENT_VERSION}'
+type: 'ociImage'
+relation: 'local'
+access:
+  type: 'ociRegistry'
+  imageReference: 'eu.gcr.io/gardener-project/gardener/resource-manager:${COMPONENT_VERSION}'
+---
