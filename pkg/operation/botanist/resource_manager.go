@@ -220,7 +220,7 @@ func (b *Botanist) reconcileGardenerResourceManagerBootstrapKubeconfigSecret(ctx
 			APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(true),
 			CAData:        caBundleSecret.Data[secretutils.DataKeyCertificateBundle],
 		}},
-	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster))
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAClient))
 }
 
 func (b *Botanist) waitUntilGardenerResourceManagerBootstrapped(ctx context.Context) error {

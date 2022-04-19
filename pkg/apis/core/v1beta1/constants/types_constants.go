@@ -23,6 +23,9 @@ const (
 	// SecretNameCACluster is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of a shoot cluster.
 	SecretNameCACluster = "ca"
+	// SecretNameCAClient is a constant for the name of a Kubernetes secret object that contains the client CA
+	// certificate of a shoot cluster.
+	SecretNameCAClient = "ca-client"
 	// SecretNameCAETCD is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of the etcd of a shoot cluster.
 	SecretNameCAETCD = "ca-etcd"

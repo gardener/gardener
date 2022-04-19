@@ -114,7 +114,7 @@ lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 			Spec: gardenercore.ShootStateSpec{
 				Gardener: []gardenercore.GardenerResourceData{
 					{
-						Name: "ca",
+						Name: "ca-client",
 						Type: "secret",
 						Data: runtime.RawExtension{
 							Raw: caRaw,

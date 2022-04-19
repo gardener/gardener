@@ -141,6 +141,18 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 	existingSecret := &corev1.Secret{}
 
 	switch configName {
+	case "ca-client":
+		// TODO(rfranzke): Drop this code before promoting the ShootCARotation feature gate to beta. Otherwise, the
+		//  cluster CA will still be used as client CA during the first shoot CA certificate rotation since the `ca`
+		//  secret will still exist. This code is only very temporary to ensure all shoots get a `ca-client` secret.
+		if err := m.client.Get(ctx, kutil.Key(m.namespace, "ca"), existingSecret); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, err
+			}
+			return newData, nil
+		}
+		return existingSecret.Data, nil
+
 	case "kube-apiserver-basic-auth", "observability-ingress", "observability-ingress-users":
 		oldSecretName := configName
 		if configName == "observability-ingress" {
