@@ -56,6 +56,16 @@ func getSecretConfigs(namespace string) []extensionssecretsmanager.SecretConfigW
 			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlane)},
 		},
 		{
+			Config: &secretutils.CertificateSecretConfig{
+				Name:                        local.Name + "-dummy-client",
+				CommonName:                  "extensions.gardener.cloud:" + local.Name + ":dummy-client",
+				Organization:                []string{"extensions.gardener.cloud:" + local.Name + ":dummy"},
+				CertType:                    secretutils.ClientCert,
+				SkipPublishingCACertificate: true,
+			},
+			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlane)},
+		},
+		{
 			Config: &secretutils.BasicAuthSecretConfig{
 				Name:           local.Name + "-dummy-auth",
 				Format:         secretutils.BasicAuthFormatCSV,

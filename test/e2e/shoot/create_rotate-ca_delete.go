@@ -192,6 +192,7 @@ const (
 	caProviderLocalControlPlane       = "ca-provider-local-controlplane"
 	caProviderLocalControlPlaneBundle = "ca-provider-local-controlplane-bundle"
 	providerLocalDummyServer          = "provider-local-dummy-server"
+	providerLocalDummyClient          = "provider-local-dummy-client"
 	providerLocalDummyAuth            = "provider-local-dummy-auth"
 )
 
@@ -204,6 +205,7 @@ func verifyProviderLocalSecretsBefore(ctx context.Context, g Gomega, c client.Re
 		HaveKeyWithValue(caProviderLocalControlPlane, HaveLen(1)),
 		HaveKeyWithValue(caProviderLocalControlPlaneBundle, HaveLen(1)),
 		HaveKeyWithValue(providerLocalDummyServer, HaveLen(1)),
+		HaveKeyWithValue(providerLocalDummyClient, HaveLen(1)),
 		HaveKeyWithValue(providerLocalDummyAuth, HaveLen(1)),
 	), "all secrets should get created, but not rotated yet")
 
@@ -219,12 +221,14 @@ func verifyProviderLocalSecretsPrepared(ctx context.Context, g Gomega, c client.
 		HaveKeyWithValue(caProviderLocalControlPlane, HaveLen(2)),
 		HaveKeyWithValue(caProviderLocalControlPlaneBundle, HaveLen(1)),
 		HaveKeyWithValue(providerLocalDummyServer, HaveLen(1)),
+		HaveKeyWithValue(providerLocalDummyClient, HaveLen(1)),
 		HaveKeyWithValue(providerLocalDummyAuth, HaveLen(1)),
 	), "CA should get rotated, but old CA and server secrets are kept")
 
 	g.Expect(grouped).To(HaveKeyWithValue(caProviderLocalControlPlane, ContainElement(secretsBefore[caProviderLocalControlPlane][0])), "old CA secret should be kept")
 	g.Expect(grouped).To(HaveKeyWithValue(caProviderLocalControlPlaneBundle, Not(ContainElement(secretsBefore[caProviderLocalControlPlaneBundle][0]))), "CA bundle should have changed")
 	g.Expect(grouped).To(HaveKeyWithValue(providerLocalDummyServer, ContainElement(secretsBefore[providerLocalDummyServer][0])), "server cert should be kept (signed with old CA)")
+	g.Expect(grouped).To(HaveKeyWithValue(providerLocalDummyClient, Not(ContainElement(secretsBefore[providerLocalDummyServer][0]))), "client cert should have changed (signed with new CA)")
 
 	return grouped
 }
@@ -238,10 +242,12 @@ func verifyProviderLocalSecretsCompleted(ctx context.Context, g Gomega, c client
 		HaveKeyWithValue(caProviderLocalControlPlane, HaveLen(1)),
 		HaveKeyWithValue(caProviderLocalControlPlaneBundle, HaveLen(1)),
 		HaveKeyWithValue(providerLocalDummyServer, HaveLen(1)),
+		HaveKeyWithValue(providerLocalDummyClient, HaveLen(1)),
 		HaveKeyWithValue(providerLocalDummyAuth, HaveLen(1)),
 	), "old CA secret should get cleaned up")
 
 	g.Expect(grouped).To(HaveKeyWithValue(caProviderLocalControlPlane, ContainElement(secretsPrepared[caProviderLocalControlPlane][1])), "new CA secret should be kept")
 	g.Expect(grouped).To(HaveKeyWithValue(caProviderLocalControlPlaneBundle, Not(ContainElement(secretsPrepared[caProviderLocalControlPlaneBundle][0]))), "CA bundle should have changed")
 	g.Expect(grouped).To(HaveKeyWithValue(providerLocalDummyServer, Not(ContainElement(secretsPrepared[providerLocalDummyServer][0]))), "server cert should have changed (signed with new CA)")
+	g.Expect(grouped).To(HaveKeyWithValue(providerLocalDummyClient, ContainElement(secretsPrepared[providerLocalDummyClient][0])), "client cert sould be kept (already signed with new CA)")
 }
