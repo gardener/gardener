@@ -6,6 +6,34 @@ repo_root_dir="$1"
 repo_name="${2:-github.com/gardener/gardener}"
 descriptor_out_file="${COMPONENT_DESCRIPTOR_PATH}"
 
+resources_file="$repo_root_dir/.ci/resources.yaml"
+if [[ -f ${resources_file} ]]; then
+  echo "Adding additional resources from ${resources_file}"
+
+  # component-cli expects a directory where the component descriptor file is named component-descriptor.yaml.
+  # however the pre-rendered component descriptors of the pipeline have different filenames.
+  # therefore create a tempdir and copy the pre-rendered component descriptor to it with the correct filename.
+  tmp_dir="$(mktemp -d)"
+  tmp_cd="${tmp_dir}/component-descriptor.yaml"
+  cp "${BASE_DEFINITION_PATH}" "${tmp_cd}"
+  echo "${tmp_cd}"
+
+  # read component component version.
+  if [[ -z ${VERSION_PATH} ]]; then
+    echo "The env variable VERSION_PATH must be set"
+    exit 1
+  fi
+  component_version="$(cat ${VERSION_PATH}/version)"
+
+  # adds all resources defined in the resources file to the component descriptor.
+  component-cli component-archive resources add ${tmp_dir} ${resources_file} -v=3 -- COMPONENT_VERSION=${component_version}
+
+  # move modified component descriptor back to the original file.
+  mv "${tmp_cd}" "${BASE_DEFINITION_PATH}"
+else
+  echo "Resources file ${resources_file} not found. Skip adding additional resources."
+fi
+
 echo "Enriching component descriptor from ${BASE_DEFINITION_PATH}"
 
 if [[ -f "$repo_root_dir/charts/images.yaml" ]]; then
