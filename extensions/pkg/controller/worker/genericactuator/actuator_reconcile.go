@@ -415,6 +415,10 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 				return retryutils.Ok()
 			}
 
+			if err := a.updateWorkerStatusMachineDeployments(ctx, worker, extensionsworker.MachineDeployments{}); err != nil {
+				return retryutils.SevereError(fmt.Errorf("failed to update the machine deployments in worker status: %w", err))
+			}
+
 			if numUnavailable == 0 && numAvailable == numDesired && numUpdated < numberOfAwakeMachines {
 				msg = fmt.Sprintf("Waiting until all old machines are drained and terminated. Waiting for %d machine(s)...", numberOfAwakeMachines-numUpdated)
 				break
@@ -475,10 +479,7 @@ func (a *genericActuator) updateWorkerStatusMachineDeployments(ctx context.Conte
 	if len(statusMachineDeployments) > 0 {
 		worker.Status.MachineDeployments = statusMachineDeployments
 	}
-	if err := a.client.Status().Patch(ctx, worker, patch); err != nil {
-		return err
-	}
-	return nil
+	return a.client.Status().Patch(ctx, worker, patch)
 }
 
 // Helper functions
