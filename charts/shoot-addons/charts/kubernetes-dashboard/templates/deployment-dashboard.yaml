@@ -66,11 +66,7 @@ spec:
             cpu: 50m
             memory: 50Mi
           limits:
-          {{- if .Values.global.vpaEnabled }}
-            memory: 200Mi
-          {{- else }}
             memory: 256Mi
-          {{- end }}
       volumes:
       - name: kubernetes-dashboard-certs
         secret:

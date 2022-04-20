@@ -57,11 +57,7 @@ spec:
             cpu: 10m
             memory: 5Mi
           limits:
-          {{- if .Values.global.vpaEnabled }}
-            memory: 50Mi
-          {{- else }}
             memory: 150Mi
-          {{- end }}
         ports:
         - containerPort: 9115
           protocol: TCP
