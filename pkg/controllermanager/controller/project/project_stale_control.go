@@ -302,10 +302,15 @@ func computeSecretNames(secretList []corev1.Secret) sets.String {
 			continue
 		}
 
+		hasOwnerRef := false
 		for _, ownerRef := range secret.OwnerReferences {
 			if ownerRef.APIVersion == gardencorev1beta1.SchemeGroupVersion.String() && ownerRef.Kind == "Shoot" {
-				continue
+				hasOwnerRef = true
+				break
 			}
+		}
+		if hasOwnerRef {
+			continue
 		}
 
 		names.Insert(secret.Name)
