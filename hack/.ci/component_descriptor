@@ -18,15 +18,14 @@ if [[ -f ${resources_file} ]]; then
   cp "${BASE_DEFINITION_PATH}" "${tmp_cd}"
   echo "${tmp_cd}"
 
-  # read component component version.
-  if [[ -z ${VERSION_PATH} ]]; then
-    echo "The env variable VERSION_PATH must be set"
+  # read the component version.
+  if [[ -z ${EFFECTIVE_VERSION} ]]; then
+    echo "The env variable EFFECTIVE_VERSION must be set"
     exit 1
   fi
-  component_version="$(cat ${VERSION_PATH}/version)"
 
   # adds all resources defined in the resources file to the component descriptor.
-  component-cli component-archive resources add ${tmp_dir} ${resources_file} -v=3 -- COMPONENT_VERSION=${component_version}
+  component-cli component-archive resources add ${tmp_dir} ${resources_file} -v=3 -- COMPONENT_VERSION=${EFFECTIVE_VERSION}
 
   # move modified component descriptor back to the original file.
   mv "${tmp_cd}" "${BASE_DEFINITION_PATH}"
