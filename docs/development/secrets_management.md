@@ -1,4 +1,3 @@
-
 # Secrets Management for Seed and Shoot Cluster
 
 > 🚧️ Please note that the work in the new secrets management is ongoing and hence not yet completed.
