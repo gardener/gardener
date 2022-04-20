@@ -18,7 +18,7 @@ if [[ -f ${resources_file} ]]; then
   cp "${BASE_DEFINITION_PATH}" "${tmp_cd}"
   echo "${tmp_cd}"
 
-  # read component component version.
+  # read the component version.
   if [[ -z ${EFFECTIVE_VERSION} ]]; then
     echo "The env variable EFFECTIVE_VERSION must be set"
     exit 1
