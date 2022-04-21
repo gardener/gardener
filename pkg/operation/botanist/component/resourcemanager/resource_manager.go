@@ -1051,6 +1051,7 @@ func (r *resourceManager) getNetworkPolicyLabels() map[string]string {
 			v1beta1constants.LabelNetworkPolicyToShootAPIServer:   v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyFromShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToSeedAPIServer:    v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyFromPrometheus:     v1beta1constants.LabelNetworkPolicyAllowed,
 		}
 	}
 

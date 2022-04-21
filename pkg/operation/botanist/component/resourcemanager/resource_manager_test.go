@@ -373,6 +373,7 @@ var _ = Describe("ResourceManager", func() {
 							"projected-token-mount.resources.gardener.cloud/skip": "true",
 							"networking.gardener.cloud/to-dns":                    "allowed",
 							"networking.gardener.cloud/to-seed-apiserver":         "allowed",
+							"networking.gardener.cloud/from-prometheus":           "allowed",
 							"networking.gardener.cloud/to-shoot-apiserver":        "allowed",
 							"networking.gardener.cloud/from-shoot-apiserver":      "allowed",
 							v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleControlPlane,
@@ -1341,6 +1342,7 @@ subjects:
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-seed-apiserver")
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-shoot-apiserver")
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/from-shoot-apiserver")
+				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/from-prometheus")
 
 				cfg.TargetDiffersFromSourceCluster = false
 				resourceManager = New(c, deployNamespace, sm, image, cfg)
