@@ -71,7 +71,7 @@ type terraformer struct {
 	deadlinePod         time.Duration
 	deadlinePodCreation time.Duration
 
-	// TODO(rfranzke/BeckerMax): Remove these flags when all provider extensions enable the projected token mount.
+	// should only be disabled for testing
 	useProjectedTokenMount bool
 }
 
