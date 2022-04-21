@@ -22,12 +22,12 @@ v1.47   | Week 19-20  | May 9, 2022            | May 22, 2022       | [@shafeeqe
 v1.48   | Week 21-22  | May 23, 2022           | June 5, 2022       | [@ary1992](https://github.com/ary1992)           |
 v1.49   | Week 23-24  | June 6, 2022           | June 19, 2022      | [@plkokanov](https://github.com/plkokanov)       |
 v1.50   | Week 25-26  | June 20, 2022          | July 3, 2022       | [@rfranzke](https://github.com/rfranzke)         |
-v1.51   | Week 27-28  | July 4, 2022           | July 17, 2022      | [@kris94](https://github.com/kris94)             |
-v1.52   | Week 29-30  | July 18, 2022          | July 31, 2022      | [@timebertt](https://github.com/timebertt)       |
+v1.51   | Week 27-28  | July 4, 2022           | July 17, 2022      | [@timebertt](https://github.com/timebertt)       |
+v1.52   | Week 29-30  | July 18, 2022          | July 31, 2022      | [@kris94](https://github.com/kris94)             |
 v1.53   | Week 31-32  | August 1, 2022         | August 14, 2022    | [@acumino](https://github.com/acumino)           |
 v1.54   | Week 33-34  | August 15, 2022        | August 28, 2022    | [@ialidzhikov](https://github.com/ialidzhikov)   |
-v1.55   | Week 35-36  | August 29, 2022        | September 11, 2022 | [@shafeeqes](https://github.com/shafeeqes)       |
-v1.56   | Week 37-38  | September 12, 2022     | September 25, 2022 | [@oliver-goetz](https://github.com/oliver-goetz) |
+v1.55   | Week 35-36  | August 29, 2022        | September 11, 2022 | [@oliver-goetz](https://github.com/oliver-goetz) |
+v1.56   | Week 37-38  | September 12, 2022     | September 25, 2022 | [@shafeeqes](https://github.com/shafeeqes)       |
 
 Apart from the release of the next version, the release responsible is also taking care of potential hotfix releases of the last three minor versions.
 The release responsible is the main contact person for coordinating new feature PRs for the next minor versions or cherry-pick PRs for the last three minor versions.
