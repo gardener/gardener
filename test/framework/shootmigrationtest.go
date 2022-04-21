@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -30,19 +31,17 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/onsi/ginkgo/v2"
-
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/onsi/ginkgo/v2"
 )
 
 // ShootMigrationTest represents a shoot migration test.
@@ -69,6 +68,7 @@ type ShootMigrationConfig struct {
 	ShootName       string
 	ShootNamespace  string
 	AddTestRunTaint string
+	skipNodeCheck   bool
 }
 
 // ShootComparisonElements contains details about Machines and Nodes that will be compared during the tests
@@ -275,9 +275,11 @@ func (t *ShootMigrationTest) populateBeforeMigrationComparisonElements(ctx conte
 	if err != nil {
 		return
 	}
-	t.ComparisonElementsBeforeMigration.NodeNames, err = t.GetNodeNames(ctx, t.ShootClient)
-	if err != nil {
-		return
+	if t.Config.skipNodeCheck {
+		t.ComparisonElementsBeforeMigration.NodeNames, err = t.GetNodeNames(ctx, t.ShootClient)
+		if err != nil {
+			return
+		}
 	}
 	t.ComparisonElementsBeforeMigration.SecretsMap, err = t.GetPersistedSecrets(ctx, t.SourceSeedClient)
 	return
@@ -289,9 +291,11 @@ func (t *ShootMigrationTest) populateAfterMigrationComparisonElements(ctx contex
 	if err != nil {
 		return
 	}
-	t.ComparisonElementsAfterMigration.NodeNames, err = t.GetNodeNames(ctx, t.ShootClient)
-	if err != nil {
-		return
+	if t.Config.skipNodeCheck {
+		t.ComparisonElementsAfterMigration.NodeNames, err = t.GetNodeNames(ctx, t.ShootClient)
+		if err != nil {
+			return
+		}
 	}
 	t.ComparisonElementsAfterMigration.SecretsMap, err = t.GetPersistedSecrets(ctx, t.TargetSeedClient)
 	return
@@ -305,11 +309,13 @@ func (t *ShootMigrationTest) compareElementsAfterMigration() error {
 	if !reflect.DeepEqual(t.ComparisonElementsBeforeMigration.MachineNodes, t.ComparisonElementsAfterMigration.MachineNodes) {
 		return fmt.Errorf("initial Machine Nodes (label) %s, do not match after-migrate Machine Nodes (label) %s", t.ComparisonElementsBeforeMigration.MachineNodes, t.ComparisonElementsAfterMigration.MachineNodes)
 	}
-	if !reflect.DeepEqual(t.ComparisonElementsBeforeMigration.NodeNames, t.ComparisonElementsAfterMigration.NodeNames) {
-		return fmt.Errorf("initial Nodes %s, do not match after-migrate Nodes %s", t.ComparisonElementsBeforeMigration.NodeNames, t.ComparisonElementsAfterMigration.NodeNames)
-	}
-	if !reflect.DeepEqual(t.ComparisonElementsAfterMigration.MachineNodes, t.ComparisonElementsAfterMigration.NodeNames) {
-		return fmt.Errorf("machine Nodes (label) %s, do not match after-migrate Nodes %s", t.ComparisonElementsAfterMigration.MachineNodes, t.ComparisonElementsAfterMigration.NodeNames)
+	if t.Config.skipNodeCheck {
+		if !reflect.DeepEqual(t.ComparisonElementsBeforeMigration.NodeNames, t.ComparisonElementsAfterMigration.NodeNames) {
+			return fmt.Errorf("initial Nodes %s, do not match after-migrate Nodes %s", t.ComparisonElementsBeforeMigration.NodeNames, t.ComparisonElementsAfterMigration.NodeNames)
+		}
+		if !reflect.DeepEqual(t.ComparisonElementsAfterMigration.MachineNodes, t.ComparisonElementsAfterMigration.NodeNames) {
+			return fmt.Errorf("machine Nodes (label) %s, do not match after-migrate Nodes %s", t.ComparisonElementsAfterMigration.MachineNodes, t.ComparisonElementsAfterMigration.NodeNames)
+		}
 	}
 
 	differingSecrets := []string{}

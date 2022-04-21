@@ -41,15 +41,19 @@ const projectNamespace = "garden-local"
 
 func defaultShootCreationFramework() *framework.ShootCreationFramework {
 	return framework.NewShootCreationFramework(&framework.ShootCreationConfig{
-		GardenerConfig: &framework.GardenerConfig{
-			ProjectNamespace:   projectNamespace,
-			GardenerKubeconfig: os.Getenv("KUBECONFIG"),
-			SkipAccessingShoot: true,
-			CommonConfig: &framework.CommonConfig{
-				ResourceDir: filepath.Join("..", "..", "framework", "resources"),
-			},
-		},
+		GardenerConfig: defaultGardenConfig(),
 	})
+}
+
+func defaultGardenConfig() *framework.GardenerConfig {
+	return &framework.GardenerConfig{
+		ProjectNamespace:   projectNamespace,
+		GardenerKubeconfig: os.Getenv("KUBECONFIG"),
+		SkipAccessingShoot: true,
+		CommonConfig: &framework.CommonConfig{
+			ResourceDir: filepath.Join("..", "..", "framework", "resources"),
+		},
+	}
 }
 
 func defaultShoot(generateName string) *gardencorev1beta1.Shoot {
