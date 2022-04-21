@@ -219,9 +219,13 @@ func Bootstrap(
 		return nil, err
 	}
 
-	caSecret, found := secretsManager.Get(v1beta1constants.SecretNameCASeed)
-	if !found {
-		return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCASeed)
+	var caBundleData []byte
+	if secretsManager != nil {
+		caSecret, found := secretsManager.Get(v1beta1constants.SecretNameCASeed)
+		if !found {
+			return nil, fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCASeed)
+		}
+		caBundleData = caSecret.Data[secretutils.DataKeyCertificateBundle]
 	}
 
 	scheduler, err := New(
@@ -236,7 +240,7 @@ func Bootstrap(
 				Namespace: seedAdmissionControllerNamespace,
 				Path:      pointer.String(podschedulername.WebhookPath),
 			},
-			CABundle: caSecret.Data[secretutils.DataKeyCertificateBundle],
+			CABundle: caBundleData,
 		},
 	)
 	if err != nil {
