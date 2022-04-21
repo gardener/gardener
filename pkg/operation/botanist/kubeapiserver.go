@@ -421,7 +421,8 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	if deployment != nil && values.Autoscaling.HVPAEnabled {
 		for _, container := range deployment.Spec.Template.Spec.Containers {
 			if container.Name == kubeapiserver.ContainerNameKubeAPIServer {
-				b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingAPIServerResources(container.Resources)
+				// Only set requests to allow limits to be removed
+				b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingAPIServerResources(corev1.ResourceRequirements{Requests: container.Resources.Requests})
 				break
 			}
 		}
