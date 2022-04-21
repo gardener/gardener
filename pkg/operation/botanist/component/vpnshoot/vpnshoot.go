@@ -154,7 +154,7 @@ func (v *vpnShoot) Deploy(ctx context.Context) error {
 			CertType:                    secretutils.ServerCert,
 			SkipPublishingCACertificate: true,
 		}
-		signingCA = v1beta1constants.SecretNameCACluster
+		signingCA = v1beta1constants.SecretNameCAClient
 	}
 
 	secretCA, found := v.secretsManager.Get(signingCA)
