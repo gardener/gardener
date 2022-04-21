@@ -1099,6 +1099,20 @@ func RunDeleteSeedFlow(
 		return err
 	}
 
+	if seed.GetInfo().Status.ClusterIdentity == nil {
+		seedClusterIdentity, err := determineClusterIdentity(ctx, seedClient)
+		if err != nil {
+			return err
+		}
+
+		if err := seed.UpdateInfoStatus(ctx, gardenClient, false, func(seed *gardencorev1beta1.Seed) error {
+			seed.Status.ClusterIdentity = &seedClusterIdentity
+			return nil
+		}); err != nil {
+			return err
+		}
+	}
+
 	secretData, err := getDNSProviderSecretData(ctx, gardenClient, seed)
 	if err != nil {
 		return err
