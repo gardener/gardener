@@ -48,12 +48,12 @@ digraph oidc_registration {
         cr4 -> cr5;
         cr5 -> cr6;
         cr6 -> cr7;
-        cr7 -> cr8 [penwidth=5,style=solid];
+        cr7 -> cr8;
         cr8 -> cr9;
         cr9 -> cr10;
     }
     {
-        dr9[label="ready",shape=rectangle,height=1]
+        dr7[label="ready",shape=rectangle,height=1]
         edge [style=dashed, weight=6];
         authr -> dr1;
         dr1 -> dr2;
@@ -61,9 +61,9 @@ digraph oidc_registration {
         dr3 -> dr4;
         dr4 -> dr5[penwidth=5,style=solid];
         dr5 -> dr6;
-        dr6 -> dr7 [penwidth=5,style=solid];
+        dr6 -> dr7 [label="   add Custom IDP\n  to list of OIDC\n  authenticators",penwidth=5,style=solid,arrowhead=normal];
         dr7 -> dr8;
-        dr8 -> dr9 [label="   add Custom IDP\n  to list of OIDC\n  authenticators",penwidth=5,style=solid,arrowhead=normal];
+        dr8 -> dr9;
         dr9 -> dr10;
     }
     // Draws activations
@@ -73,7 +73,5 @@ digraph oidc_registration {
      { rank=same; br5 -> cr5 [arrowhead=normal,dir=back] cr5 -> dr5 [label="jwks_uri\n request"];  }
      { rank=same; br4 -> cr4 [label="OIDC discovery\n response"]; cr4 -> dr4 [arrowhead=normal] }
      { rank=same; br6 -> cr6 [label="jwks_uri\n response"]; cr6 -> dr6 [arrowhead=normal] }
-     { rank=same; cr7 -> dr7 [label="OpenIDConnect\n update status",arrowhead=normal,dir=back] }
-     { rank=same; cr8 -> dr8 [label="watch",arrowhead=normal] }
 
 }
