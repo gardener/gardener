@@ -2,4 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-- https://projectcalico.docs.tigera.io/v3.22/manifests/calico.yaml
+# Pin calico manifests to a specific version by copying released manifests to this repository.
+# With this, we are also not affected any more by downtimes of https://projectcalico.docs.tigera.io/v3.22/manifests/calico.yaml
+# which caused flakes of e2e test jobs in the past.
+- calico.yaml # extracted from https://github.com/projectcalico/calico/releases/download/v3.22.2/release-v3.22.2.tgz (manifests/calico.yaml)
