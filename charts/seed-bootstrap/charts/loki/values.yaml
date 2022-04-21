@@ -65,11 +65,11 @@ resources:
       memory: 12Mi
   kubeRBACproxy:
     limits:
-      cpu: 60m
-      memory: 50Mi
+      cpu: 180m
+      memory: 150Mi
     requests:
-      cpu: 30m
-      memory: 15Mi 
+      cpu: 50m
+      memory: 50Mi
   telegraf:
     limits:
       cpu: 15m
