@@ -27,7 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 )
 
@@ -48,7 +48,8 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 		vpaLabels           = map[string]string{v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer + "-vpa"}
 		updateModeAuto      = hvpav1alpha1.UpdateModeAuto
 		scaleDownUpdateMode = updateModeAuto
-		containerPolicyOff  = autoscalingv1beta2.ContainerScalingModeOff
+		containerPolicyOff  = vpaautoscalingv1.ContainerScalingModeOff
+		controlledValues    = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		hpaMetrics          = []autoscalingv2beta1.MetricSpec{
 			{
 				Type: autoscalingv2beta1.ResourceMetricSourceType,
@@ -58,7 +59,7 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 				},
 			},
 		}
-		vpaContainerResourcePolicies = []autoscalingv1beta2.ContainerResourcePolicy{
+		vpaContainerResourcePolicies = []vpaautoscalingv1.ContainerResourcePolicy{
 			{
 				ContainerName: ContainerNameKubeAPIServer,
 				MinAllowed: corev1.ResourceList{
@@ -69,10 +70,12 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 					corev1.ResourceCPU:    resource.MustParse("8"),
 					corev1.ResourceMemory: resource.MustParse("25G"),
 				},
+				ControlledValues: &controlledValues,
 			},
 			{
-				ContainerName: containerNameVPNSeed,
-				Mode:          &containerPolicyOff,
+				ContainerName:    containerNameVPNSeed,
+				Mode:             &containerPolicyOff,
+				ControlledValues: &controlledValues,
 			},
 		}
 		weightBasedScalingIntervals = []hvpav1alpha1.WeightBasedScalingInterval{
@@ -99,9 +102,10 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 	}
 
 	if k.values.SNI.PodMutatorEnabled {
-		vpaContainerResourcePolicies = append(vpaContainerResourcePolicies, autoscalingv1beta2.ContainerResourcePolicy{
-			ContainerName: containerNameAPIServerProxyPodMutator,
-			Mode:          &containerPolicyOff,
+		vpaContainerResourcePolicies = append(vpaContainerResourcePolicies, vpaautoscalingv1.ContainerResourcePolicy{
+			ContainerName:    containerNameAPIServerProxyPodMutator,
+			Mode:             &containerPolicyOff,
+			ControlledValues: &controlledValues,
 		})
 	}
 
@@ -189,7 +193,7 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 					Labels: vpaLabels,
 				},
 				Spec: hvpav1alpha1.VpaTemplateSpec{
-					ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
+					ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 						ContainerPolicies: vpaContainerResourcePolicies,
 					},
 				},

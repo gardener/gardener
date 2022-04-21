@@ -259,10 +259,10 @@ github.com/gardener/gardener v1.36.0/go.mod h1:aVEbZy2WybsuwfXfUFNfOYz1JOmMjEOeY
 github.com/gardener/gardener-resource-manager v0.10.0/go.mod h1:0pKTHOhvU91eQB0EYr/6Ymd7lXc/5Hi8P8tF/gpV0VQ=
 github.com/gardener/gardener-resource-manager v0.13.1/go.mod h1:0No/XttYRUwDn5lSppq9EqlKdo/XJQ44aCZz5BVu3Vw=
 github.com/gardener/gardener-resource-manager v0.18.0/go.mod h1:k53Yw2iDAIpTxnChQY9qFHrRtuPQWJDNnCP9eE6TnWQ=
-github.com/gardener/hvpa-controller v0.4.0 h1:yJWQeQiQ1UCPRwNm7PsSmqV2zGVOlkUoKWzrSJ4kJdo=
-github.com/gardener/hvpa-controller v0.4.0/go.mod h1:8mvrG3Iw1/lo0sAhsbkVScz8AmU6IVFNSXbi5yAmL4Y=
-github.com/gardener/hvpa-controller/api v0.4.0 h1:IwNHmqEjleDLmvSDzIcSrIcqrNI8R06PuWIzX40Yw/4=
-github.com/gardener/hvpa-controller/api v0.4.0/go.mod h1:QQl3ELkCaki+8RhXl0FZMfvnm0WCGwGJlGmrxJj6lvM=
+github.com/gardener/hvpa-controller v0.5.0 h1:4t4xSFKCsyQwMF9bXn+FwKMwDvNbIepLBqakuv1vMTs=
+github.com/gardener/hvpa-controller v0.5.0/go.mod h1:8mvrG3Iw1/lo0sAhsbkVScz8AmU6IVFNSXbi5yAmL4Y=
+github.com/gardener/hvpa-controller/api v0.5.0 h1:f4F3O7YUrenwh4S3TgPREPiB287JjjUiUL18OqPLyAA=
+github.com/gardener/hvpa-controller/api v0.5.0/go.mod h1:QQl3ELkCaki+8RhXl0FZMfvnm0WCGwGJlGmrxJj6lvM=
 github.com/gardener/landscaper/apis v0.7.0/go.mod h1:++MW27PlSnbWM4AJipikw62RSprxO5TKVxZ8nh0e4Yw=
 github.com/gardener/machine-controller-manager v0.27.0/go.mod h1:zlIxuLQMtRO+aXOFsG6qtYkBmggbWY82K7MSO051ARU=
 github.com/gardener/machine-controller-manager v0.33.0/go.mod h1:jxxE+mGgXwg4iPlCHTG4GtUfK2CcHA6yYoIIowoxOZU=

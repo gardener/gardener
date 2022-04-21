@@ -48,7 +48,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -99,7 +99,8 @@ var _ = Describe("Etcd", func() {
 		backupLeaderElectionReelectionPeriod      = &metav1.Duration{Duration: 11 * time.Second}
 
 		updateModeAuto     = hvpav1alpha1.UpdateModeAuto
-		containerPolicyOff = autoscalingv1beta2.ContainerScalingModeOff
+		containerPolicyOff = vpaautoscalingv1.ContainerScalingModeOff
+		controlledValues   = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		metricsBasic       = druidv1alpha1.Basic
 		metricsExtensive   = druidv1alpha1.Extensive
 
@@ -416,8 +417,8 @@ var _ = Describe("Etcd", func() {
 								},
 							},
 							Spec: hvpav1alpha1.VpaTemplateSpec{
-								ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
-									ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+								ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+									ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 										{
 											ContainerName: "etcd",
 											MinAllowed: corev1.ResourceList{
@@ -428,10 +429,12 @@ var _ = Describe("Etcd", func() {
 												corev1.ResourceCPU:    resource.MustParse("4"),
 												corev1.ResourceMemory: resource.MustParse("30G"),
 											},
+											ControlledValues: &controlledValues,
 										},
 										{
-											ContainerName: "backup-restore",
-											Mode:          &containerPolicyOff,
+											ContainerName:    "backup-restore",
+											Mode:             &containerPolicyOff,
+											ControlledValues: &controlledValues,
 										},
 									},
 								},

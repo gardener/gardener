@@ -46,7 +46,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -420,7 +420,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			hpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-hpa-" + e.role}
 			vpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-vpa-" + e.role}
 			updateModeAuto     = hvpav1alpha1.UpdateModeAuto
-			containerPolicyOff = autoscalingv1beta2.ContainerScalingModeOff
+			containerPolicyOff = vpaautoscalingv1.ContainerScalingModeOff
+			controlledValues   = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		)
 
 		scaleDownUpdateMode := e.hvpaConfig.ScaleDownUpdateMode
@@ -516,8 +517,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						Labels: vpaLabels,
 					},
 					Spec: hvpav1alpha1.VpaTemplateSpec{
-						ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
-							ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+						ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+							ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 								{
 									ContainerName: containerNameEtcd,
 									MinAllowed:    minAllowed,
@@ -525,10 +526,12 @@ func (e *etcd) Deploy(ctx context.Context) error {
 										corev1.ResourceCPU:    resource.MustParse("4"),
 										corev1.ResourceMemory: resource.MustParse("30G"),
 									},
+									ControlledValues: &controlledValues,
 								},
 								{
-									ContainerName: containerNameBackupRestore,
-									Mode:          &containerPolicyOff,
+									ContainerName:    containerNameBackupRestore,
+									Mode:             &containerPolicyOff,
+									ControlledValues: &controlledValues,
 								},
 							},
 						},
