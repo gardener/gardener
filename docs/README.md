@@ -123,6 +123,7 @@
   * [Logging and monitoring for extensions](extensions/logging-and-monitoring.md)
   * [Contributing to shoot health status conditions](extensions/shoot-health-status-conditions.md)
     * [Health Check Library](extensions/healthcheck-library.md)
+  * [CA Rotation in Extensions](extensions/ca-rotation.md)
   * Blob storage providers
     * [`BackupBucket` resource](extensions/backupbucket.md)
     * [`BackupEntry` resource](extensions/backupentry.md)

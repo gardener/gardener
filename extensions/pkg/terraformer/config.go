@@ -75,7 +75,8 @@ func (t *terraformer) SetOwnerRef(owner *metav1.OwnerReference) Terraformer {
 	return t
 }
 
-// UseProjectedTokenMount configures the useProjectedTokenMount field.
+// UseProjectedTokenMount configures the useProjectedTokenMount field (defaults to true).
+// Should only be disabled for testing in a cluster without gardener-resource-manager.
 func (t *terraformer) UseProjectedTokenMount(useProjectedTokenMount bool) Terraformer {
 	t.useProjectedTokenMount = useProjectedTokenMount
 	return t

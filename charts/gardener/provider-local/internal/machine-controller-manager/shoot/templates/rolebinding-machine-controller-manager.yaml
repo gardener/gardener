@@ -9,11 +9,6 @@ roleRef:
   kind: Role
   name: extensions.gardener.cloud:{{ .Values.providerName }}:machine-controller-manager
 subjects:
-{{- if .Values.useTokenRequestor }}
 - kind: ServiceAccount
   name: machine-controller-manager
   namespace: kube-system
-{{- else }}
-- kind: User
-  name: system:machine-controller-manager
-{{- end }}

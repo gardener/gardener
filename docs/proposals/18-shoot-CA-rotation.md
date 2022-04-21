@@ -142,6 +142,7 @@ The proposal section includes a detailed description of all steps involved for r
 - Update `kube-apiserver`, `kube-scheduler`, etc. to trust CLIENT CERTS signed by both `CA0` and `CLIENT_CA1` (`--client-ca-file` flag)
 - Update `kube-controller-manager` to issue new CLIENT CERTS now with `CLIENT_CA1`
 - Update kubeconfig so that its CA bundle contains both `CA0` and`CA1` (if kubeconfig still contains a legacy CLIENT CERT then rotate the kubeconfig)
+- Update `generic-token-kubeconfig` so that its CA bundle contains both `CA0` and`CA1`
 - Update `kube-controller-manager` to populate both `CA0` and `CA1` in `ServiceAccount` secrets.
 - Restart control plane components so that their CA bundle contains both `CA0` and `CA1`
 - Renew CLIENT CERTS (sign them with `CLIENT_CA1`) for the following control plane components: Prometheus, DWD, legacy VPN), if not dropped already in the context of [gardener/gardener#4661](https://github.com/gardener/gardener/issues/4661)
@@ -154,9 +155,10 @@ The proposal section includes a detailed description of all steps involved for r
 
 Prerequisite: All Gardener-controlled actions listed in t1 were executed successfully (for example node rollout). The shoot owner has guaranteed that they exchanged their client credentials and triggered step 2 via an annotation.
 
-- Renew SERVER CERTS (sign them with `CA1`) for `kube-apiserver`, etc.
+- Renew SERVER CERTS (sign them with `CA1`) for `kube-apiserver`, `kube-controller-manager`, `cloud-controller-manager` etc.
 - Update `kube-apiserver`, `kube-scheduler`, etc. to trust only CLIENT CERTS signed by `CLIENT_CA1`
 - Update kubeconfig so that its CA bundle contains only `CA1`
+- Update `generic-token-kubeconfig` so that its CA bundle contains only `CA1`
 - Update `kube-controller-manager` to only contain CA1. `ServiceAccount` secrets created after this point will get secrets that include only `CA1`
 - Restart control plane components so that their CA bundle contains only `CA1`
 - Restart kubelets so that the CA bundle in their kubeconfigs contain only `CA1`

@@ -49,11 +49,7 @@ spec:
         - --machine-health-timeout=10m
         - --namespace={{ .Release.Namespace }}
         - --port={{ .Values.metricsPortLocal }}
-        {{- if .Values.useTokenRequestor }}
         - --target-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
-        {{- else }}
-        - --target-kubeconfig=/var/lib/machine-controller-manager/kubeconfig
-        {{- end }}
         - --v=3
         livenessProbe:
           failureThreshold: 3
@@ -68,15 +64,9 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
-        {{- if .Values.useTokenRequestor }}
         - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
           name: kubeconfig
           readOnly: true
-        {{- else }}
-        - mountPath: /var/lib/machine-controller-manager
-          name: machine-controller-manager
-          readOnly: true
-        {{- end }}
       - name: local-machine-controller-manager
         image: {{ index .Values.images "machine-controller-manager" }}
         imagePullPolicy: IfNotPresent
@@ -92,11 +82,7 @@ spec:
         - --port={{ .Values.metricsPort }}
         - --safety-up=2
         - --safety-down=1
-        {{- if .Values.useTokenRequestor }}
         - --target-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
-        {{- else }}
-        - --target-kubeconfig=/var/lib/machine-controller-manager/kubeconfig
-        {{- end }}
         - --v=3
         livenessProbe:
           failureThreshold: 3
@@ -119,17 +105,10 @@ spec:
           limits:
             memory: 256Mi
         volumeMounts:
-        {{- if .Values.useTokenRequestor }}
         - mountPath: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig
           name: kubeconfig
           readOnly: true
-        {{- else }}
-        - mountPath: /var/lib/machine-controller-manager
-          name: machine-controller-manager
-          readOnly: true
-        {{- end }}
       volumes:
-      {{- if .Values.useTokenRequestor }}
       - name: kubeconfig
         projected:
           defaultMode: 420
@@ -146,8 +125,3 @@ spec:
                 path: token
               name: shoot-access-machine-controller-manager
               optional: false
-      {{- else }}
-      - name: machine-controller-manager
-        secret:
-          secretName: machine-controller-manager
-      {{- end }}

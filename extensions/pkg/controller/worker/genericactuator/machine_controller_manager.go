@@ -29,14 +29,11 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 const (
@@ -58,21 +55,13 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, lo
 		return err
 	}
 
-	mcmValues["useTokenRequestor"] = a.useTokenRequestor
-	mcmValues["useProjectedTokenMount"] = a.useProjectedTokenMount
+	mcmValues["useTokenRequestor"] = true
+	mcmValues["useProjectedTokenMount"] = true
 
-	if a.useTokenRequestor {
-		if err := gutil.NewShootAccessSecret(a.mcmName, workerObj.Namespace).Reconcile(ctx, a.client); err != nil {
-			return err
-		}
-		mcmValues["genericTokenKubeconfigSecretName"] = extensionscontroller.GenericTokenKubeconfigSecretNameFromCluster(cluster)
-	} else {
-		mcmKubeconfigSecret, err := createKubeconfigForMachineControllerManager(ctx, a.client, workerObj.Namespace, a.mcmName)
-		if err != nil {
-			return err
-		}
-		injectPodAnnotation(mcmValues, "checksum/secret-machine-controller-manager", utils.ComputeChecksum(mcmKubeconfigSecret.Data))
+	if err := gutil.NewShootAccessSecret(a.mcmName, workerObj.Namespace).Reconcile(ctx, a.client); err != nil {
+		return err
 	}
+	mcmValues["genericTokenKubeconfigSecretName"] = extensionscontroller.GenericTokenKubeconfigSecretNameFromCluster(cluster)
 
 	replicaCount, err := replicas()
 	if err != nil {
@@ -94,12 +83,7 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, lo
 		return fmt.Errorf("waiting until deployment/%s is updated: %w", McmDeploymentName, err)
 	}
 
-	// TODO(rfranzke/BeckerMax): Remove in a future release.
-	secretName := a.mcmName
-	if !a.useTokenRequestor {
-		secretName = "shoot-access-" + a.mcmName
-	}
-	return kutil.DeleteObject(ctx, a.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: workerObj.Namespace}})
+	return nil
 }
 
 func (a *genericActuator) deleteMachineControllerManager(ctx context.Context, logger logr.Logger, workerObj *extensionsv1alpha1.Worker) error {
@@ -119,11 +103,7 @@ func (a *genericActuator) deleteMachineControllerManager(ctx context.Context, lo
 		return fmt.Errorf("cleaning up machine-controller-manager resources in seed failed: %w", err)
 	}
 
-	return kutil.DeleteObjects(ctx, a.client,
-		// TODO(rfranzke/BeckerMax): Remove in a future release.
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-" + a.mcmName, Namespace: workerObj.Namespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: a.mcmName, Namespace: workerObj.Namespace}},
-	)
+	return kutil.DeleteObject(ctx, a.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "shoot-access-" + a.mcmName, Namespace: workerObj.Namespace}})
 }
 
 func (a *genericActuator) waitUntilMachineControllerManagerIsDeleted(ctx context.Context, logger logr.Logger, namespace string) error {
@@ -159,33 +139,11 @@ func (a *genericActuator) applyMachineControllerManagerShootChart(ctx context.Co
 		return err
 	}
 
-	values["useTokenRequestor"] = a.useTokenRequestor
+	values["useTokenRequestor"] = true
 
 	if err := managedresources.RenderChartAndCreate(ctx, workerObj.Namespace, McmShootResourceName, false, a.client, chartRenderer, a.mcmShootChart, values, a.imageVector, metav1.NamespaceSystem, cluster.Shoot.Spec.Kubernetes.Version, true, false); err != nil {
 		return fmt.Errorf("could not apply control plane shoot chart for worker '%s': %w", kutil.ObjectName(workerObj), err)
 	}
 
 	return nil
-}
-
-// createKubeconfigForMachineControllerManager generates a new certificate and kubeconfig for the machine-controller-manager. If
-// such credentials already exist then they will be returned.
-func createKubeconfigForMachineControllerManager(ctx context.Context, c client.Client, namespace, name string) (*corev1.Secret, error) {
-	certConfig := secrets.CertificateSecretConfig{
-		Name:       name,
-		CommonName: fmt.Sprintf("system:%s", name),
-	}
-
-	return util.GetOrCreateShootKubeconfig(ctx, c, certConfig, namespace)
-}
-
-func injectPodAnnotation(values map[string]interface{}, key string, value interface{}) {
-	podAnnotations, ok := values["podAnnotations"]
-	if !ok {
-		values["podAnnotations"] = map[string]interface{}{
-			key: value,
-		}
-	} else {
-		podAnnotations.(map[string]interface{})[key] = value
-	}
 }

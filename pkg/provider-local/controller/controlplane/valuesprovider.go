@@ -15,8 +15,17 @@
 package controlplane
 
 import (
+	"time"
+
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
+	extensionssecretsmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
+	"github.com/gardener/gardener/pkg/provider-local/local"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
+
+const caNameControlPlane = "ca-" + local.Name + "-controlplane"
 
 // NewValuesProvider creates a new ValuesProvider for the generic actuator.
 func NewValuesProvider() genericactuator.ValuesProvider {
@@ -25,4 +34,44 @@ func NewValuesProvider() genericactuator.ValuesProvider {
 
 type valuesProvider struct {
 	genericactuator.NoopValuesProvider
+}
+
+func getSecretConfigs(namespace string) []extensionssecretsmanager.SecretConfigWithOptions {
+	return []extensionssecretsmanager.SecretConfigWithOptions{
+		{
+			Config: &secretutils.CertificateSecretConfig{
+				Name:       caNameControlPlane,
+				CommonName: caNameControlPlane,
+				CertType:   secretutils.CACert,
+			},
+			Options: []secretsmanager.GenerateOption{secretsmanager.Persist()},
+		},
+		{
+			Config: &secretutils.CertificateSecretConfig{
+				Name:       local.Name + "-dummy-server",
+				CommonName: local.Name + "-dummy-server",
+				DNSNames:   kutil.DNSNamesForService(local.Name+"-dummy-server", namespace),
+				CertType:   secretutils.ServerCert,
+			},
+			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlane)},
+		},
+		{
+			Config: &secretutils.CertificateSecretConfig{
+				Name:                        local.Name + "-dummy-client",
+				CommonName:                  "extensions.gardener.cloud:" + local.Name + ":dummy-client",
+				Organization:                []string{"extensions.gardener.cloud:" + local.Name + ":dummy"},
+				CertType:                    secretutils.ClientCert,
+				SkipPublishingCACertificate: true,
+			},
+			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlane)},
+		},
+		{
+			Config: &secretutils.BasicAuthSecretConfig{
+				Name:           local.Name + "-dummy-auth",
+				Format:         secretutils.BasicAuthFormatCSV,
+				PasswordLength: 32,
+			},
+			Options: []secretsmanager.GenerateOption{secretsmanager.Validity(time.Hour)},
+		},
+	}
 }
