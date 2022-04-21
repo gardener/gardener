@@ -690,7 +690,7 @@ type KubeAPIServerConfig struct {
 // Note: The schema (incl. child structs) and documentation resembles istio's AuthorizationPolicy.
 type AccessControl struct {
 	// The action to take on the source of request.
-	Action *AuthorizationAction `json:"action,omitempty" protobuf:"bytes,1,opt,name=authorizationAction"`
+	Action AuthorizationAction `json:"action" protobuf:"bytes,1,opt,name=authorizationAction"`
 	// Origin of request to run defined authorization action against.
 	Source Source `json:"source" protobuf:"bytes,2,opt,name=source"`
 }
