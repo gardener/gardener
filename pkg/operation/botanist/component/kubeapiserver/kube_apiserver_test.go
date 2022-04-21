@@ -52,7 +52,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -73,7 +72,7 @@ var _ = Describe("KubeAPIServer", func() {
 		namespace          = "some-namespace"
 		vpaUpdateMode      = vpaautoscalingv1.UpdateModeOff
 		controlledValues   = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
-		containerPolicyOff = autoscalingv1beta2.ContainerScalingModeOff
+		containerPolicyOff = vpaautoscalingv1.ContainerScalingModeOff
 
 		kubernetesInterface kubernetes.Interface
 		c                   client.Client
@@ -365,7 +364,7 @@ var _ = Describe("KubeAPIServer", func() {
 							},
 						},
 					}
-					defaultExpectedVPAContainerResourcePolicies = []autoscalingv1beta2.ContainerResourcePolicy{
+					defaultExpectedVPAContainerResourcePolicies = []vpaautoscalingv1.ContainerResourcePolicy{
 						{
 							ContainerName: "kube-apiserver",
 							MinAllowed: corev1.ResourceList{
@@ -376,10 +375,12 @@ var _ = Describe("KubeAPIServer", func() {
 								"cpu":    resource.MustParse("8"),
 								"memory": resource.MustParse("25G"),
 							},
+							ControlledValues: &controlledValues,
 						},
 						{
-							ContainerName: "vpn-seed",
-							Mode:          &containerPolicyOff,
+							ContainerName:    "vpn-seed",
+							Mode:             &containerPolicyOff,
+							ControlledValues: &controlledValues,
 						},
 					}
 					defaultExpectedWeightBasedScalingIntervals = []hvpav1alpha1.WeightBasedScalingInterval{
@@ -397,7 +398,7 @@ var _ = Describe("KubeAPIServer", func() {
 						sniConfig SNIConfig,
 						expectedScaleDownUpdateMode string,
 						expectedHPAMetrics []autoscalingv2beta1.MetricSpec,
-						expectedVPAContainerResourcePolicies []autoscalingv1beta2.ContainerResourcePolicy,
+						expectedVPAContainerResourcePolicies []vpaautoscalingv1.ContainerResourcePolicy,
 						expectedWeightBasedScalingIntervals []hvpav1alpha1.WeightBasedScalingInterval,
 					) {
 						kapi = New(kubernetesInterface, namespace, sm, Values{
@@ -500,7 +501,7 @@ var _ = Describe("KubeAPIServer", func() {
 											Labels: map[string]string{"role": "apiserver-vpa"},
 										},
 										Spec: hvpav1alpha1.VpaTemplateSpec{
-											ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
+											ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
 												ContainerPolicies: expectedVPAContainerResourcePolicies,
 											},
 										},
@@ -584,7 +585,7 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 						defaultExpectedScaleDownUpdateMode,
 						defaultExpectedHPAMetrics,
-						[]autoscalingv1beta2.ContainerResourcePolicy{
+						[]vpaautoscalingv1.ContainerResourcePolicy{
 							{
 								ContainerName: "kube-apiserver",
 								MinAllowed: corev1.ResourceList{
@@ -595,14 +596,17 @@ var _ = Describe("KubeAPIServer", func() {
 									"cpu":    resource.MustParse("8"),
 									"memory": resource.MustParse("25G"),
 								},
+								ControlledValues: &controlledValues,
 							},
 							{
-								ContainerName: "vpn-seed",
-								Mode:          &containerPolicyOff,
+								ContainerName:    "vpn-seed",
+								Mode:             &containerPolicyOff,
+								ControlledValues: &controlledValues,
 							},
 							{
-								ContainerName: "apiserver-proxy-pod-mutator",
-								Mode:          &containerPolicyOff,
+								ContainerName:    "apiserver-proxy-pod-mutator",
+								Mode:             &containerPolicyOff,
+								ControlledValues: &controlledValues,
 							},
 						},
 						defaultExpectedWeightBasedScalingIntervals,

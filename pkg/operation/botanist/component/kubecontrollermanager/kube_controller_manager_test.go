@@ -50,7 +50,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -379,13 +378,14 @@ var _ = Describe("KubeControllerManager", func() {
 										},
 									},
 									Spec: hvpav1alpha1.VpaTemplateSpec{
-										ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
-											ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{{
+										ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+											ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{{
 												ContainerName: "kube-controller-manager",
 												MinAllowed: corev1.ResourceList{
 													corev1.ResourceCPU:    resource.MustParse("100m"),
 													corev1.ResourceMemory: resource.MustParse("100Mi"),
 												},
+												ControlledValues: &controlledValues,
 											}},
 										},
 									},

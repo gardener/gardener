@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	vpa_api "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	vpa_api "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 )
 
 var (
@@ -31,7 +31,7 @@ var (
 	GroupName = "autoscaling.k8s.io"
 
 	// SchemeGroupVersionVpa is group version used to register these objects
-	SchemeGroupVersionVpa = schema.GroupVersion{Group: GroupName, Version: "v1beta2"}
+	SchemeGroupVersionVpa = schema.GroupVersion{Group: GroupName, Version: "v1"}
 
 	// SchemeGroupVersionHvpa is group version used to register these objects
 	SchemeGroupVersionHvpa = schema.GroupVersion{Group: GroupName, Version: "v1alpha1"}

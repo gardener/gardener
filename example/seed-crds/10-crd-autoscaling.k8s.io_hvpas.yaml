@@ -899,6 +899,23 @@ spec:
                                         in which case the policy is used by the containers
                                         that don't have their own policy specified.
                                       type: string
+                                    controlledResources:
+                                      description: Specifies the type of recommendations
+                                        that will be computed (and possibly applied)
+                                        by VPA. If not specified, the default of [ResourceCPU,
+                                        ResourceMemory] will be used.
+                                      items:
+                                        description: ResourceName is the name identifying
+                                          various resources in a ResourceList.
+                                        type: string
+                                      type: array
+                                    controlledValues:
+                                      description: Specifies which resource values
+                                        should be controlled. The default is "RequestsAndLimits".
+                                      enum:
+                                      - RequestsAndLimits
+                                      - RequestsOnly
+                                      type: string
                                     maxAllowed:
                                       additionalProperties:
                                         anyOf:

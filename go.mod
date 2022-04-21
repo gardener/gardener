@@ -12,7 +12,7 @@ require (
 	github.com/gardener/dependency-watchdog v0.7.0
 	github.com/gardener/etcd-druid v0.8.0
 	github.com/gardener/external-dns-management v0.7.18
-	github.com/gardener/hvpa-controller/api v0.4.0
+	github.com/gardener/hvpa-controller/api v0.5.0
 	github.com/gardener/machine-controller-manager v0.41.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.2.0
@@ -181,8 +181,8 @@ require (
 replace (
 	github.com/emicklei/go-restful => github.com/emicklei/go-restful v2.9.5+incompatible // keep this value in sync with k8s.io/apiserver
 	github.com/envoyproxy/go-control-plane => github.com/envoyproxy/go-control-plane v0.9.4
-	github.com/gardener/hvpa-controller => github.com/gardener/hvpa-controller v0.4.0
-	github.com/gardener/hvpa-controller/api => github.com/gardener/hvpa-controller/api v0.4.0
+	github.com/gardener/hvpa-controller => github.com/gardener/hvpa-controller v0.5.0
+	github.com/gardener/hvpa-controller/api => github.com/gardener/hvpa-controller/api v0.5.0
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.5.5 // keep this value in sync with k8s.io/apiserver
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.1 // keep this value in sync with sigs.k8s.io/controller-runtime
 	google.golang.org/grpc => google.golang.org/grpc v1.40.0 // keep this value in sync with k8s.io/apiserver
