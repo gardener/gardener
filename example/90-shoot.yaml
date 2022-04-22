@@ -130,6 +130,7 @@ spec:
     #   - DiskPressure
   kubernetes:
     version: 1.20.1
+  # enableStaticTokenKubeconfig: true
   # allowPrivilegedContainers: true # 'true' means that all authenticated users can use the "gardener.privileged" PodSecurityPolicy, allowing full unrestricted access to Pod features.
   # kubeAPIServer:
   #   eventTTL: 1h

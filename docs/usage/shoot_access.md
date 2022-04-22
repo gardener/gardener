@@ -1,6 +1,6 @@
 # Shoot_access.md
 
-There are several scenarios where end-user would like to access shoot cluster. There are several options available to user to access the shoot cluster.
+Following options are available for end-users to access the shoot cluster :
 
 ## Static token kubeconfig :
 
