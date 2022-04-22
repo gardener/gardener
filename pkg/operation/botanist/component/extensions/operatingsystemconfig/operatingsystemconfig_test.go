@@ -122,7 +122,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					},
 					[]extensionsv1alpha1.File{
 						{Path: fmt.Sprintf("%s", cctx.Images)},
-						{Path: cctx.KubeletCABundle},
+						{Path: string(cctx.KubeletCABundle)},
 						{Path: fmt.Sprintf("%v", cctx.KubeletCLIFlags)},
 						{Path: fmt.Sprintf("%v", cctx.KubeletConfigParameters)},
 						{Path: *cctx.KubeletDataVolumeName},

@@ -35,8 +35,8 @@ var _ = Describe("Component", func() {
 		component components.Component
 		ctx       components.Context
 
-		kubeletCABundle            = "certificate"
-		kubeletCACertificateBase64 = utils.EncodeBase64([]byte(kubeletCABundle))
+		kubeletCABundle       = []byte("certificate")
+		kubeletCABundleBase64 = utils.EncodeBase64(kubeletCABundle)
 	)
 
 	BeforeEach(func() {
@@ -109,7 +109,7 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
-							Data:     kubeletCACertificateBase64,
+							Data:     kubeletCABundleBase64,
 						},
 					},
 				},

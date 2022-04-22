@@ -36,7 +36,7 @@ type Context struct {
 	ClusterDomain           string
 	CRIName                 extensionsv1alpha1.CRIName
 	Images                  map[string]*imagevector.Image
-	KubeletCABundle         string
+	KubeletCABundle         []byte
 	KubeletCLIFlags         ConfigurableKubeletCLIFlags
 	KubeletConfigParameters ConfigurableKubeletConfigParameters
 	KubeletDataVolumeName   *string

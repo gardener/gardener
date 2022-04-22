@@ -505,7 +505,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		clusterDomain:           o.values.ClusterDomain,
 		criName:                 criName,
 		images:                  o.values.Images,
-		kubeletCABundle:         string(kubeletCASecret.Data[secretutils.DataKeyCertificateBundle]),
+		kubeletCABundle:         kubeletCASecret.Data[secretutils.DataKeyCertificateBundle],
 		kubeletConfigParameters: kubeletConfigParameters,
 		kubeletCLIFlags:         kubeletCLIFlags,
 		kubeletDataVolumeName:   worker.KubeletDataVolumeName,
@@ -564,7 +564,7 @@ type deployer struct {
 	clusterDomain           string
 	criName                 extensionsv1alpha1.CRIName
 	images                  map[string]*imagevector.Image
-	kubeletCABundle         string
+	kubeletCABundle         []byte
 	kubeletConfigParameters components.ConfigurableKubeletConfigParameters
 	kubeletCLIFlags         components.ConfigurableKubeletCLIFlags
 	kubeletDataVolumeName   *string
