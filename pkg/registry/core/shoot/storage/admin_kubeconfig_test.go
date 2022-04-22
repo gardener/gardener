@@ -51,8 +51,11 @@ var _ = Describe("Admin Kubeconfig", func() {
 		obj              *authenticationapi.AdminKubeconfigRequest
 		createValidation registryrest.ValidateObjectFunc
 
-		caCert1Name = "minikubeCA"
-		caCert1     = []byte(`-----BEGIN CERTIFICATE-----
+		clusterCACert1 = []byte("cluster-ca-cert1")
+		clusterCACert2 = []byte("cluster-ca-cert2")
+
+		clientCACert1Name = "minikubeCA"
+		clientCACert1     = []byte(`-----BEGIN CERTIFICATE-----
 MIIDBjCCAe6gAwIBAgIBATANBgkqhkiG9w0BAQsFADAVMRMwEQYDVQQDEwptaW5p
 a3ViZUNBMB4XDTIxMDMyNTE0MjczN1oXDTMxMDMyNDE0MjczN1owFTETMBEGA1UE
 AxMKbWluaWt1YmVDQTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALsW
@@ -71,7 +74,7 @@ OnM7+5534rkP8/eIX58QFcVibjM34BfqNQgHW5vFXobYoIX2wfMysLZVESYQdU9P
 C3KRaS8COePkaiH/NUjuIjyTXzhvJqmFbH730vABpcKi01eQMMjtRkPlWIEqUHoG
 QbU6uberp2QAQA==
 -----END CERTIFICATE-----`)
-		caKey1 = []byte(`-----BEGIN RSA PRIVATE KEY-----
+		clientCAKey1 = []byte(`-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAuxbyNToBQ/W31anrE5MBiGOsQ8aLE/6IKP1xJfleRKGlU1g1
 6bAKqkM0560oAC0VAySlyjWKx+4Hzvps1j79sLlgKtimvOWNL4RgBv794P9qFRGd
 dfLT3J8GsZMy+vq2LwEvkOqUOqEe7ex6QgxJ52twKzXR0NySCXiWCGhFKgJp3f8s
@@ -99,8 +102,8 @@ AIOz/jD6sCJ6KPr1L6mJ5w4mDX1UmjCKy3Kz4xfqxPEbMvPDTL+9TWFSlAuNtHGC
 lIwEl8tStnO9u1JUK4w1e+lC37zI2v5k4WMQmJcolUEMwmZjnCR/
 -----END RSA PRIVATE KEY-----`)
 
-		caCert2Name = "new-minikube-ca"
-		caCert2     = []byte(`-----BEGIN CERTIFICATE-----
+		clientCACert2Name = "new-minikube-ca"
+		clientCACert2     = []byte(`-----BEGIN CERTIFICATE-----
 MIIDBDCCAeygAwIBAgIUXutuW//tcCBAR2BKjz1N9xNosNwwDQYJKoZIhvcNAQEL
 BQAwGjEYMBYGA1UEAxMPbmV3LW1pbmlrdWJlLWNhMB4XDTIyMDQxMjA3MDcwMFoX
 DTI3MDQxMTA3MDcwMFowGjEYMBYGA1UEAxMPbmV3LW1pbmlrdWJlLWNhMIIBIjAN
@@ -119,7 +122,7 @@ Eh1pkuxLBmO/iz4iAMaaG5JuVlPtDEYLX1kBx/aPh9sjgw28AWvlA1L/HawmXLsR
 Yg+zBuGRGSu1IfIIwjshOGmsz+jaTM0SEZ5AtbmOl1gvGSgj8Ylod+Qb7gXBxBO8
 yUsW6+ksN+o=
 -----END CERTIFICATE-----`)
-		caKey2 = []byte(`-----BEGIN RSA PRIVATE KEY-----
+		clientCAKey2 = []byte(`-----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEAsiOi5NGvtPtJLD4FfMUne1KcgtKso91WdriOJWF6mfWiB2fn
 bMS8EaKaU4AMXyrQpn6neZTDXeH5DOXhiQqvczRr5B4u/SD+OXLhdrzNaIpYc7DN
 hbT41DdG0F+ZiNQao0rQJrvw7pcR6D+CzqMmLk34Q4VUh0e2nXSqNS4S/0coKUom
@@ -160,6 +163,19 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 			Spec: gardenercore.ShootStateSpec{
 				Gardener: []gardenercore.GardenerResourceData{
 					{
+						Name: "ca-hugo",
+						Type: "secret",
+						Labels: map[string]string{
+							"name":             "ca",
+							"managed-by":       "secrets-manager",
+							"manager-identity": "gardenlet",
+							"issued-at-time":   "0",
+						},
+						Data: runtime.RawExtension{
+							Raw: []byte(`{"ca.crt":"` + utils.EncodeBase64(clusterCACert1) + `"}`),
+						},
+					},
+					{
 						Name: "ca-client-foo",
 						Type: "secret",
 						Labels: map[string]string{
@@ -169,7 +185,7 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 							"issued-at-time":   "0",
 						},
 						Data: runtime.RawExtension{
-							Raw: []byte(`{"ca.crt":"` + utils.EncodeBase64(caCert1) + `","ca.key":"` + utils.EncodeBase64(caKey1) + `"}`),
+							Raw: []byte(`{"ca.crt":"` + utils.EncodeBase64(clientCACert1) + `","ca.key":"` + utils.EncodeBase64(clientCAKey1) + `"}`),
 						},
 					},
 				},
@@ -257,17 +273,25 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 			shoot.Status.AdvertisedAddresses = nil
 		})
 
-		It("returns error when the certificate authority is not yet provisioned", func() {
-			shootState.Spec.Gardener = nil
+		It("returns error when the cluster certificate authority is not yet provisioned", func() {
+			shootState.Spec.Gardener = append(shootState.Spec.Gardener[:0], shootState.Spec.Gardener[1:]...)
 		})
 
-		It("returns error when the certificate authority contains no certificate", func() {
+		It("returns error when the cluster certificate authority contains no certificate", func() {
 			shootState.Spec.Gardener[0].Data.Raw = []byte("{}")
+		})
+
+		It("returns error when the client certificate authority is not yet provisioned", func() {
+			shootState.Spec.Gardener = append(shootState.Spec.Gardener[:1], shootState.Spec.Gardener[2:]...)
+		})
+
+		It("returns error when the client certificate authority contains no certificate", func() {
+			shootState.Spec.Gardener[1].Data.Raw = []byte("{}")
 		})
 	})
 
 	DescribeTable("request succeeds",
-		func(expectedIssuerName string, expectedCACert []byte, prepEnv func()) {
+		func(expectedIssuerName string, expectedClusterCABundle []byte, prepEnv func()) {
 			if prepEnv != nil {
 				prepEnv()
 			}
@@ -290,14 +314,14 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 					Name: "baz--test-external",
 					Cluster: configv1.Cluster{
 						Server:                   "https://foo.bar.external:9443",
-						CertificateAuthorityData: expectedCACert,
+						CertificateAuthorityData: expectedClusterCABundle,
 					},
 				},
 				configv1.NamedCluster{
 					Name: "baz--test-internal",
 					Cluster: configv1.Cluster{
 						Server:                   "https://foo.bar.internal:9443",
-						CertificateAuthorityData: expectedCACert,
+						CertificateAuthorityData: expectedClusterCABundle,
 					},
 				},
 			))
@@ -336,9 +360,25 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 			Expect(cert.Issuer.CommonName).To(Equal(expectedIssuerName))
 		},
 
-		Entry("one client ca", caCert1Name, caCert1, nil),
+		Entry("one client CA, one cluster CA", clientCACert1Name, clusterCACert1, nil),
 
-		Entry("multiple client ca (in case of rotation)", caCert2Name, caCert2, func() {
+		Entry("one client CA, multiple cluster CA", clientCACert1Name, append(clusterCACert1, clusterCACert2...), func() {
+			shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardenercore.GardenerResourceData{
+				Name: "ca-cluster-2",
+				Type: "secret",
+				Labels: map[string]string{
+					"name":             "ca",
+					"managed-by":       "secrets-manager",
+					"manager-identity": "gardenlet",
+					"issued-at-time":   "1",
+				},
+				Data: runtime.RawExtension{
+					Raw: []byte(`{"ca.crt":"` + utils.EncodeBase64(clusterCACert2) + `"}`),
+				},
+			})
+		}),
+
+		Entry("multiple client CA (in case of rotation), one cluster CA", clientCACert2Name, clusterCACert1, func() {
 			shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardenercore.GardenerResourceData{
 				Name: "ca-client-bar",
 				Type: "secret",
@@ -349,41 +389,56 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 					"issued-at-time":   "1",
 				},
 				Data: runtime.RawExtension{
-					Raw: []byte(`{"ca.crt":"` + utils.EncodeBase64(caCert2) + `","ca.key":"` + utils.EncodeBase64(caKey2) + `"}`),
+					Raw: []byte(`{"ca.crt":"` + utils.EncodeBase64(clientCACert2) + `","ca.key":"` + utils.EncodeBase64(clientCAKey2) + `"}`),
 				},
 			})
 		}),
 
-		Entry("no client ca, one cluster ca", caCert1Name, caCert1, func() {
+		Entry("multiple client CA (in case of rotation), multiple cluster CA", clientCACert2Name, append(clusterCACert1, clusterCACert2...), func() {
+			shootState.Spec.Gardener = append(shootState.Spec.Gardener,
+				gardenercore.GardenerResourceData{
+					Name: "ca-client-bar",
+					Type: "secret",
+					Labels: map[string]string{
+						"name":             "ca-client",
+						"managed-by":       "secrets-manager",
+						"manager-identity": "gardenlet",
+						"issued-at-time":   "1",
+					},
+					Data: runtime.RawExtension{
+						Raw: []byte(`{"ca.crt":"` + utils.EncodeBase64(clientCACert2) + `","ca.key":"` + utils.EncodeBase64(clientCAKey2) + `"}`),
+					},
+				},
+				gardenercore.GardenerResourceData{
+					Name: "ca-cluster-2",
+					Type: "secret",
+					Labels: map[string]string{
+						"name":             "ca",
+						"managed-by":       "secrets-manager",
+						"manager-identity": "gardenlet",
+						"issued-at-time":   "1",
+					},
+					Data: runtime.RawExtension{
+						Raw: []byte(`{"ca.crt":"` + utils.EncodeBase64(clusterCACert2) + `"}`),
+					},
+				},
+			)
+		}),
+
+		Entry("no client CA, one cluster CA", clientCACert1Name, clusterCACert1, func() {
 			shootState.Spec.Gardener[0].Labels["name"] = "ca"
 		}),
 
-		Entry("one client ca, one cluster ca", caCert1Name, caCert1, func() {
-			shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardenercore.GardenerResourceData{
-				Name: "ca-new",
-				Type: "secret",
-				Labels: map[string]string{
-					"name":             "ca",
-					"managed-by":       "secrets-manager",
-					"manager-identity": "gardenlet",
-					"issued-at-time":   "1",
-				},
-				Data: runtime.RawExtension{
-					Raw: []byte(`{"ca.crt":"` + utils.EncodeBase64(caCert2) + `","ca.key":"` + utils.EncodeBase64(caKey2) + `"}`),
-				},
-			})
-		}),
-
-		Entry("legacy ca is stored as certificate data type", caCert1Name, caCert1, func() {
+		Entry("cluster CA is stored without labels", clientCACert1Name, clusterCACert1, func() {
 			shootState.Spec.Gardener[0].Name = "ca"
 			shootState.Spec.Gardener[0].Labels = nil
 		}),
 
-		Entry("legacy ca is stored as certificate data type", caCert1Name, caCert1, func() {
+		Entry("cluster CA is stored as certificate data type", clientCACert1Name, clusterCACert1, func() {
 			shootState.Spec.Gardener[0].Name = "ca"
 			shootState.Spec.Gardener[0].Labels = nil
 			shootState.Spec.Gardener[0].Type = "certificate"
-			shootState.Spec.Gardener[0].Data.Raw = []byte(`{"certificate":"` + utils.EncodeBase64(caCert1) + `","privateKey":"` + utils.EncodeBase64(caKey1) + `"}`)
+			shootState.Spec.Gardener[0].Data.Raw = []byte(`{"certificate":"` + utils.EncodeBase64(clusterCACert1) + `"}`)
 		}),
 	)
 })
