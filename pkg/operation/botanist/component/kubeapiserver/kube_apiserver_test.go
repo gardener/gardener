@@ -1570,7 +1570,7 @@ rules:
 							},
 							{
 								Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_CA",
-								Value: "/srv/secrets/vpn-seed/ca.crt",
+								Value: "/srv/kubernetes/ca/ca.crt",
 							},
 							{
 								Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_CRT",
@@ -1618,6 +1618,10 @@ rules:
 							{
 								Name:      "vpn-seed-tlsauth",
 								MountPath: "/srv/secrets/tlsauth",
+							},
+							{
+								Name:      "ca",
+								MountPath: "/srv/kubernetes/ca",
 							},
 						},
 					}))

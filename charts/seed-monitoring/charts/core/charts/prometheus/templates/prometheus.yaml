@@ -203,8 +203,20 @@ spec:
       # TODO(rfranzke): Delete this in a future release once all monitoring configurations of extensions have been
       #	adapted.
       - name: prometheus-client-cert
-        secret:
-          secretName: {{ .Values.secretNameClientCert }}
+        projected:
+          defaultMode: 420
+          sources:
+          - secret:
+              items:
+              - key: tls.crt
+                path: prometheus.crt
+              - key: tls.key
+                path: prometheus.key
+              name: {{ .Values.secretNameClientCert }}
+              optional: false
+          - secret:
+              name: ca
+              optional: false
       - name: shoot-access
         secret:
           secretName: shoot-access-prometheus

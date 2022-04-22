@@ -740,7 +740,7 @@ func (k *kubeAPIServer) handleVPNSettings(
 				},
 				{
 					Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_CA",
-					Value: volumeMountPathVPNSeed + "/" + secrets.DataKeyCertificateCA,
+					Value: volumeMountPathCA + "/" + secrets.DataKeyCertificateCA,
 				},
 				{
 					Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_CRT",
@@ -784,6 +784,10 @@ func (k *kubeAPIServer) handleVPNSettings(
 				{
 					Name:      volumeNameVPNSeedTLSAuth,
 					MountPath: volumeMountPathVPNSeedTLSAuth,
+				},
+				{
+					Name:      volumeNameCA,
+					MountPath: volumeMountPathCA,
 				},
 			},
 		}
