@@ -18,12 +18,15 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	. "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/utils"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 )
 
 var _ = Describe("ShootStateList", func() {
@@ -171,6 +174,39 @@ var _ = Describe("ShootStateList", func() {
 				list := GardenerResourceDataList(shootState.Spec.Gardener)
 				resource := list.Get("bar")
 				Expect(resource).To(BeNil())
+			})
+		})
+
+		Context("#Select", func() {
+			var (
+				selector = labels.NewSelector().Add(
+					utils.MustNewRequirement("foo", selection.Equals, "bar"),
+				)
+
+				data1 = gardencorev1alpha1.GardenerResourceData{Name: "data1", Labels: map[string]string{"bar": "foo"}}
+				data2 = gardencorev1alpha1.GardenerResourceData{Name: "data2", Labels: map[string]string{"foo": "bar"}}
+				data3 = gardencorev1alpha1.GardenerResourceData{Name: "data3", Labels: map[string]string{"foo": "baz"}}
+				data4 = gardencorev1alpha1.GardenerResourceData{Name: "data4", Labels: map[string]string{"foo": "bar"}}
+			)
+
+			It("should return an empty list because nothing matches", func() {
+				list := GardenerResourceDataList(shootState.Spec.Gardener)
+
+				Expect(list.Select(selector)).To(BeEmpty())
+			})
+
+			It("should return one result", func() {
+				shootState.Spec.Gardener = append(shootState.Spec.Gardener, data1, data2, data3)
+				list := GardenerResourceDataList(shootState.Spec.Gardener)
+
+				Expect(list.Select(selector)).To(ConsistOf(&data2))
+			})
+
+			It("should return two results", func() {
+				shootState.Spec.Gardener = append(shootState.Spec.Gardener, data1, data2, data3, data4)
+				list := GardenerResourceDataList(shootState.Spec.Gardener)
+
+				Expect(list.Select(selector)).To(ConsistOf(&data2, &data4))
 			})
 		})
 
