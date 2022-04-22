@@ -9,7 +9,6 @@ spec:
   kubernetes:
     versions:
     - version: 1.23.6
-    - version: 1.23.1
     - version: 1.22.0
     - version: 1.21.0
     - version: 1.20.0
