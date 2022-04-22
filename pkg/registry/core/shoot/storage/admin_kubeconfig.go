@@ -85,7 +85,6 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 	}
 
 	out := obj.(*authenticationapi.AdminKubeconfigRequest)
-
 	if errs := authenticationvalidation.ValidateAdminKubeconfigRequest(out); len(errs) != 0 {
 		return nil, errors.NewInvalid(gvk.GroupKind(), "", errs)
 	}
@@ -101,9 +100,7 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 	}
 
 	shootState := &gardencorev1alpha1.ShootState{}
-
-	err = kubernetes.GardenScheme.Convert(shootStateObj, shootState, nil)
-	if err != nil {
+	if err := kubernetes.GardenScheme.Convert(shootStateObj, shootState, nil); err != nil {
 		return nil, err
 	}
 
@@ -122,67 +119,37 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 		return nil, errors.NewInvalid(gvk.GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 	}
 
-	var (
-		resourceDataList = gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
-		ca               *gardencorev1alpha1.GardenerResourceData
-	)
+	resourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
 
-	ca, err = getCAFromResourceDataList(resourceDataList, nameCAClientReq)
+	clusterCABundle, err := getClusterCABundle(resourceDataList)
 	if err != nil {
-		return nil, errors.NewInternalError(fmt.Errorf("could not find CA certificate for %s: %w", nameCAClientReq, err))
+		return nil, errors.NewInternalError(fmt.Errorf("could not find cluster CA bundle: %w", err))
 	}
 
-	// fall back to cluster CA since not all clusters might have a client CA yet
-	if ca == nil {
-		ca, err = getCAFromResourceDataList(resourceDataList, nameCAClusterReq)
-		if err != nil {
-			return nil, errors.NewInternalError(fmt.Errorf("could not find CA certificate for %s: %w", nameCAClusterReq, err))
-		}
-	}
-
-	// fall back to constant CA name
-	// TODO(rfranzke): Delete this in a future release.
-	if ca == nil {
-		ca = resourceDataList.Get(v1beta1constants.SecretNameCACluster)
-	}
-
-	if ca == nil {
-		return nil, errors.NewInternalError(fmt.Errorf("certificate authority not yet provisioned"))
-	}
-
-	data := make(map[string][]byte)
-	if err := json.Unmarshal(ca.Data.Raw, &data); err != nil {
-		return nil, errors.NewInternalError(err)
-	}
-
-	keyPrivateKey, keyCertificate := secrets.DataKeyPrivateKeyCA, secrets.DataKeyCertificateCA
-	if ca.Type == "certificate" {
-		keyPrivateKey, keyCertificate = "privateKey", "certificate"
-	}
-
-	caCert, err := secrets.LoadCertificate("", data[keyPrivateKey], data[keyCertificate])
+	clientCACertificate, err := getClientCACertificate(resourceDataList)
 	if err != nil {
-		return nil, errors.NewInternalError(err)
+		return nil, errors.NewInternalError(fmt.Errorf("could not find client CA certificate: %w", err))
 	}
 
 	if r.maxExpirationSeconds > 0 && out.Spec.ExpirationSeconds > r.maxExpirationSeconds {
 		out.Spec.ExpirationSeconds = r.maxExpirationSeconds
 	}
 
-	validity := time.Duration(out.Spec.ExpirationSeconds) * time.Second
-	authName := fmt.Sprintf("%s--%s", shoot.Namespace, shoot.Name)
-
-	cpsc := secrets.ControlPlaneSecretConfig{
-		Name: authName,
-		CertificateSecretConfig: &secrets.CertificateSecretConfig{
-			CommonName:   userInfo.GetName(),
-			Organization: []string{user.SystemPrivilegedGroup},
-			CertType:     secrets.ClientCert,
-			Validity:     &validity,
-			SigningCA:    caCert,
-			Clock:        r.clock,
-		},
-	}
+	var (
+		validity = time.Duration(out.Spec.ExpirationSeconds) * time.Second
+		authName = fmt.Sprintf("%s--%s", shoot.Namespace, shoot.Name)
+		cpsc     = secrets.ControlPlaneSecretConfig{
+			Name: authName,
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				CommonName:   userInfo.GetName(),
+				Organization: []string{user.SystemPrivilegedGroup},
+				CertType:     secrets.ClientCert,
+				Validity:     &validity,
+				SigningCA:    clientCACertificate,
+				Clock:        r.clock,
+			},
+		}
+	)
 
 	for _, address := range shoot.Status.AdvertisedAddresses {
 		u, err := url.Parse(address.URL)
@@ -193,6 +160,7 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 		cpsc.KubeConfigRequests = append(cpsc.KubeConfigRequests, secrets.KubeConfigRequest{
 			ClusterName:   fmt.Sprintf("%s-%s", authName, address.Name),
 			APIServerHost: u.Host,
+			CAData:        clusterCABundle,
 		})
 	}
 
@@ -232,7 +200,7 @@ func getCAFromResourceDataList(resourceDataList gardencorev1alpha1helper.Gardene
 
 	ca, err := findNewestCACertificate(caCerts)
 	if err != nil {
-		return nil, errors.NewInternalError(fmt.Errorf("could not find newest CA certificate for %s: %w", requirement, err))
+		return nil, fmt.Errorf("could not find newest CA certificate for %s: %w", requirement, err)
 	}
 
 	return ca, nil
@@ -266,4 +234,80 @@ func findNewestCACertificate(results []*gardencorev1alpha1.GardenerResourceData)
 	}
 
 	return result, nil
+}
+
+func getClusterCABundle(resourceDataList gardencorev1alpha1helper.GardenerResourceDataList) ([]byte, error) {
+	caCerts := resourceDataList.Select(caCertificateSelector.Add(nameCAClusterReq))
+	if len(caCerts) == 0 {
+		// fall back to constant CA name
+		// TODO(rfranzke): Delete this in a future release.
+		ca := resourceDataList.Get(v1beta1constants.SecretNameCACluster)
+		if ca == nil {
+			return nil, fmt.Errorf("cluster certificate authority not yet provisioned")
+		}
+		caCerts = append(caCerts, ca)
+	}
+
+	var caBundle []byte
+
+	for _, data := range caCerts {
+		cert, _, err := getCADataRaw(data)
+		if err != nil {
+			return nil, fmt.Errorf("could not fetch raw CA data for %q", data.Name)
+		}
+		caBundle = append(caBundle, cert...)
+	}
+
+	if len(caBundle) == 0 {
+		return nil, fmt.Errorf("cluster certificate authority not yet provisioned")
+	}
+
+	return caBundle, nil
+}
+
+func getClientCACertificate(resourceDataList gardencorev1alpha1helper.GardenerResourceDataList) (*secrets.Certificate, error) {
+	ca, err := getCAFromResourceDataList(resourceDataList, nameCAClientReq)
+	if err != nil {
+		return nil, fmt.Errorf("could not find client CA certificate for %s: %w", nameCAClientReq, err)
+	}
+
+	// fall back to cluster CA since not all clusters might have a client CA yet
+	if ca == nil {
+		ca, err = getCAFromResourceDataList(resourceDataList, nameCAClusterReq)
+		if err != nil {
+			return nil, fmt.Errorf("could not find client CA certificate for %s: %w", nameCAClusterReq, err)
+		}
+	}
+
+	// fall back to constant CA name
+	// TODO(rfranzke): Delete this in a future release.
+	if ca == nil {
+		ca = resourceDataList.Get(v1beta1constants.SecretNameCACluster)
+	}
+
+	if ca == nil {
+		return nil, fmt.Errorf("client certificate authority not yet provisioned")
+	}
+
+	cert, key, err := getCADataRaw(ca)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch raw client CA data for %q", ca.Name)
+	}
+
+	return secrets.LoadCertificate("", key, cert)
+}
+
+func getCADataRaw(resourceData *gardencorev1alpha1.GardenerResourceData) (certificate []byte, privateKey []byte, err error) {
+	data := make(map[string][]byte)
+	if err = json.Unmarshal(resourceData.Data.Raw, &data); err != nil {
+		return nil, nil, err
+	}
+
+	keyPrivateKey, keyCertificate := secrets.DataKeyPrivateKeyCA, secrets.DataKeyCertificateCA
+	if resourceData.Type == "certificate" {
+		keyPrivateKey, keyCertificate = "privateKey", "certificate"
+	}
+
+	certificate, privateKey = data[keyCertificate], data[keyPrivateKey]
+	return
 }
