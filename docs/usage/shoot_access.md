@@ -1,68 +1,58 @@
-# Shoot_access.md
+# Accessing Shoot Clusters
 
-Following options are available for end-users to access the shoot cluster :
+After creation of a shoot clusters, end-users requires a `kubeconfig` to access it. There are several options available to get to such `kubeconfig`.
 
-## Static token kubeconfig :
+## Static Token Kubeconfig :
 
-  - To access the shoot cluster with the static token kubeconfig, shoot should have `.spec.kubernetes.enableStaticTokenKubeconfig` option set to `true`. enableStaticTokenKubeconfig will allow the creation of kubeconfig secret in the project namespace. End users can fetch the secret and use the kubeconfig inside it. Static token belongs to `system:masters` group and grants `cluster-admin` privileges to cluster.
+This `kubeconfig` contains a [static token](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#static-token-file) and provides `cluster-admin` privileges.
+It is created by default and persisted in the `<shoot-name>.kubeconfig` secret in the project namespace in the garden cluster.
 
-    ```yaml
-    apiVersion: core.gardener.cloud/v1beta1
-    kind: Shoot
-    metadata:
-      name: local
-      namespace: garden-local
-      ...
-    spec:
-      kubernetes:
-        version: 1.23.1
-        enableStaticTokenKubeconfig: true
-      ...
-    ```
-  This is not the recommended method to access the shoot cluster as the static token kubeconfig has some security flaws associated with it.
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+...
+spec:
+kubernetes:
+    enableStaticTokenKubeconfig: true
+...
+```
+It is **not** the recommended method to access the shoot cluster as the static token `kubeconfig` has some security flaws associated with it:
+- The static token in the `kubeconfig` doesn't have any expiration date. To revoke the static token, the user needs to rotate the kuebcconfig credentials (see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_operations.md#rotate-kubeconfig-credentials).
+- The static token doesn't have any user identity associated with it. The user in that token will always be `system:cluster-admin` irrespective of the person accessing the cluster. Hence, it is impossible to audit the events in cluster.
 
-   - Static token in the kubeconfig doesn't have any expiration date. To revoke the static token, the user needs to rotate the kuebcconfig credentials.
-   - Static token doesn't have user identity associated with it. User in that token will always be system:cluster-admin irrespective of the person accessing the cluster. Hence it is impossible to audit the events in cluster.
+## `shoots/adminkubeconfig` subresource
 
-  To disable the creation of static token kubeconfig, set the value of `.spec.kubernetes.enableStaticTokenKubeconfig`  field in the shoot spec to `false`.
-  ```yaml
-    apiVersion: core.gardener.cloud/v1beta1
-    kind: Shoot
-    metadata:
-      name: local
-      namespace: garden-local
-      ...
-    spec:
-      kubernetes:
-        version: 1.23.1
-        enableStaticTokenKubeconfig: true
-      ...
-  ```
+The [`shoots/adminkubeconfig`](https://github.com/gardener/gardener/blob/master/docs/proposals/16-adminkubeconfig-subresource.md) subresource allows users to dynamically generate short-lived `kubeconfig` that can be used to access shoot cluster with `cluster-admin` privileges. The credentials associated with this `kubeconfig` are client certificates which have a very short validity and must be renewed before they expire.
 
-## Dynamic kubeconfig
+The username associated with such `kubeconfig` will be the same which is used for authenticating to the Gardener API. Apart from this advantage, the created `kubeconfig` will not be persisted anywhere.
 
-  Shoot subresource called `adminKubeconfig` allows user to dynamically generate short lived `kubeconfig` that can be used to access shoot cluster with `cluster-admin` priviledge. `shoots/adminkubeconfig` resource can only accept `CREATE` calls and accept   `AdminKubeconfigRequest` .Kubeconfig is generated only when `AdminKubeconfigRequest` sent to the subresource.
+```bash
+export NAMESPACE=my-namespace
+export SHOOT_NAME=my-shoot
+kubectl create \
+    -f <path>/<to>/kubeconfig-request.json \
+    --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d
+```
 
-  User identity of kubeconfig will be the user authenticating to gardener API server. Following command can be used to request a kubeconfig using the `AdminKubeconfigRequest`.
+Here, the `kubeconfig-request.json` has the following content:
 
-  ```bash
-  export NAMESPACE=my-namespace
-  export SHOOT_NAME=my-shoot
-  kubectl create \
-      -f example/shoot-kubeconfig/kubeconfig-request.json \
-      --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/adminkubeconfig | jq -r ".status.kubeconfig" | base64 -d
-  ```
+```json
+{
+    "apiVersion": "authentication.gardener.cloud/v1alpha1",
+    "kind": "AdminKubeconfigRequest",
+    "spec": {
+        "expirationSeconds": 1000
+    }
+}
+```
+> The [`gardenctl-v2`](https://github.com/gardener/gardenctl-v2/) tool makes it easy to target shoot clusters and automatically renews such `kubeconfig` when required.
 
-  Here  `kubeconfig-request.json` has the followng content where `expirationSeconds` is in seconds.
+## `oidcConfig`
 
-  ```json
-  {
-      "apiVersion": "authentication.gardener.cloud/v1alpha1",
-      "kind": "AdminKubeconfigRequest",
-      "spec": {
-          "expirationSeconds": 1000
-      }
-  }
-  ```
+Gardener has `ClusterOpenIDConnectPreset` and `OpenIDConnectPreset` API resource for injecting additional runtime [OIDC](https://openid.net/connect/) requirements into a Shoot at creation time. The injected information contains configuration for the Kube API Server and optionally configuration for kubeconfig generation using said configuration. (Cluster)OpenIDConnectPreset contains the oidc server details like `clientID` , `issuerURL`. ClusterOpenIDConnectPreset specified oidc configuration applies to `Projects` and `Shoots` cluster-wide while OpenIDConnectPreset is `Project` scoped.
 
-  
+Gardener provides an admission controller (ClusterOpenIDConnectPreset and OpenIDConnectPreset) which, when enabled, applies ClusterOpenIDConnectPresets and OpenIDConnectPresets respectivly to incoming `Shoot` creation requests having label `oidc : enable` set. It mutates the shoot's `.spec.kubernetes.kubeAPIServer.oidcConfig` field with the oidc configuration which will be used for  `kubeconfig` generation.
+
+It is the end-user responsibility to incorporate the OpenID Connect configurations in kubeconfig to access the cluster. One way is to use the kubectl plugin called [`kubectl oidc-login`](https://github.com/int128/kubelogin)  for OIDC authentication.
+
+For further information on (Cluster)OpenIDConnectPreset, refer to [doc](https://github.com/gardener/gardener/blob/master/docs/usage/openidconnect-presets.md).
