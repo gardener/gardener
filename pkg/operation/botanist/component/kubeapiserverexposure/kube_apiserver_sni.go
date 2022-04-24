@@ -191,7 +191,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if authrActionEnum, ok := istioapisecurityv1beta1.AuthorizationPolicy_Action_value[string(s.values.AccessControl.Action)]; ok {
+	if authrActionEnum, ok := istioapisecurityv1beta1.AuthorizationPolicy_Action_value[string(*s.values.AccessControl.Action)]; ok {
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, accessControl, func() error {
 			accessControl.Labels = getLabels()
 			accessControl.Spec = istioapisecurityv1beta1.AuthorizationPolicy{
