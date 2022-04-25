@@ -118,25 +118,37 @@ func (b *Botanist) restoreSecretsFromShootStateForSecretsManagerAdoption(ctx con
 	return flow.Parallel(fns...)(ctx)
 }
 
-func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
-	// TODO(rfranzke): Move this client CA secret configuration to the below loop in a future release.
-	if _, err := b.SecretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
-		Name:       v1beta1constants.SecretNameCAClient,
-		CommonName: "kubernetes-client",
-		CertType:   secretutils.CACert,
-	}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld)); err != nil {
-		return err
-	}
-
-	for _, config := range []secretutils.ConfigInterface{
+func caCertConfigurations() []secretutils.ConfigInterface {
+	return []secretutils.ConfigInterface{
 		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCACluster, CommonName: "kubernetes", CertType: secretutils.CACert},
+		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAClient, CommonName: "kubernetes-client", CertType: secretutils.CACert},
 		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCD, CommonName: "etcd", CertType: secretutils.CACert},
 		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAFrontProxy, CommonName: "front-proxy", CertType: secretutils.CACert},
 		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAKubelet, CommonName: "kubelet", CertType: secretutils.CACert},
 		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAMetricsServer, CommonName: "metrics-server", CertType: secretutils.CACert},
 		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAVPN, CommonName: "vpn", CertType: secretutils.CACert},
-	} {
-		if _, err := b.SecretsManager.Generate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld), secretsmanager.IgnoreConfigChecksumForCASecretName()); err != nil {
+	}
+}
+
+func caCertGenerateOptionsFor(configName string) []secretsmanager.GenerateOption {
+	options := []secretsmanager.GenerateOption{
+		secretsmanager.Persist(),
+		secretsmanager.Rotate(secretsmanager.KeepOld),
+	}
+
+	// For all CAs other than the client CA we ignore the checksum for the CA secret name due to backwards compatibility
+	// reasons. The client CA was only introduced late with https://github.com/gardener/gardener/pull/5779, hence nobody
+	// was using it and the config checksum could be considered right away.
+	if configName != v1beta1constants.SecretNameCAClient {
+		options = append(options, secretsmanager.IgnoreConfigChecksumForCASecretName())
+	}
+
+	return options
+}
+
+func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
+	for _, config := range caCertConfigurations() {
+		if _, err := b.SecretsManager.Generate(ctx, config, caCertGenerateOptionsFor(config.GetName())...); err != nil {
 			return err
 		}
 	}
