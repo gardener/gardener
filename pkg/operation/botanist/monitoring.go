@@ -199,6 +199,16 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
 	}
 
+	clusterCASecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+	}
+
+	etcdCASecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCAETCD)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
+	}
+
 	etcdClientSecret, found := b.SecretsManager.Get(etcd.SecretNameClient)
 	if !found {
 		return fmt.Errorf("secret %q not found", etcd.SecretNameClient)
@@ -210,6 +220,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"services": b.Shoot.Networks.Services.String(),
 		}
 		prometheusConfig = map[string]interface{}{
+			"secretNameClusterCA":      clusterCASecret.Name,
+			"secretNameEtcdCA":         etcdCASecret.Name,
 			"secretNameEtcdClientCert": etcdClientSecret.Name,
 			"secretNameClientCert":     prometheusClientSecret.Name,
 			"kubernetesVersion":        b.Shoot.GetInfo().Spec.Kubernetes.Version,

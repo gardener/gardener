@@ -20,6 +20,8 @@ ingress:
   authSecretName: auth-secret-name
 
 kubernetesVersion: 1.20.1
+secretNameClusterCA: ca
+secretNameEtcdCA: ca-etcd
 secretNameEtcdClientCert: etcd-client-tls
 secretNameClientCert: prometheus
 

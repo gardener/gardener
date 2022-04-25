@@ -193,10 +193,10 @@ spec:
       - name: shoot-ca
         secret:
           defaultMode: 420
-          secretName: ca
+          secretName: {{ .Values.secretNameClusterCA }}
       - name: ca-etcd
         secret:
-          secretName: ca-etcd
+          secretName: {{ .Values.secretNameEtcdCA }}
       - name: etcd-client-tls
         secret:
           secretName: {{ .Values.secretNameEtcdClientCert }}
@@ -215,7 +215,7 @@ spec:
               name: {{ .Values.secretNameClientCert }}
               optional: false
           - secret:
-              name: ca
+              name: {{ .Values.secretNameClusterCA }}
               optional: false
       - name: shoot-access
         secret:

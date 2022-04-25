@@ -14,6 +14,8 @@ prometheus:
     vpn-seed: image-repository:image-tag
   ingress:
     class: nginx
+  secretNameClusterCA: ca
+  secretNameEtcdCA: ca-etcd
   secretNameEtcdClientCert: etcd-client-tls
   secretNameClientCert: prometheus
 kube-state-metrics-seed:
