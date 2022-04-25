@@ -450,7 +450,12 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 // DeploySeedGrafana deploys the grafana charts to the Seed cluster.
 func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeTesting {
-		return b.DeleteGrafana(ctx)
+		if err := b.DeleteGrafana(ctx); err != nil {
+			return err
+		}
+
+		secretName := gutil.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, gutil.ShootProjectSecretSuffixMonitoring)
+		return kutil.DeleteObject(ctx, b.K8sGardenClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}})
 	}
 
 	credentialsSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngressOperators), secretsmanager.Persist())

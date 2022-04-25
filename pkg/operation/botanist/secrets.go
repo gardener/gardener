@@ -32,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
@@ -187,7 +186,7 @@ func (b *Botanist) generateGenericTokenKubeconfig(ctx context.Context) error {
 }
 
 func (b *Botanist) generateSSHKeypair(ctx context.Context) error {
-	sshKeypairSecret, err := b.SecretsManager.Generate(ctx, &secrets.RSASecretConfig{
+	sshKeypairSecret, err := b.SecretsManager.Generate(ctx, &secretutils.RSASecretConfig{
 		Name:       v1beta1constants.SecretNameSSHKeyPair,
 		Bits:       4096,
 		UsedForSSH: true,
