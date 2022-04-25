@@ -71,6 +71,12 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 	rotation := make(map[string]time.Time)
 
 	if shootStatus := b.Shoot.GetInfo().Status; shootStatus.Credentials != nil && shootStatus.Credentials.Rotation != nil {
+		if shootStatus.Credentials.Rotation.CertificateAuthorities != nil && shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime != nil {
+			for _, config := range caCertConfigurations() {
+				rotation[config.GetName()] = shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time
+			}
+		}
+
 		if shootStatus.Credentials.Rotation.Kubeconfig != nil && shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime != nil {
 			rotation[kubeapiserver.SecretStaticTokenName] = shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime.Time
 			rotation[kubeapiserver.SecretBasicAuthName] = shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime.Time
@@ -80,9 +86,6 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 			rotation[v1beta1constants.SecretNameSSHKeyPair] = shootStatus.Credentials.Rotation.SSHKeypair.LastInitiationTime.Time
 		}
 	}
-
-	// CA rotation start time is not added here for now. Otherwise, the CAs would actually get rotated already,
-	// which can only be done once all components have been adapted.
 
 	return rotation
 }
