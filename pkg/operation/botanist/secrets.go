@@ -137,16 +137,25 @@ func caCertConfigurations() []secretutils.ConfigInterface {
 	}
 }
 
-func caCertGenerateOptionsFor(configName string) []secretsmanager.GenerateOption {
+func (b *Botanist) caCertGenerateOptionsFor(configName string) []secretsmanager.GenerateOption {
 	options := []secretsmanager.GenerateOption{
 		secretsmanager.Persist(),
 		secretsmanager.Rotate(secretsmanager.KeepOld),
 	}
 
+	if configName == v1beta1constants.SecretNameCAClient {
+		return options
+	}
+
 	// For all CAs other than the client CA we ignore the checksum for the CA secret name due to backwards compatibility
-	// reasons. The client CA was only introduced late with https://github.com/gardener/gardener/pull/5779, hence nobody
-	// was using it and the config checksum could be considered right away.
-	if configName != v1beta1constants.SecretNameCAClient {
+	// reasons in case the CA certificate were never rotated yet. With the first rotation we consider the config
+	// checksums since we can now assume that all components are able to cater with it (since we only allow triggering
+	// CA rotations after we have adapted all components that might rely on the constant CA secret names).
+	// The client CA was only introduced late with https://github.com/gardener/gardener/pull/5779, hence nobody was
+	// using it and the config checksum could be considered right away.
+	if shootStatus := b.Shoot.GetInfo().Status; shootStatus.Credentials == nil ||
+		shootStatus.Credentials.Rotation == nil ||
+		shootStatus.Credentials.Rotation.CertificateAuthorities == nil {
 		options = append(options, secretsmanager.IgnoreConfigChecksumForCASecretName())
 	}
 
@@ -155,7 +164,7 @@ func caCertGenerateOptionsFor(configName string) []secretsmanager.GenerateOption
 
 func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
 	for _, config := range caCertConfigurations() {
-		if _, err := b.SecretsManager.Generate(ctx, config, caCertGenerateOptionsFor(config.GetName())...); err != nil {
+		if _, err := b.SecretsManager.Generate(ctx, config, b.caCertGenerateOptionsFor(config.GetName())...); err != nil {
 			return err
 		}
 	}
