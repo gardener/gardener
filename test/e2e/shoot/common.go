@@ -67,7 +67,7 @@ func defaultShoot(generateName string) *gardencorev1beta1.Shoot {
 			CloudProfileName:  "local",
 			SeedName:          pointer.String("local"),
 			Kubernetes: gardencorev1beta1.Kubernetes{
-				Version: "1.23.1",
+				Version: "1.23.6",
 			},
 			Networking: gardencorev1beta1.Networking{
 				Type:           "calico",
