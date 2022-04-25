@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/core/v1"
@@ -120,6 +121,18 @@ func (m *MockInterface) ScrapeConfigs() ([]string, error) {
 func (mr *MockInterfaceMockRecorder) ScrapeConfigs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScrapeConfigs", reflect.TypeOf((*MockInterface)(nil).ScrapeConfigs))
+}
+
+// SetAccessControl mocks base method.
+func (m *MockInterface) SetAccessControl(arg0 *v1beta1.AccessControl) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetAccessControl", arg0)
+}
+
+// SetAccessControl indicates an expected call of SetAccessControl.
+func (mr *MockInterfaceMockRecorder) SetAccessControl(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAccessControl", reflect.TypeOf((*MockInterface)(nil).SetAccessControl), arg0)
 }
 
 // SetAutoscalingAPIServerResources mocks base method.
