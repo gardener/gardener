@@ -252,9 +252,9 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 				Expect(sm.Cleanup(ctx)).To(Succeed())
 
 				expectSecrets(fakeClient,
-					"my-extension-ca-42e0ee8a", "my-extension-ca-bundle-6b7e0c1e",
-					"my-extension-ca-2-5aab76c0", "my-extension-ca-2-bundle-a11871e1",
-					"some-server-eb130089", "some-secret-2583adfe")
+					"my-extension-ca-42e0ee8a", "my-extension-ca-bundle-b8ddbc7f",
+					"my-extension-ca-2-5aab76c0", "my-extension-ca-2-bundle-62b9412d",
+					"some-server-4b592699", "some-secret-2583adfe")
 			})
 		})
 
@@ -301,8 +301,8 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 					Expect(sm.Cleanup(ctx)).To(Succeed())
 
 					expectSecrets(fakeClient,
-						"my-extension-ca-42e0ee8a", "my-extension-ca-42e0ee8a-431ab", "my-extension-ca-bundle-b5c615bd",
-						"my-extension-ca-2-5aab76c0", "my-extension-ca-2-5aab76c0-431ab", "my-extension-ca-2-bundle-27b2f0a7",
+						"my-extension-ca-42e0ee8a", "my-extension-ca-42e0ee8a-431ab", "my-extension-ca-bundle-13e1abd9",
+						"my-extension-ca-2-5aab76c0", "my-extension-ca-2-5aab76c0-431ab", "my-extension-ca-2-bundle-77d9e734",
 						"some-server-ec17c27a", "some-secret-2583adfe")
 				})
 			})
@@ -326,9 +326,9 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 					Expect(sm.Cleanup(ctx)).To(Succeed())
 
 					expectSecrets(fakeClient,
-						"my-extension-ca-42e0ee8a-431ab", "my-extension-ca-bundle-6b7e0c1e",
-						"my-extension-ca-2-5aab76c0-431ab", "my-extension-ca-2-bundle-a11871e1",
-						"some-server-eb130089", "some-secret-2583adfe")
+						"my-extension-ca-42e0ee8a-431ab", "my-extension-ca-bundle-d0aec49c",
+						"my-extension-ca-2-5aab76c0-431ab", "my-extension-ca-2-bundle-c3d8dbb5",
+						"some-server-d521ae63", "some-secret-2583adfe")
 				})
 			})
 		})

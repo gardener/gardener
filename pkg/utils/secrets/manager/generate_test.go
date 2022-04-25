@@ -233,12 +233,15 @@ var _ = Describe("Generate", func() {
 		})
 
 		Context("for CA certificate secrets", func() {
-			var config *secretutils.CertificateSecretConfig
+			var (
+				config     *secretutils.CertificateSecretConfig
+				commonName = "my-ca-common-name"
+			)
 
 			BeforeEach(func() {
 				config = &secretutils.CertificateSecretConfig{
 					Name:       name,
-					CommonName: name,
+					CommonName: commonName,
 					CertType:   secretutils.CACert,
 				}
 			})
@@ -247,7 +250,7 @@ var _ = Describe("Generate", func() {
 				By("generating new secret")
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(secret.Name).To(Equal(name + "-cb09286a"))
+				Expect(secret.Name).To(Equal(name + "-54620669"))
 				expectSecretWasCreated(ctx, fakeClient, secret)
 
 				By("finding created bundle secret")
@@ -299,6 +302,17 @@ var _ = Describe("Generate", func() {
 					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
 					HaveKeyWithValue("valid-until-time", strconv.FormatInt(fakeClock.Now().AddDate(10, 0, 0).Unix(), 10)),
 				))
+			})
+
+			It("should generate a new CA secret and use the secret name as common name", func() {
+				By("generating new secret")
+				secret, err := m.Generate(ctx, config)
+				Expect(err).NotTo(HaveOccurred())
+				expectSecretWasCreated(ctx, fakeClient, secret)
+
+				cert, err := secretutils.LoadCertificate("", secret.Data["ca.key"], secret.Data["ca.crt"])
+				Expect(err).NotTo(HaveOccurred())
+				Expect(cert.Certificate.Subject.CommonName).To(Equal(secret.Name))
 			})
 
 			It("should generate a new CA secret and ignore the config checksum for its name", func() {
@@ -546,6 +560,33 @@ var _ = Describe("Generate", func() {
 					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
 					Not(HaveKey("valid-until-time")),
 				))
+			})
+
+			It("should generate a new server and client secret and keep the common name", func() {
+				By("generating new CA secret")
+				caSecret, err := m.Generate(ctx, caConfig)
+				Expect(err).NotTo(HaveOccurred())
+				expectSecretWasCreated(ctx, fakeClient, caSecret)
+
+				By("generating new server secret")
+				serverSecret, err := m.Generate(ctx, serverConfig, SignedByCA(caName))
+				Expect(err).NotTo(HaveOccurred())
+				expectSecretWasCreated(ctx, fakeClient, serverSecret)
+
+				By("verifying server certificate common name")
+				serverCert, err := secretutils.LoadCertificate("", serverSecret.Data["tls.key"], serverSecret.Data["tls.crt"])
+				Expect(err).NotTo(HaveOccurred())
+				Expect(serverCert.Certificate.Subject.CommonName).To(Equal(serverConfig.CommonName))
+
+				By("generating new client secret")
+				clientSecret, err := m.Generate(ctx, clientConfig, SignedByCA(caName))
+				Expect(err).NotTo(HaveOccurred())
+				expectSecretWasCreated(ctx, fakeClient, clientSecret)
+
+				By("verifying client certificate common name")
+				clientCert, err := secretutils.LoadCertificate("", clientSecret.Data["tls.key"], clientSecret.Data["tls.crt"])
+				Expect(err).NotTo(HaveOccurred())
+				Expect(clientCert.Certificate.Subject.CommonName).To(Equal(clientConfig.CommonName))
 			})
 		})
 

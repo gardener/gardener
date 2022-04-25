@@ -120,6 +120,10 @@ func (b *Botanist) restoreSecretsFromShootStateForSecretsManagerAdoption(ctx con
 
 func caCertConfigurations() []secretutils.ConfigInterface {
 	return []secretutils.ConfigInterface{
+		// The CommonNames for CA certificates will be overridden with the secret name by the secrets manager when
+		// generated to ensure that each CA has a unique common name. For backwards-compatibility, we still keep the
+		// CommonNames here (if we removed them then new CAs would be generated with the next shoot reconciliation
+		// without the end-user to explicitly trigger it).
 		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCACluster, CommonName: "kubernetes", CertType: secretutils.CACert},
 		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAClient, CommonName: "kubernetes-client", CertType: secretutils.CACert},
 		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCD, CommonName: "etcd", CertType: secretutils.CACert},

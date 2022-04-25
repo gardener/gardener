@@ -238,17 +238,17 @@ var _ = Describe("Actuator", func() {
 		checksums = map[string]string{
 			v1beta1constants.SecretNameCloudProvider: "8bafb35ff1ac60275d62e1cbd495aceb511fb354f74a20f7d06ecb48b3a68432",
 			cloudProviderConfigName:                  "08a7bc7fe8f59b055f173145e211760a83f02cf89635cef26ebb351378635606",
-			caNameControlPlane:                       "bfcf386778c8d3313168d622fc1e2d28d9b6265759e3f505e3cffa5848206dd1",
-			"cloud-controller-manager":               "48b5661ff7d535ac5cb2c3e4efc47918cc702ff0ebf84772150310ebc3c943ac",
+			caNameControlPlane:                       "5debc1c84fcd7cb944bad4b7d55ded0ff8e9a0443f479d1bfd057a0c7daf3603",
+			"cloud-controller-manager":               "e0d91e909e7d1a144ea4f31c1347286e30c968a9906d76c4667d93bc35c0e34e",
 		}
 		checksumsNoConfig = map[string]string{
 			v1beta1constants.SecretNameCloudProvider: "8bafb35ff1ac60275d62e1cbd495aceb511fb354f74a20f7d06ecb48b3a68432",
-			caNameControlPlane:                       "bfcf386778c8d3313168d622fc1e2d28d9b6265759e3f505e3cffa5848206dd1",
-			"cloud-controller-manager":               "48b5661ff7d535ac5cb2c3e4efc47918cc702ff0ebf84772150310ebc3c943ac",
+			caNameControlPlane:                       "5debc1c84fcd7cb944bad4b7d55ded0ff8e9a0443f479d1bfd057a0c7daf3603",
+			"cloud-controller-manager":               "e0d91e909e7d1a144ea4f31c1347286e30c968a9906d76c4667d93bc35c0e34e",
 		}
 		exposureChecksums = map[string]string{
-			caNameControlPlaneExposure: "3162cd2e6ef1a654fb98ca96af809d7c3341de0e2fa95b64ce8b53accaf45e57",
-			"lb-readvertiser":          "81ef59b177361b751734e9d7540331a9110428d5c58f2c5334b45ac6c4ceb39f",
+			caNameControlPlaneExposure: "8dc6feaf701d4b9fb7ecf314085a9bbb84d61fb6858d993d92d0a75deee571d1",
+			"lb-readvertiser":          "c2411522ce7468cb728995069e48a52ac7f4ffeb912ff21ca7ea730eeda03d63",
 		}
 
 		configChartValues = map[string]interface{}{
@@ -430,8 +430,8 @@ var _ = Describe("Actuator", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			expectSecretsManagedBySecretsManager(fakeClient, "wanted secrets should get created",
-				"ca-provider-test-controlplane-b01ab5b3", "ca-provider-test-controlplane-bundle-264279f5",
-				"cloud-controller-manager-87d232df",
+				"ca-provider-test-controlplane-b01ab5b3", "ca-provider-test-controlplane-bundle-275a8b6e",
+				"cloud-controller-manager-1329cb64",
 			)
 		},
 		Entry("should deploy secrets and apply charts with correct parameters", cloudProviderConfigName, checksums, []admissionregistrationv1.MutatingWebhook{{}}, true),
@@ -549,8 +549,8 @@ var _ = Describe("Actuator", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			expectSecretsManagedBySecretsManager(fakeClient, "wanted secrets should get created",
-				"ca-provider-test-controlplane-exposure-708d12fb", "ca-provider-test-controlplane-exposure-bundle-fec10245",
-				"lb-readvertiser-29ec35bb",
+				"ca-provider-test-controlplane-exposure-708d12fb", "ca-provider-test-controlplane-exposure-bundle-c830ff02",
+				"lb-readvertiser-eb3483ee",
 			)
 		},
 		Entry("should deploy secrets and apply charts with correct parameters"),
