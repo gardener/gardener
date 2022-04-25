@@ -17,8 +17,6 @@ package secrets
 import (
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/utils/infodata"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	configlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	configv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -69,86 +67,16 @@ func (s *ControlPlaneSecretConfig) GetName() string {
 
 // Generate implements ConfigInterface.
 func (s *ControlPlaneSecretConfig) Generate() (DataInterface, error) {
-	return s.GenerateControlPlane()
-}
-
-// GenerateInfoData implements ConfigInterface
-func (s *ControlPlaneSecretConfig) GenerateInfoData() (infodata.InfoData, error) {
-	s.CertificateSecretConfig.Name = s.Name
-
-	cert, err := s.CertificateSecretConfig.GenerateCertificate()
-	if err != nil {
-		return nil, err
-	}
-
-	if len(cert.PrivateKeyPEM) == 0 && len(cert.CertificatePEM) == 0 {
-		return infodata.EmptyInfoData, nil
-	}
-
-	return NewCertificateInfoData(cert.PrivateKeyPEM, cert.CertificatePEM), nil
-}
-
-// GenerateFromInfoData implements ConfigInterface
-func (s *ControlPlaneSecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (DataInterface, error) {
-	data, ok := infoData.(*CertificateInfoData)
-	if !ok {
-		return nil, fmt.Errorf("could not convert InfoData entry %s to CertificateInfoData", s.Name)
-	}
-
-	certificate := &Certificate{
-		Name: s.Name,
-		CA:   s.CertificateSecretConfig.SigningCA,
-
-		PrivateKeyPEM:  data.PrivateKey,
-		CertificatePEM: data.Certificate,
-	}
-
-	controlPlane := &ControlPlane{
-		Name: s.Name,
-
-		Certificate: certificate,
-		BasicAuth:   s.BasicAuth,
-		Token:       s.Token,
-	}
-
-	if len(s.KubeConfigRequests) > 0 {
-		kubeconfig, err := GenerateKubeconfig(s, certificate)
-		if err != nil {
-			return nil, err
-		}
-		controlPlane.Kubeconfig = kubeconfig
-	}
-
-	return controlPlane, nil
-}
-
-// LoadFromSecretData implements infodata.Loader
-func (s *ControlPlaneSecretConfig) LoadFromSecretData(secretData map[string][]byte) (infodata.InfoData, error) {
-	privateKeyPEM := secretData[ControlPlaneSecretDataKeyPrivateKey(s.Name)]
-	certificatePEM := secretData[ControlPlaneSecretDataKeyCertificatePEM(s.Name)]
-
-	if len(privateKeyPEM) == 0 && len(certificatePEM) == 0 {
-		return infodata.EmptyInfoData, nil
-	}
-
-	return NewCertificateInfoData(privateKeyPEM, certificatePEM), nil
-}
-
-// GenerateControlPlane computes a secret for a control plane component of the clusters managed by Gardener.
-// It may include a Kubeconfig.
-func (s *ControlPlaneSecretConfig) GenerateControlPlane() (*ControlPlane, error) {
-	var (
-		certificate *Certificate
-		err         error
-	)
+	var certificate *Certificate
 
 	if s.CertificateSecretConfig != nil {
 		s.CertificateSecretConfig.Name = s.Name
 
-		certificate, err = s.CertificateSecretConfig.GenerateCertificate()
+		certData, err := s.CertificateSecretConfig.GenerateCertificate()
 		if err != nil {
 			return nil, err
 		}
+		certificate = certData
 	}
 
 	controlPlane := &ControlPlane{
@@ -160,7 +88,7 @@ func (s *ControlPlaneSecretConfig) GenerateControlPlane() (*ControlPlane, error)
 	}
 
 	if len(s.KubeConfigRequests) > 0 {
-		kubeconfig, err := GenerateKubeconfig(s, certificate)
+		kubeconfig, err := generateKubeconfig(s, certificate)
 		if err != nil {
 			return nil, err
 		}
@@ -201,10 +129,7 @@ func (c *ControlPlane) SecretData() map[string][]byte {
 	return data
 }
 
-// GenerateKubeconfig generates a Kubernetes Kubeconfig for communicating with the kube-apiserver by using
-// a client certificate. If <basicAuthUser> and <basicAuthPass> are non-empty string, a second user object
-// containing the Basic Authentication credentials is added to the Kubeconfig.
-func GenerateKubeconfig(secret *ControlPlaneSecretConfig, certificate *Certificate) ([]byte, error) {
+func generateKubeconfig(secret *ControlPlaneSecretConfig, certificate *Certificate) ([]byte, error) {
 	if len(secret.KubeConfigRequests) == 0 {
 		return nil, fmt.Errorf("missing kubeconfig request for %q", secret.Name)
 	}

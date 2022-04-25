@@ -197,25 +197,21 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 			Name: "Ensuring that ShootState exists",
 			Fn:   flow.TaskFn(botanist.EnsureShootStateExists).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
+		// TODO(rfranzke): Remove this task in a future version.
+		dropLegacySecretsFromShootState = g.Add(flow.Task{
+			Name:         "Dropping legacy secrets from ShootState",
+			Fn:           botanist.DropLegacySecretsFromShootState,
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
+		})
 		initializeSecretsManagement = g.Add(flow.Task{
 			Name:         "Initializing secrets management",
 			Fn:           flow.TaskFn(botanist.InitializeSecretsManagement).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
-		})
-		generateSecrets = g.Add(flow.Task{
-			Name:         "Generating secrets and saving them into ShootState",
-			Fn:           botanist.GenerateAndSaveSecrets,
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists, initializeSecretsManagement),
-		})
-		deploySecrets = g.Add(flow.Task{
-			Name:         "Deploying Shoot certificates / keys",
-			Fn:           flow.TaskFn(botanist.DeploySecrets).DoIf(nonTerminatingNamespace),
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists, generateSecrets, initializeSecretsManagement),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists, dropLegacySecretsFromShootState),
 		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
 			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources || etcdSnapshotRequired),
-			Dependencies: flow.NewTaskIDs(deploySecrets),
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})
 		scaleETCDToOne = g.Add(flow.Task{
 			Name:         "Scaling etcd up",
@@ -233,7 +229,7 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 		restoreControlPlane = g.Add(flow.Task{
 			Name:         "Restoring Shoot control plane",
 			Fn:           flow.TaskFn(botanist.RestoreControlPlane).DoIf(cleanupShootResources && controlPlaneRestorationNeeded),
-			Dependencies: flow.NewTaskIDs(deploySecrets),
+			Dependencies: flow.NewTaskIDs(initializeSecretsManagement),
 		})
 		waitUntilControlPlaneReady = g.Add(flow.Task{
 			Name:         "Waiting until Shoot control plane has been restored",

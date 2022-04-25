@@ -620,6 +620,26 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 		}
 
 		if r.values.TargetDiffersFromSourceCluster {
+			clusterCASecret, found := r.secretsManager.Get(v1beta1constants.SecretNameCACluster)
+			if !found {
+				return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+			}
+
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+				Name: volumeNameRootCA,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName:  clusterCASecret.Name,
+						DefaultMode: pointer.Int32(420),
+					},
+				},
+			})
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+				MountPath: volumeMountPathRootCA,
+				Name:      volumeNameRootCA,
+				ReadOnly:  true,
+			})
+
 			if r.secrets.BootstrapKubeconfig != nil {
 				deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
 					Name: volumeNameBootstrapKubeconfig,
@@ -643,24 +663,6 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 
 				utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, genericTokenKubeconfigSecret.Name, r.secrets.shootAccess.Secret.Name))
 			}
-		}
-
-		if r.secrets.RootCA != nil {
-			metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum/secret-"+r.secrets.RootCA.Name, r.secrets.RootCA.Checksum)
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-				Name: volumeNameRootCA,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName:  r.secrets.RootCA.Name,
-						DefaultMode: pointer.Int32(420),
-					},
-				},
-			})
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-				MountPath: volumeMountPathRootCA,
-				Name:      volumeNameRootCA,
-				ReadOnly:  true,
-			})
 		}
 
 		return nil
@@ -697,8 +699,8 @@ func (r *resourceManager) computeCommand() []string {
 		cmd = append(cmd, fmt.Sprintf("--root-ca-publisher-max-concurrent-workers=%d", *r.values.MaxConcurrentRootCAPublisherWorkers))
 	}
 	if r.values.MaxConcurrentRootCAPublisherWorkers != nil {
-		if r.secrets.RootCA != nil {
-			cmd = append(cmd, fmt.Sprintf("--root-ca-file=%s/%s", volumeMountPathRootCA, secrets.DataKeyCertificateCA))
+		if r.values.TargetDiffersFromSourceCluster {
+			cmd = append(cmd, fmt.Sprintf("--root-ca-file=%s/%s", volumeMountPathRootCA, secrets.DataKeyCertificateBundle))
 		} else {
 			// default to using the CA cert from the mounted service account. Relevant when source=target cluster.
 			// In this case, the CA cert of the source cluster is published.
@@ -1109,8 +1111,6 @@ type Secrets struct {
 	// BootstrapKubeconfig is the kubeconfig of the gardener-resource-manager used during the bootstrapping process. Its
 	// token requestor controller will request a JWT token for itself with this kubeconfig.
 	BootstrapKubeconfig *component.Secret
-	// RootCA is a secret containing the root CA secret of the target cluster.
-	RootCA *component.Secret
 
 	shootAccess *gutil.ShootAccessSecret
 }

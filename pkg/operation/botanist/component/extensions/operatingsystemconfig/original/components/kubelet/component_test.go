@@ -35,8 +35,8 @@ var _ = Describe("Component", func() {
 		component components.Component
 		ctx       components.Context
 
-		kubeletCACertificate       = "certificate"
-		kubeletCACertificateBase64 = utils.EncodeBase64([]byte(kubeletCACertificate))
+		kubeletCABundle       = []byte("certificate")
+		kubeletCABundleBase64 = utils.EncodeBase64(kubeletCABundle)
 	)
 
 	BeforeEach(func() {
@@ -49,7 +49,7 @@ var _ = Describe("Component", func() {
 
 			ctx.CRIName = criName
 			ctx.KubernetesVersion = semver.MustParse(kubernetesVersion)
-			ctx.KubeletCACertificate = kubeletCACertificate
+			ctx.KubeletCABundle = kubeletCABundle
 			ctx.Images = map[string]*imagevector.Image{
 				"hyperkube": {
 					Name:       "pause-container",
@@ -109,7 +109,7 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
-							Data:     kubeletCACertificateBase64,
+							Data:     kubeletCABundleBase64,
 						},
 					},
 				},

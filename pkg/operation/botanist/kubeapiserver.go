@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -428,12 +427,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		}
 	}
 
-	secrets := kubeapiserver.Secrets{
-		CA:           component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
-		CAFrontProxy: component.Secret{Name: v1beta1constants.SecretNameCAFrontProxy, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCAFrontProxy)},
-	}
-
-	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSecrets(secrets)
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetServerCertificateConfig(b.computeKubeAPIServerServerCertificateConfig())
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSNIConfig(b.computeKubeAPIServerSNIConfig())
 

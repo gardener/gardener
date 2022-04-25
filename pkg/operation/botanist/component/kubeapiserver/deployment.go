@@ -152,9 +152,19 @@ func (k *kubeAPIServer) reconcileDeployment(
 		healthCheckToken = token.Token
 	}
 
+	clusterCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+	}
+
 	clientCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCAClient)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAClient)
+	}
+
+	frontProxyCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCAFrontProxy)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAFrontProxy)
 	}
 
 	vpnCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCAVPN)
@@ -188,7 +198,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: k.computePodAnnotations(),
 					Labels: utils.MergeStringMaps(GetLabels(), map[string]string{
 						v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyToPublicNetworks:  v1beta1constants.LabelNetworkPolicyAllowed,
@@ -345,7 +354,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameCA,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: k.secrets.CA.Name,
+									SecretName: clusterCASecret.Name,
 								},
 							},
 						},
@@ -369,7 +378,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameCAFrontProxy,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: k.secrets.CAFrontProxy.Name,
+									SecretName: frontProxyCASecret.Name,
 								},
 							},
 						},
@@ -449,18 +458,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 	return err
 }
 
-func (k *kubeAPIServer) computePodAnnotations() map[string]string {
-	out := make(map[string]string)
-
-	for _, s := range k.secrets.all() {
-		if s.Secret != nil && s.Name != "" && s.Checksum != "" {
-			out["checksum/secret-"+s.Name] = s.Checksum
-		}
-	}
-
-	return out
-}
-
 func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	var out []string
 
@@ -517,7 +514,7 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, "--profiling=false")
 	out = append(out, fmt.Sprintf("--proxy-client-cert-file=%s/%s", volumeMountPathKubeAggregator, secrets.DataKeyCertificate))
 	out = append(out, fmt.Sprintf("--proxy-client-key-file=%s/%s", volumeMountPathKubeAggregator, secrets.DataKeyPrivateKey))
-	out = append(out, fmt.Sprintf("--requestheader-client-ca-file=%s/%s", volumeMountPathCAFrontProxy, secrets.DataKeyCertificateCA))
+	out = append(out, fmt.Sprintf("--requestheader-client-ca-file=%s/%s", volumeMountPathCAFrontProxy, secrets.DataKeyCertificateBundle))
 	out = append(out, "--requestheader-extra-headers-prefix=X-Remote-Extra-")
 	out = append(out, "--requestheader-group-headers=X-Remote-Group")
 	out = append(out, "--requestheader-username-headers=X-Remote-User")
@@ -740,7 +737,7 @@ func (k *kubeAPIServer) handleVPNSettings(
 				},
 				{
 					Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_CA",
-					Value: volumeMountPathCA + "/" + secrets.DataKeyCertificateCA,
+					Value: volumeMountPathCA + "/" + secrets.DataKeyCertificateBundle,
 				},
 				{
 					Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_CRT",

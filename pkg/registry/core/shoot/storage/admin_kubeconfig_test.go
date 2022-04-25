@@ -428,18 +428,6 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 		Entry("no client CA, one cluster CA", clientCACert1Name, clusterCACert1, func() {
 			shootState.Spec.Gardener[0].Labels["name"] = "ca"
 		}),
-
-		Entry("cluster CA is stored without labels", clientCACert1Name, clusterCACert1, func() {
-			shootState.Spec.Gardener[0].Name = "ca"
-			shootState.Spec.Gardener[0].Labels = nil
-		}),
-
-		Entry("cluster CA is stored as certificate data type", clientCACert1Name, clusterCACert1, func() {
-			shootState.Spec.Gardener[0].Name = "ca"
-			shootState.Spec.Gardener[0].Labels = nil
-			shootState.Spec.Gardener[0].Type = "certificate"
-			shootState.Spec.Gardener[0].Data.Raw = []byte(`{"certificate":"` + utils.EncodeBase64(clusterCACert1) + `"}`)
-		}),
 	)
 })
 

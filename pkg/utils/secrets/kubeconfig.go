@@ -15,9 +15,6 @@
 package secrets
 
 import (
-	"errors"
-
-	"github.com/gardener/gardener/pkg/utils/infodata"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -62,21 +59,6 @@ func (s *KubeconfigSecretConfig) Generate() (DataInterface, error) {
 		Kubeconfig:    kubeconfig,
 		kubeconfigRaw: raw,
 	}, nil
-}
-
-// GenerateInfoData implements ConfigInterface.
-func (s *KubeconfigSecretConfig) GenerateInfoData() (infodata.InfoData, error) {
-	return nil, errors.New("not implemented")
-}
-
-// GenerateFromInfoData implements ConfigInterface.
-func (s *KubeconfigSecretConfig) GenerateFromInfoData(_ infodata.InfoData) (DataInterface, error) {
-	return nil, errors.New("not implemented")
-}
-
-// LoadFromSecretData implements infodata.Loader.
-func (s *KubeconfigSecretConfig) LoadFromSecretData(_ map[string][]byte) (infodata.InfoData, error) {
-	return nil, errors.New("not implemented")
 }
 
 // SecretData computes the data map which can be used in a Kubernetes secret.

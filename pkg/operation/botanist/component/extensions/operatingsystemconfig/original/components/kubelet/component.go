@@ -149,7 +149,7 @@ ExecStart=` + pathHealthMonitor),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
-						Data:     utils.EncodeBase64([]byte(ctx.KubeletCACertificate)),
+						Data:     utils.EncodeBase64(ctx.KubeletCABundle),
 					},
 				},
 			},

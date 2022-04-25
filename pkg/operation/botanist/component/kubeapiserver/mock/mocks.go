@@ -182,18 +182,6 @@ func (mr *MockInterfaceMockRecorder) SetSNIConfig(arg0 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSNIConfig", reflect.TypeOf((*MockInterface)(nil).SetSNIConfig), arg0)
 }
 
-// SetSecrets mocks base method.
-func (m *MockInterface) SetSecrets(arg0 kubeapiserver.Secrets) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetSecrets", arg0)
-}
-
-// SetSecrets indicates an expected call of SetSecrets.
-func (mr *MockInterfaceMockRecorder) SetSecrets(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSecrets", reflect.TypeOf((*MockInterface)(nil).SetSecrets), arg0)
-}
-
 // SetServerCertificateConfig mocks base method.
 func (m *MockInterface) SetServerCertificateConfig(arg0 kubeapiserver.ServerCertificateConfig) {
 	m.ctrl.T.Helper()

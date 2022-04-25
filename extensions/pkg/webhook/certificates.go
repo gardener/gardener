@@ -108,12 +108,10 @@ func GenerateCertificates(ctx context.Context, mgr manager.Manager, certDir, nam
 }
 
 func generateNewCAAndServerCert(mode, namespace, name, url string) (*secrets.Certificate, *secrets.Certificate, error) {
-	caConfig := &secrets.CertificateSecretConfig{
+	caCert, err := (&secrets.CertificateSecretConfig{
 		CommonName: "webhook-ca",
 		CertType:   secrets.CACert,
-	}
-
-	caCert, err := caConfig.GenerateCertificate()
+	}).GenerateCertificate()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -121,10 +119,10 @@ func generateNewCAAndServerCert(mode, namespace, name, url string) (*secrets.Cer
 	var (
 		dnsNames    []string
 		ipAddresses []net.IP
-	)
 
-	serverName := url
-	serverNameData := strings.SplitN(url, ":", 3)
+		serverName     = url
+		serverNameData = strings.SplitN(url, ":", 3)
+	)
 
 	if len(serverNameData) == 2 {
 		serverName = serverNameData[0]
@@ -133,13 +131,9 @@ func generateNewCAAndServerCert(mode, namespace, name, url string) (*secrets.Cer
 	switch mode {
 	case ModeURL:
 		if addr := net.ParseIP(url); addr != nil {
-			ipAddresses = []net.IP{
-				addr,
-			}
+			ipAddresses = []net.IP{addr}
 		} else {
-			dnsNames = []string{
-				serverName,
-			}
+			dnsNames = []string{serverName}
 		}
 
 	case ModeService:
@@ -150,15 +144,13 @@ func generateNewCAAndServerCert(mode, namespace, name, url string) (*secrets.Cer
 		}
 	}
 
-	serverConfig := &secrets.CertificateSecretConfig{
+	serverCert, err := (&secrets.CertificateSecretConfig{
 		CommonName:  name,
 		DNSNames:    dnsNames,
 		IPAddresses: ipAddresses,
 		CertType:    secrets.ServerCert,
 		SigningCA:   caCert,
-	}
-
-	serverCert, err := serverConfig.GenerateCertificate()
+	}).GenerateCertificate()
 	if err != nil {
 		return nil, nil, err
 	}

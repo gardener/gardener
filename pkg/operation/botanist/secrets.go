@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/seed"
-	"github.com/gardener/gardener/pkg/operation/shootsecrets"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -42,43 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-func (b *Botanist) wantedCertificateAuthorities() map[string]*secretutils.CertificateSecretConfig {
-	return map[string]*secretutils.CertificateSecretConfig{
-		v1beta1constants.SecretNameCACluster: {
-			Name:       v1beta1constants.SecretNameCACluster,
-			CommonName: "kubernetes",
-			CertType:   secretutils.CACert,
-		},
-		v1beta1constants.SecretNameCAETCD: {
-			Name:       v1beta1constants.SecretNameCAETCD,
-			CommonName: "etcd",
-			CertType:   secretutils.CACert,
-		},
-		v1beta1constants.SecretNameCAFrontProxy: {
-			Name:       v1beta1constants.SecretNameCAFrontProxy,
-			CommonName: "front-proxy",
-			CertType:   secretutils.CACert,
-		},
-		v1beta1constants.SecretNameCAKubelet: {
-			Name:       v1beta1constants.SecretNameCAKubelet,
-			CommonName: "kubelet",
-			CertType:   secretutils.CACert,
-		},
-		v1beta1constants.SecretNameCAMetricsServer: {
-			Name:       v1beta1constants.SecretNameCAMetricsServer,
-			CommonName: "metrics-server",
-			CertType:   secretutils.CACert,
-		},
-		v1beta1constants.SecretNameCAVPN: {
-			Name:       v1beta1constants.SecretNameCAVPN,
-			CommonName: "vpn",
-			CertType:   secretutils.CACert,
-		},
-	}
-}
 
 // InitializeSecretsManagement initializes the secrets management and deploys the required secrets to the shoot
 // namespace in the seed.
@@ -96,8 +59,11 @@ func (b *Botanist) InitializeSecretsManagement(ctx context.Context) error {
 
 	return flow.Sequential(
 		b.generateCertificateAuthorities,
-		b.generateGenericTokenKubeconfig,
 		b.generateSSHKeypair,
+		b.generateGenericTokenKubeconfig,
+		b.reconcileWildcardIngressCertificate,
+		// TODO(rfranzke): Remove this function in a future release.
+		b.reconcileGenericKubeconfigSecret,
 	)(ctx)
 }
 
@@ -153,8 +119,7 @@ func (b *Botanist) restoreSecretsFromShootStateForSecretsManagerAdoption(ctx con
 }
 
 func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
-	// TODO(rfranzke): Move this client CA secret configuration to the b.wantedCertificateAuthorities() function in a
-	//  future release.
+	// TODO(rfranzke): Move this client CA secret configuration to the below loop in a future release.
 	if _, err := b.SecretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
 		Name:       v1beta1constants.SecretNameCAClient,
 		CommonName: "kubernetes-client",
@@ -163,7 +128,14 @@ func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
 		return err
 	}
 
-	for _, config := range b.wantedCertificateAuthorities() {
+	for _, config := range []secretutils.ConfigInterface{
+		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCACluster, CommonName: "kubernetes", CertType: secretutils.CACert},
+		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCD, CommonName: "etcd", CertType: secretutils.CACert},
+		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAFrontProxy, CommonName: "front-proxy", CertType: secretutils.CACert},
+		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAKubelet, CommonName: "kubelet", CertType: secretutils.CACert},
+		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAMetricsServer, CommonName: "metrics-server", CertType: secretutils.CACert},
+		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAVPN, CommonName: "vpn", CertType: secretutils.CACert},
+	} {
 		if _, err := b.SecretsManager.Generate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld), secretsmanager.IgnoreConfigChecksumForCASecretName()); err != nil {
 			return err
 		}
@@ -287,41 +259,13 @@ func (b *Botanist) syncShootCredentialToGarden(
 	return err
 }
 
-func (b *Botanist) fetchCertificateAuthoritiesForLegacySecretsManager(ctx context.Context, legacySecretsManager *shootsecrets.SecretsManager, addToDeployedSecrets bool) (map[string]*secretutils.Certificate, error) {
-	cas := make(map[string]*secretutils.Certificate)
-
-	for _, config := range b.wantedCertificateAuthorities() {
-		secret, err := b.SecretsManager.Generate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld), secretsmanager.IgnoreConfigChecksumForCASecretName())
-		if err != nil {
-			return nil, err
-		}
-
-		if addToDeployedSecrets {
-			legacySecretsManager.DeployedSecrets[secret.Name] = secret
-		}
-
-		cert, err := secretutils.LoadCertificate(secret.Name, secret.Data[secretutils.DataKeyPrivateKeyCA], secret.Data[secretutils.DataKeyCertificateCA])
-		if err != nil {
-			return nil, err
-		}
-
-		cas[secret.Name] = cert
-	}
-
-	return cas, nil
-}
-
-// GenerateAndSaveSecrets creates a CA certificate for the Shoot cluster and uses it to sign the server certificate
-// used by the kube-apiserver, and all client certificates used for communication. It also creates RSA key
-// pairs for SSH connections to the nodes/VMs and for the VPN tunnel. Moreover, basic authentication
-// credentials are computed which will be used to secure the Ingress resources and the kube-apiserver itself.
-// Server certificates for the exposed monitoring endpoints (via Ingress) are generated as well.
-func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
+// DropLegacySecretsFromShootState drops the legacy secrets stored in the ShootState resource.
+// TODO(rfranzke): Remove this function in a future version.
+func (b *Botanist) DropLegacySecretsFromShootState(ctx context.Context) error {
 	return b.SaveGardenerResourceDataInShootState(ctx, func(gardenerResourceData *[]gardencorev1alpha1.GardenerResourceData) error {
 		gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(*gardenerResourceData)
 
 		// Remove legacy secrets from ShootState.
-		// TODO(rfranzke): Remove in a future version.
 		for _, name := range []string{
 			"dependency-watchdog-internal-probe",
 			"dependency-watchdog-external-probe",
@@ -368,87 +312,37 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			gardenerResourceDataList.Delete(name)
 		}
 
-		secretsManager := shootsecrets.NewSecretsManager(
-			gardenerResourceDataList,
-			b.generateWantedSecretConfigs,
-		)
-
-		// For backwards-compatibility, we need to make the CAs known to the legacy secret manager.
-		// TODO(rfranzke): This can be removed in a future release once all secrets where adapted.
-		cas, err := b.fetchCertificateAuthoritiesForLegacySecretsManager(ctx, secretsManager, false)
-		if err != nil {
-			return err
-		}
-		secretsManager = secretsManager.WithCertificateAuthorities(cas)
-
-		if err := secretsManager.Generate(); err != nil {
-			return err
-		}
-
-		*gardenerResourceData = secretsManager.GardenerResourceDataList
-
+		*gardenerResourceData = gardenerResourceDataList
 		return nil
 	})
 }
 
-// DeploySecrets takes all existing secrets from the ShootState resource and deploys them in the shoot's control plane.
-func (b *Botanist) DeploySecrets(ctx context.Context) error {
-	gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(b.GetShootState().Spec.Gardener)
-	existingSecrets, err := b.fetchExistingSecrets(ctx)
-	if err != nil {
-		return err
-	}
-
-	secretsManager := shootsecrets.NewSecretsManager(
-		gardenerResourceDataList,
-		b.generateWantedSecretConfigs,
-	)
-
-	// For backwards-compatibility, we need to make the CAs known to the legacy secret manager.
-	// TODO(rfranzke): This can be removed in a future release once all secrets where adapted.
-	cas, err := b.fetchCertificateAuthoritiesForLegacySecretsManager(ctx, secretsManager, true)
-	if err != nil {
-		return err
-	}
-	secretsManager = secretsManager.WithCertificateAuthorities(cas)
-
-	if err := secretsManager.WithExistingSecrets(existingSecrets).Deploy(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace); err != nil {
-		return err
-	}
-
-	for name, secret := range secretsManager.DeployedSecrets {
-		b.StoreSecret(name, secret)
-	}
-
-	for _, name := range b.AllSecretKeys() {
-		b.StoreCheckSum(name, utils.ComputeSecretChecksum(b.LoadSecret(name).Data))
-	}
-
+func (b *Botanist) reconcileWildcardIngressCertificate(ctx context.Context) error {
 	wildcardCert, err := seed.GetWildcardCertificate(ctx, b.K8sSeedClient.Client())
 	if err != nil {
 		return err
 	}
-
-	if wildcardCert != nil {
-		// Copy certificate to shoot namespace
-		certSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      wildcardCert.GetName(),
-				Namespace: b.Shoot.SeedNamespace,
-			},
-		}
-
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), certSecret, func() error {
-			certSecret.Data = wildcardCert.Data
-			return nil
-		}); err != nil {
-			return err
-		}
-
-		b.ControlPlaneWildcardCert = certSecret
+	if wildcardCert == nil {
+		return nil
 	}
 
-	return b.reconcileGenericKubeconfigSecret(ctx)
+	// Copy certificate to shoot namespace
+	certSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      wildcardCert.GetName(),
+			Namespace: b.Shoot.SeedNamespace,
+		},
+	}
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), certSecret, func() error {
+		certSecret.Data = wildcardCert.Data
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	b.ControlPlaneWildcardCert = certSecret
+	return nil
 }
 
 // TODO(rfranzke): Remove this function in a future release.
@@ -460,11 +354,16 @@ func (b *Botanist) reconcileGenericKubeconfigSecret(ctx context.Context) error {
 		},
 	}
 
+	clusterCASecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
+	}
+
 	kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kutil.NewKubeconfig(
 		b.Shoot.SeedNamespace,
 		clientcmdv1.Cluster{
 			Server:                   b.Shoot.ComputeInClusterAPIServerAddress(true),
-			CertificateAuthorityData: b.LoadSecret(v1beta1constants.SecretNameCACluster).Data[secretutils.DataKeyCertificateCA],
+			CertificateAuthorityData: clusterCASecret.Data[secretutils.DataKeyCertificateBundle],
 		},
 		clientcmdv1.AuthInfo{TokenFile: gutil.PathShootToken},
 	))
@@ -493,7 +392,7 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 		}
 	)
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), secret, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), secret, func() error {
 		secret.Annotations = map[string]string{
 			"checksum/data": checksum,
 		}
@@ -503,37 +402,6 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 		secret.Type = corev1.SecretTypeOpaque
 		secret.Data = b.Shoot.Secret.Data
 		return nil
-	}); err != nil {
-		return err
-	}
-
-	b.StoreSecret(v1beta1constants.SecretNameCloudProvider, b.Shoot.Secret)
-	b.StoreCheckSum(v1beta1constants.SecretNameCloudProvider, checksum)
-
-	return nil
-}
-
-func (b *Botanist) fetchExistingSecrets(ctx context.Context) (map[string]*corev1.Secret, error) {
-	secretList := &corev1.SecretList{}
-	if err := b.K8sSeedClient.Client().List(ctx, secretList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
-		return nil, err
-	}
-
-	existingSecretsMap := make(map[string]*corev1.Secret, len(secretList.Items))
-	for _, secret := range secretList.Items {
-		secretObj := secret
-		existingSecretsMap[secret.Name] = &secretObj
-	}
-
-	return existingSecretsMap, nil
-}
-
-func (b *Botanist) cleanupSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList, secretNames ...string) error {
-	for _, secret := range secretNames {
-		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secret, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-		gardenerResourceDataList.Delete(secret)
-	}
-	return nil
+	})
+	return err
 }

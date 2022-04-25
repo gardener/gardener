@@ -76,8 +76,6 @@ const (
 type Interface interface {
 	component.DeployWaiter
 	component.MonitoringComponent
-	// SetSecrets sets the secrets for the kube-controller-manager.
-	SetSecrets(Secrets)
 	// SetReplicaCount sets the replica count for the kube-controller-manager.
 	SetReplicaCount(replicas int32)
 	// WaitForControllerToBeActive checks whether kube-controller-manager has
@@ -132,17 +130,12 @@ type kubeControllerManager struct {
 	image          string
 	replicas       int32
 	config         *gardencorev1beta1.KubeControllerManagerConfig
-	secrets        Secrets
 	podNetwork     *net.IPNet
 	serviceNetwork *net.IPNet
 	hvpaConfig     *HVPAConfig
 }
 
 func (k *kubeControllerManager) Deploy(ctx context.Context) error {
-	if k.secrets.CA.Name == "" || k.secrets.CA.Checksum == "" {
-		return fmt.Errorf("missing CA secret information")
-	}
-
 	serverSecret, err := k.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
 		Name:                        secretNameServer,
 		CommonName:                  v1beta1constants.DeploymentNameKubeControllerManager,
@@ -152,6 +145,11 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCACluster), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return err
+	}
+
+	clusterCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCACluster)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
 
 	clientCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCAClient, secretsmanager.Current)
@@ -238,9 +236,6 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					"checksum/secret-" + k.secrets.CA.Name: k.secrets.CA.Checksum,
-				},
 				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 					v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleControlPlane,
 					v1beta1constants.LabelPodMaintenanceRestart:         "true",
@@ -304,7 +299,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						Name: volumeNameCA,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
-								SecretName: k.secrets.CA.Name,
+								SecretName: clusterCASecret.Name,
 							},
 						},
 					},
@@ -442,7 +437,6 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	return kutil.DeleteObject(ctx, k.seedClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager-server", Namespace: k.namespace}})
 }
 
-func (k *kubeControllerManager) SetSecrets(secrets Secrets)      { k.secrets = secrets }
 func (k *kubeControllerManager) SetShootClient(c client.Client)  { k.shootClient = c }
 func (k *kubeControllerManager) SetReplicaCount(replicas int32)  { k.replicas = replicas }
 func (k *kubeControllerManager) Destroy(_ context.Context) error { return nil }
@@ -547,7 +541,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		"--leader-elect=true",
 		fmt.Sprintf("--node-monitor-grace-period=%s", nodeMonitorGracePeriod.Duration),
 		fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeout.Duration),
-		fmt.Sprintf("--root-ca-file=%s/%s", volumeMountPathCA, secrets.DataKeyCertificateCA),
+		fmt.Sprintf("--root-ca-file=%s/%s", volumeMountPathCA, secrets.DataKeyCertificateBundle),
 		fmt.Sprintf("--service-account-private-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey),
 		fmt.Sprintf("--service-cluster-ip-range=%s", k.serviceNetwork.String()),
 		fmt.Sprintf("--secure-port=%d", port),
@@ -619,13 +613,4 @@ func (k *kubeControllerManager) computeResourceRequirements(ctx context.Context)
 	}
 
 	return defaultResources, nil
-}
-
-// Secrets is collection of secrets for the kube-controller-manager.
-type Secrets struct {
-	// CA is a secret containing a root CA x509 certificate and key that is used for the flags.
-	// --cluster-signing-cert-file
-	// --cluster-signing-key-file
-	// --root-ca-file
-	CA component.Secret
 }

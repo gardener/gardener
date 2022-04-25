@@ -15,10 +15,7 @@
 package secrets
 
 import (
-	"errors"
 	"fmt"
-
-	"github.com/gardener/gardener/pkg/utils/infodata"
 )
 
 const (
@@ -58,21 +55,6 @@ func (s *ETCDEncryptionKeySecretConfig) Generate() (DataInterface, error) {
 		Key:    fmt.Sprintf("key%d", Clock.Now().Unix()),
 		Secret: secret,
 	}, nil
-}
-
-// GenerateInfoData implements ConfigInterface.
-func (s *ETCDEncryptionKeySecretConfig) GenerateInfoData() (infodata.InfoData, error) {
-	return nil, errors.New("not implemented")
-}
-
-// GenerateFromInfoData implements ConfigInterface.
-func (s *ETCDEncryptionKeySecretConfig) GenerateFromInfoData(_ infodata.InfoData) (DataInterface, error) {
-	return nil, errors.New("not implemented")
-}
-
-// LoadFromSecretData implements infodata.Loader.
-func (s *ETCDEncryptionKeySecretConfig) LoadFromSecretData(_ map[string][]byte) (infodata.InfoData, error) {
-	return nil, errors.New("not implemented")
 }
 
 // SecretData computes the data map which can be used in a Kubernetes secret.

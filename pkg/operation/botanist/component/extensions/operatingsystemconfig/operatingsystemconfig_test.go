@@ -35,6 +35,8 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -54,6 +56,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("OperatingSystemConfig", func() {
@@ -63,6 +66,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 		var (
 			ctrl             *gomock.Controller
 			c                client.Client
+			fakeClient       client.Client
+			sm               secretsmanager.Interface
 			defaultDepWaiter Interface
 
 			ctx     context.Context
@@ -75,10 +80,10 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			apiServerURL                = "https://url-to-apiserver"
 			caBundle                    = pointer.String("ca-bundle")
+			clusterCASecretName         = "ca"
 			clusterDNSAddress           = "cluster-dns"
 			clusterDomain               = "cluster-domain"
 			images                      = map[string]*imagevector.Image{"foo": {}}
-			kubeletCACertificate        = "kubelet-ca"
 			evictionHardMemoryAvailable = "100Mi"
 			kubeletConfig               = &gardencorev1beta1.KubeletConfig{
 				EvictionHard: &gardencorev1beta1.KubeletConfigEviction{
@@ -94,7 +99,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			ccdUnitContent = "ccd-unit-content"
 
-			downloaderConfigFn = func(cloudConfigUserDataSecretName, apiServerURL string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+			downloaderConfigFn = func(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 				return []extensionsv1alpha1.Unit{
 						{Name: cloudConfigUserDataSecretName},
 						{
@@ -104,6 +109,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					},
 					[]extensionsv1alpha1.File{
 						{Path: apiServerURL},
+						{Path: clusterCASecretName},
 					},
 					nil
 			}
@@ -116,7 +122,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					},
 					[]extensionsv1alpha1.File{
 						{Path: fmt.Sprintf("%s", cctx.Images)},
-						{Path: cctx.KubeletCACertificate},
+						{Path: string(cctx.KubeletCABundle)},
 						{Path: fmt.Sprintf("%v", cctx.KubeletCLIFlags)},
 						{Path: fmt.Sprintf("%v", cctx.KubeletConfigParameters)},
 						{Path: *cctx.KubeletDataVolumeName},
@@ -173,6 +179,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 			Expect(kubernetesfake.AddToScheme(s)).To(Succeed())
 			c = fake.NewClientBuilder().WithScheme(s).Build()
 
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(s).Build()
+			sm = fakesecretsmanager.New(fakeClient, namespace)
+
 			values = &Values{
 				Namespace:         namespace,
 				Workers:           workers,
@@ -181,15 +190,14 @@ var _ = Describe("OperatingSystemConfig", func() {
 					APIServerURL: apiServerURL,
 				},
 				OriginalValues: OriginalValues{
-					CABundle:             caBundle,
-					ClusterDNSAddress:    clusterDNSAddress,
-					ClusterDomain:        clusterDomain,
-					Images:               images,
-					KubeletConfig:        kubeletConfig,
-					KubeletCACertificate: kubeletCACertificate,
-					MachineTypes:         machineTypes,
-					SSHPublicKeys:        sshPublicKeys,
-					PromtailEnabled:      promtailEnabled,
+					CABundle:          caBundle,
+					ClusterDNSAddress: clusterDNSAddress,
+					ClusterDomain:     clusterDomain,
+					Images:            images,
+					KubeletConfig:     kubeletConfig,
+					MachineTypes:      machineTypes,
+					SSHPublicKeys:     sshPublicKeys,
+					PromtailEnabled:   promtailEnabled,
 				},
 			}
 
@@ -220,14 +228,14 @@ var _ = Describe("OperatingSystemConfig", func() {
 				downloaderUnits, downloaderFiles, _ := downloaderConfigFn(
 					key,
 					apiServerURL,
+					clusterCASecretName,
 				)
 				originalUnits, originalFiles, _ := originalConfigFn(components.Context{
-					CABundle:             caBundle,
-					ClusterDNSAddress:    clusterDNSAddress,
-					ClusterDomain:        clusterDomain,
-					CRIName:              criName,
-					Images:               images,
-					KubeletCACertificate: kubeletCACertificate,
+					CABundle:          caBundle,
+					ClusterDNSAddress: clusterDNSAddress,
+					ClusterDomain:     clusterDomain,
+					CRIName:           criName,
+					Images:            images,
 					KubeletConfigParameters: components.ConfigurableKubeletConfigParameters{
 						EvictionHard: map[string]string{
 							"memory.available": evictionHardMemoryAvailable,
@@ -300,7 +308,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				expected = append(expected, oscDownloader, oscOriginal)
 			}
 
-			defaultDepWaiter = New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+			defaultDepWaiter = New(log, c, sm, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 		})
 
 		AfterEach(func() {
@@ -351,8 +359,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			It("should exclude the bootstrap token file if purpose is not provision", func() {
 				bootstrapTokenFile := extensionsv1alpha1.File{Path: "/var/lib/cloud-config-downloader/credentials/bootstrap-token"}
-				downloaderConfigFnWithBootstrapToken := func(cloudConfigUserDataSecretName, apiServerURL string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-					units, files, error := downloaderConfigFn(cloudConfigUserDataSecretName, apiServerURL)
+				downloaderConfigFnWithBootstrapToken := func(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+					units, files, error := downloaderConfigFn(cloudConfigUserDataSecretName, apiServerURL, clusterCASecretName)
 					return units, append(files, bootstrapTokenFile), error
 				}
 
@@ -489,7 +497,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
 				}
 
-				defaultDepWaiter = New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+				defaultDepWaiter = New(log, mc, sm, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 				Expect(defaultDepWaiter.Restore(ctx, shootState)).To(Succeed())
 			})
 		})
@@ -742,7 +750,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.OperatingSystemConfig{}), gomock.Any())
 				mc.EXPECT().Delete(ctx, &expectedOSC).Return(fakeErr)
 
-				defaultDepWaiter = New(log, mc, &Values{Namespace: namespace}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+				defaultDepWaiter = New(log, mc, nil, &Values{Namespace: namespace}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 				Expect(defaultDepWaiter.Destroy(ctx)).To(MatchError(multierror.Append(fakeErr)))
 			})
 		})

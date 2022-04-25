@@ -24,9 +24,8 @@ import (
 var _ = Describe("Static Token Secrets", func() {
 	Describe("StaticToken Secret Configuration", func() {
 		var (
-			staticTokenConfig   *StaticTokenSecretConfig
-			staticTokenInfoData *StaticTokenInfoData
-			username            = "bar"
+			staticTokenConfig *StaticTokenSecretConfig
+			username          = "bar"
 		)
 
 		BeforeEach(func() {
@@ -38,12 +37,6 @@ var _ = Describe("Static Token Secrets", func() {
 						UserID:   "foo",
 						Groups:   []string{"group"},
 					},
-				},
-			}
-
-			staticTokenInfoData = &StaticTokenInfoData{
-				Tokens: map[string]string{
-					username: "foo",
 				},
 			}
 		})
@@ -61,52 +54,6 @@ var _ = Describe("Static Token Secrets", func() {
 				Expect(staticToken.Tokens[0].Username).To(Equal(staticTokenConfig.Tokens[username].Username))
 				Expect(staticToken.Tokens[0].UserID).To(Equal(staticTokenConfig.Tokens[username].UserID))
 				Expect(staticToken.Tokens[0].Groups).To(Equal(staticTokenConfig.Tokens[username].Groups))
-			})
-		})
-
-		Describe("#GenerateInfoData", func() {
-			It("should generate correct StaticToken InfoData", func() {
-				obj, err := staticTokenConfig.GenerateInfoData()
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(obj.TypeVersion()).To(Equal(StaticTokenDataType))
-
-				currentStaticTokenInfoData, ok := obj.(*StaticTokenInfoData)
-				Expect(ok).To(BeTrue())
-
-				Expect(len(currentStaticTokenInfoData.Tokens)).To(Equal(1))
-				Expect(currentStaticTokenInfoData.Tokens[username]).ToNot(Equal(""))
-			})
-		})
-
-		Describe("#GenerateFromInfoData", func() {
-			It("should properly load StaticToken object from StaticTokenInfoData", func() {
-				obj, err := staticTokenConfig.GenerateFromInfoData(staticTokenInfoData)
-				Expect(err).NotTo(HaveOccurred())
-
-				staticToken, ok := obj.(*StaticToken)
-				Expect(ok).To(BeTrue())
-
-				Expect(len(staticToken.Tokens)).To(Equal(1))
-				Expect(staticToken.Tokens[0].Token).To(Equal(staticTokenInfoData.Tokens[username]))
-				Expect(staticToken.Tokens[0].Username).To(Equal(staticTokenConfig.Tokens[username].Username))
-				Expect(staticToken.Tokens[0].UserID).To(Equal(staticTokenConfig.Tokens[username].UserID))
-				Expect(staticToken.Tokens[0].Groups).To(Equal(staticTokenConfig.Tokens[username].Groups))
-			})
-		})
-
-		Describe("#LoadFromSecretData", func() {
-			It("should properly load StaticTokenInfoData from secret data", func() {
-				secretData := map[string][]byte{
-					DataKeyStaticTokenCSV: []byte("foo,bar,foo,group"),
-				}
-				obj, err := staticTokenConfig.LoadFromSecretData(secretData)
-				Expect(err).NotTo(HaveOccurred())
-
-				currentStaticTokenInfoData, ok := obj.(*StaticTokenInfoData)
-				Expect(ok).To(BeTrue())
-
-				Expect(currentStaticTokenInfoData).To(Equal(staticTokenInfoData))
 			})
 		})
 	})

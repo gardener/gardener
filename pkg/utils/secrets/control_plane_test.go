@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package secrets_test
+package secrets
 
 import (
-	. "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/ghodss/yaml"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -70,11 +69,10 @@ var _ = Describe("utils", func() {
 				It("should return a kubeconfig with one context and one user", func() {
 					secret.BasicAuth = nil
 
-					kubeconfig, err := GenerateKubeconfig(secret, certificate)
+					kubeconfig, err := generateKubeconfig(secret, certificate)
 					Expect(err).NotTo(HaveOccurred())
 
-					err = yaml.Unmarshal(kubeconfig, &kubecfg)
-					Expect(err).NotTo(HaveOccurred())
+					Expect(yaml.Unmarshal(kubeconfig, &kubecfg)).To(Succeed())
 
 					Expect(kubecfg.CurrentContext).To(Equal(clusterName))
 					Expect(kubecfg.Clusters).To(HaveLen(1))
@@ -93,7 +91,7 @@ var _ = Describe("utils", func() {
 						APIServerHost: "foo.bar",
 					})
 
-					kubeconfig, err := GenerateKubeconfig(secret, certificate)
+					kubeconfig, err := generateKubeconfig(secret, certificate)
 					Expect(err).NotTo(HaveOccurred())
 
 					err = yaml.Unmarshal(kubeconfig, &kubecfg)
@@ -150,11 +148,10 @@ var _ = Describe("utils", func() {
 
 			Context("with Basic Authentication credentials", func() {
 				It("should return a kubeconfig with one context and two users", func() {
-					kubeconfig, err := GenerateKubeconfig(secret, certificate)
+					kubeconfig, err := generateKubeconfig(secret, certificate)
 					Expect(err).NotTo(HaveOccurred())
 
-					err = yaml.Unmarshal(kubeconfig, &kubecfg)
-					Expect(err).NotTo(HaveOccurred())
+					Expect(yaml.Unmarshal(kubeconfig, &kubecfg)).To(Succeed())
 
 					Expect(kubecfg.CurrentContext).To(Equal(clusterName))
 					Expect(kubecfg.Clusters).To(HaveLen(1))
@@ -175,11 +172,10 @@ var _ = Describe("utils", func() {
 					APIServerHost: "foo.bar",
 				})
 
-				kubeconfig, err := GenerateKubeconfig(secret, certificate)
+				kubeconfig, err := generateKubeconfig(secret, certificate)
 				Expect(err).NotTo(HaveOccurred())
 
-				err = yaml.Unmarshal(kubeconfig, &kubecfg)
-				Expect(err).NotTo(HaveOccurred())
+				Expect(yaml.Unmarshal(kubeconfig, &kubecfg)).To(Succeed())
 
 				Expect(kubecfg).To(Equal(clientcmdv1.Config{
 					Kind:       "Config",
@@ -240,11 +236,10 @@ var _ = Describe("utils", func() {
 				It("should return a kubeconfig with one context and one user", func() {
 					secret.KubeConfigRequests[0].CAData = []byte(caCert)
 
-					kubeconfig, err := GenerateKubeconfig(secret, nil)
+					kubeconfig, err := generateKubeconfig(secret, nil)
 					Expect(err).NotTo(HaveOccurred())
 
-					err = yaml.Unmarshal(kubeconfig, &kubecfg)
-					Expect(err).NotTo(HaveOccurred())
+					Expect(yaml.Unmarshal(kubeconfig, &kubecfg)).To(Succeed())
 
 					Expect(kubecfg.CurrentContext).To(Equal(clusterName))
 					Expect(kubecfg.Clusters).To(HaveLen(1))

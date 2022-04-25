@@ -26,7 +26,6 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/mock"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	mockresourcemanager "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager/mock"
@@ -41,7 +40,6 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -68,69 +66,15 @@ var _ = Describe("ResourceManager", func() {
 		var (
 			kubeAPIServer   *mockkubeapiserver.MockInterface
 			resourceManager *mockresourcemanager.MockInterface
+			secrets         resourcemanager.Secrets
 
-			ctx     = context.TODO()
-			fakeErr = fmt.Errorf("fake err")
+			ctx           = context.TODO()
+			fakeErr       = fmt.Errorf("fake err")
+			seedNamespace = "fake-seed-ns"
 
 			c             *mockclient.MockClient
 			k8sSeedClient kubernetes.Interface
 			sm            secretsmanager.Interface
-
-			seedNamespace = "fake-seed-ns"
-
-			secretNameCA     = "ca"
-			secretChecksumCA = "9012"
-			secretDataCA     = map[string][]byte{
-				"ca.crt": []byte(`-----BEGIN CERTIFICATE-----
-MIIDYDCCAkigAwIBAgIUEb00DjvE8F0HiGOlQY/B/AG1AjMwDQYJKoZIhvcNAQEL
-BQAwSDELMAkGA1UEBhMCVVMxCzAJBgNVBAgTAkNBMRYwFAYDVQQHEw1TYW4gRnJh
-bmNpc2NvMRQwEgYDVQQDEwtleGFtcGxlLm5ldDAeFw0yMDA1MTEwODU0MDBaFw0y
-NTA1MTAwODU0MDBaMEgxCzAJBgNVBAYTAlVTMQswCQYDVQQIEwJDQTEWMBQGA1UE
-BxMNU2FuIEZyYW5jaXNjbzEUMBIGA1UEAxMLZXhhbXBsZS5uZXQwggEiMA0GCSqG
-SIb3DQEBAQUAA4IBDwAwggEKAoIBAQC/YYT0dKAY9/1lR20Gs2CfAYdR3dMcc5bE
-ncD6pWoes8eZ54Am9J572o7hvVto73S/FcxF5Do06owJPVRZvHcgI4tRzbMvj5Is
-XyqmMyRayoayBKkaM6f/mOPjGonSIPl90ZboaDARp9Vk9MfoLoXvRWLLF/TNpQf9
-Y2rAPkInJ0fekooZewob/amoTw2Ek/KLWaQHjr6LfddL0yXotniIG6iWddSmcrON
-zZEAskqNqgau6kmfK06XUK2hyJL6voeTyPchtQh83bXG/Rih43CzO3qDY6IMnJH3
-0wsGFrJDsLq/9bDO8X3xFwU7YoH628BzIyFHuixEz5uNdwE35L7LAgMBAAGjQjBA
-MA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBRIb9F1
-tE70YCjoXdjm5LeJSK9eojANBgkqhkiG9w0BAQsFAAOCAQEAdVb8yUICkTt/jENU
-gvYBF3EGr8nNVC728Vatx1gmzVgudCydqHWx7clV5nuLgikXziNBpEwvr2ige3WL
-BwJ041CL8wBM2A/hhYkiujulpw0M1rzp/RGUvr5fxIHVvkaztB1lksWx83JCFzwC
-u8zZlKIZNR44i5pcrMylzLuyiwoFF4dJrYOgCbV2STAnDUEsT4k15ifT98Cg3Yuz
-xyIt/1Lw9rpEEUEB1hg3ouLDh4xjXFlJWSMw8X+n0DXToRWUrU1WPGut4C2uX58Y
-RMn7d2EqHa/0L8QHsfJBSb4IiCZ3lkPnTICC0E9/dXagH0jq76TPcmFjIy1vIPuX
-nvslPg==
------END CERTIFICATE-----`),
-				"ca.key": []byte(`-----BEGIN RSA PRIVATE KEY-----
-MIIEogIBAAKCAQEAv2GE9HSgGPf9ZUdtBrNgnwGHUd3THHOWxJ3A+qVqHrPHmeeA
-JvSee9qO4b1baO90vxXMReQ6NOqMCT1UWbx3ICOLUc2zL4+SLF8qpjMkWsqGsgSp
-GjOn/5jj4xqJ0iD5fdGW6GgwEafVZPTH6C6F70Viyxf0zaUH/WNqwD5CJydH3pKK
-GXsKG/2pqE8NhJPyi1mkB46+i33XS9Ml6LZ4iBuolnXUpnKzjc2RALJKjaoGrupJ
-nytOl1CtociS+r6Hk8j3IbUIfN21xv0YoeNwszt6g2OiDJyR99MLBhayQ7C6v/Ww
-zvF98RcFO2KB+tvAcyMhR7osRM+bjXcBN+S+ywIDAQABAoIBAETvJWrAD2KvALDY
-V2cQeX8Ml+dfFUmsQOQ1RmuB5YWFkCHZhwmBFwzZnpmlESXtCopBmcCbAnRI/4Pc
-eWORRP9ojig7BY3eEvK0nLIcvb2OMZIxp49uh9bDBWKqDnaHthYhxk+UJ6xUXcLt
-gIwbJdcXkQxCZsUj6orUooD4a++Zz7YGrfPZ7f1MTzhipzjwrv9sn4iTXJfijk+D
-IpE1HA+jfSsnd0bENKRUoP58+iS0bNZnIspKL2PYUSVJwkDs5r/WLEAqkjT/j8oH
-Sr/pHIQIh18Snp16urJPIuI0aHTG79qcD4Bcighr/mif2CehitInoPgSu5YlJ3Ki
-y0jiORECgYEAwmVihnZVhk1rW5b9JAyj7mzlezdQJU5FtEqOn00H8ARgygFJNKK1
-TpZxPC5nTRrnRSdeH6m4WPtSO/4lXfSY2oiO2f/S1gwWF13i1clBFxwiRnfpeDhF
-LWWE/m6UvjSqoFF9D2g5NTTAtV55OgTT0NuPM0Dl9nRsyqLS2qceXXUCgYEA/AeH
-5l9eUjYttDIM9zPKXSyqFzBME6P+Lje2znCRFkS0l6xPXecdjMg8zWF3CMuYKbdl
-BfXqaArUdtPHN2yS3SolZkPtUdRsYncq0skmQqFjvAqsvxhHmd9vJ+14bK6qFwf9
-Xk+0+6mvGXABiwfGtgKRGRVXptP065jIZP254z8CgYB68vivpqRM/yZJlWOhq0T7
-hXBW0BMmpSy87PLrmiLNEVfOK6YLXmVhwRD5STgYsk1XlaCYUhXAYaQPQZyMoikS
-/o+rHXxR2O8X9E+Fe3ZpkWe0Ph8x5BUMs0q8SWBWNKU+JIv+dKLKHgVMMOZnZao6
-TMNzXTaU++na98R4en5gCQKBgDmwG5pOsA9PWWzKnA8laqejJpfCNVe1jOPVWuGs
-AHnBZjjldxE+apQj7U7xhUadG4pI8TXJEUuZVwKP/SShlIhNMlxTJgo5/kkXj9TJ
-uBk+Sc7r/piLHTCKZS4VfCAcZtB4wrUIt5t3Pp4q9h91uzVEJyQ/r11/XKtkwFHl
-hdwPAoGARP6NCOGqsjC1lpasktu7nO9OB01BRBY234rInHijTDORY65nn5OuL/Xb
-WifluILPHrTS8ZUNpjy6j2CUG626TPUORKmMw+p199Ve3VxlMp2g29INt+HwwJUO
-nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
------END RSA PRIVATE KEY-----`),
-			}
-			secrets resourcemanager.Secrets
 
 			bootstrapKubeconfigSecret *corev1.Secret
 			shootAccessSecret         *corev1.Secret
@@ -144,9 +88,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 			c = mockclient.NewMockClient(ctrl)
 			k8sSeedClient = fakekubernetes.NewClientSetBuilder().WithClient(c).Build()
 			sm = fakesecretsmanager.New(c, seedNamespace)
-
-			botanist.StoreCheckSum(secretNameCA, secretChecksumCA)
-			botanist.StoreSecret(secretNameCA, &corev1.Secret{Data: secretDataCA})
 
 			botanist.K8sSeedClient = k8sSeedClient
 			botanist.SecretsManager = sm
@@ -167,9 +108,7 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 				},
 			})
 
-			secrets = resourcemanager.Secrets{
-				RootCA: &component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
-			}
+			secrets = resourcemanager.Secrets{}
 
 			bootstrapKubeconfigSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -342,7 +281,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 						// set secrets and deploy with bootstrap kubeconfig
 						resourceManager.EXPECT().SetSecrets(&secretMatcher{
 							bootstrapKubeconfigName: &bootstrapKubeconfigSecret.Name,
-							rootCA:                  secrets.RootCA,
 						}),
 						resourceManager.EXPECT().Deploy(ctx),
 
@@ -482,7 +420,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 							// set secrets and deploy with bootstrap kubeconfig
 							resourceManager.EXPECT().SetSecrets(&secretMatcher{
 								bootstrapKubeconfigName: &bootstrapKubeconfigSecret.Name,
-								rootCA:                  secrets.RootCA,
 							}),
 							resourceManager.EXPECT().Deploy(ctx),
 						)
@@ -550,7 +487,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 						// set secrets and deploy with bootstrap kubeconfig
 						resourceManager.EXPECT().SetSecrets(&secretMatcher{
 							bootstrapKubeconfigName: &bootstrapKubeconfigSecret.Name,
-							rootCA:                  secrets.RootCA,
 						}),
 						resourceManager.EXPECT().Deploy(ctx),
 
@@ -585,7 +521,6 @@ nQwHTbS7lsjLl4cdJWWZ/k1euUyKSpeJtSIwiXyF2kogjOoNh84=
 
 type secretMatcher struct {
 	bootstrapKubeconfigName *string
-	rootCA                  *component.Secret
 }
 
 func (m *secretMatcher) Matches(x interface{}) bool {
@@ -598,16 +533,11 @@ func (m *secretMatcher) Matches(x interface{}) bool {
 		return false
 	}
 
-	if m.rootCA != nil && (req.RootCA == nil || !apiequality.Semantic.DeepEqual(*m.rootCA, *req.RootCA)) {
-		return false
-	}
-
 	return true
 }
 
 func (m *secretMatcher) String() string {
 	return fmt.Sprintf(`Secret Matcher:
 bootstrapKubeconfigName: %v,
-rootCA: %v
-`, m.bootstrapKubeconfigName, m.rootCA)
+`, m.bootstrapKubeconfigName)
 }

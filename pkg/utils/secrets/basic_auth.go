@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/infodata"
 
 	"k8s.io/apiserver/pkg/authentication/user"
 )
@@ -68,61 +67,11 @@ func (s *BasicAuthSecretConfig) GetName() string {
 
 // Generate implements ConfigInterface.
 func (s *BasicAuthSecretConfig) Generate() (DataInterface, error) {
-	return s.GenerateBasicAuth()
-}
-
-// GenerateInfoData implements ConfigInterface.
-func (s *BasicAuthSecretConfig) GenerateInfoData() (infodata.InfoData, error) {
 	password, err := GenerateRandomString(s.PasswordLength)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewBasicAuthInfoData(password), nil
-}
-
-// GenerateFromInfoData implements ConfigInteface
-func (s *BasicAuthSecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (DataInterface, error) {
-	data, ok := infoData.(*BasicAuthInfoData)
-	if !ok {
-		return nil, fmt.Errorf("could not convert InfoData entry %s to BasicAuthInfoData", s.Name)
-	}
-
-	password := data.Password
-	return s.generateWithPassword(password)
-}
-
-// LoadFromSecretData implements infodata.Loader
-func (s *BasicAuthSecretConfig) LoadFromSecretData(secretData map[string][]byte) (infodata.InfoData, error) {
-	var password string
-
-	switch s.Format {
-	case BasicAuthFormatNormal:
-		password = string(secretData[DataKeyPassword])
-	case BasicAuthFormatCSV:
-		csv := strings.Split(string(secretData[DataKeyCSV]), ",")
-		if len(csv) < 2 {
-			return nil, fmt.Errorf("invalid CSV for loading basic auth data: %s", string(secretData[DataKeyCSV]))
-		}
-		password = csv[0]
-	}
-
-	return NewBasicAuthInfoData(password), nil
-}
-
-// GenerateBasicAuth computes a username,password and the hash of the password keypair. It uses "admin" as username and generates a
-// random password of length 32.
-func (s *BasicAuthSecretConfig) GenerateBasicAuth() (*BasicAuth, error) {
-	password, err := GenerateRandomString(s.PasswordLength)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.generateWithPassword(password)
-}
-
-// generateWithPassword returns a BasicAuth secret DataInterface with the given password.
-func (s *BasicAuthSecretConfig) generateWithPassword(password string) (*BasicAuth, error) {
 	basicAuth := &BasicAuth{
 		Name:   s.Name,
 		Format: s.Format,

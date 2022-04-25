@@ -8,7 +8,6 @@ import (
 	context "context"
 	reflect "reflect"
 
-	kubecontrollermanager "github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	gomock "github.com/golang/mock/gomock"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -104,18 +103,6 @@ func (m *MockInterface) SetReplicaCount(arg0 int32) {
 func (mr *MockInterfaceMockRecorder) SetReplicaCount(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetReplicaCount", reflect.TypeOf((*MockInterface)(nil).SetReplicaCount), arg0)
-}
-
-// SetSecrets mocks base method.
-func (m *MockInterface) SetSecrets(arg0 kubecontrollermanager.Secrets) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetSecrets", arg0)
-}
-
-// SetSecrets indicates an expected call of SetSecrets.
-func (mr *MockInterfaceMockRecorder) SetSecrets(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSecrets", reflect.TypeOf((*MockInterface)(nil).SetSecrets), arg0)
 }
 
 // SetShootClient mocks base method.

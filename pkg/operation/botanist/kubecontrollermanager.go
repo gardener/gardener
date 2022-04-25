@@ -21,7 +21,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -71,11 +70,7 @@ func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
 	b.Shoot.Components.ControlPlane.KubeControllerManager.SetReplicaCount(replicaCount)
-	b.Shoot.Components.ControlPlane.KubeControllerManager.SetSecrets(kubecontrollermanager.Secrets{
-		CA: component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
-	})
 
 	return b.Shoot.Components.ControlPlane.KubeControllerManager.Deploy(ctx)
 }

@@ -164,13 +164,14 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 		})
 	}
 
-	cp, err := cpsc.GenerateControlPlane()
+	cp, err := cpsc.Generate()
 	if err != nil {
 		return nil, err
 	}
+	controlPlaneSecret := cp.(*secrets.ControlPlane)
 
-	out.Status.Kubeconfig = cp.Kubeconfig
-	out.Status.ExpirationTimestamp = metav1.Time{Time: cp.Certificate.Certificate.NotAfter}
+	out.Status.Kubeconfig = controlPlaneSecret.Kubeconfig
+	out.Status.ExpirationTimestamp = metav1.Time{Time: controlPlaneSecret.Certificate.Certificate.NotAfter}
 
 	return out, nil
 }
@@ -237,20 +238,9 @@ func findNewestCACertificate(results []*gardencorev1alpha1.GardenerResourceData)
 }
 
 func getClusterCABundle(resourceDataList gardencorev1alpha1helper.GardenerResourceDataList) ([]byte, error) {
-	caCerts := resourceDataList.Select(caCertificateSelector.Add(nameCAClusterReq))
-	if len(caCerts) == 0 {
-		// fall back to constant CA name
-		// TODO(rfranzke): Delete this in a future release.
-		ca := resourceDataList.Get(v1beta1constants.SecretNameCACluster)
-		if ca == nil {
-			return nil, fmt.Errorf("cluster certificate authority not yet provisioned")
-		}
-		caCerts = append(caCerts, ca)
-	}
-
 	var caBundle []byte
 
-	for _, data := range caCerts {
+	for _, data := range resourceDataList.Select(caCertificateSelector.Add(nameCAClusterReq)) {
 		cert, _, err := getCADataRaw(data)
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch raw CA data for %q", data.Name)
@@ -271,18 +261,13 @@ func getClientCACertificate(resourceDataList gardencorev1alpha1helper.GardenerRe
 		return nil, fmt.Errorf("could not find client CA certificate for %s: %w", nameCAClientReq, err)
 	}
 
+	// TODO(rfranzke): Remove this in a future version.
 	// fall back to cluster CA since not all clusters might have a client CA yet
 	if ca == nil {
 		ca, err = getCAFromResourceDataList(resourceDataList, nameCAClusterReq)
 		if err != nil {
 			return nil, fmt.Errorf("could not find client CA certificate for %s: %w", nameCAClusterReq, err)
 		}
-	}
-
-	// fall back to constant CA name
-	// TODO(rfranzke): Delete this in a future release.
-	if ca == nil {
-		ca = resourceDataList.Get(v1beta1constants.SecretNameCACluster)
 	}
 
 	if ca == nil {
@@ -303,11 +288,6 @@ func getCADataRaw(resourceData *gardencorev1alpha1.GardenerResourceData) (certif
 		return nil, nil, err
 	}
 
-	keyPrivateKey, keyCertificate := secrets.DataKeyPrivateKeyCA, secrets.DataKeyCertificateCA
-	if resourceData.Type == "certificate" {
-		keyPrivateKey, keyCertificate = "privateKey", "certificate"
-	}
-
-	certificate, privateKey = data[keyCertificate], data[keyPrivateKey]
+	certificate, privateKey = data[secrets.DataKeyCertificateCA], data[secrets.DataKeyPrivateKeyCA]
 	return
 }

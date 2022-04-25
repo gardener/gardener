@@ -24,9 +24,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/mock"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	mockkubecontrollermanager "github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -99,12 +97,6 @@ var _ = Describe("KubeControllerManager", func() {
 		var (
 			kubeAPIServer         *mockkubeapiserver.MockInterface
 			kubeControllerManager *mockkubecontrollermanager.MockInterface
-
-			secretNameCA = "ca"
-			checksumCA   = "56"
-			secrets      = kubecontrollermanager.Secrets{
-				CA: component.Secret{Name: secretNameCA, Checksum: checksumCA},
-			}
 		)
 
 		BeforeEach(func() {
@@ -112,7 +104,6 @@ var _ = Describe("KubeControllerManager", func() {
 			kubeControllerManager = mockkubecontrollermanager.NewMockInterface(ctrl)
 
 			botanist.K8sSeedClient = kubernetesClient
-			botanist.StoreCheckSum(secretNameCA, checksumCA)
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					ControlPlane: &shootpkg.ControlPlane{
@@ -127,7 +118,6 @@ var _ = Describe("KubeControllerManager", func() {
 
 		Context("successfully deployment", func() {
 			BeforeEach(func() {
-				kubeControllerManager.EXPECT().SetSecrets(secrets)
 				kubeControllerManager.EXPECT().Deploy(ctx)
 			})
 
@@ -309,7 +299,6 @@ var _ = Describe("KubeControllerManager", func() {
 		It("should fail when the deploy function fails", func() {
 			kubernetesClient.EXPECT().Client().Return(c)
 			c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{}))
-			kubeControllerManager.EXPECT().SetSecrets(secrets)
 			kubeControllerManager.EXPECT().SetReplicaCount(int32(0))
 			kubeControllerManager.EXPECT().Deploy(ctx).Return(fakeErr)
 
