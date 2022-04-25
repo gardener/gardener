@@ -88,6 +88,9 @@ var _ = Describe("Monitoring", func() {
 		projectNamespace = "garden-foo"
 		seedNamespace    = "shoot--foo--bar"
 		shootName        = "bar"
+
+		shootPurposeEvaluation = gardencorev1beta1.ShootPurposeEvaluation
+		shootPurposeTesting    = gardencorev1beta1.ShootPurposeTesting
 	)
 
 	BeforeEach(func() {
@@ -173,6 +176,9 @@ var _ = Describe("Monitoring", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      shootName,
 				Namespace: projectNamespace,
+			},
+			Spec: gardencorev1beta1.ShootSpec{
+				Purpose: &shootPurposeEvaluation,
 			},
 			Status: gardencorev1beta1.ShootStatus{
 				TechnicalID: seedNamespace,
@@ -279,6 +285,21 @@ var _ = Describe("Monitoring", func() {
 			Expect(secret.Annotations).To(HaveKeyWithValue("url", "https://gu-foo--bar."))
 			Expect(secret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "monitoring"))
 			Expect(secret.Data).To(And(HaveKey("username"), HaveKey("password"), HaveKey("auth"), HaveKey("basic_auth.csv")))
+		})
+
+		It("should cleanup the secrets when shoot purpose is changed", func() {
+			defer test.WithVar(&ChartsPath, filepath.Join("..", "..", "..", "charts"))()
+
+			Expect(fakeGardenClient.Get(ctx, kutil.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(BeNotFoundError())
+
+			Expect(botanist.DeploySeedGrafana(ctx)).To(Succeed())
+			Expect(fakeGardenClient.Get(ctx, kutil.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(Succeed())
+			Expect(*botanist.Shoot.GetInfo().Spec.Purpose == shootPurposeEvaluation).To(BeTrue())
+
+			botanist.Shoot.Purpose = shootPurposeTesting
+			Expect(botanist.DeploySeedGrafana(ctx)).To(Succeed())
+
+			Expect(fakeGardenClient.Get(ctx, kutil.Key(projectNamespace, shootName+".monitoring"), &corev1.Secret{})).To(BeNotFoundError())
 		})
 	})
 })
