@@ -484,15 +484,16 @@ func GetValidatingWebhookConfig(caBundle []byte, webhookClientService *corev1.Se
 		}},
 	}
 
-	webhookConfig.Webhooks = getWebhooks(caBundle, webhookClientService, webhookConfig.Webhooks)
+	webhookConfig.Webhooks = append(webhookConfig.Webhooks, getWebhooks(caBundle, webhookClientService)...)
 	return webhookConfig
 }
 
-func getWebhooks(caBundle []byte, webhookClientService *corev1.Service, webhooks []admissionregistrationv1.ValidatingWebhook) []admissionregistrationv1.ValidatingWebhook {
+func getWebhooks(caBundle []byte, webhookClientService *corev1.Service) []admissionregistrationv1.ValidatingWebhook {
 	var (
 		failurePolicy = admissionregistrationv1.Fail
 		matchPolicy   = admissionregistrationv1.Exact
 		sideEffect    = admissionregistrationv1.SideEffectClassNone
+		webhooks      []admissionregistrationv1.ValidatingWebhook
 	)
 
 	resources := map[string]string{
