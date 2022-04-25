@@ -24,6 +24,7 @@ import (
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
@@ -141,6 +142,10 @@ func (b *Botanist) caCertGenerateOptionsFor(configName string) []secretsmanager.
 	options := []secretsmanager.GenerateOption{
 		secretsmanager.Persist(),
 		secretsmanager.Rotate(secretsmanager.KeepOld),
+	}
+
+	if gardencorev1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationCompleting {
+		options = append(options, secretsmanager.IgnoreOldSecrets())
 	}
 
 	if configName == v1beta1constants.SecretNameCAClient {
