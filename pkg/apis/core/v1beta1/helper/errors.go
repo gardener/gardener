@@ -27,18 +27,18 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
-// ErrorWithCodes contains error codes and an error message.
+// ErrorWithCodes contains the error and Gardener error codes.
 type ErrorWithCodes struct {
-	message string
-	codes   []gardencorev1beta1.ErrorCode
+	err   error
+	codes []gardencorev1beta1.ErrorCode
 }
 
 // Retriable marks ErrorWithCodes as retriable.
 func (e *ErrorWithCodes) Retriable() {}
 
 // NewErrorWithCodes creates a new error that additionally exposes the given codes via the Coder interface.
-func NewErrorWithCodes(message string, codes ...gardencorev1beta1.ErrorCode) error {
-	return &ErrorWithCodes{message, codes}
+func NewErrorWithCodes(err error, codes ...gardencorev1beta1.ErrorCode) error {
+	return &ErrorWithCodes{err, codes}
 }
 
 // Codes returns all error codes.
@@ -46,9 +46,18 @@ func (e *ErrorWithCodes) Codes() []gardencorev1beta1.ErrorCode {
 	return e.codes
 }
 
+// ExtractError rettieves the error from ErrorWithCodes.
+func (e *ErrorWithCodes) ExtractError() error {
+	return e.err
+}
+
 // Error returns the error message.
 func (e *ErrorWithCodes) Error() string {
-	return e.message
+	unwrappedError := errors.Unwrap(e.err)
+	if unwrappedError == nil {
+		unwrappedError = e.err
+	}
+	return unwrappedError.Error()
 }
 
 var (
@@ -63,25 +72,30 @@ var (
 	retryableConfigurationProblemRegexp = regexp.MustCompile(`(?i)(is misconfigured and requires zero voluntary evictions|SDK.CanNotResolveEndpoint|The requested configuration is currently not supported)`)
 )
 
-// DetermineError determines the Garden error code for the given error and creates a new error with the given message.
-// TODO(timebertt): this is should be improved: clean up the usages to not pass the error twice (once as an error and
-// once as a string) and properly wrap the given error instead of creating a new one from the given error message,
-// so we can use errors.As up the call stack.
-func DetermineError(err error, message string) error {
+// DetermineError determines the Gardener error codes for the given error and returns an ErrorWithCodes with the error and codes.
+func DetermineError(err error) error {
 	if err == nil {
-		return errors.New(message)
-	}
-
-	errMsg := message
-	if errMsg == "" {
-		errMsg = err.Error()
+		return nil
 	}
 
 	codes := DetermineErrorCodes(err)
 	if codes == nil {
-		return errors.New(errMsg)
+		return err
 	}
-	return &ErrorWithCodes{errMsg, codes}
+
+	// if error itself is ErrorWithCodes
+	if errorWithCodes, ok := err.(*ErrorWithCodes); ok {
+		err = errorWithCodes.ExtractError()
+		return &ErrorWithCodes{err, codes}
+	}
+
+	// if error contains ErrorWithCodes wrapped inside it
+	unwrappedError := errors.Unwrap(err)
+	if errorWithCodes, ok := unwrappedError.(*ErrorWithCodes); ok {
+		err = errorWithCodes.ExtractError()
+	}
+
+	return &ErrorWithCodes{err, codes}
 }
 
 // DetermineErrorCodes determines error codes based on the given error.
