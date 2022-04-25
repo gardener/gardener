@@ -102,6 +102,11 @@ func (s *CertificateSecretConfig) GetName() string {
 
 // Generate implements ConfigInterface.
 func (s *CertificateSecretConfig) Generate() (DataInterface, error) {
+	return s.GenerateCertificate()
+}
+
+// GenerateCertificate is the same as Generate but returns a *Certificate instead of the DataInterface.
+func (s *CertificateSecretConfig) GenerateCertificate() (*Certificate, error) {
 	certificateObj := &Certificate{
 		Name:                        s.Name,
 		CA:                          s.SigningCA,
@@ -277,7 +282,7 @@ func SelfGenerateTLSServerCertificate(name string, dnsNames []string, ips []net.
 		Name:       name,
 		CommonName: name,
 		CertType:   CACert,
-	}).Generate()
+	}).GenerateCertificate()
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -296,8 +301,8 @@ func SelfGenerateTLSServerCertificate(name string, dnsNames []string, ips []net.
 		DNSNames:    dnsNames,
 		IPAddresses: ips,
 		CertType:    ServerCert,
-		SigningCA:   caCertificate.(*Certificate),
-	}).Generate()
+		SigningCA:   caCertificate,
+	}).GenerateCertificate()
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -310,5 +315,5 @@ func SelfGenerateTLSServerCertificate(name string, dnsNames []string, ips []net.
 		return nil, nil, "", err
 	}
 
-	return certificate.(*Certificate), caCertificate.(*Certificate), tempDir, nil
+	return certificate, caCertificate, tempDir, nil
 }

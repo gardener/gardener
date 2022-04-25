@@ -441,7 +441,7 @@ func generateCertificate(validity time.Duration) secrets.Certificate {
 		CertType:     secrets.ClientCert,
 		Validity:     &validity,
 	}
-	cert, err := caCertConfig.Generate()
+	cert, err := caCertConfig.GenerateCertificate()
 	Expect(err).ToNot(HaveOccurred())
-	return *cert.(*secrets.Certificate)
+	return *cert
 }

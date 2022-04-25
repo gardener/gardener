@@ -67,7 +67,7 @@ func (a AggregatorConfig) generateCerts() error {
 		Name:       "front-proxy",
 		CommonName: "front-proxy",
 		CertType:   secrets.CACert,
-	}).Generate()
+	}).GenerateCertificate()
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (a AggregatorConfig) generateCerts() error {
 		Name:       "front-proxy",
 		CommonName: "front-proxy",
 		CertType:   secrets.ClientCert,
-		SigningCA:  ca.(*secrets.Certificate),
+		SigningCA:  ca,
 	}).Generate()
 	if err != nil {
 		return err

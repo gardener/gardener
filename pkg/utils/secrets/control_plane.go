@@ -72,11 +72,11 @@ func (s *ControlPlaneSecretConfig) Generate() (DataInterface, error) {
 	if s.CertificateSecretConfig != nil {
 		s.CertificateSecretConfig.Name = s.Name
 
-		certData, err := s.CertificateSecretConfig.Generate()
+		certData, err := s.CertificateSecretConfig.GenerateCertificate()
 		if err != nil {
 			return nil, err
 		}
-		certificate = certData.(*Certificate)
+		certificate = certData
 	}
 
 	controlPlane := &ControlPlane{

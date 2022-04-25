@@ -111,7 +111,7 @@ func generateNewCAAndServerCert(mode, namespace, name, url string) (*secrets.Cer
 	caCert, err := (&secrets.CertificateSecretConfig{
 		CommonName: "webhook-ca",
 		CertType:   secrets.CACert,
-	}).Generate()
+	}).GenerateCertificate()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -149,13 +149,13 @@ func generateNewCAAndServerCert(mode, namespace, name, url string) (*secrets.Cer
 		DNSNames:    dnsNames,
 		IPAddresses: ipAddresses,
 		CertType:    secrets.ServerCert,
-		SigningCA:   caCert.(*secrets.Certificate),
-	}).Generate()
+		SigningCA:   caCert,
+	}).GenerateCertificate()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return caCert.(*secrets.Certificate), serverCert.(*secrets.Certificate), nil
+	return caCert, serverCert, nil
 }
 
 func loadExistingCAAndServerCert(data map[string][]byte) (*secrets.Certificate, *secrets.Certificate, error) {

@@ -94,15 +94,11 @@ func convertPublicKeyToPEM(key rsa.PublicKey) (string, error) {
 }
 
 func createCACertificate() (*secrets.Certificate, error) {
-	certificate, err := (&secrets.CertificateSecretConfig{
+	return (&secrets.CertificateSecretConfig{
 		Name:       v1beta1constants.SecretNameCACluster,
 		CommonName: "kubernetes-ca",
 		CertType:   secrets.CACert,
-	}).Generate()
-	if err != nil {
-		return nil, err
-	}
-	return certificate.(*secrets.Certificate), nil
+	}).GenerateCertificate()
 }
 
 func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[string]certsAndKeys, error) {
