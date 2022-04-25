@@ -171,10 +171,11 @@ func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencor
 	for _, webhookConfig := range validatingWebhookConfigs {
 		for _, w := range webhookConfig.Webhooks {
 			if IsProblematicWebhook(w.FailurePolicy, w.ObjectSelector, w.NamespaceSelector, w.Rules, w.TimeoutSeconds) {
+				msg := buildProblematicWebhookMessage("ValidatingWebhookConfiguration", webhookConfig.Name, w.Name, w.FailurePolicy, w.TimeoutSeconds)
 				return gardencorev1beta1.ConditionFalse,
 					"ProblematicWebhooks",
-					buildProblematicWebhookMessage("ValidatingWebhookConfiguration", webhookConfig.Name, w.Name, w.FailurePolicy, w.TimeoutSeconds),
-					nil
+					msg,
+					gardencorev1beta1helper.NewErrorWithCodes(msg, gardencorev1beta1.ErrorUserWebhook)
 			}
 		}
 	}
@@ -187,10 +188,11 @@ func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencor
 	for _, webhookConfig := range mutatingWebhookConfigs {
 		for _, w := range webhookConfig.Webhooks {
 			if IsProblematicWebhook(w.FailurePolicy, w.ObjectSelector, w.NamespaceSelector, w.Rules, w.TimeoutSeconds) {
+				msg := buildProblematicWebhookMessage("MutatingWebhookConfiguration", webhookConfig.Name, w.Name, w.FailurePolicy, w.TimeoutSeconds)
 				return gardencorev1beta1.ConditionFalse,
 					"ProblematicWebhooks",
-					buildProblematicWebhookMessage("MutatingWebhookConfiguration", webhookConfig.Name, w.Name, w.FailurePolicy, w.TimeoutSeconds),
-					nil
+					msg,
+					gardencorev1beta1helper.NewErrorWithCodes(msg, gardencorev1beta1.ErrorUserWebhook)
 			}
 		}
 	}
