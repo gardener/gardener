@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/gardener/gardener/cmd/utils"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
@@ -79,6 +80,7 @@ var _ = BeforeSuite(func() {
 	By("setting up manager")
 	// setup manager in order to leverage dependency injection
 	mgr, err := manager.New(restConfig, manager.Options{
+		Scheme:  kubernetes.SeedScheme,
 		Port:    testEnv.WebhookInstallOptions.LocalServingPort,
 		Host:    testEnv.WebhookInstallOptions.LocalServingHost,
 		CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
@@ -89,9 +91,9 @@ var _ = BeforeSuite(func() {
 
 	By("setting up webhook server")
 	server := mgr.GetWebhookServer()
+	Expect(extensionresources.AddWebhooks(mgr)).To(Succeed())
 	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(logger)})
 	server.Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName)})
-	server.Register(extensionresources.WebhookPath, &webhook.Admission{Handler: extensionresources.New(logger)})
 
 	go func() {
 		defer GinkgoRecover()

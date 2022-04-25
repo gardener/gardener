@@ -25,6 +25,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
@@ -343,10 +344,10 @@ webhooks:
     service:
       name: gardener-seed-admission-controller
       namespace: shoot--foo--bar
-      path: /webhooks/validate-extension-resources
+      path: /validate-druid-gardener-cloud-v1alpha1-etcd
   failurePolicy: Fail
   matchPolicy: Exact
-  name: validation.extensions.seed.admission.core.gardener.cloud
+  name: validation.extensions.etcd.admission.core.gardener.cloud
   namespaceSelector: {}
   rules:
   - apiGroups:
@@ -358,28 +359,10 @@ webhooks:
     - UPDATE
     resources:
     - etcds
-  - apiGroups:
-    - extensions.gardener.cloud
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - backupbuckets
-    - backupentries
-    - bastions
-    - containerruntimes
-    - controlplanes
-    - dnsrecords
-    - extensions
-    - infrastructures
-    - networks
-    - operatingsystemconfigs
-    - workers
   sideEffects: None
   timeoutSeconds: 10
-`
+` + getWebhooks()
+
 		vpaYAML = `apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
@@ -664,3 +647,53 @@ status: {}
 		})
 	})
 })
+
+func getWebhooks() string {
+	var webhooks string
+	resources := map[string]string{
+		"backupbuckets":          extensionresources.BackupBucketWebhookPath,
+		"backupentries":          extensionresources.BackupEntryWebhookPath,
+		"bastions":               extensionresources.BastionWebhookPath,
+		"containerruntimes":      extensionresources.ContainerRuntimeWebhookPath,
+		"controlplanes":          extensionresources.ControlPlaneWebhookPath,
+		"dnsrecords":             extensionresources.DNSRecordWebhookPath,
+		"extensions":             extensionresources.ExtensionWebhookPath,
+		"infrastructures":        extensionresources.InfrastructureWebhookPath,
+		"networks":               extensionresources.NetworkWebhookPath,
+		"operatingsystemconfigs": extensionresources.OperatingSystemConfigWebhookPath,
+		"workers":                extensionresources.WorkerWebhookPath,
+	}
+
+	resourcesName := []string{"backupbuckets", "backupentries", "bastions", "containerruntimes", "controlplanes", "dnsrecords", "extensions", "infrastructures", "networks", "operatingsystemconfigs", "workers"}
+
+	for _, resource := range resourcesName {
+		webhook := `- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    service:
+      name: gardener-seed-admission-controller
+      namespace: shoot--foo--bar
+      path: ` + resources[resource] + `
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: validation.extensions.` + resource + `.admission.core.gardener.cloud
+  namespaceSelector: {}
+  rules:
+  - apiGroups:
+    - extensions.gardener.cloud
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - ` + resource + `
+  sideEffects: None
+  timeoutSeconds: 10
+`
+		webhooks = webhooks + webhook
+	}
+
+	return webhooks
+}

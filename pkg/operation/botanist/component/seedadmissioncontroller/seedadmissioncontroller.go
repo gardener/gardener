@@ -377,7 +377,7 @@ func GetValidatingWebhookConfig(caBundle []byte, webhookClientService *corev1.Se
 		matchPolicy   = admissionregistrationv1.Exact
 		sideEffect    = admissionregistrationv1.SideEffectClassNone
 	)
-	return &admissionregistrationv1.ValidatingWebhookConfiguration{
+	webhookConfig := &admissionregistrationv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   Name,
 			Labels: getLabels(),
@@ -456,7 +456,7 @@ func GetValidatingWebhookConfig(caBundle []byte, webhookClientService *corev1.Se
 			SideEffects:             &sideEffect,
 			TimeoutSeconds:          pointer.Int32(10),
 		}, {
-			Name: "validation.extensions.seed.admission.core.gardener.cloud",
+			Name: "validation.extensions.etcd.admission.core.gardener.cloud",
 			Rules: []admissionregistrationv1.RuleWithOperations{
 				{
 					Rule: admissionregistrationv1.Rule{
@@ -466,22 +466,62 @@ func GetValidatingWebhookConfig(caBundle []byte, webhookClientService *corev1.Se
 					},
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
 				},
+			},
+			FailurePolicy:     &failurePolicy,
+			NamespaceSelector: &metav1.LabelSelector{},
+			ClientConfig: admissionregistrationv1.WebhookClientConfig{
+				CABundle: caBundle,
+				Service: &admissionregistrationv1.ServiceReference{
+					Name:      webhookClientService.Name,
+					Namespace: webhookClientService.Namespace,
+					Path:      pointer.String(extensionresources.EtcdWebhookPath),
+				},
+			},
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			MatchPolicy:             &matchPolicy,
+			SideEffects:             &sideEffect,
+			TimeoutSeconds:          pointer.Int32(10),
+		}},
+	}
+
+	webhookConfig.Webhooks = append(webhookConfig.Webhooks, getWebhooks(caBundle, webhookClientService)...)
+	return webhookConfig
+}
+
+func getWebhooks(caBundle []byte, webhookClientService *corev1.Service) []admissionregistrationv1.ValidatingWebhook {
+	var (
+		failurePolicy = admissionregistrationv1.Fail
+		matchPolicy   = admissionregistrationv1.Exact
+		sideEffect    = admissionregistrationv1.SideEffectClassNone
+		webhooks      []admissionregistrationv1.ValidatingWebhook
+	)
+
+	resources := map[string]string{
+		"backupbuckets":          extensionresources.BackupBucketWebhookPath,
+		"backupentries":          extensionresources.BackupEntryWebhookPath,
+		"bastions":               extensionresources.BastionWebhookPath,
+		"containerruntimes":      extensionresources.ContainerRuntimeWebhookPath,
+		"controlplanes":          extensionresources.ControlPlaneWebhookPath,
+		"dnsrecords":             extensionresources.DNSRecordWebhookPath,
+		"extensions":             extensionresources.ExtensionWebhookPath,
+		"infrastructures":        extensionresources.InfrastructureWebhookPath,
+		"networks":               extensionresources.NetworkWebhookPath,
+		"operatingsystemconfigs": extensionresources.OperatingSystemConfigWebhookPath,
+		"workers":                extensionresources.WorkerWebhookPath,
+	}
+
+	resourcesName := []string{"backupbuckets", "backupentries", "bastions", "containerruntimes", "controlplanes", "dnsrecords", "extensions", "infrastructures", "networks", "operatingsystemconfigs", "workers"}
+
+	for _, resource := range resourcesName {
+		webhook := admissionregistrationv1.ValidatingWebhook{
+			Name: "validation.extensions." + resource + ".admission.core.gardener.cloud",
+			Rules: []admissionregistrationv1.RuleWithOperations{
 				{
 					Rule: admissionregistrationv1.Rule{
 						APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
 						APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
 						Resources: []string{
-							"backupbuckets",
-							"backupentries",
-							"bastions",
-							"containerruntimes",
-							"controlplanes",
-							"dnsrecords",
-							"extensions",
-							"infrastructures",
-							"networks",
-							"operatingsystemconfigs",
-							"workers",
+							resource,
 						},
 					},
 					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
@@ -494,15 +534,19 @@ func GetValidatingWebhookConfig(caBundle []byte, webhookClientService *corev1.Se
 				Service: &admissionregistrationv1.ServiceReference{
 					Name:      webhookClientService.Name,
 					Namespace: webhookClientService.Namespace,
-					Path:      pointer.String(extensionresources.WebhookPath),
+					Path:      pointer.String(resources[resource]),
 				},
 			},
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 			MatchPolicy:             &matchPolicy,
 			SideEffects:             &sideEffect,
 			TimeoutSeconds:          pointer.Int32(10),
-		}},
+		}
+
+		webhooks = append(webhooks, webhook)
 	}
+
+	return webhooks
 }
 
 func getLabels() map[string]string {
