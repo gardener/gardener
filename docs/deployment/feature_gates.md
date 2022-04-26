@@ -33,6 +33,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | RotateSSHKeypairOnMaintenance                | `false` | `Alpha` | `1.28` | `1.44` |
 | RotateSSHKeypairOnMaintenance                | `true`  | `Beta`  | `1.45` |        |
 | WorkerPoolKubernetesVersion                  | `false` | `Alpha` | `1.35` |        |
+| WorkerPoolKubernetesVersion                  | `true`  | `Beta`  | `1.46` |        |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` |        |
 | SecretBindingProviderValidation              | `false` | `Alpha` | `1.38` |        |
 | ForceRestore                                 | `false` | `Alpha` | `1.39` |        |

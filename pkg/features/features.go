@@ -108,6 +108,7 @@ const (
 	// WorkerPoolKubernetesVersion allows to overwrite the Kubernetes version used for shoot clusters per worker pool.
 	// owner: @rfranzke @majst01 @mwennrich
 	// alpha: v1.35.0
+	// beta: v1.46.0
 	WorkerPoolKubernetesVersion featuregate.Feature = "WorkerPoolKubernetesVersion"
 
 	// CopyEtcdBackupsDuringControlPlaneMigration enables the copy of etcd backups from the object store of the source seed
@@ -175,7 +176,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	UseDNSRecords:                 {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	RotateSSHKeypairOnMaintenance: {Default: true, PreRelease: featuregate.Beta},
 	DenyInvalidExtensionResources: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	WorkerPoolKubernetesVersion:   {Default: false, PreRelease: featuregate.Alpha},
+	WorkerPoolKubernetesVersion:   {Default: true, PreRelease: featuregate.Beta},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
 	SecretBindingProviderValidation:            {Default: false, PreRelease: featuregate.Alpha},
 	ForceRestore:                               {Default: false, PreRelease: featuregate.Alpha},
