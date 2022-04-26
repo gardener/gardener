@@ -100,7 +100,8 @@ func (r *careReconciler) care(ctx context.Context, gardenClient client.Client, c
 
 	defer func() {
 		if err := patchConditions(ctx, gardenClient, controllerInstallation, conditionControllerInstallationHealthy, conditionControllerInstallationInstalled); err != nil {
-			log.Error("Failed to patch ControllerInstallation status: %+v", err.Error())
+			msg := fmt.Sprintf("Failed to patch ControllerInstallation status: %s", err.Error())
+			log.Error(msg)
 		}
 	}()
 
