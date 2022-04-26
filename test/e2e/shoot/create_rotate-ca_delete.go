@@ -17,6 +17,7 @@ package shoot
 import (
 	"context"
 	"sort"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -87,14 +88,19 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 		Expect(f.Shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase).To(Equal(gardencorev1beta1.RotationPrepared), "ca rotation phase should be 'Prepared'")
 
 		By("Verify CA bundle secret")
-		var caBundle []byte
+		var (
+			caBundle  []byte
+			newCACert []byte
+		)
+
 		Eventually(func(g Gomega) {
 			secret := &corev1.Secret{}
 			g.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(f.Shoot.Name, gutil.ShootProjectSecretSuffixCACluster)}, secret)).To(Succeed())
-			// For now, there is only one CA cert in the bundle, as the CA is not actually rotated yet
-			// TODO: verify the old CA cert is still in there and a new is added, once the CA is actually rotated
-			g.Expect(secret.Data).To(HaveKeyWithValue("ca.crt", oldCACert))
+			g.Expect(string(secret.Data["ca.crt"])).To(ContainSubstring(string(oldCACert)))
 			caBundle = secret.Data["ca.crt"]
+
+			newCACert = []byte(strings.Replace(string(caBundle), string(oldCACert), "", -1))
+			Expect(newCACert).NotTo(BeEmpty())
 
 			verifyCABundleInKubeconfigSecret(ctx, g, f.GardenClient.Client(), client.ObjectKeyFromObject(f.Shoot), caBundle)
 		}).Should(Succeed(), "CA bundle should be synced to garden")
@@ -135,14 +141,10 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 		}).Should(BeTrue())
 
 		By("Verify new CA secret")
-		var newCACert []byte
 		Eventually(func(g Gomega) {
 			secret := &corev1.Secret{}
 			g.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(f.Shoot.Name, gutil.ShootProjectSecretSuffixCACluster)}, secret)).To(Succeed())
-			// For now, the secret will still contain the old CA cert, as the CA is not actually rotated yet
-			// TODO: verify that only the new CA cert of the bundle is kept, once the CA is actually rotated
-			g.Expect(secret.Data).To(HaveKeyWithValue("ca.crt", caBundle))
-			newCACert = secret.Data["ca.crt"]
+			g.Expect(secret.Data).To(HaveKeyWithValue("ca.crt", newCACert))
 
 			verifyCABundleInKubeconfigSecret(ctx, g, f.GardenClient.Client(), client.ObjectKeyFromObject(f.Shoot), newCACert)
 		}).Should(Succeed(), "new CA cert should be synced to garden")
@@ -161,7 +163,7 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 
 func verifyCABundleInKubeconfigSecret(ctx context.Context, g Gomega, c client.Reader, shootKey client.ObjectKey, expectedBundle []byte) {
 	secret := &corev1.Secret{}
-	shootKey.Name = gutil.ComputeShootProjectSecretName(shootKey.Name, gutil.ShootProjectSecretSuffixCACluster)
+	shootKey.Name = gutil.ComputeShootProjectSecretName(shootKey.Name, gutil.ShootProjectSecretSuffixKubeconfig)
 	g.Expect(c.Get(ctx, shootKey, secret)).To(Succeed())
 	g.Expect(secret.Data).To(HaveKeyWithValue("ca.crt", expectedBundle))
 }

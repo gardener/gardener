@@ -355,3 +355,16 @@ func secretTypeForData(data map[string][]byte) corev1.SecretType {
 func unixTime(in time.Time) string {
 	return strconv.FormatInt(in.UTC().Unix(), 10)
 }
+
+func certificateSecretConfig(config secretutils.ConfigInterface) *secretutils.CertificateSecretConfig {
+	var certificateConfig *secretutils.CertificateSecretConfig
+
+	switch cfg := config.(type) {
+	case *secretutils.CertificateSecretConfig:
+		certificateConfig = cfg
+	case *secretutils.ControlPlaneSecretConfig:
+		certificateConfig = cfg.CertificateSecretConfig
+	}
+
+	return certificateConfig
+}

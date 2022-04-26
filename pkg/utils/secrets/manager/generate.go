@@ -109,6 +109,11 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 }
 
 func (m *manager) generateAndCreate(ctx context.Context, config secretutils.ConfigInterface, objectMeta metav1.ObjectMeta) (*corev1.Secret, error) {
+	// Use secret name as common name to make sure the x509 subject names in the CA certificates are always unique.
+	if certConfig := certificateSecretConfig(config); certConfig != nil && certConfig.CertType == secretutils.CACert {
+		certConfig.CommonName = objectMeta.Name
+	}
+
 	data, err := config.Generate()
 	if err != nil {
 		return nil, err
@@ -531,13 +536,8 @@ func SignedByCA(name string, opts ...SignedByCAOption) GenerateOption {
 			return nil
 		}
 
-		var certificateConfig *secretutils.CertificateSecretConfig
-		switch cfg := config.(type) {
-		case *secretutils.CertificateSecretConfig:
-			certificateConfig = cfg
-		case *secretutils.ControlPlaneSecretConfig:
-			certificateConfig = cfg.CertificateSecretConfig
-		default:
+		certificateConfig := certificateSecretConfig(config)
+		if certificateConfig == nil {
 			return fmt.Errorf("could not apply option to %T, expected *secrets.CertificateSecretConfig", config)
 		}
 

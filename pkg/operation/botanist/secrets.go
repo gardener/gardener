@@ -24,6 +24,7 @@ import (
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
@@ -70,6 +71,12 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 	rotation := make(map[string]time.Time)
 
 	if shootStatus := b.Shoot.GetInfo().Status; shootStatus.Credentials != nil && shootStatus.Credentials.Rotation != nil {
+		if shootStatus.Credentials.Rotation.CertificateAuthorities != nil && shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime != nil {
+			for _, config := range caCertConfigurations() {
+				rotation[config.GetName()] = shootStatus.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time
+			}
+		}
+
 		if shootStatus.Credentials.Rotation.Kubeconfig != nil && shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime != nil {
 			rotation[kubeapiserver.SecretStaticTokenName] = shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime.Time
 			rotation[kubeapiserver.SecretBasicAuthName] = shootStatus.Credentials.Rotation.Kubeconfig.LastInitiationTime.Time
@@ -79,9 +86,6 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 			rotation[v1beta1constants.SecretNameSSHKeyPair] = shootStatus.Credentials.Rotation.SSHKeypair.LastInitiationTime.Time
 		}
 	}
-
-	// CA rotation start time is not added here for now. Otherwise, the CAs would actually get rotated already,
-	// which can only be done once all components have been adapted.
 
 	return rotation
 }
@@ -117,25 +121,54 @@ func (b *Botanist) restoreSecretsFromShootStateForSecretsManagerAdoption(ctx con
 	return flow.Parallel(fns...)(ctx)
 }
 
-func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
-	// TODO(rfranzke): Move this client CA secret configuration to the below loop in a future release.
-	if _, err := b.SecretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
-		Name:       v1beta1constants.SecretNameCAClient,
-		CommonName: "kubernetes-client",
-		CertType:   secretutils.CACert,
-	}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld)); err != nil {
-		return err
-	}
-
-	for _, config := range []secretutils.ConfigInterface{
+func caCertConfigurations() []secretutils.ConfigInterface {
+	return []secretutils.ConfigInterface{
+		// The CommonNames for CA certificates will be overridden with the secret name by the secrets manager when
+		// generated to ensure that each CA has a unique common name. For backwards-compatibility, we still keep the
+		// CommonNames here (if we removed them then new CAs would be generated with the next shoot reconciliation
+		// without the end-user to explicitly trigger it).
 		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCACluster, CommonName: "kubernetes", CertType: secretutils.CACert},
+		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAClient, CommonName: "kubernetes-client", CertType: secretutils.CACert},
 		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAETCD, CommonName: "etcd", CertType: secretutils.CACert},
 		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAFrontProxy, CommonName: "front-proxy", CertType: secretutils.CACert},
 		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAKubelet, CommonName: "kubelet", CertType: secretutils.CACert},
 		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAMetricsServer, CommonName: "metrics-server", CertType: secretutils.CACert},
 		&secretutils.CertificateSecretConfig{Name: v1beta1constants.SecretNameCAVPN, CommonName: "vpn", CertType: secretutils.CACert},
-	} {
-		if _, err := b.SecretsManager.Generate(ctx, config, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld), secretsmanager.IgnoreConfigChecksumForCASecretName()); err != nil {
+	}
+}
+
+func (b *Botanist) caCertGenerateOptionsFor(configName string) []secretsmanager.GenerateOption {
+	options := []secretsmanager.GenerateOption{
+		secretsmanager.Persist(),
+		secretsmanager.Rotate(secretsmanager.KeepOld),
+	}
+
+	if gardencorev1beta1helper.GetShootCARotationPhase(b.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationCompleting {
+		options = append(options, secretsmanager.IgnoreOldSecrets())
+	}
+
+	if configName == v1beta1constants.SecretNameCAClient {
+		return options
+	}
+
+	// For all CAs other than the client CA we ignore the checksum for the CA secret name due to backwards compatibility
+	// reasons in case the CA certificate were never rotated yet. With the first rotation we consider the config
+	// checksums since we can now assume that all components are able to cater with it (since we only allow triggering
+	// CA rotations after we have adapted all components that might rely on the constant CA secret names).
+	// The client CA was only introduced late with https://github.com/gardener/gardener/pull/5779, hence nobody was
+	// using it and the config checksum could be considered right away.
+	if shootStatus := b.Shoot.GetInfo().Status; shootStatus.Credentials == nil ||
+		shootStatus.Credentials.Rotation == nil ||
+		shootStatus.Credentials.Rotation.CertificateAuthorities == nil {
+		options = append(options, secretsmanager.IgnoreConfigChecksumForCASecretName())
+	}
+
+	return options
+}
+
+func (b *Botanist) generateCertificateAuthorities(ctx context.Context) error {
+	for _, config := range caCertConfigurations() {
+		if _, err := b.SecretsManager.Generate(ctx, config, b.caCertGenerateOptionsFor(config.GetName())...); err != nil {
 			return err
 		}
 	}
