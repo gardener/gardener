@@ -98,7 +98,9 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 			g.Expect(f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(f.Shoot.Name, gutil.ShootProjectSecretSuffixCACluster)}, secret)).To(Succeed())
 			g.Expect(string(secret.Data["ca.crt"])).To(ContainSubstring(string(oldCACert)))
 			caBundle = secret.Data["ca.crt"]
+
 			newCACert = []byte(strings.Replace(string(caBundle), string(oldCACert), "", -1))
+			Expect(newCACert).NotTo(BeEmpty())
 
 			verifyCABundleInKubeconfigSecret(ctx, g, f.GardenClient.Client(), client.ObjectKeyFromObject(f.Shoot), caBundle)
 		}).Should(Succeed(), "CA bundle should be synced to garden")
