@@ -427,6 +427,8 @@ func (r *Reconciler) applyNewResources(ctx context.Context, origin string, newRe
 		}
 	)
 
+	newResourcesObjects = sortByKind(newResourcesObjects)
+
 	// get all HPA and HVPA targetRefs to check if we should prevent overwriting replicas and/or resource requirements.
 	// VPAs don't have to be checked, as they don't update the spec directly and only mutate Pods via a MutatingWebhook
 	// and therefore don't interfere with the resource manager.
