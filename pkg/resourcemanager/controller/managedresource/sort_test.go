@@ -134,7 +134,7 @@ var _ = Describe("Sorter", func() {
 				},
 			}
 
-			// copy refs for assertions, as referenceSorter is sorting in-place
+			// copy refs for assertions, as kindSorter is sorting in-place
 			obj = append(obj[:0:0], objBase...)
 		})
 
