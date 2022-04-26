@@ -45,7 +45,7 @@ const (
 	ErrorConfigurationProblem ErrorCode = "ERR_CONFIGURATION_PROBLEM"
 	// ErrorRetryableConfigurationProblem indicates that the last error occurred due to a retryable configuration problem.
 	ErrorRetryableConfigurationProblem ErrorCode = "ERR_RETRYABLE_CONFIGURATION_PROBLEM"
-	// ErorUserWebhook indicates that the last error occurred due to misconfigurred webhook.
+	// ErrorUserWebhook indicates that the last error occurred due to misconfigured webhook.
 	// It is classified as a non-retryable error code.
 	ErrorUserWebhook ErrorCode = "ERR_USER_WEBHOOK"
 )
