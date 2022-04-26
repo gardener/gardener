@@ -415,10 +415,6 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 				return retryutils.Ok()
 			}
 
-			if err := a.updateWorkerStatusMachineDeployments(ctx, worker, extensionsworker.MachineDeployments{}); err != nil {
-				return retryutils.SevereError(fmt.Errorf("failed to update the machine deployments in worker status: %w", err))
-			}
-
 			if numUnavailable == 0 && numAvailable == numDesired && numUpdated < numberOfAwakeMachines {
 				msg = fmt.Sprintf("Waiting until all old machines are drained and terminated. Waiting for %d machine(s)...", numberOfAwakeMachines-numUpdated)
 				break
@@ -465,8 +461,11 @@ func (a *genericActuator) waitUntilUnwantedMachineDeploymentsDeleted(ctx context
 }
 
 func (a *genericActuator) updateWorkerStatusMachineDeployments(ctx context.Context, worker *extensionsv1alpha1.Worker, machineDeployments extensionsworker.MachineDeployments) error {
-	var statusMachineDeployments []extensionsv1alpha1.MachineDeployment
+	if len(machineDeployments) == 0 {
+		return nil
+	}
 
+	var statusMachineDeployments []extensionsv1alpha1.MachineDeployment
 	for _, machineDeployment := range machineDeployments {
 		statusMachineDeployments = append(statusMachineDeployments, extensionsv1alpha1.MachineDeployment{
 			Name:    machineDeployment.Name,
@@ -476,9 +475,7 @@ func (a *genericActuator) updateWorkerStatusMachineDeployments(ctx context.Conte
 	}
 
 	patch := client.MergeFrom(worker.DeepCopy())
-	if len(statusMachineDeployments) > 0 {
-		worker.Status.MachineDeployments = statusMachineDeployments
-	}
+	worker.Status.MachineDeployments = statusMachineDeployments
 	return a.client.Status().Patch(ctx, worker, patch)
 }
 
