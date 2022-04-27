@@ -810,6 +810,19 @@ func ComputeExpectedGardenletConfiguration(
 			Namespace:   pointer.String(gardenletconfigv1alpha1.DefaultSNIIngresNamespace),
 			Labels:      map[string]string{"app": "istio-ingressgateway", "istio": "ingressgateway"},
 		}},
+		ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{
+			BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
+				EnableBackupCompaction: pointer.Bool(false),
+				EventsThreshold:        pointer.Int64(1000000),
+				Workers:                pointer.Int64(3),
+			},
+			CustodianController: &gardenletconfigv1alpha1.CustodianController{
+				Workers: pointer.Int64(10),
+			},
+			ETCDController: &gardenletconfigv1alpha1.ETCDController{
+				Workers: pointer.Int64(50),
+			},
+		},
 	}
 
 	if componentConfigUsesTlsServerConfig {

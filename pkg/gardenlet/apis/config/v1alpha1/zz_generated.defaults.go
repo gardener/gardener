@@ -107,6 +107,9 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 			SetDefaults_SNIIngress(in.SNI.Ingress)
 		}
 	}
+	if in.ETCDConfig != nil {
+		SetDefaults_ETCDConfig(in.ETCDConfig)
+	}
 	for i := range in.ExposureClassHandlers {
 		a := &in.ExposureClassHandlers[i]
 		if a.SNI != nil {

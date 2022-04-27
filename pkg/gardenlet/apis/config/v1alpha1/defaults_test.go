@@ -180,6 +180,21 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.Logging.Loki.Garden.Storage).To(PointTo(Equal(resource.MustParse("100Gi"))))
 			})
 		})
+
+		Describe("#SetDefaults_ETCDConfig", func() {
+			It("should correctly default ETCDConfig configuration", func() {
+				SetObjectDefaults_GardenletConfiguration(obj)
+				Expect(obj.ETCDConfig).NotTo(BeNil())
+				Expect(obj.ETCDConfig.ETCDController).NotTo(BeNil())
+				Expect(obj.ETCDConfig.ETCDController.Workers).To(PointTo(Equal(int64(50))))
+				Expect(obj.ETCDConfig.CustodianController).NotTo(BeNil())
+				Expect(obj.ETCDConfig.CustodianController.Workers).To(PointTo(Equal(int64(10))))
+				Expect(obj.ETCDConfig.BackupCompactionController).NotTo(BeNil())
+				Expect(obj.ETCDConfig.BackupCompactionController.Workers).To(PointTo(Equal(int64(3))))
+				Expect(obj.ETCDConfig.BackupCompactionController.EnableBackupCompaction).To(PointTo(Equal(false)))
+				Expect(obj.ETCDConfig.BackupCompactionController.EventsThreshold).To(PointTo(Equal(int64(1000000))))
+			})
+		})
 	})
 
 	Describe("#SetDefaults_ManagedSeedControllerConfiguration", func() {
