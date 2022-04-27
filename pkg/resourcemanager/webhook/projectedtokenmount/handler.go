@@ -105,6 +105,9 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 	for i := range pod.Spec.Containers {
 		pod.Spec.Containers[i].VolumeMounts = append(pod.Spec.Containers[i].VolumeMounts, getVolumeMount())
 	}
+	for i := range pod.Spec.InitContainers {
+		pod.Spec.InitContainers[i].VolumeMounts = append(pod.Spec.InitContainers[i].VolumeMounts, getVolumeMount())
+	}
 
 	// Workaround https://github.com/kubernetes/kubernetes/issues/82573 - this got fixed with
 	// https://github.com/kubernetes/kubernetes/pull/89193 starting with Kubernetes 1.19, however, we don't know to

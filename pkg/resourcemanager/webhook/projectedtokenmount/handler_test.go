@@ -81,6 +81,7 @@ var _ = Describe("Handler", func() {
 			Spec: corev1.PodSpec{
 				ServiceAccountName: serviceAccountName,
 				Containers:         []corev1.Container{{}, {}},
+				InitContainers:     []corev1.Container{{}},
 			},
 		}
 		serviceAccount = &corev1.ServiceAccount{
@@ -322,6 +323,17 @@ var _ = Describe("Handler", func() {
 					jsonpatch.JsonPatchOperation{
 						Operation: "add",
 						Path:      "/spec/containers/1/volumeMounts",
+						Value: []interface{}{
+							map[string]interface{}{
+								"name":      "kube-api-access-gardener",
+								"readOnly":  true,
+								"mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+							},
+						},
+					},
+					jsonpatch.JsonPatchOperation{
+						Operation: "add",
+						Path:      "/spec/initContainers/0/volumeMounts",
 						Value: []interface{}{
 							map[string]interface{}{
 								"name":      "kube-api-access-gardener",
