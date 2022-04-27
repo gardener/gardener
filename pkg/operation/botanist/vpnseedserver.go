@@ -27,9 +27,9 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-const (
-	// DefaultDiffieHellmanKey is the default diffie-hellmann key
-	DefaultDiffieHellmanKey = `-----BEGIN DH PARAMETERS-----
+var (
+	diffieHellmanKeyData = map[string][]byte{
+		"dh2048.pem": []byte(`-----BEGIN DH PARAMETERS-----
 MIIBCAKCAQEA7cBXxG9an6KRz/sB5uiSOTf7Eg+uWVkhXO4peKDTARzMYa8b7WR8
 B/Aw+AyUXtB3tXtrzeC5M3IHnuhFwMo3K4oSOkFJxatLlYKeY15r+Kt5vnOOT3BW
 eN5OnWlR5Wi7GZBWbaQgXVR79N4yst43sVhJus6By0lN6Olc9xD/ys9GH/ykJVIh
@@ -37,14 +37,27 @@ Z/NLrxAC5lxjwCqJMd8hrryChuDlz597vg6gYFuRV60U/YU4DK71F4H7mI07aGJ9
 l+SK8TbkKWF5ITI7kYWbc4zmtfXSXaGjMhM9omQUaTH9csB96hzFJdeZ4XjxybRf
 Vc3t7XP5q7afeaKmM3FhSXdeHKCTqQzQuwIBAg==
 -----END DH PARAMETERS-----
-`
+`,
+		)}
+	diffieHellmanKeyChecksum string
 )
-
-var diffieHellmanKeyChecksum string
 
 // init calculates the checksum of the default diffie hellman key
 func init() {
-	diffieHellmanKeyChecksum = utils.ComputeChecksum(map[string][]byte{"dh2048.pem": []byte(DefaultDiffieHellmanKey)})
+	diffieHellmanKeyChecksum = utils.ComputeChecksum(diffieHellmanKeyData)
+}
+
+func (b *Botanist) getDiffieHellmanSecret() component.Secret {
+	data, checksum := diffieHellmanKeyData, diffieHellmanKeyChecksum
+	if secret := b.LoadSecret(v1beta1constants.GardenRoleOpenVPNDiffieHellman); secret != nil {
+		data, checksum = secret.Data, utils.ComputeSecretChecksum(secret.Data)
+	}
+
+	return component.Secret{
+		Name:     v1beta1constants.GardenRoleOpenVPNDiffieHellman,
+		Data:     data,
+		Checksum: checksum,
+	}
 }
 
 // DefaultVPNSeedServer returns a deployer for the vpn-seed-server.
@@ -88,19 +101,10 @@ func (b *Botanist) DeployVPNServer(ctx context.Context) error {
 		return b.Shoot.Components.ControlPlane.VPNSeedServer.Destroy(ctx)
 	}
 
-	checkSumDH := diffieHellmanKeyChecksum
-	openvpnDiffieHellmanSecret := map[string][]byte{"dh2048.pem": []byte(DefaultDiffieHellmanKey)}
-	if dh := b.LoadSecret(v1beta1constants.GardenRoleOpenVPNDiffieHellman); dh != nil {
-		openvpnDiffieHellmanSecret = dh.Data
-		checkSumDH = b.LoadCheckSum(v1beta1constants.GardenRoleOpenVPNDiffieHellman)
-	}
-
-	b.Shoot.Components.ControlPlane.VPNSeedServer.SetSecrets(vpnseedserver.Secrets{
-		DiffieHellmanKey: component.Secret{Name: v1beta1constants.GardenRoleOpenVPNDiffieHellman, Checksum: checkSumDH, Data: openvpnDiffieHellmanSecret},
-	})
-
+	b.Shoot.Components.ControlPlane.VPNSeedServer.SetSecrets(vpnseedserver.Secrets{DiffieHellmanKey: b.getDiffieHellmanSecret()})
 	b.Shoot.Components.ControlPlane.VPNSeedServer.SetSeedNamespaceObjectUID(b.SeedNamespaceObject.UID)
 	b.Shoot.Components.ControlPlane.VPNSeedServer.SetSNIConfig(b.Config.SNI)
+
 	if b.ExposureClassHandler != nil {
 		b.Shoot.Components.ControlPlane.VPNSeedServer.SetExposureClassHandlerName(b.ExposureClassHandler.Name)
 		b.Shoot.Components.ControlPlane.VPNSeedServer.SetSNIConfig(b.ExposureClassHandler.SNI)
