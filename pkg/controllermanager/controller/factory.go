@@ -134,7 +134,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Plant controller: %w", err)
 	}
 
-	projectController, err := projectcontroller.NewProjectController(ctx, log, f.clientMap, f.cfg, f.recorder)
+	projectController, err := projectcontroller.NewProjectController(ctx, log, clock.RealClock{}, f.clientMap, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Project controller: %w", err)
 	}

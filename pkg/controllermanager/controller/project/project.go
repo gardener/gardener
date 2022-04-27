@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -46,23 +47,16 @@ type Controller struct {
 	gardenClient client.Client
 	log          logr.Logger
 
-	projectReconciler                    reconcile.Reconciler
-	projectStaleReconciler               reconcile.Reconciler
-	projectShootActivityReconciler       reconcile.Reconciler
-	projectSecretActivityReconciler      reconcile.Reconciler
-	projectPlantActivityReconciler       reconcile.Reconciler
-	projectBackupEntryActivityReconciler reconcile.Reconciler
-	projectQuotaActivityReconciler       reconcile.Reconciler
+	clock clock.Clock
 
-	hasSyncedFuncs []cache.InformerSynced
+	projectReconciler         reconcile.Reconciler
+	projectStaleReconciler    reconcile.Reconciler
+	projectActivityReconciler reconcile.Reconciler
+	hasSyncedFuncs            []cache.InformerSynced
 
-	projectQueue                    workqueue.RateLimitingInterface
-	projectStaleQueue               workqueue.RateLimitingInterface
-	projectShootActivityQueue       workqueue.RateLimitingInterface
-	projectSecretActivityQueue      workqueue.RateLimitingInterface
-	projectPlantActivityQueue       workqueue.RateLimitingInterface
-	projectBackupEntryActivityQueue workqueue.RateLimitingInterface
-	projectQuotaActivityQueue       workqueue.RateLimitingInterface
+	projectQueue         workqueue.RateLimitingInterface
+	projectStaleQueue    workqueue.RateLimitingInterface
+	projectActivityQueue workqueue.RateLimitingInterface
 
 	workerCh               chan int
 	numberOfRunningWorkers int
@@ -74,6 +68,7 @@ type Controller struct {
 func NewProjectController(
 	ctx context.Context,
 	log logr.Logger,
+	clock clock.Clock,
 	clientMap clientmap.ClientMap,
 	config *config.ControllerManagerConfiguration,
 	recorder record.EventRecorder,
@@ -118,23 +113,16 @@ func NewProjectController(
 	}
 
 	projectController := &Controller{
-		gardenClient:                         gardenClient.Client(),
-		log:                                  log,
-		projectReconciler:                    NewProjectReconciler(config.Controllers.Project, gardenClient, recorder),
-		projectStaleReconciler:               NewProjectStaleReconciler(config.Controllers.Project, gardenClient.Client()),
-		projectShootActivityReconciler:       NewShootActivityReconciler(gardenClient.Client()),
-		projectSecretActivityReconciler:      NewSecretActivityReconciler(gardenClient.Client()),
-		projectPlantActivityReconciler:       NewPlantActivityReconciler(gardenClient.Client()),
-		projectBackupEntryActivityReconciler: NewBackupEntryActivityReconciler(gardenClient.Client()),
-		projectQuotaActivityReconciler:       NewQuotaActivityReconciler(gardenClient.Client()),
-		projectQueue:                         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
-		projectStaleQueue:                    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
-		projectShootActivityQueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Shoot Activity"),
-		projectSecretActivityQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Secret Activity"),
-		projectPlantActivityQueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Plant Activity"),
-		projectBackupEntryActivityQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project BackupEntry Activity"),
-		projectQuotaActivityQueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Quota Activity"),
-		workerCh:                             make(chan int),
+		gardenClient:              gardenClient.Client(),
+		log:                       log,
+		clock:                     clock,
+		projectReconciler:         NewProjectReconciler(config.Controllers.Project, gardenClient, recorder),
+		projectStaleReconciler:    NewProjectStaleReconciler(config.Controllers.Project, gardenClient.Client()),
+		projectActivityReconciler: NewActivityReconciler(gardenClient.Client(), clock),
+		projectQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
+		projectStaleQueue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
+		projectActivityQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Activity"),
+		workerCh:                  make(chan int),
 	}
 
 	projectInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -149,23 +137,48 @@ func NewProjectController(
 	})
 
 	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: projectController.updateShootActivity,
+		AddFunc: func(obj interface{}) {
+			projectController.projectActivityShootAdd(ctx, obj)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			projectController.projectActivityShootUpdate(ctx, oldObj, newObj)
+		},
 	})
 
 	secretInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		UpdateFunc: projectController.updateSecretActivity,
+		AddFunc: func(obj interface{}) {
+			projectController.projectActivitySecretAdd(ctx, obj)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			projectController.projectActivitySecretUpdate(ctx, oldObj, newObj)
+		},
 	})
 
 	plantInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: projectController.updatePlantActivity,
-	})
-
-	backupEntryInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: projectController.updateBackupEntryActivity,
+		AddFunc: func(obj interface{}) {
+			projectController.projectActivityPlantAdd(ctx, obj)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			projectController.projectActivityPlantUpdate(ctx, oldObj, newObj)
+		},
 	})
 
 	quotaInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: projectController.updateQuotaActivity,
+		AddFunc: func(obj interface{}) {
+			projectController.projectActivityQuotaAdd(ctx, obj)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			projectController.projectActivityQuotaUpdate(ctx, oldObj, newObj)
+		},
+	})
+
+	backupEntryInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			projectController.projectActivityBackupEntryAdd(ctx, obj)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			projectController.projectActivityBackupEntryUpdate(ctx, oldObj, newObj)
+		},
 	})
 
 	projectController.hasSyncedFuncs = append(projectController.hasSyncedFuncs,
@@ -202,31 +215,19 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	for i := 0; i < workers; i++ {
 		controllerutils.CreateWorker(ctx, c.projectQueue, "Project", c.projectReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(projectReconcilerName)))
 		controllerutils.CreateWorker(ctx, c.projectStaleQueue, "Project Stale", c.projectStaleReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(staleReconcilerName)))
-		controllerutils.CreateWorker(ctx, c.projectShootActivityQueue, "Project Shoot Activity", c.projectShootActivityReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(shootActivityReconcilerName)))
-		controllerutils.CreateWorker(ctx, c.projectSecretActivityQueue, "Project Secret Activity", c.projectSecretActivityReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(secretActivityReconcilerName)))
-		controllerutils.CreateWorker(ctx, c.projectPlantActivityQueue, "Project Plant Activity", c.projectPlantActivityReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(plantActivityReconcilerName)))
-		controllerutils.CreateWorker(ctx, c.projectBackupEntryActivityQueue, "Project BackupEntry Activity", c.projectBackupEntryActivityReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(backupEntryActivityReconcilerName)))
-		controllerutils.CreateWorker(ctx, c.projectQuotaActivityQueue, "Project Quota Activity", c.projectQuotaActivityReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(quotaActivityReconcilerName)))
+		controllerutils.CreateWorker(ctx, c.projectActivityQueue, "Project Activity", c.projectActivityReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log.WithName(projectActivityReconcilerName)))
 	}
 
 	// Shutdown handling
 	<-ctx.Done()
 	c.projectQueue.ShutDown()
 	c.projectStaleQueue.ShutDown()
-	c.projectShootActivityQueue.ShutDown()
-	c.projectSecretActivityQueue.ShutDown()
-	c.projectPlantActivityQueue.ShutDown()
-	c.projectBackupEntryActivityQueue.ShutDown()
-	c.projectQuotaActivityQueue.ShutDown()
+	c.projectActivityQueue.ShutDown()
 
 	for {
 		if c.projectQueue.Len() == 0 &&
 			c.projectStaleQueue.Len() == 0 &&
-			c.projectShootActivityQueue.Len() == 0 &&
-			c.projectSecretActivityQueue.Len() == 0 &&
-			c.projectPlantActivityQueue.Len() == 0 &&
-			c.projectBackupEntryActivityQueue.Len() == 0 &&
-			c.projectQuotaActivityQueue.Len() == 0 &&
+			c.projectActivityQueue.Len() == 0 &&
 			c.numberOfRunningWorkers == 0 {
 			c.log.V(1).Info("No running Project worker and no items left in the queues. Terminating Project controller")
 			break
@@ -234,7 +235,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		c.log.V(1).Info(
 			"Waiting for Project workers to finish",
 			"numberOfRunningWorkers", c.numberOfRunningWorkers,
-			"queueLength", c.projectQueue.Len()+c.projectStaleQueue.Len()+c.projectShootActivityQueue.Len()+c.projectSecretActivityQueue.Len()+c.projectPlantActivityQueue.Len()+c.projectBackupEntryActivityQueue.Len()+c.projectQuotaActivityQueue.Len(),
+			"queueLength", c.projectQueue.Len()+c.projectStaleQueue.Len()+c.projectActivityQueue.Len(),
 		)
 		time.Sleep(5 * time.Second)
 	}
