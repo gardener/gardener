@@ -46,18 +46,14 @@ func (e *ErrorWithCodes) Codes() []gardencorev1beta1.ErrorCode {
 	return e.codes
 }
 
-// ExtractError rettieves the error from ErrorWithCodes.
-func (e *ErrorWithCodes) ExtractError() error {
+// Unwrap rettieves the error from ErrorWithCodes.
+func (e *ErrorWithCodes) Unwrap() error {
 	return e.err
 }
 
 // Error returns the error message.
 func (e *ErrorWithCodes) Error() string {
-	unwrappedError := errors.Unwrap(e.err)
-	if unwrappedError == nil {
-		unwrappedError = e.err
-	}
-	return unwrappedError.Error()
+	return e.err.Error()
 }
 
 var (
@@ -79,20 +75,20 @@ func DetermineError(err error) error {
 	}
 
 	codes := DetermineErrorCodes(err)
-	if codes == nil {
+	if len(codes) == 0 {
 		return err
 	}
 
 	// if error itself is ErrorWithCodes
 	if errorWithCodes, ok := err.(*ErrorWithCodes); ok {
-		err = errorWithCodes.ExtractError()
+		err = errorWithCodes.Unwrap()
 		return &ErrorWithCodes{err, codes}
 	}
 
 	// if error contains ErrorWithCodes wrapped inside it
 	unwrappedError := errors.Unwrap(err)
 	if errorWithCodes, ok := unwrappedError.(*ErrorWithCodes); ok {
-		err = errorWithCodes.ExtractError()
+		err = errorWithCodes.Unwrap()
 	}
 
 	return &ErrorWithCodes{err, codes}
