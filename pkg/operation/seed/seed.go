@@ -1601,7 +1601,12 @@ func getIssuedAtTimeForCABundleSecret(ctx context.Context, seedClient client.Cli
 		return nil, nil
 	}
 
-	issuedAtUnix, err := strconv.ParseInt(secretList.Items[0].Labels[secretsmanager.LabelKeyIssuedAtTime], 10, 64)
+	issuedAt, ok := secretList.Items[0].Labels[secretsmanager.LabelKeyIssuedAtTime]
+	if !ok {
+		return nil, nil
+	}
+
+	issuedAtUnix, err := strconv.ParseInt(issuedAt, 10, 64)
 	if err != nil {
 		return nil, err
 	}
