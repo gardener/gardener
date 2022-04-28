@@ -291,19 +291,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	}
 	prometheusConfig["networks"] = networks
 
-	var (
-		prometheusImages = []string{
-			images.ImageNamePrometheus,
-			images.ImageNameConfigmapReloader,
-			images.ImageNameBlackboxExporter,
-		}
-		podAnnotations = map[string]interface{}{
-			"checksum/secret-prometheus": b.LoadCheckSum("prometheus"),
-		}
-	)
-
-	prometheusConfig["podAnnotations"] = podAnnotations
-
 	// Add remotewrite to prometheus when enabled
 	if b.Config.Monitoring != nil &&
 		b.Config.Monitoring.Shoot != nil &&
@@ -345,7 +332,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		prometheusConfig["externalLabels"] = b.Config.Monitoring.Shoot.ExternalLabels
 	}
 
-	prometheus, err := b.InjectSeedShootImages(prometheusConfig, prometheusImages...)
+	prometheus, err := b.InjectSeedShootImages(prometheusConfig, images.ImageNamePrometheus, images.ImageNameConfigmapReloader, images.ImageNameBlackboxExporter)
 	if err != nil {
 		return err
 	}

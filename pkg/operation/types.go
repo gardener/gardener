@@ -52,9 +52,6 @@ type Builder struct {
 
 // Operation contains all data required to perform an operation on a Shoot cluster.
 type Operation struct {
-	checkSumsMutex sync.RWMutex
-	checkSums      map[string]string
-
 	secrets        map[string]*corev1.Secret
 	secretsMutex   sync.RWMutex
 	SecretsManager secretsmanager.Interface

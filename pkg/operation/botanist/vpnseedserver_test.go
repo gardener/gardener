@@ -121,7 +121,7 @@ var _ = Describe("VPNSeedServer", func() {
 			fakeErr = fmt.Errorf("fake err")
 
 			secretNameDH     = v1beta1constants.GardenRoleOpenVPNDiffieHellman
-			secretChecksumDH = "9012"
+			secretChecksumDH = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 			namespaceUID = types.UID("1234")
 		)
@@ -129,7 +129,6 @@ var _ = Describe("VPNSeedServer", func() {
 		BeforeEach(func() {
 			vpnSeedServer = mockvpnseedserver.NewMockInterface(ctrl)
 
-			botanist.StoreCheckSum(secretNameDH, secretChecksumDH)
 			botanist.StoreSecret(secretNameDH, &corev1.Secret{})
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
@@ -151,7 +150,7 @@ var _ = Describe("VPNSeedServer", func() {
 			}
 			botanist.SeedNamespaceObject = &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
-					UID: types.UID("1234"),
+					UID: "1234",
 				},
 			}
 		})

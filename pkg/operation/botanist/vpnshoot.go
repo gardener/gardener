@@ -17,8 +17,6 @@ package botanist
 import (
 	"context"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/utils/images"
@@ -79,14 +77,8 @@ func (b *Botanist) DeployVPNShoot(ctx context.Context) error {
 	secrets := vpnshoot.Secrets{}
 
 	if !b.Shoot.ReversedVPNEnabled {
-		checkSumDH := diffieHellmanKeyChecksum
-		openvpnDiffieHellmanSecret := map[string][]byte{"dh2048.pem": []byte(DefaultDiffieHellmanKey)}
-		if dh := b.LoadSecret(v1beta1constants.GardenRoleOpenVPNDiffieHellman); dh != nil {
-			openvpnDiffieHellmanSecret = dh.Data
-			checkSumDH = b.LoadCheckSum(v1beta1constants.GardenRoleOpenVPNDiffieHellman)
-		}
-
-		secrets.DH = &component.Secret{Name: v1beta1constants.GardenRoleOpenVPNDiffieHellman, Checksum: checkSumDH, Data: openvpnDiffieHellmanSecret}
+		dhSecret := b.getDiffieHellmanSecret()
+		secrets.DH = &dhSecret
 	}
 
 	b.Shoot.Components.SystemComponents.VPNShoot.SetSecrets(secrets)
