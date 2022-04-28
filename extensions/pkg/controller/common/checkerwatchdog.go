@@ -89,23 +89,29 @@ func (w *checkerWatchdog) Start(ctx context.Context) {
 			resultRequested := false
 			select {
 			case <-ctx.Done():
+				w.logger.V(2).Info("Context done")
 				return
 			case reset := <-w.timerChan:
+				w.logger.V(2).Info("Stopping timer")
 				// Stop the timer, then reset it if a reset was requested
 				// Timers are not concurrency safe, therefore all timer updates are performed here
 				timer.Stop()
 				if reset {
+					w.logger.V(2).Info("Resetting timer")
 					timer.Reset(w.interval)
 				}
 				continue
 			case <-w.resultChan:
+				w.logger.V(2).Info("Result requested")
 				resultRequested = true
 				// If the last result is not older than w.interval, use it
 				if !w.clock.Now().After(w.resultTime.Add(w.interval)) {
+					w.logger.V(2).Info("Using last result")
 					w.resultReadyChan <- struct{}{}
 					continue
 				}
 			case <-timer.C():
+				w.logger.V(2).Info("Timer expired")
 				timer.Reset(w.interval)
 			}
 

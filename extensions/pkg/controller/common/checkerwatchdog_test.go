@@ -19,6 +19,9 @@ import (
 	"errors"
 	"time"
 
+	"go.uber.org/zap/zapcore"
+	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+
 	. "github.com/gardener/gardener/extensions/pkg/controller/common"
 	mockcommon "github.com/gardener/gardener/extensions/pkg/controller/common/mock"
 
@@ -26,7 +29,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/util/clock"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -49,7 +51,7 @@ var _ = Describe("CheckerWatchdog", func() {
 		checker = mockcommon.NewMockChecker(ctrl)
 		fakeClock = clock.NewFakeClock(time.Now())
 		ctx = context.TODO()
-		watchdog = NewCheckerWatchdog(checker, interval, timeout, fakeClock, log.Log.WithName("test"))
+		watchdog = NewCheckerWatchdog(checker, interval, timeout, fakeClock, logzap.New(logzap.Level(zapcore.DebugLevel*2), logzap.WriteTo(GinkgoWriter)))
 	})
 
 	AfterEach(func() {
