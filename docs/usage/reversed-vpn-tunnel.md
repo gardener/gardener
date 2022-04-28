@@ -1,7 +1,3 @@
----
-title: Reversed VPN Tunnel
----
-
 # Reversed VPN Tunnel Setup and Configuration 
 
 This is a short guide describing how to enable tunneling traffic from shoot cluster to seed cluster instead of the default "seed to shoot" direction. 

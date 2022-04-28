@@ -1,7 +1,3 @@
----
-title: OpenIDConnect Presets
----
-
 # ClusterOpenIDConnectPreset and OpenIDConnectPreset
 
 This page provides an overview of ClusterOpenIDConnectPresets and OpenIDConnectPresets, which are objects for injecting [OpenIDConnect Configuration](https://openid.net/connect/) into `Shoot` at creation time. The injected information contains configuration for the Kube API Server and optionally configuration for kubeconfig generation using said configuration.

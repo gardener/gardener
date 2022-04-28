@@ -1,7 +1,3 @@
----
-title: ExposureClasses
----
-
 # ExposureClasses
 
 The Gardener API server provides a cluster-scoped `ExposureClass` resource.
