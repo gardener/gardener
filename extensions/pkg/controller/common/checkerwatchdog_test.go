@@ -123,15 +123,8 @@ var _ = Describe("CheckerWatchdog", func() {
 
 		It("should cancel the context returned by AddContext if the checker times out", func() {
 			checker.EXPECT().Check(gomock.Any()).DoAndReturn(func(ctx context.Context) (bool, error) {
-				// Take twice as long as the timeout to succeed
-				for {
-					select {
-					case <-fakeClock.After(timeout * 2):
-						return true, nil
-					case <-ctx.Done():
-						return false, errors.New("context cancelled")
-					}
-				}
+				// return context.DeadlineExceeded to simulate timeout
+				return false, context.DeadlineExceeded
 			}).Times(2)
 
 			watchdog.Start(ctx)
