@@ -1,7 +1,3 @@
----
-title: DNSRecord
----
-
 # Contract: `DNSRecord` resources
 
 Every shoot cluster requires external DNS records that are publicly resolvable.

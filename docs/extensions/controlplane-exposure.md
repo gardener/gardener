@@ -1,7 +1,3 @@
----
-title: ControlPlane Exposure
----
-
 # Contract: `ControlPlane` resource with purpose `exposure`
 
 Some Kubernetes clusters require an additional deployments required by the seed cloud provider in order to work properly, e.g. AWS Load Balancer Readvertiser.

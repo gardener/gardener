@@ -1,7 +1,3 @@
----
-title: CSI Components
----
-
 # (Custom) CSI Components
 
 Some provider extensions for Gardener are using CSI components to manage persistent volumes in the shoot clusters.

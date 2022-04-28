@@ -7,6 +7,8 @@ structure:
       title: API Reference
       weight: 1
       aliases: "/api-reference/"
+      categories:
+        - Developers
   nodesSelector:
     path: /docs/api-reference
 - name: concepts
@@ -14,34 +16,120 @@ structure:
     frontmatter:
       title: Concepts
       weight: 2
+      categories:
+        - Operators
+        - Developers
   nodesSelector:
     path: /docs/concepts
+  nodes:
+    - name: cluster-api.md
+      source: https://github.com/gardener/gardener/blob/master/docs/concepts/cluster-api.md
+      properties:
+        frontmatter:
+          title: Cluster API
+    - name: apiserver.md
+      source: https://github.com/gardener/gardener/blob/master/docs/concepts/apiserver.md
+      properties:
+        frontmatter:
+          title: API Server 
+    - name: apiserver_admission_plugins.md
+      source: https://github.com/gardener/gardener/blob/master/docs/concepts/apiserver_admission_plugins.md
+      properties:
+        frontmatter:
+          title: APIServer Admission Plugins
 - name: deployment
   properties:
     frontmatter:
       title: Deployment
       weight: 3
+      categories:
+        - Operators
+        - Developers
   nodesSelector:
     path: /docs/deployment
+  nodes:
+    - name: gardenlet_api_access.md
+      source: https://github.com/gardener/gardener/blob/master/docs/deployment/gardenlet_api_access.md
+      properties:
+        frontmatter:
+          title: Gardenlet API Access
 - name: development
   properties:
     frontmatter:
       title: Development
       weight: 4
+      categories:
+        - Developers
   nodesSelector:
     path: /docs/development
+  nodes:
+    - name: changing-the-api.md
+      source: https://github.com/gardener/gardener/blob/master/docs/development/changing-the-api.md
+      properties:
+        frontmatter:
+          title: Changing the APIs
 - name: extensions
   properties:
     frontmatter:
       title: Extensions
       weight: 5
+      categories:
+        - Developers
   nodesSelector:
     path: /docs/extensions
+  nodes:
+    - name: backupbucket.md
+      source: https://github.com/gardener/gardener/blob/master/docs/extensions/backupbucket.md
+      properties:
+        frontmatter:
+          title: BackupBucket
+    - name: backupentry.md
+      source: https://github.com/gardener/gardener/blob/master/docs/extensions/backupentry.md
+      properties:
+        frontmatter:
+          title: BackupEntry
+    - name: containerruntime.md
+      source: https://github.com/gardener/gardener/blob/master/docs/extensions/containerruntime.md
+      properties:
+        frontmatter:
+          title: ContainerRuntime
+    - name: controllerregistration.md
+      source: https://github.com/gardener/gardener/blob/master/docs/extensions/controllerregistration.md
+      properties:
+        frontmatter:
+          title: ControllerRegistration
+    - name: controlplane-exposure.md
+      source: https://github.com/gardener/gardener/blob/master/docs/extensions/controlplane-exposure.md
+      properties:
+        frontmatter:
+          title: ControlPlane Exposure
+    - name: controlplane-webhooks.md
+      source: https://github.com/gardener/gardener/blob/master/docs/extensions/controlplane-webhooks.md
+      properties:
+        frontmatter:
+          title: ControlPlane Webhooks
+    - name: controlplane.md
+      source: https://github.com/gardener/gardener/blob/master/docs/extensions/controlplane.md
+      properties:
+        frontmatter:
+          title: ControlPlane
+    - name: dns.md
+      source: https://github.com/gardener/gardener/blob/master/docs/extensions/dns.md
+      properties:
+        frontmatter:
+          title: DNS
+    - name: dnsrecord.md
+      source: https://github.com/gardener/gardener/blob/master/docs/extensions/dnsrecord.md
+      properties:
+        frontmatter:
+          title: DNS Record
 - name: monitoring
   properties:
     frontmatter:
       title: Monitoring
       weight: 6
+      categories:
+        - Operators
   nodesSelector:
     path: /docs/monitoring
 - name: proposals
@@ -49,12 +137,74 @@ structure:
     frontmatter:
       title: Proposals
       weight: 7
+      categories:
+        - Developers
   nodesSelector:
     path: /docs/proposals
+  nodes:
+    - name: 08-shoot-apiserver-via-sni.md
+      source: https://github.com/gardener/gardener/blob/master/docs/proposals/08-shoot-apiserver-via-sni.md
+      properties:
+        frontmatter:
+          title: Shoot APIServer via SNI
+    - name: 04-new-core-gardener-cloud-apis.md
+      source: https://github.com/gardener/gardener/blob/master/docs/proposals/04-new-core-gardener-cloud-apis.md
+      properties:
+        frontmatter:
+          title: New Core Gardener Cloud APIs
 - name: usage
   properties:
     frontmatter:
       title: Usage
       weight: 8
+      categories:
+        - Operators
+        - Users
   nodesSelector:
     path: /docs/usage
+  nodes:
+    - name: apiserver-sni-injection.md
+      source: https://github.com/gardener/gardener/blob/master/docs/usage/apiserver-sni-injection.md
+      properties:
+        frontmatter:
+          title: APIServer SNI Injection
+    - name: shooted_seed.md
+      source: https://github.com/gardener/gardener/blob/master/docs/usage/shooted_seed.md
+      properties:
+        frontmatter:
+          title: Create a Shooted Seed Cluster
+    - name: csi_components.md
+      source: https://github.com/gardener/gardener/blob/master/docs/usage/csi_components.md
+      properties:
+        frontmatter:
+          title: CSI Components
+    - name: custom-dns.md
+      source: https://github.com/gardener/gardener/blob/master/docs/usage/custom-dns.md
+      properties:
+        frontmatter:
+          title: Custom DNS Configuration
+    - name: dns-autoscaling.md
+      source: https://github.com/gardener/gardener/blob/master/docs/usage/dns-autoscaling.md
+      properties:
+        frontmatter:
+          title: DNS Autoscaling
+    - name: exposureclasses.md
+      source: https://github.com/gardener/gardener/blob/master/docs/usage/exposureclasses.md
+      properties:
+        frontmatter:
+          title: ExposureClasses
+    - name: node-local-dns.md
+      source: https://github.com/gardener/gardener/blob/master/docs/usage/node-local-dns.md
+      properties:
+        frontmatter:
+          title: NodeLocalDNS Configuration
+    - name: openidconnect-presets.md
+      source: https://github.com/gardener/gardener/blob/master/docs/usage/openidconnect-presets.md
+      properties:
+        frontmatter:
+          title: OpenIDConnect Presets
+    - name: reversed-vpn-tunnel.md
+      source: https://github.com/gardener/gardener/blob/master/docs/usage/reversed-vpn-tunnel.md
+      properties:
+        frontmatter:
+          title: Reversed VPN Tunnel

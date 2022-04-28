@@ -1,7 +1,3 @@
----
-title: DNS Autoscaling
----
-
 # DNS Autoscaling
 
 This is a short guide describing different options how to automatically scale CoreDNS in the shoot cluster.
