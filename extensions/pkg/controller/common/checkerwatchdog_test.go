@@ -19,6 +19,9 @@ import (
 	"errors"
 	"time"
 
+	"go.uber.org/zap/zapcore"
+	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+
 	. "github.com/gardener/gardener/extensions/pkg/controller/common"
 	mockcommon "github.com/gardener/gardener/extensions/pkg/controller/common/mock"
 
@@ -26,7 +29,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/util/clock"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -49,7 +51,7 @@ var _ = Describe("CheckerWatchdog", func() {
 		checker = mockcommon.NewMockChecker(ctrl)
 		fakeClock = clock.NewFakeClock(time.Now())
 		ctx = context.TODO()
-		watchdog = NewCheckerWatchdog(checker, interval, timeout, fakeClock, log.Log.WithName("test"))
+		watchdog = NewCheckerWatchdog(checker, interval, timeout, fakeClock, logzap.New(logzap.Level(zapcore.DebugLevel*2), logzap.WriteTo(GinkgoWriter)))
 	})
 
 	AfterEach(func() {
@@ -123,15 +125,8 @@ var _ = Describe("CheckerWatchdog", func() {
 
 		It("should cancel the context returned by AddContext if the checker times out", func() {
 			checker.EXPECT().Check(gomock.Any()).DoAndReturn(func(ctx context.Context) (bool, error) {
-				// Take twice as long as the timeout to succeed
-				for {
-					select {
-					case <-fakeClock.After(timeout * 2):
-						return true, nil
-					case <-ctx.Done():
-						return false, errors.New("context cancelled")
-					}
-				}
+				// return context.DeadlineExceeded to simulate timeout
+				return false, context.DeadlineExceeded
 			}).Times(2)
 
 			watchdog.Start(ctx)
