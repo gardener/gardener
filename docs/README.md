@@ -53,6 +53,7 @@
 * [Shoot Status](usage/shoot_status.md)
 * [Shoot Info `ConfigMap`](usage/shoot_info_configmap.md)
 * [Shoot Updates and Upgrades](usage/shoot_updates.md)
+* [Accessing Shoot Clusters](usage/shoot_access.md)
 * [Supported Kubernetes versions](usage/supported_k8s_versions.md)
 * [Tolerations](usage/tolerations.md)
 * [Trigger shoot operations](usage/shoot_operations.md)
