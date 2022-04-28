@@ -88,6 +88,11 @@ structure:
       properties:
         frontmatter:
           title: BackupEntry
+    - name: ca-rotation.md
+      source: https://github.com/gardener/gardener/blob/master/docs/extensions/ca-rotation.md
+      properties:
+        frontmatter:
+          title: CA Rotation
     - name: containerruntime.md
       source: https://github.com/gardener/gardener/blob/master/docs/extensions/containerruntime.md
       properties:
