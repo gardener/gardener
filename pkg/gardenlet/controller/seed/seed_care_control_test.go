@@ -135,7 +135,7 @@ var _ = Describe("Seed Care Control", func() {
 
 			Context("when seed client is not available", func() {
 				It("should report a setup failure", func() {
-					careControl = NewCareReconciler(clientMapBuilder.Build(), gardenletConf)
+					careControl = NewCareReconciler(clientMapBuilder.Build(), *gardenletConf.Controllers.SeedCare)
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
 					updatedSeed := &gardencorev1beta1.Seed{}
@@ -158,7 +158,7 @@ var _ = Describe("Seed Care Control", func() {
 					WithClientSetForKey(keys.ForGarden(), gardenClientSet).
 					WithClientSetForKey(keys.ForSeedWithName(seedName), seedClientSet).
 					Build()
-				careControl = NewCareReconciler(clientMap, gardenletConf)
+				careControl = NewCareReconciler(clientMap, *gardenletConf.Controllers.SeedCare)
 			})
 
 			Context("when no conditions are returned", func() {
@@ -323,7 +323,7 @@ var _ = Describe("Seed Care Control", func() {
 type resultingConditionFunc func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
 
 func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
-	return func(seed *gardencorev1beta1.Seed, client kubernetes.Interface, logger logr.Logger) HealthCheck {
+	return func(seed *gardencorev1beta1.Seed, client client.Client, logger logr.Logger) HealthCheck {
 		return fn
 	}
 }

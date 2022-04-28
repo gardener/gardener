@@ -346,8 +346,10 @@ type SeedCareControllerConfiguration struct {
 	// SyncPeriod is the duration how often the existing resources are reconciled (how
 	// often the health check of Seed clusters is performed (only if no operation is
 	// already running on them).
+	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 	// ConditionThresholds defines the condition threshold per condition type.
+	// +optional
 	ConditionThresholds []ConditionThreshold `json:"conditionThresholds,omitempty"`
 }
 

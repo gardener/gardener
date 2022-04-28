@@ -23,7 +23,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 
 	"github.com/go-logr/logr"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -37,17 +37,17 @@ import (
 // NewCareReconciler returns an implementation of reconcile.Reconciler which is dedicated to execute care operations
 func NewCareReconciler(
 	clientMap clientmap.ClientMap,
-	config *config.GardenletConfiguration,
+	seedCareControllerConfig gardenletconfig.SeedCareControllerConfiguration,
 ) reconcile.Reconciler {
 	return &careReconciler{
-		clientMap: clientMap,
-		config:    config,
+		clientMap:                clientMap,
+		seedCareControllerConfig: seedCareControllerConfig,
 	}
 }
 
 type careReconciler struct {
-	clientMap clientmap.ClientMap
-	config    *config.GardenletConfiguration
+	clientMap                clientmap.ClientMap
+	seedCareControllerConfig gardenletconfig.SeedCareControllerConfiguration
 }
 
 func (r *careReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
@@ -72,7 +72,7 @@ func (r *careReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{RequeueAfter: r.config.Controllers.SeedCare.SyncPeriod.Duration}, nil
+	return reconcile.Result{RequeueAfter: r.seedCareControllerConfig.SyncPeriod.Duration}, nil
 }
 
 var (
@@ -83,7 +83,7 @@ var (
 )
 
 func (r *careReconciler) care(ctx context.Context, gardenClientSet client.Client, seed *gardencorev1beta1.Seed, log logr.Logger) error {
-	careCtx, cancel := context.WithTimeout(ctx, r.config.Controllers.SeedCare.SyncPeriod.Duration)
+	careCtx, cancel := context.WithTimeout(ctx, r.seedCareControllerConfig.SyncPeriod.Duration)
 	defer cancel()
 
 	log.V(1).Info("Starting seed care")
@@ -169,7 +169,7 @@ func patchSeedStatus(ctx context.Context, c client.StatusClient, seed *gardencor
 
 func (r *careReconciler) conditionThresholdsToProgressingMapping() map[gardencorev1beta1.ConditionType]time.Duration {
 	out := make(map[gardencorev1beta1.ConditionType]time.Duration)
-	for _, threshold := range r.config.Controllers.SeedCare.ConditionThresholds {
+	for _, threshold := range r.seedCareControllerConfig.ConditionThresholds {
 		out[gardencorev1beta1.ConditionType(threshold.Type)] = threshold.Duration.Duration
 	}
 	return out
