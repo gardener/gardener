@@ -21,7 +21,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -69,7 +68,7 @@ func (r *careReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	if err := r.care(ctx, gardenClient, seed, log); err != nil {
+	if err := r.care(ctx, gardenClient.Client(), seed, log); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -83,12 +82,11 @@ var (
 	NewHealthCheck = defaultNewHealthCheck
 )
 
-func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.Interface, seed *gardencorev1beta1.Seed, log logr.Logger) error {
+func (r *careReconciler) care(ctx context.Context, gardenClientSet client.Client, seed *gardencorev1beta1.Seed, log logr.Logger) error {
 	careCtx, cancel := context.WithTimeout(ctx, r.config.Controllers.SeedCare.SyncPeriod.Duration)
 	defer cancel()
 
 	log.V(1).Info("Starting seed care")
-	gardenClient := gardenClientSet.Client()
 
 	// Initialize conditions based on the current status.
 	conditionTypes := []gardencorev1beta1.ConditionType{
@@ -103,26 +101,26 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 	if err != nil {
 		log.Error(err, "SeedClient cannot be constructed")
 
-		if err := careSetupFailure(ctx, gardenClient, seed, "Precondition failed: seed client cannot be constructed", conditions); err != nil {
+		if err := careSetupFailure(ctx, gardenClientSet, seed, "Precondition failed: seed client cannot be constructed", conditions); err != nil {
 			log.Error(err, "Unable to create error condition")
 		}
 
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
-	seedObj, err := NewSeed(ctx, seed)
+	seedObj, err := NewSeed(careCtx, seed)
 	if err != nil {
 		log.Error(err, "SeedObj cannot be constructed")
-		if err := careSetupFailure(careCtx, gardenClient, seed, "seedObj cannot be constructed", conditions); err != nil {
+		if err := careSetupFailure(careCtx, gardenClientSet, seed, "seedObj cannot be constructed", conditions); err != nil {
 			log.Error(err, "Unable to create error condition")
 		}
 		return nil
 	}
 
 	// Trigger health check
-	seedHealth := NewHealthCheck(seed, seedClient, log)
+	seedHealth := NewHealthCheck(seed, seedClient.Client(), log)
 	updatedConditions := seedHealth.CheckSeed(
-		ctx,
+		careCtx,
 		seedObj,
 		conditions,
 		r.conditionThresholdsToProgressingMapping(),
@@ -134,7 +132,7 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 		// correct types will be updated, and any other conditions will remain intact
 		conditions := buildSeedConditions(seed.Status.Conditions, updatedConditions, conditionTypes)
 		log.Info("Updating seed status conditions and constraints")
-		if err := patchSeedStatus(ctx, gardenClient, seed, conditions); err != nil {
+		if err := patchSeedStatus(ctx, gardenClientSet, seed, conditions); err != nil {
 			log.Error(err, "Could not update Seed status")
 			return nil // We do not want to run in the exponential backoff for the condition checks.
 		}

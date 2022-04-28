@@ -170,10 +170,10 @@ config.yaml: |
 {{ toYaml .Values.global.gardenlet.config.controllers.shootCare.conditionThresholds | indent 6 }}
       {{- end }}
     seedCare:
-        syncPeriod: {{ required ".Values.global.gardenlet.config.controllers.seedCare.syncPeriod is required" .Values.global.gardenlet.config.controllers.seedCare.syncPeriod }}
-        conditionThresholds:
+      syncPeriod: {{ required ".Values.global.gardenlet.config.controllers.seedCare.syncPeriod is required" .Values.global.gardenlet.config.controllers.seedCare.syncPeriod }}
+      conditionThresholds:
         {{- if .Values.global.gardenlet.config.controllers.seedCare.conditionThresholds }}
-{{ toYaml .Values.global.gardenlet.config.controllers.seedCare.conditionThresholds | indent 8 }}
+{{ toYaml .Values.global.gardenlet.config.controllers.seedCare.conditionThresholds | indent 6 }}
       {{- end }}
     {{- if .Values.global.gardenlet.config.controllers.shootSecret }}
     shootSecret:

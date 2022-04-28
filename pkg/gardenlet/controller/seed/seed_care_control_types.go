@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package seed
 
 import (
@@ -18,25 +19,21 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/care"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/go-logr/logr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var defaultNewSeedObjectFunc = func(ctx context.Context, seed *gardencorev1beta1.Seed) (*seedpkg.Seed, error) {
-	seedObj, err := seedpkg.NewBuilder().WithSeedObject(seed).Build(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return seedObj, nil
+	return seedpkg.NewBuilder().WithSeedObject(seed).Build(ctx)
 }
 
 // NewHealthCheckFunc is a function used to create a new instance for performing health checks.
-type NewHealthCheckFunc func(seed *gardencorev1beta1.Seed, client kubernetes.Interface, l logr.Logger) HealthCheck
+type NewHealthCheckFunc func(seed *gardencorev1beta1.Seed, client client.Client, l logr.Logger) HealthCheck
 
 // defaultNewHealthCheck is the default function to create a new instance for performing health checks.
-var defaultNewHealthCheck NewHealthCheckFunc = func(seed *gardencorev1beta1.Seed, client kubernetes.Interface, l logr.Logger) HealthCheck {
+var defaultNewHealthCheck NewHealthCheckFunc = func(seed *gardencorev1beta1.Seed, client client.Client, l logr.Logger) HealthCheck {
 	return care.NewHealthForSeed(seed, client, l)
 }
 
