@@ -645,7 +645,7 @@ func makeWorkerLister(ctx context.Context, c client.Client, namespace string) ku
 // NewConditionOrError returns the given new condition or returns an unknown error condition if an error occurred or `newCondition` is nil.
 func NewConditionOrError(oldCondition gardencorev1beta1.Condition, newCondition *gardencorev1beta1.Condition, err error) gardencorev1beta1.Condition {
 	if err != nil || newCondition == nil {
-		return gardencorev1beta1helper.UpdatedConditionUnknownError(oldCondition, err, gardencorev1beta1helper.ExtractErrorCodes(err)...)
+		return gardencorev1beta1helper.UpdatedConditionUnknownError(oldCondition, err)
 	}
 	return *newCondition
 }

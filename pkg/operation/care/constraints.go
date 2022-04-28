@@ -124,12 +124,12 @@ func (c *Constraint) constraintsChecks(
 
 	var newHibernationConstraint, newMaintenancePreconditionsSatisfiedConstraint *gardencorev1beta1.Condition
 
-	status, reason, message, err := c.CheckForProblematicWebhooks(ctx)
+	status, reason, message, errorCodes, err := c.CheckForProblematicWebhooks(ctx)
 	if err == nil {
-		updatedHibernationCondition := gardencorev1beta1helper.UpdatedCondition(hibernationPossibleConstraint, status, reason, message)
+		updatedHibernationCondition := gardencorev1beta1helper.UpdatedCondition(hibernationPossibleConstraint, status, reason, message, errorCodes...)
 		newHibernationConstraint = &updatedHibernationCondition
 
-		updatedMaintenanceCondition := gardencorev1beta1helper.UpdatedCondition(maintenancePreconditionsSatisfiedConstraint, status, reason, message)
+		updatedMaintenanceCondition := gardencorev1beta1helper.UpdatedCondition(maintenancePreconditionsSatisfiedConstraint, status, reason, message, errorCodes...)
 		newMaintenancePreconditionsSatisfiedConstraint = &updatedMaintenanceCondition
 	}
 
@@ -162,10 +162,10 @@ func getMutatingWebhookConfigurations(ctx context.Context, c client.Client, k8sV
 
 // CheckForProblematicWebhooks checks the Shoot for problematic webhooks which could prevent shoot worker nodes from
 // joining the cluster.
-func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencorev1beta1.ConditionStatus, string, string, error) {
+func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencorev1beta1.ConditionStatus, string, string, []gardencorev1beta1.ErrorCode, error) {
 	validatingWebhookConfigs, err := getValidatingWebhookConfigurations(ctx, c.shootClient, c.shoot.KubernetesVersion)
 	if err != nil {
-		return "", "", "", fmt.Errorf("could not get ValidatingWebhookConfigurations of Shoot cluster to check for problematic webhooks: %w", err)
+		return "", "", "", nil, fmt.Errorf("could not get ValidatingWebhookConfigurations of Shoot cluster to check for problematic webhooks: %w", err)
 	}
 
 	for _, webhookConfig := range validatingWebhookConfigs {
@@ -175,14 +175,15 @@ func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencor
 				return gardencorev1beta1.ConditionFalse,
 					"ProblematicWebhooks",
 					msg,
-					gardencorev1beta1helper.NewErrorWithCodes(msg, gardencorev1beta1.ErrorUserWebhook)
+					[]gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorUserWebhook},
+					nil
 			}
 		}
 	}
 
 	mutatingWebhookConfigs, err := getMutatingWebhookConfigurations(ctx, c.shootClient, c.shoot.KubernetesVersion)
 	if err != nil {
-		return "", "", "", fmt.Errorf("could not get MutatingWebhookConfigurations of Shoot cluster to check for problematic webhooks: %w", err)
+		return "", "", "", nil, fmt.Errorf("could not get MutatingWebhookConfigurations of Shoot cluster to check for problematic webhooks: %w", err)
 	}
 
 	for _, webhookConfig := range mutatingWebhookConfigs {
@@ -192,7 +193,8 @@ func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencor
 				return gardencorev1beta1.ConditionFalse,
 					"ProblematicWebhooks",
 					msg,
-					gardencorev1beta1helper.NewErrorWithCodes(msg, gardencorev1beta1.ErrorUserWebhook)
+					[]gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorUserWebhook},
+					nil
 			}
 		}
 	}
@@ -200,6 +202,7 @@ func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencor
 	return gardencorev1beta1.ConditionTrue,
 		"NoProblematicWebhooks",
 		"All webhooks are properly configured.",
+		nil,
 		nil
 }
 
