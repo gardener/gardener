@@ -817,6 +817,10 @@ func (r *shootReconciler) patchShootStatusOperationSuccess(
 		})
 	}
 
+	if pointer.BoolEqual(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, pointer.Bool(false)) {
+		shoot.Status.Credentials.Rotation.Kubeconfig = nil
+	}
+
 	return gardenClient.Status().Patch(ctx, shoot, patch)
 }
 
