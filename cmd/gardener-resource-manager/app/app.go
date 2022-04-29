@@ -105,7 +105,9 @@ func NewResourceManagerCommand() *cobra.Command {
 				if err := resourceControllerOpts.Completed().ApplyDefaultClusterId(ctx, log, sourceClientOpts.Completed().RESTConfig); err != nil {
 					return err
 				}
+				healthControllerOpts.Completed().ClusterID = resourceControllerOpts.Completed().ClusterID
 				healthControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
+				healthControllerOpts.Completed().TargetCacheDisabled = targetClusterOpts.Completed().DisableCachedClient
 				gcControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
 				tokenInvalidatorControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
 				tokenRequestorControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster

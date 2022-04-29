@@ -37,7 +37,6 @@ import (
 )
 
 type reconciler struct {
-	log          logr.Logger
 	client       client.Client
 	targetClient client.Client
 	targetScheme *runtime.Scheme

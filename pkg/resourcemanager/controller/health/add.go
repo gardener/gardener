@@ -52,12 +52,15 @@ type ControllerConfig struct {
 	MaxConcurrentWorkers int
 	SyncPeriod           time.Duration
 
-	ClassFilter   managerpredicate.ClassFilter
-	TargetCluster cluster.Cluster
+	ClassFilter         managerpredicate.ClassFilter
+	TargetCluster       cluster.Cluster
+	TargetCacheDisabled bool
+	ClusterID           string
 }
 
 // AddToManagerWithOptions adds the controller to a Manager with the given config.
 func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
+	// setup main health reconciler
 	healthController, err := controller.New(ControllerName, mgr, controller.Options{
 		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
 		Reconciler: &reconciler{
@@ -69,36 +72,13 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		RecoverPanic: true,
 	})
 	if err != nil {
-		return fmt.Errorf("unable to set up health controller: %w", err)
+		return fmt.Errorf("unable to setup health reconciler: %w", err)
 	}
 
 	if err := healthController.Watch(
 		&source.Kind{Type: &resourcesv1alpha1.ManagedResource{}},
-		&handler.Funcs{
-			CreateFunc: func(e event.CreateEvent, q workqueue.RateLimitingInterface) {
-				q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
-					Name:      e.Object.GetName(),
-					Namespace: e.Object.GetNamespace(),
-				}})
-			},
-			UpdateFunc: func(e event.UpdateEvent, q workqueue.RateLimitingInterface) {
-				q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
-					Name:      e.ObjectNew.GetName(),
-					Namespace: e.ObjectNew.GetNamespace(),
-				}})
-			},
-		},
-		&conf.ClassFilter,
-		predicate.Or(
-			managerpredicate.ClassChangedPredicate(),
-			// start health checks immediately after MR has been reconciled
-			managerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesApplied, managerpredicate.DefaultConditionChange),
-			managerpredicate.NoLongerIgnored(),
-		),
-		predicate.Or(
-			managerpredicate.NotIgnored(),
-			predicateutils.IsDeleting(),
-		),
+		enqueueCreateAndUpdate,
+		append(healthControllerPredicates, &conf.ClassFilter)...,
 	); err != nil {
 		return fmt.Errorf("unable to watch ManagedResources: %w", err)
 	}
@@ -128,4 +108,32 @@ func (o *ControllerOptions) Complete() error {
 // Completed returns the completed ControllerConfig.
 func (o *ControllerOptions) Completed() *ControllerConfig {
 	return &defaultControllerConfig
+}
+
+var enqueueCreateAndUpdate = &handler.Funcs{
+	CreateFunc: func(e event.CreateEvent, q workqueue.RateLimitingInterface) {
+		q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
+			Name:      e.Object.GetName(),
+			Namespace: e.Object.GetNamespace(),
+		}})
+	},
+	UpdateFunc: func(e event.UpdateEvent, q workqueue.RateLimitingInterface) {
+		q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
+			Name:      e.ObjectNew.GetName(),
+			Namespace: e.ObjectNew.GetNamespace(),
+		}})
+	},
+}
+
+var healthControllerPredicates = []predicate.Predicate{
+	predicate.Or(
+		managerpredicate.ClassChangedPredicate(),
+		// start health checks immediately after MR has been reconciled
+		managerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesApplied, managerpredicate.DefaultConditionChange),
+		managerpredicate.NoLongerIgnored(),
+	),
+	predicate.Or(
+		managerpredicate.NotIgnored(),
+		predicateutils.IsDeleting(),
+	),
 }
