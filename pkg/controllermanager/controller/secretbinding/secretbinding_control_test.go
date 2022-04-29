@@ -17,6 +17,7 @@ package secretbinding
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -206,7 +207,7 @@ var _ = Describe("SecretBindingControl", func() {
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{})).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.SecretBindingList, _ ...client.ListOption) error {
 				(&gardencorev1beta1.SecretBindingList{Items: []gardencorev1beta1.SecretBinding{*secretBinding}}).DeepCopyInto(list)
 				return nil
-			})
+			}).AnyTimes()
 
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
 				(&gardencorev1beta1.ShootList{}).DeepCopyInto(list)
@@ -217,6 +218,160 @@ var _ = Describe("SecretBindingControl", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(len(secret.ObjectMeta.Labels)).To(Equal(0))
+		})
+	})
+
+	Describe("SecretBinding label for Quotas", func() {
+		var (
+			reconciler *secretBindingReconciler
+			request    reconcile.Request
+
+			secretBindingNamespace1 = "sb-ns-1"
+			secretBindingName1      = "sb-1"
+			secretBindingNamespace2 = "sb-ns-2"
+			secretBindingName2      = "sb-2"
+			quotaNamespace1         = "quota-ns-1"
+			quotaName1              = "quota-1"
+			quotaNamespace2         = "quota-ns-2"
+			quotaName2              = "quota-2"
+
+			secretBinding1 = &gardencorev1beta1.SecretBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretBindingName1,
+					Namespace: secretBindingNamespace1,
+				},
+				Quotas: []corev1.ObjectReference{
+					{
+						Name:      quotaName1,
+						Namespace: quotaNamespace1,
+					},
+					{
+						Name:      quotaName2,
+						Namespace: quotaNamespace2,
+					},
+				},
+			}
+			secretBinding2 = &gardencorev1beta1.SecretBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretBindingName2,
+					Namespace: secretBindingNamespace2,
+				},
+				Quotas: []corev1.ObjectReference{
+					{
+						Name:      quotaName2,
+						Namespace: quotaNamespace2,
+					},
+				},
+			}
+
+			quota1 = &gardencorev1beta1.Quota{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      quotaName1,
+					Namespace: quotaNamespace1,
+				},
+			}
+			quota2 = &gardencorev1beta1.Quota{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      quotaName2,
+					Namespace: quotaNamespace2,
+				},
+			}
+		)
+
+		BeforeEach(func() {
+			reconciler = &secretBindingReconciler{gardenClient: c}
+
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{}), gomock.Any()).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.SecretBindingList, _ ...client.ListOption) error {
+				(&gardencorev1beta1.SecretBindingList{Items: []gardencorev1beta1.SecretBinding{*secretBinding1, *secretBinding2}}).DeepCopyInto(list)
+				return nil
+			}).AnyTimes()
+
+			c.EXPECT().Get(ctx, gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBinding{})).DoAndReturn(func(_ context.Context, namespacedName client.ObjectKey, obj *gardencorev1beta1.SecretBinding) error {
+				for _, sb := range []gardencorev1beta1.SecretBinding{*secretBinding1, *secretBinding2} {
+					if reflect.DeepEqual(namespacedName.Name, sb.Name) && reflect.DeepEqual(namespacedName.Namespace, sb.Namespace) {
+						sb.DeepCopyInto(obj)
+						return nil
+					}
+				}
+				return nil
+			}).AnyTimes()
+
+			c.EXPECT().Get(ctx, gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Quota{})).DoAndReturn(func(_ context.Context, namespacedName client.ObjectKey, obj *gardencorev1beta1.Quota) error {
+				for _, q := range []gardencorev1beta1.Quota{*quota1, *quota2} {
+					if reflect.DeepEqual(namespacedName.Name, q.Name) && reflect.DeepEqual(namespacedName.Namespace, q.Namespace) {
+						q.DeepCopyInto(obj)
+						return nil
+					}
+				}
+				return nil
+			}).AnyTimes()
+
+			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBinding{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, sb *gardencorev1beta1.SecretBinding, _ client.Patch, _ ...client.PatchOption) error {
+					if sb.Name == secretBindingName1 {
+						*secretBinding1 = *sb
+					} else if sb.Name == secretBindingName2 {
+						*secretBinding2 = *sb
+					}
+					return nil
+				},
+			).AnyTimes()
+
+			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Quota{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, q *gardencorev1beta1.Quota, _ client.Patch, _ ...client.PatchOption) error {
+					if q.Name == quotaName1 {
+						*quota1 = *q
+					} else if q.Name == quotaName2 {
+						*quota2 = *q
+					}
+					return nil
+				},
+			).AnyTimes()
+
+			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, s *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
+					return nil
+				},
+			).AnyTimes()
+		})
+
+		It("should add the label to the quota referred by the secretbinding", func() {
+			c.EXPECT().Get(ctx, gomock.Any(), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
+				(&corev1.Secret{}).DeepCopyInto(obj)
+				return nil
+			})
+
+			request = reconcile.Request{NamespacedName: types.NamespacedName{Namespace: secretBindingNamespace1, Name: secretBindingName1}}
+
+			_, err := reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+
+			expectedLabels := map[string]string{
+				"secretbinding.gardener.cloud/referred": "true",
+			}
+
+			Expect(quota1.ObjectMeta.Labels).To(Equal(expectedLabels))
+			Expect(quota2.ObjectMeta.Labels).To(Equal(expectedLabels))
+		})
+
+		It("should remove the label from the quota when there are no secretbindings referring it", func() {
+			secretBinding1.DeletionTimestamp = &metav1.Time{Time: time.Date(1, 1, 1, 1, 1, 1, 1, time.UTC)}
+
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{})).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+				(&gardencorev1beta1.ShootList{}).DeepCopyInto(list)
+				return nil
+			})
+
+			_, err := reconciler.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(len(quota1.ObjectMeta.Labels)).To(Equal(0))
+
+			expectedLabels := map[string]string{
+				"secretbinding.gardener.cloud/referred": "true",
+			}
+
+			Expect(quota2.ObjectMeta.Labels).To(Equal(expectedLabels))
 		})
 	})
 })

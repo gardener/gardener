@@ -163,6 +163,11 @@ func (c *Controller) projectActivityQuotaAdd(ctx context.Context, obj interface{
 		return
 	}
 
+	// skip queueing if the quota doesn't have the "referred by a secretbinding" label
+	if !metav1.HasLabel(quota.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
+		return
+	}
+
 	// If the creationTimestamp of the object is less than 1 hour (experimental) from current time,
 	// skip it. This is to prevent unnecessary reconciliations in case of GCM restart.
 	if quota.GetCreationTimestamp().Add(time.Hour).UTC().Before(c.clock.Now().UTC()) {
@@ -184,6 +189,11 @@ func (c *Controller) projectActivityQuotaUpdate(ctx context.Context, oldObj, new
 	}
 	newQuota, ok := newObj.(*gardencorev1beta1.Quota)
 	if !ok {
+		return
+	}
+
+	// skip queueing if the quota doesn't have the "referred by a secretbinding" label
+	if !metav1.HasLabel(newQuota.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
 		return
 	}
 
