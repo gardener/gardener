@@ -626,18 +626,10 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			}).DoIf(requestControlPlanePodsRestart),
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployControlPlane, deployControlPlaneExposure),
 		})
-		deployVPA = g.Add(flow.Task{
+		_ = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes vertical pod autoscaler",
 			Fn:           flow.TaskFn(botanist.DeployVerticalPodAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, deployManagedResourcesForAddons, deployManagedResourceForCloudConfigExecutor, hibernateControlPlane),
-		})
-		_ = g.Add(flow.Task{
-			Name: "Cleaning no longer required secrets",
-			Fn: flow.Sequential(func(ctx context.Context) error {
-				// TODO(rfranzke): Remove in a future release.
-				return kutil.DeleteObject(ctx, botanist.K8sSeedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client-tls", Namespace: botanist.Shoot.SeedNamespace}})
-			}, botanist.SecretsManager.Cleanup).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployVPA),
 		})
 	)
 
@@ -651,6 +643,19 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 	}); err != nil {
 		o.Logger.Errorf("Failed to %s Shoot cluster %q: %+v", utils.IifString(isRestoring, "restore", "reconcile"), o.Shoot.GetInfo().Name, err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
+	}
+
+	o.Logger.Info("Cleaning no longer required secrets")
+	err = flow.Sequential(
+		func(ctx context.Context) error {
+			// TODO(rfranzke): Remove in a future release.
+			return kutil.DeleteObject(ctx, botanist.K8sSeedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client-tls", Namespace: botanist.Shoot.SeedNamespace}})
+		},
+		botanist.SecretsManager.Cleanup,
+	)(ctx)
+	if err != nil {
+		err = fmt.Errorf("failed to clean no longer required secrets: %w", err)
+		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), err)
 	}
 
 	// ensure that shoot client is invalidated after it has been hibernated
