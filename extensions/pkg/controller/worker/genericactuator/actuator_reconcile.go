@@ -26,7 +26,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
@@ -34,7 +33,6 @@ import (
 	workerhealthcheck "github.com/gardener/gardener/extensions/pkg/controller/healthcheck/worker"
 	extensionsworker "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	workerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -205,13 +203,18 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 		}
 	}
 
-	if err := a.updateWorkerStatusMachineDeployments(ctx, worker, wantedMachineDeployments, false); err != nil {
+	if err := a.updateWorkerStatusMachineDeployments(ctx, worker, wantedMachineDeployments); err != nil {
 		return fmt.Errorf("failed to update the machine deployments in worker status: %w", err)
 	}
 
 	// Cleanup machine dependencies.
 	if err := workerDelegate.CleanupMachineDependencies(ctx); err != nil {
 		return fmt.Errorf("failed to cleanup machine dependencies: %w", err)
+	}
+
+	// TODO(ary1992): Remove this in a future release.
+	if err := a.cleanupRollingUpdateCondition(ctx, worker); err != nil {
+		return fmt.Errorf("failed to cleanup the RollingUpdate condition: %w", err)
 	}
 
 	return nil
@@ -332,7 +335,6 @@ func (a *genericActuator) deployMachineDeployments(ctx context.Context, logger l
 // available by the machine-controller-manager. It polls the status every 5 seconds.
 func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context.Context, logger logr.Logger, cluster *extensionscontroller.Cluster, worker *extensionsv1alpha1.Worker, alreadyExistingMachineDeploymentNames sets.String, alreadyExistingMachineClassNames sets.String, wantedMachineDeployments extensionsworker.MachineDeployments, clusterAutoscalerUsed bool) error {
 	logger.Info("Waiting until wanted machine deployments are available")
-	workerStatusUpdatedForRollingUpdate := false
 
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		var numHealthyDeployments, numUpdated, numAvailable, numUnavailable, numDesired, numberOfAwakeMachines int32
@@ -418,14 +420,6 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 				return retryutils.Ok()
 			}
 
-			// update worker status with condition that indicates an ongoing rolling update operation
-			if !workerStatusUpdatedForRollingUpdate {
-				if err := a.updateWorkerStatusMachineDeployments(ctx, worker, extensionsworker.MachineDeployments{}, true); err != nil {
-					return retryutils.SevereError(fmt.Errorf("failed to update the machine status rolling update condition: %w", err))
-				}
-				workerStatusUpdatedForRollingUpdate = true
-			}
-
 			if numUnavailable == 0 && numAvailable == numDesired && numUpdated < numberOfAwakeMachines {
 				msg = fmt.Sprintf("Waiting until all old machines are drained and terminated. Waiting for %d machine(s)...", numberOfAwakeMachines-numUpdated)
 				break
@@ -471,9 +465,12 @@ func (a *genericActuator) waitUntilUnwantedMachineDeploymentsDeleted(ctx context
 	})
 }
 
-func (a *genericActuator) updateWorkerStatusMachineDeployments(ctx context.Context, worker *extensionsv1alpha1.Worker, machineDeployments extensionsworker.MachineDeployments, isRollingUpdate bool) error {
-	var statusMachineDeployments []extensionsv1alpha1.MachineDeployment
+func (a *genericActuator) updateWorkerStatusMachineDeployments(ctx context.Context, worker *extensionsv1alpha1.Worker, machineDeployments extensionsworker.MachineDeployments) error {
+	if len(machineDeployments) == 0 {
+		return nil
+	}
 
+	var statusMachineDeployments []extensionsv1alpha1.MachineDeployment
 	for _, machineDeployment := range machineDeployments {
 		statusMachineDeployments = append(statusMachineDeployments, extensionsv1alpha1.MachineDeployment{
 			Name:    machineDeployment.Name,
@@ -482,49 +479,9 @@ func (a *genericActuator) updateWorkerStatusMachineDeployments(ctx context.Conte
 		})
 	}
 
-	rollingUpdateCondition, err := buildRollingUpdateCondition(worker.Status.Conditions, isRollingUpdate)
-	if err != nil {
-		return err
-	}
-
-	return tryUpdateStatus(ctx, retry.DefaultBackoff, a.client, worker, func() error {
-		if len(statusMachineDeployments) > 0 {
-			worker.Status.MachineDeployments = statusMachineDeployments
-		}
-
-		worker.Status.Conditions = gardencorev1beta1helper.MergeConditions(worker.Status.Conditions, rollingUpdateCondition)
-		return nil
-	})
-}
-
-const (
-	// ReasonRollingUpdateProgressing indicates that a rolling update is in progress
-	ReasonRollingUpdateProgressing = "RollingUpdateProgressing"
-	// ReasonNoRollingUpdate indicates that no rolling update is currently in progress
-	ReasonNoRollingUpdate = "NoRollingUpdate"
-)
-
-func buildRollingUpdateCondition(conditions []gardencorev1beta1.Condition, isRollingUpdate bool) (gardencorev1beta1.Condition, error) {
-	bldr, err := gardencorev1beta1helper.NewConditionBuilder(extensionsv1alpha1.WorkerRollingUpdate)
-	if err != nil {
-		return gardencorev1beta1.Condition{}, err
-	}
-
-	if c := gardencorev1beta1helper.GetCondition(conditions, extensionsv1alpha1.WorkerRollingUpdate); c != nil {
-		bldr.WithOldCondition(*c)
-	}
-	if isRollingUpdate {
-		bldr.WithStatus(gardencorev1beta1.ConditionTrue)
-		bldr.WithReason(ReasonRollingUpdateProgressing)
-		bldr.WithMessage("Rolling update in progress")
-	} else {
-		bldr.WithStatus(gardencorev1beta1.ConditionFalse)
-		bldr.WithReason(ReasonNoRollingUpdate)
-		bldr.WithMessage("No rolling update in progress")
-	}
-
-	condition, _ := bldr.WithNowFunc(metav1.Now).Build()
-	return condition, nil
+	patch := client.MergeFrom(worker.DeepCopy())
+	worker.Status.MachineDeployments = statusMachineDeployments
+	return a.client.Status().Patch(ctx, worker, patch)
 }
 
 // Helper functions
@@ -583,4 +540,17 @@ func ReadMachineConfiguration(pool extensionsv1alpha1.WorkerPool) *machinev1alph
 		}
 	}
 	return machineConfiguration
+}
+
+// cleanupRollingUpdateCondition removes the RollingUpdate condition from the Worker status.
+// TODO(ary1992): Remove this in a future release.
+func (a *genericActuator) cleanupRollingUpdateCondition(ctx context.Context, worker *extensionsv1alpha1.Worker) error {
+	if c := gardencorev1beta1helper.GetCondition(worker.Status.Conditions, "RollingUpdate"); c != nil {
+		conditions := gardencorev1beta1helper.RemoveConditions(worker.Status.Conditions, "RollingUpdate")
+
+		patch := client.MergeFromWithOptions(worker.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		worker.Status.Conditions = conditions
+		return a.client.Status().Patch(ctx, worker, patch)
+	}
+	return nil
 }
