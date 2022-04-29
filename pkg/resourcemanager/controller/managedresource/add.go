@@ -75,7 +75,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
 		Reconciler: reconcilerutils.OperationAnnotationWrapper(
 			func() client.Object { return &resourcesv1alpha1.ManagedResource{} },
-			&Reconciler{
+			&reconciler{
 				targetClient:              conf.TargetCluster.GetClient(),
 				targetRESTMapper:          conf.TargetCluster.GetRESTMapper(),
 				targetScheme:              conf.TargetCluster.GetScheme(),

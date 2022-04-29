@@ -65,8 +65,8 @@ var (
 	foregroundDeletionAPIGroups = sets.NewString(appsv1.GroupName, extensionsv1beta1.GroupName, batchv1.GroupName)
 )
 
-// Reconciler contains information in order to reconcile instances of ManagedResource.
-type Reconciler struct {
+// reconciler contains information in order to reconcile instances of ManagedResource.
+type reconciler struct {
 	client           client.Client
 	targetClient     client.Client
 	targetRESTMapper meta.RESTMapper
@@ -81,13 +81,13 @@ type Reconciler struct {
 }
 
 // InjectClient injects a client into the reconciler.
-func (r *Reconciler) InjectClient(c client.Client) error {
+func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil
 }
 
 // Reconcile implements `reconcile.Reconciler`.
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
 	mr := &resourcesv1alpha1.ManagedResource{}
@@ -122,7 +122,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return r.reconcile(ctx, mr, log)
 }
 
-func (r *Reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.ManagedResource, log logr.Logger) (ctrl.Result, error) {
+func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.ManagedResource, log logr.Logger) (ctrl.Result, error) {
 	log.Info("Starting to reconcile ManagedResource")
 
 	if err := controllerutils.PatchAddFinalizers(ctx, r.client, mr, r.class.FinalizerName()); err != nil {
@@ -352,11 +352,15 @@ func (r *Reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 	return ctrl.Result{RequeueAfter: r.syncPeriod}, nil
 }
 
-func (r *Reconciler) delete(ctx context.Context, mr *resourcesv1alpha1.ManagedResource, log logr.Logger) (ctrl.Result, error) {
+func (r *reconciler) delete(ctx context.Context, mr *resourcesv1alpha1.ManagedResource, log logr.Logger) (ctrl.Result, error) {
 	log.Info("Starting to delete ManagedResource")
 
 	deleteCtx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
+
+	if err := r.updateConditionsForDeletion(ctx, log, mr); err != nil {
+		return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
+	}
 
 	conditionResourcesApplied := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
 
@@ -414,7 +418,15 @@ func (r *Reconciler) delete(ctx context.Context, mr *resourcesv1alpha1.ManagedRe
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, origin string, newResourcesObjects []object, labelsToInject map[string]string, equivalences Equivalences) error {
+func (r *reconciler) updateConditionsForDeletion(ctx context.Context, log logr.Logger, mr *resourcesv1alpha1.ManagedResource) error {
+	conditionResourcesHealthy := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
+	conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ConditionDeletionPending, "The resources are currently being deleted.")
+	conditionResourcesProgressing := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesProgressing)
+	conditionResourcesProgressing = v1beta1helper.UpdatedCondition(conditionResourcesProgressing, gardencorev1beta1.ConditionTrue, resourcesv1alpha1.ConditionDeletionPending, "The resources are currently being deleted.")
+	return updateConditions(ctx, r.client, mr, conditionResourcesHealthy, conditionResourcesProgressing)
+}
+
+func (r *reconciler) applyNewResources(ctx context.Context, log logr.Logger, origin string, newResourcesObjects []object, labelsToInject map[string]string, equivalences Equivalences) error {
 	var (
 		results   = make(chan error)
 		wg        sync.WaitGroup
@@ -620,7 +632,7 @@ func keyExistsAndValueTrue(kv map[string]string, key string) bool {
 	return exists && valueTrue
 }
 
-func (r *Reconciler) cleanOldResources(ctx context.Context, log logr.Logger, index *objectIndex, mr *resourcesv1alpha1.ManagedResource) (bool, error) {
+func (r *reconciler) cleanOldResources(ctx context.Context, log logr.Logger, index *objectIndex, mr *resourcesv1alpha1.ManagedResource) (bool, error) {
 	type output struct {
 		obj             *unstructured.Unstructured
 		deletionPending bool
@@ -743,7 +755,7 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, log logr.Logger, ind
 	return deletionPending, errorList.ErrorOrNil()
 }
 
-func (r *Reconciler) releaseOrphanedResources(ctx context.Context, log logr.Logger, orphanedResources []resourcesv1alpha1.ObjectReference, origin string) error {
+func (r *reconciler) releaseOrphanedResources(ctx context.Context, log logr.Logger, orphanedResources []resourcesv1alpha1.ObjectReference, origin string) error {
 	var (
 		results   = make(chan error)
 		wg        sync.WaitGroup
@@ -778,7 +790,7 @@ func (r *Reconciler) releaseOrphanedResources(ctx context.Context, log logr.Logg
 	return errorList.ErrorOrNil()
 }
 
-func (r *Reconciler) releaseOrphanedResource(ctx context.Context, log logr.Logger, ref resourcesv1alpha1.ObjectReference, origin string) error {
+func (r *reconciler) releaseOrphanedResource(ctx context.Context, log logr.Logger, ref resourcesv1alpha1.ObjectReference, origin string) error {
 	obj := &unstructured.Unstructured{}
 	obj.SetAPIVersion(ref.APIVersion)
 	obj.SetKind(ref.Kind)

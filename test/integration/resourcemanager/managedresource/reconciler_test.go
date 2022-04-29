@@ -15,10 +15,13 @@
 package reconciler_test
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -47,7 +50,6 @@ const (
 
 var _ = Describe("ManagedResource controller tests", func() {
 	var (
-		ctx                      = context.Background()
 		secretForManagedResource *corev1.Secret
 		managedResource          *resourcesv1alpha1.ManagedResource
 		configMap                *corev1.ConfigMap
@@ -305,6 +307,35 @@ var _ = Describe("ManagedResource controller tests", func() {
 					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
 					return condition != nil && condition.Status == gardencorev1beta1.ConditionFalse
 				}, time.Minute, time.Second).Should(BeTrue())
+			})
+		})
+
+		Context("delete managed resource", func() {
+			BeforeEach(func() {
+				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
+				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
+
+				patch := client.MergeFrom(managedResource.DeepCopy())
+				managedResource.SetFinalizers([]string{"test-finalizer"})
+				Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
+			})
+
+			JustAfterEach(func() {
+				patch := client.MergeFrom(managedResource.DeepCopy())
+				controllerutil.RemoveFinalizer(managedResource, "test-finalizer")
+				Expect(testClient.Patch(ctx, managedResource, patch))
+			})
+
+			It("should set ManagedResource to unhealthy", func() {
+				Expect(testClient.Delete(ctx, managedResource)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionFalse), withReason(resourcesv1alpha1.ConditionDeletionPending)),
+					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionDeletionPending)),
+				)
 			})
 		})
 	})
@@ -865,4 +896,26 @@ func compareResource(oldResource corev1.ResourceRequirements, newResource corev1
 		return false
 	}
 	return true
+}
+
+func containCondition(matchers ...gomegatypes.GomegaMatcher) gomegatypes.GomegaMatcher {
+	return ContainElement(And(matchers...))
+}
+
+func ofType(conditionType gardencorev1beta1.ConditionType) gomegatypes.GomegaMatcher {
+	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
+		"Type": Equal(conditionType),
+	})
+}
+
+func withStatus(status gardencorev1beta1.ConditionStatus) gomegatypes.GomegaMatcher {
+	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
+		"Status": Equal(status),
+	})
+}
+
+func withReason(reason string) gomegatypes.GomegaMatcher {
+	return gstruct.MatchFields(gstruct.IgnoreExtras, gstruct.Fields{
+		"Reason": Equal(reason),
+	})
 }

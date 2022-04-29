@@ -67,7 +67,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			log.Info("Stopping health checks for ManagedResource, as it has been deleted")
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf("could not fetch ManagedResource: %+v", err)
+		return ctrl.Result{}, fmt.Errorf("could not fetch ManagedResource: %w", err)
 	}
 
 	// Check responsibility
@@ -77,7 +77,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	if !mr.DeletionTimestamp.IsZero() {
-		return r.updateStatusForDeletion(ctx, log, mr)
+		log.Info("Stopping health checks for ManagedResource, as it is marked for deletion")
+		return ctrl.Result{}, nil
 	}
 
 	// skip health checks until ManagedResource has been reconciled completely successfully to prevent writing
@@ -89,17 +90,6 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	return r.executeHealthChecks(ctx, log, mr)
-}
-
-func (r *reconciler) updateStatusForDeletion(ctx context.Context, log logr.Logger, mr *resourcesv1alpha1.ManagedResource) (ctrl.Result, error) {
-	conditionResourcesHealthy := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
-	conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ConditionDeletionPending, "The resources are currently being deleted.")
-	if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
-		return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
-	}
-
-	log.Info("Stopping health checks for ManagedResource, as it has been deleted (deletionTimestamp is set)")
-	return ctrl.Result{}, nil
 }
 
 func (r *reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, mr *resourcesv1alpha1.ManagedResource) (ctrl.Result, error) {

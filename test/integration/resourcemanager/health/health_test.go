@@ -129,31 +129,6 @@ var _ = Describe("Health controller tests", func() {
 		})
 	})
 
-	Context("ManagedResource in deletion", func() {
-		JustBeforeEach(func() {
-			By("marking ManagedResource for deletion")
-			patch := client.MergeFrom(managedResource.DeepCopy())
-			managedResource.SetFinalizers([]string{testFinalizer})
-			Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
-			Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
-
-			DeferCleanup(func() {
-				patch = client.MergeFrom(managedResource.DeepCopy())
-				managedResource.SetFinalizers(nil)
-				Expect(testClient.Patch(ctx, managedResource, patch))
-			})
-		})
-
-		It("sets ManagedResource to unhealthy", func() {
-			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				return managedResource.Status.Conditions
-			}).Should(
-				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionFalse), withReason(resourcesv1alpha1.ConditionDeletionPending)),
-			)
-		})
-	})
-
 	Context("resources not applied yet", func() {
 		It("does not touch ManagedResource if it has not been applied yet", func() {
 			Consistently(func(g Gomega) []gardencorev1beta1.Condition {
