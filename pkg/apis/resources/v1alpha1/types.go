@@ -105,6 +105,7 @@ const (
 // +kubebuilder:printcolumn:name="Class",type=string,JSONPath=`.spec.class`,description="The class identifies which resource manager is responsible for this ManagedResource."
 // +kubebuilder:printcolumn:name="Applied",type=string,JSONPath=`.status.conditions[?(@.type=="ResourcesApplied")].status`,description=" Indicates whether all resources have been applied."
 // +kubebuilder:printcolumn:name="Healthy",type=string,JSONPath=`.status.conditions[?(@.type=="ResourcesHealthy")].status`,description="Indicates whether all resources are healthy."
+// +kubebuilder:printcolumn:name="Progressing",type=string,JSONPath=`.status.conditions[?(@.type=="ResourcesProgressing")].status`,description="Indicates whether some resources are still progressing to be rolled out."
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="creation timestamp"
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -184,6 +185,8 @@ const (
 	ResourcesApplied gardencorev1beta1.ConditionType = "ResourcesApplied"
 	// ResourcesHealthy is a condition type that indicates whether all resources are present and healthy.
 	ResourcesHealthy gardencorev1beta1.ConditionType = "ResourcesHealthy"
+	// ResourcesProgressing is a condition type that indicates whether some resources are still progressing to be rolled out.
+	ResourcesProgressing gardencorev1beta1.ConditionType = "ResourcesProgressing"
 )
 
 // These are well-known reasons for Conditions.
