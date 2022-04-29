@@ -212,10 +212,9 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 		return fmt.Errorf("failed to cleanup machine dependencies: %w", err)
 	}
 
-	// Cleanup RollingUpdate condition.
-	//TODO(ary1992) Remove this in future release.
+	// TODO(ary1992): Remove this in a future release.
 	if err := a.cleanupRollingUpdateCondition(ctx, worker); err != nil {
-		return fmt.Errorf("failed to cleanup RollingUpdate condition: %w", err)
+		return fmt.Errorf("failed to cleanup the RollingUpdate condition: %w", err)
 	}
 
 	return nil
@@ -543,13 +542,15 @@ func ReadMachineConfiguration(pool extensionsv1alpha1.WorkerPool) *machinev1alph
 	return machineConfiguration
 }
 
-// Cleanup RollingUpdate condition
-// TODO(ary1992) Remove this in future release
+// cleanupRollingUpdateCondition removes the RollingUpdate condition from the Worker status.
+// TODO(ary1992): Remove this in a future release.
 func (a *genericActuator) cleanupRollingUpdateCondition(ctx context.Context, worker *extensionsv1alpha1.Worker) error {
 	if c := gardencorev1beta1helper.GetCondition(worker.Status.Conditions, "RollingUpdate"); c != nil {
-		condition := gardencorev1beta1helper.RemoveConditions(worker.Status.Conditions, "RollingUpdate")
-		worker.Status.Conditions = condition
-		return a.client.Status().Update(ctx, worker)
+		conditions := gardencorev1beta1helper.RemoveConditions(worker.Status.Conditions, "RollingUpdate")
+
+		patch := client.MergeFromWithOptions(worker.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		worker.Status.Conditions = conditions
+		return a.client.Status().Patch(ctx, worker, patch)
 	}
 	return nil
 }
