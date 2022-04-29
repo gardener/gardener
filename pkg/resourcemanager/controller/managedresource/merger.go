@@ -36,8 +36,6 @@ const (
 	descriptionAnnotation     = "resources.gardener.cloud/description"
 	descriptionAnnotationText = `DO NOT EDIT - This resource is managed by gardener-resource-manager.
 Any modifications are discarded and the resource is returned to the original state.`
-
-	originAnnotation = "resources.gardener.cloud/origin"
 )
 
 // merge merges the values of the `desired` object into the `current` object while preserving `current`'s important
@@ -89,7 +87,7 @@ func merge(origin string, desired, current *unstructured.Unstructured, forceOver
 	}
 
 	ann[descriptionAnnotation] = descriptionAnnotationText
-	ann[originAnnotation] = origin
+	ann[resourcesv1alpha1.OriginAnnotation] = origin
 	newObject.SetAnnotations(ann)
 
 	// keep status of old object if it is set and not empty

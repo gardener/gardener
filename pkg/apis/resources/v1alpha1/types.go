@@ -46,6 +46,10 @@ const (
 	// true then the controller will keep the resource requests and limits in Pod templates (e.g. in a
 	// DeploymentSpec) during updates to the resource. This applies for all containers.
 	PreserveResources = "resources.gardener.cloud/preserve-resources"
+	// OriginAnnotation is a constant for an annotation on a resource managed by a ManagedResource.
+	// It is set by the ManagedResource controller to the key of the owning ManagedResource, optionally prefixed with the
+	// clusterID.
+	OriginAnnotation = "resources.gardener.cloud/origin"
 
 	// StaticTokenSkip is a constant for a label on a ServiceAccount which indicates that this ServiceAccount should not
 	// be considered by this controller.

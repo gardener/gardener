@@ -29,6 +29,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	resourceshelper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
@@ -135,7 +136,7 @@ func (r *Reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 
 		equivalences           = NewEquivalences(mr.Spec.Equivalences...)
 		existingResourcesIndex = NewObjectIndex(mr.Status.Resources, equivalences)
-		origin                 = r.origin(mr)
+		origin                 = resourceshelper.OriginForManagedResource(r.clusterID, mr)
 
 		forceOverwriteLabels      bool
 		forceOverwriteAnnotations bool
@@ -498,13 +499,6 @@ func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, ori
 	return errorList.ErrorOrNil()
 }
 
-func (r *Reconciler) origin(mr *resourcesv1alpha1.ManagedResource) string {
-	if r.clusterID != "" {
-		return r.clusterID + ":" + mr.Namespace + "/" + mr.Name
-	}
-	return mr.Namespace + "/" + mr.Name
-}
-
 // computeAllScaledObjectKeys returns two sets containing object keys (in the form `Group/Kind/Namespace/Name`).
 // The first one contains keys to objects that are horizontally scaled by either an HPA or HVPA. And the
 // second one contains keys to objects that are vertically scaled by an HVPA.
@@ -801,7 +795,7 @@ func (r *Reconciler) releaseOrphanedResource(ctx context.Context, log logr.Logge
 	}
 
 	// Skip the release of resource when the origin annotation has already changed
-	objOrigin := obj.GetAnnotations()[originAnnotation]
+	objOrigin := obj.GetAnnotations()[resourcesv1alpha1.OriginAnnotation]
 	if objOrigin != origin {
 		log.Info("Skipping release for orphan resource as origin annotation has already changed", "resource", resource)
 		return nil
@@ -809,7 +803,7 @@ func (r *Reconciler) releaseOrphanedResource(ctx context.Context, log logr.Logge
 
 	oldObj := obj.DeepCopy()
 	annotations := obj.GetAnnotations()
-	delete(annotations, originAnnotation)
+	delete(annotations, resourcesv1alpha1.OriginAnnotation)
 	delete(annotations, descriptionAnnotation)
 	obj.SetAnnotations(annotations)
 
