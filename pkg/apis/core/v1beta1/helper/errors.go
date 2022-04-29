@@ -68,34 +68,30 @@ var (
 	retryableConfigurationProblemRegexp = regexp.MustCompile(`(?i)(is misconfigured and requires zero voluntary evictions|SDK.CanNotResolveEndpoint|The requested configuration is currently not supported)`)
 )
 
-// DetermineError determines the Gardener error codes for the given error and returns an ErrorWithCodes with the error and codes.
-func DetermineError(err error) error {
+// DeprecatedDetermineError determines the Gardener error codes for the given error and returns an ErrorWithCodes with the error and codes.
+// This function is deprecated and will be removed in a future version.
+func DeprecatedDetermineError(err error) error {
 	if err == nil {
 		return nil
 	}
 
-	codes := DetermineErrorCodes(err)
-	if len(codes) == 0 {
+	// try to re-use codes from error
+	var coder Coder
+	if errors.As(err, &coder) {
 		return err
 	}
 
-	// if error itself is ErrorWithCodes
-	if errorWithCodes, ok := err.(*ErrorWithCodes); ok {
-		err = errorWithCodes.Unwrap()
-		return &ErrorWithCodes{err, codes}
-	}
-
-	// if error contains ErrorWithCodes wrapped inside it
-	unwrappedError := errors.Unwrap(err)
-	if errorWithCodes, ok := unwrappedError.(*ErrorWithCodes); ok {
-		err = errorWithCodes.Unwrap()
+	codes := DeprecatedDetermineErrorCodes(err)
+	if len(codes) == 0 {
+		return err
 	}
 
 	return &ErrorWithCodes{err, codes}
 }
 
-// DetermineErrorCodes determines error codes based on the given error.
-func DetermineErrorCodes(err error) []gardencorev1beta1.ErrorCode {
+// DeprecatedDetermineErrorCodes determines error codes based on the given error.
+// This function is deprecated and will be removed in a future version.
+func DeprecatedDetermineErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 	var (
 		coder   Coder
 		message = err.Error()
@@ -235,7 +231,7 @@ func NewWrappedLastErrors(description string, err error) *WrappedLastErrors {
 		lastErrors = append(lastErrors, *LastErrorWithTaskID(
 			partError.Error(),
 			utilerrors.GetID(partError),
-			DetermineErrorCodes(utilerrors.Unwrap(partError))...))
+			DeprecatedDetermineErrorCodes(utilerrors.Unwrap(partError))...))
 	}
 
 	return &WrappedLastErrors{

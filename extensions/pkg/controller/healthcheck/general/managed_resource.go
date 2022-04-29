@@ -82,7 +82,7 @@ func (healthChecker *ManagedResourceHealthChecker) Check(ctx context.Context, re
 		return &healthcheck.SingleCheckResult{
 			Status: gardencorev1beta1.ConditionFalse,
 			Detail: err.Error(),
-			Codes:  gardencorev1beta1helper.DetermineErrorCodes(err),
+			Codes:  gardencorev1beta1helper.DeprecatedDetermineErrorCodes(err),
 		}, nil
 	}
 

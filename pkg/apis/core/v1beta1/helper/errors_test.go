@@ -37,12 +37,12 @@ var _ = Describe("errors", func() {
 
 	Describe("#DetermineError", func() {
 		It("should return nil for empty error", func() {
-			Expect(DetermineError(nil)).To(BeNil())
+			Expect(DeprecatedDetermineError(nil)).To(BeNil())
 		})
 	})
 	DescribeTable("#DetermineError",
 		func(err error, expectedErr error) {
-			Expect(DetermineError(err)).To(Equal(expectedErr))
+			Expect(DeprecatedDetermineError(err)).To(Equal(expectedErr))
 		},
 
 		Entry("no wrapped error",
