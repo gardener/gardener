@@ -35,20 +35,26 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentName string, defaultReplicas int32) (int32, error) {
+func (b *Botanist) determineControllerReplicas(ctx context.Context, deploymentName string, defaultReplicas int32, controlledByDependencyWatchdog bool) (int32, error) {
 	isCreateOrRestoreOperation := b.Shoot.GetInfo().Status.LastOperation != nil &&
 		(b.Shoot.GetInfo().Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate ||
 			b.Shoot.GetInfo().Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore)
 
 	if (isCreateOrRestoreOperation && b.Shoot.HibernationEnabled) ||
-		(!isCreateOrRestoreOperation && b.Shoot.HibernationEnabled == b.Shoot.GetInfo().Status.IsHibernated) {
+		(!isCreateOrRestoreOperation && b.Shoot.HibernationEnabled && b.Shoot.GetInfo().Status.IsHibernated) {
 		// Shoot is being created or restored with .spec.hibernation.enabled=true or
-		// shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated,
+		// Shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated=true,
+		// so keep the replicas which are already available.
+		return kutil.CurrentReplicaCountForDeployment(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, deploymentName)
+	}
+	if controlledByDependencyWatchdog && !isCreateOrRestoreOperation && !b.Shoot.HibernationEnabled && !b.Shoot.GetInfo().Status.IsHibernated {
+		// The replicas of the component are controlled by dependency-watchdog and
+		// Shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated=false,
 		// so keep the replicas which are already available.
 		return kutil.CurrentReplicaCountForDeployment(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, deploymentName)
 	}
 
-	// If Kube-Apiserver is set to 0 replicas then we also want to return 0 here
+	// If kube-apiserver is set to 0 replicas then we also want to return 0 here
 	// since the controller is most likely not able to run w/o communicating to the Apiserver.
 	if pointer.Int32Deref(b.Shoot.Components.ControlPlane.KubeAPIServer.GetAutoscalingReplicas(), 0) == 0 {
 		return 0, nil

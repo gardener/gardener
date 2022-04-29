@@ -182,7 +182,7 @@ var _ = Describe("ResourceManager", func() {
 
 					gomock.InOrder(
 						resourceManager.EXPECT().GetReplicas(),
-						c.EXPECT().Get(ctx, kutil.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(0)),
 						resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
 					)
 				})
@@ -238,8 +238,8 @@ var _ = Describe("ResourceManager", func() {
 				BeforeEach(func() {
 					gomock.InOrder(
 						resourceManager.EXPECT().GetReplicas(),
-						c.EXPECT().Get(ctx, kutil.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-						resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
+						kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(1)),
+						resourceManager.EXPECT().SetReplicas(pointer.Int32(3)),
 						resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(3)),
 
 						// ensure bootstrapping prerequisites are not met
@@ -359,8 +359,8 @@ var _ = Describe("ResourceManager", func() {
 
 						gomock.InOrder(
 							resourceManager.EXPECT().GetReplicas(),
-							c.EXPECT().Get(ctx, kutil.Key(seedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-							resourceManager.EXPECT().SetReplicas(pointer.Int32(0)),
+							kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(1)),
+							resourceManager.EXPECT().SetReplicas(pointer.Int32(3)),
 							resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(3)),
 						)
 					})
@@ -370,13 +370,12 @@ var _ = Describe("ResourceManager", func() {
 
 				Context("shoot is in the process of being woken-up", func() {
 					BeforeEach(func() {
-						kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(1)).AnyTimes()
-
 						botanist.Shoot.HibernationEnabled = false
 						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{IsHibernated: true}})
 
 						gomock.InOrder(
 							resourceManager.EXPECT().GetReplicas(),
+							kubeAPIServer.EXPECT().GetAutoscalingReplicas().Return(pointer.Int32(1)),
 							resourceManager.EXPECT().SetReplicas(pointer.Int32(3)),
 							resourceManager.EXPECT().GetReplicas().Return(pointer.Int32(3)),
 						)
