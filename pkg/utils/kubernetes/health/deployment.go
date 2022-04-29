@@ -85,3 +85,26 @@ func CheckDeployment(deployment *appsv1.Deployment) error {
 
 	return nil
 }
+
+// IsDeploymentProgressing returns false if the Deployment has been fully rolled out. Otherwise, it returns true along
+// with a reason, why the Deployment is not considered to be fully rolled out.
+func IsDeploymentProgressing(deployment *appsv1.Deployment) (bool, string) {
+	if deployment.Status.ObservedGeneration < deployment.Generation {
+		return true, fmt.Sprintf("observed generation outdated (%d/%d)", deployment.Status.ObservedGeneration, deployment.Generation)
+	}
+
+	// if the observed generation is up-to-date, we can rely on the progressing condition to reflect the current status
+	condition := getDeploymentCondition(deployment.Status.Conditions, appsv1.DeploymentProgressing)
+	if condition == nil {
+		return true, fmt.Sprintf("condition %q is missing", appsv1.DeploymentProgressing)
+	}
+
+	if condition.Status != corev1.ConditionTrue || condition.Reason != "NewReplicaSetAvailable" {
+		// only if Progressing is in status True with reason NewReplicaSetAvailable, the Deployment has been fully rolled out
+		// note: old pods or excess pods (scale-down) might still be terminating, but there is no way to tell this from the
+		// Deployment's status
+		return true, condition.Message
+	}
+
+	return false, "Deployment is fully rolled out"
+}

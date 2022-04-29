@@ -39,3 +39,23 @@ func CheckStatefulSet(statefulSet *appsv1.StatefulSet) error {
 	}
 	return nil
 }
+
+// IsStatefulSetProgressing returns false if the StatefulSet has been fully rolled out. Otherwise, it returns true along
+// with a reason, why the StatefulSet is not considered to be fully rolled out.
+func IsStatefulSetProgressing(statefulSet *appsv1.StatefulSet) (bool, string) {
+	if statefulSet.Status.ObservedGeneration < statefulSet.Generation {
+		return true, fmt.Sprintf("observed generation outdated (%d/%d)", statefulSet.Status.ObservedGeneration, statefulSet.Generation)
+	}
+
+	desiredReplicas := int32(1)
+	if statefulSet.Spec.Replicas != nil {
+		desiredReplicas = *statefulSet.Spec.Replicas
+	}
+
+	updatedReplicas := statefulSet.Status.UpdatedReplicas
+	if updatedReplicas < desiredReplicas {
+		return true, fmt.Sprintf("%d of %d replica(s) have been updated", updatedReplicas, desiredReplicas)
+	}
+
+	return false, "StatefulSet is fully rolled out"
+}

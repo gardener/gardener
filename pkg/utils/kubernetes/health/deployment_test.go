@@ -15,71 +15,140 @@
 package health_test
 
 import (
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
 var _ = Describe("Deployment", func() {
-	Describe("CheckDeployment", func() {
-		DescribeTable("deployments",
-			func(deployment *appsv1.Deployment, matcher types.GomegaMatcher) {
-				err := health.CheckDeployment(deployment)
-				Expect(err).To(matcher)
-			},
-			Entry("healthy", &appsv1.Deployment{
-				Status: appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{
-					{
-						Type:   appsv1.DeploymentAvailable,
-						Status: corev1.ConditionTrue,
-					},
-				}},
-			}, BeNil()),
-			Entry("healthy with progressing", &appsv1.Deployment{
-				Status: appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{
-					{
-						Type:   appsv1.DeploymentAvailable,
-						Status: corev1.ConditionTrue,
-					},
-					{
-						Type:   appsv1.DeploymentProgressing,
-						Status: corev1.ConditionTrue,
-					},
-				}},
-			}, BeNil()),
-			Entry("not observed at latest version", &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{Generation: 1},
-			}, HaveOccurred()),
-			Entry("not available", &appsv1.Deployment{
-				Status: appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{
-					{
-						Type:   appsv1.DeploymentAvailable,
-						Status: corev1.ConditionFalse,
-					},
-					{
-						Type:   appsv1.DeploymentProgressing,
-						Status: corev1.ConditionTrue,
-					},
-				}},
-			}, HaveOccurred()),
-			Entry("not progressing", &appsv1.Deployment{
-				Status: appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{
-					{
-						Type:   appsv1.DeploymentAvailable,
-						Status: corev1.ConditionTrue,
-					},
-					{
-						Type:   appsv1.DeploymentProgressing,
-						Status: corev1.ConditionFalse,
-					},
-				}},
-			}, HaveOccurred()),
-			Entry("available | progressing missing", &appsv1.Deployment{}, HaveOccurred()),
+	DescribeTable("CheckDeployment",
+		func(deployment *appsv1.Deployment, matcher types.GomegaMatcher) {
+			err := health.CheckDeployment(deployment)
+			Expect(err).To(matcher)
+		},
+		Entry("healthy", &appsv1.Deployment{
+			Status: appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionTrue,
+				},
+			}},
+		}, BeNil()),
+		Entry("healthy with progressing", &appsv1.Deployment{
+			Status: appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionTrue,
+				},
+				{
+					Type:   appsv1.DeploymentProgressing,
+					Status: corev1.ConditionTrue,
+				},
+			}},
+		}, BeNil()),
+		Entry("not observed at latest version", &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{Generation: 1},
+		}, HaveOccurred()),
+		Entry("not available", &appsv1.Deployment{
+			Status: appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionFalse,
+				},
+				{
+					Type:   appsv1.DeploymentProgressing,
+					Status: corev1.ConditionTrue,
+				},
+			}},
+		}, HaveOccurred()),
+		Entry("not progressing", &appsv1.Deployment{
+			Status: appsv1.DeploymentStatus{Conditions: []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionTrue,
+				},
+				{
+					Type:   appsv1.DeploymentProgressing,
+					Status: corev1.ConditionFalse,
+				},
+			}},
+		}, HaveOccurred()),
+		Entry("available | progressing missing", &appsv1.Deployment{}, HaveOccurred()),
+	)
+
+	Describe("IsDeploymentProgressing", func() {
+		var (
+			deployment *appsv1.Deployment
 		)
+
+		BeforeEach(func() {
+			deployment = &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 42,
+				},
+				Status: appsv1.DeploymentStatus{
+					ObservedGeneration: 42,
+					Conditions: []appsv1.DeploymentCondition{{
+						Type:    appsv1.DeploymentProgressing,
+						Status:  corev1.ConditionTrue,
+						Reason:  "NewReplicaSetAvailable",
+						Message: `ReplicaSet "nginx-66b6c48dd5" has successfully progressed.`,
+					}},
+				},
+			}
+		})
+
+		It("should return false if it is fully rolled out", func() {
+			progressing, reason := health.IsDeploymentProgressing(deployment)
+			Expect(progressing).To(BeFalse())
+			Expect(reason).To(Equal("Deployment is fully rolled out"))
+		})
+
+		It("should return true if observedGeneration is outdated", func() {
+			deployment.Status.ObservedGeneration--
+
+			progressing, reason := health.IsDeploymentProgressing(deployment)
+			Expect(progressing).To(BeTrue())
+			Expect(reason).To(Equal("observed generation outdated (41/42)"))
+		})
+
+		It("should return true if Progressing condition is missing", func() {
+			deployment.Status.Conditions = []appsv1.DeploymentCondition{}
+
+			progressing, reason := health.IsDeploymentProgressing(deployment)
+			Expect(progressing).To(BeTrue())
+			Expect(reason).To(Equal(`condition "Progressing" is missing`))
+		})
+
+		It("should return true if Progressing condition is not True", func() {
+			deployment.Status.Conditions = []appsv1.DeploymentCondition{{
+				Type:    appsv1.DeploymentProgressing,
+				Status:  corev1.ConditionFalse,
+				Reason:  "ProgressDeadlineExceeded",
+				Message: `ReplicaSet "nginx-946d57896" has timed out progressing.`,
+			}}
+
+			progressing, reason := health.IsDeploymentProgressing(deployment)
+			Expect(progressing).To(BeTrue())
+			Expect(reason).To(Equal(deployment.Status.Conditions[0].Message))
+		})
+
+		It("should return true if Progressing condition does not have reason NewReplicaSetAvailable", func() {
+			deployment.Status.Conditions = []appsv1.DeploymentCondition{{
+				Type:    appsv1.DeploymentProgressing,
+				Status:  corev1.ConditionFalse,
+				Reason:  "ReplicaSetUpdated",
+				Message: `ReplicaSet "nginx-85cfdf946f" is progressing.`,
+			}}
+
+			progressing, reason := health.IsDeploymentProgressing(deployment)
+			Expect(progressing).To(BeTrue())
+			Expect(reason).To(Equal(deployment.Status.Conditions[0].Message))
+		})
 	})
 })

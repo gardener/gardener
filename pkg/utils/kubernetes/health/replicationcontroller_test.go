@@ -15,6 +15,8 @@
 package health_test
 
 import (
+	"k8s.io/utils/pointer"
+
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -24,24 +26,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("Replicationcontroller", func() {
-	Context("CheckReplicationController", func() {
-		DescribeTable("replicationcontroller",
-			func(rc *corev1.ReplicationController, matcher types.GomegaMatcher) {
-				err := health.CheckReplicationController(rc)
-				Expect(err).To(matcher)
-			},
-			Entry("not observed at latest version", &corev1.ReplicationController{
-				ObjectMeta: metav1.ObjectMeta{Generation: 1},
-			}, HaveOccurred()),
-			Entry("not enough ready replicas", &corev1.ReplicationController{
-				Spec:   corev1.ReplicationControllerSpec{Replicas: replicas(2)},
-				Status: corev1.ReplicationControllerStatus{ReadyReplicas: 1},
-			}, HaveOccurred()),
-			Entry("healthy", &corev1.ReplicationController{
-				Spec:   corev1.ReplicationControllerSpec{Replicas: replicas(2)},
-				Status: corev1.ReplicationControllerStatus{ReadyReplicas: 2},
-			}, BeNil()),
-		)
-	})
+var _ = Describe("ReplicationController", func() {
+	DescribeTable("CheckReplicationController",
+		func(rc *corev1.ReplicationController, matcher types.GomegaMatcher) {
+			err := health.CheckReplicationController(rc)
+			Expect(err).To(matcher)
+		},
+		Entry("not observed at latest version", &corev1.ReplicationController{
+			ObjectMeta: metav1.ObjectMeta{Generation: 1},
+		}, HaveOccurred()),
+		Entry("not enough ready replicas", &corev1.ReplicationController{
+			Spec:   corev1.ReplicationControllerSpec{Replicas: pointer.Int32(2)},
+			Status: corev1.ReplicationControllerStatus{ReadyReplicas: 1},
+		}, HaveOccurred()),
+		Entry("healthy", &corev1.ReplicationController{
+			Spec:   corev1.ReplicationControllerSpec{Replicas: pointer.Int32(2)},
+			Status: corev1.ReplicationControllerStatus{ReadyReplicas: 2},
+		}, BeNil()),
+	)
 })
