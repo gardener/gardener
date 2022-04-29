@@ -47,7 +47,7 @@ func init() {
 
 // CheckHealth checks whether the given object is healthy.
 // It returns a bool indicating whether the object was actually checked and an error if any health check failed.
-func CheckHealth(ctx context.Context, c client.Client, obj runtime.Object) (bool, error) {
+func CheckHealth(ctx context.Context, c client.Client, obj client.Object) (bool, error) {
 	// We must not rely on TypeMeta to be set in objects as decoder clears apiVersion and kind fields, see
 	// https://github.com/kubernetes/kubernetes/issues/80609 and https://github.com/gardener/gardener/issues/5357#issuecomment-1040150204.
 	// Instead of using GetObjectKind(), we use a scheme to figure out the GroupVersionKind which works for both typed

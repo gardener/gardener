@@ -44,7 +44,7 @@ var _ = Describe("CheckHealth", func() {
 		ctx context.Context
 		c   client.Client
 
-		healthy, unhealthy runtime.Object
+		healthy, unhealthy client.Object
 		gvk                schema.GroupVersionKind
 	)
 
