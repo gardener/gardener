@@ -267,7 +267,8 @@ func HasNonRetryableErrorCode(lastErrors ...gardencorev1beta1.LastError) bool {
 				code == gardencorev1beta1.ErrorInfraDependencies ||
 				code == gardencorev1beta1.ErrorInfraQuotaExceeded ||
 				code == gardencorev1beta1.ErrorInfraRateLimitsExceeded ||
-				code == gardencorev1beta1.ErrorConfigurationProblem {
+				code == gardencorev1beta1.ErrorConfigurationProblem ||
+				code == gardencorev1beta1.ErrorProblematicWebhook {
 				return true
 			}
 		}

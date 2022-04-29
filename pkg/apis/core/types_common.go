@@ -47,6 +47,10 @@ const (
 	ErrorConfigurationProblem ErrorCode = "ERR_CONFIGURATION_PROBLEM"
 	// ErrorRetryableConfigurationProblem indicates that the last error occurred due to a retryable configuration problem.
 	ErrorRetryableConfigurationProblem ErrorCode = "ERR_RETRYABLE_CONFIGURATION_PROBLEM"
+	// ErrorProblematicWebhook indicates that the last error occurred due to a webhook not following the Kubernetes
+	// best practices (https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#best-practices-and-warnings).
+	// It is classified as a non-retryable error code.
+	ErrorProblematicWebhook ErrorCode = "ERR_PROBLEMATIC_WEBHOOK"
 )
 
 // LastError indicates the last occurred error for an operation on a resource.

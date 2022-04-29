@@ -105,3 +105,4 @@ Known error codes are:
 - `ERR_CLEANUP_CLUSTER_RESOURCES` - indicates that the last error occurred due to resources in the cluster that are stuck in deletion.
 - `ERR_CONFIGURATION_PROBLEM` - indicates that the last error occurred due to a configuration problem. It is classified as a non-retryable error code.
 - `ERR_RETRYABLE_CONFIGURATION_PROBLEM` - indicates that the last error occurred due to a retryable configuration problem. "Retryable" means that the occurred error is likely to be resolved in a ungraceful manner after given period of time.
+- `ERR_PROBLEMATIC_WEBHOOK` - indicates that the last error occurred due to a webhook not following the Kubernetes best practices (https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#best-practices-and-warnings).
