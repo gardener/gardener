@@ -215,4 +215,7 @@ const (
 	// ConditionHealthChecksPending indicates that the `ResourcesHealthy` condition is `Unknown`,
 	// because the health checks have not been completely executed yet for the current set of resources.
 	ConditionHealthChecksPending = "HealthChecksPending"
+	// ConditionProgressingChecksPending indicates that the `ResourcesProgressing` condition is `Unknown`,
+	// because the checks have not been completely executed yet for the current set of resources.
+	ConditionProgressingChecksPending = "ChecksPending"
 )

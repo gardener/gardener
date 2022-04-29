@@ -274,6 +274,9 @@ func (r *Reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		conditionResourcesHealthy := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
 		conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionUnknown,
 			resourcesv1alpha1.ConditionHealthChecksPending, "The health checks have not yet been executed for the current set of resources.")
+		conditionResourcesProgressing := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesProgressing)
+		conditionResourcesProgressing = v1beta1helper.UpdatedCondition(conditionResourcesProgressing, gardencorev1beta1.ConditionUnknown,
+			resourcesv1alpha1.ConditionProgressingChecksPending, "Checks have not yet been executed for the current set of resources.")
 
 		reason := resourcesv1alpha1.ConditionApplyProgressing
 		msg := "The resources are currently being reconciled."
@@ -285,7 +288,7 @@ func (r *Reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		}
 		conditionResourcesApplied = v1beta1helper.UpdatedCondition(conditionResourcesApplied, gardencorev1beta1.ConditionProgressing, reason, msg)
 
-		if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy, conditionResourcesApplied); err != nil {
+		if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy, conditionResourcesProgressing, conditionResourcesApplied); err != nil {
 			return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 		}
 	}
