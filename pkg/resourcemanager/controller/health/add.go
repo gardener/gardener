@@ -36,7 +36,7 @@ import (
 )
 
 // ControllerName is the name of the health controller.
-const ControllerName = "health-controller"
+const ControllerName = "health"
 
 // defaultControllerConfig is the default config for the controller.
 var defaultControllerConfig ControllerConfig

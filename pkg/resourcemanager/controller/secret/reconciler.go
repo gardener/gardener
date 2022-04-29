@@ -19,11 +19,12 @@ import (
 	"fmt"
 	"time"
 
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,7 +34,6 @@ import (
 
 // Reconciler adds/removes finalizers to/from secrets referenced by ManagedResources.
 type Reconciler struct {
-	log    logr.Logger
 	client client.Client
 
 	ClassFilter *predicate.ClassFilter
@@ -45,18 +45,12 @@ func (r *Reconciler) InjectClient(client client.Client) error {
 	return nil
 }
 
-// InjectLogger injects a logger into the reconciler.
-func (r *Reconciler) InjectLogger(l logr.Logger) error {
-	r.log = l.WithName(ControllerName)
-	return nil
-}
-
 // Reconcile implements reconcile.Reconciler.
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
-
-	log := r.log.WithValues("secret", req)
 
 	secret := &corev1.Secret{}
 	if err := r.client.Get(ctx, req.NamespacedName, secret); err != nil {

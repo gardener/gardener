@@ -31,7 +31,7 @@ import (
 )
 
 // ControllerName is the name of the controller.
-const ControllerName = "garbage_collector"
+const ControllerName = "garbage-collector"
 
 // defaultControllerConfig is the default config for the controller.
 var defaultControllerConfig ControllerConfig

@@ -42,7 +42,7 @@ import (
 )
 
 // ControllerName is the name of the managedresource controller.
-const ControllerName = "resource-controller"
+const ControllerName = "resource"
 
 // defaultControllerConfig is the default config for the controller.
 var defaultControllerConfig ControllerConfig

@@ -51,12 +51,6 @@ func (r *reconciler) InjectClient(c client.Client) error {
 	return nil
 }
 
-// InjectLogger injects a logger into the reconciler.
-func (r *reconciler) InjectLogger(l logr.Logger) error {
-	r.log = l.WithName(ControllerName)
-	return nil
-}
-
 // Reconcile performs health checks.
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)

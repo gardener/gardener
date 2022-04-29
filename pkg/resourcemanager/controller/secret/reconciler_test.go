@@ -18,13 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	secretcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
-	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
-	"github.com/gardener/gardener/pkg/utils/test"
-	"github.com/go-logr/logr"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -37,6 +30,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	secretcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
+	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("SecretReconciler", func() {
@@ -60,7 +59,6 @@ var _ = Describe("SecretReconciler", func() {
 		r = &secretcontroller.Reconciler{ClassFilter: classFilter}
 
 		Expect(inject.ClientInto(c, r)).To(BeTrue())
-		Expect(inject.LoggerInto(logr.Discard(), r)).To(BeTrue())
 
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{

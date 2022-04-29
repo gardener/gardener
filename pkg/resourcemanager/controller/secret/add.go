@@ -31,7 +31,7 @@ import (
 )
 
 // ControllerName is the name of the secret controller.
-const ControllerName = "secret-controller"
+const ControllerName = "secret"
 
 // defaultControllerConfig is the default config for the controller.
 var defaultControllerConfig ControllerConfig

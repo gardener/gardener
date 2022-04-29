@@ -18,6 +18,8 @@ import (
 	"context"
 	"time"
 
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	errorutils "github.com/gardener/gardener/pkg/utils/errors"
 
@@ -44,17 +46,14 @@ type reconciler struct {
 	minimumObjectLifetime time.Duration
 }
 
-func (r *reconciler) InjectLogger(l logr.Logger) error {
-	r.log = l.WithName(ControllerName)
-	return nil
-}
-
 func (r *reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(reconcileCtx)
+
 	ctx, cancel := context.WithTimeout(reconcileCtx, time.Minute)
 	defer cancel()
 
-	r.log.Info("Starting garbage collection")
-	defer r.log.Info("Garbage collection finished")
+	log.Info("Starting garbage collection")
+	defer log.Info("Garbage collection finished")
 
 	var (
 		labels                  = client.MatchingLabels{references.LabelKeyGarbageCollectable: references.LabelValueGarbageCollectable}
@@ -135,7 +134,7 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 				return
 			}
 
-			r.log.Info("Delete resource",
+			log.Info("Delete resource",
 				"kind", objId.kind,
 				"namespace", objId.namespace,
 				"name", objId.name,

@@ -66,8 +66,6 @@ var (
 
 // Reconciler contains information in order to reconcile instances of ManagedResource.
 type Reconciler struct {
-	log logr.Logger
-
 	client           client.Client
 	targetClient     client.Client
 	targetRESTMapper meta.RESTMapper
@@ -84,12 +82,6 @@ type Reconciler struct {
 // InjectClient injects a client into the reconciler.
 func (r *Reconciler) InjectClient(c client.Client) error {
 	r.client = c
-	return nil
-}
-
-// InjectLogger injects a logger into the reconciler.
-func (r *Reconciler) InjectLogger(l logr.Logger) error {
-	r.log = l.WithName(ControllerName)
 	return nil
 }
 
@@ -297,7 +289,7 @@ func (r *Reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		}
 	}
 
-	if deletionPending, err := r.cleanOldResources(reconcileCtx, existingResourcesIndex, mr); err != nil {
+	if deletionPending, err := r.cleanOldResources(reconcileCtx, log, existingResourcesIndex, mr); err != nil {
 		var (
 			reason string
 			status gardencorev1beta1.ConditionStatus
@@ -324,7 +316,7 @@ func (r *Reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		}
 	}
 
-	if err := r.releaseOrphanedResources(ctx, orphanedObjectReferences, origin); err != nil {
+	if err := r.releaseOrphanedResources(ctx, log, orphanedObjectReferences, origin); err != nil {
 		conditionResourcesApplied = v1beta1helper.UpdatedCondition(conditionResourcesApplied, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ReleaseOfOrphanedResourcesFailed, err.Error())
 		if err := updateConditions(ctx, r.client, mr, conditionResourcesApplied); err != nil {
 			return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
@@ -333,7 +325,7 @@ func (r *Reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		return ctrl.Result{}, fmt.Errorf("could not release all orphaned resources: %+v", err)
 	}
 
-	if err := r.applyNewResources(reconcileCtx, origin, newResourcesObjects, mr.Spec.InjectLabels, equivalences); err != nil {
+	if err := r.applyNewResources(reconcileCtx, log, origin, newResourcesObjects, mr.Spec.InjectLabels, equivalences); err != nil {
 		conditionResourcesApplied = v1beta1helper.UpdatedCondition(conditionResourcesApplied, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ConditionApplyFailed, err.Error())
 		if err := updateConditions(ctx, r.client, mr, conditionResourcesApplied); err != nil {
 			return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
@@ -378,7 +370,7 @@ func (r *Reconciler) delete(ctx context.Context, mr *resourcesv1alpha1.ManagedRe
 			return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 		}
 
-		if deletionPending, err := r.cleanOldResources(deleteCtx, existingResourcesIndex, mr); err != nil {
+		if deletionPending, err := r.cleanOldResources(deleteCtx, log, existingResourcesIndex, mr); err != nil {
 			var (
 				reason string
 				status gardencorev1beta1.ConditionStatus
@@ -418,7 +410,7 @@ func (r *Reconciler) delete(ctx context.Context, mr *resourcesv1alpha1.ManagedRe
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) applyNewResources(ctx context.Context, origin string, newResourcesObjects []object, labelsToInject map[string]string, equivalences Equivalences) error {
+func (r *Reconciler) applyNewResources(ctx context.Context, log logr.Logger, origin string, newResourcesObjects []object, labelsToInject map[string]string, equivalences Equivalences) error {
 	var (
 		results   = make(chan error)
 		wg        sync.WaitGroup
@@ -448,7 +440,7 @@ func (r *Reconciler) applyNewResources(ctx context.Context, origin string, newRe
 				scaledVertically   = isScaled(obj.obj, verticallyScaledObjects, equivalences)
 			)
 
-			r.log.Info("Applying", "resource", resource)
+			log.Info("Applying", "resource", resource)
 
 			results <- retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 				if operationResult, err := controllerutils.TypedCreateOrUpdate(ctx, r.targetClient, r.targetScheme, current, r.alwaysUpdate, func() error {
@@ -472,7 +464,7 @@ func (r *Reconciler) applyNewResources(ctx context.Context, origin string, newRe
 					return merge(origin, obj.obj, current, obj.forceOverwriteLabels, obj.oldInformation.Labels, obj.forceOverwriteAnnotations, obj.oldInformation.Annotations, scaledHorizontally, scaledVertically)
 				}); err != nil {
 					if apierrors.IsConflict(err) {
-						r.log.Info("Conflict while applying object", "object", resource, "err", err)
+						log.Info("Conflict while applying object", "object", resource, "err", err)
 						// return conflict error directly, so that the update will be retried
 						return err
 					}
@@ -631,7 +623,7 @@ func keyExistsAndValueTrue(kv map[string]string, key string) bool {
 	return exists && valueTrue
 }
 
-func (r *Reconciler) cleanOldResources(ctx context.Context, index *objectIndex, mr *resourcesv1alpha1.ManagedResource) (bool, error) {
+func (r *Reconciler) cleanOldResources(ctx context.Context, log logr.Logger, index *objectIndex, mr *resourcesv1alpha1.ManagedResource) (bool, error) {
 	type output struct {
 		obj             *unstructured.Unstructured
 		deletionPending bool
@@ -661,12 +653,12 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, index *objectIndex, 
 				obj.SetName(ref.Name)
 
 				resource := unstructuredToString(obj)
-				r.log.Info("Deleting", "resource", resource)
+				log.Info("Deleting", "resource", resource)
 
 				// get object before deleting to be able to do cleanup work for it
 				if err := r.targetClient.Get(ctx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, obj); err != nil {
 					if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
-						r.log.Error(err, "Error during deletion", "resource", resource)
+						log.Error(err, "Error during deletion", "resource", resource)
 						results <- &output{obj, true, err}
 						return
 					}
@@ -677,19 +669,19 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, index *objectIndex, 
 				}
 
 				if keepObject(obj) {
-					r.log.Info("Keeping object in the system as "+resourcesv1alpha1.KeepObject+" annotation found", "resource", unstructuredToString(obj))
+					log.Info("Keeping object in the system as "+resourcesv1alpha1.KeepObject+" annotation found", "resource", unstructuredToString(obj))
 					results <- &output{obj, false, nil}
 					return
 				}
 
 				if r.garbageCollectorActivated && isGarbageCollectableResource(obj) {
-					r.log.Info("Keeping object in the system as it is marked as 'garbage-collectable'", "resource", unstructuredToString(obj))
+					log.Info("Keeping object in the system as it is marked as 'garbage-collectable'", "resource", unstructuredToString(obj))
 					results <- &output{obj, false, nil}
 					return
 				}
 
 				if err := cleanup(ctx, r.targetClient, r.targetScheme, obj, deletePVCs); err != nil {
-					r.log.Error(err, "Error during cleanup", "resource", resource)
+					log.Error(err, "Error during cleanup", "resource", resource)
 					results <- &output{obj, true, err}
 					return
 				}
@@ -708,7 +700,7 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, index *objectIndex, 
 
 				if err := r.targetClient.Delete(ctx, obj, deleteOptions); err != nil {
 					if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
-						r.log.Error(err, "Error during deletion", "resource", resource)
+						log.Error(err, "Error during deletion", "resource", resource)
 						results <- &output{obj, true, err}
 						return
 					}
@@ -737,7 +729,7 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, index *objectIndex, 
 			// consult service events for more details
 			eventsMsg, err := eventsForObject(ctx, r.targetScheme, r.targetClient, out.obj)
 			if err != nil {
-				r.log.Error(err, "Error reading events for more information", "resource", resource)
+				log.Error(err, "Error reading events for more information", "resource", resource)
 			} else if eventsMsg != "" {
 				errMsg = fmt.Sprintf("%s\n\n%s", errMsg, eventsMsg)
 			}
@@ -754,7 +746,7 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, index *objectIndex, 
 	return deletionPending, errorList.ErrorOrNil()
 }
 
-func (r *Reconciler) releaseOrphanedResources(ctx context.Context, orphanedResources []resourcesv1alpha1.ObjectReference, origin string) error {
+func (r *Reconciler) releaseOrphanedResources(ctx context.Context, log logr.Logger, orphanedResources []resourcesv1alpha1.ObjectReference, origin string) error {
 	var (
 		results   = make(chan error)
 		wg        sync.WaitGroup
@@ -769,7 +761,7 @@ func (r *Reconciler) releaseOrphanedResources(ctx context.Context, orphanedResou
 		go func(ref resourcesv1alpha1.ObjectReference) {
 			defer wg.Done()
 
-			err := r.releaseOrphanedResource(ctx, ref, origin)
+			err := r.releaseOrphanedResource(ctx, log, ref, origin)
 			results <- err
 
 		}(orphanedResource)
@@ -789,7 +781,7 @@ func (r *Reconciler) releaseOrphanedResources(ctx context.Context, orphanedResou
 	return errorList.ErrorOrNil()
 }
 
-func (r *Reconciler) releaseOrphanedResource(ctx context.Context, ref resourcesv1alpha1.ObjectReference, origin string) error {
+func (r *Reconciler) releaseOrphanedResource(ctx context.Context, log logr.Logger, ref resourcesv1alpha1.ObjectReference, origin string) error {
 	obj := &unstructured.Unstructured{}
 	obj.SetAPIVersion(ref.APIVersion)
 	obj.SetKind(ref.Kind)
@@ -798,7 +790,7 @@ func (r *Reconciler) releaseOrphanedResource(ctx context.Context, ref resourcesv
 
 	resource := unstructuredToString(obj)
 
-	r.log.Info("Releasing orphan resource", "resource", resource)
+	log.Info("Releasing orphan resource", "resource", resource)
 
 	if err := r.targetClient.Get(ctx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, obj); err != nil {
 		if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
@@ -811,7 +803,7 @@ func (r *Reconciler) releaseOrphanedResource(ctx context.Context, ref resourcesv
 	// Skip the release of resource when the origin annotation has already changed
 	objOrigin := obj.GetAnnotations()[originAnnotation]
 	if objOrigin != origin {
-		r.log.Info("Skipping release for orphan resource as origin annotation has already changed", "resource", resource)
+		log.Info("Skipping release for orphan resource as origin annotation has already changed", "resource", resource)
 		return nil
 	}
 
