@@ -175,7 +175,7 @@ func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencor
 				return gardencorev1beta1.ConditionFalse,
 					"ProblematicWebhooks",
 					msg,
-					[]gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorUserWebhook},
+					[]gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorProblematicWebhook},
 					nil
 			}
 		}
@@ -193,7 +193,7 @@ func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencor
 				return gardencorev1beta1.ConditionFalse,
 					"ProblematicWebhooks",
 					msg,
-					[]gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorUserWebhook},
+					[]gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorProblematicWebhook},
 					nil
 			}
 		}
