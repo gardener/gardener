@@ -22,13 +22,12 @@ import (
 	"go.uber.org/zap/zapcore"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	. "github.com/gardener/gardener/extensions/pkg/controller/common"
-	mockcommon "github.com/gardener/gardener/extensions/pkg/controller/common/mock"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/util/clock"
+
+	. "github.com/gardener/gardener/extensions/pkg/controller/common"
 )
 
 const (
@@ -40,7 +39,7 @@ const (
 var _ = Describe("CheckerWatchdog", func() {
 	var (
 		ctrl      *gomock.Controller
-		checker   *mockcommon.MockChecker
+		checker   *fakeChecker
 		fakeClock *clock.FakeClock
 		ctx       context.Context
 		watchdog  Watchdog
@@ -48,7 +47,7 @@ var _ = Describe("CheckerWatchdog", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		checker = mockcommon.NewMockChecker(ctrl)
+		checker = &fakeChecker{called: make(chan struct{}, 2)} // we expect 2 calls in every test case
 		fakeClock = clock.NewFakeClock(time.Now())
 		ctx = context.TODO()
 		watchdog = NewCheckerWatchdog(checker, interval, timeout, fakeClock, logzap.New(logzap.Level(zapcore.DebugLevel*2), logzap.WriteTo(GinkgoWriter)))
@@ -60,7 +59,7 @@ var _ = Describe("CheckerWatchdog", func() {
 
 	Describe("#Start / #Stop / #AddContext / #RemoveContext / #Result", func() {
 		It("should not cancel the context returned by AddContext if the checker returns true", func() {
-			checker.EXPECT().Check(gomock.Any()).Return(true, nil).Times(2)
+			checker.result = true
 
 			watchdog.Start(ctx)
 			defer watchdog.Stop()
@@ -74,15 +73,17 @@ var _ = Describe("CheckerWatchdog", func() {
 			result, err := watchdog.Result()
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result).To(BeTrue())
+			Eventually(checker.called).Should(Receive())
 			fakeClock.Step(interval)
 			result2, err := watchdog.Result()
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result2).To(BeTrue())
-			Eventually(newCtx.Done()).Should(Not(BeClosed()))
+			Eventually(checker.called).Should(Receive())
+			Consistently(newCtx.Done()).Should(Not(BeClosed()))
 		})
 
 		It("should cancel the context returned by AddContext if the checker returns false", func() {
-			checker.EXPECT().Check(gomock.Any()).Return(false, nil).Times(2)
+			checker.result = false
 
 			watchdog.Start(ctx)
 			defer watchdog.Stop()
@@ -96,15 +97,17 @@ var _ = Describe("CheckerWatchdog", func() {
 			result, err := watchdog.Result()
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result).To(BeFalse())
+			Eventually(checker.called).Should(Receive())
 			fakeClock.Step(interval)
 			result2, err := watchdog.Result()
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result2).To(BeFalse())
+			Eventually(checker.called).Should(Receive())
 			Eventually(newCtx.Done()).Should(BeClosed())
 		})
 
 		It("should cancel the context returned by AddContext if the checker returns an error", func() {
-			checker.EXPECT().Check(gomock.Any()).Return(false, errors.New("text")).Times(2)
+			checker.err = errors.New("text")
 
 			watchdog.Start(ctx)
 			defer watchdog.Stop()
@@ -117,17 +120,16 @@ var _ = Describe("CheckerWatchdog", func() {
 			}()
 			_, err := watchdog.Result()
 			Expect(err).To(HaveOccurred())
+			Eventually(checker.called).Should(Receive())
 			fakeClock.Step(interval)
 			_, err = watchdog.Result()
 			Expect(err).To(HaveOccurred())
+			Eventually(checker.called).Should(Receive())
 			Eventually(newCtx.Done()).Should(BeClosed())
 		})
 
 		It("should cancel the context returned by AddContext if the checker times out", func() {
-			checker.EXPECT().Check(gomock.Any()).DoAndReturn(func(ctx context.Context) (bool, error) {
-				// return context.DeadlineExceeded to simulate timeout
-				return false, context.DeadlineExceeded
-			}).Times(2)
+			checker.err = context.DeadlineExceeded
 
 			watchdog.Start(ctx)
 			defer watchdog.Stop()
@@ -140,10 +142,26 @@ var _ = Describe("CheckerWatchdog", func() {
 			}()
 			_, err := watchdog.Result()
 			Expect(err).To(HaveOccurred())
+			Eventually(checker.called).Should(Receive())
 			fakeClock.Step(interval)
 			_, err = watchdog.Result()
 			Expect(err).To(HaveOccurred())
+			Eventually(checker.called).Should(Receive())
 			Eventually(newCtx.Done()).Should(BeClosed())
 		})
 	})
 })
+
+type fakeChecker struct {
+	// Check will return these
+	result bool
+	err    error
+
+	// each Check invocation will send one notification to this channel, buffer accordingly!
+	called chan struct{}
+}
+
+func (f fakeChecker) Check(ctx context.Context) (bool, error) {
+	f.called <- struct{}{}
+	return f.result, f.err
+}
