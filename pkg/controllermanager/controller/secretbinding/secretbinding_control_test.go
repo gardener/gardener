@@ -195,7 +195,7 @@ var _ = Describe("SecretBindingControl", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			expectedLabels := map[string]string{
-				"secretbinding.gardener.cloud/referred": "true",
+				"reference.gardener.cloud/secretbinding": "true",
 			}
 
 			Expect(secret.ObjectMeta.Labels).To(Equal(expectedLabels))
@@ -347,7 +347,7 @@ var _ = Describe("SecretBindingControl", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			expectedLabels := map[string]string{
-				"secretbinding.gardener.cloud/referred": "true",
+				"reference.gardener.cloud/secretbinding": "true",
 			}
 
 			Expect(quota1.ObjectMeta.Labels).To(Equal(expectedLabels))
@@ -368,7 +368,7 @@ var _ = Describe("SecretBindingControl", func() {
 			Expect(len(quota1.ObjectMeta.Labels)).To(Equal(0))
 
 			expectedLabels := map[string]string{
-				"secretbinding.gardener.cloud/referred": "true",
+				"reference.gardener.cloud/secretbinding": "true",
 			}
 
 			Expect(quota2.ObjectMeta.Labels).To(Equal(expectedLabels))

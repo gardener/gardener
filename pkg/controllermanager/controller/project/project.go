@@ -138,46 +138,55 @@ func NewProjectController(
 
 	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			projectController.projectActivityShootAdd(ctx, obj)
+			projectController.projectActivityObjectAdd(ctx, obj)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			projectController.projectActivityShootUpdate(ctx, oldObj, newObj)
+		},
+		DeleteFunc: func(obj interface{}) {
+			projectController.projectActivityObjectDelete(ctx, obj)
 		},
 	})
 
 	secretInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			projectController.projectActivitySecretAdd(ctx, obj)
+			projectController.projectActivityObjectWithLabelAdd(ctx, obj)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			projectController.projectActivitySecretUpdate(ctx, oldObj, newObj)
+			projectController.projectActivityObjectWithLabelUpdate(ctx, oldObj, newObj)
 		},
 	})
 
 	plantInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			projectController.projectActivityPlantAdd(ctx, obj)
+			projectController.projectActivityObjectAdd(ctx, obj)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			projectController.projectActivityPlantUpdate(ctx, oldObj, newObj)
+		},
+		DeleteFunc: func(obj interface{}) {
+			projectController.projectActivityObjectDelete(ctx, obj)
 		},
 	})
 
 	quotaInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			projectController.projectActivityQuotaAdd(ctx, obj)
+			projectController.projectActivityObjectWithLabelAdd(ctx, obj)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			projectController.projectActivityQuotaUpdate(ctx, oldObj, newObj)
+			projectController.projectActivityObjectWithLabelUpdate(ctx, oldObj, newObj)
 		},
 	})
 
 	backupEntryInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			projectController.projectActivityBackupEntryAdd(ctx, obj)
+			projectController.projectActivityObjectAdd(ctx, obj)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			projectController.projectActivityBackupEntryUpdate(ctx, oldObj, newObj)
+		},
+		DeleteFunc: func(obj interface{}) {
+			projectController.projectActivityObjectDelete(ctx, obj)
 		},
 	})
 
