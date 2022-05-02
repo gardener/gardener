@@ -21,7 +21,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 
@@ -270,7 +269,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 		})
 	}
 
-	v.injectAPIServerConnectionSpec(deployment, admissionController, serviceAccountName, v.genericTokenKubeconfigSecretName)
+	v.injectAPIServerConnectionSpec(deployment, admissionController, serviceAccountName, nil)
 }
 
 func (v *vpa) reconcileAdmissionControllerVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) {
@@ -300,10 +299,8 @@ func (v *vpa) reconcileAdmissionControllerVPA(vpa *vpaautoscalingv1.VerticalPodA
 }
 
 func (v *vpa) computeAdmissionControllerCommands() []string {
+	// TODO(shafeeqes): add --kubeconfig flag also, after https://github.com/kubernetes/autoscaler/issues/4844 is fixed.
 	out := []string{"./admission-controller"}
 
-	if v.values.ClusterType == ClusterTypeShoot {
-		out = append(out, "--kubeconfig="+gutil.PathGenericKubeconfig)
-	}
 	return out
 }
