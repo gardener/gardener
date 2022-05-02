@@ -19,9 +19,7 @@ import (
 	"errors"
 	"time"
 
-	"go.uber.org/zap/zapcore"
-	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
-
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -50,7 +48,7 @@ var _ = Describe("CheckerWatchdog", func() {
 		checker = &fakeChecker{called: make(chan struct{}, 2)} // we expect 2 calls in every test case
 		fakeClock = clock.NewFakeClock(time.Now())
 		ctx = context.TODO()
-		watchdog = NewCheckerWatchdog(checker, interval, timeout, fakeClock, logzap.New(logzap.Level(zapcore.DebugLevel*2), logzap.WriteTo(GinkgoWriter)))
+		watchdog = NewCheckerWatchdog(checker, interval, timeout, fakeClock, logr.Discard())
 	})
 
 	AfterEach(func() {
