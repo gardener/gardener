@@ -1,5 +1,5 @@
 ############# base
-FROM alpine:3.13.7 AS base
+FROM alpine:3.15.4 AS base
 
 # Define GOTRACEBACK to mark this container as using the Go language runtime
 # for `skaffold debug` (https://skaffold.dev/docs/workflows/debug/).

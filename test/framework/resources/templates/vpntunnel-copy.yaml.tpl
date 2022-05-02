@@ -17,7 +17,7 @@ spec:
         app: {{ .AppLabel }}
     spec:
       initContainers:
-      - image: eu.gcr.io/gardener-project/3rd/alpine:3.13.5
+      - image: eu.gcr.io/gardener-project/3rd/alpine:3.15
         name: data-generator
         command:
         - dd
@@ -28,7 +28,7 @@ spec:
         volumeMounts:
         - name: source-data
           mountPath: /data
-      - image: eu.gcr.io/gardener-project/3rd/alpine:3.13.5
+      - image: eu.gcr.io/gardener-project/3rd/alpine:3.15
         name: install-kubectl
         command:
         - /bin/sh

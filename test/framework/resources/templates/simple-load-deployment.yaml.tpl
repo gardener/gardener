@@ -14,7 +14,7 @@ spec:
         app: load
     spec:
       containers:
-      - image: eu.gcr.io/gardener-project/3rd/alpine:3.13
+      - image: eu.gcr.io/gardener-project/3rd/alpine:3.15
         name: load
         command: ["sh", "-c"]
         {{ if .nodeName }}
