@@ -41,7 +41,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | ShootCARotation                              | `false` | `Alpha` | `1.42` |        |
 | ShootMaxTokenExpirationOverwrite             | `false` | `Alpha` | `1.43` | `1.44` |
 | ShootMaxTokenExpirationOverwrite             | `true`  | `Beta`  | `1.45` |        |
-| ShootMaxTokenExpirationValidation            | `false` | `Alpha` | `1.43` |        |
+| ShootMaxTokenExpirationValidation            | `false` | `Alpha` | `1.43` | `1.45` |
+| ShootMaxTokenExpirationValidation            | `true`  | `Beta`  | `1.46` |        |
 
 ## Feature gates for graduated or deprecated features
 

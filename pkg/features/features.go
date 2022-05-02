@@ -160,6 +160,7 @@ const (
 	// Only enable this after ShootMaxTokenExpirationOverwrite is enabled and all shoots got updated accordingly.
 	// owner: @rfranzke
 	// alpha: v1.43.0
+	// beta: v1.46.0
 	ShootMaxTokenExpirationValidation featuregate.Feature = "ShootMaxTokenExpirationValidation"
 )
 
@@ -183,7 +184,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DisableDNSProviderManagement:               {Default: false, PreRelease: featuregate.Alpha},
 	ShootCARotation:                            {Default: false, PreRelease: featuregate.Alpha},
 	ShootMaxTokenExpirationOverwrite:           {Default: true, PreRelease: featuregate.Beta},
-	ShootMaxTokenExpirationValidation:          {Default: false, PreRelease: featuregate.Alpha},
+	ShootMaxTokenExpirationValidation:          {Default: true, PreRelease: featuregate.Beta},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
