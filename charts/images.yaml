@@ -69,7 +69,7 @@ images:
 - name: vpn-seed-server
   sourceRepository: github.com/gardener/vpn2
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed-server
-  tag: "0.6.0"
+  tag: "0.7.0"
 
 # Monitoring
 - name: alertmanager
@@ -113,7 +113,7 @@ images:
 - name: vpn-shoot-client
   sourceRepository: github.com/gardener/vpn2
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot-client
-  tag: "0.6.0"
+  tag: "0.7.0"
 - name: coredns
   sourceRepository: github.com/coredns/coredns
   repository: coredns/coredns
