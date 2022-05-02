@@ -661,6 +661,9 @@ type ShootMonitoringConfig struct {
 	// ExternalLabels is optional and sets additional external labels for the monitoring stack.
 	// +optional
 	ExternalLabels map[string]string `json:"externalLabels,omitempty"`
+	// AgentMode is optional and contains settings for the prometheus agent mode.
+	// +optional
+	AgentMode *AgentModeMonitoringConfig `json:"agentMode,omitempty"`
 }
 
 // RemoteWriteMonitoringConfig contains settings for the remote write setting for monitoring stack.
@@ -673,6 +676,14 @@ type RemoteWriteMonitoringConfig struct {
 	// QueueConfig contains the queue_config for prometheus remote write.
 	// +optional
 	QueueConfig *string `json:"queueConfig,omitempty"`
+}
+
+// AgentModeMonitoringConfig contains settings for the prometheus agent mode for
+// monitoring stack.
+type AgentModeMonitoringConfig struct {
+	// Enabled is used to enable or disable the agent mode feature of prometheus.
+	// +optional
+	Enabled *bool `json:"enabled"`
 }
 
 const (

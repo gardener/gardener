@@ -5,8 +5,13 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   targetRef:
+    {{- if not .Values.agentMode.enabled }}
     apiVersion: {{ include "statefulsetversion" . }}
     kind: StatefulSet
+    {{- else }}
+    apiVersion: {{ include "deploymentversion" . }}
+    kind: Deployment
+    {{- end }}
     name: prometheus
   updatePolicy:
     updateMode: "Auto"

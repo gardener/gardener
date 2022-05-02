@@ -56,6 +56,8 @@ An optional collection of all Shoot Prometheus metrics to a central prometheus (
 ```
 monitoring:
   shoot:
+    agentMode:
+      enabled: true
     remoteWrite:
       url: https://remoteWriteUrl # remote write URL
       keep:# metrics that should be forwarded to the external write endpoint. If empty all metrics get forwarded
@@ -68,5 +70,7 @@ monitoring:
     externalLabels: # add additional labels to metrics to identify it on the central instance
       additional: label
 ```
+
+Note that for `remoteWrite`, it is recommended to enable `agentMode`. This is a light-weight operation mode for Prometheus, optimized for remoteWrite use cases.
 
 If basic auth is needed it can be set via secret in garden namespace (Gardener API Server). [Example secret](../../example/10-secret-remote-write.yaml)

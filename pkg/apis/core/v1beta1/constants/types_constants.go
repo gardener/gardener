@@ -146,6 +146,9 @@ const (
 	// StatefulSetNamePrometheus is a constant for the name of a Kubernetes stateful set object that contains
 	// the prometheus pod.
 	StatefulSetNamePrometheus = "prometheus"
+	// DeploymentNamePrometheus is a constant for the name of a Kubernetesdeployment object that contains
+	// the prometheus pod when prometheus is configured to run in agent mode.
+	DeploymentNamePrometheus = "prometheus"
 
 	// GardenerPurpose is a constant for the key in a label describing the purpose of the respective object.
 	GardenerPurpose = "gardener.cloud/purpose"

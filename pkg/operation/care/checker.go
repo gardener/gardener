@@ -324,16 +324,6 @@ func computeRequiredControlPlaneDeployments(
 	return requiredControlPlaneDeployments, nil
 }
 
-// computeRequiredMonitoringStatefulSets determine the required monitoring statefulsets
-// which should exist next to the control plane.
-func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.String {
-	var requiredMonitoringStatefulSets = sets.NewString(v1beta1constants.StatefulSetNamePrometheus)
-	if wantsAlertmanager {
-		requiredMonitoringStatefulSets.Insert(v1beta1constants.StatefulSetNameAlertManager)
-	}
-	return requiredMonitoringStatefulSets
-}
-
 // CheckControlPlane checks whether the control plane components in the given listers are complete and healthy.
 func (b *HealthChecker) CheckControlPlane(
 	shoot *gardencorev1beta1.Shoot,
@@ -483,11 +473,24 @@ func (b *HealthChecker) CheckMonitoringControlPlane(
 	if err != nil {
 		return nil, err
 	}
-	if exitCondition := b.checkRequiredStatefulSets(condition, computeRequiredMonitoringStatefulSets(wantsAlertmanager), statefulSetList); exitCondition != nil {
-		return exitCondition, nil
+
+	if wantsAlertmanager {
+		if exitCondition := b.checkRequiredStatefulSets(condition, sets.NewString(v1beta1constants.StatefulSetNameAlertManager), statefulSetList); exitCondition != nil {
+			return exitCondition, nil
+		}
 	}
+
 	if exitCondition := b.checkStatefulSets(condition, statefulSetList); exitCondition != nil {
 		return exitCondition, nil
+	}
+
+	// combined check that fails if neither a prometheus
+	// statefulset nor a prometheus deployment are present
+	exitConditionPrometheusDeployment := b.checkRequiredDeployments(condition, sets.NewString(v1beta1constants.DeploymentNamePrometheus), deploymentList)
+	exitConditionPrometheusStatefulSet := b.checkRequiredStatefulSets(condition, sets.NewString(v1beta1constants.StatefulSetNamePrometheus), statefulSetList)
+	if exitConditionPrometheusDeployment != nil && exitConditionPrometheusStatefulSet != nil {
+		combinedCondition := b.FailedCondition(condition, "PrometheusResourceMissing", "Either a StatefulSet or a Deployment for Prometheus is missing")
+		return &combinedCondition, nil
 	}
 
 	return nil, nil

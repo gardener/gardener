@@ -1,0 +1,193 @@
+{{- if .Values.agentMode.enabled -}}
+apiVersion: {{include "deploymentversion" .}}
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: {{ .Release.Namespace }}
+  labels:
+    gardener.cloud/role: monitoring
+    app: prometheus
+    role: monitoring
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: prometheus
+      role: monitoring
+  serviceName: prometheus
+  template:
+    metadata:
+      annotations:
+        checksum/configmap-blackbox-exporter: {{ include (print $.Template.BasePath "/blackbox-exporter-config.yaml") . | sha256sum }}
+        # TODO(rfranzke): Remove in a future release.
+        security.gardener.cloud/trigger: rollout
+{{- if .Values.podAnnotations }}
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
+      labels:
+        gardener.cloud/role: monitoring
+        app: prometheus
+        role: monitoring
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-public-networks: allowed
+        networking.gardener.cloud/to-shoot-networks: allowed
+        networking.gardener.cloud/to-shoot-apiserver: allowed
+        networking.gardener.cloud/to-seed-apiserver: allowed
+    spec:
+      # used to talk to Seed's API server.
+      serviceAccountName: prometheus
+      containers:
+      - name: prometheus
+        image: {{ index .Values.images "prometheus" }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - --config.file=/etc/prometheus/config/prometheus.yaml
+        - --enable-feature=agent
+        - --web.route-prefix=/
+        - --web.enable-lifecycle
+        - --web.listen-address=0.0.0.0:{{ .Values.port }}
+        - --web.external-url=https://{{ .Values.ingress.host }}
+        # Since v2.0.0-beta.3 prometheus runs as nobody user (fsGroup 65534/runAsUser 0)
+        # data volume needs to be mounted with the same permissions,
+        # otherwise we will have Permission denied problems
+        securityContext:
+          runAsUser: 0
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: {{ .Values.port }}
+            scheme: HTTP
+          failureThreshold: 60
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: {{ .Values.port }}
+            scheme: HTTP
+          failureThreshold: 120
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
+        ports:
+        - name: web
+          containerPort: 9090
+          protocol: TCP
+        resources:
+          requests:
+            cpu: 50m
+            memory: 350Mi
+        volumeMounts:
+        - mountPath: /srv/kubernetes/prometheus-kubelet
+          name: prometheus-kubelet
+        - mountPath: /srv/kubernetes/etcd/ca
+          name: ca-etcd
+        - mountPath: /srv/kubernetes/etcd/client
+          name: etcd-client-tls
+        - mountPath: /etc/prometheus/config
+          name: config
+          readOnly: true
+        - mountPath: /etc/prometheus/rules
+          name: rules
+          readOnly: true
+        # TODO(rfranzke): Delete this in a future release once all monitoring configurations of extensions have been
+        # adapted.
+        - mountPath: /etc/prometheus/seed
+          name: prometheus-client-cert
+        - name: shoot-access
+          mountPath: /var/run/secrets/gardener.cloud/shoot/token
+          readOnly: true
+        {{- if hasKey .Values.alerting.auth_type "certificate" }}
+        - mountPath: /etc/prometheus/operator
+          name: prometheus-remote-am-tls
+        {{- end }}
+      - name: blackbox-exporter
+        image: {{ index .Values.images "blackbox-exporter" }}
+        args:
+        - --config.file=/vpn/blackbox.yaml
+        - --web.listen-address=127.0.0.1:9115
+        ports:
+        # port name must be max 15 characters long
+        - name: blackbox-export
+          containerPort: 9115
+          protocol: TCP
+        resources:
+          requests:
+            cpu: 5m
+            memory: 35Mi
+          limits:
+            cpu: 50m
+            memory: 128Mi
+        volumeMounts:
+        - name: blackbox-exporter-config-prometheus
+          mountPath: /vpn
+        - mountPath: /var/run/secrets/shoot-ca
+          name: shoot-ca
+          readOnly: true
+        - name: shoot-access
+          mountPath: /var/run/secrets/gardener.cloud/shoot/token
+          readOnly: true
+      - name: prometheus-config-reloader
+        image: {{ index .Values.images "configmap-reloader" }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - -webhook-url=http://localhost:{{ .Values.port }}/-/reload
+        - -volume-dir=/etc/prometheus/config
+        - -volume-dir=/etc/prometheus/rules
+        resources:
+          requests:
+            cpu: 5m
+            memory: 25Mi
+          limits:
+            cpu: 10m
+            memory: 25Mi
+        volumeMounts:
+        - mountPath: /etc/prometheus/config
+          name: config
+          readOnly: true
+        - mountPath: /etc/prometheus/rules
+          name: rules
+          readOnly: true
+      terminationGracePeriodSeconds: 60
+      volumes:
+      - name: config
+        configMap:
+          defaultMode: 420
+          name: prometheus-config
+      - name: rules
+        configMap:
+          defaultMode: 420
+          name: prometheus-rules
+      - name: shoot-ca
+        secret:
+          defaultMode: 420
+          secretName: ca
+      - name: ca-etcd
+        secret:
+          secretName: ca-etcd
+      - name: etcd-client-tls
+        secret:
+          secretName: etcd-client-tls
+      # TODO(rfranzke): Delete this in a future release once all monitoring configurations of extensions have been
+      #	adapted.
+      - name: prometheus-client-cert
+        secret:
+          secretName: prometheus
+      - name: shoot-access
+        secret:
+          secretName: shoot-access-prometheus
+      - name: prometheus-kubelet
+        secret:
+          secretName: prometheus-kubelet
+      - name: blackbox-exporter-config-prometheus
+        configMap:
+          name: blackbox-exporter-config-prometheus
+{{- if hasKey .Values.alerting.auth_type "certificate" }}
+      - name: prometheus-remote-am-tls
+        secret:
+          secretName: prometheus-remote-am-tls
+{{- end }}
+{{- end -}}

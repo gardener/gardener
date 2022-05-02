@@ -355,5 +355,8 @@ resources:
 #  - metric3
 #  - metric4
 
+agentMode:
+  enabled: false
+
 #externalLabels:
 #  env: test

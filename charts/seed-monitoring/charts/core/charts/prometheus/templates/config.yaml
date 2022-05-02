@@ -48,6 +48,7 @@ data:
     {{- end }}
     {{- end }}
     {{- end }}
+{{- if not .Values.agentMode.enabled}}
     rule_files:
     - /etc/prometheus/rules/*.yaml
     alerting:
@@ -94,6 +95,7 @@ data:
       - source_labels: [ ignoreAlerts ]
         regex: true
         action: drop
+{{- end }}
     scrape_configs:
     - job_name: kube-kubelet
       honor_labels: false
