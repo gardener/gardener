@@ -21,6 +21,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 
@@ -190,7 +191,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 					Name:            "admission-controller",
 					Image:           v.values.AdmissionController.Image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command:         []string{"./admission-controller"},
+					Command:         v.computeAdmissionControllerCommands(),
 					Args: []string{
 						"--v=2",
 						"--stderrthreshold=info",
@@ -269,7 +270,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 		})
 	}
 
-	v.injectAPIServerConnectionSpec(deployment, admissionController, serviceAccountName)
+	v.injectAPIServerConnectionSpec(deployment, admissionController, serviceAccountName, v.genericTokenKubeconfigSecretName)
 }
 
 func (v *vpa) reconcileAdmissionControllerVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) {
@@ -296,4 +297,13 @@ func (v *vpa) reconcileAdmissionControllerVPA(vpa *vpaautoscalingv1.VerticalPodA
 			},
 		},
 	}
+}
+
+func (v *vpa) computeAdmissionControllerCommands() []string {
+	out := []string{"./admission-controller"}
+
+	if v.values.ClusterType == ClusterTypeShoot {
+		out = append(out, "--kubeconfig="+gutil.PathGenericKubeconfig)
+	}
+	return out
 }

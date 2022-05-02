@@ -21,6 +21,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -156,7 +157,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 					Name:            "recommender",
 					Image:           v.values.Recommender.Image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command:         []string{"./recommender"},
+					Command:         v.computeRecommenderCommands(),
 					Args: []string{
 						"--v=2",
 						"--stderrthreshold=info",
@@ -198,7 +199,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 		})
 	}
 
-	v.injectAPIServerConnectionSpec(deployment, recommender, serviceAccountName)
+	v.injectAPIServerConnectionSpec(deployment, recommender, serviceAccountName, v.genericTokenKubeconfigSecretName)
 }
 
 func (v *vpa) reconcileRecommenderVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) {
@@ -225,4 +226,13 @@ func (v *vpa) reconcileRecommenderVPA(vpa *vpaautoscalingv1.VerticalPodAutoscale
 			},
 		},
 	}
+}
+
+func (v *vpa) computeRecommenderCommands() []string {
+	out := []string{"./recommender"}
+
+	if v.values.ClusterType == ClusterTypeShoot {
+		out = append(out, "--kubeconfig="+gutil.PathGenericKubeconfig)
+	}
+	return out
 }

@@ -236,19 +236,23 @@ type ShootAccessSecret struct {
 // with for the given name and namespace. If not already done, the name will be prefixed with the
 // SecretNamePrefixShootAccess. The ServiceAccountName field will be defaulted with the name.
 func NewShootAccessSecret(name, namespace string) *ShootAccessSecret {
-	if !strings.HasPrefix(name, SecretNamePrefixShootAccess) {
-		name = SecretNamePrefixShootAccess + name
-	}
-
 	return &ShootAccessSecret{
 		Secret: &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      GetShootAccessSecretName(name),
 				Namespace: namespace,
 			},
 		},
 		ServiceAccountName: strings.TrimPrefix(name, SecretNamePrefixShootAccess),
 	}
+}
+
+// GetShootAccessSecretName returns the name for the ShootAccessSecret with SecretNamePrefixShootAccess.
+func GetShootAccessSecretName(name string) string {
+	if !strings.HasPrefix(name, SecretNamePrefixShootAccess) {
+		return SecretNamePrefixShootAccess + name
+	}
+	return name
 }
 
 // WithNameOverride sets the ObjectMeta.Name field of the *corev1.Secret inside the ShootAccessSecret.

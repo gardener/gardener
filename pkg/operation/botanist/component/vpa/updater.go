@@ -21,6 +21,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -141,7 +142,7 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 					Name:            "updater",
 					Image:           v.values.Updater.Image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command:         []string{"./updater"},
+					Command:         v.computeUpdaterCommands(),
 					Args: []string{
 						"--min-replicas=1",
 						fmt.Sprintf("--eviction-tolerance=%f", pointer.Float64Deref(v.values.Updater.EvictionTolerance, gardencorev1beta1.DefaultEvictionTolerance)),
@@ -183,7 +184,7 @@ func (v *vpa) reconcileUpdaterDeployment(deployment *appsv1.Deployment, serviceA
 		})
 	}
 
-	v.injectAPIServerConnectionSpec(deployment, updater, serviceAccountName)
+	v.injectAPIServerConnectionSpec(deployment, updater, serviceAccountName, v.genericTokenKubeconfigSecretName)
 }
 
 func (v *vpa) reconcileUpdaterVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) {
@@ -210,4 +211,13 @@ func (v *vpa) reconcileUpdaterVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, d
 			},
 		},
 	}
+}
+
+func (v *vpa) computeUpdaterCommands() []string {
+	out := []string{"./updater"}
+
+	if v.values.ClusterType == ClusterTypeShoot {
+		out = append(out, "--kubeconfig="+gutil.PathGenericKubeconfig)
+	}
+	return out
 }

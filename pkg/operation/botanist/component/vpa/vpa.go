@@ -17,15 +17,12 @@ package vpa
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -39,6 +36,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -77,9 +75,10 @@ type vpa struct {
 	registry    *managedresources.Registry
 	crdDeployer component.Deployer
 
-	caSecretName     string
-	caBundle         []byte
-	serverSecretName string
+	caSecretName                     string
+	caBundle                         []byte
+	serverSecretName                 string
+	genericTokenKubeconfigSecretName *string
 }
 
 // Values is a set of configuration values for the VPA components.
@@ -182,6 +181,12 @@ func (v *vpa) Deploy(ctx context.Context) error {
 			&admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "vpa-webhook-config-seed"}},
 		)
 	}
+
+	genericTokenKubeconfigSecret, found := v.secretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
+	}
+	v.genericTokenKubeconfigSecretName = &genericTokenKubeconfigSecret.Name
 
 	for _, name := range []string{
 		v1beta1constants.DeploymentNameVPAAdmissionController,
@@ -390,7 +395,7 @@ func mergeResourceConfigs(configsLists ...resourceConfigs) resourceConfigs {
 	return out
 }
 
-func (v *vpa) injectAPIServerConnectionSpec(deployment *appsv1.Deployment, name string, serviceAccountName *string) {
+func (v *vpa) injectAPIServerConnectionSpec(deployment *appsv1.Deployment, name string, serviceAccountName, genericTokenKubeconfigSecretName *string) {
 	if serviceAccountName != nil {
 		deployment.Spec.Template.Spec.ServiceAccountName = *serviceAccountName
 
@@ -406,54 +411,10 @@ func (v *vpa) injectAPIServerConnectionSpec(deployment *appsv1.Deployment, name 
 		}
 	} else {
 		deployment.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
-		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env,
-			corev1.EnvVar{
-				Name:  "KUBERNETES_SERVICE_HOST",
-				Value: v1beta1constants.DeploymentNameKubeAPIServer,
-			},
-			corev1.EnvVar{
-				Name:  "KUBERNETES_SERVICE_PORT",
-				Value: strconv.Itoa(kubeapiserver.Port),
-			},
-		)
-		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: "shoot-access",
-			VolumeSource: corev1.VolumeSource{
-				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: pointer.Int32(420),
-					Sources: []corev1.VolumeProjection{
-						{
-							Secret: &corev1.SecretProjection{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: v.caSecretName,
-								},
-								Items: []corev1.KeyToPath{{
-									Key:  secretutils.DataKeyCertificateBundle,
-									Path: "ca.crt",
-								}},
-							},
-						},
-						{
-							Secret: &corev1.SecretProjection{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: gutil.SecretNamePrefixShootAccess + name,
-								},
-								Items: []corev1.KeyToPath{{
-									Key:  resourcesv1alpha1.DataKeyToken,
-									Path: "token",
-								}},
-								Optional: pointer.Bool(false),
-							},
-						},
-					},
-				},
-			},
-		})
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      "shoot-access",
-			MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
-			ReadOnly:  true,
-		})
+
+		if genericTokenKubeconfigSecretName != nil {
+			utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, *genericTokenKubeconfigSecretName, gutil.GetShootAccessSecretName(deployment.Name)))
+		}
 	}
 }
 
