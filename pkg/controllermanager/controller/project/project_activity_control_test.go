@@ -292,17 +292,16 @@ var _ = Describe("Project Activity", func() {
 					},
 				}
 
-				It("should add the project to the queue if the data of the object has changed", func() {
+				It("should add the project to the queue if the quota has label", func() {
 					queue.EXPECT().Add(projectName)
-
 					newObj := oldObj.DeepCopy()
-					newObj.Spec.ClusterLifetimeDays = pointer.Int32(60)
 
 					c.projectActivityQuotaUpdate(ctx, oldObj, newObj)
 				})
 
-				It("should not add the project to the queue if the data of the object hasn't changed", func() {
+				It("should not add the project to the queue if the quota doesn't have label", func() {
 					newObj := oldObj.DeepCopy()
+					newObj.ObjectMeta.Labels = nil
 
 					c.projectActivityQuotaUpdate(ctx, oldObj, newObj)
 				})
@@ -351,17 +350,16 @@ var _ = Describe("Project Activity", func() {
 					Data: map[string][]byte{"bar": []byte("foo")},
 				}
 
-				It("should add the project to the queue if the data of the object has changed", func() {
+				It("should add the project to the queue if the secret has label", func() {
 					queue.EXPECT().Add(projectName)
-
 					newObj := oldObj.DeepCopy()
-					newObj.Data = map[string][]byte{"foo": []byte("dash")}
 
 					c.projectActivitySecretUpdate(ctx, oldObj, newObj)
 				})
 
-				It("should not add the project to the queue if the data of the object hasn't changed", func() {
+				It("should not add the project to the queue if the secret doesn't have label", func() {
 					newObj := oldObj.DeepCopy()
+					newObj.ObjectMeta.Labels = nil
 
 					c.projectActivitySecretUpdate(ctx, oldObj, newObj)
 				})

@@ -183,7 +183,7 @@ func (c *Controller) projectActivityQuotaAdd(ctx context.Context, obj interface{
 }
 
 func (c *Controller) projectActivityQuotaUpdate(ctx context.Context, oldObj, newObj interface{}) {
-	oldQuota, ok := oldObj.(*gardencorev1beta1.Quota)
+	_, ok := oldObj.(*gardencorev1beta1.Quota)
 	if !ok {
 		return
 	}
@@ -194,10 +194,6 @@ func (c *Controller) projectActivityQuotaUpdate(ctx context.Context, oldObj, new
 
 	// skip queueing if the quota doesn't have the "referred by a secretbinding" label
 	if !metav1.HasLabel(newQuota.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
-		return
-	}
-
-	if apiequality.Semantic.DeepEqual(newQuota.Spec, oldQuota.Spec) {
 		return
 	}
 
@@ -235,7 +231,7 @@ func (c *Controller) projectActivitySecretAdd(ctx context.Context, obj interface
 }
 
 func (c *Controller) projectActivitySecretUpdate(ctx context.Context, oldObj, newObj interface{}) {
-	oldSecret, ok := oldObj.(*corev1.Secret)
+	_, ok := oldObj.(*corev1.Secret)
 	if !ok {
 		return
 	}
@@ -246,10 +242,6 @@ func (c *Controller) projectActivitySecretUpdate(ctx context.Context, oldObj, ne
 
 	// skip queueing if the secret doesn't have the "referred by a secretbinding" label
 	if !metav1.HasLabel(newSecret.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
-		return
-	}
-
-	if apiequality.Semantic.DeepEqual(newSecret.Data, oldSecret.Data) {
 		return
 	}
 
