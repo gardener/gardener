@@ -299,6 +299,10 @@ We refer to the global configuration values as _gardenlet configuration_ in the 
         namespace: garden
     ```
 
+### Updating the garden cluster CA
+
+The kubeconfig created by the gardenlet in step 4 will not be recreated, as long as it exists, even if a new bootstrap kubeconfig is provided. To enable rotation of the garden cluster CA certificate, new certificates can be given in the `gardenClientConnection.gardenClusterCACert` field. If the certificate given there differs from the one currently in the gardenlet kubeconfig secret, it will be updated. To remove the CA completely - when switching to a publicly trusted endpoint - this field can be set to either `none` or `null`.
+
 ## Automatically register shoot cluster as a seed cluster
 
 A seed cluster can either be registered by manually creating
