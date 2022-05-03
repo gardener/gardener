@@ -3,6 +3,9 @@ kind: ValidatingWebhookConfiguration
 metadata:
   name: istiod
   labels:
+    # The istio revision is required so that the web hook is found at runtime for the caBundle update
+    # Currently, we do not set the istio revision. Hence, it is just empty.
+    istio.io/rev: ""
 {{ .Values.labels | toYaml | indent 4 }}
 webhooks:
   - name: validation.istio.io
