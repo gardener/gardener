@@ -203,6 +203,47 @@ var _ = Describe("Generate", func() {
 				Expect(secretInfos.bundle).To(BeNil())
 			})
 
+			It("should drop the old secret if rotation strategy is KeepOld after IgnoreOldSecretsAfter has passed", func() {
+				By("generating secret")
+				secret, err := m.Generate(ctx, config)
+				Expect(err).NotTo(HaveOccurred())
+				expectSecretWasCreated(ctx, fakeClient, secret)
+
+				By("changing secret config and generating again")
+				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{})
+				Expect(err).NotTo(HaveOccurred())
+				m = mgr.(*manager)
+
+				config.PasswordLength = 4
+				newSecret, err := m.Generate(ctx, config, Rotate(KeepOld), IgnoreOldSecretsAfter(time.Minute))
+				Expect(err).NotTo(HaveOccurred())
+				expectSecretWasCreated(ctx, fakeClient, newSecret)
+
+				By("verifying internal store contains both old and new secret")
+				secretInfos, found := m.getFromStore(name)
+				Expect(found).To(BeTrue())
+				Expect(secretInfos.current.obj).To(Equal(newSecret))
+				Expect(secretInfos.old.obj).To(Equal(withoutTypeMeta(secret)))
+				Expect(secretInfos.bundle).To(BeNil())
+
+				By("generating secret again after given duration")
+				fakeClock.Step(time.Minute)
+				mgr, err = New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{})
+				Expect(err).NotTo(HaveOccurred())
+				m = mgr.(*manager)
+
+				newSecret, err = m.Generate(ctx, config, Rotate(KeepOld), IgnoreOldSecretsAfter(time.Minute))
+				Expect(err).NotTo(HaveOccurred())
+				expectSecretWasCreated(ctx, fakeClient, newSecret)
+
+				By("verifying internal store contains only new secret")
+				secretInfos, found = m.getFromStore(name)
+				Expect(found).To(BeTrue())
+				Expect(secretInfos.current.obj).To(Equal(newSecret))
+				Expect(secretInfos.old).To(BeNil())
+				Expect(secretInfos.bundle).To(BeNil())
+			})
+
 			It("should reconcile the secret", func() {
 				By("generating new secret")
 				secret, err := m.Generate(ctx, config)

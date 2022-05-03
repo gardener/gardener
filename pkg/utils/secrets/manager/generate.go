@@ -17,6 +17,7 @@ package manager
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -81,12 +82,18 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 		}
 	}
 
+	if err := m.maintainLifetimeLabels(config, secret, desiredLabels); err != nil {
+		return nil, err
+	}
+
 	if !options.isBundleSecret {
 		if err := m.addToStore(config.GetName(), secret, current); err != nil {
 			return nil, err
 		}
 
-		if !options.IgnoreOldSecrets && options.RotationStrategy == KeepOld {
+		if ignore, err := m.shouldIgnoreOldSecrets(desiredLabels[LabelKeyIssuedAtTime], options); err != nil {
+			return nil, err
+		} else if !ignore {
 			if err := m.storeOldSecrets(ctx, config.GetName(), secret.Name); err != nil {
 				return nil, err
 			}
@@ -95,10 +102,6 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 		if err := m.generateBundleSecret(ctx, config); err != nil {
 			return nil, err
 		}
-	}
-
-	if err := m.maintainLifetimeLabels(config, secret, desiredLabels); err != nil {
-		return nil, err
 	}
 
 	if err := m.reconcileSecret(ctx, secret, desiredLabels); err != nil {
@@ -319,6 +322,33 @@ func (m *manager) keepExistingSecretsIfNeeded(ctx context.Context, configName st
 	return newData, nil
 }
 
+func (m *manager) shouldIgnoreOldSecrets(issuedAt string, options *GenerateOptions) (bool, error) {
+	// unconditionally ignore old secrets
+	if options.RotationStrategy != KeepOld || options.IgnoreOldSecrets {
+		return true, nil
+	}
+
+	// ignore old secrets if current secret is older than IgnoreOldSecretsAfter
+	if options.IgnoreOldSecretsAfter != nil {
+		if issuedAt == "" {
+			// should never happen
+			return false, nil
+		}
+
+		issuedAtUnix, err := strconv.ParseInt(issuedAt, 10, 64)
+		if err != nil {
+			return false, err
+		}
+
+		age := m.clock.Now().UTC().Sub(time.Unix(issuedAtUnix, 0).UTC())
+		if age >= *options.IgnoreOldSecretsAfter {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 func (m *manager) storeOldSecrets(ctx context.Context, name, currentSecretName string) error {
 	secretList := &corev1.SecretList{}
 	if err := m.client.List(ctx, secretList, client.InNamespace(m.namespace), client.MatchingLabels{
@@ -449,8 +479,10 @@ type GenerateOptions struct {
 	Persist bool
 	// RotationStrategy specifies how the secret should be rotated in case it needs to get rotated.
 	RotationStrategy rotationStrategy
-	// IgnoreOldSecrets specifies whether old secrets should be loaded to the internal store.
+	// IgnoreOldSecrets specifies whether old secrets should be dropped.
 	IgnoreOldSecrets bool
+	// IgnoreOldSecretsAfter specifies that old secrets should be dropped once a given duration after rotation has passed.
+	IgnoreOldSecretsAfter *time.Duration
 	// Validity specifies for how long the secret should be valid.
 	Validity time.Duration
 	// IgnoreConfigChecksumForCASecretName specifies whether the secret config checksum should be ignored when
@@ -587,6 +619,14 @@ func Rotate(strategy rotationStrategy) GenerateOption {
 func IgnoreOldSecrets() GenerateOption {
 	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
 		options.IgnoreOldSecrets = true
+		return nil
+	}
+}
+
+// IgnoreOldSecretsAfter returns a function which sets the 'IgnoreOldSecretsAfter' field to the given duration.
+func IgnoreOldSecretsAfter(d time.Duration) GenerateOption {
+	return func(_ Interface, _ secretutils.ConfigInterface, options *GenerateOptions) error {
+		options.IgnoreOldSecretsAfter = &d
 		return nil
 	}
 }
