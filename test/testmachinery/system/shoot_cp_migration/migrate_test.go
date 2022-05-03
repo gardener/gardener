@@ -134,9 +134,10 @@ func initShootAndClient(ctx context.Context, t *ShootMigrationTest) (err error) 
 		}
 		t.GardenerFramework.Logger.Info("Shoot kubeconfig secret was fetched successfully")
 
-		t.ShootClient, err = kubernetes.NewClientFromSecret(ctx, t.GardenerFramework.GardenClient.Client(), kubecfgSecret.Namespace, kubecfgSecret.Name, kubernetes.WithClientOptions(client.Options{
-			Scheme: kubernetes.ShootScheme,
-		}))
+		t.ShootClient, err = kubernetes.NewClientFromSecret(ctx, t.GardenerFramework.GardenClient.Client(), kubecfgSecret.Namespace, kubecfgSecret.Name,
+			kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.ShootScheme}),
+			kubernetes.WithDisabledCachedClient(),
+		)
 	}
 	t.Shoot = *shoot
 	return
