@@ -50,6 +50,7 @@
 * [Shoot Kubernetes and Operating System Versioning](usage/shoot_versions.md)
 * [Shoot Networking](usage/shoot_networking.md)
 * [Shoot Maintenance](usage/shoot_maintenance.md)
+* [Shoot `ServiceAccount` Configurations](usage/shoot_serviceaccounts.md)
 * [Shoot Status](usage/shoot_status.md)
 * [Shoot Info `ConfigMap`](usage/shoot_info_configmap.md)
 * [Shoot Updates and Upgrades](usage/shoot_updates.md)

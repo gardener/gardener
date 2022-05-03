@@ -1236,7 +1236,10 @@ var _ = Describe("KubeAPIServer", func() {
 						}
 						botanist.Shoot.SetInfo(shootCopy)
 					},
-					kubeapiserver.ServiceAccountConfig{Issuer: "issuer"},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:          "issuer",
+						AcceptedIssuers: []string{"https://api." + internalClusterDomain},
+					},
 					false,
 					Not(HaveOccurred()),
 				),
@@ -1274,7 +1277,27 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					kubeapiserver.ServiceAccountConfig{
 						Issuer:          "issuer",
-						AcceptedIssuers: []string{"issuer1", "issuer2"},
+						AcceptedIssuers: []string{"issuer1", "issuer2", "https://api." + internalClusterDomain},
+					},
+					false,
+					Not(HaveOccurred()),
+				),
+				Entry("Default Issuer is already part of AcceptedIssuers",
+					func() {
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+									Issuer:          pointer.String("issuer"),
+									AcceptedIssuers: []string{"https://api." + internalClusterDomain},
+								},
+							},
+						}
+						botanist.Shoot.SetInfo(shootCopy)
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:          "issuer",
+						AcceptedIssuers: []string{"https://api." + internalClusterDomain},
 					},
 					false,
 					Not(HaveOccurred()),
