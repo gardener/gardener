@@ -8,7 +8,7 @@ In this guide, we will start a [KinD](https://kind.sigs.k8s.io/) cluster which i
 
 The Gardener components, however, will be run as regular processes on your machine (hence, no container images are being built).
 
-![Architecture Diagram](content/getting_started_locally.png)
+![Architecture Diagram](https://raw.githubusercontent.com/gardener/gardener/master/docs/development/content/getting_started_locally.png)
 
 ## Prerequisites
 
