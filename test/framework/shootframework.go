@@ -210,10 +210,8 @@ func (f *ShootFramework) AddShoot(ctx context.Context, shootName, shootNamespace
 
 	if !f.GardenerFrameworkConfig.SkipAccessingShoot {
 		if err := retry.UntilTimeout(ctx, k8sClientInitPollInterval, k8sClientInitTimeout, func(ctx context.Context) (bool, error) {
-			shootClient, err = kubernetes.NewClientFromSecret(ctx, f.GardenClient.Client(), shoot.Namespace, shoot.Name+"."+gutil.ShootProjectSecretSuffixKubeconfig, kubernetes.WithClientOptions(
-				client.Options{
-					Scheme: kubernetes.ShootScheme,
-				}),
+			shootClient, err = kubernetes.NewClientFromSecret(ctx, f.GardenClient.Client(), shoot.Namespace, shoot.Name+"."+gutil.ShootProjectSecretSuffixKubeconfig,
+				kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.ShootScheme}),
 				kubernetes.WithDisabledCachedClient(),
 			)
 			if err != nil {
