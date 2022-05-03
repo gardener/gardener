@@ -10,7 +10,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/envoyproxy/go-control-plane v0.10.1
 	github.com/gardener/dependency-watchdog v0.7.0
-	github.com/gardener/etcd-druid v0.8.0
+	github.com/gardener/etcd-druid v0.9.0
 	github.com/gardener/external-dns-management v0.7.18
 	github.com/gardener/hvpa-controller/api v0.5.0
 	github.com/gardener/machine-controller-manager v0.41.0

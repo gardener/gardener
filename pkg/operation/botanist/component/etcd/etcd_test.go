@@ -238,7 +238,7 @@ var _ = Describe("Etcd", func() {
 					},
 					Etcd: druidv1alpha1.EtcdConfig{
 						Resources: resourcesContainerEtcd,
-						TLS: &druidv1alpha1.TLSConfig{
+						ClientUrlTLS: &druidv1alpha1.TLSConfig{
 							TLSCASecretRef: druidv1alpha1.SecretReference{
 								SecretReference: corev1.SecretReference{
 									Name:      secretNameCA,
@@ -262,6 +262,23 @@ var _ = Describe("Etcd", func() {
 						Quota:                   &quota,
 					},
 					Backup: druidv1alpha1.BackupSpec{
+						TLS: &druidv1alpha1.TLSConfig{
+							TLSCASecretRef: druidv1alpha1.SecretReference{
+								SecretReference: corev1.SecretReference{
+									Name:      secretNameCA,
+									Namespace: testNamespace,
+								},
+								DataKey: pointer.String("bundle.crt"),
+							},
+							ServerTLSSecretRef: corev1.SecretReference{
+								Name:      secretNameServer,
+								Namespace: testNamespace,
+							},
+							ClientTLSSecretRef: corev1.SecretReference{
+								Name:      secretNameClient,
+								Namespace: testNamespace,
+							},
+						},
 						Port:                    &PortBackupRestore,
 						Resources:               resourcesContainerBackupRestore,
 						GarbageCollectionPolicy: &garbageCollectionPolicy,
