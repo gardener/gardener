@@ -52,6 +52,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -418,8 +419,13 @@ func (r *Reconciler) delete(ctx context.Context, mr *resourcesv1alpha1.ManagedRe
 }
 
 func (r *Reconciler) applyNewResources(ctx context.Context, origin string, newResourcesObjects []object, labelsToInject map[string]string, equivalences Equivalences) error {
-
-	newResourcesObjects = sortByKind(newResourcesObjects)
+	var (
+		results   = make(chan error)
+		wg        sync.WaitGroup
+		errorList = &multierror.Error{
+			ErrorFormat: errorutils.NewErrorFormatFuncWithPrefix("Could not apply all new resources"),
+		}
+	)
 
 	// get all HPA and HVPA targetRefs to check if we should prevent overwriting replicas and/or resource requirements.
 	// VPAs don't have to be checked, as they don't update the spec directly and only mutate Pods via a MutatingWebhook
@@ -429,55 +435,75 @@ func (r *Reconciler) applyNewResources(ctx context.Context, origin string, newRe
 		return fmt.Errorf("failed to compute all HPA and HVPA target ref object keys: %w", err)
 	}
 
-	for _, obj := range newResourcesObjects {
-		var (
-			current            = obj.obj.DeepCopy()
-			resource           = unstructuredToString(obj.obj)
-			scaledHorizontally = isScaled(obj.obj, horizontallyScaledObjects, equivalences)
-			scaledVertically   = isScaled(obj.obj, verticallyScaledObjects, equivalences)
-		)
+	for _, o := range newResourcesObjects {
+		wg.Add(1)
 
-		r.log.Info("Applying", "resource", resource)
+		go func(obj object) {
+			defer wg.Done()
 
-		if operationResult, err := controllerutils.TypedCreateOrUpdate(ctx, r.targetClient, r.targetScheme, current, r.alwaysUpdate, func() error {
-			metadata, err := meta.Accessor(obj.obj)
-			if err != nil {
-				return fmt.Errorf("error getting metadata of object %q: %s", resource, err)
-			}
+			var (
+				current            = obj.obj.DeepCopy()
+				resource           = unstructuredToString(obj.obj)
+				scaledHorizontally = isScaled(obj.obj, horizontallyScaledObjects, equivalences)
+				scaledVertically   = isScaled(obj.obj, verticallyScaledObjects, equivalences)
+			)
 
-			// if the ignore annotation is set to false, do nothing (ignore the resource)
-			if ignore(metadata) {
-				annotations := current.GetAnnotations()
-				delete(annotations, descriptionAnnotation)
-				current.SetAnnotations(annotations)
-				return nil
-			}
+			r.log.Info("Applying", "resource", resource)
 
-			if err := injectLabels(obj.obj, labelsToInject); err != nil {
-				return fmt.Errorf("error injecting labels into object %q: %s", resource, err)
-			}
+			results <- retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+				if operationResult, err := controllerutils.TypedCreateOrUpdate(ctx, r.targetClient, r.targetScheme, current, r.alwaysUpdate, func() error {
+					metadata, err := meta.Accessor(obj.obj)
+					if err != nil {
+						return fmt.Errorf("error getting metadata of object %q: %s", resource, err)
+					}
 
-			return merge(origin, obj.obj, current, obj.forceOverwriteLabels, obj.oldInformation.Labels, obj.forceOverwriteAnnotations, obj.oldInformation.Annotations, scaledHorizontally, scaledVertically)
-		}); err != nil {
-			if apierrors.IsConflict(err) {
-				r.log.Info("Conflict while applying object", "object", resource, "err", err)
-				// return conflict error directly, so that the update will be retried
-				return err
-			}
+					// if the ignore annotation is set to false, do nothing (ignore the resource)
+					if ignore(metadata) {
+						annotations := current.GetAnnotations()
+						delete(annotations, descriptionAnnotation)
+						current.SetAnnotations(annotations)
+						return nil
+					}
 
-			if apierrors.IsInvalid(err) && operationResult == controllerutil.OperationResultUpdated && deleteOnInvalidUpdate(current) {
-				if deleteErr := r.targetClient.Delete(ctx, current); client.IgnoreNotFound(deleteErr) != nil {
-					return fmt.Errorf("error deleting object %q after 'invalid' update error: %s", resource, deleteErr)
+					if err := injectLabels(obj.obj, labelsToInject); err != nil {
+						return fmt.Errorf("error injecting labels into object %q: %s", resource, err)
+					}
+
+					return merge(origin, obj.obj, current, obj.forceOverwriteLabels, obj.oldInformation.Labels, obj.forceOverwriteAnnotations, obj.oldInformation.Annotations, scaledHorizontally, scaledVertically)
+				}); err != nil {
+					if apierrors.IsConflict(err) {
+						r.log.Info("Conflict while applying object", "object", resource, "err", err)
+						// return conflict error directly, so that the update will be retried
+						return err
+					}
+
+					if apierrors.IsInvalid(err) && operationResult == controllerutil.OperationResultUpdated && deleteOnInvalidUpdate(current) {
+						if deleteErr := r.targetClient.Delete(ctx, current); client.IgnoreNotFound(deleteErr) != nil {
+							return fmt.Errorf("error deleting object %q after 'invalid' update error: %s", resource, deleteErr)
+						}
+						// return error directly, so that the create after delete will be retried
+						return fmt.Errorf("deleted object %q because of 'invalid' update error and 'delete-on-invalid-update' annotation on object (%s)", resource, err)
+					}
+
+					return fmt.Errorf("error during apply of object %q: %s", resource, err)
 				}
-				// return error directly, so that the create after delete will be retried
-				return fmt.Errorf("deleted object %q because of 'invalid' update error and 'delete-on-invalid-update' annotation on object (%s)", resource, err)
-			}
+				return nil
+			})
+		}(o)
+	}
 
-			return fmt.Errorf("error during apply of object %q: %s", resource, err)
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	for err := range results {
+		if err != nil {
+			errorList = multierror.Append(errorList, err)
 		}
 	}
 
-	return nil
+	return errorList.ErrorOrNil()
 }
 
 func (r *Reconciler) origin(mr *resourcesv1alpha1.ManagedResource) string {
