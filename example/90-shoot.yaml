@@ -183,7 +183,7 @@ spec:
   #     signingKeySecretName:
   #       name: my-signing-key-secret
   #     extendTokenExpiration: true
-  #     maxTokenExpiration: 1y
+  #     maxTokenExpiration: 45d
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
   #   podEvictionTimeout: 2m0s
