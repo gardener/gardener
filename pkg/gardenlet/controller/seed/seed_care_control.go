@@ -199,8 +199,16 @@ func (c *Controller) seedCareUpdate(_, newObj interface{}) {
 		return
 	}
 
-	if newSeed.Generation == newSeed.Status.ObservedGeneration && apiequality.Semantic.DeepEqual(oldSeed.Status, newSeed.Status) {
+	if apiequality.Semantic.DeepEqual(gardencorev1beta1helper.GetCondition(newSeed.Status.Conditions, gardencorev1beta1.SeedBootstrapped),
+		gardencorev1beta1helper.GetCondition(oldSeed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)) &&
+		apiequality.Semantic.DeepEqual(gardencorev1beta1helper.GetCondition(newSeed.Status.Conditions, gardencorev1beta1.SeedGardenletReady),
+			gardencorev1beta1helper.GetCondition(oldSeed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)) &&
+		apiequality.Semantic.DeepEqual(gardencorev1beta1helper.GetCondition(newSeed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady),
+			gardencorev1beta1helper.GetCondition(oldSeed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady)) &&
+		apiequality.Semantic.DeepEqual(gardencorev1beta1helper.GetCondition(newSeed.Status.Conditions, gardencorev1beta1.SeedExtensionsReady),
+			gardencorev1beta1helper.GetCondition(oldSeed.Status.Conditions, gardencorev1beta1.SeedExtensionsReady)) {
 		return
 	}
+
 	c.seedCareQueue.Add(key)
 }

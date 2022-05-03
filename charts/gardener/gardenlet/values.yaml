@@ -108,7 +108,7 @@ global:
         seedCare:
           syncPeriod: 30s
           conditionThresholds:
-          - type: SystemComponentsHealthy
+          - type: SeedSystemComponentsHealthy
             duration: 1m
         shootSecret:
           concurrentSyncs: 5

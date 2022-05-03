@@ -888,7 +888,7 @@ func VerifyGardenletComponentConfigConfigMap(
 		for _, cm := range list.Items {
 			cmNames += " " + cm.Name
 		}
-		ginkgo.Fail("Could not find unique gardenlet configmap, possibly the unique name has changed. Found:" + cmNames)
+		ginkgo.Fail("Could not find unique gardenlet configmap " + uniqueName + ", possibly the unique name has changed. Found:" + cmNames)
 	}
 
 	Expect(componentConfigCm.Labels).To(DeepEqual(expectedComponentConfigCm.Labels))

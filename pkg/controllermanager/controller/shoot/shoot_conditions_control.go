@@ -30,9 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// SeedSystemComponentsHealthyInShoot is the seed SystemComponentsHealthy constatnt that is used in the shoot
-const SeedSystemComponentsHealthyInShoot = "SeedSystemComponentsHealthy"
-
 func (c *Controller) shootConditionsAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
@@ -74,7 +71,18 @@ func (r *shootConditionsReconciler) Reconcile(ctx context.Context, request recon
 	// Build new shoot conditions
 	// First remove all existing seed conditions and then add the current seed conditions
 	// if the shoot is still registered as seed
-	conditions := AddSeedConditionsToShoot(seed, shoot)
+	seedConditionTypes := []gardencorev1beta1.ConditionType{
+		gardencorev1beta1.SeedBackupBucketsReady,
+		gardencorev1beta1.SeedBootstrapped,
+		gardencorev1beta1.SeedExtensionsReady,
+		gardencorev1beta1.SeedGardenletReady,
+		gardencorev1beta1.SeedSystemComponentsHealthy,
+	}
+	conditions := gardencorev1beta1helper.RemoveConditions(shoot.Status.Conditions, seedConditionTypes...)
+	if seed != nil {
+		conditions = gardencorev1beta1helper.MergeConditions(conditions, seed.Status.Conditions...)
+	}
+
 	// Update the shoot conditions if needed
 	if gardencorev1beta1helper.ConditionsNeedUpdate(shoot.Status.Conditions, conditions) {
 		r.logger.Debugf("Updating shoot %s conditions", kutil.ObjectName(shoot))
@@ -133,24 +141,4 @@ func FilterSeedForShootConditions(obj, oldObj, _ client.Object, _ bool) bool {
 	}
 
 	return false
-}
-
-// AddSeedConditionsToShoot adds the conditions from the seed to the shoot by adapting the type of the seed's SystemComponentsHealthy condition so that it is not duplicated.
-func AddSeedConditionsToShoot(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) []gardencorev1beta1.Condition {
-	seedConditionTypes := []gardencorev1beta1.ConditionType{
-		gardencorev1beta1.SeedBackupBucketsReady,
-		gardencorev1beta1.SeedBootstrapped,
-		gardencorev1beta1.SeedExtensionsReady,
-		gardencorev1beta1.SeedGardenletReady,
-		SeedSystemComponentsHealthyInShoot,
-	}
-	conditions := gardencorev1beta1helper.RemoveConditions(shoot.Status.Conditions, seedConditionTypes...)
-	if seed != nil {
-		seedSystemComponentsCondition := gardencorev1beta1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy)
-		seedSystemComponentsCondition.Type = SeedSystemComponentsHealthyInShoot
-		seedConditions := append(gardencorev1beta1helper.RemoveConditions(seed.Status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy), seedSystemComponentsCondition)
-
-		conditions = gardencorev1beta1helper.MergeConditions(conditions, seedConditions...)
-	}
-	return conditions
 }

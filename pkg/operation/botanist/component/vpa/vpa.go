@@ -117,6 +117,8 @@ const (
 	ClusterTypeSeed clusterType = "seed"
 	// ClusterTypeShoot is a constant for the 'shoot' cluster type.
 	ClusterTypeShoot clusterType = "shoot"
+	// ManagedResourceControlName is the name of the of the cluster-autoscaler managed resource.
+	ManagedResourceControlName = "vpa"
 )
 
 func (v *vpa) Deploy(ctx context.Context) error {

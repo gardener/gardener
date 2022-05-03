@@ -84,10 +84,6 @@ var _ = Describe("Seed Care Control", func() {
 		}
 	})
 
-	AfterEach(func() {
-		careControl = nil
-	})
-
 	Describe("#Care", func() {
 		var (
 			careSyncPeriod time.Duration
@@ -162,18 +158,9 @@ var _ = Describe("Seed Care Control", func() {
 			})
 
 			Context("when no conditions are returned", func() {
-				var revertFns []func()
-
 				BeforeEach(func() {
-					revertFns = append(revertFns,
-						test.WithVars(&NewHealthCheck,
-							healthCheckFunc(func(_ []gardencorev1beta1.Condition) []gardencorev1beta1.Condition { return nil })),
-					)
-				})
-				AfterEach(func() {
-					for _, fn := range revertFns {
-						fn()
-					}
+					DeferCleanup(test.WithVars(&NewHealthCheck,
+						healthCheckFunc(func(_ []gardencorev1beta1.Condition) []gardencorev1beta1.Condition { return nil })))
 				})
 				It("should not set conditions", func() {
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
@@ -202,21 +189,12 @@ var _ = Describe("Seed Care Control", func() {
 			})
 
 			Context("when conditions are returned unchanged", func() {
-				var revertFns []func()
 				BeforeEach(func() {
-					revertFns = append(revertFns,
-						test.WithVars(&NewHealthCheck,
-							healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-								conditionsCopy := append(cond[:0:0], cond...)
-								return conditionsCopy
-							}),
-						),
-					)
-				})
-				AfterEach(func() {
-					for _, fn := range revertFns {
-						fn()
-					}
+					DeferCleanup(test.WithVars(&NewHealthCheck,
+						healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+							conditionsCopy := append(cond[:0:0], cond...)
+							return conditionsCopy
+						})))
 				})
 
 				It("should not set conditions", func() {
@@ -248,8 +226,6 @@ var _ = Describe("Seed Care Control", func() {
 			Context("when conditions are changed", func() {
 				var (
 					conditions []gardencorev1beta1.Condition
-
-					revertFns []func()
 				)
 
 				BeforeEach(func() {
@@ -260,60 +236,17 @@ var _ = Describe("Seed Care Control", func() {
 							Reason: "foo",
 						},
 					}
-
-					revertFns = append(revertFns,
-						test.WithVars(&NewHealthCheck,
-							healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-								return conditions
-							}),
-						),
-					)
+					DeferCleanup(test.WithVars(&NewHealthCheck,
+						healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+							return conditions
+						})))
 				})
-
-				AfterEach(func() {
-					for _, fn := range revertFns {
-						fn()
-					}
-				})
-
 				It("should update shoot conditions", func() {
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
 					updatedSeed := &gardencorev1beta1.Seed{}
 					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(seed), updatedSeed)).To(Succeed())
 					Expect(updatedSeed.Status.Conditions).To(ConsistOf(conditions))
-				})
-			})
-
-			Context("when conditions are changed to healthy", func() {
-				var (
-					conditions []gardencorev1beta1.Condition
-
-					revertFns []func()
-				)
-
-				BeforeEach(func() {
-					conditions = []gardencorev1beta1.Condition{
-						{
-							Type:   gardencorev1beta1.SeedSystemComponentsHealthy,
-							Status: gardencorev1beta1.ConditionTrue,
-							Reason: "foo",
-						},
-					}
-
-					revertFns = append(revertFns,
-						test.WithVars(&NewHealthCheck,
-							healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-								return conditions
-							}),
-						),
-					)
-				})
-
-				AfterEach(func() {
-					for _, fn := range revertFns {
-						fn()
-					}
 				})
 			})
 		})

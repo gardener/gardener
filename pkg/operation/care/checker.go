@@ -30,7 +30,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
@@ -553,6 +555,8 @@ var managedResourcesSeed = sets.NewString(
 	networkpolicies.ManagedResourceControlName,
 	clusteridentity.ManagedResourceControlName,
 	clusterautoscaler.ManagedResourceControlName,
+	vpa.ManagedResourceControlName,
+	nginxingress.ManagedResourceControlName,
 )
 
 func makeDeploymentLister(ctx context.Context, c client.Client, namespace string, selector labels.Selector) kutil.DeploymentLister {

@@ -42,6 +42,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// ManagedResourceControlName is the name of the of the cluster-autoscaler managed resource.
+const ManagedResourceControlName = "cluster-autoscaler"
+
 const (
 	name                = "nginx-ingress"
 	managedResourceName = name
