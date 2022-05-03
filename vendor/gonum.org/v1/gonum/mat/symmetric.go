@@ -9,6 +9,8 @@ import (
 
 	"gonum.org/v1/gonum/blas"
 	"gonum.org/v1/gonum/blas/blas64"
+	"gonum.org/v1/gonum/lapack"
+	"gonum.org/v1/gonum/lapack/lapack64"
 )
 
 var (
@@ -22,10 +24,7 @@ var (
 	_ MutableSymmetric = symDense
 )
 
-const (
-	badSymTriangle = "mat: blas64.Symmetric not upper"
-	badSymCap      = "mat: bad capacity for SymDense"
-)
+const badSymTriangle = "mat: blas64.Symmetric not upper"
 
 // SymDense is a symmetric matrix that uses dense storage. SymDense
 // matrices are stored in the upper triangle.
@@ -38,8 +37,8 @@ type SymDense struct {
 // the element at {j, i}). Symmetric matrices are always square.
 type Symmetric interface {
 	Matrix
-	// Symmetric returns the number of rows/columns in the matrix.
-	Symmetric() int
+	// SymmetricDim returns the number of rows/columns in the matrix.
+	SymmetricDim() int
 }
 
 // A RawSymmetricer can return a view of itself as a BLAS Symmetric matrix.
@@ -101,9 +100,9 @@ func (s *SymDense) T() Matrix {
 	return s
 }
 
-// Symmetric implements the Symmetric interface and returns the number of rows
+// SymmetricDim implements the Symmetric interface and returns the number of rows
 // and columns in the matrix.
-func (s *SymDense) Symmetric() int {
+func (s *SymDense) SymmetricDim() int {
 	return s.mat.N
 }
 
@@ -182,7 +181,8 @@ func (s *SymDense) reuseAsNonZeroed(n int) {
 		panic(ErrZeroLength)
 	}
 	if s.mat.N > s.cap {
-		panic(badSymCap)
+		// Panic as a string, not a mat.Error.
+		panic(badCap)
 	}
 	if s.IsEmpty() {
 		s.mat = blas64.Symmetric{
@@ -211,7 +211,8 @@ func (s *SymDense) reuseAsZeroed(n int) {
 		panic(ErrZeroLength)
 	}
 	if s.mat.N > s.cap {
-		panic(badSymCap)
+		// Panic as a string, not a mat.Error.
+		panic(badCap)
 	}
 	if s.IsEmpty() {
 		s.mat = blas64.Symmetric{
@@ -233,14 +234,14 @@ func (s *SymDense) reuseAsZeroed(n int) {
 }
 
 func (s *SymDense) isolatedWorkspace(a Symmetric) (w *SymDense, restore func()) {
-	n := a.Symmetric()
+	n := a.SymmetricDim()
 	if n == 0 {
 		panic(ErrZeroLength)
 	}
-	w = getWorkspaceSym(n, false)
+	w = getSymDenseWorkspace(n, false)
 	return w, func() {
 		s.CopySym(w)
-		putWorkspaceSym(w)
+		putSymDenseWorkspace(w)
 	}
 }
 
@@ -257,8 +258,8 @@ func (s *SymDense) DiagView() Diagonal {
 }
 
 func (s *SymDense) AddSym(a, b Symmetric) {
-	n := a.Symmetric()
-	if n != b.Symmetric() {
+	n := a.SymmetricDim()
+	if n != b.SymmetricDim() {
 		panic(ErrShape)
 	}
 	s.reuseAsNonZeroed(n)
@@ -294,7 +295,7 @@ func (s *SymDense) AddSym(a, b Symmetric) {
 }
 
 func (s *SymDense) CopySym(a Symmetric) int {
-	n := a.Symmetric()
+	n := a.SymmetricDim()
 	n = min(n, s.mat.N)
 	if n == 0 {
 		return 0
@@ -324,7 +325,7 @@ func (s *SymDense) CopySym(a Symmetric) int {
 //  s = a + alpha * x * xᵀ
 func (s *SymDense) SymRankOne(a Symmetric, alpha float64, x Vector) {
 	n := x.Len()
-	if a.Symmetric() != n {
+	if a.SymmetricDim() != n {
 		panic(ErrShape)
 	}
 	s.reuseAsNonZeroed(n)
@@ -356,7 +357,7 @@ func (s *SymDense) SymRankOne(a Symmetric, alpha float64, x Vector) {
 // result into the receiver. If a is zero, see SymOuterK.
 //  s = a + alpha * x * x'
 func (s *SymDense) SymRankK(a Symmetric, alpha float64, x Matrix) {
-	n := a.Symmetric()
+	n := a.SymmetricDim()
 	r, _ := x.Dims()
 	if r != n {
 		panic(ErrShape)
@@ -404,10 +405,10 @@ func (s *SymDense) SymOuterK(alpha float64, x Matrix) {
 		panic(badSymTriangle)
 	case s.mat.N == n:
 		if s == x {
-			w := getWorkspaceSym(n, true)
+			w := getSymDenseWorkspace(n, true)
 			w.SymRankK(w, alpha, x)
 			s.CopySym(w)
-			putWorkspaceSym(w)
+			putSymDenseWorkspace(w)
 		} else {
 			switch r := x.(type) {
 			case RawMatrixer:
@@ -494,7 +495,7 @@ func (s *SymDense) RankTwo(a Symmetric, alpha float64, x, y Vector) {
 
 // ScaleSym multiplies the elements of a by f, placing the result in the receiver.
 func (s *SymDense) ScaleSym(f float64, a Symmetric) {
-	n := a.Symmetric()
+	n := a.SymmetricDim()
 	s.reuseAsNonZeroed(n)
 	if a, ok := a.(RawSymmetricer); ok {
 		amat := a.RawSymmetric()
@@ -522,7 +523,7 @@ func (s *SymDense) ScaleSym(f float64, a Symmetric) {
 // have to be a strict subset, dimension repeats are allowed.
 func (s *SymDense) SubsetSym(a Symmetric, set []int) {
 	n := len(set)
-	na := a.Symmetric()
+	na := a.SymmetricDim()
 	s.reuseAsNonZeroed(n)
 	var restore func()
 	if a == s {
@@ -578,8 +579,33 @@ func (s *SymDense) sliceSym(i, k int) *SymDense {
 	return &v
 }
 
+// Norm returns the specified norm of the receiver. Valid norms are:
+//  1 - The maximum absolute column sum
+//  2 - The Frobenius norm, the square root of the sum of the squares of the elements
+//  Inf - The maximum absolute row sum
+//
+// Norm will panic with ErrNormOrder if an illegal norm is specified and with
+// ErrZeroLength if the matrix has zero size.
+func (s *SymDense) Norm(norm float64) float64 {
+	if s.IsEmpty() {
+		panic(ErrZeroLength)
+	}
+	lnorm := normLapack(norm, false)
+	if lnorm == lapack.MaxColumnSum || lnorm == lapack.MaxRowSum {
+		work := getFloat64s(s.mat.N, false)
+		defer putFloat64s(work)
+		return lapack64.Lansy(lnorm, s.mat, work)
+	}
+	return lapack64.Lansy(lnorm, s.mat, nil)
+}
+
 // Trace returns the trace of the matrix.
+//
+// Trace will panic with ErrZeroLength if the matrix has zero size.
 func (s *SymDense) Trace() float64 {
+	if s.IsEmpty() {
+		panic(ErrZeroLength)
+	}
 	// TODO(btracey): could use internal asm sum routine.
 	var v float64
 	for i := 0; i < s.mat.N; i++ {
@@ -601,7 +627,7 @@ func (s *SymDense) GrowSym(n int) Symmetric {
 	}
 	var v SymDense
 	n += s.mat.N
-	if n > s.cap {
+	if s.IsEmpty() || n > s.cap {
 		v.mat = blas64.Symmetric{
 			N:      n,
 			Stride: n,
@@ -634,10 +660,10 @@ func (s *SymDense) GrowSym(n int) Symmetric {
 
 // PowPSD computes a^pow where a is a positive symmetric definite matrix.
 //
-// PowPSD returns an error if the matrix is not not positive symmetric definite
+// PowPSD returns an error if the matrix is not positive symmetric definite
 // or the Eigen decomposition is not successful.
 func (s *SymDense) PowPSD(a Symmetric, pow float64) error {
-	dim := a.Symmetric()
+	dim := a.SymmetricDim()
 	s.reuseAsNonZeroed(dim)
 
 	var eigen EigenSym

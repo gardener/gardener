@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"gonum.org/v1/gonum/graph"
-	"gonum.org/v1/gonum/graph/internal/uid"
 	"gonum.org/v1/gonum/graph/iterator"
+	"gonum.org/v1/gonum/graph/set/uid"
 )
 
 var (
@@ -33,7 +33,7 @@ type WeightedDirectedGraph struct {
 
 	self, absent float64
 
-	nodeIDs uid.Set
+	nodeIDs *uid.Set
 }
 
 // NewWeightedDirectedGraph returns a WeightedDirectedGraph with the specified self and absent
@@ -141,6 +141,17 @@ func (g *WeightedDirectedGraph) Nodes() graph.Nodes {
 		return graph.Empty
 	}
 	return iterator.NewNodes(g.nodes)
+}
+
+// NodeWithID returns a Node with the given ID if possible. If a graph.Node
+// is returned that is not already in the graph NodeWithID will return true
+// for new and the graph.Node must be added to the graph before use.
+func (g *WeightedDirectedGraph) NodeWithID(id int64) (n graph.Node, new bool) {
+	n, ok := g.nodes[id]
+	if ok {
+		return n, false
+	}
+	return Node(id), true
 }
 
 // RemoveEdge removes the edge with the given end point IDs from the graph, leaving the terminal

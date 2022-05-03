@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"gonum.org/v1/gonum/graph"
-	"gonum.org/v1/gonum/graph/internal/uid"
 	"gonum.org/v1/gonum/graph/iterator"
+	"gonum.org/v1/gonum/graph/set/uid"
 )
 
 var (
@@ -29,7 +29,7 @@ type DirectedGraph struct {
 	from  map[int64]map[int64]graph.Edge
 	to    map[int64]map[int64]graph.Edge
 
-	nodeIDs uid.Set
+	nodeIDs *uid.Set
 }
 
 // NewDirectedGraph returns a DirectedGraph.
@@ -137,6 +137,17 @@ func (g *DirectedGraph) Nodes() graph.Nodes {
 		return graph.Empty
 	}
 	return iterator.NewNodes(g.nodes)
+}
+
+// NodeWithID returns a Node with the given ID if possible. If a graph.Node
+// is returned that is not already in the graph NodeWithID will return true
+// for new and the graph.Node must be added to the graph before use.
+func (g *DirectedGraph) NodeWithID(id int64) (n graph.Node, new bool) {
+	n, ok := g.nodes[id]
+	if ok {
+		return n, false
+	}
+	return Node(id), true
 }
 
 // RemoveEdge removes the edge with the given end point IDs from the graph, leaving the terminal

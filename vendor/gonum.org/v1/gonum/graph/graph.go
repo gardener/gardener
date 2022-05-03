@@ -19,8 +19,12 @@ type Edge interface {
 	// To returns the to node of the edge.
 	To() Node
 
-	// ReversedEdge returns an edge that has
-	// the end points of the receiver swapped.
+	// ReversedEdge returns the edge reversal of the receiver
+	// if a reversal is valid for the data type.
+	// When a reversal is valid an edge of the same type as
+	// the receiver with nodes of the receiver swapped should
+	// be returned, otherwise the receiver should be returned
+	// unaltered.
 	ReversedEdge() Edge
 }
 
@@ -140,6 +144,18 @@ type NodeAdder interface {
 	// AddNode adds a node to the graph. AddNode panics if
 	// the added node ID matches an existing node ID.
 	AddNode(Node)
+}
+
+// NodeWithIDer is a graph that can return potentially new nodes with
+// a defined ID.
+type NodeWithIDer interface {
+	// NodeWithID returns a Node with the given ID if possible.
+	// A nil Node will be returned if no Node exists or
+	// can be created.
+	// If a non-nil Node is returned that is not already in the
+	// graph NodeWithID will return true for new and the Node
+	// must be added to the graph before use.
+	NodeWithID(id int64) (n Node, new bool)
 }
 
 // NodeRemover is an interface for removing nodes from a graph.

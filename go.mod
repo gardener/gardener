@@ -39,7 +39,7 @@ require (
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
 	golang.org/x/tools v0.1.9
 	gomodules.xyz/jsonpatch/v2 v2.2.0
-	gonum.org/v1/gonum v0.8.2
+	gonum.org/v1/gonum v0.11.0
 	gopkg.in/yaml.v2 v2.4.0
 	istio.io/api v0.0.0-20220304035241-8c47cbbea144
 	istio.io/client-go v1.12.5
@@ -99,7 +99,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/go-cmp v0.5.6 // indirect
+	github.com/google/go-cmp v0.5.7 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/google/pprof v0.0.0-20210407192527-94a9f03dee38 // indirect
 	github.com/google/uuid v1.1.2 // indirect

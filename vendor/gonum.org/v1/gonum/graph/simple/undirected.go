@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"gonum.org/v1/gonum/graph"
-	"gonum.org/v1/gonum/graph/internal/uid"
 	"gonum.org/v1/gonum/graph/iterator"
+	"gonum.org/v1/gonum/graph/set/uid"
 )
 
 var (
@@ -28,7 +28,7 @@ type UndirectedGraph struct {
 	nodes map[int64]graph.Node
 	edges map[int64]map[int64]graph.Edge
 
-	nodeIDs uid.Set
+	nodeIDs *uid.Set
 }
 
 // NewUndirectedGraph returns an UndirectedGraph.
@@ -74,16 +74,14 @@ func (g *UndirectedGraph) Edges() graph.Edges {
 		return graph.Empty
 	}
 	var edges []graph.Edge
-	seen := make(map[[2]int64]struct{})
-	for _, u := range g.edges {
-		for _, e := range u {
-			uid := e.From().ID()
-			vid := e.To().ID()
-			if _, ok := seen[[2]int64{uid, vid}]; ok {
+	for xid, u := range g.edges {
+		for yid, e := range u {
+			if yid < xid {
+				// Do not consider edges when the To node ID is
+				// before the From node ID. Both orientations
+				// are stored.
 				continue
 			}
-			seen[[2]int64{uid, vid}] = struct{}{}
-			seen[[2]int64{vid, uid}] = struct{}{}
 			edges = append(edges, e)
 		}
 	}
@@ -142,6 +140,17 @@ func (g *UndirectedGraph) Nodes() graph.Nodes {
 		return graph.Empty
 	}
 	return iterator.NewNodes(g.nodes)
+}
+
+// NodeWithID returns a Node with the given ID if possible. If a graph.Node
+// is returned that is not already in the graph NodeWithID will return true
+// for new and the graph.Node must be added to the graph before use.
+func (g *UndirectedGraph) NodeWithID(id int64) (n graph.Node, new bool) {
+	n, ok := g.nodes[id]
+	if ok {
+		return n, false
+	}
+	return Node(id), true
 }
 
 // RemoveEdge removes the edge with the given end IDs from the graph, leaving the terminal nodes.
