@@ -336,7 +336,10 @@ func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.S
 }
 
 func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context, config *gardencorev1beta1.KubeAPIServerConfig, externalHostname string) (kubeapiserver.ServiceAccountConfig, error) {
-	out := kubeapiserver.ServiceAccountConfig{Issuer: "https://" + externalHostname}
+	var (
+		defaultIssuer = "https://" + externalHostname
+		out           = kubeapiserver.ServiceAccountConfig{Issuer: defaultIssuer}
+	)
 
 	if config == nil || config.ServiceAccountConfig == nil {
 		return out, nil
@@ -349,6 +352,9 @@ func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context,
 		out.Issuer = *config.ServiceAccountConfig.Issuer
 	}
 	out.AcceptedIssuers = config.ServiceAccountConfig.AcceptedIssuers
+	if out.Issuer != defaultIssuer && !utils.ValueExists(defaultIssuer, out.AcceptedIssuers) {
+		out.AcceptedIssuers = append(out.AcceptedIssuers, defaultIssuer)
+	}
 
 	if signingKeySecret := config.ServiceAccountConfig.SigningKeySecret; signingKeySecret != nil {
 		secret := &corev1.Secret{}
