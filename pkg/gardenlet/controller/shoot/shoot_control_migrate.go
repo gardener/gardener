@@ -197,16 +197,10 @@ func (r *shootReconciler) runPrepareShootForMigrationFlow(ctx context.Context, o
 			Name: "Ensuring that ShootState exists",
 			Fn:   flow.TaskFn(botanist.EnsureShootStateExists).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
-		// TODO(rfranzke): Remove this task in a future version.
-		dropLegacySecretsFromShootState = g.Add(flow.Task{
-			Name:         "Dropping legacy secrets from ShootState",
-			Fn:           botanist.DropLegacySecretsFromShootState,
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
-		})
 		initializeSecretsManagement = g.Add(flow.Task{
 			Name:         "Initializing secrets management",
 			Fn:           flow.TaskFn(botanist.InitializeSecretsManagement).DoIf(nonTerminatingNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists, dropLegacySecretsFromShootState),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
 		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",

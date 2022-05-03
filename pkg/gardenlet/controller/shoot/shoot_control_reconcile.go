@@ -142,16 +142,10 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Fn:           botanist.UpdateAdvertisedAddresses,
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
 		})
-		// TODO(rfranzke): Remove this task in a future version.
-		dropLegacySecretsFromShootState = g.Add(flow.Task{
-			Name:         "Dropping legacy secrets from ShootState",
-			Fn:           botanist.DropLegacySecretsFromShootState,
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
-		})
 		initializeSecretsManagement = g.Add(flow.Task{
 			Name:         "Initializing secrets management",
 			Fn:           flow.TaskFn(botanist.InitializeSecretsManagement).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists, dropLegacySecretsFromShootState),
+			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists),
 		})
 		deployReferencedResources = g.Add(flow.Task{
 			Name:         "Deploying referenced resources",

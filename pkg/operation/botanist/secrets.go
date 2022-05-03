@@ -291,64 +291,6 @@ func (b *Botanist) syncShootCredentialToGarden(
 	return err
 }
 
-// DropLegacySecretsFromShootState drops the legacy secrets stored in the ShootState resource.
-// TODO(rfranzke): Remove this function in a future version.
-func (b *Botanist) DropLegacySecretsFromShootState(ctx context.Context) error {
-	return b.SaveGardenerResourceDataInShootState(ctx, func(gardenerResourceData *[]gardencorev1alpha1.GardenerResourceData) error {
-		gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(*gardenerResourceData)
-
-		// Remove legacy secrets from ShootState.
-		for _, name := range []string{
-			"dependency-watchdog-internal-probe",
-			"dependency-watchdog-external-probe",
-			"gardener",
-			"gardener-internal",
-			"kube-controller-manager",
-			"cluster-autoscaler",
-			"kube-state-metrics",
-			"prometheus",
-			"prometheus-kubelet",
-			"kube-apiserver",
-			"kube-apiserver-kubelet",
-			"kube-aggregator",
-			"kube-apiserver-http-proxy",
-			"kube-scheduler-server",
-			"kube-controller-manager-server",
-			"etcd-server-cert",
-			"etcd-client-tls",
-			"metrics-server",
-			"vpa-tls-certs",
-			"loki-tls",
-			"prometheus-tls",
-			"alertmanager-tls",
-			"grafana-tls",
-			"gardener-resource-manager-server",
-			"vpn-shoot",
-			"vpn-shoot-client",
-			"vpn-seed-server-tlsauth",
-			"vpn-seed",
-			"vpn-seed-tlsauth",
-			"vpn-seed-server",
-			"monitoring-ingress-credentials",
-			"monitoring-ingress-credentials-users",
-			"gardener-resource-manager",
-			"kube-proxy",
-			"cloud-config-downloader",
-			"kibana-tls",
-			"elasticsearch-logging-server",
-			"sg-admin-client",
-			"kibana-logging-sg-credentials",
-			"curator-sg-credentials",
-			"admin-sg-credentials",
-		} {
-			gardenerResourceDataList.Delete(name)
-		}
-
-		*gardenerResourceData = gardenerResourceDataList
-		return nil
-	})
-}
-
 func (b *Botanist) reconcileWildcardIngressCertificate(ctx context.Context) error {
 	wildcardCert, err := seed.GetWildcardCertificate(ctx, b.K8sSeedClient.Client())
 	if err != nil {
