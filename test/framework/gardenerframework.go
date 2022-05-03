@@ -88,10 +88,8 @@ func NewGardenerFrameworkFromConfig(cfg *GardenerConfig) *GardenerFramework {
 func (f *GardenerFramework) BeforeEach() {
 	f.GardenerFrameworkConfig = mergeGardenerConfig(f.GardenerFrameworkConfig, gardenerCfg)
 	validateGardenerConfig(f.GardenerFrameworkConfig)
-	gardenClient, err := kubernetes.NewClientFromFile("", f.GardenerFrameworkConfig.GardenerKubeconfig, kubernetes.WithClientOptions(
-		client.Options{
-			Scheme: kubernetes.GardenScheme,
-		}),
+	gardenClient, err := kubernetes.NewClientFromFile("", f.GardenerFrameworkConfig.GardenerKubeconfig,
+		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}),
 		kubernetes.WithAllowedUserFields([]string{kubernetes.AuthTokenFile}),
 		kubernetes.WithDisabledCachedClient(),
 	)
