@@ -63,6 +63,11 @@ func (r *progressingReconciler) Reconcile(ctx context.Context, req reconcile.Req
 		return ctrl.Result{}, fmt.Errorf("could not fetch ManagedResource: %w", err)
 	}
 
+	if isIgnored(mr) {
+		log.Info("Skipping checks since ManagedResource is ignored")
+		return ctrl.Result{}, nil
+	}
+
 	// Check responsibility
 	if _, responsible := r.classFilter.Active(mr); !responsible {
 		log.Info("Stopping checks as the responsibility changed")

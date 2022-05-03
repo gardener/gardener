@@ -101,8 +101,13 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 			managerpredicate.HasOperationAnnotation(),
 			managerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesHealthy, managerpredicate.ConditionChangedToUnhealthy),
 			managerpredicate.NoLongerIgnored(),
+			// we need to reconcile once if the ManagedResource got marked as ignored in order to update the conditions
+			managerpredicate.GotMarkedAsIgnored(),
 		),
+		// TODO: refactor this predicate chain into a single predicate.Funcs that can be properly tested as a whole
 		predicate.Or(
+			// Added again here, as otherwise NotIgnored would filter this add/update event out
+			managerpredicate.GotMarkedAsIgnored(),
 			managerpredicate.NotIgnored(),
 			predicateutils.IsDeleting(),
 		),

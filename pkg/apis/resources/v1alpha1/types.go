@@ -212,6 +212,9 @@ const (
 	// ReleaseOfOrphanedResourcesFailed indicates that the `ResourcesApplied` condition is `False`,
 	// because the release of orphaned resources failed.
 	ReleaseOfOrphanedResourcesFailed = "ReleaseOfOrphanedResourcesFailed"
+	// ConditionManagedResourceIgnored indicates that the ManagedResource's conditions are not checked,
+	// because the ManagedResource is marked to be ignored.
+	ConditionManagedResourceIgnored = "ManagedResourceIgnored"
 	// ConditionHealthChecksPending indicates that the `ResourcesHealthy` condition is `Unknown`,
 	// because the health checks have not been completely executed yet for the current set of resources.
 	ConditionHealthChecksPending = "HealthChecksPending"

@@ -37,7 +37,6 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	resourceshelper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
-	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
@@ -179,10 +178,7 @@ var healthControllerPredicates = []predicate.Predicate{
 		managerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesApplied, managerpredicate.DefaultConditionChange),
 		managerpredicate.NoLongerIgnored(),
 	),
-	predicate.Or(
-		managerpredicate.NotIgnored(),
-		predicateutils.IsDeleting(),
-	),
+	managerpredicate.NotIgnored(),
 }
 
 func mapToOriginManagedResource(log logr.Logger, clusterID string) handler.MapFunc {
@@ -221,4 +217,8 @@ var progressingStatusChanged = predicate.Funcs{
 	},
 	DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
 	GenericFunc: func(_ event.GenericEvent) bool { return false },
+}
+
+func isIgnored(obj client.Object) bool {
+	return obj.GetAnnotations()[resourcesv1alpha1.Ignore] == "true"
 }

@@ -101,6 +101,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if ignore(mr) && mr.DeletionTimestamp == nil {
 		log.Info("Skipping reconciliation since ManagedResource is ignored")
+		if err := r.updateConditionsForIgnoredManagedResource(ctx, mr); err != nil {
+			return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
+		}
+
 		return reconcile.Result{}, nil
 	}
 
@@ -358,7 +362,7 @@ func (r *reconciler) delete(ctx context.Context, mr *resourcesv1alpha1.ManagedRe
 	deleteCtx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
-	if err := r.updateConditionsForDeletion(ctx, log, mr); err != nil {
+	if err := r.updateConditionsForDeletion(ctx, mr); err != nil {
 		return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 	}
 
@@ -418,7 +422,24 @@ func (r *reconciler) delete(ctx context.Context, mr *resourcesv1alpha1.ManagedRe
 	return ctrl.Result{}, nil
 }
 
-func (r *reconciler) updateConditionsForDeletion(ctx context.Context, log logr.Logger, mr *resourcesv1alpha1.ManagedResource) error {
+func (r *reconciler) updateConditionsForIgnoredManagedResource(ctx context.Context, mr *resourcesv1alpha1.ManagedResource) error {
+	conditionResourcesApplied := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+	conditionResourcesApplied = v1beta1helper.UpdatedCondition(conditionResourcesApplied, gardencorev1beta1.ConditionTrue, resourcesv1alpha1.ConditionManagedResourceIgnored, "ManagedResource is marked to be ignored.")
+	conditionResourcesHealthy := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
+	conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionTrue, resourcesv1alpha1.ConditionManagedResourceIgnored, "ManagedResource is marked to be ignored.")
+	conditionResourcesProgressing := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesProgressing)
+	conditionResourcesProgressing = v1beta1helper.UpdatedCondition(conditionResourcesProgressing, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ConditionManagedResourceIgnored, "ManagedResource is marked to be ignored.")
+
+	oldMr := mr.DeepCopy()
+	mr.Status.Conditions = v1beta1helper.MergeConditions(mr.Status.Conditions, conditionResourcesApplied, conditionResourcesHealthy, conditionResourcesProgressing)
+	if !apiequality.Semantic.DeepEqual(oldMr.Status.Conditions, mr.Status.Conditions) {
+		return r.client.Status().Update(ctx, mr)
+	}
+
+	return nil
+}
+
+func (r *reconciler) updateConditionsForDeletion(ctx context.Context, mr *resourcesv1alpha1.ManagedResource) error {
 	conditionResourcesHealthy := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
 	conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ConditionDeletionPending, "The resources are currently being deleted.")
 	conditionResourcesProgressing := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesProgressing)

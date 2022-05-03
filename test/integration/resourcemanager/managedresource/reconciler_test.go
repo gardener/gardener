@@ -623,15 +623,18 @@ var _ = Describe("ManagedResource controller tests", func() {
 				managedResource.SetAnnotations(map[string]string{resourcesv1alpha1.Ignore: "true"})
 				Expect(testClient.Update(ctx, managedResource)).To(Succeed())
 
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionManagedResourceIgnored)),
+					containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionManagedResourceIgnored)),
+					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse), withReason(resourcesv1alpha1.ConditionManagedResourceIgnored)),
+				)
+
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
 				configMap.Data = map[string]string{"foo": "bar"}
 				Expect(testClient.Update(ctx, configMap)).To(Succeed())
-
-				Eventually(func(g Gomega) bool {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
-				}).Should(BeTrue())
 
 				Consistently(func(g Gomega) bool {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
