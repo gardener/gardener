@@ -119,6 +119,8 @@ elif name == 'etcd-custom-image':
     names = ['etcd']
 elif name == 'egress-filter-refresher':
     names = ['egress-filter-blackholer', 'egress-filter-firewaller']
+elif name == 'apiserver-proxy':
+    names = ['apiserver-proxy-sidecar', 'apiserver-proxy-pod-webhook']
 else:
     names = [name]
 
