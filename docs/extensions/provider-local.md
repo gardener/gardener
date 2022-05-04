@@ -113,6 +113,13 @@ Due to legacy reasons, the gardenlet still creates `DNSProvider` resources part 
 Since those are only needed in conjunction with the [`shoot-dns-service` extension](https://github.com/gardener/gardener-extension-shoot-dns-service) and have no relevance for the local provider, it just sets their `status.state=Ready` to please the expectations.
 In the future, this controller can be dropped when the gardenlet no longer creates such `DNSProvider`s.
 
+#### `Ingress`
+
+Gardenlet creates a wildcard DNS record for the Seed's ingress domain pointing to the `nginx-ingress-controller`'s LoadBalancer.
+This domain is commonly used by all `Ingress` objects created in the Seed for Seed and Shoot components.
+However, provider-local implements the `DNSRecord` extension API by writing the DNS record to `/etc/hosts`, which doesn't support wildcard entries.
+To make `Ingress` domains resolvable on the host, this controller reconciles all `Ingresses` and creates `DNSRecords` of type `local` for each host included in `spec.rules`.
+
 #### `Service`
 
 This controller reconciles `Services` of type `LoadBalancer` in the local `Seed` cluster

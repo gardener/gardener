@@ -16,8 +16,6 @@ rules:
   - clusters
   - controlplanes
   - controlplanes/status
-  - dnsrecords
-  - dnsrecords/status
   - infrastructures
   - infrastructures/status
   - operatingsystemconfigs
@@ -25,6 +23,18 @@ rules:
   - workers
   - workers/status
   verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - extensions.gardener.cloud
+  resources:
+  - dnsrecords
+  - dnsrecords/status
+  verbs:
+  - create
   - get
   - list
   - watch
@@ -94,6 +104,7 @@ rules:
   - mutatingwebhookconfigurations
   - customresourcedefinitions
   - networkpolicies
+  - ingresses
   verbs:
   - "*"
 - apiGroups:
