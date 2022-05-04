@@ -205,6 +205,11 @@ func (c *ChartDownloader) ResolveChartVersion(ref, version string) (*url.URL, ge
 	}
 	c.setCredentials(r)
 
+	// Skip if dependency not contain name
+	if len(r.Config.Name) == 0 {
+		return u, r.Client, nil
+	}
+
 	// Next, we need to load the index, and actually look up the chart.
 	i, err := repo.LoadIndexFile(c.HelmHome.CacheIndex(r.Config.Name))
 	if err != nil {
@@ -213,7 +218,7 @@ func (c *ChartDownloader) ResolveChartVersion(ref, version string) (*url.URL, ge
 
 	cv, err := i.Get(chartName, version)
 	if err != nil {
-		return u, r.Client, fmt.Errorf("chart %q matching %q not found in %s index. (try 'helm repo update'). %s", chartName, version, r.Config.Name, err)
+		return u, r.Client, fmt.Errorf("chart %q matching version %q not found in %s index. (try 'helm repo update'). %s", chartName, version, r.Config.Name, err)
 	}
 
 	if len(cv.URLs) == 0 {
