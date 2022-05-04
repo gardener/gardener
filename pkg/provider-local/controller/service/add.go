@@ -27,7 +27,7 @@ import (
 )
 
 // ControllerName is the name of the controller.
-const ControllerName = "service_controller"
+const ControllerName = "service"
 
 // DefaultAddOptions are the default AddOptions for AddToManager.
 var DefaultAddOptions = AddOptions{}
@@ -45,7 +45,9 @@ type AddOptions struct {
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
-	opts.Controller.Reconciler = NewReconciler(opts.HostIP)
+	opts.Controller.Reconciler = &reconciler{
+		hostIP: opts.HostIP,
+	}
 	opts.Controller.RecoverPanic = true
 
 	ctrl, err := controller.New(ControllerName, mgr, opts.Controller)
@@ -53,12 +55,24 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 		return err
 	}
 
-	selectorPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchExpressions: matchExpressions(opts.APIServerSNIEnabled)})
+	istioIngressGatewayPredicate, err := predicate.LabelSelectorPredicate(
+		metav1.LabelSelector{MatchExpressions: matchExpressionsIstioIngressGateway(opts.APIServerSNIEnabled)},
+	)
 	if err != nil {
 		return err
 	}
 
-	return ctrl.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForObject{}, selectorPredicate)
+	nginxIngressPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{MatchLabels: map[string]string{
+		"app":       "nginx-ingress",
+		"component": "controller",
+	}})
+	if err != nil {
+		return err
+	}
+
+	return ctrl.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForObject{},
+		predicate.Or(istioIngressGatewayPredicate, nginxIngressPredicate),
+	)
 }
 
 // AddToManager adds a controller with the default Options.
@@ -66,7 +80,7 @@ func AddToManager(mgr manager.Manager) error {
 	return AddToManagerWithOptions(mgr, DefaultAddOptions)
 }
 
-func matchExpressions(apiServerSNIEnabled bool) []metav1.LabelSelectorRequirement {
+func matchExpressionsIstioIngressGateway(apiServerSNIEnabled bool) []metav1.LabelSelectorRequirement {
 	if apiServerSNIEnabled {
 		return []metav1.LabelSelectorRequirement{
 			{

@@ -17,25 +17,15 @@ package service
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 type reconciler struct {
-	logger logr.Logger
 	client client.Client
 	hostIP string
-}
-
-// NewReconciler creates a new reconcile.Reconciler that reconciles Services.
-func NewReconciler(hostIP string) reconcile.Reconciler {
-	return &reconciler{
-		logger: log.Log.WithName(ControllerName),
-		hostIP: hostIP,
-	}
 }
 
 func (r *reconciler) InjectClient(client client.Client) error {
@@ -43,9 +33,17 @@ func (r *reconciler) InjectClient(client client.Client) error {
 	return nil
 }
 
-func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+var (
+	keyIstioIngressGateway = client.ObjectKey{Namespace: "istio-ingress", Name: "istio-ingressgateway"}
+	keyNginxIngress        = client.ObjectKey{Namespace: "garden", Name: "nginx-ingress-controller"}
+)
+
+func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	log := logf.FromContext(ctx)
+
+	key := req.NamespacedName
 	service := &corev1.Service{}
-	if err := r.client.Get(ctx, request.NamespacedName, service); err != nil {
+	if err := r.client.Get(ctx, key, service); err != nil {
 		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -53,18 +51,22 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	if service.Name == "istio-ingressgateway" && service.Namespace == "istio-ingress" {
+	log.Info("Reconciling service")
+
+	if key == keyIstioIngressGateway || key == keyNginxIngress {
 		patch := client.MergeFrom(service.DeepCopy())
 
 		for i, servicePort := range service.Spec.Ports {
-			if servicePort.Name == "tcp" {
+			switch {
+			case key == keyIstioIngressGateway && servicePort.Name == "tcp":
 				service.Spec.Ports[i].NodePort = 30443
-				break
+			case key == keyNginxIngress && servicePort.Name == "https":
+				service.Spec.Ports[i].NodePort = 30448
 			}
 		}
 
 		if err := r.client.Patch(ctx, service, patch); err != nil {
-			return reconcile.Result{}, nil
+			return reconcile.Result{}, err
 		}
 	}
 
