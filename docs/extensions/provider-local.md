@@ -42,10 +42,6 @@ Please note that all of them are no technical limitations/blockers but simply ad
 
    _The `dependency-watchdog` needs to be able to resolve the shoot cluster's DNS names. It is not yet able to do so, hence, it cannot be enabled._
 
-7. `Ingress`es exposed in the seed cluster are not reachable.
-
-   _There is no DNS resolution for the domains used for `Ingress`es in the seed cluster yet, hence, they are not reachable. Consequently, the [shoot node logging](../deployment/configuring_logging.md#enable-logs-from-the-shoots-node-systemd-services) feature does not work end-to-end._
-
 ## Implementation Details
 
 This section contains information about how the respective controllers and webhooks are implemented and what their purpose is.
