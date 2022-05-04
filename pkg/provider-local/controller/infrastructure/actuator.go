@@ -114,9 +114,18 @@ func (a *actuator) Reconcile(ctx context.Context, infrastructure *extensionsv1al
 			},
 		}},
 		Egress: []networkingv1.NetworkPolicyEgressRule{{
-			To: []networkingv1.NetworkPolicyPeer{{
-				PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}},
-			}},
+			To: []networkingv1.NetworkPolicyPeer{
+				{
+					PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "machine"}},
+				},
+				{
+					NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"role": "garden"}},
+					PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+						"app":       "nginx-ingress",
+						"component": "controller",
+					}},
+				},
+			},
 		}},
 		PodSelector: metav1.LabelSelector{
 			MatchLabels: map[string]string{"app": "machine"},

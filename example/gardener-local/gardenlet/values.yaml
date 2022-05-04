@@ -45,6 +45,16 @@ global:
         SeedKubeScheduler: false
         ReversedVPN: true
         ShootCARotation: true
+      logging:
+        enabled: true
+        loki:
+          enabled: true
+        shootNodeLogging:
+          shootPurposes:
+          - "infrastructure"
+          - "production"
+          - "development"
+          - "evaluation"
       seedConfig:
         apiVersion: core.gardener.cloud/v1beta1
         kind: Seed
