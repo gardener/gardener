@@ -41,5 +41,6 @@ func RegisterFeatureGates() {
 		features.DisableDNSProviderManagement,
 		features.ShootCARotation,
 		features.ShootSARotation,
+		features.HAControlPlanes,
 	)))
 }

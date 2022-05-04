@@ -43,6 +43,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | DisableDNSProviderManagement                 | `false` | `Alpha` | `1.41` |        |
 | ShootCARotation                              | `false` | `Alpha` | `1.42` |        |
 | ShootSARotation                              | `false` | `Alpha` | `1.48` |        |
+| HAControlPlanes                              | `false` | `Alpha` | `1.48` |        |
 
 ## Feature gates for graduated or deprecated features
 
@@ -140,3 +141,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | ShootSARotation                            | `gardener-apiserver`, `gardenlet`                                | Enables the feature to trigger automated service account signing key rotation for shoot clusters. |
 | ShootMaxTokenExpirationOverwrite           | `gardener-apiserver`                                             | Makes the Gardener API server overwriting values in the `.spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration` field of Shoot specifications to<br>- be at least 720h (30d) when the current value is lower<br>- be at most 2160h (90d) when the current value is higher<br>before persisting the object to etcd. |
 | ShootMaxTokenExpirationValidation          | `gardener-apiserver`                                             | Enables validations on Gardener API server that enforce that the value of the `.spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration` field<br>- is at least 720h (30d).<br>- is at most 2160h (90d).<br>Only enable this after `ShootMaxTokenExpirationOverwrite` is enabled and all shoots got updated accordingly. |
+| HAControlPlanes                            | `gardenlet`                                                      | HAControlPlanes allows shoot control planes to be run in High Availability mode. |
