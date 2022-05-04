@@ -795,7 +795,7 @@ var _ = Describe("Etcd", func() {
 			Expect(etcd.Deploy(ctx)).To(Succeed())
 		})
 
-		It("should successfully deploy (normal etcd) and keep the existing resource settings to not interfer with HVPA controller", func() {
+		It("should successfully deploy (normal etcd) and keep the existing resource request settings (but not limits) to not interfer with HVPA controller", func() {
 			oldTimeNow := TimeNow
 			defer func() { TimeNow = oldTimeNow }()
 			TimeNow = func() time.Time { return now }
@@ -820,6 +820,13 @@ var _ = Describe("Etcd", func() {
 						corev1.ResourceCPU:    resource.MustParse("7"),
 						corev1.ResourceMemory: resource.MustParse("8G"),
 					},
+				}
+
+				expectedResourcesContainerEtcd = corev1.ResourceRequirements{
+					Requests: existingResourcesContainerEtcd.Requests,
+				}
+				expectedResourcesContainerBackupRestore = corev1.ResourceRequirements{
+					Requests: existingResourcesContainerBackupRestore.Requests,
 				}
 			)
 
@@ -863,8 +870,8 @@ var _ = Describe("Etcd", func() {
 						nil,
 						"",
 						"",
-						&existingResourcesContainerEtcd,
-						&existingResourcesContainerBackupRestore,
+						&expectedResourcesContainerEtcd,
+						&expectedResourcesContainerBackupRestore,
 					)))
 				}),
 				c.EXPECT().Get(ctx, kutil.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),

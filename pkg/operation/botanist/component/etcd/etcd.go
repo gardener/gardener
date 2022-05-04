@@ -698,9 +698,13 @@ func (e *etcd) computeContainerResources(existingSts *appsv1.StatefulSet) (*core
 			v := existingSts.Spec.Template.Spec.Containers[k]
 			switch v.Name {
 			case containerNameEtcd:
-				resourcesEtcd = v.Resources.DeepCopy()
+				resourcesEtcd = &corev1.ResourceRequirements{
+					Requests: v.Resources.Requests,
+				}
 			case containerNameBackupRestore:
-				resourcesBackupRestore = v.Resources.DeepCopy()
+				resourcesBackupRestore = &corev1.ResourceRequirements{
+					Requests: v.Resources.Requests,
+				}
 			}
 		}
 	}
