@@ -954,9 +954,6 @@ func ComputeExpectedGardenletDeploymentSpec(
 							FailureThreshold:    3,
 						},
 						Resources: corev1.ResourceRequirements{
-							Limits: corev1.ResourceList{
-								corev1.ResourceMemory: resource.MustParse("512Mi"),
-							},
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("100m"),
 								corev1.ResourceMemory: resource.MustParse("100Mi"),
@@ -1030,9 +1027,15 @@ func ComputeExpectedGardenletDeploymentSpec(
 			}
 
 			if value, ok := deploymentConfiguration.Resources.Limits[corev1.ResourceCPU]; ok {
+				if deployment.Template.Spec.Containers[0].Resources.Limits == nil {
+					deployment.Template.Spec.Containers[0].Resources.Limits = map[corev1.ResourceName]resource.Quantity{}
+				}
 				deployment.Template.Spec.Containers[0].Resources.Limits[corev1.ResourceCPU] = value
 			}
 			if value, ok := deploymentConfiguration.Resources.Limits[corev1.ResourceMemory]; ok {
+				if deployment.Template.Spec.Containers[0].Resources.Limits == nil {
+					deployment.Template.Spec.Containers[0].Resources.Limits = map[corev1.ResourceName]resource.Quantity{}
+				}
 				deployment.Template.Spec.Containers[0].Resources.Limits[corev1.ResourceMemory] = value
 			}
 		}
