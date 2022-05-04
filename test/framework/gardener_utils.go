@@ -60,10 +60,8 @@ func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string) (*gard
 		return seed, nil, nil
 	}
 
-	seedClient, err := kubernetes.NewClientFromSecret(ctx, f.GardenClient.Client(), seedSecretRef.Namespace, seedSecretRef.Name, kubernetes.WithClientOptions(
-		client.Options{
-			Scheme: kubernetes.SeedScheme,
-		}),
+	seedClient, err := kubernetes.NewClientFromSecret(ctx, f.GardenClient.Client(), seedSecretRef.Namespace, seedSecretRef.Name,
+		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
 		kubernetes.WithDisabledCachedClient(),
 	)
 	if err != nil {
