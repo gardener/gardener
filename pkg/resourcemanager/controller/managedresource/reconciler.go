@@ -277,10 +277,10 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 	if len(mr.Status.Resources) == 0 || !apiequality.Semantic.DeepEqual(mr.Status.Resources, newResourcesObjectReferences) {
 		conditionResourcesHealthy := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
 		conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionUnknown,
-			resourcesv1alpha1.ConditionHealthChecksPending, "The health checks have not yet been executed for the current set of resources.")
+			resourcesv1alpha1.ConditionChecksPending, "The health checks have not yet been executed for the current set of resources.")
 		conditionResourcesProgressing := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesProgressing)
 		conditionResourcesProgressing = v1beta1helper.UpdatedCondition(conditionResourcesProgressing, gardencorev1beta1.ConditionUnknown,
-			resourcesv1alpha1.ConditionProgressingChecksPending, "Checks have not yet been executed for the current set of resources.")
+			resourcesv1alpha1.ConditionChecksPending, "Checks have not yet been executed for the current set of resources.")
 
 		reason := resourcesv1alpha1.ConditionApplyProgressing
 		msg := "The resources are currently being reconciled."
@@ -423,12 +423,13 @@ func (r *reconciler) delete(ctx context.Context, mr *resourcesv1alpha1.ManagedRe
 }
 
 func (r *reconciler) updateConditionsForIgnoredManagedResource(ctx context.Context, mr *resourcesv1alpha1.ManagedResource) error {
+	message := "ManagedResource is marked to be ignored."
 	conditionResourcesApplied := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-	conditionResourcesApplied = v1beta1helper.UpdatedCondition(conditionResourcesApplied, gardencorev1beta1.ConditionTrue, resourcesv1alpha1.ConditionManagedResourceIgnored, "ManagedResource is marked to be ignored.")
+	conditionResourcesApplied = v1beta1helper.UpdatedCondition(conditionResourcesApplied, gardencorev1beta1.ConditionTrue, resourcesv1alpha1.ConditionManagedResourceIgnored, message)
 	conditionResourcesHealthy := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
-	conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionTrue, resourcesv1alpha1.ConditionManagedResourceIgnored, "ManagedResource is marked to be ignored.")
+	conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionTrue, resourcesv1alpha1.ConditionManagedResourceIgnored, message)
 	conditionResourcesProgressing := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesProgressing)
-	conditionResourcesProgressing = v1beta1helper.UpdatedCondition(conditionResourcesProgressing, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ConditionManagedResourceIgnored, "ManagedResource is marked to be ignored.")
+	conditionResourcesProgressing = v1beta1helper.UpdatedCondition(conditionResourcesProgressing, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ConditionManagedResourceIgnored, message)
 
 	oldMr := mr.DeepCopy()
 	mr.Status.Conditions = v1beta1helper.MergeConditions(mr.Status.Conditions, conditionResourcesApplied, conditionResourcesHealthy, conditionResourcesProgressing)

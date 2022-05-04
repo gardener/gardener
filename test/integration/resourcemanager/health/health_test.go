@@ -369,11 +369,13 @@ var _ = Describe("Health controller tests", func() {
 				Expect(testClient.Create(ctx, deployment)).To(Succeed())
 				deployment.Status = *deploymentStatus
 				Expect(testClient.Status().Update(ctx, deployment)).To(Succeed())
+
 				statefulSet = generateStatefulSetTestResource(managedResource.Name)
 				statefulSetStatus := statefulSet.Status.DeepCopy()
 				Expect(testClient.Create(ctx, statefulSet)).To(Succeed())
 				statefulSet.Status = *statefulSetStatus
 				Expect(testClient.Status().Update(ctx, statefulSet)).To(Succeed())
+
 				daemonSet = generateDaemonSetTestResource(managedResource.Name)
 				daemonSetStatus := daemonSet.Status.DeepCopy()
 				Expect(testClient.Create(ctx, daemonSet)).To(Succeed())

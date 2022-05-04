@@ -99,7 +99,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		For(&resourcesv1alpha1.ManagedResource{}, builder.WithPredicates(append(healthControllerPredicates, &conf.ClassFilter)...))
 
 	if !conf.TargetCacheDisabled {
-		// Watch relevant objects for Progressing condition in oder to immediately update the condition as soon as there is
+		// Watch relevant objects for Progressing condition in order to immediately update the condition as soon as there is
 		// a change on managed resources.
 		// If the target cache is disabled (e.g. for Shoots), we don't want to watch workload objects (Deployment, DaemonSet,
 		// StatefulSet) because this would cache all of them in the entire cluster. This can potentially be a lot of objects

@@ -75,15 +75,16 @@ func (r *progressingReconciler) Reconcile(ctx context.Context, req reconcile.Req
 	}
 
 	if !mr.DeletionTimestamp.IsZero() {
-		log.Info("Stopping checks for ManagedResource, as it is marked for deletion")
+		log.Info("Stopping checks for ManagedResource as it is marked for deletion")
 		return ctrl.Result{}, nil
 	}
 
 	// skip checks until ManagedResource has been reconciled completely successfully to prevent updating status while
-	// resource controller is still applying the resources (this would lead to a myriad of conflicts)
+	// resource controller is still applying the resources (this might lead to wrongful results inconsistent with the
+	// actual set of applied resources and causes a myriad of conflicts)
 	conditionResourcesApplied := v1beta1helper.GetCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
 	if conditionResourcesApplied == nil || conditionResourcesApplied.Status == gardencorev1beta1.ConditionProgressing || conditionResourcesApplied.Status == gardencorev1beta1.ConditionFalse {
-		log.Info("Skipping checks for ManagedResource, as it is has not been reconciled successfully yet")
+		log.Info("Skipping checks for ManagedResource as the resources were not applied yet")
 		return ctrl.Result{RequeueAfter: r.syncPeriod}, nil
 	}
 

@@ -215,10 +215,7 @@ const (
 	// ConditionManagedResourceIgnored indicates that the ManagedResource's conditions are not checked,
 	// because the ManagedResource is marked to be ignored.
 	ConditionManagedResourceIgnored = "ManagedResourceIgnored"
-	// ConditionHealthChecksPending indicates that the `ResourcesHealthy` condition is `Unknown`,
-	// because the health checks have not been completely executed yet for the current set of resources.
-	ConditionHealthChecksPending = "HealthChecksPending"
-	// ConditionProgressingChecksPending indicates that the `ResourcesProgressing` condition is `Unknown`,
-	// because the checks have not been completely executed yet for the current set of resources.
-	ConditionProgressingChecksPending = "ChecksPending"
+	// ConditionChecksPending indicates that the `ResourcesProgressing` condition is `Unknown`,
+	// because the condition checks have not been completely executed yet for the current set of resources.
+	ConditionChecksPending = "ChecksPending"
 )
