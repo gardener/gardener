@@ -142,30 +142,10 @@ var _ = Describe("Project Activity", func() {
 		})
 
 		Context("BackupEntry activity", func() {
-			Context("BackupEntry Add", func() {
-				var obj = &gardencorev1beta1.BackupEntry{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "backupEntry",
-						Namespace: namespaceName,
-					},
-				}
-				It("should add the project to the queue if the creationTimestamp of object is not old", func() {
-					queue.EXPECT().Add(projectName)
+			var backupEntry *gardencorev1beta1.BackupEntry
 
-					obj.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 30, 0, 0, time.UTC)}
-
-					c.projectActivityObjectAdd(ctx, obj)
-				})
-
-				It("should add the project to the queue if the creationTimestamp of object is old", func() {
-					obj.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 29, 0, 0, time.UTC)}
-
-					c.projectActivityObjectAdd(ctx, obj)
-				})
-			})
-
-			Context("BackupEntry Update", func() {
-				var oldObj = &gardencorev1beta1.BackupEntry{
+			BeforeEach(func() {
+				backupEntry = &gardencorev1beta1.BackupEntry{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "backupEntry",
 						Namespace: namespaceName,
@@ -174,50 +154,47 @@ var _ = Describe("Project Activity", func() {
 						BucketName: "bucket1",
 					},
 				}
+			})
 
+			Context("BackupEntry Add", func() {
+				It("should add the project to the queue if the creationTimestamp of object is not old", func() {
+					queue.EXPECT().Add(projectName)
+
+					backupEntry.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 30, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAdd(ctx, backupEntry)
+				})
+
+				It("should add the project to the queue if the creationTimestamp of object is old", func() {
+					backupEntry.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 29, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAdd(ctx, backupEntry)
+				})
+			})
+
+			Context("BackupEntry Update", func() {
 				It("should add the project to the queue if the spec of the object has changed", func() {
 					queue.EXPECT().Add(projectName)
 
-					newObj := oldObj.DeepCopy()
-					newObj.Spec.BucketName = "bucket2"
+					newBackupEntry := backupEntry.DeepCopy()
+					newBackupEntry.Spec.BucketName = "bucket2"
 
-					c.projectActivityBackupEntryUpdate(ctx, oldObj, newObj)
+					c.projectActivityBackupEntryUpdate(ctx, backupEntry, newBackupEntry)
 				})
 
 				It("should not add the project to the queue if the spec of the object hasn't changed", func() {
-					newObj := oldObj.DeepCopy()
+					newBackupEntry := backupEntry.DeepCopy()
 
-					c.projectActivityBackupEntryUpdate(ctx, oldObj, newObj)
+					c.projectActivityBackupEntryUpdate(ctx, backupEntry, newBackupEntry)
 				})
 			})
 		})
 
 		Context("Plant activity", func() {
-			Context("Plant Add", func() {
-				var obj = &gardencorev1beta1.Plant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "plant",
-						Namespace: namespaceName,
-					},
-				}
+			var plant *gardencorev1beta1.Plant
 
-				It("should add the project to the queue if the creationTimestamp of object is not old", func() {
-					queue.EXPECT().Add(projectName)
-
-					obj.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 45, 0, 0, time.UTC)}
-
-					c.projectActivityObjectAdd(ctx, obj)
-				})
-
-				It("should add the project to the queue if the creationTimestamp of object is old", func() {
-					obj.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2021, 01, 01, 4, 45, 0, 0, time.UTC)}
-
-					c.projectActivityObjectAdd(ctx, obj)
-				})
-			})
-
-			Context("Plant Update", func() {
-				var oldObj = &gardencorev1beta1.Plant{
+			BeforeEach(func() {
+				plant = &gardencorev1beta1.Plant{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "plant",
 						Namespace: namespaceName,
@@ -230,168 +207,177 @@ var _ = Describe("Project Activity", func() {
 						},
 					},
 				}
+			})
 
+			Context("Plant Add", func() {
+				It("should add the project to the queue if the creationTimestamp of object is not old", func() {
+					queue.EXPECT().Add(projectName)
+
+					plant.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 45, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAdd(ctx, plant)
+				})
+
+				It("should add the project to the queue if the creationTimestamp of object is old", func() {
+					plant.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2021, 01, 01, 4, 45, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAdd(ctx, plant)
+				})
+			})
+
+			Context("Plant Update", func() {
 				It("should add the project to the queue if the spec of the object has changed", func() {
 					queue.EXPECT().Add(projectName)
 
-					newObj := oldObj.DeepCopy()
-					newObj.Spec.Endpoints[0].Name = "endpoint2"
+					newPlant := plant.DeepCopy()
+					newPlant.Spec.Endpoints[0].Name = "endpoint2"
 
-					c.projectActivityPlantUpdate(ctx, oldObj, newObj)
+					c.projectActivityPlantUpdate(ctx, plant, newPlant)
 				})
 
 				It("should not add the project to the queue if the spec of the object hasn't changed", func() {
-					newObj := oldObj.DeepCopy()
+					newPlant := plant.DeepCopy()
 
-					c.projectActivityPlantUpdate(ctx, oldObj, newObj)
+					c.projectActivityPlantUpdate(ctx, plant, newPlant)
 				})
 			})
 		})
 
 		Context("Quota activity", func() {
-			Context("Quota Add", func() {
-				var obj = &gardencorev1beta1.Quota{
+			var quota *gardencorev1beta1.Quota
+
+			BeforeEach(func() {
+				quota = &gardencorev1beta1.Quota{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "quota",
 						Namespace: namespaceName,
 						Labels:    map[string]string{"reference.gardener.cloud/secretbinding": "true"},
 					},
 				}
+			})
 
+			Context("Quota Add", func() {
 				It("should add the project to the queue if the creationTimestamp of object is not old", func() {
 					queue.EXPECT().Add(projectName)
 
-					obj.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
+					quota.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
 
-					c.projectActivityObjectWithLabelAdd(ctx, obj)
+					c.projectActivityObjectWithLabelAdd(ctx, quota)
 				})
 
 				It("should add the project to the queue if the creationTimestamp of object is old", func() {
-					obj.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2021, 06, 01, 5, 00, 0, 0, time.UTC)}
+					quota.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2021, 06, 01, 5, 00, 0, 0, time.UTC)}
 
-					c.projectActivityObjectWithLabelAdd(ctx, obj)
+					c.projectActivityObjectWithLabelAdd(ctx, quota)
 				})
 
 				It("should not add the project to the queue if the object doesn't have 'referred by a secretbinding' label", func() {
-					obj.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
-					obj.ObjectMeta.Labels = nil
+					quota.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
+					quota.ObjectMeta.Labels = nil
 
-					c.projectActivityObjectWithLabelAdd(ctx, obj)
+					c.projectActivityObjectWithLabelAdd(ctx, quota)
 				})
 			})
 
 			Context("Quota Update", func() {
-				var oldObj = &gardencorev1beta1.Quota{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "quota",
-						Namespace: namespaceName,
-						Labels:    map[string]string{"reference.gardener.cloud/secretbinding": "true"},
-					},
-					Spec: gardencorev1beta1.QuotaSpec{
-						ClusterLifetimeDays: pointer.Int32(30),
-					},
-				}
-
-				It("should add the project to the queue if the quota has label", func() {
-					queue.EXPECT().Add(projectName)
-					newObj := oldObj.DeepCopy()
-
-					c.projectActivityObjectWithLabelUpdate(ctx, oldObj, newObj)
+				BeforeEach(func() {
+					quota.ObjectMeta.Labels = nil
 				})
 
-				It("should not add the project to the queue if the quota doesn't have label", func() {
-					newObj := oldObj.DeepCopy()
-					newObj.ObjectMeta.Labels = nil
+				It("should add the project to the queue if old object doesn't have the label and new object have it (the quota is referred for the first time)", func() {
+					queue.EXPECT().Add(projectName)
+					newQuota := quota.DeepCopy()
+					newQuota.ObjectMeta.Labels = map[string]string{"reference.gardener.cloud/secretbinding": "true"}
 
-					c.projectActivityObjectWithLabelUpdate(ctx, oldObj, newObj)
+					c.projectActivityObjectWithLabelUpdate(ctx, quota, newQuota)
+				})
+
+				It("should add the project to the queue if the old object has the label and new object doesn't (the quota is no longer referred)", func() {
+					queue.EXPECT().Add(projectName)
+					newQuota := quota.DeepCopy()
+					quota.ObjectMeta.Labels = map[string]string{"reference.gardener.cloud/secretbinding": "true"}
+
+					c.projectActivityObjectWithLabelUpdate(ctx, quota, newQuota)
+				})
+
+				It("should not add the project to the queue if neither of the objects have the label", func() {
+					newQuota := quota.DeepCopy()
+
+					c.projectActivityObjectWithLabelUpdate(ctx, quota, newQuota)
 				})
 			})
 		})
 
 		Context("Secret activity", func() {
-			Context("Secret Add", func() {
-				var obj = &corev1.Secret{
+			var secret *corev1.Secret
+
+			BeforeEach(func() {
+				secret = &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "secret",
 						Namespace: namespaceName,
 						Labels:    map[string]string{"reference.gardener.cloud/secretbinding": "true"},
 					},
 				}
+			})
 
+			Context("Secret Add", func() {
 				It("should add the project to the queue if the creationTimestamp of object is not old", func() {
 					queue.EXPECT().Add(projectName)
 
-					obj.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
+					secret.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
 
-					c.projectActivityObjectWithLabelAdd(ctx, obj)
+					c.projectActivityObjectWithLabelAdd(ctx, secret)
 				})
 
 				It("should add the project to the queue if the creationTimestamp of object is old", func() {
-					obj.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 00, 0, 0, time.UTC)}
+					secret.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 00, 0, 0, time.UTC)}
 
-					c.projectActivityObjectWithLabelAdd(ctx, obj)
+					c.projectActivityObjectWithLabelAdd(ctx, secret)
 				})
 
 				It("should not add the project to the queue if the object doesn't have 'referred by a secretbinding' label", func() {
-					obj.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
-					obj.ObjectMeta.Labels = nil
+					secret.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
+					secret.ObjectMeta.Labels = nil
 
-					c.projectActivityObjectWithLabelAdd(ctx, obj)
+					c.projectActivityObjectWithLabelAdd(ctx, secret)
 				})
 			})
 
 			Context("Secret Update", func() {
-				var oldObj = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "secret",
-						Namespace: namespaceName,
-						Labels:    map[string]string{"reference.gardener.cloud/secretbinding": "true"},
-					},
-					Data: map[string][]byte{"bar": []byte("foo")},
-				}
-
-				It("should add the project to the queue if the secret has label", func() {
-					queue.EXPECT().Add(projectName)
-					newObj := oldObj.DeepCopy()
-
-					c.projectActivityObjectWithLabelUpdate(ctx, oldObj, newObj)
+				BeforeEach(func() {
+					secret.ObjectMeta.Labels = nil
 				})
 
-				It("should not add the project to the queue if the secret doesn't have label", func() {
-					newObj := oldObj.DeepCopy()
-					newObj.ObjectMeta.Labels = nil
+				It("should add the project to the queue if old object doesn't have the label and new object have it (the secret is referred for the first time)", func() {
+					queue.EXPECT().Add(projectName)
+					newSecret := secret.DeepCopy()
+					newSecret.ObjectMeta.Labels = map[string]string{"reference.gardener.cloud/secretbinding": "true"}
 
-					c.projectActivityObjectWithLabelUpdate(ctx, oldObj, newObj)
+					c.projectActivityObjectWithLabelUpdate(ctx, secret, newSecret)
+				})
+
+				It("should add the project to the queue if the old object has the label and new object doesn't (the secret is no longer referred)", func() {
+					queue.EXPECT().Add(projectName)
+					newSecret := secret.DeepCopy()
+					secret.ObjectMeta.Labels = map[string]string{"reference.gardener.cloud/secretbinding": "true"}
+
+					c.projectActivityObjectWithLabelUpdate(ctx, secret, newSecret)
+				})
+
+				It("should not add the project to the queue if neither of the objects have the label", func() {
+					newSecret := secret.DeepCopy()
+
+					c.projectActivityObjectWithLabelUpdate(ctx, secret, newSecret)
 				})
 			})
 		})
 
 		Context("Shoot activity", func() {
-			Context("Shoot Add", func() {
-				var obj = &gardencorev1beta1.Shoot{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "shoot",
-						Namespace: namespaceName,
-					},
-				}
+			var shoot *gardencorev1beta1.Shoot
 
-				It("should add the project to the queue if the creationTimestamp of object is not old", func() {
-					queue.EXPECT().Add(projectName)
-
-					obj.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
-
-					c.projectActivityObjectAdd(ctx, obj)
-				})
-
-				It("should add the project to the queue if the creationTimestamp of object is old", func() {
-					obj.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 01, 31, 6, 00, 0, 0, time.UTC)}
-
-					c.projectActivityObjectAdd(ctx, obj)
-				})
-			})
-
-			Context("Shoot Update", func() {
-				var oldObj = &gardencorev1beta1.Shoot{
+			BeforeEach(func() {
+				shoot = &gardencorev1beta1.Shoot{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "shoot",
 						Namespace: namespaceName,
@@ -402,20 +388,38 @@ var _ = Describe("Project Activity", func() {
 						},
 					},
 				}
+			})
 
+			Context("Shoot Add", func() {
+				It("should add the project to the queue if the creationTimestamp of object is not old", func() {
+					queue.EXPECT().Add(projectName)
+
+					shoot.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAdd(ctx, shoot)
+				})
+
+				It("should add the project to the queue if the creationTimestamp of object is old", func() {
+					shoot.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 01, 31, 6, 00, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAdd(ctx, shoot)
+				})
+			})
+
+			Context("Shoot Update", func() {
 				It("should add the project to the queue if the spec of the object has changed", func() {
 					queue.EXPECT().Add(projectName)
 
-					newObj := oldObj.DeepCopy()
-					newObj.Spec.CloudProfileName = "cloudProfile"
+					newShoot := shoot.DeepCopy()
+					newShoot.Spec.CloudProfileName = "cloudProfile"
 
-					c.projectActivityShootUpdate(ctx, oldObj, newObj)
+					c.projectActivityShootUpdate(ctx, shoot, newShoot)
 				})
 
 				It("should not add the project to the queue if the spec of the object hasn't changed", func() {
-					newObj := oldObj.DeepCopy()
+					newShoot := shoot.DeepCopy()
 
-					c.projectActivityShootUpdate(ctx, oldObj, newObj)
+					c.projectActivityShootUpdate(ctx, shoot, newShoot)
 				})
 			})
 		})
