@@ -117,6 +117,8 @@ elif name == 'logging':
     names = ['fluent-bit-plugin-installer', 'loki-curator', 'telegraf']
 elif name == 'etcd-custom-image':
     names = ['etcd']
+elif name == 'egress-filter-refresher':
+    names = ['egress-filter-blackholer', 'egress-filter-firewaller']
 else:
     names = [name]
 
