@@ -216,6 +216,11 @@ spec:
               optional: false
           - secret:
               name: {{ .Values.secretNameClusterCA }}
+              items:
+              - key: bundle.crt
+                path: bundle.crt
+              - key: bundle.crt
+                path: ca.crt
               optional: false
       - name: shoot-access
         secret:
