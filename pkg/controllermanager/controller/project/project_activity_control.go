@@ -133,7 +133,7 @@ func (c *Controller) projectActivityObjectWithLabelAdd(ctx context.Context, obj 
 }
 
 func (c *Controller) projectActivityObjectWithLabelUpdate(ctx context.Context, oldObj, newObj interface{}) {
-	_, err := meta.Accessor(oldObj)
+	oldObjMeta, err := meta.Accessor(oldObj)
 	if err != nil {
 		return
 	}
@@ -143,7 +143,9 @@ func (c *Controller) projectActivityObjectWithLabelUpdate(ctx context.Context, o
 	}
 
 	// skip queueing if the object(secret or quota) doesn't have the "referred by a secretbinding" label
-	if _, hasLabel := newObjMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]; !hasLabel {
+	_, oldObjHasLabel := oldObjMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
+	_, newObjHasLabel := newObjMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
+	if !oldObjHasLabel && !newObjHasLabel {
 		return
 	}
 
