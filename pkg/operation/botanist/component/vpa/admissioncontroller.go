@@ -269,7 +269,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 		})
 	}
 
-	v.injectAPIServerConnectionSpec(deployment, admissionController, serviceAccountName, nil)
+	v.injectAPIServerConnectionSpec(deployment, admissionController, serviceAccountName)
 }
 
 func (v *vpa) reconcileAdmissionControllerVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) {

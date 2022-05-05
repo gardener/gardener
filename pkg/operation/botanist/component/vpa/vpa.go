@@ -398,7 +398,7 @@ func mergeResourceConfigs(configsLists ...resourceConfigs) resourceConfigs {
 	return out
 }
 
-func (v *vpa) injectAPIServerConnectionSpec(deployment *appsv1.Deployment, name string, serviceAccountName, genericTokenKubeconfigSecretName *string) {
+func (v *vpa) injectAPIServerConnectionSpec(deployment *appsv1.Deployment, name string, serviceAccountName *string) {
 	if serviceAccountName != nil {
 		deployment.Spec.Template.Spec.ServiceAccountName = *serviceAccountName
 
@@ -415,9 +415,9 @@ func (v *vpa) injectAPIServerConnectionSpec(deployment *appsv1.Deployment, name 
 	} else {
 		deployment.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
 
-		// TODO(shafeeqes): Adapt admssion-controller to use kubeconfig too, after https://github.com/kubernetes/autoscaler/issues/4844 is fixed.
-		if genericTokenKubeconfigSecretName != nil {
-			utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, *genericTokenKubeconfigSecretName, gutil.GetShootAccessSecretName(deployment.Name)))
+		// TODO(shafeeqes): Adapt admission-controller to use kubeconfig too, after https://github.com/kubernetes/autoscaler/issues/4844 is fixed.
+		if name != admissionController {
+			utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, *v.genericTokenKubeconfigSecretName, gutil.SecretNamePrefixShootAccess+deployment.Name))
 		} else {
 			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env,
 				corev1.EnvVar{

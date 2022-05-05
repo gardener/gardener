@@ -199,7 +199,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 		})
 	}
 
-	v.injectAPIServerConnectionSpec(deployment, recommender, serviceAccountName, v.genericTokenKubeconfigSecretName)
+	v.injectAPIServerConnectionSpec(deployment, recommender, serviceAccountName)
 }
 
 func (v *vpa) reconcileRecommenderVPA(vpa *vpaautoscalingv1.VerticalPodAutoscaler, deployment *appsv1.Deployment) {
