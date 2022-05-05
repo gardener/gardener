@@ -138,6 +138,10 @@ func UpdateGardenKubeconfigCAIfChanged(ctx context.Context, seedClient client.Cl
 		return kubeconfig, nil
 	}
 
+	if bytes.Equal(gardenClientConnection.GardenClusterCACert, []byte("none")) || bytes.Equal(gardenClientConnection.GardenClusterCACert, []byte("null")) {
+		gardenClientConnection.GardenClusterCACert = []byte{}
+	}
+
 	// extract data from existing kubeconfig and reuse UpdateGardenKubeconfigSecret function
 	return UpdateGardenKubeconfigSecret(ctx, &rest.Config{
 		Host: curCluster.Server,
