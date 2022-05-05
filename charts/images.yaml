@@ -192,11 +192,11 @@ images:
 - name: fluent-bit
   sourceRepository: github.com/fluent/fluent-bit
   repository: fluent/fluent-bit
-  tag: "1.8.7"
+  tag: "1.9.3"
 - name: fluent-bit-plugin-installer
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/fluent-bit-to-loki
-  tag: "v0.39.0"
+  tag: "v0.40.0"
 - name: loki
   sourceRepository: github.com/grafana/loki
   repository: grafana/loki
@@ -204,11 +204,11 @@ images:
 - name: loki-curator
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/loki-curator
-  tag: "v0.39.0"
+  tag: "v0.40.0"
 - name: kube-rbac-proxy
   sourceRepository: github.com/brancz/kube-rbac-proxy
   repository: quay.io/brancz/kube-rbac-proxy
-  tag: v0.8.0
+  tag: v0.12.0
 - name: promtail
   sourceRepository: github.com/grafana/loki
   repository: "docker.io/grafana/promtail"
@@ -216,7 +216,7 @@ images:
 - name: telegraf
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/telegraf-iptables
-  tag: "v0.39.0"
+  tag: "v0.40.0"
 
 # VPA
 - name: vpa-admission-controller
