@@ -162,13 +162,13 @@ var _ = Describe("Project Activity", func() {
 
 					backupEntry.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 30, 0, 0, time.UTC)}
 
-					c.projectActivityObjectAdd(ctx, backupEntry)
+					c.projectActivityObjectAddDelete(ctx, backupEntry, false, true)
 				})
 
 				It("should add the project to the queue if the creationTimestamp of object is old", func() {
 					backupEntry.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 29, 0, 0, time.UTC)}
 
-					c.projectActivityObjectAdd(ctx, backupEntry)
+					c.projectActivityObjectAddDelete(ctx, backupEntry, false, true)
 				})
 			})
 
@@ -186,6 +186,16 @@ var _ = Describe("Project Activity", func() {
 					newBackupEntry := backupEntry.DeepCopy()
 
 					c.projectActivityBackupEntryUpdate(ctx, backupEntry, newBackupEntry)
+				})
+			})
+
+			Context("BackupEntry Delete", func() {
+				It("should add the project to the queue on object deletion even if creationTimestamp is old", func() {
+					queue.EXPECT().Add(projectName)
+
+					backupEntry.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 01, 01, 5, 29, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, backupEntry, false, false)
 				})
 			})
 		})
@@ -215,13 +225,13 @@ var _ = Describe("Project Activity", func() {
 
 					plant.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 45, 0, 0, time.UTC)}
 
-					c.projectActivityObjectAdd(ctx, plant)
+					c.projectActivityObjectAddDelete(ctx, plant, false, true)
 				})
 
 				It("should add the project to the queue if the creationTimestamp of object is old", func() {
 					plant.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2021, 01, 01, 4, 45, 0, 0, time.UTC)}
 
-					c.projectActivityObjectAdd(ctx, plant)
+					c.projectActivityObjectAddDelete(ctx, plant, false, true)
 				})
 			})
 
@@ -239,6 +249,16 @@ var _ = Describe("Project Activity", func() {
 					newPlant := plant.DeepCopy()
 
 					c.projectActivityPlantUpdate(ctx, plant, newPlant)
+				})
+			})
+
+			Context("Plant Delete", func() {
+				It("should add the project to the queue on object deletion even if creationTimestamp is old", func() {
+					queue.EXPECT().Add(projectName)
+
+					plant.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2021, 01, 01, 4, 45, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, plant, false, false)
 				})
 			})
 		})
@@ -262,20 +282,20 @@ var _ = Describe("Project Activity", func() {
 
 					quota.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
 
-					c.projectActivityObjectWithLabelAdd(ctx, quota)
+					c.projectActivityObjectAddDelete(ctx, quota, true, true)
 				})
 
 				It("should add the project to the queue if the creationTimestamp of object is old", func() {
 					quota.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2021, 06, 01, 5, 00, 0, 0, time.UTC)}
 
-					c.projectActivityObjectWithLabelAdd(ctx, quota)
+					c.projectActivityObjectAddDelete(ctx, quota, true, true)
 				})
 
 				It("should not add the project to the queue if the object doesn't have 'referred by a secretbinding' label", func() {
 					quota.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
 					quota.ObjectMeta.Labels = nil
 
-					c.projectActivityObjectWithLabelAdd(ctx, quota)
+					c.projectActivityObjectAddDelete(ctx, quota, true, true)
 				})
 			})
 
@@ -306,6 +326,22 @@ var _ = Describe("Project Activity", func() {
 					c.projectActivityObjectWithLabelUpdate(ctx, quota, newQuota)
 				})
 			})
+
+			Context("Quota Delete", func() {
+				It("should add the project to the queue on object deletion if the object has label even if creationTimestamp is old", func() {
+					queue.EXPECT().Add(projectName)
+
+					quota.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2021, 01, 01, 4, 45, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, quota, true, false)
+				})
+
+				It("should not add the project to the queue on object deletion if the object doesn't have label", func() {
+					quota.ObjectMeta.Labels = nil
+
+					c.projectActivityObjectAddDelete(ctx, quota, true, false)
+				})
+			})
 		})
 
 		Context("Secret activity", func() {
@@ -327,20 +363,20 @@ var _ = Describe("Project Activity", func() {
 
 					secret.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
 
-					c.projectActivityObjectWithLabelAdd(ctx, secret)
+					c.projectActivityObjectAddDelete(ctx, secret, true, true)
 				})
 
 				It("should add the project to the queue if the creationTimestamp of object is old", func() {
 					secret.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 00, 0, 0, time.UTC)}
 
-					c.projectActivityObjectWithLabelAdd(ctx, secret)
+					c.projectActivityObjectAddDelete(ctx, secret, true, true)
 				})
 
 				It("should not add the project to the queue if the object doesn't have 'referred by a secretbinding' label", func() {
 					secret.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
 					secret.ObjectMeta.Labels = nil
 
-					c.projectActivityObjectWithLabelAdd(ctx, secret)
+					c.projectActivityObjectAddDelete(ctx, secret, true, true)
 				})
 			})
 
@@ -371,6 +407,22 @@ var _ = Describe("Project Activity", func() {
 					c.projectActivityObjectWithLabelUpdate(ctx, secret, newSecret)
 				})
 			})
+
+			Context("Secret Delete", func() {
+				It("should add the project to the queue on object deletion if the object has label even if creationTimestamp is old", func() {
+					queue.EXPECT().Add(projectName)
+
+					secret.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 00, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, secret, true, false)
+				})
+
+				It("should not add the project to the queue on object deletion if the object doesn't have label", func() {
+					secret.ObjectMeta.Labels = nil
+
+					c.projectActivityObjectAddDelete(ctx, secret, true, false)
+				})
+			})
 		})
 
 		Context("Shoot activity", func() {
@@ -396,13 +448,13 @@ var _ = Describe("Project Activity", func() {
 
 					shoot.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
 
-					c.projectActivityObjectAdd(ctx, shoot)
+					c.projectActivityObjectAddDelete(ctx, shoot, false, true)
 				})
 
 				It("should add the project to the queue if the creationTimestamp of object is old", func() {
 					shoot.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 01, 31, 6, 00, 0, 0, time.UTC)}
 
-					c.projectActivityObjectAdd(ctx, shoot)
+					c.projectActivityObjectAddDelete(ctx, shoot, false, true)
 				})
 			})
 
@@ -420,6 +472,16 @@ var _ = Describe("Project Activity", func() {
 					newShoot := shoot.DeepCopy()
 
 					c.projectActivityShootUpdate(ctx, shoot, newShoot)
+				})
+			})
+
+			Context("Shoot Delete", func() {
+				It("should add the project to the queue on object deletion even if creationTimestamp is old", func() {
+					queue.EXPECT().Add(projectName)
+
+					shoot.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 01, 31, 6, 00, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, shoot, false, false)
 				})
 			})
 		})

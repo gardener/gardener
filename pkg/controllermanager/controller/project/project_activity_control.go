@@ -73,55 +73,25 @@ func (r *projectActivityReconciler) Reconcile(ctx context.Context, request recon
 	return reconcile.Result{}, nil
 }
 
-func (c *Controller) projectActivityObjectAdd(ctx context.Context, obj interface{}) {
+func (c *Controller) projectActivityObjectAddDelete(ctx context.Context, obj interface{}, withLabel bool, addFunc bool) {
 	objMeta, err := meta.Accessor(obj)
 	if err != nil {
 		return
 	}
 
-	// If the creationTimestamp of the object is less than 1 hour (experimental) from current time,
-	// skip it. This is to prevent unnecessary reconciliations in case of GCM restart.
-	if objMeta.GetCreationTimestamp().Add(time.Hour).UTC().Before(c.clock.Now().UTC()) {
-		return
+	if withLabel {
+		// skip queueing if the object(secret or quota) doesn't have the "referred by a secretbinding" label
+		if _, hasLabel := objMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]; !hasLabel {
+			return
+		}
 	}
 
-	key := c.getProjectKey(ctx, objMeta.GetNamespace())
-	if key == "" {
-		return
-	}
-
-	c.projectActivityQueue.Add(key)
-}
-
-func (c *Controller) projectActivityObjectDelete(ctx context.Context, obj interface{}) {
-	objMeta, err := meta.Accessor(obj)
-	if err != nil {
-		return
-	}
-
-	key := c.getProjectKey(ctx, objMeta.GetNamespace())
-	if key == "" {
-		return
-	}
-
-	c.projectActivityQueue.Add(key)
-}
-
-func (c *Controller) projectActivityObjectWithLabelAdd(ctx context.Context, obj interface{}) {
-	objMeta, err := meta.Accessor(obj)
-	if err != nil {
-		return
-	}
-
-	// skip queueing if the object(secret or quota) doesn't have the "referred by a secretbinding" label
-	if _, hasLabel := objMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]; !hasLabel {
-		return
-	}
-
-	// If the creationTimestamp of the object is less than 1 hour (experimental) from current time,
-	// skip it. This is to prevent unnecessary reconciliations in case of GCM restart.
-	if objMeta.GetCreationTimestamp().Add(time.Hour).UTC().Before(c.clock.Now().UTC()) {
-		return
+	if addFunc {
+		// If the creationTimestamp of the object is less than 1 hour (experimental) from current time,
+		// skip it. This is to prevent unnecessary reconciliations in case of GCM restart.
+		if objMeta.GetCreationTimestamp().Add(time.Hour).UTC().Before(c.clock.Now().UTC()) {
+			return
+		}
 	}
 
 	key := c.getProjectKey(ctx, objMeta.GetNamespace())
@@ -145,6 +115,7 @@ func (c *Controller) projectActivityObjectWithLabelUpdate(ctx context.Context, o
 	// skip queueing if the object(secret or quota) doesn't have the "referred by a secretbinding" label
 	_, oldObjHasLabel := oldObjMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
 	_, newObjHasLabel := newObjMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
+
 	if !oldObjHasLabel && !newObjHasLabel {
 		return
 	}
