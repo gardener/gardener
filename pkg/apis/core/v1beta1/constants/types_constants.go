@@ -288,7 +288,8 @@ const (
 	// plane high availability annotation, that allows gardener to spread the shoot control plane across
 	// multiple availability zones if it is possible.
 	ShootAlphaControlPlaneHighAvailabilityMultiZone = "multi-zone"
-
+	// LabelSeedMultiZonal is used to identify whether the seed supports multi-zonal control planes for shoots.
+	LabelSeedMultiZonal = "seed.gardener.cloud/multi-zonal"
 	// ShootExpirationTimestamp is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
 	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
 	// of referenced quotas.
