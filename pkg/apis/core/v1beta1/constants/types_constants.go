@@ -300,6 +300,9 @@ const (
 	// ShootOperationRotateCAComplete is a constant for an annotation on a Shoot indicating that the rotation of the
 	// certificate authorities shall be completed.
 	ShootOperationRotateCAComplete = "rotate-ca-complete"
+	// ShootOperationRotateObservabilityUserCredentials is a constant for an annotation on a Shoot indicating that the credentials
+	// contained in the observability-user secret shall be rotated.
+	ShootOperationRotateObservabilityUserCredentials = "rotate-observability-user-credentials"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.

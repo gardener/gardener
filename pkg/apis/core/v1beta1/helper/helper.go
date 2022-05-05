@@ -1574,3 +1574,34 @@ func IsShootSSHKeypairRotationInitiationTimeAfterLastCompletionTime(credentials 
 	return credentials.Rotation.SSHKeypair.LastCompletionTime == nil ||
 		credentials.Rotation.SSHKeypair.LastCompletionTime.Before(credentials.Rotation.SSHKeypair.LastInitiationTime)
 }
+
+// MutateObservabilityUserRotation mutates the .status.credentials.rotation.observabilityUser field based on the provided
+// mutation function. If the field is nil then it is initialized.
+func MutateObservabilityUserRotation(shoot *gardencorev1beta1.Shoot, f func(*gardencorev1beta1.ShootObservabilityUserRotation)) {
+	if shoot.Status.Credentials == nil {
+		shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{}
+	}
+	if shoot.Status.Credentials.Rotation == nil {
+		shoot.Status.Credentials.Rotation = &gardencorev1beta1.ShootCredentialsRotation{}
+	}
+	if shoot.Status.Credentials.Rotation.ObservabilityUser == nil {
+		shoot.Status.Credentials.Rotation.ObservabilityUser = &gardencorev1beta1.ShootObservabilityUserRotation{}
+	}
+
+	f(shoot.Status.Credentials.Rotation.ObservabilityUser)
+}
+
+// IsShootObservabilityUserRotationInitiationTimeAfterLastCompletionTime returns true when the lastInitiationTime in the
+// .status.credentials.rotation.observabilityUser field is newer than the lastCompletionTime. This is also true if the
+// lastCompletionTime is unset.
+func IsShootObservabilityUserRotationInitiationTimeAfterLastCompletionTime(credentials *gardencorev1beta1.ShootCredentials) bool {
+	if credentials == nil ||
+		credentials.Rotation == nil ||
+		credentials.Rotation.ObservabilityUser == nil ||
+		credentials.Rotation.ObservabilityUser.LastInitiationTime == nil {
+		return false
+	}
+
+	return credentials.Rotation.ObservabilityUser.LastCompletionTime == nil ||
+		credentials.Rotation.ObservabilityUser.LastCompletionTime.Before(credentials.Rotation.ObservabilityUser.LastInitiationTime)
+}

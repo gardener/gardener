@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -462,7 +463,11 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		return err
 	}
 
-	credentialsUsersSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngressUsers), secretsmanager.Persist())
+	usersGenerateOptions := []secretsmanager.GenerateOption{
+		secretsmanager.Persist(),
+		secretsmanager.Rotate(secretsmanager.InPlace),
+	}
+	credentialsUsersSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngressUsers), usersGenerateOptions...)
 	if err != nil {
 		return err
 	}

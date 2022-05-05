@@ -85,6 +85,10 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 		if shootStatus.Credentials.Rotation.SSHKeypair != nil && shootStatus.Credentials.Rotation.SSHKeypair.LastInitiationTime != nil {
 			rotation[v1beta1constants.SecretNameSSHKeyPair] = shootStatus.Credentials.Rotation.SSHKeypair.LastInitiationTime.Time
 		}
+
+		if shootStatus.Credentials.Rotation.ObservabilityUser != nil && shootStatus.Credentials.Rotation.ObservabilityUser.LastInitiationTime != nil {
+			rotation[v1beta1constants.SecretNameObservabilityIngress+"-users"] = shootStatus.Credentials.Rotation.ObservabilityUser.LastInitiationTime.Time
+		}
 	}
 
 	return rotation
