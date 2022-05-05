@@ -2244,7 +2244,7 @@ message ShootObservabilityUserRotation {
 
 // ShootSSHKeypairRotation contains information about the ssh-keypair credential rotation.
 message ShootSSHKeypairRotation {
-  // LastInitiationTime is the most recent time when the ssh-keypair credential credential rotation was initiated.
+  // LastInitiationTime is the most recent time when the ssh-keypair credential rotation was initiated.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 1;
 

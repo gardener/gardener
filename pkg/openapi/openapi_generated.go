@@ -14237,7 +14237,7 @@ func schema_pkg_apis_core_v1beta1_ShootSSHKeypairRotation(ref common.ReferenceCa
 				Properties: map[string]spec.Schema{
 					"lastInitiationTime": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LastInitiationTime is the most recent time when the ssh-keypair credential credential rotation was initiated.",
+							Description: "LastInitiationTime is the most recent time when the ssh-keypair credential rotation was initiated.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
