@@ -193,20 +193,6 @@ var (
 	caCertificateSelector      = labels.NewSelector().Add(managedBySecretsManagerReq).Add(identityGardenletReq)
 )
 
-func getCAFromResourceDataList(resourceDataList gardencorev1alpha1helper.GardenerResourceDataList, requirement labels.Requirement) (*gardencorev1alpha1.GardenerResourceData, error) {
-	caCerts := resourceDataList.Select(caCertificateSelector.Add(requirement))
-	if len(caCerts) == 0 {
-		return nil, nil
-	}
-
-	ca, err := findNewestCACertificate(caCerts)
-	if err != nil {
-		return nil, fmt.Errorf("could not find newest CA certificate for %s: %w", requirement, err)
-	}
-
-	return ca, nil
-}
-
 func findNewestCACertificate(results []*gardencorev1alpha1.GardenerResourceData) (*gardencorev1alpha1.GardenerResourceData, error) {
 	if len(results) == 1 {
 		return results[0], nil
@@ -256,17 +242,15 @@ func getClusterCABundle(resourceDataList gardencorev1alpha1helper.GardenerResour
 }
 
 func getClientCACertificate(resourceDataList gardencorev1alpha1helper.GardenerResourceDataList) (*secrets.Certificate, error) {
-	ca, err := getCAFromResourceDataList(resourceDataList, nameCAClientReq)
-	if err != nil {
-		return nil, fmt.Errorf("could not find client CA certificate for %s: %w", nameCAClientReq, err)
-	}
+	var (
+		ca  *gardencorev1alpha1.GardenerResourceData
+		err error
+	)
 
-	// TODO(rfranzke): Remove this in a future version.
-	// fall back to cluster CA since not all clusters might have a client CA yet
-	if ca == nil {
-		ca, err = getCAFromResourceDataList(resourceDataList, nameCAClusterReq)
+	if caCerts := resourceDataList.Select(caCertificateSelector.Add(nameCAClientReq)); len(caCerts) > 0 {
+		ca, err = findNewestCACertificate(caCerts)
 		if err != nil {
-			return nil, fmt.Errorf("could not find client CA certificate for %s: %w", nameCAClusterReq, err)
+			return nil, fmt.Errorf("could not find newest CA certificate for %s: %w", nameCAClientReq, err)
 		}
 	}
 
