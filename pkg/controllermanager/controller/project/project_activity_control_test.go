@@ -165,7 +165,7 @@ var _ = Describe("Project Activity", func() {
 					c.projectActivityObjectAddDelete(ctx, backupEntry, false, true)
 				})
 
-				It("should add the project to the queue if the creationTimestamp of object is old", func() {
+				It("should not add the project to the queue if the creationTimestamp of object is old", func() {
 					backupEntry.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 29, 0, 0, time.UTC)}
 
 					c.projectActivityObjectAddDelete(ctx, backupEntry, false, true)
@@ -228,7 +228,7 @@ var _ = Describe("Project Activity", func() {
 					c.projectActivityObjectAddDelete(ctx, plant, false, true)
 				})
 
-				It("should add the project to the queue if the creationTimestamp of object is old", func() {
+				It("should not add the project to the queue if the creationTimestamp of object is old", func() {
 					plant.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2021, 01, 01, 4, 45, 0, 0, time.UTC)}
 
 					c.projectActivityObjectAddDelete(ctx, plant, false, true)
@@ -285,7 +285,7 @@ var _ = Describe("Project Activity", func() {
 					c.projectActivityObjectAddDelete(ctx, quota, true, true)
 				})
 
-				It("should add the project to the queue if the creationTimestamp of object is old", func() {
+				It("should not add the project to the queue if the creationTimestamp of object is old", func() {
 					quota.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2021, 06, 01, 5, 00, 0, 0, time.UTC)}
 
 					c.projectActivityObjectAddDelete(ctx, quota, true, true)
@@ -366,7 +366,7 @@ var _ = Describe("Project Activity", func() {
 					c.projectActivityObjectAddDelete(ctx, secret, true, true)
 				})
 
-				It("should add the project to the queue if the creationTimestamp of object is old", func() {
+				It("should not add the project to the queue if the creationTimestamp of object is old", func() {
 					secret.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 00, 0, 0, time.UTC)}
 
 					c.projectActivityObjectAddDelete(ctx, secret, true, true)
@@ -451,7 +451,7 @@ var _ = Describe("Project Activity", func() {
 					c.projectActivityObjectAddDelete(ctx, shoot, false, true)
 				})
 
-				It("should add the project to the queue if the creationTimestamp of object is old", func() {
+				It("should not add the project to the queue if the creationTimestamp of object is old", func() {
 					shoot.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 01, 31, 6, 00, 0, 0, time.UTC)}
 
 					c.projectActivityObjectAddDelete(ctx, shoot, false, true)
