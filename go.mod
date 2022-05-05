@@ -195,7 +195,7 @@ replace (
 	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.23.3
 	k8s.io/code-generator => k8s.io/code-generator v0.23.3
 	k8s.io/component-base => k8s.io/component-base v0.23.3
-	k8s.io/helm => k8s.io/helm v2.13.1+incompatible
+	k8s.io/helm => k8s.io/helm v2.16.1+incompatible
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.23.3
 	k8s.io/kube-proxy => k8s.io/kube-proxy v0.23.3
 )
