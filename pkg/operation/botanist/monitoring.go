@@ -458,7 +458,11 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		return kutil.DeleteObject(ctx, b.K8sGardenClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}})
 	}
 
-	credentialsSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngressOperators), secretsmanager.Persist())
+	operatorsGenerateOptions := []secretsmanager.GenerateOption{
+		secretsmanager.Persist(),
+		secretsmanager.Validity(30 * 24 * time.Hour),
+	}
+	credentialsSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngressOperators), operatorsGenerateOptions...)
 	if err != nil {
 		return err
 	}
