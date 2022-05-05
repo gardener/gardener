@@ -108,6 +108,7 @@
       DynamicHostSuffix .svc:3100/loki/api/v1/push
       DynamicHostRegex ^shoot-
       DynamicTenant user gardenuser user
+      HostnameKeyValue nodename ${NODE_NAME}
       MaxRetries 3
       Timeout 10s
       MinBackoff 30s
@@ -139,6 +140,7 @@
       DropSingleKey false
       RemoveKeys kubernetes,stream,hostname,unit
       LabelMapPath /fluent-bit/etc/systemd_label_map.json
+      HostnameKeyValue nodename ${NODE_NAME}
       MaxRetries 3
       Timeout 10s
       MinBackoff 30s
