@@ -1364,7 +1364,6 @@ subjects:
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-seed-apiserver")
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-shoot-apiserver")
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/from-shoot-apiserver")
-				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/from-prometheus")
 
 				cfg.TargetDiffersFromSourceCluster = false
 				resourceManager = New(c, deployNamespace, sm, image, cfg)

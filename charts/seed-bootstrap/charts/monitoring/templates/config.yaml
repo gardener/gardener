@@ -118,3 +118,22 @@ data:
         target_label: namespace
       - source_labels: [ __meta_kubernetes_pod_name ]
         target_label: pod
+
+    - job_name: 'gardener-resource-manager'
+      kubernetes_sd_configs:
+        - role: endpoints
+          namespaces:
+            names: [ garden ]
+      relabel_configs:
+        - source_labels:
+            - __meta_kubernetes_service_name
+            - __meta_kubernetes_endpoint_port_name
+            - __meta_kubernetes_namespace
+          action: keep
+          regex: gardener-resource-manager;metrics;garden
+        - action: labelmap
+          regex: __meta_kubernetes_service_label_(.+)
+        - source_labels: [ __meta_kubernetes_pod_name ]
+          target_label: pod
+        - source_labels: [ __meta_kubernetes_namespace ]
+          target_label: namespace
