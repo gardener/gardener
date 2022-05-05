@@ -155,7 +155,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 			logger.Info("Successfully deleted stuck machine-controller-manager pod", "reason", msg)
 		}
 
-		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Failed while waiting for all machine deployments to be ready: '%s'", err.Error()))
+		return fmt.Errorf("Failed while waiting for all machine deployments to be ready: %w", err)
 	}
 
 	// Delete all old machine deployments (i.e. those which were not previously computed but exist in the cluster).

@@ -16,6 +16,7 @@ package extensions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -224,7 +225,7 @@ func WaitUntilExtensionObjectDeleted(
 
 		if lastErr := obj.GetExtensionStatus().GetLastError(); lastErr != nil {
 			logger.Errorf("%s did not get deleted yet, lastError is: %s", extensionKey(kind, namespace, name), lastErr.Description)
-			lastObservedError = gardencorev1beta1helper.NewErrorWithCodes(lastErr.Description, lastErr.Codes...)
+			lastObservedError = gardencorev1beta1helper.NewErrorWithCodes(errors.New(lastErr.Description), lastErr.Codes...)
 		}
 
 		var message = fmt.Sprintf("%s is still present", extensionKey(kind, namespace, name))

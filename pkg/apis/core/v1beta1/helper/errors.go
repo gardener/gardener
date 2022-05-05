@@ -27,18 +27,18 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
-// ErrorWithCodes contains error codes and an error message.
+// ErrorWithCodes contains the error and Gardener error codes.
 type ErrorWithCodes struct {
-	message string
-	codes   []gardencorev1beta1.ErrorCode
+	err   error
+	codes []gardencorev1beta1.ErrorCode
 }
 
 // Retriable marks ErrorWithCodes as retriable.
 func (e *ErrorWithCodes) Retriable() {}
 
 // NewErrorWithCodes creates a new error that additionally exposes the given codes via the Coder interface.
-func NewErrorWithCodes(message string, codes ...gardencorev1beta1.ErrorCode) error {
-	return &ErrorWithCodes{message, codes}
+func NewErrorWithCodes(err error, codes ...gardencorev1beta1.ErrorCode) error {
+	return &ErrorWithCodes{err, codes}
 }
 
 // Codes returns all error codes.
@@ -46,9 +46,14 @@ func (e *ErrorWithCodes) Codes() []gardencorev1beta1.ErrorCode {
 	return e.codes
 }
 
+// Unwrap rettieves the error from ErrorWithCodes.
+func (e *ErrorWithCodes) Unwrap() error {
+	return e.err
+}
+
 // Error returns the error message.
 func (e *ErrorWithCodes) Error() string {
-	return e.message
+	return e.err.Error()
 }
 
 var (
@@ -63,29 +68,30 @@ var (
 	retryableConfigurationProblemRegexp = regexp.MustCompile(`(?i)(is misconfigured and requires zero voluntary evictions|SDK.CanNotResolveEndpoint|The requested configuration is currently not supported)`)
 )
 
-// DetermineError determines the Garden error code for the given error and creates a new error with the given message.
-// TODO(timebertt): this is should be improved: clean up the usages to not pass the error twice (once as an error and
-// once as a string) and properly wrap the given error instead of creating a new one from the given error message,
-// so we can use errors.As up the call stack.
-func DetermineError(err error, message string) error {
+// DeprecatedDetermineError determines the Gardener error codes for the given error and returns an ErrorWithCodes with the error and codes.
+// This function is deprecated and will be removed in a future version.
+func DeprecatedDetermineError(err error) error {
 	if err == nil {
-		return errors.New(message)
+		return nil
 	}
 
-	errMsg := message
-	if errMsg == "" {
-		errMsg = err.Error()
+	// try to re-use codes from error
+	var coder Coder
+	if errors.As(err, &coder) {
+		return err
 	}
 
-	codes := DetermineErrorCodes(err)
-	if codes == nil {
-		return errors.New(errMsg)
+	codes := DeprecatedDetermineErrorCodes(err)
+	if len(codes) == 0 {
+		return err
 	}
-	return &ErrorWithCodes{errMsg, codes}
+
+	return &ErrorWithCodes{err, codes}
 }
 
-// DetermineErrorCodes determines error codes based on the given error.
-func DetermineErrorCodes(err error) []gardencorev1beta1.ErrorCode {
+// DeprecatedDetermineErrorCodes determines error codes based on the given error.
+// This function is deprecated and will be removed in a future version.
+func DeprecatedDetermineErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 	var (
 		coder   Coder
 		message = err.Error()
@@ -225,7 +231,7 @@ func NewWrappedLastErrors(description string, err error) *WrappedLastErrors {
 		lastErrors = append(lastErrors, *LastErrorWithTaskID(
 			partError.Error(),
 			utilerrors.GetID(partError),
-			DetermineErrorCodes(utilerrors.Unwrap(partError))...))
+			DeprecatedDetermineErrorCodes(utilerrors.Unwrap(partError))...))
 	}
 
 	return &WrappedLastErrors{

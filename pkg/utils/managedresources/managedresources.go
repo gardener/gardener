@@ -220,7 +220,7 @@ func WaitUntilListDeleted(ctx context.Context, client client.Client, mrList *res
 			if resourcesAppliedCondition != nil && resourcesAppliedCondition.Status != gardencorev1beta1.ConditionTrue &&
 				(resourcesAppliedCondition.Reason == resourcesv1alpha1.ConditionDeletionFailed || resourcesAppliedCondition.Reason == resourcesv1alpha1.ConditionDeletionPending) {
 				deleteError := fmt.Errorf("%w:\n%s", err, resourcesAppliedCondition.Message)
-				allErrs.Append(gardencorev1beta1helper.DetermineError(deleteError, deleteError.Error()))
+				allErrs.Append(gardencorev1beta1helper.DeprecatedDetermineError(deleteError))
 			}
 		}
 	}
@@ -241,7 +241,7 @@ func WaitUntilDeleted(ctx context.Context, client client.Client, namespace, name
 		if resourcesAppliedCondition != nil && resourcesAppliedCondition.Status != gardencorev1beta1.ConditionTrue &&
 			(resourcesAppliedCondition.Reason == resourcesv1alpha1.ConditionDeletionFailed || resourcesAppliedCondition.Reason == resourcesv1alpha1.ConditionDeletionPending) {
 			deleteError := fmt.Errorf("error while waiting for all resources to be deleted: %w:\n%s", err, resourcesAppliedCondition.Message)
-			return gardencorev1beta1helper.DetermineError(deleteError, deleteError.Error())
+			return gardencorev1beta1helper.DeprecatedDetermineError(deleteError)
 		}
 		return err
 	}

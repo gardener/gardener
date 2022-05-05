@@ -162,7 +162,7 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 			return &healthcheck.SingleCheckResult{
 				Status: gardencorev1beta1.ConditionFalse,
 				Detail: err.Error(),
-				Codes:  gardencorev1beta1helper.DetermineErrorCodes(err),
+				Codes:  gardencorev1beta1helper.DeprecatedDetermineErrorCodes(err),
 			}, nil
 		}
 
@@ -180,7 +180,7 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 			return &healthcheck.SingleCheckResult{
 				Status:               status,
 				Detail:               err.Error(),
-				Codes:                gardencorev1beta1helper.DetermineErrorCodes(err),
+				Codes:                gardencorev1beta1helper.DeprecatedDetermineErrorCodes(err),
 				ProgressingThreshold: h.scaleUpProgressingThreshold,
 			}, nil
 		}
@@ -191,7 +191,7 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 		return &healthcheck.SingleCheckResult{
 			Status: gardencorev1beta1.ConditionFalse,
 			Detail: err.Error(),
-			Codes:  gardencorev1beta1helper.DetermineErrorCodes(err),
+			Codes:  gardencorev1beta1helper.DeprecatedDetermineErrorCodes(err),
 		}, nil
 	}
 
@@ -200,7 +200,7 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 		return &healthcheck.SingleCheckResult{
 			Status:               status,
 			Detail:               err.Error(),
-			Codes:                gardencorev1beta1helper.DetermineErrorCodes(err),
+			Codes:                gardencorev1beta1helper.DeprecatedDetermineErrorCodes(err),
 			ProgressingThreshold: h.scaleDownProgressingThreshold,
 		}, nil
 	}

@@ -29,6 +29,7 @@ import (
 
 	. "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 )
@@ -135,7 +136,7 @@ var _ = Describe("Status", func() {
 		})
 
 		It("should update the last operation as expected (w/ error codes)", func() {
-			err := fmt.Errorf("foo unauthorized foo")
+			err := helper.NewErrorWithCodes(fmt.Errorf("unauthorized"), gardencorev1beta1.ErrorInfraUnauthorized)
 
 			gomock.InOrder(
 				c.EXPECT().Status().Return(c),
