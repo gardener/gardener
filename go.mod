@@ -35,7 +35,7 @@ require (
 	go.uber.org/automaxprocs v1.4.0
 	go.uber.org/goleak v1.1.12
 	go.uber.org/zap v1.19.1
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
+	golang.org/x/crypto v0.0.0-20220427172511-eb4f295cb31f
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
 	golang.org/x/tools v0.1.9
 	gomodules.xyz/jsonpatch/v2 v2.2.0
@@ -185,6 +185,7 @@ replace (
 	github.com/gardener/hvpa-controller/api => github.com/gardener/hvpa-controller/api v0.5.0
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.5.5 // keep this value in sync with k8s.io/apiserver
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.1 // keep this value in sync with sigs.k8s.io/controller-runtime
+	golang.org/x/crypto => golang.org/x/crypto v0.0.0-20220427172511-eb4f295cb31f
 	google.golang.org/grpc => google.golang.org/grpc v1.40.0 // keep this value in sync with k8s.io/apiserver
 	k8s.io/api => k8s.io/api v0.23.3
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.23.3
