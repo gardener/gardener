@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-to-provider-local-coredns
+  namespace: garden
+spec:
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: gardener-extension-provider-local-coredns
+      podSelector:
+        matchLabels:
+          app: coredns
+    ports:
+    - port: 9053
+      protocol: TCP
+    - port: 9053
+      protocol: UDP
+  podSelector:
+    matchLabels:
+      networking.gardener.cloud/to-dns: allowed
+  policyTypes:
+  - Egress
