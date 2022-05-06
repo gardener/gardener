@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -62,7 +63,11 @@ var _ = Describe("VPA", func() {
 
 		namespace    = "some-namespace"
 		secretNameCA = "ca"
-		values       = Values{
+
+		genericTokenKubeconfigSecretName = "generic-token-kubeconfig"
+		pathGenericKubeconfig            = "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig"
+
+		values = Values{
 			SecretNameServerCA: secretNameCA,
 		}
 
@@ -518,54 +523,9 @@ var _ = Describe("VPA", func() {
 			} else {
 				obj.Labels["gardener.cloud/role"] = "controlplane"
 				obj.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
-				obj.Spec.Template.Spec.Containers[0].Env = append(obj.Spec.Template.Spec.Containers[0].Env,
-					corev1.EnvVar{
-						Name:  "KUBERNETES_SERVICE_HOST",
-						Value: "kube-apiserver",
-					},
-					corev1.EnvVar{
-						Name:  "KUBERNETES_SERVICE_PORT",
-						Value: strconv.Itoa(443),
-					},
-				)
-				obj.Spec.Template.Spec.Volumes = append(obj.Spec.Template.Spec.Volumes, corev1.Volume{
-					Name: "shoot-access",
-					VolumeSource: corev1.VolumeSource{
-						Projected: &corev1.ProjectedVolumeSource{
-							DefaultMode: pointer.Int32(420),
-							Sources: []corev1.VolumeProjection{
-								{
-									Secret: &corev1.SecretProjection{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "ca",
-										},
-										Items: []corev1.KeyToPath{{
-											Key:  "bundle.crt",
-											Path: "ca.crt",
-										}},
-									},
-								},
-								{
-									Secret: &corev1.SecretProjection{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "shoot-access-vpa-updater",
-										},
-										Items: []corev1.KeyToPath{{
-											Key:  "token",
-											Path: "token",
-										}},
-										Optional: pointer.Bool(false),
-									},
-								},
-							},
-						},
-					},
-				})
-				obj.Spec.Template.Spec.Containers[0].VolumeMounts = append(obj.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-					Name:      "shoot-access",
-					MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
-					ReadOnly:  true,
-				})
+				obj.Spec.Template.Spec.Containers[0].Command = append(obj.Spec.Template.Spec.Containers[0].Command, "--kubeconfig="+pathGenericKubeconfig)
+
+				Expect(gutil.InjectGenericKubeconfig(obj, genericTokenKubeconfigSecretName, shootAccessSecretUpdater.Name)).To(Succeed())
 			}
 
 			return obj
@@ -825,54 +785,9 @@ var _ = Describe("VPA", func() {
 			} else {
 				obj.Labels["gardener.cloud/role"] = "controlplane"
 				obj.Spec.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
-				obj.Spec.Template.Spec.Containers[0].Env = append(obj.Spec.Template.Spec.Containers[0].Env,
-					corev1.EnvVar{
-						Name:  "KUBERNETES_SERVICE_HOST",
-						Value: "kube-apiserver",
-					},
-					corev1.EnvVar{
-						Name:  "KUBERNETES_SERVICE_PORT",
-						Value: strconv.Itoa(443),
-					},
-				)
-				obj.Spec.Template.Spec.Volumes = append(obj.Spec.Template.Spec.Volumes, corev1.Volume{
-					Name: "shoot-access",
-					VolumeSource: corev1.VolumeSource{
-						Projected: &corev1.ProjectedVolumeSource{
-							DefaultMode: pointer.Int32(420),
-							Sources: []corev1.VolumeProjection{
-								{
-									Secret: &corev1.SecretProjection{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "ca",
-										},
-										Items: []corev1.KeyToPath{{
-											Key:  "bundle.crt",
-											Path: "ca.crt",
-										}},
-									},
-								},
-								{
-									Secret: &corev1.SecretProjection{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: "shoot-access-vpa-recommender",
-										},
-										Items: []corev1.KeyToPath{{
-											Key:  "token",
-											Path: "token",
-										}},
-										Optional: pointer.Bool(false),
-									},
-								},
-							},
-						},
-					},
-				})
-				obj.Spec.Template.Spec.Containers[0].VolumeMounts = append(obj.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-					Name:      "shoot-access",
-					MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
-					ReadOnly:  true,
-				})
+				obj.Spec.Template.Spec.Containers[0].Command = append(obj.Spec.Template.Spec.Containers[0].Command, "--kubeconfig="+pathGenericKubeconfig)
+
+				Expect(gutil.InjectGenericKubeconfig(obj, genericTokenKubeconfigSecretName, shootAccessSecretRecommender.Name)).To(Succeed())
 			}
 
 			return obj

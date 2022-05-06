@@ -190,7 +190,7 @@ func (v *vpa) reconcileAdmissionControllerDeployment(deployment *appsv1.Deployme
 					Name:            "admission-controller",
 					Image:           v.values.AdmissionController.Image,
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command:         []string{"./admission-controller"},
+					Command:         v.computeAdmissionControllerCommands(),
 					Args: []string{
 						"--v=2",
 						"--stderrthreshold=info",
@@ -296,4 +296,11 @@ func (v *vpa) reconcileAdmissionControllerVPA(vpa *vpaautoscalingv1.VerticalPodA
 			},
 		},
 	}
+}
+
+func (v *vpa) computeAdmissionControllerCommands() []string {
+	// TODO(shafeeqes): add --kubeconfig flag also, after https://github.com/kubernetes/autoscaler/issues/4844 is fixed.
+	out := []string{"./admission-controller"}
+
+	return out
 }
