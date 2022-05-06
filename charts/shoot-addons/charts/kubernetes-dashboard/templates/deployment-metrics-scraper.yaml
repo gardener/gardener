@@ -53,6 +53,7 @@ spec:
       {{- end }}
       serviceAccountName: kubernetes-dashboard
       nodeSelector:
+        kubernetes.io/os: linux
         worker.gardener.cloud/system-components: "true"
       volumes:
       - name: tmp-volume
