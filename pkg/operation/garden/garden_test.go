@@ -26,7 +26,6 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -208,27 +207,6 @@ var _ = Describe("Garden", func() {
 
 		It("should generate a global monitoring secret because none exists yet", func() {
 			Expect(BootstrapCluster(ctx, k8sGardenClient, sm)).To(Succeed())
-
-			secretList := &corev1.SecretList{}
-			Expect(fakeGardenClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{"gardener.cloud/role": "global-monitoring"})).To(Succeed())
-			validateGlobalMonitoringSecret(secretList)
-		})
-
-		It("should generate a global monitoring secret because legacy secret exists", func() {
-			legacySecret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "monitoring-ingress-credentials",
-					Namespace: namespace,
-					Labels: map[string]string{
-						"gardener.cloud/role": "global-monitoring",
-					},
-				},
-			}
-			Expect(fakeGardenClient.Create(ctx, legacySecret)).To(Succeed())
-
-			Expect(BootstrapCluster(ctx, k8sGardenClient, sm)).To(Succeed())
-
-			Expect(fakeGardenClient.Get(ctx, client.ObjectKeyFromObject(legacySecret), &corev1.Secret{})).To(BeNotFoundError())
 
 			secretList := &corev1.SecretList{}
 			Expect(fakeGardenClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{"gardener.cloud/role": "global-monitoring"})).To(Succeed())

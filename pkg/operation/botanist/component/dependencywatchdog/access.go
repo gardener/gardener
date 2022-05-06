@@ -92,11 +92,7 @@ func (d *dependencyWatchdogAccess) Deploy(ctx context.Context) error {
 		}
 	}
 
-	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObjects(ctx, d.client,
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "dependency-watchdog-internal-probe", Namespace: d.namespace}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "dependency-watchdog-external-probe", Namespace: d.namespace}},
-	)
+	return nil
 }
 
 func (d *dependencyWatchdogAccess) Destroy(ctx context.Context) error {

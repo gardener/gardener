@@ -328,11 +328,10 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient kubernetes.Interface,
 
 	mustGenerateMonitoringSecret := true
 	for _, s := range secretList.Items {
-		legacySecret := s.Name == "monitoring-ingress-credentials" // TODO(rfranzke): Remove this line in a future version.
 		managedBySecretsManager := s.Labels[secretsmanager.LabelKeyManagedBy] == secretsmanager.LabelValueSecretsManager &&
 			s.Labels[secretsmanager.LabelKeyManagerIdentity] == v1beta1constants.SecretManagerIdentityControllerManager
 
-		if !legacySecret && !managedBySecretsManager {
+		if !managedBySecretsManager {
 			// found a custom monitoring secret managed by a human operator
 			// keep it and don't take over responsibility for the monitoring secret
 			mustGenerateMonitoringSecret = false

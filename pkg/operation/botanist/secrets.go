@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -250,18 +248,7 @@ func (b *Botanist) generateSSHKeypair(ctx context.Context) error {
 		}
 	}
 
-	// TODO(rfranzke): Remove in a future release.
-	if err := b.SaveGardenerResourceDataInShootState(ctx, func(gardenerResourceData *[]gardencorev1alpha1.GardenerResourceData) error {
-		gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(*gardenerResourceData)
-		gardenerResourceDataList.Delete("ssh-keypair")
-		*gardenerResourceData = gardenerResourceDataList
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	// TODO(rfranzke): Remove this in a future release.
-	return kutil.DeleteObject(ctx, b.K8sSeedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ssh-keypair", Namespace: b.Shoot.SeedNamespace}})
+	return nil
 }
 
 func (b *Botanist) syncShootCredentialToGarden(

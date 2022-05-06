@@ -44,7 +44,6 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -398,19 +397,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 		serverPortName = "server"
 	)
 
-	// TODO(rfranzke): This can be removed in a future version.
 	service := r.emptyService()
-	if err := r.client.Get(ctx, client.ObjectKeyFromObject(service), service); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
-	} else if service.Spec.ClusterIP == corev1.ClusterIPNone {
-		if err2 := r.client.Delete(ctx, service); client.IgnoreNotFound(err2) != nil {
-			return err2
-		}
-	}
-
-	service = r.emptyService()
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, service, func() error {
 		service.Labels = r.getLabels()
 		service.Spec.Selector = appLabel()

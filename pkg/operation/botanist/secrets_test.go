@@ -156,15 +156,6 @@ var _ = Describe("Secrets", func() {
 				Expect(fakeGardenClient.Get(ctx, kutil.Key(gardenNamespace, shootName+".ssh-keypair.old"), gardenSecret)).To(Succeed())
 				Expect(gardenSecret.Labels).To(HaveKeyWithValue("gardener.cloud/role", "ssh-keypair"))
 			})
-
-			It("should delete the legacy ssh-keypair secret", func() {
-				legacySecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ssh-keypair", Namespace: seedNamespace}}
-				Expect(fakeSeedClient.Create(ctx, legacySecret)).To(Succeed())
-
-				Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
-
-				Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(legacySecret), &corev1.Secret{})).To(BeNotFoundError())
-			})
 		})
 
 		Context("when shoot is in restoration phase", func() {

@@ -22,7 +22,6 @@ import (
 	unstructuredutils "github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -53,19 +52,6 @@ func (b *Botanist) DeployReferencedResources(ctx context.Context) error {
 		unstructuredObj.SetNamespace(b.Shoot.SeedNamespace)
 		unstructuredObj.SetName(v1beta1constants.ReferencedResourcesPrefix + unstructuredObj.GetName())
 		unstructuredObjs = append(unstructuredObjs, unstructuredObj)
-
-		// Delete undesired metadata for existing referenced resources in the seed (see https://github.com/gardener/gardener/issues/5554)
-		// TODO(rfranzke): Remove this in a future release.
-		o := unstructuredObj.DeepCopy()
-		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKeyFromObject(o), o); err == nil {
-			patch := client.MergeFrom(o.DeepCopy())
-			o.SetFinalizers(nil)
-			if err := b.K8sSeedClient.Client().Patch(ctx, o, patch); err != nil {
-				return err
-			}
-		} else if !apierrors.IsNotFound(err) {
-			return err
-		}
 	}
 
 	// Create managed resource from the slice of unstructured objects
