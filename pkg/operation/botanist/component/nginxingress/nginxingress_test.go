@@ -462,15 +462,15 @@ spec:
         - --election-id=ingress-controller-seed-leader
         - --update-status=true
         - --annotations-prefix=nginx.ingress.kubernetes.io
-        - --configmap=` + namespace + `/` + configMapName + ``
+        - --configmap=` + namespace + `/` + configMapName
 
 				if version.ConstraintK8sGreaterEqual122.Check(kubernetesVersion) {
 					out += `
         - --ingress-class=` + v1beta1constants.SeedNginxIngressClass122 + `
-        - --controller-class=k8s.io/` + v1beta1constants.SeedNginxIngressClass122 + ``
+        - --controller-class=k8s.io/` + v1beta1constants.SeedNginxIngressClass122
 				} else {
 					out += `
-        - --ingress-class=` + v1beta1constants.SeedNginxIngressClass + ``
+        - --ingress-class=` + v1beta1constants.SeedNginxIngressClass
 				}
 
 				out += `
@@ -523,7 +523,14 @@ spec:
           allowPrivilegeEscalation: true
           capabilities:
             add:
-            - NET_BIND_SERVICE
+            - NET_BIND_SERVICE`
+
+				if version.ConstraintK8sGreaterEqual122.Check(kubernetesVersion) {
+					out += `
+            - SYS_CHROOT`
+				}
+
+				out += `
             drop:
             - ALL
           runAsUser: 101

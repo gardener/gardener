@@ -553,6 +553,8 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 				Controller: "k8s.io/" + n.values.IngressClass,
 			},
 		}
+
+		deploymentController.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Add = append(deploymentController.Spec.Template.Spec.Containers[0].SecurityContext.Capabilities.Add, "SYS_CHROOT")
 	}
 
 	return registry.AddAllAndSerialize(
