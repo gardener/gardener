@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package machinepod
+package dnsconfig
 
 import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
@@ -27,11 +27,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// WebhookName is the name of the machine pod webhook.
-const WebhookName = "machinepod"
+// WebhookName is the name of the DNS config webhook.
+const WebhookName = "dnsconfig"
 
 var (
-	logger = log.Log.WithName("local-machinepod-webhook")
+	logger = log.Log.WithName("local-dnsconfig-webhook")
 
 	// DefaultAddOptions are the default AddOptions for AddToManager.
 	DefaultAddOptions = AddOptions{}
@@ -41,11 +41,11 @@ var (
 type AddOptions struct{}
 
 // AddToManagerWithOptions creates a webhook with the given options and adds it to the manager.
-func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) (*extensionswebhook.Webhook, error) {
+func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebhook.Webhook, error) {
 	logger.Info("Adding webhook to manager")
 
 	var (
-		name     = "machinepod"
+		name     = "dnsconfig"
 		kind     = controlplane.KindSeed
 		provider = local.Type
 		types    = []extensionswebhook.Type{{Obj: &corev1.Pod{}}}

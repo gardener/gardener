@@ -156,7 +156,7 @@ This webhook reacts on the `OperatingSystemConfig` containing the configuration 
 This webhook reacts on the `kube-apiserver` `Service` in shoot namespaces in the seed in case the gardenlet's `APIServerSNI` feature gate is disabled.
 It sets the `nodePort` to `30443` to enable communication from the host (this requires a port mapping to work when creating the local cluster).
 
-#### Machine Pod
+#### DNS Config
 
 This webhook reacts on `Pod`s created when the `machine-controller-manager` reconciles `Machine`s.
 It sets the `.spec.dnsPolicy=None` and `.spec.dnsConfig.nameServers` to the cluster IP of the `coredns` `Service` created in the `gardener-extension-provider-local-coredns` namespaces (see the [Bootstrapping section](#bootstrapping) for more details).
