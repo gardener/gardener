@@ -327,7 +327,7 @@ func (b *bootstrapper) name() string {
 }
 
 func (b *bootstrapper) getLabels() map[string]string {
-	return map[string]string{v1beta1constants.LabelRole: b.name()}
+	return map[string]string{v1beta1constants.LabelApp: b.name()}
 }
 
 func (b *bootstrapper) clusterRoleRules() []rbacv1.PolicyRule {
