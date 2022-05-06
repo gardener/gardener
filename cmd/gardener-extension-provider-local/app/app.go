@@ -37,7 +37,6 @@ import (
 	localhealthcheck "github.com/gardener/gardener/pkg/provider-local/controller/healthcheck"
 	localinfrastructure "github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	localingress "github.com/gardener/gardener/pkg/provider-local/controller/ingress"
-	localnode "github.com/gardener/gardener/pkg/provider-local/controller/node"
 	localservice "github.com/gardener/gardener/pkg/provider-local/controller/service"
 	localworker "github.com/gardener/gardener/pkg/provider-local/controller/worker"
 	"github.com/gardener/gardener/pkg/provider-local/local"
@@ -45,9 +44,15 @@ import (
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/spf13/cobra"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -123,11 +128,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			ContainerMountPath: backupoptions.DefaultContainerMountPath,
 		}
 
-		// options for the node controller
-		nodeCtrlOpts = &localnode.ControllerOptions{
-			MaxConcurrentReconciles: 1,
-		}
-
 		// options for the operatingsystemconfig controller
 		operatingSystemConfigCtrlOpts = &controllercmd.ControllerOptions{
 			MaxConcurrentReconciles: 5,
@@ -169,7 +169,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			controllercmd.PrefixOption("ingress-", ingressCtrlOpts),
 			controllercmd.PrefixOption("service-", serviceCtrlOpts),
 			controllercmd.PrefixOption("backupbucket-", localBackupBucketOptions),
-			controllercmd.PrefixOption("node-", nodeCtrlOpts),
 			controllercmd.PrefixOption("operatingsystemconfig-", operatingSystemConfigCtrlOpts),
 			controllercmd.PrefixOption("healthcheck-", healthCheckCtrlOpts),
 			controllerSwitches,
@@ -224,7 +223,6 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			operatingSystemConfigCtrlOpts.Completed().Apply(&oscommon.DefaultAddOptions.Controller)
 			ingressCtrlOpts.Completed().Apply(&localingress.DefaultAddOptions)
 			serviceCtrlOpts.Completed().Apply(&localservice.DefaultAddOptions)
-			nodeCtrlOpts.Completed().Apply(&localnode.DefaultAddOptions)
 			workerCtrlOpts.Completed().Apply(&localworker.DefaultAddOptions.Controller)
 			localBackupBucketOptions.Completed().Apply(&localbackupbucket.DefaultAddOptions)
 			localBackupBucketOptions.Completed().Apply(&localbackupentry.DefaultAddOptions)
@@ -260,6 +258,11 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("error ensuring shoot webhooks in all namespaces: %w", err)
 			}
 
+			// Send empty patches on start-up to trigger webhooks
+			if err := mgr.Add(&webhookTriggerer{restConfig: restOpts.Completed().Config}); err != nil {
+				return fmt.Errorf("error adding runnable for triggering DNS config webhook: %w", err)
+			}
+
 			if err := controllerSwitches.Completed().AddToManager(mgr); err != nil {
 				return fmt.Errorf("could not add controllers to manager: %w", err)
 			}
@@ -277,4 +280,36 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 	aggOption.AddFlags(cmd.Flags())
 
 	return cmd
+}
+
+type webhookTriggerer struct {
+	restConfig *rest.Config
+}
+
+func (s *webhookTriggerer) NeedLeaderElection() bool {
+	return true
+}
+
+func (s *webhookTriggerer) Start(ctx context.Context) error {
+	c, err := client.New(s.restConfig, client.Options{})
+	if err != nil {
+		return err
+	}
+
+	if err := s.trigger(ctx, c, c.Status(), &corev1.NodeList{}, client.MatchingLabels{"kubernetes.io/hostname": "gardener-local-control-plane"}); err != nil {
+		return err
+	}
+
+	return s.trigger(ctx, c, c, &appsv1.DeploymentList{}, client.MatchingLabels{"app": "dependency-watchdog-probe"})
+}
+
+func (s *webhookTriggerer) trigger(ctx context.Context, reader client.Reader, writer client.StatusWriter, objectList client.ObjectList, labelSelector client.MatchingLabels) error {
+	if err := reader.List(ctx, objectList, labelSelector); err != nil {
+		return err
+	}
+
+	return meta.EachListItem(objectList, func(obj runtime.Object) error {
+		object := obj.(client.Object)
+		return writer.Patch(ctx, object, client.RawPatch(types.StrategicMergePatchType, []byte("{}")))
+	})
 }

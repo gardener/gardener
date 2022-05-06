@@ -33,7 +33,6 @@ import (
 	healthcheckcontroller "github.com/gardener/gardener/pkg/provider-local/controller/healthcheck"
 	infrastructurecontroller "github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
 	ingresscontroller "github.com/gardener/gardener/pkg/provider-local/controller/ingress"
-	nodecontroller "github.com/gardener/gardener/pkg/provider-local/controller/node"
 	operatingsystemconfigcontroller "github.com/gardener/gardener/pkg/provider-local/controller/operatingsystemconfig"
 	servicecontroller "github.com/gardener/gardener/pkg/provider-local/controller/service"
 	workercontroller "github.com/gardener/gardener/pkg/provider-local/controller/worker"
@@ -55,7 +54,6 @@ func ControllerSwitchOptions() *controllercmd.SwitchOptions {
 		controllercmd.Switch(extensionsinfrastructurecontroller.ControllerName, infrastructurecontroller.AddToManager),
 		controllercmd.Switch(extensionsworkercontroller.ControllerName, workercontroller.AddToManager),
 		controllercmd.Switch(ingresscontroller.ControllerName, ingresscontroller.AddToManager),
-		controllercmd.Switch(nodecontroller.ControllerName, nodecontroller.AddToManager),
 		controllercmd.Switch(servicecontroller.ControllerName, servicecontroller.AddToManager),
 		controllercmd.Switch(extensionshealthcheckcontroller.ControllerName, healthcheckcontroller.AddToManager),
 		controllercmd.Switch(extensionsoperatingsystemconfgcontroller.ControllerName, operatingsystemconfigcontroller.AddToManager),
