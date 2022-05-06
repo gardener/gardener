@@ -33,7 +33,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/clock"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -147,11 +146,9 @@ var _ = Describe("Project Activity", func() {
 			BeforeEach(func() {
 				backupEntry = &gardencorev1beta1.BackupEntry{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "backupEntry",
-						Namespace: namespaceName,
-					},
-					Spec: gardencorev1beta1.BackupEntrySpec{
-						BucketName: "bucket1",
+						Name:       "backupEntry",
+						Namespace:  namespaceName,
+						Generation: 1,
 					},
 				}
 			})
@@ -173,19 +170,19 @@ var _ = Describe("Project Activity", func() {
 			})
 
 			Context("BackupEntry Update", func() {
-				It("should add the project to the queue if the spec of the object has changed", func() {
+				It("should add the project to the queue if the generation the object has changed", func() {
 					queue.EXPECT().Add(projectName)
 
 					newBackupEntry := backupEntry.DeepCopy()
-					newBackupEntry.Spec.BucketName = "bucket2"
+					newBackupEntry.ObjectMeta.Generation = 2
 
-					c.projectActivityBackupEntryUpdate(ctx, backupEntry, newBackupEntry)
+					c.projectActivityObjectUpdate(ctx, backupEntry, newBackupEntry, false)
 				})
 
-				It("should not add the project to the queue if the spec of the object hasn't changed", func() {
+				It("should not add the project to the queue if the generation of the object hasn't changed", func() {
 					newBackupEntry := backupEntry.DeepCopy()
 
-					c.projectActivityBackupEntryUpdate(ctx, backupEntry, newBackupEntry)
+					c.projectActivityObjectUpdate(ctx, backupEntry, newBackupEntry, false)
 				})
 			})
 
@@ -206,15 +203,9 @@ var _ = Describe("Project Activity", func() {
 			BeforeEach(func() {
 				plant = &gardencorev1beta1.Plant{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "plant",
-						Namespace: namespaceName,
-					},
-					Spec: gardencorev1beta1.PlantSpec{
-						Endpoints: []gardencorev1beta1.Endpoint{
-							{
-								Name: "endpoint",
-							},
-						},
+						Name:       "plant",
+						Namespace:  namespaceName,
+						Generation: 1,
 					},
 				}
 			})
@@ -236,19 +227,19 @@ var _ = Describe("Project Activity", func() {
 			})
 
 			Context("Plant Update", func() {
-				It("should add the project to the queue if the spec of the object has changed", func() {
+				It("should add the project to the queue if the generation of the object has changed", func() {
 					queue.EXPECT().Add(projectName)
 
 					newPlant := plant.DeepCopy()
-					newPlant.Spec.Endpoints[0].Name = "endpoint2"
+					newPlant.ObjectMeta.Generation = 2
 
-					c.projectActivityPlantUpdate(ctx, plant, newPlant)
+					c.projectActivityObjectUpdate(ctx, plant, newPlant, false)
 				})
 
-				It("should not add the project to the queue if the spec of the object hasn't changed", func() {
+				It("should not add the project to the queue if the generation of the object hasn't changed", func() {
 					newPlant := plant.DeepCopy()
 
-					c.projectActivityPlantUpdate(ctx, plant, newPlant)
+					c.projectActivityObjectUpdate(ctx, plant, newPlant, false)
 				})
 			})
 
@@ -309,7 +300,7 @@ var _ = Describe("Project Activity", func() {
 					newQuota := quota.DeepCopy()
 					newQuota.ObjectMeta.Labels = map[string]string{"reference.gardener.cloud/secretbinding": "true"}
 
-					c.projectActivityObjectWithLabelUpdate(ctx, quota, newQuota)
+					c.projectActivityObjectUpdate(ctx, quota, newQuota, true)
 				})
 
 				It("should add the project to the queue if the old object has the label and new object doesn't (the quota is no longer referred)", func() {
@@ -317,13 +308,13 @@ var _ = Describe("Project Activity", func() {
 					newQuota := quota.DeepCopy()
 					quota.ObjectMeta.Labels = map[string]string{"reference.gardener.cloud/secretbinding": "true"}
 
-					c.projectActivityObjectWithLabelUpdate(ctx, quota, newQuota)
+					c.projectActivityObjectUpdate(ctx, quota, newQuota, true)
 				})
 
 				It("should not add the project to the queue if neither of the objects have the label", func() {
 					newQuota := quota.DeepCopy()
 
-					c.projectActivityObjectWithLabelUpdate(ctx, quota, newQuota)
+					c.projectActivityObjectUpdate(ctx, quota, newQuota, true)
 				})
 			})
 
@@ -390,7 +381,7 @@ var _ = Describe("Project Activity", func() {
 					newSecret := secret.DeepCopy()
 					newSecret.ObjectMeta.Labels = map[string]string{"reference.gardener.cloud/secretbinding": "true"}
 
-					c.projectActivityObjectWithLabelUpdate(ctx, secret, newSecret)
+					c.projectActivityObjectUpdate(ctx, secret, newSecret, true)
 				})
 
 				It("should add the project to the queue if the old object has the label and new object doesn't (the secret is no longer referred)", func() {
@@ -398,13 +389,13 @@ var _ = Describe("Project Activity", func() {
 					newSecret := secret.DeepCopy()
 					secret.ObjectMeta.Labels = map[string]string{"reference.gardener.cloud/secretbinding": "true"}
 
-					c.projectActivityObjectWithLabelUpdate(ctx, secret, newSecret)
+					c.projectActivityObjectUpdate(ctx, secret, newSecret, true)
 				})
 
 				It("should not add the project to the queue if neither of the objects have the label", func() {
 					newSecret := secret.DeepCopy()
 
-					c.projectActivityObjectWithLabelUpdate(ctx, secret, newSecret)
+					c.projectActivityObjectUpdate(ctx, secret, newSecret, true)
 				})
 			})
 
@@ -431,13 +422,9 @@ var _ = Describe("Project Activity", func() {
 			BeforeEach(func() {
 				shoot = &gardencorev1beta1.Shoot{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "shoot",
-						Namespace: namespaceName,
-					},
-					Spec: gardencorev1beta1.ShootSpec{
-						Kubernetes: gardencorev1beta1.Kubernetes{
-							EnableStaticTokenKubeconfig: pointer.Bool(true),
-						},
+						Name:       "shoot",
+						Namespace:  namespaceName,
+						Generation: 1,
 					},
 				}
 			})
@@ -459,19 +446,19 @@ var _ = Describe("Project Activity", func() {
 			})
 
 			Context("Shoot Update", func() {
-				It("should add the project to the queue if the spec of the object has changed", func() {
+				It("should add the project to the queue if the generation of the object has changed", func() {
 					queue.EXPECT().Add(projectName)
 
 					newShoot := shoot.DeepCopy()
-					newShoot.Spec.CloudProfileName = "cloudProfile"
+					newShoot.ObjectMeta.Generation = 2
 
-					c.projectActivityShootUpdate(ctx, shoot, newShoot)
+					c.projectActivityObjectUpdate(ctx, shoot, newShoot, false)
 				})
 
-				It("should not add the project to the queue if the spec of the object hasn't changed", func() {
+				It("should not add the project to the queue if the generation of the object hasn't changed", func() {
 					newShoot := shoot.DeepCopy()
 
-					c.projectActivityShootUpdate(ctx, shoot, newShoot)
+					c.projectActivityObjectUpdate(ctx, shoot, newShoot, false)
 				})
 			})
 

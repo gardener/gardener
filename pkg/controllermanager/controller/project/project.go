@@ -141,7 +141,7 @@ func NewProjectController(
 			projectController.projectActivityObjectAddDelete(ctx, obj, false, true)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			projectController.projectActivityShootUpdate(ctx, oldObj, newObj)
+			projectController.projectActivityObjectUpdate(ctx, oldObj, newObj, false)
 		},
 		DeleteFunc: func(obj interface{}) {
 			projectController.projectActivityObjectAddDelete(ctx, obj, false, false)
@@ -153,7 +153,7 @@ func NewProjectController(
 			projectController.projectActivityObjectAddDelete(ctx, obj, true, true)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			projectController.projectActivityObjectWithLabelUpdate(ctx, oldObj, newObj)
+			projectController.projectActivityObjectUpdate(ctx, oldObj, newObj, true)
 		},
 		DeleteFunc: func(obj interface{}) {
 			projectController.projectActivityObjectAddDelete(ctx, obj, true, false)
@@ -165,7 +165,7 @@ func NewProjectController(
 			projectController.projectActivityObjectAddDelete(ctx, obj, false, true)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			projectController.projectActivityPlantUpdate(ctx, oldObj, newObj)
+			projectController.projectActivityObjectUpdate(ctx, oldObj, newObj, false)
 		},
 		DeleteFunc: func(obj interface{}) {
 			projectController.projectActivityObjectAddDelete(ctx, obj, false, false)
@@ -177,7 +177,7 @@ func NewProjectController(
 			projectController.projectActivityObjectAddDelete(ctx, obj, true, true)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			projectController.projectActivityObjectWithLabelUpdate(ctx, oldObj, newObj)
+			projectController.projectActivityObjectUpdate(ctx, oldObj, newObj, true)
 		},
 		DeleteFunc: func(obj interface{}) {
 			projectController.projectActivityObjectAddDelete(ctx, obj, true, false)
@@ -189,7 +189,7 @@ func NewProjectController(
 			projectController.projectActivityObjectAddDelete(ctx, obj, false, true)
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			projectController.projectActivityBackupEntryUpdate(ctx, oldObj, newObj)
+			projectController.projectActivityObjectUpdate(ctx, oldObj, newObj, false)
 		},
 		DeleteFunc: func(obj interface{}) {
 			projectController.projectActivityObjectAddDelete(ctx, obj, false, false)

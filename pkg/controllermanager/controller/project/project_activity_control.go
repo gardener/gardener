@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -87,7 +86,7 @@ func (c *Controller) projectActivityObjectAddDelete(ctx context.Context, obj int
 	}
 
 	if addFunc {
-		// If the creationTimestamp of the object is less than 1 hour (experimental) from current time,
+		// If the creationTimestamp of the object is less than 1 hour from current time,
 		// skip it. This is to prevent unnecessary reconciliations in case of GCM restart.
 		if objMeta.GetCreationTimestamp().Add(time.Hour).UTC().Before(c.clock.Now().UTC()) {
 			return
@@ -102,7 +101,7 @@ func (c *Controller) projectActivityObjectAddDelete(ctx context.Context, obj int
 	c.projectActivityQueue.Add(key)
 }
 
-func (c *Controller) projectActivityObjectWithLabelUpdate(ctx context.Context, oldObj, newObj interface{}) {
+func (c *Controller) projectActivityObjectUpdate(ctx context.Context, oldObj, newObj interface{}, withLabel bool) {
 	oldObjMeta, err := meta.Accessor(oldObj)
 	if err != nil {
 		return
@@ -112,81 +111,19 @@ func (c *Controller) projectActivityObjectWithLabelUpdate(ctx context.Context, o
 		return
 	}
 
-	// skip queueing if the object(secret or quota) doesn't have the "referred by a secretbinding" label
-	_, oldObjHasLabel := oldObjMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
-	_, newObjHasLabel := newObjMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
+	if withLabel {
+		// skip queueing if the object(secret or quota) doesn't have the "referred by a secretbinding" label
+		_, oldObjHasLabel := oldObjMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
+		_, newObjHasLabel := newObjMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
 
-	if !oldObjHasLabel && !newObjHasLabel {
+		if !oldObjHasLabel && !newObjHasLabel {
+			return
+		}
+	} else if oldObjMeta.GetGeneration() == newObjMeta.GetGeneration() {
 		return
 	}
 
 	key := c.getProjectKey(ctx, newObjMeta.GetNamespace())
-	if key == "" {
-		return
-	}
-
-	c.projectActivityQueue.Add(key)
-}
-
-func (c *Controller) projectActivityBackupEntryUpdate(ctx context.Context, oldObj, newObj interface{}) {
-	oldBackupEntry, ok := oldObj.(*gardencorev1beta1.BackupEntry)
-	if !ok {
-		return
-	}
-	newBackupEntry, ok := newObj.(*gardencorev1beta1.BackupEntry)
-	if !ok {
-		return
-	}
-
-	if apiequality.Semantic.DeepEqual(newBackupEntry.Spec, oldBackupEntry.Spec) {
-		return
-	}
-
-	key := c.getProjectKey(ctx, newBackupEntry.GetNamespace())
-	if key == "" {
-		return
-	}
-
-	c.projectActivityQueue.Add(key)
-}
-
-func (c *Controller) projectActivityPlantUpdate(ctx context.Context, oldObj, newObj interface{}) {
-	oldPlant, ok := oldObj.(*gardencorev1beta1.Plant)
-	if !ok {
-		return
-	}
-	newPlant, ok := newObj.(*gardencorev1beta1.Plant)
-	if !ok {
-		return
-	}
-
-	if apiequality.Semantic.DeepEqual(newPlant.Spec, oldPlant.Spec) {
-		return
-	}
-
-	key := c.getProjectKey(ctx, newPlant.GetNamespace())
-	if key == "" {
-		return
-	}
-
-	c.projectActivityQueue.Add(key)
-}
-
-func (c *Controller) projectActivityShootUpdate(ctx context.Context, oldObj, newObj interface{}) {
-	oldShoot, ok := oldObj.(*gardencorev1beta1.Shoot)
-	if !ok {
-		return
-	}
-	newShoot, ok := newObj.(*gardencorev1beta1.Shoot)
-	if !ok {
-		return
-	}
-
-	if apiequality.Semantic.DeepEqual(newShoot.Spec, oldShoot.Spec) {
-		return
-	}
-
-	key := c.getProjectKey(ctx, newShoot.GetNamespace())
 	if key == "" {
 		return
 	}
