@@ -18,11 +18,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -54,6 +56,19 @@ func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) erro
 
 	metav1.SetMetaDataLabel(&pod.ObjectMeta, local.LabelNetworkPolicyToIstioIngressGateway, v1beta1constants.LabelNetworkPolicyAllowed)
 	pod.Spec.DNSPolicy = corev1.DNSNone
-	pod.Spec.DNSConfig = &corev1.PodDNSConfig{Nameservers: []string{service.Spec.ClusterIP}}
+	pod.Spec.DNSConfig = &corev1.PodDNSConfig{
+		Nameservers: []string{
+			service.Spec.ClusterIP,
+		},
+		Searches: []string{
+			fmt.Sprintf("%s.svc.%s", newObj.GetNamespace(), v1beta1.DefaultDomain),
+			"svc." + v1beta1.DefaultDomain,
+			v1beta1.DefaultDomain,
+		},
+		Options: []corev1.PodDNSConfigOption{{
+			Name:  "ndots",
+			Value: pointer.String("5"),
+		}},
+	}
 	return nil
 }
