@@ -29,6 +29,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	resourceshelper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
@@ -64,10 +65,8 @@ var (
 	foregroundDeletionAPIGroups = sets.NewString(appsv1.GroupName, extensionsv1beta1.GroupName, batchv1.GroupName)
 )
 
-// Reconciler contains information in order to reconcile instances of ManagedResource.
-type Reconciler struct {
-	log logr.Logger
-
+// reconciler contains information in order to reconcile instances of ManagedResource.
+type reconciler struct {
 	client           client.Client
 	targetClient     client.Client
 	targetRESTMapper meta.RESTMapper
@@ -82,19 +81,13 @@ type Reconciler struct {
 }
 
 // InjectClient injects a client into the reconciler.
-func (r *Reconciler) InjectClient(c client.Client) error {
+func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil
 }
 
-// InjectLogger injects a logger into the reconciler.
-func (r *Reconciler) InjectLogger(l logr.Logger) error {
-	r.log = l.WithName(ControllerName)
-	return nil
-}
-
 // Reconcile implements `reconcile.Reconciler`.
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
 	mr := &resourcesv1alpha1.ManagedResource{}
@@ -108,6 +101,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if ignore(mr) && mr.DeletionTimestamp == nil {
 		log.Info("Skipping reconciliation since ManagedResource is ignored")
+		if err := r.updateConditionsForIgnoredManagedResource(ctx, mr); err != nil {
+			return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
+		}
+
 		return reconcile.Result{}, nil
 	}
 
@@ -129,7 +126,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return r.reconcile(ctx, mr, log)
 }
 
-func (r *Reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.ManagedResource, log logr.Logger) (ctrl.Result, error) {
+func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.ManagedResource, log logr.Logger) (ctrl.Result, error) {
 	log.Info("Starting to reconcile ManagedResource")
 
 	if err := controllerutils.PatchAddFinalizers(ctx, r.client, mr, r.class.FinalizerName()); err != nil {
@@ -143,7 +140,7 @@ func (r *Reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 
 		equivalences           = NewEquivalences(mr.Spec.Equivalences...)
 		existingResourcesIndex = NewObjectIndex(mr.Status.Resources, equivalences)
-		origin                 = r.origin(mr)
+		origin                 = resourceshelper.OriginForManagedResource(r.clusterID, mr)
 
 		forceOverwriteLabels      bool
 		forceOverwriteAnnotations bool
@@ -280,7 +277,10 @@ func (r *Reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 	if len(mr.Status.Resources) == 0 || !apiequality.Semantic.DeepEqual(mr.Status.Resources, newResourcesObjectReferences) {
 		conditionResourcesHealthy := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
 		conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionUnknown,
-			resourcesv1alpha1.ConditionHealthChecksPending, "The health checks have not yet been executed for the current set of resources.")
+			resourcesv1alpha1.ConditionChecksPending, "The health checks have not yet been executed for the current set of resources.")
+		conditionResourcesProgressing := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesProgressing)
+		conditionResourcesProgressing = v1beta1helper.UpdatedCondition(conditionResourcesProgressing, gardencorev1beta1.ConditionUnknown,
+			resourcesv1alpha1.ConditionChecksPending, "Checks have not yet been executed for the current set of resources.")
 
 		reason := resourcesv1alpha1.ConditionApplyProgressing
 		msg := "The resources are currently being reconciled."
@@ -292,12 +292,12 @@ func (r *Reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		}
 		conditionResourcesApplied = v1beta1helper.UpdatedCondition(conditionResourcesApplied, gardencorev1beta1.ConditionProgressing, reason, msg)
 
-		if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy, conditionResourcesApplied); err != nil {
+		if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy, conditionResourcesProgressing, conditionResourcesApplied); err != nil {
 			return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 		}
 	}
 
-	if deletionPending, err := r.cleanOldResources(reconcileCtx, existingResourcesIndex, mr); err != nil {
+	if deletionPending, err := r.cleanOldResources(reconcileCtx, log, existingResourcesIndex, mr); err != nil {
 		var (
 			reason string
 			status gardencorev1beta1.ConditionStatus
@@ -324,7 +324,7 @@ func (r *Reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		}
 	}
 
-	if err := r.releaseOrphanedResources(ctx, orphanedObjectReferences, origin); err != nil {
+	if err := r.releaseOrphanedResources(ctx, log, orphanedObjectReferences, origin); err != nil {
 		conditionResourcesApplied = v1beta1helper.UpdatedCondition(conditionResourcesApplied, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ReleaseOfOrphanedResourcesFailed, err.Error())
 		if err := updateConditions(ctx, r.client, mr, conditionResourcesApplied); err != nil {
 			return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
@@ -333,7 +333,7 @@ func (r *Reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		return ctrl.Result{}, fmt.Errorf("could not release all orphaned resources: %+v", err)
 	}
 
-	if err := r.applyNewResources(reconcileCtx, origin, newResourcesObjects, mr.Spec.InjectLabels, equivalences); err != nil {
+	if err := r.applyNewResources(reconcileCtx, log, origin, newResourcesObjects, mr.Spec.InjectLabels, equivalences); err != nil {
 		conditionResourcesApplied = v1beta1helper.UpdatedCondition(conditionResourcesApplied, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ConditionApplyFailed, err.Error())
 		if err := updateConditions(ctx, r.client, mr, conditionResourcesApplied); err != nil {
 			return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
@@ -356,11 +356,15 @@ func (r *Reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 	return ctrl.Result{RequeueAfter: r.syncPeriod}, nil
 }
 
-func (r *Reconciler) delete(ctx context.Context, mr *resourcesv1alpha1.ManagedResource, log logr.Logger) (ctrl.Result, error) {
+func (r *reconciler) delete(ctx context.Context, mr *resourcesv1alpha1.ManagedResource, log logr.Logger) (ctrl.Result, error) {
 	log.Info("Starting to delete ManagedResource")
 
 	deleteCtx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
+
+	if err := r.updateConditionsForDeletion(ctx, mr); err != nil {
+		return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
+	}
 
 	conditionResourcesApplied := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
 
@@ -378,7 +382,7 @@ func (r *Reconciler) delete(ctx context.Context, mr *resourcesv1alpha1.ManagedRe
 			return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 		}
 
-		if deletionPending, err := r.cleanOldResources(deleteCtx, existingResourcesIndex, mr); err != nil {
+		if deletionPending, err := r.cleanOldResources(deleteCtx, log, existingResourcesIndex, mr); err != nil {
 			var (
 				reason string
 				status gardencorev1beta1.ConditionStatus
@@ -418,7 +422,33 @@ func (r *Reconciler) delete(ctx context.Context, mr *resourcesv1alpha1.ManagedRe
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) applyNewResources(ctx context.Context, origin string, newResourcesObjects []object, labelsToInject map[string]string, equivalences Equivalences) error {
+func (r *reconciler) updateConditionsForIgnoredManagedResource(ctx context.Context, mr *resourcesv1alpha1.ManagedResource) error {
+	message := "ManagedResource is marked to be ignored."
+	conditionResourcesApplied := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
+	conditionResourcesApplied = v1beta1helper.UpdatedCondition(conditionResourcesApplied, gardencorev1beta1.ConditionTrue, resourcesv1alpha1.ConditionManagedResourceIgnored, message)
+	conditionResourcesHealthy := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
+	conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionTrue, resourcesv1alpha1.ConditionManagedResourceIgnored, message)
+	conditionResourcesProgressing := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesProgressing)
+	conditionResourcesProgressing = v1beta1helper.UpdatedCondition(conditionResourcesProgressing, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ConditionManagedResourceIgnored, message)
+
+	oldMr := mr.DeepCopy()
+	mr.Status.Conditions = v1beta1helper.MergeConditions(mr.Status.Conditions, conditionResourcesApplied, conditionResourcesHealthy, conditionResourcesProgressing)
+	if !apiequality.Semantic.DeepEqual(oldMr.Status.Conditions, mr.Status.Conditions) {
+		return r.client.Status().Update(ctx, mr)
+	}
+
+	return nil
+}
+
+func (r *reconciler) updateConditionsForDeletion(ctx context.Context, mr *resourcesv1alpha1.ManagedResource) error {
+	conditionResourcesHealthy := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
+	conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ConditionDeletionPending, "The resources are currently being deleted.")
+	conditionResourcesProgressing := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesProgressing)
+	conditionResourcesProgressing = v1beta1helper.UpdatedCondition(conditionResourcesProgressing, gardencorev1beta1.ConditionTrue, resourcesv1alpha1.ConditionDeletionPending, "The resources are currently being deleted.")
+	return updateConditions(ctx, r.client, mr, conditionResourcesHealthy, conditionResourcesProgressing)
+}
+
+func (r *reconciler) applyNewResources(ctx context.Context, log logr.Logger, origin string, newResourcesObjects []object, labelsToInject map[string]string, equivalences Equivalences) error {
 	var (
 		results   = make(chan error)
 		wg        sync.WaitGroup
@@ -448,7 +478,7 @@ func (r *Reconciler) applyNewResources(ctx context.Context, origin string, newRe
 				scaledVertically   = isScaled(obj.obj, verticallyScaledObjects, equivalences)
 			)
 
-			r.log.Info("Applying", "resource", resource)
+			log.Info("Applying", "resource", resource)
 
 			results <- retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 				if operationResult, err := controllerutils.TypedCreateOrUpdate(ctx, r.targetClient, r.targetScheme, current, r.alwaysUpdate, func() error {
@@ -472,7 +502,7 @@ func (r *Reconciler) applyNewResources(ctx context.Context, origin string, newRe
 					return merge(origin, obj.obj, current, obj.forceOverwriteLabels, obj.oldInformation.Labels, obj.forceOverwriteAnnotations, obj.oldInformation.Annotations, scaledHorizontally, scaledVertically)
 				}); err != nil {
 					if apierrors.IsConflict(err) {
-						r.log.Info("Conflict while applying object", "object", resource, "err", err)
+						log.Info("Conflict while applying object", "object", resource, "err", err)
 						// return conflict error directly, so that the update will be retried
 						return err
 					}
@@ -504,13 +534,6 @@ func (r *Reconciler) applyNewResources(ctx context.Context, origin string, newRe
 	}
 
 	return errorList.ErrorOrNil()
-}
-
-func (r *Reconciler) origin(mr *resourcesv1alpha1.ManagedResource) string {
-	if r.clusterID != "" {
-		return r.clusterID + ":" + mr.Namespace + "/" + mr.Name
-	}
-	return mr.Namespace + "/" + mr.Name
 }
 
 // computeAllScaledObjectKeys returns two sets containing object keys (in the form `Group/Kind/Namespace/Name`).
@@ -631,7 +654,7 @@ func keyExistsAndValueTrue(kv map[string]string, key string) bool {
 	return exists && valueTrue
 }
 
-func (r *Reconciler) cleanOldResources(ctx context.Context, index *objectIndex, mr *resourcesv1alpha1.ManagedResource) (bool, error) {
+func (r *reconciler) cleanOldResources(ctx context.Context, log logr.Logger, index *objectIndex, mr *resourcesv1alpha1.ManagedResource) (bool, error) {
 	type output struct {
 		obj             *unstructured.Unstructured
 		deletionPending bool
@@ -661,12 +684,12 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, index *objectIndex, 
 				obj.SetName(ref.Name)
 
 				resource := unstructuredToString(obj)
-				r.log.Info("Deleting", "resource", resource)
+				log.Info("Deleting", "resource", resource)
 
 				// get object before deleting to be able to do cleanup work for it
 				if err := r.targetClient.Get(ctx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, obj); err != nil {
 					if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
-						r.log.Error(err, "Error during deletion", "resource", resource)
+						log.Error(err, "Error during deletion", "resource", resource)
 						results <- &output{obj, true, err}
 						return
 					}
@@ -677,19 +700,19 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, index *objectIndex, 
 				}
 
 				if keepObject(obj) {
-					r.log.Info("Keeping object in the system as "+resourcesv1alpha1.KeepObject+" annotation found", "resource", unstructuredToString(obj))
+					log.Info("Keeping object in the system as "+resourcesv1alpha1.KeepObject+" annotation found", "resource", unstructuredToString(obj))
 					results <- &output{obj, false, nil}
 					return
 				}
 
 				if r.garbageCollectorActivated && isGarbageCollectableResource(obj) {
-					r.log.Info("Keeping object in the system as it is marked as 'garbage-collectable'", "resource", unstructuredToString(obj))
+					log.Info("Keeping object in the system as it is marked as 'garbage-collectable'", "resource", unstructuredToString(obj))
 					results <- &output{obj, false, nil}
 					return
 				}
 
 				if err := cleanup(ctx, r.targetClient, r.targetScheme, obj, deletePVCs); err != nil {
-					r.log.Error(err, "Error during cleanup", "resource", resource)
+					log.Error(err, "Error during cleanup", "resource", resource)
 					results <- &output{obj, true, err}
 					return
 				}
@@ -708,7 +731,7 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, index *objectIndex, 
 
 				if err := r.targetClient.Delete(ctx, obj, deleteOptions); err != nil {
 					if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
-						r.log.Error(err, "Error during deletion", "resource", resource)
+						log.Error(err, "Error during deletion", "resource", resource)
 						results <- &output{obj, true, err}
 						return
 					}
@@ -737,7 +760,7 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, index *objectIndex, 
 			// consult service events for more details
 			eventsMsg, err := eventsForObject(ctx, r.targetScheme, r.targetClient, out.obj)
 			if err != nil {
-				r.log.Error(err, "Error reading events for more information", "resource", resource)
+				log.Error(err, "Error reading events for more information", "resource", resource)
 			} else if eventsMsg != "" {
 				errMsg = fmt.Sprintf("%s\n\n%s", errMsg, eventsMsg)
 			}
@@ -754,7 +777,7 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, index *objectIndex, 
 	return deletionPending, errorList.ErrorOrNil()
 }
 
-func (r *Reconciler) releaseOrphanedResources(ctx context.Context, orphanedResources []resourcesv1alpha1.ObjectReference, origin string) error {
+func (r *reconciler) releaseOrphanedResources(ctx context.Context, log logr.Logger, orphanedResources []resourcesv1alpha1.ObjectReference, origin string) error {
 	var (
 		results   = make(chan error)
 		wg        sync.WaitGroup
@@ -769,7 +792,7 @@ func (r *Reconciler) releaseOrphanedResources(ctx context.Context, orphanedResou
 		go func(ref resourcesv1alpha1.ObjectReference) {
 			defer wg.Done()
 
-			err := r.releaseOrphanedResource(ctx, ref, origin)
+			err := r.releaseOrphanedResource(ctx, log, ref, origin)
 			results <- err
 
 		}(orphanedResource)
@@ -789,7 +812,7 @@ func (r *Reconciler) releaseOrphanedResources(ctx context.Context, orphanedResou
 	return errorList.ErrorOrNil()
 }
 
-func (r *Reconciler) releaseOrphanedResource(ctx context.Context, ref resourcesv1alpha1.ObjectReference, origin string) error {
+func (r *reconciler) releaseOrphanedResource(ctx context.Context, log logr.Logger, ref resourcesv1alpha1.ObjectReference, origin string) error {
 	obj := &unstructured.Unstructured{}
 	obj.SetAPIVersion(ref.APIVersion)
 	obj.SetKind(ref.Kind)
@@ -798,7 +821,7 @@ func (r *Reconciler) releaseOrphanedResource(ctx context.Context, ref resourcesv
 
 	resource := unstructuredToString(obj)
 
-	r.log.Info("Releasing orphan resource", "resource", resource)
+	log.Info("Releasing orphan resource", "resource", resource)
 
 	if err := r.targetClient.Get(ctx, client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}, obj); err != nil {
 		if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
@@ -809,15 +832,15 @@ func (r *Reconciler) releaseOrphanedResource(ctx context.Context, ref resourcesv
 	}
 
 	// Skip the release of resource when the origin annotation has already changed
-	objOrigin := obj.GetAnnotations()[originAnnotation]
+	objOrigin := obj.GetAnnotations()[resourcesv1alpha1.OriginAnnotation]
 	if objOrigin != origin {
-		r.log.Info("Skipping release for orphan resource as origin annotation has already changed", "resource", resource)
+		log.Info("Skipping release for orphan resource as origin annotation has already changed", "resource", resource)
 		return nil
 	}
 
 	oldObj := obj.DeepCopy()
 	annotations := obj.GetAnnotations()
-	delete(annotations, originAnnotation)
+	delete(annotations, resourcesv1alpha1.OriginAnnotation)
 	delete(annotations, descriptionAnnotation)
 	obj.SetAnnotations(annotations)
 

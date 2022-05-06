@@ -37,7 +37,6 @@ import (
 )
 
 type reconciler struct {
-	log          logr.Logger
 	client       client.Client
 	targetClient client.Client
 	targetScheme *runtime.Scheme
@@ -48,12 +47,6 @@ type reconciler struct {
 // InjectClient injects a client into the reconciler.
 func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
-	return nil
-}
-
-// InjectLogger injects a logger into the reconciler.
-func (r *reconciler) InjectLogger(l logr.Logger) error {
-	r.log = l.WithName(ControllerName)
 	return nil
 }
 
@@ -73,7 +66,12 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			log.Info("Stopping health checks for ManagedResource, as it has been deleted")
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf("could not fetch ManagedResource: %+v", err)
+		return ctrl.Result{}, fmt.Errorf("could not fetch ManagedResource: %w", err)
+	}
+
+	if isIgnored(mr) {
+		log.Info("Skipping health checks since ManagedResource is ignored")
+		return ctrl.Result{}, nil
 	}
 
 	// Check responsibility
@@ -83,7 +81,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	if !mr.DeletionTimestamp.IsZero() {
-		return r.updateStatusForDeletion(ctx, log, mr)
+		log.Info("Stopping health checks for ManagedResource, as it is marked for deletion")
+		return ctrl.Result{}, nil
 	}
 
 	// skip health checks until ManagedResource has been reconciled completely successfully to prevent writing
@@ -95,17 +94,6 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	return r.executeHealthChecks(ctx, log, mr)
-}
-
-func (r *reconciler) updateStatusForDeletion(ctx context.Context, log logr.Logger, mr *resourcesv1alpha1.ManagedResource) (ctrl.Result, error) {
-	conditionResourcesHealthy := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
-	conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ConditionDeletionPending, "The resources are currently being deleted.")
-	if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
-		return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
-	}
-
-	log.Info("Stopping health checks for ManagedResource, as it has been deleted (deletionTimestamp is set)")
-	return ctrl.Result{}, nil
 }
 
 func (r *reconciler) executeHealthChecks(ctx context.Context, log logr.Logger, mr *resourcesv1alpha1.ManagedResource) (ctrl.Result, error) {

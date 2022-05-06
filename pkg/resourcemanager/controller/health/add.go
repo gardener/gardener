@@ -18,9 +18,10 @@ import (
 	"fmt"
 	"time"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
-	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,10 +34,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	resourceshelper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
+	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
 // ControllerName is the name of the health controller.
-const ControllerName = "health-controller"
+const ControllerName = "health"
 
 // defaultControllerConfig is the default config for the controller.
 var defaultControllerConfig ControllerConfig
@@ -52,12 +57,15 @@ type ControllerConfig struct {
 	MaxConcurrentWorkers int
 	SyncPeriod           time.Duration
 
-	ClassFilter   managerpredicate.ClassFilter
-	TargetCluster cluster.Cluster
+	ClassFilter         managerpredicate.ClassFilter
+	TargetCluster       cluster.Cluster
+	TargetCacheDisabled bool
+	ClusterID           string
 }
 
 // AddToManagerWithOptions adds the controller to a Manager with the given config.
 func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
+	// setup main health reconciler
 	healthController, err := controller.New(ControllerName, mgr, controller.Options{
 		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
 		Reconciler: &reconciler{
@@ -69,39 +77,57 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		RecoverPanic: true,
 	})
 	if err != nil {
-		return fmt.Errorf("unable to set up health controller: %w", err)
+		return fmt.Errorf("unable to setup health reconciler: %w", err)
 	}
 
 	if err := healthController.Watch(
 		&source.Kind{Type: &resourcesv1alpha1.ManagedResource{}},
-		&handler.Funcs{
-			CreateFunc: func(e event.CreateEvent, q workqueue.RateLimitingInterface) {
-				q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
-					Name:      e.Object.GetName(),
-					Namespace: e.Object.GetNamespace(),
-				}})
-			},
-			UpdateFunc: func(e event.UpdateEvent, q workqueue.RateLimitingInterface) {
-				q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
-					Name:      e.ObjectNew.GetName(),
-					Namespace: e.ObjectNew.GetNamespace(),
-				}})
-			},
-		},
-		&conf.ClassFilter,
-		predicate.Or(
-			managerpredicate.ClassChangedPredicate(),
-			// start health checks immediately after MR has been reconciled
-			managerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesApplied, managerpredicate.DefaultConditionChange),
-			managerpredicate.NoLongerIgnored(),
-		),
-		predicate.Or(
-			managerpredicate.NotIgnored(),
-			predicateutils.IsDeleting(),
-		),
+		enqueueCreateAndUpdate,
+		append(healthControllerPredicates, &conf.ClassFilter)...,
 	); err != nil {
 		return fmt.Errorf("unable to watch ManagedResources: %w", err)
 	}
+
+	// setup reconciler for progressing condition
+	log := mgr.GetLogger().WithName("controller").WithName(progressingReconcilerName)
+
+	b := builder.ControllerManagedBy(mgr).Named(progressingReconcilerName).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
+			RecoverPanic:            true,
+		}).
+		For(&resourcesv1alpha1.ManagedResource{}, builder.WithPredicates(append(healthControllerPredicates, &conf.ClassFilter)...))
+
+	if !conf.TargetCacheDisabled {
+		// Watch relevant objects for Progressing condition in order to immediately update the condition as soon as there is
+		// a change on managed resources.
+		// If the target cache is disabled (e.g. for Shoots), we don't want to watch workload objects (Deployment, DaemonSet,
+		// StatefulSet) because this would cache all of them in the entire cluster. This can potentially be a lot of objects
+		// in Shoot clusters, because they are controlled by the end user. In this case, we rely on periodic syncs only.
+		// If we want to have immediate updates for managed resources in Shoots in the future as well, we could consider
+		// adding labels to managed resources and watch them explicitly.
+		b.Watches(
+			&source.Kind{Type: &appsv1.Deployment{}}, handler.EnqueueRequestsFromMapFunc(mapToOriginManagedResource(log, conf.ClusterID)),
+			builder.WithPredicates(progressingStatusChanged),
+		).Watches(
+			&source.Kind{Type: &appsv1.StatefulSet{}}, handler.EnqueueRequestsFromMapFunc(mapToOriginManagedResource(log, conf.ClusterID)),
+			builder.WithPredicates(progressingStatusChanged),
+		).Watches(
+			&source.Kind{Type: &appsv1.DaemonSet{}}, handler.EnqueueRequestsFromMapFunc(mapToOriginManagedResource(log, conf.ClusterID)),
+			builder.WithPredicates(progressingStatusChanged),
+		)
+	}
+
+	if err := b.Complete(&progressingReconciler{
+		client:       mgr.GetClient(),
+		targetClient: conf.TargetCluster.GetClient(),
+		targetScheme: conf.TargetCluster.GetScheme(),
+		classFilter:  &conf.ClassFilter,
+		syncPeriod:   conf.SyncPeriod,
+	}); err != nil {
+		return fmt.Errorf("unable to setup progressing reconciler: %w", err)
+	}
+
 	return nil
 }
 
@@ -128,4 +154,71 @@ func (o *ControllerOptions) Complete() error {
 // Completed returns the completed ControllerConfig.
 func (o *ControllerOptions) Completed() *ControllerConfig {
 	return &defaultControllerConfig
+}
+
+var enqueueCreateAndUpdate = &handler.Funcs{
+	CreateFunc: func(e event.CreateEvent, q workqueue.RateLimitingInterface) {
+		q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
+			Name:      e.Object.GetName(),
+			Namespace: e.Object.GetNamespace(),
+		}})
+	},
+	UpdateFunc: func(e event.UpdateEvent, q workqueue.RateLimitingInterface) {
+		q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
+			Name:      e.ObjectNew.GetName(),
+			Namespace: e.ObjectNew.GetNamespace(),
+		}})
+	},
+}
+
+var healthControllerPredicates = []predicate.Predicate{
+	predicate.Or(
+		managerpredicate.ClassChangedPredicate(),
+		// start health checks immediately after MR has been reconciled
+		managerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesApplied, managerpredicate.DefaultConditionChange),
+		managerpredicate.NoLongerIgnored(),
+	),
+	managerpredicate.NotIgnored(),
+}
+
+func mapToOriginManagedResource(log logr.Logger, clusterID string) handler.MapFunc {
+	return func(obj client.Object) []reconcile.Request {
+		origin, ok := obj.GetAnnotations()[resourcesv1alpha1.OriginAnnotation]
+		if !ok {
+			return nil
+		}
+
+		originClusterID, key, err := resourceshelper.SplitOrigin(origin)
+		if err != nil {
+			log.Error(err, "Failed to parse origin of object", "object", obj, "origin", origin)
+			return nil
+		}
+
+		if originClusterID != clusterID {
+			// object isn't managed by this resource-manager instance
+			return nil
+		}
+
+		return []reconcile.Request{{NamespacedName: key}}
+	}
+}
+
+var progressingStatusChanged = predicate.Funcs{
+	CreateFunc: func(_ event.CreateEvent) bool { return false },
+	UpdateFunc: func(e event.UpdateEvent) bool {
+		if e.ObjectOld.GetResourceVersion() == e.ObjectNew.GetResourceVersion() {
+			// periodic cache resync, enqueue
+			return true
+		}
+
+		oldProgressing, _ := CheckProgressing(e.ObjectOld)
+		newProgressing, _ := CheckProgressing(e.ObjectNew)
+		return oldProgressing != newProgressing
+	},
+	DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
+	GenericFunc: func(_ event.GenericEvent) bool { return false },
+}
+
+func isIgnored(obj client.Object) bool {
+	return obj.GetAnnotations()[resourcesv1alpha1.Ignore] == "true"
 }

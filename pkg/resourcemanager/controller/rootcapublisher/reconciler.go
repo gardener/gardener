@@ -18,13 +18,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -41,7 +41,6 @@ const (
 type reconciler struct {
 	targetClient client.Client
 	rootCA       string
-	log          logr.Logger
 }
 
 // NewReconciler is constructor only used in tests.
@@ -52,13 +51,8 @@ func NewReconciler(cl client.Client, rootCA string) *reconciler {
 	}
 }
 
-func (r *reconciler) InjectLogger(l logr.Logger) error {
-	r.log = l.WithName(ControllerName)
-	return nil
-}
-
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	log := r.log.WithValues("rootcapublisher", req)
+	log := logf.FromContext(ctx)
 
 	namespace := &corev1.Namespace{}
 	if err := r.targetClient.Get(ctx, req.NamespacedName, namespace); err != nil {

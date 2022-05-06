@@ -31,6 +31,11 @@ spec:
       jsonPath: .status.conditions[?(@.type=="ResourcesHealthy")].status
       name: Healthy
       type: string
+    - description: Indicates whether some resources are still progressing to be rolled
+        out.
+      jsonPath: .status.conditions[?(@.type=="ResourcesProgressing")].status
+      name: Progressing
+      type: string
     - description: creation timestamp
       jsonPath: .metadata.creationTimestamp
       name: Age

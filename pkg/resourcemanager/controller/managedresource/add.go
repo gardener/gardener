@@ -42,7 +42,7 @@ import (
 )
 
 // ControllerName is the name of the managedresource controller.
-const ControllerName = "resource-controller"
+const ControllerName = "resource"
 
 // defaultControllerConfig is the default config for the controller.
 var defaultControllerConfig ControllerConfig
@@ -75,7 +75,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
 		Reconciler: reconcilerutils.OperationAnnotationWrapper(
 			func() client.Object { return &resourcesv1alpha1.ManagedResource{} },
-			&Reconciler{
+			&reconciler{
 				targetClient:              conf.TargetCluster.GetClient(),
 				targetRESTMapper:          conf.TargetCluster.GetRESTMapper(),
 				targetScheme:              conf.TargetCluster.GetScheme(),
@@ -101,8 +101,13 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 			managerpredicate.HasOperationAnnotation(),
 			managerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesHealthy, managerpredicate.ConditionChangedToUnhealthy),
 			managerpredicate.NoLongerIgnored(),
+			// we need to reconcile once if the ManagedResource got marked as ignored in order to update the conditions
+			managerpredicate.GotMarkedAsIgnored(),
 		),
+		// TODO: refactor this predicate chain into a single predicate.Funcs that can be properly tested as a whole
 		predicate.Or(
+			// Added again here, as otherwise NotIgnored would filter this add/update event out
+			managerpredicate.GotMarkedAsIgnored(),
 			managerpredicate.NotIgnored(),
 			predicateutils.IsDeleting(),
 		),

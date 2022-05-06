@@ -46,6 +46,10 @@ const (
 	// true then the controller will keep the resource requests and limits in Pod templates (e.g. in a
 	// DeploymentSpec) during updates to the resource. This applies for all containers.
 	PreserveResources = "resources.gardener.cloud/preserve-resources"
+	// OriginAnnotation is a constant for an annotation on a resource managed by a ManagedResource.
+	// It is set by the ManagedResource controller to the key of the owning ManagedResource, optionally prefixed with the
+	// clusterID.
+	OriginAnnotation = "resources.gardener.cloud/origin"
 
 	// StaticTokenSkip is a constant for a label on a ServiceAccount which indicates that this ServiceAccount should not
 	// be considered by this controller.
@@ -101,6 +105,7 @@ const (
 // +kubebuilder:printcolumn:name="Class",type=string,JSONPath=`.spec.class`,description="The class identifies which resource manager is responsible for this ManagedResource."
 // +kubebuilder:printcolumn:name="Applied",type=string,JSONPath=`.status.conditions[?(@.type=="ResourcesApplied")].status`,description=" Indicates whether all resources have been applied."
 // +kubebuilder:printcolumn:name="Healthy",type=string,JSONPath=`.status.conditions[?(@.type=="ResourcesHealthy")].status`,description="Indicates whether all resources are healthy."
+// +kubebuilder:printcolumn:name="Progressing",type=string,JSONPath=`.status.conditions[?(@.type=="ResourcesProgressing")].status`,description="Indicates whether some resources are still progressing to be rolled out."
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="creation timestamp"
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -180,6 +185,8 @@ const (
 	ResourcesApplied gardencorev1beta1.ConditionType = "ResourcesApplied"
 	// ResourcesHealthy is a condition type that indicates whether all resources are present and healthy.
 	ResourcesHealthy gardencorev1beta1.ConditionType = "ResourcesHealthy"
+	// ResourcesProgressing is a condition type that indicates whether some resources are still progressing to be rolled out.
+	ResourcesProgressing gardencorev1beta1.ConditionType = "ResourcesProgressing"
 )
 
 // These are well-known reasons for Conditions.
@@ -205,7 +212,10 @@ const (
 	// ReleaseOfOrphanedResourcesFailed indicates that the `ResourcesApplied` condition is `False`,
 	// because the release of orphaned resources failed.
 	ReleaseOfOrphanedResourcesFailed = "ReleaseOfOrphanedResourcesFailed"
-	// ConditionHealthChecksPending indicates that the `ResourcesHealthy` condition is `Unknown`,
-	// because the health checks have not been completely executed yet for the current set of resources.
-	ConditionHealthChecksPending = "HealthChecksPending"
+	// ConditionManagedResourceIgnored indicates that the ManagedResource's conditions are not checked,
+	// because the ManagedResource is marked to be ignored.
+	ConditionManagedResourceIgnored = "ManagedResourceIgnored"
+	// ConditionChecksPending indicates that the `ResourcesProgressing` condition is `Unknown`,
+	// because the condition checks have not been completely executed yet for the current set of resources.
+	ConditionChecksPending = "ChecksPending"
 )

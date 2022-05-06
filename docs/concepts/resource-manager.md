@@ -108,6 +108,7 @@ In this example the label `foo=bar` will be injected into the `Deployment` as we
 If a ManagedResource is annotated with `resources.gardener.cloud/ignore=true` then it will be skipped entirely by the controller (no reconciliations or deletions of managed resources at all).
 However, when the ManagedResource itself is deleted (for example when a shoot is deleted) then the annotation is not respected and all resources will be deleted as usual.
 This feature can be helpful to temporarily patch/change resources managed as part of such ManagedResource.
+Condition checks will be skipped for such ManagedResources.
 
 #### Modes
 
@@ -127,10 +128,11 @@ A ManagedResource has an optional `.spec.class` field that allows to indicate th
 
 A ManagedResource has a ManagedResourceStatus, which has an array of Conditions. Conditions currently include:
 
-| Condition          | Description                                               |
-| ------------------ | --------------------------------------------------------- |
-| `ResourcesApplied` | `True` if all resources are applied to the target cluster |
-| `ResourcesHealthy` | `True` if all resources are present and healthy           |
+| Condition              | Description                                               |
+|------------------------|-----------------------------------------------------------|
+| `ResourcesApplied`     | `True` if all resources are applied to the target cluster |
+| `ResourcesHealthy`     | `True` if all resources are present and healthy           |
+| `ResourcesProgressing` | `False` if all resources have been fully rolled out       |
 
 `ResourcesApplied` may be `False` when:
 - the resource `apiVersion` is not known to the target cluster
@@ -142,29 +144,33 @@ A ManagedResource has a ManagedResourceStatus, which has an array of Conditions.
 - the resource is a Deployment and the Deployment does not have the minimum availability.
 - ...
 
+`ResourcesProgressing` may be `True` when:
+- a `Deployment`, `StatefulSet` or `DaemonSet` has not been fully rolled out yet, i.e. not all replicas have been updated with the latest changes to `spec.template`.
+
 Each Kubernetes resources has different notion for being healthy. For example, a Deployment is considered healthy if the controller observed its current revision and if the number of updated replicas is equal to the number of replicas.
 
-The following section describes a healthy ManagedResource:
+The following `status.conditions` section describes a healthy ManagedResource:
 
-```json
-"conditions": [
-  {
-    "type": "ResourcesApplied",
-    "status": "True",
-    "reason": "ApplySucceeded",
-    "message": "All resources are applied.",
-    "lastUpdateTime": "2019-09-09T11:31:21Z",
-    "lastTransitionTime": "2019-09-08T19:53:23Z"
-  },
-  {
-    "type": "ResourcesHealthy",
-    "status": "True",
-    "reason": "ResourcesHealthy",
-    "message": "All resources are healthy.",
-    "lastUpdateTime": "2019-09-09T11:31:21Z",
-    "lastTransitionTime": "2019-09-09T11:31:21Z"
-  }
-]  
+```yaml
+conditions:
+- lastTransitionTime: "2022-05-03T10:55:39Z"
+  lastUpdateTime: "2022-05-03T10:55:39Z"
+  message: All resources are healthy.
+  reason: ResourcesHealthy
+  status: "True"
+  type: ResourcesHealthy
+- lastTransitionTime: "2022-05-03T10:55:36Z"
+  lastUpdateTime: "2022-05-03T10:55:36Z"
+  message: All resources have been fully rolled out.
+  reason: ResourcesRolledOut
+  status: "False"
+  type: ResourcesProgressing
+- lastTransitionTime: "2022-05-03T10:55:18Z"
+  lastUpdateTime: "2022-05-03T10:55:18Z"
+  message: All resources are applied.
+  reason: ApplySucceeded
+  status: "True"
+  type: ResourcesApplied
 ```
 
 #### Ignoring Updates

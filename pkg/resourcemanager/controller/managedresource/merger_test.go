@@ -31,6 +31,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
 var _ = Describe("merger", func() {
@@ -1115,7 +1117,7 @@ func addAnnotations(origin string, obj *unstructured.Unstructured) {
 		ann = make(map[string]string, 1)
 	}
 	ann[descriptionAnnotation] = descriptionAnnotationText
-	ann[originAnnotation] = origin
+	ann[v1alpha1.OriginAnnotation] = origin
 	obj.SetAnnotations(ann)
 }
 

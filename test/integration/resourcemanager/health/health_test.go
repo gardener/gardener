@@ -19,6 +19,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -75,10 +76,11 @@ var _ = Describe("Health controller tests", func() {
 				return managedResource.Status.Conditions
 			}).ShouldNot(
 				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy)),
+				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing)),
 			)
 		})
 
-		It("sets ManagedResource to healthy if it is responsible now", func() {
+		It("checks ManagedResource again if it is responsible now", func() {
 			By("update ManagedResource to default class")
 			patch := client.MergeFrom(managedResource.DeepCopy())
 			managedResource.Spec.Class = nil
@@ -89,6 +91,7 @@ var _ = Describe("Health controller tests", func() {
 				return managedResource.Status.Conditions
 			}).Should(
 				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionTrue)),
+				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse)),
 			)
 		})
 	})
@@ -111,10 +114,11 @@ var _ = Describe("Health controller tests", func() {
 				return managedResource.Status.Conditions
 			}).ShouldNot(
 				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy)),
+				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing)),
 			)
 		})
 
-		It("sets ManagedResource to healthy if it no longer ignored", func() {
+		It("checks ManagedResource again if it is no longer ignored", func() {
 			By("update ManagedResource and remove ignore annotation")
 			patch := client.MergeFrom(managedResource.DeepCopy())
 			delete(managedResource.Annotations, resourcesv1alpha1.Ignore)
@@ -125,31 +129,7 @@ var _ = Describe("Health controller tests", func() {
 				return managedResource.Status.Conditions
 			}).Should(
 				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionTrue)),
-			)
-		})
-	})
-
-	Context("ManagedResource in deletion", func() {
-		JustBeforeEach(func() {
-			By("marking ManagedResource for deletion")
-			patch := client.MergeFrom(managedResource.DeepCopy())
-			managedResource.SetFinalizers([]string{testFinalizer})
-			Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
-			Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
-
-			DeferCleanup(func() {
-				patch = client.MergeFrom(managedResource.DeepCopy())
-				managedResource.SetFinalizers(nil)
-				Expect(testClient.Patch(ctx, managedResource, patch))
-			})
-		})
-
-		It("sets ManagedResource to unhealthy", func() {
-			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				return managedResource.Status.Conditions
-			}).Should(
-				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionFalse), withReason(resourcesv1alpha1.ConditionDeletionPending)),
+				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse)),
 			)
 		})
 	})
@@ -161,6 +141,7 @@ var _ = Describe("Health controller tests", func() {
 				return managedResource.Status.Conditions
 			}).ShouldNot(
 				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy)),
+				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing)),
 			)
 		})
 
@@ -174,6 +155,7 @@ var _ = Describe("Health controller tests", func() {
 				return managedResource.Status.Conditions
 			}).ShouldNot(
 				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy)),
+				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing)),
 			)
 		})
 
@@ -187,11 +169,12 @@ var _ = Describe("Health controller tests", func() {
 				return managedResource.Status.Conditions
 			}).ShouldNot(
 				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy)),
+				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing)),
 			)
 		})
 	})
 
-	Context("resources applied", func() {
+	Describe("Health Reconciler", func() {
 		JustBeforeEach(func() {
 			By("set ManagedResource to be applied successfully")
 			patch := client.MergeFrom(managedResource.DeepCopy())
@@ -321,6 +304,176 @@ var _ = Describe("Health controller tests", func() {
 			})
 		})
 	})
+
+	Describe("Progressing Reconciler", func() {
+		JustBeforeEach(func() {
+			By("set ManagedResource to be applied successfully")
+			patch := client.MergeFrom(managedResource.DeepCopy())
+			setCondition(managedResource, resourcesv1alpha1.ResourcesApplied, gardencorev1beta1.ConditionTrue)
+			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
+		})
+
+		It("sets Progressing to false as it does not contain any resources of interest", func() {
+			By("add resources to ManagedResource status")
+			patch := client.MergeFrom(managedResource.DeepCopy())
+			managedResource.Status.Resources = []resourcesv1alpha1.ObjectReference{{
+				ObjectReference: corev1.ObjectReference{
+					APIVersion: "v1",
+					Kind:       "ConfigMap",
+					Namespace:  testNamespace.Name,
+					Name:       "non-existing",
+				},
+			}}
+			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
+
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				return managedResource.Status.Conditions
+			}).Should(
+				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse), withReason("ResourcesRolledOut")),
+			)
+		})
+
+		It("ignores missing resources", func() {
+			By("add resources to ManagedResource status")
+			patch := client.MergeFrom(managedResource.DeepCopy())
+			managedResource.Status.Resources = []resourcesv1alpha1.ObjectReference{{
+				ObjectReference: corev1.ObjectReference{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Namespace:  testNamespace.Name,
+					Name:       "non-existing",
+				},
+			}}
+			Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
+
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				return managedResource.Status.Conditions
+			}).Should(
+				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse), withReason("ResourcesRolledOut")),
+			)
+		})
+
+		Context("with existing resources", func() {
+			var (
+				deployment  *appsv1.Deployment
+				statefulSet *appsv1.StatefulSet
+				daemonSet   *appsv1.DaemonSet
+			)
+
+			JustBeforeEach(func() {
+				By("create test resources")
+				deployment = generateDeploymentTestResource(managedResource.Name)
+				deploymentStatus := deployment.Status.DeepCopy()
+				Expect(testClient.Create(ctx, deployment)).To(Succeed())
+				deployment.Status = *deploymentStatus
+				Expect(testClient.Status().Update(ctx, deployment)).To(Succeed())
+
+				statefulSet = generateStatefulSetTestResource(managedResource.Name)
+				statefulSetStatus := statefulSet.Status.DeepCopy()
+				Expect(testClient.Create(ctx, statefulSet)).To(Succeed())
+				statefulSet.Status = *statefulSetStatus
+				Expect(testClient.Status().Update(ctx, statefulSet)).To(Succeed())
+
+				daemonSet = generateDaemonSetTestResource(managedResource.Name)
+				daemonSetStatus := daemonSet.Status.DeepCopy()
+				Expect(testClient.Create(ctx, daemonSet)).To(Succeed())
+				daemonSet.Status = *daemonSetStatus
+				Expect(testClient.Status().Update(ctx, daemonSet)).To(Succeed())
+
+				DeferCleanup(func() {
+					By("delete test resources")
+					Expect(testClient.Delete(ctx, deployment)).To(Or(Succeed(), BeNotFoundError()))
+					Expect(testClient.Delete(ctx, statefulSet)).To(Or(Succeed(), BeNotFoundError()))
+					Expect(testClient.Delete(ctx, daemonSet)).To(Or(Succeed(), BeNotFoundError()))
+				})
+
+				By("add resources to ManagedResource status")
+				patch := client.MergeFrom(managedResource.DeepCopy())
+				managedResource.Status.Resources = []resourcesv1alpha1.ObjectReference{
+					{
+						ObjectReference: corev1.ObjectReference{
+							APIVersion: "apps/v1",
+							Kind:       "Deployment",
+							Namespace:  deployment.Namespace,
+							Name:       deployment.Name,
+						},
+					},
+					{
+						ObjectReference: corev1.ObjectReference{
+							APIVersion: "apps/v1",
+							Kind:       "StatefulSet",
+							Namespace:  statefulSet.Namespace,
+							Name:       statefulSet.Name,
+						},
+					},
+					{
+						ObjectReference: corev1.ObjectReference{
+							APIVersion: "apps/v1",
+							Kind:       "DaemonSet",
+							Namespace:  daemonSet.Namespace,
+							Name:       daemonSet.Name,
+						},
+					},
+				}
+				Expect(testClient.Status().Patch(ctx, managedResource, patch)).To(Succeed())
+			})
+
+			It("sets Progressing to false as all resources have been fully rolled out", func() {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse), withReason("ResourcesRolledOut")),
+				)
+			})
+
+			It("sets Progressing to true as Deployment is not fully rolled out", func() {
+				patch := client.MergeFrom(deployment.DeepCopy())
+				deployment.Status.Conditions = []appsv1.DeploymentCondition{{
+					Type:    appsv1.DeploymentProgressing,
+					Status:  corev1.ConditionFalse,
+					Reason:  "ProgressDeadlineExceeded",
+					Message: `ReplicaSet "nginx-946d57896" has timed out progressing.`,
+				}}
+				Expect(testClient.Status().Patch(ctx, deployment, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionTrue), withReason("DeploymentProgressing")),
+				)
+			})
+
+			It("sets Progressing to true as StatefulSet is not fully rolled out", func() {
+				patch := client.MergeFrom(statefulSet.DeepCopy())
+				statefulSet.Status.UpdatedReplicas--
+				Expect(testClient.Status().Patch(ctx, statefulSet, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionTrue), withReason("StatefulSetProgressing")),
+				)
+			})
+
+			It("sets Progressing to true as DaemonSet is not fully rolled out", func() {
+				patch := client.MergeFrom(daemonSet.DeepCopy())
+				daemonSet.Status.UpdatedNumberScheduled--
+				Expect(testClient.Status().Patch(ctx, daemonSet, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionTrue), withReason("DaemonSetProgressing")),
+				)
+			})
+		})
+	})
 })
 
 func setCondition(managedResource *resourcesv1alpha1.ManagedResource, conditionType gardencorev1beta1.ConditionType, status gardencorev1beta1.ConditionStatus) {
@@ -370,6 +523,99 @@ func generatePodTestResource(name string) *corev1.Pod {
 			// set to non-existing node, so that no kubelet will interfere when testing against existing cluster, so that we
 			// solely control the pod's status
 			NodeName: "non-existing",
+		},
+	}
+}
+
+func generateDeploymentTestResource(name string) *appsv1.Deployment {
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       name,
+			Namespace:  testNamespace.Name,
+			Generation: 42,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: pointer.Int32(1),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"test": "foo",
+				},
+			},
+			Template: generatePodTemplate(),
+		},
+		Status: appsv1.DeploymentStatus{
+			ObservedGeneration: 42,
+			Conditions: []appsv1.DeploymentCondition{{
+				Type:    appsv1.DeploymentProgressing,
+				Status:  corev1.ConditionTrue,
+				Reason:  "NewReplicaSetAvailable",
+				Message: `ReplicaSet "test-foo-abcdef" has successfully progressed.`,
+			}},
+		},
+	}
+}
+
+func generateStatefulSetTestResource(name string) *appsv1.StatefulSet {
+	return &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       name,
+			Namespace:  testNamespace.Name,
+			Generation: 42,
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas: pointer.Int32(1),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"test": "foo",
+				},
+			},
+			Template: generatePodTemplate(),
+		},
+		Status: appsv1.StatefulSetStatus{
+			ObservedGeneration: 42,
+			Replicas:           1,
+			CurrentReplicas:    1,
+			UpdatedReplicas:    1,
+		},
+	}
+}
+
+func generateDaemonSetTestResource(name string) *appsv1.DaemonSet {
+	return &appsv1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       name,
+			Namespace:  testNamespace.Name,
+			Generation: 42,
+		},
+		Spec: appsv1.DaemonSetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"test": "foo",
+				},
+			},
+			Template: generatePodTemplate(),
+		},
+		Status: appsv1.DaemonSetStatus{
+			ObservedGeneration:     42,
+			DesiredNumberScheduled: 1,
+			CurrentNumberScheduled: 1,
+			UpdatedNumberScheduled: 1,
+		},
+	}
+}
+
+func generatePodTemplate() corev1.PodTemplateSpec {
+	return corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"test": "foo",
+			},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name:  "test",
+				Image: "ubuntu",
+			}},
 		},
 	}
 }

@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-var _ = Describe("Daemonset", func() {
+var _ = Describe("DaemonSet", func() {
 	oneUnavailable := intstr.FromInt(1)
 
 	DescribeTable("#CheckDaemonSet",
@@ -96,4 +96,45 @@ var _ = Describe("Daemonset", func() {
 			},
 		}, BeNil()),
 	)
+
+	Describe("IsDaemonSetProgressing", func() {
+		var (
+			daemonSet *appsv1.DaemonSet
+		)
+
+		BeforeEach(func() {
+			daemonSet = &appsv1.DaemonSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 42,
+				},
+				Status: appsv1.DaemonSetStatus{
+					ObservedGeneration:     42,
+					DesiredNumberScheduled: 3,
+					UpdatedNumberScheduled: 3,
+				},
+			}
+		})
+
+		It("should return false if it is fully rolled out", func() {
+			progressing, reason := health.IsDaemonSetProgressing(daemonSet)
+			Expect(progressing).To(BeFalse())
+			Expect(reason).To(Equal("DaemonSet is fully rolled out"))
+		})
+
+		It("should return true if observedGeneration is outdated", func() {
+			daemonSet.Status.ObservedGeneration--
+
+			progressing, reason := health.IsDaemonSetProgressing(daemonSet)
+			Expect(progressing).To(BeTrue())
+			Expect(reason).To(Equal("observed generation outdated (41/42)"))
+		})
+
+		It("should return true if replicas still need to be updated", func() {
+			daemonSet.Status.UpdatedNumberScheduled--
+
+			progressing, reason := health.IsDaemonSetProgressing(daemonSet)
+			Expect(progressing).To(BeTrue())
+			Expect(reason).To(Equal("2 of 3 replica(s) have been updated"))
+		})
+	})
 })

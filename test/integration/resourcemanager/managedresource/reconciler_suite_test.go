@@ -18,6 +18,7 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
@@ -100,9 +101,11 @@ var _ = BeforeSuite(func() {
 	By("registering controller")
 	filter = predicate.NewClassFilter(managerpredicate.DefaultClass)
 	Expect(managedresource.AddToManagerWithOptions(mgr, managedresource.ControllerConfig{
-		MaxConcurrentWorkers: 1,
-		TargetCluster:        mgr,
-		ClassFilter:          filter,
+		MaxConcurrentWorkers: 5,
+		SyncPeriod:           500 * time.Millisecond, // gotta go fast during tests
+
+		TargetCluster: mgr,
+		ClassFilter:   filter,
 	})).To(Succeed())
 
 	By("starting manager")

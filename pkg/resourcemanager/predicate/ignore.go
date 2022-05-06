@@ -15,10 +15,11 @@
 package predicate
 
 import (
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 )
 
 // NotIgnored returns a predicate that detects if the object has the resources.gardener.cloud/ignore=true annotation.
@@ -37,6 +38,26 @@ func NoLongerIgnored() predicate.Predicate {
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			return isIgnored(e.ObjectOld) && !isIgnored(e.ObjectNew)
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return true
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return true
+		},
+	}
+}
+
+// GotMarkedAsIgnored returns a predicate that detects if resources.gardener.cloud/ignore=true annotation was added
+// during an update.
+func GotMarkedAsIgnored() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			// Add event is received on controller startup. We need to reconcile this if we haven't updated the conditions yet
+			return true
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return !isIgnored(e.ObjectOld) && isIgnored(e.ObjectNew)
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			return true

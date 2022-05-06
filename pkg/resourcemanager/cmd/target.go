@@ -76,7 +76,8 @@ type TargetClusterOptions struct {
 // Before the first usage, Start and WaitForCacheSync should be called to ensure that the cache is running
 // and has been populated successfully.
 type TargetClusterConfig struct {
-	Cluster cluster.Cluster
+	Cluster             cluster.Cluster
+	DisableCachedClient bool
 }
 
 // AddFlags adds the needed command line flags to the given FlagSet.
@@ -127,7 +128,7 @@ func (o *TargetClusterOptions) Complete() error {
 		return fmt.Errorf("could not instantiate target cluster: %w", err)
 	}
 
-	o.config = &TargetClusterConfig{Cluster: cl}
+	o.config = &TargetClusterConfig{Cluster: cl, DisableCachedClient: o.disableCachedClient}
 	return nil
 }
 

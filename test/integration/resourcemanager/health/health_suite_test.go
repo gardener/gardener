@@ -45,9 +45,8 @@ func TestHealthController(t *testing.T) {
 }
 
 const (
-	// testID is used for generating test namespace names
-	testID        = "health-controller-test"
-	testFinalizer = "gardener.cloud/" + testID
+	// testID is used for generating test namespace names and other IDs
+	testID = "health-controller-test"
 )
 
 var (
