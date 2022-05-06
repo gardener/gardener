@@ -121,7 +121,7 @@ images:
 - name: node-local-dns
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/cluster/addons/dns/nodelocaldns
   repository: k8s.gcr.io/dns/k8s-dns-node-cache
-  tag: "1.18.0"
+  tag: "1.22.2"
 - name: node-problem-detector
   sourceRepository: github.com/kubernetes/node-problem-detector
   repository: k8s.gcr.io/node-problem-detector/node-problem-detector
