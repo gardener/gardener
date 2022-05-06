@@ -38,10 +38,6 @@ Please note that all of them are no technical limitations/blockers but simply ad
 
    _When [`APIServerSNI`](../proposals/08-shoot-apiserver-via-sni.md) is disabled then gardenlet uses load balancer `Service`s in order to expose the shoot clusters' `kube-apiserver`s. Typically, local Kubernetes clusters don't support this. In this case, the local extension uses the host IP to expose the `kube-apiserver`, however, this can only be done once._
 
-6. Dependency-Watchdog cannot be enabled.
-
-   _The `dependency-watchdog` needs to be able to resolve the shoot cluster's DNS names. It is not yet able to do so, hence, it cannot be enabled._
-
 ## Implementation Details
 
 This section contains information about how the respective controllers and webhooks are implemented and what their purpose is.
