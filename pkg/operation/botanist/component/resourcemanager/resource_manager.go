@@ -1057,7 +1057,9 @@ func (r *resourceManager) getNetworkPolicyLabels() map[string]string {
 		}
 	}
 
-	return nil
+	return map[string]string{
+		v1beta1constants.LabelNetworkPolicyFromPrometheus: v1beta1constants.LabelNetworkPolicyAllowed,
+	}
 }
 
 func appLabel() map[string]string {
