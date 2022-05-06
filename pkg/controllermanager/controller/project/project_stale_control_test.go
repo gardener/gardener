@@ -370,6 +370,44 @@ var _ = Describe("ProjectStaleControl", func() {
 						Expect(result).To(Succeed())
 					})
 
+					It("has secrets that have owner references to a shoot", func() {
+						defer test.WithVar(&NowFunc, nowFunc)()
+
+						otherNamespace := namespaceName + "other"
+						secretBinding.Namespace = otherNamespace
+						shoot.Namespace = otherNamespace
+
+						secretWithOwnerRef := secret.DeepCopy()
+						secretWithOwnerRef.OwnerReferences = []metav1.OwnerReference{
+							{
+								APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+								Kind:       "Shoot",
+							},
+						}
+
+						k8sGardenRuntimeClient.EXPECT().List(ctx, partialShootMetaList, client.InNamespace(namespaceName), client.Limit(1))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, partialPlantMetaList, client.InNamespace(namespaceName), client.Limit(1))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, partialBackupEntryMetaList, client.InNamespace(namespaceName), client.Limit(1))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *corev1.SecretList, opts ...client.ListOption) error {
+							(&corev1.SecretList{Items: []corev1.Secret{*secretWithOwnerRef}}).DeepCopyInto(list)
+							return nil
+						})
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{})).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.SecretBindingList, opts ...client.ListOption) error {
+							(&gardencorev1beta1.SecretBindingList{Items: []gardencorev1beta1.SecretBinding{*secretBinding}}).DeepCopyInto(list)
+							return nil
+						}).AnyTimes()
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(otherNamespace)).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.ShootList, opts ...client.ListOption) error {
+							(&gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{*shoot}}).DeepCopyInto(list)
+							return nil
+						}).AnyTimes()
+						k8sGardenRuntimeClient.EXPECT().List(ctx, partialQuotaMetaList, client.InNamespace(namespaceName))
+
+						expectStaleMarking(k8sGardenRuntimeClient, project, nil, nil, nowFunc)
+
+						_, result := reconciler.Reconcile(ctx, request)
+						Expect(result).To(Succeed())
+					})
+
 					It("has quotas that are unused", func() {
 						defer test.WithVar(&NowFunc, nowFunc)()
 

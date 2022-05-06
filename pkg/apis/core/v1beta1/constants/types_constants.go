@@ -324,6 +324,9 @@ const (
 	// LabelMonitoring is a constant for a label for monitoring stack configurations
 	LabelMonitoring = "monitoring"
 
+	// LabelSecretBindingReference is used to identify secrets which are referred by a SecretBinding (not necessarily in the same namespace).
+	LabelSecretBindingReference = "reference.gardener.cloud/secretbinding"
+
 	// LabelExtensionExtensionTypePrefix is used to prefix extension label for extension types.
 	LabelExtensionExtensionTypePrefix = "extensions.extensions.gardener.cloud/"
 	// LabelExtensionProviderTypePrefix is used to prefix extension label for cloud provider types.

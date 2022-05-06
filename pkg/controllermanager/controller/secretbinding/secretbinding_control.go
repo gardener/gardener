@@ -105,15 +105,27 @@ func (r *secretBindingReconciler) Reconcile(ctx context.Context, request reconci
 			}
 
 			if mayReleaseSecret {
-				// Remove finalizer from referenced secret
 				secret := &corev1.Secret{}
 				if err := r.gardenClient.Get(ctx, kutil.Key(secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name), secret); err == nil {
+					// Remove 'referred by a secret binding' label
+					if metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
+						patch := client.MergeFrom(secret.DeepCopy())
+						delete(secret.ObjectMeta.Labels, v1beta1constants.LabelSecretBindingReference)
+						if err := r.gardenClient.Patch(ctx, secret, patch); err != nil {
+							return reconcile.Result{}, fmt.Errorf("failed to remove referred label from Secret: %w", err)
+						}
+					}
+					// Remove finalizer from referenced secret
 					if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, secret.DeepCopy(), gardencorev1beta1.ExternalGardenerName); client.IgnoreNotFound(err) != nil {
 						return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from Secret: %w", err)
 					}
 				} else if !apierrors.IsNotFound(err) {
 					return reconcile.Result{}, err
 				}
+			}
+
+			if err := r.removeLabelfromQuotas(ctx, secretBinding.Quotas, secretBinding.Namespace, secretBinding.Name); err != nil {
+				return reconcile.Result{}, err
 			}
 
 			// Remove finalizer from SecretBinding
@@ -163,6 +175,33 @@ func (r *secretBindingReconciler) Reconcile(ctx context.Context, request reconci
 		}
 	}
 
+	if len(secretBinding.Quotas) != 0 {
+		for _, objRef := range secretBinding.Quotas {
+			quota := &gardencorev1beta1.Quota{}
+			if err := r.gardenClient.Get(ctx, kutil.Key(objRef.Namespace, objRef.Name), quota); err != nil {
+				return reconcile.Result{}, err
+			}
+
+			// Add 'referred by a secret binding' label
+			if !metav1.HasLabel(quota.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
+				patch := client.MergeFrom(quota.DeepCopy())
+				metav1.SetMetaDataLabel(&quota.ObjectMeta, v1beta1constants.LabelSecretBindingReference, "true")
+				if err := r.gardenClient.Patch(ctx, quota, patch); err != nil {
+					return reconcile.Result{}, fmt.Errorf("failed to add referred label to the quota referenced in SecretBinding, quota: %s , namespace: %s : %w", quota.Name, quota.Namespace, err)
+				}
+			}
+		}
+	}
+
+	// Add 'referred by a secret binding' label
+	if !metav1.HasLabel(secret.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
+		patch := client.MergeFrom(secret.DeepCopy())
+		metav1.SetMetaDataLabel(&secret.ObjectMeta, v1beta1constants.LabelSecretBindingReference, "true")
+		if err := r.gardenClient.Patch(ctx, secret, patch); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add referred label to Secret referenced in SecretBinding: %w", err)
+		}
+	}
+
 	return reconcile.Result{}, nil
 }
 
@@ -183,4 +222,49 @@ func (r *secretBindingReconciler) mayReleaseSecret(ctx context.Context, secretBi
 	}
 
 	return true, nil
+}
+
+// Remove the label from the quota only if there is no other secretbinding that references it (maybe in a different namespace).
+func (r *secretBindingReconciler) removeLabelfromQuotas(ctx context.Context, quotas []corev1.ObjectReference, secretBindingNamespace, secretBindingName string) error {
+	secretBindingList := &gardencorev1beta1.SecretBindingList{}
+	if err := r.gardenClient.List(ctx, secretBindingList); err != nil {
+		return err
+	}
+
+	for _, q := range quotas {
+		if quotaHasOtherRef(q, secretBindingList, secretBindingNamespace, secretBindingName) {
+			continue
+		}
+
+		quota := &gardencorev1beta1.Quota{}
+		if err := r.gardenClient.Get(ctx, kutil.Key(q.Namespace, q.Name), quota); err != nil {
+			return err
+		}
+
+		// Remove 'referred by a secret binding' label
+		if metav1.HasLabel(quota.ObjectMeta, v1beta1constants.LabelSecretBindingReference) {
+			patch := client.MergeFromWithOptions(quota.DeepCopy(), client.MergeFromWithOptimisticLock{})
+			delete(quota.ObjectMeta.Labels, v1beta1constants.LabelSecretBindingReference)
+			if err := r.gardenClient.Patch(ctx, quota, patch); err != nil {
+				return fmt.Errorf("failed to remove referred label from Quota: %w", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func quotaHasOtherRef(quota corev1.ObjectReference, secretBindingList *gardencorev1beta1.SecretBindingList, secretBindingNamespace, secretBindingName string) bool {
+	for _, secretBinding := range secretBindingList.Items {
+		if secretBinding.Namespace == secretBindingNamespace && secretBinding.Name == secretBindingName {
+			continue
+		}
+		for _, q := range secretBinding.Quotas {
+			if q.Name == quota.Name && q.Namespace == quota.Namespace {
+				return true
+			}
+		}
+	}
+
+	return false
 }

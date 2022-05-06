@@ -22,46 +22,43 @@ import (
 
 	"github.com/golang/mock/gomock"
 
-	"github.com/gardener/gardener/pkg/apis/core"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	mockworkqueue "github.com/gardener/gardener/pkg/mock/client-go/util/workqueue"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var (
-	namespaceName = "namespace"
-	projectName   = "name"
-	shootName     = "shoot"
-)
-
-var _ = Describe("Project Activity Reconcile", func() {
+var _ = Describe("Project Activity", func() {
 	var (
-		project             *gardencorev1beta1.Project
-		shoot               *gardencorev1beta1.Shoot
-		shootWithoutProject *gardencorev1beta1.Shoot
-		errorShoot          *gardencorev1beta1.Shoot
+		project *gardencorev1beta1.Project
 
 		reconciler reconcile.Reconciler
+		request    reconcile.Request
 
-		request reconcile.Request
+		fakeClock *clock.FakeClock
 
+		ctrl                   *gomock.Controller
 		k8sGardenRuntimeClient *mockclient.MockClient
-		ctx                    = context.TODO()
+		ctx                    context.Context
 	)
 
 	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
+		ctx = context.TODO()
+
 		project = &gardencorev1beta1.Project{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      projectName,
-				Namespace: namespaceName,
-				UID:       "1",
+				Name: projectName,
 			},
 			Status: gardencorev1beta1.ProjectStatus{
 				LastActivityTimestamp: &metav1.Time{Time: time.Date(1, 1, 1, 1, 1, 1, 1, time.UTC)},
@@ -70,60 +67,30 @@ var _ = Describe("Project Activity Reconcile", func() {
 				Namespace: &namespaceName,
 			},
 		}
-		shoot = &gardencorev1beta1.Shoot{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              shootName,
-				Namespace:         namespaceName,
-				UID:               "1",
-				CreationTimestamp: metav1.Time{Time: time.Date(1, 2, 1, 1, 1, 1, 1, time.UTC)},
-			},
-		}
-		shootWithoutProject = &gardencorev1beta1.Shoot{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              shootName,
-				Namespace:         "fake",
-				UID:               "1",
-				CreationTimestamp: metav1.Time{Time: time.Date(1, 3, 1, 1, 1, 1, 1, time.UTC)},
-			},
-		}
-		errorShoot = &gardencorev1beta1.Shoot{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              shootName,
-				Namespace:         "error",
-				UID:               "1",
-				CreationTimestamp: metav1.Time{Time: time.Date(1, 4, 1, 1, 1, 1, 1, time.UTC)},
-			},
-		}
-
-		ctrl := gomock.NewController(GinkgoT())
-		k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
-		reconciler = NewActivityReconciler(k8sGardenRuntimeClient)
-		request = reconcile.Request{NamespacedName: types.NamespacedName{Name: shoot.Name, Namespace: shoot.Namespace}}
-		k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ProjectList{}), gomock.Any()).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ProjectList, opts client.MatchingFields) error {
-			if reflect.DeepEqual(opts[core.ProjectNamespace], *project.Spec.Namespace) {
-				*obj = gardencorev1beta1.ProjectList{Items: []gardencorev1beta1.Project{*project}}
-				return nil
-			}
-			if reflect.DeepEqual(opts[core.ProjectNamespace], "error") {
-				return errors.New("API ERROR")
-			}
-			*obj = gardencorev1beta1.ProjectList{}
-			return nil
-		}).AnyTimes()
-
-		k8sGardenRuntimeClient.EXPECT().Get(ctx, gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, namespacedName client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
-			for _, s := range []gardencorev1beta1.Shoot{*shoot, *shootWithoutProject, *errorShoot} {
-				if reflect.DeepEqual(namespacedName.Name, s.Name) && reflect.DeepEqual(namespacedName.Namespace, s.Namespace) {
-					*obj = s
-					return nil
-				}
-			}
-			return apierrors.NewNotFound(gardencorev1beta1.Resource("Project"), "<unknown>")
-		})
 	})
 
-	Describe("LastActivityTimestamp updates", func() {
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	Describe("Project Activity Reconcile", func() {
 		BeforeEach(func() {
+
+			fakeClock = clock.NewFakeClock(time.Now())
+			reconciler = NewActivityReconciler(k8sGardenRuntimeClient, fakeClock)
+
+			k8sGardenRuntimeClient.EXPECT().Get(
+				ctx,
+				gomock.Any(),
+				gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}),
+			).DoAndReturn(func(_ context.Context, namespacedName client.ObjectKey, obj *gardencorev1beta1.Project) error {
+				if reflect.DeepEqual(namespacedName.Namespace, namespaceName) {
+					project.DeepCopyInto(obj)
+					return nil
+				}
+				return errors.New("error retrieving object from store")
+			})
+
 			k8sGardenRuntimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}), gomock.Any()).DoAndReturn(
 				func(_ context.Context, prj *gardencorev1beta1.Project, _ client.Patch, _ ...client.PatchOption) error {
 					*project = *prj
@@ -133,51 +100,377 @@ var _ = Describe("Project Activity Reconcile", func() {
 			k8sGardenRuntimeClient.EXPECT().Status().Return(k8sGardenRuntimeClient).AnyTimes()
 		})
 
-		It("should update the creation timestamp", func() {
-			shoot.CreationTimestamp = metav1.Time{Time: time.Date(1, 1, 2, 1, 1, 1, 1, time.UTC)}
-			_, err := reconciler.Reconcile(ctx, request)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(shoot.CreationTimestamp).To(Equal(*project.Status.LastActivityTimestamp))
-		})
+		Context("Project Activity Reconcile", func() {
+			It("should update the lastActivityTimestamp to now", func() {
+				request = reconcile.Request{NamespacedName: types.NamespacedName{Name: project.Name, Namespace: namespaceName}}
+				_, err := reconciler.Reconcile(ctx, request)
+				Expect(err).ToNot(HaveOccurred())
 
-		It("the empty LastActivityTimestamp should be set to the newest shoot", func() {
-			k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), gomock.Any()).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-				obj.Items = []gardencorev1beta1.Shoot{*shoot, *shootWithoutProject, *errorShoot}
-				return nil
+				now := &metav1.Time{Time: fakeClock.Now()}
+				Expect(project.Status.LastActivityTimestamp).To(Equal(now))
 			})
-			project.Status.LastActivityTimestamp = nil
-			reconcileResult, err := reconciler.Reconcile(ctx, request)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(reconcileResult).To(Equal(reconcile.Result{}))
-			Expect(errorShoot.CreationTimestamp).To(Equal(*project.Status.LastActivityTimestamp))
-		})
 
-		It("should not update the creation timestamp since the shoot is not part of this project", func() {
-			reconcileResult, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: shootWithoutProject.Name, Namespace: shootWithoutProject.Namespace}})
-			Expect(err).ToNot(HaveOccurred())
-			Expect(reconcileResult).To(Equal(reconcile.Result{Requeue: false}))
-			Expect(shoot.CreationTimestamp).ToNot(Equal(*project.Status.LastActivityTimestamp))
+			It("should fail reconcile because the project can't be retrieved", func() {
+				request = reconcile.Request{NamespacedName: types.NamespacedName{Name: project.Name, Namespace: namespaceName + "other"}}
+				_, err := reconciler.Reconcile(ctx, request)
+				Expect(err).To(HaveOccurred())
+			})
 		})
 	})
 
-	Describe("Unsuccessful reconciles due to different errors", func() {
-		It("should not update the creation timestamp since the shoot is created before the last activity", func() {
-			shoot.CreationTimestamp = metav1.Time{Time: time.Date(1, 1, 0, 1, 0, 0, 0, time.UTC)}
-			_, err := reconciler.Reconcile(ctx, request)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(shoot.CreationTimestamp).ToNot(Equal(*project.Status.LastActivityTimestamp))
+	Describe("Project Activity Queue", func() {
+		var (
+			queue *mockworkqueue.MockRateLimitingInterface
+			c     *Controller
+		)
+
+		BeforeEach(func() {
+			queue = mockworkqueue.NewMockRateLimitingInterface(ctrl)
+			fakeClock = clock.NewFakeClock(time.Date(2022, 02, 01, 6, 30, 0, 0, time.UTC))
+			c = &Controller{
+				gardenClient:         k8sGardenRuntimeClient,
+				projectActivityQueue: queue,
+				clock:                fakeClock,
+			}
+
+			k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ProjectList{}), client.MatchingFields{gardencore.ProjectNamespace: namespaceName}).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ProjectList, _ ...client.ListOption) error {
+				(&gardencorev1beta1.ProjectList{Items: []gardencorev1beta1.Project{*project}}).DeepCopyInto(list)
+				return nil
+			}).AnyTimes()
+
 		})
 
-		It("should not update the creation timestamp since the shoot does not exist", func() {
-			reconcileResult, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: shoot.Name, Namespace: "empty"}})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(reconcileResult).To(Equal(reconcile.Result{}))
+		Context("BackupEntry activity", func() {
+			var backupEntry *gardencorev1beta1.BackupEntry
+
+			BeforeEach(func() {
+				backupEntry = &gardencorev1beta1.BackupEntry{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "backupEntry",
+						Namespace:  namespaceName,
+						Generation: 1,
+					},
+				}
+			})
+
+			Context("BackupEntry Add", func() {
+				It("should add the project to the queue if the creationTimestamp of object is not old", func() {
+					queue.EXPECT().Add(projectName)
+
+					backupEntry.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 30, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, backupEntry, false, true)
+				})
+
+				It("should not add the project to the queue if the creationTimestamp of object is old", func() {
+					backupEntry.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 29, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, backupEntry, false, true)
+				})
+			})
+
+			Context("BackupEntry Update", func() {
+				It("should add the project to the queue if the generation the object has changed", func() {
+					queue.EXPECT().Add(projectName)
+
+					newBackupEntry := backupEntry.DeepCopy()
+					newBackupEntry.ObjectMeta.Generation = 2
+
+					c.projectActivityObjectUpdate(ctx, backupEntry, newBackupEntry, false)
+				})
+
+				It("should not add the project to the queue if the generation of the object hasn't changed", func() {
+					newBackupEntry := backupEntry.DeepCopy()
+
+					c.projectActivityObjectUpdate(ctx, backupEntry, newBackupEntry, false)
+				})
+			})
+
+			Context("BackupEntry Delete", func() {
+				It("should add the project to the queue on object deletion even if creationTimestamp is old", func() {
+					queue.EXPECT().Add(projectName)
+
+					backupEntry.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 01, 01, 5, 29, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, backupEntry, false, false)
+				})
+			})
 		})
 
-		It("should fail the reconcile since the projects can not be listed ", func() {
-			reconcileResult, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: errorShoot.Name, Namespace: errorShoot.Namespace}})
-			Expect(err).To(HaveOccurred())
-			Expect(reconcileResult).To(Equal(reconcile.Result{}))
+		Context("Plant activity", func() {
+			var plant *gardencorev1beta1.Plant
+
+			BeforeEach(func() {
+				plant = &gardencorev1beta1.Plant{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "plant",
+						Namespace:  namespaceName,
+						Generation: 1,
+					},
+				}
+			})
+
+			Context("Plant Add", func() {
+				It("should add the project to the queue if the creationTimestamp of object is not old", func() {
+					queue.EXPECT().Add(projectName)
+
+					plant.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 45, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, plant, false, true)
+				})
+
+				It("should not add the project to the queue if the creationTimestamp of object is old", func() {
+					plant.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2021, 01, 01, 4, 45, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, plant, false, true)
+				})
+			})
+
+			Context("Plant Update", func() {
+				It("should add the project to the queue if the generation of the object has changed", func() {
+					queue.EXPECT().Add(projectName)
+
+					newPlant := plant.DeepCopy()
+					newPlant.ObjectMeta.Generation = 2
+
+					c.projectActivityObjectUpdate(ctx, plant, newPlant, false)
+				})
+
+				It("should not add the project to the queue if the generation of the object hasn't changed", func() {
+					newPlant := plant.DeepCopy()
+
+					c.projectActivityObjectUpdate(ctx, plant, newPlant, false)
+				})
+			})
+
+			Context("Plant Delete", func() {
+				It("should add the project to the queue on object deletion even if creationTimestamp is old", func() {
+					queue.EXPECT().Add(projectName)
+
+					plant.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2021, 01, 01, 4, 45, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, plant, false, false)
+				})
+			})
+		})
+
+		Context("Quota activity", func() {
+			var quota *gardencorev1beta1.Quota
+
+			BeforeEach(func() {
+				quota = &gardencorev1beta1.Quota{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "quota",
+						Namespace: namespaceName,
+						Labels:    map[string]string{"reference.gardener.cloud/secretbinding": "true"},
+					},
+				}
+			})
+
+			Context("Quota Add", func() {
+				It("should add the project to the queue if the creationTimestamp of object is not old", func() {
+					queue.EXPECT().Add(projectName)
+
+					quota.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, quota, true, true)
+				})
+
+				It("should not add the project to the queue if the creationTimestamp of object is old", func() {
+					quota.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2021, 06, 01, 5, 00, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, quota, true, true)
+				})
+
+				It("should not add the project to the queue if the object doesn't have 'referred by a secretbinding' label", func() {
+					quota.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
+					quota.ObjectMeta.Labels = nil
+
+					c.projectActivityObjectAddDelete(ctx, quota, true, true)
+				})
+			})
+
+			Context("Quota Update", func() {
+				BeforeEach(func() {
+					quota.ObjectMeta.Labels = nil
+				})
+
+				It("should add the project to the queue if old object doesn't have the label and new object have it (the quota is referred for the first time)", func() {
+					queue.EXPECT().Add(projectName)
+					newQuota := quota.DeepCopy()
+					newQuota.ObjectMeta.Labels = map[string]string{"reference.gardener.cloud/secretbinding": "true"}
+
+					c.projectActivityObjectUpdate(ctx, quota, newQuota, true)
+				})
+
+				It("should add the project to the queue if the old object has the label and new object doesn't (the quota is no longer referred)", func() {
+					queue.EXPECT().Add(projectName)
+					newQuota := quota.DeepCopy()
+					quota.ObjectMeta.Labels = map[string]string{"reference.gardener.cloud/secretbinding": "true"}
+
+					c.projectActivityObjectUpdate(ctx, quota, newQuota, true)
+				})
+
+				It("should not add the project to the queue if neither of the objects have the label", func() {
+					newQuota := quota.DeepCopy()
+
+					c.projectActivityObjectUpdate(ctx, quota, newQuota, true)
+				})
+			})
+
+			Context("Quota Delete", func() {
+				It("should add the project to the queue on object deletion if the object has label even if creationTimestamp is old", func() {
+					queue.EXPECT().Add(projectName)
+
+					quota.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2021, 01, 01, 4, 45, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, quota, true, false)
+				})
+
+				It("should not add the project to the queue on object deletion if the object doesn't have label", func() {
+					quota.ObjectMeta.Labels = nil
+
+					c.projectActivityObjectAddDelete(ctx, quota, true, false)
+				})
+			})
+		})
+
+		Context("Secret activity", func() {
+			var secret *corev1.Secret
+
+			BeforeEach(func() {
+				secret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "secret",
+						Namespace: namespaceName,
+						Labels:    map[string]string{"reference.gardener.cloud/secretbinding": "true"},
+					},
+				}
+			})
+
+			Context("Secret Add", func() {
+				It("should add the project to the queue if the creationTimestamp of object is not old", func() {
+					queue.EXPECT().Add(projectName)
+
+					secret.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, secret, true, true)
+				})
+
+				It("should not add the project to the queue if the creationTimestamp of object is old", func() {
+					secret.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 00, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, secret, true, true)
+				})
+
+				It("should not add the project to the queue if the object doesn't have 'referred by a secretbinding' label", func() {
+					secret.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
+					secret.ObjectMeta.Labels = nil
+
+					c.projectActivityObjectAddDelete(ctx, secret, true, true)
+				})
+			})
+
+			Context("Secret Update", func() {
+				BeforeEach(func() {
+					secret.ObjectMeta.Labels = nil
+				})
+
+				It("should add the project to the queue if old object doesn't have the label and new object have it (the secret is referred for the first time)", func() {
+					queue.EXPECT().Add(projectName)
+					newSecret := secret.DeepCopy()
+					newSecret.ObjectMeta.Labels = map[string]string{"reference.gardener.cloud/secretbinding": "true"}
+
+					c.projectActivityObjectUpdate(ctx, secret, newSecret, true)
+				})
+
+				It("should add the project to the queue if the old object has the label and new object doesn't (the secret is no longer referred)", func() {
+					queue.EXPECT().Add(projectName)
+					newSecret := secret.DeepCopy()
+					secret.ObjectMeta.Labels = map[string]string{"reference.gardener.cloud/secretbinding": "true"}
+
+					c.projectActivityObjectUpdate(ctx, secret, newSecret, true)
+				})
+
+				It("should not add the project to the queue if neither of the objects have the label", func() {
+					newSecret := secret.DeepCopy()
+
+					c.projectActivityObjectUpdate(ctx, secret, newSecret, true)
+				})
+			})
+
+			Context("Secret Delete", func() {
+				It("should add the project to the queue on object deletion if the object has label even if creationTimestamp is old", func() {
+					queue.EXPECT().Add(projectName)
+
+					secret.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 5, 00, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, secret, true, false)
+				})
+
+				It("should not add the project to the queue on object deletion if the object doesn't have label", func() {
+					secret.ObjectMeta.Labels = nil
+
+					c.projectActivityObjectAddDelete(ctx, secret, true, false)
+				})
+			})
+		})
+
+		Context("Shoot activity", func() {
+			var shoot *gardencorev1beta1.Shoot
+
+			BeforeEach(func() {
+				shoot = &gardencorev1beta1.Shoot{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "shoot",
+						Namespace:  namespaceName,
+						Generation: 1,
+					},
+				}
+			})
+
+			Context("Shoot Add", func() {
+				It("should add the project to the queue if the creationTimestamp of object is not old", func() {
+					queue.EXPECT().Add(projectName)
+
+					shoot.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 02, 01, 6, 00, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, shoot, false, true)
+				})
+
+				It("should not add the project to the queue if the creationTimestamp of object is old", func() {
+					shoot.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 01, 31, 6, 00, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, shoot, false, true)
+				})
+			})
+
+			Context("Shoot Update", func() {
+				It("should add the project to the queue if the generation of the object has changed", func() {
+					queue.EXPECT().Add(projectName)
+
+					newShoot := shoot.DeepCopy()
+					newShoot.ObjectMeta.Generation = 2
+
+					c.projectActivityObjectUpdate(ctx, shoot, newShoot, false)
+				})
+
+				It("should not add the project to the queue if the generation of the object hasn't changed", func() {
+					newShoot := shoot.DeepCopy()
+
+					c.projectActivityObjectUpdate(ctx, shoot, newShoot, false)
+				})
+			})
+
+			Context("Shoot Delete", func() {
+				It("should add the project to the queue on object deletion even if creationTimestamp is old", func() {
+					queue.EXPECT().Add(projectName)
+
+					shoot.ObjectMeta.CreationTimestamp = metav1.Time{Time: time.Date(2022, 01, 31, 6, 00, 0, 0, time.UTC)}
+
+					c.projectActivityObjectAddDelete(ctx, shoot, false, false)
+				})
+			})
 		})
 	})
 })

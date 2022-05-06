@@ -17,37 +17,43 @@ package project
 import (
 	"context"
 	"fmt"
+	"time"
 
-	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/tools/cache"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const activityReconcilerName = "activity"
+const projectActivityReconcilerName = "project-activity"
 
 // NewActivityReconciler creates a new instance of a reconciler which reconciles the LastActivityTimestamp of a project, then it calls the stale reconciler.
-func NewActivityReconciler(gardenClient client.Client) reconcile.Reconciler {
+func NewActivityReconciler(gardenClient client.Client, clock clock.Clock) reconcile.Reconciler {
 	return &projectActivityReconciler{
 		gardenClient: gardenClient,
+		clock:        clock,
 	}
 }
 
 type projectActivityReconciler struct {
 	gardenClient client.Client
+	clock        clock.Clock
 }
 
 func (r *projectActivityReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := logf.FromContext(ctx)
 
-	shoot := &gardencorev1beta1.Shoot{}
-	if err := r.gardenClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: request.Name}, shoot); err != nil {
+	project := &gardencorev1beta1.Project{}
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, project); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -55,51 +61,92 @@ func (r *projectActivityReconciler) Reconcile(ctx context.Context, request recon
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
-	return r.reconcile(ctx, log, shoot)
-}
-
-func (r *projectActivityReconciler) reconcile(ctx context.Context, log logr.Logger, obj client.Object) (reconcile.Result, error) {
-	project, err := gutil.ProjectForNamespaceFromReader(ctx, r.gardenClient, obj.GetNamespace())
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			// project is gone, nothing to do here
-			return reconcile.Result{}, nil
-		}
-		return reconcile.Result{}, fmt.Errorf("failed to get project for namespace %q: %w", obj.GetNamespace(), err)
-	}
-
-	if project.Status.LastActivityTimestamp != nil && obj.GetCreationTimestamp().UTC().Before(project.Status.LastActivityTimestamp.UTC()) {
-		// not the newest object in this project, nothing to do
-		return reconcile.Result{}, nil
-	}
-
-	timestamp := obj.GetCreationTimestamp()
-	if project.Status.LastActivityTimestamp == nil {
-		shoots := &gardencorev1beta1.ShootList{}
-		if err := r.gardenClient.List(ctx, shoots, client.InNamespace(*project.Spec.Namespace)); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to list shoots in project namespace %q: %w", *project.Spec.Namespace, err)
-		}
-		for _, shoot := range shoots.Items {
-			if shoot.GetCreationTimestamp().UTC().After(timestamp.UTC()) {
-				timestamp = shoot.GetCreationTimestamp()
-			}
-		}
-	}
-
-	log.Info("Updating Project's lastActivityTimestamp", "lastActivityTimestamp", timestamp)
+	now := r.clock.Now()
+	log.Info("Updating Project's lastActivityTimestamp", "lastActivityTimestamp", now)
 	if err := updateStatus(ctx, r.gardenClient, project, func() {
-		project.Status.LastActivityTimestamp = &timestamp
+		project.Status.LastActivityTimestamp = &metav1.Time{Time: now}
 	}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed updating Project's lastActivityTimestamp: %w", err)
 	}
+
 	return reconcile.Result{}, nil
 }
 
-func (c *Controller) updateShootActivity(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
+func (c *Controller) projectActivityObjectAddDelete(ctx context.Context, obj interface{}, withLabel bool, addFunc bool) {
+	objMeta, err := meta.Accessor(obj)
 	if err != nil {
-		c.log.Error(err, "Couldn't get key for object", "object", obj)
 		return
 	}
-	c.projectShootActivityQueue.Add(key)
+
+	if withLabel {
+		// skip queueing if the object(secret or quota) doesn't have the "referred by a secretbinding" label
+		if _, hasLabel := objMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]; !hasLabel {
+			return
+		}
+	}
+
+	if addFunc {
+		// If the creationTimestamp of the object is less than 1 hour from current time,
+		// skip it. This is to prevent unnecessary reconciliations in case of GCM restart.
+		if objMeta.GetCreationTimestamp().Add(time.Hour).UTC().Before(c.clock.Now().UTC()) {
+			return
+		}
+	}
+
+	key := c.getProjectKey(ctx, objMeta.GetNamespace())
+	if key == "" {
+		return
+	}
+
+	c.projectActivityQueue.Add(key)
+}
+
+func (c *Controller) projectActivityObjectUpdate(ctx context.Context, oldObj, newObj interface{}, withLabel bool) {
+	oldObjMeta, err := meta.Accessor(oldObj)
+	if err != nil {
+		return
+	}
+	newObjMeta, err := meta.Accessor(newObj)
+	if err != nil {
+		return
+	}
+
+	if withLabel {
+		// skip queueing if the object(secret or quota) doesn't have the "referred by a secretbinding" label
+		_, oldObjHasLabel := oldObjMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
+		_, newObjHasLabel := newObjMeta.GetLabels()[v1beta1constants.LabelSecretBindingReference]
+
+		if !oldObjHasLabel && !newObjHasLabel {
+			return
+		}
+	} else if oldObjMeta.GetGeneration() == newObjMeta.GetGeneration() {
+		return
+	}
+
+	key := c.getProjectKey(ctx, newObjMeta.GetNamespace())
+	if key == "" {
+		return
+	}
+
+	c.projectActivityQueue.Add(key)
+}
+
+func (c *Controller) getProjectKey(ctx context.Context, namespace string) string {
+	project, err := gutil.ProjectForNamespaceFromReader(ctx, c.gardenClient, namespace)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// project is gone, nothing to do here
+			return ""
+		}
+		c.log.Error(err, "Failed to get project for namespace", "namespace", namespace)
+		return ""
+	}
+
+	key, err := cache.MetaNamespaceKeyFunc(project)
+	if err != nil {
+		c.log.Error(err, "Couldn't get key for object", "object", project)
+		return ""
+	}
+
+	return key
 }
