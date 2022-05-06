@@ -13,8 +13,12 @@ type Line interface {
 	// To returns the to node of the edge.
 	To() Node
 
-	// ReversedLine returns a line that has the
-	// end points of the receiver swapped.
+	// ReversedLine returns the edge reversal of the receiver
+	// if a reversal is valid for the data type.
+	// When a reversal is valid an edge of the same type as
+	// the receiver with nodes of the receiver swapped should
+	// be returned, otherwise the receiver should be returned
+	// unaltered.
 	ReversedLine() Line
 
 	// ID returns the unique ID for the Line.
@@ -173,7 +177,7 @@ type WeightedMultigraphBuilder interface {
 	WeightedLineAdder
 }
 
-// UndirectedMultgraphBuilder is an undirected multigraph builder.
+// UndirectedMultigraphBuilder is an undirected multigraph builder.
 type UndirectedMultigraphBuilder interface {
 	UndirectedMultigraph
 	MultigraphBuilder

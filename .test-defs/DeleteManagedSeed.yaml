@@ -14,4 +14,4 @@ spec:
     --v -ginkgo.v -ginkgo.progress -ginkgo.no-color
     -kubecfg="$TM_KUBECONFIG_PATH/gardener.config"
     -managed-seed-name=$MANAGED_SEED_NAME
-  image: eu.gcr.io/gardener-project/3rd/golang:1.17.9
+  image: eu.gcr.io/gardener-project/3rd/golang:1.18.1

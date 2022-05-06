@@ -1,5 +1,5 @@
 ############# base
-FROM alpine:3.13.7 AS base
+FROM alpine:3.15.4 AS base
 
 # Define GOTRACEBACK to mark this container as using the Go language runtime
 # for `skaffold debug` (https://skaffold.dev/docs/workflows/debug/).
@@ -8,7 +8,7 @@ ENV GOTRACEBACK=single
 RUN apk add --update tzdata
 
 ############# builder-base #############
-FROM golang:1.17.9 AS builder-base
+FROM golang:1.18.1 AS builder-base
 
 WORKDIR /go/src/github.com/gardener/gardener
 

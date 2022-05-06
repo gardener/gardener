@@ -219,8 +219,8 @@ github.com/golang/protobuf/ptypes/wrappers
 # github.com/golang/snappy v0.0.4
 ## explicit
 github.com/golang/snappy
-# github.com/google/go-cmp v0.5.6
-## explicit; go 1.8
+# github.com/google/go-cmp v0.5.7
+## explicit; go 1.11
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
@@ -682,8 +682,8 @@ golang.org/x/xerrors/internal
 # gomodules.xyz/jsonpatch/v2 v2.2.0
 ## explicit; go 1.12
 gomodules.xyz/jsonpatch/v2
-# gonum.org/v1/gonum v0.8.2
-## explicit; go 1.14
+# gonum.org/v1/gonum v0.11.0
+## explicit; go 1.17
 gonum.org/v1/gonum/blas
 gonum.org/v1/gonum/blas/blas64
 gonum.org/v1/gonum/blas/cblas128
@@ -694,8 +694,8 @@ gonum.org/v1/gonum/graph
 gonum.org/v1/gonum/graph/internal/linear
 gonum.org/v1/gonum/graph/internal/ordered
 gonum.org/v1/gonum/graph/internal/set
-gonum.org/v1/gonum/graph/internal/uid
 gonum.org/v1/gonum/graph/iterator
+gonum.org/v1/gonum/graph/set/uid
 gonum.org/v1/gonum/graph/simple
 gonum.org/v1/gonum/graph/traverse
 gonum.org/v1/gonum/internal/asm/c128

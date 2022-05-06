@@ -34,7 +34,9 @@ type Float64 interface {
 	Dpotrf(ul blas.Uplo, n int, a []float64, lda int) (ok bool)
 	Dpotri(ul blas.Uplo, n int, a []float64, lda int) (ok bool)
 	Dpotrs(ul blas.Uplo, n, nrhs int, a []float64, lda int, b []float64, ldb int)
+	Dpstrf(uplo blas.Uplo, n int, a []float64, lda int, piv []int, tol float64, work []float64) (rank int, ok bool)
 	Dsyev(jobz EVJob, uplo blas.Uplo, n int, a []float64, lda int, w, work []float64, lwork int) (ok bool)
+	Dtbtrs(uplo blas.Uplo, trans blas.Transpose, diag blas.Diag, n, kd, nrhs int, a []float64, lda int, b []float64, ldb int) (ok bool)
 	Dtrcon(norm MatrixNorm, uplo blas.Uplo, diag blas.Diag, n int, a []float64, lda int, work []float64, iwork []int) float64
 	Dtrtri(uplo blas.Uplo, diag blas.Diag, n int, a []float64, lda int) (ok bool)
 	Dtrtrs(uplo blas.Uplo, trans blas.Transpose, diag blas.Diag, n, nrhs int, a []float64, lda int, b []float64, ldb int) (ok bool)
@@ -213,4 +215,13 @@ const (
 	EVAll      EVHowMany = 'A' // Compute all right and/or left eigenvectors.
 	EVAllMulQ  EVHowMany = 'B' // Compute all right and/or left eigenvectors multiplied by an input matrix.
 	EVSelected EVHowMany = 'S' // Compute selected right and/or left eigenvectors.
+)
+
+// MaximizeNormX specifies the heuristic method for computing a contribution to
+// the reciprocal Dif-estimate in Dlatdf.
+type MaximizeNormXJob byte
+
+const (
+	LocalLookAhead       MaximizeNormXJob = 0 // Solve Z*x=h-f where h is a vector of ±1.
+	NormalizedNullVector MaximizeNormXJob = 2 // Compute an approximate null-vector e of Z, normalize e and solve Z*x=±e-f.
 )
