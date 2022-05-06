@@ -22,6 +22,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -38,15 +39,33 @@ func (m *mutator) InjectClient(c client.Client) error {
 }
 
 func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) error {
-	if oldObj != nil {
-		// This is basically a hack - ideally, we would like the mutating webhook configuration to only react for CREATE
-		// operations. However, currently both "CREATE" and "UPDATE" are hard-coded in the extensions library.
-		return nil
-	}
+	var (
+		podMeta *metav1.ObjectMeta
+		podSpec *corev1.PodSpec
+	)
 
-	pod, ok := newObj.(*corev1.Pod)
-	if !ok {
-		return fmt.Errorf("unexpected object, got %T wanted *corev1.Pod", newObj)
+	switch obj := newObj.(type) {
+	case *corev1.Pod:
+		if oldObj != nil {
+			// This is basically a hack - ideally, we would like the mutating webhook configuration to only react for CREATE
+			// operations. However, currently both "CREATE" and "UPDATE" are hard-coded in the extensions library.
+			return nil
+		}
+
+		if newObj.GetLabels()["app"] == "dependency-watchdog-probe" {
+			// We don't want to react for DWD pods but only for DWD deployments, so exit early here.
+			return nil
+		}
+
+		podMeta = &obj.ObjectMeta
+		podSpec = &obj.Spec
+
+	case *appsv1.Deployment:
+		podMeta = &obj.Spec.Template.ObjectMeta
+		podSpec = &obj.Spec.Template.Spec
+
+	default:
+		return fmt.Errorf("unexpected object, got %T wanted *appsv1.Deployment or *corev1.Pod", newObj)
 	}
 
 	service := &corev1.Service{}
@@ -54,14 +73,19 @@ func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) erro
 		return err
 	}
 
-	metav1.SetMetaDataLabel(&pod.ObjectMeta, local.LabelNetworkPolicyToIstioIngressGateway, v1beta1constants.LabelNetworkPolicyAllowed)
-	pod.Spec.DNSPolicy = corev1.DNSNone
-	pod.Spec.DNSConfig = &corev1.PodDNSConfig{
+	metav1.SetMetaDataLabel(podMeta, local.LabelNetworkPolicyToIstioIngressGateway, v1beta1constants.LabelNetworkPolicyAllowed)
+	m.injectDNSConfig(podSpec, newObj.GetNamespace(), service.Spec.ClusterIP)
+	return nil
+}
+
+func (m *mutator) injectDNSConfig(podSpec *corev1.PodSpec, namespace, coreDNSClusterIP string) {
+	podSpec.DNSPolicy = corev1.DNSNone
+	podSpec.DNSConfig = &corev1.PodDNSConfig{
 		Nameservers: []string{
-			service.Spec.ClusterIP,
+			coreDNSClusterIP,
 		},
 		Searches: []string{
-			fmt.Sprintf("%s.svc.%s", newObj.GetNamespace(), v1beta1.DefaultDomain),
+			fmt.Sprintf("%s.svc.%s", namespace, v1beta1.DefaultDomain),
 			"svc." + v1beta1.DefaultDomain,
 			v1beta1.DefaultDomain,
 		},
@@ -70,5 +94,4 @@ func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) erro
 			Value: pointer.String("5"),
 		}},
 	}
-	return nil
 }

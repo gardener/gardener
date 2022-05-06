@@ -17,9 +17,9 @@ package dnsconfig
 import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -48,7 +48,10 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 		name     = "dnsconfig"
 		kind     = controlplane.KindSeed
 		provider = local.Type
-		types    = []extensionswebhook.Type{{Obj: &corev1.Pod{}}}
+		types    = []extensionswebhook.Type{
+			{Obj: &appsv1.Deployment{}},
+			{Obj: &corev1.Pod{}},
+		}
 	)
 
 	logger = logger.WithValues("kind", kind, "provider", provider)
@@ -68,11 +71,11 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 		Target:   extensionswebhook.TargetSeed,
 		Path:     name,
 		Webhook:  &admission.Webhook{Handler: handler},
-		Selector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
-			{Key: v1beta1constants.LabelShootProvider, Operator: metav1.LabelSelectorOpIn, Values: []string{provider}},
-		}},
 		ObjectSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
-			{Key: "app", Operator: metav1.LabelSelectorOpIn, Values: []string{"machine"}},
+			{Key: "app", Operator: metav1.LabelSelectorOpIn, Values: []string{
+				"machine",
+				"dependency-watchdog-probe",
+			}},
 		}},
 	}, nil
 }
