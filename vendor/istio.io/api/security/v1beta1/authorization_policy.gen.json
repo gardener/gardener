@@ -1,0 +1,297 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Configuration for access control on workloads.",
+    "version": "v1beta1"
+  },
+  "components": {
+    "schemas": {
+      "istio.security.v1beta1.AuthorizationPolicy": {
+        "description": "AuthorizationPolicy enables access control on workloads.",
+        "type": "object",
+        "properties": {
+          "selector": {
+            "$ref": "#/components/schemas/istio.type.v1beta1.WorkloadSelector"
+          },
+          "rules": {
+            "description": "Optional. A list of rules to match the request. A match occurs when at least one rule matches the request.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/istio.security.v1beta1.Rule"
+            }
+          },
+          "action": {
+            "$ref": "#/components/schemas/istio.security.v1beta1.AuthorizationPolicy.Action"
+          }
+        },
+        "oneOf": [
+          {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "provider"
+                  ],
+                  "properties": {
+                    "provider": {
+                      "$ref": "#/components/schemas/istio.security.v1beta1.AuthorizationPolicy.ExtensionProvider"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "required": [
+              "provider"
+            ],
+            "properties": {
+              "provider": {
+                "$ref": "#/components/schemas/istio.security.v1beta1.AuthorizationPolicy.ExtensionProvider"
+              }
+            }
+          }
+        ]
+      },
+      "istio.security.v1beta1.AuthorizationPolicy.Action": {
+        "description": "Action specifies the operation to take.",
+        "type": "string",
+        "enum": [
+          "ALLOW",
+          "DENY",
+          "AUDIT",
+          "CUSTOM"
+        ]
+      },
+      "istio.security.v1beta1.AuthorizationPolicy.ExtensionProvider": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "Specifies the name of the extension provider. The list of available providers is defined in the MeshConfig. Note, currently at most 1 extension provider is allowed per workload. Different workloads can use different extension provider.",
+            "type": "string"
+          }
+        }
+      },
+      "istio.security.v1beta1.Condition": {
+        "description": "Condition specifies additional required attributes.",
+        "type": "object",
+        "properties": {
+          "key": {
+            "description": "The name of an Istio attribute. See the [full list of supported attributes](https://istio.io/docs/reference/config/security/conditions/).",
+            "type": "string"
+          },
+          "values": {
+            "description": "Optional. A list of allowed values for the attribute. Note: at least one of values or not_values must be set.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notValues": {
+            "description": "Optional. A list of negative match of values for the attribute. Note: at least one of values or not_values must be set.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "istio.security.v1beta1.Operation": {
+        "description": "Operation specifies the operations of a request. Fields in the operation are ANDed together.",
+        "type": "object",
+        "properties": {
+          "hosts": {
+            "description": "Optional. A list of hosts as specified in the HTTP request. The match is case-insensitive. See the [security best practices](https://istio.io/latest/docs/ops/best-practices/security/#writing-host-match-policies) for recommended usage of this field.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notHosts": {
+            "description": "Optional. A list of negative match of hosts as specified in the HTTP request. The match is case-insensitive.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ports": {
+            "description": "Optional. A list of ports as specified in the connection.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notPorts": {
+            "description": "Optional. A list of negative match of ports as specified in the connection.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "methods": {
+            "description": "Optional. A list of methods as specified in the HTTP request. For gRPC service, this will always be \"POST\".",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notMethods": {
+            "description": "Optional. A list of negative match of methods as specified in the HTTP request.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "paths": {
+            "description": "Optional. A list of paths as specified in the HTTP request. See the [Authorization Policy Normalization](https://istio.io/latest/docs/reference/config/security/normalization/) for details of the path normalization. For gRPC service, this will be the fully-qualified name in the form of \"/package.service/method\".",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notPaths": {
+            "description": "Optional. A list of negative match of paths.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "istio.security.v1beta1.Rule": {
+        "description": "Rule matches requests from a list of sources that perform a list of operations subject to a list of conditions. A match occurs when at least one source, one operation and all conditions matches the request. An empty rule is always matched.",
+        "type": "object",
+        "properties": {
+          "from": {
+            "description": "Optional. from specifies the source of a request.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/istio.security.v1beta1.Rule.From"
+            }
+          },
+          "to": {
+            "description": "Optional. to specifies the operation of a request.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/istio.security.v1beta1.Rule.To"
+            }
+          },
+          "when": {
+            "description": "Optional. when specifies a list of additional conditions of a request.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/istio.security.v1beta1.Condition"
+            }
+          }
+        }
+      },
+      "istio.security.v1beta1.Rule.From": {
+        "description": "From includes a list or sources.",
+        "type": "object",
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/istio.security.v1beta1.Source"
+          }
+        }
+      },
+      "istio.security.v1beta1.Rule.To": {
+        "description": "To includes a list or operations.",
+        "type": "object",
+        "properties": {
+          "operation": {
+            "$ref": "#/components/schemas/istio.security.v1beta1.Operation"
+          }
+        }
+      },
+      "istio.security.v1beta1.Source": {
+        "description": "Source specifies the source identities of a request. Fields in the source are ANDed together.",
+        "type": "object",
+        "properties": {
+          "principals": {
+            "description": "Optional. A list of peer identities derived from the peer certificate. The peer identity is in the format of `\"\u003cTRUST_DOMAIN\u003e/ns/\u003cNAMESPACE\u003e/sa/\u003cSERVICE_ACCOUNT\u003e\"`, for example, `\"cluster.local/ns/default/sa/productpage\"`. This field requires mTLS enabled and is the same as the `source.principal` attribute.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notPrincipals": {
+            "description": "Optional. A list of negative match of peer identities.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requestPrincipals": {
+            "description": "Optional. A list of request identities derived from the JWT. The request identity is in the format of `\"\u003cISS\u003e/\u003cSUB\u003e\"`, for example, `\"example.com/sub-1\"`. This field requires request authentication enabled and is the same as the `request.auth.principal` attribute.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notRequestPrincipals": {
+            "description": "Optional. A list of negative match of request identities.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "namespaces": {
+            "description": "Optional. A list of namespaces derived from the peer certificate. This field requires mTLS enabled and is the same as the `source.namespace` attribute.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notNamespaces": {
+            "description": "Optional. A list of negative match of namespaces.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ipBlocks": {
+            "description": "Optional. A list of IP blocks, populated from the source address of the IP packet. Single IP (e.g. \"1.2.3.4\") and CIDR (e.g. \"1.2.3.0/24\") are supported. This is the same as the `source.ip` attribute.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notIpBlocks": {
+            "description": "Optional. A list of negative match of IP blocks.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "remoteIpBlocks": {
+            "description": "Optional. A list of IP blocks, populated from X-Forwarded-For header or proxy protocol. To make use of this field, you must configure the numTrustedProxies field of the gatewayTopology under the meshConfig when you install Istio or using an annotation on the ingress gateway. See the documentation here: [Configuring Gateway Network Topology](https://istio.io/latest/docs/ops/configuration/traffic-management/network-topologies/). Single IP (e.g. \"1.2.3.4\") and CIDR (e.g. \"1.2.3.0/24\") are supported. This is the same as the `remote.ip` attribute.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notRemoteIpBlocks": {
+            "description": "Optional. A list of negative match of remote IP blocks.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "istio.type.v1beta1.WorkloadSelector": {
+        "description": "WorkloadSelector specifies the criteria used to determine if a policy can be applied to a proxy. The matching criteria includes the metadata associated with a proxy, workload instance info such as labels attached to the pod/VM, or any other info that the proxy provides to Istio during the initial handshake. If multiple conditions are specified, all conditions need to match in order for the workload instance to be selected. Currently, only label based selection mechanism is supported.",
+        "type": "object",
+        "properties": {
+          "matchLabels": {
+            "description": "One or more labels that indicate a specific set of pods/VMs on which a policy should be applied. The scope of label search is restricted to the configuration namespace in which the resource is present.",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}
