@@ -24,7 +24,7 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = defaultShoot("default-")
+	f.Shoot = defaultShoot("", "default-")
 
 	It("Create and Delete", Label("fast"), func() {
 		By("Create Shoot")

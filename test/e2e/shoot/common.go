@@ -52,11 +52,12 @@ func defaultShootCreationFramework() *framework.ShootCreationFramework {
 	})
 }
 
-func defaultShoot(generateName string) *gardencorev1beta1.Shoot {
+func defaultShoot(name, generateName string) *gardencorev1beta1.Shoot {
 	return &gardencorev1beta1.Shoot{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      generateName,
-			Namespace: projectNamespace,
+			Name:         name,
+			GenerateName: generateName,
+			Namespace:    projectNamespace,
 			Annotations: map[string]string{
 				v1beta1constants.AnnotationShootInfrastructureCleanupWaitPeriodSeconds: "0",
 			},
