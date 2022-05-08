@@ -708,11 +708,11 @@ const (
 )
 
 type Source struct {
-	// A list of IP blocks, populated from the source address of the IP packet.
+	// A list of IP blocks (Ipv4 & Ipv6), populated from the source address of the IP packet.
 	// Single IP (e.g. "1.2.3.4") and CIDR (e.g. "1.2.3.0/24") are supported.
 	// +optional
 	IPBlocks []string `json:"ipBlocks,omitempty" protobuf:"bytes,1,opt,name=ipBlocks"`
-	// A list of IP blocks, populated from X-Forwarded-For header or proxy protocol.
+	// A list of IP blocks (Ipv4 & Ipv6), populated from X-Forwarded-For header or proxy protocol.
 	// Single IP (e.g. "1.2.3.4") and CIDR (e.g. "1.2.3.0/24") are supported.
 	// +optional
 	RemoteIPBlocks []string `json:"remoteIpBlocks,omitempty" protobuf:"bytes,2,opt,name=remoteIpBlocks"`
