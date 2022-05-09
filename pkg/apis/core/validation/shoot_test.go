@@ -1861,6 +1861,26 @@ var _ = Describe("Shoot Validation Tests", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
+		It("should fail when using nil access control action", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.AccessControl.Action = nil
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.accessControl.action"),
+			}))))
+		})
+
+		It("should fail when using unknown access control action", func() {
+			m := core.AuthorizationAction("fooMode")
+			shoot.Spec.Kubernetes.KubeAPIServer.AccessControl.Action = &m
+			errorList := ValidateShoot(shoot)
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.accessControl.action"),
+			}))))
+		})
+
 		Context("KubeControllerManager validation", func() {
 			It("should forbid unsupported HPA configuration", func() {
 				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleStabilization = makeDurationPointer(-1 * time.Second)
