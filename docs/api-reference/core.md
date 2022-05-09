@@ -9003,6 +9003,20 @@ ShootSSHKeypairRotation
 <p>SSHKeypair contains information about the ssh-keypair credential rotation.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>observability</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootObservabilityRotation">
+ShootObservabilityRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Observability contains information about the observability credential rotation.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ShootCredentialsRotationPhase">ShootCredentialsRotationPhase
@@ -9162,6 +9176,53 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ShootObservabilityRotation">ShootObservabilityRotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotation">ShootCredentialsRotation</a>)
+</p>
+<p>
+<p>ShootObservabilityRotation contains information about the observability credential rotation.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>lastInitiationTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationTime is the most recent time when the observability credential rotation was initiated.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastCompletionTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastCompletionTime is the most recent time when the observability credential rotation was successfully completed.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ShootPurpose">ShootPurpose
 (<code>string</code> alias)</p></h3>
 <p>
@@ -9199,7 +9260,7 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <em>(Optional)</em>
-<p>LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.</p>
+<p>LastInitiationTime is the most recent time when the ssh-keypair credential rotation was initiated.</p>
 </td>
 </tr>
 <tr>

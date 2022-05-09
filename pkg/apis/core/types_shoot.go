@@ -165,6 +165,8 @@ type ShootCredentialsRotation struct {
 	Kubeconfig *ShootKubeconfigRotation
 	// SSHKeypair contains information about the ssh-keypair credential rotation.
 	SSHKeypair *ShootSSHKeypairRotation
+	// Observability contains information about the observability credential rotation.
+	Observability *ShootObservabilityRotation
 }
 
 // ShootCARotation contains information about the certificate authority credential rotation.
@@ -191,6 +193,14 @@ type ShootSSHKeypairRotation struct {
 	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
 	LastInitiationTime *metav1.Time
 	// LastCompletionTime is the most recent time when the ssh-keypair credential rotation was successfully completed.
+	LastCompletionTime *metav1.Time
+}
+
+// ShootObservabilityRotation contains information about the observability credential rotation.
+type ShootObservabilityRotation struct {
+	// LastInitiationTime is the most recent time when the observability credential rotation was initiated.
+	LastInitiationTime *metav1.Time
+	// LastCompletionTime is the most recent time when the observability credential rotation was successfully completed.
 	LastCompletionTime *metav1.Time
 }
 

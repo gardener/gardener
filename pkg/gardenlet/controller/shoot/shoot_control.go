@@ -699,6 +699,12 @@ func (r *shootReconciler) updateShootStatusOperationStart(ctx context.Context, g
 		v1beta1helper.MutateShootSSHKeypairRotation(shoot, func(rotation *gardencorev1beta1.ShootSSHKeypairRotation) {
 			rotation.LastInitiationTime = &now
 		})
+
+	case v1beta1constants.ShootOperationRotateObservabilityCredentials:
+		mustRemoveOperationAnnotation = true
+		v1beta1helper.MutateObservabilityRotation(shoot, func(rotation *gardencorev1beta1.ShootObservabilityRotation) {
+			rotation.LastInitiationTime = &now
+		})
 	}
 
 	if err := gardenClient.Status().Update(ctx, shoot); err != nil {
@@ -813,6 +819,12 @@ func (r *shootReconciler) patchShootStatusOperationSuccess(
 
 	if v1beta1helper.IsShootSSHKeypairRotationInitiationTimeAfterLastCompletionTime(shoot.Status.Credentials) {
 		v1beta1helper.MutateShootSSHKeypairRotation(shoot, func(rotation *gardencorev1beta1.ShootSSHKeypairRotation) {
+			rotation.LastCompletionTime = &now
+		})
+	}
+
+	if v1beta1helper.IsShootObservabilityRotationInitiationTimeAfterLastCompletionTime(shoot.Status.Credentials) {
+		v1beta1helper.MutateObservabilityRotation(shoot, func(rotation *gardencorev1beta1.ShootObservabilityRotation) {
 			rotation.LastCompletionTime = &now
 		})
 	}

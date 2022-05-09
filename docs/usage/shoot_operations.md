@@ -45,6 +45,17 @@ kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/oper
 
 You can check the `.status.credentials.rotation.kubeconfig` field in the `Shoot` to see when the rotation was last initiated or last completed.
 
+## Rotate observability credentials
+
+Annotate the shoot with `gardener.cloud/operation=rotate-observability-credentials` to make the `gardenlet` exchange your shoot cluster's observability credentials. Note that this only affects the user credentials since the operator credentials are rotated automatically each `30d`.
+This operation is not allowed for shoot clusters that are already in deletion.
+
+```bash
+kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=rotate-observability-credentials
+```
+
+You can check the `.status.credentials.rotation.observability` field in the `Shoot` to see when the rotation was last initiated or last completed.
+
 ## Restart systemd services on particular worker nodes
 
 It is possible to make Gardener restart particular systemd services on your shoot worker nodes if needed.
