@@ -41,6 +41,10 @@ Please consult [this document](shoot_credentials_rotation.md#kubeconfig) for mor
 
 Please consult [this document](shoot_credentials_rotation.md#observability-passwords-for-grafana) for more information.
 
+## Rotate SSH Keypair For Worker Nodes
+
+Please consult [this document](shoot_credentials_rotation.md#ssh-key-pair-for-worker-nodes) for more information.
+
 ## Restart `systemd` Services On Particular Worker Nodes
 
 It is possible to make Gardener restart particular systemd services on your shoot worker nodes if needed.

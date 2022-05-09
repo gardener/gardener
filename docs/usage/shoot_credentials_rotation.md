@@ -80,3 +80,27 @@ kubectl -n shoot--<project>--<name> get secret -l name=observability-ingress,man
 These credentials are only valid for `30d` and get automatically rotated with the next `Shoot` reconciliation when 80% of the validity approaches or when there are less than `10d` until expiration.
 There is no way to trigger the rotation manually.
 
+## SSH Key Pair For Worker Nodes
+
+Gardener generates an SSH key pair whose public key is propagated to all worker nodes of the `Shoot`.
+The private key can be used to establish an SSH connection to the workers for troubleshooting purposes.
+It is recommended to use [`gardenctl-v2`](https://github.com/gardener/gardenctl-v2/) and its `gardenctl ssh` command since it is required to first open up the security groups and create a bastion VM (no direct SSH access to the worker nodes is possible).
+
+The private key is stored in a `Secret` with name `<shoot-name>.ssh-keypair` in the project namespace in the garden cluster and has multiple data keys:
+
+- `id_rsa`: the private key
+- `id_rsa.pub`: the public key for SSH
+
+In order to rotate the keys, annotate the `Shoot` with `gardener.cloud/operation=rotate-ssh-keypair`.
+This will propagate a new key to all worker nodes while keeping the old key active and valid as well (it will only be invalidated/removed with the next rotation).
+
+```bash
+kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=rotate-ssh-keypair
+```
+
+> You can check the `.status.credentials.rotation.sshKeypair` field in the `Shoot` to see when the rotation was last initiated or last completed.
+
+The old key is stored in a `Secret` with name `<shoot-name>.ssh-keypair.old` in the project namespace in the garden cluster and has the same data keys as the regular `Secret`.
+
+> Note that the SSH keypairs for shoot clusters are rotated automatically during maintenance time window when the `RotateSSHKeypairOnMaintenance` feature gate is enabled.
+
