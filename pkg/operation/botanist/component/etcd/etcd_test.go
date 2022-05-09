@@ -73,7 +73,8 @@ var _ = Describe("Etcd", func() {
 		ctx                     = context.TODO()
 		fakeErr                 = fmt.Errorf("fake err")
 		class                   = ClassNormal
-		retainReplicas          = false
+		annotations             = map[string]string{}
+		replicas                = pointer.Int32Ptr(1)
 		storageCapacity         = "12Gi"
 		storageCapacityQuantity = resource.MustParse(storageCapacity)
 		defragmentationSchedule = "abcd"
@@ -126,8 +127,8 @@ var _ = Describe("Etcd", func() {
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						"garden.sapcloud.io/role": "controlplane",
-						"app":                     "etcd-statefulset",
+						"gardener.cloud/role": "controlplane",
+						"app":                 "etcd-statefulset",
 					},
 				},
 				Ingress: []networkingv1.NetworkPolicyIngressRule{
@@ -221,7 +222,7 @@ var _ = Describe("Etcd", func() {
 					Replicas:          replicas,
 					PriorityClassName: pointer.String("gardener-shoot-controlplane"),
 					Labels: map[string]string{
-						"garden.sapcloud.io/role":          "controlplane",
+						"gardener.cloud/role":              "controlplane",
 						"role":                             testRole,
 						"app":                              "etcd-statefulset",
 						"networking.gardener.cloud/to-dns": "allowed",
@@ -231,9 +232,9 @@ var _ = Describe("Etcd", func() {
 					},
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"garden.sapcloud.io/role": "controlplane",
-							"role":                    testRole,
-							"app":                     "etcd-statefulset",
+							"gardener.cloud/role": "controlplane",
+							"role":                testRole,
+							"app":                 "etcd-statefulset",
 						},
 					},
 					Etcd: druidv1alpha1.EtcdConfig{
@@ -255,7 +256,7 @@ var _ = Describe("Etcd", func() {
 								Namespace: testNamespace,
 							},
 						},
-						ServerPort:              &PortEtcdServer,
+						ServerPort:              &PortEtcdPeer,
 						ClientPort:              &PortEtcdClient,
 						Metrics:                 &metricsBasic,
 						DefragmentationSchedule: &defragSchedule,
@@ -332,9 +333,9 @@ var _ = Describe("Etcd", func() {
 					Name:      hvpaName,
 					Namespace: testNamespace,
 					Labels: map[string]string{
-						"garden.sapcloud.io/role": "controlplane",
-						"role":                    testRole,
-						"app":                     "etcd-statefulset",
+						"gardener.cloud/role": "controlplane",
+						"role":                testRole,
+						"app":                 "etcd-statefulset",
 					},
 				},
 				Spec: hvpav1alpha1.HvpaSpec{
@@ -490,7 +491,7 @@ var _ = Describe("Etcd", func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 		sm = fakesecretsmanager.New(fakeClient, testNamespace)
 		log = logger.NewNopLogger()
-		etcd = New(c, log, testNamespace, sm, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
+		etcd = New(c, log, testNamespace, sm, testRole, class, annotations, replicas, storageCapacity, &defragmentationSchedule)
 
 		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: testNamespace}})).To(Succeed())
@@ -648,10 +649,9 @@ var _ = Describe("Etcd", func() {
 
 			var (
 				existingReplicas int32 = 245
-				retainReplicas         = true
 			)
 
-			etcd = New(c, log, testNamespace, sm, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
+			etcd = New(c, log, testNamespace, sm, testRole, class, annotations, nil, storageCapacity, &defragmentationSchedule)
 			setHVPAConfig()
 
 			gomock.InOrder(
@@ -704,10 +704,9 @@ var _ = Describe("Etcd", func() {
 
 			var (
 				existingReplicas int32 = 245
-				retainReplicas         = true
 			)
 
-			etcd = New(c, log, testNamespace, sm, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
+			etcd = New(c, log, testNamespace, sm, testRole, class, annotations, nil, storageCapacity, &defragmentationSchedule)
 			setHVPAConfig()
 
 			gomock.InOrder(
@@ -917,7 +916,9 @@ var _ = Describe("Etcd", func() {
 					updateMode = hvpav1alpha1.UpdateModeOff
 				}
 
-				etcd = New(c, log, testNamespace, sm, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
+				replicas = pointer.Int32Ptr(1)
+
+				etcd = New(c, log, testNamespace, sm, testRole, class, annotations, replicas, storageCapacity, &defragmentationSchedule)
 				newSetHVPAConfigFunc(updateMode)()
 
 				gomock.InOrder(

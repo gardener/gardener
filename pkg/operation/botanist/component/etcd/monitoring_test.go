@@ -27,7 +27,7 @@ import (
 var _ = Describe("Monitoring", func() {
 	Describe("#ScrapeConfig", func() {
 		It("should successfully test the scrape configuration", func() {
-			etcd := New(nil, nil, testNamespace, nil, testRole, ClassNormal, true, "", nil)
+			etcd := New(nil, nil, testNamespace, nil, testRole, ClassNormal, nil, nil, "", nil)
 			test.ScrapeConfigs(etcd, expectedScrapeConfigEtcd, expectedScrapeConfigBackupRestore)
 		})
 	})
@@ -35,7 +35,7 @@ var _ = Describe("Monitoring", func() {
 	Describe("#AlertingRules", func() {
 		Context("w/o backup", func() {
 			It("should successfully test the alerting rules (normal)", func() {
-				etcd := New(nil, nil, testNamespace, nil, testRole, ClassNormal, true, "", nil)
+				etcd := New(nil, nil, testNamespace, nil, testRole, ClassNormal, nil, nil, "", nil)
 				test.AlertingRulesWithPromtool(
 					etcd,
 					map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesNormalWithoutBackup},
@@ -44,7 +44,7 @@ var _ = Describe("Monitoring", func() {
 			})
 
 			It("should successfully test the alerting rules (important)", func() {
-				etcd := New(nil, nil, testNamespace, nil, testRole, ClassImportant, true, "", nil)
+				etcd := New(nil, nil, testNamespace, nil, testRole, ClassImportant, nil, nil, "", nil)
 				test.AlertingRulesWithPromtool(
 					etcd,
 					map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesImportantWithoutBackup},
@@ -55,7 +55,7 @@ var _ = Describe("Monitoring", func() {
 
 		Context("w/ backup", func() {
 			It("should successfully test the alerting rules (normal)", func() {
-				etcd := New(nil, nil, testNamespace, nil, testRole, ClassNormal, true, "", nil)
+				etcd := New(nil, nil, testNamespace, nil, testRole, ClassNormal, nil, nil, "", nil)
 				etcd.SetBackupConfig(&BackupConfig{})
 				test.AlertingRulesWithPromtool(
 					etcd,
@@ -65,7 +65,7 @@ var _ = Describe("Monitoring", func() {
 			})
 
 			It("should successfully test the alerting rules (important)", func() {
-				etcd := New(nil, nil, testNamespace, nil, testRole, ClassImportant, true, "", nil)
+				etcd := New(nil, nil, testNamespace, nil, testRole, ClassImportant, nil, nil, "", nil)
 				etcd.SetBackupConfig(&BackupConfig{})
 				test.AlertingRulesWithPromtool(
 					etcd,

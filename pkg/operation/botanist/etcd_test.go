@@ -143,7 +143,7 @@ var _ = Describe("Etcd", func() {
 							expectedSecretsManager:          Equal(sm),
 							expectedRole:                    Equal(role),
 							expectedClass:                   Equal(class),
-							expectedReplicas:                PointTo(Equal(1)),
+							expectedReplicas:                PointTo(Equal(int32(1))),
 							expectedStorageCapacity:         Equal("10Gi"),
 							expectedDefragmentationSchedule: Equal(pointer.String("34 12 */3 * *")),
 							expectedHVPAConfig: Equal(&etcd.HVPAConfig{
@@ -182,7 +182,7 @@ var _ = Describe("Etcd", func() {
 					expectedSecretsManager:          Equal(sm),
 					expectedRole:                    Equal(role),
 					expectedClass:                   Equal(class),
-					expectedReplicas:                PointTo(Equal(1)),
+					expectedReplicas:                PointTo(Equal(int32(1))),
 					expectedStorageCapacity:         Equal("10Gi"),
 					expectedDefragmentationSchedule: Equal(pointer.String("34 12 * * *")),
 					expectedHVPAConfig: Equal(&etcd.HVPAConfig{
@@ -213,7 +213,7 @@ var _ = Describe("Etcd", func() {
 					expectedSecretsManager:          Equal(sm),
 					expectedRole:                    Equal(role),
 					expectedClass:                   Equal(class),
-					expectedReplicas:                PointTo(Equal(1)),
+					expectedReplicas:                PointTo(Equal(int32(1))),
 					expectedStorageCapacity:         Equal("10Gi"),
 					expectedDefragmentationSchedule: Equal(pointer.String("34 12 * * *")),
 					expectedHVPAConfig: Equal(&etcd.HVPAConfig{
@@ -485,7 +485,8 @@ func (v *newEtcdValidator) NewEtcd(
 	secretsManager secretsmanager.Interface,
 	role string,
 	class etcd.Class,
-	replicas *int,
+	annotations map[string]string,
+	replicas *int32,
 	storageCapacity string,
 	defragmentationSchedule *string,
 ) etcd.Interface {

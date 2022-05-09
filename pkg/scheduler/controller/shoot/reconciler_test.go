@@ -121,6 +121,7 @@ var _ = Describe("Scheduler_Control", func() {
 					Strategy: config.SameRegion,
 				},
 			},
+			FeatureGates: map[string]bool{},
 		}
 	)
 

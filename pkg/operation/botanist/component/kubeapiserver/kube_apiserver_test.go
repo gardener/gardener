@@ -766,8 +766,8 @@ var _ = Describe("KubeAPIServer", func() {
 								To: []networkingv1.NetworkPolicyPeer{{
 									PodSelector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
-											"app":                     "etcd-statefulset",
-											"garden.sapcloud.io/role": "controlplane",
+											"app":                 "etcd-statefulset",
+											"gardener.cloud/role": "controlplane",
 										},
 									},
 								}},
@@ -848,8 +848,8 @@ var _ = Describe("KubeAPIServer", func() {
 									To: []networkingv1.NetworkPolicyPeer{{
 										PodSelector: &metav1.LabelSelector{
 											MatchLabels: map[string]string{
-												"app":                     "etcd-statefulset",
-												"garden.sapcloud.io/role": "controlplane",
+												"app":                 "etcd-statefulset",
+												"gardener.cloud/role": "controlplane",
 											},
 										},
 									}},

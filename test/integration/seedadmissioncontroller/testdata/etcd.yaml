@@ -12,5 +12,5 @@ spec:
   selector:
     matchLabels:
       app: etcd-statefulset
-      garden.sapcloud.io/role: controlplane
+      gardener.cloud/role: controlplane
       role: main

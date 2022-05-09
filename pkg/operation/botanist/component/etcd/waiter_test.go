@@ -89,7 +89,7 @@ var _ = Describe("#Wait", func() {
 			&retry.UntilTimeout, waiter.UntilTimeout,
 		)
 
-		etcd = New(c, log, testNamespace, sm, testRole, ClassNormal, false, "12Gi", pointer.String("abcd"))
+		etcd = New(c, log, testNamespace, sm, testRole, ClassNormal, nil, pointer.Int32Ptr(1), "12Gi", pointer.String("abcd"))
 		etcd.SetHVPAConfig(&HVPAConfig{
 			Enabled: true,
 			MaintenanceTimeWindow: gardencorev1beta1.MaintenanceTimeWindow{
