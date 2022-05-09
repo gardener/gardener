@@ -102,7 +102,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		envoyFilter     = s.emptyEnvoyFilter()
 		gateway         = s.emptyGateway()
 		virtualService  = s.emptyVirtualService()
-		accessControl   = s.emptyAccessControl()
+		accessControl   = s.emptyAuthorizationPolicy()
 
 		hostName        = fmt.Sprintf("%s.%s.svc.%s", v1beta1constants.DeploymentNameKubeAPIServer, s.namespace, gardencorev1beta1.DefaultDomain)
 		envoyFilterSpec bytes.Buffer
@@ -226,7 +226,7 @@ func (s *sni) Destroy(ctx context.Context) error {
 		s.emptyEnvoyFilter(),
 		s.emptyGateway(),
 		s.emptyVirtualService(),
-		s.emptyAccessControl(),
+		s.emptyAuthorizationPolicy(),
 	)
 }
 
@@ -249,7 +249,7 @@ func (s *sni) emptyVirtualService() *istionetworkingv1beta1.VirtualService {
 	return &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
 }
 
-func (s *sni) emptyAccessControl() *istiosecurity1beta1.AuthorizationPolicy {
+func (s *sni) emptyAuthorizationPolicy() *istiosecurity1beta1.AuthorizationPolicy {
 	return &istiosecurity1beta1.AuthorizationPolicy{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
 }
 
