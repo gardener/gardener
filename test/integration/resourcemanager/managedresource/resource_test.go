@@ -762,10 +762,10 @@ var _ = Describe("ManagedResource controller tests", func() {
 				updatedDeployment.Spec.Template = *newPodTemplateSpec
 				Expect(testClient.Update(ctx, updatedDeployment)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) corev1.ResourceRequirements {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-					return compareResource(deployment.Spec.Template.Spec.Containers[0].Resources, defaultPodTemplateSpec.Spec.Containers[0].Resources)
-				}).Should(BeTrue())
+					return deployment.Spec.Template.Spec.Containers[0].Resources
+				}).Should(DeepEqual(defaultPodTemplateSpec.Spec.Containers[0].Resources))
 			})
 
 			It("should preserve changes in resource requests and limits in Pod if the resource has preserve-resources annotation", func() {
@@ -786,10 +786,10 @@ var _ = Describe("ManagedResource controller tests", func() {
 				updatedDeployment.Spec.Template = *newPodTemplateSpec
 				Expect(testClient.Update(ctx, updatedDeployment)).To(Succeed())
 
-				Consistently(func(g Gomega) bool {
+				Eventually(func(g Gomega) corev1.ResourceRequirements {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-					return compareResource(deployment.Spec.Template.Spec.Containers[0].Resources, defaultPodTemplateSpec.Spec.Containers[0].Resources)
-				}).Should(BeFalse())
+					return deployment.Spec.Template.Spec.Containers[0].Resources
+				}).ShouldNot(DeepEqual(defaultPodTemplateSpec.Spec.Containers[0].Resources))
 			})
 		})
 	})
@@ -799,22 +799,6 @@ func secretDataForObject(obj runtime.Object, key string) map[string][]byte {
 	jsonObject, err := json.Marshal(obj)
 	Expect(err).NotTo(HaveOccurred())
 	return map[string][]byte{key: jsonObject}
-}
-
-func compareResource(oldResource corev1.ResourceRequirements, newResource corev1.ResourceRequirements) bool {
-	if *oldResource.Requests.Cpu() != *newResource.Requests.Cpu() {
-		return false
-	}
-	if *oldResource.Requests.Memory() != *newResource.Requests.Memory() {
-		return false
-	}
-	if *oldResource.Limits.Cpu() != *newResource.Limits.Cpu() {
-		return false
-	}
-	if *oldResource.Limits.Memory() != *newResource.Limits.Memory() {
-		return false
-	}
-	return true
 }
 
 func containCondition(matchers ...gomegatypes.GomegaMatcher) gomegatypes.GomegaMatcher {
