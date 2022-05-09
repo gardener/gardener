@@ -104,3 +104,18 @@ The old key is stored in a `Secret` with name `<shoot-name>.ssh-keypair.old` in 
 
 > Note that the SSH keypairs for shoot clusters are rotated automatically during maintenance time window when the `RotateSSHKeypairOnMaintenance` feature gate is enabled.
 
+## ETCD Encryption Key
+
+This key is used to encrypt the data of `Secret` resources inside etcd.
+It is currently **not** rotated automatically and there is no way to trigger it manually.
+
+## `ServiceAccount` Token Signing Key
+
+This key is used to sign the tokens for `ServiceAccount`s.
+It is currently **not** rotated automatically and there is no way to trigger it manually.
+Note that there is the option to pass such key to Gardener, please see [this document](shoot_serviceaccounts.md#signing-key-secret) for more details.
+
+## OpenVPN TLS Auth Keys
+
+This key is used to ensure encrypted communication for the VPN connection between the control plane in the seed cluster and the shoot cluster.
+It is currently **not** rotated automatically and there is no way to trigger it manually.
