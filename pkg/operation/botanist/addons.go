@@ -384,3 +384,10 @@ func (b *Botanist) generateOptionalAddonsChart(_ context.Context) (*chartrendere
 func (b *Botanist) outOfClusterAPIServerFQDN() string {
 	return fmt.Sprintf("%s.", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true))
 }
+
+func (b *Botanist) getAccessControlKubeApiServerChecked() *gardencorev1beta1.AccessControl {
+	if b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer != nil {
+		return b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.AccessControl
+	}
+	return nil
+}
