@@ -1,37 +1,6 @@
 
 
 
-### Gardener generated secrets
-
-#### Kubeconfig
-
-*Name*: `<shoot-name>.kubeconfig`
-
-*Description*: Admin Kubeconfig provided by Gardener for the managed shoot cluster.
-
-This `Secret` has multiple keys:
-- `kubeconfig`: the completed kubeconfig
-- `token`: token for `system:cluster-admin` user
-- `username`/`password`: basic auth credentials (if enabled via `Shoot.spec.kubernetes.kubeAPIServer.enableBasicAuthentication`)
-- `ca.crt`: the CA bundle for establishing trust to the API server (same as in the [Cluster CA bundle secret](#cluster-certificate-authority-bundle))
-
----
-**NOTE**
-
-This Kubeconfig contains the highest privileges in the cluster. We strongly discourage distributing or using this Kubeconfig. 
-Instead, configure dedicated [Service Accounts](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/),
-[OIDC](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#openid-connect-tokens) or similar alternatives
-to grant role-based and revocable access for a broader audience.
-
----
-
-*Rotation*: Kubeconfig can be rotated by annotating the shoot resource with `gardener.cloud/operation: rotate-kubeconfig-credentials`.
-The substituted Kubeconfig are provided after the initialized reconciliation was performed. Please note, shoot clusters 
-which were created with Gardener version `<= 0.28.0` used to have a Kubeconfig based on a client certificate instead of a static token.
-These client certificates are not revocable and thus a full credential rotation is not supported.
-
-You can check the `.status.credentials.rotation.kubeconfig` field in the `Shoot` to see when the rotation was last initiated or last completed.
-
 #### Cluster Certificate Authority Bundle
 
 *Name*: `<shoot-name>.ca-cluster`
