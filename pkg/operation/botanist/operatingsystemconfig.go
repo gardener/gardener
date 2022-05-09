@@ -181,12 +181,12 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 			return err
 		}
 
-		secretName, data, err := b.generateCloudConfigExecutorResourcesForWorker(worker, oscData.Original, hyperkubeImage)
+		secretNames, data, err := b.generateCloudConfigExecutorResourcesForWorker(worker, oscData.Original, hyperkubeImage)
 		if err != nil {
 			return err
 		}
 
-		cloudConfigExecutorSecretNames = append(cloudConfigExecutorSecretNames, secretName)
+		cloudConfigExecutorSecretNames = append(cloudConfigExecutorSecretNames, secretNames...)
 		managedResourceSecretNameToData[fmt.Sprintf("shoot-cloud-config-execution-%s", worker.Name)] = data
 	}
 
@@ -243,17 +243,18 @@ func (b *Botanist) generateCloudConfigExecutorResourcesForWorker(
 	oscDataOriginal operatingsystemconfig.Data,
 	hyperkubeImage *imagevector.Image,
 ) (
-	string,
+	[]string,
 	map[string][]byte,
 	error,
 ) {
 	kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(b.Shoot.KubernetesVersion, worker.Kubernetes)
 	if err != nil {
-		return "", nil, err
+		return nil, nil, err
 	}
 	var (
-		registry   = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
-		secretName = operatingsystemconfig.Key(worker.Name, kubernetesVersion)
+		registry    = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+		secretName  = operatingsystemconfig.Key(worker.Name, kubernetesVersion, worker.CRI)
+		secretNames = []string{secretName}
 	)
 
 	var kubeletDataVolume *gardencorev1beta1.DataVolume
@@ -269,13 +270,23 @@ func (b *Botanist) generateCloudConfigExecutorResourcesForWorker(
 
 	executorScript, err := ExecutorScriptFn([]byte(oscDataOriginal.Content), hyperkubeImage, kubernetesVersion.String(), kubeletDataVolume, *oscDataOriginal.Command, oscDataOriginal.Units)
 	if err != nil {
-		return "", nil, err
+		return nil, nil, err
 	}
 
-	resources, err := registry.AddAllAndSerialize(executor.Secret(secretName, metav1.NamespaceSystem, worker.Name, executorScript))
-	if err != nil {
-		return "", nil, err
+	if err := registry.Add(executor.Secret(secretName, metav1.NamespaceSystem, worker.Name, executorScript)); err != nil {
+		return nil, nil, err
 	}
 
-	return secretName, resources, nil
+	// TODO(rfranzke): Remove this legacySecretName in a future release.
+	// Since we changed the logic of the Key function to incorporate the CRI name for
+	// https://github.com/gardener/gardener/issues/4415, the name of the secret changes. To make existing nodes
+	// update to the new secret name, we need to also create the legacy secret name and point it to the new secret.
+	if legacySecretName := operatingsystemconfig.Key(worker.Name, kubernetesVersion, nil); legacySecretName != secretName {
+		if err := registry.Add(executor.Secret(legacySecretName, metav1.NamespaceSystem, worker.Name, executorScript)); err != nil {
+			return nil, nil, err
+		}
+		secretNames = append(secretNames, legacySecretName)
+	}
+
+	return secretNames, registry.SerializedObjects(), nil
 }

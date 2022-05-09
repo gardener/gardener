@@ -22,6 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
@@ -36,6 +37,7 @@ import (
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -44,11 +46,12 @@ import (
 func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operation.Operation, operationType gardencorev1beta1.LastOperationType) *gardencorev1beta1helper.WrappedLastErrors {
 	// We create the botanists (which will do the actual work).
 	var (
-		isRestoring             = operationType == gardencorev1beta1.LastOperationTypeRestore
-		botanist                *botanistpkg.Botanist
-		tasksWithErrors         []string
-		isCopyOfBackupsRequired bool
-		err                     error
+		isRestoring                    = operationType == gardencorev1beta1.LastOperationTypeRestore
+		botanist                       *botanistpkg.Botanist
+		tasksWithErrors                []string
+		isCopyOfBackupsRequired        bool
+		err                            error
+		controlPlaneExistsAndSucceeded bool
 	)
 
 	for _, lastError := range o.Shoot.GetInfo().Status.LastErrors {
@@ -73,6 +76,18 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 				}
 				return retryutils.Ok()
 			})
+		}),
+		errors.ToExecute("Check whether control plane exists and is succeeded", func() error {
+			cp := &extensionsv1alpha1.ControlPlane{}
+			if err := o.K8sSeedClient.Client().Get(ctx, kutil.Key(o.Shoot.SeedNamespace, o.Shoot.GetInfo().Name), cp); err != nil {
+				if apierrors.IsNotFound(err) {
+					controlPlaneExistsAndSucceeded = false
+					return nil
+				}
+				return err
+			}
+			controlPlaneExistsAndSucceeded = cp.Status.LastOperation != nil && cp.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded
+			return nil
 		}),
 		errors.ToExecute("Check required extensions", func() error {
 			return botanist.WaitUntilRequiredExtensionsReady(ctx)
@@ -152,6 +167,27 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Fn:           flow.TaskFn(botanist.DeployReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
+
+		// Temporary code to ensure all nodes are migrated to the new cloud-config secret names.
+		// TODO(rfranzke): Remove the below in a future version.
+		deployOperatingSystemConfigForMigration = g.Add(flow.Task{
+			Name: "Deploying operating system specific configuration for shoot workers for cloud-config secret name migration",
+			Fn: flow.TaskFn(botanist.DeployOperatingSystemConfig).
+				RetryUntilTimeout(defaultInterval, defaultTimeout).
+				DoIf(controlPlaneExistsAndSucceeded),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists, deployReferencedResources, initializeSecretsManagement, waitUntilKubeAPIServerServiceIsReady),
+		})
+		waitUntilOperatingSystemConfigReadyForMigration = g.Add(flow.Task{
+			Name:         "Waiting until operating system configurations for worker nodes have been reconciled for cloud-config secret name migration",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.OperatingSystemConfig.Wait).DoIf(controlPlaneExistsAndSucceeded),
+			Dependencies: flow.NewTaskIDs(deployOperatingSystemConfigForMigration),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying managed resources for the cloud config executors for cloud-config secret name migration",
+			Fn:           flow.TaskFn(botanist.DeployManagedResourceForCloudConfigExecutor).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(controlPlaneExistsAndSucceeded),
+			Dependencies: flow.NewTaskIDs(waitUntilOperatingSystemConfigReadyForMigration),
+		})
+
 		deployOwnerDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Deploying owner domain DNS record",
 			Fn:           botanist.DeployOwnerDNSResources,
