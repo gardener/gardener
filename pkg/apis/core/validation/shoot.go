@@ -119,6 +119,11 @@ var (
 		"PS512",
 		"none",
 	)
+
+	availableAccessControlAction = sets.NewString(
+		string(core.AuthorizationAction_ALLOW),
+		string(core.AuthorizationAction_DENY),
+	)
 )
 
 // ValidateShoot validates a Shoot object.
@@ -848,9 +853,13 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 
 		if kubeAPIServer.AccessControl != nil {
 			// Action available, but no Source
-			if kubeAPIServer.AccessControl.Action != nil && kubeAPIServer.AccessControl.Source == nil {
-				allErrs = append(allErrs, field.Required(fldPath.Child("kubeAPIServer", "accessControl", "action"), "is required when access control action enabled"))
+			if kubeAPIServer.AccessControl.Action != nil {
+				if kubeAPIServer.AccessControl.Source == nil {
+					allErrs = append(allErrs, field.Required(fldPath.Child("kubeAPIServer", "accessControl", "source"), "is required when access control action provided"))
+				}
+				allErrs = append(allErrs, validateAccessControlAction(kubeAPIServer.AccessControl.Action, fldPath.Child("kubeAPIServer", "accessControl"))...)
 			}
+
 			// Source available, but no Action
 			if kubeAPIServer.AccessControl.Source != nil {
 				if kubeAPIServer.AccessControl.Source.IPBlocks != nil {
@@ -860,8 +869,13 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 					allErrs = append(allErrs, validateIpAdress(kubeAPIServer.AccessControl.Source.RemoteIPBlocks, fldPath.Child("kubeAPIServer", "accessControl", "source", "remoteIpBlocks"))...)
 				}
 				if kubeAPIServer.AccessControl.Action == nil {
-					allErrs = append(allErrs, field.Required(fldPath.Child("kubeAPIServer", "accessControl", "source"), "is required when source for action enabled"))
+					allErrs = append(allErrs, field.Required(fldPath.Child("kubeAPIServer", "accessControl", "action"), "is required when source for action provided"))
 				}
+			}
+			// Neither is available
+			if kubeAPIServer.AccessControl.Action == nil && kubeAPIServer.AccessControl.Source == nil {
+				allErrs = append(allErrs, field.Required(fldPath.Child("kubeAPIServer", "accessControl", "action"), "is required when aproviding access control"))
+				allErrs = append(allErrs, field.Required(fldPath.Child("kubeAPIServer", "accessControl", "source"), "is required when providing access control"))
 			}
 		}
 
@@ -894,6 +908,16 @@ func validateIpAdress(ips []string, fldPath *field.Path) field.ErrorList {
 				allErrs = append(allErrs, field.Invalid(fldPath, ip, "is neither a valid IP adress nor valid CIDR"))
 			}
 		}
+	}
+
+	return allErrs
+}
+
+func validateAccessControlAction(action *core.AuthorizationAction, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if !availableAccessControlAction.Has(string(*action)) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("action"), action, availableAccessControlAction.List()))
 	}
 
 	return allErrs
