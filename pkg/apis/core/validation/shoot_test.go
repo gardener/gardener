@@ -1848,6 +1848,19 @@ var _ = Describe("Shoot Validation Tests", func() {
 			}))))
 		})
 
+		It("should not invalid due to valid Ip Adress", func() {
+
+			shoot.Spec.Kubernetes.KubeAPIServer.AccessControl = &core.AccessControl{
+				Source: &core.Source{
+					IPBlocks: []string{"127.0.0.1"},
+				},
+			}
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
 		Context("KubeControllerManager validation", func() {
 			It("should forbid unsupported HPA configuration", func() {
 				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleStabilization = makeDurationPointer(-1 * time.Second)
