@@ -22,7 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardenerv1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -104,21 +103,23 @@ var _ = Describe("ManagedResource controller tests", func() {
 					return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
 				}).Should(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
 			})
 
 			It("should fail to create the resource due to missing secret reference", func() {
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionFalse && condition.Reason == "CannotReadSecret"
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionFalse), withReason("CannotReadSecret")),
+				)
 			})
 
 			It("should fail to create the resource due to incorrect object", func() {
@@ -128,11 +129,12 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionFalse
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionFalse), withReason(resourcesv1alpha1.ConditionApplyFailed)),
+				)
 			})
 
 			It("should correctly set the condition ResourceApplied to Progressing", func() {
@@ -144,11 +146,12 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
 
 				newConfigMap := &corev1.ConfigMap{
 					TypeMeta: metav1.TypeMeta{
@@ -165,11 +168,12 @@ var _ = Describe("ManagedResource controller tests", func() {
 				secretForManagedResource.Data = secretDataForObject(newConfigMap, dataKey)
 				Expect(testClient.Update(ctx, secretForManagedResource)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionProgressing
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionProgressing), withReason(resourcesv1alpha1.ConditionDeletionPending)),
+				)
 
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Or(Succeed(), BeNoMatchError()))
 				configMap.Finalizers = []string{}
@@ -200,11 +204,12 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
 			})
 
 			It("should successfully create a new resource when the secret referenced by the managed resource is updated with data containing the new resource", func() {
@@ -217,31 +222,21 @@ var _ = Describe("ManagedResource controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(newResource), newResource)).To(Succeed())
 				}).Should(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
 			})
 
 			It("should successfully update the managed resource with a new secret reference", func() {
-				newConfigMap := &corev1.ConfigMap{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: corev1.SchemeGroupVersion.String(),
-						Kind:       "ConfigMap",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "new-configmap",
-						Namespace: testNamespace.Name,
-					},
-				}
-
 				newSecretForManagedResource := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "new-secret",
 						Namespace: testNamespace.Name,
 					},
-					Data: secretDataForObject(newConfigMap, dataKey),
+					Data: secretDataForObject(newResource, dataKey),
 				}
 
 				Expect(testClient.Create(ctx, newSecretForManagedResource)).To(Succeed())
@@ -250,14 +245,15 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(newConfigMap), newConfigMap)).To(Succeed())
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(newResource), newResource)).To(Succeed())
 				}).Should(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
 			})
 
 			It("should fail to update the managed resource if a new incorrect resource is added to the secret referenced by the managed resource", func() {
@@ -267,11 +263,12 @@ var _ = Describe("ManagedResource controller tests", func() {
 				secretForManagedResource.Data[newDataKey] = secretDataForObject(newResource, newDataKey)[newDataKey]
 				Expect(testClient.Update(ctx, secretForManagedResource)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionFalse
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionFalse), withReason(resourcesv1alpha1.ConditionApplyFailed)),
+				)
 			})
 		})
 
@@ -356,11 +353,12 @@ var _ = Describe("ManagedResource controller tests", func() {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
 			}).Should(BeNotFoundError())
 
-			Consistently(func(g Gomega) bool {
+			Consistently(func(g Gomega) []gardencorev1beta1.Condition {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-				return condition == nil
-			}).Should(BeTrue())
+				return managedResource.Status.Conditions
+			}).ShouldNot(
+				containCondition(ofType(resourcesv1alpha1.ResourcesApplied)),
+			)
 		})
 	})
 
@@ -413,11 +411,12 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
 
 				Consistently(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(BeNotFoundError())
@@ -433,11 +432,12 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
 			})
 
 			It("should not delete the resource on valid update", func() {
@@ -451,11 +451,12 @@ var _ = Describe("ManagedResource controller tests", func() {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
 				}).Should(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
 			})
 
 			It("should delete the resource on invalid update", func() {
@@ -466,11 +467,12 @@ var _ = Describe("ManagedResource controller tests", func() {
 				secretForManagedResource.Data = secretDataForObject(newConfigMap, dataKey)
 				Expect(testClient.Update(ctx, secretForManagedResource)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionFalse
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionFalse), withReason(resourcesv1alpha1.ConditionApplyFailed)),
+				)
 
 				Consistently(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(BeNotFoundError())
@@ -487,22 +489,24 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
 			})
 
 			It("should keep the object in case it is removed from the MangedResource", func() {
 				managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{}
 				Expect(testClient.Update(ctx, managedResource)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
 
 				Consistently(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
@@ -529,38 +533,41 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
 
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
 
 				configMap.Data = map[string]string{"foo": "bar"}
 				Expect(testClient.Update(ctx, configMap)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
 
-				Consistently(func(g Gomega) bool {
+				Consistently(func(g Gomega) map[string]string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
-					return configMap.Data != nil && configMap.Data["foo"] == "bar"
-				}).Should(BeTrue())
+					return configMap.Data
+				}).Should(HaveKeyWithValue("foo", "bar"))
 			})
 
 			It("should not revert any manual update on the resources when the ManagedResource has ignore annotation", func() {
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
 
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				managedResource.SetAnnotations(map[string]string{resourcesv1alpha1.Ignore: "true"})
@@ -579,10 +586,10 @@ var _ = Describe("ManagedResource controller tests", func() {
 				configMap.Data = map[string]string{"foo": "bar"}
 				Expect(testClient.Update(ctx, configMap)).To(Succeed())
 
-				Consistently(func(g Gomega) bool {
+				Consistently(func(g Gomega) map[string]string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
-					return configMap.Data != nil && configMap.Data["foo"] == "bar"
-				}).Should(BeTrue())
+					return configMap.Data
+				}).Should(HaveKeyWithValue("foo", "bar"))
 			})
 		})
 	})
@@ -649,10 +656,10 @@ var _ = Describe("ManagedResource controller tests", func() {
 			Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
 
 			// wait for finalizer to be added
-			Eventually(func(g Gomega) bool {
+			Eventually(func(g Gomega) []string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-				return deployment.Finalizers != nil && len(deployment.Finalizers) == 1
-			}).Should(BeTrue())
+				return deployment.Finalizers
+			}).Should(ConsistOf("foregroundDeletion"))
 
 			// remove finalizer so the deployment can be deleted
 			Expect(controllerutils.PatchRemoveFinalizers(ctx, testClient, deployment, "foregroundDeletion")).To(BeNil())
@@ -672,21 +679,22 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
 
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 				updatedDeployment := deployment.DeepCopy()
 				updatedDeployment.Spec.Replicas = pointer.Int32Ptr(5)
 				Expect(testClient.Update(ctx, updatedDeployment)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) int32 {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-					return *deployment.Spec.Replicas == int32(1)
-				}).Should(BeTrue())
+					return *deployment.Spec.Replicas
+				}).Should(BeEquivalentTo(1))
 			})
 
 			It("should preserve changes in the number of replicas if the resource has preserve-replicas annotation", func() {
@@ -696,21 +704,22 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
 
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 				updatedDeployment := deployment.DeepCopy()
 				updatedDeployment.Spec.Replicas = pointer.Int32Ptr(5)
 				Expect(testClient.Update(ctx, updatedDeployment)).To(Succeed())
 
-				Consistently(func(g Gomega) bool {
+				Consistently(func(g Gomega) int32 {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-					return *deployment.Spec.Replicas == int32(5)
-				}).Should(BeTrue())
+					return *deployment.Spec.Replicas
+				}).Should(BeEquivalentTo(5))
 			})
 		})
 
@@ -751,11 +760,12 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
 
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 				updatedDeployment := deployment.DeepCopy()
@@ -775,11 +785,12 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
-				Eventually(func(g Gomega) bool {
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					condition := gardenerv1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied)
-					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
-				}).Should(BeTrue())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+				)
 
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 				updatedDeployment := deployment.DeepCopy()
