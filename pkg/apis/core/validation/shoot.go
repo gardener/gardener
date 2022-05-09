@@ -853,6 +853,12 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 			}
 			// Source available, but no Action
 			if kubeAPIServer.AccessControl.Source != nil {
+				if kubeAPIServer.AccessControl.Source.IPBlocks != nil {
+					allErrs = append(allErrs, validateIpAdress(kubeAPIServer.AccessControl.Source.IPBlocks, fldPath.Child("kubeAPIServer", "accessControl", "source", "ipBlocks"))...)
+				}
+				if kubeAPIServer.AccessControl.Source.RemoteIPBlocks != nil {
+					allErrs = append(allErrs, validateIpAdress(kubeAPIServer.AccessControl.Source.RemoteIPBlocks, fldPath.Child("kubeAPIServer", "accessControl", "source", "remoteIpBlocks"))...)
+				}
 				if kubeAPIServer.AccessControl.Action == nil {
 					allErrs = append(allErrs, field.Required(fldPath.Child("kubeAPIServer", "accessControl", "source"), "is required when source for action enabled"))
 				}
@@ -874,6 +880,20 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 	}
 	if verticalPodAutoscaler := kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
 		allErrs = append(allErrs, ValidateVerticalPodAutoscaler(*verticalPodAutoscaler, fldPath.Child("verticalPodAutoscaler"))...)
+	}
+
+	return allErrs
+}
+
+func validateIpAdress(ips []string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for _, ip := range ips {
+		if parsedIp := net.ParseIP(ip); parsedIp == nil {
+			if _, _, err := net.ParseCIDR(ip); err != nil {
+				allErrs = append(allErrs, field.Invalid(fldPath, ip, "is neither a valid IP adress nor valid CIDR"))
+			}
+		}
 	}
 
 	return allErrs
