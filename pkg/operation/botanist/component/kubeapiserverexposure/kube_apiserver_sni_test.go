@@ -240,7 +240,8 @@ var _ = Describe("#SNI", func() {
 			AccessControl: v1beta1.AccessControl{
 				Action: &authorization,
 				Source: &v1beta1.Source{
-					IPBlocks: ipBlocks,
+					IPBlocks:       ipBlocks,
+					RemoteIPBlocks: remoteIpBlocks,
 				},
 			},
 		})
