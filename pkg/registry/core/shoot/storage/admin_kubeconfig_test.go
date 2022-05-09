@@ -362,7 +362,7 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 
 		Entry("one client CA, one cluster CA", clientCACert1Name, clusterCACert1, nil),
 
-		Entry("one client CA, multiple cluster CA", clientCACert1Name, append(clusterCACert1, clusterCACert2...), func() {
+		Entry("one client CA, multiple cluster CA", clientCACert1Name, append(clusterCACert2, clusterCACert1...), func() {
 			shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardenercore.GardenerResourceData{
 				Name: "ca-cluster-2",
 				Type: "secret",
@@ -394,7 +394,7 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 			})
 		}),
 
-		Entry("multiple client CA (in case of rotation), multiple cluster CA", clientCACert2Name, append(clusterCACert1, clusterCACert2...), func() {
+		Entry("multiple client CA (in case of rotation), multiple cluster CA", clientCACert2Name, append(clusterCACert2, clusterCACert1...), func() {
 			shootState.Spec.Gardener = append(shootState.Spec.Gardener,
 				gardenercore.GardenerResourceData{
 					Name: "ca-client-bar",
