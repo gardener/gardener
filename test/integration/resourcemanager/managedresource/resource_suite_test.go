@@ -20,11 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
-	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
-	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -37,6 +33,12 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
+	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 func TestManagedResourceController(t *testing.T) {
@@ -44,26 +46,27 @@ func TestManagedResourceController(t *testing.T) {
 	RunSpecs(t, "ManagedResource Controller Integration Test Suite")
 }
 
-const namespaceName = "test-namespace"
+// testID is used for generating test namespace names and other IDs
+const testID = "resource-controller-test"
 
 var (
 	ctx       = context.Background()
 	mgrCancel context.CancelFunc
+	log       logr.Logger
 
-	logger     logr.Logger
 	testEnv    *envtest.Environment
 	testClient client.Client
 
-	filter *managerpredicate.ClassFilter
+	testNamespace *corev1.Namespace
 
-	namespace *corev1.Namespace
+	filter *managerpredicate.ClassFilter
 )
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true), func(options *zap.Options) {
 		options.TimeEncoder = zapcore.ISO8601TimeEncoder
 	}))
-	logger = logf.Log.WithName("test")
+	log = logf.Log.WithName("test")
 
 	By("starting test environment")
 	testEnv = &envtest.Environment{
@@ -77,26 +80,54 @@ var _ = BeforeSuite(func() {
 	}
 
 	restConfig, err := testEnv.Start()
-	Expect(err).ToNot(HaveOccurred())
-	Expect(restConfig).ToNot(BeNil())
+	Expect(err).NotTo(HaveOccurred())
+	Expect(restConfig).NotTo(BeNil())
 
-	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.SeedScheme})
-	Expect(err).ToNot(HaveOccurred())
+	DeferCleanup(func() {
+		By("stopping test environment")
+		Expect(testEnv.Stop()).To(Succeed())
+	})
+
+	By("creating test client")
+	testScheme := runtime.NewScheme()
+	Expect(resourcemanagercmd.AddToSourceScheme(testScheme)).To(Succeed())
+	Expect(resourcemanagercmd.AddToTargetScheme(testScheme)).To(Succeed())
+
+	testClient, err = client.New(restConfig, client.Options{Scheme: testScheme})
+	Expect(err).NotTo(HaveOccurred())
 
 	By("creating test namespace")
-	namespace = &corev1.Namespace{
+	testNamespace = &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: namespaceName,
+			// create dedicated namespace for each test run, so that we can run multiple tests concurrently for stress tests
+			GenerateName: testID + "-",
 		},
 	}
-	Expect(testClient.Create(ctx, namespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
+
+	DeferCleanup(func() {
+		By("deleting test namespace")
+		Expect(testClient.Delete(ctx, testNamespace)).To(Or(Succeed(), BeNotFoundError()))
+	})
 
 	By("setting up manager")
+	mgrScheme := runtime.NewScheme()
+	Expect(resourcemanagercmd.AddToSourceScheme(mgrScheme)).To(Succeed())
+
 	mgr, err := manager.New(restConfig, manager.Options{
+		Scheme:             mgrScheme,
 		MetricsBindAddress: "0",
-		Scheme:             kubernetes.SeedScheme,
+		Namespace:          testNamespace.Name,
 	})
 	Expect(err).NotTo(HaveOccurred())
+
+	targetClusterOpts := &resourcemanagercmd.TargetClusterOptions{
+		Namespace:  testNamespace.Name,
+		RESTConfig: restConfig,
+	}
+	Expect(targetClusterOpts.Complete()).To(Succeed())
+	Expect(mgr.Add(targetClusterOpts.Completed().Cluster)).To(Succeed())
 
 	By("registering controller")
 	filter = predicate.NewClassFilter(managerpredicate.DefaultClass)
@@ -104,30 +135,21 @@ var _ = BeforeSuite(func() {
 		MaxConcurrentWorkers: 5,
 		SyncPeriod:           500 * time.Millisecond, // gotta go fast during tests
 
-		TargetCluster: mgr,
 		ClassFilter:   filter,
+		TargetCluster: targetClusterOpts.Completed().Cluster,
 	})).To(Succeed())
 
 	By("starting manager")
 	var mgrContext context.Context
 	mgrContext, mgrCancel = context.WithCancel(ctx)
+
 	go func() {
 		defer GinkgoRecover()
 		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
-})
 
-var _ = AfterSuite(func() {
-	By("deleting namespace")
-	if testClient != nil {
-		Expect(testClient.Delete(ctx, namespace)).To(Succeed())
-	}
-
-	By("stopping manager")
-	if mgrCancel != nil {
+	DeferCleanup(func() {
+		By("stopping manager")
 		mgrCancel()
-	}
-
-	By("stopping test environment")
-	Expect(testEnv.Stop()).To(Succeed())
+	})
 })

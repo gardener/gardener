@@ -16,7 +16,6 @@ package managedresource_test
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
@@ -40,19 +39,17 @@ import (
 )
 
 const (
-	secretName      = "test-secret"
-	configMapName   = "test-configmap"
-	newResourceName = "update-test-secret"
-	deploymentName  = "test-deploy"
+	secretName    = "test-secret"
+	configMapName = "test-configmap"
+	dataKey       = "configmap.yaml"
 )
 
 var _ = Describe("ManagedResource controller tests", func() {
 	var (
 		secretForManagedResource *corev1.Secret
 		managedResource          *resourcesv1alpha1.ManagedResource
-		configMap                *corev1.ConfigMap
-		defaultPodTemplateSpec   *corev1.PodTemplateSpec
-		deployment               *appsv1.Deployment
+
+		configMap *corev1.ConfigMap
 	)
 
 	Context("create, update and delete operations", func() {
@@ -61,27 +58,25 @@ var _ = Describe("ManagedResource controller tests", func() {
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: corev1.SchemeGroupVersion.String(),
 					Kind:       "ConfigMap",
-				}, ObjectMeta: metav1.ObjectMeta{
+				},
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      configMapName,
-					Namespace: namespaceName,
-				}}
-
-			data, err := createSecretDataFromObject(configMap, "config-map.yaml")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(data).ToNot(BeNil())
+					Namespace: testNamespace.Name,
+				},
+			}
 
 			secretForManagedResource = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      secretName,
-					Namespace: namespaceName,
+					Namespace: testNamespace.Name,
 				},
-				Data: data,
+				Data: secretDataForObject(configMap, dataKey),
 			}
 
 			managedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-managedresource",
-					Namespace: namespaceName,
+					Namespace: testNamespace.Name,
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					Class:      pointer.String(filter.ResourceClass()),
@@ -127,11 +122,8 @@ var _ = Describe("ManagedResource controller tests", func() {
 			})
 
 			It("should fail to create the resource due to incorrect object", func() {
-				configMap := &corev1.ConfigMap{}
-				data, err := createSecretDataFromObject(configMap, "config-map.yaml")
-				Expect(err).ToNot(HaveOccurred())
-				Expect(data).ToNot(BeNil())
-				secretForManagedResource.Data = data
+				newConfigMap := &corev1.ConfigMap{}
+				secretForManagedResource.Data = secretDataForObject(newConfigMap, dataKey)
 
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
@@ -147,11 +139,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				// this finalizer is added to prolong the deletion of the resource so that we can
 				// observe the controller successfully setting ResourceApplied condition to Progressing
 				configMap.Finalizers = append(configMap.Finalizers, "kubernetes")
-				data, err := createSecretDataFromObject(configMap, "config-map.yaml")
-				Expect(err).ToNot(HaveOccurred())
-				Expect(data).ToNot(BeNil())
-
-				secretForManagedResource.Data = data
+				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
 
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
@@ -162,22 +150,19 @@ var _ = Describe("ManagedResource controller tests", func() {
 					return condition != nil && condition.Status == gardencorev1beta1.ConditionTrue
 				}).Should(BeTrue())
 
-				newConfigMapName := "new-configmap"
 				newConfigMap := &corev1.ConfigMap{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: corev1.SchemeGroupVersion.String(),
 						Kind:       "ConfigMap",
-					}, ObjectMeta: metav1.ObjectMeta{
-						Name:      newConfigMapName,
-						Namespace: namespaceName,
-					}}
-
-				newData, err := createSecretDataFromObject(newConfigMap, fmt.Sprintf("%s.yaml", newConfigMapName))
-				Expect(err).ToNot(HaveOccurred())
-				Expect(newData).ToNot(BeNil())
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "new-configmap",
+						Namespace: testNamespace.Name,
+					},
+				}
 
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretForManagedResource), secretForManagedResource)).To(Or(Succeed(), BeNoMatchError()))
-				secretForManagedResource.Data = newData
+				secretForManagedResource.Data = secretDataForObject(newConfigMap, dataKey)
 				Expect(testClient.Update(ctx, secretForManagedResource)).To(Succeed())
 
 				Eventually(func(g Gomega) bool {
@@ -193,11 +178,8 @@ var _ = Describe("ManagedResource controller tests", func() {
 		})
 
 		Context("update managed resource", func() {
-			var (
-				newResource        *corev1.Secret
-				newResourceData    []byte
-				newResourceDataKey string
-			)
+			const newDataKey = "secret.yaml"
+			var newResource *corev1.Secret
 
 			BeforeEach(func() {
 				newResource = &corev1.Secret{
@@ -206,22 +188,15 @@ var _ = Describe("ManagedResource controller tests", func() {
 						Kind:       "Secret",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      newResourceName,
-						Namespace: namespaceName,
+						Name:      "update-test-secret",
+						Namespace: testNamespace.Name,
 					},
 					Data: map[string][]byte{
 						"entry": []byte("value"),
 					},
 					Type: corev1.SecretTypeOpaque,
 				}
-				var err error
-				newResourceData, err = json.Marshal(newResource)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(newResourceData).NotTo(BeNil())
-				newResourceDataKey = fmt.Sprintf("%s.yaml", newResourceName)
-			})
 
-			JustBeforeEach(func() {
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
@@ -234,9 +209,8 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 			It("should successfully create a new resource when the secret referenced by the managed resource is updated with data containing the new resource", func() {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretForManagedResource), secretForManagedResource)).To(Or(Succeed(), BeNoMatchError()))
-				updatedSecretForManagedResource := secretForManagedResource.DeepCopy()
-				updatedSecretForManagedResource.Data[newResourceDataKey] = newResourceData
-				Expect(testClient.Update(ctx, updatedSecretForManagedResource)).To(Succeed())
+				secretForManagedResource.Data[newDataKey] = secretDataForObject(newResource, newDataKey)[newDataKey]
+				Expect(testClient.Update(ctx, secretForManagedResource)).To(Succeed())
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
@@ -251,26 +225,23 @@ var _ = Describe("ManagedResource controller tests", func() {
 			})
 
 			It("should successfully update the managed resource with a new secret reference", func() {
-				newConfigMapName := "new-configmap"
 				newConfigMap := &corev1.ConfigMap{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: corev1.SchemeGroupVersion.String(),
 						Kind:       "ConfigMap",
-					}, ObjectMeta: metav1.ObjectMeta{
-						Name:      newConfigMapName,
-						Namespace: namespaceName,
-					}}
-
-				data, err := createSecretDataFromObject(newConfigMap, fmt.Sprintf("%s.yaml", newConfigMapName))
-				Expect(err).ToNot(HaveOccurred())
-				Expect(data).ToNot(BeNil())
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "new-configmap",
+						Namespace: testNamespace.Name,
+					},
+				}
 
 				newSecretForManagedResource := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "new-secret",
-						Namespace: namespaceName,
+						Namespace: testNamespace.Name,
 					},
-					Data: data,
+					Data: secretDataForObject(newConfigMap, dataKey),
 				}
 
 				Expect(testClient.Create(ctx, newSecretForManagedResource)).To(Succeed())
@@ -291,11 +262,9 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 			It("should fail to update the managed resource if a new incorrect resource is added to the secret referenced by the managed resource", func() {
 				newResource.TypeMeta = metav1.TypeMeta{}
-				newResourceData, err := json.Marshal(newResource)
-				Expect(err).NotTo(HaveOccurred())
 
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretForManagedResource), secretForManagedResource)).To(Or(Succeed(), BeNoMatchError()))
-				secretForManagedResource.Data[newResourceDataKey] = newResourceData
+				secretForManagedResource.Data[newDataKey] = secretDataForObject(newResource, newDataKey)[newDataKey]
 				Expect(testClient.Update(ctx, secretForManagedResource)).To(Succeed())
 
 				Eventually(func(g Gomega) bool {
@@ -342,27 +311,25 @@ var _ = Describe("ManagedResource controller tests", func() {
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: corev1.SchemeGroupVersion.String(),
 					Kind:       "ConfigMap",
-				}, ObjectMeta: metav1.ObjectMeta{
+				},
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      configMapName,
-					Namespace: namespaceName,
-				}}
-
-			data, err := createSecretDataFromObject(configMap, "config-map.yaml")
-			Expect(err).ToNot(HaveOccurred())
-			Expect(data).ToNot(BeNil())
+					Namespace: testNamespace.Name,
+				},
+			}
 
 			secretForManagedResource = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      secretName,
-					Namespace: namespaceName,
+					Namespace: testNamespace.Name,
 				},
-				Data: data,
+				Data: secretDataForObject(configMap, dataKey),
 			}
 
 			managedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-managedresource",
-					Namespace: namespaceName,
+					Namespace: testNamespace.Name,
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					Class:      pointer.String("test"),
@@ -403,22 +370,24 @@ var _ = Describe("ManagedResource controller tests", func() {
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: corev1.SchemeGroupVersion.String(),
 					Kind:       "ConfigMap",
-				}, ObjectMeta: metav1.ObjectMeta{
+				},
+				ObjectMeta: metav1.ObjectMeta{
 					Name:      configMapName,
-					Namespace: namespaceName,
-				}}
+					Namespace: testNamespace.Name,
+				},
+			}
 
 			secretForManagedResource = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      secretName,
-					Namespace: namespaceName,
+					Namespace: testNamespace.Name,
 				},
 			}
 
 			managedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-managedresource",
-					Namespace: namespaceName,
+					Namespace: testNamespace.Name,
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					Class:      pointer.String(filter.ResourceClass()),
@@ -439,12 +408,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 		Context("Ignore Mode", func() {
 			It("should not update/re-apply resources having ignore mode annotation and remove them from the ManagedResource status", func() {
 				configMap.SetAnnotations(map[string]string{resourcesv1alpha1.Mode: resourcesv1alpha1.ModeIgnore})
-
-				data, err := createSecretDataFromObject(configMap, "config-map.yaml")
-				Expect(err).ToNot(HaveOccurred())
-				Expect(data).ToNot(BeNil())
-
-				secretForManagedResource.Data = data
+				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
 
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
@@ -464,15 +428,8 @@ var _ = Describe("ManagedResource controller tests", func() {
 		Context("Delete On Invalid Update", func() {
 			BeforeEach(func() {
 				configMap.SetAnnotations(map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"})
+				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
 
-				data, err := createSecretDataFromObject(configMap, "config-map.yaml")
-				Expect(err).ToNot(HaveOccurred())
-				Expect(data).ToNot(BeNil())
-
-				secretForManagedResource.Data = data
-			})
-
-			JustBeforeEach(func() {
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
@@ -485,11 +442,9 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 			It("should not delete the resource on valid update", func() {
 				configMap.Data = map[string]string{"foo": "bar"}
-				newResourceData, err := json.Marshal(configMap)
-				Expect(err).NotTo(HaveOccurred())
 
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretForManagedResource), secretForManagedResource)).To(Or(Succeed(), BeNoMatchError()))
-				secretForManagedResource.Data["config-map.yaml"] = newResourceData
+				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
 				Expect(testClient.Update(ctx, secretForManagedResource)).To(Succeed())
 
 				Eventually(func(g Gomega) {
@@ -504,13 +459,11 @@ var _ = Describe("ManagedResource controller tests", func() {
 			})
 
 			It("should delete the resource on invalid update", func() {
-				newConfigMap := configMap
+				newConfigMap := configMap.DeepCopy()
 				newConfigMap.TypeMeta = metav1.TypeMeta{}
-				newResourceData, err := json.Marshal(newConfigMap)
-				Expect(err).NotTo(HaveOccurred())
 
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretForManagedResource), secretForManagedResource)).To(Or(Succeed(), BeNoMatchError()))
-				secretForManagedResource.Data["config-map.yaml"] = newResourceData
+				secretForManagedResource.Data = secretDataForObject(newConfigMap, dataKey)
 				Expect(testClient.Update(ctx, secretForManagedResource)).To(Succeed())
 
 				Eventually(func(g Gomega) bool {
@@ -529,14 +482,8 @@ var _ = Describe("ManagedResource controller tests", func() {
 			BeforeEach(func() {
 				configMap.SetAnnotations(map[string]string{resourcesv1alpha1.KeepObject: "true"})
 
-				data, err := createSecretDataFromObject(configMap, "config-map.yaml")
-				Expect(err).ToNot(HaveOccurred())
-				Expect(data).ToNot(BeNil())
+				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
 
-				secretForManagedResource.Data = data
-			})
-
-			JustBeforeEach(func() {
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
 
@@ -577,11 +524,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 			It("should not revert any manual update on resource managed by ManagedResource when resource itself has ignore annotation", func() {
 				configMap.SetAnnotations(map[string]string{resourcesv1alpha1.Ignore: "true"})
 
-				data, err := createSecretDataFromObject(configMap, "config-map.yaml")
-				Expect(err).ToNot(HaveOccurred())
-				Expect(data).ToNot(BeNil())
-
-				secretForManagedResource.Data = data
+				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
 
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
@@ -645,6 +588,11 @@ var _ = Describe("ManagedResource controller tests", func() {
 	})
 
 	Context("Preserve Replica/Resource", func() {
+		var (
+			defaultPodTemplateSpec *corev1.PodTemplateSpec
+			deployment             *appsv1.Deployment
+		)
+
 		BeforeEach(func() {
 			defaultPodTemplateSpec = &corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -666,8 +614,8 @@ var _ = Describe("ManagedResource controller tests", func() {
 					Kind:       "Deployment",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      deploymentName,
-					Namespace: namespaceName,
+					Name:      "test-deploy",
+					Namespace: testNamespace.Name,
 				},
 				Spec: appsv1.DeploymentSpec{
 					Selector: &metav1.LabelSelector{
@@ -681,14 +629,14 @@ var _ = Describe("ManagedResource controller tests", func() {
 			secretForManagedResource = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      secretName,
-					Namespace: namespaceName,
+					Namespace: testNamespace.Name,
 				},
 			}
 
 			managedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-managedresource",
-					Namespace: namespaceName,
+					Namespace: testNamespace.Name,
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					Class:      pointer.String(filter.ResourceClass()),
@@ -719,10 +667,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 		Context("Preserve Replicas", func() {
 			It("should not preserve changes in the number of replicas if the resource don't have preserve-replicas annotation", func() {
-				data, err := createSecretDataFromObject(deployment, "deployment.yaml")
-				Expect(err).ToNot(HaveOccurred())
-				Expect(data).ToNot(BeNil())
-				secretForManagedResource.Data = data
+				secretForManagedResource.Data = secretDataForObject(deployment, "deployment.yaml")
 
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
@@ -746,10 +691,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 			It("should preserve changes in the number of replicas if the resource has preserve-replicas annotation", func() {
 				deployment.SetAnnotations(map[string]string{resourcesv1alpha1.PreserveReplicas: "true"})
-				data, err := createSecretDataFromObject(deployment, "deployment.yaml")
-				Expect(err).ToNot(HaveOccurred())
-				Expect(data).ToNot(BeNil())
-				secretForManagedResource.Data = data
+				secretForManagedResource.Data = secretDataForObject(deployment, "deployment.yaml")
 
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
@@ -804,10 +746,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 			})
 
 			It("should not preserve changes in resource requests and limits in Pod if the resource doesn't have preserve-resources annotation", func() {
-				data, err := createSecretDataFromObject(deployment, "deployment.yaml")
-				Expect(err).ToNot(HaveOccurred())
-				Expect(data).ToNot(BeNil())
-				secretForManagedResource.Data = data
+				secretForManagedResource.Data = secretDataForObject(deployment, "deployment.yaml")
 
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
@@ -831,10 +770,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 
 			It("should preserve changes in resource requests and limits in Pod if the resource has preserve-resources annotation", func() {
 				deployment.SetAnnotations(map[string]string{resourcesv1alpha1.PreserveResources: "true"})
-				data, err := createSecretDataFromObject(deployment, "deployment.yaml")
-				Expect(err).ToNot(HaveOccurred())
-				Expect(data).ToNot(BeNil())
-				secretForManagedResource.Data = data
+				secretForManagedResource.Data = secretDataForObject(deployment, "deployment.yaml")
 
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
 				Expect(testClient.Create(ctx, managedResource)).To(Succeed())
@@ -859,12 +795,10 @@ var _ = Describe("ManagedResource controller tests", func() {
 	})
 })
 
-func createSecretDataFromObject(obj runtime.Object, key string) (map[string][]byte, error) {
+func secretDataForObject(obj runtime.Object, key string) map[string][]byte {
 	jsonObject, err := json.Marshal(obj)
-	if err != nil {
-		return nil, err
-	}
-	return map[string][]byte{key: jsonObject}, nil
+	Expect(err).NotTo(HaveOccurred())
+	return map[string][]byte{key: jsonObject}
 }
 
 func compareResource(oldResource corev1.ResourceRequirements, newResource corev1.ResourceRequirements) bool {
