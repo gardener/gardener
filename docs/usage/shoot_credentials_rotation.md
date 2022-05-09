@@ -46,6 +46,65 @@ kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/oper
 
 > You can check the `.status.credentials.rotation.kubeconfig` field in the `Shoot` to see when the rotation was last initiated and last completed.
 
+## Certificate Authorities
+
+Gardener generates several certificate authorities (CAs) to ensure secured communication between the various components and actors.
+Most of those CAs are used for internal communication (e.g., `kube-apiserver` talks to etcd, `vpn-shoot` talks to the `vpn-seed-server`, `kubelet` talks to `kube-apiserver` etc.).
+However, there is also the "cluster CA" which is part of all `kubeconfig`s and used to sign the server certificate exposed by the `kube-apiserver`.
+
+Gardener populates a `Secret` with name `<shoot-name>.ca-cluster` in the project namespace in the garden cluster which contains the following data keys:
+
+- `ca.crt`: the CA bundle of the cluster
+
+This bundle contains one or multiple CAs which are used for signing serving certificates of the `Shoot`'s API server.
+Hence, the certificates contained in this `Secret` can be used to verify the API server's identity when communicating with its public endpoint (e.g. as `certificate-authority-data` in a `kubeconfig`).
+This is the same certificate that is also contained in the `kubeconfig`'s `certificate-authority-data` field.
+
+> `Shoot`s created with Gardener >= v1.45 have a dedicated client CA which verifies the legitimacy of client certificates. For older `Shoot`s, the client CA is equal to the cluster CA. With the first CA rotation, such clusters will get a dedicated client CA as well.
+
+All of the certificates are valid for 10 years.
+Since it requires adaptation for the consumers of the `Shoot`, there is no automatic rotation and **it is the responsibility of the end-user to regularly rotate the CA certificates.**
+
+> Note that the CA rotation can only be triggered if the `ShootCARotation` feature gate is enabled.
+
+The rotation happens in three stages (see also [GEP-18](../proposals/18-shoot-CA-rotation.md) for the full details):
+
+- In stage one, new CAs are created and added to the bundle (together with the old CAs). Client certificates are re-issued immediately.
+- In stage two, end-users update all cluster API clients that communicate with the control plane.
+- In stage three, the old CAs are dropped from the bundle and server certificate are re-issued.
+
+Technically, the `Preparing` phase indicates stage one.
+Once it is completed, the `Prepared` phase indicates readiness for stage two.
+The `Completing` phase indicates stage three, and the `Completed` phase states that the rotation process has finished.
+
+> You can check the `.status.credentials.rotation.certificateAuthorities` field in the `Shoot` to see when the rotation was last initiated, last completed, and in which phase it currently is.
+
+In order to start the rotation (stage one), you have to annotate the shoot with the `rotate-ca-start` operation:
+
+```bash
+kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=rotate-ca-start
+```
+
+This will trigger a `Shoot` reconciliation and performs stage one.
+After it is completed, the `.status.credentials.rotation.certificateAuthorities.phase` is set to `Prepared`.
+
+Now you must update all API clients outside the cluster (such as the `kubeconfig`s on developer machines) to use the newly issued CA bundle in the `<shoot-name>.ca-cluster` `Secret`.
+
+After updating all API clients, you can complete the rotation by annotating the shoot with the `rotate-ca-complete` operation:
+
+```bash
+kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=rotate-ca-complete
+```
+
+This will trigger another `Shoot` reconciliation and performs stage three.
+After it is completed, the `.status.credentials.rotation.certificateAuthorities.phase` is set to `Completed`.
+You could update your API clients again and drop the old CA from their bundle.
+
+> Note that the CA rotation also rotates all internal CAs and signed certificates.
+Hence, most of the components need to be restarted (including etcd and `kube-apiserver`).
+>
+> ⚠️ In stage one, all worker nodes of the `Shoot` will be rolled out to ensure that the `Pod`s as well as the `kubelet`s get the updated credentials as well.
+
 ## Observability Password(s) For Grafana
 
 For `Shoot`s with `.spec.purpose!=testing`, Gardener deploys an observability stack with Prometheus for monitoring, Alertmanager for alerting (optional), Loki for logging, and Grafana for visualization.
