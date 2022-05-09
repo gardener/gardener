@@ -39,14 +39,7 @@ Please consult [this document](shoot_credentials_rotation.md#kubeconfig) for mor
 
 ## Rotate Observability Credentials
 
-Annotate the shoot with `gardener.cloud/operation=rotate-observability-credentials` to make the `gardenlet` exchange your shoot cluster's observability credentials. Note that this only affects the user credentials since the operator credentials are rotated automatically each `30d`.
-This operation is not allowed for shoot clusters that are already in deletion.
-
-```bash
-kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=rotate-observability-credentials
-```
-
-You can check the `.status.credentials.rotation.observability` field in the `Shoot` to see when the rotation was last initiated or last completed.
+Please consult [this document](shoot_credentials_rotation.md#observability-passwords-for-grafana) for more information.
 
 ## Restart `systemd` Services On Particular Worker Nodes
 

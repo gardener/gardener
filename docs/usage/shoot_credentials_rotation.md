@@ -46,3 +46,37 @@ kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/oper
 
 > You can check the `.status.credentials.rotation.kubeconfig` field in the `Shoot` to see when the rotation was last initiated and last completed.
 
+## Observability Password(s) For Grafana
+
+For `Shoot`s with `.spec.purpose!=testing`, Gardener deploys an observability stack with Prometheus for monitoring, Alertmanager for alerting (optional), Loki for logging, and Grafana for visualization.
+The Grafana instance is exposed via `Ingress` and accessible for end-users via basic authentication credentials generated and managed by Gardener.
+
+Those credentials are stored in a `Secret` with name `<shoot-name>.monitoring` in the project namespace in the garden cluster and has multiple data keys:
+
+- `username`: the user name
+- `password`: the password
+- `basic_auth.csv`: the user name and password in CSV format
+- `auth`: the user name with SHA-1 representation of the password
+
+**It is the responsibility of the end-user to regularly rotate those credentials.**
+In order to rotate the `password`, annotate the `Shoot` with `gardener.cloud/operation=rotate-observability-credentials`.
+This operation is not allowed for `Shoot`s that are already marked for deletion.
+
+```bash
+kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=rotate-observability-credentials
+```
+
+> You can check the `.status.credentials.rotation.observability` field in the `Shoot` to see when the rotation was last initiated and last completed.
+
+### Operators
+
+Gardener operators have separate credentials to access their own Grafana instance or Prometheus, Alertmanager, Loki directly.
+These credentials are only stored in the shoot namespace in the seed cluster and can be retrieved as follows:
+
+```bash
+kubectl -n shoot--<project>--<name> get secret -l name=observability-ingress,managed-by=secrets-manager,manager-identity=gardenlet
+```
+
+These credentials are only valid for `30d` and get automatically rotated with the next `Shoot` reconciliation when 80% of the validity approaches or when there are less than `10d` until expiration.
+There is no way to trigger the rotation manually.
+
