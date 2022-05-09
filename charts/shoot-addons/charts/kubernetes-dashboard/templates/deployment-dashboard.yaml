@@ -27,6 +27,7 @@ spec:
     spec:
       nodeSelector:
         worker.gardener.cloud/system-components: "true"
+        kubernetes.io/os: linux
       securityContext:
         allowPrivilegeEscalation: false
         readOnlyRootFilesystem: true
