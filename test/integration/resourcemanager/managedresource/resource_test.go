@@ -19,6 +19,7 @@ import (
 
 	"github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -425,8 +426,23 @@ var _ = Describe("ManagedResource controller tests", func() {
 		})
 
 		Context("Delete On Invalid Update", func() {
+			var originalUID types.UID
+
 			BeforeEach(func() {
+				configMap = &corev1.ConfigMap{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: corev1.SchemeGroupVersion.String(),
+						Kind:       "ConfigMap",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      configMapName,
+						Namespace: testNamespace.Name,
+					},
+				}
+
 				configMap.SetAnnotations(map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"})
+				// provoke invalid update by trying to update an immutable configmap's data
+				configMap.Immutable = pointer.Bool(true)
 				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
 
 				Expect(testClient.Create(ctx, secretForManagedResource)).To(Succeed())
@@ -438,45 +454,40 @@ var _ = Describe("ManagedResource controller tests", func() {
 				}).Should(
 					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
 				)
+
+				cm := configMap.DeepCopy() // copy in order to not remove TypeMeta from configMap which we rely on later
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(cm), cm)).To(Succeed())
+				// use UID to distinguish between object instances with different names
+				// i.e. if UID changed, the object got deleted and recreated, if not it wasn't deleted
+				originalUID = cm.UID
+				Expect(originalUID).NotTo(BeEmpty()) // sanity check
 			})
 
 			It("should not delete the resource on valid update", func() {
-				configMap.Data = map[string]string{"foo": "bar"}
+				metav1.SetMetaDataLabel(&configMap.ObjectMeta, "foo", "bar")
 
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretForManagedResource), secretForManagedResource)).To(Or(Succeed(), BeNoMatchError()))
 				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
 				Expect(testClient.Update(ctx, secretForManagedResource)).To(Succeed())
 
-				Eventually(func(g Gomega) {
+				Consistently(func(g Gomega) types.UID {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
-				}).Should(Succeed())
-
-				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					return managedResource.Status.Conditions
-				}).Should(
-					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
-				)
+					return configMap.UID
+				}).Should(Equal(originalUID), "ConfigMap should not get deleted")
 			})
 
 			It("should delete the resource on invalid update", func() {
-				newConfigMap := configMap.DeepCopy()
-				newConfigMap.TypeMeta = metav1.TypeMeta{}
+				configMap.Data = map[string]string{"invalid": "update"}
 
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretForManagedResource), secretForManagedResource)).To(Or(Succeed(), BeNoMatchError()))
-				secretForManagedResource.Data = secretDataForObject(newConfigMap, dataKey)
+				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
 				Expect(testClient.Update(ctx, secretForManagedResource)).To(Succeed())
 
-				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-					return managedResource.Status.Conditions
-				}).Should(
-					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionFalse), withReason(resourcesv1alpha1.ConditionApplyFailed)),
-				)
-
-				Consistently(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(BeNotFoundError())
-				}).Should(Succeed())
+				Eventually(func(g Gomega) types.UID {
+					// also accept transient NotFoundError because controller needs to delete the ConfigMap first before recreating it
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Or(Succeed(), BeNotFoundError()))
+					return configMap.UID
+				}).ShouldNot(Equal(originalUID), "ConfigMap should get deleted and recreated")
 			})
 		})
 
