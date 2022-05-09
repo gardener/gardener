@@ -51,7 +51,7 @@ import (
 
 const (
 	secretNameIngressOperators = v1beta1constants.SecretNameObservabilityIngress
-	secretNameIngressUsers     = v1beta1constants.SecretNameObservabilityIngress + "-users"
+	secretNameIngressUsers     = v1beta1constants.SecretNameObservabilityIngressUsers
 
 	grafanaOperatorsRole = "operators"
 	grafanaUsersRole     = "users"
@@ -458,20 +458,18 @@ func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 		return kutil.DeleteObject(ctx, b.K8sGardenClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.GetInfo().Namespace}})
 	}
 
-	operatorsGenerateOptions := []secretsmanager.GenerateOption{
+	credentialsSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngressOperators),
 		secretsmanager.Persist(),
-		secretsmanager.Validity(30 * 24 * time.Hour),
-	}
-	credentialsSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngressOperators), operatorsGenerateOptions...)
+		secretsmanager.Validity(30*24*time.Hour),
+	)
 	if err != nil {
 		return err
 	}
 
-	usersGenerateOptions := []secretsmanager.GenerateOption{
+	credentialsUsersSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngressUsers),
 		secretsmanager.Persist(),
 		secretsmanager.Rotate(secretsmanager.InPlace),
-	}
-	credentialsUsersSecret, err := b.SecretsManager.Generate(ctx, observabilityIngressSecretConfig(secretNameIngressUsers), usersGenerateOptions...)
+	)
 	if err != nil {
 		return err
 	}

@@ -9005,16 +9005,16 @@ ShootSSHKeypairRotation
 </tr>
 <tr>
 <td>
-<code>observabilityUser</code></br>
+<code>observability</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ShootObservabilityUserRotation">
-ShootObservabilityUserRotation
+<a href="#core.gardener.cloud/v1beta1.ShootObservabilityRotation">
+ShootObservabilityRotation
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>ObservabilityUser contains information about the observability-user credential rotation.</p>
+<p>Observability contains information about the observability credential rotation.</p>
 </td>
 </tr>
 </tbody>
@@ -9176,14 +9176,14 @@ string
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1beta1.ShootObservabilityUserRotation">ShootObservabilityUserRotation
+<h3 id="core.gardener.cloud/v1beta1.ShootObservabilityRotation">ShootObservabilityRotation
 </h3>
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotation">ShootCredentialsRotation</a>)
 </p>
 <p>
-<p>ShootObservabilityUserRotation contains information about the observability-user credential rotation.</p>
+<p>ShootObservabilityRotation contains information about the observability credential rotation.</p>
 </p>
 <table>
 <thead>
@@ -9204,7 +9204,7 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <em>(Optional)</em>
-<p>LastInitiationTime is the most recent time when the observability-user credential rotation was initiated.</p>
+<p>LastInitiationTime is the most recent time when the observability credential rotation was initiated.</p>
 </td>
 </tr>
 <tr>
@@ -9218,7 +9218,7 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <em>(Optional)</em>
-<p>LastCompletionTime is the most recent time when the observability-user credential rotation was successfully completed.</p>
+<p>LastCompletionTime is the most recent time when the observability credential rotation was successfully completed.</p>
 </td>
 </tr>
 </tbody>

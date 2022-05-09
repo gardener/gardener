@@ -2178,9 +2178,9 @@ message ShootCredentialsRotation {
   // +optional
   optional ShootSSHKeypairRotation sshKeypair = 3;
 
-  // ObservabilityUser contains information about the observability-user credential rotation.
+  // Observability contains information about the observability credential rotation.
   // +optional
-  optional ShootObservabilityUserRotation observabilityUser = 4;
+  optional ShootObservabilityRotation observability = 4;
 }
 
 // ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
@@ -2231,13 +2231,13 @@ message ShootNetworks {
   optional string services = 2;
 }
 
-// ShootObservabilityUserRotation contains information about the observability-user credential rotation.
-message ShootObservabilityUserRotation {
-  // LastInitiationTime is the most recent time when the observability-user credential rotation was initiated.
+// ShootObservabilityRotation contains information about the observability credential rotation.
+message ShootObservabilityRotation {
+  // LastInitiationTime is the most recent time when the observability credential rotation was initiated.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 1;
 
-  // LastCompletionTime is the most recent time when the observability-user credential rotation was successfully completed.
+  // LastCompletionTime is the most recent time when the observability credential rotation was successfully completed.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
 }

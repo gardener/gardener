@@ -2333,6 +2333,35 @@ var _ = Describe("helper", func() {
 		Entry("lastCompletionTime equal lastInitiationTime", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{SSHKeypair: &gardencorev1beta1.ShootSSHKeypairRotation{LastInitiationTime: timePointer(metav1.Now().Time), LastCompletionTime: timePointer(metav1.Now().Time)}}}, BeFalse()),
 		Entry("lastCompletionTime after lastInitiationTime", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{SSHKeypair: &gardencorev1beta1.ShootSSHKeypairRotation{LastInitiationTime: timePointer(metav1.Now().Time), LastCompletionTime: timePointer(metav1.Now().Add(time.Minute))}}}, BeFalse()),
 	)
+
+	DescribeTable("#MutateObservabilityRotation",
+		func(shoot *gardencorev1beta1.Shoot, lastInitiationTime metav1.Time) {
+			MutateObservabilityRotation(shoot, func(rotation *gardencorev1beta1.ShootObservabilityRotation) {
+				rotation.LastInitiationTime = &lastInitiationTime
+			})
+			Expect(shoot.Status.Credentials.Rotation.Observability.LastInitiationTime).To(PointTo(Equal(lastInitiationTime)))
+		},
+
+		Entry("credentials nil", &gardencorev1beta1.Shoot{}, metav1.Now()),
+		Entry("rotation nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{}}}, metav1.Now()),
+		Entry("observability nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}}}, metav1.Now()),
+		Entry("observability non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ShootObservabilityRotation{}}}}}, metav1.Now()),
+	)
+
+	DescribeTable("#IsShootObservabilityRotationInitiationTimeAfterLastCompletionTime",
+		func(credentials *gardencorev1beta1.ShootCredentials, matcher gomegatypes.GomegaMatcher) {
+			Expect(IsShootObservabilityRotationInitiationTimeAfterLastCompletionTime(credentials)).To(matcher)
+		},
+
+		Entry("credentials nil", nil, BeFalse()),
+		Entry("rotation nil", &gardencorev1beta1.ShootCredentials{}, BeFalse()),
+		Entry("observability nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}, BeFalse()),
+		Entry("lastInitiationTime nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ShootObservabilityRotation{}}}, BeFalse()),
+		Entry("lastCompletionTime nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ShootObservabilityRotation{LastInitiationTime: timePointer(metav1.Now().Time)}}}, BeTrue()),
+		Entry("lastCompletionTime before lastInitiationTime", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ShootObservabilityRotation{LastInitiationTime: timePointer(metav1.Now().Time), LastCompletionTime: timePointer(metav1.Now().Add(-time.Minute))}}}, BeTrue()),
+		Entry("lastCompletionTime equal lastInitiationTime", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ShootObservabilityRotation{LastInitiationTime: timePointer(metav1.Now().Time), LastCompletionTime: timePointer(metav1.Now().Time)}}}, BeFalse()),
+		Entry("lastCompletionTime after lastInitiationTime", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ShootObservabilityRotation{LastInitiationTime: timePointer(metav1.Now().Time), LastCompletionTime: timePointer(metav1.Now().Add(time.Minute))}}}, BeFalse()),
+	)
 })
 
 func timePointer(t time.Time) *metav1.Time {
