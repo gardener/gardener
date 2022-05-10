@@ -19,7 +19,9 @@ import (
 
 	"github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -39,7 +41,10 @@ import (
 )
 
 var _ = Describe("ManagedResource controller tests", func() {
-	const dataKey = "configmap.yaml"
+	const (
+		dataKey       = "configmap.yaml"
+		testFinalizer = "resources.gardener.cloud/test-finalizer"
+	)
 
 	var (
 		// resourceName is used as a base name for all resources in the current test case
@@ -200,7 +205,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 			BeforeEach(func() {
 				// this finalizer is added to prolong the deletion of the resource so that we can
 				// observe the controller successfully setting ResourceApplied condition to Progressing
-				configMap.Finalizers = append(configMap.Finalizers, "kubernetes")
+				controllerutil.AddFinalizer(configMap, testFinalizer)
 				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
 			})
 
@@ -223,9 +228,9 @@ var _ = Describe("ManagedResource controller tests", func() {
 					},
 				}
 
-				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretForManagedResource), secretForManagedResource)).To(Or(Succeed(), BeNoMatchError()))
+				patch := client.MergeFrom(secretForManagedResource.DeepCopy())
 				secretForManagedResource.Data = secretDataForObject(newConfigMap, dataKey)
-				Expect(testClient.Update(ctx, secretForManagedResource)).To(Succeed())
+				Expect(testClient.Patch(ctx, secretForManagedResource, patch)).To(Succeed())
 
 				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -234,17 +239,17 @@ var _ = Describe("ManagedResource controller tests", func() {
 					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionProgressing), withReason(resourcesv1alpha1.ConditionDeletionPending)),
 				)
 
-				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Or(Succeed(), BeNoMatchError()))
-				configMap.Finalizers = []string{}
-				Expect(testClient.Update(ctx, configMap)).To(Succeed())
+				patch = client.MergeFrom(configMap.DeepCopy())
+				controllerutil.RemoveFinalizer(configMap, testFinalizer)
+				Expect(testClient.Patch(ctx, configMap, patch)).To(Succeed())
 			})
 		})
 
 		Describe("new resource added", func() {
 			It("should successfully create a new resource", func() {
-				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretForManagedResource), secretForManagedResource)).To(Or(Succeed(), BeNoMatchError()))
+				patch := client.MergeFrom(secretForManagedResource.DeepCopy())
 				secretForManagedResource.Data[newDataKey] = secretDataForObject(newResource, newDataKey)[newDataKey]
-				Expect(testClient.Update(ctx, secretForManagedResource)).To(Succeed())
+				Expect(testClient.Patch(ctx, secretForManagedResource, patch)).To(Succeed())
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
@@ -262,9 +267,9 @@ var _ = Describe("ManagedResource controller tests", func() {
 			It("should fail to update the managed resource if a new incorrect resource is added", func() {
 				newResource.TypeMeta = metav1.TypeMeta{}
 
-				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretForManagedResource), secretForManagedResource)).To(Or(Succeed(), BeNoMatchError()))
+				patch := client.MergeFrom(secretForManagedResource.DeepCopy())
 				secretForManagedResource.Data[newDataKey] = secretDataForObject(newResource, newDataKey)[newDataKey]
-				Expect(testClient.Update(ctx, secretForManagedResource)).To(Succeed())
+				Expect(testClient.Patch(ctx, secretForManagedResource, patch)).To(Succeed())
 
 				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -286,8 +291,10 @@ var _ = Describe("ManagedResource controller tests", func() {
 				}
 
 				Expect(testClient.Create(ctx, newSecretForManagedResource)).To(Succeed())
+
+				patch := client.MergeFrom(managedResource.DeepCopy())
 				managedResource.Spec.SecretRefs = append(managedResource.Spec.SecretRefs, corev1.LocalObjectReference{Name: newSecretForManagedResource.Name})
-				Expect(testClient.Update(ctx, managedResource)).To(Succeed())
+				Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
 
 				Eventually(func(g Gomega) {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
@@ -305,8 +312,6 @@ var _ = Describe("ManagedResource controller tests", func() {
 	})
 
 	Describe("delete managed resource", func() {
-		const testFinalizer = "test-finalizer"
-
 		JustBeforeEach(func() {
 			// add finalizer to prolong deletion of ManagedResource after resource-manager removed its finalizer
 			Eventually(func(g Gomega) {
@@ -411,9 +416,9 @@ var _ = Describe("ManagedResource controller tests", func() {
 			It("should not delete the resource on valid update", func() {
 				metav1.SetMetaDataLabel(&configMap.ObjectMeta, "foo", "bar")
 
-				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretForManagedResource), secretForManagedResource)).To(Or(Succeed(), BeNoMatchError()))
+				patch := client.MergeFrom(secretForManagedResource.DeepCopy())
 				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
-				Expect(testClient.Update(ctx, secretForManagedResource)).To(Succeed())
+				Expect(testClient.Patch(ctx, secretForManagedResource, patch)).To(Succeed())
 
 				Consistently(func(g Gomega) types.UID {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
@@ -424,9 +429,9 @@ var _ = Describe("ManagedResource controller tests", func() {
 			It("should delete the resource on invalid update", func() {
 				configMap.Data = map[string]string{"invalid": "update"}
 
-				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretForManagedResource), secretForManagedResource)).To(Or(Succeed(), BeNoMatchError()))
+				patch := client.MergeFrom(secretForManagedResource.DeepCopy())
 				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
-				Expect(testClient.Update(ctx, secretForManagedResource)).To(Succeed())
+				Expect(testClient.Patch(ctx, secretForManagedResource, patch)).To(Succeed())
 
 				Eventually(func(g Gomega) types.UID {
 					// also accept transient NotFoundError because controller needs to delete the ConfigMap first before recreating it
@@ -456,8 +461,9 @@ var _ = Describe("ManagedResource controller tests", func() {
 			})
 
 			It("should keep the object in case it is removed from the MangedResource", func() {
+				patch := client.MergeFrom(managedResource.DeepCopy())
 				managedResource.Spec.SecretRefs = []corev1.LocalObjectReference{}
-				Expect(testClient.Update(ctx, managedResource)).To(Succeed())
+				Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
 
 				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -497,9 +503,9 @@ var _ = Describe("ManagedResource controller tests", func() {
 					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
 				)
 
-				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+				patch := client.MergeFrom(configMap.DeepCopy())
 				configMap.Data = map[string]string{"foo": "bar"}
-				Expect(testClient.Update(ctx, configMap)).To(Succeed())
+				Expect(testClient.Patch(ctx, configMap, patch)).To(Succeed())
 
 				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -524,9 +530,9 @@ var _ = Describe("ManagedResource controller tests", func() {
 					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
 				)
 
-				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				patch := client.MergeFrom(managedResource.DeepCopy())
 				managedResource.SetAnnotations(map[string]string{resourcesv1alpha1.Ignore: "true"})
-				Expect(testClient.Update(ctx, managedResource)).To(Succeed())
+				Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
 
 				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
@@ -537,9 +543,9 @@ var _ = Describe("ManagedResource controller tests", func() {
 					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionFalse), withReason(resourcesv1alpha1.ConditionManagedResourceIgnored)),
 				)
 
-				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+				patch = client.MergeFrom(configMap.DeepCopy())
 				configMap.Data = map[string]string{"foo": "bar"}
-				Expect(testClient.Update(ctx, configMap)).To(Succeed())
+				Expect(testClient.Patch(ctx, configMap, patch)).To(Succeed())
 
 				Consistently(func(g Gomega) map[string]string {
 					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
@@ -604,18 +610,20 @@ var _ = Describe("ManagedResource controller tests", func() {
 				By("deleting ManagedResource")
 				Expect(testClient.Delete(ctx, managedResource)).To(Or(Succeed(), BeNotFoundError()))
 
-				// wait for finalizer to be added
-				Eventually(func(g Gomega) []string {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-					return deployment.Finalizers
-				}).Should(ConsistOf("foregroundDeletion"))
-
-				// remove finalizer so the deployment can be deleted
-				Expect(controllerutils.PatchRemoveFinalizers(ctx, testClient, deployment, "foregroundDeletion")).To(BeNil())
-
-				Eventually(func(g Gomega) {
-					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(BeNotFoundError())
-				}).Should(Succeed())
+				// resource-manager deletes Deployments with foreground deletion, which causes API server to add the
+				// foregroundDeletion finalizer. It is removed by kube-controller-manager's garbage collector, which is not
+				// running in envtest, so we me might need to remove it ourselves.
+				Eventually(func(g Gomega) bool {
+					err := testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)
+					if apierrors.IsNotFound(err) {
+						// deployment is gone, done
+						return true
+					}
+					g.Expect(err).To(Succeed())
+					// no point in checking whether finalizer is present, just try to remove it until Deployment is gone
+					g.Expect(controllerutils.PatchRemoveFinalizers(ctx, testClient, deployment, metav1.FinalizerDeleteDependents)).To(Succeed())
+					return false
+				}).Should(BeTrue())
 			})
 
 			Describe("Preserve Replicas", func() {
@@ -628,10 +636,9 @@ var _ = Describe("ManagedResource controller tests", func() {
 							containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
 						)
 
-						Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-						updatedDeployment := deployment.DeepCopy()
-						updatedDeployment.Spec.Replicas = pointer.Int32Ptr(5)
-						Expect(testClient.Update(ctx, updatedDeployment)).To(Succeed())
+						patch := client.MergeFrom(deployment.DeepCopy())
+						deployment.Spec.Replicas = pointer.Int32Ptr(5)
+						Expect(testClient.Patch(ctx, deployment, patch)).To(Succeed())
 
 						Eventually(func(g Gomega) int32 {
 							g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
@@ -654,10 +661,9 @@ var _ = Describe("ManagedResource controller tests", func() {
 							containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
 						)
 
-						Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-						updatedDeployment := deployment.DeepCopy()
-						updatedDeployment.Spec.Replicas = pointer.Int32Ptr(5)
-						Expect(testClient.Update(ctx, updatedDeployment)).To(Succeed())
+						patch := client.MergeFrom(deployment.DeepCopy())
+						deployment.Spec.Replicas = pointer.Int32Ptr(5)
+						Expect(testClient.Patch(ctx, deployment, patch)).To(Succeed())
 
 						Consistently(func(g Gomega) int32 {
 							g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
@@ -693,10 +699,9 @@ var _ = Describe("ManagedResource controller tests", func() {
 							containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
 						)
 
-						Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-						updatedDeployment := deployment.DeepCopy()
-						updatedDeployment.Spec.Template = *newPodTemplateSpec
-						Expect(testClient.Update(ctx, updatedDeployment)).To(Succeed())
+						patch := client.MergeFrom(deployment.DeepCopy())
+						deployment.Spec.Template = *newPodTemplateSpec
+						Expect(testClient.Patch(ctx, deployment, patch)).To(Succeed())
 
 						Eventually(func(g Gomega) corev1.ResourceRequirements {
 							g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
@@ -719,10 +724,9 @@ var _ = Describe("ManagedResource controller tests", func() {
 							containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
 						)
 
-						Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-						updatedDeployment := deployment.DeepCopy()
-						updatedDeployment.Spec.Template = *newPodTemplateSpec
-						Expect(testClient.Update(ctx, updatedDeployment)).To(Succeed())
+						patch := client.MergeFrom(deployment.DeepCopy())
+						deployment.Spec.Template = *newPodTemplateSpec
+						Expect(testClient.Patch(ctx, deployment, patch)).To(Succeed())
 
 						Eventually(func(g Gomega) corev1.ResourceRequirements {
 							g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
