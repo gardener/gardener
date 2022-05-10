@@ -78,6 +78,8 @@ type reconciler struct {
 	garbageCollectorActivated bool
 
 	clusterID string
+
+	requeueAfterOnDeletionPending time.Duration
 }
 
 // InjectClient injects a client into the reconciler.
@@ -318,7 +320,7 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		}
 
 		if deletionPending {
-			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+			return ctrl.Result{RequeueAfter: r.requeueAfterOnDeletionPending}, nil
 		} else {
 			return ctrl.Result{}, err
 		}
@@ -403,7 +405,7 @@ func (r *reconciler) delete(ctx context.Context, mr *resourcesv1alpha1.ManagedRe
 			}
 
 			if deletionPending {
-				return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+				return ctrl.Result{RequeueAfter: r.requeueAfterOnDeletionPending}, nil
 			} else {
 				return ctrl.Result{}, err
 			}

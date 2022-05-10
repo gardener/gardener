@@ -133,7 +133,10 @@ var _ = BeforeSuite(func() {
 	filter = predicate.NewClassFilter(managerpredicate.DefaultClass)
 	Expect(managedresource.AddToManagerWithOptions(mgr, managedresource.ControllerConfig{
 		MaxConcurrentWorkers: 5,
-		SyncPeriod:           500 * time.Millisecond, // gotta go fast during tests
+
+		// gotta go fast during tests
+		SyncPeriod:                    500 * time.Millisecond,
+		RequeueAfterOnDeletionPending: 50 * time.Millisecond,
 
 		ClassFilter:   filter,
 		TargetCluster: targetClusterOpts.Completed().Cluster,
