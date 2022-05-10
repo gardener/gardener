@@ -17,7 +17,9 @@ It is built on top of the `ConfigInterface` and `DataInterface` interfaces part 
   If the configuration describes a certificate authority secret then this method automatically generates a bundle secret containing the current and potentially the old certificate.\
   Available `GenerateOption`s:
   - `SignedByCA(string, ...SignedByCAOption)`: This is only valid for certificate secrets and automatically retrieves the correct certificate authority in order to sign the provided server or client certificate.
-    - There is only one `SignedByCAOption`: `UseCurrentCA`. This option will sign server certificates with the new/current CA in case of a CA rotation. For more information, please refer to the ["Certificate Signing"](#certificate-signing) section below). 
+    - There are two `SignedByCAOption`s:
+      - `UseCurrentCA`. This option will sign server certificates with the new/current CA in case of a CA rotation. For more information, please refer to the ["Certificate Signing"](#certificate-signing) section below. 
+      - `UseOldCA`. This option will sign client certificates with the old CA in case of a CA rotation. For more information, please refer to the ["Certificate Signing"](#certificate-signing) section below. 
   - `Persist()`: This marks the secret such that it gets persisted in the `ShootState` resource in the garden cluster. Consequently, it should only be used for secrets related to a shoot cluster.
   - `Rotate(rotationStrategy)`: This specifies the strategy in case this secret is to be rotated or regenerated (either `InPlace` which immediately forgets about the old secret, or `KeepOld` which keeps the old secret in the system).
   - `IgnoreOldSecrets()`: This specifies whether old secrets should be considered and loaded (which is done by default). It should be used when old secrets are no longer important and can be "forgotten" (e.g. in ["phase 2" (`t2`) of the CA certificate rotation](../proposals/18-shoot-CA-rotation.md#rotation-sequence-for-cluster-and-client-ca)).
@@ -86,13 +88,24 @@ This is to ensure a smooth exchange of certificate during a CA rotation (typical
   - In phase 1, servers still use their old/existing certificates to allow clients to update their CA bundle used for verification of the servers' certificates.
   - In phase 2, the old CA is dropped, hence servers need to get a certificate signed by the new/current CA. At this point in time, clients have already adapted their CA bundles.    
 
+#### Always Sign Server Certificates With Current CA
+
 In case you control all clients and update them at the same time as the server, it is possible to make the secrets manager generate even server certificates with the new/current CA.
-This can help preventing certificate mismatches when the CA bundle is already exchanged while the server still serves with a certificate signed by a CA no longer part of the bundle.
+This can help to prevent certificate mismatches when the CA bundle is already exchanged while the server still serves with a certificate signed by a CA no longer part of the bundle.
 
 Let's consider the two following examples:
 
 1. `gardenlet` deploys a webhook server (`gardener-resource-manager`) and a corresponding `MutatingWebhookConfiguration` at the same time. In this case, the server certificate should be generated with the new/current CA to avoid above mentioned certificate mismatches during a CA rotation.
 2. `gardenlet` deploys a server (`etcd`) in one step, and a client (`kube-apiserver`) in a subsequent step. In this case, the default behaviour should apply (server certificate should be signed by old/existing CA).
+
+#### Always Sign Client Certificate With Old CA
+
+In the unusual case where the client is deployed before the server, it might be useful to always use the old CA for signing the client's certificate.
+This can help to prevent certificate mismatches when the client already gets a new certificate while the server still only accepts certificates signed by the old CA.
+
+Let's consider the following example:
+
+1. `gardenlet` deploys the `kube-apiserver` before the `kubelet`. However, the `kube-apiserver` has a client certificate signed by the `ca-kubelet` in order to communicate with it (e.g., when retrieving logs or forwarding ports). In this case, the client certificate should be generated with the old CA to avoid above mentioned certificate mismatches during a CA rotation.
 
 ## Reusing the SecretsManager in Other Components
 
