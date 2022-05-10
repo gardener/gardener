@@ -80,6 +80,8 @@ local   local          local      local    1.21.0        Awake         Create Pr
 make test-e2e-local-fast KUBECONFIG="$PWD/example/gardener-local/kind/kubeconfig"
 ```
 
+### Accessing the `Shoot` cluster
+
 ⚠️ Please note that in this setup shoot clusters are not accessible by default when you download the kubeconfig and try to communicate with them.
 The reason is that your host most probably cannot resolve the DNS names of the clusters since `provider-local` extension runs inside the KinD cluster (see [this](../extensions/provider-local.md#dnsrecord) for more details).
 Hence, if you want to access the shoot cluster, you have to run the following command which will extend your `/etc/hosts` file with the required information to make the DNS names resolvable:
@@ -87,12 +89,12 @@ Hence, if you want to access the shoot cluster, you have to run the following co
 ```bash
 cat <<EOF | sudo tee -a /etc/hosts
 
-# Manually created to access local Gardener shoot clusters with names 'local' or 'e2e-local' in the 'garden-local' namespace.
+# Manually created to access local Gardener shoot clusters with names 'local' or 'e2e-default' in the 'garden-local' namespace.
 # TODO: Remove this again when the shoot cluster access is no longer required.
 127.0.0.1 api.local.local.external.local.gardener.cloud
 127.0.0.1 api.local.local.internal.local.gardener.cloud
-127.0.0.1 api.e2e-local.local.external.local.gardener.cloud
-127.0.0.1 api.e2e-local.local.internal.local.gardener.cloud
+127.0.0.1 api.e2e-default.local.external.local.gardener.cloud
+127.0.0.1 api.e2e-default.local.internal.local.gardener.cloud
 EOF
 ```
 
