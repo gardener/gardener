@@ -95,6 +95,15 @@ type (
 		dataChecksum               string
 		lastRotationInitiationTime int64
 	}
+
+	// Rotation specifies certain configuration options for the rotation of secrets.
+	Rotation struct {
+		// NoCASecretAutoRotation states whether CA secrets should be skipped for automatic rotation.
+		NoCASecretAutoRotation bool
+		// SecretNamesToTimes is a map whose keys are secret names and whose values are the last rotation initiation
+		// times.
+		SecretNamesToTimes map[string]time.Time
+	}
 )
 
 var _ Interface = &manager{}
@@ -115,7 +124,7 @@ func New(
 	c client.Client,
 	namespace string,
 	identity string,
-	secretNamesToTimes map[string]time.Time,
+	rotation Rotation,
 ) (
 	Interface,
 	error,
@@ -127,10 +136,10 @@ func New(
 		client:                      c,
 		namespace:                   namespace,
 		identity:                    identity,
-		lastRotationInitiationTimes: make(map[string]string),
+		lastRotationInitiationTimes: make(nameToUnixTime),
 	}
 
-	if err := m.initialize(ctx, secretNamesToTimes); err != nil {
+	if err := m.initialize(ctx, rotation); err != nil {
 		return nil, err
 	}
 
@@ -145,7 +154,7 @@ func (m *manager) listSecrets(ctx context.Context) (*corev1.SecretList, error) {
 	})
 }
 
-func (m *manager) initialize(ctx context.Context, secretNamesToTimes map[string]time.Time) error {
+func (m *manager) initialize(ctx context.Context, rotation Rotation) error {
 	secretList, err := m.listSecrets(ctx)
 	if err != nil {
 		return err
@@ -165,6 +174,10 @@ func (m *manager) initialize(ctx context.Context, secretNamesToTimes map[string]
 
 	// Check if the secrets must be automatically renewed because they are about to expire.
 	for name, secret := range nameToNewestSecret {
+		if isCASecret(secret.Data) && rotation.NoCASecretAutoRotation {
+			continue
+		}
+
 		mustRenew, err := m.mustAutoRenewSecret(secret)
 		if err != nil {
 			return err
@@ -177,7 +190,7 @@ func (m *manager) initialize(ctx context.Context, secretNamesToTimes map[string]
 	}
 
 	// If the user has provided last rotation initiation times then use those.
-	for name, time := range secretNamesToTimes {
+	for name, time := range rotation.SecretNamesToTimes {
 		m.lastRotationInitiationTimes[name] = unixTime(time)
 	}
 
@@ -354,6 +367,10 @@ func secretTypeForData(data map[string][]byte) corev1.SecretType {
 
 func unixTime(in time.Time) string {
 	return strconv.FormatInt(in.UTC().Unix(), 10)
+}
+
+func isCASecret(data map[string][]byte) bool {
+	return data[secretutils.DataKeyCertificateCA] != nil && data[secretutils.DataKeyPrivateKeyCA] != nil
 }
 
 func certificateSecretConfig(config secretutils.ConfigInterface) *secretutils.CertificateSecretConfig {
