@@ -20,7 +20,6 @@ import (
 	"github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -306,20 +305,31 @@ var _ = Describe("ManagedResource controller tests", func() {
 	})
 
 	Describe("delete managed resource", func() {
+		const testFinalizer = "test-finalizer"
+
 		JustBeforeEach(func() {
 			// add finalizer to prolong deletion of ManagedResource after resource-manager removed its finalizer
-			patch := client.MergeFrom(managedResource.DeepCopy())
-			managedResource.SetFinalizers([]string{"test-finalizer"})
-			Expect(testClient.Patch(ctx, managedResource, patch)).To(Succeed())
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, objectKey, managedResource)).To(Succeed())
+				g.Expect(controllerutils.PatchAddFinalizers(ctx, testClient, managedResource, testFinalizer)).To(Succeed())
+			}).Should(Succeed())
 		})
 
 		JustAfterEach(func() {
-			patch := client.MergeFrom(managedResource.DeepCopy())
-			controllerutil.RemoveFinalizer(managedResource, "test-finalizer")
-			Expect(testClient.Patch(ctx, managedResource, patch))
+			Eventually(func(g Gomega) {
+				g.Expect(testClient.Get(ctx, objectKey, managedResource)).To(Succeed())
+				g.Expect(controllerutils.PatchRemoveFinalizers(ctx, testClient, managedResource, testFinalizer)).To(Succeed())
+			}).Should(Succeed())
 		})
 
 		It("should set ManagedResource to unhealthy", func() {
+			Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				return managedResource.Status.Conditions
+			}).Should(
+				containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+			)
+
 			By("deleting ManagedResource")
 			Expect(testClient.Delete(ctx, managedResource)).To(Succeed())
 
@@ -327,6 +337,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				return managedResource.Status.Conditions
 			}).Should(
+				containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionProgressing), withReason(resourcesv1alpha1.ConditionDeletionPending)),
 				containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionFalse), withReason(resourcesv1alpha1.ConditionDeletionPending)),
 				containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionDeletionPending)),
 			)
