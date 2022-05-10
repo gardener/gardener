@@ -135,8 +135,9 @@ func (i *infrastructure) deploy(ctx context.Context, operation string) (extensio
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, i.infrastructure, func() error {
 		if i.values.AnnotateOperation {
 			metav1.SetMetaDataAnnotation(&i.infrastructure.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-			metav1.SetMetaDataAnnotation(&i.infrastructure.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 		}
+
+		metav1.SetMetaDataAnnotation(&i.infrastructure.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 
 		i.infrastructure.Spec = extensionsv1alpha1.InfrastructureSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
