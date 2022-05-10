@@ -488,10 +488,10 @@ type SignedByCAOption interface {
 
 // SignedByCAOptions are options for SignedByCA calls.
 type SignedByCAOptions struct {
-	// UseCurrentCA specifies whether the certificate should always be signed by the current CA. This option does only
-	// take effect for server certificates since they are signed by the old CA by default (if it exists). Client
-	// certificates are always signed by the current CA.
-	UseCurrentCA bool
+	// CAClass specifies which CA should be used to sign the requested certificate. Server certificates are signed with
+	// the old CA by default, however one might want to use the current CA instead. Similarly, client certificates are
+	// signed with the current CA by default, however one might want to use the old CA instead.
+	CAClass *secretClass
 }
 
 // ApplyOptions applies the given update options on these options, and then returns itself (for convenient chaining).
@@ -502,13 +502,19 @@ func (o *SignedByCAOptions) ApplyOptions(opts []SignedByCAOption) *SignedByCAOpt
 	return o
 }
 
-// UseCurrentCA sets the UseCurrentCA field to 'true' in the SignedByCAOptions.
-var UseCurrentCA = useCurrentCAOption{}
+var (
+	// UseCurrentCA sets the CAClass field to 'current' in the SignedByCAOptions.
+	UseCurrentCA = useCAClassOption{current}
+	// UseOldCA sets the CAClass field to 'old' in the SignedByCAOptions.
+	UseOldCA = useCAClassOption{old}
+)
 
-type useCurrentCAOption struct{}
+type useCAClassOption struct {
+	class secretClass
+}
 
-func (useCurrentCAOption) ApplyToOptions(options *SignedByCAOptions) {
-	options.UseCurrentCA = true
+func (o useCAClassOption) ApplyToOptions(options *SignedByCAOptions) {
+	options.CAClass = &o.class
 }
 
 // SignedByCA returns a function which sets the 'SigningCA' field in case the ConfigInterface provided to the
@@ -534,11 +540,20 @@ func SignedByCA(name string, opts ...SignedByCAOption) GenerateOption {
 			return fmt.Errorf("secrets for name %q not found in internal store", name)
 		}
 
-		// Client certificates are always renewed immediately (hence, signed with the current CA), while server
-		// certificates are signed with the old CA until they don't exist anymore in the internal store.
 		secret := secrets.current
-		if certificateConfig.CertType == secretutils.ServerCert && !signedByCAOptions.UseCurrentCA && secrets.old != nil {
-			secret = *secrets.old
+		switch certificateConfig.CertType {
+		case secretutils.ClientCert:
+			// Client certificates are signed with the current CA by default unless the CAClass option was overwritten.
+			if signedByCAOptions.CAClass != nil && *signedByCAOptions.CAClass == old && secrets.old != nil {
+				secret = *secrets.old
+			}
+
+		case secretutils.ServerCert, secretutils.ServerClientCert:
+			// Server certificates are signed with the old CA by default (if it exists) unless the CAClass option was
+			// overwritten.
+			if secrets.old != nil && (signedByCAOptions.CAClass == nil || *signedByCAOptions.CAClass != current) {
+				secret = *secrets.old
+			}
 		}
 
 		ca, err := secretutils.LoadCertificate(name, secret.obj.Data[secretutils.DataKeyPrivateKeyCA], secret.obj.Data[secretutils.DataKeyCertificateCA])
