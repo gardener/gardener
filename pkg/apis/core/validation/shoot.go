@@ -1747,29 +1747,48 @@ func validateShootOperation(operation string, shoot *core.Shoot, fldPath *field.
 		return allErrs
 	}
 
-	if !utilfeature.DefaultFeatureGate.Enabled(features.ShootCARotation) {
-		return allErrs
-	}
-
 	switch operation {
 	case v1beta1constants.ShootOperationRotateCAStart:
-		if !isShootReadyForCARotationStart(shoot.Status.LastOperation) {
+		if !utilfeature.DefaultFeatureGate.Enabled(features.ShootCARotation) {
+			return allErrs
+		}
+		if !isShootReadyForRotationStart(shoot.Status.LastOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start CA rotation if shoot was not yet created successfully or is not ready for reconciliation"))
 		}
 		if phase := helper.GetShootCARotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start CA rotation if .status.credentials.rotation.certificateAuthorities.phase is not 'Completed'"))
 		}
-
 	case v1beta1constants.ShootOperationRotateCAComplete:
+		if !utilfeature.DefaultFeatureGate.Enabled(features.ShootCARotation) {
+			return allErrs
+		}
 		if helper.GetShootCARotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete CA rotation if .status.credentials.rotation.certificateAuthorities.phase is not 'Prepared'"))
+		}
+
+	case v1beta1constants.ShootOperationRotateServiceAccountKeyStart:
+		if !utilfeature.DefaultFeatureGate.Enabled(features.ShootSARotation) {
+			return allErrs
+		}
+		if !isShootReadyForRotationStart(shoot.Status.LastOperation) {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start service account key rotation if shoot was not yet created successfully or is not ready for reconciliation"))
+		}
+		if phase := helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start service account key rotation if .status.credentials.rotation.serviceAccountKey.phase is not 'Completed'"))
+		}
+	case v1beta1constants.ShootOperationRotateServiceAccountKeyComplete:
+		if !utilfeature.DefaultFeatureGate.Enabled(features.ShootSARotation) {
+			return allErrs
+		}
+		if helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete service account key rotation if .status.credentials.rotation.serviceAccountKey.phase is not 'Prepared'"))
 		}
 	}
 
 	return allErrs
 }
 
-func isShootReadyForCARotationStart(lastOperation *core.LastOperation) bool {
+func isShootReadyForRotationStart(lastOperation *core.LastOperation) bool {
 	if lastOperation == nil {
 		return false
 	}

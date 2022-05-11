@@ -139,6 +139,12 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 					// the rotation. It has to remove the annotation after it is done.
 					mustIncrease, mustRemoveOperationAnnotation = true, false
 				}
+				if utilfeature.DefaultFeatureGate.Enabled(features.ShootSARotation) &&
+					(val == v1beta1constants.ShootOperationRotateServiceAccountKeyStart || val == v1beta1constants.ShootOperationRotateServiceAccountKeyComplete) {
+					// We don't want to remove the annotation so that the gardenlet can pick it up and perform
+					// the rotation. It has to remove the annotation after it is done.
+					mustIncrease, mustRemoveOperationAnnotation = true, false
+				}
 			}
 		}
 

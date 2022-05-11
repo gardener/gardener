@@ -396,6 +396,19 @@ var _ = Describe("Strategy", func() {
 				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
 			})
 
+			It("should increase when the rotate-observability-credentials annotation gets set with a last operation", func() {
+				oldShoot := &core.Shoot{
+					Status: core.ShootStatus{
+						LastOperation: &core.LastOperation{},
+					},
+				}
+				newShoot := oldShoot.DeepCopy()
+				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateObservabilityCredentials}
+
+				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
+			})
+
 			It("should increase when the rotate-ca-start annotation gets set and feature gate is enabled", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, true)()
 
@@ -451,6 +464,66 @@ var _ = Describe("Strategy", func() {
 				}
 				newShoot := oldShoot.DeepCopy()
 				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateCAComplete}
+
+				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
+			})
+
+			It("should increase when the rotate-serviceaccount-key-start annotation gets set and feature gate is enabled", func() {
+				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootSARotation, true)()
+
+				oldShoot := &core.Shoot{
+					Status: core.ShootStatus{
+						LastOperation: &core.LastOperation{},
+					},
+				}
+				newShoot := oldShoot.DeepCopy()
+				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateServiceAccountKeyStart}
+
+				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
+			})
+
+			It("should increase when the rotate-serviceaccount-key-complete annotation gets set and feature gate is enabled", func() {
+				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootSARotation, true)()
+
+				oldShoot := &core.Shoot{
+					Status: core.ShootStatus{
+						LastOperation: &core.LastOperation{},
+					},
+				}
+				newShoot := oldShoot.DeepCopy()
+				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateServiceAccountKeyComplete}
+
+				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
+			})
+
+			It("should not increase when the rotate-serviceaccount-key-start annotation gets set and feature gate is disabled", func() {
+				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootSARotation, false)()
+
+				oldShoot := &core.Shoot{
+					Status: core.ShootStatus{
+						LastOperation: &core.LastOperation{},
+					},
+				}
+				newShoot := oldShoot.DeepCopy()
+				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateServiceAccountKeyStart}
+
+				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+				Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
+			})
+
+			It("should not increase when the rotate-serviceaccount-key-complete annotation gets set and feature gate is disabled", func() {
+				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootSARotation, false)()
+
+				oldShoot := &core.Shoot{
+					Status: core.ShootStatus{
+						LastOperation: &core.LastOperation{},
+					},
+				}
+				newShoot := oldShoot.DeepCopy()
+				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateServiceAccountKeyComplete}
 
 				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 				Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
