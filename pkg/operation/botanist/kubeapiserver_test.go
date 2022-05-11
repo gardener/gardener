@@ -1203,6 +1203,28 @@ var _ = Describe("KubeAPIServer", func() {
 					false,
 					Not(HaveOccurred()),
 				),
+				Entry("service account key rotation phase is set",
+					func() {
+						shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+						shootCopy.Spec.Kubernetes = gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
+						}
+						shootCopy.Status.Credentials = &gardencorev1beta1.ShootCredentials{
+							Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+								ServiceAccountKey: &gardencorev1beta1.ShootServiceAccountKeyRotation{
+									Phase: gardencorev1beta1.RotationCompleting,
+								},
+							},
+						}
+						botanist.Shoot.SetInfo(shootCopy)
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:        "https://api." + internalClusterDomain,
+						RotationPhase: gardencorev1beta1.RotationCompleting,
+					},
+					false,
+					Not(HaveOccurred()),
+				),
 				Entry("Issuer is not provided",
 					func() {
 						shootCopy := botanist.Shoot.GetInfo().DeepCopy()

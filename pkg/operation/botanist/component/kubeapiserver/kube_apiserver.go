@@ -230,6 +230,8 @@ type ServiceAccountConfig struct {
 	ExtendTokenExpiration *bool
 	// MaxTokenExpiration states what the maximal token expiration should be.
 	MaxTokenExpiration *metav1.Duration
+	// RotationPhase specifies the credentials rotation phase of the service account signing key.
+	RotationPhase gardencorev1beta1.ShootCredentialsRotationPhase
 }
 
 // SNIConfig contains information for configuring SNI settings for the kube-apiserver.
