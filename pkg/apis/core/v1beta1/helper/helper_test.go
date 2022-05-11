@@ -2377,6 +2377,32 @@ var _ = Describe("helper", func() {
 		Entry("lastCompletionTime equal lastInitiationTime", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ShootObservabilityRotation{LastInitiationTime: timePointer(metav1.Now().Time), LastCompletionTime: timePointer(metav1.Now().Time)}}}, BeFalse()),
 		Entry("lastCompletionTime after lastInitiationTime", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{Observability: &gardencorev1beta1.ShootObservabilityRotation{LastInitiationTime: timePointer(metav1.Now().Time), LastCompletionTime: timePointer(metav1.Now().Add(time.Minute))}}}, BeFalse()),
 	)
+
+	DescribeTable("#GetShootServiceAccountKeyRotationPhase",
+		func(credentials *gardencorev1beta1.ShootCredentials, expectedPhase gardencorev1beta1.ShootCredentialsRotationPhase) {
+			Expect(GetShootServiceAccountKeyRotationPhase(credentials)).To(Equal(expectedPhase))
+		},
+
+		Entry("credentials nil", nil, gardencorev1beta1.ShootCredentialsRotationPhase("")),
+		Entry("rotation nil", &gardencorev1beta1.ShootCredentials{}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
+		Entry("ca nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
+		Entry("phase empty", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ServiceAccountKey: &gardencorev1beta1.ShootServiceAccountKeyRotation{}}}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
+		Entry("phase set", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ServiceAccountKey: &gardencorev1beta1.ShootServiceAccountKeyRotation{Phase: gardencorev1beta1.RotationCompleting}}}, gardencorev1beta1.RotationCompleting),
+	)
+
+	DescribeTable("#MutateShootServiceAccountKeyRotation",
+		func(shoot *gardencorev1beta1.Shoot, phase gardencorev1beta1.ShootCredentialsRotationPhase) {
+			MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootServiceAccountKeyRotation) {
+				rotation.Phase = phase
+			})
+			Expect(shoot.Status.Credentials.Rotation.ServiceAccountKey.Phase).To(Equal(phase))
+		},
+
+		Entry("credentials nil", &gardencorev1beta1.Shoot{}, gardencorev1beta1.RotationCompleting),
+		Entry("rotation nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{}}}, gardencorev1beta1.RotationCompleting),
+		Entry("certificateAuthorities nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}}}, gardencorev1beta1.RotationCompleting),
+		Entry("certificateAuthorities non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ServiceAccountKey: &gardencorev1beta1.ShootServiceAccountKeyRotation{}}}}}, gardencorev1beta1.RotationCompleting),
+	)
 })
 
 func timePointer(t time.Time) *metav1.Time {

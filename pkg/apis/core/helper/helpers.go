@@ -371,6 +371,17 @@ func GetShootCARotationPhase(credentials *core.ShootCredentials) core.ShootCrede
 	return ""
 }
 
+// GetShootServiceAccountKeyRotationPhase returns the specified shoot service account key rotation phase or an empty
+// string.
+func GetShootServiceAccountKeyRotationPhase(credentials *core.ShootCredentials) core.ShootCredentialsRotationPhase {
+	if credentials != nil &&
+		credentials.Rotation != nil &&
+		credentials.Rotation.ServiceAccountKey != nil {
+		return credentials.Rotation.ServiceAccountKey.Phase
+	}
+	return ""
+}
+
 var scheme *runtime.Scheme
 
 func init() {

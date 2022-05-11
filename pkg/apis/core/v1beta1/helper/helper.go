@@ -1610,3 +1610,28 @@ func IsShootObservabilityRotationInitiationTimeAfterLastCompletionTime(credentia
 	return credentials.Rotation.Observability.LastCompletionTime == nil ||
 		credentials.Rotation.Observability.LastCompletionTime.Before(credentials.Rotation.Observability.LastInitiationTime)
 }
+
+// GetShootServiceAccountKeyRotationPhase returns the specified shoot service account key rotation phase or an empty
+// string.
+func GetShootServiceAccountKeyRotationPhase(credentials *gardencorev1beta1.ShootCredentials) gardencorev1beta1.ShootCredentialsRotationPhase {
+	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.ServiceAccountKey != nil {
+		return credentials.Rotation.ServiceAccountKey.Phase
+	}
+	return ""
+}
+
+// MutateShootServiceAccountKeyRotation mutates the .status.credentials.rotation.serviceAccountKey field based on the
+// provided mutation function. If the field is nil then it is initialized.
+func MutateShootServiceAccountKeyRotation(shoot *gardencorev1beta1.Shoot, f func(*gardencorev1beta1.ShootServiceAccountKeyRotation)) {
+	if shoot.Status.Credentials == nil {
+		shoot.Status.Credentials = &gardencorev1beta1.ShootCredentials{}
+	}
+	if shoot.Status.Credentials.Rotation == nil {
+		shoot.Status.Credentials.Rotation = &gardencorev1beta1.ShootCredentialsRotation{}
+	}
+	if shoot.Status.Credentials.Rotation.ServiceAccountKey == nil {
+		shoot.Status.Credentials.Rotation.ServiceAccountKey = &gardencorev1beta1.ShootServiceAccountKeyRotation{}
+	}
+
+	f(shoot.Status.Credentials.Rotation.ServiceAccountKey)
+}
