@@ -403,7 +403,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		deployOperatingSystemConfig = g.Add(flow.Task{
 			Name:         "Deploying operating system specific configuration for shoot workers",
 			Fn:           flow.TaskFn(botanist.DeployOperatingSystemConfig).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady, waitUntilControlPlaneReady, waitUntilOperatingSystemConfigReadyForMigration),
 		})
 		waitUntilOperatingSystemConfigReady = g.Add(flow.Task{
 			Name:         "Waiting until operating system configurations for worker nodes have been reconciled",
