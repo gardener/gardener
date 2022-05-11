@@ -22,6 +22,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
@@ -35,6 +36,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -65,6 +67,9 @@ var _ = Describe("Secrets", func() {
 		fakeSeedClient    client.Client
 		fakeSeedInterface kubernetes.Interface
 
+		fakeShootClient    client.Client
+		fakeShootInterface kubernetes.Interface
+
 		fakeSecretsManager secretsmanager.Interface
 
 		botanist *Botanist
@@ -77,12 +82,17 @@ var _ = Describe("Secrets", func() {
 		fakeSeedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeSeedInterface = fakeclientset.NewClientSetBuilder().WithClient(fakeSeedClient).Build()
 
+		fakeShootClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.ShootScheme).Build()
+		fakeShootInterface = fakeclientset.NewClientSetBuilder().WithClient(fakeShootClient).Build()
+
 		fakeSecretsManager = fakesecretsmanager.New(fakeSeedClient, seedNamespace)
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
+				Logger:          logrus.NewEntry(logger.NewNopLogger()),
 				K8sGardenClient: fakeGardenInterface,
 				K8sSeedClient:   fakeSeedInterface,
+				K8sShootClient:  fakeShootInterface,
 				SecretsManager:  fakeSecretsManager,
 				Shoot: &shootpkg.Shoot{
 					SeedNamespace: seedNamespace,
@@ -286,6 +296,96 @@ var _ = Describe("Secrets", func() {
 			Expect(secret3.Annotations).NotTo(HaveKey("serviceaccount.resources.gardener.cloud/token-renew-timestamp"))
 		})
 	})
+
+	Context("service account secret rotation", func() {
+		var (
+			namespace1, namespace2 *corev1.Namespace
+			sa1, sa2, sa3          *corev1.ServiceAccount
+			suffix                 = "-4c6b7a"
+		)
+
+		BeforeEach(func() {
+			namespace1 = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns1"}}
+			namespace2 = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns2"}}
+
+			Expect(fakeShootClient.Create(ctx, namespace1)).To(Succeed())
+			Expect(fakeShootClient.Create(ctx, namespace2)).To(Succeed())
+
+			sa1 = &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{Name: "sa1", Namespace: namespace1.Name},
+				Secrets:    []corev1.ObjectReference{{Name: "sa1secret1"}},
+			}
+			sa2 = &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{Name: "sa2", Namespace: namespace2.Name},
+				Secrets:    []corev1.ObjectReference{{Name: "sa2secret1"}},
+			}
+			sa3 = &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{Name: "sa3", Namespace: namespace2.Name, Labels: map[string]string{"credentials.gardener.cloud/key-name": "service-account-key-current"}},
+				Secrets:    []corev1.ObjectReference{{Name: "sa3secret1"}},
+			}
+
+			Expect(fakeShootClient.Create(ctx, sa1)).To(Succeed())
+			Expect(fakeShootClient.Create(ctx, sa2)).To(Succeed())
+			Expect(fakeShootClient.Create(ctx, sa3)).To(Succeed())
+		})
+
+		Describe("#CreateNewServiceAccountSecrets", func() {
+			It("should create new service account secrets and make them the first in the list", func() {
+				Expect(botanist.CreateNewServiceAccountSecrets(ctx)).To(Succeed())
+
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(sa1), sa1)).To(Succeed())
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(sa2), sa2)).To(Succeed())
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(sa3), sa3)).To(Succeed())
+
+				Expect(sa1.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "service-account-key-current"))
+				Expect(sa2.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "service-account-key-current"))
+				Expect(sa1.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "sa1-token" + suffix}, corev1.ObjectReference{Name: "sa1secret1"}))
+				Expect(sa2.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "sa2-token" + suffix}, corev1.ObjectReference{Name: "sa2secret1"}))
+				Expect(sa3.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "sa3secret1"}))
+
+				sa1Secret := &corev1.Secret{}
+				Expect(fakeShootClient.Get(ctx, kutil.Key(sa1.Namespace, "sa1-token"+suffix), sa1Secret))
+				verifySATokenSecret(sa1Secret, sa1.Name)
+
+				sa2Secret := &corev1.Secret{}
+				Expect(fakeShootClient.Get(ctx, kutil.Key(sa2.Namespace, "sa2-token"+suffix), sa2Secret))
+				verifySATokenSecret(sa2Secret, sa2.Name)
+			})
+		})
+
+		Describe("#DeleteOldServiceAccountSecrets", func() {
+			It("should delete old service account secrets", func() {
+				sa3.Secrets = append([]corev1.ObjectReference{{Name: "new-sa-secret"}}, sa3.Secrets...)
+				Expect(fakeShootClient.Update(ctx, sa3)).To(Succeed())
+
+				sa3OldSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "sa3secret1", Namespace: sa3.Namespace}}
+				Expect(fakeShootClient.Create(ctx, sa3OldSecret)).To(Succeed())
+
+				sa1Copy := sa1.DeepCopy()
+				sa1Copy.TypeMeta = metav1.TypeMeta{APIVersion: "v1", Kind: "ServiceAccount"}
+				sa2Copy := sa2.DeepCopy()
+				sa2Copy.TypeMeta = metav1.TypeMeta{APIVersion: "v1", Kind: "ServiceAccount"}
+
+				Expect(botanist.DeleteOldServiceAccountSecrets(ctx)).To(Succeed())
+
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(sa1), sa1)).To(Succeed())
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(sa2), sa2)).To(Succeed())
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(sa3), sa3)).To(Succeed())
+
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(sa3OldSecret), sa3OldSecret)).To(BeNotFoundError())
+				// mimic kube-controller-manager behaviour: In reality, when a service account token secret is deleted
+				// then KCM removes it from the ServiceAccount's `.secrets[]` list. Since no KCM is running for the
+				// test, we have to mimic it here
+				sa3.Secrets = []corev1.ObjectReference{sa3.Secrets[0]}
+				Expect(fakeShootClient.Update(ctx, sa3)).To(Succeed())
+
+				Expect(sa1).To(Equal(sa1Copy))
+				Expect(sa2).To(Equal(sa2Copy))
+				Expect(sa3.Labels).NotTo(HaveKey("credentials.gardener.cloud/key-name"))
+				Expect(sa3.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "new-sa-secret"}))
+			})
+		})
+	})
 })
 
 func verifyCASecret(name string, secret *corev1.Secret, dataMatcher gomegatypes.GomegaMatcher) {
@@ -307,4 +407,9 @@ func verifyCASecret(name string, secret *corev1.Secret, dataMatcher gomegatypes.
 
 func rawData(key, value string) []byte {
 	return []byte(`{"` + key + `":"` + utils.EncodeBase64([]byte(value)) + `"}`)
+}
+
+func verifySATokenSecret(secret *corev1.Secret, serviceAccountName string) {
+	Expect(secret.Type).To(Equal(corev1.SecretTypeServiceAccountToken))
+	Expect(secret.Annotations).To(HaveKeyWithValue("kubernetes.io/service-account.name", serviceAccountName))
 }
