@@ -50,6 +50,7 @@ spec:
         - --ignore-operation-annotation={{ .Values.controllers.ignoreOperationAnnotation }}
         - --worker-max-concurrent-reconciles={{ .Values.controllers.worker.concurrentSyncs }}
         - --operatingsystemconfig-max-concurrent-reconciles={{ .Values.controllers.operatingsystemconfig.concurrentSyncs }}
+        - --ingress-max-concurrent-reconciles={{ .Values.controllers.ingress.concurrentSyncs }}
         - --node-max-concurrent-reconciles={{ .Values.controllers.node.concurrentSyncs }}
         - --service-max-concurrent-reconciles={{ .Values.controllers.service.concurrentSyncs }}
         - --service-host-ip={{ .Values.controllers.service.hostIP }}
