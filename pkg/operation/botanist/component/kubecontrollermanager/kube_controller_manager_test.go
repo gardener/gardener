@@ -525,7 +525,7 @@ var _ = Describe("KubeControllerManager", func() {
 											Name: "service-account-key",
 											VolumeSource: corev1.VolumeSource{
 												Secret: &corev1.SecretVolumeSource{
-													SecretName: "service-account-key",
+													SecretName: "service-account-key-current",
 												},
 											},
 										},

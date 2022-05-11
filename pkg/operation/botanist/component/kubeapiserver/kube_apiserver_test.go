@@ -79,21 +79,22 @@ var _ = Describe("KubeAPIServer", func() {
 		kapi                Interface
 		version             = semver.MustParse("1.22.1")
 
-		secretNameBasicAuthentication    = "kube-apiserver-basic-auth-426b1845"
-		secretNameStaticToken            = "kube-apiserver-static-token-c069a0e6"
-		secretNameCA                     = "ca"
-		secretNameCAClient               = "ca-client"
-		secretNameCAEtcd                 = "ca-etcd"
-		secretNameCAFrontProxy           = "ca-front-proxy"
-		secretNameCAVPN                  = "ca-vpn"
-		secretNameEtcd                   = "etcd-client"
-		secretNameHTTPProxy              = "kube-apiserver-http-proxy"
-		secretNameKubeAggregator         = "kube-aggregator"
-		secretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"
-		secretNameServer                 = "kube-apiserver"
-		secretNameServiceAccountKey      = "service-account-key-c37a87f6"
-		secretNameVPNSeed                = "vpn-seed"
-		secretNameVPNSeedTLSAuth         = "vpn-seed-tlsauth-de1d12a3"
+		secretNameBasicAuthentication     = "kube-apiserver-basic-auth-426b1845"
+		secretNameStaticToken             = "kube-apiserver-static-token-c069a0e6"
+		secretNameCA                      = "ca"
+		secretNameCAClient                = "ca-client"
+		secretNameCAEtcd                  = "ca-etcd"
+		secretNameCAFrontProxy            = "ca-front-proxy"
+		secretNameCAVPN                   = "ca-vpn"
+		secretNameEtcd                    = "etcd-client"
+		secretNameHTTPProxy               = "kube-apiserver-http-proxy"
+		secretNameKubeAggregator          = "kube-aggregator"
+		secretNameKubeAPIServerToKubelet  = "kube-apiserver-kubelet"
+		secretNameServer                  = "kube-apiserver"
+		secretNameServiceAccountKey       = "service-account-key-c37a87f6"
+		secretNameServiceAccountKeyBundle = "service-account-key"
+		secretNameVPNSeed                 = "vpn-seed"
+		secretNameVPNSeedTLSAuth          = "vpn-seed-tlsauth-de1d12a3"
 
 		secretNameAdmissionConfig      = "kube-apiserver-admission-config-e38ff146"
 		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-235f7353"
@@ -1350,6 +1351,7 @@ rules:
 
 				Expect(deployment.Annotations).To(Equal(map[string]string{
 					"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
+					"reference.resources.gardener.cloud/secret-3055c21f":    secretNameServiceAccountKeyBundle,
 					"reference.resources.gardener.cloud/secret-69590970":    secretNameCA,
 					"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
 					"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
@@ -1398,6 +1400,7 @@ rules:
 
 				Expect(deployment.Spec.Template.Annotations).To(Equal(map[string]string{
 					"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
+					"reference.resources.gardener.cloud/secret-3055c21f":    secretNameServiceAccountKeyBundle,
 					"reference.resources.gardener.cloud/secret-69590970":    secretNameCA,
 					"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
 					"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
@@ -1729,7 +1732,7 @@ rules:
 						"--service-account-issuer="+acceptedIssuers[1],
 						"--service-account-max-token-expiration="+serviceAccountMaxTokenExpiration.String(),
 						"--service-account-extend-token-expiration="+strconv.FormatBool(serviceAccountExtendTokenExpiration),
-						"--service-account-key-file=/srv/kubernetes/service-account-key/id_rsa",
+						"--service-account-key-file=/srv/kubernetes/service-account-key-bundle/bundle.key",
 						"--service-account-signing-key-file=/srv/kubernetes/service-account-key/id_rsa",
 						"--token-auth-file=/srv/kubernetes/token/static_tokens.csv",
 						"--tls-cert-file=/srv/kubernetes/apiserver/tls.crt",
@@ -1780,6 +1783,10 @@ rules:
 						corev1.VolumeMount{
 							Name:      "service-account-key",
 							MountPath: "/srv/kubernetes/service-account-key",
+						},
+						corev1.VolumeMount{
+							Name:      "service-account-key-bundle",
+							MountPath: "/srv/kubernetes/service-account-key-bundle",
 						},
 						corev1.VolumeMount{
 							Name:      "static-token",
@@ -1857,6 +1864,14 @@ rules:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: secretNameServiceAccountKey,
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "service-account-key-bundle",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretNameServiceAccountKeyBundle,
 								},
 							},
 						},
