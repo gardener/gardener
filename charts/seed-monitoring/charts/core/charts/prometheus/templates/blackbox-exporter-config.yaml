@@ -23,7 +23,7 @@ data:
             Accept: "*/*"
             Accept-Language: "en-US"
           tls_config:
-            ca_file: "/var/run/secrets/shoot-ca/ca.crt"
+            ca_file: "/var/run/secrets/shoot-ca/bundle.crt"
             server_name: {{ .Values.shoot.apiserverServerName }}
           bearer_token_file: /var/run/secrets/gardener.cloud/shoot/token/token
           preferred_ip_protocol: "ip4"
