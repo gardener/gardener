@@ -386,7 +386,7 @@ func NewClientFromServiceAccount(ctx context.Context, k8sClient kubernetes.Inter
 		Host: k8sClient.RESTConfig().Host,
 		TLSClientConfig: rest.TLSClientConfig{
 			Insecure: false,
-			CAData:   secret.Data["ca.crt"],
+			CAData:   k8sClient.RESTConfig().CAData,
 		},
 		BearerToken: string(secret.Data["token"]),
 	}
