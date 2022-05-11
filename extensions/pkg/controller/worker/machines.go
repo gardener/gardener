@@ -156,10 +156,13 @@ func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontr
 		}
 	}
 
-	if status := cluster.Shoot.Status; status.Credentials != nil && status.Credentials.Rotation != nil &&
-		status.Credentials.Rotation.CertificateAuthorities != nil &&
-		status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime != nil {
-		data = append(data, status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time.String())
+	if status := cluster.Shoot.Status; status.Credentials != nil && status.Credentials.Rotation != nil {
+		if status.Credentials.Rotation.CertificateAuthorities != nil && status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime != nil {
+			data = append(data, status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time.String())
+		}
+		if status.Credentials.Rotation.ServiceAccountKey != nil && status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime != nil {
+			data = append(data, status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime.Time.String())
+		}
 	}
 
 	var result string
