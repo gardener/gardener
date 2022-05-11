@@ -21,20 +21,20 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("CertificateBundle Secrets", func() {
+var _ = Describe("Bundle Secrets", func() {
 	var (
-		name  = "bundle"
-		cert1 = []byte("cert1")
-		cert2 = []byte("cert2")
+		name   = "bundle"
+		entry1 = []byte("entry1")
+		entry2 = []byte("entry2")
 	)
 
-	Describe("Configuration", func() {
+	Describe("CertificateBundleSecretConfig", func() {
 		var config *CertificateBundleSecretConfig
 
 		BeforeEach(func() {
 			config = &CertificateBundleSecretConfig{
 				Name:            name,
-				CertificatePEMs: [][]byte{cert1, cert2},
+				CertificatePEMs: [][]byte{entry1, entry2},
 			}
 		})
 
@@ -49,29 +49,67 @@ var _ = Describe("CertificateBundle Secrets", func() {
 				obj, err := config.Generate()
 				Expect(err).NotTo(HaveOccurred())
 
-				bundle, ok := obj.(*CertificateBundle)
+				bundle, ok := obj.(*Bundle)
 				Expect(ok).To(BeTrue())
 
 				Expect(bundle.Name).To(Equal(name))
-				Expect(bundle.Bundle).To(Equal(append(cert1, cert2...)))
+				Expect(bundle.Bundle).To(Equal(append(entry1, entry2...)))
+
+				Expect(bundle.SecretData()).To(Equal(map[string][]byte{"bundle.crt": bundle.Bundle}))
+			})
+		})
+	})
+
+	Describe("RSAPrivateKeyBundleSecretConfig", func() {
+		var config *RSAPrivateKeyBundleSecretConfig
+
+		BeforeEach(func() {
+			config = &RSAPrivateKeyBundleSecretConfig{
+				Name:           name,
+				PrivateKeyPEMs: [][]byte{entry1, entry2},
+			}
+		})
+
+		Describe("#GetName", func() {
+			It("should return the name", func() {
+				Expect(config.GetName()).To(Equal(name))
+			})
+		})
+
+		Describe("#Generate", func() {
+			It("should generate the bundle", func() {
+				obj, err := config.Generate()
+				Expect(err).NotTo(HaveOccurred())
+
+				bundle, ok := obj.(*Bundle)
+				Expect(ok).To(BeTrue())
+
+				Expect(bundle.Name).To(Equal(name))
+				Expect(bundle.Bundle).To(Equal(append(entry1, entry2...)))
+
+				Expect(bundle.SecretData()).To(Equal(map[string][]byte{"bundle.key": bundle.Bundle}))
 			})
 		})
 	})
 
 	Describe("Bundle", func() {
-		var bundle *CertificateBundle
+		var (
+			bundle  *Bundle
+			dataKey = "some.key"
+		)
 
 		BeforeEach(func() {
-			bundle = &CertificateBundle{
-				Name:   name,
-				Bundle: append(cert1, cert2...),
+			bundle = &Bundle{
+				Name:        name,
+				Bundle:      append(entry1, entry2...),
+				DataKeyName: dataKey,
 			}
 		})
 
 		Describe("#SecretData", func() {
 			It("should return the correct data map", func() {
 				Expect(bundle.SecretData()).To(Equal(map[string][]byte{
-					"bundle.crt": bundle.Bundle,
+					dataKey: bundle.Bundle,
 				}))
 			})
 		})
