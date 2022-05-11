@@ -660,6 +660,58 @@ var _ = Describe("Generate", func() {
 			})
 		})
 
+		Context("for RSA Private Key secrets", func() {
+			var config *secretutils.RSASecretConfig
+
+			BeforeEach(func() {
+				config = &secretutils.RSASecretConfig{
+					Name: name,
+					Bits: 2048,
+				}
+			})
+
+			It("should generate a new RSA private key secret and a corresponding bundle", func() {
+				By("generating new secret")
+				secret, err := m.Generate(ctx, config)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(secret.Name).To(Equal(name + "-16163da7"))
+				expectSecretWasCreated(ctx, fakeClient, secret)
+
+				By("finding created bundle secret")
+				secretList := &corev1.SecretList{}
+				Expect(fakeClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+					"managed-by":       "secrets-manager",
+					"manager-identity": "test",
+					"bundle-for":       name,
+				})).To(Succeed())
+				Expect(secretList.Items).To(HaveLen(1))
+
+				By("verifying internal store reflects changes")
+				secretInfos, found := m.getFromStore(name)
+				Expect(found).To(BeTrue())
+				Expect(secretInfos.current.obj).To(Equal(secret))
+				Expect(secretInfos.old).To(BeNil())
+				Expect(secretInfos.bundle.obj).To(Equal(withTypeMeta(&secretList.Items[0])))
+			})
+
+			It("should generate a new RSA private key secret but no bundle since it's used for SSH", func() {
+				config.UsedForSSH = true
+
+				By("generating new secret")
+				secret, err := m.Generate(ctx, config)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(secret.Name).To(Equal(name + "-fc4f9932"))
+				expectSecretWasCreated(ctx, fakeClient, secret)
+
+				By("verifying internal store reflects changes")
+				secretInfos, found := m.getFromStore(name)
+				Expect(found).To(BeTrue())
+				Expect(secretInfos.current.obj).To(Equal(secret))
+				Expect(secretInfos.old).To(BeNil())
+				Expect(secretInfos.bundle).To(BeNil())
+			})
+		})
+
 		Context("backwards compatibility", func() {
 			Context("etcd encryption key", func() {
 				var (
