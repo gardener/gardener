@@ -170,6 +170,8 @@ type ShootCredentialsRotation struct {
 	SSHKeypair *ShootSSHKeypairRotation
 	// Observability contains information about the observability credential rotation.
 	Observability *ShootObservabilityRotation
+	// ServiceAccountKey contains information about the service account key credential rotation.
+	ServiceAccountKey *ShootServiceAccountKeyRotation
 }
 
 // ShootCARotation contains information about the certificate authority credential rotation.
@@ -204,6 +206,17 @@ type ShootObservabilityRotation struct {
 	// LastInitiationTime is the most recent time when the observability credential rotation was initiated.
 	LastInitiationTime *metav1.Time
 	// LastCompletionTime is the most recent time when the observability credential rotation was successfully completed.
+	LastCompletionTime *metav1.Time
+}
+
+// ShootServiceAccountKeyRotation contains information about the service account key credential rotation.
+type ShootServiceAccountKeyRotation struct {
+	// Phase describes the phase of the service account key credential rotation.
+	Phase ShootCredentialsRotationPhase
+	// LastInitiationTime is the most recent time when the service account key credential rotation was initiated.
+	LastInitiationTime *metav1.Time
+	// LastCompletionTime is the most recent time when the service account key credential rotation was successfully
+	// completed.
 	LastCompletionTime *metav1.Time
 }
 

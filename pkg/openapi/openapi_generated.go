@@ -180,6 +180,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootNetworks":                          schema_pkg_apis_core_v1alpha1_ShootNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootObservabilityRotation":             schema_pkg_apis_core_v1alpha1_ShootObservabilityRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootSSHKeypairRotation":                schema_pkg_apis_core_v1alpha1_ShootSSHKeypairRotation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootServiceAccountKeyRotation":         schema_pkg_apis_core_v1alpha1_ShootServiceAccountKeyRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootSpec":                              schema_pkg_apis_core_v1alpha1_ShootSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootState":                             schema_pkg_apis_core_v1alpha1_ShootState(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootStateList":                         schema_pkg_apis_core_v1alpha1_ShootStateList(ref),
@@ -333,6 +334,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootNetworks":                           schema_pkg_apis_core_v1beta1_ShootNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootObservabilityRotation":              schema_pkg_apis_core_v1beta1_ShootObservabilityRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSSHKeypairRotation":                 schema_pkg_apis_core_v1beta1_ShootSSHKeypairRotation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootServiceAccountKeyRotation":          schema_pkg_apis_core_v1beta1_ShootServiceAccountKeyRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSpec":                               schema_pkg_apis_core_v1beta1_ShootSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStatus":                             schema_pkg_apis_core_v1beta1_ShootStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootTemplate":                           schema_pkg_apis_core_v1beta1_ShootTemplate(ref),
@@ -6955,11 +6957,17 @@ func schema_pkg_apis_core_v1alpha1_ShootCredentialsRotation(ref common.Reference
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootObservabilityRotation"),
 						},
 					},
+					"serviceAccountKey": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ServiceAccountKey contains information about the service account key credential rotation.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootServiceAccountKeyRotation"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCARotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootKubeconfigRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootObservabilityRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootSSHKeypairRotation"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCARotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootKubeconfigRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootObservabilityRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootSSHKeypairRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootServiceAccountKeyRotation"},
 	}
 }
 
@@ -7152,6 +7160,42 @@ func schema_pkg_apis_core_v1alpha1_ShootSSHKeypairRotation(ref common.ReferenceC
 						},
 					},
 				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ShootServiceAccountKeyRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootServiceAccountKeyRotation contains information about the service account key credential rotation.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Phase describes the phase of the service account key credential rotation.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"lastInitiationTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastInitiationTime is the most recent time when the service account key credential rotation was initiated.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastCompletionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTime is the most recent time when the service account key credential rotation was successfully completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"phase"},
 			},
 		},
 		Dependencies: []string{
@@ -14057,11 +14101,17 @@ func schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref common.ReferenceC
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootObservabilityRotation"),
 						},
 					},
+					"serviceAccountKey": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ServiceAccountKey contains information about the service account key credential rotation.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootServiceAccountKeyRotation"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCARotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootKubeconfigRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootObservabilityRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSSHKeypairRotation"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCARotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootKubeconfigRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootObservabilityRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSSHKeypairRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootServiceAccountKeyRotation"},
 	}
 }
 
@@ -14254,6 +14304,42 @@ func schema_pkg_apis_core_v1beta1_ShootSSHKeypairRotation(ref common.ReferenceCa
 						},
 					},
 				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ShootServiceAccountKeyRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootServiceAccountKeyRotation contains information about the service account key credential rotation.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Phase describes the phase of the service account key credential rotation.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"lastInitiationTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastInitiationTime is the most recent time when the service account key credential rotation was initiated.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastCompletionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTime is the most recent time when the service account key credential rotation was successfully completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"phase"},
 			},
 		},
 		Dependencies: []string{
