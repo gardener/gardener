@@ -34,6 +34,10 @@ nodes:
         mountPath: /etc/gardener/controlplane/auth-webhook-kubeconfig-skaffold.yaml
         readOnly: true
         pathType: File
+  - |
+    apiVersion: kubelet.config.k8s.io/v1beta1
+    kind: KubeletConfiguration
+    maxPods: 500
 networking:
   disableDefaultCNI: true # disable kindnet since we install calico for network policy support
   podSubnet: 10.1.0.0/16
