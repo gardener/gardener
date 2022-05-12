@@ -99,16 +99,6 @@ func (cm *GenericClientMap) GetClient(ctx context.Context, key clientmap.ClientS
 	if found {
 		if entry.refreshLimiter.AllowN(cm.clock.Now(), 1) {
 			shouldRefresh, err := func() (bool, error) {
-				// refresh server version
-				oldVersion := entry.clientSet.Version()
-				serverVersion, err := entry.clientSet.DiscoverVersion()
-				if err != nil {
-					return false, fmt.Errorf("failed to refresh ClientSet's server version: %w", err)
-				}
-				if serverVersion.GitVersion != oldVersion {
-					cm.log.Info("New server version discovered for ClientSet", "key", key.Key(), "serverVersion", serverVersion.GitVersion)
-				}
-
 				// invalidate client if the config of the client has changed (e.g. kubeconfig secret)
 				hash, err := cm.factory.CalculateClientSetHash(ctx, key)
 				if err != nil {
@@ -117,6 +107,17 @@ func (cm *GenericClientMap) GetClient(ctx context.Context, key clientmap.ClientS
 
 				if hash != entry.hash {
 					cm.log.Info("Refreshing ClientSet due to changed ClientSetHash", "key", key.Key(), "oldHash", entry.hash, "newHash", hash)
+					return true, nil
+				}
+
+				// refresh server version
+				oldVersion := entry.clientSet.Version()
+				serverVersion, err := entry.clientSet.DiscoverVersion()
+				if err != nil {
+					return false, fmt.Errorf("failed to refresh ClientSet's server version: %w", err)
+				}
+				if serverVersion.GitVersion != oldVersion {
+					cm.log.Info("New server version discovered for ClientSet", "key", key.Key(), "serverVersion", serverVersion.GitVersion)
 					return true, nil
 				}
 
