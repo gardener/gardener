@@ -273,7 +273,7 @@ func (k *kubeAPIServer) reconcileSecretKubeletClient(ctx context.Context) (*core
 		CommonName:                  userName,
 		CertType:                    secretutils.ClientCert,
 		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAKubelet), secretsmanager.Rotate(secretsmanager.InPlace))
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAKubelet, secretsmanager.UseOldCA), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return nil, err
 	}

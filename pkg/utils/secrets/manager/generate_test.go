@@ -491,6 +491,35 @@ var _ = Describe("Generate", func() {
 				Expect(newServerSecret).NotTo(Equal(serverSecret))
 			})
 
+			It("should not regenerate the client cert when the CA rotates and the 'UseOldCA' option is set", func() {
+				By("generating new CA secret")
+				caSecret, err := m.Generate(ctx, caConfig)
+				Expect(err).NotTo(HaveOccurred())
+				expectSecretWasCreated(ctx, fakeClient, caSecret)
+
+				By("generating new client secret")
+				clientSecret, err := m.Generate(ctx, clientConfig, SignedByCA(caName, UseOldCA))
+				Expect(err).NotTo(HaveOccurred())
+				expectSecretWasCreated(ctx, fakeClient, clientSecret)
+
+				By("rotating CA")
+				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, map[string]time.Time{caName: time.Now()})
+				Expect(err).NotTo(HaveOccurred())
+				m = mgr.(*manager)
+
+				newCASecret, err := m.Generate(ctx, caConfig, Rotate(KeepOld))
+				Expect(err).NotTo(HaveOccurred())
+				expectSecretWasCreated(ctx, fakeClient, newCASecret)
+
+				By("get or generate client secret")
+				newClientSecret, err := m.Generate(ctx, clientConfig, SignedByCA(caName, UseOldCA))
+				Expect(err).NotTo(HaveOccurred())
+				expectSecretWasCreated(ctx, fakeClient, newClientSecret)
+
+				By("verifying client secret is not changed")
+				Expect(newClientSecret).To(Equal(clientSecret))
+			})
+
 			It("should regenerate the client cert when the CA rotates", func() {
 				By("generating new CA secret")
 				caSecret, err := m.Generate(ctx, caConfig)
