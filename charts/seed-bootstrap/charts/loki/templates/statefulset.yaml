@@ -37,6 +37,7 @@ spec:
       automountServiceAccountToken: false
       securityContext:
         fsGroup: 10001
+        fsGroupChangePolicy: "OnRootMismatch"
       priorityClassName: {{ .Values.priorityClass.name }}
       containers:
 {{- if .Values.rbacSidecarEnabled }}
