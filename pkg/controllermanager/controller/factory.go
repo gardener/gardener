@@ -85,7 +85,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to start ClientMap: %+v", err)
 	}
 
-	secretsManager, err := secretsmanager.New(ctx, logf.Log.WithName("secretsmanager"), clock.RealClock{}, gardenClientSet.Client(), v1beta1constants.GardenNamespace, v1beta1constants.SecretManagerIdentityControllerManager, secretsmanager.Rotation{})
+	secretsManager, err := secretsmanager.New(ctx, logf.Log.WithName("secretsmanager"), clock.RealClock{}, gardenClientSet.Client(), v1beta1constants.GardenNamespace, v1beta1constants.SecretManagerIdentityControllerManager, secretsmanager.Config{})
 	if err != nil {
 		return fmt.Errorf("failed creating new secrets manager: %w", err)
 	}

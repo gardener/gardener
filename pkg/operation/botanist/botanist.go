@@ -83,9 +83,9 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		v1beta1constants.SecretManagerIdentityGardenlet,
-		secretsmanager.Rotation{
-			NoCASecretAutoRotation: true,
-			SecretNamesToTimes:     b.lastSecretRotationStartTimes(),
+		secretsmanager.Config{
+			CASecretAutoRotation: false,
+			SecretNamesToTimes:   b.lastSecretRotationStartTimes(),
 		},
 	)
 	if err != nil {

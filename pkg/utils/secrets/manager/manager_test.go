@@ -51,7 +51,7 @@ var _ = Describe("Manager", func() {
 		})
 
 		It("should create a new instance w/ empty last rotation initiation times map", func() {
-			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Rotation{})
+			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{})
 			Expect(err).NotTo(HaveOccurred())
 			m = mgr.(*manager)
 
@@ -59,7 +59,7 @@ var _ = Describe("Manager", func() {
 		})
 
 		It("should create a new instance w/ provided last rotation initiation times", func() {
-			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Rotation{SecretNamesToTimes: map[string]time.Time{"foo": fakeClock.Now()}})
+			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{SecretNamesToTimes: map[string]time.Time{"foo": fakeClock.Now()}})
 			Expect(err).NotTo(HaveOccurred())
 			m = mgr.(*manager)
 
@@ -81,7 +81,7 @@ var _ = Describe("Manager", func() {
 			}
 			Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
 
-			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Rotation{SecretNamesToTimes: map[string]time.Time{"secret1": fakeClock.Now()}})
+			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{SecretNamesToTimes: map[string]time.Time{"secret1": fakeClock.Now()}})
 			Expect(err).NotTo(HaveOccurred())
 			m = mgr.(*manager)
 
@@ -103,7 +103,7 @@ var _ = Describe("Manager", func() {
 			}
 			Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
 
-			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Rotation{SecretNamesToTimes: map[string]time.Time{"foo": fakeClock.Now()}})
+			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{SecretNamesToTimes: map[string]time.Time{"foo": fakeClock.Now()}})
 			Expect(err).NotTo(HaveOccurred())
 			m = mgr.(*manager)
 
@@ -132,7 +132,7 @@ var _ = Describe("Manager", func() {
 			}
 			Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
 
-			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Rotation{})
+			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{})
 			Expect(err).NotTo(HaveOccurred())
 			m = mgr.(*manager)
 
@@ -158,7 +158,7 @@ var _ = Describe("Manager", func() {
 			}
 			Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
 
-			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Rotation{})
+			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{})
 			Expect(err).NotTo(HaveOccurred())
 			m = mgr.(*manager)
 
@@ -184,7 +184,7 @@ var _ = Describe("Manager", func() {
 			}
 			Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
 
-			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Rotation{})
+			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{})
 			Expect(err).NotTo(HaveOccurred())
 			m = mgr.(*manager)
 
@@ -238,7 +238,7 @@ var _ = Describe("Manager", func() {
 				Expect(fakeClient.Create(ctx, secret)).To(Succeed())
 			}
 
-			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Rotation{})
+			mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{})
 			Expect(err).NotTo(HaveOccurred())
 			m = mgr.(*manager)
 
@@ -272,18 +272,18 @@ var _ = Describe("Manager", func() {
 				Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
 			})
 
-			It("should create a new instance and auto-renew the CA secret because NoCASecretAutoRotation=false", func() {
+			It("should create a new instance and auto-renew the CA secret because CASecretAutoRotation=true", func() {
 				fakeClock = clock.NewFakeClock(time.Date(2000, 1, 1, 1, 1, 1, 1, time.UTC))
 
-				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Rotation{NoCASecretAutoRotation: false})
+				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{CASecretAutoRotation: true})
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
 
 				Expect(m.lastRotationInitiationTimes).To(Equal(nameToUnixTime{"secret1": strconv.FormatInt(fakeClock.Now().Unix(), 10)}))
 			})
 
-			It("should create a new instance and NOT auto-renew the CA secret because NoCASecretAutoRotation=true", func() {
-				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Rotation{NoCASecretAutoRotation: true})
+			It("should create a new instance and NOT auto-renew the CA secret because CASecretAutoRotation=false", func() {
+				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{CASecretAutoRotation: false})
 				Expect(err).NotTo(HaveOccurred())
 				m = mgr.(*manager)
 

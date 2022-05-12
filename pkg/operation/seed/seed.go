@@ -242,7 +242,7 @@ func RunReconcileSeedFlow(
 		seedClient,
 		v1beta1constants.GardenNamespace,
 		v1beta1constants.SecretManagerIdentityGardenlet,
-		secretsmanager.Rotation{NoCASecretAutoRotation: false},
+		secretsmanager.Config{CASecretAutoRotation: true},
 	)
 	if err != nil {
 		return err

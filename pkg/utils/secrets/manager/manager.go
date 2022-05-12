@@ -96,10 +96,10 @@ type (
 		lastRotationInitiationTime int64
 	}
 
-	// Rotation specifies certain configuration options for the rotation of secrets.
-	Rotation struct {
-		// NoCASecretAutoRotation states whether CA secrets should be skipped for automatic rotation.
-		NoCASecretAutoRotation bool
+	// Config specifies certain configuration options for the manager.
+	Config struct {
+		// CASecretAutoRotation states whether CA secrets are considered for automatic rotation (defaults to false).
+		CASecretAutoRotation bool
 		// SecretNamesToTimes is a map whose keys are secret names and whose values are the last rotation initiation
 		// times.
 		SecretNamesToTimes map[string]time.Time
@@ -124,7 +124,7 @@ func New(
 	c client.Client,
 	namespace string,
 	identity string,
-	rotation Rotation,
+	rotation Config,
 ) (
 	Interface,
 	error,
@@ -154,7 +154,7 @@ func (m *manager) listSecrets(ctx context.Context) (*corev1.SecretList, error) {
 	})
 }
 
-func (m *manager) initialize(ctx context.Context, rotation Rotation) error {
+func (m *manager) initialize(ctx context.Context, rotation Config) error {
 	secretList, err := m.listSecrets(ctx)
 	if err != nil {
 		return err
@@ -174,7 +174,7 @@ func (m *manager) initialize(ctx context.Context, rotation Rotation) error {
 
 	// Check if the secrets must be automatically renewed because they are about to expire.
 	for name, secret := range nameToNewestSecret {
-		if isCASecret(secret.Data) && rotation.NoCASecretAutoRotation {
+		if isCASecret(secret.Data) && !rotation.CASecretAutoRotation {
 			continue
 		}
 

@@ -46,7 +46,7 @@ var _ = Describe("Cleanup", func() {
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 
-		mgr, err := New(ctx, logr.Discard(), clock.RealClock{}, fakeClient, namespace, testIdentity, Rotation{})
+		mgr, err := New(ctx, logr.Discard(), clock.RealClock{}, fakeClient, namespace, testIdentity, Config{})
 		Expect(err).NotTo(HaveOccurred())
 		m = mgr.(*manager)
 	})
