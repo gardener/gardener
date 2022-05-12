@@ -183,13 +183,13 @@ func (c *Controller) seedCareAdd(obj interface{}) {
 	c.seedCareQueue.Add(key)
 }
 
-func (c *Controller) seedCareUpdate(_, newObj interface{}) {
+func (c *Controller) seedCareUpdate(oldObj, newObj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(newObj)
 	if err != nil {
 		return
 	}
 
-	oldSeed, ok := newObj.(*gardencorev1beta1.Seed)
+	oldSeed, ok := oldObj.(*gardencorev1beta1.Seed)
 	if !ok {
 		return
 	}
