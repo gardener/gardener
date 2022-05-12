@@ -191,7 +191,8 @@ func (b *Botanist) mustBootstrapGardenerResourceManager(ctx context.Context) (bo
 
 	if conditionApplied := v1beta1helper.GetCondition(managedResource.Status.Conditions, resourcesv1alpha1.ResourcesApplied); conditionApplied != nil &&
 		conditionApplied.Status == gardencorev1beta1.ConditionFalse &&
-		strings.Contains(conditionApplied.Message, `forbidden: User "system:serviceaccount:kube-system:gardener-resource-manager" cannot`) {
+		(strings.Contains(conditionApplied.Message, `forbidden: User "system:serviceaccount:kube-system:gardener-resource-manager" cannot`) ||
+			strings.Contains(conditionApplied.Message, ": Unauthorized")) {
 		return true, nil // ServiceAccount lost access.
 	}
 
