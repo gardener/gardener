@@ -59,6 +59,7 @@ apiserver_flags="
   --feature-gates SeedChange=true \
   --feature-gates WorkerPoolKubernetesVersion=true \
   --feature-gates ShootCARotation=true \
+  --feature-gates ShootSARotation=true \
   --feature-gates ShootMaxTokenExpirationOverwrite=true \
   --feature-gates ShootMaxTokenExpirationValidation=true \
   --shoot-admin-kubeconfig-max-expiration=1h \

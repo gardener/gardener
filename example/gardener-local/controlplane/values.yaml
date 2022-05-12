@@ -157,6 +157,7 @@ global:
       SeedChange: true
       WorkerPoolKubernetesVersion: true
       ShootCARotation: true
+      ShootSARotation: true
       ShootMaxTokenExpirationOverwrite: true
       ShootMaxTokenExpirationValidation: true
     resources: {}

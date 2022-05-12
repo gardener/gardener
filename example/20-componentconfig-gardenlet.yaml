@@ -123,6 +123,7 @@ featureGates:
   ForceRestore: false
   DisableDNSProviderManagement: false
   ShootCARotation: true
+  ShootSARotation: true
 # seedConfig:
 #   metadata:
 #     name: my-seed

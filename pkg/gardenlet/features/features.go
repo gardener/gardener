@@ -40,5 +40,6 @@ func RegisterFeatureGates() {
 		features.ForceRestore,
 		features.DisableDNSProviderManagement,
 		features.ShootCARotation,
+		features.ShootSARotation,
 	)))
 }

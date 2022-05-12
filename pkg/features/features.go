@@ -144,6 +144,11 @@ const (
 	// alpha: v1.42.0
 	ShootCARotation featuregate.Feature = "ShootCARotation"
 
+	// ShootSARotation enables the automated rotation of the shoot service account signing key.
+	// owner: @rfranzke
+	// alpha: v1.48.0
+	ShootSARotation featuregate.Feature = "ShootSARotation"
+
 	// ShootMaxTokenExpirationOverwrite makes the Gardener API server overwriting values in the
 	// `.spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration` field of Shoot specifications to
 	// - be at least 720h (30d) when the current value is lower
@@ -184,6 +189,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ForceRestore:                               {Default: false, PreRelease: featuregate.Alpha},
 	DisableDNSProviderManagement:               {Default: false, PreRelease: featuregate.Alpha},
 	ShootCARotation:                            {Default: false, PreRelease: featuregate.Alpha},
+	ShootSARotation:                            {Default: false, PreRelease: featuregate.Alpha},
 	ShootMaxTokenExpirationOverwrite:           {Default: true, PreRelease: featuregate.Beta},
 	ShootMaxTokenExpirationValidation:          {Default: true, PreRelease: featuregate.Beta},
 }
