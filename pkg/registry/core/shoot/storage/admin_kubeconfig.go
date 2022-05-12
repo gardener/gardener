@@ -228,25 +228,27 @@ func getClusterCABundle(resourceDataList gardencorev1alpha1helper.GardenerResour
 	var (
 		allCAs   = resourceDataList.Select(caCertificateSelector.Add(nameCAClusterReq))
 		caBundle []byte
+		err      error
 	)
 
 	// Sort CAs descending based on their issued-at-time label. This ensures that the current CA is always the first so
 	// that the order in the bundle is the same as in the <shoot-name>.ca-cluster secret.
 	sort.Slice(allCAs, func(i, j int) bool {
-		issuedAtTime1, ok1 := allCAs[i].Labels[secretsmanager.LabelKeyIssuedAtTime]
-		issuedAtTime2, ok2 := allCAs[j].Labels[secretsmanager.LabelKeyIssuedAtTime]
-		if !ok1 || !ok2 {
-			return false
+		issuedAtUnix1, err1 := parseIssuedAtUnix(allCAs[i])
+		if err1 != nil {
+			err = err1
 		}
 
-		issuedAtUnix1, err1 := strconv.ParseInt(issuedAtTime1, 10, 64)
-		issuedAtUnix2, err2 := strconv.ParseInt(issuedAtTime2, 10, 64)
-		if err1 != nil || err2 != nil {
-			return false
+		issuedAtUnix2, err2 := parseIssuedAtUnix(allCAs[j])
+		if err2 != nil {
+			err = err2
 		}
 
 		return issuedAtUnix1 > issuedAtUnix2
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	for _, data := range allCAs {
 		cert, _, err := getCADataRaw(data)
@@ -296,4 +298,18 @@ func getCADataRaw(resourceData *gardencorev1alpha1.GardenerResourceData) (certif
 
 	certificate, privateKey = data[secrets.DataKeyCertificateCA], data[secrets.DataKeyPrivateKeyCA]
 	return
+}
+
+func parseIssuedAtUnix(caSecret *gardencorev1alpha1.GardenerResourceData) (int64, error) {
+	issuedAtTime, ok1 := caSecret.Labels[secretsmanager.LabelKeyIssuedAtTime]
+	if !ok1 {
+		return -1, fmt.Errorf("ca %q does not have %s label", caSecret.Name, secretsmanager.LabelKeyIssuedAtTime)
+	}
+
+	issuedAtUnix, err := strconv.ParseInt(issuedAtTime, 10, 64)
+	if err != nil {
+		return -1, fmt.Errorf("could not parse %s label for ca %q: %w", secretsmanager.LabelKeyIssuedAtTime, caSecret.Name, err)
+	}
+
+	return issuedAtUnix, nil
 }
