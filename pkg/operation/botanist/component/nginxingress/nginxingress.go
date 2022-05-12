@@ -42,12 +42,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// ManagedResourceControlName is the name of the of the cluster-autoscaler managed resource.
-const ManagedResourceControlName = "cluster-autoscaler"
-
 const (
-	name                = "nginx-ingress"
-	managedResourceName = name
+	name = "nginx-ingress"
+	// ManagedResourceName is the name of the of the nginx-ingress managed resource.
+	ManagedResourceName = name
 
 	labelAppValue        = "nginx-ingress"
 	labelKeyComponent    = "component"
@@ -112,11 +110,11 @@ func (n *nginxIngress) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return managedresources.CreateForSeed(ctx, n.client, n.namespace, managedResourceName, false, data)
+	return managedresources.CreateForSeed(ctx, n.client, n.namespace, ManagedResourceName, false, data)
 }
 
 func (n *nginxIngress) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, n.client, n.namespace, managedResourceName)
+	return managedresources.DeleteForSeed(ctx, n.client, n.namespace, ManagedResourceName)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -127,14 +125,14 @@ func (n *nginxIngress) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, n.client, n.namespace, managedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, n.client, n.namespace, ManagedResourceName)
 }
 
 func (n *nginxIngress) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, n.client, n.namespace, managedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, n.client, n.namespace, ManagedResourceName)
 }
 
 func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {

@@ -21,7 +21,6 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -30,18 +29,22 @@ import (
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
-	"github.com/go-logr/logr"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+)
+
+const (
+	seedName       = "seed"
+	careSyncPeriod = 1 * time.Minute
 )
 
 var _ = Describe("Seed Care Control", func() {
@@ -51,8 +54,6 @@ var _ = Describe("Seed Care Control", func() {
 		careControl   reconcile.Reconciler
 		gardenletConf *config.GardenletConfiguration
 
-		seedName string
-
 		seed *gardencorev1beta1.Seed
 	)
 
@@ -61,8 +62,6 @@ var _ = Describe("Seed Care Control", func() {
 		logf.IntoContext(ctx, logr.Discard())
 
 		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
-
-		seedName = "seed"
 
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
@@ -75,24 +74,16 @@ var _ = Describe("Seed Care Control", func() {
 					},
 				},
 			},
-			Status: gardencorev1beta1.SeedStatus{
-				KubernetesVersion: pointer.StringPtr("latest"),
-				Gardener: &gardencorev1beta1.Gardener{
-					Version: "latest",
-				},
-			},
 		}
 	})
 
 	Describe("#Care", func() {
 		var (
-			careSyncPeriod time.Duration
-			req            reconcile.Request
+			req              reconcile.Request
+			clientMapBuilder *fakeclientmap.ClientMapBuilder
 		)
 
 		BeforeEach(func() {
-			careSyncPeriod = 1 * time.Minute
-
 			req = reconcile.Request{NamespacedName: kutil.Key(seedName)}
 
 			gardenletConf = &config.GardenletConfiguration{
@@ -109,26 +100,28 @@ var _ = Describe("Seed Care Control", func() {
 					},
 				},
 			}
+
+			gardenClientSet := fakeclientset.NewClientSetBuilder().
+				WithClient(gardenClient).
+				Build()
+			clientMapBuilder = fakeclientmap.NewClientMapBuilder()
+			clientMapBuilder.WithClientSetForKey(keys.ForGarden(), gardenClientSet)
 		})
 
 		JustBeforeEach(func() {
 			Expect(gardenClient.Create(ctx, seed)).To(Succeed())
 		})
 
+		Context("when seed no longer exists", func() {
+			It("should stop reconciling and not requeue", func() {
+				careControl = NewCareReconciler(clientMapBuilder.Build(), *gardenletConf.Controllers.SeedCare)
+
+				req = reconcile.Request{NamespacedName: kutil.Key("some-other-seed")}
+				Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{}))
+			})
+		})
+
 		Context("when health check setup is broken", func() {
-			var clientMapBuilder *fakeclientmap.ClientMapBuilder
-
-			JustBeforeEach(func() {
-				gardenClientSet := fakeclientset.NewClientSetBuilder().
-					WithClient(gardenClient).
-					Build()
-				clientMapBuilder.WithClientSetForKey(keys.ForGarden(), gardenClientSet)
-			})
-
-			BeforeEach(func() {
-				clientMapBuilder = fakeclientmap.NewClientMapBuilder()
-			})
-
 			Context("when seed client is not available", func() {
 				It("should report a setup failure", func() {
 					careControl = NewCareReconciler(clientMapBuilder.Build(), *gardenletConf.Controllers.SeedCare)
@@ -142,18 +135,12 @@ var _ = Describe("Seed Care Control", func() {
 		})
 
 		Context("when health check setup is successful", func() {
-			var clientMap clientmap.ClientMap
-
 			JustBeforeEach(func() {
-				gardenClientSet := fakeclientset.NewClientSetBuilder().
-					WithClient(gardenClient).
-					Build()
 				seedClientSet := fakeclientset.NewClientSetBuilder().
 					Build()
-				clientMap = fakeclientmap.NewClientMapBuilder().
-					WithClientSetForKey(keys.ForGarden(), gardenClientSet).
-					WithClientSetForKey(keys.ForSeedWithName(seedName), seedClientSet).
+				clientMap := clientMapBuilder.WithClientSetForKey(keys.ForSeedWithName(seedName), seedClientSet).
 					Build()
+
 				careControl = NewCareReconciler(clientMap, *gardenletConf.Controllers.SeedCare)
 			})
 
@@ -205,13 +192,13 @@ var _ = Describe("Seed Care Control", func() {
 					Expect(updatedSeed.Status.Conditions).To(BeEmpty())
 				})
 				It("should not amend existing conditions", func() {
-					apiServerCondition := gardencorev1beta1.Condition{
-						Type:   gardencorev1beta1.ShootAPIServerAvailable,
+					seedSystemComponentsCondition := gardencorev1beta1.Condition{
+						Type:   gardencorev1beta1.SeedSystemComponentsHealthy,
 						Status: gardencorev1beta1.ConditionTrue,
 					}
 
 					seed.Status = gardencorev1beta1.SeedStatus{
-						Conditions: []gardencorev1beta1.Condition{apiServerCondition},
+						Conditions: []gardencorev1beta1.Condition{seedSystemComponentsCondition},
 					}
 					Expect(gardenClient.Update(ctx, seed)).To(Succeed())
 
@@ -219,7 +206,7 @@ var _ = Describe("Seed Care Control", func() {
 
 					updatedSeed := &gardencorev1beta1.Seed{}
 					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(seed), updatedSeed)).To(Succeed())
-					Expect(updatedSeed.Status.Conditions).To(ConsistOf(apiServerCondition))
+					Expect(updatedSeed.Status.Conditions).To(ConsistOf(seedSystemComponentsCondition))
 				})
 			})
 
@@ -256,7 +243,7 @@ var _ = Describe("Seed Care Control", func() {
 type resultingConditionFunc func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
 
 func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
-	return func(seed *gardencorev1beta1.Seed, client client.Client, logger logr.Logger) HealthCheck {
+	return func(seed *gardencorev1beta1.Seed, client client.Client) HealthCheck {
 		return fn
 	}
 }

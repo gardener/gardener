@@ -40,7 +40,6 @@ var _ = Describe("#VerifySeedReadiness", func() {
 					Conditions: []gardencorev1beta1.Condition{
 						{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
 						{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
-						{Type: gardencorev1beta1.SeedSystemComponentsHealthy, Status: gardencorev1beta1.ConditionTrue},
 						{Type: gardencorev1beta1.SeedBackupBucketsReady, Status: gardencorev1beta1.ConditionTrue},
 						{Type: gardencorev1beta1.SeedExtensionsReady, Status: gardencorev1beta1.ConditionTrue},
 					},
@@ -58,7 +57,6 @@ var _ = Describe("#VerifySeedReadiness", func() {
 		Entry("SeedBootstrapped is false", gardencorev1beta1.SeedBootstrapped, true, BeFalse()),
 		Entry("SeedGardenletReady is false", gardencorev1beta1.SeedGardenletReady, true, BeFalse()),
 		Entry("SeedBackupBucketsReady is false", gardencorev1beta1.SeedBackupBucketsReady, true, BeFalse()),
-		Entry("SeedBackupBucketsReady is false", gardencorev1beta1.SeedSystemComponentsHealthy, true, BeFalse()),
 		Entry("SeedBackupBucketsReady is false but no backup specified", gardencorev1beta1.SeedBackupBucketsReady, false, BeTrue()),
 		Entry("SeedExtensionsReady is false", gardencorev1beta1.SeedExtensionsReady, true, BeTrue()),
 	)

@@ -26,13 +26,14 @@ import (
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 
 	"github.com/go-logr/logr"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+const seedCareReconcilerName = "seed-care"
 
 // NewCareReconciler returns an implementation of reconcile.Reconciler which is dedicated to execute care operations
 func NewCareReconciler(
@@ -51,7 +52,7 @@ type careReconciler struct {
 }
 
 func (r *careReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	log := logf.FromContext(ctx).WithName(req.Name)
+	log := logf.FromContext(ctx)
 
 	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
@@ -64,8 +65,7 @@ func (r *careReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 			log.Info("Stopping care operations for Seed since it has been deleted")
 			return reconcile.Result{}, nil
 		}
-		log.Error(err, "Unable to retrieve object from store")
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
 	if err := r.care(ctx, gardenClient.Client(), seed, log); err != nil {
@@ -111,14 +111,14 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet client.Client
 	seedObj, err := NewSeed(careCtx, seed)
 	if err != nil {
 		log.Error(err, "SeedObj cannot be constructed")
-		if err := careSetupFailure(careCtx, gardenClientSet, seed, "seedObj cannot be constructed", conditions); err != nil {
+		if err := careSetupFailure(ctx, gardenClientSet, seed, "seedObj cannot be constructed", conditions); err != nil {
 			log.Error(err, "Unable to create error condition")
 		}
 		return nil
 	}
 
 	// Trigger health check
-	seedHealth := NewHealthCheck(seed, seedClient.Client(), log)
+	seedHealth := NewHealthCheck(seed, seedClient.Client())
 	updatedConditions := seedHealth.CheckSeed(
 		careCtx,
 		seedObj,
@@ -126,12 +126,12 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet client.Client
 		r.conditionThresholdsToProgressingMapping(),
 	)
 
-	// Update Seed status (conditions, constraints) if necessary
+	// Update Seed status conditions if necessary
 	if gardencorev1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) {
-		// Rebuild seed conditions and constraints to ensure that only the conditions and constraints with the
+		// Rebuild seed conditions to ensure that only the conditions with the
 		// correct types will be updated, and any other conditions will remain intact
 		conditions := buildSeedConditions(seed.Status.Conditions, updatedConditions, conditionTypes)
-		log.Info("Updating seed status conditions and constraints")
+		log.Info("Updating seed status conditions")
 		if err := patchSeedStatus(ctx, gardenClientSet, seed, conditions); err != nil {
 			log.Error(err, "Could not update Seed status")
 			return nil // We do not want to run in the exponential backoff for the condition checks.
@@ -199,16 +199,21 @@ func (c *Controller) seedCareUpdate(_, newObj interface{}) {
 		return
 	}
 
-	if apiequality.Semantic.DeepEqual(gardencorev1beta1helper.GetCondition(newSeed.Status.Conditions, gardencorev1beta1.SeedBootstrapped),
-		gardencorev1beta1helper.GetCondition(oldSeed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)) &&
-		apiequality.Semantic.DeepEqual(gardencorev1beta1helper.GetCondition(newSeed.Status.Conditions, gardencorev1beta1.SeedGardenletReady),
-			gardencorev1beta1helper.GetCondition(oldSeed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)) &&
-		apiequality.Semantic.DeepEqual(gardencorev1beta1helper.GetCondition(newSeed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady),
-			gardencorev1beta1helper.GetCondition(oldSeed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady)) &&
-		apiequality.Semantic.DeepEqual(gardencorev1beta1helper.GetCondition(newSeed.Status.Conditions, gardencorev1beta1.SeedExtensionsReady),
-			gardencorev1beta1helper.GetCondition(oldSeed.Status.Conditions, gardencorev1beta1.SeedExtensionsReady)) {
-		return
+	// re-evaluate seed health status right after seed was successfully bootstrapped
+	if seedBootstrappedSuccessfully(oldSeed, newSeed) {
+		c.seedCareQueue.Add(key)
 	}
+}
 
-	c.seedCareQueue.Add(key)
+func seedBootstrappedSuccessfully(oldSeed, newSeed *gardencorev1beta1.Seed) bool {
+	oldBootstrappedCondition := gardencorev1beta1helper.GetCondition(oldSeed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
+	newBootstrappedCondition := gardencorev1beta1helper.GetCondition(newSeed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
+
+	if newBootstrappedCondition != nil &&
+		newBootstrappedCondition.Status == gardencorev1beta1.ConditionTrue &&
+		(oldBootstrappedCondition == nil ||
+			oldBootstrappedCondition.Status != gardencorev1beta1.ConditionTrue) {
+		return true
+	}
+	return false
 }

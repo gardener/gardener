@@ -22,26 +22,40 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/go-logr/logr"
+
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+var requiredManagedResourcesSeed = sets.NewString(
+	etcd.Druid,
+	seedadmissioncontroller.Name,
+	networkpolicies.ManagedResourceControlName,
+	clusteridentity.ManagedResourceControlName,
+	clusterautoscaler.ManagedResourceControlName,
+	vpa.ManagedResourceControlName,
 )
 
 // SeedHealth contains information needed to execute health checks for seed.
 type SeedHealth struct {
 	seed       *gardencorev1beta1.Seed
 	seedClient client.Client
-
-	logger logr.Logger
 }
 
 // NewHealthForSeed creates a new Health instance with the given parameters.
-func NewHealthForSeed(seed *gardencorev1beta1.Seed, seedClient client.Client, logger logr.Logger) *SeedHealth {
+func NewHealthForSeed(seed *gardencorev1beta1.Seed, seedClient client.Client) *SeedHealth {
 	return &SeedHealth{
 		seedClient: seedClient,
-		logger:     logger,
 		seed:       seed,
 	}
 }
@@ -52,17 +66,17 @@ func (h *SeedHealth) CheckSeed(ctx context.Context,
 	conditions []gardencorev1beta1.Condition,
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration) []gardencorev1beta1.Condition {
 
-	var systemComponents gardencorev1beta1.Condition
+	var systemComponentsCondition gardencorev1beta1.Condition
 	for _, cond := range conditions {
 		switch cond.Type {
 		case gardencorev1beta1.SeedSystemComponentsHealthy:
-			systemComponents = cond
+			systemComponentsCondition = cond
 		}
 	}
 
 	checker := NewHealthChecker(thresholdMappings, nil, nil, nil, nil)
-	newSystemComponents, err := h.checkSeedSystemComponents(ctx, checker, systemComponents)
-	return []gardencorev1beta1.Condition{NewConditionOrError(systemComponents, newSystemComponents, err)}
+	newSystemComponentsCondition, err := h.checkSeedSystemComponents(ctx, checker, systemComponentsCondition)
+	return []gardencorev1beta1.Condition{NewConditionOrError(systemComponentsCondition, newSystemComponentsCondition, err)}
 }
 
 func (h *SeedHealth) checkSeedSystemComponents(
@@ -71,8 +85,7 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	condition gardencorev1beta1.Condition,
 ) (*gardencorev1beta1.Condition,
 	error) {
-
-	managedResources := managedResourcesSeed.List()
+	managedResources := requiredManagedResourcesSeed.List()
 
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogEndpointEnabled(h.seed.Spec.Settings) {
 		managedResources = append(managedResources, dependencywatchdog.ManagedResourceDependencyWatchdogEndpoint)
@@ -80,6 +93,9 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	}
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(h.seed.Spec.Settings) {
 		managedResources = append(managedResources, dependencywatchdog.ManagedResourceDependencyWatchdogProbe)
+	}
+	if gardencorev1beta1helper.SeedUsesNginxIngressController(h.seed) {
+		managedResources = append(managedResources, nginxingress.ManagedResourceName)
 	}
 
 	for _, name := range managedResources {

@@ -163,7 +163,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		controllerutils.CreateWorker(ctx, c.seedLeaseQueue, "Seed Lease", c.leaseReconciler, &waitGroup, c.workerCh)
 		controllerutils.CreateWorker(ctx, c.seedExtensionCheckQueue, "Seed Extension Check", c.extensionCheckReconciler, &waitGroup, c.workerCh)
 	}
-	controllerutils.CreateWorker(ctx, c.seedCareQueue, "Seed Care", c.careReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(logf.Log.WithName("seed-care-controller")))
+	controllerutils.CreateWorker(ctx, c.seedCareQueue, "Seed Care", c.careReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(logf.Log.WithName(seedCareReconcilerName)))
 
 	// Shutdown handling
 	<-ctx.Done()

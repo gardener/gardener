@@ -28,6 +28,7 @@ import (
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
@@ -944,7 +945,7 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	if !managedIngress(seed) {
+	if !gardencorev1beta1helper.SeedUsesNginxIngressController(seed.GetInfo()) {
 		nginxIngress := nginxingress.New(seedClient, v1beta1constants.GardenNamespace, nginxingress.Values{})
 
 		if err := component.OpDestroyAndWait(nginxIngress).Destroy(ctx); err != nil {
@@ -983,7 +984,7 @@ func runCreateSeedFlow(
 
 	// setup for flow graph
 	var ingressLoadBalancerAddress string
-	if managedIngress(seed) {
+	if gardencorev1beta1helper.SeedUsesNginxIngressController(seed.GetInfo()) {
 		providerConfig, err := getConfig(seed)
 		if err != nil {
 			return err

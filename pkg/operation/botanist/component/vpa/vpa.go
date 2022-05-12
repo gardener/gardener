@@ -117,8 +117,10 @@ const (
 	ClusterTypeSeed clusterType = "seed"
 	// ClusterTypeShoot is a constant for the 'shoot' cluster type.
 	ClusterTypeShoot clusterType = "shoot"
-	// ManagedResourceControlName is the name of the of the cluster-autoscaler managed resource.
+
+	// ManagedResourceControlName is the name of the vpa managed resource for seeds.
 	ManagedResourceControlName = "vpa"
+	shootManagedResourceName   = "shoot-core-" + ManagedResourceControlName
 )
 
 func (v *vpa) Deploy(ctx context.Context) error {
@@ -272,9 +274,9 @@ func (v *vpa) WaitCleanup(ctx context.Context) error {
 
 func (v *vpa) managedResourceName() string {
 	if v.values.ClusterType == ClusterTypeSeed {
-		return "vpa"
+		return ManagedResourceControlName
 	}
-	return "shoot-core-vpa"
+	return shootManagedResourceName
 }
 
 func (v *vpa) emptyService(name string) *corev1.Service {

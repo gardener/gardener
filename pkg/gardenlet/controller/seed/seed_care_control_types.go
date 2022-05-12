@@ -21,7 +21,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/care"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
-	"github.com/go-logr/logr"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -30,11 +30,11 @@ var defaultNewSeedObjectFunc = func(ctx context.Context, seed *gardencorev1beta1
 }
 
 // NewHealthCheckFunc is a function used to create a new instance for performing health checks.
-type NewHealthCheckFunc func(seed *gardencorev1beta1.Seed, client client.Client, l logr.Logger) HealthCheck
+type NewHealthCheckFunc func(seed *gardencorev1beta1.Seed, client client.Client) HealthCheck
 
 // defaultNewHealthCheck is the default function to create a new instance for performing health checks.
-var defaultNewHealthCheck NewHealthCheckFunc = func(seed *gardencorev1beta1.Seed, client client.Client, l logr.Logger) HealthCheck {
-	return care.NewHealthForSeed(seed, client, l)
+var defaultNewHealthCheck NewHealthCheckFunc = func(seed *gardencorev1beta1.Seed, client client.Client) HealthCheck {
+	return care.NewHealthForSeed(seed, client)
 }
 
 // HealthCheck is an interface used to perform health checks.

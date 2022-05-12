@@ -167,7 +167,7 @@ var _ = Describe("Replica", func() {
 				},
 			}
 		}
-		seed = func(deletionTimestamp *metav1.Time, gardenletReady, bootstrapped, backupBucketsReady, systemComponentsHealthy bool) *gardencorev1beta1.Seed {
+		seed = func(deletionTimestamp *metav1.Time, gardenletReady, bootstrapped, backupBucketsReady, seedSystemComponentsHealthy bool) *gardencorev1beta1.Seed {
 			var conditions []gardencorev1beta1.Condition
 			if gardenletReady {
 				conditions = append(conditions, gardencorev1beta1.Condition{
@@ -187,7 +187,7 @@ var _ = Describe("Replica", func() {
 					Status: gardencorev1beta1.ConditionTrue,
 				})
 			}
-			if systemComponentsHealthy {
+			if seedSystemComponentsHealthy {
 				conditions = append(conditions, gardencorev1beta1.Condition{
 					Type:   gardencorev1beta1.SeedSystemComponentsHealthy,
 					Status: gardencorev1beta1.ConditionTrue,

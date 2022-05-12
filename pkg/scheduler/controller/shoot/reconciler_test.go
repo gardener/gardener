@@ -89,10 +89,6 @@ var _ = Describe("Scheduler_Control", func() {
 						Type:   gardencorev1beta1.SeedBootstrapped,
 						Status: gardencorev1beta1.ConditionTrue,
 					},
-					{
-						Type:   gardencorev1beta1.SeedSystemComponentsHealthy,
-						Status: gardencorev1beta1.ConditionTrue,
-					},
 				},
 			},
 		}
@@ -911,37 +907,6 @@ var _ = Describe("Scheduler_Control", func() {
 				},
 				{
 					Type:   gardencorev1beta1.SeedBootstrapped,
-					Status: gardencorev1beta1.ConditionFalse,
-				},
-			}
-
-			reader.EXPECT().Get(ctx, kutil.Key(cloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile) error {
-				*actual = cloudProfile
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, actual *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-				*actual = gardencorev1beta1.SeedList{Items: []gardencorev1beta1.Seed{seed}}
-				return nil
-			})
-			reader.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}))
-
-			bestSeed, err := determineSeed(ctx, reader, &shoot, schedulerConfiguration.Schedulers.Shoot.Strategy)
-			Expect(err).To(HaveOccurred())
-			Expect(bestSeed).To(BeNil())
-		})
-
-		It("should fail because it cannot find a seed cluster due to unhealthy system components", func() {
-			seed.Status.Conditions = []gardencorev1beta1.Condition{
-				{
-					Type:   gardencorev1beta1.SeedGardenletReady,
-					Status: gardencorev1beta1.ConditionTrue,
-				},
-				{
-					Type:   gardencorev1beta1.SeedBootstrapped,
-					Status: gardencorev1beta1.ConditionTrue,
-				},
-				{
-					Type:   gardencorev1beta1.SeedSystemComponentsHealthy,
 					Status: gardencorev1beta1.ConditionFalse,
 				},
 			}

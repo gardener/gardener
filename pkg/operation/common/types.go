@@ -52,8 +52,6 @@ const (
 
 	// IstioNamespace is the istio-system namespace.
 	IstioNamespace = "istio-system"
-	// IstioIngressNamespace is the istio-ingress namespace.
-	IstioIngressNamespace = "istio-ingress"
 
 	// EndUserCrtValidity is the time period a user facing certificate is valid.
 	EndUserCrtValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
@@ -61,6 +59,6 @@ const (
 	// ShootDNSIngressName is a constant for the DNS resources used for the shoot ingress addon.
 	ShootDNSIngressName = "ingress"
 
-	// GardenLokiPriorityClassName is the name of the PriorityClass for the Loki in the garden namespace
+	// GardenLokiPriorityClassName is the name of the PriorityClass for the Loki in the garden namespace.
 	GardenLokiPriorityClassName = "garden-loki"
 )
