@@ -74,9 +74,9 @@ spec:
         image: {{ index .Values.global.images "configmap-reloader" }}
         imagePullPolicy: IfNotPresent
         args:
-        - -webhook-url=http://localhost:{{ .Values.aggregatePrometheus.port }}/-/reload
-        - -volume-dir=/etc/prometheus/config
-        - -volume-dir=/etc/prometheus/rules
+        - --reload-url=http://localhost:{{ .Values.aggregatePrometheus.port }}/-/reload
+        - --watched-dir=/etc/prometheus/config
+        - --watched-dir=/etc/prometheus/rules
         resources:
           {{- index .Values.prometheus.resources "prometheus-config-reloader" | toYaml | nindent 10 }}
         volumeMounts:

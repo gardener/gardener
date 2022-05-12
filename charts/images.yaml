@@ -92,9 +92,9 @@ images:
   repository: quay.io/prometheus/prometheus
   tag: v2.30.2
 - name: configmap-reloader
-  sourceRepository: github.com/jimmidyson/configmap-reload
-  repository: quay.io/coreos/configmap-reload
-  tag: v0.0.1
+  sourceRepository: github.com/prometheus-operator/prometheus-operator
+  repository: ghcr.io/prometheus-operator/prometheus-config-reloader
+  tag: v0.56.2
 - name: kube-state-metrics
   sourceRepository: github.com/kubernetes/kube-state-metrics
   repository: quay.io/coreos/kube-state-metrics

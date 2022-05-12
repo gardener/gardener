@@ -117,8 +117,8 @@ spec:
         image: {{ index .Values.global.images "configmap-reloader" }}
         imagePullPolicy: IfNotPresent
         args:
-        - -webhook-url=http://localhost:9093/-/reload
-        - -volume-dir=/etc/alertmanager/config
+        - --reload-url=http://localhost:9093/-/reload
+        - --watched-dir=/etc/alertmanager/config
         resources:
           requests:
             cpu: 5m
