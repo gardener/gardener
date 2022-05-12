@@ -123,6 +123,16 @@ featureGates:
 #     name: my-seed
 #   spec:
 #     <Check out the `spec` in the `50-seed.yaml` file to see what's possible to configure here>
+logging:
+  enabled: true
+  loki:
+    enabled: true
+  shootNodeLogging:
+    shootPurposes:
+    - "infrastructure"
+    - "production"
+    - "development"
+    - "evaluation"
 # logging:
 #   enabled: false
 #   fluentBit:

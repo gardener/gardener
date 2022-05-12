@@ -139,11 +139,13 @@ func (f *GardenerFramework) CreateShoot(ctx context.Context, shoot *gardencorev1
 func (f *GardenerFramework) DeleteShootAndWaitForDeletion(ctx context.Context, shoot *gardencorev1beta1.Shoot) (rErr error) {
 	defer func() {
 		if rErr != nil {
-			shootFramework, err := f.NewShootFramework(ctx, shoot)
-			if err != nil {
+			dumpCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			defer cancel()
+
+			if shootFramework, err := f.NewShootFramework(dumpCtx, shoot); err != nil {
 				f.Logger.Errorf("Cannot dump shoot state %s: %v", shoot.GetName(), err)
 			} else {
-				shootFramework.DumpState(ctx)
+				shootFramework.DumpState(dumpCtx)
 			}
 		}
 	}()

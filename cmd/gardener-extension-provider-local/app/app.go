@@ -36,6 +36,7 @@ import (
 	localdnsrecord "github.com/gardener/gardener/pkg/provider-local/controller/dnsrecord"
 	localhealthcheck "github.com/gardener/gardener/pkg/provider-local/controller/healthcheck"
 	localinfrastructure "github.com/gardener/gardener/pkg/provider-local/controller/infrastructure"
+	localingress "github.com/gardener/gardener/pkg/provider-local/controller/ingress"
 	localnode "github.com/gardener/gardener/pkg/provider-local/controller/node"
 	localservice "github.com/gardener/gardener/pkg/provider-local/controller/service"
 	localworker "github.com/gardener/gardener/pkg/provider-local/controller/worker"
@@ -104,6 +105,11 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			MaxConcurrentReconciles: 1,
 		}
 
+		// options for the ingress controller
+		ingressCtrlOpts = &localingress.ControllerOptions{
+			MaxConcurrentReconciles: 5,
+		}
+
 		// options for the service controller
 		serviceCtrlOpts = &localservice.ControllerOptions{
 			MaxConcurrentReconciles: 5,
@@ -160,6 +166,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			controllercmd.PrefixOption("dnsrecord-", dnsRecordCtrlOpts),
 			controllercmd.PrefixOption("infrastructure-", infraCtrlOpts),
 			controllercmd.PrefixOption("worker-", &workerCtrlOptsUnprefixed),
+			controllercmd.PrefixOption("ingress-", ingressCtrlOpts),
 			controllercmd.PrefixOption("service-", serviceCtrlOpts),
 			controllercmd.PrefixOption("backupbucket-", localBackupBucketOptions),
 			controllercmd.PrefixOption("node-", nodeCtrlOpts),
@@ -215,6 +222,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			healthCheckCtrlOpts.Completed().Apply(&localhealthcheck.DefaultAddOptions.Controller)
 			infraCtrlOpts.Completed().Apply(&localinfrastructure.DefaultAddOptions.Controller)
 			operatingSystemConfigCtrlOpts.Completed().Apply(&oscommon.DefaultAddOptions.Controller)
+			ingressCtrlOpts.Completed().Apply(&localingress.DefaultAddOptions)
 			serviceCtrlOpts.Completed().Apply(&localservice.DefaultAddOptions)
 			nodeCtrlOpts.Completed().Apply(&localnode.DefaultAddOptions)
 			workerCtrlOpts.Completed().Apply(&localworker.DefaultAddOptions.Controller)

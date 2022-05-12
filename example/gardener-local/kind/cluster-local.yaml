@@ -4,10 +4,15 @@ nodes:
 - role: control-plane
   image: kindest/node:v1.21.1
   extraPortMappings:
+  # istio-ingressgateway
   - containerPort: 30443
     hostPort: 443
+  # etcd (for gardener-apiserver)
   - containerPort: 32379
     hostPort: 32379
+  # ingress-nginx (Seed)
+  - containerPort: 30448
+    hostPort: 8448
   extraMounts:
   - hostPath: example/gardener-local/controlplane
     containerPath: /etc/gardener/controlplane
@@ -29,6 +34,10 @@ nodes:
         mountPath: /etc/gardener/controlplane/auth-webhook-kubeconfig-local.yaml
         readOnly: true
         pathType: File
+  - |
+    apiVersion: kubelet.config.k8s.io/v1beta1
+    kind: KubeletConfiguration
+    maxPods: 500
 networking:
   disableDefaultCNI: true # disable kindnet since we install calico for network policy support
   podSubnet: 10.1.0.0/16

@@ -13,7 +13,15 @@ spec:
     type: local
     region: local
   dns:
-    ingressDomain: local.seed.local.gardener.cloud
+    provider:
+      type: local
+      secretRef:
+        name: internal-domain-local
+        namespace: garden
+  ingress:
+    domain: ingress.local.seed.local.gardener.cloud
+    controller:
+      kind: nginx
   secretRef:
     name: seed-local
     namespace: garden

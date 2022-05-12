@@ -42,10 +42,6 @@ Please note that all of them are no technical limitations/blockers but simply ad
 
    _The `dependency-watchdog` needs to be able to resolve the shoot cluster's DNS names. It is not yet able to do so, hence, it cannot be enabled._
 
-7. `Ingress`es exposed in the seed cluster are not reachable.
-
-   _There is no DNS resolution for the domains used for `Ingress`es in the seed cluster yet, hence, they are not reachable. Consequently, the [shoot node logging](../deployment/configuring_logging.md#enable-logs-from-the-shoots-node-systemd-services) feature does not work end-to-end._
-
 ## Implementation Details
 
 This section contains information about how the respective controllers and webhooks are implemented and what their purpose is.
@@ -113,13 +109,20 @@ Due to legacy reasons, the gardenlet still creates `DNSProvider` resources part 
 Since those are only needed in conjunction with the [`shoot-dns-service` extension](https://github.com/gardener/gardener-extension-shoot-dns-service) and have no relevance for the local provider, it just sets their `status.state=Ready` to please the expectations.
 In the future, this controller can be dropped when the gardenlet no longer creates such `DNSProvider`s.
 
+#### `Ingress`
+
+Gardenlet creates a wildcard DNS record for the Seed's ingress domain pointing to the `nginx-ingress-controller`'s LoadBalancer.
+This domain is commonly used by all `Ingress` objects created in the Seed for Seed and Shoot components.
+However, provider-local implements the `DNSRecord` extension API by writing the DNS record to `/etc/hosts`, which doesn't support wildcard entries.
+To make `Ingress` domains resolvable on the host, this controller reconciles all `Ingresses` and creates `DNSRecords` of type `local` for each host included in `spec.rules`.
+
 #### `Service`
 
-This controller reconciles the `istio-ingress/istio-ingressgateway` `Service` in the seed cluster if the `--apiserver-sni-enabled` flag is set to `true` (default).
-Otherwise, it reconciles the `kube-apiserver` `Service` in the shoot namespaces in the seed cluster.
+This controller reconciles `Services` of type `LoadBalancer` in the local `Seed` cluster.
+Since the local Kubernetes clusters used as Seed clusters typically don't support such services, this controller sets the `.status.ingress.loadBalancer.ip[0]` to the IP of the host.
+It makes important LoadBalancer Services (e.g. `istio-ingress/istio-ingressgateway` and `garden/nginx-ingress-controller`) available to the host by setting `spec.ports[].nodePort` to well-known ports that are mapped to `hostPorts` in the kind cluster configuration.
 
-All such `Service`s are of type `LoadBalancer`.
-Since the local Kubernetes clusters used as seed typically don't support such services, this controller sets the `.status.ingress.loadBalancer.ip[0]` to the IP of the host.
+If the `--apiserver-sni-enabled` flag is set to `true` (default), `istio-ingress/istio-ingressgateway` is set to be exposed on `nodePort` `30433` by this controller. Otherwise, the `kube-apiserver` `Service` in the shoot namespaces in the seed cluster needs to be patched to be exposed on `30443` by the [Control Plane Exposure Webhook](#control-plane-exposure).
 
 #### `Node`
 

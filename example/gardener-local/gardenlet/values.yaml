@@ -45,6 +45,16 @@ global:
         SeedKubeScheduler: false
         ReversedVPN: true
         ShootCARotation: true
+      logging:
+        enabled: true
+        loki:
+          enabled: true
+        shootNodeLogging:
+          shootPurposes:
+          - "infrastructure"
+          - "production"
+          - "development"
+          - "evaluation"
       seedConfig:
         apiVersion: core.gardener.cloud/v1beta1
         kind: Seed
@@ -61,7 +71,15 @@ global:
             type: local
             region: local
           dns:
-            ingressDomain: local.seed.local.gardener.cloud
+            provider:
+              type: local
+              secretRef:
+                name: internal-domain-internal-local-gardener-cloud
+                namespace: garden
+          ingress:
+            domain: ingress.local.seed.local.gardener.cloud
+            controller:
+              kind: nginx
           secretRef:
             name: seed-local
             namespace: garden

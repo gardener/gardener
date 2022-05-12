@@ -4,6 +4,8 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+echo "> E2E Tests"
+
 # reduce flakiness in contended pipelines
 export GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT=5s
 export GOMEGA_DEFAULT_EVENTUALLY_POLLING_INTERVAL=200ms

@@ -17,6 +17,7 @@ data:
     {{- else }}
         rewrite name regex api\.(.*)\.(.*)\.(.*)\.local\.gardener\.cloud kube-apiserver.shoot--{2}--{1}.svc.cluster.local
     {{- end }}
+        rewrite name regex (.*)\.ingress\.local\.seed\.local\.gardener\.cloud nginx-ingress-controller.garden.svc.cluster.local
         prometheus :9153
         forward . /etc/resolv.conf {
            max_concurrent 1000

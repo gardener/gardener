@@ -376,11 +376,13 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 
 	if err := f.GardenerFramework.CreateShoot(ctx, f.Shoot); err != nil {
 		f.Logger.Errorf("Cannot create shoot %s: %s", f.Shoot.GetName(), err.Error())
-		shootFramework, err2 := f.NewShootFramework(ctx, f.Shoot)
-		if err2 != nil {
+
+		dumpCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		if shootFramework, err := f.NewShootFramework(dumpCtx, f.Shoot); err != nil {
 			f.Logger.Errorf("Cannot dump shoot state %s: %s", f.Shoot.GetName(), err.Error())
 		} else {
-			shootFramework.DumpState(ctx)
+			shootFramework.DumpState(dumpCtx)
 		}
 		return err
 	}
