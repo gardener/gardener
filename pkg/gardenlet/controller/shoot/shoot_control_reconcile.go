@@ -321,7 +321,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
-			Name:         "Waiting until Kubernetes API server reports readiness",
+			Name:         "Waiting until Kubernetes API server rolled out",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServer.Wait).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})

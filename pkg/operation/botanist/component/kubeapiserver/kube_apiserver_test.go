@@ -2468,7 +2468,11 @@ rules:
 	})
 
 	Describe("#Wait", func() {
-		It("should successfully wait for the deployment to be ready", func() {
+		BeforeEach(func() {
+			deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: GetLabels()}
+		})
+
+		It("should successfully wait for the deployment to be updated", func() {
 			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 			fakeKubernetesInterface := fakekubernetes.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
 			kapi = New(fakeKubernetesInterface, namespace, nil, Values{})
@@ -2480,10 +2484,22 @@ rules:
 			Expect(fakeClient.Create(ctx, deploy)).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(Succeed())
 
+			Expect(fakeClient.Create(ctx, &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "pod",
+					Namespace: deployment.Namespace,
+					Labels:    GetLabels(),
+				},
+			})).To(Succeed())
+
 			timer := time.AfterFunc(10*time.Millisecond, func() {
 				deploy.Generation = 24
+				deploy.Spec.Replicas = pointer.Int32(1)
+				deploy.Status.Conditions = []appsv1.DeploymentCondition{
+					{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
+					{Type: appsv1.DeploymentAvailable, Status: "True"},
+				}
 				deploy.Status.ObservedGeneration = deploy.Generation
-				deploy.Spec.Replicas = pointer.Int32(4)
 				deploy.Status.Replicas = *deploy.Spec.Replicas
 				deploy.Status.UpdatedReplicas = *deploy.Spec.Replicas
 				deploy.Status.AvailableReplicas = *deploy.Spec.Replicas
@@ -2492,64 +2508,6 @@ rules:
 			defer timer.Stop()
 
 			Expect(kapi.Wait(ctx)).To(Succeed())
-		})
-
-		It("should fail while waiting for the deployment to be ready due to outdated generation", func() {
-			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
-			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
-
-			deployment.Generation = 24
-			deployment.Status.ObservedGeneration = deployment.Generation - 1
-			Expect(c.Create(ctx, deployment)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-
-			Expect(kapi.Wait(ctx)).To(MatchError(ContainSubstring("not observed at latest generation")))
-		})
-
-		It("should fail while waiting for the deployment to be ready due to outdated replicas field", func() {
-			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
-			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
-
-			deployment.Generation = 24
-			deployment.Status.ObservedGeneration = deployment.Generation
-			deployment.Spec.Replicas = pointer.Int32(4)
-			deployment.Status.Replicas = *deployment.Spec.Replicas - 1
-			deployment.Status.UpdatedReplicas = *deployment.Spec.Replicas
-			Expect(c.Create(ctx, deployment)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-
-			Expect(kapi.Wait(ctx)).To(MatchError(ContainSubstring("has outdated replicas")))
-		})
-
-		It("should fail while waiting for the deployment to be ready due to outdated updatedReplicas field", func() {
-			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
-			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
-
-			deployment.Generation = 24
-			deployment.Status.ObservedGeneration = deployment.Generation
-			deployment.Spec.Replicas = pointer.Int32(4)
-			deployment.Status.Replicas = *deployment.Spec.Replicas
-			deployment.Status.UpdatedReplicas = *deployment.Spec.Replicas - 1
-			Expect(c.Create(ctx, deployment)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-
-			Expect(kapi.Wait(ctx)).To(MatchError(ContainSubstring("does not have enough updated replicas")))
-		})
-
-		It("should fail while waiting for the deployment to be ready due to outdated updatedReplicas field", func() {
-			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
-			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
-
-			deployment.Generation = 24
-			deployment.Status.ObservedGeneration = deployment.Generation
-			deployment.Spec.Replicas = pointer.Int32(4)
-			deployment.Status.Replicas = *deployment.Spec.Replicas
-			deployment.Status.UpdatedReplicas = *deployment.Spec.Replicas
-			deployment.Status.AvailableReplicas = *deployment.Spec.Replicas - 1
-			Expect(c.Create(ctx, deployment)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-
-			Expect(kapi.Wait(ctx)).To(MatchError(ContainSubstring("does not have enough available replicas")))
 		})
 	})
 

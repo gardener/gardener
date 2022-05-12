@@ -15,18 +15,25 @@
 package health_test
 
 import (
+	"context"
+	"fmt"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("Deployment", func() {
-	DescribeTable("CheckDeployment",
+	DescribeTable("#CheckDeployment",
 		func(deployment *appsv1.Deployment, matcher types.GomegaMatcher) {
 			err := health.CheckDeployment(deployment)
 			Expect(err).To(matcher)
@@ -81,7 +88,7 @@ var _ = Describe("Deployment", func() {
 		Entry("available | progressing missing", &appsv1.Deployment{}, HaveOccurred()),
 	)
 
-	Describe("IsDeploymentProgressing", func() {
+	Describe("#IsDeploymentProgressing", func() {
 		var (
 			deployment *appsv1.Deployment
 		)
@@ -149,6 +156,121 @@ var _ = Describe("Deployment", func() {
 			progressing, reason := health.IsDeploymentProgressing(deployment)
 			Expect(progressing).To(BeTrue())
 			Expect(reason).To(Equal(deployment.Status.Conditions[0].Message))
+		})
+	})
+
+	Describe("#IsDeploymentUpdated", func() {
+		var (
+			ctx        = context.TODO()
+			fakeClient client.Client
+			deployment *appsv1.Deployment
+			labels     = map[string]string{"foo": "bar"}
+		)
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			deployment = &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "deploy",
+					Namespace: "namespace",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: pointer.Int32(1),
+					Selector: &metav1.LabelSelector{MatchLabels: labels},
+				},
+			}
+		})
+
+		It("should consider the deployment as updated", func() {
+			deployment.Generation = 24
+			deployment.Spec.Replicas = pointer.Int32(1)
+			deployment.Status.Conditions = []appsv1.DeploymentCondition{
+				{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
+				{Type: appsv1.DeploymentAvailable, Status: "True"},
+			}
+			deployment.Status.ObservedGeneration = deployment.Generation
+			deployment.Status.Replicas = *deployment.Spec.Replicas
+			deployment.Status.UpdatedReplicas = *deployment.Spec.Replicas
+			deployment.Status.AvailableReplicas = *deployment.Spec.Replicas
+
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+
+			Expect(fakeClient.Create(ctx, &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "pod",
+					Namespace: deployment.Namespace,
+					Labels:    labels,
+				},
+			})).To(Succeed())
+
+			ok, err := health.IsDeploymentUpdated(fakeClient, deployment)(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ok).To(BeTrue())
+		})
+
+		It("should not consider the deployment as updated since there are still terminating pods", func() {
+			deployment.Generation = 24
+			deployment.Spec.Replicas = pointer.Int32(1)
+			deployment.Status.Conditions = []appsv1.DeploymentCondition{
+				{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
+				{Type: appsv1.DeploymentAvailable, Status: "True"},
+			}
+			deployment.Status.ObservedGeneration = deployment.Generation
+			deployment.Status.Replicas = *deployment.Spec.Replicas
+			deployment.Status.UpdatedReplicas = *deployment.Spec.Replicas
+			deployment.Status.AvailableReplicas = *deployment.Spec.Replicas
+
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+
+			for i := 0; i < 2; i++ {
+				Expect(fakeClient.Create(ctx, &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fmt.Sprintf("pod%d", i),
+						Namespace: deployment.Namespace,
+						Labels:    labels,
+					},
+				})).To(Succeed())
+			}
+
+			ok, err := health.IsDeploymentUpdated(fakeClient, deployment)(ctx)
+			Expect(err).To(MatchError(ContainSubstring("there are still non-terminated old pods")))
+			Expect(ok).To(BeFalse())
+		})
+
+		It("should not consider the deployment as updated since it is not healthy", func() {
+			deployment.Generation = 24
+			deployment.Spec.Replicas = pointer.Int32(1)
+			deployment.Status.Conditions = []appsv1.DeploymentCondition{
+				{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
+			}
+			deployment.Status.ObservedGeneration = deployment.Generation
+			deployment.Status.Replicas = *deployment.Spec.Replicas
+			deployment.Status.UpdatedReplicas = *deployment.Spec.Replicas
+			deployment.Status.AvailableReplicas = *deployment.Spec.Replicas
+
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+
+			ok, err := health.IsDeploymentUpdated(fakeClient, deployment)(ctx)
+			Expect(err).To(MatchError(ContainSubstring(`condition "Available" is missing`)))
+			Expect(ok).To(BeFalse())
+		})
+
+		It("should not consider the deployment as updated since it is not progressing", func() {
+			deployment.Generation = 24
+			deployment.Spec.Replicas = pointer.Int32(1)
+			deployment.Status.Conditions = []appsv1.DeploymentCondition{
+				{Type: appsv1.DeploymentProgressing, Status: "False", Message: "whatever message"},
+			}
+			deployment.Status.ObservedGeneration = deployment.Generation
+			deployment.Status.Replicas = *deployment.Spec.Replicas
+			deployment.Status.UpdatedReplicas = *deployment.Spec.Replicas
+			deployment.Status.AvailableReplicas = *deployment.Spec.Replicas
+
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+
+			ok, err := health.IsDeploymentUpdated(fakeClient, deployment)(ctx)
+			Expect(err).To(MatchError(ContainSubstring("whatever message")))
+			Expect(ok).To(BeFalse())
 		})
 	})
 })
