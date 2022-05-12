@@ -54,6 +54,11 @@ const (
 	volumeName      = "config"
 	volumeMountPath = "/etc/dependency-watchdog/config"
 	configFileName  = "dep-config.yaml"
+
+	// ManagedResourceDependencyWatchdogEndpoint is the name of the dependency-watchdog-endpoint managed resource.
+	ManagedResourceDependencyWatchdogEndpoint = "dependency-watchdog-endpoint"
+	// ManagedResourceDependencyWatchdogProbe is the name of the dependency-watchdog-probe managed resource.
+	ManagedResourceDependencyWatchdogProbe = "dependency-watchdog-probe"
 )
 
 // BootstrapperValues contains dependency-watchdog values.

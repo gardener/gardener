@@ -76,6 +76,7 @@ func (r *shootConditionsReconciler) Reconcile(ctx context.Context, request recon
 		gardencorev1beta1.SeedBootstrapped,
 		gardencorev1beta1.SeedExtensionsReady,
 		gardencorev1beta1.SeedGardenletReady,
+		gardencorev1beta1.SeedSystemComponentsHealthy,
 	}
 	conditions := gardencorev1beta1helper.RemoveConditions(shoot.Status.Conditions, seedConditionTypes...)
 	if seed != nil {

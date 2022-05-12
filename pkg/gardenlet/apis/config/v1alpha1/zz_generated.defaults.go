@@ -79,6 +79,9 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 				SetDefaults_StaleExtensionHealthChecks(in.Controllers.ShootCare.StaleExtensionHealthChecks)
 			}
 		}
+		if in.Controllers.SeedCare != nil {
+			SetDefaults_SeedCareControllerConfiguration(in.Controllers.SeedCare)
+		}
 		if in.Controllers.ShootMigration != nil {
 			SetDefaults_ShootMigrationControllerConfiguration(in.Controllers.ShootMigration)
 		}

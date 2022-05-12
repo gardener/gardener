@@ -164,6 +164,9 @@ type GardenletControllerConfiguration struct {
 	// ShootCare defines the configuration of the ShootCare controller.
 	// +optional
 	ShootCare *ShootCareControllerConfiguration `json:"shootCare,omitempty"`
+	// SeedCare defines the configuration of the SeedCare controller.
+	// +optional
+	SeedCare *SeedCareControllerConfiguration `json:"seedCare,omitempty"`
 	// ShootMigration defines the configuration of the ShootMigration controller.
 	// +optional
 	ShootMigration *ShootMigrationControllerConfiguration `json:"shootMigration,omitempty"`
@@ -332,6 +335,18 @@ type ShootCareControllerConfiguration struct {
 	// StaleExtensionHealthChecks defines the configuration of the check for stale extension health checks.
 	// +optional
 	StaleExtensionHealthChecks *StaleExtensionHealthChecks `json:"staleExtensionHealthChecks,omitempty"`
+	// ConditionThresholds defines the condition threshold per condition type.
+	// +optional
+	ConditionThresholds []ConditionThreshold `json:"conditionThresholds,omitempty"`
+}
+
+// SeedCareControllerConfiguration defines the configuration of the SeedCare
+// controller.
+type SeedCareControllerConfiguration struct {
+	// SyncPeriod is the duration how often the existing resources are reconciled (how
+	// often the health check of Seed clusters is performed
+	// +optional
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
 	// ConditionThresholds defines the condition threshold per condition type.
 	// +optional
 	ConditionThresholds []ConditionThreshold `json:"conditionThresholds,omitempty"`

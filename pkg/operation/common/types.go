@@ -50,7 +50,7 @@ const (
 	// RegistrationSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
 	RegistrationSpecHash = "registration-spec-hash"
 
-	// IstioNamespace is the istio-system namespace
+	// IstioNamespace is the istio-system namespace.
 	IstioNamespace = "istio-system"
 
 	// EndUserCrtValidity is the time period a user facing certificate is valid.
@@ -59,6 +59,6 @@ const (
 	// ShootDNSIngressName is a constant for the DNS resources used for the shoot ingress addon.
 	ShootDNSIngressName = "ingress"
 
-	// GardenLokiPriorityClassName is the name of the PriorityClass for the Loki in the garden namespace
+	// GardenLokiPriorityClassName is the name of the PriorityClass for the Loki in the garden namespace.
 	GardenLokiPriorityClassName = "garden-loki"
 )

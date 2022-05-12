@@ -328,9 +328,11 @@ func seedReady(seed *gardencorev1beta1.Seed) bool {
 	conditionGardenletReady := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
 	conditionBootstrapped := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
 	conditionBackupBucketsReady := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady)
+	conditionSystemComponentsHealthy := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy)
 	return seed.Generation == seed.Status.ObservedGeneration && seed.DeletionTimestamp == nil &&
 		conditionGardenletReady != nil && conditionGardenletReady.Status == gardencorev1beta1.ConditionTrue &&
 		conditionBootstrapped != nil && conditionBootstrapped.Status == gardencorev1beta1.ConditionTrue &&
+		conditionSystemComponentsHealthy != nil && conditionSystemComponentsHealthy.Status == gardencorev1beta1.ConditionTrue &&
 		(conditionBackupBucketsReady == nil || conditionBackupBucketsReady.Status == gardencorev1beta1.ConditionTrue)
 }
 

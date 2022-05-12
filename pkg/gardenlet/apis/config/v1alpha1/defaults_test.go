@@ -55,6 +55,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.Seed).NotTo(BeNil())
 			Expect(obj.Controllers.Shoot).NotTo(BeNil())
 			Expect(obj.Controllers.ShootCare).NotTo(BeNil())
+			Expect(obj.Controllers.SeedCare).NotTo(BeNil())
 			Expect(obj.Controllers.ShootMigration).NotTo(BeNil())
 			Expect(obj.Controllers.ShootStateSync).NotTo(BeNil())
 			Expect(obj.Controllers.ManagedSeed).NotTo(BeNil())
@@ -232,6 +233,20 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
+	Describe("#SetDefaults_SeedCareControllerConfiguration", func() {
+		var obj *SeedCareControllerConfiguration
+
+		BeforeEach(func() {
+			obj = &SeedCareControllerConfiguration{}
+		})
+
+		It("should default the configuration", func() {
+			SetDefaults_SeedCareControllerConfiguration(obj)
+
+			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 30 * time.Second})))
+		})
+	})
+
 	Describe("#SetDefaults_ShootControllerConfiguration", func() {
 		var obj *ShootControllerConfiguration
 
@@ -248,6 +263,22 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.ReconcileInMaintenanceOnly).To(PointTo(Equal(false)))
 			Expect(obj.RetryDuration).To(PointTo(Equal(metav1.Duration{Duration: 12 * time.Hour})))
 			Expect(obj.DNSEntryTTLSeconds).To(PointTo(Equal(int64(120))))
+		})
+	})
+
+	Describe("#SetDefaults_ShootCareControllerConfiguration", func() {
+		var obj *ShootCareControllerConfiguration
+
+		BeforeEach(func() {
+			obj = &ShootCareControllerConfiguration{}
+		})
+
+		It("should default the configuration", func() {
+			SetDefaults_ShootCareControllerConfiguration(obj)
+
+			Expect(obj.SyncPeriod).To(PointTo(Equal(DefaultControllerSyncPeriod)))
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(DefaultControllerConcurrentSyncs)))
+			Expect(obj.StaleExtensionHealthChecks).To(PointTo(Equal(StaleExtensionHealthChecks{Enabled: true})))
 		})
 	})
 

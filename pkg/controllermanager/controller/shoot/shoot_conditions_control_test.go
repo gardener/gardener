@@ -48,12 +48,15 @@ var _ = Describe("#FilterSeedForShootConditions", func() {
 
 		Expect(shoot.FilterSeedForShootConditions(newSeed, oldSeed, nil, false)).To(BeTrue())
 	})
+
 	It("should accept in case of deletion events", func() {
 		Expect(shoot.FilterSeedForShootConditions(newSeed, nil, nil, true)).To(BeTrue())
 	})
+
 	It("should accept in case of create events", func() {
 		Expect(shoot.FilterSeedForShootConditions(newSeed, nil, nil, false)).To(BeTrue())
 	})
+
 	It("should accept if conditions differ", func() {
 		newSeed.ResourceVersion = "1"
 		oldSeed.ResourceVersion = "2"
@@ -62,6 +65,7 @@ var _ = Describe("#FilterSeedForShootConditions", func() {
 
 		Expect(shoot.FilterSeedForShootConditions(newSeed, oldSeed, nil, false)).To(BeTrue())
 	})
+
 	It("should deny if conditions are the same", func() {
 		newSeed.ResourceVersion = "1"
 		oldSeed.ResourceVersion = "2"

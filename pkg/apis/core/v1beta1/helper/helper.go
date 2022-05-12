@@ -896,6 +896,11 @@ func SeedSettingDependencyWatchdogProbeEnabled(settings *gardencorev1beta1.SeedS
 	return settings == nil || settings.DependencyWatchdog == nil || settings.DependencyWatchdog.Probe == nil || settings.DependencyWatchdog.Probe.Enabled
 }
 
+// SeedUsesNginxIngressController returns true if the seed's specification requires an nginx ingress controller to be deployed.
+func SeedUsesNginxIngressController(seed *gardencorev1beta1.Seed) bool {
+	return seed.Spec.DNS.Provider != nil && seed.Spec.Ingress != nil && seed.Spec.Ingress.Controller.Kind == v1beta1constants.IngressKindNginx
+}
+
 // DetermineMachineImageForName finds the cloud specific machine images in the <cloudProfile> for the given <name> and
 // region. In case it does not find the machine image with the <name>, it returns false. Otherwise, true and the
 // cloud-specific machine image will be returned.
