@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -36,7 +36,8 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 		shootClient kubernetes.Interface
 	)
 
-	f.Shoot = defaultShoot("e2e-default", "")
+	f.Shoot = defaultShoot("")
+	f.Shoot.Name = "e2e-default"
 
 	It("Create and Delete", Label("fast"), func() {
 		By("Create Shoot")
@@ -45,8 +46,9 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 		Expect(f.CreateShootAndWaitForCreation(ctx, false)).To(Succeed())
 		f.Verify()
 
+		By("Create shoot client using adminKubeconfig")
 		restConfig := f.GardenerFramework.GardenClient.RESTConfig()
-		versionedClient, err := versioned.NewForConfig(restConfig)
+		versionedClient, err := gardenversionedcoreclientset.NewForConfig(restConfig)
 		Expect(err).NotTo(HaveOccurred())
 
 		adminKubeconfigRequest := &v1alpha1.AdminKubeconfigRequest{
@@ -54,11 +56,9 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 				ExpirationSeconds: pointer.Int64(3600),
 			},
 		}
-
 		adminKubeconfig, err := versionedClient.CoreV1beta1().Shoots(f.Shoot.GetNamespace()).CreateAdminKubeconfigRequest(ctx, f.Shoot.GetName(), adminKubeconfigRequest, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		By("Create shoot client using adminKubeconfig")
 		Eventually(func(g Gomega) {
 			shootClient, err = kubernetes.NewClientFromBytes(adminKubeconfig.Status.Kubeconfig, kubernetes.WithClientOptions(
 				client.Options{

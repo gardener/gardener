@@ -25,7 +25,7 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = defaultShoot("", "unpriv-")
+	f.Shoot = defaultShoot("unpriv-")
 	f.Shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(false)
 
 	It("Create and Delete Unprivileged Shoot", Label("unprivileged"), func() {

@@ -27,7 +27,7 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = defaultShoot("", "hibernated-")
+	f.Shoot = defaultShoot("hibernated-")
 	f.Shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 		Enabled: pointer.Bool(true),
 	}
