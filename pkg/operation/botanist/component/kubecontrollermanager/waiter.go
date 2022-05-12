@@ -21,6 +21,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/version"
 
@@ -32,7 +33,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (k *kubeControllerManager) Wait(_ context.Context) error        { return nil }
+var (
+	// IntervalWaitForDeployment is the interval used while waiting for the Deployments to become healthy or deleted.
+	IntervalWaitForDeployment = 5 * time.Second
+	// TimeoutWaitForDeployment is the timeout used while waiting for the Deployments to become healthy or deleted.
+	TimeoutWaitForDeployment = 3 * time.Minute
+)
+
+func (k *kubeControllerManager) Wait(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForDeployment)
+	defer cancel()
+
+	return retry.Until(timeoutCtx, IntervalWaitForDeployment, health.IsDeploymentUpdated(k.seedClient.APIReader(), k.emptyDeployment()))
+}
+
 func (k *kubeControllerManager) WaitCleanup(_ context.Context) error { return nil }
 
 func (k *kubeControllerManager) WaitForControllerToBeActive(ctx context.Context) error {
@@ -42,7 +56,7 @@ func (k *kubeControllerManager) WaitForControllerToBeActive(ctx context.Context)
 	)
 
 	// Check whether the kube-controller-manager deployment exists
-	if err := k.seedClient.Get(ctx, kutil.Key(k.namespace, v1beta1constants.DeploymentNameKubeControllerManager), &appsv1.Deployment{}); err != nil {
+	if err := k.seedClient.Client().Get(ctx, kutil.Key(k.namespace, v1beta1constants.DeploymentNameKubeControllerManager), &appsv1.Deployment{}); err != nil {
 		if apierrors.IsNotFound(err) {
 			return fmt.Errorf("kube controller manager deployment not found: %w", err)
 		}
@@ -51,7 +65,7 @@ func (k *kubeControllerManager) WaitForControllerToBeActive(ctx context.Context)
 
 	return retry.UntilTimeout(ctx, pollInterval, pollTimeout, func(ctx context.Context) (done bool, err error) {
 		podList := &corev1.PodList{}
-		err = k.seedClient.List(ctx, podList,
+		err = k.seedClient.Client().List(ctx, podList,
 			client.InNamespace(k.namespace),
 			client.MatchingLabels(map[string]string{
 				v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,

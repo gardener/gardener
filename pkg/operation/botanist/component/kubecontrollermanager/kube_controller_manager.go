@@ -24,6 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
@@ -96,7 +97,7 @@ type HVPAConfig struct {
 // New creates a new instance of DeployWaiter for the kube-controller-manager.
 func New(
 	logger logrus.FieldLogger,
-	seedClient client.Client,
+	seedClient kubernetes.Interface,
 	namespace string,
 	secretsManager secretsmanager.Interface,
 	version *semver.Version,
@@ -122,7 +123,7 @@ func New(
 
 type kubeControllerManager struct {
 	log            logrus.FieldLogger
-	seedClient     client.Client
+	seedClient     kubernetes.Interface
 	shootClient    client.Client
 	namespace      string
 	secretsManager secretsmanager.Interface
@@ -205,7 +206,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient, service, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), service, func() error {
 		service.Labels = getLabels()
 		service.Spec.Selector = getLabels()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
@@ -223,11 +224,11 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := shootAccessSecret.Reconcile(ctx, k.seedClient); err != nil {
+	if err := shootAccessSecret.Reconcile(ctx, k.seedClient.Client()); err != nil {
 		return err
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient, deployment, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), deployment, func() error {
 		deployment.Labels = utils.MergeStringMaps(getLabels(), map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		})
@@ -338,7 +339,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	}
 
 	if k.hvpaConfig != nil && k.hvpaConfig.Enabled {
-		if err := kutil.DeleteObject(ctx, k.seedClient, vpa); err != nil {
+		if err := kutil.DeleteObject(ctx, k.seedClient.Client(), vpa); err != nil {
 			return err
 		}
 
@@ -352,7 +353,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			scaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeAuto)
 		}
 
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient, hvpa, func() error {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), hvpa, func() error {
 			hvpa.Labels = getLabels()
 			hvpa.Spec.Replicas = pointer.Int32(1)
 			hvpa.Spec.Hpa = hvpav1alpha1.HpaSpec{
@@ -407,13 +408,13 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			return err
 		}
 	} else {
-		if err := kutil.DeleteObject(ctx, k.seedClient, hvpa); err != nil {
+		if err := kutil.DeleteObject(ctx, k.seedClient.Client(), hvpa); err != nil {
 			return err
 		}
 
 		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
 
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient, vpa, func() error {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient.Client(), vpa, func() error {
 			vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "Deployment",
@@ -434,7 +435,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	}
 
 	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObject(ctx, k.seedClient, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager-server", Namespace: k.namespace}})
+	return kutil.DeleteObject(ctx, k.seedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager-server", Namespace: k.namespace}})
 }
 
 func (k *kubeControllerManager) SetShootClient(c client.Client)  { k.shootClient = c }
@@ -601,7 +602,7 @@ func (k *kubeControllerManager) computeResourceRequirements(ctx context.Context)
 	}
 
 	existingDeployment := k.emptyDeployment()
-	if err := k.seedClient.Get(ctx, client.ObjectKeyFromObject(existingDeployment), existingDeployment); err != nil {
+	if err := k.seedClient.Client().Get(ctx, client.ObjectKeyFromObject(existingDeployment), existingDeployment); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return corev1.ResourceRequirements{}, err
 		}

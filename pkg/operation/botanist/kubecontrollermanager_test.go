@@ -76,7 +76,6 @@ var _ = Describe("KubeControllerManager", func() {
 		})
 
 		It("should successfully create a kube-controller-manager interface", func() {
-			kubernetesClient.EXPECT().Client()
 			botanist.ImageVector = imagevector.ImageVector{{Name: "kube-controller-manager"}}
 
 			kubeControllerManager, err := botanist.DefaultKubeControllerManager()
