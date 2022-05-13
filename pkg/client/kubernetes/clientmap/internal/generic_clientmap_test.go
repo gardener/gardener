@@ -132,7 +132,6 @@ var _ = Describe("GenericClientMap", func() {
 				// let the max refresh interval pass
 				fakeClock.Sleep(internal.MaxRefreshInterval)
 				cs.EXPECT().DiscoverVersion().Return(&version.Info{GitVersion: "1.18.1"}, nil)
-				factory.EXPECT().NewClientSet(ctx, key).Return(cs, "", nil)
 				clientSet, err := cm.GetClient(ctx, key)
 				Expect(clientSet).To(BeIdenticalTo(cs))
 				Expect(err).NotTo(HaveOccurred())
