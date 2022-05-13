@@ -1,7 +1,0 @@
-# gardener maintainers
-*                @gardener/gardener-maintainers
-
-# test machinery related directory maintainers
-/.test-defs                    @gardener/gardener-maintainers @gardener/test-infra-maintainers
-/test/testmachinery            @gardener/gardener-maintainers @gardener/test-infra-maintainers
-/extensions/test/testmachinery @gardener/gardener-maintainers @gardener/test-infra-maintainers
