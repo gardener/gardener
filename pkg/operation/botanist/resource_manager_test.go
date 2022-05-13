@@ -351,6 +351,21 @@ var _ = Describe("ResourceManager", func() {
 							return nil
 						})
 					})
+
+					It("bootstraps because the managed resource indicates that the shoot access token was invalidated", func() {
+						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(shootAccessSecret), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
+							obj.Annotations = map[string]string{"serviceaccount.resources.gardener.cloud/token-renew-timestamp": time.Now().Add(time.Hour).Format(time.RFC3339)}
+							return nil
+						})
+						c.EXPECT().Get(ctx, client.ObjectKeyFromObject(managedResource), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *resourcesv1alpha1.ManagedResource) error {
+							obj.Status.ObservedGeneration = obj.Generation
+							obj.Status.Conditions = []gardencorev1beta1.Condition{
+								{Type: "ResourcesApplied", Status: gardencorev1beta1.ConditionFalse, Message: `failed to compute all HPA and HVPA target ref object keys: failed to list all HPAs: Unauthorized`},
+								{Type: "ResourcesHealthy", Status: gardencorev1beta1.ConditionTrue},
+							}
+							return nil
+						})
+					})
 				}
 
 				Context("shoot is not hibernated", func() {
