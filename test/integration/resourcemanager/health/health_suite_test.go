@@ -44,10 +44,8 @@ func TestHealthController(t *testing.T) {
 	RunSpecs(t, "Health Controller Integration Test Suite")
 }
 
-const (
-	// testID is used for generating test namespace names and other IDs
-	testID = "health-controller-test"
-)
+// testID is used for generating test namespace names and other IDs
+const testID = "health-controller-test"
 
 var (
 	ctx       = context.Background()
@@ -55,7 +53,6 @@ var (
 	log       logr.Logger
 
 	testEnv    *envtest.Environment
-	testScheme *runtime.Scheme
 	testClient client.Client
 
 	testNamespace *corev1.Namespace
@@ -85,7 +82,7 @@ var _ = BeforeSuite(func() {
 	})
 
 	By("creating test client")
-	testScheme = runtime.NewScheme()
+	testScheme := runtime.NewScheme()
 	Expect(resourcemanagercmd.AddToSourceScheme(testScheme)).To(Succeed())
 	Expect(resourcemanagercmd.AddToTargetScheme(testScheme)).To(Succeed())
 
@@ -99,7 +96,8 @@ var _ = BeforeSuite(func() {
 			GenerateName: testID + "-",
 		},
 	}
-	Expect(testClient.Create(ctx, testNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+	Expect(testClient.Create(ctx, testNamespace)).To(Succeed())
+	log.Info("Created Namespace for test", "namespaceName", testNamespace.Name)
 
 	DeferCleanup(func() {
 		By("deleting test namespace")

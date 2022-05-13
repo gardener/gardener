@@ -66,6 +66,9 @@ type ControllerConfig struct {
 	GarbageCollectorActivated bool
 
 	TargetCluster cluster.Cluster
+
+	// only used for testing, defaults to 5 seconds
+	RequeueAfterOnDeletionPending time.Duration
 }
 
 // AddToManagerWithOptions adds the controller to a Manager with the given config.
@@ -84,6 +87,8 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 				syncPeriod:                conf.SyncPeriod,
 				clusterID:                 conf.ClusterID,
 				garbageCollectorActivated: conf.GarbageCollectorActivated,
+
+				requeueAfterOnDeletionPending: conf.RequeueAfterOnDeletionPending,
 			},
 		),
 		RecoverPanic: true,
@@ -153,6 +158,8 @@ func (o *ControllerOptions) Complete() error {
 		ClassFilter:          managerpredicate.NewClassFilter(o.resourceClass),
 		AlwaysUpdate:         o.alwaysUpdate,
 		ClusterID:            o.clusterID,
+
+		RequeueAfterOnDeletionPending: 5 * time.Second,
 	}
 	return nil
 }
