@@ -44,6 +44,7 @@ import (
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/spf13/cobra"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -52,7 +53,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -250,16 +250,16 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			localcontrolplane.DefaultAddOptions.ShootWebhooks = shootWebhooks
 
 			// Update shoot webhook configuration in case the webhook server port has changed.
-			c, err := client.New(restOpts.Completed().Config, client.Options{})
-			if err != nil {
-				return fmt.Errorf("error creating client for startup tasks: %w", err)
-			}
-			if err := genericcontrolplaneactuator.ReconcileShootWebhooksForAllNamespaces(ctx, c, local.Name, local.Type, mgr.GetWebhookServer().Port, shootWebhooks); err != nil {
-				return fmt.Errorf("error ensuring shoot webhooks in all namespaces: %w", err)
+			if err := mgr.Add(&shootWebhookReconciler{
+				client:            mgr.GetClient(),
+				webhookServerPort: mgr.GetWebhookServer().Port,
+				shootWebhooks:     shootWebhooks,
+			}); err != nil {
+				return fmt.Errorf("error adding runnable for reconciling shoot webhooks in all namespaces: %w", err)
 			}
 
 			// Send empty patches on start-up to trigger webhooks
-			if err := mgr.Add(&webhookTriggerer{restConfig: restOpts.Completed().Config}); err != nil {
+			if err := mgr.Add(&webhookTriggerer{client: mgr.GetClient()}); err != nil {
 				return fmt.Errorf("error adding runnable for triggering DNS config webhook: %w", err)
 			}
 
@@ -283,27 +283,22 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 }
 
 type webhookTriggerer struct {
-	restConfig *rest.Config
+	client client.Client
 }
 
-func (s *webhookTriggerer) NeedLeaderElection() bool {
+func (w *webhookTriggerer) NeedLeaderElection() bool {
 	return true
 }
 
-func (s *webhookTriggerer) Start(ctx context.Context) error {
-	c, err := client.New(s.restConfig, client.Options{})
-	if err != nil {
+func (w *webhookTriggerer) Start(ctx context.Context) error {
+	if err := w.trigger(ctx, w.client, w.client.Status(), &corev1.NodeList{}, client.MatchingLabels{"kubernetes.io/hostname": "gardener-local-control-plane"}); err != nil {
 		return err
 	}
 
-	if err := s.trigger(ctx, c, c.Status(), &corev1.NodeList{}, client.MatchingLabels{"kubernetes.io/hostname": "gardener-local-control-plane"}); err != nil {
-		return err
-	}
-
-	return s.trigger(ctx, c, c, &appsv1.DeploymentList{}, client.MatchingLabels{"app": "dependency-watchdog-probe"})
+	return w.trigger(ctx, w.client, w.client, &appsv1.DeploymentList{}, client.MatchingLabels{"app": "dependency-watchdog-probe"})
 }
 
-func (s *webhookTriggerer) trigger(ctx context.Context, reader client.Reader, writer client.StatusWriter, objectList client.ObjectList, labelSelector client.MatchingLabels) error {
+func (w *webhookTriggerer) trigger(ctx context.Context, reader client.Reader, writer client.StatusWriter, objectList client.ObjectList, labelSelector client.MatchingLabels) error {
 	if err := reader.List(ctx, objectList, labelSelector); err != nil {
 		return err
 	}
@@ -312,4 +307,18 @@ func (s *webhookTriggerer) trigger(ctx context.Context, reader client.Reader, wr
 		object := obj.(client.Object)
 		return writer.Patch(ctx, object, client.RawPatch(types.StrategicMergePatchType, []byte("{}")))
 	})
+}
+
+type shootWebhookReconciler struct {
+	client            client.Client
+	webhookServerPort int
+	shootWebhooks     []admissionregistrationv1.MutatingWebhook
+}
+
+func (s *shootWebhookReconciler) NeedLeaderElection() bool {
+	return true
+}
+
+func (s *shootWebhookReconciler) Start(ctx context.Context) error {
+	return genericcontrolplaneactuator.ReconcileShootWebhooksForAllNamespaces(ctx, s.client, local.Name, local.Type, s.webhookServerPort, s.shootWebhooks)
 }
