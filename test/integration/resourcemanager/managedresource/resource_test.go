@@ -728,10 +728,10 @@ var _ = Describe("ManagedResource controller tests", func() {
 						deployment.Spec.Template = *newPodTemplateSpec
 						Expect(testClient.Patch(ctx, deployment, patch)).To(Succeed())
 
-						Eventually(func(g Gomega) corev1.ResourceRequirements {
+						Consistently(func(g Gomega) corev1.ResourceRequirements {
 							g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 							return deployment.Spec.Template.Spec.Containers[0].Resources
-						}).ShouldNot(DeepEqual(defaultPodTemplateSpec.Spec.Containers[0].Resources))
+						}).Should(DeepEqual(newPodTemplateSpec.Spec.Containers[0].Resources))
 					})
 				})
 			})
