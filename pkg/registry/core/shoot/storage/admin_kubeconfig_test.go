@@ -288,6 +288,18 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 		It("returns error when the client certificate authority contains no certificate", func() {
 			shootState.Spec.Gardener[1].Data.Raw = []byte("{}")
 		})
+
+		It("returns error when the issued-at-time label on a CA cert secret is missing", func() {
+			shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardenercore.GardenerResourceData{
+				Name: "ca-2",
+				Type: "secret",
+				Labels: map[string]string{
+					"name":             "ca",
+					"managed-by":       "secrets-manager",
+					"manager-identity": "gardenlet",
+				},
+			})
+		})
 	})
 
 	DescribeTable("request succeeds",
