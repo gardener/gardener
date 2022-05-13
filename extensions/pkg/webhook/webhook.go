@@ -31,11 +31,6 @@ const (
 	TargetSeed = "seed"
 	// TargetShoot defines that the webhook is to be installed in the shoot.
 	TargetShoot = "shoot"
-
-	// ValidatorName is a common name for a validation webhook.
-	ValidatorName = "validator"
-	// ValidatorPath is a common path for a validation webhook.
-	ValidatorPath = "/webhooks/validate"
 )
 
 // Webhook is the specification of a webhook.
