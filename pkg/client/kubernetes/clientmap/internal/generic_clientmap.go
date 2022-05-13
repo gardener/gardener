@@ -118,7 +118,7 @@ func (cm *GenericClientMap) GetClient(ctx context.Context, key clientmap.ClientS
 				}
 				if serverVersion.GitVersion != oldVersion {
 					cm.log.Info("New server version discovered for ClientSet", "key", key.Key(), "serverVersion", serverVersion.GitVersion)
-					return true, nil
+					// client is intentionally not refreshed in this case, see https://github.com/gardener/gardener/pull/2581 for details
 				}
 
 				return false, nil
