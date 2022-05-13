@@ -259,7 +259,7 @@ metadata:
     ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
   creationTimestamp: null
   labels:
-    role: ` + dwdName + `
+    app: ` + dwdName + `
   name: ` + dwdName + `
   namespace: ` + namespace + `
 spec:
@@ -267,34 +267,32 @@ spec:
   revisionHistoryLimit: 2
   selector:
     matchLabels:
-      role: ` + dwdName + `
+      app: ` + dwdName + `
   strategy: {}
   template:
     metadata:
       annotations:
         ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
-      creationTimestamp: null`
+      creationTimestamp: null
+      labels:
+        app: ` + dwdName
 
 					if role == RoleEndpoint {
 						out += `
-      labels:
         networking.gardener.cloud/to-dns: allowed
-        networking.gardener.cloud/to-seed-apiserver: allowed
-`
+        networking.gardener.cloud/to-seed-apiserver: allowed`
 					}
 
 					if role == RoleProbe {
 						out += `
-      labels:
         networking.gardener.cloud/to-all-shoot-apiservers: allowed
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-private-networks: allowed
         networking.gardener.cloud/to-public-networks: allowed
-        networking.gardener.cloud/to-seed-apiserver: allowed
-`
+        networking.gardener.cloud/to-seed-apiserver: allowed`
 					}
 
-					out += `        role: ` + dwdName + `
+					out += `
     spec:
       containers:
       - command:`
@@ -432,14 +430,14 @@ status: {}
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
 				Expect(managedResourceSecret.Data).To(HaveLen(8))
-				Expect(managedResourceSecret.Data["clusterrole____gardener.cloud_"+dwdName+"_cluster-role.yaml"]).To(DeepEqual([]byte(clusterRoleYAMLFor(values.Role))))
-				Expect(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_"+dwdName+"_cluster-role-binding.yaml"]).To(DeepEqual([]byte(clusterRoleBindingYAML)))
-				Expect(managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"]).To(DeepEqual([]byte(configMapYAMLFor(values.Role))))
-				Expect(managedResourceSecret.Data["deployment__"+namespace+"__"+dwdName+".yaml"]).To(DeepEqual([]byte(deploymentYAMLFor(values.Role))))
-				Expect(managedResourceSecret.Data["role__"+namespace+"__gardener.cloud_"+dwdName+"_role.yaml"]).To(DeepEqual([]byte(roleYAML)))
-				Expect(managedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_"+dwdName+"_role-binding.yaml"]).To(DeepEqual([]byte(roleBindingYAML)))
-				Expect(managedResourceSecret.Data["serviceaccount__"+namespace+"__"+dwdName+".yaml"]).To(DeepEqual([]byte(serviceAccountYAML)))
-				Expect(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__"+dwdName+"-vpa.yaml"]).To(DeepEqual([]byte(vpaYAMLFor(values.Role))))
+				Expect(string(managedResourceSecret.Data["clusterrole____gardener.cloud_"+dwdName+"_cluster-role.yaml"])).To(DeepEqual(clusterRoleYAMLFor(values.Role)))
+				Expect(string(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_"+dwdName+"_cluster-role-binding.yaml"])).To(DeepEqual(clusterRoleBindingYAML))
+				Expect(string(managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"])).To(DeepEqual(configMapYAMLFor(values.Role)))
+				Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(deploymentYAMLFor(values.Role)))
+				Expect(string(managedResourceSecret.Data["role__"+namespace+"__gardener.cloud_"+dwdName+"_role.yaml"])).To(DeepEqual(roleYAML))
+				Expect(string(managedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_"+dwdName+"_role-binding.yaml"])).To(DeepEqual(roleBindingYAML))
+				Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__"+dwdName+".yaml"])).To(DeepEqual(serviceAccountYAML))
+				Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__"+dwdName+"-vpa.yaml"])).To(DeepEqual(vpaYAMLFor(values.Role)))
 			})
 
 			It("should successfully destroy all resources for role "+string(values.Role), func() {

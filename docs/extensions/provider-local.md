@@ -38,10 +38,6 @@ Please note that all of them are no technical limitations/blockers but simply ad
 
    _When [`APIServerSNI`](../proposals/08-shoot-apiserver-via-sni.md) is disabled then gardenlet uses load balancer `Service`s in order to expose the shoot clusters' `kube-apiserver`s. Typically, local Kubernetes clusters don't support this. In this case, the local extension uses the host IP to expose the `kube-apiserver`, however, this can only be done once._
 
-6. Dependency-Watchdog cannot be enabled.
-
-   _The `dependency-watchdog` needs to be able to resolve the shoot cluster's DNS names. It is not yet able to do so, hence, it cannot be enabled._
-
 ## Implementation Details
 
 This section contains information about how the respective controllers and webhooks are implemented and what their purpose is.
@@ -124,14 +120,6 @@ It makes important LoadBalancer Services (e.g. `istio-ingress/istio-ingressgatew
 
 If the `--apiserver-sni-enabled` flag is set to `true` (default), `istio-ingress/istio-ingressgateway` is set to be exposed on `nodePort` `30433` by this controller. Otherwise, the `kube-apiserver` `Service` in the shoot namespaces in the seed cluster needs to be patched to be exposed on `30443` by the [Control Plane Exposure Webhook](#control-plane-exposure).
 
-#### `Node`
-
-This controller reconciles the `Node`s of [kind](https://kind.sigs.k8s.io/) clusters.
-Typically, the `.status.{capacity,allocatable}` values are determined by the resources configured for the Docker daemon (see for example [this](https://docs.docker.com/desktop/mac/#resources) for Mac).
-Since many of the `Pod`s deployed by Gardener have quite high `.spec.resources.{requests,limits}`, the kind `Node`s easily get filled up and only a few `Pod`s can be scheduled (even if they barely consume any of their reserved resources).
-In order to improve the user experience, the controller submits an empty patch which triggers the "Node webhook" (see below section) in case the `.status.{capacity,allocatable}` values are not high enough.
-The webhook will increase the capacity of the `Node`s to allow all `Pod`s to be scheduled.
-
 #### ETCD Backups
 This controller reconciles the `BackuBucket` and `BackupEntry` of the shoot allowing the `etcd-backup-restore` to create and copy backups using the `local` provider functionality. The backups are stored on the host file system. This is achieved by mounting that directory to the `etcd-backup-restore` container.
 
@@ -156,15 +144,19 @@ This webhook reacts on the `OperatingSystemConfig` containing the configuration 
 This webhook reacts on the `kube-apiserver` `Service` in shoot namespaces in the seed in case the gardenlet's `APIServerSNI` feature gate is disabled.
 It sets the `nodePort` to `30443` to enable communication from the host (this requires a port mapping to work when creating the local cluster).
 
-#### Machine Pod
+#### DNS Config
 
-This webhook reacts on `Pod`s created when the `machine-controller-manager` reconciles `Machine`s.
-It sets the `.spec.dnsPolicy=None` and `.spec.dnsConfig.nameServers` to the cluster IP of the `coredns` `Service` created in the `gardener-extension-provider-local-coredns` namespaces (see the [Bootstrapping section](#bootstrapping) for more details).
+This webhook reacts on events for the `dependency-watchdog-probe` `Deployment` as well as on events for `Pod`s created when the `machine-controller-manager` reconciles `Machine`s.
+It sets the `.spec.dnsPolicy=None` and `.spec.dnsConfig.nameServers` to the cluster IP of the `coredns` `Service` created in the `gardener-extension-provider-local-coredns` namespaces so that these pods can resolve the DNS records for shoot clusters (see the [Bootstrapping section](#bootstrapping) for more details).
 
 #### Node
 
 This webhook reacts on [kind](https://kind.sigs.k8s.io/) `Node`s and sets the `.status.{allocatable,capacity}.cpu="100"` and `.status.{allocatable,capacity}.memory="100Gi"` fields.
-See also the above section about the "Node controller" for more information.
+
+Background: Typically, the `.status.{capacity,allocatable}` values are determined by the resources configured for the Docker daemon (see for example [this](https://docs.docker.com/desktop/mac/#resources) for Mac).
+Since many of the `Pod`s deployed by Gardener have quite high `.spec.resources.{requests,limits}`, the kind `Node`s easily get filled up and only a few `Pod`s can be scheduled (even if they barely consume any of their reserved resources).
+In order to improve the user experience, on startup/leader election the provider-local extension submits an empty patch which triggers the "Node webhook" (see below section).
+The webhook will increase the capacity of the `Node`s to allow all `Pod`s to be scheduled.
 
 #### Shoot
 

@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package machinepod
+package dnsconfig
 
 import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -27,11 +27,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// WebhookName is the name of the machine pod webhook.
-const WebhookName = "machinepod"
+// WebhookName is the name of the DNS config webhook.
+const WebhookName = "dnsconfig"
 
 var (
-	logger = log.Log.WithName("local-machinepod-webhook")
+	logger = log.Log.WithName("local-dnsconfig-webhook")
 
 	// DefaultAddOptions are the default AddOptions for AddToManager.
 	DefaultAddOptions = AddOptions{}
@@ -41,14 +41,17 @@ var (
 type AddOptions struct{}
 
 // AddToManagerWithOptions creates a webhook with the given options and adds it to the manager.
-func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) (*extensionswebhook.Webhook, error) {
+func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebhook.Webhook, error) {
 	logger.Info("Adding webhook to manager")
 
 	var (
-		name     = "machinepod"
+		name     = "dnsconfig"
 		kind     = controlplane.KindSeed
 		provider = local.Type
-		types    = []extensionswebhook.Type{{Obj: &corev1.Pod{}}}
+		types    = []extensionswebhook.Type{
+			{Obj: &appsv1.Deployment{}},
+			{Obj: &corev1.Pod{}},
+		}
 	)
 
 	logger = logger.WithValues("kind", kind, "provider", provider)
@@ -68,11 +71,11 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) (*extensionsw
 		Target:   extensionswebhook.TargetSeed,
 		Path:     name,
 		Webhook:  &admission.Webhook{Handler: handler},
-		Selector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
-			{Key: v1beta1constants.LabelShootProvider, Operator: metav1.LabelSelectorOpIn, Values: []string{provider}},
-		}},
 		ObjectSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{
-			{Key: "app", Operator: metav1.LabelSelectorOpIn, Values: []string{"machine"}},
+			{Key: "app", Operator: metav1.LabelSelectorOpIn, Values: []string{
+				"machine",
+				"dependency-watchdog-probe",
+			}},
 		}},
 	}, nil
 }

@@ -92,9 +92,6 @@ global:
               pods: 10.3.0.0/16
               services: 10.4.0.0/16
           settings:
-            dependencyWatchdog:
-              probe:
-                enabled: false
             excessCapacityReservation:
               enabled: false
             ownerChecks:
