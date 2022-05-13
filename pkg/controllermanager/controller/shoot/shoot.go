@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -91,7 +92,7 @@ func NewShootController(
 	shootController := &Controller{
 		config: config,
 
-		shootHibernationReconciler: NewShootHibernationReconciler(gardenClient.Client(), config.Controllers.ShootHibernation, recorder),
+		shootHibernationReconciler: NewShootHibernationReconciler(gardenClient.Client(), config.Controllers.ShootHibernation, recorder, clock.RealClock{}),
 		shootMaintenanceReconciler: NewShootMaintenanceReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootMaintenance, recorder),
 		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootQuota),
 		shootRetryReconciler:       NewShootRetryReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootRetry),

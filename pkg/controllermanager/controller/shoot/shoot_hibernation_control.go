@@ -32,6 +32,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -73,16 +74,13 @@ func (c *Controller) shootHibernationUpdate(oldObj, newObj interface{}) {
 			gardenlogger.Logger.Infof("Could not parse hibernation schedules for shoot %s: %v", client.ObjectKeyFromObject(newShoot), err)
 			return
 		}
-		requeueAfter := nextHibernationTimeDuration(parsedSchedules, TimeNow())
+		requeueAfter := nextHibernationTimeDuration(parsedSchedules, time.Now())
 		c.shootHibernationQueue.AddAfter(key, requeueAfter)
 	}
 }
 
 // ControllerName is the name of the controller.
 const ControllerName = "hibernation"
-
-// TimeNow returns the current time. Exposed for testing.
-var TimeNow = time.Now
 
 // ParsedHibernationSchedule holds the loaded location, parsed cron schedule and information whether
 // the cluster should be hibernated or woken up.
@@ -126,11 +124,13 @@ func NewShootHibernationReconciler(
 	gardenClient client.Client,
 	config config.ShootHibernationControllerConfiguration,
 	recorder record.EventRecorder,
+	clock clock.Clock,
 ) reconcile.Reconciler {
 	return &shootHibernationReconciler{
 		gardenClient: gardenClient,
 		config:       config,
 		recorder:     recorder,
+		clock:        clock,
 	}
 }
 
@@ -138,6 +138,7 @@ type shootHibernationReconciler struct {
 	gardenClient client.Client
 	config       config.ShootHibernationControllerConfiguration
 	recorder     record.EventRecorder
+	clock        clock.Clock
 }
 
 func (r *shootHibernationReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -176,7 +177,7 @@ func (r *shootHibernationReconciler) reconcile(ctx context.Context, shoot *garde
 	}
 
 	// get the schedule which caused the current reconciliation, to check whether the shoot should be hibernated or woken up
-	mostRecentSchedule := getScheduleWithMostRecentTime(parsedSchedules, TimeNow(), r.config.TriggerDeadlineDuration, shoot)
+	mostRecentSchedule := getScheduleWithMostRecentTime(parsedSchedules, r.clock.Now(), r.config.TriggerDeadlineDuration, shoot)
 	if mostRecentSchedule != nil {
 		patch := client.MergeFrom(shoot.DeepCopy())
 		shoot.Spec.Hibernation.Enabled = &mostRecentSchedule.Enabled
@@ -185,7 +186,7 @@ func (r *shootHibernationReconciler) reconcile(ctx context.Context, shoot *garde
 		}
 
 		patch = client.MergeFrom(shoot.DeepCopy())
-		hibernationTriggerTime := v1.NewTime(TimeNow())
+		hibernationTriggerTime := v1.NewTime(r.clock.Now())
 		shoot.Status.LastHibernationTriggerTime = &hibernationTriggerTime
 		if err = r.gardenClient.Status().Patch(ctx, shoot, patch); err != nil {
 			return reconcile.Result{}, err
@@ -198,7 +199,7 @@ func (r *shootHibernationReconciler) reconcile(ctx context.Context, shoot *garde
 		log.Info("Successfully set shoot hibernation", "hibernation", mostRecentSchedule.Enabled)
 	}
 
-	requeueAfter := nextHibernationTimeDuration(parsedSchedules, TimeNow())
+	requeueAfter := nextHibernationTimeDuration(parsedSchedules, r.clock.Now())
 	log.Info("Requeuing hibernation", "requeueAfter", requeueAfter)
 	return reconcile.Result{RequeueAfter: requeueAfter}, nil
 }
