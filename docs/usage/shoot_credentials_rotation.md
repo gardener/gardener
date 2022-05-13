@@ -41,7 +41,7 @@ Please note that only the token (and basic auth password, if enabled) are exchan
 The CA certificate remains the same (see section below for information about the rotation).
 
 ```bash
-kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=rotate-kubeconfig-credentials
+kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-kubeconfig-credentials
 ```
 
 > You can check the `.status.credentials.rotation.kubeconfig` field in the `Shoot` to see when the rotation was last initiated and last completed.
@@ -82,7 +82,7 @@ The `Completing` phase indicates stage three, and the `Completed` phase states t
 In order to start the rotation (stage one), you have to annotate the shoot with the `rotate-ca-start` operation:
 
 ```bash
-kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=rotate-ca-start
+kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-ca-start
 ```
 
 This will trigger a `Shoot` reconciliation and performs stage one.
@@ -93,7 +93,7 @@ Now you must update all API clients outside the cluster (such as the `kubeconfig
 After updating all API clients, you can complete the rotation by annotating the shoot with the `rotate-ca-complete` operation:
 
 ```bash
-kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=rotate-ca-complete
+kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-ca-complete
 ```
 
 This will trigger another `Shoot` reconciliation and performs stage three.
@@ -122,7 +122,7 @@ In order to rotate the `password`, annotate the `Shoot` with `gardener.cloud/ope
 This operation is not allowed for `Shoot`s that are already marked for deletion.
 
 ```bash
-kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=rotate-observability-credentials
+kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-observability-credentials
 ```
 
 > You can check the `.status.credentials.rotation.observability` field in the `Shoot` to see when the rotation was last initiated and last completed.
@@ -154,7 +154,7 @@ In order to rotate the keys, annotate the `Shoot` with `gardener.cloud/operation
 This will propagate a new key to all worker nodes while keeping the old key active and valid as well (it will only be invalidated/removed with the next rotation).
 
 ```bash
-kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=rotate-ssh-keypair
+kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-ssh-keypair
 ```
 
 > You can check the `.status.credentials.rotation.sshKeypair` field in the `Shoot` to see when the rotation was last initiated or last completed.
