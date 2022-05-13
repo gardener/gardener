@@ -148,6 +148,8 @@ const (
 	ProjectMemberOwner = "owner"
 	// ProjectMemberUserAccessManager is a const for a role that provides permissions to manage human user(s, (groups)).
 	ProjectMemberUserAccessManager = "uam"
+	// ProjectMemberServiceAccountAdmin is a const for a role that provides permissions to manage service accounts and request tokens for them.
+	ProjectMemberServiceAccountAdmin = "saAdmin"
 	// ProjectMemberViewer is a const for a role that provides limited permissions to only view some resources.
 	ProjectMemberViewer = "viewer"
 	// ProjectMemberExtensionPrefix is a prefix for custom roles that are not known by Gardener.

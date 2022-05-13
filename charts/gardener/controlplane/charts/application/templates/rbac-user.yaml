@@ -392,6 +392,56 @@ rules:
   verbs:
   - create
 
+# Cluster role setting the permissions for a project serviceaccount admin. It gets bound by a RoleBinding
+# in a respective project namespace.
+# It aggregates all ClusterRoles labeled with rbac.gardener.cloud/aggregate-to-project-saAdmin: "true"
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: gardener.cloud:system:project-saAdmin
+  labels:
+    gardener.cloud/role: project-saAdmin
+    app: gardener
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels:
+      rbac.gardener.cloud/aggregate-to-project-saAdmin: "true"
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: gardener.cloud:system:project-saAdmin-aggregation
+  labels:
+    rbac.gardener.cloud/aggregate-to-project-saAdmin: "true"
+    app: gardener
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts/token
+  verbs:
+  - create
+
 # Cluster role setting the permissions for a project viewer. It gets bound by a RoleBinding
 # in a respective project namespace.
 # It aggregates all ClusterRoles labeled with rbac.gardener.cloud/aggregate-to-project-viewer: "true"

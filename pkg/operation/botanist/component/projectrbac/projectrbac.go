@@ -42,8 +42,9 @@ const (
 	namePrefixSpecificProjectViewer     = "gardener.cloud:system:project-viewer:"
 	namePrefixSpecificProjectExtensions = "gardener.cloud:extension:project:"
 
-	nameProjectMember = "gardener.cloud:system:project-member"
-	nameProjectViewer = "gardener.cloud:system:project-viewer"
+	nameProjectMember  = "gardener.cloud:system:project-member"
+	nameProjectViewer  = "gardener.cloud:system:project-viewer"
+	nameProjectSAAdmin = "gardener.cloud:system:project-saAdmin"
 )
 
 // Interface extends component.Deployer with a function to delete stale extension roles resources.
@@ -71,10 +72,11 @@ type projectRBAC struct {
 
 func (p *projectRBAC) Deploy(ctx context.Context) error {
 	var (
-		admins  []rbacv1.Subject
-		members []rbacv1.Subject
-		uams    []rbacv1.Subject
-		viewers []rbacv1.Subject
+		admins   []rbacv1.Subject
+		members  []rbacv1.Subject
+		uams     []rbacv1.Subject
+		saAdmins []rbacv1.Subject
+		viewers  []rbacv1.Subject
 
 		extensionRolesNameToSubjects = map[string][]rbacv1.Subject{}
 		extensionRolesNames          = sets.NewString()
@@ -82,6 +84,7 @@ func (p *projectRBAC) Deploy(ctx context.Context) error {
 
 	if p.project.Spec.Owner != nil {
 		admins = []rbacv1.Subject{*p.project.Spec.Owner}
+		saAdmins = []rbacv1.Subject{*p.project.Spec.Owner}
 	}
 
 	for _, member := range p.project.Spec.Members {
@@ -91,6 +94,9 @@ func (p *projectRBAC) Deploy(ctx context.Context) error {
 			}
 			if role == gardencorev1beta1.ProjectMemberUserAccessManager {
 				uams = append(uams, member.Subject)
+			}
+			if role == gardencorev1beta1.ProjectMemberServiceAccountAdmin || role == gardencorev1beta1.ProjectMemberOwner {
+				saAdmins = append(saAdmins, member.Subject)
 			}
 			if role == gardencorev1beta1.ProjectMemberViewer {
 				viewers = append(viewers, member.Subject)
@@ -151,6 +157,11 @@ func (p *projectRBAC) Deploy(ctx context.Context) error {
 					},
 				},
 			)
+		},
+
+		// service account admin resources
+		func(ctx context.Context) error {
+			return p.reconcileSAAdminRoleBinding(ctx, saAdmins)
 		},
 
 		// project members resources
@@ -300,6 +311,27 @@ func (p *projectRBAC) reconcileResources(
 	return nil
 }
 
+func (p *projectRBAC) reconcileSAAdminRoleBinding(ctx context.Context, subjects []rbacv1.Subject) error {
+	subjectsUnique := removeDuplicateSubjects(subjects)
+	ownerRef := metav1.NewControllerRef(&p.project.ObjectMeta, gardencorev1beta1.SchemeGroupVersion.WithKind("Project"))
+	ownerRef.BlockOwnerDeletion = pointer.Bool(false)
+
+	roleBinding := emptyRoleBinding(nameProjectSAAdmin, *p.project.Spec.Namespace)
+	_, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, p.client, roleBinding, func() error {
+		roleBinding.OwnerReferences = []metav1.OwnerReference{*ownerRef}
+		roleBinding.Labels = nil
+		roleBinding.RoleRef = rbacv1.RoleRef{
+			APIGroup: rbacv1.SchemeGroupVersion.Group,
+			Kind:     "ClusterRole",
+			Name:     roleBinding.Name,
+		}
+		roleBinding.Subjects = subjectsUnique
+		return nil
+	})
+
+	return err
+}
+
 func (p *projectRBAC) Destroy(ctx context.Context) error {
 	if err := p.deleteExtensionRolesResources(ctx, sets.NewString()); err != nil {
 		return err
@@ -311,6 +343,8 @@ func (p *projectRBAC) Destroy(ctx context.Context) error {
 
 		emptyClusterRole(namePrefixSpecificProjectUAM+p.project.Name),
 		emptyClusterRoleBinding(namePrefixSpecificProjectUAM+p.project.Name),
+
+		emptyRoleBinding(nameProjectSAAdmin, *p.project.Spec.Namespace),
 
 		emptyClusterRole(namePrefixSpecificProjectMember+p.project.Name),
 		emptyClusterRoleBinding(namePrefixSpecificProjectMember+p.project.Name),
