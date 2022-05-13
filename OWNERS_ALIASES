@@ -10,7 +10,6 @@ aliases:
   - plkokanov
   - rfranzke
   - shafeeqes
-  - stoyanr
   - timebertt
   - timuthy
   gardener-approvers:
@@ -22,7 +21,6 @@ aliases:
   - plkokanov
   - rfranzke
   - shafeeqes
-  - stoyanr
   - timebertt
   - timuthy
   testmachinery-maintainers:
