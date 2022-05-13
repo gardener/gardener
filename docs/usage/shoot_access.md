@@ -18,7 +18,7 @@ spec:
 ```
 
 It is **not** the recommended method to access the shoot cluster as the static token `kubeconfig` has some security flaws associated with it:
-- The static token in the `kubeconfig` doesn't have any expiration date. To revoke the static token, the user needs to rotate the kubeconfig credentials (see [rotate-kubeconfig-credentials](shoot_operations.md#rotate-kubeconfig-credentials)).
+- The static token in the `kubeconfig` doesn't have any expiration date. Read [this document](shoot_credentials_rotation.md#kubeconfig) to learn how to rotate the static token.
 - The static token doesn't have any user identity associated with it. The user in that token will always be `system:cluster-admin` irrespective of the person accessing the cluster. Hence, it is impossible to audit the events in cluster.
 
 ## `shoots/adminkubeconfig` subresource
