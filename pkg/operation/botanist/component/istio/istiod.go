@@ -17,22 +17,35 @@ package istio
 import (
 	"context"
 	"path/filepath"
+	"time"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 
+	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	// ManagedResourceIstio is the name of the ManagedResource containing the resource specifications.
+	ManagedResourceIstio = "istio"
+)
+
 type istiod struct {
-	namespace string
-	values    *IstiodValues
-	kubernetes.ChartApplier
-	chartPath string
-	client    crclient.Client
+	client                    crclient.Client
+	chartRenderer             chartrenderer.Interface
+	namespace                 string
+	values                    *IstiodValues
+	chartPath                 string
+	istioIngressGatewayValues []*IngressGateway
+	istioProxyProtocolValues  []*IstioProxyProtocol
 }
 
 // IstiodValues holds values for the istio-istiod chart.
@@ -41,21 +54,25 @@ type IstiodValues struct {
 	Image       string `json:"image,omitempty"`
 }
 
-// NewIstiod can be used to deploy istio's istiod in a namespace.
+// NewIstio can be used to deploy istio's istiod in a namespace.
 // Destroy does nothing.
-func NewIstiod(
+func NewIstio(
+	client crclient.Client,
+	chartRenderer chartrenderer.Interface,
 	values *IstiodValues,
 	namespace string,
-	applier kubernetes.ChartApplier,
 	chartsRootPath string,
-	client crclient.Client,
+	istioIngressGatewayValues []*IngressGateway,
+	istioProxyProtocolValues []*IstioProxyProtocol,
 ) component.DeployWaiter {
 	return &istiod{
-		values:       values,
-		namespace:    namespace,
-		ChartApplier: applier,
-		chartPath:    filepath.Join(chartsRootPath, istioReleaseName, "istio-istiod"),
-		client:       client,
+		client:                    client,
+		chartRenderer:             chartRenderer,
+		values:                    values,
+		namespace:                 namespace,
+		chartPath:                 filepath.Join(chartsRootPath, istioReleaseName, "istio-istiod"),
+		istioIngressGatewayValues: istioIngressGatewayValues,
+		istioProxyProtocolValues:  istioProxyProtocolValues,
 	}
 }
 
@@ -75,20 +92,113 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	applierOptions := kubernetes.CopyApplierOptions(kubernetes.DefaultMergeFuncs)
+	// TODO(mvladev): Rotate this on on every istio version upgrade.
+	for _, filterName := range []string{"tcp-metadata-exchange-1.9", "tcp-metadata-exchange-1.10", "metadata-exchange-1.9", "metadata-exchange-1.10", "tcp-stats-filter-1.9", "stats-filter-1.9"} {
+		if err := crclient.IgnoreNotFound(i.client.Delete(ctx, &networkingv1alpha3.EnvoyFilter{
+			ObjectMeta: metav1.ObjectMeta{Name: filterName, Namespace: i.namespace},
+		})); err != nil {
+			return err
+		}
+	}
 
-	return i.Apply(ctx, i.chartPath, i.namespace, istioReleaseName, kubernetes.Values(i.values), applierOptions)
+	renderedIstiodChart, err := i.generateIstioIstiodChart(ctx)
+	if err != nil {
+		return err
+	}
+
+	renderedIstioIngressGatewayChart, err := i.generateIstioIngressGatewayChart(ctx)
+	if err != nil {
+		return err
+	}
+
+	renderedIstioProxyProtocolChart, err := i.generateIstioProxyProtocolChart(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, istioIngressGateway := range i.istioIngressGatewayValues {
+		if err := i.client.Create(
+			ctx,
+			&corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   istioIngressGateway.Namespace,
+					Labels: getIngressGatewayNamespaceLabels(istioIngressGateway.Values.Labels),
+				},
+			},
+		); kutil.IgnoreAlreadyExists(err) != nil {
+			return err
+		}
+	}
+
+	renderedChart := renderedIstiodChart
+	renderedChart.Manifests = append(renderedChart.Manifests, renderedIstioIngressGatewayChart.Manifests...)
+	if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
+		renderedChart.Manifests = append(renderedChart.Manifests, renderedIstioProxyProtocolChart.Manifests...)
+	}
+
+	return managedresources.CreateForSeed(ctx, i.client, i.namespace, ManagedResourceIstio, false, renderedChart.AsSecretData())
 }
 
 func (i *istiod) Destroy(ctx context.Context) error {
-	// istio cannot be safely removed
+
+	if err := managedresources.DeleteForSeed(ctx, i.client, i.namespace, ManagedResourceIstio); err != nil {
+		return err
+	}
+
+	//delete the namespaces
+	if err := i.client.Delete(ctx, &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: i.namespace,
+		},
+	}); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	for _, istioIngressGateway := range i.istioIngressGatewayValues {
+		if err := i.client.Delete(ctx, &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: istioIngressGateway.Namespace,
+			},
+		}); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
+// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
+// or deleted.
+var TimeoutWaitForManagedResource = 2 * time.Minute
+
 func (i *istiod) Wait(ctx context.Context) error {
-	return nil
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilHealthy(timeoutCtx, i.client, i.namespace, ManagedResourceIstio)
 }
 
 func (i *istiod) WaitCleanup(ctx context.Context) error {
-	return nil
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilDeleted(timeoutCtx, i.client, i.namespace, ManagedResourceIstio)
+}
+
+func (i *istiod) generateIstioIstiodChart(ctx context.Context) (*chartrenderer.RenderedChart, error) {
+
+	values := map[string]interface{}{
+		"trustDomain":       i.values.TrustDomain,
+		"labels":            map[string]interface{}{"app": "istiod", "istio": "pilot"},
+		"deployNamespace":   false,
+		"priorityClassName": "istio",
+		"ports":             map[string]interface{}{"https": 10250},
+		"image":             i.values.Image,
+	}
+
+	return i.chartRenderer.Render(i.chartPath, ManagedResourceIstio, i.namespace, values)
 }
