@@ -37,6 +37,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -210,7 +211,7 @@ func (c *Controller) Run(
 		controllerutils.CreateWorker(ctx, c.shootQuotaQueue, "Shoot Quota", c.shootQuotaReconciler, &waitGroup, c.workerCh)
 	}
 	for i := 0; i < shootHibernationWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootHibernationQueue, "Shoot Hibernation", c.shootHibernationReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.shootHibernationQueue, "Shoot Hibernation", c.shootHibernationReconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(logf.Log.WithName(shootHibernationReconcilerName)))
 	}
 	for i := 0; i < shootReferenceWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.shootReferenceQueue, "ShootReference", c.shootRefReconciler, &waitGroup, c.workerCh)
