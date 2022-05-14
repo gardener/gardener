@@ -16,19 +16,15 @@ package istio
 
 import (
 	"context"
-	"path/filepath"
 
-	"k8s.io/apimachinery/pkg/api/meta"
-
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/chartrenderer"
 )
 
-type proxyProtocol struct {
-	values       *ProxyValues
-	namespace    string
-	chartApplier kubernetes.ChartApplier
-	chartPath    string
+// IstioProxyProtocol is a set of configuration values for the istio-proxy-protocol chart.
+type IstioProxyProtocol struct {
+	Values    *ProxyValues
+	Namespace string
+	ChartPath string
 }
 
 // ProxyValues holds values for the istio-proxy-protocol chart.
@@ -36,40 +32,22 @@ type ProxyValues struct {
 	Labels map[string]string `json:"labels,omitempty"`
 }
 
-// NewProxyProtocolGateway creates a new DeployWaiter for istio which
-// adds a PROXY Protocol listener to the istio-ingressgateway.
-func NewProxyProtocolGateway(
-	values *ProxyValues,
-	namespace string,
-	chartApplier kubernetes.ChartApplier,
-	chartsRootPath string,
-) component.DeployWaiter {
-	return &proxyProtocol{
-		values:       values,
-		namespace:    namespace,
-		chartApplier: chartApplier,
-		chartPath:    filepath.Join(chartsRootPath, istioReleaseName, "istio-proxy-protocol"),
+func (i *istiod) generateIstioProxyProtocolChart(ctx context.Context) (*chartrenderer.RenderedChart, error) {
+	renderedChart := &chartrenderer.RenderedChart{}
+
+	for _, istioProxyProtocol := range i.istioProxyProtocolValues {
+		values := map[string]interface{}{
+			"labels": istioProxyProtocol.Values.Labels,
+		}
+
+		renderedProxyProtocolChart, err := i.chartRenderer.Render(istioProxyProtocol.ChartPath, ManagedResourceIstio, istioProxyProtocol.Namespace, values)
+		if err != nil {
+			return nil, err
+		}
+
+		renderedChart.ChartName = renderedProxyProtocolChart.ChartName
+		renderedChart.Manifests = append(renderedChart.Manifests, renderedProxyProtocolChart.Manifests...)
 	}
-}
 
-func (i *proxyProtocol) Deploy(ctx context.Context) error {
-	return i.chartApplier.Apply(ctx, i.chartPath, i.namespace, istioReleaseName, kubernetes.Values(i.values))
-}
-
-func (i *proxyProtocol) Destroy(ctx context.Context) error {
-	return i.chartApplier.Delete(
-		ctx,
-		i.chartPath,
-		i.namespace,
-		istioReleaseName,
-		kubernetes.TolerateErrorFunc(meta.IsNoMatchError),
-	)
-}
-
-func (i *proxyProtocol) Wait(ctx context.Context) error {
-	return nil
-}
-
-func (i *proxyProtocol) WaitCleanup(ctx context.Context) error {
-	return nil
+	return renderedChart, nil
 }
