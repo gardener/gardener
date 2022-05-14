@@ -306,7 +306,7 @@ type ShootHibernationControllerConfiguration struct {
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 	// TriggerDeadlineDuration is an optional deadline for triggering hibernation if scheduled
-	// time is missed for any reason.
+	// time is missed for any reason (defaults to '2h').
 	// +optional
 	TriggerDeadlineDuration *metav1.Duration `json:"triggerDeadlineDuration,omitempty"`
 }

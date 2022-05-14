@@ -257,7 +257,7 @@ type ShootHibernationControllerConfiguration struct {
 	// events.
 	ConcurrentSyncs *int
 	// TriggerDeadlineDuration is an optional deadline for triggering hibernation if scheduled
-	// time is missed for any reason.
+	// time is missed for any reason (defaults to '2h').
 	TriggerDeadlineDuration *metav1.Duration
 }
 

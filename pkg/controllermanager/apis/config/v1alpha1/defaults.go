@@ -295,3 +295,10 @@ func SetDefaults_ManagedSeedSetControllerConfiguration(obj *ManagedSeedSetContro
 		obj.MaxShootRetries = &v
 	}
 }
+
+// SetDefaults_ShootHibernationControllerConfiguration sets defaults for the given ShootHibernationControllerConfiguration.
+func SetDefaults_ShootHibernationControllerConfiguration(obj *ShootHibernationControllerConfiguration) {
+	if obj.TriggerDeadlineDuration == nil {
+		obj.TriggerDeadlineDuration = &metav1.Duration{Duration: 2 * time.Hour}
+	}
+}
