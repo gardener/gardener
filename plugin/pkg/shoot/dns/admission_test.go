@@ -201,6 +201,7 @@ var _ = Describe("dns", func() {
 			shootCopy.Spec.DNS = nil
 			shootBefore := shootCopy.DeepCopy()
 
+			Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 			Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(seedCopy)).To(Succeed())
 			attrs := admission.NewAttributesRecord(shootCopy, nil, core.Kind("Shoot").WithVersion("version"), shootCopy.Namespace, shootCopy.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
@@ -676,7 +677,7 @@ var _ = Describe("dns", func() {
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-				Expect(err).To(Not(HaveOccurred()))
+				Expect(err).To(HaveOccurred())
 			})
 
 			It("should reject because no domain was configured for the shoot and project is missing", func() {
@@ -796,7 +797,7 @@ var _ = Describe("dns", func() {
 
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-					Expect(err).To(Not(HaveOccurred()))
+					Expect(err).To(HaveOccurred())
 				})
 			})
 		})
