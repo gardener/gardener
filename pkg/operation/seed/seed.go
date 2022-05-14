@@ -230,9 +230,10 @@ func RunReconcileSeedFlow(
 	log logrus.FieldLogger,
 ) error {
 	var (
-		applier      = seedClientSet.Applier()
-		seedClient   = seedClientSet.Client()
-		chartApplier = seedClientSet.ChartApplier()
+		applier       = seedClientSet.Applier()
+		seedClient    = seedClientSet.Client()
+		chartApplier  = seedClientSet.ChartApplier()
+		chartRenderer = seedClientSet.ChartRenderer()
 	)
 
 	secretsManager, err := secretsmanager.New(
@@ -744,17 +745,6 @@ func RunReconcileSeedFlow(
 		}
 
 		istioCRDs := istio.NewIstioCRD(chartApplier, charts.Path, seedClient)
-		istiod := istio.NewIstiod(
-			&istio.IstiodValues{
-				TrustDomain: gardencorev1beta1.DefaultDomain,
-				Image:       istiodImage.String(),
-			},
-			common.IstioNamespace,
-			chartApplier,
-			charts.Path,
-			seedClient,
-		)
-		istioDeployers := []component.DeployWaiter{istioCRDs, istiod}
 
 		defaultIngressGatewayConfig := &istio.IngressValues{
 			TrustDomain:     gardencorev1beta1.DefaultDomain,
@@ -777,18 +767,24 @@ func RunReconcileSeedFlow(
 			)
 		}
 
-		istioDeployers = append(istioDeployers, istio.NewIngressGateway(
-			defaultIngressGatewayConfig,
-			*conf.SNI.Ingress.Namespace,
-			chartApplier,
-			charts.Path,
-			seedClient,
-		))
+		istioIngressGateway := []*istio.IngressGateway{&istio.IngressGateway{
+			Values:    defaultIngressGatewayConfig,
+			Namespace: *conf.SNI.Ingress.Namespace,
+			ChartPath: filepath.Join(charts.Path, "istio", "istio-ingress"),
+		}}
 
-		// Add for each ExposureClass handler in the config an own Ingress Gateway.
+		istioProxyGateway := []*istio.IstioProxyProtocol{&istio.IstioProxyProtocol{
+			Values: &istio.ProxyValues{
+				Labels: conf.SNI.Ingress.Labels,
+			},
+			Namespace: *conf.SNI.Ingress.Namespace,
+			ChartPath: filepath.Join(charts.Path, "istio", "istio-proxy-protocol"),
+		}}
+
+		// Add for each ExposureClass handler in the config an own Ingress Gateway and Proxy Gateway.
 		for _, handler := range conf.ExposureClassHandlers {
-			istioDeployers = append(istioDeployers, istio.NewIngressGateway(
-				&istio.IngressValues{
+			istioIngressGateway = append(istioIngressGateway, &istio.IngressGateway{
+				Values: &istio.IngressValues{
 					TrustDomain:     gardencorev1beta1.DefaultDomain,
 					Image:           igwImage.String(),
 					IstiodNamespace: common.IstioNamespace,
@@ -797,51 +793,39 @@ func RunReconcileSeedFlow(
 					LoadBalancerIP:  handler.SNI.Ingress.ServiceExternalIP,
 					Labels:          gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name),
 				},
-				*handler.SNI.Ingress.Namespace,
-				chartApplier,
-				charts.Path,
-				seedClient,
-			))
+				Namespace: *handler.SNI.Ingress.Namespace,
+				ChartPath: filepath.Join(charts.Path, "istio", "istio-ingress"),
+			})
+
+			istioProxyGateway = append(istioProxyGateway, &istio.IstioProxyProtocol{
+				Values: &istio.ProxyValues{
+					Labels: gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name),
+				},
+				Namespace: *handler.SNI.Ingress.Namespace,
+				ChartPath: filepath.Join(charts.Path, "istio", "istio-proxy-protocol"),
+			})
 		}
+
+		if !gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
+			istioProxyGateway = nil
+		}
+
+		istiod := istio.NewIstio(
+			seedClient,
+			chartRenderer,
+			&istio.IstiodValues{
+				TrustDomain: gardencorev1beta1.DefaultDomain,
+				Image:       istiodImage.String(),
+			},
+			common.IstioNamespace,
+			charts.Path,
+			istioIngressGateway,
+			istioProxyGateway,
+		)
+		istioDeployers := []component.DeployWaiter{istioCRDs, istiod}
 
 		if err := component.OpWaiter(istioDeployers...).Deploy(ctx); err != nil {
 			return err
-		}
-	}
-
-	var proxyGatewayDeployers = []component.DeployWaiter{
-		istio.NewProxyProtocolGateway(
-			&istio.ProxyValues{
-				Labels: conf.SNI.Ingress.Labels,
-			},
-			*conf.SNI.Ingress.Namespace,
-			chartApplier,
-			charts.Path,
-		),
-	}
-
-	for _, handler := range conf.ExposureClassHandlers {
-		proxyGatewayDeployers = append(proxyGatewayDeployers, istio.NewProxyProtocolGateway(
-			&istio.ProxyValues{
-				Labels: gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name),
-			},
-			*handler.SNI.Ingress.Namespace,
-			chartApplier,
-			charts.Path,
-		))
-	}
-
-	if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
-		for _, proxyDeployer := range proxyGatewayDeployers {
-			if err := proxyDeployer.Deploy(ctx); err != nil {
-				return err
-			}
-		}
-	} else {
-		for _, proxyDeployer := range proxyGatewayDeployers {
-			if err := proxyDeployer.Destroy(ctx); err != nil {
-				return err
-			}
 		}
 	}
 
@@ -1132,6 +1116,17 @@ func RunDeleteSeedFlow(
 		return err
 	}
 
+	istioIngressGateway := []*istio.IngressGateway{&istio.IngressGateway{
+		Namespace: *conf.SNI.Ingress.Namespace,
+	}}
+
+	// Add for each ExposureClass handler in the config an own Ingress Gateway.
+	for _, handler := range conf.ExposureClassHandlers {
+		istioIngressGateway = append(istioIngressGateway, &istio.IngressGateway{
+			Namespace: *handler.SNI.Ingress.Namespace,
+		})
+	}
+
 	// setup for flow graph
 	var (
 		dnsEntry        = getManagedIngressDNSEntry(seedClient, seed.GetIngressFQDN("*"), *seed.GetInfo().Status.ClusterIdentity, "", log)
@@ -1150,6 +1145,7 @@ func RunDeleteSeedFlow(
 		systemResources = seedsystem.New(seedClient, v1beta1constants.GardenNamespace, seedsystem.Values{})
 		vpa             = vpa.New(seedClient, v1beta1constants.GardenNamespace, nil, vpa.Values{ClusterType: vpa.ClusterTypeSeed})
 		vpnAuthzServer  = vpnauthzserver.New(seedClient, v1beta1constants.GardenNamespace, "", 1)
+		istio           = istio.NewIstio(seedClient, seedClientSet.ChartRenderer(), nil, common.IstioNamespace, charts.Path, istioIngressGateway, nil)
 	)
 
 	scheduler, err := gardenerkubescheduler.Bootstrap(seedClient, nil, v1beta1constants.GardenNamespace, nil, kubernetesVersion)
@@ -1222,6 +1218,10 @@ func RunDeleteSeedFlow(
 			Name: "Destroy system resources",
 			Fn:   component.OpDestroyAndWait(systemResources).Destroy,
 		})
+		destroyIstio = g.Add(flow.Task{
+			Name: "Destroy Istio",
+			Fn:   component.OpDestroyAndWait(istio).Destroy,
+		})
 		_ = g.Add(flow.Task{
 			Name: "Destroying gardener-resource-manager",
 			Fn:   resourceManager.Destroy,
@@ -1239,6 +1239,7 @@ func RunDeleteSeedFlow(
 				destroyVPA,
 				destroyVPNAuthzServer,
 				destroySystemResources,
+				destroyIstio,
 				noControllerInstallations,
 			),
 		})
