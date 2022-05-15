@@ -863,10 +863,10 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 			// Source available, but no Action
 			if kubeAPIServer.AccessControl.Source != nil {
 				if kubeAPIServer.AccessControl.Source.IPBlocks != nil {
-					allErrs = append(allErrs, validateIpAdress(kubeAPIServer.AccessControl.Source.IPBlocks, fldPath.Child("kubeAPIServer", "accessControl", "source", "ipBlocks"))...)
+					allErrs = append(allErrs, validateIPAddresses(kubeAPIServer.AccessControl.Source.IPBlocks, fldPath.Child("kubeAPIServer", "accessControl", "source", "ipBlocks"))...)
 				}
 				if kubeAPIServer.AccessControl.Source.RemoteIPBlocks != nil {
-					allErrs = append(allErrs, validateIpAdress(kubeAPIServer.AccessControl.Source.RemoteIPBlocks, fldPath.Child("kubeAPIServer", "accessControl", "source", "remoteIpBlocks"))...)
+					allErrs = append(allErrs, validateIPAddresses(kubeAPIServer.AccessControl.Source.RemoteIPBlocks, fldPath.Child("kubeAPIServer", "accessControl", "source", "remoteIpBlocks"))...)
 				}
 				if kubeAPIServer.AccessControl.Action == nil {
 					allErrs = append(allErrs, field.Required(fldPath.Child("kubeAPIServer", "accessControl", "action"), "is required when source for action provided"))
