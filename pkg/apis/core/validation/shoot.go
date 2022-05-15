@@ -899,7 +899,7 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured, shootHasDe
 	return allErrs
 }
 
-func validateIpAdress(ips []string, fldPath *field.Path) field.ErrorList {
+func validateIPAddresses(ips []string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	for _, ip := range ips {
