@@ -905,7 +905,7 @@ func validateIpAdress(ips []string, fldPath *field.Path) field.ErrorList {
 	for _, ip := range ips {
 		if parsedIp := net.ParseIP(ip); parsedIp == nil {
 			if _, _, err := net.ParseCIDR(ip); err != nil {
-				allErrs = append(allErrs, field.Invalid(fldPath, ip, "is neither a valid IP adress nor valid CIDR"))
+				allErrs = append(allErrs, field.Invalid(fldPath, ip, "is neither a valid IP address nor a valid CIDR"))
 			}
 		}
 	}
