@@ -1832,7 +1832,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			}))))
 		})
 
-		It("should invalid due to Ip Adress", func() {
+		It("should forbid enabling access control due to invalid IP Address", func() {
 
 			action := core.AuthorizationAction_ALLOW
 			shoot.Spec.Kubernetes.KubeAPIServer.AccessControl = &core.AccessControl{
