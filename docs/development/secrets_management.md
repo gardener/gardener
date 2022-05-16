@@ -8,8 +8,8 @@ Such credentials typically should be renewed automatically when their validity e
 
 ## SecretsManager Introduction
 
-These requirements can be covered by using the `SecretsManager` package maintained in [`pkg/utils/secrets/manager`](pkg/utils/secrets/manager).
-It is built on top of the `ConfigInterface` and `DataInterface` interfaces part of [`pkg/utils/secrets`](pkg/utils/secrets) and provides the following functions:
+These requirements can be covered by using the `SecretsManager` package maintained in [`pkg/utils/secrets/manager`](../../pkg/utils/secrets/manager).
+It is built on top of the `ConfigInterface` and `DataInterface` interfaces part of [`pkg/utils/secrets`](../../pkg/utils/secrets) and provides the following functions:
 
 - `Generate(context.Context, secrets.ConfigInterface, ...GenerateOption) (*corev1.Secret, error)`
 
