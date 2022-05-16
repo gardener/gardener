@@ -34,7 +34,7 @@ require (
 	github.com/texttheater/golang-levenshtein v1.0.1
 	go.uber.org/automaxprocs v1.4.0
 	go.uber.org/goleak v1.1.12
-	go.uber.org/zap v1.19.1
+	go.uber.org/zap v1.21.0
 	golang.org/x/crypto v0.0.0-20220427172511-eb4f295cb31f
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
 	golang.org/x/tools v0.1.10
