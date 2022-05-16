@@ -28,7 +28,7 @@ github.com/beorn7/perks/quantile
 # github.com/blang/semver v3.5.1+incompatible
 ## explicit
 github.com/blang/semver
-# github.com/bronze1man/yaml2json v0.0.0-20201022121239-82e774ec909d
+# github.com/bronze1man/yaml2json v0.0.0-20211227013850-8972abeaea25
 ## explicit
 github.com/bronze1man/yaml2json
 github.com/bronze1man/yaml2json/y2jLib

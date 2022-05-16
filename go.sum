@@ -135,8 +135,8 @@ github.com/bketelsen/crypt v0.0.3-0.20200106085610-5cbc8cc4026c/go.mod h1:MKsuJm
 github.com/bketelsen/crypt v0.0.4/go.mod h1:aI6NrJ0pMGgvZKL1iVgXLnfIFJtfV+bKCoqOes/6LfM=
 github.com/blang/semver v3.5.1+incompatible h1:cQNTCjp13qL8KC3Nbxr/y2Bqb63oX6wdnnjpJbkM4JQ=
 github.com/blang/semver v3.5.1+incompatible/go.mod h1:kRBLl5iJ+tD4TcOOxsy/0fnwebNt5EWlYSAyrTnjyyk=
-github.com/bronze1man/yaml2json v0.0.0-20201022121239-82e774ec909d h1:8pnjDJr9TIv2XUQhypkjAB2zB9g8OYonQkNAI3YwXFQ=
-github.com/bronze1man/yaml2json v0.0.0-20201022121239-82e774ec909d/go.mod h1:mVTg4vqWRIHEJK5QnZhSXBUP8GmI7ArXGq182zSJbxM=
+github.com/bronze1man/yaml2json v0.0.0-20211227013850-8972abeaea25 h1:GMDsCxuwEJ1tYY5anXDexdmQ1BDVzyU5BDU7N3PQWl4=
+github.com/bronze1man/yaml2json v0.0.0-20211227013850-8972abeaea25/go.mod h1:mVTg4vqWRIHEJK5QnZhSXBUP8GmI7ArXGq182zSJbxM=
 github.com/cenkalti/backoff/v4 v4.1.0/go.mod h1:scbssz8iZGpm3xbr14ovlUdkxfGXNInqkPWOWmG2CLw=
 github.com/census-instrumentation/opencensus-proto v0.2.1 h1:glEXhBS5PSLLv4IXzLA5yPRVX4bilULVyxxbrfOtDAk=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
