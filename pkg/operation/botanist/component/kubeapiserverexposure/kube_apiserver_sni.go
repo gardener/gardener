@@ -52,7 +52,7 @@ type SNIValues struct {
 	APIServerClusterIP       string
 	APIServerInternalDNSName string
 	IstioIngressGateway      IstioIngressGateway
-	AccessControl            gardencorev1beta1.AccessControl
+	AccessControl            *gardencorev1beta1.AccessControl
 }
 
 // IstioIngressGateway contains the values for istio ingress gateway configuration.
@@ -191,27 +191,28 @@ func (s *sni) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if authrActionEnum, ok := istioapisecurityv1beta1.AuthorizationPolicy_Action_value[string(*s.values.AccessControl.Action)]; ok {
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, accessControl, func() error {
-			accessControl.Labels = getLabels()
-			accessControl.Spec = istioapisecurityv1beta1.AuthorizationPolicy{
-				Rules: []*istioapisecurityv1beta1.Rule{
-					&istioapisecurityv1beta1.Rule{
-						From: []*istioapisecurityv1beta1.Rule_From{
-							&istioapisecurityv1beta1.Rule_From{
-								Source: &istioapisecurityv1beta1.Source{
-									IpBlocks:       s.values.AccessControl.Source.IPBlocks,
-									RemoteIpBlocks: s.values.AccessControl.Source.RemoteIPBlocks,
+	if s.values.AccessControl != nil {
+		if authrActionEnum, ok := istioapisecurityv1beta1.AuthorizationPolicy_Action_value[string(s.values.AccessControl.Action)]; ok {
+			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, accessControl, func() error {
+				accessControl.Labels = getLabels()
+				accessControl.Spec = istioapisecurityv1beta1.AuthorizationPolicy{
+					Rules: []*istioapisecurityv1beta1.Rule{
+						&istioapisecurityv1beta1.Rule{
+							From: []*istioapisecurityv1beta1.Rule_From{
+								&istioapisecurityv1beta1.Rule_From{
+									Source: &istioapisecurityv1beta1.Source{
+										IpBlocks: s.values.AccessControl.Source.IPBlocks,
+									},
 								},
 							},
 						},
 					},
-				},
-				Action: istioapisecurityv1beta1.AuthorizationPolicy_Action(authrActionEnum),
+					Action: istioapisecurityv1beta1.AuthorizationPolicy_Action(authrActionEnum),
+				}
+				return nil
+			}); err != nil {
+				return err
 			}
-			return nil
-		}); err != nil {
-			return err
 		}
 	}
 

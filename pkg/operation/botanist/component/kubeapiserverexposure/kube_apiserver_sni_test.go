@@ -228,7 +228,6 @@ var _ = Describe("#SNI", func() {
 	})
 
 	JustBeforeEach(func() {
-		authorization := v1beta1.AuthorizationAction_ALLOW
 		defaultDepWaiter = NewSNI(c, applier, namespace, &SNIValues{
 			Hosts:              hosts,
 			APIServerClusterIP: "1.1.1.1",
@@ -237,11 +236,10 @@ var _ = Describe("#SNI", func() {
 				Labels:    istioLabels,
 			},
 			NamespaceUID: namespaceUID,
-			AccessControl: v1beta1.AccessControl{
-				Action: &authorization,
-				Source: &v1beta1.Source{
-					IPBlocks:       ipBlocks,
-					RemoteIPBlocks: remoteIpBlocks,
+			AccessControl: &v1beta1.AccessControl{
+				Action: v1beta1.AuthorizationAction_ALLOW,
+				Source: v1beta1.Source{
+					IPBlocks: ipBlocks,
 				},
 			},
 		})
