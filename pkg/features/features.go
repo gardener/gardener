@@ -96,6 +96,7 @@ const (
 	// owner: @petersutter
 	// alpha: v1.28.0
 	// beta: v1.45.0
+	// deprecated: v1.48.0
 	RotateSSHKeypairOnMaintenance featuregate.Feature = "RotateSSHKeypairOnMaintenance"
 
 	// DenyInvalidExtensionResources causes the seed-admission-controller to deny invalid extension resources (instead of just logging validation errors).
@@ -175,7 +176,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ReversedVPN:                   {Default: true, PreRelease: featuregate.Beta},
 	AdminKubeconfigRequest:        {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	UseDNSRecords:                 {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	RotateSSHKeypairOnMaintenance: {Default: true, PreRelease: featuregate.Beta},
+	RotateSSHKeypairOnMaintenance: {Default: false, PreRelease: featuregate.Beta},
 	DenyInvalidExtensionResources: {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	WorkerPoolKubernetesVersion:   {Default: true, PreRelease: featuregate.Beta},
 	CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},

@@ -32,6 +32,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | ReversedVPN                                  | `true`  | `Beta`  | `1.42` |        |
 | RotateSSHKeypairOnMaintenance                | `false` | `Alpha` | `1.28` | `1.44` |
 | RotateSSHKeypairOnMaintenance                | `true`  | `Beta`  | `1.45` |        |
+| RotateSSHKeypairOnMaintenance (deprecated)   | `false` | `Beta`  | `1.48` |        |
 | WorkerPoolKubernetesVersion                  | `false` | `Alpha` | `1.35` | `1.45` |
 | WorkerPoolKubernetesVersion                  | `true`  | `Beta`  | `1.46` |        |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` |        |
@@ -123,7 +124,7 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | ReversedVPN                                | `gardenlet`                                                      | Reverses the connection setup of the vpn tunnel between the Seed and the Shoot cluster(s). It allows Seed and Shoot clusters to be in different networks with only direct access in one direction (Shoot -> Seed). In addition to that, it reduces the amount of load balancers required, i.e. no load balancers are required for the vpn tunnel anymore. It requires `APIServerSNI` and kubernetes version `1.18` or higher to work. Details can be found in [GEP-14](../proposals/14-reversed-cluster-vpn.md). |
 | AdminKubeconfigRequest                     | `gardener-apiserver`                                             | Enables the `AdminKubeconfigRequest` endpoint on Shoot resources. See [GEP-16](../proposals/16-adminkubeconfig-subresource.md) for more details. |
 | UseDNSRecords                              | `gardener-apiserver`, `gardener-controller-manager`, `gardenlet` | Enables using `DNSRecord` resources for Gardener DNS records instead of `DNSProvider`, `DNSEntry`, and `DNSOwner` resources. See [Contract: `DNSRecord` resources](../extensions/dnsrecord.md) for more details. |
-| RotateSSHKeypairOnMaintenance              | `gardener-controller-manager`                                    | Enables SSH keypair rotation in the maintenance controller of the gardener-controller-manager. Details can be found in [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md). |
+| RotateSSHKeypairOnMaintenance (deprecated) | `gardener-controller-manager`                                    | Enables SSH keypair rotation in the maintenance controller of the gardener-controller-manager. Details can be found in [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md). |
 | DenyInvalidExtensionResources              | `gardenlet`                                                      | Causes the `seed-admission-controller` to deny invalid extension resources, instead of just logging validation errors. |
 | WorkerPoolKubernetesVersion                | `gardener-apiserver`                                             | Allows to overwrite the Kubernetes version used for shoot clusters per worker pool (see [this document](../usage/worker_pool_k8s_versions.md)) |
 | CopyEtcdBackupsDuringControlPlaneMigration | `gardenlet`                                                      | Enables the copy of etcd backups from the object store of the source seed to the object store of the destination seed during control plane migration. |
