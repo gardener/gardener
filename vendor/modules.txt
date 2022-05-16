@@ -68,7 +68,7 @@ github.com/dsnet/compress/internal/prefix
 ## explicit
 github.com/emicklei/go-restful
 github.com/emicklei/go-restful/log
-# github.com/envoyproxy/go-control-plane v0.9.10-0.20210907150352-cf90f659a021 => github.com/envoyproxy/go-control-plane v0.9.4
+# github.com/envoyproxy/go-control-plane v0.10.1 => github.com/envoyproxy/go-control-plane v0.9.4
 ## explicit; go 1.12
 github.com/envoyproxy/go-control-plane/envoy/annotations
 github.com/envoyproxy/go-control-plane/envoy/api/v2

@@ -8,7 +8,7 @@ require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.2.0
 	github.com/bronze1man/yaml2json v0.0.0-20201022121239-82e774ec909d
 	github.com/coreos/go-systemd/v22 v22.3.2
-	github.com/envoyproxy/go-control-plane v0.9.10-0.20210907150352-cf90f659a021
+	github.com/envoyproxy/go-control-plane v0.10.1
 	github.com/gardener/dependency-watchdog v0.7.0
 	github.com/gardener/etcd-druid v0.8.0
 	github.com/gardener/external-dns-management v0.7.18
