@@ -6747,7 +6747,7 @@ func schema_pkg_apis_core_v1alpha1_ServiceAccountConfig(ref common.ReferenceCall
 					},
 					"signingKeySecretName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SigningKeySecret is a reference to a secret that contains an optional private key of the service account token issuer. The issuer will sign issued ID tokens with this private key. Only useful if service account tokens are also issued by another external system.",
+							Description: "SigningKeySecret is a reference to a secret that contains an optional private key of the service account token issuer. The issuer will sign issued ID tokens with this private key. Only useful if service account tokens are also issued by another external system. Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.",
 							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
 						},
 					},
@@ -13843,7 +13843,7 @@ func schema_pkg_apis_core_v1beta1_ServiceAccountConfig(ref common.ReferenceCallb
 					},
 					"signingKeySecretName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SigningKeySecret is a reference to a secret that contains an optional private key of the service account token issuer. The issuer will sign issued ID tokens with this private key. Only useful if service account tokens are also issued by another external system.",
+							Description: "SigningKeySecret is a reference to a secret that contains an optional private key of the service account token issuer. The issuer will sign issued ID tokens with this private key. Only useful if service account tokens are also issued by another external system. Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.",
 							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
 						},
 					},
