@@ -449,8 +449,8 @@ github.com/spf13/viper/internal/encoding/yaml
 # github.com/subosito/gotenv v1.2.0
 ## explicit
 github.com/subosito/gotenv
-# github.com/texttheater/golang-levenshtein v0.0.0-20191208221605-eb6844b05fc6
-## explicit
+# github.com/texttheater/golang-levenshtein v1.0.1
+## explicit; go 1.13
 github.com/texttheater/golang-levenshtein/levenshtein
 # github.com/ulikunitz/xz v0.5.10
 ## explicit; go 1.12
