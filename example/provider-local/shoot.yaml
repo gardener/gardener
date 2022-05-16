@@ -31,4 +31,4 @@ spec:
       maxSurge: 1
       maxUnavailable: 0
   kubernetes:
-    version: 1.23.6
+    version: 1.24.0
