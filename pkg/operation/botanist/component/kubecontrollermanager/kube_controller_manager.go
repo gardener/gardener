@@ -185,6 +185,10 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 					corev1.ResourceCPU:    resource.MustParse("100m"),
 					corev1.ResourceMemory: resource.MustParse("100Mi"),
 				},
+				MaxAllowed: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("4"),
+					corev1.ResourceMemory: resource.MustParse("10G"),
+				},
 				ControlledValues: &controlledValues,
 			}},
 		}
@@ -194,6 +198,10 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				MinAllowed: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("100m"),
 					corev1.ResourceMemory: resource.MustParse("100Mi"),
+				},
+				MaxAllowed: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("4"),
+					corev1.ResourceMemory: resource.MustParse("10G"),
 				},
 				ControlledValues: &controlledValues,
 			}},

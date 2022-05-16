@@ -277,6 +277,10 @@ var _ = Describe("KubeControllerManager", func() {
 									corev1.ResourceCPU:    resource.MustParse("100m"),
 									corev1.ResourceMemory: resource.MustParse("100Mi"),
 								},
+								MaxAllowed: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("4"),
+									corev1.ResourceMemory: resource.MustParse("10G"),
+								},
 								ControlledValues: &controlledValues,
 							}},
 						},
@@ -365,6 +369,10 @@ var _ = Describe("KubeControllerManager", func() {
 												MinAllowed: corev1.ResourceList{
 													corev1.ResourceCPU:    resource.MustParse("100m"),
 													corev1.ResourceMemory: resource.MustParse("100Mi"),
+												},
+												MaxAllowed: corev1.ResourceList{
+													corev1.ResourceCPU:    resource.MustParse("4"),
+													corev1.ResourceMemory: resource.MustParse("10G"),
 												},
 												ControlledValues: &controlledValues,
 											}},

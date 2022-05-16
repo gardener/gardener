@@ -764,8 +764,12 @@ func (r *resourceManager) ensureVPA(ctx context.Context) error {
 		vpa.Spec.ResourcePolicy = &vpaautoscalingv1.PodResourcePolicy{
 			ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
 				{
-					ContainerName:    vpaautoscalingv1.DefaultContainerResourcePolicy,
-					MinAllowed:       r.values.VPA.MinAllowed,
+					ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+					MinAllowed:    r.values.VPA.MinAllowed,
+					MaxAllowed: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("4"),
+						corev1.ResourceMemory: resource.MustParse("10G"),
+					},
 					ControlledValues: &controlledValues,
 				},
 			},
