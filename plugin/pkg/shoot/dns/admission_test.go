@@ -666,7 +666,7 @@ var _ = Describe("dns", func() {
 				Expect(err).To(HaveOccurred())
 			})
 
-			It("should not reject shoots using a non compliant default domain on updates", func() {
+			It("should reject shoots using a non compliant default domain on updates", func() {
 				shootDomain := fmt.Sprintf("%s.other-project.%s", shoot.Name, domain)
 				shoot.Spec.DNS.Domain = &shootDomain
 
@@ -786,7 +786,7 @@ var _ = Describe("dns", func() {
 					Expect(err).To(HaveOccurred())
 				})
 
-				It("should not reject shoots using a non compliant default domain on updates", func() {
+				It("should reject shoots using a non compliant default domain on updates", func() {
 					shootDomain := fmt.Sprintf("%s.other-project.%s", shoot.Name, domain)
 					shoot.Spec.DNS.Domain = &shootDomain
 

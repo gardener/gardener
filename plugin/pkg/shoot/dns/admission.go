@@ -161,7 +161,7 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 	specPath := field.NewPath("spec")
 	// If shoot uses deafult domain validate domain even though shoot can be assigned to seed
 	// having dns disabled
-	if !helper.ShootUsesUnmanagedDNS(shoot) {
+	if shoot.Spec.DNS != nil && !helper.ShootUsesUnmanagedDNS(shoot) {
 		if err := assignDefaultDomainIfNeeded(a, shoot, d.projectLister, defaultDomains); err != nil {
 			return err
 		}
@@ -230,6 +230,10 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 	// Generate a Shoot domain if none is configured (at this point in time we know that the chosen seed does
 	// not disable DNS.
 	if !helper.ShootUsesUnmanagedDNS(shoot) {
+		if err := assignDefaultDomainIfNeeded(a, shoot, d.projectLister, defaultDomains); err != nil {
+			return err
+		}
+
 		if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
 			fieldErr := field.Required(specPath.Child("DNS"), fmt.Sprintf("shoot domain field .spec.dns.domain must be set if provider != %s and assigned to a seed which does not disable DNS", core.DNSUnmanaged))
 			return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, field.ErrorList{fieldErr})
