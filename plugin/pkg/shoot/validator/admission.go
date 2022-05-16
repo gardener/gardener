@@ -498,7 +498,8 @@ func (c *validationContext) validateShootHibernation(a admission.Attributes) err
 	if !oldIsHibernated && newIsHibernated {
 		if hibernationConstraint := helper.GetCondition(c.shoot.Status.Constraints, core.ShootHibernationPossible); hibernationConstraint != nil {
 			if hibernationConstraint.Status != core.ConditionTrue {
-				return admission.NewForbidden(a, fmt.Errorf(hibernationConstraint.Message))
+				err := fmt.Errorf("'%s' constraint is '%s': %s", core.ShootHibernationPossible, hibernationConstraint.Status, hibernationConstraint.Message)
+				return admission.NewForbidden(a, err)
 			}
 		}
 	}
