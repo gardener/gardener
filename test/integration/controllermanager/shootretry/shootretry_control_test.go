@@ -30,6 +30,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -46,11 +47,23 @@ var _ = Describe("Shoot retry controller tests", func() {
 	var (
 		ctx = context.Background()
 
+		project   *gardencorev1beta1.Project
 		namespace *corev1.Namespace
 		shoot     *gardencorev1beta1.Shoot
 	)
 
 	BeforeEach(func() {
+		By("create project")
+		project = &gardencorev1beta1.Project{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "dev",
+			},
+			Spec: gardencorev1beta1.ProjectSpec{
+				Namespace: pointer.String("garden-dev"),
+			},
+		}
+		Expect(testClient.Create(ctx, project)).To(Succeed())
+
 		By("create shoot namespace")
 		namespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{Name: "garden-dev"},
