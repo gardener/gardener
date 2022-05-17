@@ -576,7 +576,7 @@ go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/zapcore
 go.uber.org/zap/zapgrpc
-# golang.org/x/crypto v0.0.0-20220516162934-403b01795ae8 => golang.org/x/crypto v0.0.0-20220427172511-eb4f295cb31f
+# golang.org/x/crypto v0.0.0-20220516162934-403b01795ae8 => golang.org/x/crypto v0.0.0-20220516162934-403b01795ae8
 ## explicit; go 1.17
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
@@ -1652,7 +1652,7 @@ sigs.k8s.io/yaml
 # github.com/gardener/hvpa-controller/api => github.com/gardener/hvpa-controller/api v0.5.0
 # github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.5.5
 # github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.1
-# golang.org/x/crypto => golang.org/x/crypto v0.0.0-20220427172511-eb4f295cb31f
+# golang.org/x/crypto => golang.org/x/crypto v0.0.0-20220516162934-403b01795ae8
 # google.golang.org/grpc => google.golang.org/grpc v1.40.0
 # k8s.io/api => k8s.io/api v0.23.3
 # k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.23.3
