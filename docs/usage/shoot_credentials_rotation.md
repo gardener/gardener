@@ -89,6 +89,7 @@ This will trigger a `Shoot` reconciliation and performs stage one.
 After it is completed, the `.status.credentials.rotation.certificateAuthorities.phase` is set to `Prepared`.
 
 Now you must update all API clients outside the cluster (such as the `kubeconfig`s on developer machines) to use the newly issued CA bundle in the `<shoot-name>.ca-cluster` `Secret`.
+Please also note that client certificates must be re-issued now.
 
 After updating all API clients, you can complete the rotation by annotating the shoot with the `rotate-ca-complete` operation:
 
@@ -171,9 +172,50 @@ It is currently **not** rotated automatically and there is no way to trigger it 
 
 ## `ServiceAccount` Token Signing Key
 
-This key is used to sign the tokens for `ServiceAccount`s.
-It is currently **not** rotated automatically and there is no way to trigger it manually.
-Note that there is the option to pass such key to Gardener, please see [this document](shoot_serviceaccounts.md#signing-key-secret) for more details.
+Gardener generates a key which is used to sign the tokens for [`ServiceAccount`s](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/).
+Those tokens are typically used by workload `Pod`s running inside the cluster in order to authenticate themselves with the `kube-apiserver`.
+This also includes system components running in the `kube-system` namespace.
+
+The token signing key has no expiration date.
+Since it might require adaptation for the consumers of the `Shoot`, there is no automatic rotation and **it is the responsibility of the end-user to regularly rotate the signing key.**
+
+> Note that the signing key rotation can only be triggered if the `ShootSARotation` feature gate is enabled.
+
+The rotation happens in three stages, similar to how the [CA certificates](#certificate-authorities) are rotated:
+
+- In stage one, a new signing key is created and added to the bundle (together with the old signing key).
+- In stage two, end-users update all out-of-cluster API clients that communicate with the control plane via `ServiceAccount` tokens.
+- In stage three, the old signing key is dropped from the bundle.
+
+Technically, the `Preparing` phase indicates stage one.
+Once it is completed, the `Prepared` phase indicates readiness for stage two.
+The `Completing` phase indicates stage three, and the `Completed` phase states that the rotation process has finished.
+
+> You can check the `.status.credentials.rotation.serviceAccountKey` field in the `Shoot` to see when the rotation was last initiated, last completed, and in which phase it currently is.
+
+In order to start the rotation (stage one), you have to annotate the shoot with the `rotate-serviceaccount-key-start` operation:
+
+```bash
+kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-serviceaccount-key-start
+```
+
+This will trigger a `Shoot` reconciliation and performs stage one.
+After it is completed, the `.status.credentials.rotation.serviceAccountKey.phase` is set to `Prepared`.
+
+Now you must update all API clients outside the cluster using a `ServiceAccount` token (such as the `kubeconfig`s on developer machines) to use a token issued by the new signing key.
+Gardener already generates new static token secrets for all `ServiceAccount`s in the cluster.
+However, if you need to create it manually, you can check out [this document](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#manually-create-a-service-account-api-token) for instructions.
+
+After updating all API clients, you can complete the rotation by annotating the shoot with the `rotate-serviceaccount-key-complete` operation:
+
+```bash
+kubectl -n <shoot-namespace> annotate shoot <shoot-name> gardener.cloud/operation=rotate-serviceaccount-key-complete
+```
+
+This will trigger another `Shoot` reconciliation and performs stage three.
+After it is completed, the `.status.credentials.rotation.serviceAccountKey.phase` is set to `Completed`.
+
+> ⚠️ In stage one, all worker nodes of the `Shoot` will be rolled out to ensure that the `Pod`s use a new token.
 
 ## OpenVPN TLS Auth Keys
 

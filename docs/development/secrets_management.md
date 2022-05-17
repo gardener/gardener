@@ -18,8 +18,8 @@ It is built on top of the `ConfigInterface` and `DataInterface` interfaces part 
   Available `GenerateOption`s:
   - `SignedByCA(string, ...SignedByCAOption)`: This is only valid for certificate secrets and automatically retrieves the correct certificate authority in order to sign the provided server or client certificate.
     - There are two `SignedByCAOption`s:
-      - `UseCurrentCA`. This option will sign server certificates with the new/current CA in case of a CA rotation. For more information, please refer to the ["Certificate Signing"](#certificate-signing) section below. 
-      - `UseOldCA`. This option will sign client certificates with the old CA in case of a CA rotation. For more information, please refer to the ["Certificate Signing"](#certificate-signing) section below. 
+      - `UseCurrentCA`. This option will sign server certificates with the new/current CA in case of a CA rotation. For more information, please refer to the ["Certificate Signing"](#certificate-signing) section below.
+      - `UseOldCA`. This option will sign client certificates with the old CA in case of a CA rotation. For more information, please refer to the ["Certificate Signing"](#certificate-signing) section below.
   - `Persist()`: This marks the secret such that it gets persisted in the `ShootState` resource in the garden cluster. Consequently, it should only be used for secrets related to a shoot cluster.
   - `Rotate(rotationStrategy)`: This specifies the strategy in case this secret is to be rotated or regenerated (either `InPlace` which immediately forgets about the old secret, or `KeepOld` which keeps the old secret in the system).
   - `IgnoreOldSecrets()`: This specifies that old secrets should not be considered and loaded (contrary to the default behavior). It should be used when old secrets are no longer important and can be "forgotten" (e.g. in ["phase 2" (`t2`) of the CA certificate rotation](../proposals/18-shoot-CA-rotation.md#rotation-sequence-for-cluster-and-client-ca)). Such old secrets will be deleted on `Cleanup()`.
@@ -87,7 +87,7 @@ This is to ensure a smooth exchange of certificate during a CA rotation (typical
   - In phase 2, the respective server drops accepting certificates signed by the old CA.
 - Server certificates:
   - In phase 1, servers still use their old/existing certificates to allow clients to update their CA bundle used for verification of the servers' certificates.
-  - In phase 2, the old CA is dropped, hence servers need to get a certificate signed by the new/current CA. At this point in time, clients have already adapted their CA bundles.    
+  - In phase 2, the old CA is dropped, hence servers need to get a certificate signed by the new/current CA. At this point in time, clients have already adapted their CA bundles.
 
 #### Always Sign Server Certificates With Current CA
 
@@ -114,8 +114,8 @@ While the `SecretsManager` is primarily used by gardenlet, it can be reused by o
 
 External components that want to reuse the `SecretsManager` should consider the following aspects:
 
-- On initialization of a `SecretsManager`, pass an `identity` specific to the component, controller and purpose. For example, gardenlet's shoot controller uses `gardenlet` as the `SecretsManager`'s identity, the `Worker` controller in `provider-foo` should use `provider-foo-worker` and the `ControlPlane` controller should use `provider-foo-controlplane-exposure` for `ControlPlane` objects of purpose `exposure`.  
-  The given identity is added as a value for the `manager-identity` label on managed `Secret`s. 
+- On initialization of a `SecretsManager`, pass an `identity` specific to the component, controller and purpose. For example, gardenlet's shoot controller uses `gardenlet` as the `SecretsManager`'s identity, the `Worker` controller in `provider-foo` should use `provider-foo-worker` and the `ControlPlane` controller should use `provider-foo-controlplane-exposure` for `ControlPlane` objects of purpose `exposure`.
+  The given identity is added as a value for the `manager-identity` label on managed `Secret`s.
   This label is used by the `Cleanup` function to select only those `Secret`s that are actually managed by the particular `SecretManager` instance. This is done to prevent removing still needed `Secret`s that are managed by other instances.
 - Generate dedicated CAs for signing certificates instead of depending on CAs managed by gardenlet.
 - Names of `Secret`s managed by external `SecretsManager` instances must not conflict with `Secret` names from other instances (e.g. gardenlet).
