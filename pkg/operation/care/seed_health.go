@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
-	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -62,7 +61,6 @@ func NewHealthForSeed(seed *gardencorev1beta1.Seed, seedClient client.Client) *S
 
 // CheckSeed conducts the health checks on all the given conditions.
 func (h *SeedHealth) CheckSeed(ctx context.Context,
-	seed *seedpkg.Seed,
 	conditions []gardencorev1beta1.Condition,
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration) []gardencorev1beta1.Condition {
 
