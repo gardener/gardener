@@ -28,7 +28,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -37,8 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var _ = Describe("Shoot hibernation controller tests", func() {
-
+var _ = Describe("Shoot Hibernation controller tests", func() {
 	var (
 		ctx = context.Background()
 
@@ -85,42 +83,49 @@ var _ = Describe("Shoot hibernation controller tests", func() {
 		Expect(testClient.Create(ctx, shoot)).To(Or(Succeed(), BeAlreadyExistsError()))
 	})
 
-	It("should successfully hibernate the shoot based on schedule", func() {
+	It("should successfully hibernate then wake up the shoot based on schedule", func() {
+		By("set clock time to be 1 second before hibernation trigger time")
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+		nextHour := roundToNextHour(shoot.CreationTimestamp.Time)
+		fakeClock.SetTime(nextHour.Add(59 * time.Second))
+
+		By("patch shoot with hibernation schedules")
 		patch := client.MergeFrom(shoot.DeepCopy())
 		shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
 			Schedules: []gardencorev1beta1.HibernationSchedule{
 				{
-					Start: pointer.String("*/1 * * * *"),
-					End:   nil,
+					Start: pointer.String("1 * * * *"),
+					End:   pointer.String("2 * * * *"),
 				},
 			},
 		}
 		Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
 
+		By("increase clock time by 1 minute and check that shoot gets hibernated")
+		fakeClock.Step(time.Minute)
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 			g.Expect(shoot.Spec.Hibernation.Enabled).To(PointTo(Equal(true)))
-		}, 90*time.Second).Should(Succeed())
-	})
+			g.Expect(shoot.Status.LastHibernationTriggerTime).To(PointTo(Equal(metav1.Time{Time: fakeClock.Now()})))
+		}).Should(Succeed())
 
-	It("should successfully wakeup the shoot based on schedule", func() {
-		patch := client.MergeFrom(shoot.DeepCopy())
-		shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{
-			Schedules: []gardencorev1beta1.HibernationSchedule{
-				{
-					Start: nil,
-					End:   pointer.String("*/1 * * * *"),
-				},
-			},
-		}
-		Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
-
+		By("increase clock time by 1 minute and check that shoot gets woken up")
+		fakeClock.Step(time.Minute)
 		Eventually(func(g Gomega) {
 			g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 			g.Expect(shoot.Spec.Hibernation.Enabled).To(PointTo(Equal(false)))
-		}, 90*time.Second).Should(Succeed())
+			g.Expect(shoot.Status.LastHibernationTriggerTime).To(PointTo(Equal(metav1.Time{Time: fakeClock.Now()})))
+		}).Should(Succeed())
 	})
 })
+
+func roundToNextHour(t time.Time) time.Time {
+	tmpTime := t.Round(time.Hour)
+	if tmpTime.Before(t) {
+		return tmpTime.Add(time.Hour)
+	}
+	return tmpTime
+}
 
 func addShootHibernationControllerToManager(mgr manager.Manager) error {
 	recorder := mgr.GetEventRecorderFor("shoot-hibernation-controller")
@@ -128,17 +133,12 @@ func addShootHibernationControllerToManager(mgr manager.Manager) error {
 		"shoot-hibernation",
 		mgr,
 		controller.Options{
-			Reconciler: shoot.NewShootHibernationReconciler(testClient, config.ShootHibernationControllerConfiguration{TriggerDeadlineDuration: &metav1.Duration{Duration: time.Minute}}, recorder, clock.RealClock{}),
+			Reconciler: shoot.NewShootHibernationReconciler(testClient, config.ShootHibernationControllerConfiguration{TriggerDeadlineDuration: &metav1.Duration{Duration: 2 * time.Minute}}, recorder, fakeClock),
 		},
 	)
 	if err != nil {
 		return err
 	}
 
-	err = c.Watch(&source.Kind{Type: &gardencorev1beta1.Shoot{}}, &handler.EnqueueRequestForObject{})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return c.Watch(&source.Kind{Type: &gardencorev1beta1.Shoot{}}, &handler.EnqueueRequestForObject{})
 }

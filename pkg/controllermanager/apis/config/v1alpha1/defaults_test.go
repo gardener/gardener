@@ -103,9 +103,6 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.ShootQuota.ConcurrentSyncs).NotTo(BeNil())
 			Expect(obj.Controllers.ShootQuota.ConcurrentSyncs).To(PointTo(Equal(5)))
 
-			Expect(obj.Controllers.ShootHibernation.ConcurrentSyncs).NotTo(BeNil())
-			Expect(obj.Controllers.ShootHibernation.ConcurrentSyncs).To(PointTo(Equal(5)))
-
 			Expect(obj.Controllers.ShootReference).NotTo(BeNil())
 			Expect(obj.Controllers.ShootReference.ConcurrentSyncs).NotTo(BeNil())
 			Expect(obj.Controllers.ShootReference.ConcurrentSyncs).To(PointTo(Equal(5)))
@@ -220,6 +217,7 @@ var _ = Describe("Defaults", func() {
 			obj := &ShootHibernationControllerConfiguration{}
 
 			SetDefaults_ShootHibernationControllerConfiguration(obj)
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(5)))
 			Expect(obj.TriggerDeadlineDuration).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Hour})))
 		})
 	})

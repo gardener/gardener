@@ -71,17 +71,17 @@ var _ = Describe("Shoot Hibernation", func() {
 			return sched
 		}
 
-		mustLoadLocation = func(locationName string) *time.Location {
+		mustLoadLocation = func(locationName string) time.Location {
 			location, err := time.LoadLocation(locationName)
 			Expect(err).NotTo(HaveOccurred())
-			return location
+			return *location
 		}
 
 		requeueAfterBasedOnSchedule = func(schedule, location string) func(now time.Time) time.Duration {
 			return func(now time.Time) time.Duration {
 				parsedSchedule := mustParseStandard(schedule)
 				loc := mustLoadLocation(location)
-				return parsedSchedule.Next(now.In(loc)).Add(nextScheduleDelta).Sub(now)
+				return parsedSchedule.Next(now.In(&loc)).Add(nextScheduleDelta).Sub(now)
 			}
 		}
 
@@ -415,9 +415,9 @@ var _ = Describe("Shoot Hibernation", func() {
 						}
 						shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateFailed}
 						shoot.Status.Gardener.Version = version.Get().GitVersion
-						shoot.Status.LastHibernationTriggerTime = &metav1.Time{Time: timeWithOffset(weekDayAt7, -24*time.Hour)()}
 					},
-					triggerDeadlineDuration: shortDeadline,
+					triggerDeadlineDuration:     shortDeadline,
+					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
 				}),
 			)
 		})

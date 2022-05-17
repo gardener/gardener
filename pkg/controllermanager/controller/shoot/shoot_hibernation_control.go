@@ -59,8 +59,6 @@ func (c *Controller) shootHibernationUpdate(oldObj, newObj interface{}) {
 	var (
 		oldShoot     = oldObj.(*gardencorev1beta1.Shoot)
 		newShoot     = newObj.(*gardencorev1beta1.Shoot)
-		oldFailed    = gutil.IsShootFailed(oldShoot)
-		newFailed    = gutil.IsShootFailed(newShoot)
 		oldSchedules = getShootHibernationSchedules(oldShoot.Spec.Hibernation)
 		newSchedules = getShootHibernationSchedules(newShoot.Spec.Hibernation)
 	)
@@ -71,14 +69,6 @@ func (c *Controller) shootHibernationUpdate(oldObj, newObj interface{}) {
 		return
 	}
 
-	if oldFailed && !newFailed && len(newSchedules) > 0 {
-		// Shoot has recovered from Failed state. Immediately add it to the queue so that it can
-		// be hibernated or woken up, if the previous hibernation or wakeup time from the schedules is
-		// within the hibernation triggerDeadlineDuration.
-		c.shootHibernationQueue.Add(key)
-		return
-	}
-
 	if !reflect.DeepEqual(oldSchedules, newSchedules) && len(newSchedules) > 0 {
 		parsedSchedules, err := parseHibernationSchedules(newSchedules)
 		if err != nil {
@@ -86,8 +76,7 @@ func (c *Controller) shootHibernationUpdate(oldObj, newObj interface{}) {
 			return
 		}
 
-		requeueAfter := nextHibernationTimeDuration(parsedSchedules, time.Now())
-		c.shootHibernationQueue.AddAfter(key, requeueAfter)
+		c.shootHibernationQueue.AddAfter(key, nextHibernationTimeDuration(parsedSchedules, time.Now()))
 	}
 }
 
@@ -107,7 +96,7 @@ const (
 // parsedHibernationSchedule holds the loaded location, parsed cron schedule and information whether
 // the cluster should be hibernated or woken up.
 type parsedHibernationSchedule struct {
-	location  *time.Location
+	location  time.Location
 	schedule  cron.Schedule
 	operation operation
 }
@@ -115,24 +104,17 @@ type parsedHibernationSchedule struct {
 // next returns the time in UTC from the schedule, that is immediately after the input time 't'.
 // The input 't' is converted in the schedule's location before any calculations are done.
 func (s *parsedHibernationSchedule) next(t time.Time) time.Time {
-	if s.location == nil {
-		s.location = time.UTC
-	}
-	return s.schedule.Next(t.In(s.location)).UTC()
+	return s.schedule.Next(t.In(&s.location)).UTC()
 }
 
 // previous returns the time in UTC from the schedule that is immediately before 'to' and after 'from'.
 // Nil is returned if no such time can be found.
 // The input times - 'to' and 'from' are converted in the schedule's location before any calculation is done.
 func (s *parsedHibernationSchedule) previous(from, to time.Time) *time.Time {
-	if s.location == nil {
-		s.location = time.UTC
-	}
-
 	// To get the time that is immediately before `to`, iterate over every activation time in the cron schedule
 	// that is after "from" until the one that is immediately after `to` is reached.
 	var previousActivationTime *time.Time
-	for t := s.schedule.Next(from.In(s.location)); !t.UTC().After(to.UTC()); t = s.schedule.Next(t) {
+	for t := s.schedule.Next(from.In(&s.location)); !t.UTC().After(to.UTC()); t = s.schedule.Next(t) {
 		inUTC := t.UTC()
 		previousActivationTime = &inUTC
 	}
@@ -194,12 +176,12 @@ func (r *shootHibernationReconciler) reconcile(ctx context.Context, shoot *garde
 		return reconcile.Result{}, nil
 	}
 
-	if gutil.IsShootFailed(shoot) {
-		log.Info("Shoot is in Failed state, stopping reconciliation")
-		return reconcile.Result{}, nil
-	}
-
 	now := r.clock.Now()
+	if gutil.IsShootFailed(shoot) {
+		requeueAfter := nextHibernationTimeDuration(parsedSchedules, now)
+		log.Info("Shoot is in Failed state, requeuing shoot hibernation", "requeueAfter", requeueAfter)
+		return reconcile.Result{RequeueAfter: requeueAfter}, nil
+	}
 
 	// Get the schedule which caused the current reconciliation and check whether the shoot should be hibernated or woken up.
 	// If no such schedule is found, the hibernation schedules were changed mid-air and the shoot must be
@@ -242,33 +224,33 @@ func parseHibernationSchedules(schedules []gardencorev1beta1.HibernationSchedule
 	var parsedHibernationSchedules []parsedHibernationSchedule
 
 	for _, schedule := range schedules {
-		var locationID string
+		locationID := time.UTC.String()
 		if schedule.Location != nil {
 			locationID = *schedule.Location
-		} else {
-			locationID = time.UTC.String()
 		}
 
 		location, err := time.LoadLocation(locationID)
 		if err != nil {
 			return nil, err
 		}
+
 		if schedule.Start != nil {
 			parsed, err := cron.ParseStandard(*schedule.Start)
 			if err != nil {
 				return nil, err
 			}
 			parsedHibernationSchedules = append(parsedHibernationSchedules,
-				parsedHibernationSchedule{location: location, schedule: parsed, operation: hibernate},
+				parsedHibernationSchedule{location: *location, schedule: parsed, operation: hibernate},
 			)
 		}
+
 		if schedule.End != nil {
 			parsed, err := cron.ParseStandard(*schedule.End)
 			if err != nil {
 				return nil, err
 			}
 			parsedHibernationSchedules = append(parsedHibernationSchedules,
-				parsedHibernationSchedule{location: location, schedule: parsed, operation: wakeUp},
+				parsedHibernationSchedule{location: *location, schedule: parsed, operation: wakeUp},
 			)
 		}
 	}
@@ -281,28 +263,24 @@ func parseHibernationSchedules(schedules []gardencorev1beta1.HibernationSchedule
 // If the time drifts are adjusted which in most realistic cases would be around 100ms, scheduled hibernation
 // will still be executed without missing the schedule.
 func nextHibernationTimeDuration(schedules []parsedHibernationSchedule, now time.Time) time.Duration {
-	var timestamps []time.Time
+	var timeStamps []time.Time
 	for _, schedule := range schedules {
-		ts := schedule.next(now)
-		timestamps = append(timestamps, ts)
+		timeStamps = append(timeStamps, schedule.next(now))
 	}
 
-	sort.Slice(timestamps, func(i, j int) bool {
-		return timestamps[i].Before(timestamps[j])
+	sort.Slice(timeStamps, func(i, j int) bool {
+		return timeStamps[i].Before(timeStamps[j])
 	})
 
-	duration := timestamps[0].Add(nextScheduleDelta).Sub(now)
-	return duration
+	return timeStamps[0].Add(nextScheduleDelta).Sub(now)
 }
 
 // getScheduleWithMostRecentTime returns the ParsedHibernationSchedule that contains the schedule with the most recent (previous) execution time.
 func getScheduleWithMostRecentTime(schedules []parsedHibernationSchedule, triggerDeadlineDuration *metav1.Duration, shoot *gardencorev1beta1.Shoot, now time.Time, log logr.Logger) *parsedHibernationSchedule {
-	var earliestTime time.Time
+	// If the shoot has just been created or has never been hibernated, use the creation timestamp.
+	earliestTime := shoot.CreationTimestamp.Time
 	if shoot.Status.LastHibernationTriggerTime != nil {
 		earliestTime = shoot.Status.LastHibernationTriggerTime.Time
-	} else {
-		// If the shoot has just been created or has never been hibernated, use the creation timestamp.
-		earliestTime = shoot.CreationTimestamp.Time
 	}
 
 	if triggerDeadlineDuration != nil {
@@ -311,7 +289,8 @@ func getScheduleWithMostRecentTime(schedules []parsedHibernationSchedule, trigge
 		}
 	}
 
-	// Cap the earliestTime time to 7 days ago.
+	// Cap earliestTime to 7 days ago. This is necessary if the shoot was created a long time ago and has never been hibernated,
+	// so that a smaller time frame is used when looking for the schedule that has the most recent time entry.
 	if sevenDaysAgo := now.Add(-sevenDays); earliestTime.Before(sevenDaysAgo) {
 		earliestTime = sevenDaysAgo
 	}

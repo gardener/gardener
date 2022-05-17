@@ -20,10 +20,10 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/envtest"
-	"github.com/gardener/gardener/test/framework"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -43,6 +43,7 @@ var (
 	mgrCancel  context.CancelFunc
 
 	testClient client.Client
+	fakeClock  *clock.FakeClock
 )
 
 var _ = BeforeSuite(func() {
@@ -58,8 +59,14 @@ var _ = BeforeSuite(func() {
 	restConfig, err = testEnv.Start()
 	Expect(err).ToNot(HaveOccurred())
 
+	DeferCleanup(func() {
+		By("stopping test environment")
+		Expect(testEnv.Stop()).To(Succeed())
+	})
+
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).ToNot(HaveOccurred())
+	fakeClock = &clock.FakeClock{}
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
@@ -68,8 +75,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	err = addShootHibernationControllerToManager(mgr)
-	Expect(err).ToNot(HaveOccurred())
+	Expect(addShootHibernationControllerToManager(mgr)).To(Succeed())
 
 	var mgrContext context.Context
 	mgrContext, mgrCancel = context.WithCancel(ctx)
@@ -77,18 +83,11 @@ var _ = BeforeSuite(func() {
 	By("start manager")
 	go func() {
 		defer GinkgoRecover()
-		err := mgr.Start(mgrContext)
-		Expect(err).ToNot(HaveOccurred())
+		Expect(mgr.Start(mgrContext)).ToNot(HaveOccurred())
 	}()
-})
 
-var _ = AfterSuite(func() {
-	By("stopping manager")
-	mgrCancel()
-
-	By("running cleanup actions")
-	framework.RunCleanupActions()
-
-	By("stopping test environment")
-	Expect(testEnv.Stop()).To(Succeed())
+	DeferCleanup(func() {
+		By("stopping manager")
+		mgrCancel()
+	})
 })
