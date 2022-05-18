@@ -319,6 +319,11 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 		return err
 	}
 
+	conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionProgressing, "BootstrapProgressing", "Seed cluster is currently being bootstrapped.")
+	if err = r.patchSeedStatus(ctx, gardenClient, log, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped); err != nil {
+		return fmt.Errorf("could not update status of %s condition to %s: %w", conditionSeedBootstrapped.Type, gardencorev1beta1.ConditionProgressing, err)
+	}
+
 	// Bootstrap the Seed cluster.
 	if err := seedpkg.RunReconcileSeedFlow(ctx, gardenClient, seedClientSet, seedObj, gardenSecrets, r.imageVector, r.componentImageVectors, r.config.DeepCopy(), log); err != nil {
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "BootstrappingFailed", err.Error())
@@ -327,8 +332,16 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 		return err
 	}
 
+	// Set the status of SeedSystemComponentsHealthy condition to Progressing so that the Seed does not immediately become ready
+	// after being successfully bootstrapped in case the system components got updated. The SeedSystemComponentsHealthy condition
+	// will be set to either True, False or Progressing by the seed care reconciler depending on the health of the system components
+	// after the necessary checks are completed.
+	conditionSeedSystemComponentsHealthy := gardencorev1beta1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy)
+	conditionSeedSystemComponentsHealthy = gardencorev1beta1helper.UpdatedCondition(conditionSeedSystemComponentsHealthy, gardencorev1beta1.ConditionProgressing, "SystemComponentsCheckProgressing", "Checking the health of system components after successful bootstrap of seed cluster.")
 	conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionTrue, "BootstrappingSucceeded", "Seed cluster has been bootstrapped successfully.")
-	_ = r.patchSeedStatus(ctx, gardenClient, log, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped)
+	if err = r.patchSeedStatus(ctx, gardenClient, log, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped, conditionSeedSystemComponentsHealthy); err != nil {
+		return fmt.Errorf("could not update status of %s and %s conditions to %s: %w", conditionSeedBootstrapped.Type, conditionSeedSystemComponentsHealthy.Type, gardencorev1beta1.ConditionProgressing, err)
+	}
 
 	if seed.Spec.Backup != nil {
 		// This should be post updating the seed is available. Since, scheduler will then mostly use
