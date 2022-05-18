@@ -243,11 +243,11 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("could not add readycheck of webhook to manager: %w", err)
 			}
 
-			_, shootWebhooks, err := webhookOptions.Completed().AddToManager(ctx, mgr)
+			atomicShootWebhookConfig, err := webhookOptions.Completed().AddToManager(ctx, mgr)
 			if err != nil {
 				return fmt.Errorf("could not add webhooks to manager: %w", err)
 			}
-			localcontrolplane.DefaultAddOptions.ShootWebhooks = shootWebhooks
+			localcontrolplane.DefaultAddOptions.ShootWebhookConfig = atomicShootWebhookConfig
 
 			// Update shoot webhook configuration in case the webhook server port has changed.
 			if err := mgr.Add(&shootWebhookReconciler{
