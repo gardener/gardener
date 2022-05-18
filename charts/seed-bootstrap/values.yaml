@@ -130,6 +130,7 @@ allowedMetrics:
   - kubelet_volume_stats_capacity_bytes
 
   nodeExporter:
+  - node_boot_time_seconds
   - node_cpu_seconds_total
   - node_filesystem_avail_bytes
   - node_filesystem_free_bytes

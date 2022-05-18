@@ -137,6 +137,7 @@ allowedMetrics:
   - process_max_fds
   - process_open_fds
   nodeExporter:
+  - node_boot_time_seconds
   - node_cpu_seconds_total
   - node_filesystem_avail_bytes
   - node_filesystem_free_bytes
