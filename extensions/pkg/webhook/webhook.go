@@ -41,7 +41,6 @@ const (
 // Webhook is the specification of a webhook.
 type Webhook struct {
 	Name           string
-	Kind           string
 	Provider       string
 	Path           string
 	Target         string

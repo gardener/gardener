@@ -16,7 +16,6 @@ package node
 
 import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
-	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -47,13 +46,12 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) (*extensionsw
 
 	var (
 		name          = "node"
-		kind          = controlplane.KindSeed
 		provider      = local.Type
 		types         = []extensionswebhook.Type{{Obj: &corev1.Node{}, Subresource: pointer.String("status")}}
 		failurePolicy = admissionregistrationv1.Fail
 	)
 
-	logger = logger.WithValues("kind", kind, "provider", provider)
+	logger = logger.WithValues("provider", provider)
 
 	handler, err := extensionswebhook.NewBuilder(mgr, logger).WithMutator(&mutator{}, types...).Build()
 	if err != nil {
@@ -64,7 +62,6 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) (*extensionsw
 
 	return &extensionswebhook.Webhook{
 		Name:           name,
-		Kind:           kind,
 		Provider:       provider,
 		Types:          types,
 		Target:         extensionswebhook.TargetSeed,
