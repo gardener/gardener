@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"time"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	controllercmd "github.com/gardener/gardener/extensions/pkg/controller/cmd"
@@ -39,12 +40,15 @@ import (
 	localservice "github.com/gardener/gardener/pkg/provider-local/controller/service"
 	localworker "github.com/gardener/gardener/pkg/provider-local/controller/worker"
 	"github.com/gardener/gardener/pkg/provider-local/local"
+	"github.com/gardener/gardener/pkg/utils/retry"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/spf13/cobra"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -280,6 +284,32 @@ func (w *webhookTriggerer) NeedLeaderElection() bool {
 }
 
 func (w *webhookTriggerer) Start(ctx context.Context) error {
+	// Wait for the reconciler to populate the webhook CA into the configurations before triggering the webhooks.
+	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	if err := retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (bool, error) {
+		webhookConfig := &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-extension-" + local.Name}}
+		if err := w.client.Get(ctx, client.ObjectKeyFromObject(webhookConfig), webhookConfig); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return retry.SevereError(err)
+			}
+			return retry.MinorError(fmt.Errorf("webhook was not yet created"))
+		}
+
+		for _, webhook := range webhookConfig.Webhooks {
+			// We can return when we find the first webhook w/o CA bundle since the reconciler would populate it into
+			// all webhooks at the same time.
+			if len(webhook.ClientConfig.CABundle) == 0 {
+				return retry.MinorError(fmt.Errorf("CA bundle was not yet populated to all webhooks"))
+			}
+		}
+
+		return retry.Ok()
+	}); err != nil {
+		return err
+	}
+
 	if err := w.trigger(ctx, w.client, w.client.Status(), &corev1.NodeList{}, client.MatchingLabels{"kubernetes.io/hostname": "gardener-local-control-plane"}); err != nil {
 		return err
 	}
