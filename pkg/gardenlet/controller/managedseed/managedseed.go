@@ -49,8 +49,6 @@ const (
 	// GardenletDefaultKubeconfigBootstrapSecretName is the default name for the field in the Gardenlet component configuration
 	// .gardenClientConnection.BootstrapKubeconfig.Name
 	GardenletDefaultKubeconfigBootstrapSecretName = "gardenlet-kubeconfig-bootstrap"
-	// GardenerOperationRenewKubeconfig is the value for the operation annotation to renew the gardenlet's kubeconfig secret.
-	GardenerOperationRenewKubeconfig = "renew-kubeconfig"
 )
 
 // Controller controls ManagedSeeds.

@@ -22,7 +22,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/validation"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -91,7 +90,7 @@ func mustIncreaseGeneration(oldManagedSeed, newManagedSeed *seedmanagement.Manag
 	}
 
 	// The operation annotation was added with value "renew-kubeconfig"
-	if kutil.HasMetaDataAnnotation(&newManagedSeed.ObjectMeta, v1beta1constants.GardenerOperation, managedseed.GardenerOperationRenewKubeconfig) {
+	if kutil.HasMetaDataAnnotation(&newManagedSeed.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRenewKubeconfig) {
 		return true
 	}
 

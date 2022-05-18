@@ -759,11 +759,11 @@ var _ = Describe("Actuator", func() {
 			It("should create the garden namespace and seed secrets, and deploy gardenlet (with bootstrap, non-expired gardenlet client cert, and renew-kubeconfig annotation)", func() {
 				seed.Status.ClientCertificateExpirationTimestamp = &metav1.Time{Time: time.Now().Add(time.Hour)}
 				managedSeed.Annotations = map[string]string{
-					v1beta1constants.GardenerOperation: GardenerOperationRenewKubeconfig,
+					v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRenewKubeconfig,
 				}
 
 				expectGetShoot()
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Renewing gardenlet kubeconfig secret due to '%s=%s' annotation", v1beta1constants.GardenerOperation, GardenerOperationRenewKubeconfig)
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Renewing gardenlet kubeconfig secret due to '%s=%s' annotation", v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRenewKubeconfig)
 				expectDeleteKubeconfigSecret()
 				shc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 					Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"annotations":null}}`))

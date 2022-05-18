@@ -713,9 +713,9 @@ func (a *actuator) prepareGardenClientConnectionWithBootstrap(
 		if err := kutil.DeleteSecretByReference(ctx, shootClient.Client(), gcc.KubeconfigSecret); err != nil {
 			return "", err
 		}
-	} else if managedSeed.Annotations[v1beta1constants.GardenerOperation] == GardenerOperationRenewKubeconfig {
+	} else if managedSeed.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRenewKubeconfig {
 		// Also remove the kubeconfig if the renew-kubeconfig operation annotation is set on the ManagedSeed resource.
-		a.reconcilingInfoEventf(managedSeed, "Renewing gardenlet kubeconfig secret due to '%s=%s' annotation", v1beta1constants.GardenerOperation, GardenerOperationRenewKubeconfig)
+		a.reconcilingInfoEventf(managedSeed, "Renewing gardenlet kubeconfig secret due to '%s=%s' annotation", v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRenewKubeconfig)
 		if err := kutil.DeleteSecretByReference(ctx, shootClient.Client(), gcc.KubeconfigSecret); err != nil {
 			return "", err
 		}
