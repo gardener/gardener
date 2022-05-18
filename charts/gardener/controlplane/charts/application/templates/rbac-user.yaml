@@ -302,7 +302,7 @@ rules:
   resources:
   - secrets
   - configmaps
-  - serviceaccounts # TODO: Remove this in a future release
+  - serviceaccounts # TODO(dimityrmirchev): Remove create/delete/modify permissions for serviceaccounts in a future release
   verbs:
   - create
   - delete
@@ -478,7 +478,7 @@ rules:
   - events
   - configmaps
   - resourcequotas
-  - serviceaccounts # TODO: Remove this in a future release
+  - serviceaccounts
   verbs:
   - get
   - list
