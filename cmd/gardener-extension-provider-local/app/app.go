@@ -155,7 +155,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 
 		controllerSwitches = ControllerSwitchOptions()
 		webhookSwitches    = WebhookSwitchOptions()
-		webhookOptions     = webhookcmd.NewAddToManagerOptions(local.Name, webhookServerOptions, webhookSwitches)
+		webhookOptions     = webhookcmd.NewAddToManagerOptions(local.Name, local.Type, webhookServerOptions, webhookSwitches)
 
 		aggOption = controllercmd.NewOptionAggregator(
 			restOpts,
