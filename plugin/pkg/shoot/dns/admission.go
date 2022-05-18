@@ -369,8 +369,7 @@ func checkDefaultDomainFormat(a admission.Attributes, shoot *core.Shoot, project
 		return apierrors.NewInternalError(err)
 	}
 
-	var shootDomain *string
-	shootDomain = shoot.Spec.DNS.Domain
+	shootDomain := shoot.Spec.DNS.Domain
 
 	for _, domain := range defaultDomains {
 		if shootDomain != nil && strings.HasSuffix(*shootDomain, "."+domain) {
