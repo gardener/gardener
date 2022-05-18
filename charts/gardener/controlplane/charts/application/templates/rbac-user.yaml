@@ -302,7 +302,7 @@ rules:
   resources:
   - secrets
   - configmaps
-  - serviceaccounts
+  - serviceaccounts # TODO: Remove this in a future release
   verbs:
   - create
   - delete
@@ -392,16 +392,16 @@ rules:
   verbs:
   - create
 
-# Cluster role setting the permissions for a project serviceaccount admin. It gets bound by a RoleBinding
+# Cluster role setting the permissions for a project service account manager. It gets bound by a RoleBinding
 # in a respective project namespace.
-# It aggregates all ClusterRoles labeled with rbac.gardener.cloud/aggregate-to-project-saAdmin: "true"
+# It aggregates all ClusterRoles labeled with rbac.gardener.cloud/aggregate-to-project-serviceaccountmanager: "true"
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  name: gardener.cloud:system:project-saAdmin
+  name: gardener.cloud:system:project-serviceaccountmanager
   labels:
-    gardener.cloud/role: project-saAdmin
+    gardener.cloud/role: project-serviceaccountmanager
     app: gardener
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     release: "{{ .Release.Name }}"
@@ -409,14 +409,14 @@ metadata:
 aggregationRule:
   clusterRoleSelectors:
   - matchLabels:
-      rbac.gardener.cloud/aggregate-to-project-saAdmin: "true"
+      rbac.gardener.cloud/aggregate-to-project-serviceaccountmanager: "true"
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  name: gardener.cloud:system:project-saAdmin-aggregation
+  name: gardener.cloud:system:project-serviceaccountmanager-aggregation
   labels:
-    rbac.gardener.cloud/aggregate-to-project-saAdmin: "true"
+    rbac.gardener.cloud/aggregate-to-project-serviceaccountmanager: "true"
     app: gardener
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     release: "{{ .Release.Name }}"
@@ -478,7 +478,7 @@ rules:
   - events
   - configmaps
   - resourcequotas
-  - serviceaccounts
+  - serviceaccounts # TODO: Remove this in a future release
   verbs:
   - get
   - list

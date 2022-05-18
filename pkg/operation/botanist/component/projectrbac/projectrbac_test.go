@@ -62,7 +62,7 @@ var _ = Describe("ProjectRBAC", func() {
 		clusterRoleProjectUAM        *rbacv1.ClusterRole
 		clusterRoleBindingProjectUAM *rbacv1.ClusterRoleBinding
 
-		roleBindingProjectSAAdmin *rbacv1.RoleBinding
+		roleBindingProjectServiceAccountManager *rbacv1.RoleBinding
 
 		clusterRoleProjectMember        *rbacv1.ClusterRole
 		clusterRoleBindingProjectMember *rbacv1.ClusterRoleBinding
@@ -204,9 +204,9 @@ var _ = Describe("ProjectRBAC", func() {
 			},
 		}
 
-		roleBindingProjectSAAdmin = &rbacv1.RoleBinding{
+		roleBindingProjectServiceAccountManager = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gardener.cloud:system:project-saAdmin",
+				Name:      "gardener.cloud:system:project-serviceaccountmanager",
 				Namespace: namespace,
 				OwnerReferences: []metav1.OwnerReference{{
 					APIVersion:         "core.gardener.cloud/v1beta1",
@@ -219,7 +219,7 @@ var _ = Describe("ProjectRBAC", func() {
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: "rbac.authorization.k8s.io",
 				Kind:     "ClusterRole",
-				Name:     "gardener.cloud:system:project-saAdmin",
+				Name:     "gardener.cloud:system:project-serviceaccountmanager",
 			},
 		}
 
@@ -415,13 +415,13 @@ var _ = Describe("ProjectRBAC", func() {
 				},
 				{
 					Subject: member4,
-					Roles:   []string{"saAdmin"},
+					Roles:   []string{"serviceaccountmanager"},
 				},
 			}
 
 			clusterRoleBindingProjectAdmin.Subjects = []rbacv1.Subject{member3}
 			clusterRoleBindingProjectUAM.Subjects = []rbacv1.Subject{member2}
-			roleBindingProjectSAAdmin.Subjects = []rbacv1.Subject{member3, member4}
+			roleBindingProjectServiceAccountManager.Subjects = []rbacv1.Subject{member3, member4}
 			clusterRoleBindingProjectMember.Subjects = []rbacv1.Subject{member2, member3}
 			roleBindingProjectMember.Subjects = []rbacv1.Subject{member2, member3}
 			clusterRoleBindingProjectViewer.Subjects = []rbacv1.Subject{member1, member3}
@@ -440,9 +440,9 @@ var _ = Describe("ProjectRBAC", func() {
 			c.EXPECT().Get(ctx, kutil.Key(clusterRoleBindingProjectUAM.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{}))
 			c.EXPECT().Patch(ctx, clusterRoleBindingProjectUAM, gomock.Any())
 
-			// project saAdmin
-			c.EXPECT().Get(ctx, kutil.Key(roleBindingProjectSAAdmin.Namespace, roleBindingProjectSAAdmin.Name), gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}))
-			c.EXPECT().Patch(ctx, roleBindingProjectSAAdmin, gomock.Any())
+			// project serviceaccountmanager
+			c.EXPECT().Get(ctx, kutil.Key(roleBindingProjectServiceAccountManager.Namespace, roleBindingProjectServiceAccountManager.Name), gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}))
+			c.EXPECT().Patch(ctx, roleBindingProjectServiceAccountManager, gomock.Any())
 
 			// project member
 			c.EXPECT().Get(ctx, kutil.Key(clusterRoleProjectMember.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRole{}))
@@ -494,7 +494,7 @@ var _ = Describe("ProjectRBAC", func() {
 			c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:system:project-uam:" + projectName}})
 			c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:system:project-uam:" + projectName}})
 
-			c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:system:project-saAdmin", Namespace: namespace}})
+			c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:system:project-serviceaccountmanager", Namespace: namespace}})
 
 			c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:system:project-member:" + projectName}})
 			c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:system:project-member:" + projectName}})

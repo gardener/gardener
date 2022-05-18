@@ -164,7 +164,7 @@ var supportedRoles = sets.NewString(
 	core.ProjectMemberAdmin,
 	core.ProjectMemberViewer,
 	core.ProjectMemberUserAccessManager,
-	core.ProjectMemberServiceAccountAdmin,
+	core.ProjectMemberServiceAccountManager,
 )
 
 const extensionRoleMaxLength = 20

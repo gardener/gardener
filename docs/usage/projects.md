@@ -27,7 +27,7 @@ spec:
   # roles:
   # - viewer 
   # - uam
-  # - saAdmin
+  # - serviceaccountmanager
   # - extension:foo
   - apiGroup: rbac.authorization.k8s.io
     kind: User
@@ -57,15 +57,15 @@ The list of members (again a list in `.spec.members[]` using the `rbac.authoriza
 Each project member must have at least one role (currently described in `.spec.members[].role`, additional roles can be added to `.spec.members[].roles[]`). The following roles exist:
 
 * `admin`: This allows to fully manage resources inside the project (e.g., secrets, shoots, configmaps, and similar).
-* `saAdmin`: This allows to fully manage service accounts inside the project and request tokens for them.
+* `serviceaccountmanager`: This allows to fully manage service accounts inside the project and request tokens for them.
 * `uam`: This allows to add/modify/remove human users or groups to/from the project member list. Technical users (service accounts) can be managed by all admins.
 * `viewer`: This allows to read all resources inside the project except secrets.
-* `owner`: This combines the `admin`, `uam` and `saAdmin` roles.
+* `owner`: This combines the `admin`, `uam` and `serviceaccountmanager` roles.
 * Extension roles (prefixed with `extension:`): Please refer to [this document](../extensions/project-roles.md).
 
 The [project controller](../concepts/controller-manager.md#project-controller) inside the Gardener Controller Manager is managing RBAC resources that grant the described privileges to the respective members.
 
-There are three central `ClusterRole`s `gardener.cloud:system:project-member`, `gardener.cloud:system:project-viewer` and `gardener.cloud:system:project-saAdmin` that grant the permissions for namespaced resources (e.g., `Secret`s, `Shoot`s, `ServiceAccount`s, etc.).
+There are three central `ClusterRole`s `gardener.cloud:system:project-member`, `gardener.cloud:system:project-viewer` and `gardener.cloud:system:project-serviceaccountmanager` that grant the permissions for namespaced resources (e.g., `Secret`s, `Shoot`s, `ServiceAccount`s, etc.).
 Via referring `RoleBinding`s created in the respective namespace the project members get bound to these `ClusterRole`s and, thus, the needed permissions.
 There are also project-specific `ClusterRole`s granting the permissions for cluster-scoped resources, e.g. the `Namespace` or `Project` itself.  
 For each role, the following `ClusterRole`s, `ClusterRoleBinding`s, and `RoleBinding`s are created:
@@ -73,7 +73,7 @@ For each role, the following `ClusterRole`s, `ClusterRoleBinding`s, and `RoleBin
 | Role | `ClusterRole` | `ClusterRoleBinding` | `RoleBinding` |
 | ---- | ----------- | ------------------ | ----------- |
 | `admin` | `gardener.cloud:system:project-member:<projectName>` | `gardener.cloud:system:project-member:<projectName>` | `gardener.cloud:system:project-member` |
-| `saAdmin` | | | `gardener.cloud:system:project-saAdmin` |
+| `serviceaccountmanager` | | | `gardener.cloud:system:project-serviceaccountmanager` |
 | `uam`   | `gardener.cloud:system:project-uam:<projectName>` | `gardener.cloud:system:project-uam:<projectName>` | |
 | `viewer` | `gardener.cloud:system:project-viewer:<projectName>` | `gardener.cloud:system:project-viewer:<projectName>` | `gardener.cloud:system:project-viewer` |
 | `owner` | `gardener.cloud:system:project:<projectName>` | `gardener.cloud:system:project:<projectName>` |  |
