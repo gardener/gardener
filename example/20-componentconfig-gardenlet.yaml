@@ -69,7 +69,7 @@ controllers:
     syncPeriod: 30s
   seed:
     concurrentSyncs: 5
-    syncPeriod: 1m
+    syncPeriod: 15m
   # leaseResyncSeconds: 2
   # leaseResyncMissThreshold: 10
   managedSeed:
