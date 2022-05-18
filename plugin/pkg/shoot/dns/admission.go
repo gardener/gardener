@@ -162,7 +162,7 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 	// If shoot uses deafult domain validate domain even though shoot can be assigned to seed
 	// having dns disabled
 	if shoot.Spec.DNS != nil && !helper.ShootUsesUnmanagedDNS(shoot) {
-		if err := assignDefaultDomainIfNeeded(a, shoot, d.projectLister, defaultDomains); err != nil {
+		if err := checkDefaultDomainFormat(a, shoot, d.projectLister, defaultDomains); err != nil {
 			return err
 		}
 	}
@@ -342,10 +342,35 @@ func assignDefaultDomainIfNeeded(a admission.Attributes, shoot *core.Shoot, proj
 		return apierrors.NewInternalError(err)
 	}
 
-	var shootDomain *string
-	if shoot.Spec.DNS != nil {
-		shootDomain = shoot.Spec.DNS.Domain
+	if shoot.Spec.DNS == nil {
+		shoot.Spec.DNS = &core.DNS{}
 	}
+
+	if len(defaultDomains) > 0 && shoot.Spec.DNS.Domain == nil {
+		domain := defaultDomains[0]
+		shootDNSName := shoot.Name
+
+		if len(shoot.Name) == 0 && len(shoot.GenerateName) > 0 {
+			shootDNSName, err = utils.GenerateRandomStringFromCharset(len(shoot.GenerateName)+5, "0123456789abcdefghijklmnopqrstuvwxyz")
+			if err != nil {
+				return apierrors.NewInternalError(err)
+			}
+		}
+		generatedDomain := fmt.Sprintf("%s.%s.%s", shootDNSName, project.Name, domain)
+		shoot.Spec.DNS.Domain = &generatedDomain
+	}
+
+	return nil
+}
+
+func checkDefaultDomainFormat(a admission.Attributes, shoot *core.Shoot, projectLister corelisters.ProjectLister, defaultDomains []string) error {
+	project, err := admissionutils.ProjectForNamespaceFromInternalLister(projectLister, shoot.Namespace)
+	if err != nil {
+		return apierrors.NewInternalError(err)
+	}
+
+	var shootDomain *string
+	shootDomain = shoot.Spec.DNS.Domain
 
 	for _, domain := range defaultDomains {
 		if shootDomain != nil && strings.HasSuffix(*shootDomain, "."+domain) {
@@ -364,23 +389,6 @@ func assignDefaultDomainIfNeeded(a admission.Attributes, shoot *core.Shoot, proj
 				return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 			}
 
-			return nil
-		}
-
-		// Shoot did not specify a domain, assign default domain and set provider to nil
-		if shootDomain == nil {
-			if shoot.Spec.DNS == nil {
-				shoot.Spec.DNS = &core.DNS{}
-			}
-			shootDNSName := shoot.Name
-			if len(shoot.Name) == 0 && len(shoot.GenerateName) > 0 {
-				shootDNSName, err = utils.GenerateRandomStringFromCharset(len(shoot.GenerateName)+5, "0123456789abcdefghijklmnopqrstuvwxyz")
-				if err != nil {
-					return apierrors.NewInternalError(err)
-				}
-			}
-			generatedDomain := fmt.Sprintf("%s.%s.%s", shootDNSName, project.Name, domain)
-			shoot.Spec.DNS.Domain = &generatedDomain
 			return nil
 		}
 	}
