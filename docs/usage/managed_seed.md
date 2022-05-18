@@ -45,6 +45,8 @@ For an example that uses non-default configuration, see [55-managed-seed-gardenl
 
 To have the `ManagedSeed` controller renew the gardenlet's kubeconfig secret, annotate the `ManagedSeed` with `gardener.cloud/operation=renew-kubeconfig`. This will trigger a reconciliation during which the kubeconfig secret is deleted and the bootstrapping is performed again.
 
+It is also possible to trigger the renewal on the secret directly, see [here](../concepts/gardenlet.md#rotate-certificates-using-bootstrap-kubeconfig).
+
 ## Creating a Seed from a Template
 
 To register a shoot as a seed from a template without deploying `gardenlet` to the shoot using a default configuration, create a `ManagedSeed` resource similar to the following:
