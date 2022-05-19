@@ -546,7 +546,13 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--service-account-private-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey),
 		fmt.Sprintf("--service-cluster-ip-range=%s", k.serviceNetwork.String()),
 		fmt.Sprintf("--secure-port=%d", port),
-		"--port=0",
+	)
+
+	if version.ConstraintK8sLess124.Check(k.version) {
+		command = append(command, "--port=0")
+	}
+
+	command = append(command,
 		fmt.Sprintf("--horizontal-pod-autoscaler-downscale-stabilization=%s", defaultHorizontalPodAutoscalerConfig.DownscaleStabilization.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-initial-readiness-delay=%s", defaultHorizontalPodAutoscalerConfig.InitialReadinessDelay.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-cpu-initialization-period=%s", defaultHorizontalPodAutoscalerConfig.CPUInitializationPeriod.Duration.String()),

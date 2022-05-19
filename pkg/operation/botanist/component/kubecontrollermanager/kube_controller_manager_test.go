@@ -908,7 +908,13 @@ func commandForKubernetesVersion(
 		"--service-account-private-key-file=/srv/kubernetes/service-account-key/id_rsa",
 		fmt.Sprintf("--service-cluster-ip-range=%s", serviceNetwork.String()),
 		fmt.Sprintf("--secure-port=%d", port),
-		"--port=0",
+	)
+
+	if versionutils.ConstraintK8sLess124.Check(semver.MustParse(version)) {
+		command = append(command, "--port=0")
+	}
+
+	command = append(command,
 		fmt.Sprintf("--horizontal-pod-autoscaler-downscale-stabilization=%s", horizontalPodAutoscalerConfig.DownscaleStabilization.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-initial-readiness-delay=%s", horizontalPodAutoscalerConfig.InitialReadinessDelay.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-cpu-initialization-period=%s", horizontalPodAutoscalerConfig.CPUInitializationPeriod.Duration.String()),
