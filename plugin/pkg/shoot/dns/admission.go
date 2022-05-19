@@ -161,7 +161,7 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 	specPath := field.NewPath("spec")
 	// If shoot uses deafult domain validate domain even though shoot can be assigned to seed
 	// having dns disabled
-	if shoot.Spec.DNS != nil && !helper.ShootUsesUnmanagedDNS(shoot) {
+	if shoot.Spec.DNS != nil && shoot.Spec.DNS.Domain != nil && !helper.ShootUsesUnmanagedDNS(shoot) {
 		if err := checkDefaultDomainFormat(a, shoot, d.projectLister, defaultDomains); err != nil {
 			return err
 		}
@@ -372,7 +372,7 @@ func checkDefaultDomainFormat(a admission.Attributes, shoot *core.Shoot, project
 	shootDomain := shoot.Spec.DNS.Domain
 
 	for _, domain := range defaultDomains {
-		if shootDomain != nil && strings.HasSuffix(*shootDomain, "."+domain) {
+		if strings.HasSuffix(*shootDomain, "."+domain) {
 			// Check that the specified domain matches the pattern for default domains, especially in order
 			// to prevent shoots from "stealing" domain names for shoots in other projects
 			if len(shoot.GenerateName) > 0 && (len(shoot.Name) == 0 || strings.HasPrefix(shoot.Name, shoot.GenerateName)) {
