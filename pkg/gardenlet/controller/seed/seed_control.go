@@ -337,7 +337,7 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 	// will be set to either True, False or Progressing by the seed care reconciler depending on the health of the system components
 	// after the necessary checks are completed.
 	conditionSeedSystemComponentsHealthy := gardencorev1beta1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedSystemComponentsHealthy)
-	conditionSeedSystemComponentsHealthy = gardencorev1beta1helper.UpdatedCondition(conditionSeedSystemComponentsHealthy, gardencorev1beta1.ConditionProgressing, "SystemComponentsCheckProgressing", "Checking the health of system components after successful bootstrap of seed cluster.")
+	conditionSeedSystemComponentsHealthy = gardencorev1beta1helper.UpdatedCondition(conditionSeedSystemComponentsHealthy, gardencorev1beta1.ConditionProgressing, "SystemComponentsCheckProgressing", "Pending health check of system components after successful bootstrap of seed cluster.")
 	conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionTrue, "BootstrappingSucceeded", "Seed cluster has been bootstrapped successfully.")
 	if err = r.patchSeedStatus(ctx, gardenClient, log, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped, conditionSeedSystemComponentsHealthy); err != nil {
 		return fmt.Errorf("could not update status of %s and %s conditions to %s: %w", conditionSeedBootstrapped.Type, conditionSeedSystemComponentsHealthy.Type, gardencorev1beta1.ConditionProgressing, err)
