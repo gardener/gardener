@@ -146,8 +146,8 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 	mutateFn := func() error {
 		if c.values.AnnotateOperation {
 			metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-			metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 		}
+		metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 
 		c.dnsRecord.Spec = extensionsv1alpha1.DNSRecordSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{

@@ -171,7 +171,9 @@ var _ = Describe("#Interface", func() {
 
 			actual := &extensionsv1alpha1.Infrastructure{}
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), actual)).To(Succeed())
-			expected.SetAnnotations(nil)
+			expected.SetAnnotations(map[string]string{
+				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+			})
 			Expect(actual).To(DeepEqual(expected))
 		})
 

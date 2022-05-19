@@ -215,8 +215,11 @@ var _ = Describe("DNSRecord", func() {
 					Kind:       extensionsv1alpha1.DNSRecordResource,
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            name,
-					Namespace:       namespace,
+					Name:      name,
+					Namespace: namespace,
+					Annotations: map[string]string{
+						v1beta1constants.GardenerTimestamp: now.UTC().String(),
+					},
 					ResourceVersion: "1",
 				},
 				Spec: dns.Spec,
