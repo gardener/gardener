@@ -40,6 +40,7 @@ import (
 var _ = Describe("Shoot Maintenance controller tests", func() {
 
 	var (
+		project      *gardencorev1beta1.Project
 		cloudProfile *gardencorev1beta1.CloudProfile
 		shoot        *gardencorev1beta1.Shoot
 
@@ -63,6 +64,17 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 	)
 
 	BeforeEach(func() {
+		By("create project")
+		project = &gardencorev1beta1.Project{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "dev",
+			},
+			Spec: gardencorev1beta1.ProjectSpec{
+				Namespace: pointer.String("garden-dev"),
+			},
+		}
+		Expect(testClient.Create(ctx, project)).To(Succeed())
+
 		By("create cloud profile")
 		cloudProfile = &gardencorev1beta1.CloudProfile{
 			ObjectMeta: metav1.ObjectMeta{
@@ -177,6 +189,9 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 
 		logger.Infof("Delete CloudProfile %s", cloudProfile.Name)
 		Expect(testClient.Delete(ctx, cloudProfile)).To(Succeed())
+
+		logger.Infof("Delete Project %s", project.Name)
+		Expect(deleteProject(ctx, testClient, project)).To(Succeed())
 	})
 
 	It("should add task annotations", func() {

@@ -156,3 +156,11 @@ func deleteShoot(ctx context.Context, gardenClient client.Client, shoot *gardenc
 	}
 	return client.IgnoreNotFound(gardenClient.Delete(ctx, shoot))
 }
+
+func deleteProject(ctx context.Context, gardenClient client.Client, project *gardencorev1beta1.Project) error {
+	err := gutil.ConfirmDeletion(ctx, gardenClient, project)
+	if err != nil {
+		return err
+	}
+	return client.IgnoreNotFound(gardenClient.Delete(ctx, project))
+}
