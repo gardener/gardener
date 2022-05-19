@@ -26,6 +26,7 @@ controllers:
   # enableShootCoreAddonRestarter: true
   shootHibernation:
     concurrentSyncs: 5
+    triggerDeadlineDuration: 2h
   shootQuota:
     concurrentSyncs: 5
     syncPeriod: 60m

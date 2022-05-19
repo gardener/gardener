@@ -7651,6 +7651,12 @@ func schema_pkg_apis_core_v1alpha1_ShootStatus(ref common.ReferenceCallback) com
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCredentials"),
 						},
 					},
+					"lastHibernationTriggerTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastHibernationTriggerTime indicates the last time when the hibernation controller managed to change the hibernation settings of the cluster",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
 				},
 				Required: []string{"gardener", "hibernated", "technicalID", "uid"},
 			},
@@ -14582,6 +14588,12 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 						SchemaProps: spec.SchemaProps{
 							Description: "Credentials contains information about the shoot credentials.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentials"),
+						},
+					},
+					"lastHibernationTriggerTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastHibernationTriggerTime indicates the last time when the hibernation controller managed to change the hibernation settings of the cluster",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 				},

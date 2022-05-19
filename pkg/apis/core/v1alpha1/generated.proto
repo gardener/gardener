@@ -2510,6 +2510,11 @@ message ShootStatus {
   // Credentials contains information about the shoot credentials.
   // +optional
   optional ShootCredentials credentials = 16;
+
+  // LastHibernationTriggerTime indicates the last time when the hibernation controller
+  // managed to change the hibernation settings of the cluster
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastHibernationTriggerTime = 17;
 }
 
 // SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.

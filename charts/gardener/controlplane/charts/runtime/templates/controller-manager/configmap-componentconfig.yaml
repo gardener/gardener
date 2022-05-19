@@ -116,6 +116,7 @@ data:
         syncPeriod: {{ required ".Values.global.controller.config.controllers.shootQuota.syncPeriod is required" .Values.global.controller.config.controllers.shootQuota.syncPeriod }}
       shootHibernation:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.shootHibernation.concurrentSyncs is required" .Values.global.controller.config.controllers.shootHibernation.concurrentSyncs }}
+        triggerDeadlineDuration: {{ required ".Values.global.controller.config.controllers.shootHibernation.triggerDeadlineDuration is required" .Values.global.controller.config.controllers.shootHibernation.triggerDeadlineDuration }}
       shootReference:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.shootReference.concurrentSyncs is required" .Values.global.controller.config.controllers.shootReference.concurrentSyncs }}
       shootRetry:

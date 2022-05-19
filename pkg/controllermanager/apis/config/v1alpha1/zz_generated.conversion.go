@@ -910,6 +910,7 @@ func Convert_config_ShootConditionsControllerConfiguration_To_v1alpha1_ShootCond
 
 func autoConvert_v1alpha1_ShootHibernationControllerConfiguration_To_config_ShootHibernationControllerConfiguration(in *ShootHibernationControllerConfiguration, out *config.ShootHibernationControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
+	out.TriggerDeadlineDuration = (*v1.Duration)(unsafe.Pointer(in.TriggerDeadlineDuration))
 	return nil
 }
 
@@ -920,6 +921,7 @@ func Convert_v1alpha1_ShootHibernationControllerConfiguration_To_config_ShootHib
 
 func autoConvert_config_ShootHibernationControllerConfiguration_To_v1alpha1_ShootHibernationControllerConfiguration(in *config.ShootHibernationControllerConfiguration, out *ShootHibernationControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
+	out.TriggerDeadlineDuration = (*v1.Duration)(unsafe.Pointer(in.TriggerDeadlineDuration))
 	return nil
 }
 

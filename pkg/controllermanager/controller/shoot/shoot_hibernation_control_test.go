@@ -12,292 +12,414 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shoot_test
+package shoot
 
 import (
 	"context"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
-	mockshoot "github.com/gardener/gardener/pkg/controllermanager/controller/shoot/mock"
-	"github.com/gardener/gardener/pkg/logger"
-	mockevent "github.com/gardener/gardener/pkg/mock/client-go/tools/record"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
-	"github.com/gardener/gardener/pkg/utils/test"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"github.com/robfig/cron"
-	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/component-base/version"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// MustParseStandard parses the standardSpec and errors otherwise.
-func MustParseStandard(standardSpec string) cron.Schedule {
-	sched, err := cron.ParseStandard(standardSpec)
-	Expect(err).NotTo(HaveOccurred())
-	return sched
-}
-
 var _ = Describe("Shoot Hibernation", func() {
-	var (
-		ctrl         *gomock.Controller
-		gardenClient *mockclient.MockClient
+	type testEntry struct {
+		timeNow                 func() time.Time
+		triggerDeadlineDuration time.Duration
+		shootSettings           func(shoot *gardencorev1beta1.Shoot)
 
-		ctx = context.TODO()
+		triggerHibernationOrWakeup  bool
+		expectedRequeueDurationFunc func(now time.Time) time.Duration
+		expectedHibernationEnabled  bool
+	}
+
+	var (
+		everyDayAt2      = "00 02 * * 1,2,3,4,5,6,0"
+		everyDayAt7      = "00 07 * * 1,2,3,4,5,6,0"
+		everyWeekDayAt8  = "00 08 * * 1,2,3,4,5"
+		everyWeekDayAt19 = "00 19 * * 1,2,3,4,5"
+
+		locationEUBerlin = "Europe/Berlin"
+		locationEUSofia  = "Europe/Sofia"
+
+		weekDayAt2  = "2022-04-12T02:00:00Z"
+		weekDayAt0  = "2022-04-12T00:00:00Z"
+		weekDayAt7  = "2022-04-12T07:00:00Z"
+		weekDayAt19 = "2022-04-12T19:00:00Z"
+
+		noDeadLine    = -1234 * time.Second
+		shortDeadline = 10 * time.Second
+		longDeadline  = 10 * time.Hour
+
+		mustParseStandard = func(standardSpec string) cron.Schedule {
+			sched, err := cron.ParseStandard(standardSpec)
+			Expect(err).NotTo(HaveOccurred())
+			return sched
+		}
+
+		mustLoadLocation = func(locationName string) time.Location {
+			location, err := time.LoadLocation(locationName)
+			Expect(err).NotTo(HaveOccurred())
+			return *location
+		}
+
+		requeueAfterBasedOnSchedule = func(schedule, location string) func(now time.Time) time.Duration {
+			return func(now time.Time) time.Duration {
+				parsedSchedule := mustParseStandard(schedule)
+				loc := mustLoadLocation(location)
+				return parsedSchedule.Next(now.In(&loc)).Add(nextScheduleDelta).Sub(now)
+			}
+		}
+
+		mustParseRFC3339Time = func(t string) time.Time {
+			parsedTime, err := time.Parse(time.RFC3339, t)
+			Expect(err).NotTo(HaveOccurred())
+			return parsedTime
+		}
+
+		timeWithOffset = func(t string, offset time.Duration) func() time.Time {
+			return func() time.Time {
+				parsedTime := mustParseRFC3339Time(t)
+				return parsedTime.Add(offset)
+			}
+		}
 	)
 
-	BeforeEach(func() {
-		ctrl = gomock.NewController(GinkgoT())
-		gardenClient = mockclient.NewMockClient(ctrl)
-	})
+	Context("parsedHibernationSchedule", func() {
+		Describe("#next", func() {
+			It("should correctly return the next scheduling time from the parsed schedule", func() {
+				now := mustParseRFC3339Time(weekDayAt2)
+				expected := mustParseRFC3339Time(weekDayAt0).Add(24 * time.Hour)
 
-	AfterEach(func() {
-		ctrl.Finish()
-	})
-
-	trueVar := true
-	Context("HibernationSchedule", func() {
-		Describe("#GroupHibernationSchedulesByLocation", func() {
-			It("should group the hibernation schedules with the same location together", func() {
-				var (
-					locationEuropeBerlin = "Europe/Berlin"
-					locationUSCentral    = "US/Central"
-
-					s1 = gardencorev1beta1.HibernationSchedule{Location: &locationEuropeBerlin}
-					s2 = gardencorev1beta1.HibernationSchedule{Location: &locationEuropeBerlin}
-					s3 = gardencorev1beta1.HibernationSchedule{Location: &locationUSCentral}
-					s4 = gardencorev1beta1.HibernationSchedule{}
-				)
-
-				grouped := GroupHibernationSchedulesByLocation([]gardencorev1beta1.HibernationSchedule{s1, s2, s3, s4})
-				Expect(grouped).To(Equal(map[string][]gardencorev1beta1.HibernationSchedule{
-					locationEuropeBerlin: {s1, s2},
-					locationUSCentral:    {s3},
-					time.UTC.String():    {s4},
-				}))
+				parsedSchedule := parsedHibernationSchedule{
+					location: mustLoadLocation(locationEUBerlin),
+					schedule: mustParseStandard(everyDayAt2),
+				}
+				Expect(parsedSchedule.next(now)).To(Equal(expected))
 			})
 		})
 
-		Describe("#ComputeHibernationSchedule", func() {
-			It("should compute a correct hibernation schedule", func() {
-				var (
-					log      = logger.NewNopLogger()
-					recorder = &record.FakeRecorder{}
-					now      time.Time
+		Describe("#previous", func() {
+			It("should correctly return the previous scheduling time from the parsed schedule if it is within the specified range", func() {
+				now := mustParseRFC3339Time(weekDayAt2)
+				from := now.Add(-2 * 24 * time.Hour)
 
-					start = "0 * * * *"
-					end   = "10 * * * *"
-
-					startSched     = MustParseStandard(start)
-					endSched       = MustParseStandard(end)
-					location       = time.UTC
-					locationString = location.String()
-
-					shoot = gardencorev1beta1.Shoot{
-						Spec: gardencorev1beta1.ShootSpec{
-							Hibernation: &gardencorev1beta1.Hibernation{
-								Enabled: &trueVar,
-								Schedules: []gardencorev1beta1.HibernationSchedule{
-									{
-										Start:    &start,
-										End:      &end,
-										Location: &locationString,
-									},
-								},
-							},
-						},
-					}
-
-					timeNow             = mocktime.NewMockNow(ctrl)
-					newCronWithLocation = mockshoot.NewMockNewCronWithLocation(ctrl)
-					cr                  = mockshoot.NewMockCron(ctrl)
-				)
-
-				defer test.WithVars(
-					&NewCronWithLocation, newCronWithLocation.Do,
-					&TimeNow, timeNow.Do,
-				)()
-
-				timeNow.EXPECT().Do().Return(now).AnyTimes()
-
-				gomock.InOrder(
-					newCronWithLocation.EXPECT().Do(location).Return(cr),
-
-					cr.EXPECT().Schedule(startSched, NewHibernationJob(ctx, gardenClient, LocationLogger(log, location), recorder, &shoot, trueVar)),
-					cr.EXPECT().Schedule(endSched, NewHibernationJob(ctx, gardenClient, LocationLogger(log, location), recorder, &shoot, false)),
-				)
-
-				actualSched, err := ComputeHibernationSchedule(ctx, gardenClient, log, recorder, &shoot)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(actualSched).To(Equal(HibernationSchedule{locationString: cr}))
+				expected := mustParseRFC3339Time(weekDayAt0)
+				parsedSchedule := parsedHibernationSchedule{
+					location: mustLoadLocation(locationEUBerlin),
+					schedule: mustParseStandard(everyDayAt2),
+				}
+				prev := parsedSchedule.previous(from, now)
+				Expect(prev).NotTo(BeNil())
+				Expect(*prev).To(Equal(expected))
 			})
-		})
 
-		Describe("#Start", func() {
-			It("should start all crons", func() {
-				var (
-					c1 = mockshoot.NewMockCron(ctrl)
-					c2 = mockshoot.NewMockCron(ctrl)
+			It("should return nil if previous scheduling time was not in specified range", func() {
+				now := mustParseRFC3339Time(weekDayAt2)
+				from := now.Add(-1 * time.Hour)
 
-					sched = HibernationSchedule{"l1": c1, "l2": c2}
-				)
-
-				c1.EXPECT().Start()
-				c2.EXPECT().Start()
-
-				sched.Start()
-			})
-		})
-
-		Describe("#Stop", func() {
-			It("should stop all crons", func() {
-				var (
-					c1 = mockshoot.NewMockCron(ctrl)
-					c2 = mockshoot.NewMockCron(ctrl)
-
-					sched = HibernationSchedule{"l1": c1, "l2": c2}
-				)
-
-				c1.EXPECT().Stop()
-				c2.EXPECT().Stop()
-
-				sched.Stop()
+				parsedSchedule := parsedHibernationSchedule{
+					location: mustLoadLocation(locationEUBerlin),
+					schedule: mustParseStandard(everyDayAt2),
+				}
+				prev := parsedSchedule.previous(from, now)
+				Expect(prev).To(BeNil())
 			})
 		})
 	})
 
-	Context("#HibernationScheduleRegistry", func() {
-		var (
-			k1, k2, k3 string
-
-			s1, s2 HibernationSchedule
-
-			reg HibernationScheduleRegistry
-		)
-
-		BeforeEach(func() {
-			k1 = "foo"
-			k2 = "bar"
-			k3 = "baz"
-
-			s1 = HibernationSchedule{k1: nil}
-			s2 = HibernationSchedule{k2: nil}
-
-			reg = NewHibernationScheduleRegistry()
-		})
-
-		Describe("#Load", func() {
-			It("should correctly retrieve the entries", func() {
-				reg.Store(k1, s1)
-				reg.Store(k2, s2)
-
-				actualS1, ok := reg.Load(k1)
-				Expect(ok).To(BeTrue())
-				Expect(actualS1).To(Equal(s1))
-
-				actualS2, ok := reg.Load(k2)
-				Expect(ok).To(BeTrue())
-				Expect(actualS2).To(Equal(s2))
-
-				_, ok = reg.Load(k3)
-				Expect(ok).To(BeFalse())
-			})
-		})
-
-		Describe("#Delete", func() {
-			It("should delete the specified entry", func() {
-				reg.Store(k1, s1)
-				reg.Store(k2, s2)
-
-				reg.Delete(k1)
-
-				_, ok := reg.Load(k1)
-				Expect(ok).To(BeFalse())
-
-				actualS2, ok := reg.Load(k2)
-				Expect(ok).To(BeTrue())
-				Expect(actualS2).To(Equal(s2))
-			})
-		})
-	})
-
-	Context("HibernationJob", func() {
-		Describe("#Run", func() {
+	Context("Shoot hibernation reconciliation", func() {
+		Describe("#Reconcile", func() {
 			var (
-				log      *logrus.Logger
-				recorder *mockevent.MockEventRecorder
-				shoot    *gardencorev1beta1.Shoot
+				ctx       context.Context
+				c         client.Client
+				now       time.Time
+				fakeClock *clock.FakeClock
 
-				namespace string
-				name      string
+				shoot *gardencorev1beta1.Shoot
 			)
 
 			BeforeEach(func() {
-				log = logger.NewNopLogger()
-				recorder = mockevent.NewMockEventRecorder(ctrl)
+				ctx = context.TODO()
+				c = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 
-				namespace = "foo"
-				name = "bar"
 				shoot = &gardencorev1beta1.Shoot{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: namespace,
-						Name:      name,
+						Name:      "bar",
+						Namespace: "garden-foo",
 					},
 					Spec: gardencorev1beta1.ShootSpec{
 						Hibernation: &gardencorev1beta1.Hibernation{},
 					},
+					Status: gardencorev1beta1.ShootStatus{},
 				}
 			})
-			It("should set the hibernation status correctly to enabled", func() {
-				enabled := true
-				job := NewHibernationJob(ctx, gardenClient, log, recorder, shoot, enabled)
 
-				gomock.InOrder(
-					gardenClient.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(shoot), gomock.AssignableToTypeOf(shoot)).
-						Do(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
-							shoot.DeepCopyInto(obj)
-							return nil
-						}),
-					gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(shoot), gomock.Any()).
-						Do(func(_ context.Context, actual *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) {
-							Expect(actual.Spec.Hibernation).To(Equal(&gardencorev1beta1.Hibernation{
-								Enabled: &enabled,
-							}))
-						}),
-					recorder.EXPECT().Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationEnabled, "%s", "Hibernating cluster due to schedule"),
+			DescribeTable("should properly enable or disable hibernation and requeue the shoot", func(t testEntry) {
+				By("setting current time")
+				timeNow := now
+				if t.timeNow != nil {
+					timeNow = t.timeNow()
+				}
+				fakeClock = clock.NewFakeClock(timeNow)
+
+				if t.shootSettings != nil {
+					By("configuring shoot")
+					t.shootSettings(shoot)
+				}
+
+				By("creating shoot")
+				Expect(c.Create(ctx, shoot)).To(Succeed())
+
+				By("configuring hibernation reconciler")
+				config := config.ShootHibernationControllerConfiguration{}
+				if t.triggerDeadlineDuration != noDeadLine {
+					config.TriggerDeadlineDuration = &metav1.Duration{Duration: t.triggerDeadlineDuration}
+				}
+				reconciler := NewShootHibernationReconciler(c, config, record.NewFakeRecorder(1), fakeClock)
+
+				By("reconciling shoot resource")
+				var requeueAfter time.Duration
+				if t.expectedRequeueDurationFunc != nil {
+					requeueAfter = t.expectedRequeueDurationFunc(timeNow)
+				}
+				result, err := reconciler.Reconcile(ctx,
+					reconcile.Request{
+						NamespacedName: client.ObjectKeyFromObject(shoot),
+					},
 				)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{RequeueAfter: requeueAfter}))
 
-				job.Run()
-			})
-
-			It("should set the hibernation status correctly to disabled", func() {
-				enabled := false
-				job := NewHibernationJob(ctx, gardenClient, log, recorder, shoot, enabled)
-
-				gomock.InOrder(
-					gardenClient.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(shoot), gomock.AssignableToTypeOf(shoot)).
-						Do(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
-							shoot.DeepCopyInto(obj)
-							return nil
-						}),
-					gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(shoot), gomock.Any()).
-						Do(func(_ context.Context, actual *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) {
-							Expect(actual.Spec.Hibernation).To(Equal(&gardencorev1beta1.Hibernation{
-								Enabled: &enabled,
-							}))
-						}),
-					recorder.EXPECT().Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationDisabled, "%s", "Waking up cluster due to schedule"),
-				)
-
-				job.Run()
-			})
+				reconciledShoot := &gardencorev1beta1.Shoot{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(shoot), reconciledShoot)).To(Succeed())
+				if t.triggerHibernationOrWakeup {
+					Expect(reconciledShoot.Spec.Hibernation.Enabled).To(PointTo(Equal(t.expectedHibernationEnabled)))
+					Expect(reconciledShoot.Status.LastHibernationTriggerTime.Time.UTC()).To(Equal(timeNow))
+				} else {
+					Expect(reconciledShoot.Spec.Hibernation.Enabled).To(BeNil())
+				}
+			},
+				Entry("when there are no hibernation schedules nothing should be done", testEntry{
+					timeNow: timeWithOffset(weekDayAt2, 0),
+					shootSettings: func(shoot *gardencorev1beta1.Shoot) {
+						shoot.CreationTimestamp = metav1.Time{Time: timeWithOffset(weekDayAt2, 0)()}
+					},
+				}),
+				Entry("when hibernation schedule is incorrect nothing should be done and shoot must not be requeued", testEntry{
+					timeNow: timeWithOffset(weekDayAt2, 0),
+					shootSettings: func(shoot *gardencorev1beta1.Shoot) {
+						shoot.CreationTimestamp = metav1.Time{Time: timeWithOffset(weekDayAt2, 0)()}
+						shoot.Spec.Hibernation.Schedules = []gardencorev1beta1.HibernationSchedule{{Start: pointer.String("")}}
+					},
+				}),
+				Entry("when shoot has never been hibernated and reconciliation is executed 30 seconds before wakeup schedule", testEntry{
+					timeNow: timeWithOffset(weekDayAt2, -30*time.Second),
+					shootSettings: func(shoot *gardencorev1beta1.Shoot) {
+						shoot.CreationTimestamp = metav1.Time{Time: timeWithOffset(weekDayAt2, -1*24*time.Hour)()}
+						shoot.Spec.Hibernation.Schedules = []gardencorev1beta1.HibernationSchedule{{
+							Start: &everyDayAt7,
+							End:   &everyDayAt2,
+						}}
+					},
+					triggerDeadlineDuration:     noDeadLine,
+					triggerHibernationOrWakeup:  true,
+					expectedHibernationEnabled:  true,
+					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
+				}),
+				Entry("when shoot has never been hibernated and reconciliation is executed just before hibernation schedule", testEntry{
+					timeNow: timeWithOffset(weekDayAt7, -1*time.Second),
+					shootSettings: func(shoot *gardencorev1beta1.Shoot) {
+						shoot.CreationTimestamp = metav1.Time{Time: timeWithOffset(weekDayAt7, -1*24*time.Hour)()}
+						shoot.Spec.Hibernation.Schedules = []gardencorev1beta1.HibernationSchedule{{
+							Start: &everyDayAt7,
+							End:   &everyDayAt2,
+						}}
+					},
+					triggerDeadlineDuration:     noDeadLine,
+					triggerHibernationOrWakeup:  true,
+					expectedHibernationEnabled:  false,
+					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt7, "UTC"),
+				}),
+				Entry("when shoot has never hibernated and reconciliation is executed just after hibernation start schedule", testEntry{
+					timeNow: timeWithOffset(weekDayAt7, 1*time.Second),
+					shootSettings: func(shoot *gardencorev1beta1.Shoot) {
+						shoot.CreationTimestamp = metav1.Time{Time: timeWithOffset(weekDayAt7, -1*24*time.Hour)()}
+						shoot.Spec.Hibernation.Schedules = []gardencorev1beta1.HibernationSchedule{{
+							Start: &everyDayAt7,
+							End:   &everyDayAt2,
+						}}
+					},
+					triggerDeadlineDuration:     noDeadLine,
+					triggerHibernationOrWakeup:  true,
+					expectedHibernationEnabled:  true,
+					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
+				}),
+				Entry("when shoot has never been hibernated and reconciliation is executed exactly at hibernation start schedule", testEntry{
+					timeNow: timeWithOffset(weekDayAt7, 0),
+					shootSettings: func(shoot *gardencorev1beta1.Shoot) {
+						shoot.CreationTimestamp = metav1.Time{Time: timeWithOffset(weekDayAt7, -30*time.Second)()}
+						shoot.Spec.Hibernation.Schedules = []gardencorev1beta1.HibernationSchedule{{
+							Start: &everyDayAt7,
+							End:   &everyDayAt2,
+						}}
+					},
+					triggerDeadlineDuration:     noDeadLine,
+					triggerHibernationOrWakeup:  true,
+					expectedHibernationEnabled:  true,
+					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
+				}),
+				Entry("when shoot has just been created", testEntry{
+					timeNow: timeWithOffset(weekDayAt19, 1*time.Second),
+					shootSettings: func(shoot *gardencorev1beta1.Shoot) {
+						shoot.CreationTimestamp = metav1.Time{Time: timeWithOffset(weekDayAt19, 0)()}
+						shoot.Spec.Hibernation.Schedules = []gardencorev1beta1.HibernationSchedule{{
+							Start: &everyDayAt7,
+							End:   &everyDayAt2,
+						}}
+					},
+					triggerDeadlineDuration:     noDeadLine,
+					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
+				}),
+				Entry("when shoot has never been hibernated and has multiple hibernation schedules and reconciliation is executed just after hibernation", testEntry{
+					timeNow: timeWithOffset(weekDayAt7, 1*time.Second),
+					shootSettings: func(shoot *gardencorev1beta1.Shoot) {
+						shoot.CreationTimestamp = metav1.Time{Time: timeWithOffset(weekDayAt7, -1*24*time.Hour)()}
+						shoot.Spec.Hibernation.Schedules = []gardencorev1beta1.HibernationSchedule{
+							{
+								Start:    &everyDayAt7,
+								End:      &everyDayAt2,
+								Location: &locationEUBerlin,
+							},
+							{
+								Start:    &everyWeekDayAt8,
+								End:      &everyWeekDayAt19,
+								Location: &locationEUSofia,
+							},
+							{
+								Start: &everyDayAt2,
+								End:   &everyDayAt7,
+							},
+						}
+					},
+					triggerDeadlineDuration:     noDeadLine,
+					triggerHibernationOrWakeup:  true,
+					expectedHibernationEnabled:  false,
+					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyWeekDayAt19, locationEUSofia),
+				}),
+				Entry("when shoot has been hibernated or woken up previously and reconciliation is executed exactly after hibernation start time", testEntry{
+					timeNow: timeWithOffset(weekDayAt7, 1*time.Second),
+					shootSettings: func(shoot *gardencorev1beta1.Shoot) {
+						shoot.CreationTimestamp = metav1.Time{Time: timeWithOffset(weekDayAt7, -24*time.Hour)()}
+						shoot.Spec.Hibernation.Schedules = []gardencorev1beta1.HibernationSchedule{{
+							Start: &everyDayAt7,
+							End:   &everyDayAt2,
+						}}
+						shoot.Status.LastHibernationTriggerTime = &metav1.Time{Time: timeWithOffset(weekDayAt2, 0)()}
+					},
+					triggerDeadlineDuration:     noDeadLine,
+					triggerHibernationOrWakeup:  true,
+					expectedHibernationEnabled:  true,
+					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
+				}),
+				Entry("when shoot has been hibernated or woken up previously and reconciliation is executed before hibernation start time", testEntry{
+					timeNow: timeWithOffset(weekDayAt7, -1*time.Second),
+					shootSettings: func(shoot *gardencorev1beta1.Shoot) {
+						shoot.CreationTimestamp = metav1.Time{Time: timeWithOffset(weekDayAt7, -24*time.Hour)()}
+						shoot.Spec.Hibernation.Schedules = []gardencorev1beta1.HibernationSchedule{{
+							Start: &everyDayAt7,
+							End:   &everyDayAt2,
+						}}
+						shoot.Status.LastHibernationTriggerTime = &metav1.Time{Time: timeWithOffset(weekDayAt2, 0)()}
+					},
+					triggerDeadlineDuration:     noDeadLine,
+					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt7, "UTC"),
+				}),
+				Entry("when shoot was not hibernated and current reconciliation is within the hibernation deadline", testEntry{
+					timeNow: timeWithOffset(weekDayAt7, 1*time.Second),
+					shootSettings: func(shoot *gardencorev1beta1.Shoot) {
+						shoot.CreationTimestamp = metav1.Time{Time: timeWithOffset(weekDayAt7, -24*time.Hour)()}
+						shoot.Spec.Hibernation.Schedules = []gardencorev1beta1.HibernationSchedule{{
+							Start: &everyDayAt7,
+							End:   &everyDayAt2,
+						}}
+					},
+					triggerDeadlineDuration:     longDeadline,
+					triggerHibernationOrWakeup:  true,
+					expectedHibernationEnabled:  true,
+					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
+				}),
+				Entry("when shoot was previously hibernated and current reconciliation is within the hibernation deadline", testEntry{
+					timeNow: timeWithOffset(weekDayAt7, 1*time.Second),
+					shootSettings: func(shoot *gardencorev1beta1.Shoot) {
+						shoot.CreationTimestamp = metav1.Time{Time: timeWithOffset(weekDayAt7, -24*time.Hour)()}
+						shoot.Spec.Hibernation.Schedules = []gardencorev1beta1.HibernationSchedule{{
+							Start: &everyDayAt7,
+							End:   &everyDayAt2,
+						}}
+						shoot.Status.LastHibernationTriggerTime = &metav1.Time{Time: timeWithOffset(weekDayAt2, 0)()}
+					},
+					triggerDeadlineDuration:     longDeadline,
+					triggerHibernationOrWakeup:  true,
+					expectedHibernationEnabled:  true,
+					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
+				}),
+				Entry("when shoot was not previously hibernated and current reconciliation is outside hibernation deadline", testEntry{
+					timeNow: timeWithOffset(weekDayAt7, shortDeadline+1*time.Second),
+					shootSettings: func(shoot *gardencorev1beta1.Shoot) {
+						shoot.CreationTimestamp = metav1.Time{Time: timeWithOffset(weekDayAt7, -24*time.Hour)()}
+						shoot.Spec.Hibernation.Schedules = []gardencorev1beta1.HibernationSchedule{{
+							Start: &everyDayAt7,
+							End:   &everyDayAt2,
+						}}
+					},
+					triggerDeadlineDuration:     shortDeadline,
+					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
+				}),
+				Entry("when shoot was previously hibernated and current reconciliation is outside hibernation deadline", testEntry{
+					timeNow: timeWithOffset(weekDayAt7, shortDeadline+1*time.Second),
+					shootSettings: func(shoot *gardencorev1beta1.Shoot) {
+						shoot.CreationTimestamp = metav1.Time{Time: timeWithOffset(weekDayAt7, -24*time.Hour)()}
+						shoot.Spec.Hibernation.Schedules = []gardencorev1beta1.HibernationSchedule{{
+							Start: &everyDayAt7,
+							End:   &everyDayAt2,
+						}}
+						shoot.Status.LastHibernationTriggerTime = &metav1.Time{Time: timeWithOffset(weekDayAt2, 0)()}
+					},
+					triggerDeadlineDuration:     shortDeadline,
+					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
+				}),
+				Entry("when shoot is in failed state", testEntry{
+					timeNow: timeWithOffset(weekDayAt7, shortDeadline+1*time.Second),
+					shootSettings: func(shoot *gardencorev1beta1.Shoot) {
+						shoot.CreationTimestamp = metav1.Time{Time: timeWithOffset(weekDayAt7, 1*time.Second)()}
+						shoot.Spec.Hibernation.Schedules = []gardencorev1beta1.HibernationSchedule{
+							{
+								Start: &everyDayAt7,
+								End:   &everyDayAt2,
+							},
+						}
+						shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateFailed}
+						shoot.Status.Gardener.Version = version.Get().GitVersion
+					},
+					triggerDeadlineDuration:     shortDeadline,
+					expectedRequeueDurationFunc: requeueAfterBasedOnSchedule(everyDayAt2, "UTC"),
+				}),
+			)
 		})
 	})
 })

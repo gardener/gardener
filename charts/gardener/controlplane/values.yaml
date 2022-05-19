@@ -398,7 +398,7 @@ global:
           syncPeriod: 60m
         shootHibernation:
           concurrentSyncs: 5
-          syncPeriod: 24h
+          triggerDeadlineDuration: 2h
         shootReference:
           concurrentSyncs: 5
         shootRetry:

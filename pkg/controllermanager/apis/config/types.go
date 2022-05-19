@@ -256,6 +256,9 @@ type ShootHibernationControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs *int
+	// TriggerDeadlineDuration is an optional deadline for triggering hibernation if scheduled
+	// time is missed for any reason (defaults to '2h').
+	TriggerDeadlineDuration *metav1.Duration
 }
 
 // ShootReferenceControllerConfiguration defines the configuration of the

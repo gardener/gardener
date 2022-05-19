@@ -4168,6 +4168,10 @@ func (in *ShootStatus) DeepCopyInto(out *ShootStatus) {
 		*out = new(ShootCredentials)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.LastHibernationTriggerTime != nil {
+		in, out := &in.LastHibernationTriggerTime, &out.LastHibernationTriggerTime
+		*out = (*in).DeepCopy()
+	}
 	return
 }
 
