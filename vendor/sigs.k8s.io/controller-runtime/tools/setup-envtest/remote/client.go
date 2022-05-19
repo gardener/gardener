@@ -8,6 +8,7 @@ import (
 	"crypto/md5" //nolint:gosec
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -160,7 +161,7 @@ func (c *Client) GetVersion(ctx context.Context, version versions.Concrete, plat
 		checksum := md5.New()        //nolint:gosec
 		for cont := true; cont; {
 			amt, err := resp.Body.Read(buf)
-			if err != nil && err != io.EOF {
+			if err != nil && !errors.Is(err, io.EOF) {
 				return fmt.Errorf("unable read next chunk of %s: %w", itemName, err)
 			}
 			if amt > 0 {
@@ -170,7 +171,7 @@ func (c *Client) GetVersion(ctx context.Context, version versions.Concrete, plat
 					return fmt.Errorf("unable write next chunk of %s: %w", itemName, err)
 				}
 			}
-			cont = amt > 0 && err != io.EOF
+			cont = amt > 0 && !errors.Is(err, io.EOF)
 		}
 
 		sum := base64.StdEncoding.EncodeToString(checksum.Sum(nil))

@@ -182,7 +182,7 @@ func (s *Store) Add(ctx context.Context, item Item, contents io.Reader) (resErr 
 			return err
 		}
 	}
-	if err != nil && err != io.EOF {
+	if err != nil && !errors.Is(err, io.EOF) {
 		return fmt.Errorf("unable to finish un-tar-ing the downloaded archive: %w", err)
 	}
 	log.V(1).Info("unpacked archive")
@@ -229,7 +229,7 @@ func (s *Store) Remove(ctx context.Context, matching Filter) ([]Item, error) {
 func (s *Store) Path(item Item) (string, error) {
 	path := s.unpackedPath(item.dirName())
 	// NB(directxman12): we need root's realpath because RealPath only
-	// looks at it's own path, and so thus doesn't prepend the underlying
+	// looks at its own path, and so thus doesn't prepend the underlying
 	// root's base path.
 	//
 	// Technically, if we're fed something that's double wrapped as root,
