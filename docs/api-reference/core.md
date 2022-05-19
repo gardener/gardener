@@ -8756,7 +8756,8 @@ Kubernetes core/v1.LocalObjectReference
 <em>(Optional)</em>
 <p>SigningKeySecret is a reference to a secret that contains an optional private key of the
 service account token issuer. The issuer will sign issued ID tokens with this private key.
-Only useful if service account tokens are also issued by another external system.</p>
+Only useful if service account tokens are also issued by another external system.
+Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.</p>
 </td>
 </tr>
 <tr>

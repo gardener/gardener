@@ -13,6 +13,7 @@ spec:
         acceptedIssuers:
         - foo1
         - foo2
+        # Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.
         signingKeySecretName:
           name: my-signing-key-secret
         extendTokenExpiration: true
@@ -40,6 +41,8 @@ Additionally, all [`ServiceAccount` token secrets](https://kubernetes.io/docs/co
 Apart from this you should wait for at least `12h` to make sure the control plane and system components receive a new token from Gardener.
 
 ## Signing Key Secret
+
+> 🚨 This field is deprecated and will be removed in a future version of Gardener. Do not use it.
 
 The `.spec.kubernetes.kubeAPIServer.serviceAccountConfig.signingKeySecretName.name` specifies the name of `Secret` in the same namespace as the `Shoot` in the garden cluster.
 It should look as follows:

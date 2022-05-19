@@ -181,8 +181,6 @@ spec:
   #     acceptedIssuers:
   #     - foo1
   #     - foo2
-  #     signingKeySecretName:
-  #       name: my-signing-key-secret
   #     extendTokenExpiration: true
   #     maxTokenExpiration: 45d
   # kubeControllerManager:
