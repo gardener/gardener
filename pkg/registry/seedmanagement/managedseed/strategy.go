@@ -89,6 +89,11 @@ func mustIncreaseGeneration(oldManagedSeed, newManagedSeed *seedmanagement.Manag
 		return true
 	}
 
+	// The operation annotation was added with value "renew-kubeconfig"
+	if kutil.HasMetaDataAnnotation(&newManagedSeed.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRenewKubeconfig) {
+		return true
+	}
+
 	return false
 }
 
