@@ -110,7 +110,7 @@ images:
 - name: blackbox-exporter
   sourceRepository: github.com/prometheus/blackbox_exporter
   repository: quay.io/prometheus/blackbox-exporter
-  tag: v0.18.0
+  tag: v0.20.0
 - name: metrics-server
   sourceRepository: github.com/kubernetes-sigs/metrics-server
   repository: k8s.gcr.io/metrics-server/metrics-server
