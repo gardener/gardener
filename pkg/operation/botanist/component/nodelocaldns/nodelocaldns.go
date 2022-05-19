@@ -55,8 +55,9 @@ const (
 	// portServer is the target port used for the DNS server.
 	portServer = 8053
 	// prometheus configuration for node-local-dns
-	prometheusPort   = 9253
-	prometheusScrape = true
+	prometheusPort      = 9253
+	prometheusScrape    = true
+	prometheusErrorPort = 9353
 
 	domain            = gardencorev1beta1.DefaultDomain
 	serviceName       = "kube-dns-upstream"
@@ -172,6 +173,10 @@ func (c *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
 					{
 						Min: prometheusPort,
 						Max: prometheusPort,
+					},
+					{
+						Min: prometheusErrorPort,
+						Max: prometheusErrorPort,
 					},
 				},
 				Privileged: true,
