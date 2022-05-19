@@ -1046,12 +1046,12 @@ var _ = Describe("Utils", func() {
 		var (
 			otherEnvDeployment = &seedmanagementv1alpha1.GardenletDeployment{
 				Env: []corev1.EnvVar{
-					corev1.EnvVar{Name: "TEST_VAR", Value: "TEST_VALUE"},
+					{Name: "TEST_VAR", Value: "TEST_VALUE"},
 				},
 			}
 			kubernetesServiceHostEnvDeployment = &seedmanagementv1alpha1.GardenletDeployment{
 				Env: []corev1.EnvVar{
-					corev1.EnvVar{Name: kubernetesServiceHost, Value: preserveDomain},
+					{Name: kubernetesServiceHost, Value: preserveDomain},
 				},
 			}
 
