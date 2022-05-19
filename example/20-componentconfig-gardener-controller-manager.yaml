@@ -82,5 +82,3 @@ server:
 debugging:
   enableProfiling: false
   enableContentionProfiling: false
-featureGates:
-  RotateSSHKeypairOnMaintenance: true
