@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -513,7 +514,10 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 		out = append(out, kutil.FeatureGatesToCommandLineParameter(k.values.FeatureGates))
 	}
 
-	out = append(out, "--insecure-port=0")
+	if version.ConstraintK8sLess124.Check(k.values.Version) {
+		out = append(out, "--insecure-port=0")
+	}
+
 	out = append(out, "--kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP")
 	out = append(out, fmt.Sprintf("--kubelet-client-certificate=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.DataKeyCertificate))
 	out = append(out, fmt.Sprintf("--kubelet-client-key=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.DataKeyPrivateKey))

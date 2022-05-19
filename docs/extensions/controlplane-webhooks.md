@@ -41,7 +41,7 @@ The `command` field of the `kube-apiserver` container **shall** contain the [kub
 * admission plugins (`--enable-admission-plugins`, `--disable-admission-plugins`)
 * secure communications (`--etcd-cafile`, `--etcd-certfile`, `--etcd-keyfile`, ...)
 * audit log (`--audit-log-*`)
-* ports (`--insecure-port`, `--secure-port`)
+* ports (`--secure-port`)
 
 The kube-apiserver command line **shall not** contain any provider-specific flags, such as:
 
