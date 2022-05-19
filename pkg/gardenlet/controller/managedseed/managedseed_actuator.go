@@ -719,9 +719,9 @@ func (a *actuator) prepareGardenClientConnectionWithBootstrap(
 		if err := kutil.DeleteSecretByReference(ctx, shootClient.Client(), gcc.KubeconfigSecret); err != nil {
 			return "", err
 		}
-		old := managedSeed.DeepCopy()
+		patch := client.MergeFrom(managedSeed.DeepCopy())
 		delete(managedSeed.Annotations, v1beta1constants.GardenerOperation)
-		if err := shootClient.Client().Patch(ctx, managedSeed, client.MergeFrom(old)); err != nil {
+		if err := shootClient.Client().Patch(ctx, managedSeed, patch); err != nil {
 			return "", err
 		}
 	} else {
