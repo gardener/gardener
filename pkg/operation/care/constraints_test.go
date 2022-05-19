@@ -218,6 +218,59 @@ var _ = Describe("#IsProblematicWebhook", func() {
 			))
 		}
 
+		namespacesTestTables = func(gvr schema.GroupVersionResource) {
+			var (
+				problematic = []TableEntry{
+					Entry("namespaceSelector matching purpose", webhookTestCase{
+						namespaceSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
+					}),
+					Entry("objectSelector matching purpose", webhookTestCase{
+						objectSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
+					}),
+				}
+				notProblematic = []TableEntry{
+					Entry("namespaceSelector not matching purpose", webhookTestCase{
+						namespaceSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{Key: "gardener.cloud/purpose", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
+							},
+						},
+					}),
+					Entry("not matching namespaceSelector", webhookTestCase{
+						namespaceSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"foo": "bar"}},
+					}),
+					Entry("objectSelector not matching purpose", webhookTestCase{
+						objectSelector: &metav1.LabelSelector{
+							MatchExpressions: []metav1.LabelSelectorRequirement{
+								{Key: "gardener.cloud/purpose", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
+							},
+						},
+					}),
+					Entry("not matching objectSelector", webhookTestCase{
+						objectSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"foo": "bar"}},
+					}),
+					Entry("matching objectSelector, not matching namespaceSelector", webhookTestCase{
+						objectSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
+						namespaceSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"foo": "bar"}},
+					}),
+					Entry("matching namespaceSelector, not matching objectSelector", webhookTestCase{
+						objectSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"foo": "bar"}},
+						namespaceSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
+					}),
+				}
+			)
+
+			commonTests(gvr, problematic, notProblematic)
+		}
+
 		kubeSystemNamespaceTables = func(gvr schema.GroupVersionResource) {
 			commonTests(gvr, kubeSystemNamespaceProblematic, kubeSystemNamespaceNotProblematic)
 		}
@@ -237,9 +290,8 @@ var _ = Describe("#IsProblematicWebhook", func() {
 	withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("services/status"))
 	withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("nodes"))
 	withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("nodes/status"))
-	withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("namespaces"))
-	withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("namespaces/status"))
-	withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("namespaces/finalize"))
+	namespacesTestTables(corev1.SchemeGroupVersion.WithResource("namespaces"))
+	namespacesTestTables(corev1.SchemeGroupVersion.WithResource("namespaces/status"))
 
 	kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("controllerrevisions"))
 	kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("daemonsets"))

@@ -77,10 +77,9 @@ var (
 		{GVR: corev1.SchemeGroupVersion.WithResource("nodes"), ClusterScoped: true},
 		{GVR: corev1.SchemeGroupVersion.WithResource("nodes"), ClusterScoped: true, Subresource: "status"},
 
-		// needed when cluster is migrating to a version which adds the "kube-node-lease" namespace
-		{GVR: corev1.SchemeGroupVersion.WithResource("namespaces"), ClusterScoped: true},
-		{GVR: corev1.SchemeGroupVersion.WithResource("namespaces"), ClusterScoped: true, Subresource: "status"},
-		{GVR: corev1.SchemeGroupVersion.WithResource("namespaces"), ClusterScoped: true, Subresource: "finalize"},
+		// needed for gardener-resource-manager to update "kube-system" namespace labels
+		{GVR: corev1.SchemeGroupVersion.WithResource("namespaces"), ClusterScoped: true, ObjectLabels: kubeSystemLabels, NamespaceLabels: kubeSystemLabels},
+		{GVR: corev1.SchemeGroupVersion.WithResource("namespaces"), ClusterScoped: true, ObjectLabels: kubeSystemLabels, NamespaceLabels: kubeSystemLabels, Subresource: "status"},
 
 		{GVR: appsv1.SchemeGroupVersion.WithResource("controllerrevisions"), NamespaceLabels: kubeSystemLabels},
 		{GVR: appsv1.SchemeGroupVersion.WithResource("daemonsets"), NamespaceLabels: kubeSystemLabels},
@@ -232,6 +231,11 @@ func (w *WebhookConstraintMatcher) Match(
 	rm := ruleMatcher{rule: r, gvr: w.GVR, subresource: w.Subresource}
 	if !w.ClusterScoped {
 		rm.namespace = "dummy"
+	}
+
+	// namespaceSelector can be used to select namespace objects (although the namespace is cluster-scoped resource)
+	if w.GVR == namespaceResource {
+		return matchObj && matchNS && rm.Matches()
 	}
 
 	return matchObj && (w.ClusterScoped || matchNS) && rm.Matches()
