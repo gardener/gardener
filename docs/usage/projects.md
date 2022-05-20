@@ -57,7 +57,7 @@ The list of members (again a list in `.spec.members[]` using the `rbac.authoriza
 Each project member must have at least one role (currently described in `.spec.members[].role`, additional roles can be added to `.spec.members[].roles[]`). The following roles exist:
 
 * `admin`: This allows to fully manage resources inside the project (e.g., secrets, shoots, configmaps, and similar).
-* `serviceaccountmanager`: This allows to fully manage service accounts inside the project namespace and request tokens for them. Please refer to [this document](./project-namespace-access.md).
+* `serviceaccountmanager`: This allows to fully manage service accounts inside the project namespace and request tokens for them. Please refer to [this document](./project_namespace_access.md).
 * `uam`: This allows to add/modify/remove human users or groups to/from the project member list. Technical users (service accounts) can be managed by all admins.
 * `viewer`: This allows to read all resources inside the project except secrets.
 * `owner`: This combines the `admin`, `uam` and `serviceaccountmanager` roles.
