@@ -39,7 +39,7 @@ curl -X POST https://api.gardener/api/v1/namespaces/project-abc/serviceaccounts/
       }'
 ```
 
-Mind that the returned token is not stored within the Kubernetes cluster, will be valid for `3600` seconds and will be invalidated if the "robot-user" `ServiceAccount` is deleted. Although `expirationSeconds` can be modified depending on the needs the returned token's validity will not exceed the configured `service-account-max-token-expiration` duration for that Kubernetes cluster. It is advised that the actual `expirationTimestamp` is verified so that expectations are met. This can be done by asserting the `expirationTimestamp` in the `TokenRequestStatus` or the `exp` claim in the token itself.
+Mind that the returned token is not stored within the Kubernetes cluster, will be valid for `3600` seconds and will be invalidated if the "robot-user" `ServiceAccount` is deleted. Although `expirationSeconds` can be modified depending on the needs, the returned token's validity will not exceed the configured `service-account-max-token-expiration` duration for the garden cluster. It is advised that the actual `expirationTimestamp` is verified so that expectations are met. This can be done by asserting the `expirationTimestamp` in the `TokenRequestStatus` or the `exp` claim in the token itself.
 
 ### Delete a Service Account
 In order to delete the `ServiceAccount` named "robot-user" run the following `kubectl` command:
