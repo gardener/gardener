@@ -201,6 +201,7 @@ type SeedSettings struct {
 	// Scheduling controls settings for scheduling decisions for the seed.
 	Scheduling *SeedSettingScheduling
 	// ShootDNS controls the shoot DNS settings for the seed.
+	// Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.
 	ShootDNS *SeedSettingShootDNS
 	// LoadBalancerServices controls certain settings for services of type load balancer that are created in the seed.
 	LoadBalancerServices *SeedSettingLoadBalancerServices

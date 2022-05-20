@@ -1938,6 +1938,7 @@ message SeedSettings {
   optional SeedSettingScheduling scheduling = 2;
 
   // ShootDNS controls the shoot DNS settings for the seed.
+  // Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.
   // +optional
   optional SeedSettingShootDNS shootDNS = 3;
 
