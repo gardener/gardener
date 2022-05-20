@@ -191,9 +191,9 @@ images:
   tag: "v1.2.0"
   targetVersion: ">= 1.22"
 - name: ingress-default-backend
-  sourceRepository: github.com/gardener/ingress-default-backend
-  repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
-  tag: "0.10.0"
+  sourceRepository: https://github.com/kubernetes/ingress-gce
+  repository: k8s.gcr.io/defaultbackend-amd64
+  tag: "1.5"
 
 # Miscellaenous
 - name: alpine

@@ -357,7 +357,7 @@ func (n *nginxIngress) computeResourcesData() (map[string][]byte, error) {
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
-										Path:   "/healthy",
+										Path:   "/healthz",
 										Port:   intstr.FromInt(int(containerPortBackend)),
 										Scheme: corev1.URISchemeHTTP,
 									},
