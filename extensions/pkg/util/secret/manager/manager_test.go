@@ -345,7 +345,7 @@ func createOldCASecrets(c client.Client, cluster *extensionscontroller.Cluster, 
 	for _, caConfig := range caConfigs {
 		secretData, err := caConfig.Config.Generate()
 		Expect(err).NotTo(HaveOccurred(), caConfig.Config.GetName())
-		secretMeta, err := secretsmanager.ObjectMeta(cluster.ObjectMeta.Name, testIdentity, caConfig.Config, false, "", nil, nil, nil, nil)
+		secretMeta, err := secretsmanager.ObjectMeta(cluster.ObjectMeta.Name, testIdentity, caConfig.Config, false, "", nil, nil, nil)
 		Expect(err).NotTo(HaveOccurred(), caConfig.Config.GetName())
 
 		dataMap := secretData.SecretData()

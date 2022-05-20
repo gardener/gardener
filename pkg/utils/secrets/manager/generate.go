@@ -49,18 +49,12 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 		bundleFor = pointer.String(strings.TrimSuffix(config.GetName(), nameSuffixBundle))
 	}
 
-	var validUntilTime *string
-	if options.Validity > 0 {
-		validUntilTime = pointer.String(unixTime(m.clock.Now().Add(options.Validity)))
-	}
-
 	objectMeta, err := ObjectMeta(
 		m.namespace,
 		m.identity,
 		config,
 		options.IgnoreConfigChecksumForCASecretName,
 		m.lastRotationInitiationTimes[config.GetName()],
-		validUntilTime,
 		options.signingCAChecksum,
 		&options.Persist,
 		bundleFor,
@@ -82,7 +76,7 @@ func (m *manager) Generate(ctx context.Context, config secretutils.ConfigInterfa
 		}
 	}
 
-	if err := m.maintainLifetimeLabels(config, secret, desiredLabels); err != nil {
+	if err := m.maintainLifetimeLabels(config, secret, desiredLabels, options.Validity); err != nil {
 		return nil, err
 	}
 
@@ -413,12 +407,41 @@ func (m *manager) generateBundleSecret(ctx context.Context, config secretutils.C
 	return m.addToStore(config.GetName(), secret, bundle)
 }
 
-func (m *manager) maintainLifetimeLabels(config secretutils.ConfigInterface, secret *corev1.Secret, desiredLabels map[string]string) error {
+func (m *manager) maintainLifetimeLabels(
+	config secretutils.ConfigInterface,
+	secret *corev1.Secret,
+	desiredLabels map[string]string,
+	validity time.Duration,
+) error {
 	issuedAt := secret.Labels[LabelKeyIssuedAtTime]
 	if issuedAt == "" {
 		issuedAt = unixTime(m.clock.Now())
 	}
 	desiredLabels[LabelKeyIssuedAtTime] = issuedAt
+
+	if validity > 0 {
+		desiredLabels[LabelKeyValidUntilTime] = unixTime(m.clock.Now().Add(validity))
+
+		// Handle changed validity values in case there already is a valid-until-time label from previous Generate
+		// invocations.
+		if secret.Labels[LabelKeyValidUntilTime] != "" {
+			issuedAtTime, err := strconv.ParseInt(issuedAt, 10, 64)
+			if err != nil {
+				return err
+			}
+
+			existingValidUntilTime, err := strconv.ParseInt(secret.Labels[LabelKeyValidUntilTime], 10, 64)
+			if err != nil {
+				return err
+			}
+
+			if oldValidity := time.Duration(existingValidUntilTime - issuedAtTime); oldValidity != validity {
+				desiredLabels[LabelKeyValidUntilTime] = unixTime(time.Unix(issuedAtTime, 0).UTC().Add(validity))
+				// If this has yielded a valid-until-time which is in the past then the next instantiation of the
+				// secrets manager will regenerate the secret since it has expired.
+			}
+		}
+	}
 
 	var dataKeyCertificate string
 	switch cfg := config.(type) {
@@ -456,9 +479,18 @@ func (m *manager) reconcileSecret(ctx context.Context, secret *corev1.Secret, la
 		mustPatch = true
 	}
 
+	// Check if desired labels must be added or changed.
 	for k, desired := range labels {
 		if current, ok := secret.Labels[k]; !ok || current != desired {
 			metav1.SetMetaDataLabel(&secret.ObjectMeta, k, desired)
+			mustPatch = true
+		}
+	}
+
+	// Check if existing labels must be removed
+	for k := range secret.Labels {
+		if _, ok := labels[k]; !ok {
+			delete(secret.Labels, k)
 			mustPatch = true
 		}
 	}

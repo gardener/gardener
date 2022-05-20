@@ -303,7 +303,7 @@ var _ = Describe("Manager", func() {
 			func(ignoreChecksum bool, expectedName string, lastRotationInitiationTime string) {
 				config := &secretutils.CertificateSecretConfig{Name: configName}
 
-				meta, err := ObjectMeta(namespace, "test", config, ignoreChecksum, lastRotationInitiationTime, nil, nil, nil, nil)
+				meta, err := ObjectMeta(namespace, "test", config, ignoreChecksum, lastRotationInitiationTime, nil, nil, nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(meta).To(Equal(metav1.ObjectMeta{
@@ -326,13 +326,13 @@ var _ = Describe("Manager", func() {
 		)
 
 		DescribeTable("check different label options",
-			func(nameInfix string, signingCAChecksum *string, validUntilTime *string, persist *bool, bundleFor *string, extraLabels map[string]string) {
+			func(nameInfix string, signingCAChecksum *string, persist *bool, bundleFor *string, extraLabels map[string]string) {
 				config := &secretutils.CertificateSecretConfig{
 					Name:      configName,
 					SigningCA: &secretutils.Certificate{},
 				}
 
-				meta, err := ObjectMeta(namespace, "test", config, false, lastRotationInitiationTime, validUntilTime, signingCAChecksum, persist, bundleFor)
+				meta, err := ObjectMeta(namespace, "test", config, false, lastRotationInitiationTime, signingCAChecksum, persist, bundleFor)
 				Expect(err).NotTo(HaveOccurred())
 
 				labels := map[string]string{
@@ -350,11 +350,10 @@ var _ = Describe("Manager", func() {
 				}))
 			},
 
-			Entry("no extras", "a9c2fcb9", nil, nil, nil, nil, nil),
-			Entry("with signing ca checksum", "a11a0b2d", pointer.String("checksum"), nil, nil, nil, map[string]string{"checksum-of-signing-ca": "checksum"}),
-			Entry("with valid until time", "a9c2fcb9", nil, pointer.String("validuntil"), nil, nil, map[string]string{"valid-until-time": "validuntil"}),
-			Entry("with persist", "a9c2fcb9", nil, nil, pointer.Bool(true), nil, map[string]string{"persist": "true"}),
-			Entry("with bundleFor", "a9c2fcb9", nil, nil, nil, pointer.String("bundle-origin"), map[string]string{"bundle-for": "bundle-origin"}),
+			Entry("no extras", "a9c2fcb9", nil, nil, nil, nil),
+			Entry("with signing ca checksum", "a11a0b2d", pointer.String("checksum"), nil, nil, map[string]string{"checksum-of-signing-ca": "checksum"}),
+			Entry("with persist", "a9c2fcb9", nil, pointer.Bool(true), nil, map[string]string{"persist": "true"}),
+			Entry("with bundleFor", "a9c2fcb9", nil, nil, pointer.String("bundle-origin"), map[string]string{"bundle-for": "bundle-origin"}),
 		)
 	})
 
