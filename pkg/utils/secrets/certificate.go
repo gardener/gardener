@@ -26,8 +26,6 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/utils"
-
-	"k8s.io/apimachinery/pkg/util/clock"
 )
 
 // CertType is a string alias for certificate types.
@@ -76,8 +74,6 @@ type CertificateSecretConfig struct {
 
 	Validity                    *time.Duration
 	SkipPublishingCACertificate bool
-
-	Clock clock.Clock
 }
 
 // Certificate contains the private key, and the certificate. It does also contain the CA certificate
@@ -207,12 +203,8 @@ func LoadCertificate(name string, privateKeyPEM, certificatePEM []byte) (*Certif
 // or both, depending on the <certType> value. If <isCACert> is true, then a CA certificate is being created.
 // The certificates a valid for 10 years.
 func (s *CertificateSecretConfig) generateCertificateTemplate() *x509.Certificate {
-	clock := Clock
-	if s.Clock != nil {
-		clock = s.Clock
-	}
+	now := Clock.Now()
 
-	now := clock.Now()
 	expiration := now.AddDate(10, 0, 0) // + 10 years
 	if s.Validity != nil {
 		expiration = now.Add(*s.Validity)

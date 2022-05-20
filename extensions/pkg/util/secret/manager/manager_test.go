@@ -20,15 +20,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-logr/logr"
-	. "github.com/onsi/gomega/gstruct"
-	gomegatypes "github.com/onsi/gomega/types"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/clock"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -36,8 +27,16 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/test"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/clock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = BeforeSuite(func() {
@@ -70,7 +69,10 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 		fakeClient = fakeclient.NewClientBuilder().Build()
 
 		deterministicReader := strings.NewReader(strings.Repeat("-", 10000))
-		DeferCleanup(test.WithVar(&rand.Reader, deterministicReader))
+		DeferCleanup(test.WithVars(
+			&rand.Reader, deterministicReader,
+			&secretutils.Clock, fakeClock,
+		))
 
 		caConfigs = []SecretConfigWithOptions{
 			{
@@ -78,7 +80,6 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 					Name:       "my-extension-ca",
 					CommonName: "my-extension",
 					CertType:   secretutils.CACert,
-					Clock:      fakeClock,
 				},
 				Options: []secretsmanager.GenerateOption{secretsmanager.Persist()},
 			},
@@ -87,7 +88,6 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 					Name:       "my-extension-ca-2",
 					CommonName: "my-extension-2",
 					CertType:   secretutils.CACert,
-					Clock:      fakeClock,
 				},
 			},
 		}
@@ -97,7 +97,6 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 				Name:       "some-server",
 				CommonName: "some-server",
 				CertType:   secretutils.ServerCert,
-				Clock:      fakeClock,
 			},
 			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA("my-extension-ca"), secretsmanager.Persist()},
 		}
@@ -161,7 +160,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 				Expect(sm.Cleanup(ctx)).To(Succeed())
 
 				expectSecretsForConfig(fakeClient, caConfigs[0].Config, "CA should not get rotated",
-					"my-extension-ca-42e0ee8a")
+					"my-extension-ca-013c464d")
 			})
 		})
 
@@ -186,7 +185,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 				Expect(sm.Cleanup(ctx)).To(Succeed())
 
 				expectSecretsForConfig(fakeClient, caConfigs[0].Config, "CA should get rotated",
-					"my-extension-ca-42e0ee8a", "my-extension-ca-42e0ee8a-431ab",
+					"my-extension-ca-013c464d", "my-extension-ca-013c464d-431ab",
 				)
 			})
 		})
@@ -212,7 +211,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 				Expect(sm.Cleanup(ctx)).To(Succeed())
 
 				expectSecretsForConfig(fakeClient, caConfigs[0].Config, "old CA secret should get cleaned up",
-					"my-extension-ca-42e0ee8a-431ab")
+					"my-extension-ca-013c464d-431ab")
 			})
 		})
 	})
@@ -252,9 +251,9 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 				Expect(sm.Cleanup(ctx)).To(Succeed())
 
 				expectSecrets(fakeClient,
-					"my-extension-ca-42e0ee8a", "my-extension-ca-bundle-b8ddbc7f",
-					"my-extension-ca-2-5aab76c0", "my-extension-ca-2-bundle-62b9412d",
-					"some-server-4b592699", "some-secret-2583adfe")
+					"my-extension-ca-013c464d", "my-extension-ca-bundle-d563c0b7",
+					"my-extension-ca-2-673cf9ab", "my-extension-ca-2-bundle-086fe2a7",
+					"some-server-7388feb3", "some-secret-2583adfe")
 			})
 		})
 
@@ -276,9 +275,9 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 					Expect(sm.Cleanup(ctx)).To(Succeed())
 
 					expectSecrets(fakeClient,
-						"my-extension-ca-42e0ee8a", "my-extension-ca-bundle-7c9e4d64",
-						"my-extension-ca-2-5aab76c0", "my-extension-ca-2-bundle-97af5249",
-						"some-server-ec17c27a", "some-secret-2583adfe")
+						"my-extension-ca-013c464d", "my-extension-ca-bundle-7c9e4d64",
+						"my-extension-ca-2-673cf9ab", "my-extension-ca-2-bundle-97af5249",
+						"some-server-70ec0461", "some-secret-2583adfe")
 				})
 			})
 
@@ -301,9 +300,9 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 					Expect(sm.Cleanup(ctx)).To(Succeed())
 
 					expectSecrets(fakeClient,
-						"my-extension-ca-42e0ee8a", "my-extension-ca-42e0ee8a-431ab", "my-extension-ca-bundle-13e1abd9",
-						"my-extension-ca-2-5aab76c0", "my-extension-ca-2-5aab76c0-431ab", "my-extension-ca-2-bundle-77d9e734",
-						"some-server-ec17c27a", "some-secret-2583adfe")
+						"my-extension-ca-013c464d", "my-extension-ca-013c464d-431ab", "my-extension-ca-bundle-e595315e",
+						"my-extension-ca-2-673cf9ab", "my-extension-ca-2-673cf9ab-431ab", "my-extension-ca-2-bundle-fb324296",
+						"some-server-70ec0461", "some-secret-2583adfe")
 				})
 			})
 
@@ -326,9 +325,9 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 					Expect(sm.Cleanup(ctx)).To(Succeed())
 
 					expectSecrets(fakeClient,
-						"my-extension-ca-42e0ee8a-431ab", "my-extension-ca-bundle-d0aec49c",
-						"my-extension-ca-2-5aab76c0-431ab", "my-extension-ca-2-bundle-c3d8dbb5",
-						"some-server-d521ae63", "some-secret-2583adfe")
+						"my-extension-ca-013c464d-431ab", "my-extension-ca-bundle-0efe4bf3",
+						"my-extension-ca-2-673cf9ab-431ab", "my-extension-ca-2-bundle-11a56f33",
+						"some-server-bbe4c0f9", "some-secret-2583adfe")
 				})
 			})
 		})

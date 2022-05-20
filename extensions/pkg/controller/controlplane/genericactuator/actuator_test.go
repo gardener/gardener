@@ -238,17 +238,17 @@ var _ = Describe("Actuator", func() {
 		checksums = map[string]string{
 			v1beta1constants.SecretNameCloudProvider: "8bafb35ff1ac60275d62e1cbd495aceb511fb354f74a20f7d06ecb48b3a68432",
 			cloudProviderConfigName:                  "08a7bc7fe8f59b055f173145e211760a83f02cf89635cef26ebb351378635606",
-			caNameControlPlane:                       "5debc1c84fcd7cb944bad4b7d55ded0ff8e9a0443f479d1bfd057a0c7daf3603",
-			"cloud-controller-manager":               "e0d91e909e7d1a144ea4f31c1347286e30c968a9906d76c4667d93bc35c0e34e",
+			caNameControlPlane:                       "7c7f437f14009f27cd74756cebb86555d35cc45bf92f85fe2285f5a4190f7b58",
+			"cloud-controller-manager":               "70e8dfa39f8feedcc3ed93c35499f94f851d3304ed1919e9a8c73ef8213728dd",
 		}
 		checksumsNoConfig = map[string]string{
 			v1beta1constants.SecretNameCloudProvider: "8bafb35ff1ac60275d62e1cbd495aceb511fb354f74a20f7d06ecb48b3a68432",
-			caNameControlPlane:                       "5debc1c84fcd7cb944bad4b7d55ded0ff8e9a0443f479d1bfd057a0c7daf3603",
-			"cloud-controller-manager":               "e0d91e909e7d1a144ea4f31c1347286e30c968a9906d76c4667d93bc35c0e34e",
+			caNameControlPlane:                       "7c7f437f14009f27cd74756cebb86555d35cc45bf92f85fe2285f5a4190f7b58",
+			"cloud-controller-manager":               "70e8dfa39f8feedcc3ed93c35499f94f851d3304ed1919e9a8c73ef8213728dd",
 		}
 		exposureChecksums = map[string]string{
-			caNameControlPlaneExposure: "8dc6feaf701d4b9fb7ecf314085a9bbb84d61fb6858d993d92d0a75deee571d1",
-			"lb-readvertiser":          "c2411522ce7468cb728995069e48a52ac7f4ffeb912ff21ca7ea730eeda03d63",
+			caNameControlPlaneExposure: "dc1f6bc41dedab9e06650fa5a19e677a8ea1f47d6667d066c33601ab2e85ff36",
+			"lb-readvertiser":          "d640460979ef9e3ff08ffeff15486a0c8ed6222be4c4f9ce1e10a7dd62b967a6",
 		}
 
 		configChartValues = map[string]interface{}{
@@ -291,8 +291,12 @@ var _ = Describe("Actuator", func() {
 		}
 
 		deterministicReader := strings.NewReader(strings.Repeat("-", 10000))
-		DeferCleanup(test.WithVar(&rand.Reader, deterministicReader))
 		fakeClock = clock.NewFakeClock(time.Unix(1649848746, 0))
+
+		DeferCleanup(test.WithVars(
+			&rand.Reader, deterministicReader,
+			&secretutils.Clock, fakeClock,
+		))
 
 		cp = &extensionsv1alpha1.ControlPlane{
 			ObjectMeta: metav1.ObjectMeta{Name: "control-plane", Namespace: namespace},
@@ -444,8 +448,8 @@ webhooks:
 			Expect(err).NotTo(HaveOccurred())
 
 			expectSecretsManagedBySecretsManager(fakeClient, "wanted secrets should get created",
-				"ca-provider-test-controlplane-b01ab5b3", "ca-provider-test-controlplane-bundle-275a8b6e",
-				"cloud-controller-manager-1329cb64",
+				"ca-provider-test-controlplane-05334c48", "ca-provider-test-controlplane-bundle-4e0a1191",
+				"cloud-controller-manager-bd8ec11d",
 			)
 		},
 		Entry("should deploy secrets and apply charts with correct parameters", cloudProviderConfigName, checksums, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, true),
@@ -569,8 +573,8 @@ webhooks:
 			Expect(err).NotTo(HaveOccurred())
 
 			expectSecretsManagedBySecretsManager(fakeClient, "wanted secrets should get created",
-				"ca-provider-test-controlplane-exposure-708d12fb", "ca-provider-test-controlplane-exposure-bundle-c830ff02",
-				"lb-readvertiser-eb3483ee",
+				"ca-provider-test-controlplane-exposure-3dcf5fed", "ca-provider-test-controlplane-exposure-bundle-3b7e0d50",
+				"lb-readvertiser-335cd873",
 			)
 		},
 		Entry("should deploy secrets and apply charts with correct parameters"),
@@ -800,7 +804,6 @@ func getSecretsConfigs(namespace string) []extensionssecretsmanager.SecretConfig
 				Name:       caNameControlPlane,
 				CommonName: caNameControlPlane,
 				CertType:   secretutils.CACert,
-				Clock:      fakeClock,
 			},
 			Options: []secretsmanager.GenerateOption{secretsmanager.Persist()},
 		},
@@ -810,7 +813,6 @@ func getSecretsConfigs(namespace string) []extensionssecretsmanager.SecretConfig
 				CommonName: "cloud-controller-manager",
 				DNSNames:   kutil.DNSNamesForService("cloud-controller-manager", namespace),
 				CertType:   secretutils.ServerCert,
-				Clock:      fakeClock,
 			},
 			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlane)},
 		},
@@ -824,7 +826,6 @@ func getSecretsConfigsExposure(namespace string) []extensionssecretsmanager.Secr
 				Name:       caNameControlPlaneExposure,
 				CommonName: caNameControlPlaneExposure,
 				CertType:   secretutils.CACert,
-				Clock:      fakeClock,
 			},
 			Options: []secretsmanager.GenerateOption{secretsmanager.Persist()},
 		},
@@ -834,7 +835,6 @@ func getSecretsConfigsExposure(namespace string) []extensionssecretsmanager.Secr
 				CommonName: "lb-readvertiser",
 				DNSNames:   kutil.DNSNamesForService("lb-readvertiser", namespace),
 				CertType:   secretutils.ServerCert,
-				Clock:      fakeClock,
 			},
 			Options: []secretsmanager.GenerateOption{secretsmanager.SignedByCA(caNameControlPlaneExposure)},
 		},
