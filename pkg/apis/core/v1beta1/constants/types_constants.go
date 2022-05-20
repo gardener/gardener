@@ -309,6 +309,12 @@ const (
 	// for the observability stack secret shall be rotated. Note that this only affects the user credentials
 	// since the operator credentials are rotated automatically each `30d`.
 	ShootOperationRotateObservabilityCredentials = "rotate-observability-credentials"
+	// ShootOperationRotateServiceAccountKeyStart is a constant for an annotation on a Shoot indicating that the
+	// rotation of the service account signing key shall be started.
+	ShootOperationRotateServiceAccountKeyStart = "rotate-serviceaccount-key-start"
+	// ShootOperationRotateServiceAccountKeyComplete is a constant for an annotation on a Shoot indicating that the
+	// rotation of the service account signing key shall be completed.
+	ShootOperationRotateServiceAccountKeyComplete = "rotate-serviceaccount-key-complete"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.

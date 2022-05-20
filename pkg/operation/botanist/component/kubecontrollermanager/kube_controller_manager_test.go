@@ -23,6 +23,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
@@ -30,6 +32,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
@@ -62,6 +65,7 @@ var _ = Describe("KubeControllerManager", func() {
 		ctrl                  *gomock.Controller
 		c                     *mockclient.MockClient
 		fakeClient            client.Client
+		fakeInterface         kubernetes.Interface
 		sm                    secretsmanager.Interface
 		kubeControllerManager Interface
 
@@ -107,6 +111,7 @@ var _ = Describe("KubeControllerManager", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
+		fakeInterface = fakekubernetes.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 		sm = fakesecretsmanager.New(fakeClient, namespace)
 	})
@@ -120,7 +125,7 @@ var _ = Describe("KubeControllerManager", func() {
 			BeforeEach(func() {
 				kubeControllerManager = New(
 					testLogger,
-					c,
+					fakeInterface,
 					namespace,
 					sm,
 					semverVersion,
@@ -525,7 +530,7 @@ var _ = Describe("KubeControllerManager", func() {
 											Name: "service-account-key",
 											VolumeSource: corev1.VolumeSource{
 												Secret: &corev1.SecretVolumeSource{
-													SecretName: "service-account-key",
+													SecretName: "service-account-key-current",
 												},
 											},
 										},
@@ -611,7 +616,7 @@ subjects:
 
 					kubeControllerManager = New(
 						testLogger,
-						c,
+						fakeInterface,
 						namespace,
 						sm,
 						semverVersion,
@@ -748,7 +753,72 @@ subjects:
 	})
 
 	Describe("#Wait", func() {
-		It("should return nil as it's not implemented as of now", func() {
+		var (
+			deployment *appsv1.Deployment
+			labels     = map[string]string{"role": "kcm"}
+		)
+
+		BeforeEach(func() {
+			deployment = &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "kube-controller-manager",
+					Namespace: namespace,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: pointer.Int32(1),
+					Selector: &metav1.LabelSelector{MatchLabels: labels},
+				},
+			}
+		})
+
+		It("should successfully wait for the deployment to be updated", func() {
+			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			fakeKubernetesInterface := fakekubernetes.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
+
+			kubeControllerManager = New(
+				nil,
+				fakeKubernetesInterface,
+				namespace,
+				nil,
+				nil,
+				"",
+				nil,
+				nil,
+				nil,
+				nil,
+			)
+
+			deploy := deployment.DeepCopy()
+
+			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
+			defer test.WithVars(&TimeoutWaitForDeployment, 100*time.Millisecond)()
+
+			Expect(fakeClient.Create(ctx, deploy)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(Succeed())
+
+			Expect(fakeClient.Create(ctx, &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "pod",
+					Namespace: deployment.Namespace,
+					Labels:    labels,
+				},
+			})).To(Succeed())
+
+			timer := time.AfterFunc(10*time.Millisecond, func() {
+				deploy.Generation = 24
+				deploy.Spec.Replicas = pointer.Int32(1)
+				deploy.Status.Conditions = []appsv1.DeploymentCondition{
+					{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
+					{Type: appsv1.DeploymentAvailable, Status: "True"},
+				}
+				deploy.Status.ObservedGeneration = deploy.Generation
+				deploy.Status.Replicas = *deploy.Spec.Replicas
+				deploy.Status.UpdatedReplicas = *deploy.Spec.Replicas
+				deploy.Status.AvailableReplicas = *deploy.Spec.Replicas
+				Expect(fakeClient.Update(ctx, deploy)).To(Succeed())
+			})
+			defer timer.Stop()
+
 			Expect(kubeControllerManager.Wait(ctx)).To(Succeed())
 		})
 	})

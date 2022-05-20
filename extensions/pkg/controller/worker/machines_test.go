@@ -81,10 +81,11 @@ var _ = Describe("Machines", func() {
 
 	Describe("#WorkerPoolHash", func() {
 		var (
-			p                      extensionsv1alpha1.WorkerPool
-			c                      *extensionscontroller.Cluster
-			hash                   string
-			lastRotationInitiation = metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
+			p                           extensionsv1alpha1.WorkerPool
+			c                           *extensionscontroller.Cluster
+			hash                        string
+			lastCARotationInitiation    = metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
+			lastSAKeyRotationInitiation = metav1.Time{Time: time.Date(1, 1, 2, 0, 0, 0, 0, time.UTC)}
 		)
 
 		BeforeEach(func() {
@@ -115,7 +116,10 @@ var _ = Describe("Machines", func() {
 						Credentials: &gardencorev1beta1.ShootCredentials{
 							Rotation: &gardencorev1beta1.ShootCredentialsRotation{
 								CertificateAuthorities: &gardencorev1beta1.ShootCARotation{
-									LastInitiationTime: &lastRotationInitiation,
+									LastInitiationTime: &lastCARotationInitiation,
+								},
+								ServiceAccountKey: &gardencorev1beta1.ShootServiceAccountKeyRotation{
+									LastInitiationTime: &lastSAKeyRotationInitiation,
 								},
 							},
 						},
@@ -235,18 +239,33 @@ var _ = Describe("Machines", func() {
 			})
 
 			It("when a shoot CA rotation is triggered", func() {
-				newRotationTime := metav1.Time{Time: lastRotationInitiation.Add(time.Hour)}
+				newRotationTime := metav1.Time{Time: lastCARotationInitiation.Add(time.Hour)}
 				c.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime = &newRotationTime
 			})
 
 			It("when a shoot CA rotation is triggered for the first time (lastInitiationTime was nil)", func() {
 				var err error
-				credentialStatusWithInitiatedRotation := c.Shoot.Status.Credentials.DeepCopy()
-				c.Shoot.Status.Credentials = nil
+				credentialStatusWithInitiatedRotation := c.Shoot.Status.Credentials.Rotation.CertificateAuthorities.DeepCopy()
+				c.Shoot.Status.Credentials.Rotation.CertificateAuthorities = nil
 				hash, err = WorkerPoolHash(p, c)
 				Expect(err).ToNot(HaveOccurred())
 
-				c.Shoot.Status.Credentials = credentialStatusWithInitiatedRotation
+				c.Shoot.Status.Credentials.Rotation.CertificateAuthorities = credentialStatusWithInitiatedRotation
+			})
+
+			It("when a shoot service account key rotation is triggered", func() {
+				newRotationTime := metav1.Time{Time: lastSAKeyRotationInitiation.Add(time.Hour)}
+				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime = &newRotationTime
+			})
+
+			It("when a shoot service account key rotation is triggered for the first time (lastInitiationTime was nil)", func() {
+				var err error
+				credentialStatusWithInitiatedRotation := c.Shoot.Status.Credentials.Rotation.ServiceAccountKey.DeepCopy()
+				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey = nil
+				hash, err = WorkerPoolHash(p, c)
+				Expect(err).ToNot(HaveOccurred())
+
+				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey = credentialStatusWithInitiatedRotation
 			})
 		})
 	})

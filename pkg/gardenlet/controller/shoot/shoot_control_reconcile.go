@@ -321,7 +321,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
-			Name:         "Waiting until Kubernetes API server reports readiness",
+			Name:         "Waiting until Kubernetes API server rolled out",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServer.Wait).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
@@ -334,6 +334,13 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Name:         "Waiting until gardener-resource-manager reports readiness",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.ResourceManager.Wait).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Renewing shoot access secrets after creation of new ServiceAccount signing key",
+			Fn: flow.TaskFn(botanist.RenewShootAccessSecrets).
+				RetryUntilTimeout(defaultInterval, defaultTimeout).
+				DoIf(gardencorev1beta1helper.GetShootServiceAccountKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilGardenerResourceManagerReady),
 		})
 		deploySeedLogging = g.Add(flow.Task{
 			Name:         "Deploying shoot logging stack in Seed",
@@ -399,6 +406,26 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Name:         "Deploying Kubernetes controller manager",
 			Fn:           flow.TaskFn(botanist.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, waitUntilKubeAPIServerIsReady),
+		})
+		waitUntilKubeControllerManagerReady = g.Add(flow.Task{
+			Name: "Waiting until kube-controller-manager reports readiness",
+			Fn: flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeControllerManager.Wait).
+				DoIf(gardencorev1beta1helper.GetShootServiceAccountKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing),
+			Dependencies: flow.NewTaskIDs(deployKubeControllerManager),
+		})
+		createNewServiceAccountSecrets = g.Add(flow.Task{
+			Name: "Creating new ServiceAccount secrets after creation of new signing key",
+			Fn: flow.TaskFn(botanist.CreateNewServiceAccountSecrets).
+				RetryUntilTimeout(30*time.Second, 10*time.Minute).
+				DoIf(gardencorev1beta1helper.GetShootServiceAccountKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilKubeControllerManagerReady),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deleting old ServiceAccount secrets after rotation of signing key",
+			Fn: flow.TaskFn(botanist.DeleteOldServiceAccountSecrets).
+				RetryUntilTimeout(30*time.Second, 10*time.Minute).
+				DoIf(gardencorev1beta1helper.GetShootServiceAccountKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationCompleting),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilKubeControllerManagerReady),
 		})
 		deployOperatingSystemConfig = g.Add(flow.Task{
 			Name:         "Deploying operating system specific configuration for shoot workers",
@@ -501,7 +528,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		deployWorker = g.Add(flow.Task{
 			Name:         "Configuring shoot worker pools",
 			Fn:           flow.TaskFn(botanist.DeployWorker).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, deployReferencedResources, waitUntilInfrastructureReady, initializeShootClients, waitUntilOperatingSystemConfigReady, waitUntilNetworkIsReady),
+			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, deployReferencedResources, waitUntilInfrastructureReady, initializeShootClients, waitUntilOperatingSystemConfigReady, waitUntilNetworkIsReady, createNewServiceAccountSecrets),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Reconciling Grafana for Shoot in Seed for the logging stack",
@@ -676,14 +703,13 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 	}
 
 	o.Logger.Info("Cleaning no longer required secrets")
-	err = flow.Sequential(
+	if err := flow.Sequential(
+		// TODO(rfranzke): Remove this function in a future release.
 		func(ctx context.Context) error {
-			// TODO(rfranzke): Remove in a future release.
 			return kutil.DeleteObject(ctx, botanist.K8sSeedClient.Client(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client-tls", Namespace: botanist.Shoot.SeedNamespace}})
 		},
 		botanist.SecretsManager.Cleanup,
-	)(ctx)
-	if err != nil {
+	)(ctx); err != nil {
 		err = fmt.Errorf("failed to clean no longer required secrets: %w", err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), err)
 	}

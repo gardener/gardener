@@ -363,10 +363,17 @@ func ShootWantsVerticalPodAutoscaler(shoot *core.Shoot) bool {
 
 // GetShootCARotationPhase returns the specified shoot CA rotation phase or an empty string
 func GetShootCARotationPhase(credentials *core.ShootCredentials) core.ShootCredentialsRotationPhase {
-	if credentials != nil &&
-		credentials.Rotation != nil &&
-		credentials.Rotation.CertificateAuthorities != nil {
+	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.CertificateAuthorities != nil {
 		return credentials.Rotation.CertificateAuthorities.Phase
+	}
+	return ""
+}
+
+// GetShootServiceAccountKeyRotationPhase returns the specified shoot service account key rotation phase or an empty
+// string.
+func GetShootServiceAccountKeyRotationPhase(credentials *core.ShootCredentials) core.ShootCredentialsRotationPhase {
+	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.ServiceAccountKey != nil {
+		return credentials.Rotation.ServiceAccountKey.Phase
 	}
 	return ""
 }

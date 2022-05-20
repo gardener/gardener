@@ -24,6 +24,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/seed"
@@ -34,11 +35,15 @@ import (
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
+	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // InitializeSecretsManagement initializes the secrets management and deploys the required secrets to the shoot
@@ -86,6 +91,10 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 
 		if shootStatus.Credentials.Rotation.Observability != nil && shootStatus.Credentials.Rotation.Observability.LastInitiationTime != nil {
 			rotation[v1beta1constants.SecretNameObservabilityIngressUsers] = shootStatus.Credentials.Rotation.Observability.LastInitiationTime.Time
+		}
+
+		if shootStatus.Credentials.Rotation.ServiceAccountKey != nil && shootStatus.Credentials.Rotation.ServiceAccountKey.LastInitiationTime != nil {
+			rotation[v1beta1constants.SecretNameServiceAccountKey] = shootStatus.Credentials.Rotation.ServiceAccountKey.LastInitiationTime.Time
 		}
 	}
 
@@ -369,4 +378,163 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 		return nil
 	})
 	return err
+}
+
+// RenewShootAccessSecrets drops the serviceaccount.resources.gardener.cloud/token-renew-timestamp annotation from all
+// shoot access secrets. This will make the TokenRequestor controller part of gardener-resource-manager issuing new
+// tokens immediately.
+func (b *Botanist) RenewShootAccessSecrets(ctx context.Context) error {
+	secretList := &corev1.SecretList{}
+	if err := b.K8sSeedClient.Client().List(ctx, secretList, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{
+		resourcesv1alpha1.ResourceManagerPurpose: resourcesv1alpha1.LabelPurposeTokenRequest,
+	}); err != nil {
+		return err
+	}
+
+	var fns []flow.TaskFn
+
+	for _, obj := range secretList.Items {
+		secret := obj
+
+		fns = append(fns, func(ctx context.Context) error {
+			patch := client.MergeFrom(secret.DeepCopy())
+			delete(secret.Annotations, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp)
+			return b.K8sSeedClient.Client().Patch(ctx, &secret, patch)
+		})
+	}
+
+	return flow.Parallel(fns...)(ctx)
+}
+
+const (
+	labelKeyRotationKeyName = "credentials.gardener.cloud/key-name"
+	rotationQPS             = 100
+)
+
+// CreateNewServiceAccountSecrets creates new secrets for all service accounts in the shoot cluster. This should only
+// be executed in the 'Preparing' phase of the service account signing key rotation operation.
+func (b *Botanist) CreateNewServiceAccountSecrets(ctx context.Context) error {
+	serviceAccountKeySecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameServiceAccountKey, secretsmanager.Current)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameServiceAccountKey)
+	}
+	secretNameSuffix := utils.ComputeSecretChecksum(serviceAccountKeySecret.Data)[:6]
+
+	serviceAccountList := &corev1.ServiceAccountList{}
+	if err := b.K8sShootClient.Client().List(ctx, serviceAccountList, client.MatchingLabelsSelector{
+		Selector: labels.NewSelector().Add(
+			utils.MustNewRequirement(labelKeyRotationKeyName, selection.NotEquals, serviceAccountKeySecret.Name),
+		)},
+	); err != nil {
+		return err
+	}
+
+	b.Logger.Infof("Found %d ServiceAccounts requiring a new token secret", len(serviceAccountList.Items))
+
+	var (
+		limiter = rate.NewLimiter(rate.Limit(rotationQPS), rotationQPS)
+		taskFns []flow.TaskFn
+	)
+
+	for _, obj := range serviceAccountList.Items {
+		serviceAccount := obj
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			if len(serviceAccount.Secrets) == 0 {
+				return nil
+			}
+
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        fmt.Sprintf("%s-token-%s", serviceAccount.Name, secretNameSuffix),
+					Namespace:   serviceAccount.Namespace,
+					Annotations: map[string]string{corev1.ServiceAccountNameKey: serviceAccount.Name},
+				},
+				Type: corev1.SecretTypeServiceAccountToken,
+			}
+
+			patch := client.StrategicMergeFrom(serviceAccount.DeepCopy(), client.MergeFromWithOptimisticLock{})
+			metav1.SetMetaDataLabel(&serviceAccount.ObjectMeta, labelKeyRotationKeyName, serviceAccountKeySecret.Name)
+			serviceAccount.Secrets = append([]corev1.ObjectReference{{Name: secret.Name}}, serviceAccount.Secrets...)
+
+			// Wait until we are allowed by the limiter to not overload the kube-apiserver with too many requests.
+			if err := limiter.Wait(ctx); err != nil {
+				return err
+			}
+
+			if err := b.K8sShootClient.Client().Create(ctx, secret); kutil.IgnoreAlreadyExists(err) != nil {
+				b.Logger.Errorf("Error creating new ServiceAccount secret for %s/%s: %s", serviceAccount.Namespace, serviceAccount.Name, err.Error())
+				return err
+			}
+
+			if err := b.K8sShootClient.Client().Patch(ctx, &serviceAccount, patch); err != nil {
+				b.Logger.Errorf("Error patching ServiceAccount %s/%s after creation of new secret: %s", serviceAccount.Namespace, serviceAccount.Name, err.Error())
+				return err
+			}
+
+			return nil
+		})
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
+}
+
+// DeleteOldServiceAccountSecrets deletes old secrets for all service accounts in the shoot cluster. This should only
+// be executed in the 'Completing' phase of the service account signing key rotation operation.
+func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
+	serviceAccountList := &corev1.ServiceAccountList{}
+	if err := b.K8sShootClient.Client().List(ctx, serviceAccountList, client.MatchingLabelsSelector{
+		Selector: labels.NewSelector().Add(
+			utils.MustNewRequirement(labelKeyRotationKeyName, selection.Exists),
+		)},
+	); err != nil {
+		return err
+	}
+
+	b.Logger.Infof("Found %d ServiceAccounts requiring the cleanup of old token secrets", len(serviceAccountList.Items))
+
+	var (
+		limiter = rate.NewLimiter(rate.Limit(rotationQPS), rotationQPS)
+		taskFns []flow.TaskFn
+	)
+
+	for _, obj := range serviceAccountList.Items {
+		serviceAccount := obj
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			if len(serviceAccount.Secrets) == 0 {
+				return nil
+			}
+
+			var secretsToDelete []client.Object
+			for _, secretReference := range serviceAccount.Secrets[1:] {
+				secretsToDelete = append(secretsToDelete, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretReference.Name, Namespace: serviceAccount.Namespace}})
+			}
+
+			patch := client.StrategicMergeFrom(serviceAccount.DeepCopy())
+			delete(serviceAccount.Labels, labelKeyRotationKeyName)
+			// No need to remove the secret from serviceAccount.Secrets since kube-controller-manager will take care of
+			// this when the token secret gets deleted from the system. Consequently, no optimistic locking required for
+			// the patch request dropping the label.
+
+			// Wait until we are allowed by the limiter to not overload the kube-apiserver with too many requests.
+			if err := limiter.Wait(ctx); err != nil {
+				return err
+			}
+
+			if err := kutil.DeleteObjects(ctx, b.K8sShootClient.Client(), secretsToDelete...); err != nil {
+				b.Logger.Errorf("Error deleting old ServiceAccount secrets for %s/%s: %s", serviceAccount.Namespace, serviceAccount.Name, err.Error())
+				return err
+			}
+
+			if err := b.K8sShootClient.Client().Patch(ctx, &serviceAccount, patch); err != nil {
+				b.Logger.Errorf("Error patching ServiceAccount %s/%s after deletion of old secrets: %s", serviceAccount.Namespace, serviceAccount.Name, err.Error())
+				return err
+			}
+
+			return nil
+		})
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
 }

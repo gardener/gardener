@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/pointer"
 )
 
@@ -331,130 +332,64 @@ var _ = Describe("Strategy", func() {
 				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
 			})
 
-			It("should increase when the last operation is failed and the retry annotation gets set", func() {
-				oldShoot := &core.Shoot{
-					Status: core.ShootStatus{
-						LastOperation: &core.LastOperation{
-							State: core.LastOperationStateFailed,
+			DescribeTable("operation annotations",
+				func(operationAnnotation string, mustIncreaseGeneration bool, mutateOldShoot func(*core.Shoot), featureGates map[featuregate.Feature]bool) {
+					oldShoot := &core.Shoot{
+						Status: core.ShootStatus{
+							LastOperation: &core.LastOperation{},
 						},
-					},
-				}
-				newShoot := oldShoot.DeepCopy()
-				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRetry}
+					}
 
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
-			})
+					if mutateOldShoot != nil {
+						mutateOldShoot(oldShoot)
+					}
 
-			It("should not increase when the last operation is not failed and the retry annotation gets set", func() {
-				oldShoot := &core.Shoot{
-					Status: core.ShootStatus{
-						LastOperation: &core.LastOperation{
-							State: core.LastOperationStateSucceeded,
-						},
-					},
-				}
-				newShoot := oldShoot.DeepCopy()
-				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRetry}
+					var deferFns []interface{}
+					for name, enabled := range featureGates {
+						deferFns = append(deferFns, test.WithFeatureGate(utilfeature.DefaultFeatureGate, name, enabled))
+					}
+					for _, fn := range deferFns {
+						DeferCleanup(fn)
+					}
 
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-				Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
-			})
+					newShoot := oldShoot.DeepCopy()
+					newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: operationAnnotation}
 
-			It("should increase when the reconcile annotation gets set but no last operation", func() {
-				oldShoot := &core.Shoot{}
-				newShoot := oldShoot.DeepCopy()
-				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile}
+					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-				Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
-			})
+					if mustIncreaseGeneration {
+						Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
+					} else {
+						Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
+					}
+				},
 
-			It("should increase when the reconcile annotation gets set with a last operation", func() {
-				oldShoot := &core.Shoot{
-					Status: core.ShootStatus{
-						LastOperation: &core.LastOperation{},
-					},
-				}
-				newShoot := oldShoot.DeepCopy()
-				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile}
+				Entry("retry; last operation is failed", v1beta1constants.ShootOperationRetry, true, func(oldShoot *core.Shoot) {
+					oldShoot.Status.LastOperation.State = core.LastOperationStateFailed
+				}, nil),
+				Entry("retry; last operation is not failed", v1beta1constants.ShootOperationRetry, false, func(oldShoot *core.Shoot) {
+					oldShoot.Status.LastOperation.State = core.LastOperationStateSucceeded
+				}, nil),
+				Entry("retry; last operation is not set", v1beta1constants.ShootOperationRetry, false, func(oldShoot *core.Shoot) {
+					oldShoot.Status.LastOperation = nil
+				}, nil),
 
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
-			})
+				Entry("reconcile", v1beta1constants.GardenerOperationReconcile, true, nil, nil),
 
-			It("should increase when the rotate-kubeconfig-credentials annotation gets set with a last operation", func() {
-				oldShoot := &core.Shoot{
-					Status: core.ShootStatus{
-						LastOperation: &core.LastOperation{},
-					},
-				}
-				newShoot := oldShoot.DeepCopy()
-				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateKubeconfigCredentials}
+				Entry("rotate-kubeconfig-credentials", v1beta1constants.ShootOperationRotateKubeconfigCredentials, true, nil, nil),
+				Entry("rotate-ssh-keypair", v1beta1constants.ShootOperationRotateSSHKeypair, true, nil, nil),
+				Entry("rotate-observability-credentials", v1beta1constants.ShootOperationRotateObservabilityCredentials, true, nil, nil),
 
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
-			})
+				Entry("rotate-ca-start; feature gate is enabled", v1beta1constants.ShootOperationRotateCAStart, true, nil, map[featuregate.Feature]bool{features.ShootCARotation: true}),
+				Entry("rotate-ca-complete; feature gate is enabled", v1beta1constants.ShootOperationRotateCAComplete, true, nil, map[featuregate.Feature]bool{features.ShootCARotation: true}),
+				Entry("rotate-ca-start; feature gate is disabled", v1beta1constants.ShootOperationRotateCAStart, false, nil, map[featuregate.Feature]bool{features.ShootCARotation: false}),
+				Entry("rotate-ca-complete; feature gate is disabled", v1beta1constants.ShootOperationRotateCAComplete, false, nil, map[featuregate.Feature]bool{features.ShootCARotation: false}),
 
-			It("should increase when the rotate-ca-start annotation gets set and feature gate is enabled", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, true)()
-
-				oldShoot := &core.Shoot{
-					Status: core.ShootStatus{
-						LastOperation: &core.LastOperation{},
-					},
-				}
-				newShoot := oldShoot.DeepCopy()
-				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateCAStart}
-
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
-			})
-
-			It("should increase when the rotate-ca-complete annotation gets set and feature gate is enabled", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, true)()
-
-				oldShoot := &core.Shoot{
-					Status: core.ShootStatus{
-						LastOperation: &core.LastOperation{},
-					},
-				}
-				newShoot := oldShoot.DeepCopy()
-				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateCAComplete}
-
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
-			})
-
-			It("should not increase when the rotate-ca-start annotation gets set and feature gate is disabled", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, false)()
-
-				oldShoot := &core.Shoot{
-					Status: core.ShootStatus{
-						LastOperation: &core.LastOperation{},
-					},
-				}
-				newShoot := oldShoot.DeepCopy()
-				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateCAStart}
-
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-				Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
-			})
-
-			It("should not increase when the rotate-ca-complete annotation gets set and feature gate is disabled", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, false)()
-
-				oldShoot := &core.Shoot{
-					Status: core.ShootStatus{
-						LastOperation: &core.LastOperation{},
-					},
-				}
-				newShoot := oldShoot.DeepCopy()
-				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateCAComplete}
-
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-				Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
-			})
+				Entry("rotate-serviceaccount-key-start; feature gate is enabled", v1beta1constants.ShootOperationRotateServiceAccountKeyStart, true, nil, map[featuregate.Feature]bool{features.ShootSARotation: true}),
+				Entry("rotate-serviceaccount-key-complete; feature gate is enabled", v1beta1constants.ShootOperationRotateServiceAccountKeyComplete, true, nil, map[featuregate.Feature]bool{features.ShootSARotation: true}),
+				Entry("rotate-serviceaccount-key-start; feature gate is disabled", v1beta1constants.ShootOperationRotateServiceAccountKeyStart, false, nil, map[featuregate.Feature]bool{features.ShootSARotation: false}),
+				Entry("rotate-serviceaccount-key-complete; feature gate is disabled", v1beta1constants.ShootOperationRotateServiceAccountKeyComplete, false, nil, map[featuregate.Feature]bool{features.ShootSARotation: false}),
+			)
 		})
 
 		Context("max token expiration", func() {

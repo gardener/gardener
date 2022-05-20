@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -230,6 +231,8 @@ type ServiceAccountConfig struct {
 	ExtendTokenExpiration *bool
 	// MaxTokenExpiration states what the maximal token expiration should be.
 	MaxTokenExpiration *metav1.Duration
+	// RotationPhase specifies the credentials rotation phase of the service account signing key.
+	RotationPhase gardencorev1beta1.ShootCredentialsRotationPhase
 }
 
 // SNIConfig contains information for configuring SNI settings for the kube-apiserver.
@@ -442,38 +445,11 @@ func (k *kubeAPIServer) Wait(ctx context.Context) error {
 
 	deployment := k.emptyDeployment()
 
-	if err := retry.Until(timeoutCtx, IntervalWaitForDeployment, func(ctx context.Context) (done bool, err error) {
-		if err2 := k.client.APIReader().Get(ctx, client.ObjectKeyFromObject(deployment), deployment); err2 != nil {
-			return retry.SevereError(err2)
-		}
-
-		if deployment.Generation != deployment.Status.ObservedGeneration {
-			return retry.MinorError(fmt.Errorf("kube-apiserver not observed at latest generation (%d/%d)",
-				deployment.Status.ObservedGeneration, deployment.Generation))
-		}
-
-		replicas := int32(0)
-		if deployment.Spec.Replicas != nil {
-			replicas = *deployment.Spec.Replicas
-		}
-		if replicas != deployment.Status.Replicas {
-			return retry.MinorError(fmt.Errorf("kube-apiserver deployment has outdated replicas"))
-		}
-		if replicas != deployment.Status.UpdatedReplicas {
-			return retry.MinorError(fmt.Errorf("kube-apiserver does not have enough updated replicas (%d/%d)",
-				deployment.Status.UpdatedReplicas, replicas))
-		}
-		if replicas != deployment.Status.AvailableReplicas {
-			return retry.MinorError(fmt.Errorf("kube-apiserver does not have enough available replicas (%d/%d",
-				deployment.Status.AvailableReplicas, replicas))
-		}
-
-		return retry.Ok()
-	}); err != nil {
+	if err := retry.Until(timeoutCtx, IntervalWaitForDeployment, health.IsDeploymentUpdated(k.client.APIReader(), deployment)); err != nil {
 		var (
 			retryError *retry.Error
 			headBytes  *int64
-			tailLines  = pointer.Int64Ptr(10)
+			tailLines  = pointer.Int64(10)
 		)
 
 		if !errors.As(err, &retryError) {
@@ -489,7 +465,7 @@ func (k *kubeAPIServer) Wait(ctx context.Context) error {
 		}
 
 		if version.ConstraintK8sLess119.Check(k.values.Version) {
-			headBytes = pointer.Int64Ptr(1024)
+			headBytes = pointer.Int64(1024)
 		}
 
 		logs, err2 := kutil.MostRecentCompleteLogs(ctx, k.client.Kubernetes().CoreV1().Pods(newestPod.Namespace), newestPod, ContainerNameKubeAPIServer, tailLines, headBytes)

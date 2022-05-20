@@ -19,6 +19,15 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/logger"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
+
 	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -33,13 +42,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/gardener/gardener/pkg/logger"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
-	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("WaiterTest", func() {
@@ -53,11 +55,12 @@ var _ = Describe("WaiterTest", func() {
 		version               = semver.MustParse("v1.19.8")
 
 		// mock
-		ctrl        *gomock.Controller
-		seedClient  *mockclient.MockClient
-		shootClient *mockclient.MockClient
-		waiter      *retryfake.Ops
-		cleanupFunc func()
+		ctrl              *gomock.Controller
+		fakeSeedInterface kubernetes.Interface
+		seedClient        *mockclient.MockClient
+		shootClient       *mockclient.MockClient
+		waiter            *retryfake.Ops
+		cleanupFunc       func()
 
 		listOptions = []client.ListOption{
 			client.InNamespace(namespace),
@@ -71,6 +74,7 @@ var _ = Describe("WaiterTest", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		seedClient = mockclient.NewMockClient(ctrl)
+		fakeSeedInterface = fakekubernetes.NewClientSetBuilder().WithAPIReader(seedClient).WithClient(seedClient).Build()
 		shootClient = mockclient.NewMockClient(ctrl)
 	})
 
@@ -83,7 +87,7 @@ var _ = Describe("WaiterTest", func() {
 		BeforeEach(func() {
 			kubeControllerManager = New(
 				testLogger,
-				seedClient,
+				fakeSeedInterface,
 				namespace,
 				nil,
 				version,
@@ -249,7 +253,7 @@ var _ = Describe("WaiterTest", func() {
 		It("should succeed (k8s >= 1.20)", func() {
 			kubeControllerManager = New(
 				testLogger,
-				seedClient,
+				fakeSeedInterface,
 				namespace,
 				nil,
 				semver.MustParse("v1.20.1"),

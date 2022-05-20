@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -86,10 +87,19 @@ func (k *kubeAPIServer) reconcileSecretUserProvidedServiceAccountSigningKey(ctx 
 }
 
 func (k *kubeAPIServer) reconcileSecretServiceAccountKey(ctx context.Context) (*corev1.Secret, error) {
+	options := []secretsmanager.GenerateOption{
+		secretsmanager.Persist(),
+		secretsmanager.Rotate(secretsmanager.KeepOld),
+	}
+
+	if k.values.ServiceAccount.RotationPhase == gardencorev1beta1.RotationCompleting {
+		options = append(options, secretsmanager.IgnoreOldSecrets())
+	}
+
 	secret, err := k.secretsManager.Generate(ctx, &secretutils.RSASecretConfig{
 		Name: v1beta1constants.SecretNameServiceAccountKey,
 		Bits: 4096,
-	}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld))
+	}, options...)
 	if err != nil {
 		return nil, err
 	}

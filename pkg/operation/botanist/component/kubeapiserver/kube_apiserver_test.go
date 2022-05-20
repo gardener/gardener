@@ -79,21 +79,22 @@ var _ = Describe("KubeAPIServer", func() {
 		kapi                Interface
 		version             = semver.MustParse("1.22.1")
 
-		secretNameBasicAuthentication    = "kube-apiserver-basic-auth-426b1845"
-		secretNameStaticToken            = "kube-apiserver-static-token-c069a0e6"
-		secretNameCA                     = "ca"
-		secretNameCAClient               = "ca-client"
-		secretNameCAEtcd                 = "ca-etcd"
-		secretNameCAFrontProxy           = "ca-front-proxy"
-		secretNameCAVPN                  = "ca-vpn"
-		secretNameEtcd                   = "etcd-client"
-		secretNameHTTPProxy              = "kube-apiserver-http-proxy"
-		secretNameKubeAggregator         = "kube-aggregator"
-		secretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"
-		secretNameServer                 = "kube-apiserver"
-		secretNameServiceAccountKey      = "service-account-key-c37a87f6"
-		secretNameVPNSeed                = "vpn-seed"
-		secretNameVPNSeedTLSAuth         = "vpn-seed-tlsauth-de1d12a3"
+		secretNameBasicAuthentication     = "kube-apiserver-basic-auth-426b1845"
+		secretNameStaticToken             = "kube-apiserver-static-token-c069a0e6"
+		secretNameCA                      = "ca"
+		secretNameCAClient                = "ca-client"
+		secretNameCAEtcd                  = "ca-etcd"
+		secretNameCAFrontProxy            = "ca-front-proxy"
+		secretNameCAVPN                   = "ca-vpn"
+		secretNameEtcd                    = "etcd-client"
+		secretNameHTTPProxy               = "kube-apiserver-http-proxy"
+		secretNameKubeAggregator          = "kube-aggregator"
+		secretNameKubeAPIServerToKubelet  = "kube-apiserver-kubelet"
+		secretNameServer                  = "kube-apiserver"
+		secretNameServiceAccountKey       = "service-account-key-c37a87f6"
+		secretNameServiceAccountKeyBundle = "service-account-key"
+		secretNameVPNSeed                 = "vpn-seed"
+		secretNameVPNSeedTLSAuth          = "vpn-seed-tlsauth-de1d12a3"
 
 		secretNameAdmissionConfig      = "kube-apiserver-admission-config-e38ff146"
 		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-235f7353"
@@ -1350,6 +1351,7 @@ rules:
 
 				Expect(deployment.Annotations).To(Equal(map[string]string{
 					"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
+					"reference.resources.gardener.cloud/secret-3055c21f":    secretNameServiceAccountKeyBundle,
 					"reference.resources.gardener.cloud/secret-69590970":    secretNameCA,
 					"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
 					"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
@@ -1398,6 +1400,7 @@ rules:
 
 				Expect(deployment.Spec.Template.Annotations).To(Equal(map[string]string{
 					"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
+					"reference.resources.gardener.cloud/secret-3055c21f":    secretNameServiceAccountKeyBundle,
 					"reference.resources.gardener.cloud/secret-69590970":    secretNameCA,
 					"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
 					"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
@@ -1729,7 +1732,7 @@ rules:
 						"--service-account-issuer="+acceptedIssuers[1],
 						"--service-account-max-token-expiration="+serviceAccountMaxTokenExpiration.String(),
 						"--service-account-extend-token-expiration="+strconv.FormatBool(serviceAccountExtendTokenExpiration),
-						"--service-account-key-file=/srv/kubernetes/service-account-key/id_rsa",
+						"--service-account-key-file=/srv/kubernetes/service-account-key-bundle/bundle.key",
 						"--service-account-signing-key-file=/srv/kubernetes/service-account-key/id_rsa",
 						"--token-auth-file=/srv/kubernetes/token/static_tokens.csv",
 						"--tls-cert-file=/srv/kubernetes/apiserver/tls.crt",
@@ -1780,6 +1783,10 @@ rules:
 						corev1.VolumeMount{
 							Name:      "service-account-key",
 							MountPath: "/srv/kubernetes/service-account-key",
+						},
+						corev1.VolumeMount{
+							Name:      "service-account-key-bundle",
+							MountPath: "/srv/kubernetes/service-account-key-bundle",
 						},
 						corev1.VolumeMount{
 							Name:      "static-token",
@@ -1857,6 +1864,14 @@ rules:
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: secretNameServiceAccountKey,
+								},
+							},
+						},
+						corev1.Volume{
+							Name: "service-account-key-bundle",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretNameServiceAccountKeyBundle,
 								},
 							},
 						},
@@ -2453,7 +2468,11 @@ rules:
 	})
 
 	Describe("#Wait", func() {
-		It("should successfully wait for the deployment to be ready", func() {
+		BeforeEach(func() {
+			deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: GetLabels()}
+		})
+
+		It("should successfully wait for the deployment to be updated", func() {
 			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 			fakeKubernetesInterface := fakekubernetes.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
 			kapi = New(fakeKubernetesInterface, namespace, nil, Values{})
@@ -2465,10 +2484,22 @@ rules:
 			Expect(fakeClient.Create(ctx, deploy)).To(Succeed())
 			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(Succeed())
 
+			Expect(fakeClient.Create(ctx, &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "pod",
+					Namespace: deployment.Namespace,
+					Labels:    GetLabels(),
+				},
+			})).To(Succeed())
+
 			timer := time.AfterFunc(10*time.Millisecond, func() {
 				deploy.Generation = 24
+				deploy.Spec.Replicas = pointer.Int32(1)
+				deploy.Status.Conditions = []appsv1.DeploymentCondition{
+					{Type: appsv1.DeploymentProgressing, Status: "True", Reason: "NewReplicaSetAvailable"},
+					{Type: appsv1.DeploymentAvailable, Status: "True"},
+				}
 				deploy.Status.ObservedGeneration = deploy.Generation
-				deploy.Spec.Replicas = pointer.Int32(4)
 				deploy.Status.Replicas = *deploy.Spec.Replicas
 				deploy.Status.UpdatedReplicas = *deploy.Spec.Replicas
 				deploy.Status.AvailableReplicas = *deploy.Spec.Replicas
@@ -2477,64 +2508,6 @@ rules:
 			defer timer.Stop()
 
 			Expect(kapi.Wait(ctx)).To(Succeed())
-		})
-
-		It("should fail while waiting for the deployment to be ready due to outdated generation", func() {
-			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
-			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
-
-			deployment.Generation = 24
-			deployment.Status.ObservedGeneration = deployment.Generation - 1
-			Expect(c.Create(ctx, deployment)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-
-			Expect(kapi.Wait(ctx)).To(MatchError(ContainSubstring("not observed at latest generation")))
-		})
-
-		It("should fail while waiting for the deployment to be ready due to outdated replicas field", func() {
-			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
-			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
-
-			deployment.Generation = 24
-			deployment.Status.ObservedGeneration = deployment.Generation
-			deployment.Spec.Replicas = pointer.Int32(4)
-			deployment.Status.Replicas = *deployment.Spec.Replicas - 1
-			deployment.Status.UpdatedReplicas = *deployment.Spec.Replicas
-			Expect(c.Create(ctx, deployment)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-
-			Expect(kapi.Wait(ctx)).To(MatchError(ContainSubstring("has outdated replicas")))
-		})
-
-		It("should fail while waiting for the deployment to be ready due to outdated updatedReplicas field", func() {
-			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
-			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
-
-			deployment.Generation = 24
-			deployment.Status.ObservedGeneration = deployment.Generation
-			deployment.Spec.Replicas = pointer.Int32(4)
-			deployment.Status.Replicas = *deployment.Spec.Replicas
-			deployment.Status.UpdatedReplicas = *deployment.Spec.Replicas - 1
-			Expect(c.Create(ctx, deployment)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-
-			Expect(kapi.Wait(ctx)).To(MatchError(ContainSubstring("does not have enough updated replicas")))
-		})
-
-		It("should fail while waiting for the deployment to be ready due to outdated updatedReplicas field", func() {
-			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
-			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
-
-			deployment.Generation = 24
-			deployment.Status.ObservedGeneration = deployment.Generation
-			deployment.Spec.Replicas = pointer.Int32(4)
-			deployment.Status.Replicas = *deployment.Spec.Replicas
-			deployment.Status.UpdatedReplicas = *deployment.Spec.Replicas
-			deployment.Status.AvailableReplicas = *deployment.Spec.Replicas - 1
-			Expect(c.Create(ctx, deployment)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
-
-			Expect(kapi.Wait(ctx)).To(MatchError(ContainSubstring("does not have enough available replicas")))
 		})
 	})
 

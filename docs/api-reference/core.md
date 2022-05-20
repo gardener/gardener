@@ -9018,13 +9018,28 @@ ShootObservabilityRotation
 <p>Observability contains information about the observability credential rotation.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>serviceAccountKey</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootServiceAccountKeyRotation">
+ShootServiceAccountKeyRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ServiceAccountKey contains information about the service account key credential rotation.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ShootCredentialsRotationPhase">ShootCredentialsRotationPhase
 (<code>string</code> alias)</p></h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.ShootCARotation">ShootCARotation</a>)
+<a href="#core.gardener.cloud/v1beta1.ShootCARotation">ShootCARotation</a>, 
+<a href="#core.gardener.cloud/v1beta1.ShootServiceAccountKeyRotation">ShootServiceAccountKeyRotation</a>)
 </p>
 <p>
 <p>ShootCredentialsRotationPhase is a string alias.</p>
@@ -9276,6 +9291,67 @@ Kubernetes meta/v1.Time
 <td>
 <em>(Optional)</em>
 <p>LastCompletionTime is the most recent time when the ssh-keypair credential rotation was successfully completed.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ShootServiceAccountKeyRotation">ShootServiceAccountKeyRotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotation">ShootCredentialsRotation</a>)
+</p>
+<p>
+<p>ShootServiceAccountKeyRotation contains information about the service account key credential rotation.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>phase</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotationPhase">
+ShootCredentialsRotationPhase
+</a>
+</em>
+</td>
+<td>
+<p>Phase describes the phase of the service account key credential rotation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastInitiationTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationTime is the most recent time when the service account key credential rotation was initiated.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastCompletionTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastCompletionTime is the most recent time when the service account key credential rotation was successfully
+completed.</p>
 </td>
 </tr>
 </tbody>

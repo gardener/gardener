@@ -38,8 +38,6 @@ import (
 )
 
 const (
-	// SecretNameServer is the name of the secret for the kube-apiserver server certificates.
-	SecretNameServer = "kube-apiserver"
 	// SecretNameVPNSeedTLSAuth is the name of the secret containing the TLS auth for the vpn-seed.
 	SecretNameVPNSeedTLSAuth = "vpn-seed-tlsauth"
 	secretNameLegacyVPNSeed  = "vpn-seed"
@@ -54,59 +52,61 @@ const (
 	containerNameVPNSeed                  = "vpn-seed"
 	containerNameAPIServerProxyPodMutator = "apiserver-proxy-pod-mutator"
 
-	volumeNameAdmissionConfiguration   = "admission-config"
-	volumeNameAuditPolicy              = "audit-policy-config"
-	volumeNameBasicAuthentication      = "basic-auth"
-	volumeNameCA                       = "ca"
-	volumeNameCAClient                 = "ca-client"
-	volumeNameCAEtcd                   = "ca-etcd"
-	volumeNameCAFrontProxy             = "ca-front-proxy"
-	volumeNameCAVPN                    = "ca-vpn"
-	volumeNameEgressSelector           = "egress-selection-config"
-	volumeNameEtcdClient               = "etcd-client"
-	volumeNameEtcdEncryptionConfig     = "etcd-encryption-secret"
-	volumeNameHTTPProxy                = "http-proxy"
-	volumeNameKubeAPIServerToKubelet   = "kubelet-client"
-	volumeNameKubeAggregator           = "kube-aggregator"
-	volumeNameLibModules               = "modules"
-	volumeNameOIDCCABundle             = "oidc-cabundle"
-	volumeNameServer                   = "kube-apiserver-server"
-	volumeNameServiceAccountKey        = "service-account-key"
-	volumeNameServiceAccountSigningKey = "service-account-signing-key"
-	volumeNameStaticToken              = "static-token"
-	volumeNameVPNSeed                  = "vpn-seed"
-	volumeNameVPNSeedTLSAuth           = "vpn-seed-tlsauth"
-	volumeNameFedora                   = "fedora-rhel6-openelec-cabundle"
-	volumeNameCentOS                   = "centos-rhel7-cabundle"
-	volumeNameEtcSSL                   = "etc-ssl"
-	volumeNameUsrShareCaCerts          = "usr-share-cacerts"
+	volumeNameAdmissionConfiguration               = "admission-config"
+	volumeNameAuditPolicy                          = "audit-policy-config"
+	volumeNameBasicAuthentication                  = "basic-auth"
+	volumeNameCA                                   = "ca"
+	volumeNameCAClient                             = "ca-client"
+	volumeNameCAEtcd                               = "ca-etcd"
+	volumeNameCAFrontProxy                         = "ca-front-proxy"
+	volumeNameCAVPN                                = "ca-vpn"
+	volumeNameEgressSelector                       = "egress-selection-config"
+	volumeNameEtcdClient                           = "etcd-client"
+	volumeNameEtcdEncryptionConfig                 = "etcd-encryption-secret"
+	volumeNameHTTPProxy                            = "http-proxy"
+	volumeNameKubeAPIServerToKubelet               = "kubelet-client"
+	volumeNameKubeAggregator                       = "kube-aggregator"
+	volumeNameLibModules                           = "modules"
+	volumeNameOIDCCABundle                         = "oidc-cabundle"
+	volumeNameServer                               = "kube-apiserver-server"
+	volumeNameServiceAccountKey                    = "service-account-key"
+	volumeNameServiceAccountKeyBundle              = "service-account-key-bundle"
+	volumeNameUserProvidedServiceAccountSigningKey = "service-account-signing-key"
+	volumeNameStaticToken                          = "static-token"
+	volumeNameVPNSeed                              = "vpn-seed"
+	volumeNameVPNSeedTLSAuth                       = "vpn-seed-tlsauth"
+	volumeNameFedora                               = "fedora-rhel6-openelec-cabundle"
+	volumeNameCentOS                               = "centos-rhel7-cabundle"
+	volumeNameEtcSSL                               = "etc-ssl"
+	volumeNameUsrShareCaCerts                      = "usr-share-cacerts"
 
-	volumeMountPathAdmissionConfiguration   = "/etc/kubernetes/admission"
-	volumeMountPathAuditPolicy              = "/etc/kubernetes/audit"
-	volumeMountPathBasicAuthentication      = "/srv/kubernetes/auth"
-	volumeMountPathCA                       = "/srv/kubernetes/ca"
-	volumeMountPathCAClient                 = "/srv/kubernetes/ca-client"
-	volumeMountPathCAEtcd                   = "/srv/kubernetes/etcd/ca"
-	volumeMountPathCAFrontProxy             = "/srv/kubernetes/ca-front-proxy"
-	volumeMountPathCAVPN                    = "/srv/kubernetes/ca-vpn"
-	volumeMountPathEgressSelector           = "/etc/kubernetes/egress"
-	volumeMountPathEtcdEncryptionConfig     = "/etc/kubernetes/etcd-encryption-secret"
-	volumeMountPathEtcdClient               = "/srv/kubernetes/etcd/client"
-	volumeMountPathHTTPProxy                = "/etc/srv/kubernetes/envoy"
-	volumeMountPathKubeAPIServerToKubelet   = "/srv/kubernetes/apiserver-kubelet"
-	volumeMountPathKubeAggregator           = "/srv/kubernetes/aggregator"
-	volumeMountPathLibModules               = "/lib/modules"
-	volumeMountPathOIDCCABundle             = "/srv/kubernetes/oidc"
-	volumeMountPathServer                   = "/srv/kubernetes/apiserver"
-	volumeMountPathServiceAccountKey        = "/srv/kubernetes/service-account-key"
-	volumeMountPathServiceAccountSigningKey = "/srv/kubernetes/service-account-signing-key"
-	volumeMountPathStaticToken              = "/srv/kubernetes/token"
-	volumeMountPathVPNSeed                  = "/srv/secrets/vpn-seed"
-	volumeMountPathVPNSeedTLSAuth           = "/srv/secrets/tlsauth"
-	volumeMountPathFedora                   = "/etc/pki/tls"
-	volumeMountPathCentOS                   = "/etc/pki/ca-trust/extracted/pem"
-	volumeMountPathEtcSSL                   = "/etc/ssl"
-	volumeMountPathUsrShareCaCerts          = "/usr/share/ca-certificates"
+	volumeMountPathAdmissionConfiguration               = "/etc/kubernetes/admission"
+	volumeMountPathAuditPolicy                          = "/etc/kubernetes/audit"
+	volumeMountPathBasicAuthentication                  = "/srv/kubernetes/auth"
+	volumeMountPathCA                                   = "/srv/kubernetes/ca"
+	volumeMountPathCAClient                             = "/srv/kubernetes/ca-client"
+	volumeMountPathCAEtcd                               = "/srv/kubernetes/etcd/ca"
+	volumeMountPathCAFrontProxy                         = "/srv/kubernetes/ca-front-proxy"
+	volumeMountPathCAVPN                                = "/srv/kubernetes/ca-vpn"
+	volumeMountPathEgressSelector                       = "/etc/kubernetes/egress"
+	volumeMountPathEtcdEncryptionConfig                 = "/etc/kubernetes/etcd-encryption-secret"
+	volumeMountPathEtcdClient                           = "/srv/kubernetes/etcd/client"
+	volumeMountPathHTTPProxy                            = "/etc/srv/kubernetes/envoy"
+	volumeMountPathKubeAPIServerToKubelet               = "/srv/kubernetes/apiserver-kubelet"
+	volumeMountPathKubeAggregator                       = "/srv/kubernetes/aggregator"
+	volumeMountPathLibModules                           = "/lib/modules"
+	volumeMountPathOIDCCABundle                         = "/srv/kubernetes/oidc"
+	volumeMountPathServer                               = "/srv/kubernetes/apiserver"
+	volumeMountPathServiceAccountKey                    = "/srv/kubernetes/service-account-key"
+	volumeMountPathServiceAccountKeyBundle              = "/srv/kubernetes/service-account-key-bundle"
+	volumeMountPathUserProvidedServiceAccountSigningKey = "/srv/kubernetes/service-account-signing-key"
+	volumeMountPathStaticToken                          = "/srv/kubernetes/token"
+	volumeMountPathVPNSeed                              = "/srv/secrets/vpn-seed"
+	volumeMountPathVPNSeedTLSAuth                       = "/srv/secrets/tlsauth"
+	volumeMountPathFedora                               = "/etc/pki/tls"
+	volumeMountPathCentOS                               = "/etc/pki/ca-trust/extracted/pem"
+	volumeMountPathEtcSSL                               = "/etc/ssl"
+	volumeMountPathUsrShareCaCerts                      = "/usr/share/ca-certificates"
 )
 
 func (k *kubeAPIServer) emptyDeployment() *appsv1.Deployment {
@@ -152,34 +152,39 @@ func (k *kubeAPIServer) reconcileDeployment(
 		healthCheckToken = token.Token
 	}
 
-	clusterCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCACluster)
+	secretCACluster, found := k.secretsManager.Get(v1beta1constants.SecretNameCACluster)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCACluster)
 	}
 
-	clientCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCAClient)
+	secretCAClient, found := k.secretsManager.Get(v1beta1constants.SecretNameCAClient)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAClient)
 	}
 
-	frontProxyCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCAFrontProxy)
+	secretCAFrontProxy, found := k.secretsManager.Get(v1beta1constants.SecretNameCAFrontProxy)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAFrontProxy)
 	}
 
-	vpnCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCAVPN)
+	secretCAVPN, found := k.secretsManager.Get(v1beta1constants.SecretNameCAVPN)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAVPN)
 	}
 
-	etcdCASecret, found := k.secretsManager.Get(v1beta1constants.SecretNameCAETCD)
+	secretCAETCD, found := k.secretsManager.Get(v1beta1constants.SecretNameCAETCD)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCD)
 	}
 
-	etcdClientSecret, found := k.secretsManager.Get(etcd.SecretNameClient)
+	secretETCDClient, found := k.secretsManager.Get(etcd.SecretNameClient)
 	if !found {
 		return fmt.Errorf("secret %q not found", etcd.SecretNameClient)
+	}
+
+	secretServiceAccountKeyBundle, found := k.secretsManager.Get(v1beta1constants.SecretNameServiceAccountKey)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameServiceAccountKey)
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), deployment, func() error {
@@ -311,6 +316,10 @@ func (k *kubeAPIServer) reconcileDeployment(
 								MountPath: volumeMountPathServiceAccountKey,
 							},
 							{
+								Name:      volumeNameServiceAccountKeyBundle,
+								MountPath: volumeMountPathServiceAccountKeyBundle,
+							},
+							{
 								Name:      volumeNameStaticToken,
 								MountPath: volumeMountPathStaticToken,
 							},
@@ -354,7 +363,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameCA,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: clusterCASecret.Name,
+									SecretName: secretCACluster.Name,
 								},
 							},
 						},
@@ -362,7 +371,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameCAClient,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: clientCASecret.Name,
+									SecretName: secretCAClient.Name,
 								},
 							},
 						},
@@ -370,7 +379,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameCAEtcd,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: etcdCASecret.Name,
+									SecretName: secretCAETCD.Name,
 								},
 							},
 						},
@@ -378,7 +387,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameCAFrontProxy,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: frontProxyCASecret.Name,
+									SecretName: secretCAFrontProxy.Name,
 								},
 							},
 						},
@@ -386,7 +395,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							Name: volumeNameEtcdClient,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: etcdClientSecret.Name,
+									SecretName: secretETCDClient.Name,
 								},
 							},
 						},
@@ -395,6 +404,14 @@ func (k *kubeAPIServer) reconcileDeployment(
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName: secretServiceAccountKey.Name,
+								},
+							},
+						},
+						{
+							Name: volumeNameServiceAccountKeyBundle,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretServiceAccountKeyBundle.Name,
 								},
 							},
 						},
@@ -448,7 +465,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleHostCertVolumes(deployment)
 		k.handleSNISettings(deployment)
 		k.handlePodMutatorSettings(deployment)
-		k.handleVPNSettings(deployment, configMapEgressSelector, vpnCASecret, secretHTTPProxy, secretLegacyVPNSeed, secretLegacyVPNSeedTLSAuth)
+		k.handleVPNSettings(deployment, configMapEgressSelector, secretCAVPN, secretHTTPProxy, secretLegacyVPNSeed, secretLegacyVPNSeedTLSAuth)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment, secretUserProvidedServiceAccountSigningKey)
 
@@ -918,17 +935,17 @@ func (k *kubeAPIServer) handleOIDCSettings(deployment *appsv1.Deployment, secret
 
 func (k *kubeAPIServer) handleServiceAccountSigningKeySettings(deployment *appsv1.Deployment, secretServiceAccountSigningKey *corev1.Secret) {
 	if k.values.ServiceAccount.SigningKey != nil {
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-signing-key-file=%s/%s", volumeMountPathServiceAccountSigningKey, SecretServiceAccountSigningKeyDataKeySigningKey))
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-key-file=%s/%s", volumeMountPathServiceAccountSigningKey, SecretServiceAccountSigningKeyDataKeySigningKey))
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-signing-key-file=%s/%s", volumeMountPathUserProvidedServiceAccountSigningKey, SecretServiceAccountSigningKeyDataKeySigningKey))
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-key-file=%s/%s", volumeMountPathUserProvidedServiceAccountSigningKey, SecretServiceAccountSigningKeyDataKeySigningKey))
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
 			{
-				Name:      volumeNameServiceAccountSigningKey,
-				MountPath: volumeMountPathServiceAccountSigningKey,
+				Name:      volumeNameUserProvidedServiceAccountSigningKey,
+				MountPath: volumeMountPathUserProvidedServiceAccountSigningKey,
 			},
 		}...)
 		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
 			{
-				Name: volumeNameServiceAccountSigningKey,
+				Name: volumeNameUserProvidedServiceAccountSigningKey,
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
 						SecretName: secretServiceAccountSigningKey.Name,
@@ -938,7 +955,7 @@ func (k *kubeAPIServer) handleServiceAccountSigningKeySettings(deployment *appsv
 		}...)
 	} else {
 		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-signing-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey))
-		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey))
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-key-file=%s/%s", volumeMountPathServiceAccountKeyBundle, secrets.DataKeyPrivateKeyBundle))
 	}
 }
 

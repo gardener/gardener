@@ -337,7 +337,10 @@ func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.S
 func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context, config *gardencorev1beta1.KubeAPIServerConfig, externalHostname string) (kubeapiserver.ServiceAccountConfig, error) {
 	var (
 		defaultIssuer = "https://" + externalHostname
-		out           = kubeapiserver.ServiceAccountConfig{Issuer: defaultIssuer}
+		out           = kubeapiserver.ServiceAccountConfig{
+			Issuer:        defaultIssuer,
+			RotationPhase: gardencorev1beta1helper.GetShootServiceAccountKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
+		}
 	)
 
 	if config == nil || config.ServiceAccountConfig == nil {

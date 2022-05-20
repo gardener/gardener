@@ -2249,6 +2249,10 @@ message ShootCredentialsRotation {
   // Observability contains information about the observability credential rotation.
   // +optional
   optional ShootObservabilityRotation observability = 4;
+
+  // ServiceAccountKey contains information about the service account key credential rotation.
+  // +optional
+  optional ShootServiceAccountKeyRotation serviceAccountKey = 5;
 }
 
 // ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
@@ -2317,6 +2321,21 @@ message ShootSSHKeypairRotation {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 1;
 
   // LastCompletionTime is the most recent time when the ssh-keypair credential rotation was successfully completed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
+}
+
+// ShootServiceAccountKeyRotation contains information about the service account key credential rotation.
+message ShootServiceAccountKeyRotation {
+  // Phase describes the phase of the service account key credential rotation.
+  optional string phase = 1;
+
+  // LastInitiationTime is the most recent time when the service account key credential rotation was initiated.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastInitiationTime = 3;
+
+  // LastCompletionTime is the most recent time when the service account key credential rotation was successfully
+  // completed.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTime = 2;
 }

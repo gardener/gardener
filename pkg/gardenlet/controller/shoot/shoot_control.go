@@ -705,6 +705,19 @@ func (r *shootReconciler) updateShootStatusOperationStart(ctx context.Context, g
 		v1beta1helper.MutateObservabilityRotation(shoot, func(rotation *gardencorev1beta1.ShootObservabilityRotation) {
 			rotation.LastInitiationTime = &now
 		})
+
+	case v1beta1constants.ShootOperationRotateServiceAccountKeyStart:
+		mustRemoveOperationAnnotation = true
+		v1beta1helper.MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootServiceAccountKeyRotation) {
+			rotation.Phase = gardencorev1beta1.RotationPreparing
+			rotation.LastInitiationTime = &now
+		})
+
+	case v1beta1constants.ShootOperationRotateServiceAccountKeyComplete:
+		mustRemoveOperationAnnotation = true
+		v1beta1helper.MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootServiceAccountKeyRotation) {
+			rotation.Phase = gardencorev1beta1.RotationCompleting
+		})
 	}
 
 	if err := gardenClient.Status().Update(ctx, shoot); err != nil {
@@ -806,6 +819,19 @@ func (r *shootReconciler) patchShootStatusOperationSuccess(
 
 	case gardencorev1beta1.RotationCompleting:
 		v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.ShootCARotation) {
+			rotation.Phase = gardencorev1beta1.RotationCompleted
+			rotation.LastCompletionTime = &now
+		})
+	}
+
+	switch v1beta1helper.GetShootServiceAccountKeyRotationPhase(shoot.Status.Credentials) {
+	case gardencorev1beta1.RotationPreparing:
+		v1beta1helper.MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootServiceAccountKeyRotation) {
+			rotation.Phase = gardencorev1beta1.RotationPrepared
+		})
+
+	case gardencorev1beta1.RotationCompleting:
+		v1beta1helper.MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootServiceAccountKeyRotation) {
 			rotation.Phase = gardencorev1beta1.RotationCompleted
 			rotation.LastCompletionTime = &now
 		})

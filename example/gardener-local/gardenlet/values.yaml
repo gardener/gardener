@@ -45,6 +45,7 @@ global:
         SeedKubeScheduler: false
         ReversedVPN: true
         ShootCARotation: true
+        ShootSARotation: true
       logging:
         enabled: true
         loki:

@@ -399,6 +399,19 @@ func (m *manager) generateBundleSecret(ctx context.Context, config secretutils.C
 				CertificatePEMs: certs,
 			}
 		}
+
+	case *secretutils.RSASecretConfig:
+		if !c.UsedForSSH {
+			keys := [][]byte{secrets.current.obj.Data[secretutils.DataKeyRSAPrivateKey]}
+			if secrets.old != nil {
+				keys = append(keys, secrets.old.obj.Data[secretutils.DataKeyRSAPrivateKey])
+			}
+
+			bundleConfig = &secretutils.RSAPrivateKeyBundleSecretConfig{
+				Name:           config.GetName() + nameSuffixBundle,
+				PrivateKeyPEMs: keys,
+			}
+		}
 	}
 
 	if bundleConfig == nil {
