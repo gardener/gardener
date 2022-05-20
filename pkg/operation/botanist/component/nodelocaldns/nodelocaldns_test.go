@@ -130,6 +130,7 @@ spec:
   - secret
   - hostPath
   - configMap
+  - projected
 `
 			clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
