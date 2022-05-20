@@ -389,7 +389,7 @@ spec:
         imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
-            path: /healthy
+            path: /healthz
             port: 8080
             scheme: HTTP
           initialDelaySeconds: 30
