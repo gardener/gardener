@@ -116,20 +116,6 @@ func (r *reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		if _, err = r.generateWebhookServerCert(ctx, sm); err != nil {
 			return err
 		}
-
-		if r.ShootWebhookConfig != nil {
-			caBundleSecret, found := sm.Get(r.CASecretName)
-			if !found {
-				return fmt.Errorf("secret %q not found", r.CASecretName)
-			}
-
-			// update shoot webhook config object with the freshly created CA bundle which is also used by the
-			// generic ControlPlane actuator
-			if err := webhook.InjectCABundleIntoWebhookConfig(r.ShootWebhookConfig, caBundleSecret.Data[secretutils.DataKeyCertificateBundle]); err != nil {
-				return err
-			}
-			r.AtomicShootWebhookConfig.Store(r.ShootWebhookConfig.DeepCopy())
-		}
 	}
 
 	// remove legacy webhook cert secret
@@ -180,15 +166,6 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	)
 	log.Info("Generated webhook CA")
 
-	if r.ShootWebhookConfig != nil {
-		// update shoot webhook config object (in memory) with the freshly created CA bundle which is also used by the
-		// ControlPlane actuator
-		if err := webhook.InjectCABundleIntoWebhookConfig(r.ShootWebhookConfig, caBundleSecret.Data[secretutils.DataKeyCertificateBundle]); err != nil {
-			return reconcile.Result{}, err
-		}
-		r.AtomicShootWebhookConfig.Store(r.ShootWebhookConfig.DeepCopy())
-	}
-
 	serverSecret, err := r.generateWebhookServerCert(ctx, sm)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -201,6 +178,13 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	log.Info("Updated seed webhook config with new CA bundle", "webhookConfig", r.SeedWebhookConfig)
 
 	if r.ShootWebhookConfig != nil {
+		// update shoot webhook config object (in memory) with the freshly created CA bundle which is also used by the
+		// ControlPlane actuator
+		if err := webhook.InjectCABundleIntoWebhookConfig(r.ShootWebhookConfig, caBundleSecret.Data[secretutils.DataKeyCertificateBundle]); err != nil {
+			return reconcile.Result{}, err
+		}
+		r.AtomicShootWebhookConfig.Store(r.ShootWebhookConfig.DeepCopy())
+
 		// reconcile all shoot webhook configs with the freshly created CA bundle
 		if err := genericactuator.ReconcileShootWebhooksForAllNamespaces(ctx, r.client, r.ProviderName, r.ProviderType, r.serverPort, r.ShootWebhookConfig); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error reconciling all shoot webhook configs: %w", err)

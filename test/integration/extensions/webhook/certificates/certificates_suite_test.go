@@ -19,7 +19,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/go-logr/logr"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap/zapcore"
@@ -28,8 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 func TestWebhookCertificates(t *testing.T) {
@@ -40,7 +39,6 @@ func TestWebhookCertificates(t *testing.T) {
 var (
 	ctx       = context.Background()
 	mgrCancel context.CancelFunc
-	log       logr.Logger
 
 	testEnv    *envtest.Environment
 	restConfig *rest.Config
@@ -51,7 +49,6 @@ var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true), func(options *zap.Options) {
 		options.TimeEncoder = zapcore.ISO8601TimeEncoder
 	}))
-	log = logf.Log.WithName("test")
 
 	By("starting test environment")
 	testEnv = &envtest.Environment{

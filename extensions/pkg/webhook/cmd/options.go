@@ -23,10 +23,9 @@ import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	"k8s.io/apimachinery/pkg/util/clock"
-
 	"github.com/spf13/pflag"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -265,7 +264,6 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 	}
 
 	atomicShootWebhookConfig := &atomic.Value{}
-	atomicShootWebhookConfig.Store(shootWebhookConfig)
 
 	if c.Server.Namespace == "" {
 		// If the namespace is not set (e.g. when running locally), then we can't use the secrets manager for managing
@@ -273,10 +271,15 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		mgr.GetLogger().Info("Running webhooks with unmanaged certificates (i.e., the webhook CA will not be rotated automatically). " +
 			"This mode is supposed to be used for development purposes only. Make sure to configure --webhook-config-namespace in production.")
 
-		caBundle, err := certificates.GenerateUnmanagedCertificates(webhookServer.CertDir, c.Server.Mode, c.providerName, c.Server.URL)
+		caBundle, err := certificates.GenerateUnmanagedCertificates(c.providerName, webhookServer.CertDir, c.Server.Mode, c.Server.URL)
 		if err != nil {
 			return nil, fmt.Errorf("error generating new certificates for webhook server: %w", err)
 		}
+
+		if err := extensionswebhook.InjectCABundleIntoWebhookConfig(shootWebhookConfig, caBundle); err != nil {
+			return nil, err
+		}
+		atomicShootWebhookConfig.Store(shootWebhookConfig.DeepCopy())
 
 		// register seed webhook config once we become leader – with the CA bundle we just generated
 		// also reconcile all shoot webhook configs to update the CA bundle
