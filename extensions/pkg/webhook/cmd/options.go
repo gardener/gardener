@@ -17,11 +17,15 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 
+	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
-
+	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/spf13/pflag"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -167,18 +171,20 @@ func NewSwitchOptions(pairs ...NameToFactory) *SwitchOptions {
 
 // AddToManagerOptions are options to create an `AddToManager` function from ServerOptions and SwitchOptions.
 type AddToManagerOptions struct {
-	serverName string
-	Server     ServerOptions
-	Switch     SwitchOptions
+	providerName string
+	providerType string
+	Server       ServerOptions
+	Switch       SwitchOptions
 }
 
 // NewAddToManagerOptions creates new AddToManagerOptions with the given server name, server, and switch options.
-// It is supposed to be used for webhooks which should be automatically registered in the cluster via a Mutatingwebhookconfiguration.
-func NewAddToManagerOptions(serverName string, serverOpts *ServerOptions, switchOpts *SwitchOptions) *AddToManagerOptions {
+// It is supposed to be used for webhooks which should be automatically registered in the cluster via a MutatingWebhookConfiguration.
+func NewAddToManagerOptions(providerName string, providerType string, serverOpts *ServerOptions, switchOpts *SwitchOptions) *AddToManagerOptions {
 	return &AddToManagerOptions{
-		serverName: serverName,
-		Server:     *serverOpts,
-		Switch:     *switchOpts,
+		providerName: providerName,
+		providerType: providerType,
+		Server:       *serverOpts,
+		Switch:       *switchOpts,
 	}
 }
 
@@ -200,26 +206,33 @@ func (c *AddToManagerOptions) Complete() error {
 // Completed returns the completed AddToManagerConfig. Only call this if a previous call to `Complete` succeeded.
 func (c *AddToManagerOptions) Completed() *AddToManagerConfig {
 	return &AddToManagerConfig{
-		serverName: c.serverName,
-		Server:     *c.Server.Completed(),
-		Switch:     *c.Switch.Completed(),
+		providerName: c.providerName,
+		providerType: c.providerType,
+		Server:       *c.Server.Completed(),
+		Switch:       *c.Switch.Completed(),
 	}
 }
 
 // AddToManagerConfig is a completed AddToManager configuration.
 type AddToManagerConfig struct {
-	serverName string
-	Server     ServerConfig
-	Switch     SwitchConfig
+	providerName string
+	providerType string
+	Server       ServerConfig
+	Switch       SwitchConfig
+	Clock        clock.Clock
 }
 
 // AddToManager instantiates all webhooks of this configuration. If there are any webhooks, it creates a
 // webhook server, registers the webhooks and adds the server to the manager. Otherwise, it is a no-op.
-// It generates and registers the seed targeted webhooks via a Mutatingwebhookconfiguration.
-func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manager) ([]admissionregistrationv1.MutatingWebhook, []admissionregistrationv1.MutatingWebhook, error) {
+// It generates and registers the seed targeted webhooks via a MutatingWebhookConfiguration.
+func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manager) (*atomic.Value, error) {
+	if c.Clock == nil {
+		c.Clock = &clock.RealClock{}
+	}
+
 	webhooks, err := c.Switch.WebhooksFactory(mgr)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not create webhooks: %w", err)
+		return nil, fmt.Errorf("could not create webhooks: %w", err)
 	}
 	webhookServer := mgr.GetWebhookServer()
 
@@ -236,22 +249,119 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		}
 	}
 
-	caBundle, err := extensionswebhook.GenerateCertificates(ctx, mgr, webhookServer.CertDir, c.Server.Namespace, c.serverName, c.Server.Mode, c.Server.URL)
+	seedWebhookConfig, shootWebhookConfig, err := extensionswebhook.BuildWebhookConfigs(
+		webhooks,
+		mgr.GetClient(),
+		c.Server.Namespace,
+		c.providerName,
+		servicePort,
+		c.Server.Mode,
+		c.Server.URL,
+		nil,
+	)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not generate certificates: %w", err)
+		return nil, fmt.Errorf("could not create webhooks: %w", err)
 	}
 
-	seedWebhooks, shootWebhooks, err := extensionswebhook.RegisterWebhooks(ctx, mgr, c.Server.Namespace, c.serverName, servicePort, c.Server.Mode, c.Server.URL, caBundle, webhooks)
-	if err != nil {
-		return nil, nil, fmt.Errorf("could not create webhooks: %w", err)
+	atomicShootWebhookConfig := &atomic.Value{}
+
+	if c.Server.Namespace == "" {
+		// If the namespace is not set (e.g. when running locally), then we can't use the secrets manager for managing
+		// the webhook certificates. We simply generate a new certificate and write it to CertDir in this case.
+		mgr.GetLogger().Info("Running webhooks with unmanaged certificates (i.e., the webhook CA will not be rotated automatically). " +
+			"This mode is supposed to be used for development purposes only. Make sure to configure --webhook-config-namespace in production.")
+
+		caBundle, err := certificates.GenerateUnmanagedCertificates(c.providerName, webhookServer.CertDir, c.Server.Mode, c.Server.URL)
+		if err != nil {
+			return nil, fmt.Errorf("error generating new certificates for webhook server: %w", err)
+		}
+
+		if err := extensionswebhook.InjectCABundleIntoWebhookConfig(shootWebhookConfig, caBundle); err != nil {
+			return nil, err
+		}
+		atomicShootWebhookConfig.Store(shootWebhookConfig.DeepCopy())
+
+		// register seed webhook config once we become leader – with the CA bundle we just generated
+		// also reconcile all shoot webhook configs to update the CA bundle
+		if err := mgr.Add(runOnceWithLeaderElection(flow.Sequential(
+			c.reconcileSeedWebhookConfig(mgr, seedWebhookConfig, caBundle),
+			c.reconcileShootWebhookConfigs(mgr, shootWebhookConfig, caBundle),
+		))); err != nil {
+			return nil, err
+		}
+
+		return atomicShootWebhookConfig, nil
 	}
 
-	return seedWebhooks, shootWebhooks, nil
+	// register seed webhook config once we become leader – without CA bundle
+	// We only care about registering the desired webhooks here, but not the CA bundle, it will be managed by the
+	// reconciler. That's why we also don't reconcile the shoot webhook configs here. They are registered in the
+	// ControlPlane actuator and our reconciler will update the included CA bundles if necessary.
+	if err := mgr.Add(runOnceWithLeaderElection(
+		c.reconcileSeedWebhookConfig(mgr, seedWebhookConfig, nil),
+	)); err != nil {
+		return nil, err
+	}
+
+	if err := certificates.AddCertificateManagementToManager(
+		ctx,
+		mgr,
+		c.Clock,
+		seedWebhookConfig,
+		shootWebhookConfig,
+		atomicShootWebhookConfig,
+		c.providerName,
+		c.providerType,
+		c.Server.Namespace,
+		c.Server.Mode,
+		c.Server.URL,
+	); err != nil {
+		return nil, err
+	}
+
+	return atomicShootWebhookConfig, nil
+}
+
+func (c *AddToManagerConfig) reconcileSeedWebhookConfig(mgr manager.Manager, seedWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration, caBundle []byte) func(ctx context.Context) error {
+	return func(ctx context.Context) error {
+		if seedWebhookConfig != nil {
+			if err := extensionswebhook.ReconcileSeedWebhookConfig(ctx, mgr.GetClient(), seedWebhookConfig, c.Server.Namespace, caBundle); err != nil {
+				return fmt.Errorf("error reconciling seed webhook config: %w", err)
+			}
+		}
+		return nil
+	}
+}
+
+func (c *AddToManagerConfig) reconcileShootWebhookConfigs(mgr manager.Manager, shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration, caBundle []byte) func(ctx context.Context) error {
+	return func(ctx context.Context) error {
+		if shootWebhookConfig != nil {
+			if err := extensionswebhook.InjectCABundleIntoWebhookConfig(shootWebhookConfig, caBundle); err != nil {
+				return err
+			}
+			if err := genericactuator.ReconcileShootWebhooksForAllNamespaces(ctx, mgr.GetClient(), c.providerName, c.providerType, mgr.GetWebhookServer().Port, shootWebhookConfig); err != nil {
+				return fmt.Errorf("error reconciling all shoot webhook configs: %w", err)
+			}
+		}
+
+		return nil
+	}
+}
+
+// runOnceWithLeaderElection is a function that is run exactly once when the manager, it is added to, becomes leader.
+type runOnceWithLeaderElection func(ctx context.Context) error
+
+func (r runOnceWithLeaderElection) NeedLeaderElection() bool {
+	return true
+}
+
+func (r runOnceWithLeaderElection) Start(ctx context.Context) error {
+	return r(ctx)
 }
 
 // NewAddToManagerSimpleOptions creates new AddToManagerSimpleOptions with the given switch options.
 // It can be used for webhooks which are required to run only without an automatic registration in the K8s cluster.
-// Hence, Validatingwebhookconfiguration or Mutatingwebhookconfiguration must be created separately.
+// Hence, ValidatingWebhookConfiguration or MutatingWebhookConfiguration must be created separately.
 func NewAddToManagerSimpleOptions(switchOpts *SwitchOptions) *AddToManagerSimpleOptions {
 	return &AddToManagerSimpleOptions{
 		Switch: *switchOpts,
@@ -286,7 +396,7 @@ type AddToManagerSimple struct {
 }
 
 // AddToManager makes the configured webhooks known to the given manager.
-// The registration for these webhooks must happen separately via Validatingwebhookconfiguration or Mutatingwebhookconfiguration.
+// The registration for these webhooks must happen separately via ValidatingWebhookConfiguration or MutatingWebhookConfiguration.
 func (s *AddToManagerSimple) AddToManager(mgr manager.Manager) error {
 	webhooks, err := s.Switch.WebhooksFactory(mgr)
 	if err != nil {

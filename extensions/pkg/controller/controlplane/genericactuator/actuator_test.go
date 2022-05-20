@@ -19,14 +19,9 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/go-logr/logr"
-	. "github.com/onsi/gomega/gstruct"
-	gomegatypes "github.com/onsi/gomega/types"
-	"k8s.io/apimachinery/pkg/util/clock"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	mockgenericactuator "github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator/mock"
@@ -48,9 +43,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -58,8 +56,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
@@ -312,19 +312,33 @@ var _ = Describe("Actuator", func() {
 	})
 
 	DescribeTable("#Reconcile",
-		func(configName string, checksums map[string]string, webhooks []admissionregistrationv1.MutatingWebhook, withShootCRDsChart bool) {
+		func(configName string, checksums map[string]string, webhookConfig *admissionregistrationv1.MutatingWebhookConfiguration, withShootCRDsChart bool) {
+			var atomicWebhookConfig *atomic.Value
+			if webhookConfig != nil {
+				atomicWebhookConfig = &atomic.Value{}
+				atomicWebhookConfig.Store(webhookConfig)
+			}
+
 			// Create mock client
 			c := mockclient.NewMockClient(ctrl)
 
-			if len(webhooks) > 0 {
+			if webhookConfig != nil {
 				c.EXPECT().Get(ctx, resourceKeyShootWebhooksNetworkPolicy, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(errNotFound)
 				c.EXPECT().Create(ctx, createdNetworkPolicyForShootWebhooks).Return(nil)
 
-				data, _ := marshalWebhooks(webhooks, providerName)
 				createdMRSecretForShootWebhooks := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: namespace},
-					Data:       map[string][]byte{"mutatingwebhookconfiguration.yaml": data},
-					Type:       corev1.SecretTypeOpaque,
+					Data: map[string][]byte{"mutatingwebhookconfiguration____.yaml": []byte(`apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+webhooks:
+- admissionReviewVersions: null
+  clientConfig: {}
+  name: ""
+  sideEffects: null
+`)},
+					Type: corev1.SecretTypeOpaque,
 				}
 				c.EXPECT().Get(ctx, resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
 				c.EXPECT().Create(ctx, createdMRSecretForShootWebhooks).Return(nil)
@@ -417,7 +431,7 @@ var _ = Describe("Actuator", func() {
 				})
 
 			// Create actuator
-			a := NewActuator(providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, ccmShootChart, cpShootCRDsChart, storageClassesChart, nil, vp, crf, imageVector, configName, webhooks, webhookServerPort, logger)
+			a := NewActuator(providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, ccmShootChart, cpShootCRDsChart, storageClassesChart, nil, vp, crf, imageVector, configName, atomicWebhookConfig, webhookServerPort, logger)
 			err := a.(inject.Client).InjectClient(c)
 			Expect(err).NotTo(HaveOccurred())
 			a.(*actuator).gardenerClientset = gardenerClientset
@@ -434,14 +448,20 @@ var _ = Describe("Actuator", func() {
 				"cloud-controller-manager-1329cb64",
 			)
 		},
-		Entry("should deploy secrets and apply charts with correct parameters", cloudProviderConfigName, checksums, []admissionregistrationv1.MutatingWebhook{{}}, true),
-		Entry("should deploy secrets and apply charts with correct parameters (no config)", "", checksumsNoConfig, []admissionregistrationv1.MutatingWebhook{{}}, true),
+		Entry("should deploy secrets and apply charts with correct parameters", cloudProviderConfigName, checksums, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, true),
+		Entry("should deploy secrets and apply charts with correct parameters (no config)", "", checksumsNoConfig, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, true),
 		Entry("should deploy secrets and apply charts with correct parameters (no webhook)", cloudProviderConfigName, checksums, nil, true),
-		Entry("should deploy secrets and apply charts with correct parameters (no shoot CRDs chart)", cloudProviderConfigName, checksums, []admissionregistrationv1.MutatingWebhook{{}}, false),
+		Entry("should deploy secrets and apply charts with correct parameters (no shoot CRDs chart)", cloudProviderConfigName, checksums, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, false),
 	)
 
 	DescribeTable("#Delete",
-		func(configName string, webhooks []admissionregistrationv1.MutatingWebhook, withShootCRDsChart bool) {
+		func(configName string, webhookConfig *admissionregistrationv1.MutatingWebhookConfiguration, withShootCRDsChart bool) {
+			var atomicWebhookConfig *atomic.Value
+			if webhookConfig != nil {
+				atomicWebhookConfig = &atomic.Value{}
+				atomicWebhookConfig.Store(webhookConfig)
+			}
+
 			// Create mock clients
 			client := mockclient.NewMockClient(ctrl)
 
@@ -472,7 +492,7 @@ var _ = Describe("Actuator", func() {
 			ccmChart := mockchartutil.NewMockInterface(ctrl)
 			ccmChart.EXPECT().Delete(ctx, client, namespace).Return(nil)
 
-			if len(webhooks) > 0 {
+			if webhookConfig != nil {
 				client.EXPECT().Delete(ctx, deletedNetworkPolicyForShootWebhooks).Return(nil)
 				client.EXPECT().Delete(ctx, deletedMRForShootWebhooks).Return(nil)
 				client.EXPECT().Delete(ctx, deletedMRSecretForShootWebhooks).Return(nil)
@@ -483,7 +503,7 @@ var _ = Describe("Actuator", func() {
 			client.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecretsFunc(namespace)[0].Secret.Name, Namespace: namespace}})
 
 			// Create actuator
-			a := NewActuator(providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, nil, cpShootCRDsChart, nil, nil, nil, nil, nil, configName, webhooks, webhookServerPort, logger)
+			a := NewActuator(providerName, getSecretsConfigs, shootAccessSecretsFunc, nil, nil, configChart, ccmChart, nil, cpShootCRDsChart, nil, nil, nil, nil, nil, configName, atomicWebhookConfig, webhookServerPort, logger)
 			Expect(a.(inject.Client).InjectClient(client)).To(Succeed())
 			a.(*actuator).newSecretsManager = newSecretsManager
 
@@ -492,10 +512,10 @@ var _ = Describe("Actuator", func() {
 
 			expectSecretsManagedBySecretsManager(fakeClient, "all secrets managed by SecretsManager should get cleaned up")
 		},
-		Entry("should delete secrets and charts", cloudProviderConfigName, []admissionregistrationv1.MutatingWebhook{{}}, true),
-		Entry("should delete secrets and charts (no config)", "", []admissionregistrationv1.MutatingWebhook{{}}, true),
+		Entry("should delete secrets and charts", cloudProviderConfigName, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, true),
+		Entry("should delete secrets and charts (no config)", "", &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, true),
 		Entry("should delete secrets and charts (no webhook)", cloudProviderConfigName, nil, true),
-		Entry("should delete secrets and charts (no shoot CRDs chart)", cloudProviderConfigName, []admissionregistrationv1.MutatingWebhook{{}}, false),
+		Entry("should delete secrets and charts (no shoot CRDs chart)", cloudProviderConfigName, &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}, false),
 	)
 
 	DescribeTable("#ReconcileExposure",
@@ -587,16 +607,17 @@ var _ = Describe("Actuator", func() {
 				v1beta1constants.GardenRole:         v1beta1constants.GardenRoleShoot,
 				v1beta1constants.LabelShootProvider: providerType,
 			}
-			port              = 1234
-			networkPolicyName = "gardener-extension-" + providerName
-			shootWebhooks     = []admissionregistrationv1.MutatingWebhook{{}}
+			port               = 1234
+			networkPolicyName  = "gardener-extension-" + providerName
+			shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration
 		)
+
+		BeforeEach(func() {
+			shootWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}
+		})
 
 		It("should behave correctly", func() {
 			c := mockclient.NewMockClient(ctrl)
-
-			v1beta1WebhookData, err := marshalWebhooks(shootWebhooks, providerName)
-			Expect(err).NotTo(HaveOccurred())
 
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.NamespaceList{}), labelSelector).DoAndReturn(func(_ context.Context, list *corev1.NamespaceList, _ ...client.ListOption) error {
 				*list = corev1.NamespaceList{Items: []corev1.Namespace{
@@ -612,8 +633,17 @@ var _ = Describe("Actuator", func() {
 
 			createdMRSecretForShootWebhooksNS1 := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: "namespace1"},
-				Data:       map[string][]byte{"mutatingwebhookconfiguration.yaml": v1beta1WebhookData},
-				Type:       corev1.SecretTypeOpaque,
+				Data: map[string][]byte{"mutatingwebhookconfiguration____.yaml": []byte(`apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+webhooks:
+- admissionReviewVersions: null
+  clientConfig: {}
+  name: ""
+  sideEffects: null
+`)},
+				Type: corev1.SecretTypeOpaque,
 			}
 			createdMRForShootWebhooksNS1 := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: "namespace1"},
@@ -637,13 +667,19 @@ var _ = Describe("Actuator", func() {
 				},
 			)
 
-			v1WebhookData, err := marshalWebhooks(shootWebhooks, providerName)
-			Expect(err).NotTo(HaveOccurred())
-
 			createdMRSecretForShootWebhooksNS3 := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: "namespace3"},
-				Data:       map[string][]byte{"mutatingwebhookconfiguration.yaml": v1WebhookData},
-				Type:       corev1.SecretTypeOpaque,
+				Data: map[string][]byte{"mutatingwebhookconfiguration____.yaml": []byte(`apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+webhooks:
+- admissionReviewVersions: null
+  clientConfig: {}
+  name: ""
+  sideEffects: null
+`)},
+				Type: corev1.SecretTypeOpaque,
 			}
 			createdMRForShootWebhooksNS3 := &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: "namespace3"},
@@ -667,7 +703,7 @@ var _ = Describe("Actuator", func() {
 				},
 			)
 
-			Expect(ReconcileShootWebhooksForAllNamespaces(ctx, c, providerName, providerType, port, shootWebhooks)).To(Succeed())
+			Expect(ReconcileShootWebhooksForAllNamespaces(ctx, c, providerName, providerType, port, shootWebhookConfig)).To(Succeed())
 		})
 	})
 })

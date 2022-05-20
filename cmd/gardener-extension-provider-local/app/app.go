@@ -19,10 +19,10 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"time"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	controllercmd "github.com/gardener/gardener/extensions/pkg/controller/cmd"
-	genericcontrolplaneactuator "github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	webhookcmd "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
@@ -40,6 +40,7 @@ import (
 	localservice "github.com/gardener/gardener/pkg/provider-local/controller/service"
 	localworker "github.com/gardener/gardener/pkg/provider-local/controller/worker"
 	"github.com/gardener/gardener/pkg/provider-local/local"
+	"github.com/gardener/gardener/pkg/utils/retry"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -47,6 +48,7 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -155,7 +157,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 
 		controllerSwitches = ControllerSwitchOptions()
 		webhookSwitches    = WebhookSwitchOptions()
-		webhookOptions     = webhookcmd.NewAddToManagerOptions(local.Name, webhookServerOptions, webhookSwitches)
+		webhookOptions     = webhookcmd.NewAddToManagerOptions(local.Name, local.Type, webhookServerOptions, webhookSwitches)
 
 		aggOption = controllercmd.NewOptionAggregator(
 			restOpts,
@@ -243,20 +245,11 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("could not add readycheck of webhook to manager: %w", err)
 			}
 
-			_, shootWebhooks, err := webhookOptions.Completed().AddToManager(ctx, mgr)
+			atomicShootWebhookConfig, err := webhookOptions.Completed().AddToManager(ctx, mgr)
 			if err != nil {
 				return fmt.Errorf("could not add webhooks to manager: %w", err)
 			}
-			localcontrolplane.DefaultAddOptions.ShootWebhooks = shootWebhooks
-
-			// Update shoot webhook configuration in case the webhook server port has changed.
-			if err := mgr.Add(&shootWebhookReconciler{
-				client:            mgr.GetClient(),
-				webhookServerPort: mgr.GetWebhookServer().Port,
-				shootWebhooks:     shootWebhooks,
-			}); err != nil {
-				return fmt.Errorf("error adding runnable for reconciling shoot webhooks in all namespaces: %w", err)
-			}
+			localcontrolplane.DefaultAddOptions.ShootWebhookConfig = atomicShootWebhookConfig
 
 			// Send empty patches on start-up to trigger webhooks
 			if err := mgr.Add(&webhookTriggerer{client: mgr.GetClient()}); err != nil {
@@ -291,6 +284,32 @@ func (w *webhookTriggerer) NeedLeaderElection() bool {
 }
 
 func (w *webhookTriggerer) Start(ctx context.Context) error {
+	// Wait for the reconciler to populate the webhook CA into the configurations before triggering the webhooks.
+	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	if err := retry.Until(timeoutCtx, time.Second, func(ctx context.Context) (bool, error) {
+		webhookConfig := &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-extension-" + local.Name}}
+		if err := w.client.Get(ctx, client.ObjectKeyFromObject(webhookConfig), webhookConfig); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return retry.SevereError(err)
+			}
+			return retry.MinorError(fmt.Errorf("webhook was not yet created"))
+		}
+
+		for _, webhook := range webhookConfig.Webhooks {
+			// We can return when we find the first webhook w/o CA bundle since the reconciler would populate it into
+			// all webhooks at the same time.
+			if len(webhook.ClientConfig.CABundle) == 0 {
+				return retry.MinorError(fmt.Errorf("CA bundle was not yet populated to all webhooks"))
+			}
+		}
+
+		return retry.Ok()
+	}); err != nil {
+		return err
+	}
+
 	if err := w.trigger(ctx, w.client, w.client.Status(), &corev1.NodeList{}, client.MatchingLabels{"kubernetes.io/hostname": "gardener-local-control-plane"}); err != nil {
 		return err
 	}
@@ -307,18 +326,4 @@ func (w *webhookTriggerer) trigger(ctx context.Context, reader client.Reader, wr
 		object := obj.(client.Object)
 		return writer.Patch(ctx, object, client.RawPatch(types.StrategicMergePatchType, []byte("{}")))
 	})
-}
-
-type shootWebhookReconciler struct {
-	client            client.Client
-	webhookServerPort int
-	shootWebhooks     []admissionregistrationv1.MutatingWebhook
-}
-
-func (s *shootWebhookReconciler) NeedLeaderElection() bool {
-	return true
-}
-
-func (s *shootWebhookReconciler) Start(ctx context.Context) error {
-	return genericcontrolplaneactuator.ReconcileShootWebhooksForAllNamespaces(ctx, s.client, local.Name, local.Type, s.webhookServerPort, s.shootWebhooks)
 }

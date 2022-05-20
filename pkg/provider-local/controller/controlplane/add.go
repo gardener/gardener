@@ -15,6 +15,8 @@
 package controlplane
 
 import (
+	"sync/atomic"
+
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
@@ -22,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/provider-local/imagevector"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -41,8 +42,8 @@ type AddOptions struct {
 	Controller controller.Options
 	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
 	IgnoreOperationAnnotation bool
-	// ShootWebhooks specifies the list of desired Shoot MutatingWebhooks.
-	ShootWebhooks []admissionregistrationv1.MutatingWebhook
+	// ShootWebhookConfig specifies the desired Shoot MutatingWebhooksConfiguration.
+	ShootWebhookConfig *atomic.Value
 }
 
 // AddToManagerWithOptions adds a controller with the given Options to the given manager.
@@ -51,7 +52,7 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 	return controlplane.Add(mgr, controlplane.AddArgs{
 		Actuator: genericactuator.NewActuator(local.Name, getSecretConfigs, nil, nil, nil, nil, nil, nil,
 			nil, nil, nil, NewValuesProvider(), extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot),
-			imagevector.ImageVector(), "", opts.ShootWebhooks, mgr.GetWebhookServer().Port, logger),
+			imagevector.ImageVector(), "", opts.ShootWebhookConfig, mgr.GetWebhookServer().Port, logger),
 		ControllerOptions: opts.Controller,
 		Predicates:        controlplane.DefaultPredicates(opts.IgnoreOperationAnnotation),
 		Type:              local.Type,

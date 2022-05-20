@@ -23,12 +23,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 const (
@@ -36,23 +36,32 @@ const (
 	NamePrefix = "gardener-extension-"
 	// NameSuffixShoot is the suffix used for {Valida,Muta}tingWebhookConfigurations of extensions targeting a shoot.
 	NameSuffixShoot = "-shoot"
+	// ModeService is a constant for the webhook mode indicating that the controller is running inside of the Kubernetes cluster it
+	// is serving.
+	ModeService = "service"
+	// ModeURL is a constant for the webhook mode indicating that the controller is running outside of the Kubernetes cluster it
+	// is serving. If this is set then a URL is required for configuration.
+	ModeURL = "url"
+	// ModeURLWithServiceName is a constant for the webhook mode indicating that the controller is running outside of the Kubernetes cluster it
+	// is serving but in the same cluster like the kube-apiserver. If this is set then a URL is required for configuration.
+	ModeURLWithServiceName = "url-service"
 )
 
-// RegisterWebhooks registers the given webhooks in the Kubernetes cluster targeted by the provided manager.
-func RegisterWebhooks(ctx context.Context, mgr manager.Manager, namespace, providerName string, servicePort int, mode, url string, caBundle []byte, webhooks []*Webhook) (webhooksToRegisterSeed []admissionregistrationv1.MutatingWebhook, webhooksToRegisterShoot []admissionregistrationv1.MutatingWebhook, err error) {
+// BuildWebhookConfigs builds MutatingWebhookConfiguration objects for seed and shoots from the given webhooks slice.
+func BuildWebhookConfigs(webhooks []*Webhook, c client.Client, namespace, providerName string, servicePort int, mode, url string, caBundle []byte) (*admissionregistrationv1.MutatingWebhookConfiguration, *admissionregistrationv1.MutatingWebhookConfiguration, error) {
 	var (
-		exact                            = admissionregistrationv1.Exact
-		mutatingWebhookConfigurationSeed = &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: NamePrefix + providerName}}
+		exact       = admissionregistrationv1.Exact
+		sideEffects = admissionregistrationv1.SideEffectClassNone
+
+		seedWebhooks  []admissionregistrationv1.MutatingWebhook
+		shootWebhooks []admissionregistrationv1.MutatingWebhook
 	)
 
 	for _, webhook := range webhooks {
-		var (
-			rules       []admissionregistrationv1.RuleWithOperations
-			sideEffects = admissionregistrationv1.SideEffectClassNone
-		)
+		var rules []admissionregistrationv1.RuleWithOperations
 
 		for _, t := range webhook.Types {
-			rule, err := buildRule(mgr, t)
+			rule, err := buildRule(c, t)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -83,46 +92,163 @@ func RegisterWebhooks(ctx context.Context, mgr manager.Manager, namespace, provi
 			webhookToRegister.FailurePolicy = getFailurePolicy(admissionregistrationv1.Fail, webhook.FailurePolicy)
 			webhookToRegister.MatchPolicy = &exact
 			webhookToRegister.ClientConfig = buildClientConfigFor(webhook, namespace, providerName, servicePort, mode, url, caBundle)
-			webhooksToRegisterSeed = append(webhooksToRegisterSeed, webhookToRegister)
+			seedWebhooks = append(seedWebhooks, webhookToRegister)
 		case TargetShoot:
 			webhookToRegister.FailurePolicy = getFailurePolicy(admissionregistrationv1.Ignore, webhook.FailurePolicy)
 			webhookToRegister.MatchPolicy = &exact
 			webhookToRegister.ClientConfig = buildClientConfigFor(webhook, namespace, providerName, servicePort, shootMode, url, caBundle)
-			webhooksToRegisterShoot = append(webhooksToRegisterShoot, webhookToRegister)
+			shootWebhooks = append(shootWebhooks, webhookToRegister)
 		default:
 			return nil, nil, fmt.Errorf("invalid webhook target: %s", webhook.Target)
 		}
-
 	}
 
-	if len(webhooksToRegisterSeed) > 0 {
-		c, err := getClient(mgr)
-		if err != nil {
-			return nil, nil, err
-		}
+	var seedWebhookConfig, shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration
 
-		var ownerReference *metav1.OwnerReference
-		if len(namespace) > 0 {
-			ns := &corev1.Namespace{}
-			if err := c.Get(ctx, client.ObjectKey{Name: namespace}, ns); err != nil {
-				return nil, nil, err
-			}
-			ownerReference = metav1.NewControllerRef(ns, corev1.SchemeGroupVersion.WithKind("Namespace"))
-			ownerReference.BlockOwnerDeletion = pointer.Bool(false)
-		}
-
-		if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c, mutatingWebhookConfigurationSeed, func() error {
-			if ownerReference != nil {
-				mutatingWebhookConfigurationSeed.SetOwnerReferences(kubernetes.MergeOwnerReferences(mutatingWebhookConfigurationSeed.GetOwnerReferences(), *ownerReference))
-			}
-			mutatingWebhookConfigurationSeed.Webhooks = webhooksToRegisterSeed
-			return nil
-		}); err != nil {
-			return nil, nil, err
+	// if all webhooks for one target are removed in a new version, extensions need to explicitly delete the respective
+	// webhook config
+	if len(seedWebhooks) > 0 {
+		seedWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{Name: NamePrefix + providerName},
+			Webhooks:   seedWebhooks,
 		}
 	}
 
-	return webhooksToRegisterSeed, webhooksToRegisterShoot, nil
+	if len(shootWebhooks) > 0 {
+		shootWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{Name: NamePrefix + providerName + NameSuffixShoot},
+			Webhooks:   shootWebhooks,
+		}
+	}
+
+	return seedWebhookConfig, shootWebhookConfig, nil
+}
+
+// ReconcileSeedWebhookConfig reconciles the given webhook config in the seed cluster.
+// If a CA bundle is given, it is injected it into all desired webhooks. If not, the CA bundle from the webhook config
+// on the cluster (if any) is kept.
+func ReconcileSeedWebhookConfig(ctx context.Context, c client.Client, webhookConfig client.Object, ownerNamespace string, caBundle []byte) error {
+	var ownerReference *metav1.OwnerReference
+	if len(ownerNamespace) > 0 {
+		ns := &corev1.Namespace{}
+		if err := c.Get(ctx, client.ObjectKey{Name: ownerNamespace}, ns); err != nil {
+			return err
+		}
+		ownerReference = metav1.NewControllerRef(ns, corev1.SchemeGroupVersion.WithKind("Namespace"))
+		ownerReference.BlockOwnerDeletion = pointer.Bool(false)
+	}
+
+	desiredWebhookConfig := webhookConfig.DeepCopyObject().(client.Object)
+
+	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c, webhookConfig, func() error {
+		if ownerReference != nil {
+			webhookConfig.SetOwnerReferences(kubernetes.MergeOwnerReferences(webhookConfig.GetOwnerReferences(), *ownerReference))
+		}
+
+		if len(caBundle) == 0 {
+			var err error
+			// we can safely assume, that the CA bundles in all webhooks are the same, as we manage it ourselves
+			caBundle, err = GetCABundleFromWebhookConfig(webhookConfig)
+			if err != nil {
+				return err
+			}
+		}
+
+		if err := InjectCABundleIntoWebhookConfig(desiredWebhookConfig, caBundle); err != nil {
+			return err
+		}
+		return OverwriteWebhooks(webhookConfig, desiredWebhookConfig)
+	}); err != nil {
+		return fmt.Errorf("error reconciling seed webhook config: %w", err)
+	}
+
+	return nil
+}
+
+// OverwriteWebhooks sets current.Webhooks to desired.Webhooks for all kinds and version of webhook configs.
+func OverwriteWebhooks(current, desired client.Object) error {
+	switch config := current.(type) {
+	case *admissionregistrationv1.MutatingWebhookConfiguration:
+		d := desired.(*admissionregistrationv1.MutatingWebhookConfiguration)
+		config.Webhooks = d.DeepCopy().Webhooks
+	case *admissionregistrationv1.ValidatingWebhookConfiguration:
+		d := desired.(*admissionregistrationv1.ValidatingWebhookConfiguration)
+		config.Webhooks = d.DeepCopy().Webhooks
+	case *admissionregistrationv1beta1.MutatingWebhookConfiguration:
+		d := desired.(*admissionregistrationv1beta1.MutatingWebhookConfiguration)
+		config.Webhooks = d.DeepCopy().Webhooks
+	case *admissionregistrationv1beta1.ValidatingWebhookConfiguration:
+		d := desired.(*admissionregistrationv1beta1.ValidatingWebhookConfiguration)
+		config.Webhooks = d.DeepCopy().Webhooks
+	default:
+		return fmt.Errorf("unexpected webhook config type: %T", current)
+	}
+
+	return nil
+}
+
+// GetCABundleFromWebhookConfig finds the first non-empty Webhooks[0].ClientConfig.CABundle from the given webhook config.
+func GetCABundleFromWebhookConfig(obj client.Object) ([]byte, error) {
+	switch config := obj.(type) {
+	case *admissionregistrationv1.MutatingWebhookConfiguration:
+		for _, webhook := range config.Webhooks {
+			if caBundle := webhook.ClientConfig.CABundle; len(caBundle) > 0 {
+				return caBundle, nil
+			}
+		}
+	case *admissionregistrationv1.ValidatingWebhookConfiguration:
+		for _, webhook := range config.Webhooks {
+			if caBundle := webhook.ClientConfig.CABundle; len(caBundle) > 0 {
+				return caBundle, nil
+			}
+		}
+	case *admissionregistrationv1beta1.MutatingWebhookConfiguration:
+		for _, w := range config.Webhooks {
+			if caBundle := w.ClientConfig.CABundle; len(caBundle) > 0 {
+				return caBundle, nil
+			}
+		}
+	case *admissionregistrationv1beta1.ValidatingWebhookConfiguration:
+		for _, webhook := range config.Webhooks {
+			if caBundle := webhook.ClientConfig.CABundle; len(caBundle) > 0 {
+				return caBundle, nil
+			}
+		}
+	default:
+		return nil, fmt.Errorf("unexpected webhook config type: %T", obj)
+	}
+
+	return nil, nil
+}
+
+// InjectCABundleIntoWebhookConfig sets the given CA bundle in all webhook client config in the given webhook config.
+func InjectCABundleIntoWebhookConfig(obj client.Object, caBundle []byte) error {
+	switch config := obj.(type) {
+	case *admissionregistrationv1.MutatingWebhookConfiguration:
+		for i, w := range config.Webhooks {
+			w.ClientConfig.CABundle = caBundle
+			config.Webhooks[i] = w
+		}
+	case *admissionregistrationv1.ValidatingWebhookConfiguration:
+		for i, w := range config.Webhooks {
+			w.ClientConfig.CABundle = caBundle
+			config.Webhooks[i] = w
+		}
+	case *admissionregistrationv1beta1.MutatingWebhookConfiguration:
+		for i, w := range config.Webhooks {
+			w.ClientConfig.CABundle = caBundle
+			config.Webhooks[i] = w
+		}
+	case *admissionregistrationv1beta1.ValidatingWebhookConfiguration:
+		for i, w := range config.Webhooks {
+			w.ClientConfig.CABundle = caBundle
+			config.Webhooks[i] = w
+		}
+	default:
+		return fmt.Errorf("unexpected webhook config type: %T", obj)
+	}
+
+	return nil
 }
 
 func getFailurePolicy(def admissionregistrationv1.FailurePolicyType, overwrite *admissionregistrationv1.FailurePolicyType) *admissionregistrationv1.FailurePolicyType {
@@ -133,15 +259,15 @@ func getFailurePolicy(def admissionregistrationv1.FailurePolicyType, overwrite *
 }
 
 // buildRule creates and returns a RuleWithOperations for the given object type.
-func buildRule(mgr manager.Manager, t Type) (*admissionregistrationv1.RuleWithOperations, error) {
+func buildRule(c client.Client, t Type) (*admissionregistrationv1.RuleWithOperations, error) {
 	// Get GVK from the type
-	gvk, err := apiutil.GVKForObject(t.Obj, mgr.GetScheme())
+	gvk, err := apiutil.GVKForObject(t.Obj, c.Scheme())
 	if err != nil {
 		return nil, fmt.Errorf("could not get GroupVersionKind from object %v: %w", t.Obj, err)
 	}
 
 	// Get REST mapping from GVK
-	mapping, err := mgr.GetRESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
+	mapping, err := c.RESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
 	if err != nil {
 		return nil, fmt.Errorf("could not get REST mapping from GroupVersionKind '%s': %w", gvk.String(), err)
 	}
@@ -166,19 +292,19 @@ func buildRule(mgr manager.Manager, t Type) (*admissionregistrationv1.RuleWithOp
 }
 
 func buildClientConfigFor(webhook *Webhook, namespace, providerName string, servicePort int, mode, url string, caBundle []byte) admissionregistrationv1.WebhookClientConfig {
-	path := "/" + webhook.Path
-
-	clientConfig := admissionregistrationv1.WebhookClientConfig{
-		CABundle: caBundle,
-	}
+	var (
+		path         = "/" + webhook.Path
+		clientConfig = admissionregistrationv1.WebhookClientConfig{
+			// can be empty if injected later on
+			CABundle: caBundle,
+		}
+	)
 
 	switch mode {
 	case ModeURL:
-		url := fmt.Sprintf("https://%s%s", url, path)
-		clientConfig.URL = &url
+		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s%s", url, path))
 	case ModeURLWithServiceName:
-		url := fmt.Sprintf("https://gardener-extension-%s.%s:%d%s", providerName, namespace, servicePort, path)
-		clientConfig.URL = &url
+		clientConfig.URL = pointer.String(fmt.Sprintf("https://gardener-extension-%s.%s:%d%s", providerName, namespace, servicePort, path))
 	case ModeService:
 		clientConfig.Service = &admissionregistrationv1.ServiceReference{
 			Namespace: namespace,

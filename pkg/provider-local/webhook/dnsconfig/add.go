@@ -16,7 +16,6 @@ package dnsconfig
 
 import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
-	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane"
 	"github.com/gardener/gardener/pkg/provider-local/local"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -46,7 +45,6 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 
 	var (
 		name     = "dnsconfig"
-		kind     = controlplane.KindSeed
 		provider = local.Type
 		types    = []extensionswebhook.Type{
 			{Obj: &appsv1.Deployment{}},
@@ -54,7 +52,7 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 		}
 	)
 
-	logger = logger.WithValues("kind", kind, "provider", provider)
+	logger = logger.WithValues("provider", provider)
 
 	handler, err := extensionswebhook.NewBuilder(mgr, logger).WithMutator(&mutator{}, types...).Build()
 	if err != nil {
@@ -65,7 +63,6 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 
 	return &extensionswebhook.Webhook{
 		Name:     name,
-		Kind:     kind,
 		Provider: provider,
 		Types:    types,
 		Target:   extensionswebhook.TargetSeed,

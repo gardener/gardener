@@ -207,8 +207,7 @@ func LoadCertificate(name string, privateKeyPEM, certificatePEM []byte) (*Certif
 // or both, depending on the <certType> value. If <isCACert> is true, then a CA certificate is being created.
 // The certificates a valid for 10 years.
 func (s *CertificateSecretConfig) generateCertificateTemplate() *x509.Certificate {
-	var clock clock.Clock = clock.RealClock{}
-
+	clock := Clock
 	if s.Clock != nil {
 		clock = s.Clock
 	}
