@@ -106,17 +106,66 @@ var _ = Describe("Generate", func() {
 
 			It("should maintain the lifetime labels (w/ validity)", func() {
 				By("generating new secret")
-				secret, err := m.Generate(ctx, config, Validity(time.Hour))
+				validity := time.Hour
+				secret, err := m.Generate(ctx, config, Validity(validity))
 				Expect(err).NotTo(HaveOccurred())
 
 				By("reading created secret from system")
 				foundSecret := &corev1.Secret{}
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), foundSecret)).To(Succeed())
 
+				issuedAtTime := fakeClock.Now()
+
 				By("verifying labels")
 				Expect(foundSecret.Labels).To(And(
-					HaveKeyWithValue("issued-at-time", strconv.FormatInt(fakeClock.Now().Unix(), 10)),
-					HaveKeyWithValue("valid-until-time", strconv.FormatInt(fakeClock.Now().Add(time.Hour).Unix(), 10)),
+					HaveKeyWithValue("issued-at-time", strconv.FormatInt(issuedAtTime.Unix(), 10)),
+					HaveKeyWithValue("valid-until-time", strconv.FormatInt(issuedAtTime.Add(validity).Unix(), 10)),
+				))
+
+				By("fast-forward time")
+				fakeClock.Step(30 * time.Minute)
+
+				By("generating the same secret again w/ same validity")
+				secret2, err := m.Generate(ctx, config, Validity(validity))
+				Expect(err).NotTo(HaveOccurred())
+
+				By("reading created secret from system")
+				foundSecret2 := &corev1.Secret{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret2), foundSecret2)).To(Succeed())
+
+				By("verifying labels (validity should not have been changed)")
+				Expect(foundSecret2.Labels).To(And(
+					HaveKeyWithValue("issued-at-time", secret.Labels["issued-at-time"]),
+					HaveKeyWithValue("valid-until-time", secret.Labels["valid-until-time"]),
+				))
+
+				By("generating the same secret again w/ new validity")
+				validity = 2 * time.Hour
+				secret3, err := m.Generate(ctx, config, Validity(validity))
+				Expect(err).NotTo(HaveOccurred())
+
+				By("reading created secret from system")
+				foundSecret3 := &corev1.Secret{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret3), foundSecret3)).To(Succeed())
+
+				By("verifying labels (validity should have been recomputed)")
+				Expect(foundSecret3.Labels).To(And(
+					HaveKeyWithValue("issued-at-time", secret.Labels["issued-at-time"]),
+					HaveKeyWithValue("valid-until-time", strconv.FormatInt(issuedAtTime.Add(validity).Unix(), 10)),
+				))
+
+				By("generating the same secret again w/o validity option this time")
+				secret4, err := m.Generate(ctx, config)
+				Expect(err).NotTo(HaveOccurred())
+
+				By("reading created secret from system")
+				foundSecret4 := &corev1.Secret{}
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret4), foundSecret4)).To(Succeed())
+
+				By("verifying labels (validity should have been recomputed)")
+				Expect(foundSecret4.Labels).To(And(
+					HaveKeyWithValue("issued-at-time", secret.Labels["issued-at-time"]),
+					Not(HaveKey("valid-until-time")),
 				))
 			})
 

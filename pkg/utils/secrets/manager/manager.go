@@ -284,7 +284,6 @@ func ObjectMeta(
 	config secretutils.ConfigInterface,
 	ignoreConfigChecksumForCASecretName bool,
 	lastRotationInitiationTime string,
-	validUntilTime *string,
 	signingCAChecksum *string,
 	persist *bool,
 	bundleFor *string,
@@ -307,10 +306,6 @@ func ObjectMeta(
 
 	if signingCAChecksum != nil {
 		labels[LabelKeyChecksumSigningCA] = *signingCAChecksum
-	}
-
-	if validUntilTime != nil {
-		labels[LabelKeyValidUntilTime] = *validUntilTime
 	}
 
 	if persist != nil && *persist {
