@@ -69,6 +69,8 @@ var _ = Describe("Certificates tests", func() {
 		codec     = newCodec(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 		fakeClock *clock.FakeClock
 
+		extensionNamespace *corev1.Namespace
+		shootNamespace     *corev1.Namespace
 		cluster            *extensionsv1alpha1.Cluster
 		shootNetworkPolicy *networkingv1.NetworkPolicy
 
@@ -85,6 +87,31 @@ var _ = Describe("Certificates tests", func() {
 		scope                    = admissionregistrationv1.AllScopes
 		timeoutSeconds     int32 = 10
 	)
+
+	BeforeEach(func() {
+		By("creating test namespaces")
+		extensionNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{GenerateName: "webhook-certs-test-"}}
+		Expect(testClient.Create(ctx, extensionNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+
+		shootNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "shoot--foo--",
+				Labels: map[string]string{
+					"shoot.gardener.cloud/provider": providerType,
+					"gardener.cloud/role":           "shoot",
+				},
+			},
+		}
+		Expect(testClient.Create(ctx, shootNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+
+		DeferCleanup(func() {
+			By("deleting extension namespace")
+			Expect(testClient.Delete(ctx, extensionNamespace)).To(Or(Succeed(), BeNotFoundError()))
+
+			By("deleting shoot namespace")
+			Expect(testClient.Delete(ctx, shootNamespace)).To(Or(Succeed(), BeNotFoundError()))
+		})
+	})
 
 	BeforeEach(func() {
 		fakeClock = clock.NewFakeClock(time.Now())
@@ -214,6 +241,11 @@ var _ = Describe("Certificates tests", func() {
 		}).ShouldNot(BeEmpty())
 	})
 
+	AfterEach(func() {
+		By("deleting webhook config")
+		Expect(testClient.Delete(ctx, seedWebhookConfig)).To(Or(Succeed(), BeNotFoundError()))
+	})
+
 	Context("seed webhook does not yet exist", func() {
 		It("should create the webhook and inject the CA bundle", func() {
 			Eventually(func(g Gomega) {
@@ -258,7 +290,7 @@ var _ = Describe("Certificates tests", func() {
 			}).Should(Not(BeEmpty()))
 
 			Eventually(func(g Gomega) []byte {
-				g.Expect(getShootWebhookConfig(codec, shootWebhookConfig)).To(Succeed())
+				g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
 				return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
 			}).Should(Equal(caBundle1))
 
@@ -288,7 +320,7 @@ var _ = Describe("Certificates tests", func() {
 			))
 
 			Eventually(func(g Gomega) []byte {
-				g.Expect(getShootWebhookConfig(codec, shootWebhookConfig)).To(Succeed())
+				g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
 				return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
 			}).Should(Equal(caBundle2))
 
@@ -354,8 +386,8 @@ func newCodec(scheme *runtime.Scheme, codec serializer.CodecFactory, serializer 
 	return codec.CodecForVersions(serializer, serializer, schema.GroupVersions(groupVersions), schema.GroupVersions(groupVersions))
 }
 
-func getShootWebhookConfig(codec runtime.Codec, shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration) error {
-	managedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "extension-controlplane-shoot-webhooks", Namespace: shootNamespace.Name}}
+func getShootWebhookConfig(codec runtime.Codec, shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration, namespace string) error {
+	managedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "extension-controlplane-shoot-webhooks", Namespace: namespace}}
 	if err := testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret); err != nil {
 		return err
 	}

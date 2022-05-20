@@ -19,20 +19,17 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap/zapcore"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 func TestWebhookCertificates(t *testing.T) {
@@ -48,9 +45,6 @@ var (
 	testEnv    *envtest.Environment
 	restConfig *rest.Config
 	testClient client.Client
-
-	extensionNamespace *corev1.Namespace
-	shootNamespace     *corev1.Namespace
 )
 
 var _ = BeforeSuite(func() {
@@ -83,27 +77,4 @@ var _ = BeforeSuite(func() {
 	By("creating test client")
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.SeedScheme})
 	Expect(err).NotTo(HaveOccurred())
-
-	By("creating test namespaces")
-	extensionNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "webhook-certs-tests"}}
-	Expect(testClient.Create(ctx, extensionNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
-
-	shootNamespace = &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "shoot--foo--bar",
-			Labels: map[string]string{
-				"shoot.gardener.cloud/provider": providerType,
-				"gardener.cloud/role":           "shoot",
-			},
-		},
-	}
-	Expect(testClient.Create(ctx, shootNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
-
-	DeferCleanup(func() {
-		By("deleting extension namespace")
-		Expect(testClient.Delete(ctx, extensionNamespace)).To(Or(Succeed(), BeNotFoundError()))
-
-		By("deleting shoot namespace")
-		Expect(testClient.Delete(ctx, shootNamespace)).To(Or(Succeed(), BeNotFoundError()))
-	})
 })
