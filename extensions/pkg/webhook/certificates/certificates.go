@@ -50,15 +50,14 @@ func GenerateUnmanagedCertificates(providerName, certDir, mode, url string) ([]b
 	return caCert.CertificatePEM, writeCertificatesToDisk(certDir, serverCert.CertificatePEM, serverCert.PrivateKeyPEM)
 }
 
-// CACertificateValidity is the validity of the CA certificate.
-var CACertificateValidity = 30 * 24 * time.Hour // 30d
+var caCertificateValidity = 30 * 24 * time.Hour // 30d
 
 func getWebhookCAConfig(name string) *secretutils.CertificateSecretConfig {
 	return &secretutils.CertificateSecretConfig{
 		Name:       name,
 		CommonName: name,
 		CertType:   secretutils.CACert,
-		Validity:   &CACertificateValidity,
+		Validity:   &caCertificateValidity,
 	}
 }
 

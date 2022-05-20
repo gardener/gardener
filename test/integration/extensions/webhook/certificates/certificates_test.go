@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -90,8 +91,12 @@ var _ = Describe("Certificates tests", func() {
 
 	BeforeEach(func() {
 		By("creating test namespaces")
-		extensionNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{GenerateName: "webhook-certs-test-"}}
-		Expect(testClient.Create(ctx, extensionNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+		extensionNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "webhook-certs-test-",
+			},
+		}
+		Expect(testClient.Create(ctx, extensionNamespace)).To(Succeed())
 
 		shootNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -102,7 +107,7 @@ var _ = Describe("Certificates tests", func() {
 				},
 			},
 		}
-		Expect(testClient.Create(ctx, shootNamespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+		Expect(testClient.Create(ctx, shootNamespace)).To(Succeed())
 
 		DeferCleanup(func() {
 			By("deleting extension namespace")
@@ -237,7 +242,11 @@ var _ = Describe("Certificates tests", func() {
 
 		By("verifying CA bundle was written in atomic shoot webhook config")
 		Eventually(func() []byte {
-			return atomicShootWebhookConfig.Load().(*admissionregistrationv1.MutatingWebhookConfiguration).Webhooks[0].ClientConfig.CABundle
+			val, ok := atomicShootWebhookConfig.Load().(*admissionregistrationv1.MutatingWebhookConfiguration)
+			if !ok {
+				return nil
+			}
+			return val.Webhooks[0].ClientConfig.CABundle
 		}).ShouldNot(BeEmpty())
 	})
 
@@ -276,11 +285,12 @@ var _ = Describe("Certificates tests", func() {
 			DeferCleanup(test.WithVars(
 				&certificates.DefaultSyncPeriod, 100*time.Millisecond,
 				&secretutils.GenerateKey, secretutils.FakeGenerateKey,
+				&secretutils.Clock, fakeClock,
 			))
 		})
 
 		It("should rotate the certificates and update the webhook configs", func() {
-			var caBundle1, caBundle2, serverCert1 []byte
+			var caBundle1, caBundle2, caBundle3, serverCert1 []byte
 
 			By("retrieving CA bundle (before first reconciliation)")
 			Eventually(func(g Gomega) []byte {
@@ -308,21 +318,24 @@ var _ = Describe("Certificates tests", func() {
 			}).Should(Not(BeEmpty()))
 
 			By("retrieving CA bundle again (after validity has expired)")
-			fakeClock.Step(certificates.CACertificateValidity)
+			fakeClock.Step(30 * 24 * time.Hour)
 
-			Eventually(func(g Gomega) []byte {
+			Eventually(func(g Gomega) string {
 				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seedWebhookConfig), seedWebhookConfig)).To(Succeed())
 				caBundle2 = seedWebhookConfig.Webhooks[0].ClientConfig.CABundle
-				return caBundle2
+				return string(caBundle2)
 			}).Should(And(
 				Not(BeEmpty()),
-				Not(Equal(caBundle1)),
+				Not(BeEquivalentTo(caBundle1)),
+				ContainSubstring(string(caBundle1)),
 			))
 
 			Eventually(func(g Gomega) []byte {
 				g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
 				return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
 			}).Should(Equal(caBundle2))
+
+			caCert2 := strings.TrimPrefix(string(caBundle2), string(caBundle1))
 
 			By("reading re-generated server certificate from disk")
 			Eventually(func(g Gomega) []byte {
@@ -336,6 +349,23 @@ var _ = Describe("Certificates tests", func() {
 
 			// we don't assert that the server key changed since we have overwritten the 'GenerateKey' function with
 			// a fake implementation above (hence, it cannot change)
+
+			By("retrieving CA bundle again (after old secrets are ignored)")
+			fakeClock.Step(24 * time.Hour)
+
+			Eventually(func(g Gomega) string {
+				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seedWebhookConfig), seedWebhookConfig)).To(Succeed())
+				caBundle3 = seedWebhookConfig.Webhooks[0].ClientConfig.CABundle
+				return string(caBundle3)
+			}).Should(And(
+				Not(BeEmpty()),
+				Equal(caCert2),
+			))
+
+			Eventually(func(g Gomega) []byte {
+				g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
+				return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
+			}).Should(Equal(caBundle3))
 		})
 	})
 
