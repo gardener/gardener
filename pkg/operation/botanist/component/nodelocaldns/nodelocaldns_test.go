@@ -120,6 +120,8 @@ spec:
     min: 53
   - max: 9253
     min: 9253
+  - max: 9353
+    min: 9353
   privileged: true
   runAsUser:
     rule: RunAsAny

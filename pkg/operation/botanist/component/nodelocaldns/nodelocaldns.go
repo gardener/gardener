@@ -174,6 +174,10 @@ func (c *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
 						Min: prometheusPort,
 						Max: prometheusPort,
 					},
+					{
+						Min: prometheusErrorPort,
+						Max: prometheusErrorPort,
+					},
 				},
 				Privileged: true,
 				RunAsUser: policyv1beta1.RunAsUserStrategyOptions{
