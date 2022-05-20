@@ -39,6 +39,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // runReconcileShootFlow reconciles the Shoot cluster.
@@ -79,14 +80,10 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		}),
 		errors.ToExecute("Check whether control plane exists and is succeeded", func() error {
 			cp := &extensionsv1alpha1.ControlPlane{}
-			if err := o.K8sSeedClient.Client().Get(ctx, kutil.Key(o.Shoot.SeedNamespace, o.Shoot.GetInfo().Name), cp); err != nil {
-				if apierrors.IsNotFound(err) {
-					controlPlaneExistsAndSucceeded = false
-					return nil
-				}
+			if err := o.K8sSeedClient.Client().Get(ctx, kutil.Key(o.Shoot.SeedNamespace, o.Shoot.GetInfo().Name), cp); client.IgnoreNotFound(err) != nil {
 				return err
 			}
-			controlPlaneExistsAndSucceeded = cp.Status.LastOperation != nil && cp.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded
+			controlPlaneExistsAndSucceeded = !apierrors.IsNotFound(err) && cp.Status.LastOperation != nil && cp.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded
 			return nil
 		}),
 		errors.ToExecute("Check required extensions", func() error {
