@@ -107,10 +107,6 @@ func (a *actuator) Reconcile(ctx context.Context, ms *seedmanagementv1alpha1.Man
 	updateCondition(status, seedmanagementv1alpha1.ManagedSeedShootReconciled, gardencorev1beta1.ConditionTrue, gardencorev1beta1.EventReconciled,
 		fmt.Sprintf("Shoot %s has been reconciled", kutil.ObjectName(shoot)))
 
-	// Update SeedRegistered condition
-	updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionProgressing, gardencorev1beta1.EventReconciling,
-		fmt.Sprintf("Registering seed %s", ms.Name))
-
 	// Get shoot client
 	shootClient, err := a.clientMap.GetClient(ctx, keys.ForShoot(shoot))
 	if err != nil {
