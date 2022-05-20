@@ -62,13 +62,14 @@ var _ = Describe("NodeLocalDNS", func() {
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
 
-		ipvsAddress       = "169.254.20.10"
-		labelKey          = "k8s-app"
-		labelValue        = "node-local-dns"
-		prometheusPort    = 9253
-		prometheusScrape  = true
-		livenessProbePort = 8080
-		configMapHash     string
+		ipvsAddress         = "169.254.20.10"
+		labelKey            = "k8s-app"
+		labelValue          = "node-local-dns"
+		prometheusPort      = 9253
+		prometheusErrorPort = 9353
+		prometheusScrape    = true
+		livenessProbePort   = 8080
+		configMapHash       string
 	)
 
 	BeforeEach(func() {
@@ -353,6 +354,11 @@ status:
 											{
 												ContainerPort: int32(prometheusPort),
 												Name:          "metrics",
+												Protocol:      corev1.ProtocolTCP,
+											},
+											{
+												ContainerPort: int32(prometheusErrorPort),
+												Name:          "errormetrics",
 												Protocol:      corev1.ProtocolTCP,
 											},
 										},

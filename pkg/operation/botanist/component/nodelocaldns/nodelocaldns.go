@@ -55,8 +55,9 @@ const (
 	// portServer is the target port used for the DNS server.
 	portServer = 8053
 	// prometheus configuration for node-local-dns
-	prometheusPort   = 9253
-	prometheusScrape = true
+	prometheusPort      = 9253
+	prometheusScrape    = true
+	prometheusErrorPort = 9353
 
 	domain            = gardencorev1beta1.DefaultDomain
 	serviceName       = "kube-dns-upstream"
@@ -409,6 +410,11 @@ ip6.arpa:53 {
 									{
 										ContainerPort: int32(prometheusPort),
 										Name:          "metrics",
+										Protocol:      corev1.ProtocolTCP,
+									},
+									{
+										ContainerPort: int32(prometheusErrorPort),
+										Name:          "errormetrics",
 										Protocol:      corev1.ProtocolTCP,
 									},
 								},
