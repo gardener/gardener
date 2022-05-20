@@ -41,6 +41,7 @@
 * [`NodeLocalDNS` feature](usage/node-local-dns.md)
 * [OpenIDConnect presets](usage/openidconnect-presets.md)
 * [Projects](usage/projects.md)
+* [Project Namespace Access](usage/project_namespace_access.md)
 * [Register Shoot as Seed](usage/managed_seed.md)
 * [Reversed Cluster VPN](usage/reversed-vpn-tunnel.md)
 * [Seed Bootstrapping](usage/seed_bootstrapping.md)

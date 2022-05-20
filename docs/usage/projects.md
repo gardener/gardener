@@ -27,6 +27,7 @@ spec:
   # roles:
   # - viewer 
   # - uam
+  # - serviceaccountmanager
   # - extension:foo
   - apiGroup: rbac.authorization.k8s.io
     kind: User
@@ -56,14 +57,15 @@ The list of members (again a list in `.spec.members[]` using the `rbac.authoriza
 Each project member must have at least one role (currently described in `.spec.members[].role`, additional roles can be added to `.spec.members[].roles[]`). The following roles exist:
 
 * `admin`: This allows to fully manage resources inside the project (e.g., secrets, shoots, configmaps, and similar).
+* `serviceaccountmanager`: This allows to fully manage service accounts inside the project namespace and request tokens for them. Please refer to [this document](./project_namespace_access.md).
 * `uam`: This allows to add/modify/remove human users or groups to/from the project member list. Technical users (service accounts) can be managed by all admins.
 * `viewer`: This allows to read all resources inside the project except secrets.
-* `owner`: This combines the `admin` and `uam` roles.
+* `owner`: This combines the `admin`, `uam` and `serviceaccountmanager` roles.
 * Extension roles (prefixed with `extension:`): Please refer to [this document](../extensions/project-roles.md).
 
 The [project controller](../concepts/controller-manager.md#project-controller) inside the Gardener Controller Manager is managing RBAC resources that grant the described privileges to the respective members.
 
-There are two central `ClusterRole`s `gardener.cloud:system:project-member` and `gardener.cloud:system:project-viewer` that grant the permissions for namespaced resources (e.g., `Secret`s, `Shoot`s, etc.).
+There are three central `ClusterRole`s `gardener.cloud:system:project-member`, `gardener.cloud:system:project-viewer` and `gardener.cloud:system:project-serviceaccountmanager` that grant the permissions for namespaced resources (e.g., `Secret`s, `Shoot`s, `ServiceAccount`s, etc.).
 Via referring `RoleBinding`s created in the respective namespace the project members get bound to these `ClusterRole`s and, thus, the needed permissions.
 There are also project-specific `ClusterRole`s granting the permissions for cluster-scoped resources, e.g. the `Namespace` or `Project` itself.  
 For each role, the following `ClusterRole`s, `ClusterRoleBinding`s, and `RoleBinding`s are created:
@@ -71,6 +73,7 @@ For each role, the following `ClusterRole`s, `ClusterRoleBinding`s, and `RoleBin
 | Role | `ClusterRole` | `ClusterRoleBinding` | `RoleBinding` |
 | ---- | ----------- | ------------------ | ----------- |
 | `admin` | `gardener.cloud:system:project-member:<projectName>` | `gardener.cloud:system:project-member:<projectName>` | `gardener.cloud:system:project-member` |
+| `serviceaccountmanager` | | | `gardener.cloud:system:project-serviceaccountmanager` |
 | `uam`   | `gardener.cloud:system:project-uam:<projectName>` | `gardener.cloud:system:project-uam:<projectName>` | |
 | `viewer` | `gardener.cloud:system:project-viewer:<projectName>` | `gardener.cloud:system:project-viewer:<projectName>` | `gardener.cloud:system:project-viewer` |
 | `owner` | `gardener.cloud:system:project:<projectName>` | `gardener.cloud:system:project:<projectName>` |  |
@@ -82,7 +85,7 @@ For `Project`s created before Gardener v1.8 all admins were allowed to manage ot
 Beginning with v1.8 the new `uam` role is being introduced.
 It is backed by the `manage-members` custom RBAC verb which allows to add/modify/remove human users or groups to/from the project member list.
 Human users are subjects with `kind=User` and `name!=system:serviceaccount:*`, and groups are subjects with `kind=Group`.
-The management of service account subjects (`kind=ServiecAccount` or `name=system:serviceaccount:*`) is not controlled via the `uam` custom verb but with the standard `update`/`patch` verbs for projects.
+The management of service account subjects (`kind=ServiceAccount` or `name=system:serviceaccount:*`) is not controlled via the `uam` custom verb but with the standard `update`/`patch` verbs for projects.
 
 All newly created projects will only bind the owner to the `uam` role.
 The owner can still grant the `uam` role to other members if desired.
