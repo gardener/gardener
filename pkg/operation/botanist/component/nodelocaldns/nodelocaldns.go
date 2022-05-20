@@ -193,6 +193,7 @@ func (c *nodeLocalDNS) computeResourcesData() (map[string][]byte, error) {
 					"secret",
 					"hostPath",
 					"configMap",
+					"projected",
 				},
 			},
 		}
