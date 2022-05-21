@@ -117,6 +117,8 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 		storage["shoots/adminkubeconfig"] = shootStorage.AdminKubeconfig
 	}
 
+	storage["shoots/binding"] = shootStorage.Binding
+
 	return storage
 }
 
@@ -169,6 +171,8 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 	if shootStorage.AdminKubeconfig != nil {
 		storage["shoots/adminkubeconfig"] = shootStorage.AdminKubeconfig
 	}
+
+	storage["shoots/binding"] = shootStorage.Binding
 
 	return storage
 }

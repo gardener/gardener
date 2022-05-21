@@ -39,6 +39,7 @@ type ShootStorage struct {
 	Shoot           *REST
 	Status          *StatusREST
 	AdminKubeconfig *AdminKubeconfigREST
+	Binding         *BindingREST
 }
 
 // NewStorage creates a new ShootStorage object.
@@ -59,6 +60,10 @@ func NewStorage(
 		shootStateStorage:    shootStateStore,
 		shootStorage:         shootRest,
 		maxExpirationSeconds: int64(adminKubeconfigMaxExpiration.Seconds()),
+	}
+
+	s.Binding = &BindingREST{
+		shootStorage: shootRest,
 	}
 
 	return s
