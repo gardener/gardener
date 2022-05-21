@@ -14,6 +14,8 @@ Resource Types:
 </li><li>
 <a href="#core.gardener.cloud/v1beta1.BackupEntry">BackupEntry</a>
 </li><li>
+<a href="#core.gardener.cloud/v1beta1.Binding">Binding</a>
+</li><li>
 <a href="#core.gardener.cloud/v1beta1.CloudProfile">CloudProfile</a>
 </li><li>
 <a href="#core.gardener.cloud/v1beta1.ControllerDeployment">ControllerDeployment</a>
@@ -262,6 +264,68 @@ BackupEntryStatus
 <td>
 <em>(Optional)</em>
 <p>Status contains the most recently observed status of the Backup Entry.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.Binding">Binding
+</h3>
+<p>
+<p>Binding binds the shoot to a seed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+core.gardener.cloud/v1beta1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>Binding</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Standard object metadata.</p>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>target</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Specification of the Binding.</p>
 </td>
 </tr>
 </tbody>

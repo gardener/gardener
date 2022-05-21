@@ -36,6 +36,10 @@ func (c *FakeCore) BackupEntries(namespace string) internalversion.BackupEntryIn
 	return &FakeBackupEntries{c, namespace}
 }
 
+func (c *FakeCore) Bindings(namespace string) internalversion.BindingInterface {
+	return &FakeBindings{c, namespace}
+}
+
 func (c *FakeCore) CloudProfiles() internalversion.CloudProfileInterface {
 	return &FakeCloudProfiles{c}
 }

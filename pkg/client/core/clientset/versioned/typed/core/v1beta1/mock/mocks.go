@@ -69,6 +69,20 @@ func (mr *MockCoreV1beta1InterfaceMockRecorder) BackupEntries(arg0 interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BackupEntries", reflect.TypeOf((*MockCoreV1beta1Interface)(nil).BackupEntries), arg0)
 }
 
+// Bindings mocks base method.
+func (m *MockCoreV1beta1Interface) Bindings(arg0 string) v1beta10.BindingInterface {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Bindings", arg0)
+	ret0, _ := ret[0].(v1beta10.BindingInterface)
+	return ret0
+}
+
+// Bindings indicates an expected call of Bindings.
+func (mr *MockCoreV1beta1InterfaceMockRecorder) Bindings(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Bindings", reflect.TypeOf((*MockCoreV1beta1Interface)(nil).Bindings), arg0)
+}
+
 // CloudProfiles mocks base method.
 func (m *MockCoreV1beta1Interface) CloudProfiles() v1beta10.CloudProfileInterface {
 	m.ctrl.T.Helper()
@@ -274,6 +288,21 @@ func (m *MockShootInterface) CreateAdminKubeconfigRequest(arg0 context.Context, 
 func (mr *MockShootInterfaceMockRecorder) CreateAdminKubeconfigRequest(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAdminKubeconfigRequest", reflect.TypeOf((*MockShootInterface)(nil).CreateAdminKubeconfigRequest), arg0, arg1, arg2, arg3)
+}
+
+// CreateBinding mocks base method.
+func (m *MockShootInterface) CreateBinding(arg0 context.Context, arg1 string, arg2 *v1beta1.Binding, arg3 v1.CreateOptions) (*v1.Status, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateBinding", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(*v1.Status)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateBinding indicates an expected call of CreateBinding.
+func (mr *MockShootInterfaceMockRecorder) CreateBinding(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateBinding", reflect.TypeOf((*MockShootInterface)(nil).CreateBinding), arg0, arg1, arg2, arg3)
 }
 
 // Delete mocks base method.

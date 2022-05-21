@@ -152,3 +152,14 @@ func (c *FakeShoots) CreateAdminKubeconfigRequest(ctx context.Context, shootName
 	}
 	return obj.(*authenticationv1alpha1.AdminKubeconfigRequest), err
 }
+
+// CreateBinding takes the representation of a binding and creates it.  Returns the server's representation of the status, and an error, if there is any.
+func (c *FakeShoots) CreateBinding(ctx context.Context, shootName string, binding *v1alpha1.Binding, opts v1.CreateOptions) (result *v1.Status, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewCreateSubresourceAction(shootsResource, shootName, "binding", c.ns, binding), &v1.Status{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1.Status), err
+}
