@@ -1,9 +1,10 @@
 # Registering Extension Controllers
 
 Extensions are registered in the garden cluster via [`ControllerRegistration`](../../example/25-controllerregistration.yaml) resources.
-Gardener is evaluating the registrations and creates [`ControllerInstallation`](../../example/25-controllerinstallation.yaml) resources which describe the request "please install this controller `X` to this seed `Y`".
+Deployment for respective extensions are specified via [`ControllerDeployment`](../../example/25-controllerdeployment.yaml) resources.
+Gardener evaluates the registrations and deployments and creates [`ControllerInstallation`](../../example/25-controllerinstallation.yaml) resources which describe the request "please install this controller `X` to this seed `Y`".
 
-Similar to how `CloudProfile` or `Seed` resources get into the system, the Gardener administrator must deploy the `ControllerRegistration` resources (this does not happen automatically in any way - the administrator decides which extensions shall be enabled).
+Similar to how `CloudProfile` or `Seed` resources get into the system, the Gardener administrator must deploy the `ControllerRegistration` and `ControllerDeployment` resources (this does not happen automatically in any way - the administrator decides which extensions shall be enabled).
 
 The specification mainly describes which of Gardener's extension CRDs are managed, for example:
 
@@ -56,7 +57,7 @@ metadata:
   name: os-gardenlinux
 spec:
   deploymentRef:
-    name: networking-calico
+    name: os-gardenlinux
   registrationRef:
     name: os-gardenlinux
   seedRef:
