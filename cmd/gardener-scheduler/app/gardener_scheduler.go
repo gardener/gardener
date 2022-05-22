@@ -24,6 +24,7 @@ import (
 	"strconv"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
@@ -133,6 +134,11 @@ func runCommand(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed to create Kubernetes REST configuration: %w", err)
 	}
 
+	versionedCoreClient, err := gardenversionedcoreclientset.NewForConfig(restCfg)
+	if err != nil {
+		return fmt.Errorf("unable to create versioned client: %w", err)
+	}
+
 	// Setup controller-runtime manager
 	mgr, err := manager.New(restCfg, manager.Options{
 		MetricsBindAddress:         getAddress(cfg.Server.Metrics),
@@ -165,7 +171,7 @@ func runCommand(ctx context.Context, opts *Options) error {
 	}
 
 	// Add controllers
-	if err := shootcontroller.AddToManager(mgr, cfg.Schedulers.Shoot); err != nil {
+	if err := shootcontroller.AddToManager(mgr, versionedCoreClient, cfg.Schedulers.Shoot); err != nil {
 		return fmt.Errorf("failed to create shoot scheduler controller: %w", err)
 	}
 

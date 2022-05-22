@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 
@@ -35,13 +36,15 @@ const (
 // AddToManager adds a new scheduler controller to the given manager.
 func AddToManager(
 	mgr manager.Manager,
+	versionedCoreClient *gardenversionedcoreclientset.Clientset,
 	config *config.ShootSchedulerConfiguration,
 ) error {
 	ctrlOptions := controller.Options{
 		Reconciler: &reconciler{
-			config:       config,
-			gardenClient: mgr.GetClient(),
-			recorder:     mgr.GetEventRecorderFor(ControllerName),
+			config:              config,
+			gardenClient:        mgr.GetClient(),
+			versionedCoreClient: versionedCoreClient,
+			recorder:            mgr.GetEventRecorderFor(ControllerName),
 		},
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
 		RecoverPanic:            true,
