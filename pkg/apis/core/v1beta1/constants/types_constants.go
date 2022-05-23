@@ -315,6 +315,12 @@ const (
 	// ShootOperationRotateServiceAccountKeyComplete is a constant for an annotation on a Shoot indicating that the
 	// rotation of the service account signing key shall be completed.
 	ShootOperationRotateServiceAccountKeyComplete = "rotate-serviceaccount-key-complete"
+	// ShootOperationRotateETCDEncryptionKeyStart is a constant for an annotation on a Shoot indicating that the
+	// rotation of the ETCD encryption key shall be started.
+	ShootOperationRotateETCDEncryptionKeyStart = "rotate-etcd-encryption-key-start"
+	// ShootOperationRotateETCDEncryptionKeyComplete is a constant for an annotation on a Shoot indicating that the
+	// rotation of the ETCD encryption key shall be completed.
+	ShootOperationRotateETCDEncryptionKeyComplete = "rotate-etcd-encryption-key-complete"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.
