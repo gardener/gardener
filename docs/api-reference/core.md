@@ -9033,6 +9033,20 @@ ShootServiceAccountKeyRotation
 <p>ServiceAccountKey contains information about the service account key credential rotation.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>etcdEncryptionKey</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootETCDEncryptionKeyRotation">
+ShootETCDEncryptionKeyRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ShootCredentialsRotationPhase">ShootCredentialsRotationPhase
@@ -9040,11 +9054,73 @@ ShootServiceAccountKeyRotation
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.ShootCARotation">ShootCARotation</a>, 
+<a href="#core.gardener.cloud/v1beta1.ShootETCDEncryptionKeyRotation">ShootETCDEncryptionKeyRotation</a>, 
 <a href="#core.gardener.cloud/v1beta1.ShootServiceAccountKeyRotation">ShootServiceAccountKeyRotation</a>)
 </p>
 <p>
 <p>ShootCredentialsRotationPhase is a string alias.</p>
 </p>
+<h3 id="core.gardener.cloud/v1beta1.ShootETCDEncryptionKeyRotation">ShootETCDEncryptionKeyRotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotation">ShootCredentialsRotation</a>)
+</p>
+<p>
+<p>ShootETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>phase</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootCredentialsRotationPhase">
+ShootCredentialsRotationPhase
+</a>
+</em>
+</td>
+<td>
+<p>Phase describes the phase of the ETCD encryption key credential rotation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastInitiationTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>lastCompletionTime</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully
+completed.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ShootKubeconfigRotation">ShootKubeconfigRotation
 </h3>
 <p>

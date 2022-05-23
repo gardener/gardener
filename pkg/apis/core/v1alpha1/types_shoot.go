@@ -206,6 +206,9 @@ type ShootCredentialsRotation struct {
 	// ServiceAccountKey contains information about the service account key credential rotation.
 	// +optional
 	ServiceAccountKey *ShootServiceAccountKeyRotation `json:"serviceAccountKey,omitempty" protobuf:"bytes,5,opt,name=serviceAccountKey"`
+	// ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.
+	// +optional
+	ETCDEncryptionKey *ShootETCDEncryptionKeyRotation `json:"etcdEncryptionKey,omitempty" protobuf:"bytes,6,opt,name=etcdEncryptionKey"`
 }
 
 // ShootCARotation contains information about the certificate authority credential rotation.
@@ -259,6 +262,19 @@ type ShootServiceAccountKeyRotation struct {
 	// +optional
 	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
 	// LastCompletionTime is the most recent time when the service account key credential rotation was successfully
+	// completed.
+	// +optional
+	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
+}
+
+// ShootETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.
+type ShootETCDEncryptionKeyRotation struct {
+	// Phase describes the phase of the ETCD encryption key credential rotation.
+	Phase ShootCredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
+	// LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.
+	// +optional
+	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
+	// LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully
 	// completed.
 	// +optional
 	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`

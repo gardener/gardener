@@ -174,6 +174,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCARotation":                        schema_pkg_apis_core_v1alpha1_ShootCARotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCredentials":                       schema_pkg_apis_core_v1alpha1_ShootCredentials(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCredentialsRotation":               schema_pkg_apis_core_v1alpha1_ShootCredentialsRotation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootETCDEncryptionKeyRotation":         schema_pkg_apis_core_v1alpha1_ShootETCDEncryptionKeyRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootKubeconfigRotation":                schema_pkg_apis_core_v1alpha1_ShootKubeconfigRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootList":                              schema_pkg_apis_core_v1alpha1_ShootList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootMachineImage":                      schema_pkg_apis_core_v1alpha1_ShootMachineImage(ref),
@@ -328,6 +329,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCARotation":                         schema_pkg_apis_core_v1beta1_ShootCARotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentials":                        schema_pkg_apis_core_v1beta1_ShootCredentials(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCredentialsRotation":                schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootETCDEncryptionKeyRotation":          schema_pkg_apis_core_v1beta1_ShootETCDEncryptionKeyRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootKubeconfigRotation":                 schema_pkg_apis_core_v1beta1_ShootKubeconfigRotation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootList":                               schema_pkg_apis_core_v1beta1_ShootList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootMachineImage":                       schema_pkg_apis_core_v1beta1_ShootMachineImage(ref),
@@ -6963,11 +6965,53 @@ func schema_pkg_apis_core_v1alpha1_ShootCredentialsRotation(ref common.Reference
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootServiceAccountKeyRotation"),
 						},
 					},
+					"etcdEncryptionKey": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootETCDEncryptionKeyRotation"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCARotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootKubeconfigRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootObservabilityRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootSSHKeypairRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootServiceAccountKeyRotation"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootCARotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootETCDEncryptionKeyRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootKubeconfigRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootObservabilityRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootSSHKeypairRotation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootServiceAccountKeyRotation"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ShootETCDEncryptionKeyRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Phase describes the phase of the ETCD encryption key credential rotation.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"lastInitiationTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastCompletionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"phase"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -14107,11 +14151,53 @@ func schema_pkg_apis_core_v1beta1_ShootCredentialsRotation(ref common.ReferenceC
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootServiceAccountKeyRotation"),
 						},
 					},
+					"etcdEncryptionKey": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ETCDEncryptionKey contains information about the ETCD encryption key credential rotation.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootETCDEncryptionKeyRotation"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCARotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootKubeconfigRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootObservabilityRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSSHKeypairRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootServiceAccountKeyRotation"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootCARotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootETCDEncryptionKeyRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootKubeconfigRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootObservabilityRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSSHKeypairRotation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootServiceAccountKeyRotation"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ShootETCDEncryptionKeyRotation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootETCDEncryptionKeyRotation contains information about the ETCD encryption key credential rotation.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Phase describes the phase of the ETCD encryption key credential rotation.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"lastInitiationTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastInitiationTime is the most recent time when the ETCD encryption key credential rotation was initiated.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastCompletionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastCompletionTime is the most recent time when the ETCD encryption key credential rotation was successfully completed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+				Required: []string{"phase"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
