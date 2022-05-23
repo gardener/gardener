@@ -6,7 +6,7 @@
 
 When enabled in gardenlet the `ManagedIstio` feature gate can be used to deploy a Gardener-tailored Istio installation in Seed clusters. It's main usage is to enable features such as [Shoot API server SNI](../proposals/08-shoot-apiserver-via-sni.md). This feature should not be enabled on a Seed cluster where Istio is already deployed.
 
-However, this feature gate is deprecated, turned off by default and will be removed in a future version of Gardener.
+However, this feature gate is deprecated, turned on by default and will be removed in a future version of Gardener.
 This means that Gardener will unconditionally deploy Istio with its desired configuration to seed clusters.
 Consequently, existing/bring-your-own Istio deployments will no longer be supported.
 
