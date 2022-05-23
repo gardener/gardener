@@ -151,14 +151,14 @@ type Values struct {
 	ServiceAccount ServiceAccountConfig
 	// SNI contains information for configuring SNI settings for the kube-apiserver.
 	SNI SNIConfig
+	// StaticTokenKubeconfigEnabled indicates whether static token kubeconfig secret will be created for shoot.
+	StaticTokenKubeconfigEnabled *bool
 	// Version is the Kubernetes version for the kube-apiserver.
 	Version *semver.Version
 	// VPN contains information for configuring the VPN settings for the kube-apiserver.
 	VPN VPNConfig
 	// WatchCacheSizes are the configured sizes for the watch caches.
 	WatchCacheSizes *gardencorev1beta1.WatchCacheSizes
-	// EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for shoot.
-	EnableStaticTokenKubeconfig *bool
 }
 
 // AuditConfig contains information for configuring audit settings for the kube-apiserver.
@@ -401,7 +401,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if pointer.BoolDeref(k.values.EnableStaticTokenKubeconfig, true) {
+	if pointer.BoolDeref(k.values.StaticTokenKubeconfigEnabled, true) {
 		if err := k.reconcileSecretUserKubeconfig(ctx, secretStaticToken, secretBasicAuth); err != nil {
 			return err
 		}

@@ -1956,7 +1956,7 @@ rules:
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(legacySecret), &corev1.Secret{})).To(BeNotFoundError())
 				})
 
-				It("should generate a kubeconfig secret for the user when EnableStaticTokenKubeconfig is set to true", func() {
+				It("should generate a kubeconfig secret for the user when StaticTokenKubeconfigEnabled is set to true", func() {
 					deployAndRead()
 
 					secretList := &corev1.SecretList{}
@@ -1975,7 +1975,7 @@ rules:
 					Expect(kubeconfig.AuthInfos[0].AuthInfo.Token).NotTo(BeEmpty())
 				})
 
-				It("should not generate a kubeconfig secret for the user when EnableStaticTokenKubeconfig is set to false", func() {
+				It("should not generate a kubeconfig secret for the user when StaticTokenKubeconfigEnabled is set to false", func() {
 					deployAndRead()
 
 					secretList := &corev1.SecretList{}
@@ -1983,7 +1983,7 @@ rules:
 						"name": "user-kubeconfig",
 					})).To(Succeed())
 
-					kapi = New(kubernetesInterface, namespace, sm, Values{Version: version, EnableStaticTokenKubeconfig: pointer.Bool(false)})
+					kapi = New(kubernetesInterface, namespace, sm, Values{Version: version, StaticTokenKubeconfigEnabled: pointer.Bool(false)})
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 
@@ -1993,7 +1993,7 @@ rules:
 					})).To(BeNil())
 				})
 
-				It("should generate kube-apiserver-static-token without system:cluster-admin token when EnableStaticTokenKubeconfig is set to false", func() {
+				It("should generate kube-apiserver-static-token without system:cluster-admin token when StaticTokenKubeconfigEnabled is set to false", func() {
 					deployAndRead()
 
 					secret := &corev1.Secret{}
@@ -2011,7 +2011,7 @@ rules:
 
 					newSecretNameStaticToken := "kube-apiserver-static-token-53d619b2"
 
-					kapi = New(kubernetesInterface, namespace, sm, Values{Version: version, EnableStaticTokenKubeconfig: pointer.Bool(false)})
+					kapi = New(kubernetesInterface, namespace, sm, Values{Version: version, StaticTokenKubeconfigEnabled: pointer.Bool(false)})
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 
@@ -2429,7 +2429,7 @@ rules:
 				})
 
 				It("should have the proper probes", func() {
-					kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: semver.MustParse("1.20.9"), EnableStaticTokenKubeconfig: pointer.Bool(true)})
+					kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: semver.MustParse("1.20.9"), StaticTokenKubeconfigEnabled: pointer.Bool(true)})
 					deployAndRead()
 
 					validateProbe := func(probe *corev1.Probe, path string, initialDelaySeconds int32) {
