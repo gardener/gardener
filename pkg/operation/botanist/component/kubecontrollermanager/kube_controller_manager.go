@@ -610,7 +610,8 @@ func (k *kubeControllerManager) computeResourceRequirements(ctx context.Context)
 	}
 
 	if len(existingDeployment.Spec.Template.Spec.Containers) > 0 {
-		return existingDeployment.Spec.Template.Spec.Containers[0].Resources, nil
+		// Copy requests only, effectively removing limits
+		return corev1.ResourceRequirements{Requests: existingDeployment.Spec.Template.Spec.Containers[0].Resources.Requests}, nil
 	}
 
 	return defaultResources, nil

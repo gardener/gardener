@@ -144,9 +144,6 @@ func (a *authzServer) Deploy(ctx context.Context) error {
 									corev1.ResourceCPU:    resource.MustParse("100m"),
 									corev1.ResourceMemory: resource.MustParse("100Mi"),
 								},
-								Limits: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("500Mi"),
-								},
 							},
 						},
 					},
