@@ -92,7 +92,7 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameKubeAPIServerToKubelet  = "kube-apiserver-kubelet"
 		secretNameServer                  = "kube-apiserver"
 		secretNameServiceAccountKey       = "service-account-key-c37a87f6"
-		secretNameServiceAccountKeyBundle = "service-account-key"
+		secretNameServiceAccountKeyBundle = "service-account-key-bundle"
 		secretNameVPNSeed                 = "vpn-seed"
 		secretNameVPNSeedTLSAuth          = "vpn-seed-tlsauth-de1d12a3"
 
@@ -120,6 +120,15 @@ var _ = Describe("KubeAPIServer", func() {
 		kubernetesInterface = fakekubernetes.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
 		sm = fakesecretsmanager.New(c, namespace)
 		kapi = New(kubernetesInterface, namespace, sm, Values{Version: version})
+
+		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-client", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-front-proxy", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-vpn", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "service-account-key-bundle", Namespace: namespace}})).To(Succeed())
 
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1351,7 +1360,7 @@ rules:
 
 				Expect(deployment.Annotations).To(Equal(map[string]string{
 					"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
-					"reference.resources.gardener.cloud/secret-3055c21f":    secretNameServiceAccountKeyBundle,
+					"reference.resources.gardener.cloud/secret-ad29e1cc":    secretNameServiceAccountKeyBundle,
 					"reference.resources.gardener.cloud/secret-69590970":    secretNameCA,
 					"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
 					"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
@@ -1400,7 +1409,7 @@ rules:
 
 				Expect(deployment.Spec.Template.Annotations).To(Equal(map[string]string{
 					"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
-					"reference.resources.gardener.cloud/secret-3055c21f":    secretNameServiceAccountKeyBundle,
+					"reference.resources.gardener.cloud/secret-ad29e1cc":    secretNameServiceAccountKeyBundle,
 					"reference.resources.gardener.cloud/secret-69590970":    secretNameCA,
 					"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
 					"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,

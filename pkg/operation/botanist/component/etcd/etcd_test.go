@@ -28,7 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -471,9 +471,12 @@ var _ = Describe("Etcd", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-		sm = fake.New(fakeClient, testNamespace)
+		sm = fakesecretsmanager.New(fakeClient, testNamespace)
 		log = logger.NewNopLogger()
 		etcd = New(c, log, testNamespace, sm, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
+
+		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: testNamespace}})).To(Succeed())
 	})
 
 	AfterEach(func() {

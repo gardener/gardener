@@ -160,6 +160,8 @@ var _ = Describe("Secrets", func() {
 			})
 
 			It("should also sync the old ssh-keypair secret to the garden", func() {
+				Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ssh-keypair-old", Namespace: seedNamespace}})).To(Succeed())
+
 				Expect(botanist.InitializeSecretsManagement(ctx)).To(Succeed())
 
 				gardenSecret := &corev1.Secret{}
@@ -331,6 +333,8 @@ var _ = Describe("Secrets", func() {
 
 		Describe("#CreateNewServiceAccountSecrets", func() {
 			It("should create new service account secrets and make them the first in the list", func() {
+				Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "service-account-key-current", Namespace: seedNamespace}})).To(Succeed())
+
 				Expect(botanist.CreateNewServiceAccountSecrets(ctx)).To(Succeed())
 
 				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(sa1), sa1)).To(Succeed())

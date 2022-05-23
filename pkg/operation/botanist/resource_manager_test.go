@@ -89,6 +89,9 @@ var _ = Describe("ResourceManager", func() {
 			k8sSeedClient = fakekubernetes.NewClientSetBuilder().WithClient(c).Build()
 			sm = fakesecretsmanager.New(c, seedNamespace)
 
+			By("expecting secrets managed outside of this function for whose secretsmanager.Get() will be called")
+			c.EXPECT().Get(gomock.Any(), kutil.Key(seedNamespace, "ca"), gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
+
 			botanist.K8sSeedClient = k8sSeedClient
 			botanist.SecretsManager = sm
 			botanist.Shoot = &shootpkg.Shoot{

@@ -298,6 +298,9 @@ status: {}
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(fakeClient, namespace)
 
+		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-metrics-server", Namespace: namespace}})).To(Succeed())
+
 		metricsServer = New(fakeClient, namespace, sm, image, false, nil)
 
 		managedResourceSecret = &corev1.Secret{

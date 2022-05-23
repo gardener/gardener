@@ -56,13 +56,22 @@ func (m *fakeManager) Get(name string, opts ...secretsmanager.GetOption) (*corev
 		secretName += "-" + string(*options.Class)
 	}
 
-	return &corev1.Secret{
+	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
 			Namespace: m.namespace,
 		},
-		Data: map[string][]byte{"data-for": []byte(name)},
-	}, true
+	}
+	if err := m.client.Get(context.TODO(), client.ObjectKeyFromObject(secret), secret); err != nil {
+		return nil, false
+	}
+
+	if secret.Data == nil {
+		secret.Data = make(map[string][]byte, 1)
+	}
+	secret.Data["data-for"] = []byte(name)
+
+	return secret, true
 }
 
 func (m *fakeManager) Generate(ctx context.Context, config secretutils.ConfigInterface, opts ...secretsmanager.GenerateOption) (*corev1.Secret, error) {

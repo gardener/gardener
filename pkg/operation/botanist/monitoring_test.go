@@ -213,6 +213,14 @@ var _ = Describe("Monitoring", func() {
 		})
 
 		It("should delete the legacy ingress secrets", func() {
+			By("creating secrets managed outside of this function for whose secretsmanager.Get() will be called")
+			Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: seedNamespace}})).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: seedNamespace}})).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client", Namespace: seedNamespace}})).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress", Namespace: seedNamespace}})).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "observability-ingress-users", Namespace: seedNamespace}})).To(Succeed())
+			Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: seedNamespace}})).To(Succeed())
+
 			defer test.WithVar(&ChartsPath, filepath.Join("..", "..", "..", "charts"))()
 
 			legacySecret1 := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: seedNamespace, Name: "prometheus-basic-auth"}}

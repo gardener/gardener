@@ -79,6 +79,9 @@ subjects:
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		sm = fakesecretsmanager.New(fakeClient, namespace)
 
+		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
+
 		access = New(fakeClient, namespace, sm, Values{
 			ServerOutOfCluster: serverOutOfCluster,
 			ServerInCluster:    serverInCluster,

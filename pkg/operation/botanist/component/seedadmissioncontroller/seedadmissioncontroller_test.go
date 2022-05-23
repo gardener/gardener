@@ -397,6 +397,9 @@ status: {}
 
 		seedAdmission = New(c, namespace, sm, image)
 
+		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-seed", Namespace: namespace}})).To(Succeed())
+
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      managedResourceSecretName,

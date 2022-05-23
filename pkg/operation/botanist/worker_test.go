@@ -58,6 +58,7 @@ var _ = Describe("Worker", func() {
 		botanist              *Botanist
 
 		ctx                                   = context.TODO()
+		namespace                             = "namespace"
 		fakeErr                               = fmt.Errorf("fake")
 		shootState                            = &gardencorev1alpha1.ShootState{}
 		infrastructureProviderStatus          = &runtime.RawExtension{Raw: []byte("infrastatus")}
@@ -69,7 +70,11 @@ var _ = Describe("Worker", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		sm = fakesecretsmanager.New(fakeClient, "namespace")
+		sm = fakesecretsmanager.New(fakeClient, namespace)
+
+		By("creating secrets managed outside of this function for whose secretsmanager.Get() will be called")
+		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ssh-keypair", Namespace: namespace}})).To(Succeed())
+
 		worker = mockworker.NewMockInterface(ctrl)
 		operatingSystemConfig = mockoperatingsystemconfig.NewMockInterface(ctrl)
 		infrastructure = mockinfrastructure.NewMockInterface(ctrl)

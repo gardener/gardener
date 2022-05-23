@@ -35,7 +35,7 @@ import (
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	"github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -84,7 +84,7 @@ var _ = Describe("Etcd", func() {
 			WithAPIReader(reader).
 			Build()
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-		sm = fake.New(fakeClient, namespace)
+		sm = fakesecretsmanager.New(fakeClient, namespace)
 		botanist = &Botanist{Operation: &operation.Operation{}}
 	})
 
