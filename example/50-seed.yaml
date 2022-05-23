@@ -67,6 +67,7 @@ spec:
       enabled: true # this seed will deploy excess-capacity-reservation pods
     scheduling:
       visible: true # the gardener-scheduler will consider this seed for shoots
+    # Deprecated: This field (`shootDNS`) is deprecated and will be removed in a future version of Gardener. Do not use it.
     shootDNS:
       enabled: true # all shoots on this seed will use DNS, if disabled they'll just use the plain IPs/hostnames
   # loadBalancerServices:

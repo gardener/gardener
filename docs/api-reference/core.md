@@ -8071,7 +8071,8 @@ SeedSettingShootDNS
 </td>
 <td>
 <em>(Optional)</em>
-<p>ShootDNS controls the shoot DNS settings for the seed.</p>
+<p>ShootDNS controls the shoot DNS settings for the seed.
+Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.</p>
 </td>
 </tr>
 <tr>

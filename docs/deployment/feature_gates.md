@@ -24,8 +24,10 @@ The following tables are a summary of the feature gates that you can set on diff
 | HVPAForShootedSeed                           | `false` | `Alpha` | `0.32` |        |
 | ManagedIstio                                 | `false` | `Alpha` | `1.5`  | `1.18` |
 | ManagedIstio                                 | `true`  | `Beta`  | `1.19` |        |
+| ManagedIstio (deprecated)                    | `true`  | `Beta`  | `1.48` |        |
 | APIServerSNI                                 | `false` | `Alpha` | `1.7`  | `1.18` |
 | APIServerSNI                                 | `true`  | `Beta`  | `1.19` |        |
+| APIServerSNI (deprecated)                    | `true`  | `Beta`  | `1.48` |        |
 | SeedChange                                   | `false` | `Alpha` | `1.12` |        |
 | SeedKubeScheduler                            | `false` | `Alpha` | `1.15` |        |
 | ReversedVPN                                  | `false` | `Alpha` | `1.22` | `1.41` |
@@ -117,8 +119,8 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 | ------------------------------------------ | ---------------------------------------------------------------- |  -----------|
 | HVPA                                       | `gardenlet`                                                      | Enables simultaneous horizontal and vertical scaling in Seed Clusters. |
 | HVPAForShootedSeed                         | `gardenlet`                                                      | Enables simultaneous horizontal and vertical scaling in managed seed (aka "shooted seed") clusters. |
-| ManagedIstio                               | `gardenlet`                                                      | Enables a Gardener-tailored [Istio](https://istio.io) in each Seed cluster. Disable this feature if Istio is already installed in the cluster. Istio is not automatically removed if this feature is disabled. See the [detailed documentation](../usage/istio.md) for more information. |
-| APIServerSNI                               | `gardenlet`                                                      | Enables only one LoadBalancer to be used for every Shoot cluster API server in a Seed. Enable this feature when `ManagedIstio` is enabled or Istio is manually deployed in Seed cluster. See [GEP-8](../proposals/08-shoot-apiserver-via-sni.md) for more details. |
+| ManagedIstio (deprecated)                  | `gardenlet`                                                      | Enables a Gardener-tailored [Istio](https://istio.io) in each Seed cluster. Disable this feature if Istio is already installed in the cluster. Istio is not automatically removed if this feature is disabled. See the [detailed documentation](../usage/istio.md) for more information. |
+| APIServerSNI (deprecated)                  | `gardenlet`                                                      | Enables only one LoadBalancer to be used for every Shoot cluster API server in a Seed. Enable this feature when `ManagedIstio` is enabled or Istio is manually deployed in Seed cluster. See [GEP-8](../proposals/08-shoot-apiserver-via-sni.md) for more details. |
 | CachedRuntimeClients                       | `gardener-controller-manager`, `gardenlet`                       | Enables a cache in the controller-runtime clients, that Gardener components use. The feature gate can be specified for gardenlet and gardener-controller-manager (and gardener-scheduler for the versions `< 1.29`). |
 | SeedChange                                 | `gardener-apiserver`                                             | Enables updating the `spec.seedName` field during shoot validation from a non-empty value in order to trigger shoot control plane migration. |
 | SeedKubeScheduler                          | `gardenlet`                                                      | Adds custom `kube-scheduler` in `gardener-kube-scheduler` namespace. It schedules [pods with scheduler name](../concepts/seed-admission-controller.md#mutating-webhooks) `gardener-kube-scheduler` on Nodes with higher resource utilization. It requires Seed cluster with kubernetes version `1.18` or higher. |

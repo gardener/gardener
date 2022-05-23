@@ -6433,7 +6433,7 @@ func schema_pkg_apis_core_v1alpha1_SeedSettings(ref common.ReferenceCallback) co
 					},
 					"shootDNS": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ShootDNS controls the shoot DNS settings for the seed.",
+							Description: "ShootDNS controls the shoot DNS settings for the seed. Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS"),
 						},
 					},
@@ -13533,7 +13533,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettings(ref common.ReferenceCallback) com
 					},
 					"shootDNS": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ShootDNS controls the shoot DNS settings for the seed.",
+							Description: "ShootDNS controls the shoot DNS settings for the seed. Deprecated: This field is deprecated and will be removed in a future version of Gardener. Do not use it.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS"),
 						},
 					},

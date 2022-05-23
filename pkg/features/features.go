@@ -43,6 +43,7 @@ const (
 	// owner @ScheererJ @DockToFuture
 	// alpha: v1.5.0
 	// beta: v1.19.0
+	// deprecated: v1.48.0
 	ManagedIstio featuregate.Feature = "ManagedIstio"
 
 	// APIServerSNI allows to use only one LoadBalancer in the Seed cluster
@@ -52,6 +53,7 @@ const (
 	// owner @ScheererJ @DockToFuture
 	// alpha: v1.7.0
 	// beta: v1.19.0
+	// deprecated: v1.48.0
 	APIServerSNI featuregate.Feature = "APIServerSNI"
 
 	// CachedRuntimeClients enables a cache in the controller-runtime clients, that Gardener uses.
