@@ -378,6 +378,15 @@ func GetShootServiceAccountKeyRotationPhase(credentials *core.ShootCredentials) 
 	return ""
 }
 
+// GetShootETCDEncryptionKeyRotationPhase returns the specified shoot ETCD encryption key rotation phase or an empty
+// string.
+func GetShootETCDEncryptionKeyRotationPhase(credentials *core.ShootCredentials) core.ShootCredentialsRotationPhase {
+	if credentials != nil && credentials.Rotation != nil && credentials.Rotation.ETCDEncryptionKey != nil {
+		return credentials.Rotation.ETCDEncryptionKey.Phase
+	}
+	return ""
+}
+
 var scheme *runtime.Scheme
 
 func init() {

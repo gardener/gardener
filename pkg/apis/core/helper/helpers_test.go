@@ -111,6 +111,18 @@ var _ = Describe("helper", func() {
 		Entry("phase set", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ServiceAccountKey: &core.ShootServiceAccountKeyRotation{Phase: core.RotationCompleting}}}, core.RotationCompleting),
 	)
 
+	DescribeTable("#GetShootETCDEncryptionKeyRotationPhase",
+		func(credentials *core.ShootCredentials, expectedPhase core.ShootCredentialsRotationPhase) {
+			Expect(GetShootETCDEncryptionKeyRotationPhase(credentials)).To(Equal(expectedPhase))
+		},
+
+		Entry("credentials nil", nil, core.ShootCredentialsRotationPhase("")),
+		Entry("rotation nil", &core.ShootCredentials{}, core.ShootCredentialsRotationPhase("")),
+		Entry("ca nil", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{}}, core.ShootCredentialsRotationPhase("")),
+		Entry("phase empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{}}}, core.ShootCredentialsRotationPhase("")),
+		Entry("phase set", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{Phase: core.RotationCompleting}}}, core.RotationCompleting),
+	)
+
 	DescribeTable("#TaintsHave",
 		func(taints []core.SeedTaint, key string, expectation bool) {
 			Expect(TaintsHave(taints, key)).To(Equal(expectation))
