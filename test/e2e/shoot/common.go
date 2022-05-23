@@ -26,7 +26,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
 )
 
 var (
@@ -66,7 +65,6 @@ func defaultShoot(generateName string) *gardencorev1beta1.Shoot {
 			Region:            "local",
 			SecretBindingName: "local",
 			CloudProfileName:  "local",
-			SeedName:          pointer.String("local"),
 			Kubernetes: gardencorev1beta1.Kubernetes{
 				Version:                     "1.24.0",
 				EnableStaticTokenKubeconfig: pointer.Bool(true),
