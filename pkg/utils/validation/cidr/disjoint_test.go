@@ -36,7 +36,7 @@ var _ = Describe("utils", func() {
 			var (
 				podsCIDR     = "10.242.128.0/17"
 				servicesCIDR = "10.242.0.0/17"
-				nodesCIDR    = "10.241.0.0/16"
+				nodesCIDR    = "10.243.0.0/16"
 			)
 
 			errorList := ValidateNetworkDisjointedness(
@@ -135,7 +135,7 @@ var _ = Describe("utils", func() {
 			var (
 				podsCIDR     = "192.168.123.0/24"
 				servicesCIDR = "10.242.0.0/17"
-				nodesCIDR    = "10.241.0.0/16"
+				nodesCIDR    = "10.243.0.0/16"
 			)
 
 			errorList := ValidateNetworkDisjointedness(
@@ -158,7 +158,7 @@ var _ = Describe("utils", func() {
 			var (
 				podsCIDR     = "10.242.128.0/17"
 				servicesCIDR = "192.168.123.64/26"
-				nodesCIDR    = "10.241.0.0/16"
+				nodesCIDR    = "10.243.0.0/16"
 			)
 
 			errorList := ValidateNetworkDisjointedness(
@@ -204,7 +204,7 @@ var _ = Describe("utils", func() {
 			var (
 				podsCIDR     = seedNodesCIDR
 				servicesCIDR = seedNodesCIDR
-				nodesCIDR    = "10.241.0.0/16"
+				nodesCIDR    = "10.243.0.0/16"
 			)
 
 			errorList := ValidateNetworkDisjointedness(
@@ -225,6 +225,29 @@ var _ = Describe("utils", func() {
 				"Field": Equal("[].services"),
 			})),
 			))
+		})
+
+		It("should fail due to seed service network and shoot node network overlap", func() {
+			var (
+				podsCIDR     = "10.242.128.0/17"
+				servicesCIDR = "10.242.0.0/17"
+				nodesCIDR    = "10.241.0.0/16"
+			)
+
+			errorList := ValidateNetworkDisjointedness(
+				field.NewPath(""),
+				&nodesCIDR,
+				&podsCIDR,
+				&servicesCIDR,
+				&seedNodesCIDR,
+				seedPodsCIDR,
+				seedServicesCIDR,
+			)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].nodes"),
+			}))))
 		})
 	})
 
