@@ -10,6 +10,47 @@ Also, the involved Seeds need to have enabled BackupBuckets.
 
 `ShootState` is an API resource which stores non-reconstructible state and data required to completely recreate a `Shoot`'s control plane on a new `Seed`.  The `ShootState` resource is created on `Shoot` creation in its `Project` namespace and the required state/data is persisted during `Shoot` creation or reconciliation.
 
+## `shoots/binding` subresource
+
+The `shoots/binding` subresource is used to bind a shoot to a seed. On creation of shoot clusters, the scheduler creates such a binding automatically. 
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: Binding
+metadata:
+  name: <name>
+spec:
+  target:
+    apiVersion: core.gardener.cloud/v1beta1
+    kind: "Seed"
+    name: <seed-name>
+```
+The CreateBinding call just alters the spec.seedName and the `binding` will not be persisted anywhere.
+
+For controlplane migration, only operators with the neceassary RBAC can request such a `binding`, with the following commands:
+```bash
+export NAMESPACE=my-namespace
+export SHOOT_NAME=my-shoot
+kubectl create \
+    -f <path>/<to>/binding-request.json \
+    --raw /apis/core.gardener.cloud/v1beta1/namespaces/${NAMESPACE}/shoots/${SHOOT_NAME}/binding | jq -r ".status"
+```
+
+Here, the `binding-request.json` has the following content:
+
+```json
+{
+    "apiVersion": "core.gardener.cloud/v1beta1",
+    "kind": "Binding",
+    "metadata": {
+      "name": "<shoot-name>"
+    },
+    "target": {
+      "apiVersion": "core.gardener.cloud/v1beta1",
+      "kind": "Seed",
+      "name": "<seed-name>"
+    }
+}
+```
 ## Shoot Control Plane Migration
 
 Triggering the migration is done by changing the `Shoot`'s `.spec.seedName` to a `Seed` that differs from the `.status.seedName`, we call this `Seed` `"Destination Seed"`. If the Destination `Seed` does not have a backup and restore configuration, the change to `spec.seedName` is rejected. Additionally, this Seed must not be set for deletion and must be healthy.
