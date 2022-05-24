@@ -917,6 +917,7 @@ var _ = Describe("KubeAPIServer", func() {
 				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{Autoscaling: autoscalingConfig})
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(&expectedReplicas)
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+				kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
@@ -995,6 +996,7 @@ var _ = Describe("KubeAPIServer", func() {
 					kubeAPIServer.EXPECT().SetAutoscalingAPIServerResources(*expectedResources)
 				}
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+				kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
@@ -1055,11 +1057,124 @@ var _ = Describe("KubeAPIServer", func() {
 			),
 		)
 
+		DescribeTable("ETCDEncryptionConfig",
+			func(rotationPhase gardencorev1beta1.ShootCredentialsRotationPhase, prepTest func(), expectedETCDEncryptionConfig kubeapiserver.ETCDEncryptionConfig, finalizeTest func()) {
+				if len(rotationPhase) > 0 {
+					shootCopy := botanist.Shoot.GetInfo().DeepCopy()
+					shootCopy.Status.Credentials = &gardencorev1beta1.ShootCredentials{
+						Rotation: &gardencorev1beta1.ShootCredentialsRotation{
+							ETCDEncryptionKey: &gardencorev1beta1.ShootETCDEncryptionKeyRotation{
+								Phase: rotationPhase,
+							},
+						},
+					}
+					botanist.Shoot.SetInfo(shootCopy)
+				}
+
+				if prepTest != nil {
+					prepTest()
+				}
+
+				kubeAPIServer.EXPECT().GetValues()
+				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+				kubeAPIServer.EXPECT().SetETCDEncryptionConfig(expectedETCDEncryptionConfig)
+				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
+				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
+				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
+				kubeAPIServer.EXPECT().SetServiceAccountConfig(gomock.Any())
+				kubeAPIServer.EXPECT().Deploy(ctx)
+
+				Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
+
+				if finalizeTest != nil {
+					finalizeTest()
+				}
+			},
+
+			Entry("no rotation",
+				gardencorev1beta1.ShootCredentialsRotationPhase(""),
+				nil,
+				kubeapiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: true},
+				nil,
+			),
+			Entry("preparing phase, new key already populated",
+				gardencorev1beta1.RotationPreparing,
+				func() {
+					Expect(c.Create(ctx, &appsv1.Deployment{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "kube-apiserver",
+							Namespace:   seedNamespace,
+							Annotations: map[string]string{"credentials.gardener.cloud/new-encryption-key-populated": "true"},
+						},
+					})).To(Succeed())
+				},
+				kubeapiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: true},
+				nil,
+			),
+			Entry("preparing phase, new key not yet populated",
+				gardencorev1beta1.RotationPreparing,
+				func() {
+					Expect(c.Create(ctx, &appsv1.Deployment{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "kube-apiserver",
+							Namespace: seedNamespace,
+						},
+					})).To(Succeed())
+
+					kubeAPIServer.EXPECT().Wait(ctx)
+
+					kubeAPIServer.EXPECT().SetETCDEncryptionConfig(kubeapiserver.ETCDEncryptionConfig{
+						RotationPhase:         gardencorev1beta1.RotationPreparing,
+						EncryptWithCurrentKey: true,
+					})
+					kubeAPIServer.EXPECT().Deploy(ctx)
+				},
+				kubeapiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: false},
+				func() {
+					deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: seedNamespace}}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+					Expect(deployment.Annotations).To(HaveKeyWithValue("credentials.gardener.cloud/new-encryption-key-populated", "true"))
+				},
+			),
+			Entry("prepared phase",
+				gardencorev1beta1.RotationPrepared,
+				nil,
+				kubeapiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPrepared, EncryptWithCurrentKey: true},
+				nil,
+			),
+			Entry("completing phase",
+				gardencorev1beta1.RotationCompleting,
+				func() {
+					Expect(c.Create(ctx, &appsv1.Deployment{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        "kube-apiserver",
+							Namespace:   seedNamespace,
+							Annotations: map[string]string{"credentials.gardener.cloud/new-encryption-key-populated": "true"},
+						},
+					})).To(Succeed())
+				},
+				kubeapiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleting, EncryptWithCurrentKey: true},
+				func() {
+					deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: seedNamespace}}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+					Expect(deployment.Annotations).NotTo(HaveKey("credentials.gardener.cloud/new-encryption-key-populated"))
+				},
+			),
+			Entry("completed phase",
+				gardencorev1beta1.RotationCompleted,
+				nil,
+				kubeapiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleted, EncryptWithCurrentKey: true},
+				nil,
+			),
+		)
+
 		Describe("ExternalHostname", func() {
 			It("should set the external hostname to the out-of-cluster address (internal domain)", func() {
 				kubeAPIServer.EXPECT().GetValues()
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+				kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname("api." + internalClusterDomain)
 				kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
@@ -1080,6 +1195,7 @@ var _ = Describe("KubeAPIServer", func() {
 					kubeAPIServer.EXPECT().GetValues()
 					kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 					kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+					kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 					kubeAPIServer.EXPECT().SetServerCertificateConfig(expectedConfig)
@@ -1183,6 +1299,7 @@ var _ = Describe("KubeAPIServer", func() {
 					kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
 					if !expectError {
 						kubeAPIServer.EXPECT().SetServiceAccountConfig(expectedConfig)
+						kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
 						kubeAPIServer.EXPECT().Deploy(ctx)
 					}
 
@@ -1435,6 +1552,7 @@ var _ = Describe("KubeAPIServer", func() {
 					kubeAPIServer.EXPECT().GetValues()
 					kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 					kubeAPIServer.EXPECT().SetSNIConfig(expectedConfig)
+					kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 					kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 					kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
@@ -1518,6 +1636,7 @@ var _ = Describe("KubeAPIServer", func() {
 				kubeAPIServer.EXPECT().GetValues()
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 				kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+				kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 				kubeAPIServer.EXPECT().SetExternalServer("api." + externalClusterDomain)
 				kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
@@ -1532,6 +1651,7 @@ var _ = Describe("KubeAPIServer", func() {
 			kubeAPIServer.EXPECT().GetValues()
 			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
 			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 			kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
@@ -1556,6 +1676,7 @@ var _ = Describe("KubeAPIServer", func() {
 			kubeAPIServer.EXPECT().GetValues()
 			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
 			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 			kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
@@ -1584,6 +1705,7 @@ var _ = Describe("KubeAPIServer", func() {
 			kubeAPIServer.EXPECT().GetValues()
 			kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 			kubeAPIServer.EXPECT().SetSNIConfig(gomock.Any())
+			kubeAPIServer.EXPECT().SetETCDEncryptionConfig(gomock.Any())
 			kubeAPIServer.EXPECT().SetExternalHostname(gomock.Any())
 			kubeAPIServer.EXPECT().SetExternalServer(gomock.Any())
 			kubeAPIServer.EXPECT().SetServerCertificateConfig(gomock.Any())
