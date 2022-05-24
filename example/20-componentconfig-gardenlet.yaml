@@ -142,6 +142,8 @@ logging:
 # logging:
 #   enabled: false
 #   fluentBit:
+#     additionalEgressIpBlock: # add additional egress ipBlock to allow-fluentbit networkpolicy
+#       - 123.123.123.123/24
 #     output: |-
 #       [Output]
 #           ...
