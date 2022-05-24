@@ -48,9 +48,9 @@ logging:
           ...
 ```
 
-# additional egress ipBlock for allow-fluentbit networkpolicy
+# additional egress IPBlock for allow-fluentbit NetworkPolicy
 
-The optional setting under `logging.fluentBit.additionalEgressIpBlock` add additional egress ipBlock to `allow-fluentbit` networkpolicy to forward logs to a central system.
+The optional setting under `logging.fluentBit.networkPolicy.additionalEgressIPBlocks` add additional egress IPBlock to `allow-fluentbit` NetworkPolicy to forward logs to a central system.
 
 ```yaml
 logging:

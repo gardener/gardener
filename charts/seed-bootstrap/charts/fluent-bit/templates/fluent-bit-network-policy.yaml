@@ -12,7 +12,7 @@ spec:
 {{ toYaml .Values.labels | indent 6 }}
   egress:
   - to:
-{{- range .Values.additionalEgressIpBlock }}
+{{- range .Values.networkPolicy.additionalEgressIPBlocks }}
     - ipBlock:
         cidr: {{ . }}
 {{- end }}
