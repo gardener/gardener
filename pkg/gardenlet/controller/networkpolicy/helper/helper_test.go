@@ -70,7 +70,7 @@ var _ = Describe("helper", func() {
 								IP: ip4,
 							},
 							{
-								IP: ip2, // duplicate address should be removed
+								IP: ip2, // should not be removed, no duplicate in this EndpointAddress list
 							},
 							{
 								IP: ip4, // duplicate address should be removed
@@ -112,6 +112,83 @@ var _ = Describe("helper", func() {
 							IPBlock: &networkingv1.IPBlock{
 								CIDR: fmt.Sprintf("%s/32", ip4),
 							},
+						},
+						{
+							IPBlock: &networkingv1.IPBlock{
+								CIDR: fmt.Sprintf("%s/32", ip2),
+							},
+						},
+					},
+				},
+			}
+			Expect(egressRules).To(Equal(expectedRules))
+		})
+
+		It("should return the Egress rule with correct IP Blocks of 2 same EndpointSubset", func() {
+			var (
+				ip1     = "10.250.119.142"
+				tcp     = corev1.ProtocolTCP
+				subsets = []corev1.EndpointSubset{
+					{
+						Addresses: []corev1.EndpointAddress{
+							{
+								IP: ip1,
+							},
+						},
+						Ports: []corev1.EndpointPort{
+							{
+								Port:     443,
+								Protocol: tcp,
+							},
+						},
+					},
+					{
+						Addresses: []corev1.EndpointAddress{
+							{
+								IP: ip1,
+							},
+						},
+						Ports: []corev1.EndpointPort{
+							{
+								Port:     443,
+								Protocol: tcp,
+							},
+						},
+					},
+				}
+			)
+
+			egressRules := GetEgressRules(subsets...)
+
+			port443 := intstr.FromInt(443)
+			expectedRules := []networkingv1.NetworkPolicyEgressRule{
+				{
+					To: []networkingv1.NetworkPolicyPeer{
+						{
+							IPBlock: &networkingv1.IPBlock{
+								CIDR: fmt.Sprintf("%s/32", ip1),
+							},
+						},
+					},
+					Ports: []networkingv1.NetworkPolicyPort{
+						{
+							Protocol: &tcp,
+							Port:     &port443,
+						},
+					},
+				},
+				{
+					To: []networkingv1.NetworkPolicyPeer{
+						{
+							IPBlock: &networkingv1.IPBlock{
+								CIDR: fmt.Sprintf("%s/32", ip1),
+							},
+						},
+					},
+					Ports: []networkingv1.NetworkPolicyPort{
+						{
+							Protocol: &tcp,
+							Port:     &port443,
 						},
 					},
 				},
