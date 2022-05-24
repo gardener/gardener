@@ -299,7 +299,7 @@ var _ = Describe("Secrets", func() {
 		})
 	})
 
-	Context("service account secret rotation", func() {
+	Context("service account signing key secret rotation", func() {
 		var (
 			namespace1, namespace2 *corev1.Namespace
 			sa1, sa2, sa3          *corev1.ServiceAccount
@@ -387,6 +387,89 @@ var _ = Describe("Secrets", func() {
 				Expect(sa2).To(Equal(sa2Copy))
 				Expect(sa3.Labels).NotTo(HaveKey("credentials.gardener.cloud/key-name"))
 				Expect(sa3.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "new-sa-secret"}))
+			})
+		})
+	})
+
+	Context("etcd encryption key secret rotation", func() {
+		var (
+			namespace1, namespace2    *corev1.Namespace
+			secret1, secret2, secret3 *corev1.Secret
+		)
+
+		BeforeEach(func() {
+			namespace1 = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns1"}}
+			namespace2 = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns2"}}
+
+			Expect(fakeShootClient.Create(ctx, namespace1)).To(Succeed())
+			Expect(fakeShootClient.Create(ctx, namespace2)).To(Succeed())
+
+			secret1 = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "secret1", Namespace: namespace1.Name},
+			}
+			secret2 = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "secret2", Namespace: namespace2.Name},
+			}
+			secret3 = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "secret3", Namespace: namespace2.Name, Labels: map[string]string{"credentials.gardener.cloud/key-name": "kube-apiserver-etcd-encryption-key-current"}},
+			}
+
+			Expect(fakeShootClient.Create(ctx, secret1)).To(Succeed())
+			Expect(fakeShootClient.Create(ctx, secret2)).To(Succeed())
+			Expect(fakeShootClient.Create(ctx, secret3)).To(Succeed())
+		})
+
+		Describe("#RewriteSecretsAddLabel", func() {
+			It("should patch all secrets and add the label if not already done", func() {
+				Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-etcd-encryption-key-current", Namespace: seedNamespace}})).To(Succeed())
+
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
+
+				secret1ResourceVersion := secret1.ResourceVersion
+				secret2ResourceVersion := secret2.ResourceVersion
+				secret3ResourceVersion := secret3.ResourceVersion
+
+				Expect(botanist.RewriteSecretsAddLabel(ctx)).To(Succeed())
+
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
+
+				Expect(secret1.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "kube-apiserver-etcd-encryption-key-current"))
+				Expect(secret2.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "kube-apiserver-etcd-encryption-key-current"))
+				Expect(secret3.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "kube-apiserver-etcd-encryption-key-current"))
+
+				Expect(secret1.ResourceVersion).NotTo(Equal(secret1ResourceVersion))
+				Expect(secret2.ResourceVersion).NotTo(Equal(secret2ResourceVersion))
+				Expect(secret3.ResourceVersion).To(Equal(secret3ResourceVersion))
+			})
+		})
+
+		Describe("#RewriteSecretsRemoveLabel", func() {
+			It("should patch all secrets and remove the label if not already done", func() {
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
+
+				secret1ResourceVersion := secret1.ResourceVersion
+				secret2ResourceVersion := secret2.ResourceVersion
+				secret3ResourceVersion := secret3.ResourceVersion
+
+				Expect(botanist.RewriteSecretsRemoveLabel(ctx)).To(Succeed())
+
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
+
+				Expect(secret1.Labels).NotTo(HaveKey("credentials.gardener.cloud/key-name"))
+				Expect(secret2.Labels).NotTo(HaveKey("credentials.gardener.cloud/key-name"))
+				Expect(secret3.Labels).NotTo(HaveKey("credentials.gardener.cloud/key-name"))
+
+				Expect(secret1.ResourceVersion).To(Equal(secret1ResourceVersion))
+				Expect(secret2.ResourceVersion).To(Equal(secret2ResourceVersion))
+				Expect(secret3.ResourceVersion).NotTo(Equal(secret3ResourceVersion))
 			})
 		})
 	})
