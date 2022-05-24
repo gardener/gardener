@@ -21,6 +21,7 @@ import (
 	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/envtest"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -43,13 +44,14 @@ func TestScheduler(t *testing.T) {
 }
 
 var (
-	ctx        = context.Background()
-	testEnv    *envtest.GardenerTestEnvironment
-	restConfig *rest.Config
-	err        error
-	mgrContext context.Context
-	mgrCancel  context.CancelFunc
-	testClient client.Client
+	ctx                 = context.Background()
+	testEnv             *envtest.GardenerTestEnvironment
+	restConfig          *rest.Config
+	err                 error
+	mgrContext          context.Context
+	mgrCancel           context.CancelFunc
+	testClient          client.Client
+	versionedTestClient *gardenversionedcoreclientset.Clientset
 )
 
 var _ = BeforeSuite(func() {
@@ -68,6 +70,10 @@ var _ = BeforeSuite(func() {
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).ToNot(HaveOccurred())
 	Expect(testClient).NotTo(BeNil())
+
+	versionedTestClient, err = gardenversionedcoreclientset.NewForConfig(restConfig)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(versionedTestClient).NotTo(BeNil())
 
 	By("create shoot namespace")
 	shootNamespace := &corev1.Namespace{
