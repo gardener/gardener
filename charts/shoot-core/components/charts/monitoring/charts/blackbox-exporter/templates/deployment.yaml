@@ -15,7 +15,7 @@ metadata:
 {{ include "blackbox-exporter.deployment.annotations" . | indent 4 }}
 spec:
   revisionHistoryLimit: 1
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       component: blackbox-exporter
