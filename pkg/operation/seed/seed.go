@@ -425,6 +425,7 @@ func RunReconcileSeedFlow(
 	// Logging feature gate
 	var (
 		loggingEnabled                    bool
+		additionalEgressIpBlock           []string
 		filters                           = strings.Builder{}
 		parsers                           = strings.Builder{}
 		fluentBitConfigurationsOverwrites = map[string]interface{}{}
@@ -599,6 +600,8 @@ func RunReconcileSeedFlow(
 
 		if loggingConfig != nil && loggingConfig.FluentBit != nil {
 			fbConfig := loggingConfig.FluentBit
+
+			additionalEgressIpBlock = fbConfig.AdditionalEgressIpBlock
 
 			if fbConfig.ServiceSection != nil {
 				fluentBitConfigurationsOverwrites["service"] = *fbConfig.ServiceSection
@@ -904,6 +907,7 @@ func RunReconcileSeedFlow(
 			"additionalFilters":                 filters.String(),
 			"fluentBitConfigurationsOverwrites": fluentBitConfigurationsOverwrites,
 			"exposedComponentsTagPrefix":        userExposedComponentTagPrefix,
+			"additionalEgressIpBlock":           additionalEgressIpBlock,
 		},
 		"loki":         lokiValues,
 		"alertmanager": alertManagerConfig,

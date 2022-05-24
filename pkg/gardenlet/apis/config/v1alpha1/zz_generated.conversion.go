@@ -837,6 +837,7 @@ func autoConvert_v1alpha1_FluentBit_To_config_FluentBit(in *FluentBit, out *conf
 	out.ServiceSection = (*string)(unsafe.Pointer(in.ServiceSection))
 	out.InputSection = (*string)(unsafe.Pointer(in.InputSection))
 	out.OutputSection = (*string)(unsafe.Pointer(in.OutputSection))
+	out.AdditionalEgressIpBlock = *(*[]string)(unsafe.Pointer(&in.AdditionalEgressIpBlock))
 	return nil
 }
 
@@ -849,6 +850,7 @@ func autoConvert_config_FluentBit_To_v1alpha1_FluentBit(in *config.FluentBit, ou
 	out.ServiceSection = (*string)(unsafe.Pointer(in.ServiceSection))
 	out.InputSection = (*string)(unsafe.Pointer(in.InputSection))
 	out.OutputSection = (*string)(unsafe.Pointer(in.OutputSection))
+	out.AdditionalEgressIpBlock = *(*[]string)(unsafe.Pointer(&in.AdditionalEgressIpBlock))
 	return nil
 }
 

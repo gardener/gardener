@@ -382,6 +382,8 @@ type FluentBit struct {
 	// OutputSection defines [OUTPUT] configuration for the fluent-bit.
 	// If it is nil, fluent-bit uses default output configuration.
 	OutputSection *string
+	// AdditionalEgressIpBlock contains ip cidr for the egress network policy.
+	AdditionalEgressIpBlock []string
 }
 
 // Loki contains configuration for the Loki.

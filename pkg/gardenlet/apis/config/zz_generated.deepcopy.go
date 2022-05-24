@@ -404,6 +404,11 @@ func (in *FluentBit) DeepCopyInto(out *FluentBit) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.AdditionalEgressIpBlock != nil {
+		in, out := &in.AdditionalEgressIpBlock, &out.AdditionalEgressIpBlock
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 
