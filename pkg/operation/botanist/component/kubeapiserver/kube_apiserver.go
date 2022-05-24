@@ -195,6 +195,10 @@ type AutoscalingConfig struct {
 type ETCDEncryptionConfig struct {
 	// RotationPhase specifies the credentials rotation phase of the encryption key.
 	RotationPhase gardencorev1beta1.ShootCredentialsRotationPhase
+	// EncryptWithCurrentKey specifies whether the current encryption key should be used for encryption. If this is
+	// false and if there are two keys then the old key will be used for encryption while the current/new key will only
+	// be used for decryption.
+	EncryptWithCurrentKey bool
 }
 
 // Images is a set of container images used for the containers of the kube-apiserver pods.

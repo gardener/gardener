@@ -48,7 +48,6 @@ const (
 	// SecretBasicAuthName is a constant for the name of the basic-auth secret.
 	SecretBasicAuthName = "kube-apiserver-basic-auth"
 
-	secretETCDEncryptionKeyName                 = "kube-apiserver-etcd-encryption-key"
 	secretETCDEncryptionConfigurationNamePrefix = "kube-apiserver-etcd-encryption-configuration"
 	secretETCDEncryptionConfigurationDataKey    = "encryption-configuration.yaml"
 
@@ -223,6 +222,8 @@ func (k *kubeAPIServer) reconcileSecretETCDEncryptionConfiguration(ctx context.C
 		return err
 	}
 
+	keySecretOld, _ := k.secretsManager.Get(v1beta1constants.SecretNameETCDEncryptionKey, secretsmanager.Old)
+
 	encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{
 		Resources: []apiserverconfigv1.ResourceConfiguration{{
 			Resources: []string{
@@ -231,12 +232,7 @@ func (k *kubeAPIServer) reconcileSecretETCDEncryptionConfiguration(ctx context.C
 			Providers: []apiserverconfigv1.ProviderConfiguration{
 				{
 					AESCBC: &apiserverconfigv1.AESConfiguration{
-						Keys: []apiserverconfigv1.Key{
-							{
-								Name:   string(keySecret.Data[secretutils.DataKeyEncryptionKeyName]),
-								Secret: string(keySecret.Data[secretutils.DataKeyEncryptionSecret]),
-							},
-						},
+						Keys: k.etcdEncryptionAESKeys(keySecret, keySecretOld),
 					},
 				},
 				{
@@ -255,6 +251,31 @@ func (k *kubeAPIServer) reconcileSecretETCDEncryptionConfiguration(ctx context.C
 	utilruntime.Must(kutil.MakeUnique(secret))
 
 	return kutil.IgnoreAlreadyExists(k.client.Client().Create(ctx, secret))
+}
+
+func (k *kubeAPIServer) etcdEncryptionAESKeys(keySecretCurrent, keySecretOld *corev1.Secret) []apiserverconfigv1.Key {
+	if keySecretOld == nil {
+		return []apiserverconfigv1.Key{
+			aesKeyFromSecretData(keySecretCurrent.Data),
+		}
+	}
+
+	keyForEncryption, keyForDecryption := keySecretCurrent, keySecretOld
+	if !k.values.ETCDEncryption.EncryptWithCurrentKey {
+		keyForEncryption, keyForDecryption = keySecretOld, keySecretCurrent
+	}
+
+	return []apiserverconfigv1.Key{
+		aesKeyFromSecretData(keyForEncryption.Data),
+		aesKeyFromSecretData(keyForDecryption.Data),
+	}
+}
+
+func aesKeyFromSecretData(data map[string][]byte) apiserverconfigv1.Key {
+	return apiserverconfigv1.Key{
+		Name:   string(data[secretutils.DataKeyEncryptionKeyName]),
+		Secret: string(data[secretutils.DataKeyEncryptionSecret]),
+	}
 }
 
 func (k *kubeAPIServer) reconcileSecretServer(ctx context.Context) (*corev1.Secret, error) {

@@ -337,6 +337,7 @@ func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.S
 func (b *Botanist) computeKubeAPIServerETCDEncryptionConfig(ctx context.Context) (kubeapiserver.ETCDEncryptionConfig, error) {
 	config := kubeapiserver.ETCDEncryptionConfig{
 		RotationPhase:         gardencorev1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
+		EncryptWithCurrentKey: true,
 	}
 
 	return config, nil
