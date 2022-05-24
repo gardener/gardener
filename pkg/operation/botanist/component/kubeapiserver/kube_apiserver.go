@@ -102,16 +102,18 @@ type Interface interface {
 	SetAutoscalingAPIServerResources(corev1.ResourceRequirements)
 	// SetAutoscalingReplicas sets the Replicas field in the AutoscalingConfig of the Values of the deployer.
 	SetAutoscalingReplicas(*int32)
+	// SetETCDEncryptionConfig sets the ETCDEncryptionConfig field int he Values of the deployer.
+	SetETCDEncryptionConfig(ETCDEncryptionConfig)
+	// SetExternalHostname sets the ExternalHostname field in the Values of the deployer.
+	SetExternalHostname(string)
+	// SetExternalServer sets the ExternalServer field in the Values of the deployer.
+	SetExternalServer(string)
 	// SetServerCertificateConfig sets the ServerCertificateConfig field in the Values of the deployer.
 	SetServerCertificateConfig(ServerCertificateConfig)
 	// SetServiceAccountConfig sets the ServiceAccount field in the Values of the deployer.
 	SetServiceAccountConfig(ServiceAccountConfig)
 	// SetSNIConfig sets the SNI field in the Values of the deployer.
 	SetSNIConfig(SNIConfig)
-	// SetExternalHostname sets the ExternalHostname field in the Values of the deployer.
-	SetExternalHostname(string)
-	// SetExternalServer sets the ExternalServer field in the Values of the deployer.
-	SetExternalServer(string)
 }
 
 // Values contains configuration values for the kube-apiserver resources.
@@ -129,6 +131,8 @@ type Values struct {
 	Autoscaling AutoscalingConfig
 	// BasicAuthenticationEnabled states whether basic authentication is enabled.
 	BasicAuthenticationEnabled bool
+	// ETCDEncryption contains configuration for the encryption of resources in etcd.
+	ETCDEncryption ETCDEncryptionConfig
 	// EventTTL is the amount of time to retain events.
 	EventTTL *metav1.Duration
 	// ExternalHostname is the external hostname which should be exposed by the kube-apiserver.
@@ -185,6 +189,12 @@ type AutoscalingConfig struct {
 	// ScaleDownDisabledForHvpa states whether scale-down shall be disabled when HPA or VPA are configured in an HVPA
 	// resource.
 	ScaleDownDisabledForHvpa bool
+}
+
+// ETCDEncryptionConfig contains configuration for the encryption of resources in etcd.
+type ETCDEncryptionConfig struct {
+	// RotationPhase specifies the credentials rotation phase of the encryption key.
+	RotationPhase gardencorev1beta1.ShootCredentialsRotationPhase
 }
 
 // Images is a set of container images used for the containers of the kube-apiserver pods.
@@ -513,6 +523,18 @@ func (k *kubeAPIServer) SetAutoscalingReplicas(replicas *int32) {
 	k.values.Autoscaling.Replicas = replicas
 }
 
+func (k *kubeAPIServer) SetETCDEncryptionConfig(config ETCDEncryptionConfig) {
+	k.values.ETCDEncryption = config
+}
+
+func (k *kubeAPIServer) SetExternalHostname(hostname string) {
+	k.values.ExternalHostname = hostname
+}
+
+func (k *kubeAPIServer) SetExternalServer(server string) {
+	k.values.ExternalServer = server
+}
+
 func (k *kubeAPIServer) SetServerCertificateConfig(config ServerCertificateConfig) {
 	k.values.ServerCertificate = config
 }
@@ -523,14 +545,6 @@ func (k *kubeAPIServer) SetServiceAccountConfig(config ServiceAccountConfig) {
 
 func (k *kubeAPIServer) SetSNIConfig(config SNIConfig) {
 	k.values.SNI = config
-}
-
-func (k *kubeAPIServer) SetExternalHostname(hostname string) {
-	k.values.ExternalHostname = hostname
-}
-
-func (k *kubeAPIServer) SetExternalServer(server string) {
-	k.values.ExternalServer = server
 }
 
 // GetLabels returns the labels for the kube-apiserver.

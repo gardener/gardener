@@ -206,10 +206,19 @@ func (k *kubeAPIServer) reconcileSecretUserKubeconfig(ctx context.Context, secre
 }
 
 func (k *kubeAPIServer) reconcileSecretETCDEncryptionConfiguration(ctx context.Context, secret *corev1.Secret) error {
+	options := []secretsmanager.GenerateOption{
+		secretsmanager.Persist(),
+		secretsmanager.Rotate(secretsmanager.KeepOld),
+	}
+
+	if k.values.ETCDEncryption.RotationPhase == gardencorev1beta1.RotationCompleting {
+		options = append(options, secretsmanager.IgnoreOldSecrets())
+	}
+
 	keySecret, err := k.secretsManager.Generate(ctx, &secretutils.ETCDEncryptionKeySecretConfig{
-		Name:         secretETCDEncryptionKeyName,
+		Name:         v1beta1constants.SecretNameETCDEncryptionKey,
 		SecretLength: 32,
-	}, secretsmanager.Persist(), secretsmanager.Rotate(secretsmanager.KeepOld))
+	}, options...)
 	if err != nil {
 		return err
 	}

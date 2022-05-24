@@ -33,6 +33,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -42,8 +43,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
-
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DefaultKubeAPIServer returns a deployer for the kube-apiserver.
@@ -334,6 +334,14 @@ func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.S
 	}
 }
 
+func (b *Botanist) computeKubeAPIServerETCDEncryptionConfig(ctx context.Context) (kubeapiserver.ETCDEncryptionConfig, error) {
+	config := kubeapiserver.ETCDEncryptionConfig{
+		RotationPhase:         gardencorev1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
+	}
+
+	return config, nil
+}
+
 func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context, config *gardencorev1beta1.KubeAPIServerConfig, externalHostname string) (kubeapiserver.ServiceAccountConfig, error) {
 	var (
 		defaultIssuer = "https://" + externalHostname
@@ -450,6 +458,12 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		return err
 	}
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetServiceAccountConfig(serviceAccountConfig)
+
+	etcdEncryptionConfig, err := b.computeKubeAPIServerETCDEncryptionConfig(ctx)
+	if err != nil {
+		return err
+	}
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetETCDEncryptionConfig(etcdEncryptionConfig)
 
 	if err := b.Shoot.Components.ControlPlane.KubeAPIServer.Deploy(ctx); err != nil {
 		return err
