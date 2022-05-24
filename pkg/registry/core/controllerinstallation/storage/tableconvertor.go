@@ -59,12 +59,10 @@ func (c *convertor) ConvertToTable(ctx context.Context, o runtime.Object, tableO
 
 	if m, err := meta.ListAccessor(o); err == nil {
 		table.ResourceVersion = m.GetResourceVersion()
-		table.SelfLink = m.GetSelfLink()
 		table.Continue = m.GetContinue()
 	} else {
 		if m, err := meta.CommonAccessor(o); err == nil {
 			table.ResourceVersion = m.GetResourceVersion()
-			table.SelfLink = m.GetSelfLink()
 		}
 	}
 
