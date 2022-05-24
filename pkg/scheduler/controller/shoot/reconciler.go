@@ -88,7 +88,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		},
 		Target: corev1.ObjectReference{
 			Kind:       "Seed",
-			APIVersion: "core.gardener.cloud/v1beta1",
+			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 			Name:       seed.Name,
 		},
 	}

@@ -234,8 +234,7 @@ message Binding {
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
-  // Specification of the Binding.
-  // +optional
+  // Target seed for the binding.
   optional k8s.io.api.core.v1.ObjectReference target = 2;
 }
 

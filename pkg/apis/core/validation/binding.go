@@ -16,11 +16,12 @@ package validation
 
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
+
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
-// ValidateShootBinding tests if required fields in the shoot binding are legal.
-func ValidateShootBinding(binding *core.Binding) field.ErrorList {
+// ValidateBinding tests if required fields in the shoot binding are valid.
+func ValidateBinding(binding *core.Binding) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(binding.Target.Kind) != 0 && binding.Target.Kind != "Seed" {

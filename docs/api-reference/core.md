@@ -324,8 +324,7 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>Specification of the Binding.</p>
+<p>Target seed for the binding.</p>
 </td>
 </tr>
 </tbody>

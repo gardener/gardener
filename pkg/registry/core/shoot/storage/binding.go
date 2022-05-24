@@ -61,7 +61,7 @@ func (r *BindingREST) Create(ctx context.Context, name string, obj runtime.Objec
 		}
 	}
 
-	if errs := validation.ValidateShootBinding(binding); len(errs) != 0 {
+	if errs := validation.ValidateBinding(binding); len(errs) != 0 {
 		return nil, errs.ToAggregate()
 	}
 
@@ -106,7 +106,7 @@ func (r *BindingREST) assignShoot(ctx context.Context, shootUID types.UID, shoot
 			return nil, fmt.Errorf("unexpected object: %#v", obj)
 		}
 		if shoot.DeletionTimestamp != nil {
-			return nil, fmt.Errorf("shoot %s is being deleted, cannot be assigned to a host", shoot.Name)
+			return nil, fmt.Errorf("shoot %s is being deleted, cannot be assigned to a seed", shoot.Name)
 		}
 
 		shoot.Spec.SeedName = &seedName
