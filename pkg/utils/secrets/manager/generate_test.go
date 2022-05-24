@@ -361,8 +361,9 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should maintain the lifetime labels (w/o custom validity)", func() {
+				DeferCleanup(test.WithVar(&secretutils.Clock, fakeClock))
+
 				By("generating new secret")
-				config.Clock = fakeClock
 				secret, err := m.Generate(ctx, config)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -378,8 +379,9 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should maintain the lifetime labels (w/ custom validity which is ignored for certificates)", func() {
+				DeferCleanup(test.WithVar(&secretutils.Clock, fakeClock))
+
 				By("generating new secret")
-				config.Clock = fakeClock
 				secret, err := m.Generate(ctx, config, Validity(time.Hour))
 				Expect(err).NotTo(HaveOccurred())
 
@@ -478,13 +480,14 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should maintain the lifetime labels (w/o custom validity)", func() {
+				DeferCleanup(test.WithVar(&secretutils.Clock, fakeClock))
+
 				By("generating new CA secret")
 				caSecret, err := m.Generate(ctx, caConfig)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, caSecret)
 
 				By("generating new server secret")
-				serverConfig.Clock = fakeClock
 				serverSecret, err := m.Generate(ctx, serverConfig, SignedByCA(caName))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, serverSecret)
@@ -501,13 +504,14 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should maintain the lifetime labels (w/ custom validity which is ignored for certificates)", func() {
+				DeferCleanup(test.WithVar(&secretutils.Clock, fakeClock))
+
 				By("generating new CA secret")
 				caSecret, err := m.Generate(ctx, caConfig)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, caSecret)
 
 				By("generating new server secret")
-				serverConfig.Clock = fakeClock
 				serverSecret, err := m.Generate(ctx, serverConfig, SignedByCA(caName), Validity(time.Hour))
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, serverSecret)
@@ -640,13 +644,14 @@ var _ = Describe("Generate", func() {
 			})
 
 			It("should also accept ControlPlaneSecretConfigs", func() {
+				DeferCleanup(test.WithVar(&secretutils.Clock, fakeClock))
+
 				By("generating new CA secret")
 				caSecret, err := m.Generate(ctx, caConfig)
 				Expect(err).NotTo(HaveOccurred())
 				expectSecretWasCreated(ctx, fakeClient, caSecret)
 
 				By("generating new control plane secret")
-				serverConfig.Clock = fakeClock
 				serverConfig.Validity = utils.DurationPtr(1337 * time.Minute)
 				controlPlaneSecretConfig := &secretutils.ControlPlaneSecretConfig{
 					Name:                    "control-plane-secret",

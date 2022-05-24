@@ -26,6 +26,8 @@ import (
 	authenticationapi "github.com/gardener/gardener/pkg/apis/authentication"
 	gardenercore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/utils"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -218,12 +220,13 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 		akcREST = &AdminKubeconfigREST{
 			shootStorage:      shootGetter,
 			shootStateStorage: shootStateGetter,
-			clock:             clock.NewFakeClock(time.Unix(10, 0)),
 		}
 
 		ctx = request.WithUser(context.Background(), &user.DefaultInfo{
 			Name: userName,
 		})
+
+		DeferCleanup(test.WithVar(&secretutils.Clock, clock.NewFakeClock(time.Unix(10, 0))))
 	})
 
 	Context("request fails", func() {
