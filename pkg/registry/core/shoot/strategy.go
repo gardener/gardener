@@ -116,33 +116,37 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 
 		switch lastOperation.State {
 		case core.LastOperationStateFailed:
-			// The shoot state is failed and the retry annotation is set.
 			if val, ok := newShoot.Annotations[v1beta1constants.GardenerOperation]; ok && val == v1beta1constants.ShootOperationRetry {
 				mustIncrease, mustRemoveOperationAnnotation = true, true
 			}
+
 		default:
-			// The shoot state is not failed and the reconcile or rotate-credentials/rotate-ssh-keypair annotations are set.
-			if val, ok := newShoot.Annotations[v1beta1constants.GardenerOperation]; ok {
-				if val == v1beta1constants.GardenerOperationReconcile {
-					mustIncrease, mustRemoveOperationAnnotation = true, true
-				}
-				if val == v1beta1constants.ShootOperationRotateKubeconfigCredentials ||
-					val == v1beta1constants.ShootOperationRotateSSHKeypair ||
-					val == v1beta1constants.ShootOperationRotateObservabilityCredentials ||
-					val == v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart ||
-					val == v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete {
+			switch newShoot.Annotations[v1beta1constants.GardenerOperation] {
+			case v1beta1constants.GardenerOperationReconcile:
+				mustIncrease, mustRemoveOperationAnnotation = true, true
+
+			case v1beta1constants.ShootOperationRotateCredentialsStart,
+				v1beta1constants.ShootOperationRotateCredentialsComplete,
+				v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart,
+				v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete,
+				v1beta1constants.ShootOperationRotateKubeconfigCredentials,
+				v1beta1constants.ShootOperationRotateSSHKeypair,
+				v1beta1constants.ShootOperationRotateObservabilityCredentials:
+				// We don't want to remove the annotation so that the gardenlet can pick it up and perform
+				// the rotation. It has to remove the annotation after it is done.
+				mustIncrease, mustRemoveOperationAnnotation = true, false
+
+			case v1beta1constants.ShootOperationRotateCAStart,
+				v1beta1constants.ShootOperationRotateCAComplete:
+				if utilfeature.DefaultFeatureGate.Enabled(features.ShootCARotation) {
 					// We don't want to remove the annotation so that the gardenlet can pick it up and perform
 					// the rotation. It has to remove the annotation after it is done.
 					mustIncrease, mustRemoveOperationAnnotation = true, false
 				}
-				if utilfeature.DefaultFeatureGate.Enabled(features.ShootCARotation) &&
-					(val == v1beta1constants.ShootOperationRotateCAStart || val == v1beta1constants.ShootOperationRotateCAComplete) {
-					// We don't want to remove the annotation so that the gardenlet can pick it up and perform
-					// the rotation. It has to remove the annotation after it is done.
-					mustIncrease, mustRemoveOperationAnnotation = true, false
-				}
-				if utilfeature.DefaultFeatureGate.Enabled(features.ShootSARotation) &&
-					(val == v1beta1constants.ShootOperationRotateServiceAccountKeyStart || val == v1beta1constants.ShootOperationRotateServiceAccountKeyComplete) {
+
+			case v1beta1constants.ShootOperationRotateServiceAccountKeyStart,
+				v1beta1constants.ShootOperationRotateServiceAccountKeyComplete:
+				if utilfeature.DefaultFeatureGate.Enabled(features.ShootSARotation) {
 					// We don't want to remove the annotation so that the gardenlet can pick it up and perform
 					// the rotation. It has to remove the annotation after it is done.
 					mustIncrease, mustRemoveOperationAnnotation = true, false
