@@ -405,12 +405,15 @@ var _ = Describe("Secrets", func() {
 			Expect(fakeShootClient.Create(ctx, namespace2)).To(Succeed())
 
 			secret1 = &corev1.Secret{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
 				ObjectMeta: metav1.ObjectMeta{Name: "secret1", Namespace: namespace1.Name},
 			}
 			secret2 = &corev1.Secret{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
 				ObjectMeta: metav1.ObjectMeta{Name: "secret2", Namespace: namespace2.Name},
 			}
 			secret3 = &corev1.Secret{
+				TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"},
 				ObjectMeta: metav1.ObjectMeta{Name: "secret3", Namespace: namespace2.Name, Labels: map[string]string{"credentials.gardener.cloud/key-name": "kube-apiserver-etcd-encryption-key-current"}},
 			}
 

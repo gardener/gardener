@@ -575,7 +575,8 @@ func (b *Botanist) RewriteSecretsRemoveLabel(ctx context.Context) error {
 }
 
 func (b *Botanist) rewriteSecrets(ctx context.Context, requirement labels.Requirement, mutateObjectMeta func(*metav1.ObjectMeta)) error {
-	secretList := &corev1.SecretList{}
+	secretList := &metav1.PartialObjectMetadataList{}
+	secretList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("SecretList"))
 	if err := b.K8sShootClient.Client().List(ctx, secretList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(requirement)}); err != nil {
 		return err
 	}
