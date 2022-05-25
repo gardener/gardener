@@ -382,6 +382,14 @@ type FluentBit struct {
 	// OutputSection defines [OUTPUT] configuration for the fluent-bit.
 	// If it is nil, fluent-bit uses default output configuration.
 	OutputSection *string
+	// NetworkPolicy defines settings for the fluent-bit NetworkPolicy.
+	NetworkPolicy *FluentBitNetworkPolicy
+}
+
+// FluentBitNetworkPolicy defines settings for the fluent-bit NetworkPolicy.
+type FluentBitNetworkPolicy struct {
+	// AdditionalEgressIPBlocks contains IP CIDRs for the egress network policy.
+	AdditionalEgressIPBlocks []string
 }
 
 // Loki contains configuration for the Loki.

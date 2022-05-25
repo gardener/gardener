@@ -12,6 +12,10 @@ spec:
 {{ toYaml .Values.labels | indent 6 }}
   egress:
   - to:
+{{- range .Values.networkPolicy.additionalEgressIPBlocks }}
+    - ipBlock:
+        cidr: {{ . }}
+{{- end }}
     - namespaceSelector:
         matchLabels:
           gardener.cloud/role: shoot

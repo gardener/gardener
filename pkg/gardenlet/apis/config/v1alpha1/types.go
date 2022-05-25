@@ -470,6 +470,16 @@ type FluentBit struct {
 	// If it is nil, fluent-bit uses default output configuration.
 	// +optional
 	OutputSection *string `json:"output,omitempty" yaml:"output,omitempty"`
+	// NetworkPolicy defines settings for the fluent-bit NetworkPolicy.
+	// +optional
+	NetworkPolicy *FluentBitNetworkPolicy `json:"networkPolicy,omitempty" yaml:"networkPolicy,omitempty"`
+}
+
+// FluentBitNetworkPolicy defines settings for the fluent-bit NetworkPolicy.
+type FluentBitNetworkPolicy struct {
+	// AdditionalEgressIPBlocks contains IP CIDRs for the egress network policy.
+	// +optional
+	AdditionalEgressIPBlocks []string `json:"additionalEgressIPBlocks,omitempty" yaml:"additionalEgressIPBlocks,omitempty"`
 }
 
 // Loki contains configuration for the Loki.

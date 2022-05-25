@@ -37,11 +37,11 @@ const AllowToSeedAPIServer = "allow-to-seed-apiserver"
 func GetEgressRules(subsets ...corev1.EndpointSubset) []networkingv1.NetworkPolicyEgressRule {
 	var (
 		egressRules = []networkingv1.NetworkPolicyEgressRule{}
-		existingIPs = sets.NewString()
 	)
 
 	for _, subset := range subsets {
 		egressRule := networkingv1.NetworkPolicyEgressRule{}
+		existingIPs := sets.NewString()
 
 		for _, address := range subset.Addresses {
 			if existingIPs.Has(address.IP) {

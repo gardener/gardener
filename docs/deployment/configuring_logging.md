@@ -48,6 +48,18 @@ logging:
           ...
 ```
 
+# additional egress IPBlock for allow-fluentbit NetworkPolicy
+
+The optional setting under `logging.fluentBit.networkPolicy.additionalEgressIPBlocks` add additional egress IPBlock to `allow-fluentbit` NetworkPolicy to forward logs to a central system.
+
+```yaml
+logging:
+  enabled: true
+  fluentBit:
+    additionalEgressIpBlock:
+      - 123.123.123.123/32
+```
+
 # Configuring the Loki PriorityClass
 
 The central Loki, which is in the `garden` namespace, contains all the logs from the most important seed components. When the central Loki `PriorityClass` is with low value then its pods can be preempted and often moved from one node to another while Kubernetes tries to free space for more important pods. The persistent volume will be detached/attached again as well. Based on the performance of the underlying infrastructure, this leads to great central Loki downtime. To give greater priority of the seed Loki you can use the `logging.loki.garden.priority` option.

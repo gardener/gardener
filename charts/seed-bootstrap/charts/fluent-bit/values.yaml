@@ -16,6 +16,10 @@ ports:
   metrics: 2020
   outputPluginMetrics: 2021
 
+networkPolicy:
+  additionalEgressIPBlocks: []
+#   - 123.123.123.123/32
+
 additionalFilters: ""
 additionalParsers: ""
 fluentBitConfigurationsOverwrites: {}
