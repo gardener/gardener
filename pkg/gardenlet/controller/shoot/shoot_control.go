@@ -817,7 +817,7 @@ func (r *shootReconciler) patchShootStatusOperationSuccess(
 		})
 	}
 
-	if pointer.BoolEqual(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, pointer.Bool(false)) {
+	if pointer.BoolEqual(shoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, pointer.Bool(false)) && shoot.Status.Credentials != nil && shoot.Status.Credentials.Rotation != nil {
 		shoot.Status.Credentials.Rotation.Kubeconfig = nil
 	}
 
