@@ -116,7 +116,7 @@ var _ = Describe("Seed health", func() {
 				healthCheck := care.NewHealthForSeed(seed, c)
 				updatedConditions := healthCheck.CheckSeed(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition}, nil)
 				Expect(len(updatedConditions)).ToNot(BeZero())
-				Expect(updatedConditions[0].Status).To(Equal(gardencorev1beta1.ConditionTrue))
+				Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy."))
 			})
 		})
 
@@ -135,7 +135,7 @@ var _ = Describe("Seed health", func() {
 				healthCheck := care.NewHealthForSeed(seed, c)
 				updatedConditions := healthCheck.CheckSeed(ctx, []gardencorev1beta1.Condition{seedSystemComponentsHealthyCondition}, nil)
 				Expect(len(updatedConditions)).ToNot(BeZero())
-				Expect(updatedConditions[0].Status).To(Equal(gardencorev1beta1.ConditionTrue))
+				Expect(updatedConditions[0]).To(beConditionWithStatusReasonAndMessage(gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy."))
 			})
 		})
 
@@ -233,7 +233,7 @@ var _ = Describe("Seed health", func() {
 					}
 				})
 
-				tests("Foo", "Bar")
+				tests("NotHealthy", "Resources are not healthy")
 			})
 
 			Context("When all managed resources are deployed but their resources are not applied", func() {
@@ -241,9 +241,9 @@ var _ = Describe("Seed health", func() {
 					for _, name := range append(requiredManagedResources, optionalManagedResources...) {
 						Expect(c.Create(ctx, notAppliedManagedResource(name))).To(Succeed())
 					}
-
-					tests("Foo", "Bar")
 				})
+
+				tests("NotApplied", "Resources are not applied")
 			})
 		})
 	})
@@ -276,14 +276,14 @@ func notHealthyManagedResource(name string) *resourcesv1alpha1.ManagedResource {
 		name,
 		[]gardencorev1beta1.Condition{
 			{
-				Type:    resourcesv1alpha1.ResourcesApplied,
-				Reason:  "Foo",
-				Message: "Bar",
-				Status:  gardencorev1beta1.ConditionFalse,
+				Type:   resourcesv1alpha1.ResourcesApplied,
+				Status: gardencorev1beta1.ConditionTrue,
 			},
 			{
-				Type:   resourcesv1alpha1.ResourcesHealthy,
-				Status: gardencorev1beta1.ConditionTrue,
+				Type:    resourcesv1alpha1.ResourcesHealthy,
+				Reason:  "NotHealthy",
+				Message: "Resources are not healthy",
+				Status:  gardencorev1beta1.ConditionFalse,
 			},
 		})
 }
@@ -294,8 +294,8 @@ func notAppliedManagedResource(name string) *resourcesv1alpha1.ManagedResource {
 		[]gardencorev1beta1.Condition{
 			{
 				Type:    resourcesv1alpha1.ResourcesApplied,
-				Reason:  "Foo",
-				Message: "Bar",
+				Reason:  "NotApplied",
+				Message: "Resources are not applied",
 				Status:  gardencorev1beta1.ConditionFalse,
 			},
 			{
