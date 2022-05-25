@@ -18,14 +18,14 @@ import (
 	"context"
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/clock"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/utils"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/clock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // plantClientMap is a ClientMap for requesting and storing clients for Plant clusters.

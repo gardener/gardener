@@ -19,8 +19,8 @@ import (
 	"time"
 
 	"github.com/spf13/pflag"
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"

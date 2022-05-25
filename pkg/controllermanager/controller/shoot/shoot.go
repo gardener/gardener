@@ -31,10 +31,10 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"

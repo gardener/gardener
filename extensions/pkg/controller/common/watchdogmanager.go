@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/util/clock"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -81,7 +81,7 @@ var (
 )
 
 // NewWatchdogManager creates a new WatchdogManager using the given watchdog factory, ttl, and logger.
-func NewWatchdogManager(watchdogFactory WatchdogFactory, ttl time.Duration, clk clock.Clock, logger logr.Logger) WatchdogManager {
+func NewWatchdogManager(watchdogFactory WatchdogFactory, ttl time.Duration, clk clock.WithTickerAndDelayedExecution, logger logr.Logger) WatchdogManager {
 	return &watchdogManager{
 		watchdogFactory: watchdogFactory,
 		ttl:             ttl,
@@ -95,7 +95,7 @@ func NewWatchdogManager(watchdogFactory WatchdogFactory, ttl time.Duration, clk 
 type watchdogManager struct {
 	watchdogFactory WatchdogFactory
 	ttl             time.Duration
-	clock           clock.Clock
+	clock           clock.WithTickerAndDelayedExecution
 	logger          logr.Logger
 	watchdogs       map[string]Watchdog
 	watchdogsMutex  sync.Mutex

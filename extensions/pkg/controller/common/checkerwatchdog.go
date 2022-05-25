@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/util/clock"
+	"k8s.io/utils/clock"
 )
 
 // Watchdog manages a goroutine that regularly checks if a certain condition is true,

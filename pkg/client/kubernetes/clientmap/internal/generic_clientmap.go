@@ -22,7 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"golang.org/x/time/rate"
-	"k8s.io/apimachinery/pkg/util/clock"
+	"k8s.io/utils/clock"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
