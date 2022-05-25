@@ -145,7 +145,7 @@ allowedMetrics:
   - node_load1
   - node_load15
   - node_load5
-  - node_memory_Active_bytes
+  - node_memory_.+
   - node_nf_conntrack_entries
   - node_nf_conntrack_entries_limit
   - node_scrape_collector_duration_seconds
