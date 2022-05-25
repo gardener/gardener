@@ -31,12 +31,14 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockchartrenderer "github.com/gardener/gardener/pkg/chartrenderer/mock"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	mockchartutil "github.com/gardener/gardener/pkg/utils/chart/mocks"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -56,15 +58,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/clock"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 const (
@@ -85,7 +85,7 @@ var (
 	vFalse, vTrue = false, true
 	pFalse, pTrue = &vFalse, &vTrue
 
-	fakeClock *clock.FakeClock
+	fakeClock *testclock.FakeClock
 )
 
 func TestControlPlane(t *testing.T) {
@@ -291,7 +291,7 @@ var _ = Describe("Actuator", func() {
 		}
 
 		deterministicReader := strings.NewReader(strings.Repeat("-", 10000))
-		fakeClock = clock.NewFakeClock(time.Unix(1649848746, 0))
+		fakeClock = testclock.NewFakeClock(time.Unix(1649848746, 0))
 
 		DeferCleanup(test.WithVars(
 			&rand.Reader, deterministicReader,

@@ -20,19 +20,18 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/golang/mock/gomock"
-
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockworkqueue "github.com/gardener/gardener/pkg/mock/client-go/util/workqueue"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/clock"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -44,7 +43,7 @@ var _ = Describe("Project Activity", func() {
 		reconciler reconcile.Reconciler
 		request    reconcile.Request
 
-		fakeClock *clock.FakeClock
+		fakeClock *testclock.FakeClock
 
 		ctrl                   *gomock.Controller
 		k8sGardenRuntimeClient *mockclient.MockClient
@@ -76,7 +75,7 @@ var _ = Describe("Project Activity", func() {
 	Describe("Project Activity Reconcile", func() {
 		BeforeEach(func() {
 
-			fakeClock = clock.NewFakeClock(time.Now())
+			fakeClock = testclock.NewFakeClock(time.Now())
 			reconciler = NewActivityReconciler(k8sGardenRuntimeClient, fakeClock)
 
 			k8sGardenRuntimeClient.EXPECT().Get(
@@ -126,7 +125,7 @@ var _ = Describe("Project Activity", func() {
 
 		BeforeEach(func() {
 			queue = mockworkqueue.NewMockRateLimitingInterface(ctrl)
-			fakeClock = clock.NewFakeClock(time.Date(2022, 02, 01, 6, 30, 0, 0, time.UTC))
+			fakeClock = testclock.NewFakeClock(time.Date(2022, 02, 01, 6, 30, 0, 0, time.UTC))
 			c = &Controller{
 				gardenClient:         k8sGardenRuntimeClient,
 				projectActivityQueue: queue,

@@ -47,11 +47,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -61,7 +61,7 @@ var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVar(&secretutils.GenerateRandomString, secretutils.FakeGenerateRandomString))
 	DeferCleanup(test.WithVar(&secretutils.GenerateKey, secretutils.FakeGenerateKey))
 	DeferCleanup(test.WithVar(&secretutils.GenerateVPNKey, secretutils.FakeGenerateVPNKey))
-	DeferCleanup(test.WithVar(&secretutils.Clock, clock.NewFakeClock(time.Time{})))
+	DeferCleanup(test.WithVar(&secretutils.Clock, testclock.NewFakeClock(time.Time{})))
 })
 
 var _ = Describe("KubeAPIServer", func() {

@@ -23,7 +23,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/util/clock"
+	testclock "k8s.io/utils/clock/testing"
 )
 
 func TestSecrets(t *testing.T) {
@@ -33,5 +33,5 @@ func TestSecrets(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	DeferCleanup(test.WithVar(&GenerateRandomString, FakeGenerateRandomString))
-	DeferCleanup(test.WithVar(&Clock, clock.NewFakeClock(time.Time{})))
+	DeferCleanup(test.WithVar(&Clock, testclock.NewFakeClock(time.Time{})))
 })

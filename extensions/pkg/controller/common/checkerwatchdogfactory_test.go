@@ -26,7 +26,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/util/clock"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -46,7 +46,7 @@ var _ = Describe("CheckerWatchdogFactory", func() {
 		checkerFactory = mockcommon.NewMockCheckerFactory(ctrl)
 		checker = mockcommon.NewMockChecker(ctrl)
 		ctx = context.TODO()
-		checkerWatchdogFactory = NewCheckerWatchdogFactory(checkerFactory, interval, timeout, clock.NewFakeClock(time.Now()), log.Log.WithName("test"))
+		checkerWatchdogFactory = NewCheckerWatchdogFactory(checkerFactory, interval, timeout, testclock.NewFakeClock(time.Now()), log.Log.WithName("test"))
 	})
 
 	AfterEach(func() {

@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/goleak"
-	"k8s.io/apimachinery/pkg/util/clock"
+	testclock "k8s.io/utils/clock/testing"
 )
 
 var _ = Describe("ProgressReporterDelaying", func() {
@@ -31,7 +31,7 @@ var _ = Describe("ProgressReporterDelaying", func() {
 
 		var (
 			ctx           = context.TODO()
-			fakeClock     = clock.NewFakeClock(time.Now())
+			fakeClock     = testclock.NewFakeClock(time.Now())
 			period        = 50 * time.Second
 			reportedStats atomic.Value
 			reporterFn    = func(_ context.Context, stats *Stats) { reportedStats.Store(stats) }

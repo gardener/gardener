@@ -23,7 +23,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/util/clock"
+	testclock "k8s.io/utils/clock/testing"
 
 	. "github.com/gardener/gardener/extensions/pkg/controller/common"
 )
@@ -38,7 +38,7 @@ var _ = Describe("CheckerWatchdog", func() {
 	var (
 		ctrl      *gomock.Controller
 		checker   *fakeChecker
-		fakeClock *clock.FakeClock
+		fakeClock *testclock.FakeClock
 		ctx       context.Context
 		watchdog  Watchdog
 	)
@@ -46,7 +46,7 @@ var _ = Describe("CheckerWatchdog", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		checker = &fakeChecker{called: make(chan struct{}, 2)} // we expect 2 calls in every test case
-		fakeClock = clock.NewFakeClock(time.Now())
+		fakeClock = testclock.NewFakeClock(time.Now())
 		ctx = context.TODO()
 		watchdog = NewCheckerWatchdog(checker, interval, timeout, fakeClock, logr.Discard())
 	})

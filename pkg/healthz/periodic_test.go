@@ -20,13 +20,13 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/goleak"
-	"k8s.io/apimachinery/pkg/util/clock"
+	testclock "k8s.io/utils/clock/testing"
 )
 
 var _ = Describe("Periodic", func() {
 	Describe("periodicHealthz", func() {
 		var (
-			fakeClock     *clock.FakeClock
+			fakeClock     *testclock.FakeClock
 			p             *periodicHealthz
 			resetDuration = 5 * time.Second
 			ignoreCurrent goleak.Option
@@ -34,7 +34,7 @@ var _ = Describe("Periodic", func() {
 
 		BeforeEach(func() {
 			ignoreCurrent = goleak.IgnoreCurrent()
-			fakeClock = clock.NewFakeClock(time.Now())
+			fakeClock = testclock.NewFakeClock(time.Now())
 			p = NewPeriodicHealthz(fakeClock, resetDuration).(*periodicHealthz)
 		})
 
