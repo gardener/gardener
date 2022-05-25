@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -71,6 +72,7 @@ var _ = Describe("ResourceManager", func() {
 		healthPort      int32 = 8081
 		metricsPort     int32 = 8080
 		serverPort            = 10250
+		version               = semver.MustParse("1.22.1")
 
 		// optional configuration
 		clusterIdentity                      = "foo"
@@ -285,6 +287,7 @@ var _ = Describe("ResourceManager", func() {
 			SyncPeriod:                           &syncPeriod,
 			TargetDiffersFromSourceCluster:       true,
 			TargetDisableCache:                   &targetDisableCache,
+			Version:                              version,
 			WatchedNamespace:                     &watchedNamespace,
 			VPA: &VPAConfig{
 				MinAllowed: corev1.ResourceList{
