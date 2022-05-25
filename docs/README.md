@@ -94,6 +94,8 @@
 * [GEP-15: Manage Bastions and SSH Key Pair Rotation](proposals/15-manage-bastions-and-ssh-key-pair-rotation.md)
 * [GEP-16: Dynamic kubeconfig generation for Shoot clusters](proposals/16-adminkubeconfig-subresource.md)
 * [GEP-17: Shoot Control Plane Migration "Bad Case" Scenario](proposals/17-shoot-control-plane-migration-bad-case.md)
+* [GEP-18: Automated Shoot CA Rotation](proposals/18-shoot-CA-rotation.md)
+* [GEP-19: Monitoring Stack - Migrating to the prometheus-operator](proposals/19-migrating-to-prometheus-operator.md)
 
 ## Development
 
