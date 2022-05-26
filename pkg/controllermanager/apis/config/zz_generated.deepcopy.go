@@ -714,6 +714,11 @@ func (in *ShootRetryControllerConfiguration) DeepCopyInto(out *ShootRetryControl
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.RetryJitterPeriod != nil {
+		in, out := &in.RetryJitterPeriod, &out.RetryJitterPeriod
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	return
 }
 

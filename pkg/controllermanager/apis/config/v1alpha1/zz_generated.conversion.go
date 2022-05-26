@@ -999,6 +999,7 @@ func Convert_config_ShootReferenceControllerConfiguration_To_v1alpha1_ShootRefer
 func autoConvert_v1alpha1_ShootRetryControllerConfiguration_To_config_ShootRetryControllerConfiguration(in *ShootRetryControllerConfiguration, out *config.ShootRetryControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.RetryPeriod = (*v1.Duration)(unsafe.Pointer(in.RetryPeriod))
+	out.RetryJitterPeriod = (*v1.Duration)(unsafe.Pointer(in.RetryJitterPeriod))
 	return nil
 }
 
@@ -1010,6 +1011,7 @@ func Convert_v1alpha1_ShootRetryControllerConfiguration_To_config_ShootRetryCont
 func autoConvert_config_ShootRetryControllerConfiguration_To_v1alpha1_ShootRetryControllerConfiguration(in *config.ShootRetryControllerConfiguration, out *ShootRetryControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.RetryPeriod = (*v1.Duration)(unsafe.Pointer(in.RetryPeriod))
+	out.RetryJitterPeriod = (*v1.Duration)(unsafe.Pointer(in.RetryJitterPeriod))
 	return nil
 }
 

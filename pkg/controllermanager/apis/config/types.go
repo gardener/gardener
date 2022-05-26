@@ -277,6 +277,10 @@ type ShootRetryControllerConfiguration struct {
 	ConcurrentSyncs *int
 	// RetryPeriod is the retry period for retrying failed Shoots that match certain criterion.
 	RetryPeriod *metav1.Duration
+	// RetryJitterPeriod is a jitter duration for the reconciler retry that can be used to distribute the retries randomly.
+	// If its value is greater than 0 then the shoot will not be retried with the configured retry period but a random
+	// duration between 0 and the configured value will be added. It is defaulted to 5m.
+	RetryJitterPeriod *metav1.Duration
 }
 
 // ShootConditionsControllerConfiguration defines the configuration of the

@@ -281,6 +281,9 @@ func SetDefaults_ShootRetryControllerConfiguration(obj *ShootRetryControllerConf
 	if obj.RetryPeriod == nil {
 		obj.RetryPeriod = &metav1.Duration{Duration: 10 * time.Minute}
 	}
+	if obj.RetryJitterPeriod == nil {
+		obj.RetryJitterPeriod = &metav1.Duration{Duration: 5 * time.Minute}
+	}
 }
 
 // SetDefaults_ManagedSeedSetControllerConfiguration sets defaults for the given ManagedSeedSetControllerConfiguration.
