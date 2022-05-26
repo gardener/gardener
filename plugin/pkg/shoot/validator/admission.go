@@ -34,7 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
@@ -257,7 +256,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	if err := validationContext.validateProjectMembership(a); err != nil {
 		return err
 	}
-	if err := validationContext.validateScheduling(a, v.shootLister, v.seedLister, v.shootStateLister); err != nil {
+	if err := validationContext.validateScheduling(a, v.shootLister); err != nil {
 		return err
 	}
 	if err := validationContext.validateDeletion(a); err != nil {
@@ -339,18 +338,16 @@ func (c *validationContext) validateProjectMembership(a admission.Attributes) er
 	return nil
 }
 
-func (c *validationContext) validateScheduling(a admission.Attributes, shootLister corelisters.ShootLister, seedLister corelisters.SeedLister, shootStateLister corev1alpha1listers.ShootStateLister) error {
+func (c *validationContext) validateScheduling(a admission.Attributes, shootLister corelisters.ShootLister) error {
 	if a.GetOperation() == admission.Delete {
 		return nil
 	}
 
-	var (
-		shootIsBeingScheduled          = c.oldShoot.Spec.SeedName == nil && c.shoot.Spec.SeedName != nil
-		shootIsBeingRescheduled        = c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName != nil && *c.shoot.Spec.SeedName != *c.oldShoot.Spec.SeedName
-		mustCheckSchedulingConstraints = shootIsBeingScheduled || shootIsBeingRescheduled
-	)
+	// If there is already a seedName in the shoot yaml, the scheduler will not create the Binding
+	// So we need to keep the validation here.
+	var shootIsBeingScheduled = c.oldShoot.Spec.SeedName == nil && c.shoot.Spec.SeedName != nil
 
-	if mustCheckSchedulingConstraints {
+	if shootIsBeingScheduled {
 		if c.seed.DeletionTimestamp != nil {
 			return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' that is already marked for deletion", c.shoot.Name, c.seed.Name))
 		}
@@ -371,50 +368,7 @@ func (c *validationContext) validateScheduling(a admission.Attributes, shootList
 		}
 	}
 
-	if shootIsBeingRescheduled {
-		oldSeed, err := seedLister.Get(*c.oldShoot.Spec.SeedName)
-		if err != nil {
-			return apierrors.NewInternalError(fmt.Errorf("could not find referenced seed: %+v", err.Error()))
-		}
-
-		if oldSeed.Spec.Backup == nil {
-			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because backup is not configured for old seed %q", oldSeed.Name))
-		}
-		if c.seed.Spec.Backup == nil {
-			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because backup is not configured for seed %q", c.seed.Name))
-		}
-
-		if oldSeed.Spec.Provider.Type != c.seed.Spec.Provider.Type {
-			return admission.NewForbidden(a, fmt.Errorf("cannot change seed because cloud provider for new seed (%s) is not equal to cloud provider for old seed (%s)", c.seed.Spec.Provider.Type, oldSeed.Spec.Provider.Type))
-		}
-
-		oldShootSpec := c.oldShoot.Spec
-		oldShootSpec.SeedName = c.shoot.Spec.SeedName
-		if !reflect.DeepEqual(oldShootSpec, c.shoot.Spec) {
-			return admission.NewForbidden(a, fmt.Errorf("seed name cannot be changed simultaneously with other changes to the shoot.spec"))
-		}
-
-		// Check if ShootState contains the new etcd-encryption key after it got migrated to the new secrets manager
-		// with https://github.com/gardener/gardener/pull/5616
-		shootState, err := shootStateLister.ShootStates(c.shoot.Namespace).Get(c.shoot.Name)
-		if err != nil {
-			return apierrors.NewInternalError(fmt.Errorf("could not find shoot state: %+v", err.Error()))
-		}
-
-		etcdEncryptionFound := false
-
-		for _, data := range shootState.Spec.Gardener {
-			if data.Labels[secretsmanager.LabelKeyName] == "kube-apiserver-etcd-encryption-key" &&
-				data.Labels[secretsmanager.LabelKeyManagedBy] == secretsmanager.LabelValueSecretsManager {
-				etcdEncryptionFound = true
-				break
-			}
-		}
-
-		if !etcdEncryptionFound {
-			return admission.NewForbidden(a, errors.New("cannot change seed because etcd encryption key not found in shoot state - please reconcile the shoot first"))
-		}
-	} else if !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
+	if !reflect.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) {
 		if wasShootRescheduledToNewSeed(c.shoot) {
 			return admission.NewForbidden(a, fmt.Errorf("shoot spec cannot be changed because shoot has been rescheduled to a new seed"))
 		}
@@ -1205,11 +1159,11 @@ func validateCRI(constraints []core.CRI, worker core.Worker, fldPath *field.Path
 		return allErrors
 	}
 
-	for j, runtime := range worker.CRI.ContainerRuntimes {
+	for j, cr := range worker.CRI.ContainerRuntimes {
 		jdxPath := fldPath.Child("containerRuntimes").Index(j)
-		if ok, validValues := validateCRMembership(foundCRI.ContainerRuntimes, runtime.Type); !ok {
-			detail := fmt.Sprintf("machine image '%s@%s' does not support container runtime '%s', supported values: %+v", worker.Machine.Image.Name, worker.Machine.Image.Version, runtime.Type, validValues)
-			allErrors = append(allErrors, field.Invalid(jdxPath.Child("type"), runtime.Type, detail))
+		if ok, validValues := validateCRMembership(foundCRI.ContainerRuntimes, cr.Type); !ok {
+			detail := fmt.Sprintf("machine image '%s@%s' does not support container runtime '%s', supported values: %+v", worker.Machine.Image.Name, worker.Machine.Image.Version, cr.Type, validValues)
+			allErrors = append(allErrors, field.Invalid(jdxPath.Child("type"), cr.Type, detail))
 		}
 	}
 

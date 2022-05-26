@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/validation"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,10 +70,6 @@ func (r *BindingREST) Create(ctx context.Context, name string, obj runtime.Objec
 		if err := createValidation(ctx, binding.DeepCopyObject()); err != nil {
 			return nil, err
 		}
-	}
-
-	if errs := validation.ValidateBinding(binding); len(errs) != 0 {
-		return nil, errs.ToAggregate()
 	}
 
 	shootObj, err := r.store.Get(ctx, name, &metav1.GetOptions{})
