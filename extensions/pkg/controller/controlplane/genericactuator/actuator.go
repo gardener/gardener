@@ -318,7 +318,7 @@ func (a *actuator) reconcileControlPlane(
 		scaledDown = false
 	)
 
-	if extensionscontroller.IsHibernated(cluster) {
+	if extensionscontroller.IsHibernationEnabled(cluster) {
 		dep := &appsv1.Deployment{}
 		if err := a.client.Get(ctx, client.ObjectKey{Namespace: cp.Namespace, Name: v1beta1constants.DeploymentNameKubeAPIServer}, dep); client.IgnoreNotFound(err) != nil {
 			return false, fmt.Errorf("could not get deployment '%s/%s': %w", cp.Namespace, v1beta1constants.DeploymentNameKubeAPIServer, err)

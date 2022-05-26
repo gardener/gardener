@@ -139,7 +139,7 @@ func (r *reconciler) reconcile(ctx context.Context, cluster *extensionsv1alpha1.
 
 		// If the shoot is hibernated then we wait until the cluster gets woken up again so that the kube-controller-manager
 		// can perform the CSI migration steps.
-		if extensionscontroller.IsHibernated(&extensionscontroller.Cluster{Shoot: shoot}) {
+		if extensionscontroller.IsHibernationEnabled(&extensionscontroller.Cluster{Shoot: shoot}) {
 			r.logger.Info("Shoot cluster is hibernated - doing nothing until it gets woken up", "csimigration", kutil.ObjectName(cluster))
 			return reconcile.Result{}, nil
 		}

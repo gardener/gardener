@@ -45,7 +45,7 @@ const (
 )
 
 // ReplicaCount determines the number of replicas.
-type ReplicaCount func() (int32, error)
+type ReplicaCount func() int32
 
 func (a *genericActuator) deployMachineControllerManager(ctx context.Context, logger logr.Logger, workerObj *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster, workerDelegate WorkerDelegate, replicas ReplicaCount) error {
 	logger.Info("Deploying the machine-controller-manager")
@@ -63,10 +63,7 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, lo
 	}
 	mcmValues["genericTokenKubeconfigSecretName"] = extensionscontroller.GenericTokenKubeconfigSecretNameFromCluster(cluster)
 
-	replicaCount, err := replicas()
-	if err != nil {
-		return err
-	}
+	replicaCount := replicas()
 	mcmValues["replicas"] = replicaCount
 
 	if err := a.mcmSeedChart.Apply(ctx, a.chartApplier, workerObj.Namespace,

@@ -49,8 +49,8 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 	}
 
 	// Make sure machine-controller-manager is awake before deleting the machines.
-	var replicaFunc = func() (int32, error) {
-		return 1, nil
+	var replicaFunc = func() int32 {
+		return 1
 	}
 
 	// Deploy the machine-controller-manager into the cluster to make sure worker nodes can be removed.
