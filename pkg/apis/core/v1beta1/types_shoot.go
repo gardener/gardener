@@ -28,7 +28,7 @@ import (
 
 // +genclient
 // +genclient:method=CreateAdminKubeconfigRequest,verb=create,subresource=adminkubeconfig,input=github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequest,result=github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequest
-// +genclient:method=CreateBinding,verb=create,subresource=binding,input=github.com/gardener/gardener/pkg/apis/core/v1beta1.Binding,result=k8s.io/apimachinery/pkg/apis/meta/v1.Status
+// +genclient:method=CreateBinding,verb=create,subresource=binding,input=Binding,result=k8s.io/apimachinery/pkg/apis/meta/v1.Status
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Shoot represents a Shoot cluster created and managed by Gardener.

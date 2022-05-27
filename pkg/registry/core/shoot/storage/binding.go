@@ -27,21 +27,33 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/util/dryrun"
 )
 
-// BindingREST implements a RESTStorage for shoots/binding.
+// BindingREST implements the REST endpoint for shoots/binding.
 type BindingREST struct {
-	shootStorage *REST
+	store *genericregistry.Store
 }
 
 var _ = rest.NamedCreater(&BindingREST{})
 
+// NamespaceScoped fulfill rest.Scoper
+func (r *BindingREST) NamespaceScoped() bool {
+	return r.store.NamespaceScoped()
+}
+
 // New returns and instance of Binding
 func (r *BindingREST) New() runtime.Object {
 	return &core.Binding{}
+}
+
+// Destroy cleans up resources on shutdown.
+func (r *BindingREST) Destroy() {
+	// Given that underlying store is shared with REST,
+	// we don't destroy it here explicitly.
 }
 
 // Create binds a shoot to a seed
@@ -65,7 +77,7 @@ func (r *BindingREST) Create(ctx context.Context, name string, obj runtime.Objec
 		return nil, errs.ToAggregate()
 	}
 
-	shootObj, err := r.shootStorage.Get(ctx, name, &metav1.GetOptions{})
+	shootObj, err := r.store.Get(ctx, name, &metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +96,7 @@ func (r *BindingREST) Create(ctx context.Context, name string, obj runtime.Objec
 }
 
 func (r *BindingREST) assignShoot(ctx context.Context, shootUID types.UID, shootResourceVersion, shootName string, seedName string, dryRun bool) (err error) {
-	shootKey, err := r.shootStorage.Store.KeyFunc(ctx, shootName)
+	shootKey, err := r.store.KeyFunc(ctx, shootName)
 	if err != nil {
 		return err
 	}
@@ -100,7 +112,7 @@ func (r *BindingREST) assignShoot(ctx context.Context, shootUID types.UID, shoot
 		}
 	}
 
-	return r.shootStorage.Storage.GuaranteedUpdate(ctx, shootKey, &core.Shoot{}, false, preconditions, storage.SimpleUpdate(func(obj runtime.Object) (runtime.Object, error) {
+	return r.store.Storage.GuaranteedUpdate(ctx, shootKey, &core.Shoot{}, false, preconditions, storage.SimpleUpdate(func(obj runtime.Object) (runtime.Object, error) {
 		shoot, ok := obj.(*core.Shoot)
 		if !ok {
 			return nil, fmt.Errorf("unexpected object: %#v", obj)
