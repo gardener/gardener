@@ -116,7 +116,11 @@ func (r *shootMaintenanceReconciler) Reconcile(ctx context.Context, request reco
 		return reconcile.Result{RequeueAfter: requeueAfter}, nil
 	}
 
-	return reconcile.Result{RequeueAfter: requeueAfter}, r.reconcile(ctx, shoot, r.gardenClient)
+	if err := r.reconcile(ctx, shoot, r.gardenClient); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{RequeueAfter: requeueAfter}, nil
 }
 
 func requeueAfterDuration(shoot *gardencorev1beta1.Shoot) time.Duration {
@@ -226,23 +230,19 @@ func maintainOperation(shoot *gardencorev1beta1.Shoot) {
 		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 	}
 
-	var needsRetry bool
-	if val, ok := shoot.Annotations[v1beta1constants.FailedShootNeedsRetryOperation]; ok {
-		needsRetry, _ = strconv.ParseBool(val)
-	}
-	delete(shoot.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
-
-	// do not add reconcile annotation if shoot was once set to failed or if shoot is already in an ongoing reconciliation
-	if shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+	if shoot.Status.LastOperation == nil {
+		return
 	}
 
-	// Failed shoots need to be retried first; healthy shoots instead
-	// default to rotating their SSH keypair on each maintenance interval if the RotateSSHKeypairOnMaintenance is enabled.
-	if needsRetry {
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
-	} else if controllermanagerfeatures.FeatureGate.Enabled(features.RotateSSHKeypairOnMaintenance) {
+	switch {
+	case shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateFailed:
+		if needsRetry(shoot) {
+			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
+		}
+	case controllermanagerfeatures.FeatureGate.Enabled(features.RotateSSHKeypairOnMaintenance):
 		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateSSHKeypair)
+	default:
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, getOperation(shoot))
 	}
 }
 
@@ -376,6 +376,31 @@ func mustMaintainNow(shoot *gardencorev1beta1.Shoot) bool {
 func hasMaintainNowAnnotation(shoot *gardencorev1beta1.Shoot) bool {
 	operation, ok := shoot.Annotations[v1beta1constants.GardenerOperation]
 	return ok && operation == v1beta1constants.ShootOperationMaintain
+}
+
+func needsRetry(shoot *gardencorev1beta1.Shoot) bool {
+	needsRetryOperation := false
+
+	if val, ok := shoot.Annotations[v1beta1constants.FailedShootNeedsRetryOperation]; ok {
+		needsRetryOperation, _ = strconv.ParseBool(val)
+	}
+	delete(shoot.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
+
+	return needsRetryOperation
+}
+
+func getOperation(shoot *gardencorev1beta1.Shoot) string {
+	var (
+		operation            = v1beta1constants.GardenerOperationReconcile
+		maintenanceOperation = shoot.Annotations[v1beta1constants.GardenerMaintenanceOperation]
+	)
+
+	if isValid, _ := gardencorev1beta1helper.IsValidShootOperation(maintenanceOperation, shoot.Status.LastOperation); isValid {
+		operation = maintenanceOperation
+	}
+	delete(shoot.Annotations, v1beta1constants.GardenerMaintenanceOperation)
+
+	return operation
 }
 
 func filterForCRI(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, workerCRI *gardencorev1beta1.CRI) *gardencorev1beta1.MachineImage {

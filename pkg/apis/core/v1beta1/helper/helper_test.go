@@ -2429,6 +2429,26 @@ var _ = Describe("helper", func() {
 		Entry("etcdEncryptionKey nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}}}, gardencorev1beta1.RotationCompleting),
 		Entry("etcdEncryptionKey non-nil", &gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{Credentials: &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ShootETCDEncryptionKeyRotation{}}}}}, gardencorev1beta1.RotationCompleting),
 	)
+
+	DescribeTable("#IsValidShootOperation",
+		func(operation string, lastOperation *gardencorev1beta1.LastOperation, expectedIsValid, expectedRemovedBeforePersisted bool) {
+			isValid, removedBeforePersisted := IsValidShootOperation(operation, lastOperation)
+			Expect(isValid).To(Equal(expectedIsValid))
+			Expect(removedBeforePersisted).To(Equal(expectedRemovedBeforePersisted))
+		},
+
+		Entry("last operation empty", "retry", nil, false, false),
+		Entry("last operation failed, retry", "retry", &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateFailed}, true, true),
+		Entry("last operation failed, reconcile", "reconcile", &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateFailed}, false, false),
+		Entry("last operation not failed, reconcile", "reconcile", &gardencorev1beta1.LastOperation{}, true, true),
+		Entry("last operation not failed, rotate-kubeconfig-credentials", "rotate-kubeconfig-credentials", &gardencorev1beta1.LastOperation{}, true, false),
+		Entry("last operation not failed, rotate-observability-credentials", "rotate-observability-credentials", &gardencorev1beta1.LastOperation{}, true, false),
+		Entry("last operation not failed, rotate-ssh-keypair", "rotate-ssh-keypair", &gardencorev1beta1.LastOperation{}, true, false),
+		Entry("last operation not failed, rotate-ca-start", "rotate-ca-start", &gardencorev1beta1.LastOperation{}, true, false),
+		Entry("last operation not failed, rotate-ca-complete", "rotate-ca-complete", &gardencorev1beta1.LastOperation{}, true, false),
+		Entry("last operation not failed, rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start", &gardencorev1beta1.LastOperation{}, true, false),
+		Entry("last operation not failed, rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete", &gardencorev1beta1.LastOperation{}, true, false),
+	)
 })
 
 func timePointer(t time.Time) *metav1.Time {
