@@ -107,11 +107,21 @@ func (h *SeedHealth) checkSeedSystemComponents(
 			return nil, err
 		}
 
-		if exitCondition := checker.CheckManagedResource(condition, mr); exitCondition != nil {
+		if exitCondition := checkManagedResourceForSeed(checker, condition, mr); exitCondition != nil {
 			return exitCondition, nil
 		}
 	}
 
 	c := gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy.")
 	return &c, nil
+}
+
+func checkManagedResourceForSeed(checker *HealthChecker, condition gardencorev1beta1.Condition, managedResource *resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
+	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(status gardencorev1beta1.ConditionStatus) bool{
+		resourcesv1alpha1.ResourcesApplied:     defaultSuccessfulCheck(),
+		resourcesv1alpha1.ResourcesHealthy:     defaultSuccessfulCheck(),
+		resourcesv1alpha1.ResourcesProgressing: resourcesNotProgressingCheck(),
+	}
+
+	return checker.checkManagedResourceConditions(condition, managedResource, conditionsToCheck)
 }

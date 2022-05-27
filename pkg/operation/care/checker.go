@@ -229,31 +229,47 @@ func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, nodes 
 
 // CheckManagedResource checks the conditions of the given managed resource and reflects the state in the returned condition.
 func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Condition, mr *resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
+	conditionsToCheck := map[gardencorev1beta1.ConditionType]func(status gardencorev1beta1.ConditionStatus) bool{
+		resourcesv1alpha1.ResourcesApplied: defaultSuccessfulCheck(),
+		resourcesv1alpha1.ResourcesHealthy: defaultSuccessfulCheck(),
+	}
+
+	return b.checkManagedResourceConditions(condition, mr, conditionsToCheck)
+}
+
+func defaultSuccessfulCheck() func(status gardencorev1beta1.ConditionStatus) bool {
+	return func(status gardencorev1beta1.ConditionStatus) bool {
+		return status != gardencorev1beta1.ConditionFalse && status != gardencorev1beta1.ConditionUnknown
+	}
+}
+
+func resourcesNotProgressingCheck() func(status gardencorev1beta1.ConditionStatus) bool {
+	return func(status gardencorev1beta1.ConditionStatus) bool {
+		return status != gardencorev1beta1.ConditionTrue && status != gardencorev1beta1.ConditionUnknown
+	}
+}
+
+func (b *HealthChecker) checkManagedResourceConditions(condition gardencorev1beta1.Condition, mr *resourcesv1alpha1.ManagedResource, conditionsToCheck map[gardencorev1beta1.ConditionType]func(status gardencorev1beta1.ConditionStatus) bool) *gardencorev1beta1.Condition {
 	if mr.Generation != mr.Status.ObservedGeneration {
 		c := b.FailedCondition(condition, gardencorev1beta1.OutdatedStatusError, fmt.Sprintf("observed generation of managed resource '%s/%s' outdated (%d/%d)", mr.Namespace, mr.Name, mr.Status.ObservedGeneration, mr.Generation))
 		return &c
 	}
 
-	toProcess := map[gardencorev1beta1.ConditionType]struct{}{
-		resourcesv1alpha1.ResourcesApplied: {},
-		resourcesv1alpha1.ResourcesHealthy: {},
-	}
-
 	for _, cond := range mr.Status.Conditions {
-		_, ok := toProcess[cond.Type]
+		checkConditionStatus, ok := conditionsToCheck[cond.Type]
 		if !ok {
 			continue
 		}
-		if cond.Status == gardencorev1beta1.ConditionFalse {
+		if !checkConditionStatus(cond.Status) {
 			c := b.FailedCondition(condition, cond.Reason, cond.Message)
 			return &c
 		}
-		delete(toProcess, cond.Type)
+		delete(conditionsToCheck, cond.Type)
 	}
 
-	if len(toProcess) > 0 {
+	if len(conditionsToCheck) > 0 {
 		var missing []string
-		for cond := range toProcess {
+		for cond := range conditionsToCheck {
 			missing = append(missing, string(cond))
 		}
 		c := b.FailedCondition(condition, gardencorev1beta1.ManagedResourceMissingConditionError, fmt.Sprintf("ManagedResource %s is missing the following condition(s), %v", mr.Name, missing))

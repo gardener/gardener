@@ -245,6 +245,29 @@ var _ = Describe("Seed health", func() {
 
 				tests("NotApplied", "Resources are not applied")
 			})
+
+			Context("When all managed resources are deployed but their resources are still progressing", func() {
+				JustBeforeEach(func() {
+					for _, name := range append(requiredManagedResources, optionalManagedResources...) {
+						Expect(c.Create(ctx, progressingManagedResource(name))).To(Succeed())
+					}
+				})
+
+				tests("ResourcesProgressing", "Resources are progressing")
+			})
+
+			Context("When all managed resources are deployed but not all required conditions are present", func() {
+				JustBeforeEach(func() {
+					for _, name := range append(requiredManagedResources, optionalManagedResources...) {
+						Expect(c.Create(ctx, managedResource(name, []gardencorev1beta1.Condition{{
+							Type:   resourcesv1alpha1.ResourcesApplied,
+							Status: gardencorev1beta1.ConditionTrue}},
+						))).To(Succeed())
+					}
+				})
+
+				tests("MissingManagedResourceCondition", "is missing the following condition(s)")
+			})
 		})
 	})
 })
@@ -256,6 +279,7 @@ func beConditionWithStatusReasonAndMessage(status gardencorev1beta1.ConditionSta
 		"Message": ContainSubstring(message),
 	})
 }
+
 func healthyManagedResource(name string) *resourcesv1alpha1.ManagedResource {
 	return managedResource(
 		name,
@@ -267,6 +291,10 @@ func healthyManagedResource(name string) *resourcesv1alpha1.ManagedResource {
 			{
 				Type:   resourcesv1alpha1.ResourcesHealthy,
 				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   resourcesv1alpha1.ResourcesProgressing,
+				Status: gardencorev1beta1.ConditionFalse,
 			},
 		})
 }
@@ -285,6 +313,10 @@ func notHealthyManagedResource(name string) *resourcesv1alpha1.ManagedResource {
 				Message: "Resources are not healthy",
 				Status:  gardencorev1beta1.ConditionFalse,
 			},
+			{
+				Type:   resourcesv1alpha1.ResourcesProgressing,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
 		})
 }
 
@@ -301,6 +333,31 @@ func notAppliedManagedResource(name string) *resourcesv1alpha1.ManagedResource {
 			{
 				Type:   resourcesv1alpha1.ResourcesHealthy,
 				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   resourcesv1alpha1.ResourcesProgressing,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
+		})
+}
+
+func progressingManagedResource(name string) *resourcesv1alpha1.ManagedResource {
+	return managedResource(
+		name,
+		[]gardencorev1beta1.Condition{
+			{
+				Type:   resourcesv1alpha1.ResourcesApplied,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:   resourcesv1alpha1.ResourcesHealthy,
+				Status: gardencorev1beta1.ConditionTrue,
+			},
+			{
+				Type:    resourcesv1alpha1.ResourcesProgressing,
+				Reason:  "ResourcesProgressing",
+				Message: "Resources are progressing",
+				Status:  gardencorev1beta1.ConditionTrue,
 			},
 		})
 }
