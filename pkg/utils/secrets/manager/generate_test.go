@@ -29,8 +29,8 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/clock"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -48,7 +48,7 @@ var _ = Describe("Generate", func() {
 
 		m          *manager
 		fakeClient client.Client
-		fakeClock  = clock.NewFakeClock(time.Time{})
+		fakeClock  = testclock.NewFakeClock(time.Time{})
 	)
 
 	BeforeEach(func() {

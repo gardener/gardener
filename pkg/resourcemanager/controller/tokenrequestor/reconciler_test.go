@@ -30,10 +30,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/kubernetes/scheme"
 	corev1fake "k8s.io/client-go/kubernetes/typed/core/v1/fake"
 	"k8s.io/client-go/testing"
+	"k8s.io/utils/clock"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -93,7 +94,7 @@ var _ = Describe("Reconciler", func() {
 
 		BeforeEach(func() {
 			fakeNow = time.Date(2021, 10, 4, 10, 0, 0, 0, time.UTC)
-			fakeClock = clock.NewFakeClock(fakeNow)
+			fakeClock = testclock.NewFakeClock(fakeNow)
 			fakeJitter = func(d time.Duration, _ float64) time.Duration { return d }
 
 			sourceClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()

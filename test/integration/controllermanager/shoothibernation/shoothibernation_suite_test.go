@@ -23,8 +23,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/rest"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -43,7 +43,7 @@ var (
 	mgrCancel  context.CancelFunc
 
 	testClient client.Client
-	fakeClock  *clock.FakeClock
+	fakeClock  *testclock.FakeClock
 )
 
 var _ = BeforeSuite(func() {
@@ -66,7 +66,7 @@ var _ = BeforeSuite(func() {
 
 	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	Expect(err).ToNot(HaveOccurred())
-	fakeClock = &clock.FakeClock{}
+	fakeClock = &testclock.FakeClock{}
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{

@@ -21,9 +21,9 @@ import (
 
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/wait"
 	corev1clientset "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"

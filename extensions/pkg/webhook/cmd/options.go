@@ -25,8 +25,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/spf13/pflag"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 

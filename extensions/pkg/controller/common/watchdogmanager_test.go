@@ -26,7 +26,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/util/clock"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -40,7 +40,7 @@ var _ = Describe("WatchdogManager", func() {
 		c               *mockclient.MockClient
 		watchdogFactory *mockcommon.MockWatchdogFactory
 		watchdog        *mockcommon.MockWatchdog
-		fakeClock       *clock.FakeClock
+		fakeClock       *testclock.FakeClock
 		ctx             context.Context
 		watchdogManager WatchdogManager
 	)
@@ -50,7 +50,7 @@ var _ = Describe("WatchdogManager", func() {
 		c = mockclient.NewMockClient(ctrl)
 		watchdogFactory = mockcommon.NewMockWatchdogFactory(ctrl)
 		watchdog = mockcommon.NewMockWatchdog(ctrl)
-		fakeClock = clock.NewFakeClock(time.Now())
+		fakeClock = testclock.NewFakeClock(time.Now())
 		ctx = context.TODO()
 		watchdogManager = NewWatchdogManager(watchdogFactory, ttl, fakeClock, log.Log.WithName("test"))
 	})

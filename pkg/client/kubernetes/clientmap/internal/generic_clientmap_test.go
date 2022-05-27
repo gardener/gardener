@@ -23,8 +23,8 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/version"
+	testclock "k8s.io/utils/clock/testing"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
@@ -55,7 +55,7 @@ var _ = Describe("GenericClientMap", func() {
 
 			origMaxRefreshInterval time.Duration
 
-			fakeClock *clock.FakeClock
+			fakeClock *testclock.FakeClock
 		)
 
 		BeforeEach(func() {
@@ -65,7 +65,7 @@ var _ = Describe("GenericClientMap", func() {
 			csVersion = &version.Info{GitVersion: "1.18.0"}
 			cs.EXPECT().Version().Return(csVersion.GitVersion).AnyTimes()
 
-			fakeClock = clock.NewFakeClock(time.Now())
+			fakeClock = testclock.NewFakeClock(time.Now())
 			cm = internal.NewGenericClientMap(factory, logr.Discard(), fakeClock)
 
 			origMaxRefreshInterval = internal.MaxRefreshInterval

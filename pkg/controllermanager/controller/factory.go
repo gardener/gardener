@@ -45,9 +45,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )

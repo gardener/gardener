@@ -27,8 +27,8 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/clock"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -43,7 +43,7 @@ var _ = Describe("Manager", func() {
 
 			m          *manager
 			fakeClient client.Client
-			fakeClock  = clock.NewFakeClock(time.Time{})
+			fakeClock  = testclock.NewFakeClock(time.Time{})
 		)
 
 		BeforeEach(func() {
@@ -114,7 +114,7 @@ var _ = Describe("Manager", func() {
 		})
 
 		It("should create a new instance and auto-renew a secret which is about to expire (at least 80% validity reached)", func() {
-			fakeClock = clock.NewFakeClock(time.Date(2000, 1, 1, 1, 1, 1, 1, time.UTC))
+			fakeClock = testclock.NewFakeClock(time.Date(2000, 1, 1, 1, 1, 1, 1, time.UTC))
 
 			existingSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -140,7 +140,7 @@ var _ = Describe("Manager", func() {
 		})
 
 		It("should create a new instance and auto-renew a secret which is about to expire (at most 10d left until expiration)", func() {
-			fakeClock = clock.NewFakeClock(time.Date(2000, 1, 1, 1, 1, 1, 1, time.UTC))
+			fakeClock = testclock.NewFakeClock(time.Date(2000, 1, 1, 1, 1, 1, 1, time.UTC))
 
 			existingSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -166,7 +166,7 @@ var _ = Describe("Manager", func() {
 		})
 
 		It("should create a new instance and NOT auto-renew a secret since it's still valid for a longer time", func() {
-			fakeClock = clock.NewFakeClock(time.Date(2000, 1, 1, 1, 1, 1, 1, time.UTC))
+			fakeClock = testclock.NewFakeClock(time.Date(2000, 1, 1, 1, 1, 1, 1, time.UTC))
 
 			existingSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -249,7 +249,7 @@ var _ = Describe("Manager", func() {
 			var existingSecret *corev1.Secret
 
 			BeforeEach(func() {
-				fakeClock = clock.NewFakeClock(time.Date(2000, 1, 1, 1, 1, 1, 1, time.UTC))
+				fakeClock = testclock.NewFakeClock(time.Date(2000, 1, 1, 1, 1, 1, 1, time.UTC))
 
 				existingSecret = &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
@@ -273,7 +273,7 @@ var _ = Describe("Manager", func() {
 			})
 
 			It("should create a new instance and auto-renew the CA secret because CASecretAutoRotation=true", func() {
-				fakeClock = clock.NewFakeClock(time.Date(2000, 1, 1, 1, 1, 1, 1, time.UTC))
+				fakeClock = testclock.NewFakeClock(time.Date(2000, 1, 1, 1, 1, 1, 1, time.UTC))
 
 				mgr, err := New(ctx, logr.Discard(), fakeClock, fakeClient, namespace, identity, Config{CASecretAutoRotation: true})
 				Expect(err).NotTo(HaveOccurred())

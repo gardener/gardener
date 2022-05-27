@@ -18,7 +18,7 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/apimachinery/pkg/util/clock"
+	"k8s.io/utils/clock"
 )
 
 // PeriodicHealthManagerName is the name of the periodic health manager.

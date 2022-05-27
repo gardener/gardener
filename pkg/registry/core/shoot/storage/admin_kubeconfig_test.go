@@ -34,12 +34,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 	registryrest "k8s.io/apiserver/pkg/registry/rest"
 	configlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	configv1 "k8s.io/client-go/tools/clientcmd/api/v1"
+	testclock "k8s.io/utils/clock/testing"
 )
 
 var _ = Describe("Admin Kubeconfig", func() {
@@ -226,7 +226,7 @@ bW4nbZLxXHQ4e+OOPeBUXUP9V0QcE4XixdvQuslfVxjn0Ja82gdzeA==
 			Name: userName,
 		})
 
-		DeferCleanup(test.WithVar(&secretutils.Clock, clock.NewFakeClock(time.Unix(10, 0))))
+		DeferCleanup(test.WithVar(&secretutils.Clock, testclock.NewFakeClock(time.Unix(10, 0))))
 	})
 
 	Context("request fails", func() {

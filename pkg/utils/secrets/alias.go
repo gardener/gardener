@@ -21,7 +21,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/utils"
 
-	"k8s.io/apimachinery/pkg/util/clock"
+	"k8s.io/utils/clock"
 )
 
 var (

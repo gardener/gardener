@@ -29,8 +29,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/kubernetes/scheme"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -47,7 +47,7 @@ var _ = Describe("Collector", func() {
 
 		minimumObjectLifetime = time.Minute
 		creationTimestamp     = metav1.Date(2000, 5, 5, 5, 30, 0, 0, time.Local)
-		fakeClock             = clock.NewFakeClock(creationTimestamp.Add(minimumObjectLifetime / 2))
+		fakeClock             = testclock.NewFakeClock(creationTimestamp.Add(minimumObjectLifetime / 2))
 	)
 
 	BeforeEach(func() {

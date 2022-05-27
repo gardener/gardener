@@ -32,7 +32,7 @@ import (
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
-	"k8s.io/apimachinery/pkg/util/clock"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )

@@ -20,8 +20,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
-	"k8s.io/apimachinery/pkg/util/clock"
 	baseconfig "k8s.io/component-base/config"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"

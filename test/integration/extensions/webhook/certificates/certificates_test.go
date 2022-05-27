@@ -47,7 +47,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	"k8s.io/apimachinery/pkg/util/clock"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -68,7 +68,7 @@ var _ = Describe("Certificates tests", func() {
 		err       error
 		mgr       manager.Manager
 		codec     = newCodec(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-		fakeClock *clock.FakeClock
+		fakeClock *testclock.FakeClock
 
 		extensionNamespace *corev1.Namespace
 		shootNamespace     *corev1.Namespace
@@ -119,7 +119,7 @@ var _ = Describe("Certificates tests", func() {
 	})
 
 	BeforeEach(func() {
-		fakeClock = clock.NewFakeClock(time.Now())
+		fakeClock = testclock.NewFakeClock(time.Now())
 
 		cluster = &extensionsv1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{

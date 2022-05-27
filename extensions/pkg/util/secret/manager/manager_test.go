@@ -34,7 +34,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/clock"
+	testclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -53,7 +53,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 	var (
 		ctx        = context.Background()
 		now        metav1.Time
-		fakeClock  *clock.FakeClock
+		fakeClock  *testclock.FakeClock
 		fakeClient client.Client
 
 		caConfigs, secretConfigs []SecretConfigWithOptions
@@ -65,7 +65,7 @@ var _ = Describe("SecretsManager Extension Utils", func() {
 
 	BeforeEach(func() {
 		now = metav1.NewTime(time.Unix(1649825730, 0))
-		fakeClock = clock.NewFakeClock(now.Time)
+		fakeClock = testclock.NewFakeClock(now.Time)
 		fakeClient = fakeclient.NewClientBuilder().Build()
 
 		deterministicReader := strings.NewReader(strings.Repeat("-", 10000))

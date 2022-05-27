@@ -27,9 +27,9 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/robfig/cron"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/component-base/version"
+	testclock "k8s.io/utils/clock/testing"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -148,7 +148,7 @@ var _ = Describe("Shoot Hibernation", func() {
 				ctx       context.Context
 				c         client.Client
 				now       time.Time
-				fakeClock *clock.FakeClock
+				fakeClock *testclock.FakeClock
 
 				shoot *gardencorev1beta1.Shoot
 			)
@@ -175,7 +175,7 @@ var _ = Describe("Shoot Hibernation", func() {
 				if t.timeNow != nil {
 					timeNow = t.timeNow()
 				}
-				fakeClock = clock.NewFakeClock(timeNow)
+				fakeClock = testclock.NewFakeClock(timeNow)
 
 				if t.shootSettings != nil {
 					By("configuring shoot")
