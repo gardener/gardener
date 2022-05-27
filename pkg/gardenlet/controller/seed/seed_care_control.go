@@ -108,20 +108,10 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet client.Client
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
-	seedObj, err := NewSeed(careCtx, seed)
-	if err != nil {
-		log.Error(err, "SeedObj cannot be constructed")
-		if err := careSetupFailure(ctx, gardenClientSet, seed, "seedObj cannot be constructed", conditions); err != nil {
-			log.Error(err, "Unable to create error condition")
-		}
-		return nil
-	}
-
 	// Trigger health check
 	seedHealth := NewHealthCheck(seed, seedClient.Client())
 	updatedConditions := seedHealth.CheckSeed(
 		careCtx,
-		seedObj,
 		conditions,
 		r.conditionThresholdsToProgressingMapping(),
 	)

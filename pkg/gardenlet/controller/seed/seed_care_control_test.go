@@ -26,7 +26,6 @@ import (
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
-	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 
@@ -249,7 +248,6 @@ func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
 }
 
 func (c resultingConditionFunc) CheckSeed(_ context.Context,
-	seed *seedpkg.Seed,
 	conditions []gardencorev1beta1.Condition,
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration) []gardencorev1beta1.Condition {
 	return c(conditions)

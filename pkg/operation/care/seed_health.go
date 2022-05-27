@@ -30,9 +30,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
-	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -62,7 +62,6 @@ func NewHealthForSeed(seed *gardencorev1beta1.Seed, seedClient client.Client) *S
 
 // CheckSeed conducts the health checks on all the given conditions.
 func (h *SeedHealth) CheckSeed(ctx context.Context,
-	seed *seedpkg.Seed,
 	conditions []gardencorev1beta1.Condition,
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration) []gardencorev1beta1.Condition {
 
@@ -101,6 +100,10 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	for _, name := range managedResources {
 		mr := &resourcesv1alpha1.ManagedResource{}
 		if err := h.seedClient.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, name), mr); err != nil {
+			if apierrors.IsNotFound(err) {
+				exitCondition := checker.FailedCondition(condition, "ResourceNotFound", err.Error())
+				return &exitCondition, nil
+			}
 			return nil, err
 		}
 
