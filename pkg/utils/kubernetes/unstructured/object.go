@@ -27,7 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-var systemMetadataFields = []string{"ownerReferences", "uid", "resourceVersion", "generation", "selfLink", "creationTimestamp", "deletionTimestamp", "deletionGracePeriodSeconds", "managedFields"}
+var systemMetadataFields = []string{"ownerReferences", "uid", "resourceVersion", "generation", "creationTimestamp", "deletionTimestamp", "deletionGracePeriodSeconds", "managedFields"}
 
 // GetObjectByRef returns the object with the given reference and namespace using the given client.
 // The full content of the object is returned as map[string]interface{}, except for system metadata fields.

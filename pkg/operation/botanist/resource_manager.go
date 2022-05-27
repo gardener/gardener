@@ -37,6 +37,7 @@ import (
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
+	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -73,6 +74,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		SyncPeriod:                           utils.DurationPtr(time.Minute),
 		TargetDiffersFromSourceCluster:       true,
 		TargetDisableCache:                   pointer.Bool(true),
+		Version:                              semver.MustParse(b.K8sSeedClient.Version()),
 		WatchedNamespace:                     pointer.String(b.Shoot.SeedNamespace),
 		VPA: &resourcemanager.VPAConfig{
 			MinAllowed: corev1.ResourceList{

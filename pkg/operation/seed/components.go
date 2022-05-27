@@ -104,7 +104,7 @@ func defaultGardenerSeedAdmissionController(c client.Client, imageVector imageve
 	return seedadmissioncontroller.New(c, v1beta1constants.GardenNamespace, secretsManager, image.String()), nil
 }
 
-func defaultGardenerResourceManager(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
+func defaultGardenerResourceManager(c client.Client, seedClientVersion string, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface) (component.DeployWaiter, error) {
 	image, err := imageVector.FindImage(images.ImageNameGardenerResourceManager)
 	if err != nil {
 		return nil, err
@@ -125,6 +125,7 @@ func defaultGardenerResourceManager(c client.Client, imageVector imagevector.Ima
 		ResourceClass:                        pointer.String(v1beta1constants.SeedResourceManagerClass),
 		SecretNameServerCA:                   v1beta1constants.SecretNameCASeed,
 		SyncPeriod:                           utils.DurationPtr(time.Hour),
+		Version:                              semver.MustParse(seedClientVersion),
 		VPA: &resourcemanager.VPAConfig{
 			MinAllowed: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("20m"),

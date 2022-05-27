@@ -34,7 +34,9 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
+	"github.com/gardener/gardener/pkg/utils/version"
 
+	"github.com/Masterminds/semver"
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -124,6 +126,9 @@ var (
 			Verbs:         []string{"get", "watch", "update"},
 		},
 	}
+
+	rootCAVolumeSourceName string
+	volumeProjection       corev1.VolumeProjection
 )
 
 // Interface contains functions for a gardener-resource-manager deployer.
@@ -203,6 +208,8 @@ type Values struct {
 	// WatchedNamespace restricts the gardener-resource-manager to only watch ManagedResources in the defined namespace.
 	// If not set the gardener-resource-manager controller watches for ManagedResources in all namespaces
 	WatchedNamespace *string
+	// Version is the Kubernetes version for the Kubernetes components.
+	Version *semver.Version
 	// VPA contains information for configuring VerticalPodAutoscaler settings for the gardener-resource-manager deployment.
 	VPA *VPAConfig
 }
@@ -448,9 +455,38 @@ func (r *resourceManager) getRootCAVolumeSourceName(ctx context.Context) (string
 func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 	deployment := r.emptyDeployment()
 
-	rootCAVolumeSourceName, err := r.getRootCAVolumeSourceName(ctx)
-	if err != nil {
-		return err
+	if version.ConstraintK8sLess124.Check(r.values.Version) {
+		var err error
+		rootCAVolumeSourceName, err = r.getRootCAVolumeSourceName(ctx)
+		if err != nil {
+			return err
+		}
+
+		volumeProjection = corev1.VolumeProjection{
+			Secret: &corev1.SecretProjection{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: rootCAVolumeSourceName,
+				},
+				Items: []corev1.KeyToPath{{
+					Key:  "ca.crt",
+					Path: "ca.crt",
+				}},
+			},
+		}
+	} else {
+		rootCAVolumeSourceName = "kube-root-ca.crt"
+
+		volumeProjection = corev1.VolumeProjection{
+			ConfigMap: &corev1.ConfigMapProjection{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: rootCAVolumeSourceName,
+				},
+				Items: []corev1.KeyToPath{{
+					Key:  "ca.crt",
+					Path: "ca.crt",
+				}},
+			},
+		}
 	}
 
 	secretServer, err := r.secretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
@@ -567,17 +603,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 											Path:              "token",
 										},
 									},
-									{
-										Secret: &corev1.SecretProjection{
-											LocalObjectReference: corev1.LocalObjectReference{
-												Name: rootCAVolumeSourceName,
-											},
-											Items: []corev1.KeyToPath{{
-												Key:  "ca.crt",
-												Path: "ca.crt",
-											}},
-										},
-									},
+									volumeProjection,
 									{
 										DownwardAPI: &corev1.DownwardAPIProjection{
 											Items: []corev1.DownwardAPIVolumeFile{{

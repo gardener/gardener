@@ -30,7 +30,9 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
+	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -71,6 +73,7 @@ var _ = Describe("ResourceManager", func() {
 		healthPort      int32 = 8081
 		metricsPort     int32 = 8080
 		serverPort            = 10250
+		version               = semver.MustParse("1.22.1")
 
 		// optional configuration
 		clusterIdentity                      = "foo"
@@ -111,6 +114,7 @@ var _ = Describe("ResourceManager", func() {
 		cmd                          []string
 		cmdWithoutWatchedNamespace   []string
 		deployment                   *appsv1.Deployment
+		deploymentFor                func(kubernetesVersion *semver.Version) *appsv1.Deployment
 		defaultLabels                map[string]string
 		roleBinding                  *rbacv1.RoleBinding
 		role                         *rbacv1.Role
@@ -125,6 +129,7 @@ var _ = Describe("ResourceManager", func() {
 		managedResourceSecret        *corev1.Secret
 		managedResource              *resourcesv1alpha1.ManagedResource
 		networkPolicy                *networkingv1.NetworkPolicy
+		volumeProjection             corev1.VolumeProjection
 	)
 
 	BeforeEach(func() {
@@ -285,6 +290,7 @@ var _ = Describe("ResourceManager", func() {
 			SyncPeriod:                           &syncPeriod,
 			TargetDiffersFromSourceCluster:       true,
 			TargetDisableCache:                   &targetDisableCache,
+			Version:                              version,
 			WatchedNamespace:                     &watchedNamespace,
 			VPA: &VPAConfig{
 				MinAllowed: corev1.ResourceList{
@@ -355,211 +361,256 @@ var _ = Describe("ResourceManager", func() {
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
-		deployment = &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-				Namespace: deployNamespace,
-				Labels:    defaultLabels,
-			},
-			Spec: appsv1.DeploymentSpec{
-				Replicas:             pointer.Int32(1),
-				RevisionHistoryLimit: pointer.Int32(1),
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"app": "gardener-resource-manager",
-					},
-				},
-				Template: corev1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: map[string]string{
-							"projected-token-mount.resources.gardener.cloud/skip": "true",
-							"networking.gardener.cloud/to-dns":                    "allowed",
-							"networking.gardener.cloud/to-seed-apiserver":         "allowed",
-							"networking.gardener.cloud/from-prometheus":           "allowed",
-							"networking.gardener.cloud/to-shoot-apiserver":        "allowed",
-							"networking.gardener.cloud/from-shoot-apiserver":      "allowed",
-							v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleControlPlane,
-							v1beta1constants.LabelApp:                             "gardener-resource-manager",
-						},
-					},
-					Spec: corev1.PodSpec{
-						Affinity: &corev1.Affinity{
-							PodAntiAffinity: &corev1.PodAntiAffinity{
-								PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-									{
-										Weight: 100,
-										PodAffinityTerm: corev1.PodAffinityTerm{
-											TopologyKey: corev1.LabelHostname,
-											LabelSelector: &metav1.LabelSelector{
-												MatchLabels: map[string]string{
-													v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-													v1beta1constants.LabelApp:   "gardener-resource-manager",
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-						ServiceAccountName: "gardener-resource-manager",
-						Containers: []corev1.Container{
-							{
-								Command:         cmd,
-								Image:           image,
-								ImagePullPolicy: corev1.PullIfNotPresent,
-								LivenessProbe: &corev1.Probe{
-									ProbeHandler: corev1.ProbeHandler{
-										HTTPGet: &corev1.HTTPGetAction{
-											Path:   "/healthz",
-											Scheme: "HTTP",
-											Port:   intstr.FromInt(int(healthPort)),
-										},
-									},
-									InitialDelaySeconds: 30,
-									FailureThreshold:    5,
-									PeriodSeconds:       10,
-									SuccessThreshold:    1,
-									TimeoutSeconds:      5,
-								},
-								Name: "gardener-resource-manager",
-								Ports: []corev1.ContainerPort{
-									{
-										Name:          "metrics",
-										ContainerPort: metricsPort,
-										Protocol:      corev1.ProtocolTCP,
-									},
-									{
-										Name:          "health",
-										ContainerPort: healthPort,
-										Protocol:      corev1.ProtocolTCP,
-									},
-								},
-								ReadinessProbe: &corev1.Probe{
-									ProbeHandler: corev1.ProbeHandler{
-										HTTPGet: &corev1.HTTPGetAction{
-											Path:   "/readyz",
-											Scheme: "HTTP",
-											Port:   intstr.FromInt(int(healthPort)),
-										},
-									},
-									InitialDelaySeconds: 10,
-								},
-								Resources: corev1.ResourceRequirements{
-									Requests: corev1.ResourceList{
-										corev1.ResourceCPU:    resource.MustParse("23m"),
-										corev1.ResourceMemory: resource.MustParse("47Mi"),
-									},
-								},
-								VolumeMounts: []corev1.VolumeMount{
-									{
-										MountPath: secretMountPathAPIAccess,
-										Name:      "kube-api-access-gardener",
-										ReadOnly:  true,
-									},
-									{
-										MountPath: secretMountPathServer,
-										Name:      "tls",
-										ReadOnly:  true,
-									},
 
-									{
-										MountPath: secretMountPathRootCA,
-										Name:      "root-ca",
-										ReadOnly:  true,
-									},
-									{
-										Name:      "kubeconfig",
-										MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
-										ReadOnly:  true,
-									},
-								},
+		if versionutils.ConstraintK8sLess124.Check(cfg.Version) {
+			volumeProjection = corev1.VolumeProjection{
+				Secret: &corev1.SecretProjection{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "root-ca",
+					},
+					Items: []corev1.KeyToPath{{
+						Key:  "ca.crt",
+						Path: "ca.crt",
+					}},
+				},
+			}
+		} else {
+			volumeProjection = corev1.VolumeProjection{
+				ConfigMap: &corev1.ConfigMapProjection{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "kube-root-ca.crt",
+					},
+					Items: []corev1.KeyToPath{{
+						Key:  "ca.crt",
+						Path: "ca.crt",
+					}},
+				},
+			}
+		}
+
+		deploymentFor = func(kubernetesVersion *semver.Version) *appsv1.Deployment {
+			if versionutils.ConstraintK8sLess124.Check(kubernetesVersion) {
+				volumeProjection = corev1.VolumeProjection{
+					Secret: &corev1.SecretProjection{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: serviceAccountSecretName,
+						},
+						Items: []corev1.KeyToPath{{
+							Key:  "ca.crt",
+							Path: "ca.crt",
+						}},
+					},
+				}
+			} else {
+				volumeProjection = corev1.VolumeProjection{
+					ConfigMap: &corev1.ConfigMapProjection{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "kube-root-ca.crt",
+						},
+						Items: []corev1.KeyToPath{{
+							Key:  "ca.crt",
+							Path: "ca.crt",
+						}},
+					},
+				}
+			}
+
+			deployment := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
+					Namespace: deployNamespace,
+					Labels:    defaultLabels,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas:             pointer.Int32(1),
+					RevisionHistoryLimit: pointer.Int32(1),
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app": "gardener-resource-manager",
+						},
+					},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"projected-token-mount.resources.gardener.cloud/skip": "true",
+								"networking.gardener.cloud/to-dns":                    "allowed",
+								"networking.gardener.cloud/to-seed-apiserver":         "allowed",
+								"networking.gardener.cloud/from-prometheus":           "allowed",
+								"networking.gardener.cloud/to-shoot-apiserver":        "allowed",
+								"networking.gardener.cloud/from-shoot-apiserver":      "allowed",
+								v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleControlPlane,
+								v1beta1constants.LabelApp:                             "gardener-resource-manager",
 							},
 						},
-						Volumes: []corev1.Volume{
-							{
-								Name: "kube-api-access-gardener",
-								VolumeSource: corev1.VolumeSource{
-									Projected: &corev1.ProjectedVolumeSource{
-										DefaultMode: pointer.Int32(420),
-										Sources: []corev1.VolumeProjection{
-											{
-												ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
-													ExpirationSeconds: pointer.Int64(43200),
-													Path:              "token",
-												},
-											},
-											{
-												Secret: &corev1.SecretProjection{
-													LocalObjectReference: corev1.LocalObjectReference{
-														Name: serviceAccountSecretName,
+						Spec: corev1.PodSpec{
+							Affinity: &corev1.Affinity{
+								PodAntiAffinity: &corev1.PodAntiAffinity{
+									PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+										{
+											Weight: 100,
+											PodAffinityTerm: corev1.PodAffinityTerm{
+												TopologyKey: corev1.LabelHostname,
+												LabelSelector: &metav1.LabelSelector{
+													MatchLabels: map[string]string{
+														v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+														v1beta1constants.LabelApp:   "gardener-resource-manager",
 													},
-													Items: []corev1.KeyToPath{{
-														Key:  "ca.crt",
-														Path: "ca.crt",
-													}},
-												},
-											},
-											{
-												DownwardAPI: &corev1.DownwardAPIProjection{
-													Items: []corev1.DownwardAPIVolumeFile{{
-														FieldRef: &corev1.ObjectFieldSelector{
-															APIVersion: "v1",
-															FieldPath:  "metadata.namespace",
-														},
-														Path: "namespace",
-													}},
 												},
 											},
 										},
 									},
 								},
 							},
-							{
-								Name: "tls",
-								VolumeSource: corev1.VolumeSource{
-									Secret: &corev1.SecretVolumeSource{
-										SecretName:  secretNameServer,
-										DefaultMode: pointer.Int32(420),
+							ServiceAccountName: "gardener-resource-manager",
+							Containers: []corev1.Container{
+								{
+									Command:         cmd,
+									Image:           image,
+									ImagePullPolicy: corev1.PullIfNotPresent,
+									LivenessProbe: &corev1.Probe{
+										ProbeHandler: corev1.ProbeHandler{
+											HTTPGet: &corev1.HTTPGetAction{
+												Path:   "/healthz",
+												Scheme: "HTTP",
+												Port:   intstr.FromInt(int(healthPort)),
+											},
+										},
+										InitialDelaySeconds: 30,
+										FailureThreshold:    5,
+										PeriodSeconds:       10,
+										SuccessThreshold:    1,
+										TimeoutSeconds:      5,
+									},
+									Name: "gardener-resource-manager",
+									Ports: []corev1.ContainerPort{
+										{
+											Name:          "metrics",
+											ContainerPort: metricsPort,
+											Protocol:      corev1.ProtocolTCP,
+										},
+										{
+											Name:          "health",
+											ContainerPort: healthPort,
+											Protocol:      corev1.ProtocolTCP,
+										},
+									},
+									ReadinessProbe: &corev1.Probe{
+										ProbeHandler: corev1.ProbeHandler{
+											HTTPGet: &corev1.HTTPGetAction{
+												Path:   "/readyz",
+												Scheme: "HTTP",
+												Port:   intstr.FromInt(int(healthPort)),
+											},
+										},
+										InitialDelaySeconds: 10,
+									},
+									Resources: corev1.ResourceRequirements{
+										Requests: corev1.ResourceList{
+											corev1.ResourceCPU:    resource.MustParse("23m"),
+											corev1.ResourceMemory: resource.MustParse("47Mi"),
+										},
+									},
+									VolumeMounts: []corev1.VolumeMount{
+										{
+											MountPath: secretMountPathAPIAccess,
+											Name:      "kube-api-access-gardener",
+											ReadOnly:  true,
+										},
+										{
+											MountPath: secretMountPathServer,
+											Name:      "tls",
+											ReadOnly:  true,
+										},
+
+										{
+											MountPath: secretMountPathRootCA,
+											Name:      "root-ca",
+											ReadOnly:  true,
+										},
+										{
+											Name:      "kubeconfig",
+											MountPath: "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig",
+											ReadOnly:  true,
+										},
 									},
 								},
 							},
-							{
-								Name: "root-ca",
-								VolumeSource: corev1.VolumeSource{
-									Secret: &corev1.SecretVolumeSource{
-										SecretName:  "ca",
-										DefaultMode: pointer.Int32(420),
-									},
-								},
-							},
-							{
-								Name: "kubeconfig",
-								VolumeSource: corev1.VolumeSource{
-									Projected: &corev1.ProjectedVolumeSource{
-										DefaultMode: pointer.Int32(420),
-										Sources: []corev1.VolumeProjection{
-											{
-												Secret: &corev1.SecretProjection{
-													LocalObjectReference: corev1.LocalObjectReference{
-														Name: genericTokenKubeconfigSecretName,
+							Volumes: []corev1.Volume{
+								{
+									Name: "kube-api-access-gardener",
+									VolumeSource: corev1.VolumeSource{
+										Projected: &corev1.ProjectedVolumeSource{
+											DefaultMode: pointer.Int32(420),
+											Sources: []corev1.VolumeProjection{
+												{
+													ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
+														ExpirationSeconds: pointer.Int64(43200),
+														Path:              "token",
 													},
-													Items: []corev1.KeyToPath{{
-														Key:  "kubeconfig",
-														Path: "kubeconfig",
-													}},
-													Optional: pointer.Bool(false),
+												},
+												volumeProjection,
+												{
+													DownwardAPI: &corev1.DownwardAPIProjection{
+														Items: []corev1.DownwardAPIVolumeFile{{
+															FieldRef: &corev1.ObjectFieldSelector{
+																APIVersion: "v1",
+																FieldPath:  "metadata.namespace",
+															},
+															Path: "namespace",
+														}},
+													},
 												},
 											},
-											{
-												Secret: &corev1.SecretProjection{
-													LocalObjectReference: corev1.LocalObjectReference{
-														Name: "shoot-access-gardener-resource-manager",
+										},
+									},
+								},
+								{
+									Name: "tls",
+									VolumeSource: corev1.VolumeSource{
+										Secret: &corev1.SecretVolumeSource{
+											SecretName:  secretNameServer,
+											DefaultMode: pointer.Int32(420),
+										},
+									},
+								},
+								{
+									Name: "root-ca",
+									VolumeSource: corev1.VolumeSource{
+										Secret: &corev1.SecretVolumeSource{
+											SecretName:  "ca",
+											DefaultMode: pointer.Int32(420),
+										},
+									},
+								},
+								{
+									Name: "kubeconfig",
+									VolumeSource: corev1.VolumeSource{
+										Projected: &corev1.ProjectedVolumeSource{
+											DefaultMode: pointer.Int32(420),
+											Sources: []corev1.VolumeProjection{
+												{
+													Secret: &corev1.SecretProjection{
+														LocalObjectReference: corev1.LocalObjectReference{
+															Name: genericTokenKubeconfigSecretName,
+														},
+														Items: []corev1.KeyToPath{{
+															Key:  "kubeconfig",
+															Path: "kubeconfig",
+														}},
+														Optional: pointer.Bool(false),
 													},
-													Items: []corev1.KeyToPath{{
-														Key:  resourcesv1alpha1.DataKeyToken,
-														Path: resourcesv1alpha1.DataKeyToken,
-													}},
-													Optional: pointer.Bool(false),
+												},
+												{
+													Secret: &corev1.SecretProjection{
+														LocalObjectReference: corev1.LocalObjectReference{
+															Name: "shoot-access-gardener-resource-manager",
+														},
+														Items: []corev1.KeyToPath{{
+															Key:  resourcesv1alpha1.DataKeyToken,
+															Path: resourcesv1alpha1.DataKeyToken,
+														}},
+														Optional: pointer.Bool(false),
+													},
 												},
 											},
 										},
@@ -569,7 +620,9 @@ var _ = Describe("ResourceManager", func() {
 						},
 					},
 				},
-			},
+			}
+
+			return deployment
 		}
 		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
@@ -858,9 +911,10 @@ subjects:
 	})
 
 	Describe("#Deploy", func() {
-		Context("target cluster != source cluster; watched namespace is set", func() {
+		Context("target cluster != source cluster; watched namespace is set and kubernetes version <1.24", func() {
 			BeforeEach(func() {
 				role.Namespace = watchedNamespace
+				deployment = deploymentFor(cfg.Version)
 				resourceManager = New(c, deployNamespace, sm, image, cfg)
 				resourceManager.SetSecrets(secrets)
 			})
@@ -1231,11 +1285,161 @@ subjects:
 			})
 		})
 
+		Context("target cluster != source cluster; watched namespace is set and kubernetes version >=1.24", func() {
+			BeforeEach(func() {
+				role.Namespace = watchedNamespace
+				cfg.Version = semver.MustParse("1.24.0")
+				deployment = deploymentFor(cfg.Version)
+				resourceManager = New(c, deployNamespace, sm, image, cfg)
+				resourceManager.SetSecrets(secrets)
+			})
+
+			It("should successfully deploy all resources (w/ shoot access secret)", func() {
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(secret))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(serviceAccount))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(watchedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&rbacv1.Role{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.Role{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(role))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&rbacv1.RoleBinding{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(roleBinding))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(service))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(deployment))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, pdb.Name), gomock.AssignableToTypeOf(&policyv1beta1.PodDisruptionBudget{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1beta1.PodDisruptionBudget{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(pdb))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager-vpa"), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(vpa))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "managedresource-shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+						Expect(obj).To(DeepEqual(managedResourceSecret))
+					}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+						Expect(obj).To(DeepEqual(managedResource))
+					}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "allow-kube-apiserver-to-gardener-resource-manager"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(networkPolicy))
+						}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager-server"}}),
+				)
+
+				Expect(resourceManager.Deploy(ctx)).To(Succeed())
+			})
+
+			It("should successfully deploy all resources (w/ bootstrap kubeconfig)", func() {
+				secretNameBootstrapKubeconfig := "bootstrap-kubeconfig"
+
+				secrets.BootstrapKubeconfig = &component.Secret{Name: secretNameBootstrapKubeconfig}
+				resourceManager = New(c, deployNamespace, sm, image, cfg)
+				resourceManager.SetSecrets(secrets)
+
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(secret))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(serviceAccount))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(watchedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&rbacv1.Role{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.Role{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(role))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&rbacv1.RoleBinding{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(roleBinding))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(service))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							deployment.Spec.Template.Spec.Containers[0].VolumeMounts[len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-1].Name = "kubeconfig-bootstrap"
+							deployment.Spec.Template.Spec.Volumes[len(deployment.Spec.Template.Spec.Volumes)-1] = corev1.Volume{
+								Name: "kubeconfig-bootstrap",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName:  secretNameBootstrapKubeconfig,
+										DefaultMode: pointer.Int32(420),
+									},
+								},
+							}
+
+							Expect(obj).To(DeepEqual(deployment))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, pdb.Name), gomock.AssignableToTypeOf(&policyv1beta1.PodDisruptionBudget{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&policyv1beta1.PodDisruptionBudget{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(pdb))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager-vpa"), gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&vpaautoscalingv1.VerticalPodAutoscaler{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(vpa))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "managedresource-shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+						Expect(obj).To(DeepEqual(managedResourceSecret))
+					}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "shoot-core-gardener-resource-manager"), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+						Expect(obj).To(DeepEqual(managedResource))
+					}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "allow-kube-apiserver-to-gardener-resource-manager"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
+						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(networkPolicy))
+						}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager-server"}}),
+				)
+
+				Expect(resourceManager.Deploy(ctx)).To(Succeed())
+			})
+		})
+
 		Context("target cluster != source cluster, watched namespace is nil", func() {
 			BeforeEach(func() {
 				clusterRole.Rules = allowManagedResources
 				cfg.TargetDiffersFromSourceCluster = true
 				cfg.WatchedNamespace = nil
+				deployment = deploymentFor(cfg.Version)
 				deployment.Spec.Template.Spec.Containers[0].Command = cmdWithoutWatchedNamespace
 
 				resourceManager = New(c, deployNamespace, sm, image, cfg)
@@ -1338,6 +1542,7 @@ subjects:
 		Context("target cluster = source cluster", func() {
 			BeforeEach(func() {
 				clusterRole.Rules = allowAll
+				deployment = deploymentFor(cfg.Version)
 
 				for i, cmd := range deployment.Spec.Template.Spec.Containers[0].Command {
 					if strings.HasPrefix(cmd, "--root-ca-file=") {
@@ -1426,6 +1631,7 @@ subjects:
 	Describe("#Destroy", func() {
 		Context("target differs from source cluster", func() {
 			BeforeEach(func() {
+				deployment = deploymentFor(cfg.Version)
 				resourceManager = New(c, deployNamespace, sm, image, cfg)
 			})
 
@@ -1585,6 +1791,7 @@ subjects:
 			BeforeEach(func() {
 				cfg.TargetDiffersFromSourceCluster = false
 				cfg.WatchedNamespace = nil
+				deployment = deploymentFor(cfg.Version)
 				deployment.Spec.Template.Spec.Containers[0].Command = cmdWithoutWatchedNamespace
 				resourceManager = New(c, deployNamespace, sm, image, cfg)
 			})
@@ -1608,6 +1815,7 @@ subjects:
 
 	Describe("#Wait", func() {
 		BeforeEach(func() {
+			deployment = deploymentFor(cfg.Version)
 			resourceManager = New(fakeClient, deployNamespace, nil, image, cfg)
 		})
 

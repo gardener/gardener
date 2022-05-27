@@ -164,7 +164,7 @@ SEED_KUBECONFIG_GARDENLET_TOKEN="$DEV_DIR/gardenlet-seed-$SEED_NAME-token.conf"
 cp "$SEED_KUBECONFIG" "$SEED_KUBECONFIG_GARDENLET_TOKEN"
 
 # use the token of the gardenlet service account to authenticated against the seed API
-token=$(kubectl --kubeconfig="$SEED_KUBECONFIG" --namespace garden get secret $(kubectl --kubeconfig="$SEED_KUBECONFIG" --namespace garden get serviceaccount gardenlet -o jsonpath='{.secrets[0].name}') -o jsonpath='{.data.token}' | base64 --decode)
+token=$(kubectl --kubeconfig="$SEED_KUBECONFIG" --namespace garden create token gardenlet)
 user=$(kubectl --kubeconfig="$SEED_KUBECONFIG" config view --raw --minify -o json | yq eval '.["current-context"] as $currentContext | .contexts[] | select(.name == $currentContext) | .context.user' -)
 USER_VALUE=$user TOKEN_VALUE=$token yq eval --inplace '.users = [{"name": strenv(USER_VALUE), "user": {"token": strenv(TOKEN_VALUE)}}]' $SEED_KUBECONFIG_GARDENLET_TOKEN
 
