@@ -393,10 +393,15 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Fn:           flow.TaskFn(botanist.CleanKubernetesResources).Timeout(10 * time.Minute).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(syncPointReadyForCleanup),
 		})
+		deleteMetricsServer = g.Add(flow.Task{
+			Name:         "Deleting metrics-server",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.SystemComponents.MetricsServer.Destroy).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(syncPointReadyForCleanup),
+		})
 		cleanShootNamespaces = g.Add(flow.Task{
 			Name:         "Cleaning shoot namespaces",
 			Fn:           flow.TaskFn(botanist.CleanShootNamespaces).Timeout(10 * time.Minute).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(cleanKubernetesResources),
+			Dependencies: flow.NewTaskIDs(cleanKubernetesResources, deleteMetricsServer),
 		})
 		destroyNetwork = g.Add(flow.Task{
 			Name:         "Destroying shoot network plugin",
