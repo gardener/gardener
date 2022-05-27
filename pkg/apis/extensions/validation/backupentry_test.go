@@ -93,26 +93,39 @@ var _ = Describe("BackupEntry validation tests", func() {
 			}))))
 		})
 
-		It("should prevent updating the type or region", func() {
+		It("should prevent updating the type", func() {
 			newBackupEntry := prepareBackupEntryForUpdate(be)
 			newBackupEntry.Spec.Type = "changed-type"
-			newBackupEntry.Spec.Region = "changed-region"
-			newBackupEntry.Spec.BucketName = "changed-bucket-name"
 
 			errorList := ValidateBackupEntryUpdate(newBackupEntry, be)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.type"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.region"),
 			}))))
 		})
 
 		It("should allow updating the name of the referenced secret", func() {
 			newBackupEntry := prepareBackupEntryForUpdate(be)
 			newBackupEntry.Spec.SecretRef.Name = "changed-secretref-name"
+
+			errorList := ValidateBackupEntryUpdate(newBackupEntry, be)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should allow updating the name of the backup bucket", func() {
+			newBackupEntry := prepareBackupEntryForUpdate(be)
+			newBackupEntry.Spec.BucketName = "changed-bucket-name"
+
+			errorList := ValidateBackupEntryUpdate(newBackupEntry, be)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should allow updating the region", func() {
+			newBackupEntry := prepareBackupEntryForUpdate(be)
+			newBackupEntry.Spec.Region = "changed-region"
 
 			errorList := ValidateBackupEntryUpdate(newBackupEntry, be)
 
