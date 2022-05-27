@@ -25,6 +25,7 @@ PUSH_LATEST_TAG                            := false
 VERSION                                    := $(shell cat VERSION)
 EFFECTIVE_VERSION                          := $(VERSION)-$(shell git rev-parse HEAD)
 REPO_ROOT                                  := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+LOCAL_GARDEN_KUBECONFIG                    := KUBECONFIG=$(REPO_ROOT)/example/gardener-local/kind/kubeconfig
 LOCAL_GARDEN_LABEL                         := local-garden
 REMOTE_GARDEN_LABEL                        := remote-garden
 ACTIVATE_SEEDAUTHORIZER                    := false
@@ -262,7 +263,7 @@ kind-up: $(KIND)
 	$(KIND) create cluster --name gardener-local --config $(REPO_ROOT)/example/gardener-local/kind/cluster-$(KIND_ENV).yaml --kubeconfig $(REPO_ROOT)/example/gardener-local/kind/kubeconfig
 	docker exec gardener-local-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
 	cp $(REPO_ROOT)/example/gardener-local/kind/kubeconfig $(REPO_ROOT)/example/provider-local/base/kubeconfig
-	kubectl apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side --kubeconfig $(REPO_ROOT)/example/gardener-local/kind/kubeconfig
+	$(LOCAL_GARDEN_KUBECONFIG) kubectl apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
 
 kind-down: $(KIND)
 	$(KIND) delete cluster --name gardener-local
@@ -272,31 +273,31 @@ kind-down: $(KIND)
 # workaround for https://github.com/GoogleContainerTools/skaffold/issues/6416
 export SKAFFOLD_LABEL := skaffold.dev/run-id=gardener-local
 gardener-up: $(SKAFFOLD) $(HELM)
-	$(SKAFFOLD) run
+	$(LOCAL_GARDEN_KUBECONFIG) $(SKAFFOLD) run
 
 gardener-down: $(SKAFFOLD) $(HELM)
 	@# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
-	kubectl delete seed local --ignore-not-found --wait --timeout 5m
-	$(SKAFFOLD) delete -m provider-local,gardenlet
-	kubectl delete validatingwebhookconfiguration/validate-namespace-deletion --ignore-not-found
-	kubectl annotate project local confirmation.gardener.cloud/deletion=true
-	$(SKAFFOLD) delete -m local-env
-	$(SKAFFOLD) delete -m etcd,controlplane
+	$(LOCAL_GARDEN_KUBECONFIG) kubectl delete seed local --ignore-not-found --wait --timeout 5m
+	$(LOCAL_GARDEN_KUBECONFIG) $(SKAFFOLD) delete -m provider-local,gardenlet
+	$(LOCAL_GARDEN_KUBECONFIG) kubectl delete validatingwebhookconfiguration/validate-namespace-deletion --ignore-not-found
+	$(LOCAL_GARDEN_KUBECONFIG) kubectl annotate project local confirmation.gardener.cloud/deletion=true
+	$(LOCAL_GARDEN_KUBECONFIG) $(SKAFFOLD) delete -m local-env --kubeconfig $(REPO_ROOT)/example/gardener-local/kind/kubeconfig
+	$(LOCAL_GARDEN_KUBECONFIG) $(SKAFFOLD) delete -m etcd,controlplane --kubeconfig $(REPO_ROOT)/example/gardener-local/kind/kubeconfig
 	@# workaround for https://github.com/gardener/gardener/issues/5164
-	kubectl delete ns seed-local --ignore-not-found
+	$(LOCAL_GARDEN_KUBECONFIG) kubectl delete ns seed-local --ignore-not-found
 	@# cleanup namespaces that don't get deleted automatically
-	kubectl delete ns gardener-system-seed-lease istio-ingress istio-system --ignore-not-found
+	$(LOCAL_GARDEN_KUBECONFIG) kubectl delete ns gardener-system-seed-lease istio-ingress istio-system --ignore-not-found
 
 register-local-env:
-	kubectl apply -k $(REPO_ROOT)/example/provider-local/overlays/local
+	$(LOCAL_GARDEN_KUBECONFIG) kubectl apply -k $(REPO_ROOT)/example/provider-local/overlays/local
 
 tear-down-local-env:
-	kubectl annotate project local confirmation.gardener.cloud/deletion=true
-	kubectl delete -k $(REPO_ROOT)/example/provider-local/overlays/local
+	$(LOCAL_GARDEN_KUBECONFIG) kubectl annotate project local confirmation.gardener.cloud/deletion=true
+	$(LOCAL_GARDEN_KUBECONFIG) kubectl delete -k $(REPO_ROOT)/example/provider-local/overlays/local
 
 test-e2e-local-fast: $(GINKGO)
-	./hack/test-e2e-local.sh --label-filter "Shoot && fast"
+	$(LOCAL_GARDEN_KUBECONFIG) ./hack/test-e2e-local.sh --label-filter "Shoot && fast"
 
 test-e2e-local: $(GINKGO)
 	@# run at maximum 5 tests in parallel for now until we have better experience of how much load a single prow pod can take
-	./hack/test-e2e-local.sh --procs=5
+	$(LOCAL_GARDEN_KUBECONFIG) ./hack/test-e2e-local.sh --procs=5
