@@ -79,7 +79,9 @@ global:
         # - production
         seed:
           concurrentSyncs: 5
-          syncPeriod: 1h
+        # TODO (plkokanov): the sync period is currently set to 1m because of the way that SNI detection is done during seed reconciliations.
+        # ref: https://github.com/gardener/gardener/issues/6036
+          syncPeriod: 1m
         # leaseResyncSeconds: 2
         # leaseResyncMissThreshold: 10
         shoot:
