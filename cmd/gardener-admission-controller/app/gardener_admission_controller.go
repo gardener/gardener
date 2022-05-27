@@ -21,18 +21,6 @@ import (
 	goruntime "runtime"
 	"time"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/component-base/version"
-	"k8s.io/component-base/version/verflag"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
-
 	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	configv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	configvalidation "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
@@ -47,7 +35,19 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/server/routes"
-	"github.com/gardener/gardener/pkg/utils"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/component-base/version"
+	"k8s.io/component-base/version/verflag"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 const (
@@ -197,7 +197,7 @@ func (o *options) run(ctx context.Context) error {
 	server.Register(auditpolicy.WebhookPath, &webhook.Admission{Handler: auditpolicy.New(runtimelog.Log.WithName(auditpolicy.HandlerName))})
 	server.Register(internaldomainsecret.WebhookPath, &webhook.Admission{Handler: internaldomainsecret.New(runtimelog.Log.WithName(internaldomainsecret.HandlerName))})
 
-	if utils.IsTrue(o.config.Server.EnableDebugHandlers) {
+	if pointer.BoolDeref(o.config.Server.EnableDebugHandlers, false) {
 		log.Info("Registering debug handlers")
 		server.Register(seedauthorizergraph.DebugHandlerPath, seedauthorizergraph.NewDebugHandler(graph))
 	}

@@ -33,7 +33,6 @@ import (
 	corev1alpha1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
@@ -51,6 +50,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -545,7 +545,7 @@ func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
 	}
 
 	if c.shoot.Spec.Maintenance != nil &&
-		utils.IsTrue(c.shoot.Spec.Maintenance.ConfineSpecUpdateRollout) &&
+		pointer.BoolDeref(c.shoot.Spec.Maintenance.ConfineSpecUpdateRollout, false) &&
 		!apiequality.Semantic.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) &&
 		c.shoot.Status.LastOperation != nil &&
 		c.shoot.Status.LastOperation.State == core.LastOperationStateFailed {

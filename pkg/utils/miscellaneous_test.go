@@ -19,7 +19,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	gomegatypes "github.com/onsi/gomega/types"
 	"k8s.io/utils/pointer"
 )
 
@@ -60,15 +59,6 @@ var _ = Describe("utils", func() {
 			}))
 		})
 	})
-
-	DescribeTable("#IsTrue",
-		func(value *bool, matcher gomegatypes.GomegaMatcher) {
-			Expect(IsTrue(value)).To(matcher)
-		},
-		Entry("nil", nil, BeFalse()),
-		Entry("false", pointer.Bool(false), BeFalse()),
-		Entry("true", pointer.Bool(true), BeTrue()),
-	)
 
 	DescribeTable("#IDForKeyWithOptionalValue",
 		func(key string, value *string, expectation string) {

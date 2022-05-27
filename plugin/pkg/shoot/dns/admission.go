@@ -255,7 +255,7 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 func checkFunctionlessDNSProviders(a admission.Attributes, shoot *core.Shoot) error {
 	dns := shoot.Spec.DNS
 	for _, provider := range dns.Providers {
-		if !utils.IsTrue(provider.Primary) && (provider.Type == nil || provider.SecretName == nil) {
+		if !pointer.BoolDeref(provider.Primary, false) && (provider.Type == nil || provider.SecretName == nil) {
 			fieldErr := field.Required(field.NewPath("spec", "dns", "providers"), "non-primary DNS providers in .spec.dns.providers must specify a `type` and `secretName`")
 			return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 		}

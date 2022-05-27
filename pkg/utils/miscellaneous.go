@@ -120,11 +120,6 @@ func TestEmail(email string) bool {
 	return match
 }
 
-// IsTrue returns true if the passed bool pointer is not nil and true.
-func IsTrue(value *bool) bool {
-	return value != nil && *value
-}
-
 // IDForKeyWithOptionalValue returns an identifier for the given key + optional value.
 func IDForKeyWithOptionalValue(key string, value *string) string {
 	v := ""

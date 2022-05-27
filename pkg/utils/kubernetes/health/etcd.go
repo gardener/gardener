@@ -17,15 +17,14 @@ package health
 import (
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/utils"
-
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	"k8s.io/utils/pointer"
 )
 
 // CheckEtcd checks whether the given Etcd is healthy.
 // A Etcd is considered healthy if its ready field in status is true.
 func CheckEtcd(etcd *druidv1alpha1.Etcd) error {
-	if !utils.IsTrue(etcd.Status.Ready) {
+	if !pointer.BoolDeref(etcd.Status.Ready, false) {
 		return fmt.Errorf("etcd %q is not ready yet", etcd.Name)
 	}
 	return nil
