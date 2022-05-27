@@ -189,29 +189,7 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 		reasonsForWorkerPoolKubernetesUpdate[w.Name] = reasonForWorkerPoolKubernetesUpdate
 	}
 
-	// do not add reconcile annotation if shoot was once set to failed or if shoot is already in an ongoing reconciliation
-	if shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-	}
-
-	var needsRetry bool
-	if val, ok := shoot.Annotations[v1beta1constants.FailedShootNeedsRetryOperation]; ok {
-		needsRetry, _ = strconv.ParseBool(val)
-	}
-	delete(shoot.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
-
-	// Failed shoots need to be retried first; healthy shoots instead
-	// default to rotating their SSH keypair on each maintenance interval if the RotateSSHKeypairOnMaintenance is enabled.
-	if needsRetry {
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
-	} else if controllermanagerfeatures.FeatureGate.Enabled(features.RotateSSHKeypairOnMaintenance) {
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateSSHKeypair)
-	}
-
-	if hasMaintainNowAnnotation(shoot) {
-		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
-	}
-
+	maintainOperation(shoot)
 	maintainTasks(shoot, r.config)
 
 	// try to maintain shoot, but don't retry on conflict, because a conflict means that we potentially operated on stale
@@ -241,6 +219,31 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 
 	shootLogger.Infof("[SHOOT MAINTENANCE] completed")
 	return nil
+}
+
+func maintainOperation(shoot *gardencorev1beta1.Shoot) {
+	if hasMaintainNowAnnotation(shoot) {
+		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
+	}
+
+	var needsRetry bool
+	if val, ok := shoot.Annotations[v1beta1constants.FailedShootNeedsRetryOperation]; ok {
+		needsRetry, _ = strconv.ParseBool(val)
+	}
+	delete(shoot.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
+
+	// do not add reconcile annotation if shoot was once set to failed or if shoot is already in an ongoing reconciliation
+	if shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+	}
+
+	// Failed shoots need to be retried first; healthy shoots instead
+	// default to rotating their SSH keypair on each maintenance interval if the RotateSSHKeypairOnMaintenance is enabled.
+	if needsRetry {
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
+	} else if controllermanagerfeatures.FeatureGate.Enabled(features.RotateSSHKeypairOnMaintenance) {
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateSSHKeypair)
+	}
 }
 
 func maintainTasks(shoot *gardencorev1beta1.Shoot, config config.ShootMaintenanceControllerConfiguration) {
