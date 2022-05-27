@@ -118,7 +118,7 @@ This controller reconciles `Services` of type `LoadBalancer` in the local `Seed`
 Since the local Kubernetes clusters used as Seed clusters typically don't support such services, this controller sets the `.status.ingress.loadBalancer.ip[0]` to the IP of the host.
 It makes important LoadBalancer Services (e.g. `istio-ingress/istio-ingressgateway` and `garden/nginx-ingress-controller`) available to the host by setting `spec.ports[].nodePort` to well-known ports that are mapped to `hostPorts` in the kind cluster configuration.
 
-If the `--apiserver-sni-enabled` flag is set to `true` (default), `istio-ingress/istio-ingressgateway` is set to be exposed on `nodePort` `30433` by this controller. Otherwise, the `kube-apiserver` `Service` in the shoot namespaces in the seed cluster needs to be patched to be exposed on `30443` by the [Control Plane Exposure Webhook](#control-plane-exposure).
+If the `--apiserver-sni-enabled` flag is set to `true` (default), `istio-ingress/istio-ingressgateway` is set to be exposed on `nodePort` `30433` for https and `nodePort` `31443` for the proxy protocol by this controller. Otherwise, the `kube-apiserver` `Service` in the shoot namespaces in the seed cluster needs to be patched to be exposed on `30443` by the [Control Plane Exposure Webhook](#control-plane-exposure).
 
 #### ETCD Backups
 This controller reconciles the `BackuBucket` and `BackupEntry` of the shoot allowing the `etcd-backup-restore` to create and copy backups using the `local` provider functionality. The backups are stored on the host file system. This is achieved by mounting that directory to the `etcd-backup-restore` container.

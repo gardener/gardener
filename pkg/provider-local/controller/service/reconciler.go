@@ -60,6 +60,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 			switch {
 			case key == keyIstioIngressGateway && servicePort.Name == "tcp":
 				service.Spec.Ports[i].NodePort = 30443
+			case key == keyIstioIngressGateway && servicePort.Name == "proxy":
+				service.Spec.Ports[i].NodePort = 31443
 			case key == keyNginxIngress && servicePort.Name == "https":
 				service.Spec.Ports[i].NodePort = 30448
 			}
