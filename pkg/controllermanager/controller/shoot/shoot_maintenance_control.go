@@ -162,7 +162,7 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 		return err
 	}
 
-	// Now its time to update worker pool kubernetes version if specified
+	// Now it's time to update worker pool kubernetes version if specified
 	var reasonsForWorkerPoolKubernetesUpdate = make(map[string]string)
 	for i, w := range shoot.Spec.Provider.Workers {
 		if w.Kubernetes == nil || w.Kubernetes.Version == nil {
@@ -208,30 +208,11 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateSSHKeypair)
 	}
 
-	controllerutils.AddTasks(shoot.Annotations,
-		v1beta1constants.ShootTaskDeployInfrastructure,
-		v1beta1constants.ShootTaskDeployDNSRecordInternal,
-		v1beta1constants.ShootTaskDeployDNSRecordExternal,
-		v1beta1constants.ShootTaskDeployDNSRecordIngress,
-	)
-
-	if pointer.BoolDeref(r.config.EnableShootControlPlaneRestarter, false) {
-		controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
-	}
-
-	if pointer.BoolDeref(r.config.EnableShootCoreAddonRestarter, false) {
-		controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskRestartCoreAddons)
-	}
-
 	if hasMaintainNowAnnotation(shoot) {
 		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 	}
 
-	// unset the AuditPolicy reference's resourceVersion, as it is no longer used (see https://github.com/gardener/gardener/pull/5392)
-	// TODO: remove this in a future release
-	if ref := gardencorev1beta1helper.GetShootAuditPolicyConfigMapRef(shoot.Spec.Kubernetes.KubeAPIServer); ref != nil {
-		ref.ResourceVersion = ""
-	}
+	maintainTasks(shoot, r.config)
 
 	// try to maintain shoot, but don't retry on conflict, because a conflict means that we potentially operated on stale
 	// data (e.g. when calculating the updated k8s version), so rather return error and backoff
@@ -260,6 +241,23 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 
 	shootLogger.Infof("[SHOOT MAINTENANCE] completed")
 	return nil
+}
+
+func maintainTasks(shoot *gardencorev1beta1.Shoot, config config.ShootMaintenanceControllerConfiguration) {
+	controllerutils.AddTasks(shoot.Annotations,
+		v1beta1constants.ShootTaskDeployInfrastructure,
+		v1beta1constants.ShootTaskDeployDNSRecordInternal,
+		v1beta1constants.ShootTaskDeployDNSRecordExternal,
+		v1beta1constants.ShootTaskDeployDNSRecordIngress,
+	)
+
+	if pointer.BoolDeref(config.EnableShootControlPlaneRestarter, false) {
+		controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
+	}
+
+	if pointer.BoolDeref(config.EnableShootCoreAddonRestarter, false) {
+		controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskRestartCoreAddons)
+	}
 }
 
 // MaintainMachineImages updates the machine images of a Shoot's worker pools if necessary

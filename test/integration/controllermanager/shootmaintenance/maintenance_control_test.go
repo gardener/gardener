@@ -20,7 +20,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,7 +37,6 @@ import (
 )
 
 var _ = Describe("Shoot Maintenance controller tests", func() {
-
 	var (
 		project      *gardencorev1beta1.Project
 		cloudProfile *gardencorev1beta1.CloudProfile
@@ -208,30 +206,6 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 			ContainElement("deployDNSRecordExternal"),
 			ContainElement("deployDNSRecordIngress"),
 		))
-	})
-
-	It("should unset the Shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion field", func() {
-		By("prepare shoot")
-		patch := client.MergeFrom(shoot.DeepCopy())
-		shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
-			AuditConfig: &gardencorev1beta1.AuditConfig{
-				AuditPolicy: &gardencorev1beta1.AuditPolicy{
-					ConfigMapRef: &corev1.ObjectReference{
-						Name:            "auditpolicy",
-						ResourceVersion: "123456",
-					},
-				},
-			},
-		}
-		Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
-
-		By("trigger maintenance")
-		Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
-
-		waitForShootToBeMaintained(shoot)
-
-		By("ensuring resourceVersion is empty")
-		Expect(shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion).To(BeEmpty())
 	})
 
 	Describe("Machine image maintenance tests", func() {
