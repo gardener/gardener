@@ -56,6 +56,9 @@ type Ensurer interface {
 	// EnsureKubeSchedulerDeployment ensures that the kube-scheduler deployment conforms to the provider requirements.
 	// "old" might be "nil" and must always be checked.
 	EnsureKubeSchedulerDeployment(ctx context.Context, gctx gcontext.GardenContext, new, old *appsv1.Deployment) error
+	// EnsureClusterAutoscalerDeployment ensures that the cluster-autoscaler deployment conforms to the provider requirements.
+	// "old" might be "nil" and must always be checked.
+	EnsureClusterAutoscalerDeployment(ctx context.Context, gctx gcontext.GardenContext, new, old *appsv1.Deployment) error
 	// EnsureETCD ensures that the etcds conform to the respective provider requirements.
 	// "old" might be "nil" and must always be checked.
 	EnsureETCD(ctx context.Context, gctx gcontext.GardenContext, new, old *druidv1alpha1.Etcd) error
@@ -164,6 +167,9 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 		case v1beta1constants.DeploymentNameKubeScheduler:
 			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
 			return m.ensurer.EnsureKubeSchedulerDeployment(ctx, gctx, x, oldDep)
+		case v1beta1constants.DeploymentNameClusterAutoscaler:
+			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
+			return m.ensurer.EnsureClusterAutoscalerDeployment(ctx, gctx, x, oldDep)
 		case v1beta1constants.DeploymentNameVPNSeedServer:
 			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
 			return m.ensurer.EnsureVPNSeedServerDeployment(ctx, gctx, x, oldDep)
