@@ -47,6 +47,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -365,7 +366,7 @@ func (a *actuator) deployGardenlet(
 		seed,
 		gardenletConfig,
 		v1alpha1helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap),
-		utils.IsTrue(managedSeed.Spec.Gardenlet.MergeWithParent),
+		pointer.BoolDeref(managedSeed.Spec.Gardenlet.MergeWithParent, false),
 		shoot,
 	)
 	if err != nil {
@@ -392,7 +393,7 @@ func (a *actuator) deleteGardenlet(
 		seed,
 		gardenletConfig,
 		v1alpha1helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap),
-		utils.IsTrue(managedSeed.Spec.Gardenlet.MergeWithParent),
+		pointer.BoolDeref(managedSeed.Spec.Gardenlet.MergeWithParent, false),
 		shoot,
 	)
 	if err != nil {

@@ -27,13 +27,13 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/namespaces"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -131,14 +131,14 @@ func (b *Botanist) getShootRequiredExtensionTypes(ctx context.Context) (sets.Str
 	types := sets.String{}
 	for _, reg := range controllerRegistrationList.Items {
 		for _, res := range reg.Spec.Resources {
-			if res.Kind == extensionsv1alpha1.ExtensionResource && utils.IsTrue(res.GloballyEnabled) {
+			if res.Kind == extensionsv1alpha1.ExtensionResource && pointer.BoolDeref(res.GloballyEnabled, false) {
 				types.Insert(res.Type)
 			}
 		}
 	}
 
 	for _, extension := range b.Shoot.GetInfo().Spec.Extensions {
-		if utils.IsTrue(extension.Disabled) {
+		if pointer.BoolDeref(extension.Disabled, false) {
 			types.Delete(extension.Type)
 		} else {
 			types.Insert(extension.Type)

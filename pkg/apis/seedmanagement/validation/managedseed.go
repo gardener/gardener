@@ -31,6 +31,7 @@ import (
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 )
 
 // ValidateManagedSeed validates a ManagedSeed object.
@@ -199,7 +200,7 @@ func validateGardenlet(gardenlet *seedmanagement.Gardenlet, fldPath *field.Path,
 		}
 
 		// Validate gardenlet config
-		allErrs = append(allErrs, validateGardenletConfiguration(gardenletConfig, helper.GetBootstrap(gardenlet.Bootstrap), utils.IsTrue(gardenlet.MergeWithParent), configPath, inTemplate)...)
+		allErrs = append(allErrs, validateGardenletConfiguration(gardenletConfig, helper.GetBootstrap(gardenlet.Bootstrap), pointer.BoolDeref(gardenlet.MergeWithParent, false), configPath, inTemplate)...)
 	}
 
 	if gardenlet.Bootstrap != nil {

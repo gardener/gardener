@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -40,6 +39,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -215,11 +215,11 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 		v1beta1constants.ShootTaskDeployDNSRecordIngress,
 	)
 
-	if utils.IsTrue(r.config.EnableShootControlPlaneRestarter) {
+	if pointer.BoolDeref(r.config.EnableShootControlPlaneRestarter, false) {
 		controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
 	}
 
-	if utils.IsTrue(r.config.EnableShootCoreAddonRestarter) {
+	if pointer.BoolDeref(r.config.EnableShootCoreAddonRestarter, false) {
 		controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskRestartCoreAddons)
 	}
 

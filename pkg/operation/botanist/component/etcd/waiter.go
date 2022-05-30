@@ -21,10 +21,10 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -83,7 +83,7 @@ func CheckEtcdObject(obj client.Object) error {
 		return fmt.Errorf("gardener operation %q is not yet picked up by etcd-druid", op)
 	}
 
-	if !utils.IsTrue(etcd.Status.Ready) {
+	if !pointer.BoolDeref(etcd.Status.Ready, false) {
 		return fmt.Errorf("is not ready yet")
 	}
 
