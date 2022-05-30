@@ -94,7 +94,7 @@ func (r *shootRetryReconciler) Reconcile(ctx context.Context, request reconcile.
 
 	mustRetry, requeueAfter := mustRetryNow(shoot, *r.config.RetryPeriod, r.config.RetryJitterPeriod)
 	if !mustRetry {
-		shootLogger.Infof("[SHOOT RETRY] Scheduled retry in %s", requeueAfter.Round(time.Minute))
+		shootLogger.Infof("[SHOOT RETRY] Scheduled retry in %s", requeueAfter.Round(time.Second))
 		return reconcile.Result{RequeueAfter: requeueAfter}, nil
 	}
 
@@ -122,7 +122,7 @@ func isShootFailed(shoot *gardencorev1beta1.Shoot) bool {
 		shoot.Generation == shoot.Status.ObservedGeneration
 }
 
-func mustRetryNow(shoot *gardencorev1beta1.Shoot, retryPeriod metav1.Duration, syncJitterPeriod *metav1.Duration) (bool, time.Duration) {
+func mustRetryNow(shoot *gardencorev1beta1.Shoot, retryPeriod metav1.Duration, jitterPeriod *metav1.Duration) (bool, time.Duration) {
 	if shoot.Status.LastOperation == nil {
 		return false, 0
 	}
@@ -136,5 +136,5 @@ func mustRetryNow(shoot *gardencorev1beta1.Shoot, retryPeriod metav1.Duration, s
 		return true, 0
 	}
 
-	return false, lastReconciliationPlusRetryPeriod.Add(utils.RandomDurationWithMetaDuration(syncJitterPeriod)).Sub(now)
+	return false, lastReconciliationPlusRetryPeriod.Add(utils.RandomDurationWithMetaDuration(jitterPeriod)).Sub(now)
 }
