@@ -3,7 +3,7 @@ kind: PodDisruptionBudget
 metadata:
   name: blackbox-exporter-pdb
 spec:
-  minAvailable: 1
+  maxUnavailable: 1
   selector:
     matchLabels:
       component: blackbox-exporter
