@@ -1578,7 +1578,39 @@ rules:
 					corev1.Volume{
 						Name: "vpn-seed",
 						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{SecretName: secretNameVPNSeed},
+							Projected: &corev1.ProjectedVolumeSource{
+								DefaultMode: pointer.Int32(420),
+								Sources: []corev1.VolumeProjection{
+									{
+										Secret: &corev1.SecretProjection{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: secretNameCAClient,
+											},
+											Items: []corev1.KeyToPath{{
+												Key:  "bundle.crt",
+												Path: "ca.crt",
+											}},
+										},
+									},
+									{
+										Secret: &corev1.SecretProjection{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: secretNameVPNSeed,
+											},
+											Items: []corev1.KeyToPath{
+												{
+													Key:  "tls.crt",
+													Path: "tls.crt",
+												},
+												{
+													Key:  "tls.key",
+													Path: "tls.key",
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 					corev1.Volume{

@@ -466,7 +466,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleHostCertVolumes(deployment)
 		k.handleSNISettings(deployment)
 		k.handlePodMutatorSettings(deployment)
-		k.handleVPNSettings(deployment, configMapEgressSelector, secretCAVPN, secretHTTPProxy, secretLegacyVPNSeed, secretLegacyVPNSeedTLSAuth)
+		k.handleVPNSettings(deployment, configMapEgressSelector, secretCAVPN, secretHTTPProxy, secretCAClient, secretLegacyVPNSeed, secretLegacyVPNSeedTLSAuth)
 		k.handleOIDCSettings(deployment, secretOIDCCABundle)
 		k.handleServiceAccountSigningKeySettings(deployment, secretUserProvidedServiceAccountSigningKey)
 
@@ -709,6 +709,7 @@ func (k *kubeAPIServer) handleVPNSettings(
 	configMapEgressSelector *corev1.ConfigMap,
 	vpnCASecret *corev1.Secret,
 	secretHTTPProxy *corev1.Secret,
+	secretLegacyVPNCAClient *corev1.Secret,
 	secretLegacyVPNSeed *corev1.Secret,
 	secretLegacyVPNSeedTLSAuth *corev1.Secret,
 ) {
@@ -822,7 +823,39 @@ func (k *kubeAPIServer) handleVPNSettings(
 			{
 				Name: volumeNameVPNSeed,
 				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{SecretName: secretLegacyVPNSeed.Name},
+					Projected: &corev1.ProjectedVolumeSource{
+						DefaultMode: pointer.Int32(420),
+						Sources: []corev1.VolumeProjection{
+							{
+								Secret: &corev1.SecretProjection{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: secretLegacyVPNCAClient.Name,
+									},
+									Items: []corev1.KeyToPath{{
+										Key:  secrets.DataKeyCertificateBundle,
+										Path: secrets.DataKeyCertificateCA,
+									}},
+								},
+							},
+							{
+								Secret: &corev1.SecretProjection{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: secretLegacyVPNSeed.Name,
+									},
+									Items: []corev1.KeyToPath{
+										{
+											Key:  secrets.DataKeyCertificate,
+											Path: secrets.DataKeyCertificate,
+										},
+										{
+											Key:  secrets.DataKeyPrivateKey,
+											Path: secrets.DataKeyPrivateKey,
+										},
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 			{
