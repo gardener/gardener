@@ -17,7 +17,6 @@ prometheus:
   secretNameClusterCA: ca
   secretNameEtcdCA: ca-etcd
   secretNameEtcdClientCert: etcd-client-tls
-  secretNameClientCert: prometheus
 kube-state-metrics-seed:
   replicas: 1
   images:

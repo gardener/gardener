@@ -111,6 +111,8 @@ spec:
             cpu: 50m
             memory: 350Mi
         volumeMounts:
+        - mountPath: /etc/prometheus/seed
+          name: shoot-ca
         - mountPath: /srv/kubernetes/etcd/ca
           name: ca-etcd
         - mountPath: /srv/kubernetes/etcd/client
@@ -124,10 +126,6 @@ spec:
         - mountPath: /var/prometheus/data
           name: prometheus-db
           subPath: prometheus-
-        # TODO(rfranzke): Delete this in a future release once all monitoring configurations of extensions have been
-        # adapted.
-        - mountPath: /etc/prometheus/seed
-          name: prometheus-client-cert
         - name: shoot-access
           mountPath: /var/run/secrets/gardener.cloud/shoot/token
           readOnly: true
@@ -191,29 +189,10 @@ spec:
           defaultMode: 420
           name: prometheus-rules
       - name: shoot-ca
-        secret:
-          defaultMode: 420
-          secretName: {{ .Values.secretNameClusterCA }}
-      - name: ca-etcd
-        secret:
-          secretName: {{ .Values.secretNameEtcdCA }}
-      - name: etcd-client-tls
-        secret:
-          secretName: {{ .Values.secretNameEtcdClientCert }}
-      # TODO(rfranzke): Delete this in a future release once all monitoring configurations of extensions have been
-      #	adapted.
-      - name: prometheus-client-cert
         projected:
           defaultMode: 420
           sources:
-          - secret:
-              items:
-              - key: tls.crt
-                path: prometheus.crt
-              - key: tls.key
-                path: prometheus.key
-              name: {{ .Values.secretNameClientCert }}
-              optional: false
+          # For backwards-compatibility, we make the CA bundle available under both ca.crt and bundle.crt keys.
           - secret:
               name: {{ .Values.secretNameClusterCA }}
               items:
@@ -222,6 +201,12 @@ spec:
               - key: bundle.crt
                 path: ca.crt
               optional: false
+      - name: ca-etcd
+        secret:
+          secretName: {{ .Values.secretNameEtcdCA }}
+      - name: etcd-client-tls
+        secret:
+          secretName: {{ .Values.secretNameEtcdClientCert }}
       - name: shoot-access
         secret:
           secretName: shoot-access-prometheus

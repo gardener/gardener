@@ -23,7 +23,6 @@ kubernetesVersion: 1.20.1
 secretNameClusterCA: ca
 secretNameEtcdCA: ca-etcd
 secretNameEtcdClientCert: etcd-client-tls
-secretNameClientCert: prometheus
 
 reversedVPN:
   enabled: false

@@ -183,18 +183,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
-	// TODO(rfranzke): Delete this in a future release once all monitoring configurations of extensions have been
-	// adapted and some migration grace period has passed.
-	prometheusClientSecret, err := b.SecretsManager.Generate(ctx, &secrets.CertificateSecretConfig{
-		Name:         "prometheus",
-		CommonName:   "gardener.cloud:monitoring:prometheus",
-		Organization: []string{"gardener.cloud:monitoring"},
-		CertType:     secrets.ClientCert,
-	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAClient), secretsmanager.Rotate(secretsmanager.InPlace))
-	if err != nil {
-		return err
-	}
-
 	genericTokenKubeconfigSecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameGenericTokenKubeconfig)
 	if !found {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameGenericTokenKubeconfig)
@@ -224,7 +212,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"secretNameClusterCA":      clusterCASecret.Name,
 			"secretNameEtcdCA":         etcdCASecret.Name,
 			"secretNameEtcdClientCert": etcdClientSecret.Name,
-			"secretNameClientCert":     prometheusClientSecret.Name,
 			"kubernetesVersion":        b.Shoot.GetInfo().Spec.Kubernetes.Version,
 			"nodeLocalDNS": map[string]interface{}{
 				"enabled": b.Shoot.NodeLocalDNSEnabled,
