@@ -34,7 +34,7 @@ images:
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
-  tag: "v0.7.1"
+  tag: "v0.7.2"
 
 # Seed controlplane
 #   hyperkube is used for kubectl + kubelet binaries on the worker nodes
