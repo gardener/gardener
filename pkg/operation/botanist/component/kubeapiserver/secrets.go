@@ -332,9 +332,10 @@ func (k *kubeAPIServer) reconcileSecretLegacyVPNSeed(ctx context.Context) (*core
 	}
 
 	secret, err := k.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
-		Name:       secretNameLegacyVPNSeed,
-		CommonName: UserNameVPNSeed,
-		CertType:   secretutils.ClientCert,
+		Name:                        secretNameLegacyVPNSeed,
+		CommonName:                  UserNameVPNSeed,
+		CertType:                    secretutils.ClientCert,
+		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAClient), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		return nil, err
