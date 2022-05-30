@@ -506,6 +506,21 @@ var _ = Describe("health check", func() {
 			},
 			false,
 			PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.OutdatedStatusError, "outdated"))),
+		Entry("unknown condition status with reason and message",
+			[]gardencorev1beta1.Condition{
+				{
+					Type:   resourcesv1alpha1.ResourcesApplied,
+					Status: gardencorev1beta1.ConditionTrue,
+				},
+				{
+					Type:    resourcesv1alpha1.ResourcesHealthy,
+					Status:  gardencorev1beta1.ConditionUnknown,
+					Reason:  "Unknown",
+					Message: "bar is unknown",
+				},
+			},
+			true,
+			PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "Unknown", "bar is unknown"))),
 	)
 
 	Describe("#CheckClusterNodes", func() {
