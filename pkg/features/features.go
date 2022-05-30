@@ -159,6 +159,7 @@ const (
 	// owner: @rfranzke
 	// alpha: v1.43.0
 	// beta: v1.45.0
+	// GA: v1.48.0
 	ShootMaxTokenExpirationOverwrite featuregate.Feature = "ShootMaxTokenExpirationOverwrite"
 
 	// ShootMaxTokenExpirationValidation enables validations on Gardener API server that enforce that the value of the
@@ -169,6 +170,7 @@ const (
 	// owner: @rfranzke
 	// alpha: v1.43.0
 	// beta: v1.46.0
+	// GA: v1.48.0
 	ShootMaxTokenExpirationValidation featuregate.Feature = "ShootMaxTokenExpirationValidation"
 )
 
@@ -192,8 +194,8 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	DisableDNSProviderManagement:               {Default: false, PreRelease: featuregate.Alpha},
 	ShootCARotation:                            {Default: false, PreRelease: featuregate.Alpha},
 	ShootSARotation:                            {Default: false, PreRelease: featuregate.Alpha},
-	ShootMaxTokenExpirationOverwrite:           {Default: true, PreRelease: featuregate.Beta},
-	ShootMaxTokenExpirationValidation:          {Default: true, PreRelease: featuregate.Beta},
+	ShootMaxTokenExpirationOverwrite:           {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	ShootMaxTokenExpirationValidation:          {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
