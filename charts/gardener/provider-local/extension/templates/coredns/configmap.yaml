@@ -13,11 +13,17 @@ data:
         }
         ready
     {{- if .Values.controllers.service.apiServerSNIEnabled }}
-        rewrite name regex api\.(.*)\.(.*)\.(.*)\.local\.gardener\.cloud istio-ingressgateway.istio-ingress.svc.cluster.local
+        rewrite stop {
+          name regex api\.(.*)\.(.*)\.(.*)\.local\.gardener\.cloud istio-ingressgateway.istio-ingress.svc.cluster.local answer auto
+        }
     {{- else }}
-        rewrite name regex api\.(.*)\.(.*)\.(.*)\.local\.gardener\.cloud kube-apiserver.shoot--{2}--{1}.svc.cluster.local
+        rewrite stop {
+          name regex api\.(.*)\.(.*)\.(.*)\.local\.gardener\.cloud kube-apiserver.shoot--{2}--{1}.svc.cluster.local answer auto
+        }
     {{- end }}
-        rewrite name regex (.*)\.ingress\.local\.seed\.local\.gardener\.cloud nginx-ingress-controller.garden.svc.cluster.local
+        rewrite stop {
+          name regex (.*)\.ingress\.local\.seed\.local\.gardener\.cloud nginx-ingress-controller.garden.svc.cluster.local answer auto
+        }
         prometheus :9153
         forward . /etc/resolv.conf {
            max_concurrent 1000

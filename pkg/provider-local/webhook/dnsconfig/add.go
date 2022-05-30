@@ -48,6 +48,7 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 		provider = local.Type
 		types    = []extensionswebhook.Type{
 			{Obj: &appsv1.Deployment{}},
+			{Obj: &appsv1.StatefulSet{}},
 			{Obj: &corev1.Pod{}},
 		}
 	)
@@ -72,6 +73,7 @@ func AddToManagerWithOptions(mgr manager.Manager, _ AddOptions) (*extensionswebh
 			{Key: "app", Operator: metav1.LabelSelectorOpIn, Values: []string{
 				"machine",
 				"dependency-watchdog-probe",
+				"prometheus", // needed for blackbox-exporter sidecar in prometheus statefulset
 			}},
 		}},
 	}, nil

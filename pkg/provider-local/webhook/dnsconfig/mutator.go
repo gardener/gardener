@@ -64,8 +64,12 @@ func (m *mutator) Mutate(ctx context.Context, newObj, oldObj client.Object) erro
 		podMeta = &obj.Spec.Template.ObjectMeta
 		podSpec = &obj.Spec.Template.Spec
 
+	case *appsv1.StatefulSet:
+		podMeta = &obj.Spec.Template.ObjectMeta
+		podSpec = &obj.Spec.Template.Spec
+
 	default:
-		return fmt.Errorf("unexpected object, got %T wanted *appsv1.Deployment or *corev1.Pod", newObj)
+		return fmt.Errorf("unexpected object, got %T wanted *appsv1.Deployment, *appsv1.StatefulSet or *corev1.Pod", newObj)
 	}
 
 	service := &corev1.Service{}
