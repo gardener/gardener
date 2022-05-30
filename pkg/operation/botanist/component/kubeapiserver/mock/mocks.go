@@ -146,6 +146,18 @@ func (mr *MockInterfaceMockRecorder) SetAutoscalingReplicas(arg0 interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAutoscalingReplicas", reflect.TypeOf((*MockInterface)(nil).SetAutoscalingReplicas), arg0)
 }
 
+// SetETCDEncryptionConfig mocks base method.
+func (m *MockInterface) SetETCDEncryptionConfig(arg0 kubeapiserver.ETCDEncryptionConfig) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetETCDEncryptionConfig", arg0)
+}
+
+// SetETCDEncryptionConfig indicates an expected call of SetETCDEncryptionConfig.
+func (mr *MockInterfaceMockRecorder) SetETCDEncryptionConfig(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetETCDEncryptionConfig", reflect.TypeOf((*MockInterface)(nil).SetETCDEncryptionConfig), arg0)
+}
+
 // SetExternalHostname mocks base method.
 func (m *MockInterface) SetExternalHostname(arg0 string) {
 	m.ctrl.T.Helper()

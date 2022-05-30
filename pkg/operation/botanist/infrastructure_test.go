@@ -34,6 +34,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
@@ -51,6 +52,7 @@ var _ = Describe("Infrastructure", func() {
 		botanist   *Botanist
 
 		ctx        = context.TODO()
+		namespace  = "namespace"
 		fakeErr    = fmt.Errorf("fake")
 		shootState = &gardencorev1alpha1.ShootState{}
 	)
@@ -60,7 +62,10 @@ var _ = Describe("Infrastructure", func() {
 		infrastructure = mockinfrastructure.NewMockInterface(ctrl)
 
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		sm = fakesecretsmanager.New(fakeClient, "namespace")
+		sm = fakesecretsmanager.New(fakeClient, namespace)
+
+		By("creating secrets managed outside of this function for whose secretsmanager.Get() will be called")
+		Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ssh-keypair", Namespace: namespace}})).To(Succeed())
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{

@@ -163,6 +163,10 @@ var _ = Describe("VPA", func() {
 		component = New(c, namespace, sm, values)
 		managedResourceName = ""
 
+		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "generic-token-kubeconfig", Namespace: namespace}})).To(Succeed())
+
 		serviceExporter = &corev1.Service{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "v1",

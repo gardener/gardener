@@ -57,9 +57,12 @@ const (
 	// SecretNameObservabilityIngress is a constant for the name of a Kubernetes secret object that contains the ingress
 	// credentials for observability components.
 	SecretNameObservabilityIngress = "observability-ingress"
-	// SecretNameObservabilityIngressUsers is a constant for the name of a Kubernetes secret object that contains the user's ingress
-	// credentials for observability components.
+	// SecretNameObservabilityIngressUsers is a constant for the name of a Kubernetes secret object that contains the
+	// user's ingress credentials for observability components.
 	SecretNameObservabilityIngressUsers = "observability-ingress-users"
+	// SecretNameETCDEncryptionKey is a constant for the name of a Kubernetes secret object that contains the key
+	// for encryption data in ETCD.
+	SecretNameETCDEncryptionKey = "kube-apiserver-etcd-encryption-key"
 
 	// SecretNameGardener is a constant for the name of a Kubernetes secret object that contains the client
 	// certificate and a kubeconfig for a shoot cluster. It is used by Gardener and can be used by extension
@@ -315,6 +318,12 @@ const (
 	// ShootOperationRotateServiceAccountKeyComplete is a constant for an annotation on a Shoot indicating that the
 	// rotation of the service account signing key shall be completed.
 	ShootOperationRotateServiceAccountKeyComplete = "rotate-serviceaccount-key-complete"
+	// ShootOperationRotateETCDEncryptionKeyStart is a constant for an annotation on a Shoot indicating that the
+	// rotation of the ETCD encryption key shall be started.
+	ShootOperationRotateETCDEncryptionKeyStart = "rotate-etcd-encryption-key-start"
+	// ShootOperationRotateETCDEncryptionKeyComplete is a constant for an annotation on a Shoot indicating that the
+	// rotation of the ETCD encryption key shall be completed.
+	ShootOperationRotateETCDEncryptionKeyComplete = "rotate-etcd-encryption-key-complete"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.

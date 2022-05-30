@@ -718,6 +718,19 @@ func (r *shootReconciler) updateShootStatusOperationStart(ctx context.Context, g
 		v1beta1helper.MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootServiceAccountKeyRotation) {
 			rotation.Phase = gardencorev1beta1.RotationCompleting
 		})
+
+	case v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart:
+		mustRemoveOperationAnnotation = true
+		v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootETCDEncryptionKeyRotation) {
+			rotation.Phase = gardencorev1beta1.RotationPreparing
+			rotation.LastInitiationTime = &now
+		})
+
+	case v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete:
+		mustRemoveOperationAnnotation = true
+		v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootETCDEncryptionKeyRotation) {
+			rotation.Phase = gardencorev1beta1.RotationCompleting
+		})
 	}
 
 	if err := gardenClient.Status().Update(ctx, shoot); err != nil {
@@ -832,6 +845,19 @@ func (r *shootReconciler) patchShootStatusOperationSuccess(
 
 	case gardencorev1beta1.RotationCompleting:
 		v1beta1helper.MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootServiceAccountKeyRotation) {
+			rotation.Phase = gardencorev1beta1.RotationCompleted
+			rotation.LastCompletionTime = &now
+		})
+	}
+
+	switch v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials) {
+	case gardencorev1beta1.RotationPreparing:
+		v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootETCDEncryptionKeyRotation) {
+			rotation.Phase = gardencorev1beta1.RotationPrepared
+		})
+
+	case gardencorev1beta1.RotationCompleting:
+		v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootETCDEncryptionKeyRotation) {
 			rotation.Phase = gardencorev1beta1.RotationCompleted
 			rotation.LastCompletionTime = &now
 		})

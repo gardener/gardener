@@ -92,7 +92,7 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameKubeAPIServerToKubelet  = "kube-apiserver-kubelet"
 		secretNameServer                  = "kube-apiserver"
 		secretNameServiceAccountKey       = "service-account-key-c37a87f6"
-		secretNameServiceAccountKeyBundle = "service-account-key"
+		secretNameServiceAccountKeyBundle = "service-account-key-bundle"
 		secretNameVPNSeed                 = "vpn-seed"
 		secretNameVPNSeedTLSAuth          = "vpn-seed-tlsauth-de1d12a3"
 
@@ -120,6 +120,15 @@ var _ = Describe("KubeAPIServer", func() {
 		kubernetesInterface = fakekubernetes.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
 		sm = fakesecretsmanager.New(c, namespace)
 		kapi = New(kubernetesInterface, namespace, sm, Values{Version: version})
+
+		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-client", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-front-proxy", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-vpn", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "etcd-client", Namespace: namespace}})).To(Succeed())
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "service-account-key-bundle", Namespace: namespace}})).To(Succeed())
 
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -1114,6 +1123,89 @@ resources:
 				Expect(secretList.Items).To(HaveLen(1))
 				Expect(secretList.Items[0].Labels).To(HaveKeyWithValue("persist", "true"))
 			})
+
+			DescribeTable("successfully deploy the ETCD encryption configuration secret resource w/ old key",
+				func(encryptWithCurrentKey bool) {
+					kapi = New(kubernetesInterface, namespace, sm, Values{ETCDEncryption: ETCDEncryptionConfig{EncryptWithCurrentKey: encryptWithCurrentKey}, Version: version})
+
+					oldKeyName, oldKeySecret := "key-old", "old-secret"
+					Expect(c.Create(ctx, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "kube-apiserver-etcd-encryption-key-old",
+							Namespace: namespace,
+						},
+						Data: map[string][]byte{
+							"key":    []byte(oldKeyName),
+							"secret": []byte(oldKeySecret),
+						},
+					})).To(Succeed())
+
+					etcdEncryptionConfiguration := `apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+- providers:
+  - aescbc:
+      keys:`
+
+					if encryptWithCurrentKey {
+						etcdEncryptionConfiguration += `
+      - name: key-62135596800
+        secret: ________________________________
+      - name: ` + oldKeyName + `
+        secret: ` + oldKeySecret
+					} else {
+						etcdEncryptionConfiguration += `
+      - name: ` + oldKeyName + `
+        secret: ` + oldKeySecret + `
+      - name: key-62135596800
+        secret: ________________________________`
+					}
+
+					etcdEncryptionConfiguration += `
+  - identity: {}
+  resources:
+  - secrets
+`
+
+					expectedSecretETCDEncryptionConfiguration := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-etcd-encryption-configuration", Namespace: namespace},
+						Data:       map[string][]byte{"encryption-configuration.yaml": []byte(etcdEncryptionConfiguration)},
+					}
+					Expect(kutil.MakeUnique(expectedSecretETCDEncryptionConfiguration)).To(Succeed())
+
+					actualSecretETCDEncryptionConfiguration := &corev1.Secret{}
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, expectedSecretETCDEncryptionConfiguration.Name)))
+
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
+					Expect(actualSecretETCDEncryptionConfiguration).To(DeepEqual(&corev1.Secret{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "Secret",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            expectedSecretETCDEncryptionConfiguration.Name,
+							Namespace:       expectedSecretETCDEncryptionConfiguration.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: pointer.Bool(true),
+						Data:      expectedSecretETCDEncryptionConfiguration.Data,
+					}))
+
+					secretList := &corev1.SecretList{}
+					Expect(c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels{
+						"name":       "kube-apiserver-etcd-encryption-key",
+						"managed-by": "secrets-manager",
+					})).To(Succeed())
+					Expect(secretList.Items).To(HaveLen(1))
+					Expect(secretList.Items[0].Labels).To(HaveKeyWithValue("persist", "true"))
+				},
+
+				Entry("encrypting with current", true),
+				Entry("encrypting with old", false),
+			)
 		})
 
 		Describe("ConfigMaps", func() {
@@ -1351,7 +1443,7 @@ rules:
 
 				Expect(deployment.Annotations).To(Equal(map[string]string{
 					"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
-					"reference.resources.gardener.cloud/secret-3055c21f":    secretNameServiceAccountKeyBundle,
+					"reference.resources.gardener.cloud/secret-ad29e1cc":    secretNameServiceAccountKeyBundle,
 					"reference.resources.gardener.cloud/secret-69590970":    secretNameCA,
 					"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
 					"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
@@ -1400,7 +1492,7 @@ rules:
 
 				Expect(deployment.Spec.Template.Annotations).To(Equal(map[string]string{
 					"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
-					"reference.resources.gardener.cloud/secret-3055c21f":    secretNameServiceAccountKeyBundle,
+					"reference.resources.gardener.cloud/secret-ad29e1cc":    secretNameServiceAccountKeyBundle,
 					"reference.resources.gardener.cloud/secret-69590970":    secretNameCA,
 					"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
 					"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
@@ -1956,7 +2048,7 @@ rules:
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(legacySecret), &corev1.Secret{})).To(BeNotFoundError())
 				})
 
-				It("should generate a kubeconfig secret for the user when EnableStaticTokenKubeconfig is set to true", func() {
+				It("should generate a kubeconfig secret for the user when StaticTokenKubeconfigEnabled is set to true", func() {
 					deployAndRead()
 
 					secretList := &corev1.SecretList{}
@@ -1975,7 +2067,7 @@ rules:
 					Expect(kubeconfig.AuthInfos[0].AuthInfo.Token).NotTo(BeEmpty())
 				})
 
-				It("should not generate a kubeconfig secret for the user when EnableStaticTokenKubeconfig is set to false", func() {
+				It("should not generate a kubeconfig secret for the user when StaticTokenKubeconfigEnabled is set to false", func() {
 					deployAndRead()
 
 					secretList := &corev1.SecretList{}
@@ -1983,7 +2075,7 @@ rules:
 						"name": "user-kubeconfig",
 					})).To(Succeed())
 
-					kapi = New(kubernetesInterface, namespace, sm, Values{Version: version, EnableStaticTokenKubeconfig: pointer.Bool(false)})
+					kapi = New(kubernetesInterface, namespace, sm, Values{Version: version, StaticTokenKubeconfigEnabled: pointer.Bool(false)})
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 
@@ -1993,7 +2085,7 @@ rules:
 					})).To(BeNil())
 				})
 
-				It("should generate kube-apiserver-static-token without system:cluster-admin token when EnableStaticTokenKubeconfig is set to false", func() {
+				It("should generate kube-apiserver-static-token without system:cluster-admin token when StaticTokenKubeconfigEnabled is set to false", func() {
 					deployAndRead()
 
 					secret := &corev1.Secret{}
@@ -2011,7 +2103,7 @@ rules:
 
 					newSecretNameStaticToken := "kube-apiserver-static-token-53d619b2"
 
-					kapi = New(kubernetesInterface, namespace, sm, Values{Version: version, EnableStaticTokenKubeconfig: pointer.Bool(false)})
+					kapi = New(kubernetesInterface, namespace, sm, Values{Version: version, StaticTokenKubeconfigEnabled: pointer.Bool(false)})
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 
@@ -2429,7 +2521,7 @@ rules:
 				})
 
 				It("should have the proper probes", func() {
-					kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: semver.MustParse("1.20.9"), EnableStaticTokenKubeconfig: pointer.Bool(true)})
+					kapi = New(kubernetesInterface, namespace, sm, Values{Images: images, Version: semver.MustParse("1.20.9"), StaticTokenKubeconfigEnabled: pointer.Bool(true)})
 					deployAndRead()
 
 					validateProbe := func(probe *corev1.Probe, path string, initialDelaySeconds int32) {

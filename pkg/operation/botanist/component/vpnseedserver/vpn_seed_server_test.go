@@ -666,6 +666,9 @@ admin:
 		c = mockclient.NewMockClient(ctrl)
 		sm = fakesecretsmanager.New(c, namespace)
 
+		By("expecting secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		c.EXPECT().Get(ctx, kutil.Key(namespace, "ca-vpn"), gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes()
+
 		vpnSeedServer = New(c, namespace, sm, envoyImage, vpnImage, &kubeAPIServerHost, serviceNetwork, podNetwork, nil, replicas, istioIngressGateway)
 	})
 

@@ -33,6 +33,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
@@ -67,6 +68,9 @@ var _ = Describe("Bootstrap", func() {
 		codec = serializer.NewCodecFactory(s, serializer.EnableStrict)
 		c = fake.NewClientBuilder().WithScheme(s).Build()
 		sm = fakesecretsmanager.New(c, namespace)
+
+		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-seed", Namespace: namespace}})).To(Succeed())
 	})
 
 	Context("fails", func() {

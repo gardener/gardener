@@ -128,7 +128,9 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				}
 				if val == v1beta1constants.ShootOperationRotateKubeconfigCredentials ||
 					val == v1beta1constants.ShootOperationRotateSSHKeypair ||
-					val == v1beta1constants.ShootOperationRotateObservabilityCredentials {
+					val == v1beta1constants.ShootOperationRotateObservabilityCredentials ||
+					val == v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart ||
+					val == v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete {
 					// We don't want to remove the annotation so that the gardenlet can pick it up and perform
 					// the rotation. It has to remove the annotation after it is done.
 					mustIncrease, mustRemoveOperationAnnotation = true, false

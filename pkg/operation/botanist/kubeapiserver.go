@@ -33,6 +33,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -42,8 +43,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
-
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DefaultKubeAPIServer returns a deployer for the kube-apiserver.
@@ -108,6 +108,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			OIDC:                           oidcConfig,
 			Requests:                       requests,
 			RuntimeConfig:                  runtimeConfig,
+			StaticTokenKubeconfigEnabled:   b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig,
 			Version:                        b.Shoot.KubernetesVersion,
 			VPN: kubeapiserver.VPNConfig{
 				ReversedVPNEnabled: b.Shoot.ReversedVPNEnabled,
@@ -115,8 +116,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 				ServiceNetworkCIDR: b.Shoot.Networks.Services.String(),
 				NodeNetworkCIDR:    b.Shoot.GetInfo().Spec.Networking.Nodes,
 			},
-			WatchCacheSizes:             watchCacheSizes,
-			EnableStaticTokenKubeconfig: b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig,
+			WatchCacheSizes: watchCacheSizes,
 		},
 	), nil
 }
@@ -334,6 +334,34 @@ func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.S
 	}
 }
 
+const annotationKeyNewEncryptionKeyPopulated = "credentials.gardener.cloud/new-encryption-key-populated"
+
+func (b *Botanist) computeKubeAPIServerETCDEncryptionConfig(ctx context.Context) (kubeapiserver.ETCDEncryptionConfig, error) {
+	config := kubeapiserver.ETCDEncryptionConfig{
+		RotationPhase:         gardencorev1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials),
+		EncryptWithCurrentKey: true,
+	}
+
+	if gardencorev1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing {
+		deployment := &metav1.PartialObjectMetadata{}
+		deployment.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
+		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return kubeapiserver.ETCDEncryptionConfig{}, err
+			}
+		}
+
+		// If the new encryption key was not yet populated to all replicas then we should still use the old key for
+		// encryption of data. Only if all replicas know the new key we can switch and start encrypting with the new/
+		// current key, see https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#rotating-a-decryption-key.
+		if !metav1.HasAnnotation(deployment.ObjectMeta, annotationKeyNewEncryptionKeyPopulated) {
+			config.EncryptWithCurrentKey = false
+		}
+	}
+
+	return config, nil
+}
+
 func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context, config *gardencorev1beta1.KubeAPIServerConfig, externalHostname string) (kubeapiserver.ServiceAccountConfig, error) {
 	var (
 		defaultIssuer = "https://" + externalHostname
@@ -451,8 +479,47 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	}
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetServiceAccountConfig(serviceAccountConfig)
 
+	etcdEncryptionConfig, err := b.computeKubeAPIServerETCDEncryptionConfig(ctx)
+	if err != nil {
+		return err
+	}
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetETCDEncryptionConfig(etcdEncryptionConfig)
+
 	if err := b.Shoot.Components.ControlPlane.KubeAPIServer.Deploy(ctx); err != nil {
 		return err
+	}
+
+	switch gardencorev1beta1helper.GetShootETCDEncryptionKeyRotationPhase(b.Shoot.GetInfo().Status.Credentials) {
+	case gardencorev1beta1.RotationPreparing:
+		if !etcdEncryptionConfig.EncryptWithCurrentKey {
+			if err := b.Shoot.Components.ControlPlane.KubeAPIServer.Wait(ctx); err != nil {
+				return err
+			}
+
+			// If we have hit this point then we have deployed kube-apiserver successfully with the configuration option to
+			// still use the old key for the encryption of ETCD data. Now we can mark this step as "completed" (via an
+			// annotation) and redeploy it with the option to use the current/new key for encryption, see
+			// https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#rotating-a-decryption-key for details.
+			if err := b.patchKubeAPIServerDeploymentMeta(ctx, func(meta *metav1.PartialObjectMetadata) {
+				metav1.SetMetaDataAnnotation(&meta.ObjectMeta, annotationKeyNewEncryptionKeyPopulated, "true")
+			}); err != nil {
+				return err
+			}
+
+			etcdEncryptionConfig.EncryptWithCurrentKey = true
+			b.Shoot.Components.ControlPlane.KubeAPIServer.SetETCDEncryptionConfig(etcdEncryptionConfig)
+
+			if err := b.Shoot.Components.ControlPlane.KubeAPIServer.Deploy(ctx); err != nil {
+				return err
+			}
+		}
+
+	case gardencorev1beta1.RotationCompleting:
+		if err := b.patchKubeAPIServerDeploymentMeta(ctx, func(meta *metav1.PartialObjectMetadata) {
+			delete(meta.Annotations, annotationKeyNewEncryptionKeyPopulated)
+		}); err != nil {
+			return err
+		}
 	}
 
 	if enableStaticTokenKubeconfig := b.Shoot.GetInfo().Spec.Kubernetes.EnableStaticTokenKubeconfig; enableStaticTokenKubeconfig == nil || *enableStaticTokenKubeconfig {
@@ -547,4 +614,16 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
 // ScaleKubeAPIServerToOne scales kube-apiserver replicas to one.
 func (b *Botanist) ScaleKubeAPIServerToOne(ctx context.Context) error {
 	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1)
+}
+
+func (b *Botanist) patchKubeAPIServerDeploymentMeta(ctx context.Context, mutate func(deployment *metav1.PartialObjectMetadata)) error {
+	meta := &metav1.PartialObjectMetadata{}
+	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), meta); err != nil {
+		return err
+	}
+
+	patch := client.MergeFrom(meta.DeepCopy())
+	mutate(meta)
+	return b.K8sSeedClient.Client().Patch(ctx, meta, patch)
 }

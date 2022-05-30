@@ -102,16 +102,18 @@ type Interface interface {
 	SetAutoscalingAPIServerResources(corev1.ResourceRequirements)
 	// SetAutoscalingReplicas sets the Replicas field in the AutoscalingConfig of the Values of the deployer.
 	SetAutoscalingReplicas(*int32)
+	// SetETCDEncryptionConfig sets the ETCDEncryptionConfig field in the Values of the deployer.
+	SetETCDEncryptionConfig(ETCDEncryptionConfig)
+	// SetExternalHostname sets the ExternalHostname field in the Values of the deployer.
+	SetExternalHostname(string)
+	// SetExternalServer sets the ExternalServer field in the Values of the deployer.
+	SetExternalServer(string)
 	// SetServerCertificateConfig sets the ServerCertificateConfig field in the Values of the deployer.
 	SetServerCertificateConfig(ServerCertificateConfig)
 	// SetServiceAccountConfig sets the ServiceAccount field in the Values of the deployer.
 	SetServiceAccountConfig(ServiceAccountConfig)
 	// SetSNIConfig sets the SNI field in the Values of the deployer.
 	SetSNIConfig(SNIConfig)
-	// SetExternalHostname sets the ExternalHostname field in the Values of the deployer.
-	SetExternalHostname(string)
-	// SetExternalServer sets the ExternalServer field in the Values of the deployer.
-	SetExternalServer(string)
 }
 
 // Values contains configuration values for the kube-apiserver resources.
@@ -129,6 +131,8 @@ type Values struct {
 	Autoscaling AutoscalingConfig
 	// BasicAuthenticationEnabled states whether basic authentication is enabled.
 	BasicAuthenticationEnabled bool
+	// ETCDEncryption contains configuration for the encryption of resources in etcd.
+	ETCDEncryption ETCDEncryptionConfig
 	// EventTTL is the amount of time to retain events.
 	EventTTL *metav1.Duration
 	// ExternalHostname is the external hostname which should be exposed by the kube-apiserver.
@@ -151,14 +155,14 @@ type Values struct {
 	ServiceAccount ServiceAccountConfig
 	// SNI contains information for configuring SNI settings for the kube-apiserver.
 	SNI SNIConfig
+	// StaticTokenKubeconfigEnabled indicates whether static token kubeconfig secret will be created for shoot.
+	StaticTokenKubeconfigEnabled *bool
 	// Version is the Kubernetes version for the kube-apiserver.
 	Version *semver.Version
 	// VPN contains information for configuring the VPN settings for the kube-apiserver.
 	VPN VPNConfig
 	// WatchCacheSizes are the configured sizes for the watch caches.
 	WatchCacheSizes *gardencorev1beta1.WatchCacheSizes
-	// EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for shoot.
-	EnableStaticTokenKubeconfig *bool
 }
 
 // AuditConfig contains information for configuring audit settings for the kube-apiserver.
@@ -185,6 +189,16 @@ type AutoscalingConfig struct {
 	// ScaleDownDisabledForHvpa states whether scale-down shall be disabled when HPA or VPA are configured in an HVPA
 	// resource.
 	ScaleDownDisabledForHvpa bool
+}
+
+// ETCDEncryptionConfig contains configuration for the encryption of resources in etcd.
+type ETCDEncryptionConfig struct {
+	// RotationPhase specifies the credentials rotation phase of the encryption key.
+	RotationPhase gardencorev1beta1.ShootCredentialsRotationPhase
+	// EncryptWithCurrentKey specifies whether the current encryption key should be used for encryption. If this is
+	// false and if there are two keys then the old key will be used for encryption while the current/new key will only
+	// be used for decryption.
+	EncryptWithCurrentKey bool
 }
 
 // Images is a set of container images used for the containers of the kube-apiserver pods.
@@ -401,7 +415,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if pointer.BoolDeref(k.values.EnableStaticTokenKubeconfig, true) {
+	if pointer.BoolDeref(k.values.StaticTokenKubeconfigEnabled, true) {
 		if err := k.reconcileSecretUserKubeconfig(ctx, secretStaticToken, secretBasicAuth); err != nil {
 			return err
 		}
@@ -513,6 +527,18 @@ func (k *kubeAPIServer) SetAutoscalingReplicas(replicas *int32) {
 	k.values.Autoscaling.Replicas = replicas
 }
 
+func (k *kubeAPIServer) SetETCDEncryptionConfig(config ETCDEncryptionConfig) {
+	k.values.ETCDEncryption = config
+}
+
+func (k *kubeAPIServer) SetExternalHostname(hostname string) {
+	k.values.ExternalHostname = hostname
+}
+
+func (k *kubeAPIServer) SetExternalServer(server string) {
+	k.values.ExternalServer = server
+}
+
 func (k *kubeAPIServer) SetServerCertificateConfig(config ServerCertificateConfig) {
 	k.values.ServerCertificate = config
 }
@@ -523,14 +549,6 @@ func (k *kubeAPIServer) SetServiceAccountConfig(config ServiceAccountConfig) {
 
 func (k *kubeAPIServer) SetSNIConfig(config SNIConfig) {
 	k.values.SNI = config
-}
-
-func (k *kubeAPIServer) SetExternalHostname(hostname string) {
-	k.values.ExternalHostname = hostname
-}
-
-func (k *kubeAPIServer) SetExternalServer(server string) {
-	k.values.ExternalServer = server
 }
 
 // GetLabels returns the labels for the kube-apiserver.

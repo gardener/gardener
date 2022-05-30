@@ -80,6 +80,9 @@ var _ = Describe("#Wait", func() {
 		sm = fakesecretsmanager.New(c, testNamespace)
 		log = logger.NewNopLogger()
 
+		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
+		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd", Namespace: testNamespace}})).To(Succeed())
+
 		waiter = &retryfake.Ops{MaxAttempts: 1}
 		cleanupFunc = test.WithVars(
 			&retry.Until, waiter.Until,

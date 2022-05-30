@@ -96,6 +96,10 @@ func (b *Botanist) lastSecretRotationStartTimes() map[string]time.Time {
 		if shootStatus.Credentials.Rotation.ServiceAccountKey != nil && shootStatus.Credentials.Rotation.ServiceAccountKey.LastInitiationTime != nil {
 			rotation[v1beta1constants.SecretNameServiceAccountKey] = shootStatus.Credentials.Rotation.ServiceAccountKey.LastInitiationTime.Time
 		}
+
+		if shootStatus.Credentials.Rotation.ETCDEncryptionKey != nil && shootStatus.Credentials.Rotation.ETCDEncryptionKey.LastInitiationTime != nil {
+			rotation[v1beta1constants.SecretNameETCDEncryptionKey] = shootStatus.Credentials.Rotation.ETCDEncryptionKey.LastInitiationTime.Time
+		}
 	}
 
 	return rotation
@@ -529,6 +533,75 @@ func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
 
 			if err := b.K8sShootClient.Client().Patch(ctx, &serviceAccount, patch); err != nil {
 				b.Logger.Errorf("Error patching ServiceAccount %s/%s after deletion of old secrets: %s", serviceAccount.Namespace, serviceAccount.Name, err.Error())
+				return err
+			}
+
+			return nil
+		})
+	}
+
+	return flow.Parallel(taskFns...)(ctx)
+}
+
+// RewriteSecretsAddLabel patches all secrets in all namespaces in the shoot clusters and adds a label whose value is
+// the name of the current ETCD encryption key secret. This function is useful for the ETCD encryption key secret
+// rotation which requires all secrets to be rewritten to ETCD so that they become encrypted with the new key.
+func (b *Botanist) RewriteSecretsAddLabel(ctx context.Context) error {
+	etcdEncryptionKeySecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameETCDEncryptionKey, secretsmanager.Current)
+	if !found {
+		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameETCDEncryptionKey)
+	}
+
+	return b.rewriteSecrets(
+		ctx,
+		utils.MustNewRequirement(labelKeyRotationKeyName, selection.NotEquals, etcdEncryptionKeySecret.Name),
+		func(objectMeta *metav1.ObjectMeta) {
+			metav1.SetMetaDataLabel(objectMeta, labelKeyRotationKeyName, etcdEncryptionKeySecret.Name)
+		},
+	)
+}
+
+// RewriteSecretsRemoveLabel patches all secrets in all namespaces in the shoot clusters and removes the label whose
+// value is the name of the current ETCD encryption key secret. This function is useful for the ETCD encryption key
+// secret rotation which requires all secrets to be rewritten to ETCD so that they become encrypted with the new key.
+func (b *Botanist) RewriteSecretsRemoveLabel(ctx context.Context) error {
+	return b.rewriteSecrets(
+		ctx,
+		utils.MustNewRequirement(labelKeyRotationKeyName, selection.Exists),
+		func(objectMeta *metav1.ObjectMeta) {
+			delete(objectMeta.Labels, labelKeyRotationKeyName)
+		},
+	)
+}
+
+func (b *Botanist) rewriteSecrets(ctx context.Context, requirement labels.Requirement, mutateObjectMeta func(*metav1.ObjectMeta)) error {
+	secretList := &metav1.PartialObjectMetadataList{}
+	secretList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("SecretList"))
+	if err := b.K8sShootClient.Client().List(ctx, secretList, client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(requirement)}); err != nil {
+		return err
+	}
+
+	b.Logger.Infof("Found %d Secrets requiring to be rewritten after ETCD encryption key rotation", len(secretList.Items))
+
+	var (
+		limiter = rate.NewLimiter(rate.Limit(rotationQPS), rotationQPS)
+		taskFns []flow.TaskFn
+	)
+
+	for _, obj := range secretList.Items {
+		secret := obj
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			patch := client.StrategicMergeFrom(secret.DeepCopy())
+			mutateObjectMeta(&secret.ObjectMeta)
+
+			// Wait until we are allowed by the limiter to not overload the kube-apiserver with too many requests.
+			if err := limiter.Wait(ctx); err != nil {
+				return err
+			}
+
+			if err := b.K8sShootClient.Client().Patch(ctx, &secret, patch); err != nil {
+				b.Logger.Errorf("Error patching Secret %s/%s: %s", secret.Namespace, secret.Name, err.Error())
 				return err
 			}
 

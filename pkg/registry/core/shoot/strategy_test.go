@@ -374,6 +374,8 @@ var _ = Describe("Strategy", func() {
 				Entry("rotate-kubeconfig-credentials", v1beta1constants.ShootOperationRotateKubeconfigCredentials, true, nil, nil),
 				Entry("rotate-ssh-keypair", v1beta1constants.ShootOperationRotateSSHKeypair, true, nil, nil),
 				Entry("rotate-observability-credentials", v1beta1constants.ShootOperationRotateObservabilityCredentials, true, nil, nil),
+				Entry("rotate-etcd-encryption-key-start", v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart, true, nil, nil),
+				Entry("rotate-etcd-encryption-key-complete", v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete, true, nil, nil),
 
 				Entry("rotate-ca-start; feature gate is enabled", v1beta1constants.ShootOperationRotateCAStart, true, nil, map[featuregate.Feature]bool{features.ShootCARotation: true}),
 				Entry("rotate-ca-complete; feature gate is enabled", v1beta1constants.ShootOperationRotateCAComplete, true, nil, map[featuregate.Feature]bool{features.ShootCARotation: true}),

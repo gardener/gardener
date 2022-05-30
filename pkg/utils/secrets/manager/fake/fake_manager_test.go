@@ -47,24 +47,41 @@ var _ = Describe("FakeManager", func() {
 		m = New(fakeClient, namespace)
 	})
 
-	DescribeTable("#Get",
-		func(expectedSecretName string, opts ...secretsmanager.GetOption) {
-			secret, found := m.Get(name, opts...)
-			Expect(found).To(BeTrue())
-			Expect(secret).To(Equal(&corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      expectedSecretName,
-					Namespace: namespace,
-				},
-				Data: map[string][]byte{"data-for": []byte(name)},
-			}))
-		},
+	Describe("#Get", func() {
+		Context("secret is found", func() {
+			DescribeTable("secret is found",
+				func(expectedSecretName string, opts ...secretsmanager.GetOption) {
+					Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: expectedSecretName, Namespace: namespace}})).To(Succeed())
 
-		Entry("no class option", name),
-		Entry("current", name+"-current", secretsmanager.Current),
-		Entry("old", name+"-old", secretsmanager.Old),
-		Entry("bundle", name+"-bundle", secretsmanager.Bundle),
-	)
+					secret, found := m.Get(name, opts...)
+					Expect(found).To(BeTrue())
+					Expect(secret).To(Equal(&corev1.Secret{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "v1",
+							Kind:       "Secret",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            expectedSecretName,
+							Namespace:       namespace,
+							ResourceVersion: "1",
+						},
+						Data: map[string][]byte{"data-for": []byte(name)},
+					}))
+				},
+
+				Entry("no class option", name),
+				Entry("current", name+"-current", secretsmanager.Current),
+				Entry("old", name+"-old", secretsmanager.Old),
+				Entry("bundle", name+"-bundle", secretsmanager.Bundle),
+			)
+		})
+
+		It("secret is not found", func() {
+			secret, found := m.Get(name)
+			Expect(found).To(BeFalse())
+			Expect(secret).To(BeNil())
+		})
+	})
 
 	Describe("#Generate", func() {
 		var (
