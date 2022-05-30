@@ -102,7 +102,7 @@ type Interface interface {
 	SetAutoscalingAPIServerResources(corev1.ResourceRequirements)
 	// SetAutoscalingReplicas sets the Replicas field in the AutoscalingConfig of the Values of the deployer.
 	SetAutoscalingReplicas(*int32)
-	// SetETCDEncryptionConfig sets the ETCDEncryptionConfig field int he Values of the deployer.
+	// SetETCDEncryptionConfig sets the ETCDEncryptionConfig field in the Values of the deployer.
 	SetETCDEncryptionConfig(ETCDEncryptionConfig)
 	// SetExternalHostname sets the ExternalHostname field in the Values of the deployer.
 	SetExternalHostname(string)

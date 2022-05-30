@@ -351,7 +351,7 @@ func (b *Botanist) computeKubeAPIServerETCDEncryptionConfig(ctx context.Context)
 			}
 		}
 
-		// If the new encryption key was not yet populated to all replicas then we should not still use the old key for
+		// If the new encryption key was not yet populated to all replicas then we should still use the old key for
 		// encryption of data. Only if all replicas know the new key we can switch and start encrypting with the new/
 		// current key, see https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#rotating-a-decryption-key.
 		if !metav1.HasAnnotation(deployment.ObjectMeta, annotationKeyNewEncryptionKeyPopulated) {

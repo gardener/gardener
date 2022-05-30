@@ -2385,7 +2385,7 @@ var _ = Describe("helper", func() {
 
 		Entry("credentials nil", nil, gardencorev1beta1.ShootCredentialsRotationPhase("")),
 		Entry("rotation nil", &gardencorev1beta1.ShootCredentials{}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
-		Entry("ca nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
+		Entry("serviceAccountKey nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
 		Entry("phase empty", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ServiceAccountKey: &gardencorev1beta1.ShootServiceAccountKeyRotation{}}}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
 		Entry("phase set", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ServiceAccountKey: &gardencorev1beta1.ShootServiceAccountKeyRotation{Phase: gardencorev1beta1.RotationCompleting}}}, gardencorev1beta1.RotationCompleting),
 	)
@@ -2411,7 +2411,7 @@ var _ = Describe("helper", func() {
 
 		Entry("credentials nil", nil, gardencorev1beta1.ShootCredentialsRotationPhase("")),
 		Entry("rotation nil", &gardencorev1beta1.ShootCredentials{}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
-		Entry("ca nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
+		Entry("etcdEncryptionKey nil", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{}}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
 		Entry("phase empty", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ShootETCDEncryptionKeyRotation{}}}, gardencorev1beta1.ShootCredentialsRotationPhase("")),
 		Entry("phase set", &gardencorev1beta1.ShootCredentials{Rotation: &gardencorev1beta1.ShootCredentialsRotation{ETCDEncryptionKey: &gardencorev1beta1.ShootETCDEncryptionKeyRotation{Phase: gardencorev1beta1.RotationCompleting}}}, gardencorev1beta1.RotationCompleting),
 	)

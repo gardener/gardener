@@ -106,7 +106,7 @@ var _ = Describe("helper", func() {
 
 		Entry("credentials nil", nil, core.ShootCredentialsRotationPhase("")),
 		Entry("rotation nil", &core.ShootCredentials{}, core.ShootCredentialsRotationPhase("")),
-		Entry("ca nil", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{}}, core.ShootCredentialsRotationPhase("")),
+		Entry("serviceAccountKey nil", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{}}, core.ShootCredentialsRotationPhase("")),
 		Entry("phase empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ServiceAccountKey: &core.ShootServiceAccountKeyRotation{}}}, core.ShootCredentialsRotationPhase("")),
 		Entry("phase set", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ServiceAccountKey: &core.ShootServiceAccountKeyRotation{Phase: core.RotationCompleting}}}, core.RotationCompleting),
 	)
@@ -118,7 +118,7 @@ var _ = Describe("helper", func() {
 
 		Entry("credentials nil", nil, core.ShootCredentialsRotationPhase("")),
 		Entry("rotation nil", &core.ShootCredentials{}, core.ShootCredentialsRotationPhase("")),
-		Entry("ca nil", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{}}, core.ShootCredentialsRotationPhase("")),
+		Entry("etcdEncryptionKey nil", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{}}, core.ShootCredentialsRotationPhase("")),
 		Entry("phase empty", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{}}}, core.ShootCredentialsRotationPhase("")),
 		Entry("phase set", &core.ShootCredentials{Rotation: &core.ShootCredentialsRotation{ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{Phase: core.RotationCompleting}}}, core.RotationCompleting),
 	)
