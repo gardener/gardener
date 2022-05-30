@@ -43,10 +43,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | DisableDNSProviderManagement                 | `false` | `Alpha` | `1.41` |        |
 | ShootCARotation                              | `false` | `Alpha` | `1.42` |        |
 | ShootSARotation                              | `false` | `Alpha` | `1.48` |        |
-| ShootMaxTokenExpirationOverwrite             | `false` | `Alpha` | `1.43` | `1.44` |
-| ShootMaxTokenExpirationOverwrite             | `true`  | `Beta`  | `1.45` |        |
-| ShootMaxTokenExpirationValidation            | `false` | `Alpha` | `1.43` | `1.45` |
-| ShootMaxTokenExpirationValidation            | `true`  | `Beta`  | `1.46` |        |
 
 ## Feature gates for graduated or deprecated features
 
@@ -78,6 +74,12 @@ The following tables are a summary of the feature gates that you can set on diff
 | DenyInvalidExtensionResources                | `false` | `Alpha`   | `1.31` | `1.41` |
 | DenyInvalidExtensionResources                | `true`  | `Beta`    | `1.42` | `1.44` |
 | DenyInvalidExtensionResources                | `true`  | `GA`      | `1.45` |        |
+| ShootMaxTokenExpirationOverwrite             | `false` | `Alpha`   | `1.43` | `1.44` |
+| ShootMaxTokenExpirationOverwrite             | `true`  | `Beta`    | `1.45` | `1.47` |
+| ShootMaxTokenExpirationOverwrite             | `true`  | `GA`      | `1.48` |        |
+| ShootMaxTokenExpirationValidation            | `false` | `Alpha`   | `1.43` | `1.45` |
+| ShootMaxTokenExpirationValidation            | `true`  | `Beta`    | `1.46` | `1.47` |
+| ShootMaxTokenExpirationValidation            | `true`  | `GA`      | `1.48` |        |
 
 ## Using a feature
 
