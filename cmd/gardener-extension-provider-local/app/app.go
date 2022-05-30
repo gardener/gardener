@@ -89,6 +89,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			LeaderElectionNamespace:    os.Getenv("LEADER_ELECTION_NAMESPACE"),
 			WebhookServerPort:          443,
 			WebhookCertDir:             "/tmp/gardener-extensions-cert",
+			MetricsBindAddress:         ":8080",
 			HealthBindAddress:          ":8081",
 		}
 		generalOpts = &controllercmd.GeneralOptions{}
@@ -267,7 +268,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("could not add controllers to manager: %w", err)
 			}
 
-			mgr.GetLogger().Info("Started with", "hostIP", hostIP)
+			mgr.GetLogger().Info("Started with", "hostIP", serviceCtrlOpts.HostIP)
 
 			if err := mgr.Start(ctx); err != nil {
 				return fmt.Errorf("error running manager: %w", err)

@@ -202,6 +202,7 @@ var _ = Describe("Options", func() {
 			leaderElectionResourceLock = "leases"
 			leaderElectionID           = "id"
 			leaderElectionNamespace    = "namespace"
+			metricsBindAddress         = ":8080"
 			healthBindAddress          = ":8081"
 		)
 		command := test.NewCommandBuilder(name).
@@ -210,6 +211,7 @@ var _ = Describe("Options", func() {
 				test.StringFlag("leader-election-resource-lock", leaderElectionResourceLock),
 				test.StringFlag("leader-election-id", leaderElectionID),
 				test.StringFlag("leader-election-namespace", leaderElectionNamespace),
+				test.StringFlag("metrics-bind-address", metricsBindAddress),
 				test.StringFlag("health-bind-address", healthBindAddress),
 			).
 			Command().
@@ -228,6 +230,7 @@ var _ = Describe("Options", func() {
 					LeaderElectionResourceLock: leaderElectionResourceLock,
 					LeaderElectionID:           leaderElectionID,
 					LeaderElectionNamespace:    leaderElectionNamespace,
+					MetricsBindAddress:         metricsBindAddress,
 					HealthBindAddress:          healthBindAddress,
 				}))
 			})
@@ -253,6 +256,7 @@ var _ = Describe("Options", func() {
 					LeaderElectionResourceLock: "leases",
 					LeaderElectionID:           leaderElectionID,
 					LeaderElectionNamespace:    leaderElectionNamespace,
+					MetricsBindAddress:         metricsBindAddress,
 					HealthBindAddress:          healthBindAddress,
 				}))
 			})
@@ -284,6 +288,7 @@ var _ = Describe("Options", func() {
 					LeaderElectionResourceLock: leaderElectionResourceLock,
 					LeaderElectionID:           leaderElectionID,
 					LeaderElectionNamespace:    leaderElectionNamespace,
+					MetricsBindAddress:         metricsBindAddress,
 					HealthBindAddress:          healthBindAddress,
 				}))
 			})

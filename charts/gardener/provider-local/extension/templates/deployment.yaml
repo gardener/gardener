@@ -28,7 +28,7 @@ spec:
         {{- if and .Values.metrics.enableScraping }}
         prometheus.io/scrape: "true"
         # default metrics endpoint in controller-runtime
-        prometheus.io/port: "8080"
+        prometheus.io/port: "{{ .Values.metricsPort }}"
         {{- end }}
       labels:
 {{ include "labels" . | indent 8 }}
@@ -61,6 +61,9 @@ spec:
         - --webhook-config-server-port={{ .Values.webhookConfig.serverPort }}
         - --disable-controllers={{ .Values.disableControllers | join "," }}
         - --disable-webhooks={{ .Values.disableWebhooks | join "," }}
+        {{- if .Values.metricsPort }}
+        - --metrics-bind-address=:{{ .Values.metricsPort }}
+        {{- end }}
         {{- if .Values.healthPort }}
         - --health-bind-address=:{{ .Values.healthPort }}
         {{- end }}
