@@ -68,6 +68,7 @@ spec:
         resourcePolicy:
           containerPolicies:
             - containerName: loki
+              controlledValues: RequestsOnly
               maxAllowed:
                 memory: {{ .Values.hvpa.maxAllowed.memory }}
                 cpu:  "{{ .Values.hvpa.maxAllowed.cpu }}"

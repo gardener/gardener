@@ -40,8 +40,6 @@ spec:
           - --metrics-addr=:9569
           - --v=2
         resources:
-          limits:
-            memory: 1000Mi
           requests:
             cpu: 50m
             memory: 500Mi
