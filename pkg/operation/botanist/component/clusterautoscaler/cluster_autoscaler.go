@@ -424,7 +424,7 @@ func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string)
 				},
 				{
 					APIGroups: []string{"storage.k8s.io"},
-					Resources: []string{"storageclasses", "csinodes"},
+					Resources: []string{"storageclasses", "csinodes", "csidrivers", "csistoragecapacities"},
 					Verbs:     []string{"watch", "list", "get"},
 				},
 				{

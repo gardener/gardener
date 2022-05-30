@@ -404,6 +404,8 @@ rules:
   resources:
   - storageclasses
   - csinodes
+  - csidrivers
+  - csistoragecapacities
   verbs:
   - watch
   - list
