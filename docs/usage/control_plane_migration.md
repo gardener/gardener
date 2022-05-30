@@ -40,16 +40,16 @@ Here, the `binding-request.json` has the following content:
 
 ```json
 {
+  "apiVersion": "core.gardener.cloud/v1beta1",
+  "kind": "Binding",
+  "metadata": {
+    "name": "<shoot-name>",
+    "namespace": "<shoot-namespace>",
+  },
+  "target": {
     "apiVersion": "core.gardener.cloud/v1beta1",
-    "kind": "Binding",
-    "metadata": {
-      "name": "<shoot-name>",
-      "namespace": "<shoot-namespace>",
-    },
-    "target": {
-      "apiVersion": "core.gardener.cloud/v1beta1",
-      "kind": "Seed",
-      "name": "<seed-name>"
-    }
+    "kind": "Seed",
+    "name": "<seed-name>"
+  }
 }
 ```

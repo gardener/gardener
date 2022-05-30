@@ -1438,7 +1438,7 @@ func schema_pkg_apis_core_v1alpha1_Binding(ref common.ReferenceCallback) common.
 					},
 					"target": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Target seed for the binding.",
+							Description: "Target is the object to bind to.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
@@ -8953,7 +8953,7 @@ func schema_pkg_apis_core_v1beta1_Binding(ref common.ReferenceCallback) common.O
 					},
 					"target": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Target seed for the binding.",
+							Description: "Target is the object to bind to.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},

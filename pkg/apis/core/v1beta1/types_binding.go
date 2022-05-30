@@ -29,6 +29,6 @@ type Binding struct {
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	// Target seed for the binding.
+	// Target is the object to bind to.
 	Target corev1.ObjectReference `json:"target" protobuf:"bytes,2,opt,name=target"`
 }

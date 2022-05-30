@@ -28,6 +28,6 @@ type Binding struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
-	// Specification of the Binding.
+	// Target is the object to bind to.
 	Target corev1.ObjectReference
 }
