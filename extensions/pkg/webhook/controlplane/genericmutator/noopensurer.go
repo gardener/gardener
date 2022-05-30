@@ -52,6 +52,11 @@ func (e *NoopEnsurer) EnsureKubeSchedulerDeployment(ctx context.Context, gctx gc
 	return nil
 }
 
+// EnsureClusterAutoscalerDeployment ensures that the cluster-autoscaler deployment conforms to the provider requirements.
+func (e *NoopEnsurer) EnsureClusterAutoscalerDeployment(ctx context.Context, gctx gcontext.GardenContext, new, old *appsv1.Deployment) error {
+	return nil
+}
+
 // EnsureETCD ensures that the etcd stateful sets conform to the provider requirements.
 func (e *NoopEnsurer) EnsureETCD(ctx context.Context, gctx gcontext.GardenContext, new, old *druidv1alpha1.Etcd) error {
 	return nil

@@ -227,6 +227,21 @@ var _ = Describe("Mutator", func() {
 				},
 			),
 			Entry(
+				"EnsureClusterAutoscalerDeployment with a cluster-autoscaler deployment",
+				func() {
+					new = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameClusterAutoscaler}}
+					ensurer.EXPECT().EnsureClusterAutoscalerDeployment(context.TODO(), gomock.Any(), new, old).Return(nil)
+				},
+			),
+			Entry(
+				"EnsureClusterAutoscalerDeployment with a cluster-autoscaler deployment and existing deployment",
+				func() {
+					new = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameClusterAutoscaler}}
+					old = new.DeepCopyObject().(client.Object)
+					ensurer.EXPECT().EnsureClusterAutoscalerDeployment(context.TODO(), gomock.Any(), new, old).Return(nil)
+				},
+			),
+			Entry(
 				"EnsureVPNSeedServerDeployment with a vpn-seed-server deployment",
 				func() {
 					new = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPNSeedServer}}
