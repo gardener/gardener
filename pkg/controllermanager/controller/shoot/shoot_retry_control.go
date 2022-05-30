@@ -24,6 +24,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	gardenlogger "github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -91,9 +92,9 @@ func (r *shootRetryReconciler) Reconcile(ctx context.Context, request reconcile.
 		return reconcile.Result{}, nil
 	}
 
-	mustRetry, requeueAfter := mustRetryNow(shoot, *r.config.RetryPeriod)
+	mustRetry, requeueAfter := mustRetryNow(shoot, *r.config.RetryPeriod, r.config.RetryJitterPeriod)
 	if !mustRetry {
-		shootLogger.Infof("[SHOOT RETRY] Scheduled retry in %s", requeueAfter.Round(time.Minute))
+		shootLogger.Infof("[SHOOT RETRY] Scheduled retry in %s", requeueAfter.Round(time.Second))
 		return reconcile.Result{RequeueAfter: requeueAfter}, nil
 	}
 
@@ -121,11 +122,10 @@ func isShootFailed(shoot *gardencorev1beta1.Shoot) bool {
 		shoot.Generation == shoot.Status.ObservedGeneration
 }
 
-func mustRetryNow(shoot *gardencorev1beta1.Shoot, retryPeriod metav1.Duration) (bool, time.Duration) {
+func mustRetryNow(shoot *gardencorev1beta1.Shoot, retryPeriod metav1.Duration, jitterPeriod *metav1.Duration) (bool, time.Duration) {
 	if shoot.Status.LastOperation == nil {
 		return false, 0
 	}
-
 	var (
 		lastReconciliation                = shoot.Status.LastOperation.LastUpdateTime.Time.UTC()
 		lastReconciliationPlusRetryPeriod = lastReconciliation.Add(retryPeriod.Duration)
@@ -136,5 +136,5 @@ func mustRetryNow(shoot *gardencorev1beta1.Shoot, retryPeriod metav1.Duration) (
 		return true, 0
 	}
 
-	return false, lastReconciliationPlusRetryPeriod.Sub(now)
+	return false, lastReconciliationPlusRetryPeriod.Add(utils.RandomDurationWithMetaDuration(jitterPeriod)).Sub(now)
 }

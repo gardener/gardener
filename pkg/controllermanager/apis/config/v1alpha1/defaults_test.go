@@ -209,6 +209,7 @@ var _ = Describe("Defaults", func() {
 
 			SetDefaults_ShootRetryControllerConfiguration(obj)
 			Expect(obj.RetryPeriod).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
+			Expect(obj.RetryJitterPeriod).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
 		})
 	})
 

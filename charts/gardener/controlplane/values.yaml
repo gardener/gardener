@@ -404,6 +404,7 @@ global:
         shootRetry:
           concurrentSyncs: 5
           retryPeriod: 10m
+          retryJitterPeriod: 5m
         managedSeedSet:
           concurrentSyncs: 5
           syncPeriod: 30m
