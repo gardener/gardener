@@ -27,6 +27,10 @@ The Gardener components, however, will be run as regular processes on your machi
     ```
 
     and reload the terminal.
+- Clone the Gardener repository from GitHub.
+  ```
+  git clone https://github.com/gardener/gardener.git
+  ```
 
 ## Setting up the KinD cluster (garden and seed)
 
