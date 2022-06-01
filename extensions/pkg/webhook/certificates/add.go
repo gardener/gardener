@@ -37,7 +37,10 @@ func AddCertificateManagementToManager(
 	clock clock.Clock,
 	seedWebhookConfig, shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration,
 	atomicShootWebhookConfig *atomic.Value,
-	extensionName, providerType, namespace, mode, url string,
+	extensionName string,
+	shootWebhookManagedResourceName string,
+	shootNamespaceSelector map[string]string,
+	namespace, mode, url string,
 ) error {
 	var (
 		identity         = "gardener-extension-" + extensionName + "-webhook"
@@ -48,19 +51,20 @@ func AddCertificateManagementToManager(
 	// first, add reconciler that manages the certificates and injects them into webhook configs
 	// (only running in the leader or once if no secrets have been generated yet)
 	if err := (&reconciler{
-		Clock:                    clock,
-		SyncPeriod:               DefaultSyncPeriod,
-		SeedWebhookConfig:        seedWebhookConfig,
-		ShootWebhookConfig:       shootWebhookConfig,
-		AtomicShootWebhookConfig: atomicShootWebhookConfig,
-		CASecretName:             caSecretName,
-		ServerSecretName:         serverSecretName,
-		Namespace:                namespace,
-		Identity:                 identity,
-		ProviderName:             extensionName,
-		ProviderType:             providerType,
-		Mode:                     mode,
-		URL:                      url,
+		Clock:                           clock,
+		SyncPeriod:                      DefaultSyncPeriod,
+		SeedWebhookConfig:               seedWebhookConfig,
+		ShootWebhookConfig:              shootWebhookConfig,
+		AtomicShootWebhookConfig:        atomicShootWebhookConfig,
+		CASecretName:                    caSecretName,
+		ServerSecretName:                serverSecretName,
+		Namespace:                       namespace,
+		Identity:                        identity,
+		ExtensionName:                   extensionName,
+		ShootWebhookManagedResourceName: shootWebhookManagedResourceName,
+		ShootNamespaceSelector:          shootNamespaceSelector,
+		Mode:                            mode,
+		URL:                             url,
 	}).AddToManager(ctx, mgr); err != nil {
 		return fmt.Errorf("failed to add webhook server certificate reconciler: %w", err)
 	}
