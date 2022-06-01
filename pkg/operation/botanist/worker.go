@@ -21,6 +21,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker"
@@ -39,13 +40,14 @@ func (b *Botanist) DefaultWorker() worker.Interface {
 		b.Logger,
 		b.K8sSeedClient.Client(),
 		&worker.Values{
-			Namespace:         b.Shoot.SeedNamespace,
-			Name:              b.Shoot.GetInfo().Name,
-			Type:              b.Shoot.GetInfo().Spec.Provider.Type,
-			Region:            b.Shoot.GetInfo().Spec.Region,
-			Workers:           b.Shoot.GetInfo().Spec.Provider.Workers,
-			KubernetesVersion: b.Shoot.KubernetesVersion,
-			MachineTypes:      b.Shoot.CloudProfile.Spec.MachineTypes,
+			Namespace:           b.Shoot.SeedNamespace,
+			Name:                b.Shoot.GetInfo().Name,
+			Type:                b.Shoot.GetInfo().Spec.Provider.Type,
+			Region:              b.Shoot.GetInfo().Spec.Region,
+			Workers:             b.Shoot.GetInfo().Spec.Provider.Workers,
+			KubernetesVersion:   b.Shoot.KubernetesVersion,
+			MachineTypes:        b.Shoot.CloudProfile.Spec.MachineTypes,
+			NodeLocalDNSENabled: v1beta1helper.IsNodeLocalDNSEnabled(b.Shoot.GetInfo().Spec.SystemComponents, b.Shoot.GetInfo().Annotations),
 		},
 		worker.DefaultInterval,
 		worker.DefaultSevereThreshold,

@@ -274,6 +274,7 @@ var _ = Describe("Worker", func() {
 						"worker.garden.sapcloud.io/group": worker1Name,
 						"worker.gardener.cloud/cri-name":  string(worker1CRIName),
 						"containerruntime.worker.gardener.cloud/" + worker1CRIContainerRuntime1Type: "true",
+						"networking.gardener.cloud/node-local-dns-enabled":                          "false",
 					}),
 					Taints:      worker1Taints,
 					MachineType: worker1MachineType,
@@ -310,10 +311,11 @@ var _ = Describe("Worker", func() {
 					MaxSurge:       worker2MaxSurge,
 					MaxUnavailable: worker2MaxUnavailable,
 					Labels: map[string]string{
-						"node.kubernetes.io/role":                 "node",
-						"worker.gardener.cloud/system-components": "true",
-						"worker.gardener.cloud/pool":              worker2Name,
-						"worker.garden.sapcloud.io/group":         worker2Name,
+						"node.kubernetes.io/role":                          "node",
+						"worker.gardener.cloud/system-components":          "true",
+						"worker.gardener.cloud/pool":                       worker2Name,
+						"worker.garden.sapcloud.io/group":                  worker2Name,
+						"networking.gardener.cloud/node-local-dns-enabled": "false",
 					},
 					MachineType: worker2MachineType,
 					MachineImage: extensionsv1alpha1.MachineImage{

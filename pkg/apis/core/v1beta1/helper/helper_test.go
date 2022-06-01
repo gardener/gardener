@@ -2265,6 +2265,63 @@ var _ = Describe("helper", func() {
 		Entry("with cluster-proportional autoscaling mode (horizontal)", &gardencorev1beta1.SystemComponents{CoreDNS: &gardencorev1beta1.CoreDNS{Autoscaling: &gardencorev1beta1.CoreDNSAutoscaling{Mode: "cluster-proportional"}}}, gardencorev1beta1.CoreDNSAutoscalingModeHorizontal, false),
 	)
 
+	DescribeTable("#IsNodeLocalDNSEnabled",
+		func(systemComponents *gardencorev1beta1.SystemComponents, annotations map[string]string, expected bool) {
+			Expect(IsNodeLocalDNSEnabled(systemComponents, annotations)).To(Equal(expected))
+		},
+
+		Entry("with nil (disabled)", nil, nil, false),
+		Entry("with empty system components and no proper annotation (disabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{"something": "wrong"}, false),
+		Entry("with system components and no proper annotation (disabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{}}, map[string]string{"something": "wrong"}, false),
+		Entry("with system components and no proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}, map[string]string{"something": "wrong"}, true),
+		Entry("with system components and no proper annotation (disabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}, map[string]string{"something": "wrong"}, false),
+		Entry("with empty system components and proper annotation (disabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "false"}, false),
+		Entry("with empty system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "true"}, true),
+		Entry("with empty system components and proper annotation, but wrong value (disabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "test"}, false),
+		Entry("with system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "true"}, true),
+		Entry("with system components and proper annotation (disabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "false"}, false),
+		Entry("with system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "false"}, true),
+		Entry("with system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNS: "true"}, true),
+	)
+
+	DescribeTable("#IsTCPEnforcedForNodeLocalDNSToClusterDNS",
+		func(systemComponents *gardencorev1beta1.SystemComponents, annotations map[string]string, expected bool) {
+			Expect(IsTCPEnforcedForNodeLocalDNSToClusterDNS(systemComponents, annotations)).To(Equal(expected))
+		},
+
+		Entry("with nil (enabled)", nil, nil, true),
+		Entry("with empty system components and no proper annotation (enabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{"something": "wrong"}, true),
+		Entry("with system components and no proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{}}, map[string]string{"something": "wrong"}, true),
+		Entry("with system components and no proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{ForceTCPToClusterDNS: pointer.Bool(true)}}, map[string]string{"something": "wrong"}, true),
+		Entry("with system components and no proper annotation (disabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{ForceTCPToClusterDNS: pointer.Bool(false)}}, map[string]string{"something": "wrong"}, false),
+		Entry("with empty system components and proper annotation (disabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns: "false"}, false),
+		Entry("with empty system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns: "true"}, true),
+		Entry("with empty system components and proper annotation, but wrong value (enabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns: "test"}, true),
+		Entry("with system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{ForceTCPToClusterDNS: pointer.Bool(true)}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns: "true"}, true),
+		Entry("with system components and proper annotation (disabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{ForceTCPToClusterDNS: pointer.Bool(false)}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns: "false"}, false),
+		Entry("with system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{ForceTCPToClusterDNS: pointer.Bool(true)}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns: "false"}, false),
+		Entry("with system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{ForceTCPToClusterDNS: pointer.Bool(false)}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns: "true"}, false),
+	)
+
+	DescribeTable("#IsTCPEnforcedForNodeLocalDNSToUpstreamDNS",
+		func(systemComponents *gardencorev1beta1.SystemComponents, annotations map[string]string, expected bool) {
+			Expect(IsTCPEnforcedForNodeLocalDNSToUpstreamDNS(systemComponents, annotations)).To(Equal(expected))
+		},
+
+		Entry("with nil (enabled)", nil, nil, true),
+		Entry("with empty system components and no proper annotation (enabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{"something": "wrong"}, true),
+		Entry("with system components and no proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{}}, map[string]string{"something": "wrong"}, true),
+		Entry("with system components and no proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{ForceTCPToUpstreamDNS: pointer.Bool(true)}}, map[string]string{"something": "wrong"}, true),
+		Entry("with system components and no proper annotation (disabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{ForceTCPToUpstreamDNS: pointer.Bool(false)}}, map[string]string{"something": "wrong"}, false),
+		Entry("with empty system components and proper annotation (disabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns: "false"}, false),
+		Entry("with empty system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns: "true"}, true),
+		Entry("with empty system components and proper annotation, but wrong value (enabled)", &gardencorev1beta1.SystemComponents{}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns: "test"}, true),
+		Entry("with system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{ForceTCPToUpstreamDNS: pointer.Bool(true)}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns: "true"}, true),
+		Entry("with system components and proper annotation (disabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{ForceTCPToUpstreamDNS: pointer.Bool(false)}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns: "false"}, false),
+		Entry("with system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{ForceTCPToUpstreamDNS: pointer.Bool(true)}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns: "false"}, false),
+		Entry("with system components and proper annotation (enabled)", &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{ForceTCPToUpstreamDNS: pointer.Bool(false)}}, map[string]string{v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns: "true"}, false),
+	)
+
 	DescribeTable("#GetShootCARotationPhase",
 		func(credentials *gardencorev1beta1.ShootCredentials, expectedPhase gardencorev1beta1.ShootCredentialsRotationPhase) {
 			Expect(GetShootCARotationPhase(credentials)).To(Equal(expectedPhase))

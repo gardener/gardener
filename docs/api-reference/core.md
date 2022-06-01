@@ -6434,6 +6434,62 @@ exposing the nginx-ingress. Defaults to <code>Cluster</code>.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.NodeLocalDNS">NodeLocalDNS
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SystemComponents">SystemComponents</a>)
+</p>
+<p>
+<p>NodeLocalDNS contains the settings of the node local DNS components running in the data plane of the Shoot cluster.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled indicates whether node local DNS is enabled or not.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>forceTCPToClusterDNS</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ForceTCPToClusterDNS indicates whether the connection from the node local DNS to the cluster DNS (Core DNS) will be forced to TCP or not.
+Default, if unspecified, is to enforce TCP.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>forceTCPToUpstreamDNS</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ForceTCPToUpstreamDNS indicates whether the connection from the node local DNS to the upstream DNS (infrastructure DNS) will be forced to TCP or not.
+Default, if unspecified, is to enforce TCP.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.OIDCConfig">OIDCConfig
 </h3>
 <p>
@@ -10276,6 +10332,20 @@ CoreDNS
 <td>
 <em>(Optional)</em>
 <p>CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>nodeLocalDNS</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.NodeLocalDNS">
+NodeLocalDNS
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeLocalDNS contains the settings of the node local DNS components running in the data plane of the Shoot cluster.</p>
 </td>
 </tr>
 </tbody>

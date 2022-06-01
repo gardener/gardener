@@ -123,6 +123,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.NamedResourceReference":                 schema_pkg_apis_core_v1alpha1_NamedResourceReference(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Networking":                             schema_pkg_apis_core_v1alpha1_Networking(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.NginxIngress":                           schema_pkg_apis_core_v1alpha1_NginxIngress(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.NodeLocalDNS":                           schema_pkg_apis_core_v1alpha1_NodeLocalDNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.OIDCConfig":                             schema_pkg_apis_core_v1alpha1_OIDCConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.OpenIDConnectClientAuthentication":      schema_pkg_apis_core_v1alpha1_OpenIDConnectClientAuthentication(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Plant":                                  schema_pkg_apis_core_v1alpha1_Plant(ref),
@@ -278,6 +279,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference":                  schema_pkg_apis_core_v1beta1_NamedResourceReference(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking":                              schema_pkg_apis_core_v1beta1_Networking(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.NginxIngress":                            schema_pkg_apis_core_v1beta1_NginxIngress(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.NodeLocalDNS":                            schema_pkg_apis_core_v1beta1_NodeLocalDNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig":                              schema_pkg_apis_core_v1beta1_OIDCConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.OpenIDConnectClientAuthentication":       schema_pkg_apis_core_v1beta1_OpenIDConnectClientAuthentication(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Plant":                                   schema_pkg_apis_core_v1beta1_Plant(ref),
@@ -4703,6 +4705,42 @@ func schema_pkg_apis_core_v1alpha1_NginxIngress(ref common.ReferenceCallback) co
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_NodeLocalDNS(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NodeLocalDNS contains the settings of the node local DNS components running in the data plane of the Shoot cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled indicates whether node local DNS is enabled or not.",
+							Default:     false,
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"forceTCPToClusterDNS": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ForceTCPToClusterDNS indicates whether the connection from the node local DNS to the cluster DNS (Core DNS) will be forced to TCP or not. Default, if unspecified, is to enforce TCP.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"forceTCPToUpstreamDNS": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ForceTCPToUpstreamDNS indicates whether the connection from the node local DNS to the upstream DNS (infrastructure DNS) will be forced to TCP or not. Default, if unspecified, is to enforce TCP.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_OIDCConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -7767,11 +7805,17 @@ func schema_pkg_apis_core_v1alpha1_SystemComponents(ref common.ReferenceCallback
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNS"),
 						},
 					},
+					"nodeLocalDNS": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NodeLocalDNS contains the settings of the node local DNS components running in the data plane of the Shoot cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.NodeLocalDNS"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNS"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CoreDNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.NodeLocalDNS"},
 	}
 }
 
@@ -11876,6 +11920,42 @@ func schema_pkg_apis_core_v1beta1_NginxIngress(ref common.ReferenceCallback) com
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_NodeLocalDNS(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NodeLocalDNS contains the settings of the node local DNS components running in the data plane of the Shoot cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled indicates whether node local DNS is enabled or not.",
+							Default:     false,
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"forceTCPToClusterDNS": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ForceTCPToClusterDNS indicates whether the connection from the node local DNS to the cluster DNS (Core DNS) will be forced to TCP or not. Default, if unspecified, is to enforce TCP.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"forceTCPToUpstreamDNS": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ForceTCPToUpstreamDNS indicates whether the connection from the node local DNS to the upstream DNS (infrastructure DNS) will be forced to TCP or not. Default, if unspecified, is to enforce TCP.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_OIDCConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -14819,11 +14899,17 @@ func schema_pkg_apis_core_v1beta1_SystemComponents(ref common.ReferenceCallback)
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNS"),
 						},
 					},
+					"nodeLocalDNS": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NodeLocalDNS contains the settings of the node local DNS components running in the data plane of the Shoot cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.NodeLocalDNS"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNS"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CoreDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NodeLocalDNS"},
 	}
 }
 

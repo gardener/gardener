@@ -16,9 +16,8 @@ package botanist
 
 import (
 	"context"
-	"strconv"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -41,24 +40,14 @@ func (b *Botanist) DefaultNodeLocalDNS() (nodelocaldns.Interface, error) {
 		dnsServer = b.Shoot.Networks.CoreDNS.String()
 	}
 
-	nodeLocalDNSForceTcpToClusterDNS := true
-	if forceTcp, err := strconv.ParseBool(b.Shoot.GetInfo().Annotations[v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns]); err == nil {
-		nodeLocalDNSForceTcpToClusterDNS = forceTcp
-	}
-
-	nodeLocalDNSForceTcpToUpstreamDNS := true
-	if forceTcp, err := strconv.ParseBool(b.Shoot.GetInfo().Annotations[v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns]); err == nil {
-		nodeLocalDNSForceTcpToUpstreamDNS = forceTcp
-	}
-
 	return nodelocaldns.New(
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		nodelocaldns.Values{
 			Image:                 image.String(),
 			VPAEnabled:            b.Shoot.WantsVerticalPodAutoscaler,
-			ForceTcpToClusterDNS:  nodeLocalDNSForceTcpToClusterDNS,
-			ForceTcpToUpstreamDNS: nodeLocalDNSForceTcpToUpstreamDNS,
+			ForceTcpToClusterDNS:  v1beta1helper.IsTCPEnforcedForNodeLocalDNSToClusterDNS(b.Shoot.GetInfo().Spec.SystemComponents, b.Shoot.GetInfo().Annotations),
+			ForceTcpToUpstreamDNS: v1beta1helper.IsTCPEnforcedForNodeLocalDNSToUpstreamDNS(b.Shoot.GetInfo().Spec.SystemComponents, b.Shoot.GetInfo().Annotations),
 			ClusterDNS:            clusterDNS,
 			DNSServer:             dnsServer,
 		},
