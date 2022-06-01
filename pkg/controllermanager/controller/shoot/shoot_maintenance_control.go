@@ -238,11 +238,13 @@ func maintainOperation(shoot *gardencorev1beta1.Shoot) {
 	case shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateFailed:
 		if needsRetry(shoot) {
 			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
+			delete(shoot.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
 		}
 	case controllermanagerfeatures.FeatureGate.Enabled(features.RotateSSHKeypairOnMaintenance):
 		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateSSHKeypair)
 	default:
 		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, getOperation(shoot))
+		delete(shoot.Annotations, v1beta1constants.GardenerMaintenanceOperation)
 	}
 }
 
@@ -384,7 +386,6 @@ func needsRetry(shoot *gardencorev1beta1.Shoot) bool {
 	if val, ok := shoot.Annotations[v1beta1constants.FailedShootNeedsRetryOperation]; ok {
 		needsRetryOperation, _ = strconv.ParseBool(val)
 	}
-	delete(shoot.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
 
 	return needsRetryOperation
 }
@@ -395,10 +396,9 @@ func getOperation(shoot *gardencorev1beta1.Shoot) string {
 		maintenanceOperation = shoot.Annotations[v1beta1constants.GardenerMaintenanceOperation]
 	)
 
-	if isValid, _ := gardencorev1beta1helper.IsValidShootOperation(maintenanceOperation, shoot.Status.LastOperation); isValid {
+	if gardencorev1beta1helper.IsValidShootOperation(maintenanceOperation, shoot.Status.LastOperation) {
 		operation = maintenanceOperation
 	}
-	delete(shoot.Annotations, v1beta1constants.GardenerMaintenanceOperation)
 
 	return operation
 }

@@ -1664,30 +1664,27 @@ func MutateShootETCDEncryptionKeyRotation(shoot *gardencorev1beta1.Shoot, f func
 // IsValidShootOperation checks whether the provided operation annotation value is valid. It returns two bools: The
 // first value specifies whether it's valid, and the second bool value specifies whether the gardener-apiserver removes
 // the annotation before the Shoot is persisted to etcd.
-func IsValidShootOperation(operation string, lastOperation *gardencorev1beta1.LastOperation) (isValid bool, removedBeforePersisted bool) {
+func IsValidShootOperation(operation string, lastOperation *gardencorev1beta1.LastOperation) (isValid bool) {
 	if lastOperation != nil && lastOperation.State == gardencorev1beta1.LastOperationStateFailed {
-		if operation == v1beta1constants.ShootOperationRetry {
-			return true, true
-		}
-	} else {
-		switch operation {
-		case v1beta1constants.GardenerOperationReconcile:
-			return true, true
-
-			// TODO(rfranzke): Handle new operation annotations introduced by
-			// - https://github.com/gardener/gardener/pull/6021
-			// - https://github.com/gardener/gardener/pull/6038
-			// once those PRs got merged.
-		case v1beta1constants.ShootOperationRotateKubeconfigCredentials,
-			v1beta1constants.ShootOperationRotateObservabilityCredentials,
-			v1beta1constants.ShootOperationRotateSSHKeypair,
-			v1beta1constants.ShootOperationRotateCAStart,
-			v1beta1constants.ShootOperationRotateCAComplete,
-			v1beta1constants.ShootOperationRotateServiceAccountKeyStart,
-			v1beta1constants.ShootOperationRotateServiceAccountKeyComplete:
-			return true, false
-		}
+		return operation == v1beta1constants.ShootOperationRetry
 	}
 
-	return false, false
+	switch operation {
+	case v1beta1constants.GardenerOperationReconcile,
+		v1beta1constants.ShootOperationRotateCredentialsStart,
+		v1beta1constants.ShootOperationRotateCredentialsComplete,
+		v1beta1constants.ShootOperationRotateKubeconfigCredentials,
+		v1beta1constants.ShootOperationRotateObservabilityCredentials,
+		v1beta1constants.ShootOperationRotateSSHKeypair,
+		v1beta1constants.ShootOperationRotateCAStart,
+		v1beta1constants.ShootOperationRotateCAComplete,
+		v1beta1constants.ShootOperationRotateServiceAccountKeyStart,
+		v1beta1constants.ShootOperationRotateServiceAccountKeyComplete,
+		v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart,
+		v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete:
+		return true
+
+	default:
+		return false
+	}
 }
