@@ -76,6 +76,19 @@ The reason is that Gardener cannot differentiate between create/update/reconcile
 ⚠️  There is one exceptional change in the shoot specification that triggers an immediate roll out which is changes to the `.spec.hibernation.enabled` field.
 If you hibernate or wake-up your shoot then Gardener gets active right away.
 
+## Shoot Operations
+
+In case you would like to perform certain [shoot operations](shoot_operations.md) (e.g., credentials rotation) during your maintenance time window, you can annotate the `Shoot` with
+
+```
+maintenance.gardener.cloud/operation=<operation>
+```
+
+This will execute the specified `<operation>` during the next maintenance reconciliation.
+Note that Gardener will remove this annotation after it has been performed in the maintenance reconciliation. 
+
+> ⚠️ This is skipped when the `Shoot`'s `.status.lastOperation.state=Failed`. Make sure to [retry](shoot_operations.md#retry-failed-reconciliation) your shoot reconciliation beforehand.
+
 ## Special Operations During Maintenance
 
 The shoot maintenance controller triggers special operations that are performed as part of the shoot reconciliation.

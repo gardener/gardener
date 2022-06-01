@@ -20,7 +20,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,7 +37,6 @@ import (
 )
 
 var _ = Describe("Shoot Maintenance controller tests", func() {
-
 	var (
 		project      *gardencorev1beta1.Project
 		cloudProfile *gardencorev1beta1.CloudProfile
@@ -210,28 +208,108 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 		))
 	})
 
-	It("should unset the Shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion field", func() {
-		By("prepare shoot")
-		patch := client.MergeFrom(shoot.DeepCopy())
-		shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
-			AuditConfig: &gardencorev1beta1.AuditConfig{
-				AuditPolicy: &gardencorev1beta1.AuditPolicy{
-					ConfigMapRef: &corev1.ObjectReference{
-						Name:            "auditpolicy",
-						ResourceVersion: "123456",
-					},
-				},
-			},
-		}
-		Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
+	Context("operation annotations", func() {
+		var oldGeneration int64
 
-		By("trigger maintenance")
-		Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+		BeforeEach(func() {
+			oldGeneration = shoot.Generation
+		})
 
-		waitForShootToBeMaintained(shoot)
+		Context("failed last operation state", func() {
+			BeforeEach(func() {
+				By("prepare shoot")
+				patch := client.MergeFrom(shoot.DeepCopy())
+				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateFailed}
+				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+			})
 
-		By("ensuring resourceVersion is empty")
-		Expect(shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion).To(BeEmpty())
+			It("should not set the retry operation annotation due to missing 'needs-retry-operation' annotation", func() {
+				By("trigger maintenance")
+				Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+
+				waitForShootToBeMaintained(shoot)
+
+				By("ensuring proper operation annotation handling")
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				Expect(shoot.Generation).To(Equal(oldGeneration))
+				Expect(shoot.Annotations["gardener.cloud/operation"]).To(BeEmpty())
+			})
+
+			It("should set the retry operation annotation due to 'needs-retry-operation' annotation (implicitly increasing the generation)", func() {
+				By("prepare shoot")
+				patch := client.MergeFrom(shoot.DeepCopy())
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.shoot.gardener.cloud/needs-retry-operation", "true")
+				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
+
+				By("trigger maintenance")
+				Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+
+				waitForShootToBeMaintained(shoot)
+
+				By("ensuring proper operation annotation handling")
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				Expect(shoot.Generation).To(Equal(oldGeneration + 1))
+				Expect(shoot.Annotations["gardener.cloud/operation"]).To(BeEmpty())
+				Expect(shoot.Annotations["maintenance.shoot.gardener.cloud/needs-retry-operation"]).To(BeEmpty())
+			})
+		})
+
+		Context("non-failed last operation states", func() {
+			BeforeEach(func() {
+				By("prepare shoot")
+				patch := client.MergeFrom(shoot.DeepCopy())
+				shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+				Expect(testClient.Status().Patch(ctx, shoot, patch)).To(Succeed())
+			})
+
+			It("should set the reconcile operation annotation (implicitly increasing the generation)", func() {
+				By("trigger maintenance")
+				Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+
+				waitForShootToBeMaintained(shoot)
+
+				By("ensuring proper operation annotation handling")
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				Expect(shoot.Generation).To(Equal(oldGeneration + 1))
+				Expect(shoot.Annotations["gardener.cloud/operation"]).To(BeEmpty())
+			})
+
+			It("should set the maintenance operation annotation if it's valid", func() {
+				By("prepare shoot")
+				patch := client.MergeFrom(shoot.DeepCopy())
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-kubeconfig-credentials")
+				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
+
+				By("trigger maintenance")
+				Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+
+				waitForShootToBeMaintained(shoot)
+
+				By("ensuring proper operation annotation handling")
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				Expect(shoot.Generation).To(Equal(oldGeneration + 1))
+				Expect(shoot.Annotations["gardener.cloud/operation"]).To(Equal("rotate-kubeconfig-credentials"))
+				Expect(shoot.Annotations["maintenance.gardener.cloud/operation"]).To(BeEmpty())
+			})
+
+			It("should not set the maintenance operation annotation if it's invalid and use the reconcile operation instead", func() {
+				By("prepare shoot")
+				patch := client.MergeFrom(shoot.DeepCopy())
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "foo-bar-does-not-exist")
+				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
+
+				By("trigger maintenance")
+				Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
+
+				waitForShootToBeMaintained(shoot)
+
+				By("ensuring proper operation annotation handling")
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
+				Expect(shoot.Generation).To(Equal(oldGeneration + 1))
+				Expect(shoot.Annotations["gardener.cloud/operation"]).To(BeEmpty())
+				Expect(shoot.Annotations["maintenance.gardener.cloud/operation"]).To(BeEmpty())
+			})
+		})
 	})
 
 	Describe("Machine image maintenance tests", func() {

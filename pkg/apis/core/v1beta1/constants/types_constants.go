@@ -163,6 +163,9 @@ const (
 	GardenCreatedBy = "gardener.cloud/created-by"
 	// GardenerOperation is a constant for an annotation on a resource that describes a desired operation.
 	GardenerOperation = "gardener.cloud/operation"
+	// GardenerMaintenanceOperation is a constant for an annotation on a Shoot that describes a desired operation which
+	// will be performed during maintenance.
+	GardenerMaintenanceOperation = "maintenance.gardener.cloud/operation"
 	// GardenerOperationReconcile is a constant for the value of the operation annotation describing a reconcile
 	// operation.
 	GardenerOperationReconcile = "reconcile"

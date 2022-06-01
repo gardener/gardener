@@ -114,6 +114,8 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 			mustRemoveOperationAnnotation bool
 		)
 
+		// TODO(rfranzke): After promotion and removal of `Shoot{C,S}ARotation` feature gates, consider using a function
+		//  similar to gardencorev1beta1helper.IsValidShootOperation.
 		switch lastOperation.State {
 		case core.LastOperationStateFailed:
 			if val, ok := newShoot.Annotations[v1beta1constants.GardenerOperation]; ok && val == v1beta1constants.ShootOperationRetry {

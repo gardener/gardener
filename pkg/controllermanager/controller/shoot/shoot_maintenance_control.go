@@ -116,7 +116,11 @@ func (r *shootMaintenanceReconciler) Reconcile(ctx context.Context, request reco
 		return reconcile.Result{RequeueAfter: requeueAfter}, nil
 	}
 
-	return reconcile.Result{RequeueAfter: requeueAfter}, r.reconcile(ctx, shoot, r.gardenClient)
+	if err := r.reconcile(ctx, shoot, r.gardenClient); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{RequeueAfter: requeueAfter}, nil
 }
 
 func requeueAfterDuration(shoot *gardencorev1beta1.Shoot) time.Duration {
@@ -162,7 +166,7 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 		return err
 	}
 
-	// Now its time to update worker pool kubernetes version if specified
+	// Now it's time to update worker pool kubernetes version if specified
 	var reasonsForWorkerPoolKubernetesUpdate = make(map[string]string)
 	for i, w := range shoot.Spec.Provider.Workers {
 		if w.Kubernetes == nil || w.Kubernetes.Version == nil {
@@ -189,49 +193,8 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 		reasonsForWorkerPoolKubernetesUpdate[w.Name] = reasonForWorkerPoolKubernetesUpdate
 	}
 
-	// do not add reconcile annotation if shoot was once set to failed or if shoot is already in an ongoing reconciliation
-	if shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-	}
-
-	var needsRetry bool
-	if val, ok := shoot.Annotations[v1beta1constants.FailedShootNeedsRetryOperation]; ok {
-		needsRetry, _ = strconv.ParseBool(val)
-	}
-	delete(shoot.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
-
-	// Failed shoots need to be retried first; healthy shoots instead
-	// default to rotating their SSH keypair on each maintenance interval if the RotateSSHKeypairOnMaintenance is enabled.
-	if needsRetry {
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
-	} else if controllermanagerfeatures.FeatureGate.Enabled(features.RotateSSHKeypairOnMaintenance) {
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateSSHKeypair)
-	}
-
-	controllerutils.AddTasks(shoot.Annotations,
-		v1beta1constants.ShootTaskDeployInfrastructure,
-		v1beta1constants.ShootTaskDeployDNSRecordInternal,
-		v1beta1constants.ShootTaskDeployDNSRecordExternal,
-		v1beta1constants.ShootTaskDeployDNSRecordIngress,
-	)
-
-	if pointer.BoolDeref(r.config.EnableShootControlPlaneRestarter, false) {
-		controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
-	}
-
-	if pointer.BoolDeref(r.config.EnableShootCoreAddonRestarter, false) {
-		controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskRestartCoreAddons)
-	}
-
-	if hasMaintainNowAnnotation(shoot) {
-		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
-	}
-
-	// unset the AuditPolicy reference's resourceVersion, as it is no longer used (see https://github.com/gardener/gardener/pull/5392)
-	// TODO: remove this in a future release
-	if ref := gardencorev1beta1helper.GetShootAuditPolicyConfigMapRef(shoot.Spec.Kubernetes.KubeAPIServer); ref != nil {
-		ref.ResourceVersion = ""
-	}
+	maintainOperation(shoot)
+	maintainTasks(shoot, r.config)
 
 	// try to maintain shoot, but don't retry on conflict, because a conflict means that we potentially operated on stale
 	// data (e.g. when calculating the updated k8s version), so rather return error and backoff
@@ -260,6 +223,46 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 
 	shootLogger.Infof("[SHOOT MAINTENANCE] completed")
 	return nil
+}
+
+func maintainOperation(shoot *gardencorev1beta1.Shoot) {
+	if hasMaintainNowAnnotation(shoot) {
+		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
+	}
+
+	if shoot.Status.LastOperation == nil {
+		return
+	}
+
+	switch {
+	case shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateFailed:
+		if needsRetry(shoot) {
+			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
+			delete(shoot.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
+		}
+	case controllermanagerfeatures.FeatureGate.Enabled(features.RotateSSHKeypairOnMaintenance):
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateSSHKeypair)
+	default:
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, getOperation(shoot))
+		delete(shoot.Annotations, v1beta1constants.GardenerMaintenanceOperation)
+	}
+}
+
+func maintainTasks(shoot *gardencorev1beta1.Shoot, config config.ShootMaintenanceControllerConfiguration) {
+	controllerutils.AddTasks(shoot.Annotations,
+		v1beta1constants.ShootTaskDeployInfrastructure,
+		v1beta1constants.ShootTaskDeployDNSRecordInternal,
+		v1beta1constants.ShootTaskDeployDNSRecordExternal,
+		v1beta1constants.ShootTaskDeployDNSRecordIngress,
+	)
+
+	if pointer.BoolDeref(config.EnableShootControlPlaneRestarter, false) {
+		controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
+	}
+
+	if pointer.BoolDeref(config.EnableShootCoreAddonRestarter, false) {
+		controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskRestartCoreAddons)
+	}
 }
 
 // MaintainMachineImages updates the machine images of a Shoot's worker pools if necessary
@@ -375,6 +378,29 @@ func mustMaintainNow(shoot *gardencorev1beta1.Shoot) bool {
 func hasMaintainNowAnnotation(shoot *gardencorev1beta1.Shoot) bool {
 	operation, ok := shoot.Annotations[v1beta1constants.GardenerOperation]
 	return ok && operation == v1beta1constants.ShootOperationMaintain
+}
+
+func needsRetry(shoot *gardencorev1beta1.Shoot) bool {
+	needsRetryOperation := false
+
+	if val, ok := shoot.Annotations[v1beta1constants.FailedShootNeedsRetryOperation]; ok {
+		needsRetryOperation, _ = strconv.ParseBool(val)
+	}
+
+	return needsRetryOperation
+}
+
+func getOperation(shoot *gardencorev1beta1.Shoot) string {
+	var (
+		operation            = v1beta1constants.GardenerOperationReconcile
+		maintenanceOperation = shoot.Annotations[v1beta1constants.GardenerMaintenanceOperation]
+	)
+
+	if gardencorev1beta1helper.IsValidShootOperation(maintenanceOperation, shoot.Status.LastOperation) {
+		operation = maintenanceOperation
+	}
+
+	return operation
 }
 
 func filterForCRI(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, workerCRI *gardencorev1beta1.CRI) *gardencorev1beta1.MachineImage {
