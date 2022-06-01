@@ -718,7 +718,7 @@ func (a *actuator) prepareGardenClientConnectionWithBootstrap(
 		}
 		patch := client.MergeFrom(managedSeed.DeepCopy())
 		delete(managedSeed.Annotations, v1beta1constants.GardenerOperation)
-		if err := shootClient.Client().Patch(ctx, managedSeed, patch); err != nil {
+		if err := a.gardenClient.Client().Patch(ctx, managedSeed, patch); err != nil {
 			return "", err
 		}
 	} else {
