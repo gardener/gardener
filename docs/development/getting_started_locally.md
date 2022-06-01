@@ -12,6 +12,7 @@ The Gardener components, however, will be run as regular processes on your machi
 
 ## Prerequisites
 
+- Make sure that you have followed the [Local Setup guide](https://github.com/gardener/gardener/blob/master/docs/development/local_setup.md) up until the [Get the sources](https://github.com/gardener/gardener/blob/master/docs/development/local_setup.md#get-the-sources) step.
 - Make sure your Docker daemon is up-to-date, up and running and has enough resources (at least `4` CPUs and `4Gi` memory; see [here](https://docs.docker.com/desktop/mac/#resources) how to configure the resources for Docker for Mac).
   > Please note that 4 CPU / 4Gi memory might not be enough for more than one `Shoot` cluster, i.e., you might need to increase these values if you want to run additional `Shoot`s.
 
@@ -27,10 +28,6 @@ The Gardener components, however, will be run as regular processes on your machi
     ```
 
     and reload the terminal.
-- Clone the Gardener repository from GitHub.
-  ```
-  git clone https://github.com/gardener/gardener.git
-  ```
 
 ## Setting up the KinD cluster (garden and seed)
 
