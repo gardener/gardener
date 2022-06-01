@@ -540,7 +540,8 @@ func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
 		addDNSRecordDeploymentTasks(c.shoot)
 	}
 
-	if c.shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.ShootOperationRotateSSHKeypair {
+	if c.shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.ShootOperationRotateSSHKeypair ||
+		c.shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.ShootOperationRotateCredentialsStart {
 		addInfrastructureDeploymentTask(c.shoot)
 	}
 

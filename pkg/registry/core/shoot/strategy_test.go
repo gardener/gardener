@@ -76,259 +76,191 @@ var _ = Describe("Strategy", func() {
 
 	Describe("#PrepareForUpdate", func() {
 		Context("generation increment", func() {
-			It("should not increase if new=old", func() {
-				oldShoot := &core.Shoot{}
-				newShoot := oldShoot.DeepCopy()
+			var (
+				oldShoot *core.Shoot
+				newShoot *core.Shoot
+			)
 
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-				Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
+			BeforeEach(func() {
+				oldShoot = &core.Shoot{}
+				newShoot = oldShoot.DeepCopy()
 			})
 
-			It("should not increase if spec remains the same", func() {
-				oldShoot := &core.Shoot{}
-				newShoot := oldShoot.DeepCopy()
-				newShoot.Labels = map[string]string{"foo": "bar"}
-				newShoot.Spec = oldShoot.Spec
+			DescribeTable("standard tests",
+				func(mutateNewShoot func(*core.Shoot), shouldIncreaseGeneration bool) {
+					if mutateNewShoot != nil {
+						mutateNewShoot(newShoot)
+					}
 
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-				Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
-			})
+					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
-			It("should increase for spec changes only if confineSpecUpdateRollout is false", func() {
-				oldShoot := &core.Shoot{}
-				newShoot := &core.Shoot{
-					Spec: core.ShootSpec{
-						Region: "foo",
-						Maintenance: &core.Maintenance{
-							ConfineSpecUpdateRollout: pointer.Bool(false),
-						},
+					expectedGeneration := oldShoot.Generation
+					if shouldIncreaseGeneration {
+						expectedGeneration++
+					}
+
+					Expect(newShoot.Generation).To(Equal(expectedGeneration))
+				},
+
+				Entry("no change",
+					nil,
+					false,
+				),
+				Entry("only label change",
+					func(s *core.Shoot) { s.Labels = map[string]string{"foo": "bar"} },
+					false,
+				),
+				Entry("some spec change",
+					func(s *core.Shoot) { s.Spec.Region = "foo" },
+					true,
+				),
+				Entry("deletion timestamp gets set",
+					func(s *core.Shoot) {
+						deletionTimestamp := metav1.Now()
+						s.DeletionTimestamp = &deletionTimestamp
 					},
-				}
+					true,
+				),
+			)
 
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
-			})
+			Context("confine spec update rollout", func() {
+				DescribeTable("confine spec update rollout",
+					func(confineSpecUpdateRolloutOld, confineSpecUpdateRolloutNew *bool, mutateOldShoot, mutateNewShoot func(*core.Shoot), shouldIncreaseGeneration bool) {
+						if confineSpecUpdateRolloutOld != nil {
+							oldShoot.Spec.Maintenance = &core.Maintenance{ConfineSpecUpdateRollout: confineSpecUpdateRolloutOld}
+						}
+						if confineSpecUpdateRolloutNew != nil {
+							newShoot.Spec.Maintenance = &core.Maintenance{ConfineSpecUpdateRollout: confineSpecUpdateRolloutNew}
+						}
 
-			It("should not increase for spec changes if confineSpecUpdateRollout is true", func() {
-				oldShoot := &core.Shoot{
-					Spec: core.ShootSpec{
-						Maintenance: &core.Maintenance{
-							ConfineSpecUpdateRollout: pointer.Bool(true),
-						},
+						if mutateOldShoot != nil {
+							mutateOldShoot(oldShoot)
+						}
+						if mutateNewShoot != nil {
+							mutateNewShoot(newShoot)
+						}
+
+						shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+
+						expectedGeneration := oldShoot.Generation
+						if shouldIncreaseGeneration {
+							expectedGeneration++
+						}
+
+						Expect(newShoot.Generation).To(Equal(expectedGeneration))
 					},
-				}
-				newShoot := &core.Shoot{
-					Spec: core.ShootSpec{
-						Region: "foo",
-						Maintenance: &core.Maintenance{
-							ConfineSpecUpdateRollout: pointer.Bool(true),
-						},
-					},
-				}
 
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-				Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
-			})
+					Entry("confineSpecUpdateRollout true->false",
+						pointer.Bool(true), pointer.Bool(false),
+						nil, nil,
+						true,
+					),
+					Entry("confineSpecUpdateRollout false->true",
+						pointer.Bool(false), pointer.Bool(true),
+						nil, nil,
+						false,
+					),
+					Entry("confineSpecUpdateRollout nil->false w/ additional spec change",
+						nil, pointer.Bool(false),
+						nil, func(s *core.Shoot) { s.Spec.Region = "foo" },
+						true,
+					),
+					Entry("confineSpecUpdateRollout true->true w/ additional spec change",
+						pointer.Bool(true), pointer.Bool(true),
+						nil, func(s *core.Shoot) { s.Spec.Region = "foo" },
+						false,
+					),
 
-			Context("exceptional case: spec.hibernation.enabled changes even if confineSpecUpdateRollout is true", func() {
-				var (
-					oldShoot *core.Shoot
-					newShoot *core.Shoot
+					// exceptional cases: spec.hibernation.enabled changes even if confineSpecUpdateRollout is true
+					Entry("hibernation nil -> nil",
+						pointer.Bool(true), pointer.Bool(true),
+						nil, nil,
+						false,
+					),
+					Entry("hibernation nil -> false",
+						pointer.Bool(true), pointer.Bool(true),
+						nil, func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)} },
+						false,
+					),
+					Entry("hibernation nil -> true",
+						pointer.Bool(true), pointer.Bool(true),
+						nil, func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)} },
+						true,
+					),
+
+					Entry("hibernation enabled nil -> false",
+						pointer.Bool(true), pointer.Bool(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)} },
+						false,
+					),
+					Entry("hibernation enabled nil -> true",
+						pointer.Bool(true), pointer.Bool(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)} },
+						true,
+					),
+					Entry("hibernation enabled nil -> hibernation nil",
+						pointer.Bool(true), pointer.Bool(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{} },
+						nil,
+						false,
+					),
+
+					Entry("hibernation enabled true -> true",
+						pointer.Bool(true), pointer.Bool(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)} },
+						false,
+					),
+					Entry("hibernation enabled true -> false",
+						pointer.Bool(true), pointer.Bool(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)} },
+						true,
+					),
+					Entry("hibernation enabled true -> nil",
+						pointer.Bool(true), pointer.Bool(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{} },
+						true,
+					),
+					Entry("hibernation enabled true -> hibernation nil",
+						pointer.Bool(true), pointer.Bool(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)} },
+						nil,
+						true,
+					),
+
+					Entry("hibernation enabled false -> true",
+						pointer.Bool(true), pointer.Bool(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)} },
+						true,
+					),
+					Entry("hibernation enabled false -> false",
+						pointer.Bool(true), pointer.Bool(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)} },
+						false,
+					),
+					Entry("hibernation enabled false -> nil",
+						pointer.Bool(true), pointer.Bool(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)} },
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{} },
+						false,
+					),
+					Entry("hibernation enabled false -> hibernation nil",
+						pointer.Bool(true), pointer.Bool(true),
+						func(s *core.Shoot) { s.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)} },
+						nil,
+						false,
+					),
 				)
-
-				BeforeEach(func() {
-					oldShoot = &core.Shoot{
-						Spec: core.ShootSpec{
-							Maintenance: &core.Maintenance{
-								ConfineSpecUpdateRollout: pointer.Bool(true),
-							},
-						},
-					}
-					newShoot = oldShoot.DeepCopy()
-				})
-
-				It("old hibernation=nil, new hibernation=nil", func() {
-					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-					Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
-				})
-
-				It("old hibernation=nil, new hibernation.enabled=false", func() {
-					newShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.Bool(false),
-					}
-
-					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-					Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
-				})
-
-				It("old hibernation.enabled=nil, new hibernation.enabled=false", func() {
-					oldShoot.Spec.Hibernation = &core.Hibernation{}
-					newShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.Bool(false),
-					}
-
-					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-					Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
-				})
-
-				It("old hibernation=nil, new hibernation.enabled=true", func() {
-					newShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.Bool(true),
-					}
-
-					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-					Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
-				})
-
-				It("old hibernation.enabled=nil, new hibernation.enabled=true", func() {
-					oldShoot.Spec.Hibernation = &core.Hibernation{}
-					newShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.Bool(true),
-					}
-
-					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-					Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
-				})
-
-				It("old hibernation.enabled=true, new hibernation.enabled=false", func() {
-					oldShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.Bool(true),
-					}
-					newShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.Bool(false),
-					}
-
-					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-					Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
-				})
-
-				It("old hibernation.enabled=true, new hibernation.enabled=nil", func() {
-					oldShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.Bool(true),
-					}
-					newShoot.Spec.Hibernation = &core.Hibernation{}
-
-					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-					Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
-				})
-
-				It("old hibernation.enabled=true, new hibernation=nil", func() {
-					oldShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.Bool(true),
-					}
-					newShoot.Spec.Hibernation = nil
-
-					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-					Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
-				})
-
-				It("old hibernation.enabled=true, new hibernation.enabled=nil", func() {
-					oldShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.Bool(true),
-					}
-					newShoot.Spec.Hibernation = &core.Hibernation{}
-
-					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-					Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
-				})
-
-				It("old hibernation.enabled=false, new hibernation.enabled=true", func() {
-					oldShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.Bool(false),
-					}
-					newShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.Bool(true),
-					}
-
-					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-					Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
-				})
-
-				It("old hibernation.enabled=false, new hibernation.enabled=nil", func() {
-					oldShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.Bool(false),
-					}
-					newShoot.Spec.Hibernation = &core.Hibernation{}
-
-					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-					Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
-				})
-
-				It("old hibernation.enabled=false, new hibernation=nil", func() {
-					oldShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.Bool(false),
-					}
-					newShoot.Spec.Hibernation = nil
-
-					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-					Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
-				})
-
-				It("old hibernation.enabled=nil, new hibernation=nil", func() {
-					oldShoot.Spec.Hibernation = &core.Hibernation{}
-					newShoot.Spec.Hibernation = nil
-
-					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-					Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
-				})
-			})
-
-			It("should increase for confineSpecUpdateRollout changes from true -> false", func() {
-				oldShoot := &core.Shoot{
-					Spec: core.ShootSpec{
-						Maintenance: &core.Maintenance{
-							ConfineSpecUpdateRollout: pointer.Bool(true),
-						},
-					},
-				}
-				newShoot := &core.Shoot{
-					Spec: core.ShootSpec{
-						Maintenance: &core.Maintenance{
-							ConfineSpecUpdateRollout: pointer.Bool(false),
-						},
-					},
-				}
-
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
-			})
-
-			It("should not increase for confineSpecUpdateRollout changes from false -> true", func() {
-				oldShoot := &core.Shoot{
-					Spec: core.ShootSpec{
-						Maintenance: &core.Maintenance{
-							ConfineSpecUpdateRollout: pointer.Bool(false),
-						},
-					},
-				}
-				newShoot := &core.Shoot{
-					Spec: core.ShootSpec{
-						Maintenance: &core.Maintenance{
-							ConfineSpecUpdateRollout: pointer.Bool(true),
-						},
-					},
-				}
-
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-				Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
-			})
-
-			It("should increase when the deletion timestamp gets set", func() {
-				deletionTimestamp := metav1.Now()
-
-				oldShoot := &core.Shoot{}
-				newShoot := &core.Shoot{
-					ObjectMeta: metav1.ObjectMeta{
-						DeletionTimestamp: &deletionTimestamp,
-					},
-				}
-
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
 			})
 
 			DescribeTable("operation annotations",
-				func(operationAnnotation string, mustIncreaseGeneration bool, mutateOldShoot func(*core.Shoot), featureGates map[featuregate.Feature]bool) {
+				func(operationAnnotation string, mutateOldShoot func(*core.Shoot), featureGates map[featuregate.Feature]bool, shouldIncreaseGeneration bool) {
 					oldShoot := &core.Shoot{
 						Status: core.ShootStatus{
 							LastOperation: &core.LastOperation{},
@@ -339,12 +271,8 @@ var _ = Describe("Strategy", func() {
 						mutateOldShoot(oldShoot)
 					}
 
-					var deferFns []interface{}
 					for name, enabled := range featureGates {
-						deferFns = append(deferFns, test.WithFeatureGate(utilfeature.DefaultFeatureGate, name, enabled))
-					}
-					for _, fn := range deferFns {
-						DeferCleanup(fn)
+						DeferCleanup(test.WithFeatureGate(utilfeature.DefaultFeatureGate, name, enabled))
 					}
 
 					newShoot := oldShoot.DeepCopy()
@@ -352,40 +280,133 @@ var _ = Describe("Strategy", func() {
 
 					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
-					if mustIncreaseGeneration {
-						Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
-					} else {
-						Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
+					expectedGeneration := oldShoot.Generation
+					if shouldIncreaseGeneration {
+						expectedGeneration++
 					}
+
+					Expect(newShoot.Generation).To(Equal(expectedGeneration))
 				},
 
-				Entry("retry; last operation is failed", v1beta1constants.ShootOperationRetry, true, func(oldShoot *core.Shoot) {
-					oldShoot.Status.LastOperation.State = core.LastOperationStateFailed
-				}, nil),
-				Entry("retry; last operation is not failed", v1beta1constants.ShootOperationRetry, false, func(oldShoot *core.Shoot) {
-					oldShoot.Status.LastOperation.State = core.LastOperationStateSucceeded
-				}, nil),
-				Entry("retry; last operation is not set", v1beta1constants.ShootOperationRetry, false, func(oldShoot *core.Shoot) {
-					oldShoot.Status.LastOperation = nil
-				}, nil),
+				Entry("retry; last operation is failed",
+					v1beta1constants.ShootOperationRetry,
+					func(s *core.Shoot) { s.Status.LastOperation.State = core.LastOperationStateFailed },
+					nil,
+					true,
+				),
+				Entry("retry; last operation is not failed",
+					v1beta1constants.ShootOperationRetry,
+					func(s *core.Shoot) { s.Status.LastOperation.State = core.LastOperationStateSucceeded },
+					nil,
+					false,
+				),
+				Entry("retry; last operation is not set",
+					v1beta1constants.ShootOperationRetry,
+					func(s *core.Shoot) { s.Status.LastOperation = nil },
+					nil,
+					false,
+				),
+				Entry("reconcile",
+					v1beta1constants.GardenerOperationReconcile,
+					nil,
+					nil,
+					true,
+				),
 
-				Entry("reconcile", v1beta1constants.GardenerOperationReconcile, true, nil, nil),
+				Entry("rotate-credentials-start",
+					v1beta1constants.ShootOperationRotateCredentialsStart,
+					nil,
+					nil,
+					true,
+				),
+				Entry("rotate-credentials-complete",
+					v1beta1constants.ShootOperationRotateCredentialsComplete,
+					nil,
+					nil,
+					true,
+				),
 
-				Entry("rotate-kubeconfig-credentials", v1beta1constants.ShootOperationRotateKubeconfigCredentials, true, nil, nil),
-				Entry("rotate-ssh-keypair", v1beta1constants.ShootOperationRotateSSHKeypair, true, nil, nil),
-				Entry("rotate-observability-credentials", v1beta1constants.ShootOperationRotateObservabilityCredentials, true, nil, nil),
-				Entry("rotate-etcd-encryption-key-start", v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart, true, nil, nil),
-				Entry("rotate-etcd-encryption-key-complete", v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete, true, nil, nil),
+				Entry("rotate-kubeconfig-credentials",
+					v1beta1constants.ShootOperationRotateKubeconfigCredentials,
+					nil,
+					nil,
+					true,
+				),
+				Entry("rotate-ssh-keypair",
+					v1beta1constants.ShootOperationRotateSSHKeypair,
+					nil,
+					nil,
+					true,
+				),
+				Entry("rotate-observability-credentials",
+					v1beta1constants.ShootOperationRotateObservabilityCredentials,
+					nil,
+					nil,
+					true,
+				),
 
-				Entry("rotate-ca-start; feature gate is enabled", v1beta1constants.ShootOperationRotateCAStart, true, nil, map[featuregate.Feature]bool{features.ShootCARotation: true}),
-				Entry("rotate-ca-complete; feature gate is enabled", v1beta1constants.ShootOperationRotateCAComplete, true, nil, map[featuregate.Feature]bool{features.ShootCARotation: true}),
-				Entry("rotate-ca-start; feature gate is disabled", v1beta1constants.ShootOperationRotateCAStart, false, nil, map[featuregate.Feature]bool{features.ShootCARotation: false}),
-				Entry("rotate-ca-complete; feature gate is disabled", v1beta1constants.ShootOperationRotateCAComplete, false, nil, map[featuregate.Feature]bool{features.ShootCARotation: false}),
+				Entry("rotate-etcd-encryption-key-start",
+					v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart,
+					nil,
+					nil,
+					true,
+				),
+				Entry("rotate-etcd-encryption-key-complete",
+					v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete,
+					nil,
+					nil,
+					true,
+				),
 
-				Entry("rotate-serviceaccount-key-start; feature gate is enabled", v1beta1constants.ShootOperationRotateServiceAccountKeyStart, true, nil, map[featuregate.Feature]bool{features.ShootSARotation: true}),
-				Entry("rotate-serviceaccount-key-complete; feature gate is enabled", v1beta1constants.ShootOperationRotateServiceAccountKeyComplete, true, nil, map[featuregate.Feature]bool{features.ShootSARotation: true}),
-				Entry("rotate-serviceaccount-key-start; feature gate is disabled", v1beta1constants.ShootOperationRotateServiceAccountKeyStart, false, nil, map[featuregate.Feature]bool{features.ShootSARotation: false}),
-				Entry("rotate-serviceaccount-key-complete; feature gate is disabled", v1beta1constants.ShootOperationRotateServiceAccountKeyComplete, false, nil, map[featuregate.Feature]bool{features.ShootSARotation: false}),
+				Entry("rotate-ca-start; feature gate is enabled",
+					v1beta1constants.ShootOperationRotateCAStart,
+					nil,
+					map[featuregate.Feature]bool{features.ShootCARotation: true},
+					true,
+				),
+				Entry("rotate-ca-complete; feature gate is enabled",
+					v1beta1constants.ShootOperationRotateCAComplete,
+					nil,
+					map[featuregate.Feature]bool{features.ShootCARotation: true},
+					true,
+				),
+				Entry("rotate-ca-start; feature gate is disabled",
+					v1beta1constants.ShootOperationRotateCAStart,
+					nil,
+					map[featuregate.Feature]bool{features.ShootCARotation: false},
+					false,
+				),
+				Entry("rotate-ca-complete; feature gate is disabled",
+					v1beta1constants.ShootOperationRotateCAComplete,
+					nil,
+					map[featuregate.Feature]bool{features.ShootCARotation: false},
+					false,
+				),
+
+				Entry("rotate-serviceaccount-key-start; feature gate is enabled",
+					v1beta1constants.ShootOperationRotateServiceAccountKeyStart,
+					nil,
+					map[featuregate.Feature]bool{features.ShootSARotation: true},
+					true,
+				),
+				Entry("rotate-serviceaccount-key-complete; feature gate is enabled",
+					v1beta1constants.ShootOperationRotateServiceAccountKeyComplete,
+					nil,
+					map[featuregate.Feature]bool{features.ShootSARotation: true},
+					true,
+				),
+				Entry("rotate-serviceaccount-key-start; feature gate is disabled",
+					v1beta1constants.ShootOperationRotateServiceAccountKeyStart,
+					nil,
+					map[featuregate.Feature]bool{features.ShootSARotation: false},
+					false,
+				),
+				Entry("rotate-serviceaccount-key-complete; feature gate is disabled",
+					v1beta1constants.ShootOperationRotateServiceAccountKeyComplete,
+					nil,
+					map[featuregate.Feature]bool{features.ShootSARotation: false},
+					false,
+				),
 			)
 		})
 

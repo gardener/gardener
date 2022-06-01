@@ -2512,6 +2512,411 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateShoot(shoot)).To(BeEmpty())
 			})
 
+			DescribeTable("starting rotation of all credentials",
+				func(allowed bool, status core.ShootStatus) {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, true)()
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootSARotation, true)()
+
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-credentials-start")
+					shoot.Status = status
+
+					matcher := BeEmpty()
+					if !allowed {
+						matcher = ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeForbidden),
+							"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+						})))
+					}
+
+					Expect(ValidateShoot(shoot)).To(matcher)
+				},
+
+				Entry("shoot was never created successfully", false, core.ShootStatus{}),
+				Entry("shoot is still being created", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type:  core.LastOperationTypeCreate,
+						State: core.LastOperationStateProcessing,
+					},
+				}),
+				Entry("shoot was created successfully", true, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type:  core.LastOperationTypeCreate,
+						State: core.LastOperationStateSucceeded,
+					},
+				}),
+				Entry("shoot is in reconciliation phase", true, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+				}),
+				Entry("shoot is in deletion phase", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeDelete,
+					},
+				}),
+				Entry("shoot is in migration phase", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeMigrate,
+					},
+				}),
+				Entry("shoot is in restoration phase", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeRestore,
+					},
+				}),
+				Entry("shoot was restored successfully", true, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type:  core.LastOperationTypeRestore,
+						State: core.LastOperationStateSucceeded,
+					},
+				}),
+				Entry("ca rotation phase is preparing", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationPreparing,
+							},
+						},
+					},
+				}),
+				Entry("sa rotation phase is preparing", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+								Phase: core.RotationPreparing,
+							},
+						},
+					},
+				}),
+				Entry("etcd key rotation phase is preparing", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+								Phase: core.RotationPreparing,
+							},
+						},
+					},
+				}),
+				Entry("ca rotation phase is prepared", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("sa rotation phase is prepared", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+								Phase: core.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("etcd key rotation phase is prepared", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+								Phase: core.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("ca rotation phase is completing", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationCompleting,
+							},
+						},
+					},
+				}),
+				Entry("sa rotation phase is completing", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+								Phase: core.RotationCompleting,
+							},
+						},
+					},
+				}),
+				Entry("etcd key rotation phase is completing", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+								Phase: core.RotationCompleting,
+							},
+						},
+					},
+				}),
+				Entry("ca rotation phase is completed", true, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationCompleted,
+							},
+						},
+					},
+				}),
+				Entry("sa rotation phase is completed", true, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+								Phase: core.RotationCompleted,
+							},
+						},
+					},
+				}),
+				Entry("etcd key rotation phase is completed", true, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+								Phase: core.RotationCompleted,
+							},
+						},
+					},
+				}),
+			)
+
+			DescribeTable("completing rotation of all credentials",
+				func(allowed bool, status core.ShootStatus) {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, true)()
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootSARotation, true)()
+
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-credentials-complete")
+					shoot.Status = status
+
+					matcher := BeEmpty()
+					if !allowed {
+						matcher = ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeForbidden),
+							"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+						})))
+					}
+
+					Expect(ValidateShoot(shoot)).To(matcher)
+				},
+
+				Entry("ca rotation phase is preparing", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationPreparing,
+							},
+							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+								Phase: core.RotationPrepared,
+							},
+							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+								Phase: core.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("sa rotation phase is preparing", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationPrepared,
+							},
+							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+								Phase: core.RotationPreparing,
+							},
+							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+								Phase: core.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("etcd key rotation phase is preparing", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationPrepared,
+							},
+							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+								Phase: core.RotationPrepared,
+							},
+							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+								Phase: core.RotationPreparing,
+							},
+						},
+					},
+				}),
+				Entry("all rotation phases are prepared", true, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationPrepared,
+							},
+							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+								Phase: core.RotationPrepared,
+							},
+							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+								Phase: core.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("ca rotation phase is completing", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationCompleting,
+							},
+							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+								Phase: core.RotationPrepared,
+							},
+							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+								Phase: core.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("sa rotation phase is completing", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationPrepared,
+							},
+							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+								Phase: core.RotationCompleting,
+							},
+							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+								Phase: core.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("etcd key rotation phase is completing", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationPrepared,
+							},
+							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+								Phase: core.RotationPrepared,
+							},
+							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+								Phase: core.RotationCompleting,
+							},
+						},
+					},
+				}),
+				Entry("ca rotation phase is completed", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationCompleted,
+							},
+							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+								Phase: core.RotationPrepared,
+							},
+							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+								Phase: core.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("sa rotation phase is completed", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationPrepared,
+							},
+							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+								Phase: core.RotationCompleted,
+							},
+							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+								Phase: core.RotationPrepared,
+							},
+						},
+					},
+				}),
+				Entry("etcd key rotation phase is completed", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					Credentials: &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							CertificateAuthorities: &core.ShootCARotation{
+								Phase: core.RotationPrepared,
+							},
+							ServiceAccountKey: &core.ShootServiceAccountKeyRotation{
+								Phase: core.RotationPrepared,
+							},
+							ETCDEncryptionKey: &core.ShootETCDEncryptionKeyRotation{
+								Phase: core.RotationCompleted,
+							},
+						},
+					},
+				}),
+			)
+
 			It("should do nothing if the ShootCARotation feature gate is disabled and the start operation is set", func() {
 				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, false)()
 
@@ -2576,7 +2981,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						State: core.LastOperationStateSucceeded,
 					},
 				}),
-				Entry("ca rotation phase is prepare", false, core.ShootStatus{
+				Entry("ca rotation phase is preparing", false, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeReconcile,
 					},
@@ -2600,7 +3005,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						},
 					},
 				}),
-				Entry("ca rotation phase is complete", false, core.ShootStatus{
+				Entry("ca rotation phase is completing", false, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeReconcile,
 					},
@@ -2643,7 +3048,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(matcher)
 				},
 
-				Entry("ca rotation phase is prepare", false, core.ShootStatus{
+				Entry("ca rotation phase is preparing", false, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeReconcile,
 					},
@@ -2667,7 +3072,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						},
 					},
 				}),
-				Entry("ca rotation phase is complete", false, core.ShootStatus{
+				Entry("ca rotation phase is completing", false, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeReconcile,
 					},
@@ -2757,7 +3162,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						State: core.LastOperationStateSucceeded,
 					},
 				}),
-				Entry("rotation phase is prepare", false, core.ShootStatus{
+				Entry("rotation phase is preparing", false, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeReconcile,
 					},
@@ -2781,7 +3186,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						},
 					},
 				}),
-				Entry("rotation phase is complete", false, core.ShootStatus{
+				Entry("rotation phase is completing", false, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeReconcile,
 					},
@@ -2824,7 +3229,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Expect(ValidateShoot(shoot)).To(matcher)
 				},
 
-				Entry("rotation phase is prepare", false, core.ShootStatus{
+				Entry("rotation phase is preparing", false, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeReconcile,
 					},
@@ -2848,7 +3253,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						},
 					},
 				}),
-				Entry("rotation phase is complete", false, core.ShootStatus{
+				Entry("rotation phase is completing", false, core.ShootStatus{
 					LastOperation: &core.LastOperation{
 						Type: core.LastOperationTypeReconcile,
 					},

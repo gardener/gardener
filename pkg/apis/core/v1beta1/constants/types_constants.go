@@ -296,6 +296,13 @@ const (
 	// ShootOperationRetry is a constant for an annotation on a Shoot indicating that a failed Shoot reconciliation shall be
 	// retried.
 	ShootOperationRetry = "retry"
+	// ShootOperationRotateCredentialsStart is a constant for an annotation on a Shoot indicating that the rotation of
+	// all credentials shall be started. This includes CAs, certificates, kubeconfigs, SSH keypairs, observability
+	// credentials, and ServiceAccount signing key.
+	ShootOperationRotateCredentialsStart = "rotate-credentials-start"
+	// ShootOperationRotateCredentialsComplete is a constant for an annotation on a Shoot indicating that the rotation
+	// of the credentials shall be completed.
+	ShootOperationRotateCredentialsComplete = "rotate-credentials-complete"
 	// ShootOperationRotateKubeconfigCredentials is a constant for an annotation on a Shoot indicating that the credentials
 	// contained in the kubeconfig that is handed out to the user shall be rotated.
 	ShootOperationRotateKubeconfigCredentials = "rotate-kubeconfig-credentials"

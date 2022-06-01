@@ -32,7 +32,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -675,62 +677,60 @@ func (r *shootReconciler) updateShootStatusOperationStart(ctx context.Context, g
 	var mustRemoveOperationAnnotation bool
 
 	switch shoot.Annotations[v1beta1constants.GardenerOperation] {
+	case v1beta1constants.ShootOperationRotateCredentialsStart:
+		mustRemoveOperationAnnotation = true
+		if gardenletfeatures.FeatureGate.Enabled(features.ShootCARotation) {
+			startRotationCA(shoot, &now)
+		}
+		if gardenletfeatures.FeatureGate.Enabled(features.ShootSARotation) {
+			startRotationServiceAccountKey(shoot, &now)
+		}
+		startRotationKubeconfig(shoot, &now)
+		startRotationSSHKeypair(shoot, &now)
+		startRotationObservability(shoot, &now)
+		startRotationETCDEncryptionKey(shoot, &now)
+	case v1beta1constants.ShootOperationRotateCredentialsComplete:
+		mustRemoveOperationAnnotation = true
+		if gardenletfeatures.FeatureGate.Enabled(features.ShootCARotation) {
+			completeRotationCA(shoot)
+		}
+		if gardenletfeatures.FeatureGate.Enabled(features.ShootSARotation) {
+			completeRotationServiceAccountKey(shoot)
+		}
+		completeRotationETCDEncryptionKey(shoot)
+
 	case v1beta1constants.ShootOperationRotateCAStart:
 		mustRemoveOperationAnnotation = true
-		v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.ShootCARotation) {
-			rotation.Phase = gardencorev1beta1.RotationPreparing
-			rotation.LastInitiationTime = &now
-		})
-
+		startRotationCA(shoot, &now)
 	case v1beta1constants.ShootOperationRotateCAComplete:
 		mustRemoveOperationAnnotation = true
-		v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.ShootCARotation) {
-			rotation.Phase = gardencorev1beta1.RotationCompleting
-		})
+		completeRotationCA(shoot)
 
 	case v1beta1constants.ShootOperationRotateKubeconfigCredentials:
 		mustRemoveOperationAnnotation = true
-		v1beta1helper.MutateShootKubeconfigRotation(shoot, func(rotation *gardencorev1beta1.ShootKubeconfigRotation) {
-			rotation.LastInitiationTime = &now
-		})
+		startRotationKubeconfig(shoot, &now)
 
 	case v1beta1constants.ShootOperationRotateSSHKeypair:
 		mustRemoveOperationAnnotation = true
-		v1beta1helper.MutateShootSSHKeypairRotation(shoot, func(rotation *gardencorev1beta1.ShootSSHKeypairRotation) {
-			rotation.LastInitiationTime = &now
-		})
+		startRotationSSHKeypair(shoot, &now)
 
 	case v1beta1constants.ShootOperationRotateObservabilityCredentials:
 		mustRemoveOperationAnnotation = true
-		v1beta1helper.MutateObservabilityRotation(shoot, func(rotation *gardencorev1beta1.ShootObservabilityRotation) {
-			rotation.LastInitiationTime = &now
-		})
+		startRotationObservability(shoot, &now)
 
 	case v1beta1constants.ShootOperationRotateServiceAccountKeyStart:
 		mustRemoveOperationAnnotation = true
-		v1beta1helper.MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootServiceAccountKeyRotation) {
-			rotation.Phase = gardencorev1beta1.RotationPreparing
-			rotation.LastInitiationTime = &now
-		})
-
+		startRotationServiceAccountKey(shoot, &now)
 	case v1beta1constants.ShootOperationRotateServiceAccountKeyComplete:
 		mustRemoveOperationAnnotation = true
-		v1beta1helper.MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootServiceAccountKeyRotation) {
-			rotation.Phase = gardencorev1beta1.RotationCompleting
-		})
+		completeRotationServiceAccountKey(shoot)
 
 	case v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart:
 		mustRemoveOperationAnnotation = true
-		v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootETCDEncryptionKeyRotation) {
-			rotation.Phase = gardencorev1beta1.RotationPreparing
-			rotation.LastInitiationTime = &now
-		})
-
+		startRotationETCDEncryptionKey(shoot, &now)
 	case v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete:
 		mustRemoveOperationAnnotation = true
-		v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootETCDEncryptionKeyRotation) {
-			rotation.Phase = gardencorev1beta1.RotationCompleting
-		})
+		completeRotationETCDEncryptionKey(shoot)
 	}
 
 	if err := gardenClient.Status().Update(ctx, shoot); err != nil {
@@ -1045,4 +1045,61 @@ func (t *reconciliationDueTracker) tracked(key string) bool {
 	defer t.lock.Unlock()
 	v, ok := t.tracker[key]
 	return ok && v
+}
+
+func startRotationCA(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
+	v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.ShootCARotation) {
+		rotation.Phase = gardencorev1beta1.RotationPreparing
+		rotation.LastInitiationTime = now
+	})
+}
+
+func completeRotationCA(shoot *gardencorev1beta1.Shoot) {
+	v1beta1helper.MutateShootCARotation(shoot, func(rotation *gardencorev1beta1.ShootCARotation) {
+		rotation.Phase = gardencorev1beta1.RotationCompleting
+	})
+}
+
+func startRotationServiceAccountKey(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
+	v1beta1helper.MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootServiceAccountKeyRotation) {
+		rotation.Phase = gardencorev1beta1.RotationPreparing
+		rotation.LastInitiationTime = now
+	})
+}
+
+func completeRotationServiceAccountKey(shoot *gardencorev1beta1.Shoot) {
+	v1beta1helper.MutateShootServiceAccountKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootServiceAccountKeyRotation) {
+		rotation.Phase = gardencorev1beta1.RotationCompleting
+	})
+}
+
+func startRotationETCDEncryptionKey(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
+	v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootETCDEncryptionKeyRotation) {
+		rotation.Phase = gardencorev1beta1.RotationPreparing
+		rotation.LastInitiationTime = now
+	})
+}
+
+func completeRotationETCDEncryptionKey(shoot *gardencorev1beta1.Shoot) {
+	v1beta1helper.MutateShootETCDEncryptionKeyRotation(shoot, func(rotation *gardencorev1beta1.ShootETCDEncryptionKeyRotation) {
+		rotation.Phase = gardencorev1beta1.RotationCompleting
+	})
+}
+
+func startRotationKubeconfig(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
+	v1beta1helper.MutateShootKubeconfigRotation(shoot, func(rotation *gardencorev1beta1.ShootKubeconfigRotation) {
+		rotation.LastInitiationTime = now
+	})
+}
+
+func startRotationSSHKeypair(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
+	v1beta1helper.MutateShootSSHKeypairRotation(shoot, func(rotation *gardencorev1beta1.ShootSSHKeypairRotation) {
+		rotation.LastInitiationTime = now
+	})
+}
+
+func startRotationObservability(shoot *gardencorev1beta1.Shoot, now *metav1.Time) {
+	v1beta1helper.MutateObservabilityRotation(shoot, func(rotation *gardencorev1beta1.ShootObservabilityRotation) {
+		rotation.LastInitiationTime = now
+	})
 }

@@ -33,17 +33,9 @@ Failed shoots are only reconciled again if a new Gardener version is deployed, t
 kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=retry
 ```
 
-## Rotate Kubeconfig Credentials
+## Credentials Rotation Operations
 
-Please consult [this document](shoot_credentials_rotation.md#kubeconfig) for more information.
-
-## Rotate Observability Credentials
-
-Please consult [this document](shoot_credentials_rotation.md#observability-passwords-for-grafana) for more information.
-
-## Rotate SSH Keypair For Worker Nodes
-
-Please consult [this document](shoot_credentials_rotation.md#ssh-key-pair-for-worker-nodes) for more information.
+Please consult [this document](shoot_credentials_rotation.md) for more information.
 
 ## Restart `systemd` Services On Particular Worker Nodes
 
