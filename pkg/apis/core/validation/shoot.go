@@ -1727,7 +1727,7 @@ func validateShootOperation(operation string, shoot *core.Shoot, fldPath *field.
 			}
 		}
 		if phase := helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials); len(phase) > 0 && phase != core.RotationCompleted {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
+			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
 		}
 	case v1beta1constants.ShootOperationRotateCredentialsComplete:
 		if utilfeature.DefaultFeatureGate.Enabled(features.ShootCARotation) {
@@ -1741,7 +1741,7 @@ func validateShootOperation(operation string, shoot *core.Shoot, fldPath *field.
 			}
 		}
 		if helper.GetShootETCDEncryptionKeyRotationPhase(shoot.Status.Credentials) != core.RotationPrepared {
-			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
+			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
 		}
 
 	case v1beta1constants.ShootOperationRotateCAStart:
