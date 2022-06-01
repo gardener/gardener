@@ -36,7 +36,7 @@ Those include
 
 **🚨 There is no auto-rotation of those credentials, and it is the responsibility of the end-user to regularly rotate them.**
 
-While it is possible to rotate them one by one, there is also a convenience method to combine the rotation of all of those credentials.
+While it is possible to rotate them one by one, there is also a convenient method to combine the rotation of all of those credentials.
 The rotation happens in two phases since it might be required to update some API clients (e.g., when CAs are rotated).
 In order to start the rotation (first phase), you have to annotate the shoot with the `rotate-credentials-start` operation:
 
