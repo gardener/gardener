@@ -11,11 +11,9 @@ images:
 - name: gardener-seed-admission-controller
   sourceRepository: github.com/gardener/gardener
   repository: eu.gcr.io/gardener-project/gardener/seed-admission-controller
-  tag: v1.44.0
 - name: gardener-resource-manager
   sourceRepository: github.com/gardener/gardener
   repository: eu.gcr.io/gardener-project/gardener/resource-manager
-  tag: v1.44.0
 
 # Seed bootstrap
 - name: pause-container

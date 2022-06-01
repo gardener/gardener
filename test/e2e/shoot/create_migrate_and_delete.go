@@ -27,15 +27,15 @@ import (
 )
 
 const (
-	defaultMrExcludeList              = ""
-	defaultResourcesWithGeneratedName = ""
+	defaultMrExcludeList              = "extension-controlplane-shoot-webhooks,extension-shoot-dns-service-shoot,extension-worker-mcm-shoot"
+	defaultResourcesWithGeneratedName = "apiserver-proxy-config"
 )
 
-var _ = Describe("Shoot Tests", Label("Shoot"), func() {
+var _ = Describe("Shoot Tests", Label("CPM"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = defaultShoot("default-")
+	f.Shoot = defaultShoot("migrate-")
 
-	It("Migrate and Delete", Label("fast"), func() {
+	It("Create, Migrate and Delete", func() {
 		By("Create Shoot")
 		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
@@ -43,23 +43,29 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 		f.Verify()
 
 		By("Migrate Shoot")
-		t, err := newDefaultShootMigrationTest(parentCtx, f.Shoot)
+		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
+		defer cancel()
+		t, err := newDefaultShootMigrationTest(ctx, f.Shoot, f.GardenerFramework)
 		Expect(err).ToNot(HaveOccurred())
-		beforeMigration(parentCtx, t)
-		Expect(t.MigrateShoot(parentCtx)).To(Succeed())
+		Expect(beforeMigration(ctx, t)).To(Succeed())
+		Expect(t.MigrateShoot(ctx)).To(Succeed())
+		Expect(afterMigration(ctx, t)).To(Succeed())
 
 		By("Delete Shoot")
-		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
+		ctx, cancel = context.WithTimeout(ctx, 15*time.Minute)
 		defer cancel()
 		Expect(f.DeleteShootAndWaitForDeletion(ctx, f.Shoot)).To(Succeed())
 	})
 })
 
-func newDefaultShootMigrationTest(ctx context.Context, shoot *v1beta1.Shoot) (*ShootMigrationTest, error) {
-	t, err := NewShootMigrationTest(ctx, NewGardenerFramework(defaultGardenConfig()), &ShootMigrationConfig{
-		ShootName:      shoot.Name,
-		ShootNamespace: shoot.Namespace,
-		TargetSeedName: "local-2",
+func newDefaultShootMigrationTest(ctx context.Context, shoot *v1beta1.Shoot, gardenerFramework *GardenerFramework) (*ShootMigrationTest, error) {
+	t, err := NewShootMigrationTest(ctx, gardenerFramework, &ShootMigrationConfig{
+		ShootName:               shoot.Name,
+		ShootNamespace:          shoot.Namespace,
+		TargetSeedName:          "local2",
+		SkipNodeCheck:           true,
+		SkipMachinesCheck:       true,
+		SkipProtectedToleration: true,
 	})
 	return t, err
 }
@@ -70,11 +76,7 @@ func beforeMigration(ctx context.Context, t *ShootMigrationTest) error {
 	}
 
 	By("Creating test Secret and Service Account")
-	if err := t.CreateSecretAndServiceAccount(ctx); err != nil {
-		Fail(err.Error())
-	}
-
-	return nil
+	return t.CreateSecretAndServiceAccount(ctx)
 }
 
 func afterMigration(ctx context.Context, t *ShootMigrationTest) error {
@@ -107,9 +109,5 @@ func afterMigration(ctx context.Context, t *ShootMigrationTest) error {
 
 func cleanUp(ctx context.Context, t *ShootMigrationTest) error {
 	By("Cleaning up the test Secret and Service Account")
-	if err := t.CleanUpSecretAndServiceAccount(ctx); err != nil {
-		return err
-	}
-
-	return nil
+	return t.CleanUpSecretAndServiceAccount(ctx)
 }
