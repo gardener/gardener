@@ -24,15 +24,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
 	webhookcmd "github.com/gardener/gardener/extensions/pkg/webhook/cmd"
-	"github.com/gardener/gardener/extensions/pkg/webhook/shoot"
+	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/utils"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -56,12 +56,15 @@ import (
 const (
 	servicePort = 12345
 
-	providerName = "provider-test"
-	providerType = "test"
+	extensionName                   = "provider-test"
+	extensionType                   = "test"
+	shootWebhookManagedResourceName = "extension-provider-test-shoot-webhooks"
 
 	seedWebhookName, seedWebhookPath   = "seed-webhook", "seed-path"
 	shootWebhookName, shootWebhookPath = "shoot-webhook", "shoot-path"
 )
+
+var shootNamespaceSelector = map[string]string{"shoot.gardener.cloud/provider": extensionType}
 
 var _ = Describe("Certificates tests", func() {
 	var (
@@ -101,10 +104,9 @@ var _ = Describe("Certificates tests", func() {
 		shootNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "shoot--foo--",
-				Labels: map[string]string{
-					"shoot.gardener.cloud/provider": providerType,
-					"gardener.cloud/role":           "shoot",
-				},
+				Labels: utils.MergeStringMaps(shootNamespaceSelector, map[string]string{
+					"gardener.cloud/role": "shoot",
+				}),
 			},
 		}
 		Expect(testClient.Create(ctx, shootNamespace)).To(Succeed())
@@ -131,13 +133,13 @@ var _ = Describe("Certificates tests", func() {
 				Shoot:        runtime.RawExtension{Object: &gardencorev1beta1.Shoot{}},
 			},
 		}
-		shootNetworkPolicy = shoot.GetNetworkPolicyMeta(shootNamespace.Name, providerName)
+		shootNetworkPolicy = extensionswebhookshoot.GetNetworkPolicyMeta(shootNamespace.Name, extensionName)
 
 		seedWebhook = admissionregistrationv1.MutatingWebhook{
-			Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", seedWebhookName, providerType),
+			Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", seedWebhookName, extensionType),
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
 				Service: &admissionregistrationv1.ServiceReference{
-					Name:      "gardener-extension-" + providerName,
+					Name:      "gardener-extension-" + extensionName,
 					Namespace: extensionNamespace.Name,
 					Path:      pointer.String("/" + seedWebhookPath),
 					Port:      pointer.Int32(443),
@@ -159,9 +161,9 @@ var _ = Describe("Certificates tests", func() {
 			ObjectSelector:          &metav1.LabelSelector{},
 		}
 		shootWebhook = admissionregistrationv1.MutatingWebhook{
-			Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", shootWebhookName, providerType),
+			Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", shootWebhookName, extensionType),
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				URL: pointer.String("https://gardener-extension-" + providerName + "." + extensionNamespace.Name + ":443/" + shootWebhookPath),
+				URL: pointer.String("https://gardener-extension-" + extensionName + "." + extensionNamespace.Name + ":443/" + shootWebhookPath),
 			},
 			Rules: []admissionregistrationv1.RuleWithOperations{
 				{
@@ -180,11 +182,11 @@ var _ = Describe("Certificates tests", func() {
 		}
 
 		seedWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{Name: "gardener-extension-" + providerName},
+			ObjectMeta: metav1.ObjectMeta{Name: "gardener-extension-" + extensionName},
 			Webhooks:   []admissionregistrationv1.MutatingWebhook{seedWebhook},
 		}
 		shootWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{Name: "gardener-extension-" + providerName + "-shoot"},
+			ObjectMeta: metav1.ObjectMeta{Name: "gardener-extension-" + extensionName + "-shoot"},
 			Webhooks:   []admissionregistrationv1.MutatingWebhook{shootWebhook},
 		}
 	})
@@ -208,7 +210,7 @@ var _ = Describe("Certificates tests", func() {
 				webhookcmd.Switch(seedWebhookName, newSeedWebhook),
 				webhookcmd.Switch(shootWebhookName, newShootWebhook),
 			)
-			webhookOptions = webhookcmd.NewAddToManagerOptions(providerName, providerType, serverOptions, switchOptions)
+			webhookOptions = webhookcmd.NewAddToManagerOptions(extensionName, shootWebhookManagedResourceName, shootNamespaceSelector, serverOptions, switchOptions)
 		)
 
 		Expect(webhookOptions.Complete()).To(Succeed())
@@ -275,7 +277,7 @@ var _ = Describe("Certificates tests", func() {
 			By("preparing existing shoot webhook resources")
 			Expect(testClient.Create(ctx, shootNetworkPolicy)).To(Succeed())
 			Expect(testClient.Create(ctx, cluster)).To(Succeed())
-			Expect(genericactuator.ReconcileShootWebhookConfig(ctx, testClient, shootNamespace.Name, providerName, servicePort, shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
+			Expect(extensionswebhookshoot.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionName, shootWebhookManagedResourceName, servicePort, shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
 
 			DeferCleanup(func() {
 				Expect(testClient.Delete(ctx, shootNetworkPolicy)).To(Or(Succeed(), BeNotFoundError()))
@@ -389,7 +391,7 @@ func newSeedWebhook(_ manager.Manager) (*extensionswebhook.Webhook, error) {
 	return &extensionswebhook.Webhook{
 		Name:     seedWebhookName,
 		Path:     seedWebhookPath,
-		Provider: providerType,
+		Provider: extensionType,
 		Types:    []extensionswebhook.Type{{Obj: &corev1.Service{}}},
 		Target:   extensionswebhook.TargetSeed,
 		Handler:  http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {}),
@@ -400,7 +402,7 @@ func newShootWebhook(_ manager.Manager) (*extensionswebhook.Webhook, error) {
 	return &extensionswebhook.Webhook{
 		Name:     shootWebhookName,
 		Path:     shootWebhookPath,
-		Provider: providerType,
+		Provider: extensionType,
 		Types:    []extensionswebhook.Type{{Obj: &corev1.ServiceAccount{}}},
 		Target:   extensionswebhook.TargetShoot,
 		Handler:  http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {}),
@@ -417,7 +419,7 @@ func newCodec(scheme *runtime.Scheme, codec serializer.CodecFactory, serializer 
 }
 
 func getShootWebhookConfig(codec runtime.Codec, shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration, namespace string) error {
-	managedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "extension-controlplane-shoot-webhooks", Namespace: namespace}}
+	managedResourceSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: shootWebhookManagedResourceName, Namespace: namespace}}
 	if err := testClient.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret); err != nil {
 		return err
 	}

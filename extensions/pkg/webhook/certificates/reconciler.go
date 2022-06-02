@@ -20,8 +20,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	"github.com/gardener/gardener/extensions/pkg/webhook"
+	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -69,8 +69,12 @@ type reconciler struct {
 	Namespace string
 	// Identity of the secrets manager used for managing the secret.
 	Identity string
-	// Name and provider type of the extension.
-	ProviderName, ProviderType string
+	// Name of the extension.
+	ExtensionName string
+	// ShootWebhookManagedResourceName is the name of the ManagedResource containing the raw extensionswebhookshoot webhook config.
+	ShootWebhookManagedResourceName string
+	// ShootNamespaceSelector is a label selector for extensionswebhookshoot namespaces relevant to the extension.
+	ShootNamespaceSelector map[string]string
 	// Mode is the webhook client config mode.
 	Mode string
 	// URL is the URL that is used to register the webhooks in Kubernetes.
@@ -186,7 +190,7 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 		r.AtomicShootWebhookConfig.Store(r.ShootWebhookConfig.DeepCopy())
 
 		// reconcile all shoot webhook configs with the freshly created CA bundle
-		if err := genericactuator.ReconcileShootWebhooksForAllNamespaces(ctx, r.client, r.ProviderName, r.ProviderType, r.serverPort, r.ShootWebhookConfig); err != nil {
+		if err := extensionswebhookshoot.ReconcileWebhooksForAllNamespaces(ctx, r.client, r.ExtensionName, r.ShootWebhookManagedResourceName, r.ShootNamespaceSelector, r.serverPort, r.ShootWebhookConfig); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error reconciling all shoot webhook configs: %w", err)
 		}
 		log.Info("Updated all shoot webhook configs with new CA bundle", "webhookConfig", r.ShootWebhookConfig)
@@ -247,7 +251,7 @@ func (r *reconciler) generateWebhookCA(ctx context.Context, sm secretsmanager.In
 
 func (r *reconciler) generateWebhookServerCert(ctx context.Context, sm secretsmanager.Interface) (*corev1.Secret, error) {
 	// use current CA for signing server cert to prevent mismatches when dropping the old CA from the webhook config
-	return sm.Generate(ctx, getWebhookServerCertConfig(r.ServerSecretName, r.Namespace, r.ProviderName, r.Mode, r.URL),
+	return sm.Generate(ctx, getWebhookServerCertConfig(r.ServerSecretName, r.Namespace, r.ExtensionName, r.Mode, r.URL),
 		secretsmanager.SignedByCA(r.CASecretName, secretsmanager.UseCurrentCA))
 }
 

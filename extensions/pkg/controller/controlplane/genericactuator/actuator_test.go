@@ -17,7 +17,6 @@ package genericactuator
 import (
 	"context"
 	"crypto/rand"
-	"encoding/json"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -56,7 +55,6 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/clock"
@@ -107,7 +105,6 @@ var _ = Describe("Actuator", func() {
 		newSecretsManager newSecretsManagerFunc
 
 		ctx               = context.TODO()
-		providerType      = "test"
 		webhookServerPort = 443
 
 		cp         *extensionsv1alpha1.ControlPlane
@@ -604,112 +601,6 @@ webhooks:
 		},
 		Entry("should delete secrets and charts"),
 	)
-
-	Describe("#ReconcileShootWebhooksForAllNamespaces", func() {
-		var (
-			labelSelector = client.MatchingLabels{
-				v1beta1constants.GardenRole:         v1beta1constants.GardenRoleShoot,
-				v1beta1constants.LabelShootProvider: providerType,
-			}
-			port               = 1234
-			networkPolicyName  = "gardener-extension-" + providerName
-			shootWebhookConfig *admissionregistrationv1.MutatingWebhookConfiguration
-		)
-
-		BeforeEach(func() {
-			shootWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{Webhooks: []admissionregistrationv1.MutatingWebhook{{}}}
-		})
-
-		It("should behave correctly", func() {
-			c := mockclient.NewMockClient(ctrl)
-
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.NamespaceList{}), labelSelector).DoAndReturn(func(_ context.Context, list *corev1.NamespaceList, _ ...client.ListOption) error {
-				*list = corev1.NamespaceList{Items: []corev1.Namespace{
-					{ObjectMeta: metav1.ObjectMeta{Name: "namespace1"}},
-					{ObjectMeta: metav1.ObjectMeta{Name: "namespace2"}},
-					{ObjectMeta: metav1.ObjectMeta{Name: "namespace3"}},
-				}}
-				return nil
-			})
-			c.EXPECT().Get(ctx, kutil.Key("namespace1", networkPolicyName), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}))
-			c.EXPECT().Get(ctx, kutil.Key("namespace2", networkPolicyName), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(errNotFound)
-			c.EXPECT().Get(ctx, kutil.Key("namespace3", networkPolicyName), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}))
-
-			createdMRSecretForShootWebhooksNS1 := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: "namespace1"},
-				Data: map[string][]byte{"mutatingwebhookconfiguration____.yaml": []byte(`apiVersion: admissionregistration.k8s.io/v1
-kind: MutatingWebhookConfiguration
-metadata:
-  creationTimestamp: null
-webhooks:
-- admissionReviewVersions: null
-  clientConfig: {}
-  name: ""
-  sideEffects: null
-`)},
-				Type: corev1.SecretTypeOpaque,
-			}
-			createdMRForShootWebhooksNS1 := &resourcesv1alpha1.ManagedResource{
-				ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: "namespace1"},
-				Spec:       resourcesv1alpha1.ManagedResourceSpec{SecretRefs: []corev1.LocalObjectReference{{Name: ShootWebhooksResourceName}}},
-			}
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: "namespace1", Name: networkPolicyName}, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(errNotFound)
-			c.EXPECT().Create(ctx, constructNetworkPolicy(providerName, "namespace1", port))
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: "namespace1", Name: ShootWebhooksResourceName}, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
-			c.EXPECT().Create(ctx, createdMRSecretForShootWebhooksNS1)
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: "namespace1", Name: ShootWebhooksResourceName}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
-			c.EXPECT().Create(ctx, createdMRForShootWebhooksNS1)
-
-			c.EXPECT().Get(ctx, kutil.Key("namespace1"), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, testCluster *extensionsv1alpha1.Cluster) error {
-					*testCluster = computeClusterWithShoot("namespace1", gardencorev1beta1.ShootSpec{
-						Kubernetes: gardencorev1beta1.Kubernetes{
-							Version: shootVersion,
-						},
-					})
-					return nil
-				},
-			)
-
-			createdMRSecretForShootWebhooksNS3 := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: "namespace3"},
-				Data: map[string][]byte{"mutatingwebhookconfiguration____.yaml": []byte(`apiVersion: admissionregistration.k8s.io/v1
-kind: MutatingWebhookConfiguration
-metadata:
-  creationTimestamp: null
-webhooks:
-- admissionReviewVersions: null
-  clientConfig: {}
-  name: ""
-  sideEffects: null
-`)},
-				Type: corev1.SecretTypeOpaque,
-			}
-			createdMRForShootWebhooksNS3 := &resourcesv1alpha1.ManagedResource{
-				ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: "namespace3"},
-				Spec:       resourcesv1alpha1.ManagedResourceSpec{SecretRefs: []corev1.LocalObjectReference{{Name: ShootWebhooksResourceName}}},
-			}
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: "namespace3", Name: networkPolicyName}, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}))
-			c.EXPECT().Patch(ctx, constructNetworkPolicy(providerName, "namespace3", port), gomock.Any())
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: "namespace3", Name: ShootWebhooksResourceName}, gomock.AssignableToTypeOf(&corev1.Secret{}))
-			c.EXPECT().Update(ctx, createdMRSecretForShootWebhooksNS3)
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: "namespace3", Name: ShootWebhooksResourceName}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
-			c.EXPECT().Update(ctx, createdMRForShootWebhooksNS3)
-
-			c.EXPECT().Get(ctx, kutil.Key("namespace3"), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, testCluster *extensionsv1alpha1.Cluster) error {
-					*testCluster = computeClusterWithShoot("namespace3", gardencorev1beta1.ShootSpec{
-						Kubernetes: gardencorev1beta1.Kubernetes{
-							Version: shootVersion,
-						},
-					})
-					return nil
-				},
-			)
-
-			Expect(ReconcileShootWebhooksForAllNamespaces(ctx, c, providerName, providerType, port, shootWebhookConfig)).To(Succeed())
-		})
-	})
 })
 
 func clientGet(result client.Object) interface{} {
@@ -752,8 +643,7 @@ func constructNetworkPolicy(providerName, namespace string, webhookPort int) *ne
 						{
 							NamespaceSelector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
-									v1beta1constants.LabelControllerRegistrationName: providerName,
-									v1beta1constants.GardenRole:                      v1beta1constants.GardenRoleExtension,
+									v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension,
 								},
 							},
 							PodSelector: &metav1.LabelSelector{
@@ -771,28 +661,6 @@ func constructNetworkPolicy(providerName, namespace string, webhookPort int) *ne
 					v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
 				},
 			},
-		},
-	}
-}
-
-func computeClusterWithShoot(name string, shootSpec gardencorev1beta1.ShootSpec) extensionsv1alpha1.Cluster {
-	shoot := &gardencorev1beta1.Shoot{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-			Kind:       "Shoot",
-		},
-		Spec: shootSpec,
-	}
-
-	shootJSON, err := json.Marshal(shoot)
-	Expect(err).To(Succeed())
-
-	return extensionsv1alpha1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: extensionsv1alpha1.ClusterSpec{
-			Shoot: runtime.RawExtension{Raw: shootJSON},
 		},
 	}
 }

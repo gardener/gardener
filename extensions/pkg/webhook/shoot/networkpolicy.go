@@ -29,14 +29,14 @@ import (
 )
 
 // GetNetworkPolicyMeta returns the network policy object with filled meta data.
-func GetNetworkPolicyMeta(namespace, providerName string) *networkingv1.NetworkPolicy {
-	return &networkingv1.NetworkPolicy{ObjectMeta: kutil.ObjectMeta(namespace, "gardener-extension-"+providerName)}
+func GetNetworkPolicyMeta(namespace, extensionName string) *networkingv1.NetworkPolicy {
+	return &networkingv1.NetworkPolicy{ObjectMeta: kutil.ObjectMeta(namespace, "gardener-extension-"+extensionName)}
 }
 
-// EnsureNetworkPolicy ensures that the required network policy that allows the kube-apiserver running in the given namespace
-// to talk to the extension webhook is installed.
-func EnsureNetworkPolicy(ctx context.Context, c client.Client, namespace, providerName string, port int) error {
-	networkPolicy := GetNetworkPolicyMeta(namespace, providerName)
+// EnsureNetworkPolicy ensures that the required network policy that allows the kube-apiserver running in the given
+// namespace to talk to the extension webhook is installed.
+func EnsureNetworkPolicy(ctx context.Context, c client.Client, namespace, extensionName string, port int) error {
+	networkPolicy := GetNetworkPolicyMeta(namespace, extensionName)
 
 	policyPort := intstr.FromInt(port)
 	policyProtocol := corev1.ProtocolTCP
@@ -56,13 +56,12 @@ func EnsureNetworkPolicy(ctx context.Context, c client.Client, namespace, provid
 						{
 							NamespaceSelector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
-									v1beta1constants.LabelControllerRegistrationName: providerName,
-									v1beta1constants.GardenRole:                      v1beta1constants.GardenRoleExtension,
+									v1beta1constants.GardenRole: v1beta1constants.GardenRoleExtension,
 								},
 							},
 							PodSelector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
-									"app.kubernetes.io/name": "gardener-extension-" + providerName,
+									"app.kubernetes.io/name": "gardener-extension-" + extensionName,
 								},
 							},
 						},

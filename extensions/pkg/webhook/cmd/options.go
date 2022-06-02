@@ -19,10 +19,11 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/certificates"
+	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
+
 	"github.com/spf13/pflag"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -171,20 +172,23 @@ func NewSwitchOptions(pairs ...NameToFactory) *SwitchOptions {
 
 // AddToManagerOptions are options to create an `AddToManager` function from ServerOptions and SwitchOptions.
 type AddToManagerOptions struct {
-	providerName string
-	providerType string
-	Server       ServerOptions
-	Switch       SwitchOptions
+	extensionName                   string
+	shootWebhookManagedResourceName string
+	shootNamespaceSelector          map[string]string
+
+	Server ServerOptions
+	Switch SwitchOptions
 }
 
 // NewAddToManagerOptions creates new AddToManagerOptions with the given server name, server, and switch options.
 // It is supposed to be used for webhooks which should be automatically registered in the cluster via a MutatingWebhookConfiguration.
-func NewAddToManagerOptions(providerName string, providerType string, serverOpts *ServerOptions, switchOpts *SwitchOptions) *AddToManagerOptions {
+func NewAddToManagerOptions(extensionName string, shootWebhookManagedResourceName string, shootNamespaceSelector map[string]string, serverOpts *ServerOptions, switchOpts *SwitchOptions) *AddToManagerOptions {
 	return &AddToManagerOptions{
-		providerName: providerName,
-		providerType: providerType,
-		Server:       *serverOpts,
-		Switch:       *switchOpts,
+		extensionName:                   extensionName,
+		shootWebhookManagedResourceName: shootWebhookManagedResourceName,
+		shootNamespaceSelector:          shootNamespaceSelector,
+		Server:                          *serverOpts,
+		Switch:                          *switchOpts,
 	}
 }
 
@@ -206,20 +210,24 @@ func (c *AddToManagerOptions) Complete() error {
 // Completed returns the completed AddToManagerConfig. Only call this if a previous call to `Complete` succeeded.
 func (c *AddToManagerOptions) Completed() *AddToManagerConfig {
 	return &AddToManagerConfig{
-		providerName: c.providerName,
-		providerType: c.providerType,
-		Server:       *c.Server.Completed(),
-		Switch:       *c.Switch.Completed(),
+		extensionName:                   c.extensionName,
+		shootWebhookManagedResourceName: c.shootWebhookManagedResourceName,
+		shootNamespaceSelector:          c.shootNamespaceSelector,
+
+		Server: *c.Server.Completed(),
+		Switch: *c.Switch.Completed(),
 	}
 }
 
 // AddToManagerConfig is a completed AddToManager configuration.
 type AddToManagerConfig struct {
-	providerName string
-	providerType string
-	Server       ServerConfig
-	Switch       SwitchConfig
-	Clock        clock.Clock
+	extensionName                   string
+	shootWebhookManagedResourceName string
+	shootNamespaceSelector          map[string]string
+
+	Server ServerConfig
+	Switch SwitchConfig
+	Clock  clock.Clock
 }
 
 // AddToManager instantiates all webhooks of this configuration. If there are any webhooks, it creates a
@@ -253,7 +261,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		webhooks,
 		mgr.GetClient(),
 		c.Server.Namespace,
-		c.providerName,
+		c.extensionName,
 		servicePort,
 		c.Server.Mode,
 		c.Server.URL,
@@ -271,7 +279,7 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		mgr.GetLogger().Info("Running webhooks with unmanaged certificates (i.e., the webhook CA will not be rotated automatically). " +
 			"This mode is supposed to be used for development purposes only. Make sure to configure --webhook-config-namespace in production.")
 
-		caBundle, err := certificates.GenerateUnmanagedCertificates(c.providerName, webhookServer.CertDir, c.Server.Mode, c.Server.URL)
+		caBundle, err := certificates.GenerateUnmanagedCertificates(c.extensionName, webhookServer.CertDir, c.Server.Mode, c.Server.URL)
 		if err != nil {
 			return nil, fmt.Errorf("error generating new certificates for webhook server: %w", err)
 		}
@@ -310,8 +318,9 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 		seedWebhookConfig,
 		shootWebhookConfig,
 		atomicShootWebhookConfig,
-		c.providerName,
-		c.providerType,
+		c.extensionName,
+		c.shootWebhookManagedResourceName,
+		c.shootNamespaceSelector,
 		c.Server.Namespace,
 		c.Server.Mode,
 		c.Server.URL,
@@ -339,7 +348,7 @@ func (c *AddToManagerConfig) reconcileShootWebhookConfigs(mgr manager.Manager, s
 			if err := extensionswebhook.InjectCABundleIntoWebhookConfig(shootWebhookConfig, caBundle); err != nil {
 				return err
 			}
-			if err := genericactuator.ReconcileShootWebhooksForAllNamespaces(ctx, mgr.GetClient(), c.providerName, c.providerType, mgr.GetWebhookServer().Port, shootWebhookConfig); err != nil {
+			if err := extensionswebhookshoot.ReconcileWebhooksForAllNamespaces(ctx, mgr.GetClient(), c.extensionName, c.shootWebhookManagedResourceName, c.shootNamespaceSelector, mgr.GetWebhookServer().Port, shootWebhookConfig); err != nil {
 				return fmt.Errorf("error reconciling all shoot webhook configs: %w", err)
 			}
 		}
