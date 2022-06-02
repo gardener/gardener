@@ -273,7 +273,8 @@ kind-down: $(KIND)
 	rm -rf dev/local-backupbuckets
 
 # workaround for https://github.com/GoogleContainerTools/skaffold/issues/6416
-export SKAFFOLD_LABEL := skaffold.dev/run-id=gardener-local
+$(SKAFFOLD): export SKAFFOLD_LABEL := skaffold.dev/run-id=gardener-local
+
 gardener-up: $(SKAFFOLD) $(HELM)
 	$(SKAFFOLD) run
 
