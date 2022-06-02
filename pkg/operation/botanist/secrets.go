@@ -457,6 +457,15 @@ func (b *Botanist) CreateNewServiceAccountSecrets(ctx context.Context) error {
 				Type: corev1.SecretTypeServiceAccountToken,
 			}
 
+			// If the ServiceAccount already references the secret then we have already created it and added it to the
+			// list of secrets in a previous reconciliation. Consequently, we can exit early here since there is nothing
+			// left to be done.
+			for _, secretReference := range serviceAccount.Secrets {
+				if secretReference.Name == secret.Name {
+					return nil
+				}
+			}
+
 			patch := client.StrategicMergeFrom(serviceAccount.DeepCopy(), client.MergeFromWithOptimisticLock{})
 			metav1.SetMetaDataLabel(&serviceAccount.ObjectMeta, labelKeyRotationKeyName, serviceAccountKeySecret.Name)
 			serviceAccount.Secrets = append([]corev1.ObjectReference{{Name: secret.Name}}, serviceAccount.Secrets...)
