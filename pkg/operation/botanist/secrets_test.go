@@ -319,7 +319,7 @@ var _ = Describe("Secrets", func() {
 			}
 			sa2 = &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{Name: "sa2", Namespace: namespace2.Name},
-				Secrets:    []corev1.ObjectReference{{Name: "sa2secret1"}},
+				Secrets:    []corev1.ObjectReference{{Name: "sa2-token" + suffix}, {Name: "sa2secret1"}},
 			}
 			sa3 = &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{Name: "sa3", Namespace: namespace2.Name, Labels: map[string]string{"credentials.gardener.cloud/key-name": "service-account-key-current"}},
@@ -342,18 +342,15 @@ var _ = Describe("Secrets", func() {
 				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(sa3), sa3)).To(Succeed())
 
 				Expect(sa1.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "service-account-key-current"))
-				Expect(sa2.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "service-account-key-current"))
+				Expect(sa2.Labels).NotTo(HaveKeyWithValue("credentials.gardener.cloud/key-name", "service-account-key-current"))
+				Expect(sa3.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "service-account-key-current"))
 				Expect(sa1.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "sa1-token" + suffix}, corev1.ObjectReference{Name: "sa1secret1"}))
 				Expect(sa2.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "sa2-token" + suffix}, corev1.ObjectReference{Name: "sa2secret1"}))
 				Expect(sa3.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "sa3secret1"}))
 
 				sa1Secret := &corev1.Secret{}
 				Expect(fakeShootClient.Get(ctx, kutil.Key(sa1.Namespace, "sa1-token"+suffix), sa1Secret))
-				verifySATokenSecret(sa1Secret, sa1.Name)
-
-				sa2Secret := &corev1.Secret{}
-				Expect(fakeShootClient.Get(ctx, kutil.Key(sa2.Namespace, "sa2-token"+suffix), sa2Secret))
-				verifySATokenSecret(sa2Secret, sa2.Name)
+				verifyCreatedSATokenSecret(sa1Secret, sa1.Name)
 			})
 		})
 
@@ -479,8 +476,8 @@ var _ = Describe("Secrets", func() {
 })
 
 func verifyCASecret(name string, secret *corev1.Secret, dataMatcher gomegatypes.GomegaMatcher) {
-	Expect(secret.Immutable).To(PointTo(BeTrue()))
-	Expect(secret.Labels).To(And(
+	ExpectWithOffset(1, secret.Immutable).To(PointTo(BeTrue()))
+	ExpectWithOffset(1, secret.Labels).To(And(
 		HaveKeyWithValue("name", name),
 		HaveKeyWithValue("managed-by", "secrets-manager"),
 		HaveKeyWithValue("manager-identity", fakesecretsmanager.ManagerIdentity),
@@ -491,7 +488,7 @@ func verifyCASecret(name string, secret *corev1.Secret, dataMatcher gomegatypes.
 	))
 
 	if dataMatcher != nil {
-		Expect(secret.Data).To(dataMatcher)
+		ExpectWithOffset(1, secret.Data).To(dataMatcher)
 	}
 }
 
@@ -499,7 +496,7 @@ func rawData(key, value string) []byte {
 	return []byte(`{"` + key + `":"` + utils.EncodeBase64([]byte(value)) + `"}`)
 }
 
-func verifySATokenSecret(secret *corev1.Secret, serviceAccountName string) {
-	Expect(secret.Type).To(Equal(corev1.SecretTypeServiceAccountToken))
-	Expect(secret.Annotations).To(HaveKeyWithValue("kubernetes.io/service-account.name", serviceAccountName))
+func verifyCreatedSATokenSecret(secret *corev1.Secret, serviceAccountName string) {
+	ExpectWithOffset(1, secret.Type).To(Equal(corev1.SecretTypeServiceAccountToken))
+	ExpectWithOffset(1, secret.Annotations).To(HaveKeyWithValue("kubernetes.io/service-account.name", serviceAccountName))
 }
