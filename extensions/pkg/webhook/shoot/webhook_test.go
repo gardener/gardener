@@ -223,16 +223,16 @@ webhooks:
 
 func expectWebhookConfigReconciliation(ctx context.Context, fakeClient client.Client, namespace, managedResourceName string, shootWebhookConfigRaw map[string][]byte) {
 	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}
-	Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
-	Expect(secret.Type).To(Equal(corev1.SecretTypeOpaque))
-	Expect(secret.Data).To(Equal(shootWebhookConfigRaw))
+	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+	ExpectWithOffset(1, secret.Type).To(Equal(corev1.SecretTypeOpaque))
+	ExpectWithOffset(1, secret.Data).To(Equal(shootWebhookConfigRaw))
 
 	managedResource := &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}
-	Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-	Expect(managedResource.Spec).To(DeepEqual(resourcesv1alpha1.ManagedResourceSpec{SecretRefs: []corev1.LocalObjectReference{{Name: managedResourceName}}}))
+	ExpectWithOffset(1, fakeClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+	ExpectWithOffset(1, managedResource.Spec).To(DeepEqual(resourcesv1alpha1.ManagedResourceSpec{SecretRefs: []corev1.LocalObjectReference{{Name: managedResourceName}}}))
 }
 
 func expectNoWebhookConfigReconciliation(ctx context.Context, fakeClient client.Client, namespace, managedResourceName string) {
-	Expect(fakeClient.Get(ctx, kutil.Key(namespace, managedResourceName), &corev1.Secret{})).To(BeNotFoundError())
-	Expect(fakeClient.Get(ctx, kutil.Key(namespace, managedResourceName), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
+	ExpectWithOffset(1, fakeClient.Get(ctx, kutil.Key(namespace, managedResourceName), &corev1.Secret{})).To(BeNotFoundError())
+	ExpectWithOffset(1, fakeClient.Get(ctx, kutil.Key(namespace, managedResourceName), &resourcesv1alpha1.ManagedResource{})).To(BeNotFoundError())
 }

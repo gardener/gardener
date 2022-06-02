@@ -191,7 +191,7 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 
 		// reconcile all shoot webhook configs with the freshly created CA bundle
 		if err := extensionswebhookshoot.ReconcileWebhooksForAllNamespaces(ctx, r.client, r.ExtensionName, r.ShootWebhookManagedResourceName, r.ShootNamespaceSelector, r.serverPort, r.ShootWebhookConfig); err != nil {
-			return reconcile.Result{}, fmt.Errorf("error reconciling all extensionswebhookshoot webhook configs: %w", err)
+			return reconcile.Result{}, fmt.Errorf("error reconciling all shoot webhook configs: %w", err)
 		}
 		log.Info("Updated all shoot webhook configs with new CA bundle", "webhookConfig", r.ShootWebhookConfig)
 	}
