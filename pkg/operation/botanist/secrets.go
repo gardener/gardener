@@ -496,11 +496,7 @@ func (b *Botanist) CreateNewServiceAccountSecrets(ctx context.Context) error {
 // be executed in the 'Completing' phase of the service account signing key rotation operation.
 func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
 	serviceAccountList := &corev1.ServiceAccountList{}
-	if err := b.K8sShootClient.Client().List(ctx, serviceAccountList, client.MatchingLabelsSelector{
-		Selector: labels.NewSelector().Add(
-			utils.MustNewRequirement(labelKeyRotationKeyName, selection.Exists),
-		)},
-	); err != nil {
+	if err := b.K8sShootClient.Client().List(ctx, serviceAccountList); err != nil {
 		return err
 	}
 
@@ -515,7 +511,10 @@ func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
 		serviceAccount := obj
 
 		taskFns = append(taskFns, func(ctx context.Context) error {
-			if len(serviceAccount.Secrets) == 0 {
+			// If the ServiceAccount has none or only one secret then there is nothing left to clean up. Otherwise, we
+			// should drop all secrets except for the first one in the list (which is the most recent secret signed with
+			// the new token key).
+			if len(serviceAccount.Secrets) <= 1 {
 				return nil
 			}
 
