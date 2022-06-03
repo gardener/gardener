@@ -342,7 +342,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 		e.etcd.Spec.Etcd = druidv1alpha1.EtcdConfig{
 			Resources: resourcesEtcd,
-			TLS: &druidv1alpha1.TLSConfig{
+			ClientUrlTLS: &druidv1alpha1.TLSConfig{
 				TLSCASecretRef: druidv1alpha1.SecretReference{
 					SecretReference: corev1.SecretReference{
 						Name:      etcdCASecret.Name,
@@ -366,6 +366,23 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			Quota:                   &quota,
 		}
 		e.etcd.Spec.Backup = druidv1alpha1.BackupSpec{
+			TLS: &druidv1alpha1.TLSConfig{
+				TLSCASecretRef: druidv1alpha1.SecretReference{
+					SecretReference: corev1.SecretReference{
+						Name:      etcdCASecret.Name,
+						Namespace: etcdCASecret.Namespace,
+					},
+					DataKey: pointer.String(secretutils.DataKeyCertificateBundle),
+				},
+				ServerTLSSecretRef: corev1.SecretReference{
+					Name:      serverSecret.Name,
+					Namespace: serverSecret.Namespace,
+				},
+				ClientTLSSecretRef: corev1.SecretReference{
+					Name:      clientSecret.Name,
+					Namespace: clientSecret.Namespace,
+				},
+			},
 			Port:                    &PortBackupRestore,
 			Resources:               resourcesBackupRestore,
 			GarbageCollectionPolicy: &garbageCollectionPolicy,
