@@ -19,19 +19,22 @@ import (
 	"fmt"
 	"net"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
-	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 )
 
 const (
@@ -48,8 +51,7 @@ const (
 	// SecretBasicAuthName is a constant for the name of the basic-auth secret.
 	SecretBasicAuthName = "kube-apiserver-basic-auth"
 
-	secretETCDEncryptionConfigurationNamePrefix = "kube-apiserver-etcd-encryption-configuration"
-	secretETCDEncryptionConfigurationDataKey    = "encryption-configuration.yaml"
+	secretETCDEncryptionConfigurationDataKey = "encryption-configuration.yaml"
 
 	userNameClusterAdmin = "system:cluster-admin"
 	userNameHealthCheck  = "health-check"
@@ -247,10 +249,22 @@ func (k *kubeAPIServer) reconcileSecretETCDEncryptionConfiguration(ctx context.C
 		return err
 	}
 
+	secret.Labels = map[string]string{v1beta1constants.LabelRole: v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration}
+	desiredLabels := utils.MergeStringMaps(secret.Labels) // copy
 	secret.Data = map[string][]byte{secretETCDEncryptionConfigurationDataKey: data}
 	utilruntime.Must(kutil.MakeUnique(secret))
 
-	return kutil.IgnoreAlreadyExists(k.client.Client().Create(ctx, secret))
+	if err := k.client.Client().Create(ctx, secret); err == nil || !apierrors.IsAlreadyExists(err) {
+		return err
+	}
+
+	// reconcile labels of existing secret
+	if err := k.client.Client().Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
+		return err
+	}
+	patch := client.MergeFrom(secret.DeepCopy())
+	secret.Labels = desiredLabels
+	return k.client.Client().Patch(ctx, secret, patch)
 }
 
 func (k *kubeAPIServer) etcdEncryptionAESKeys(keySecretCurrent, keySecretOld *corev1.Secret) []apiserverconfigv1.Key {

@@ -288,7 +288,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		networkPolicyAllowFromShootAPIServer       = k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer)
 		networkPolicyAllowToShootAPIServer         = k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer)
 		networkPolicyAllowKubeAPIServer            = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
-		secretETCDEncryptionConfiguration          = k.emptySecret(secretETCDEncryptionConfigurationNamePrefix)
+		secretETCDEncryptionConfiguration          = k.emptySecret(v1beta1constants.SecretNamePrefixETCDEncryptionConfiguration)
 		secretOIDCCABundle                         = k.emptySecret(secretOIDCCABundleNamePrefix)
 		secretUserProvidedServiceAccountSigningKey = k.emptySecret(secretServiceAccountSigningKeyNamePrefix)
 		configMapAdmission                         = k.emptyConfigMap(configMapAdmissionNamePrefix)

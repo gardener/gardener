@@ -1106,9 +1106,12 @@ resources:
 						Kind:       "Secret",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Name:            expectedSecretETCDEncryptionConfiguration.Name,
-						Namespace:       expectedSecretETCDEncryptionConfiguration.Namespace,
-						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+						Name:      expectedSecretETCDEncryptionConfiguration.Name,
+						Namespace: expectedSecretETCDEncryptionConfiguration.Namespace,
+						Labels: map[string]string{
+							"resources.gardener.cloud/garbage-collectable-reference": "true",
+							"role": "kube-apiserver-etcd-encryption-configuration",
+						},
 						ResourceVersion: "1",
 					},
 					Immutable: pointer.Bool(true),
@@ -1185,9 +1188,12 @@ resources:
 							Kind:       "Secret",
 						},
 						ObjectMeta: metav1.ObjectMeta{
-							Name:            expectedSecretETCDEncryptionConfiguration.Name,
-							Namespace:       expectedSecretETCDEncryptionConfiguration.Namespace,
-							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							Name:      expectedSecretETCDEncryptionConfiguration.Name,
+							Namespace: expectedSecretETCDEncryptionConfiguration.Namespace,
+							Labels: map[string]string{
+								"resources.gardener.cloud/garbage-collectable-reference": "true",
+								"role": "kube-apiserver-etcd-encryption-configuration",
+							},
 							ResourceVersion: "1",
 						},
 						Immutable: pointer.Bool(true),
