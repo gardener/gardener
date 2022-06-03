@@ -24,6 +24,8 @@ import (
 var _ = Describe("Shoot", func() {
 	trueVar := true
 	falseVar := false
+	lastOperationCreate := gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeCreate}
+	lastOperationReconcile := gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeReconcile}
 
 	cidr := "10.250.0.0/19"
 
@@ -43,7 +45,7 @@ var _ = Describe("Shoot", func() {
 		}, cidr),
 	)
 
-	DescribeTable("#IsHibernated",
+	DescribeTable("#IsHibernationEnabled",
 		func(hibernation *gardencorev1beta1.Hibernation, expectation bool) {
 			cluster := &Cluster{
 				Shoot: &gardencorev1beta1.Shoot{
@@ -53,12 +55,65 @@ var _ = Describe("Shoot", func() {
 				},
 			}
 
-			Expect(IsHibernated(cluster)).To(Equal(expectation))
+			Expect(IsHibernationEnabled(cluster)).To(Equal(expectation))
 		},
 
 		Entry("hibernation is nil", nil, false),
 		Entry("hibernation is not enabled", &gardencorev1beta1.Hibernation{Enabled: &falseVar}, false),
 		Entry("hibernation is enabled", &gardencorev1beta1.Hibernation{Enabled: &trueVar}, true),
+	)
+
+	DescribeTable("#IsHibernated",
+		func(hibernation *gardencorev1beta1.Hibernation, isHibernated bool, expectation bool) {
+			cluster := &Cluster{
+				Shoot: &gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Hibernation: hibernation,
+					},
+					Status: gardencorev1beta1.ShootStatus{IsHibernated: isHibernated},
+				},
+			}
+			Expect(IsHibernated(cluster)).To(Equal(expectation))
+		},
+		Entry("spec hibernation is nil", nil, false, false),
+		Entry("spec hibernation is not enabled", &gardencorev1beta1.Hibernation{Enabled: &falseVar}, false, false),
+		Entry("hibernation is enabled, status is not hibernated", &gardencorev1beta1.Hibernation{Enabled: &trueVar}, false, false),
+		Entry("hibernation is enabled, status is hibernated", &gardencorev1beta1.Hibernation{Enabled: &trueVar}, true, true),
+	)
+
+	DescribeTable("#IsHibernatingOrWakingUp",
+		func(hibernation *gardencorev1beta1.Hibernation, isHibernated bool, expectation bool) {
+			cluster := &Cluster{
+				Shoot: &gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Hibernation: hibernation,
+					},
+					Status: gardencorev1beta1.ShootStatus{IsHibernated: isHibernated},
+				},
+			}
+			Expect(IsHibernatingOrWakingUp(cluster)).To(Equal(expectation))
+		},
+		Entry("spec hibernation is nil", nil, false, false),
+		Entry("spec hibernation is not enabled and it is not hibernated", &gardencorev1beta1.Hibernation{Enabled: &falseVar}, false, false),
+		Entry("hibernation is enabled, status is not hibernated", &gardencorev1beta1.Hibernation{Enabled: &trueVar}, false, true),
+		Entry("hibernation is not enabled, status is hibernated", &gardencorev1beta1.Hibernation{Enabled: &falseVar}, true, true),
+		Entry("hibernation is enabled, status is hibernated", &gardencorev1beta1.Hibernation{Enabled: &trueVar}, true, false),
+	)
+
+	DescribeTable("#IsCreationInProgress",
+		func(lastOperation *gardencorev1beta1.LastOperation, expectation bool) {
+			cluster := &Cluster{
+				Shoot: &gardencorev1beta1.Shoot{
+					Status: gardencorev1beta1.ShootStatus{
+						LastOperation: lastOperation,
+					},
+				},
+			}
+			Expect(IsCreationInProcess(cluster)).To(Equal(expectation))
+		},
+		Entry("last operation is nil", nil, true),
+		Entry("last operation is create", &lastOperationCreate, true),
+		Entry("last operation is reconcile", &lastOperationReconcile, false),
 	)
 
 	var (

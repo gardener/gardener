@@ -109,7 +109,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	if extensionscontroller.IsHibernated(cluster) {
+	if extensionscontroller.IsHibernationEnabled(cluster) {
 		var conditions []condition
 		for _, healthConditionType := range r.registeredExtension.healthConditionTypes {
 			conditionBuilder, err := gardencorev1beta1helper.NewConditionBuilder(gardencorev1beta1.ConditionType(healthConditionType))

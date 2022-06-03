@@ -51,13 +51,22 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 		return fmt.Errorf("could not instantiate actuator context: %w", err)
 	}
 
-	// If the shoot is hibernated then we want to scale down the machine-controller-manager. However, we want to first allow it to delete
-	// all remaining worker nodes. Hence, we cannot set the replicas=0 here (otherwise it would be offline and not able to delete the nodes).
-	var replicaFunc = func() (int32, error) {
-		if extensionscontroller.IsHibernated(cluster) {
-			return kutil.CurrentReplicaCountForDeployment(ctx, a.client, worker.Namespace, a.mcmName)
+	// mcmReplicaFunc returns the desired replicas for machine controller manager
+	var mcmReplicaFunc = func() int32 {
+		switch {
+		// If the cluster is hibernated then there is no further need of MCM and therefore its desired replicas is 0
+		case extensionscontroller.IsHibernated(cluster):
+			return 0
+		// If the cluster is created with hibernation enabled, then desired replicas for MCM is 0
+		case extensionscontroller.IsHibernationEnabled(cluster) && extensionscontroller.IsCreationInProcess(cluster):
+			return 0
+		// If shoot is either waking up or in the process of hibernation then, MCM is required and therefore its desired replicas is 1
+		case extensionscontroller.IsHibernatingOrWakingUp(cluster):
+			return 1
+		// If the shoot is awake then MCM should be available and therefore its desired replicas is 1
+		default:
+			return 1
 		}
-		return 1, nil
 	}
 
 	// Deploy machine dependencies.
@@ -66,7 +75,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 	}
 
 	// Deploy the machine-controller-manager into the cluster.
-	if err := a.deployMachineControllerManager(ctx, logger, worker, cluster, workerDelegate, replicaFunc); err != nil {
+	if err := a.deployMachineControllerManager(ctx, logger, worker, cluster, workerDelegate, mcmReplicaFunc); err != nil {
 		return err
 	}
 
@@ -81,8 +90,8 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 
 	// When the Shoot is hibernated we want to remove the cluster autoscaler so that it does not interfer
 	// with Gardeners modifications on the machine deployment's replicas fields.
-	isHibernated := controller.IsHibernated(cluster)
-	if clusterAutoscalerUsed && isHibernated {
+	isHibernationEnabled := controller.IsHibernationEnabled(cluster)
+	if clusterAutoscalerUsed && isHibernationEnabled {
 		if err = a.scaleClusterAutoscaler(ctx, logger, worker, 0); err != nil {
 			return err
 		}
@@ -133,7 +142,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 	}
 
 	// Wait until all generated machine deployments are healthy/available.
-	if err := a.waitUntilWantedMachineDeploymentsAvailable(ctx, logger, cluster, worker, existingMachineDeploymentNames, existingMachineClassNames, wantedMachineDeployments, clusterAutoscalerUsed); err != nil {
+	if err := a.waitUntilWantedMachineDeploymentsAvailable(ctx, logger, cluster, worker, existingMachineDeploymentNames, existingMachineClassNames, wantedMachineDeployments); err != nil {
 		// check if the machine-controller-manager is stuck
 		isStuck, msg, err2 := a.IsMachineControllerStuck(ctx, worker)
 		if err2 != nil {
@@ -173,11 +182,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 		return fmt.Errorf("failed to cleanup the orphaned machine class secrets: %w", err)
 	}
 
-	replicas, err := replicaFunc()
-	if err != nil {
-		return fmt.Errorf("failed to get machine-controller-manager replicas: %w", err)
-	}
-
+	replicas := mcmReplicaFunc()
 	if replicas > 0 {
 		// Wait until all unwanted machine deployments are deleted from the system.
 		if err := a.waitUntilUnwantedMachineDeploymentsDeleted(ctx, logger, worker, wantedMachineDeployments); err != nil {
@@ -191,13 +196,13 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 	}
 
 	// Scale down machine-controller-manager if shoot is hibernated.
-	if isHibernated {
+	if isHibernationEnabled {
 		if err := a.scaleMachineControllerManager(ctx, logger, worker, 0); err != nil {
 			return err
 		}
 	}
 
-	if clusterAutoscalerUsed && !isHibernated {
+	if clusterAutoscalerUsed && !isHibernationEnabled {
 		if err = a.scaleClusterAutoscaler(ctx, logger, worker, 1); err != nil {
 			return err
 		}
@@ -237,7 +242,7 @@ func (a *genericActuator) deployMachineDeployments(ctx context.Context, logger l
 		switch {
 		// If the Shoot is hibernated then the machine deployment's replicas should be zero.
 		// Also mark all machines for forceful deletion to avoid respecting of PDBs/SLAs in case of cluster hibernation.
-		case controller.IsHibernated(cluster):
+		case controller.IsHibernationEnabled(cluster):
 			replicas = 0
 			if err := a.markAllMachinesForcefulDeletion(ctx, logger, worker.Namespace); err != nil {
 				return fmt.Errorf("marking all machines for forceful deletion failed: %w", err)
@@ -258,7 +263,7 @@ func (a *genericActuator) deployMachineDeployments(ctx context.Context, logger l
 			}
 		// If the Shoot was hibernated and is now woken up we set replicas to min so that the cluster
 		// autoscaler can scale them as required.
-		case shootIsAwake(controller.IsHibernated(cluster), existingMachineDeployments):
+		case shootIsAwake(controller.IsHibernationEnabled(cluster), existingMachineDeployments):
 			replicas = deployment.Minimum
 		// If the shoot worker pool minimum was updated and if the current machine deployment replica
 		// count is less than minimum, we update the machine deployment replica count to updated minimum.
@@ -333,7 +338,7 @@ func (a *genericActuator) deployMachineDeployments(ctx context.Context, logger l
 
 // waitUntilWantedMachineDeploymentsAvailable waits until all the desired <machineDeployments> were marked as healthy /
 // available by the machine-controller-manager. It polls the status every 5 seconds.
-func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context.Context, logger logr.Logger, cluster *extensionscontroller.Cluster, worker *extensionsv1alpha1.Worker, alreadyExistingMachineDeploymentNames sets.String, alreadyExistingMachineClassNames sets.String, wantedMachineDeployments extensionsworker.MachineDeployments, clusterAutoscalerUsed bool) error {
+func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context.Context, logger logr.Logger, cluster *extensionscontroller.Cluster, worker *extensionsv1alpha1.Worker, alreadyExistingMachineDeploymentNames sets.String, alreadyExistingMachineClassNames sets.String, wantedMachineDeployments extensionsworker.MachineDeployments) error {
 	logger.Info("Waiting until wanted machine deployments are available")
 
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
@@ -373,7 +378,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			numberOfAwakeMachines += deployment.Status.Replicas
 
 			// Skip further checks if cluster is hibernated because machine-controller-manager is usually scaled down during hibernation.
-			if controller.IsHibernated(cluster) {
+			if controller.IsHibernationEnabled(cluster) {
 				continue
 			}
 
@@ -413,7 +418,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 
 		var msg string
 		switch {
-		case !controller.IsHibernated(cluster):
+		case !controller.IsHibernationEnabled(cluster):
 			// numUpdated == numberOfAwakeMachines waits until the old machine is deleted in the case of a rolling update with maxUnavailability = 0
 			// numUnavailable == 0 makes sure that every machine joined the cluster (during creation & in the case of a rolling update with maxUnavailability > 0)
 			if numUnavailable == 0 && numUpdated == numberOfAwakeMachines && int(numHealthyDeployments) == len(wantedMachineDeployments) {
