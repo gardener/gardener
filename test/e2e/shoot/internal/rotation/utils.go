@@ -18,7 +18,13 @@ import (
 	"sort"
 
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+var managedByGardenletSecretsManager = client.MatchingLabels{
+	"managed-by":       "secrets-manager",
+	"manager-identity": "gardenlet",
+}
 
 type secretConfigNamesToSecrets map[string][]corev1.Secret
 
