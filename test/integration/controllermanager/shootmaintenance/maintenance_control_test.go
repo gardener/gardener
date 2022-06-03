@@ -20,6 +20,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -296,7 +297,8 @@ var _ = Describe("Shoot Maintenance controller tests", func() {
 				By("prepare shoot")
 				patch := client.MergeFrom(shoot.DeepCopy())
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "foo-bar-does-not-exist")
-				Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
+				err := testClient.Patch(ctx, shoot, patch)
+				Expect(apierrors.IsInvalid(err)).To(Equal(true))
 
 				By("trigger maintenance")
 				Expect(kutil.SetAnnotationAndUpdate(ctx, testClient, shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)).To(Succeed())
