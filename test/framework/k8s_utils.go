@@ -299,18 +299,18 @@ func GetDeploymentReplicas(ctx context.Context, client client.Client, namespace,
 	return replicas, nil
 }
 
-// ShootCreationCompleted checks if a shoot is successfully reconciled. In case it is not, it also returns a descriptive message stating the reason.
-func ShootCreationCompleted(newShoot *gardencorev1beta1.Shoot) (bool, string) {
-	if newShoot.Generation != newShoot.Status.ObservedGeneration {
+// ShootReconciliationSuccessful checks if a shoot is successfully reconciled. In case it is not, it also returns a descriptive message stating the reason.
+func ShootReconciliationSuccessful(shoot *gardencorev1beta1.Shoot) (bool, string) {
+	if shoot.Generation != shoot.Status.ObservedGeneration {
 		return false, "shoot generation did not equal observed generation"
 	}
-	if len(newShoot.Status.Conditions) == 0 && newShoot.Status.LastOperation == nil {
+	if len(shoot.Status.Conditions) == 0 && shoot.Status.LastOperation == nil {
 		return false, "no conditions and last operation present yet"
 	}
 
-	for _, condition := range newShoot.Status.Conditions {
+	for _, condition := range shoot.Status.Conditions {
 		if condition.Status != gardencorev1beta1.ConditionTrue {
-			hibernation := newShoot.Spec.Hibernation
+			hibernation := shoot.Spec.Hibernation
 			if condition.Type == gardencorev1beta1.SeedGardenletReady && hibernation != nil && hibernation.Enabled != nil && *hibernation.Enabled {
 				continue
 			}
@@ -318,14 +318,14 @@ func ShootCreationCompleted(newShoot *gardencorev1beta1.Shoot) (bool, string) {
 		}
 	}
 
-	if newShoot.Status.LastOperation != nil {
-		if newShoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate ||
-			newShoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeReconcile ||
-			newShoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore {
-			if newShoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
+	if shoot.Status.LastOperation != nil {
+		if shoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate ||
+			shoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeReconcile ||
+			shoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore {
+			if shoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
 				return false, "last operation type was create, reconcile or restore but state was not succeeded"
 			}
-		} else if newShoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate {
+		} else if shoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate {
 			return false, "last operation type was migrate, the migration process is not finished yet"
 		}
 	}

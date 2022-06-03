@@ -137,6 +137,11 @@ func (f *GardenerFramework) CreateShoot(ctx context.Context, shoot *gardencorev1
 
 // DeleteShootAndWaitForDeletion deletes the test shoot and waits until it cannot be found any more
 func (f *GardenerFramework) DeleteShootAndWaitForDeletion(ctx context.Context, shoot *gardencorev1beta1.Shoot) (rErr error) {
+	if f.Config.ExistingShootName != "" {
+		f.Logger.Infof("Skip deleting existing shoot %q", client.ObjectKey{Name: f.Config.ExistingShootName, Namespace: f.ProjectNamespace})
+		return nil
+	}
+
 	defer func() {
 		if rErr != nil {
 			dumpCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
@@ -293,14 +298,12 @@ func (f *GardenerFramework) ScheduleShoot(ctx context.Context, shoot *gardencore
 // WaitForShootToBeCreated waits for the shoot to be created
 func (f *GardenerFramework) WaitForShootToBeCreated(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
 	return retry.UntilTimeout(ctx, 30*time.Second, 60*time.Minute, func(ctx context.Context) (done bool, err error) {
-		newShoot := &gardencorev1beta1.Shoot{}
-		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, newShoot)
+		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, shoot)
 		if err != nil {
 			f.Logger.Infof("Error while waiting for shoot to be created: %s", err.Error())
 			return retry.MinorError(err)
 		}
-		*shoot = *newShoot
-		completed, msg := ShootCreationCompleted(shoot)
+		completed, msg := ShootReconciliationSuccessful(shoot)
 		if completed {
 			return retry.Ok()
 		}
@@ -343,7 +346,7 @@ func (f *GardenerFramework) WaitForShootToBeReconciled(ctx context.Context, shoo
 			return retry.MinorError(err)
 		}
 		shoot = newShoot
-		completed, msg := ShootCreationCompleted(shoot)
+		completed, msg := ShootReconciliationSuccessful(shoot)
 		if completed {
 			return retry.Ok()
 		}
