@@ -3449,6 +3449,33 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}),
 			)
+
+			It("should return an error if the annotation is invalid", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "foo-bar")
+				matcher := ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+				})))
+				Expect(ValidateShoot(shoot)).To(matcher)
+			})
+		})
+
+		Context("maintenance operation validation", func() {
+			It("should do nothing if the operation annotation is not set", func() {
+				Expect(ValidateShoot(shoot)).To(BeEmpty())
+			})
+			It("should return an error if the annotation is invalid", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "foo-bar")
+				matcher := ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
+				})))
+				Expect(ValidateShoot(shoot)).To(matcher)
+			})
+			It("should return nothing if annotation is valid", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "reconcile")
+				Expect(ValidateShoot(shoot)).To(BeEmpty())
+			})
 		})
 	})
 

@@ -63,6 +63,24 @@ var (
 		string(corev1.ServiceExternalTrafficPolicyTypeCluster),
 		string(corev1.ServiceExternalTrafficPolicyTypeLocal),
 	)
+	availableShootOperations = sets.NewString(
+		string(v1beta1constants.ShootOperationMaintain),
+		string(v1beta1constants.ShootOperationRetry),
+	).Union(availableShootMaintenanceOperations)
+	availableShootMaintenanceOperations = sets.NewString(
+		string(v1beta1constants.GardenerOperationReconcile),
+		string(v1beta1constants.ShootOperationRotateCAStart),
+		string(v1beta1constants.ShootOperationRotateCAComplete),
+		string(v1beta1constants.ShootOperationRotateCredentialsStart),
+		string(v1beta1constants.ShootOperationRotateCredentialsComplete),
+		string(v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart),
+		string(v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete),
+		string(v1beta1constants.ShootOperationRotateKubeconfigCredentials),
+		string(v1beta1constants.ShootOperationRotateObservabilityCredentials),
+		string(v1beta1constants.ShootOperationRotateSSHKeypair),
+		string(v1beta1constants.ShootOperationRotateServiceAccountKeyComplete),
+		string(v1beta1constants.ShootOperationRotateServiceAccountKeyStart),
+	)
 	availableShootPurposes = sets.NewString(
 		string(core.ShootPurposeEvaluation),
 		string(core.ShootPurposeTesting),
@@ -84,7 +102,7 @@ var (
 		string(core.CoreDNSAutoscalingModeHorizontal),
 	)
 
-	// assymetric algorithms from https://datatracker.ietf.org/doc/html/rfc7518#section-3.1
+	// asymmetric algorithms from https://datatracker.ietf.org/doc/html/rfc7518#section-3.1
 	availableOIDCSigningAlgs = sets.NewString(
 		"RS256",
 		"RS384",
@@ -106,6 +124,7 @@ func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&shoot.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateNameConsecutiveHyphens(shoot.Name, field.NewPath("metadata", "name"))...)
 	allErrs = append(allErrs, validateShootOperation(shoot.Annotations[v1beta1constants.GardenerOperation], shoot, field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerOperation))...)
+	allErrs = append(allErrs, validateShootMaintenanceOperation(shoot.Annotations[v1beta1constants.GardenerMaintenanceOperation], shoot, field.NewPath("metadata", "annotations").Key(v1beta1constants.GardenerMaintenanceOperation))...)
 	allErrs = append(allErrs, ValidateShootSpec(shoot.ObjectMeta, &shoot.Spec, field.NewPath("spec"), false)...)
 
 	return allErrs
@@ -1711,6 +1730,10 @@ func validateShootOperation(operation string, shoot *core.Shoot, fldPath *field.
 		return allErrs
 	}
 
+	if !availableShootOperations.Has(string(operation)) {
+		allErrs = append(allErrs, field.NotSupported(fldPath, operation, availableShootOperations.List()))
+	}
+
 	switch operation {
 	case v1beta1constants.ShootOperationRotateCredentialsStart:
 		if !isShootReadyForRotationStart(shoot.Status.LastOperation) {
@@ -1793,6 +1816,19 @@ func validateShootOperation(operation string, shoot *core.Shoot, fldPath *field.
 		}
 	}
 
+	return allErrs
+}
+
+func validateShootMaintenanceOperation(operation string, shoot *core.Shoot, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if operation == "" {
+		return allErrs
+	}
+
+	if !availableShootMaintenanceOperations.Has(string(operation)) {
+		allErrs = append(allErrs, field.NotSupported(fldPath, operation, availableShootMaintenanceOperations.List()))
+	}
 	return allErrs
 }
 
