@@ -1,7 +1,8 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: blackbox-exporter-pdb
+  name: blackbox-exporter
+  namespace: kube-system
 spec:
   maxUnavailable: 1
   selector:
