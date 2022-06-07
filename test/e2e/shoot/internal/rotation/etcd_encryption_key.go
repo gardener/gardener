@@ -16,6 +16,7 @@ package rotation
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -73,7 +74,8 @@ func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), labelSelectorEncryptionConfig)).To(Succeed())
-		g.Expect(secretList.Items).To(HaveLen(1))
+		g.Expect(secretList.Items).NotTo(BeEmpty())
+		sort.Sort(sort.Reverse(ageSorter(secretList.Items)))
 
 		encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{}
 		g.Expect(runtime.DecodeInto(decoder, secretList.Items[0].Data["encryption-configuration.yaml"], encryptionConfiguration)).To(Succeed())
@@ -123,7 +125,8 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), labelSelectorEncryptionConfig)).To(Succeed())
-		g.Expect(secretList.Items).To(HaveLen(1))
+		g.Expect(secretList.Items).NotTo(BeEmpty())
+		sort.Sort(sort.Reverse(ageSorter(secretList.Items)))
 
 		encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{}
 		_, err := runtime.Decode(decoder, secretList.Items[0].Data["encryption-configuration.yaml"])
@@ -178,7 +181,8 @@ func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), labelSelectorEncryptionConfig)).To(Succeed())
-		g.Expect(secretList.Items).To(HaveLen(1))
+		g.Expect(secretList.Items).NotTo(BeEmpty())
+		sort.Sort(sort.Reverse(ageSorter(secretList.Items)))
 
 		encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{}
 		_, err := runtime.Decode(decoder, secretList.Items[0].Data["encryption-configuration.yaml"])

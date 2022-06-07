@@ -79,7 +79,7 @@ If you want to use an existing shoot instead of creating a new one for the test 
 This can be useful to speed of the development of e2e tests.
 
 ```bash
-./hack/test-e2e-local.sh --label-filter "Shoot && credentials-rotation" -- -project-namespace=garden-local -existing-shoot-name=local
+./hack/test-e2e-local.sh --label-filter "Shoot && credentials-rotation" -- --project-namespace=garden-local --existing-shoot-name=local
 ```
 
 Also see: [developing Gardener locally](getting_started_locally.md) and [deploying Gardener locally](../deployment/getting_started_locally.md).

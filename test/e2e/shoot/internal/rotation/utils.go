@@ -34,11 +34,19 @@ func groupByName(allSecrets []corev1.Secret) secretConfigNamesToSecrets {
 		grouped[secret.Labels["name"]] = append(grouped[secret.Labels["name"]], secret)
 	}
 
-	// sort by age
 	for _, secrets := range grouped {
-		sort.Slice(secrets, func(i, j int) bool {
-			return secrets[i].CreationTimestamp.Before(&secrets[j].CreationTimestamp)
-		})
+		sort.Sort(ageSorter(secrets))
 	}
 	return grouped
 }
+
+// ageSorter implements sort.Interface for a slice of secrets for sorting by age.
+type ageSorter []corev1.Secret
+
+func (x ageSorter) Len() int { return len(x) }
+
+func (x ageSorter) Less(i, j int) bool {
+	return x[i].CreationTimestamp.Before(&x[j].CreationTimestamp)
+}
+
+func (x ageSorter) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
