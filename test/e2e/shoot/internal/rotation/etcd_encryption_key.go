@@ -129,7 +129,7 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 		sort.Sort(sort.Reverse(ageSorter(secretList.Items)))
 
 		encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{}
-		_, err := runtime.Decode(decoder, secretList.Items[0].Data["encryption-configuration.yaml"])
+		err := runtime.DecodeInto(decoder, secretList.Items[0].Data["encryption-configuration.yaml"], encryptionConfiguration)
 		g.Expect(err).NotTo(HaveOccurred())
 
 		g.Expect(encryptionConfiguration.Resources).To(HaveLen(1))
@@ -185,7 +185,7 @@ func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 		sort.Sort(sort.Reverse(ageSorter(secretList.Items)))
 
 		encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{}
-		_, err := runtime.Decode(decoder, secretList.Items[0].Data["encryption-configuration.yaml"])
+		err := runtime.DecodeInto(decoder, secretList.Items[0].Data["encryption-configuration.yaml"], encryptionConfiguration)
 		g.Expect(err).NotTo(HaveOccurred())
 
 		g.Expect(encryptionConfiguration.Resources).To(HaveLen(1))
