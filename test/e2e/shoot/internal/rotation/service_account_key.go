@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/test/framework"
 )
 
+// ServiceAccountKeyVerifier verifies the service account key rotation.
 type ServiceAccountKeyVerifier struct {
 	*framework.ShootCreationFramework
 
@@ -40,6 +41,7 @@ const (
 	serviceAccountKeyBundle = "service-account-key-bundle"
 )
 
+// Before is called before the rotation is started.
 func (v *ServiceAccountKeyVerifier) Before(ctx context.Context) {
 	seedClient := v.ShootFramework.SeedClient.Client()
 
@@ -56,11 +58,13 @@ func (v *ServiceAccountKeyVerifier) Before(ctx context.Context) {
 	}).Should(Succeed())
 }
 
+// ExpectPreparingStatus is called while waiting for the Preparing status.
 func (v *ServiceAccountKeyVerifier) ExpectPreparingStatus(g Gomega) {
 	g.Expect(v1beta1helper.GetShootServiceAccountKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationPreparing))
 	g.Expect(time.Now().UTC().Sub(v.Shoot.Status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
 }
 
+// AfterPrepared is called when the Shoot is in Prepared status.
 func (v *ServiceAccountKeyVerifier) AfterPrepared(ctx context.Context) {
 	seedClient := v.ShootFramework.SeedClient.Client()
 
@@ -82,10 +86,12 @@ func (v *ServiceAccountKeyVerifier) AfterPrepared(ctx context.Context) {
 	}).Should(Succeed())
 }
 
+// ExpectCompletingStatus is called while waiting for the Completing status.
 func (v *ServiceAccountKeyVerifier) ExpectCompletingStatus(g Gomega) {
 	g.Expect(v1beta1helper.GetShootServiceAccountKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleting))
 }
 
+// AfterCompleted is called when the Shoot is in Completed status.
 func (v *ServiceAccountKeyVerifier) AfterCompleted(ctx context.Context) {
 	seedClient := v.ShootFramework.SeedClient.Client()
 

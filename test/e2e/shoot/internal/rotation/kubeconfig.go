@@ -30,12 +30,14 @@ import (
 	"github.com/gardener/gardener/test/framework"
 )
 
+// KubeconfigVerifier verifies the kubeconfig credentials rotation.
 type KubeconfigVerifier struct {
 	*framework.ShootCreationFramework
 
 	oldKubeconfigData map[string][]byte
 }
 
+// Before is called before the rotation is started.
 func (v *KubeconfigVerifier) Before(ctx context.Context) {
 	By("Verify old kubeconfig secret")
 	Eventually(func(g Gomega) {
@@ -58,10 +60,12 @@ func (v *KubeconfigVerifier) Before(ctx context.Context) {
 	}).Should(Succeed(), "old kubeconfig secret should be present")
 }
 
+// ExpectPreparingStatus is called while waiting for the Preparing status.
 func (v *KubeconfigVerifier) ExpectPreparingStatus(g Gomega) {
 	g.Expect(time.Now().UTC().Sub(v.Shoot.Status.Credentials.Rotation.Kubeconfig.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
 }
 
+// AfterPrepared is called when the Shoot is in Prepared status.
 func (v *KubeconfigVerifier) AfterPrepared(ctx context.Context) {
 	kubeconfigRotation := v.Shoot.Status.Credentials.Rotation.Kubeconfig
 	Expect(kubeconfigRotation.LastCompletionTime.Time.UTC().After(kubeconfigRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
@@ -89,6 +93,8 @@ func (v *KubeconfigVerifier) AfterPrepared(ctx context.Context) {
 // kubeconfig rotation is completed after one reconciliation (there is no second phase)
 // hence, there is nothing to check in the second part of the credentials rotation
 
+// ExpectCompletingStatus is called while waiting for the Completing status.
 func (v *KubeconfigVerifier) ExpectCompletingStatus(g Gomega) {}
 
+// AfterCompleted is called when the Shoot is in Completed status.
 func (v *KubeconfigVerifier) AfterCompleted(ctx context.Context) {}

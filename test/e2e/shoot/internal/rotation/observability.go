@@ -27,12 +27,14 @@ import (
 	"github.com/gardener/gardener/test/framework"
 )
 
+// ObservabilityVerifier verifies the observability credentials rotation.
 type ObservabilityVerifier struct {
 	*framework.ShootCreationFramework
 
 	oldKeypairData map[string][]byte
 }
 
+// Before is called before the rotation is started.
 func (v *ObservabilityVerifier) Before(ctx context.Context) {
 	By("Verify old observability secret")
 	Eventually(func(g Gomega) {
@@ -46,10 +48,12 @@ func (v *ObservabilityVerifier) Before(ctx context.Context) {
 	}).Should(Succeed(), "old observability secret should be present")
 }
 
+// ExpectPreparingStatus is called while waiting for the Preparing status.
 func (v *ObservabilityVerifier) ExpectPreparingStatus(g Gomega) {
 	g.Expect(time.Now().UTC().Sub(v.Shoot.Status.Credentials.Rotation.Observability.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
 }
 
+// AfterPrepared is called when the Shoot is in Prepared status.
 func (v *ObservabilityVerifier) AfterPrepared(ctx context.Context) {
 	observabilityRotation := v.Shoot.Status.Credentials.Rotation.Observability
 	Expect(observabilityRotation.LastCompletionTime.Time.UTC().After(observabilityRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
@@ -68,6 +72,8 @@ func (v *ObservabilityVerifier) AfterPrepared(ctx context.Context) {
 // observability credentials rotation is completed after one reconciliation (there is no second phase)
 // hence, there is nothing to check in the second part of the credentials rotation
 
+// ExpectCompletingStatus is called while waiting for the Completing status.
 func (v *ObservabilityVerifier) ExpectCompletingStatus(g Gomega) {}
 
+// AfterCompleted is called when the Shoot is in Completed status.
 func (v *ObservabilityVerifier) AfterCompleted(ctx context.Context) {}

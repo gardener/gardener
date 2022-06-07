@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/test/framework"
 )
 
+// CAVerifier verifies the certificate authorities rotation.
 type CAVerifier struct {
 	*framework.ShootCreationFramework
 
@@ -74,6 +75,7 @@ const (
 	providerLocalDummyAuth            = "provider-local-dummy-auth"
 )
 
+// Before is called before the rotation is started.
 func (v *CAVerifier) Before(ctx context.Context) {
 	seedClient := v.ShootFramework.SeedClient.Client()
 
@@ -116,11 +118,13 @@ func (v *CAVerifier) Before(ctx context.Context) {
 	}).Should(Succeed())
 }
 
+// ExpectPreparingStatus is called while waiting for the Preparing status.
 func (v *CAVerifier) ExpectPreparingStatus(g Gomega) {
 	g.Expect(v1beta1helper.GetShootCARotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationPreparing))
 	g.Expect(time.Now().UTC().Sub(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
 }
 
+// AfterPrepared is called when the Shoot is in Prepared status.
 func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 	seedClient := v.ShootFramework.SeedClient.Client()
 	Expect(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase).To(Equal(gardencorev1beta1.RotationPrepared), "ca rotation phase should be 'Prepared'")
@@ -174,10 +178,12 @@ func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 	}).Should(Succeed())
 }
 
+// ExpectCompletingStatus is called while waiting for the Completing status.
 func (v *CAVerifier) ExpectCompletingStatus(g Gomega) {
 	g.Expect(v1beta1helper.GetShootCARotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleting))
 }
 
+// AfterCompleted is called when the Shoot is in Completed status.
 func (v *CAVerifier) AfterCompleted(ctx context.Context) {
 	seedClient := v.ShootFramework.SeedClient.Client()
 

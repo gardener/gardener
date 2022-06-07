@@ -28,12 +28,14 @@ import (
 	"github.com/gardener/gardener/test/framework"
 )
 
+// SSHKeypairVerifier verifies the ssh keypair rotation.
 type SSHKeypairVerifier struct {
 	*framework.ShootCreationFramework
 
 	oldKeypairData map[string][]byte
 }
 
+// Before is called before the rotation is started.
 func (v *SSHKeypairVerifier) Before(ctx context.Context) {
 	By("Verify old ssh-keypair secret")
 	Eventually(func(g Gomega) {
@@ -60,10 +62,12 @@ func (v *SSHKeypairVerifier) Before(ctx context.Context) {
 	}).Should(Succeed(), "old ssh-keypair secret should not be present or different from current")
 }
 
+// ExpectPreparingStatus is called while waiting for the Preparing status.
 func (v *SSHKeypairVerifier) ExpectPreparingStatus(g Gomega) {
 	g.Expect(time.Now().UTC().Sub(v.Shoot.Status.Credentials.Rotation.SSHKeypair.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
 }
 
+// AfterPrepared is called when the Shoot is in Prepared status.
 func (v *SSHKeypairVerifier) AfterPrepared(ctx context.Context) {
 	sshKeypairRotation := v.Shoot.Status.Credentials.Rotation.SSHKeypair
 	Expect(sshKeypairRotation.LastCompletionTime.Time.UTC().After(sshKeypairRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
@@ -85,6 +89,8 @@ func (v *SSHKeypairVerifier) AfterPrepared(ctx context.Context) {
 // ssh-keypair rotation is completed after one reconciliation (there is no second phase)
 // hence, there is nothing to check in the second part of the credentials rotation
 
+// ExpectCompletingStatus is called while waiting for the Completing status.
 func (v *SSHKeypairVerifier) ExpectCompletingStatus(g Gomega) {}
 
+// AfterCompleted is called when the Shoot is in Completed status.
 func (v *SSHKeypairVerifier) AfterCompleted(ctx context.Context) {}

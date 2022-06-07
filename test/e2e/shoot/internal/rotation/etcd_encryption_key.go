@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/test/framework"
 )
 
+// ETCDEncryptionKeyVerifier verifies the etcd encryption key rotation.
 type ETCDEncryptionKeyVerifier struct {
 	*framework.ShootCreationFramework
 
@@ -55,6 +56,7 @@ func init() {
 	decoder = serializer.NewCodecFactory(scheme).UniversalDeserializer()
 }
 
+// Before is called before the rotation is started.
 func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
 	seedClient := v.ShootFramework.SeedClient.Client()
 
@@ -95,11 +97,13 @@ func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
 	}).Should(Succeed(), "etcd encryption config should only have old key")
 }
 
+// ExpectPreparingStatus is called while waiting for the Preparing status.
 func (v *ETCDEncryptionKeyVerifier) ExpectPreparingStatus(g Gomega) {
 	g.Expect(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationPreparing))
 	g.Expect(time.Now().UTC().Sub(v.Shoot.Status.Credentials.Rotation.ETCDEncryptionKey.LastInitiationTime.Time.UTC())).To(BeNumerically("<=", time.Minute))
 }
 
+// AfterPrepared is called when the Shoot is in Prepared status.
 func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 	seedClient := v.ShootFramework.SeedClient.Client()
 
@@ -147,10 +151,12 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 	}).Should(Succeed(), "etcd encryption config should have both old and new key, with new key as the first one")
 }
 
+// ExpectCompletingStatus is called while waiting for the Completing status.
 func (v *ETCDEncryptionKeyVerifier) ExpectCompletingStatus(g Gomega) {
 	g.Expect(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleting))
 }
 
+// AfterCompleted is called when the Shoot is in Completed status.
 func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 	seedClient := v.ShootFramework.SeedClient.Client()
 
