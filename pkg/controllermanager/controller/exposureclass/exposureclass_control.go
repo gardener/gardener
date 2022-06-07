@@ -30,8 +30,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
@@ -121,6 +121,6 @@ func (r *exposureClassReconciler) delete(ctx context.Context, log logr.Logger, e
 	}
 
 	message := fmt.Sprintf("Cannot delete ExposureClasss, because it is still associated by the following Shoots: %+v", associatedShoots)
-	r.recorder.Event(exposureClass, corev1.EventTypeNormal, v1alpha1constants.EventResourceReferenced, message)
+	r.recorder.Event(exposureClass, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
 	return reconcile.Result{}, fmt.Errorf(message)
 }
