@@ -1,3 +1,7 @@
+---
+title: Changing the APIs
+---
+
 # Extending the API
 
 This document describes the steps that need to be performed when changing the API.

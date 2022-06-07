@@ -1,3 +1,7 @@
+---
+title: CA Rotation
+---
+
 # CA Rotation in Extensions
 
 [GEP-18](../proposals/18-shoot-CA-rotation.md) proposes adding support for automated rotation of Shoot cluster certificate authorities (CAs).

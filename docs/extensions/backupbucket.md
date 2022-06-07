@@ -1,3 +1,7 @@
+---
+title: BackupBucket
+---
+
 # Contract: `BackupBucket` resource
 
 The Gardener project features a sub-project called [etcd-backup-restore](https://github.com/gardener/etcd-backup-restore) to take periodic backups of etcd backing Shoot clusters. It demands the bucket (or its equivalent in different object store providers) to be created and configured externally with appropriate credentials. The `BackupBucket` resource takes this responsibility in Gardener.

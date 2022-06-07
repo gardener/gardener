@@ -1,3 +1,7 @@
+---
+title: New Core Gardener Cloud APIs
+---
+
 # New `core.gardener.cloud/v1beta1` APIs required to extract cloud-specific/OS-specific knowledge out of Gardener core
 
 ## Table of Contents
