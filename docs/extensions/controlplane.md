@@ -1,3 +1,7 @@
+---
+title: ControlPlane
+---
+
 # Contract: `ControlPlane` resource
 
 Most Kubernetes clusters require a `cloud-controller-manager` or CSI drivers in order to work properly.

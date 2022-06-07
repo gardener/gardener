@@ -1,3 +1,7 @@
+---
+title: NodeLocalDNS Configuration
+---
+
 # NodeLocalDNS Configuration
 
 This is a short guide describing how to enable DNS caching on the shoot cluster nodes.

@@ -1,3 +1,7 @@
+---
+title: DNS
+---
+
 # Contract: `DNSProvider` and `DNSEntry` resources
 
 Every shoot cluster requires external DNS records that are publicly resolvable.

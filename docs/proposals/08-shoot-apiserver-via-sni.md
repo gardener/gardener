@@ -1,3 +1,7 @@
+---
+title: Shoot APIServer via SNI
+---
+
 # SNI Passthrough proxy for kube-apiservers
 
 This GEP tackles the problem that today a single `LoadBalancer` is needed for every single Shoot cluster's control plane.
