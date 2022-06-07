@@ -150,8 +150,8 @@ func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 		v.gardenletSecretsPrepared = groupByName(secretList.Items)
 		for _, ca := range allGardenletCAs {
 			bundle := ca + "-bundle"
-			g.Expect(v.gardenletSecretsBefore).To(HaveKeyWithValue(ca, HaveLen(2)), ca+" secret should get rotated, but old CA is kept")
-			g.Expect(v.gardenletSecretsBefore).To(HaveKeyWithValue(bundle, HaveLen(1)), ca+" bundle secret should have changed")
+			g.Expect(v.gardenletSecretsPrepared).To(HaveKeyWithValue(ca, HaveLen(2)), ca+" secret should get rotated, but old CA is kept")
+			g.Expect(v.gardenletSecretsPrepared).To(HaveKeyWithValue(bundle, HaveLen(1)), ca+" bundle secret should have changed")
 			g.Expect(v.gardenletSecretsPrepared).To(HaveKeyWithValue(ca, ContainElement(v.gardenletSecretsBefore[ca][0])), "old "+ca+" secret should be kept")
 			g.Expect(v.gardenletSecretsPrepared).To(HaveKeyWithValue(bundle, Not(ContainElement(v.gardenletSecretsBefore[bundle][0]))), "old "+ca+" bundle should get cleaned up")
 		}
