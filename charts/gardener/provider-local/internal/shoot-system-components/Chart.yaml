@@ -1,0 +1,4 @@
+apiVersion: v1
+description: An umbrella chart for control plane resources in the Shoot cluster
+name: shoot-system-components
+version: 0.1.0

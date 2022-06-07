@@ -11,3 +11,11 @@ images:
   sourceRepository: github.com/kubernetes-sigs/kind
   repository: docker.io/kindest/kindnetd
   tag: v20210326-1e038dc5
+- name: local-path-provisioner
+  sourceRepository: github.com/kubernetes-sigs/kind/tree/main/images/local-path-provisioner
+  repository: docker.io/kindest/local-path-provisioner
+  tag: v0.0.22-kind.0
+- name: local-path-helper
+  sourceRepository: github.com/kubernetes-sigs/kind/tree/main/images/local-path-helper
+  repository: docker.io/kindest/local-path-helper
+  tag: v20220512-507ff70b

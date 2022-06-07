@@ -15,11 +15,14 @@
 package controlplane
 
 import (
+	"path/filepath"
 	"time"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane/genericactuator"
 	extensionssecretsmanager "github.com/gardener/gardener/extensions/pkg/util/secret/manager"
+	localimagevector "github.com/gardener/gardener/pkg/provider-local/imagevector"
 	"github.com/gardener/gardener/pkg/provider-local/local"
+	"github.com/gardener/gardener/pkg/utils/chart"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -75,3 +78,19 @@ func getSecretConfigs(namespace string) []extensionssecretsmanager.SecretConfigW
 		},
 	}
 }
+
+var (
+	controlPlaneShootChart = &chart.Chart{
+		Name: "shoot-system-components",
+		Path: filepath.Join(local.InternalChartsPath, "shoot-system-components"),
+		SubCharts: []*chart.Chart{
+			{
+				Name: "local-path-provisioner",
+				Images: []string{
+					localimagevector.ImageNameLocalPathProvisioner,
+					localimagevector.ImageNameLocalPathHelper,
+				},
+			},
+		},
+	}
+)
