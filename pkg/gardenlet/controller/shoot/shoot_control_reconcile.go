@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -82,7 +83,6 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			return err
 		}),
 	)
-
 	if err != nil {
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), err)
 	}
@@ -98,7 +98,18 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		requestControlPlanePodsRestart  = controllerutils.HasTask(o.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
 		kubeProxyEnabled                = gardencorev1beta1helper.KubeProxyEnabled(o.Shoot.GetInfo().Spec.Kubernetes.KubeProxy)
 		shootControlPlaneLoggingEnabled = botanist.Shoot.IsShootControlPlaneLoggingEnabled(botanist.Config)
+		deployKubeAPIServerTaskTimeout  = defaultTimeout
+	)
 
+	// During the 'Preparing' phase of ETCD encryption key rotation, the `kube-apiserver` is deployed twice. Also, the
+	// `botanist.DeployKubeAPIServer` function calls the `Wait` method after the first deployment. Hence, we should use
+	// the respective timeout in this case instead of the (too short) default timeout to prevent undesired and confusing
+	// errors in the reconciliation flow.
+	if gardencorev1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing {
+		deployKubeAPIServerTaskTimeout = kubeapiserver.TimeoutWaitForDeployment
+	}
+
+	var (
 		g                      = flow.NewGraph(fmt.Sprintf("Shoot cluster %s", utils.IifString(isRestoring, "restoration", "reconciliation")))
 		ensureShootStateExists = g.Add(flow.Task{
 			Name: "Ensuring that ShootState exists",
@@ -275,7 +286,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		})
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name: "Deploying Kubernetes API server",
-			Fn:   flow.TaskFn(botanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:   flow.TaskFn(botanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, deployKubeAPIServerTaskTimeout),
 			Dependencies: flow.NewTaskIDs(
 				initializeSecretsManagement,
 				deployETCD,
