@@ -93,4 +93,9 @@ var (
 			},
 		},
 	}
+
+	storageClassChart = &chart.Chart{
+		Name: "shoot-storageclasses",
+		Path: filepath.Join(local.InternalChartsPath, "shoot-storageclasses"),
+	}
 )

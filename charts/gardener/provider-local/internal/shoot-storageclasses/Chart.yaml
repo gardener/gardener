@@ -1,0 +1,4 @@
+apiVersion: v1
+description: A Helm chart for storageclasses that should be installed to the shoot
+name: shoot-storageclasses
+version: 0.1.0
