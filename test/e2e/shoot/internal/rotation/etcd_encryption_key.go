@@ -66,8 +66,9 @@ func (v *ETCDEncryptionKeyVerifier) Before(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
 
-		v.secretsBefore = groupByName(secretList.Items)
-		g.Expect(v.secretsBefore).To(HaveKeyWithValue(etcdEncryptionKey, HaveLen(1)), "etcd encryption key should get created, but not rotated yet")
+		grouped := groupByName(secretList.Items)
+		g.Expect(grouped[etcdEncryptionKey]).To(HaveLen(1), "etcd encryption key should get created, but not rotated yet")
+		v.secretsBefore = grouped
 	}).Should(Succeed())
 
 	By("Verify old etcd encryption config secret")
@@ -116,9 +117,10 @@ func (v *ETCDEncryptionKeyVerifier) AfterPrepared(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
 
-		v.secretsPrepared = groupByName(secretList.Items)
-		g.Expect(v.secretsPrepared).To(HaveKeyWithValue(etcdEncryptionKey, HaveLen(2)), "etcd encryption key should get rotated")
-		g.Expect(v.secretsPrepared).To(HaveKeyWithValue(etcdEncryptionKey, ContainElement(v.secretsBefore[etcdEncryptionKey][0])), "old etcd encryption key secret should be kept")
+		grouped := groupByName(secretList.Items)
+		g.Expect(grouped[etcdEncryptionKey]).To(HaveLen(2), "etcd encryption key should get rotated")
+		g.Expect(grouped[etcdEncryptionKey]).To(ContainElement(v.secretsBefore[etcdEncryptionKey][0]), "old etcd encryption key secret should be kept")
+		v.secretsPrepared = grouped
 	}).Should(Succeed())
 
 	By("Verify combined etcd encryption config secret")
@@ -173,8 +175,8 @@ func (v *ETCDEncryptionKeyVerifier) AfterCompleted(ctx context.Context) {
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
 
 		grouped := groupByName(secretList.Items)
-		g.Expect(grouped).To(HaveKeyWithValue(etcdEncryptionKey, HaveLen(1)), "old etcd encryption key should get cleaned up")
-		g.Expect(grouped).To(HaveKeyWithValue(etcdEncryptionKey, ContainElement(v.secretsPrepared[etcdEncryptionKey][1])), "new etcd encryption key secret should be kept")
+		g.Expect(grouped[etcdEncryptionKey]).To(HaveLen(1), "old etcd encryption key should get cleaned up")
+		g.Expect(grouped[etcdEncryptionKey]).To(ContainElement(v.secretsPrepared[etcdEncryptionKey][1]), "new etcd encryption key secret should be kept")
 	}).Should(Succeed())
 
 	By("Verify new etcd encryption config secret")

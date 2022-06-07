@@ -94,12 +94,13 @@ func (v *CAVerifier) Before(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
 
-		v.gardenletSecretsBefore = groupByName(secretList.Items)
+		grouped := groupByName(secretList.Items)
 		for _, ca := range allGardenletCAs {
 			bundle := ca + "-bundle"
-			g.Expect(v.gardenletSecretsBefore).To(HaveKeyWithValue(ca, HaveLen(1)), ca+" secret should get created, but not rotated yet")
-			g.Expect(v.gardenletSecretsBefore).To(HaveKeyWithValue(bundle, HaveLen(1)), ca+" bundle secret should get created, but not rotated yet")
+			g.Expect(grouped[ca]).To(HaveLen(1), ca+" secret should get created, but not rotated yet")
+			g.Expect(grouped[bundle]).To(HaveLen(1), ca+" bundle secret should get created, but not rotated yet")
 		}
+		v.gardenletSecretsBefore = grouped
 	}).Should(Succeed())
 
 	By("Verify secrets of provider-local before rotation")
@@ -107,14 +108,13 @@ func (v *CAVerifier) Before(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByProviderLocalSecretsManager)).To(Succeed())
 
-		v.providerLocalSecretsBefore = groupByName(secretList.Items)
-		g.Expect(v.providerLocalSecretsBefore).To(And(
-			HaveKeyWithValue(caProviderLocalControlPlane, HaveLen(1)),
-			HaveKeyWithValue(caProviderLocalControlPlaneBundle, HaveLen(1)),
-			HaveKeyWithValue(providerLocalDummyServer, HaveLen(1)),
-			HaveKeyWithValue(providerLocalDummyClient, HaveLen(1)),
-			HaveKeyWithValue(providerLocalDummyAuth, HaveLen(1)),
-		), "all secrets should get created, but not rotated yet")
+		grouped := groupByName(secretList.Items)
+		g.Expect(grouped[caProviderLocalControlPlane]).To(HaveLen(1), "CA secret should get created, but not rotated yet")
+		g.Expect(grouped[caProviderLocalControlPlaneBundle]).To(HaveLen(1), "CA bundle secret should get created, but not rotated yet")
+		g.Expect(grouped[providerLocalDummyServer]).To(HaveLen(1))
+		g.Expect(grouped[providerLocalDummyClient]).To(HaveLen(1))
+		g.Expect(grouped[providerLocalDummyAuth]).To(HaveLen(1))
+		v.providerLocalSecretsBefore = grouped
 	}).Should(Succeed())
 }
 
@@ -147,14 +147,15 @@ func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
 
-		v.gardenletSecretsPrepared = groupByName(secretList.Items)
+		grouped := groupByName(secretList.Items)
 		for _, ca := range allGardenletCAs {
 			bundle := ca + "-bundle"
-			g.Expect(v.gardenletSecretsPrepared).To(HaveKeyWithValue(ca, HaveLen(2)), ca+" secret should get rotated, but old CA is kept")
-			g.Expect(v.gardenletSecretsPrepared).To(HaveKeyWithValue(bundle, HaveLen(1)), ca+" bundle secret should have changed")
-			g.Expect(v.gardenletSecretsPrepared).To(HaveKeyWithValue(ca, ContainElement(v.gardenletSecretsBefore[ca][0])), "old "+ca+" secret should be kept")
-			g.Expect(v.gardenletSecretsPrepared).To(HaveKeyWithValue(bundle, Not(ContainElement(v.gardenletSecretsBefore[bundle][0]))), "old "+ca+" bundle should get cleaned up")
+			g.Expect(grouped[ca]).To(HaveLen(2), ca+" secret should get rotated, but old CA is kept")
+			g.Expect(grouped[bundle]).To(HaveLen(1), ca+" bundle secret should have changed")
+			g.Expect(grouped[ca]).To(ContainElement(v.gardenletSecretsBefore[ca][0]), "old "+ca+" secret should be kept")
+			g.Expect(grouped[bundle]).To(Not(ContainElement(v.gardenletSecretsBefore[bundle][0])), "old "+ca+" bundle should get cleaned up")
 		}
+		v.gardenletSecretsPrepared = grouped
 	}).Should(Succeed())
 
 	By("Verify secrets of provider-local after preparation")
@@ -162,19 +163,18 @@ func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByProviderLocalSecretsManager)).To(Succeed())
 
-		v.providerLocalSecretsPrepared = groupByName(secretList.Items)
-		g.Expect(v.providerLocalSecretsPrepared).To(And(
-			HaveKeyWithValue(caProviderLocalControlPlane, HaveLen(2)),
-			HaveKeyWithValue(caProviderLocalControlPlaneBundle, HaveLen(1)),
-			HaveKeyWithValue(providerLocalDummyServer, HaveLen(1)),
-			HaveKeyWithValue(providerLocalDummyClient, HaveLen(1)),
-			HaveKeyWithValue(providerLocalDummyAuth, HaveLen(1)),
-		), "CA should get rotated, but old CA and server secrets are kept")
+		grouped := groupByName(secretList.Items)
+		g.Expect(grouped[caProviderLocalControlPlane]).To(HaveLen(2), "CA secret should get rotated, but old CA is kept")
+		g.Expect(grouped[caProviderLocalControlPlaneBundle]).To(HaveLen(1), "CA bundle secret should have changed")
+		g.Expect(grouped[providerLocalDummyServer]).To(HaveLen(1))
+		g.Expect(grouped[providerLocalDummyClient]).To(HaveLen(1))
+		g.Expect(grouped[providerLocalDummyAuth]).To(HaveLen(1))
 
-		g.Expect(v.providerLocalSecretsPrepared).To(HaveKeyWithValue(caProviderLocalControlPlane, ContainElement(v.providerLocalSecretsBefore[caProviderLocalControlPlane][0])), "old CA secret should be kept")
-		g.Expect(v.providerLocalSecretsPrepared).To(HaveKeyWithValue(caProviderLocalControlPlaneBundle, Not(ContainElement(v.providerLocalSecretsBefore[caProviderLocalControlPlaneBundle][0]))), "old CA bundle should get cleaned up")
-		g.Expect(v.providerLocalSecretsPrepared).To(HaveKeyWithValue(providerLocalDummyServer, ContainElement(v.providerLocalSecretsBefore[providerLocalDummyServer][0])), "server cert should be kept (signed with old CA)")
-		g.Expect(v.providerLocalSecretsPrepared).To(HaveKeyWithValue(providerLocalDummyClient, Not(ContainElement(v.providerLocalSecretsBefore[providerLocalDummyServer][0]))), "client cert should have changed (signed with new CA)")
+		g.Expect(grouped[caProviderLocalControlPlane]).To(ContainElement(v.providerLocalSecretsBefore[caProviderLocalControlPlane][0]), "old CA secret should be kept")
+		g.Expect(grouped[caProviderLocalControlPlaneBundle]).To(Not(ContainElement(v.providerLocalSecretsBefore[caProviderLocalControlPlaneBundle][0])), "old CA bundle should get cleaned up")
+		g.Expect(grouped[providerLocalDummyServer]).To(ContainElement(v.providerLocalSecretsBefore[providerLocalDummyServer][0]), "server cert should be kept (signed with old CA)")
+		g.Expect(grouped[providerLocalDummyClient]).To(Not(ContainElement(v.providerLocalSecretsBefore[providerLocalDummyServer][0])), "client cert should have changed (signed with new CA)")
+		v.providerLocalSecretsPrepared = grouped
 	}).Should(Succeed())
 }
 
@@ -208,10 +208,10 @@ func (v *CAVerifier) AfterCompleted(ctx context.Context) {
 		grouped := groupByName(secretList.Items)
 		for _, ca := range allGardenletCAs {
 			bundle := ca + "-bundle"
-			g.Expect(grouped).To(HaveKeyWithValue(ca, HaveLen(1)), "old "+ca+" secret should get cleaned up")
-			g.Expect(grouped).To(HaveKeyWithValue(bundle, HaveLen(1)), ca+" bundle secret should have changed")
-			g.Expect(grouped).To(HaveKeyWithValue(ca, ContainElement(v.gardenletSecretsPrepared[ca][1])), "new "+ca+" secret should be kept")
-			g.Expect(grouped).To(HaveKeyWithValue(bundle, Not(ContainElement(v.gardenletSecretsPrepared[bundle][0]))), "combined "+ca+" bundle should get cleaned up")
+			g.Expect(grouped[ca]).To(HaveLen(1), "old "+ca+" secret should get cleaned up")
+			g.Expect(grouped[bundle]).To(HaveLen(1), ca+" bundle secret should have changed")
+			g.Expect(grouped[ca]).To(ContainElement(v.gardenletSecretsPrepared[ca][1]), "new "+ca+" secret should be kept")
+			g.Expect(grouped[bundle]).To(Not(ContainElement(v.gardenletSecretsPrepared[bundle][0])), "combined "+ca+" bundle should get cleaned up")
 		}
 	}).Should(Succeed())
 
@@ -221,18 +221,16 @@ func (v *CAVerifier) AfterCompleted(ctx context.Context) {
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByProviderLocalSecretsManager)).To(Succeed())
 
 		grouped := groupByName(secretList.Items)
-		g.Expect(grouped).To(And(
-			HaveKeyWithValue(caProviderLocalControlPlane, HaveLen(1)),
-			HaveKeyWithValue(caProviderLocalControlPlaneBundle, HaveLen(1)),
-			HaveKeyWithValue(providerLocalDummyServer, HaveLen(1)),
-			HaveKeyWithValue(providerLocalDummyClient, HaveLen(1)),
-			HaveKeyWithValue(providerLocalDummyAuth, HaveLen(1)),
-		), "old CA secret should get cleaned up")
+		g.Expect(grouped[caProviderLocalControlPlane]).To(HaveLen(1), "old CA secret should get cleaned up")
+		g.Expect(grouped[caProviderLocalControlPlaneBundle]).To(HaveLen(1), "CA bundle secret should have changed")
+		g.Expect(grouped[providerLocalDummyServer]).To(HaveLen(1))
+		g.Expect(grouped[providerLocalDummyClient]).To(HaveLen(1))
+		g.Expect(grouped[providerLocalDummyAuth]).To(HaveLen(1))
 
-		g.Expect(grouped).To(HaveKeyWithValue(caProviderLocalControlPlane, ContainElement(v.providerLocalSecretsPrepared[caProviderLocalControlPlane][1])), "new CA secret should be kept")
-		g.Expect(grouped).To(HaveKeyWithValue(caProviderLocalControlPlaneBundle, Not(ContainElement(v.providerLocalSecretsPrepared[caProviderLocalControlPlaneBundle][0]))), "combined CA bundle should get cleaned up")
-		g.Expect(grouped).To(HaveKeyWithValue(providerLocalDummyServer, Not(ContainElement(v.providerLocalSecretsPrepared[providerLocalDummyServer][0]))), "server cert should have changed (signed with new CA)")
-		g.Expect(grouped).To(HaveKeyWithValue(providerLocalDummyClient, ContainElement(v.providerLocalSecretsPrepared[providerLocalDummyClient][0])), "client cert should be kept (already signed with new CA)")
+		g.Expect(grouped[caProviderLocalControlPlane]).To(ContainElement(v.providerLocalSecretsPrepared[caProviderLocalControlPlane][1]), "new CA secret should be kept")
+		g.Expect(grouped[caProviderLocalControlPlaneBundle]).To(Not(ContainElement(v.providerLocalSecretsPrepared[caProviderLocalControlPlaneBundle][0])), "combined CA bundle should get cleaned up")
+		g.Expect(grouped[providerLocalDummyServer]).To(Not(ContainElement(v.providerLocalSecretsPrepared[providerLocalDummyServer][0])), "server cert should have changed (signed with new CA)")
+		g.Expect(grouped[providerLocalDummyClient]).To(ContainElement(v.providerLocalSecretsPrepared[providerLocalDummyClient][0]), "client cert should be kept (already signed with new CA)")
 	}).Should(Succeed())
 }
 

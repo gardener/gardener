@@ -50,11 +50,10 @@ func (v *ServiceAccountKeyVerifier) Before(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
 
-		v.secretsBefore = groupByName(secretList.Items)
-		g.Expect(v.secretsBefore).To(And(
-			HaveKeyWithValue(serviceAccountKey, HaveLen(1)),
-			HaveKeyWithValue(serviceAccountKeyBundle, HaveLen(1)),
-		), "all secrets should get created, but not rotated yet")
+		grouped := groupByName(secretList.Items)
+		g.Expect(grouped[serviceAccountKey]).To(HaveLen(1), "service account key secret should get created, but not rotated yet")
+		g.Expect(grouped[serviceAccountKeyBundle]).To(HaveLen(1), "service account key bundle secret should get created, but not rotated yet")
+		v.secretsBefore = grouped
 	}).Should(Succeed())
 }
 
@@ -75,14 +74,13 @@ func (v *ServiceAccountKeyVerifier) AfterPrepared(ctx context.Context) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
 
-		v.secretsPrepared = groupByName(secretList.Items)
-		g.Expect(v.secretsPrepared).To(And(
-			HaveKeyWithValue(serviceAccountKey, HaveLen(2)),
-			HaveKeyWithValue(serviceAccountKeyBundle, HaveLen(1)),
-		), "service account key should get rotated, but old service account key is kept")
+		grouped := groupByName(secretList.Items)
+		g.Expect(grouped[serviceAccountKey]).To(HaveLen(2), "service account key secret should get rotated, but old service account key is kept")
+		g.Expect(grouped[serviceAccountKeyBundle]).To(HaveLen(1))
 
-		g.Expect(v.secretsPrepared).To(HaveKeyWithValue(serviceAccountKey, ContainElement(v.secretsBefore[serviceAccountKey][0])), "old service account key secret should be kept")
-		g.Expect(v.secretsPrepared).To(HaveKeyWithValue(serviceAccountKeyBundle, Not(ContainElement(v.secretsBefore[serviceAccountKeyBundle][0]))), "service account key bundle should have changed")
+		g.Expect(grouped[serviceAccountKey]).To(ContainElement(v.secretsBefore[serviceAccountKey][0]), "old service account key secret should be kept")
+		g.Expect(grouped[serviceAccountKeyBundle]).To(Not(ContainElement(v.secretsBefore[serviceAccountKeyBundle][0])), "service account key bundle should have changed")
+		v.secretsPrepared = grouped
 	}).Should(Succeed())
 }
 
@@ -105,12 +103,10 @@ func (v *ServiceAccountKeyVerifier) AfterCompleted(ctx context.Context) {
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
 
 		grouped := groupByName(secretList.Items)
-		g.Expect(grouped).To(And(
-			HaveKeyWithValue(serviceAccountKey, HaveLen(1)),
-			HaveKeyWithValue(serviceAccountKeyBundle, HaveLen(1)),
-		), "old service account key secret should get cleaned up")
+		g.Expect(grouped[serviceAccountKey]).To(HaveLen(1), "old service account key secret should get cleaned up")
+		g.Expect(grouped[serviceAccountKeyBundle]).To(HaveLen(1))
 
-		g.Expect(grouped).To(HaveKeyWithValue(serviceAccountKey, ContainElement(v.secretsPrepared[serviceAccountKey][1])), "new service account key secret should be kept")
-		g.Expect(grouped).To(HaveKeyWithValue(serviceAccountKeyBundle, Not(ContainElement(v.secretsPrepared[serviceAccountKeyBundle][0]))), "service account key bundle should have changed")
+		g.Expect(grouped[serviceAccountKey]).To(ContainElement(v.secretsPrepared[serviceAccountKey][1]), "new service account key secret should be kept")
+		g.Expect(grouped[serviceAccountKeyBundle]).To(Not(ContainElement(v.secretsPrepared[serviceAccountKeyBundle][0])), "service account key bundle should have changed")
 	}).Should(Succeed())
 }
