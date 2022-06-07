@@ -367,12 +367,18 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Fn:           flow.TaskFn(botanist.InitializeDesiredShootClients).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilControlPlaneExposureReady, waitUntilControlPlaneExposureDeleted, deployInternalDomainDNSRecord, deployGardenerAccess),
 		})
-		_ = g.Add(flow.Task{
+		rewriteSecretsAddLabel = g.Add(flow.Task{
 			Name: "Labeling secrets to encrypt them with new ETCD encryption key",
 			Fn: flow.TaskFn(botanist.RewriteSecretsAddLabel).
 				RetryUntilTimeout(30*time.Second, 10*time.Minute).
 				DoIf(gardencorev1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Snapshotting ETCD after secrets were re-encrypted with new ETCD encryption key",
+			Fn: flow.TaskFn(botanist.SnapshotETCDAfterRewritingSecrets).
+				DoIf(allowBackup && gardencorev1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing),
+			Dependencies: flow.NewTaskIDs(rewriteSecretsAddLabel),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Removing label from secrets after rotation of ETCD encryption key",

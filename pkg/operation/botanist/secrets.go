@@ -563,16 +563,19 @@ func (b *Botanist) RewriteSecretsAddLabel(ctx context.Context) error {
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameETCDEncryptionKey)
 	}
 
-	if err := b.rewriteSecrets(
+	return b.rewriteSecrets(
 		ctx,
 		utils.MustNewRequirement(labelKeyRotationKeyName, selection.NotEquals, etcdEncryptionKeySecret.Name),
 		func(objectMeta *metav1.ObjectMeta) {
 			metav1.SetMetaDataLabel(objectMeta, labelKeyRotationKeyName, etcdEncryptionKeySecret.Name)
 		},
-	); err != nil {
-		return err
-	}
+	)
+}
 
+// SnapshotETCDAfterRewritingSecrets performs a full snapshot on ETCD after the secrets got rewritten as part of the
+// ETCD encryption secret rotation. It adds an annotation to the kube-apiserver deployment after it's done so that it
+// does not take another snapshot again after it succeeded once.
+func (b *Botanist) SnapshotETCDAfterRewritingSecrets(ctx context.Context) error {
 	// Check if we have to snapshot ETCD now that we have rewritten all secrets.
 	meta := &metav1.PartialObjectMetadata{}
 	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))

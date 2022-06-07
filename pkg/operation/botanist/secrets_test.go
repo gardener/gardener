@@ -429,6 +429,34 @@ var _ = Describe("Secrets", func() {
 		})
 
 		Describe("#RewriteSecretsAddLabel", func() {
+			It("should patch all secrets and add the label if not already done", func() {
+				Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-etcd-encryption-key-current", Namespace: seedNamespace}})).To(Succeed())
+
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
+
+				secret1ResourceVersion := secret1.ResourceVersion
+				secret2ResourceVersion := secret2.ResourceVersion
+				secret3ResourceVersion := secret3.ResourceVersion
+
+				Expect(botanist.RewriteSecretsAddLabel(ctx)).To(Succeed())
+
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
+				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
+
+				Expect(secret1.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "kube-apiserver-etcd-encryption-key-current"))
+				Expect(secret2.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "kube-apiserver-etcd-encryption-key-current"))
+				Expect(secret3.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "kube-apiserver-etcd-encryption-key-current"))
+
+				Expect(secret1.ResourceVersion).NotTo(Equal(secret1ResourceVersion))
+				Expect(secret2.ResourceVersion).NotTo(Equal(secret2ResourceVersion))
+				Expect(secret3.ResourceVersion).To(Equal(secret3ResourceVersion))
+			})
+		})
+
+		Describe("#SnapshotETCDAfterRewritingSecrets", func() {
 			var (
 				ctrl     *gomock.Controller
 				etcdMain *mocketcd.MockInterface
@@ -450,31 +478,9 @@ var _ = Describe("Secrets", func() {
 			})
 
 			It("should patch all secrets and add the label if not already done", func() {
-				Expect(fakeSeedClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-etcd-encryption-key-current", Namespace: seedNamespace}})).To(Succeed())
-
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
-
-				secret1ResourceVersion := secret1.ResourceVersion
-				secret2ResourceVersion := secret2.ResourceVersion
-				secret3ResourceVersion := secret3.ResourceVersion
-
 				etcdMain.EXPECT().Snapshot(ctx, gomock.Any())
 
-				Expect(botanist.RewriteSecretsAddLabel(ctx)).To(Succeed())
-
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
-
-				Expect(secret1.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "kube-apiserver-etcd-encryption-key-current"))
-				Expect(secret2.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "kube-apiserver-etcd-encryption-key-current"))
-				Expect(secret3.Labels).To(HaveKeyWithValue("credentials.gardener.cloud/key-name", "kube-apiserver-etcd-encryption-key-current"))
-
-				Expect(secret1.ResourceVersion).NotTo(Equal(secret1ResourceVersion))
-				Expect(secret2.ResourceVersion).NotTo(Equal(secret2ResourceVersion))
-				Expect(secret3.ResourceVersion).To(Equal(secret3ResourceVersion))
+				Expect(botanist.SnapshotETCDAfterRewritingSecrets(ctx)).To(Succeed())
 
 				Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(kubeAPIServerDeployment), kubeAPIServerDeployment)).To(Succeed())
 				Expect(kubeAPIServerDeployment.Annotations).To(HaveKeyWithValue("credentials.gardener.cloud/etcd-snapshotted", "true"))
