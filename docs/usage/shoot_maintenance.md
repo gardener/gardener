@@ -78,7 +78,7 @@ If you hibernate or wake-up your shoot then Gardener gets active right away.
 
 ## Shoot Operations
 
-In case you would like to perform certain [shoot operations](shoot_operations.md) (e.g., credentials rotation) during your maintenance time window, you can annotate the `Shoot` with
+In case you would like to perform a [shoot credential rotation](shoot_operations.md#credentials-rotation-operations) or a `reconcile` operation during your maintenance time window, you can annotate the `Shoot` with
 
 ```
 maintenance.gardener.cloud/operation=<operation>
