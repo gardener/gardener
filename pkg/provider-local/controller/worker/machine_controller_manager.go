@@ -16,7 +16,6 @@ package worker
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -28,7 +27,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 )
 
 var (
@@ -49,10 +47,6 @@ var (
 	mcmShootChart = &chart.Chart{
 		Name: local.MachineControllerManagerName,
 		Path: filepath.Join(local.InternalChartsPath, local.MachineControllerManagerName, "shoot"),
-		Objects: []*chart.Object{
-			{Type: &rbacv1.ClusterRole{}, Name: fmt.Sprintf("extensions.gardener.cloud:%s:%s", local.Name, local.MachineControllerManagerName)},
-			{Type: &rbacv1.ClusterRoleBinding{}, Name: fmt.Sprintf("extensions.gardener.cloud:%s:%s", local.Name, local.MachineControllerManagerName)},
-		},
 	}
 )
 
