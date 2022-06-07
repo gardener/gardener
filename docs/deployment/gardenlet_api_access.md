@@ -1,3 +1,7 @@
+---
+title: Gardenlet API Access
+---
+
 # Scoped API Access for Gardenlets
 
 By default, `gardenlet`s have administrative access in the garden cluster.

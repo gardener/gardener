@@ -1,3 +1,7 @@
+---
+title: Create a Shooted Seed Cluster
+---
+
 # Create Shooted Seed Cluster
 
 Create managed seed (aka "shooted seed") cluster with the `shoot.gardener.cloud/use-as-seed` annotation.
