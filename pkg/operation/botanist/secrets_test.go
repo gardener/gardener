@@ -477,7 +477,7 @@ var _ = Describe("Secrets", func() {
 				ctrl.Finish()
 			})
 
-			It("should patch all secrets and add the label if not already done", func() {
+			It("should create a snapshot of ETCD and annotate kube-apiserver accordingly", func() {
 				etcdMain.EXPECT().Snapshot(ctx, gomock.Any())
 
 				Expect(botanist.SnapshotETCDAfterRewritingSecrets(ctx)).To(Succeed())
