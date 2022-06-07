@@ -203,7 +203,7 @@ func (v *CAVerifier) AfterCompleted(ctx context.Context) {
 	By("Verify CA secrets of gardenlet after completion")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
-		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByProviderLocalSecretsManager)).To(Succeed())
+		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
 
 		grouped := groupByName(secretList.Items)
 		for _, ca := range allGardenletCAs {
