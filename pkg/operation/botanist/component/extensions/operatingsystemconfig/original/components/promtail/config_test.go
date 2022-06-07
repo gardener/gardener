@@ -117,6 +117,8 @@ ExecStart=/var/lib/promtail/scripts/fetch-token.sh`),
   http_listen_port: 3001
 client:
   url: https://ingress.loki.testClusterDomain/loki/api/v1/push
+  batchwait: 10s
+  batchsize: 1536000
   bearer_token_file: /var/lib/promtail/auth-token
   tls_config:
     ca_file: /var/lib/promtail/ca.crt
@@ -129,23 +131,61 @@ scrape_configs:
     json: false
     labels:
       job: systemd-journal
+      origin: systemd-journal
     max_age: 12h
     path: /var/log/journal
   relabel_configs:
   - action: drop
     regex: ^localhost$
     source_labels: ['__journal__hostname']
-  - source_labels: ['__journal__systemd_unit']
+  - action: replace
+    regex: '(.+)'
+    replacement: $1
+    source_labels: ['__journal__systemd_unit']
+    target_label: '__journal_syslog_identifier'
+  - action: keep
+    regex: ^kernel|kubelet\.service|docker\.service|containerd\.service$
+    source_labels: ['__journal_syslog_identifier']
+  - source_labels: ['__journal_syslog_identifier']
     target_label: unit
   - source_labels: ['__journal__hostname']
     target_label: nodename
+- job_name: combine-journal
+  journal:
+    json: false
+    labels:
+      job: systemd-combine-journal
+      origin: systemd-journal
+    max_age: 12h
+    path: /var/log/journal
+  relabel_configs:
+  - action: drop
+    regex: ^localhost$
+    source_labels: ['__journal__hostname']
+  - action: replace
+    regex: '(.+)'
+    replacement: $1
+    source_labels: ['__journal__systemd_unit']
+    target_label: '__journal_syslog_identifier'
+  - action: drop
+    regex: ^kernel|kubelet\.service|docker\.service|containerd\.service$
+    source_labels: ['__journal_syslog_identifier']
   - source_labels: ['__journal_syslog_identifier']
-    target_label: syslog_identifier
+    target_label: unit
+  - source_labels: ['__journal__hostname']
+    target_label: nodename
+  pipeline_stages:
+  - pack:
+     labels:
+     - unit
+     ingest_timestamp: true
 - job_name: kubernetes-pods-name
   pipeline_stages:
   - cri: {}
   - labeldrop:
     - filename
+    - stream
+    - pod_uid
   kubernetes_sd_configs:
   - role: pod
     api_server: https://api.test-cluster.com
