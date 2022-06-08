@@ -34,6 +34,7 @@ type GardenerConfig struct {
 	CommonConfig       *CommonConfig
 	GardenerKubeconfig string
 	ProjectNamespace   string
+	ExistingShootName  string
 	SkipAccessingShoot bool
 }
 
@@ -43,8 +44,8 @@ type GardenerFramework struct {
 	TestDescription
 	GardenClient kubernetes.Interface
 
-	ProjectNamespace        string
-	GardenerFrameworkConfig *GardenerConfig
+	ProjectNamespace string
+	Config           *GardenerConfig
 }
 
 // NewGardenerFramework creates a new gardener test framework.
@@ -55,9 +56,9 @@ func NewGardenerFramework(cfg *GardenerConfig) *GardenerFramework {
 		commonConfig = cfg.CommonConfig
 	}
 	f := &GardenerFramework{
-		CommonFramework:         NewCommonFramework(commonConfig),
-		TestDescription:         NewTestDescription("GARDENER"),
-		GardenerFrameworkConfig: cfg,
+		CommonFramework: NewCommonFramework(commonConfig),
+		TestDescription: NewTestDescription("GARDENER"),
+		Config:          cfg,
 	}
 	ginkgo.BeforeEach(f.BeforeEach)
 	CAfterEach(func(ctx context.Context) {
@@ -76,9 +77,9 @@ func NewGardenerFrameworkFromConfig(cfg *GardenerConfig) *GardenerFramework {
 		commonConfig = cfg.CommonConfig
 	}
 	f := &GardenerFramework{
-		CommonFramework:         NewCommonFrameworkFromConfig(commonConfig),
-		TestDescription:         NewTestDescription("GARDENER"),
-		GardenerFrameworkConfig: cfg,
+		CommonFramework: NewCommonFrameworkFromConfig(commonConfig),
+		TestDescription: NewTestDescription("GARDENER"),
+		Config:          cfg,
 	}
 	return f
 }
@@ -86,9 +87,9 @@ func NewGardenerFrameworkFromConfig(cfg *GardenerConfig) *GardenerFramework {
 // BeforeEach should be called in ginkgo's BeforeEach.
 // It sets up the gardener framework.
 func (f *GardenerFramework) BeforeEach() {
-	f.GardenerFrameworkConfig = mergeGardenerConfig(f.GardenerFrameworkConfig, gardenerCfg)
-	validateGardenerConfig(f.GardenerFrameworkConfig)
-	gardenClient, err := kubernetes.NewClientFromFile("", f.GardenerFrameworkConfig.GardenerKubeconfig,
+	f.Config = mergeGardenerConfig(f.Config, gardenerCfg)
+	validateGardenerConfig(f.Config)
+	gardenClient, err := kubernetes.NewClientFromFile("", f.Config.GardenerKubeconfig,
 		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}),
 		kubernetes.WithAllowedUserFields([]string{kubernetes.AuthTokenFile}),
 		kubernetes.WithDisabledCachedClient(),
@@ -96,7 +97,7 @@ func (f *GardenerFramework) BeforeEach() {
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	f.GardenClient = gardenClient
 
-	f.ProjectNamespace = f.GardenerFrameworkConfig.ProjectNamespace
+	f.ProjectNamespace = f.Config.ProjectNamespace
 }
 
 func validateGardenerConfig(cfg *GardenerConfig) {
@@ -133,6 +134,9 @@ func mergeGardenerConfig(base, overwrite *GardenerConfig) *GardenerConfig {
 	if overwrite.SkipAccessingShoot {
 		base.SkipAccessingShoot = overwrite.SkipAccessingShoot
 	}
+	if overwrite.ExistingShootName != "" {
+		base.ExistingShootName = overwrite.ExistingShootName
+	}
 
 	return base
 }
@@ -143,6 +147,7 @@ func RegisterGardenerFrameworkFlags() *GardenerConfig {
 
 	newCfg := &GardenerConfig{}
 
+	flag.StringVar(&newCfg.ExistingShootName, "existing-shoot-name", "", "Name of an existing shoot to use instead of creating a new one.")
 	flag.StringVar(&newCfg.GardenerKubeconfig, "kubecfg", "", "the path to the kubeconfig  of the garden cluster that will be used for integration tests")
 	flag.StringVar(&newCfg.ProjectNamespace, "project-namespace", "", "specify the gardener project namespace to run tests")
 	flag.BoolVar(&newCfg.SkipAccessingShoot, "skip-accessing-shoot", false, "if set to true then the test does not try to access the shoot via its kubeconfig")
@@ -157,7 +162,7 @@ func (f *GardenerFramework) NewShootFramework(ctx context.Context, shoot *garden
 	shootFramework := &ShootFramework{
 		GardenerFramework: f,
 		Config: &ShootConfig{
-			GardenerConfig: f.GardenerFrameworkConfig,
+			GardenerConfig: f.Config,
 		},
 	}
 	if err := shootFramework.AddShoot(ctx, shoot.GetName(), shoot.GetNamespace()); err != nil {

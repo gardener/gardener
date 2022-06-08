@@ -15,14 +15,25 @@
 package e2e_test
 
 import (
+	"flag"
+	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/gardener/gardener/test/framework"
+
 	// imported test specs
 	_ "github.com/gardener/gardener/test/e2e/shoot"
 )
+
+func TestMain(m *testing.M) {
+	framework.RegisterGardenerFrameworkFlags()
+	flag.Parse()
+
+	os.Exit(m.Run())
+}
 
 func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)

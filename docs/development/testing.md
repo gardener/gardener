@@ -72,7 +72,14 @@ make test-e2e-local  # alternatively: make test-e2e-local-fast
 If you want to run a specific set of e2e test cases, you can also execute them using `./hack/test-e2e-local.sh` directly in combination with [ginkgo label filters](https://onsi.github.io/ginkgo/#spec-labels). For example:
 
 ```bash
-./hack/test-e2e-local.sh --label-filter "Shoot && ca-rotation"
+./hack/test-e2e-local.sh --label-filter "Shoot && credentials-rotation"
+```
+
+If you want to use an existing shoot instead of creating a new one for the test case and deleting it afterwards, you can specify the existing shoot via the following flags.
+This can be useful to speed of the development of e2e tests.
+
+```bash
+./hack/test-e2e-local.sh --label-filter "Shoot && credentials-rotation" -- --project-namespace=garden-local --existing-shoot-name=local
 ```
 
 Also see: [developing Gardener locally](getting_started_locally.md) and [deploying Gardener locally](../deployment/getting_started_locally.md).

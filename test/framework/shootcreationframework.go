@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	"github.com/onsi/ginkgo/v2"
@@ -368,26 +370,43 @@ func (f *ShootCreationFramework) CreateShootAndWaitForCreation(ctx context.Conte
 		}
 	}
 
-	f.Logger.Infof("Creating shoot %s in namespace %s", f.Shoot.GetName(), f.ProjectNamespace)
-	if err := PrettyPrintObject(f.Shoot); err != nil {
-		f.Logger.Errorf("Cannot decode shoot %s: %s", f.Shoot.GetName(), err)
-		return err
-	}
-
-	if err := f.GardenerFramework.CreateShoot(ctx, f.Shoot); err != nil {
-		f.Logger.Errorf("Cannot create shoot %s: %s", f.Shoot.GetName(), err.Error())
-
-		dumpCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-		defer cancel()
-		if shootFramework, err := f.NewShootFramework(dumpCtx, f.Shoot); err != nil {
-			f.Logger.Errorf("Cannot dump shoot state %s: %s", f.Shoot.GetName(), err.Error())
-		} else {
-			shootFramework.DumpState(dumpCtx)
+	if f.GardenerFramework.Config.ExistingShootName != "" {
+		shootKey := client.ObjectKey{Namespace: f.GardenerFramework.ProjectNamespace, Name: f.GardenerFramework.Config.ExistingShootName}
+		if err := f.GardenClient.Client().Get(ctx, shootKey, f.Shoot); err != nil {
+			return fmt.Errorf("failed to get existing shoot %q: %w", shootKey, err)
 		}
-		return err
+
+		shootHealthy, msg := ShootReconciliationSuccessful(f.Shoot)
+		if !shootHealthy {
+			return fmt.Errorf("cannot use existing shoot %q for test because it is unhealthy: %s", shootKey, msg)
+		}
+
+		f.Logger.Infof("Using existing shoot %q for test", shootKey)
+		if err := PrettyPrintObject(f.Shoot); err != nil {
+			return err
+		}
+	} else {
+		f.Logger.Infof("Creating shoot %s in namespace %s", f.Shoot.GetName(), f.ProjectNamespace)
+		if err := PrettyPrintObject(f.Shoot); err != nil {
+			return err
+		}
+
+		if err := f.GardenerFramework.CreateShoot(ctx, f.Shoot); err != nil {
+			f.Logger.Errorf("Cannot create shoot %s: %s", f.Shoot.GetName(), err.Error())
+
+			dumpCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			defer cancel()
+			if shootFramework, err := f.NewShootFramework(dumpCtx, f.Shoot); err != nil {
+				f.Logger.Errorf("Cannot dump shoot state %s: %s", f.Shoot.GetName(), err.Error())
+			} else {
+				shootFramework.DumpState(dumpCtx)
+			}
+			return err
+		}
+
+		f.Logger.Infof("Successfully created shoot %s", f.Shoot.GetName())
 	}
 
-	f.Logger.Infof("Successfully created shoot %s", f.Shoot.GetName())
 	shootFramework, err := f.NewShootFramework(ctx, f.Shoot)
 	if err != nil {
 		return err
