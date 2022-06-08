@@ -15,7 +15,6 @@
 package gardener
 
 import (
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
@@ -26,8 +25,8 @@ import (
 // Existing label keys will be overridden by the mandatory labels keys.
 func GetMandatoryExposureClassHandlerSNILabels(labels map[string]string, exposureClassName string) map[string]string {
 	return utils.MergeStringMaps(labels, map[string]string{
-		v1beta1constants.LabelApp:                       gardenletconfigv1alpha1.DefaultIngressGatewayAppLabelValue,
-		v1alpha1constants.GardenRole:                    v1alpha1constants.GardenRoleExposureClassHandler,
-		v1alpha1constants.LabelExposureClassHandlerName: exposureClassName,
+		v1beta1constants.LabelApp:                      gardenletconfigv1alpha1.DefaultIngressGatewayAppLabelValue,
+		v1beta1constants.GardenRole:                    v1beta1constants.GardenRoleExposureClassHandler,
+		v1beta1constants.LabelExposureClassHandlerName: exposureClassName,
 	})
 }

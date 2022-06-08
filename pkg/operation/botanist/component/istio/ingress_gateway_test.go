@@ -19,17 +19,15 @@ import (
 	"context"
 	"fmt"
 
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 
-	"github.com/gogo/protobuf/jsonpb"
-
+	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/istio"
-
-	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	"github.com/ghodss/yaml"
+	"github.com/gogo/protobuf/jsonpb"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
@@ -137,8 +135,8 @@ var _ = Describe("ingress", func() {
 
 		JustBeforeEach(func() {
 			var labels = map[string]string{
-				v1alpha1constants.GardenRole:                    v1alpha1constants.GardenRoleExposureClassHandler,
-				v1alpha1constants.LabelExposureClassHandlerName: exposureClassHandlerName,
+				v1beta1constants.GardenRole:                    v1beta1constants.GardenRoleExposureClassHandler,
+				v1beta1constants.LabelExposureClassHandlerName: exposureClassHandlerName,
 			}
 
 			igw = makeIngressGateway(c, exposureClassHandlerNamespace, igwAnnotations, labels)
@@ -152,8 +150,8 @@ var _ = Describe("ingress", func() {
 
 			Expect(actualNS.Labels).To(HaveKeyWithValue("istio-operator-managed", "Reconcile"))
 			Expect(actualNS.Labels).To(HaveKeyWithValue("istio-injection", "disabled"))
-			Expect(actualNS.Labels).To(HaveKeyWithValue(v1alpha1constants.GardenRole, v1alpha1constants.GardenRoleExposureClassHandler))
-			Expect(actualNS.Labels).To(HaveKeyWithValue(v1alpha1constants.LabelExposureClassHandlerName, exposureClassHandlerName))
+			Expect(actualNS.Labels).To(HaveKeyWithValue(v1beta1constants.GardenRole, v1beta1constants.GardenRoleExposureClassHandler))
+			Expect(actualNS.Labels).To(HaveKeyWithValue(v1beta1constants.LabelExposureClassHandlerName, exposureClassHandlerName))
 		})
 	})
 

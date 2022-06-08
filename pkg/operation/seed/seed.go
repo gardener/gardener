@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/charts"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -1486,7 +1485,7 @@ func deletePriorityClassIfValueNotTheSame(ctx context.Context, k8sClient client.
 func cleanupOrphanExposureClassHandlerResources(ctx context.Context, c client.Client, exposureClassHandlers []config.ExposureClassHandler, log logrus.FieldLogger) error {
 	exposureClassHandlerNamespaces := &corev1.NamespaceList{}
 
-	if err := c.List(ctx, exposureClassHandlerNamespaces, client.MatchingLabels{v1alpha1constants.GardenRole: v1alpha1constants.GardenRoleExposureClassHandler}); err != nil {
+	if err := c.List(ctx, exposureClassHandlerNamespaces, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleExposureClassHandler}); err != nil {
 		return err
 	}
 
@@ -1504,7 +1503,7 @@ func cleanupOrphanExposureClassHandlerResources(ctx context.Context, c client.Cl
 		log.Infof("Namespace %q is orphan as there is no ExposureClass handler in the gardenlet configuration anymore", namespace.Name)
 
 		// Determine the corresponding handler name to the ExposureClass handler resources.
-		handlerName, ok := namespace.Labels[v1alpha1constants.LabelExposureClassHandlerName]
+		handlerName, ok := namespace.Labels[v1beta1constants.LabelExposureClassHandlerName]
 		if !ok {
 			log.Info("Cannot delete ExposureClass handler resources as the corresponging handler is unknown and it is not save to remove them")
 			continue
@@ -1521,7 +1520,7 @@ func cleanupOrphanExposureClassHandlerResources(ctx context.Context, c client.Cl
 				continue
 			}
 			// Check if the gateway still selects the ExposureClass handler ingress gateway.
-			if value, ok := gateway.Spec.Selector[v1alpha1constants.LabelExposureClassHandlerName]; ok && value == handlerName {
+			if value, ok := gateway.Spec.Selector[v1beta1constants.LabelExposureClassHandlerName]; ok && value == handlerName {
 				exposureClassHandlerInUse = true
 				break
 			}

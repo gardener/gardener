@@ -30,7 +30,6 @@ import (
 )
 
 var _ = Describe("ShootStateList", func() {
-
 	Describe("ExtensionResourceStateList", func() {
 		fooString := "foo"
 		var (
@@ -387,5 +386,4 @@ var _ = Describe("ShootStateList", func() {
 			})
 		})
 	})
-
 })

@@ -18,7 +18,7 @@ import (
 	"context"
 	"path/filepath"
 
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -118,11 +118,11 @@ func getIngressGatewayNamespaceLabels(labels map[string]string) map[string]strin
 		"istio-injection":        "disabled",
 	}
 
-	if value, ok := labels[v1alpha1constants.GardenRole]; ok && value == v1alpha1constants.GardenRoleExposureClassHandler {
-		namespaceLabels[v1alpha1constants.GardenRole] = v1alpha1constants.GardenRoleExposureClassHandler
+	if value, ok := labels[v1beta1constants.GardenRole]; ok && value == v1beta1constants.GardenRoleExposureClassHandler {
+		namespaceLabels[v1beta1constants.GardenRole] = v1beta1constants.GardenRoleExposureClassHandler
 	}
-	if value, ok := labels[v1alpha1constants.LabelExposureClassHandlerName]; ok {
-		namespaceLabels[v1alpha1constants.LabelExposureClassHandlerName] = value
+	if value, ok := labels[v1beta1constants.LabelExposureClassHandlerName]; ok {
+		namespaceLabels[v1beta1constants.LabelExposureClassHandlerName] = value
 	}
 
 	return namespaceLabels
