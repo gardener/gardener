@@ -223,6 +223,7 @@ var _ = Describe("Etcd", func() {
 					PriorityClassName: pointer.String("gardener-shoot-controlplane"),
 					Labels: map[string]string{
 						"gardener.cloud/role":              "controlplane",
+						"garden.sapcloud.io/role":          "controlplane",
 						"role":                             testRole,
 						"app":                              "etcd-statefulset",
 						"networking.gardener.cloud/to-dns": "allowed",
@@ -232,9 +233,9 @@ var _ = Describe("Etcd", func() {
 					},
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"gardener.cloud/role": "controlplane",
-							"role":                testRole,
-							"app":                 "etcd-statefulset",
+							"garden.sapcloud.io/role": "controlplane",
+							"role":                    testRole,
+							"app":                     "etcd-statefulset",
 						},
 					},
 					Etcd: druidv1alpha1.EtcdConfig{

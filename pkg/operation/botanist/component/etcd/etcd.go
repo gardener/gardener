@@ -330,7 +330,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					{
 						TopologyKey: "topology.kubernetes.io/zone",
 						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: e.getPodLabels(),
+							MatchLabels: e.getRoleLabels(),
 						},
 					},
 				},
@@ -343,7 +343,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					{
 						TopologyKey: "kubernetes.io/hostname",
 						LabelSelector: &metav1.LabelSelector{
-							MatchLabels: e.getPodLabels(),
+							MatchLabels: e.getRoleLabels(),
 						},
 					},
 				},
@@ -476,12 +476,15 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 			v1beta1constants.GardenerTimestamp: TimeNow().UTC().String(),
 		}
-		e.etcd.Labels = e.getRoleLabels()
+		e.etcd.Labels = map[string]string{
+			v1beta1constants.LabelRole:  e.role,
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+		}
 		e.etcd.Spec.Replicas = replicas
 		e.etcd.Spec.SchedulingConstraints = schedulingConstraints
 		e.etcd.Spec.PriorityClassName = pointer.String(v1beta1constants.PriorityClassNameShootControlPlane)
 		e.etcd.Spec.Annotations = annotations
-		e.etcd.Spec.Labels = utils.MergeStringMaps(e.getRoleLabels(), map[string]string{
+		e.etcd.Spec.Labels = utils.MergeStringMaps(e.getRoleLabels(), e.getDeprecatedRoleLabels(), map[string]string{
 			v1beta1constants.LabelApp:                            LabelAppValue,
 			v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToPublicNetworks:  v1beta1constants.LabelNetworkPolicyAllowed,
@@ -489,7 +492,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			v1beta1constants.LabelNetworkPolicyToSeedAPIServer:   v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 		e.etcd.Spec.Selector = &metav1.LabelSelector{
-			MatchLabels: utils.MergeStringMaps(e.getRoleLabels(), map[string]string{
+			MatchLabels: utils.MergeStringMaps(e.getDeprecatedRoleLabels(), map[string]string{
 				v1beta1constants.LabelApp: LabelAppValue,
 			}),
 		}
@@ -771,21 +774,23 @@ func (e *etcd) Destroy(ctx context.Context) error {
 	return nil
 }
 
-func (e *etcd) getRoleLabels() map[string]string {
+// TODO(timuthy): remove this function in a future release. Instead we can use `getRoleLabels` as soon as new labels
+// have been added to all etcd StatefulSets.
+func (e *etcd) getDeprecatedRoleLabels() map[string]string {
 	return map[string]string{
+		v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+		v1beta1constants.LabelRole:            e.role,
+	}
+}
+
+func (e *etcd) getRoleLabels() map[string]string {
+	return utils.MergeStringMaps(map[string]string{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		v1beta1constants.LabelRole:  e.role,
-	}
+	})
 }
 
-func (e *etcd) getPodLabels() map[string]string {
-	return map[string]string{
-		v1beta1constants.LabelApp:  LabelAppValue,
-		v1beta1constants.LabelRole: e.role,
-	}
-}
-
-// GetLabels returns the labels for the Etcds.
+// GetLabels returns a set of labels that is common for all etcd resources.
 func GetLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
