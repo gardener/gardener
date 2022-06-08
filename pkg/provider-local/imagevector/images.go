@@ -21,6 +21,10 @@ package imagevector
 const (
 	// ImageNameKindnet is a constant for an image in the image vector with name 'kindnet'.
 	ImageNameKindnet = "kindnet"
+	// ImageNameLocalPathHelper is a constant for an image in the image vector with name 'local-path-helper'.
+	ImageNameLocalPathHelper = "local-path-helper"
+	// ImageNameLocalPathProvisioner is a constant for an image in the image vector with name 'local-path-provisioner'.
+	ImageNameLocalPathProvisioner = "local-path-provisioner"
 	// ImageNameMachineControllerManager is a constant for an image in the image vector with name 'machine-controller-manager'.
 	ImageNameMachineControllerManager = "machine-controller-manager"
 	// ImageNameMachineControllerManagerProviderLocal is a constant for an image in the image vector with name 'machine-controller-manager-provider-local'.

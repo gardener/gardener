@@ -22,21 +22,18 @@ Please note that all of them are no technical limitations/blockers but simply ad
 
    _We are using the [`networking-calico`](https://github.com/gardener/gardener-extension-networking-calico/) extension for the CNI plugin in shoot clusters, however, it doesn't seem to be configured correctly yet to support this scenario._
 
-2. Shoot clusters don't support persistent storage.
-
-   _We don't install any CSI plugin into the shoot cluster yet, hence, there is no persistent storage for shoot clusters._
-
-3. No owner TXT `DNSRecord`s (hence, no ["bad-case" control plane migration](../proposals/17-shoot-control-plane-migration-bad-case.md)).
+2. No owner TXT `DNSRecord`s (hence, no ["bad-case" control plane migration](../proposals/17-shoot-control-plane-migration-bad-case.md)).
 
    _In order to realize DNS (see [Implementation Details](#implementation-details) section below), the `/etc/hosts` file is manipulated. This does not work for TXT records. In the future, we could look into using [CoreDNS](https://coredns.io/) instead._
 
-4. No load balancers for Shoot clusters.
+3. No load balancers for Shoot clusters.
 
    _We have not yet developed a `cloud-controller-manager` which could reconcile load balancer `Service`s in the shoot cluster. Hence, when the gardenlet's `ReversedVPN` feature gate is disabled then the `kube-system/vpn-shoot` `Service` must be manually patched (with `{"status": {"loadBalancer": {"ingress": [{"hostname": "vpn-shoot"}]}}}`) to make the reconciliation work._
 
-5. Only one shoot cluster possible when gardenlet's `APIServerSNI` feature gate is disabled.
+4. Only one shoot cluster possible when gardenlet's `APIServerSNI` feature gate is disabled.
 
-   _When [`APIServerSNI`](../proposals/08-shoot-apiserver-via-sni.md) is disabled then gardenlet uses load balancer `Service`s in order to expose the shoot clusters' `kube-apiserver`s. Typically, local Kubernetes clusters don't support this. In this case, the local extension uses the host IP to expose the `kube-apiserver`, however, this can only be done once._
+   _When [`APIServerSNI`](../proposals/08-shoot-apiserver-via-sni.md) is disabled then gardenlet uses load balancer `Service`s in order to expose the shoot clusters' `kube-apiserver`s. Typically, local Kubernetes clusters don't support this. In this case, the local extension uses the host IP to expose the `kube-apiserver`, however, this can only be done once._\
+   _However, given that the `APIServerSNI` feature gate is deprecated and will be removed in the future (see [gardener/gardener#6007](https://github.com/gardener/gardener/pull/6007)), we will probably not invest into this._
 
 ## Implementation Details
 
@@ -56,8 +53,8 @@ There are controllers for all resources in the `extensions.gardener.cloud/v1alph
 
 #### `ControlPlane`
 
-This controller is not deploying anything since we haven't invested yet into a `cloud-controller-manager` or CSI solution.
-For the latter, we could probably use the [local-path-provisioner](https://github.com/rancher/local-path-provisioner).
+This controller is deploying the [local-path-provisioner](https://github.com/rancher/local-path-provisioner) as well as a related `StorageClass` in order to support `PersistentVolumeClaim`s in the local shoot cluster.
+Additionally, it creates a few (currently unused) dummy secrets (CA, server and client certificate, basic auth credentials) for the sake of testing the secrets manager integration in the extensions library.
 
 #### `DNSRecord`
 

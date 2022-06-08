@@ -50,8 +50,8 @@ type AddOptions struct {
 // The opts.Reconciler is being set with a newly instantiated actuator.
 func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 	return controlplane.Add(mgr, controlplane.AddArgs{
-		Actuator: genericactuator.NewActuator(local.Name, getSecretConfigs, nil, nil, nil, nil, nil, nil,
-			nil, nil, nil, NewValuesProvider(), extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot),
+		Actuator: genericactuator.NewActuator(local.Name, getSecretConfigs, nil, nil, nil, nil, nil, controlPlaneShootChart,
+			nil, storageClassChart, nil, NewValuesProvider(), extensionscontroller.ChartRendererFactoryFunc(util.NewChartRendererForShoot),
 			imagevector.ImageVector(), "", opts.ShootWebhookConfig, mgr.GetWebhookServer().Port, logger),
 		ControllerOptions: opts.Controller,
 		Predicates:        controlplane.DefaultPredicates(opts.IgnoreOperationAnnotation),
