@@ -128,7 +128,7 @@ images:
 - name: coredns
   sourceRepository: github.com/coredns/coredns
   repository: coredns/coredns
-  tag: "1.9.1"
+  tag: "1.9.3"
 - name: node-local-dns
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/cluster/addons/dns/nodelocaldns
   repository: k8s.gcr.io/dns/k8s-dns-node-cache
