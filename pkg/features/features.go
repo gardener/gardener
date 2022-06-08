@@ -173,7 +173,7 @@ const (
 	// GA: v1.48.0
 	ShootMaxTokenExpirationValidation featuregate.Feature = "ShootMaxTokenExpirationValidation"
 
-	// HAControlPlanes allows shoot control planes to be run in High Availability mode.
+	// HAControlPlanes allows shoot control planes to be run in high availability mode.
 	// owner: @shreyas-s-rao @timuthy
 	// alpha: v1.47.0
 	HAControlPlanes featuregate.Feature = "HAControlPlanes"

@@ -173,7 +173,7 @@ func (b *Botanist) ScaleETCDToZero(ctx context.Context) error {
 	return b.scaleETCD(ctx, 0)
 }
 
-// ScaleUpETCD scales ETCD main and events replicas to one.
+// ScaleUpETCD scales ETCD main and events replicas to the configured replica count.
 func (b *Botanist) ScaleUpETCD(ctx context.Context) error {
 	return b.scaleETCD(ctx, getReplicas(b.Shoot.GetInfo()))
 }

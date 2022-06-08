@@ -92,7 +92,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	}
 
 	var zoneSpread bool
-	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) && b.Shoot.GetInfo().ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
+	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && b.Shoot.GetInfo().ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
 		zoneSpread = true
 	}
 
@@ -121,8 +121,8 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 				ServiceNetworkCIDR: b.Shoot.Networks.Services.String(),
 				NodeNetworkCIDR:    b.Shoot.GetInfo().Spec.Networking.Nodes,
 			},
-			WatchCacheSizes:             watchCacheSizes,
-			ZoneSpread:                  zoneSpread,
+			WatchCacheSizes: watchCacheSizes,
+			ZoneSpread:      zoneSpread,
 		},
 	), nil
 }
