@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	mocketcd "github.com/gardener/gardener/pkg/operation/botanist/component/etcd/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -32,11 +33,13 @@ import (
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -394,6 +397,7 @@ var _ = Describe("Secrets", func() {
 		var (
 			namespace1, namespace2    *corev1.Namespace
 			secret1, secret2, secret3 *corev1.Secret
+			kubeAPIServerDeployment   *appsv1.Deployment
 		)
 
 		BeforeEach(func() {
@@ -419,6 +423,9 @@ var _ = Describe("Secrets", func() {
 			Expect(fakeShootClient.Create(ctx, secret1)).To(Succeed())
 			Expect(fakeShootClient.Create(ctx, secret2)).To(Succeed())
 			Expect(fakeShootClient.Create(ctx, secret3)).To(Succeed())
+
+			kubeAPIServerDeployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: seedNamespace}}
+			Expect(fakeSeedClient.Create(ctx, kubeAPIServerDeployment)).To(Succeed())
 		})
 
 		Describe("#RewriteSecretsAddLabel", func() {
@@ -449,8 +456,42 @@ var _ = Describe("Secrets", func() {
 			})
 		})
 
+		Describe("#SnapshotETCDAfterRewritingSecrets", func() {
+			var (
+				ctrl     *gomock.Controller
+				etcdMain *mocketcd.MockInterface
+			)
+
+			BeforeEach(func() {
+				ctrl = gomock.NewController(GinkgoT())
+				etcdMain = mocketcd.NewMockInterface(ctrl)
+
+				botanist.Shoot.Components = &shootpkg.Components{
+					ControlPlane: &shootpkg.ControlPlane{
+						EtcdMain: etcdMain,
+					},
+				}
+			})
+
+			AfterEach(func() {
+				ctrl.Finish()
+			})
+
+			It("should create a snapshot of ETCD and annotate kube-apiserver accordingly", func() {
+				etcdMain.EXPECT().Snapshot(ctx, gomock.Any())
+
+				Expect(botanist.SnapshotETCDAfterRewritingSecrets(ctx)).To(Succeed())
+
+				Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(kubeAPIServerDeployment), kubeAPIServerDeployment)).To(Succeed())
+				Expect(kubeAPIServerDeployment.Annotations).To(HaveKeyWithValue("credentials.gardener.cloud/etcd-snapshotted", "true"))
+			})
+		})
+
 		Describe("#RewriteSecretsRemoveLabel", func() {
 			It("should patch all secrets and remove the label if not already done", func() {
+				metav1.SetMetaDataAnnotation(&kubeAPIServerDeployment.ObjectMeta, "credentials.gardener.cloud/etcd-snapshotted", "true")
+				Expect(fakeSeedClient.Update(ctx, kubeAPIServerDeployment)).To(Succeed())
+
 				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret1), secret1)).To(Succeed())
 				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret2), secret2)).To(Succeed())
 				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(secret3), secret3)).To(Succeed())
@@ -472,6 +513,9 @@ var _ = Describe("Secrets", func() {
 				Expect(secret1.ResourceVersion).To(Equal(secret1ResourceVersion))
 				Expect(secret2.ResourceVersion).To(Equal(secret2ResourceVersion))
 				Expect(secret3.ResourceVersion).NotTo(Equal(secret3ResourceVersion))
+
+				Expect(fakeSeedClient.Get(ctx, client.ObjectKeyFromObject(kubeAPIServerDeployment), kubeAPIServerDeployment)).To(Succeed())
+				Expect(kubeAPIServerDeployment.Annotations).NotTo(HaveKey("credentials.gardener.cloud/etcd-snapshotted"))
 			})
 		})
 	})

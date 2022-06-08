@@ -36,6 +36,7 @@ import (
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 
 	"golang.org/x/time/rate"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -554,6 +555,8 @@ func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
 // RewriteSecretsAddLabel patches all secrets in all namespaces in the shoot clusters and adds a label whose value is
 // the name of the current ETCD encryption key secret. This function is useful for the ETCD encryption key secret
 // rotation which requires all secrets to be rewritten to ETCD so that they become encrypted with the new key.
+// After it's done, it snapshots ETCD so that we can restore backups in case we lose the cluster before the next
+// incremental snapshot is taken.
 func (b *Botanist) RewriteSecretsAddLabel(ctx context.Context) error {
 	etcdEncryptionKeySecret, found := b.SecretsManager.Get(v1beta1constants.SecretNameETCDEncryptionKey, secretsmanager.Current)
 	if !found {
@@ -569,17 +572,50 @@ func (b *Botanist) RewriteSecretsAddLabel(ctx context.Context) error {
 	)
 }
 
+// SnapshotETCDAfterRewritingSecrets performs a full snapshot on ETCD after the secrets got rewritten as part of the
+// ETCD encryption secret rotation. It adds an annotation to the kube-apiserver deployment after it's done so that it
+// does not take another snapshot again after it succeeded once.
+func (b *Botanist) SnapshotETCDAfterRewritingSecrets(ctx context.Context) error {
+	// Check if we have to snapshot ETCD now that we have rewritten all secrets.
+	meta := &metav1.PartialObjectMetadata{}
+	meta.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("Deployment"))
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), meta); err != nil {
+		return err
+	}
+
+	if metav1.HasAnnotation(meta.ObjectMeta, annotationKeyEtcdSnapshotted) {
+		return nil
+	}
+
+	if err := b.SnapshotEtcd(ctx); err != nil {
+		return err
+	}
+
+	// If we have hit this point then we have snapshotted ETCD successfully. Now we can mark this step as "completed"
+	// (via an annotation) so that we do not trigger a snapshot again in a future reconciliation in case the current one
+	// fails after this step.
+	return b.patchKubeAPIServerDeploymentMeta(ctx, func(meta *metav1.PartialObjectMetadata) {
+		metav1.SetMetaDataAnnotation(&meta.ObjectMeta, annotationKeyEtcdSnapshotted, "true")
+	})
+}
+
 // RewriteSecretsRemoveLabel patches all secrets in all namespaces in the shoot clusters and removes the label whose
 // value is the name of the current ETCD encryption key secret. This function is useful for the ETCD encryption key
 // secret rotation which requires all secrets to be rewritten to ETCD so that they become encrypted with the new key.
 func (b *Botanist) RewriteSecretsRemoveLabel(ctx context.Context) error {
-	return b.rewriteSecrets(
+	if err := b.rewriteSecrets(
 		ctx,
 		utils.MustNewRequirement(labelKeyRotationKeyName, selection.Exists),
 		func(objectMeta *metav1.ObjectMeta) {
 			delete(objectMeta.Labels, labelKeyRotationKeyName)
 		},
-	)
+	); err != nil {
+		return err
+	}
+
+	return b.patchKubeAPIServerDeploymentMeta(ctx, func(meta *metav1.PartialObjectMetadata) {
+		delete(meta.Annotations, annotationKeyEtcdSnapshotted)
+	})
 }
 
 func (b *Botanist) rewriteSecrets(ctx context.Context, requirement labels.Requirement, mutateObjectMeta func(*metav1.ObjectMeta)) error {

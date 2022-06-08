@@ -334,7 +334,10 @@ func (b *Botanist) computeKubeAPIServerServerCertificateConfig() kubeapiserver.S
 	}
 }
 
-const annotationKeyNewEncryptionKeyPopulated = "credentials.gardener.cloud/new-encryption-key-populated"
+const (
+	annotationKeyNewEncryptionKeyPopulated = "credentials.gardener.cloud/new-encryption-key-populated"
+	annotationKeyEtcdSnapshotted           = "credentials.gardener.cloud/etcd-snapshotted"
+)
 
 func (b *Botanist) computeKubeAPIServerETCDEncryptionConfig(ctx context.Context) (kubeapiserver.ETCDEncryptionConfig, error) {
 	config := kubeapiserver.ETCDEncryptionConfig{
