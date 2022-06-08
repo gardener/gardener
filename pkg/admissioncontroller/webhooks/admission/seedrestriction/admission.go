@@ -539,6 +539,8 @@ func (h *handler) allowIfManagedSeedIsNotYetBootstrapped(ctx context.Context, se
 		return admission.Allowed("")
 	} else if seed.Status.ClientCertificateExpirationTimestamp != nil && seed.Status.ClientCertificateExpirationTimestamp.UTC().Before(time.Now().UTC()) {
 		return admission.Allowed("")
+	} else if managedSeed.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRenewKubeconfig {
+		return admission.Allowed("")
 	}
 
 	return admission.Errored(http.StatusBadRequest, fmt.Errorf("managed seed %s/%s is already bootstrapped", managedSeed.Namespace, managedSeed.Name))
