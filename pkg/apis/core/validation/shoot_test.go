@@ -349,6 +349,57 @@ var _ = Describe("Shoot Validation Tests", func() {
 			))
 		})
 
+		Context("HAControlPlanes", func() {
+			It("should pass as HAControlPlanes option is not changed", func() {
+				shoot.Annotations = map[string]string{
+					v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
+				}
+				newShoot := prepareShootForUpdate(shoot)
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(HaveLen(0))
+			})
+
+			It("should forbid to change the HAControlPlanes option", func() {
+				shoot.Annotations = map[string]string{
+					v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
+				}
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Annotations = map[string]string{
+					v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilitySingleZone,
+				}
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("metadata.annotations[alpha.control-plane.shoot.gardener.cloud/high-availability]"),
+					})),
+				))
+			})
+
+			It("should forbid to unset the HAControlPlanes option", func() {
+				shoot.Annotations = map[string]string{
+					v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
+				}
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Annotations = map[string]string{
+					"foo": "bar",
+				}
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("metadata.annotations[alpha.control-plane.shoot.gardener.cloud/high-availability]"),
+					})),
+				))
+			})
+		})
+
 		Context("exposure class", func() {
 			It("should pass as exposure class is not changed", func() {
 				shoot.Spec.ExposureClassName = pointer.String("exposure-class-1")
