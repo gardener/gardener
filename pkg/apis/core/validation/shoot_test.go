@@ -3458,12 +3458,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})))
 				Expect(ValidateShoot(shoot)).To(matcher)
 			})
-		})
 
-		Context("maintenance operation validation", func() {
-			It("should do nothing if the operation annotation is not set", func() {
-				Expect(ValidateShoot(shoot)).To(BeEmpty())
-			})
 			It("should return an error if the annotation is invalid", func() {
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "foo-bar")
 				matcher := ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -3472,10 +3467,55 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})))
 				Expect(ValidateShoot(shoot)).To(matcher)
 			})
-			It("should return nothing if annotation is valid", func() {
+
+			It("should return an error if maintenance annotation is not allowed in this context", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-etcd-encryption-key-complete")
+				shoot.Status = core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type:  core.LastOperationTypeCreate,
+						State: core.LastOperationStateSucceeded,
+					},
+				}
+				matcher := ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
+				})))
+				Expect(ValidateShoot(shoot)).To(matcher)
+			})
+
+			It("should return an error if both annotation have the same value", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-etcd-encryption-key-start")
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-etcd-encryption-key-start")
+				shoot.Status = core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type:  core.LastOperationTypeCreate,
+						State: core.LastOperationStateSucceeded,
+					},
+				}
+				matcher := ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("metadata.annotations"),
+				})))
+				Expect(ValidateShoot(shoot)).To(matcher)
+			})
+
+			It("should return nothing if maintenance annotation is valid", func() {
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "reconcile")
 				Expect(ValidateShoot(shoot)).To(BeEmpty())
 			})
+
+			It("should return nothing if both annotations are valid and do not have the same value", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-serviceaccount-key-start")
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-etcd-encryption-key-start")
+				shoot.Status = core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type:  core.LastOperationTypeCreate,
+						State: core.LastOperationStateSucceeded,
+					},
+				}
+				Expect(ValidateShoot(shoot)).To(BeEmpty())
+			})
+
 		})
 	})
 
