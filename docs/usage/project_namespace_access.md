@@ -13,7 +13,12 @@ kubectl -n project-abc create sa robot-user
 ### Request a token for a Service Account
 A token for the "robot-user" `ServiceAccount` can be requested via the [TokenRequest API](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/) in several ways:
 
-- using `kubectl`
+- using `kubectl` >= v1.24
+```bash
+kubectl -n project-abc create token robot-user --duration=3600s
+```
+
+- using `kubectl` < v1.24
 ```bash
 cat <<EOF | kubectl create -f - --raw /api/v1/namespaces/project-abc/serviceaccounts/robot-user/token
 {
@@ -24,11 +29,6 @@ cat <<EOF | kubectl create -f - --raw /api/v1/namespaces/project-abc/serviceacco
   }
 }
 EOF
-```
-
-- using `kubectl` v1.24 or later
-```bash
-kubectl -n project-abc create token robot-user --duration=3600s
 ```
 
 - directly calling the Kubernetes HTTP API
