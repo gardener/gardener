@@ -523,11 +523,9 @@ func (b *Botanist) DeleteOldServiceAccountSecrets(ctx context.Context) error {
 				secretsToDelete = append(secretsToDelete, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretReference.Name, Namespace: serviceAccount.Namespace}})
 			}
 
-			patch := client.StrategicMergeFrom(serviceAccount.DeepCopy())
+			patch := client.StrategicMergeFrom(serviceAccount.DeepCopy(), client.MergeFromWithOptimisticLock{})
 			delete(serviceAccount.Labels, labelKeyRotationKeyName)
-			// No need to remove the secret from serviceAccount.Secrets since kube-controller-manager will take care of
-			// this when the token secret gets deleted from the system. Consequently, no optimistic locking required for
-			// the patch request dropping the label.
+			serviceAccount.Secrets = []corev1.ObjectReference{serviceAccount.Secrets[0]}
 
 			// Wait until we are allowed by the limiter to not overload the kube-apiserver with too many requests.
 			if err := limiter.Wait(ctx); err != nil {
