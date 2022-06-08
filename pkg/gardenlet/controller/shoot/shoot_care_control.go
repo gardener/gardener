@@ -38,6 +38,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -223,8 +224,10 @@ var (
 	NewHealthCheck = defaultNewHealthCheck
 	// NewConstraintCheck is used to create a new Constraint check instance.
 	NewConstraintCheck = defaultNewConstraintCheck
-	// NewGarbageCollector is used to create a new Constraint check instance.
+	// NewGarbageCollector is used to create a new garbage collection instance.
 	NewGarbageCollector = defaultNewGarbageCollector
+	// NewWebhookRemediator is used to create a new webhook remediation instance.
+	NewWebhookRemediator = defaultNewWebhookRemediator
 )
 
 func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.Interface, shoot *gardencorev1beta1.Shoot, log logrus.FieldLogger) error {
@@ -337,6 +340,15 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 			garbageCollector := NewGarbageCollector(o, initializeShootClients)
 			garbageCollector.Collect(ctx)
 			// errors during garbage collection are only being logged and do not cause the care operation to fail
+			return nil
+		},
+		// Trigger webhook remediation
+		func(ctx context.Context) error {
+			if pointer.BoolDeref(r.config.Controllers.ShootCare.WebhookRemediatorEnabled, false) {
+				webhookRemediator := NewWebhookRemediator(o, initializeShootClients)
+				_ = webhookRemediator.Remediate(ctx)
+				// errors during webhook remediation are only being logged and do not cause the care operation to fail
+			}
 			return nil
 		},
 	)(careCtx)
