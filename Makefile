@@ -272,8 +272,8 @@ kind-down: $(KIND)
 	rm -f $(REPO_ROOT)/example/provider-local/base/kubeconfig
 	rm -rf dev/local-backupbuckets
 
-# workaround for https://github.com/GoogleContainerTools/skaffold/issues/6416
-$(SKAFFOLD): export SKAFFOLD_LABEL := skaffold.dev/run-id=gardener-local
+# use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
+gardener-up gardener-down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
 
 gardener-up: $(SKAFFOLD) $(HELM)
 	$(SKAFFOLD) run
