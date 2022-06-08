@@ -1604,6 +1604,7 @@ func autoConvert_v1alpha1_ShootCareControllerConfiguration_To_config_ShootCareCo
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	out.StaleExtensionHealthChecks = (*config.StaleExtensionHealthChecks)(unsafe.Pointer(in.StaleExtensionHealthChecks))
 	out.ConditionThresholds = *(*[]config.ConditionThreshold)(unsafe.Pointer(&in.ConditionThresholds))
+	out.WebhookRemediatorEnabled = (*bool)(unsafe.Pointer(in.WebhookRemediatorEnabled))
 	return nil
 }
 
@@ -1617,6 +1618,7 @@ func autoConvert_config_ShootCareControllerConfiguration_To_v1alpha1_ShootCareCo
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	out.StaleExtensionHealthChecks = (*StaleExtensionHealthChecks)(unsafe.Pointer(in.StaleExtensionHealthChecks))
 	out.ConditionThresholds = *(*[]ConditionThreshold)(unsafe.Pointer(&in.ConditionThresholds))
+	out.WebhookRemediatorEnabled = (*bool)(unsafe.Pointer(in.WebhookRemediatorEnabled))
 	return nil
 }
 

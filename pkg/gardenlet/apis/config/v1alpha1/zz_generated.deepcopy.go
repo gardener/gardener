@@ -1178,6 +1178,11 @@ func (in *ShootCareControllerConfiguration) DeepCopyInto(out *ShootCareControlle
 		*out = make([]ConditionThreshold, len(*in))
 		copy(*out, *in)
 	}
+	if in.WebhookRemediatorEnabled != nil {
+		in, out := &in.WebhookRemediatorEnabled, &out.WebhookRemediatorEnabled
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 
