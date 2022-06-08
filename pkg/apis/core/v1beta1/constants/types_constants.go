@@ -163,6 +163,8 @@ const (
 	GardenerPurpose = "gardener.cloud/purpose"
 	// GardenerDescription is a constant for a key in an annotation describing what the resource is used for.
 	GardenerDescription = "gardener.cloud/description"
+	// GardenerWarning is a constant for a key in an annotation containing a warning message.
+	GardenerWarning = "gardener.cloud/warning"
 
 	// GardenCreatedBy is the key for an annotation of a Shoot cluster whose value indicates contains the username
 	// of the user that created the resource.
@@ -301,6 +303,10 @@ const (
 	ShootStatus = "shoot.gardener.cloud/status"
 	// FailedShootNeedsRetryOperation is a constant for an annotation on a Shoot in a failed state indicating that a retry operation should be triggered during the next maintenance time window.
 	FailedShootNeedsRetryOperation = "maintenance.shoot.gardener.cloud/needs-retry-operation"
+	// LabelExcludeWebhookFromRemediation is a constant for a label on a webhook in the shoot which makes it being
+	// excluded from automatic remediation.
+	LabelExcludeWebhookFromRemediation = "remediation.webhook.shoot.gardener.cloud/exclude"
+
 	// ShootTasks is a constant for an annotation on a Shoot which states that certain tasks should be done.
 	ShootTasks = "shoot.gardener.cloud/tasks"
 	// ShootTaskDeployInfrastructure is a name for a Shoot's infrastructure deployment task. It indicates that the

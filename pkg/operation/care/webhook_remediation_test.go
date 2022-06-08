@@ -22,11 +22,17 @@ import (
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation/botanist/matchers"
 	. "github.com/gardener/gardener/pkg/operation/care"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -39,8 +45,9 @@ var _ = Describe("WebhookRemediation", func() {
 		fakeKubernetesInterface kubernetes.Interface
 		shootClientInit         func() (kubernetes.Interface, bool, error)
 
-		shoot *gardencorev1beta1.Shoot
-		op    *operation.Operation
+		shoot         *gardencorev1beta1.Shoot
+		seedNamespace string
+		op            *operation.Operation
 
 		remediator *WebhookRemediation
 	)
@@ -53,9 +60,12 @@ var _ = Describe("WebhookRemediation", func() {
 		}
 
 		shoot = &gardencorev1beta1.Shoot{}
+		seedNamespace = "shoot--foo--bar"
 		op = &operation.Operation{
 			Logger: logger.NewNopLogger(),
-			Shoot:  &shootpkg.Shoot{},
+			Shoot: &shootpkg.Shoot{
+				SeedNamespace: seedNamespace,
+			},
 		}
 		op.Shoot.SetInfo(shoot)
 
@@ -63,8 +73,255 @@ var _ = Describe("WebhookRemediation", func() {
 	})
 
 	Describe("#Remediate", func() {
-		It("should remediate the problematic webhooks", func() {
+		var (
+			ignore = admissionregistrationv1.Ignore
+			fail   = admissionregistrationv1.Fail
+
+			validatingWebhookConfiguration *admissionregistrationv1.ValidatingWebhookConfiguration
+			mutatingWebhookConfiguration   *admissionregistrationv1.MutatingWebhookConfiguration
+		)
+
+		BeforeEach(func() {
+			validatingWebhookConfiguration = &admissionregistrationv1.ValidatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "validating",
+				},
+			}
+			mutatingWebhookConfiguration = &admissionregistrationv1.MutatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mutating",
+				},
+			}
+		})
+
+		It("should succeed when there are no webhooks", func() {
 			Expect(remediator.Remediate(ctx)).To(Succeed())
+		})
+
+		It("should succeed when there are only excluded webhooks", func() {
+			metav1.SetMetaDataLabel(&validatingWebhookConfiguration.ObjectMeta, "remediation.webhook.shoot.gardener.cloud/exclude", "true")
+			metav1.SetMetaDataLabel(&mutatingWebhookConfiguration.ObjectMeta, "remediation.webhook.shoot.gardener.cloud/exclude", "true")
+
+			Expect(fakeClient.Create(ctx, validatingWebhookConfiguration)).To(Succeed())
+			Expect(fakeClient.Create(ctx, mutatingWebhookConfiguration)).To(Succeed())
+
+			Expect(remediator.Remediate(ctx)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(validatingWebhookConfiguration), validatingWebhookConfiguration)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
+
+			Expect(validatingWebhookConfiguration.Annotations).NotTo(HaveKey("gardener.cloud/warning"))
+			Expect(mutatingWebhookConfiguration.Annotations).NotTo(HaveKey("gardener.cloud/warning"))
+		})
+
+		It("should succeed when there are only Gardener-managed webhooks", func() {
+			metav1.SetMetaDataAnnotation(&validatingWebhookConfiguration.ObjectMeta, "resources.gardener.cloud/origin", seedNamespace)
+			metav1.SetMetaDataAnnotation(&mutatingWebhookConfiguration.ObjectMeta, "resources.gardener.cloud/origin", seedNamespace)
+
+			Expect(fakeClient.Create(ctx, validatingWebhookConfiguration)).To(Succeed())
+			Expect(fakeClient.Create(ctx, mutatingWebhookConfiguration)).To(Succeed())
+
+			Expect(remediator.Remediate(ctx)).To(Succeed())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(validatingWebhookConfiguration), validatingWebhookConfiguration)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
+
+			Expect(validatingWebhookConfiguration.Annotations).NotTo(HaveKey("gardener.cloud/warning"))
+			Expect(mutatingWebhookConfiguration.Annotations).NotTo(HaveKey("gardener.cloud/warning"))
+		})
+
+		Context("remediate offensive webhooks", func() {
+			Context("validating", func() {
+				It("timeoutSeconds", func() {
+					validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
+						Name:           "some-webhook.example.com",
+						TimeoutSeconds: pointer.Int32(30),
+					}}
+					Expect(fakeClient.Create(ctx, validatingWebhookConfiguration)).To(Succeed())
+
+					Expect(remediator.Remediate(ctx)).To(Succeed())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(validatingWebhookConfiguration), validatingWebhookConfiguration)).To(Succeed())
+					Expect(validatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
+					Expect(validatingWebhookConfiguration.Webhooks[0].TimeoutSeconds).To(Equal(pointer.Int32(15)))
+				})
+
+				It("failurePolicy", func() {
+					validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
+						Name:          "some-webhook.example.com",
+						FailurePolicy: &fail,
+						Rules: []admissionregistrationv1.RuleWithOperations{{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{""},
+								APIVersions: []string{"v1"},
+								Resources:   []string{"endpoints"},
+							},
+							Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						}},
+					}}
+					Expect(fakeClient.Create(ctx, validatingWebhookConfiguration)).To(Succeed())
+
+					Expect(remediator.Remediate(ctx)).To(Succeed())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(validatingWebhookConfiguration), validatingWebhookConfiguration)).To(Succeed())
+					Expect(validatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
+					Expect(validatingWebhookConfiguration.Webhooks[0].FailurePolicy).To(Equal(&ignore))
+				})
+
+				It("namespaceSelector", func() {
+					validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
+						Name:          "some-webhook.example.com",
+						FailurePolicy: &fail,
+						Rules: []admissionregistrationv1.RuleWithOperations{{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{""},
+								APIVersions: []string{"v1"},
+								Resources:   []string{"pods"},
+							},
+							Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						}},
+					}}
+					Expect(fakeClient.Create(ctx, validatingWebhookConfiguration)).To(Succeed())
+
+					Expect(remediator.Remediate(ctx)).To(Succeed())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(validatingWebhookConfiguration), validatingWebhookConfiguration)).To(Succeed())
+					Expect(validatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
+					Expect(validatingWebhookConfiguration.Webhooks[0].FailurePolicy).To(Equal(&fail))
+					Expect(validatingWebhookConfiguration.Webhooks[0].NamespaceSelector).NotTo(BeNil())
+					Expect(validatingWebhookConfiguration.Webhooks[0].NamespaceSelector.MatchExpressions).To(ConsistOf(
+						metav1.LabelSelectorRequirement{Key: "shoot.gardener.cloud/no-cleanup", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"true"}},
+						metav1.LabelSelectorRequirement{Key: "gardener.cloud/purpose", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
+					))
+				})
+
+				It("objectSelector", func() {
+					defer test.WithVar(&matchers.WebhookConstraintMatchers, []matchers.WebhookConstraintMatcher{
+						{GVR: corev1.SchemeGroupVersion.WithResource("foobars"), ClusterScoped: true, ObjectLabels: map[string]string{"foo": "bar"}},
+					})()
+
+					validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
+						Name:          "some-webhook.example.com",
+						FailurePolicy: &fail,
+						Rules: []admissionregistrationv1.RuleWithOperations{{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{""},
+								APIVersions: []string{"v1"},
+								Resources:   []string{"foobars"},
+							},
+							Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						}},
+					}}
+					Expect(fakeClient.Create(ctx, validatingWebhookConfiguration)).To(Succeed())
+
+					Expect(remediator.Remediate(ctx)).To(Succeed())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(validatingWebhookConfiguration), validatingWebhookConfiguration)).To(Succeed())
+					Expect(validatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
+					Expect(validatingWebhookConfiguration.Webhooks[0].FailurePolicy).To(Equal(&fail))
+					Expect(validatingWebhookConfiguration.Webhooks[0].ObjectSelector).To(Equal(&metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{Key: "foo", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"bar"}},
+						},
+					}))
+				})
+			})
+
+			Context("mutating", func() {
+				It("timeoutSeconds", func() {
+					mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
+						Name:           "some-webhook.example.com",
+						TimeoutSeconds: pointer.Int32(30),
+					}}
+					Expect(fakeClient.Create(ctx, mutatingWebhookConfiguration)).To(Succeed())
+
+					Expect(remediator.Remediate(ctx)).To(Succeed())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
+					Expect(mutatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
+					Expect(mutatingWebhookConfiguration.Webhooks[0].TimeoutSeconds).To(Equal(pointer.Int32(15)))
+				})
+
+				It("failurePolicy", func() {
+					mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
+						Name:          "some-webhook.example.com",
+						FailurePolicy: &fail,
+						Rules: []admissionregistrationv1.RuleWithOperations{{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{""},
+								APIVersions: []string{"v1"},
+								Resources:   []string{"endpoints"},
+							},
+							Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						}},
+					}}
+					Expect(fakeClient.Create(ctx, mutatingWebhookConfiguration)).To(Succeed())
+
+					Expect(remediator.Remediate(ctx)).To(Succeed())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
+					Expect(mutatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
+					Expect(mutatingWebhookConfiguration.Webhooks[0].FailurePolicy).To(Equal(&ignore))
+				})
+
+				It("namespaceSelector", func() {
+					mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
+						Name:          "some-webhook.example.com",
+						FailurePolicy: &fail,
+						Rules: []admissionregistrationv1.RuleWithOperations{{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{""},
+								APIVersions: []string{"v1"},
+								Resources:   []string{"pods"},
+							},
+							Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						}},
+					}}
+					Expect(fakeClient.Create(ctx, mutatingWebhookConfiguration)).To(Succeed())
+
+					Expect(remediator.Remediate(ctx)).To(Succeed())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
+					Expect(mutatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
+					Expect(mutatingWebhookConfiguration.Webhooks[0].FailurePolicy).To(Equal(&fail))
+					Expect(mutatingWebhookConfiguration.Webhooks[0].NamespaceSelector).NotTo(BeNil())
+					Expect(mutatingWebhookConfiguration.Webhooks[0].NamespaceSelector.MatchExpressions).To(ConsistOf(
+						metav1.LabelSelectorRequirement{Key: "shoot.gardener.cloud/no-cleanup", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"true"}},
+						metav1.LabelSelectorRequirement{Key: "gardener.cloud/purpose", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
+					))
+				})
+
+				It("objectSelector", func() {
+					defer test.WithVar(&matchers.WebhookConstraintMatchers, []matchers.WebhookConstraintMatcher{
+						{GVR: corev1.SchemeGroupVersion.WithResource("foobars"), ClusterScoped: true, ObjectLabels: map[string]string{"foo": "bar"}},
+					})()
+
+					mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
+						Name:          "some-webhook.example.com",
+						FailurePolicy: &fail,
+						Rules: []admissionregistrationv1.RuleWithOperations{{
+							Rule: admissionregistrationv1.Rule{
+								APIGroups:   []string{""},
+								APIVersions: []string{"v1"},
+								Resources:   []string{"foobars"},
+							},
+							Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						}},
+					}}
+					Expect(fakeClient.Create(ctx, mutatingWebhookConfiguration)).To(Succeed())
+
+					Expect(remediator.Remediate(ctx)).To(Succeed())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
+					Expect(mutatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
+					Expect(mutatingWebhookConfiguration.Webhooks[0].FailurePolicy).To(Equal(&fail))
+					Expect(mutatingWebhookConfiguration.Webhooks[0].ObjectSelector).To(Equal(&metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{Key: "foo", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"bar"}},
+						},
+					}))
+				})
+			})
 		})
 	})
 })
