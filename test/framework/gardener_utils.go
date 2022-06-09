@@ -214,7 +214,7 @@ func (f *GardenerFramework) UpdateShoot(ctx context.Context, shoot *gardencorev1
 		}
 
 		if err := f.GardenClient.Client().Update(ctx, updatedShoot); err != nil {
-			f.Logger.Debugf("unable to update shoot %s: %s", updatedShoot.Name, err.Error())
+			f.Logger.Infof("unable to update shoot %s: %s", updatedShoot.Name, err.Error())
 			return retry.MinorError(err)
 		}
 		*shoot = *updatedShoot
@@ -318,8 +318,7 @@ func (f *GardenerFramework) WaitForShootToBeCreated(ctx context.Context, shoot *
 // WaitForShootToBeDeleted waits for the shoot to be deleted
 func (f *GardenerFramework) WaitForShootToBeDeleted(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
 	return retry.UntilTimeout(ctx, 30*time.Second, 60*time.Minute, func(ctx context.Context) (done bool, err error) {
-		updatedShoot := &gardencorev1beta1.Shoot{}
-		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, updatedShoot)
+		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, shoot)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return retry.Ok()
@@ -327,10 +326,9 @@ func (f *GardenerFramework) WaitForShootToBeDeleted(ctx context.Context, shoot *
 			f.Logger.Infof("Error while waiting for shoot to be deleted: %s", err.Error())
 			return retry.MinorError(err)
 		}
-		*shoot = *updatedShoot
 		f.Logger.Infof("waiting for shoot %s to be deleted", shoot.Name)
 		if shoot.Status.LastOperation != nil {
-			f.Logger.Debugf("%d%%: Shoot state: %s, Description: %s", shoot.Status.LastOperation.Progress, shoot.Status.LastOperation.State, shoot.Status.LastOperation.Description)
+			f.Logger.Infof("%d%%: Shoot state: %s, Description: %s", shoot.Status.LastOperation.Progress, shoot.Status.LastOperation.State, shoot.Status.LastOperation.Description)
 		}
 		return retry.MinorError(fmt.Errorf("shoot %q still exists", shoot.Name))
 	})
@@ -339,20 +337,18 @@ func (f *GardenerFramework) WaitForShootToBeDeleted(ctx context.Context, shoot *
 // WaitForShootToBeReconciled waits for the shoot to be successfully reconciled
 func (f *GardenerFramework) WaitForShootToBeReconciled(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
 	return retry.UntilTimeout(ctx, 30*time.Second, 60*time.Minute, func(ctx context.Context) (done bool, err error) {
-		newShoot := &gardencorev1beta1.Shoot{}
-		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, newShoot)
+		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, shoot)
 		if err != nil {
 			f.Logger.Infof("Error while waiting for shoot to be reconciled: %s", err.Error())
 			return retry.MinorError(err)
 		}
-		shoot = newShoot
 		completed, msg := ShootReconciliationSuccessful(shoot)
 		if completed {
 			return retry.Ok()
 		}
 		f.Logger.Infof("Shoot %s not yet reconciled successfully (%s)", shoot.Name, msg)
-		if newShoot.Status.LastOperation != nil {
-			f.Logger.Debugf("%d%%: Shoot State: %s, Description: %s", shoot.Status.LastOperation.Progress, shoot.Status.LastOperation.State, shoot.Status.LastOperation.Description)
+		if shoot.Status.LastOperation != nil {
+			f.Logger.Infof("%d%%: Shoot State: %s, Description: %s", shoot.Status.LastOperation.Progress, shoot.Status.LastOperation.State, shoot.Status.LastOperation.Description)
 		}
 		return retry.MinorError(fmt.Errorf("shoot %q was not successfully reconciled", shoot.Name))
 	})
@@ -487,7 +483,7 @@ func (f *GardenerFramework) CreateSeed(ctx context.Context, seed *gardencorev1be
 			return retry.SevereError(err)
 		}
 		if err != nil {
-			f.Logger.Debugf("unable to create seed %s: %s", seed.Name, err.Error())
+			f.Logger.Infof("unable to create seed %s: %s", seed.Name, err.Error())
 			return retry.MinorError(err)
 		}
 		return retry.Ok()
@@ -562,7 +558,7 @@ func (f *GardenerFramework) CreateManagedSeed(ctx context.Context, managedSeed *
 			return retry.SevereError(err)
 		}
 		if err != nil {
-			f.Logger.Debugf("Could not create managed seed %s: %s", managedSeed.Name, err.Error())
+			f.Logger.Infof("Could not create managed seed %s: %s", managedSeed.Name, err.Error())
 			return retry.MinorError(err)
 		}
 		return retry.Ok()
@@ -580,7 +576,7 @@ func (f *GardenerFramework) WaitForManagedSeedToBeCreated(ctx context.Context, m
 	return retry.UntilTimeout(ctx, 30*time.Second, 60*time.Minute, func(ctx context.Context) (done bool, err error) {
 		err = f.GardenClient.Client().Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)
 		if err != nil {
-			f.Logger.Debugf("Could not get managed seed %s: %s", managedSeed.Name, err.Error())
+			f.Logger.Infof("Could not get managed seed %s: %s", managedSeed.Name, err.Error())
 			return retry.MinorError(err)
 		}
 		err = health.CheckManagedSeed(managedSeed)
@@ -597,7 +593,7 @@ func (f *GardenerFramework) DeleteManagedSeed(ctx context.Context, managedSeed *
 	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
 		err = f.GardenClient.Client().Delete(ctx, managedSeed)
 		if err != nil {
-			f.Logger.Debugf("Could not delete managed seed %s: %s", managedSeed.Name, err.Error())
+			f.Logger.Infof("Could not delete managed seed %s: %s", managedSeed.Name, err.Error())
 			return retry.MinorError(err)
 		}
 		return retry.Ok()
@@ -618,7 +614,7 @@ func (f *GardenerFramework) WaitForManagedSeedToBeDeleted(ctx context.Context, m
 			if apierrors.IsNotFound(err) {
 				return retry.Ok()
 			}
-			f.Logger.Debugf("Could not get managed seed %s: %s", managedSeed.Name, err.Error())
+			f.Logger.Infof("Could not get managed seed %s: %s", managedSeed.Name, err.Error())
 			return retry.MinorError(err)
 		}
 		return retry.MinorError(fmt.Errorf("managed seed %s still exists", managedSeed.Name))
