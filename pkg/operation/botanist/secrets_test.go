@@ -376,15 +376,6 @@ var _ = Describe("Secrets", func() {
 				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(sa2), sa2)).To(Succeed())
 				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(sa3), sa3)).To(Succeed())
 
-				Expect(fakeShootClient.Get(ctx, client.ObjectKeyFromObject(sa3OldSecret), sa3OldSecret)).To(BeNotFoundError())
-				// mimic kube-controller-manager behaviour: In reality, when a service account token secret is deleted
-				// then KCM removes it from the ServiceAccount's `.secrets[]` list. Since no KCM is running for the
-				// test, we have to mimic it here
-				sa2.Secrets = []corev1.ObjectReference{sa2.Secrets[0]}
-				Expect(fakeShootClient.Update(ctx, sa2)).To(Succeed())
-				sa3.Secrets = []corev1.ObjectReference{sa3.Secrets[0]}
-				Expect(fakeShootClient.Update(ctx, sa3)).To(Succeed())
-
 				Expect(sa1).To(Equal(sa1Copy))
 				Expect(sa2.Secrets).To(ConsistOf(corev1.ObjectReference{Name: "sa2-token" + suffix}))
 				Expect(sa3.Labels).NotTo(HaveKey("credentials.gardener.cloud/key-name"))
