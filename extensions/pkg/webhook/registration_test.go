@@ -139,7 +139,8 @@ var _ = Describe("Registration", func() {
 
 				Expect(seedWebhookConfig).To(Equal(&admissionregistrationv1.MutatingWebhookConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "gardener-extension-" + providerName,
+						Name:   "gardener-extension-" + providerName,
+						Labels: map[string]string{"remediation.webhook.shoot.gardener.cloud/exclude": "true"},
 					},
 					Webhooks: []admissionregistrationv1.MutatingWebhook{
 						{
@@ -183,7 +184,8 @@ var _ = Describe("Registration", func() {
 
 				Expect(shootWebhookConfig).To(Equal(&admissionregistrationv1.MutatingWebhookConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "gardener-extension-" + providerName + "-shoot",
+						Name:   "gardener-extension-" + providerName + "-shoot",
+						Labels: map[string]string{"remediation.webhook.shoot.gardener.cloud/exclude": "true"},
 					},
 					Webhooks: []admissionregistrationv1.MutatingWebhook{
 						{

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strings"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -109,15 +110,21 @@ func BuildWebhookConfigs(webhooks []*Webhook, c client.Client, namespace, provid
 	// webhook config
 	if len(seedWebhooks) > 0 {
 		seedWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{Name: NamePrefix + providerName},
-			Webhooks:   seedWebhooks,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   NamePrefix + providerName,
+				Labels: map[string]string{v1beta1constants.LabelExcludeWebhookFromRemediation: "true"},
+			},
+			Webhooks: seedWebhooks,
 		}
 	}
 
 	if len(shootWebhooks) > 0 {
 		shootWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{Name: NamePrefix + providerName + NameSuffixShoot},
-			Webhooks:   shootWebhooks,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   NamePrefix + providerName + NameSuffixShoot,
+				Labels: map[string]string{v1beta1constants.LabelExcludeWebhookFromRemediation: "true"},
+			},
+			Webhooks: shootWebhooks,
 		}
 	}
 

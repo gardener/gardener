@@ -17,10 +17,12 @@ package vpa
 import (
 	"fmt"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
 
@@ -182,6 +184,7 @@ func (v *vpa) reconcileGeneralMutatingWebhookConfiguration(mutatingWebhookConfig
 		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s.%s:%d", admissionControllerServiceName, v.namespace, admissionControllerServicePort))
 	}
 
+	metav1.SetMetaDataLabel(&mutatingWebhookConfiguration.ObjectMeta, v1beta1constants.LabelExcludeWebhookFromRemediation, "true")
 	mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
 		Name:                    "vpa.k8s.io",
 		AdmissionReviewVersions: []string{"v1"},
