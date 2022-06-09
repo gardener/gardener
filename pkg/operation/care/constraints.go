@@ -178,6 +178,14 @@ func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencor
 					nil
 			}
 		}
+
+		if wasRemediatedByGardener(webhookConfig.Annotations) {
+			return gardencorev1beta1.ConditionFalse,
+				"RemediatedWebhooks",
+				fmt.Sprintf("ValidatingWebhookConfiguration %q is problematic and was remediated by Gardener (please check its annotations for details).", webhookConfig.Name),
+				[]gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorProblematicWebhook},
+				nil
+		}
 	}
 
 	mutatingWebhookConfigs, err := getMutatingWebhookConfigurations(ctx, c.shootClient)
@@ -195,6 +203,14 @@ func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencor
 					[]gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorProblematicWebhook},
 					nil
 			}
+		}
+
+		if wasRemediatedByGardener(webhookConfig.Annotations) {
+			return gardencorev1beta1.ConditionFalse,
+				"RemediatedWebhooks",
+				fmt.Sprintf("MutatingWebhookConfiguration %q is problematic and was remediated by Gardener (please check its annotations for details).", webhookConfig.Name),
+				[]gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorProblematicWebhook},
+				nil
 		}
 	}
 
@@ -261,4 +277,8 @@ func IsProblematicWebhook(
 	}
 
 	return false
+}
+
+func wasRemediatedByGardener(annotations map[string]string) bool {
+	return annotations[v1beta1constants.GardenerWarning] != ""
 }
