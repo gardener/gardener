@@ -19,7 +19,7 @@ The following tables are a summary of the feature gates that you can set on diff
 ## Feature gates for Alpha or Beta features
 
 | Feature                                      | Default | Stage   | Since  | Until  |
-| -------------------------------------------- | ------- | ------- | ------ | ------ |
+| -------------------------------------------- | ------- | ------- |--------| ------ |
 | HVPA                                         | `false` | `Alpha` | `0.31` |        |
 | HVPAForShootedSeed                           | `false` | `Alpha` | `0.32` |        |
 | ManagedIstio                                 | `false` | `Alpha` | `1.5`  | `1.18` |
@@ -43,7 +43,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | DisableDNSProviderManagement                 | `false` | `Alpha` | `1.41` |        |
 | ShootCARotation                              | `false` | `Alpha` | `1.42` |        |
 | ShootSARotation                              | `false` | `Alpha` | `1.48` |        |
-| HAControlPlanes                              | `false` | `Alpha` | `1.48` |        |
+| HAControlPlanes                              | `false` | `Alpha` | `1.49` |        |
 
 ## Feature gates for graduated or deprecated features
 
