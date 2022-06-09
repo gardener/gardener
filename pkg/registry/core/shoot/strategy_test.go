@@ -260,7 +260,7 @@ var _ = Describe("Strategy", func() {
 			})
 
 			DescribeTable("operation annotations",
-				func(operationAnnotation string, mutateOldShoot func(*core.Shoot), featureGates map[featuregate.Feature]bool, shouldIncreaseGeneration bool) {
+				func(operationAnnotation string, mutateOldShoot func(*core.Shoot), featureGates map[featuregate.Feature]bool, shouldIncreaseGeneration, shouldKeepAnnotation bool) {
 					oldShoot := &core.Shoot{
 						Status: core.ShootStatus{
 							LastOperation: &core.LastOperation{},
@@ -284,8 +284,13 @@ var _ = Describe("Strategy", func() {
 					if shouldIncreaseGeneration {
 						expectedGeneration++
 					}
-
 					Expect(newShoot.Generation).To(Equal(expectedGeneration))
+
+					if shouldKeepAnnotation {
+						Expect(newShoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, operationAnnotation))
+					} else {
+						Expect(newShoot.Annotations).NotTo(HaveKey(v1beta1constants.GardenerOperation))
+					}
 				},
 
 				Entry("retry; last operation is failed",
@@ -293,24 +298,28 @@ var _ = Describe("Strategy", func() {
 					func(s *core.Shoot) { s.Status.LastOperation.State = core.LastOperationStateFailed },
 					nil,
 					true,
+					false,
 				),
 				Entry("retry; last operation is not failed",
 					v1beta1constants.ShootOperationRetry,
 					func(s *core.Shoot) { s.Status.LastOperation.State = core.LastOperationStateSucceeded },
 					nil,
 					false,
+					true,
 				),
 				Entry("retry; last operation is not set",
 					v1beta1constants.ShootOperationRetry,
 					func(s *core.Shoot) { s.Status.LastOperation = nil },
 					nil,
 					false,
+					true,
 				),
 				Entry("reconcile",
 					v1beta1constants.GardenerOperationReconcile,
 					nil,
 					nil,
 					true,
+					false,
 				),
 
 				Entry("rotate-credentials-start",
@@ -318,11 +327,13 @@ var _ = Describe("Strategy", func() {
 					nil,
 					nil,
 					true,
+					true,
 				),
 				Entry("rotate-credentials-complete",
 					v1beta1constants.ShootOperationRotateCredentialsComplete,
 					nil,
 					nil,
+					true,
 					true,
 				),
 
@@ -331,17 +342,20 @@ var _ = Describe("Strategy", func() {
 					nil,
 					nil,
 					true,
+					true,
 				),
 				Entry("rotate-ssh-keypair",
 					v1beta1constants.ShootOperationRotateSSHKeypair,
 					nil,
 					nil,
 					true,
+					true,
 				),
 				Entry("rotate-observability-credentials",
 					v1beta1constants.ShootOperationRotateObservabilityCredentials,
 					nil,
 					nil,
+					true,
 					true,
 				),
 
@@ -350,11 +364,13 @@ var _ = Describe("Strategy", func() {
 					nil,
 					nil,
 					true,
+					true,
 				),
 				Entry("rotate-etcd-encryption-key-complete",
 					v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete,
 					nil,
 					nil,
+					true,
 					true,
 				),
 
@@ -363,11 +379,13 @@ var _ = Describe("Strategy", func() {
 					nil,
 					map[featuregate.Feature]bool{features.ShootCARotation: true},
 					true,
+					true,
 				),
 				Entry("rotate-ca-complete; feature gate is enabled",
 					v1beta1constants.ShootOperationRotateCAComplete,
 					nil,
 					map[featuregate.Feature]bool{features.ShootCARotation: true},
+					true,
 					true,
 				),
 				Entry("rotate-ca-start; feature gate is disabled",
@@ -375,11 +393,13 @@ var _ = Describe("Strategy", func() {
 					nil,
 					map[featuregate.Feature]bool{features.ShootCARotation: false},
 					false,
+					false,
 				),
 				Entry("rotate-ca-complete; feature gate is disabled",
 					v1beta1constants.ShootOperationRotateCAComplete,
 					nil,
 					map[featuregate.Feature]bool{features.ShootCARotation: false},
+					false,
 					false,
 				),
 
@@ -388,11 +408,13 @@ var _ = Describe("Strategy", func() {
 					nil,
 					map[featuregate.Feature]bool{features.ShootSARotation: true},
 					true,
+					true,
 				),
 				Entry("rotate-serviceaccount-key-complete; feature gate is enabled",
 					v1beta1constants.ShootOperationRotateServiceAccountKeyComplete,
 					nil,
 					map[featuregate.Feature]bool{features.ShootSARotation: true},
+					true,
 					true,
 				),
 				Entry("rotate-serviceaccount-key-start; feature gate is disabled",
@@ -400,11 +422,13 @@ var _ = Describe("Strategy", func() {
 					nil,
 					map[featuregate.Feature]bool{features.ShootSARotation: false},
 					false,
+					false,
 				),
 				Entry("rotate-serviceaccount-key-complete; feature gate is disabled",
 					v1beta1constants.ShootOperationRotateServiceAccountKeyComplete,
 					nil,
 					map[featuregate.Feature]bool{features.ShootSARotation: false},
+					false,
 					false,
 				),
 			)

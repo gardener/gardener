@@ -144,6 +144,8 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 					// We don't want to remove the annotation so that the gardenlet can pick it up and perform
 					// the rotation. It has to remove the annotation after it is done.
 					mustIncrease, mustRemoveOperationAnnotation = true, false
+				} else {
+					mustIncrease, mustRemoveOperationAnnotation = false, true
 				}
 
 			case v1beta1constants.ShootOperationRotateServiceAccountKeyStart,
@@ -152,14 +154,16 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 					// We don't want to remove the annotation so that the gardenlet can pick it up and perform
 					// the rotation. It has to remove the annotation after it is done.
 					mustIncrease, mustRemoveOperationAnnotation = true, false
+				} else {
+					mustIncrease, mustRemoveOperationAnnotation = false, true
 				}
 			}
 		}
 
+		if mustRemoveOperationAnnotation {
+			delete(newShoot.Annotations, v1beta1constants.GardenerOperation)
+		}
 		if mustIncrease {
-			if mustRemoveOperationAnnotation {
-				delete(newShoot.Annotations, v1beta1constants.GardenerOperation)
-			}
 			return true
 		}
 	}
