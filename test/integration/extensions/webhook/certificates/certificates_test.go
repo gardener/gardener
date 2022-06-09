@@ -135,31 +135,6 @@ var _ = Describe("Certificates tests", func() {
 		}
 		shootNetworkPolicy = extensionswebhookshoot.GetNetworkPolicyMeta(shootNamespace.Name, extensionName)
 
-		seedWebhook = admissionregistrationv1.MutatingWebhook{
-			Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", seedWebhookName, extensionType),
-			ClientConfig: admissionregistrationv1.WebhookClientConfig{
-				Service: &admissionregistrationv1.ServiceReference{
-					Name:      "gardener-extension-" + extensionName,
-					Namespace: extensionNamespace.Name,
-					Path:      pointer.String("/" + seedWebhookPath),
-					Port:      pointer.Int32(443),
-				},
-			},
-			Rules: []admissionregistrationv1.RuleWithOperations{
-				{
-					Rule:       admissionregistrationv1.Rule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"services"}, Scope: &scope},
-					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
-				},
-			},
-			AdmissionReviewVersions: []string{"v1", "v1beta1"},
-			FailurePolicy:           &failurePolicyFail,
-			MatchPolicy:             &matchPolicyExact,
-			SideEffects:             &sideEffectsNone,
-			TimeoutSeconds:          &timeoutSeconds,
-			ReinvocationPolicy:      &reinvocationPolicy,
-			NamespaceSelector:       &metav1.LabelSelector{},
-			ObjectSelector:          &metav1.LabelSelector{},
-		}
 		shootWebhook = admissionregistrationv1.MutatingWebhook{
 			Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", shootWebhookName, extensionType),
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
@@ -181,198 +156,416 @@ var _ = Describe("Certificates tests", func() {
 			ObjectSelector:          &metav1.LabelSelector{},
 		}
 
-		seedWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{Name: "gardener-extension-" + extensionName},
-			Webhooks:   []admissionregistrationv1.MutatingWebhook{seedWebhook},
-		}
 		shootWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
 			ObjectMeta: metav1.ObjectMeta{Name: "gardener-extension-" + extensionName + "-shoot"},
 			Webhooks:   []admissionregistrationv1.MutatingWebhook{shootWebhook},
 		}
 	})
 
-	JustBeforeEach(func() {
-		By("setting up manager")
-		mgr, err = manager.New(restConfig, manager.Options{
-			Scheme:             kubernetes.SeedScheme,
-			MetricsBindAddress: "0",
-		})
-		Expect(err).NotTo(HaveOccurred())
+	Context("run without seed webhook", func() {
+		JustBeforeEach(func() {
+			By("setting up manager")
+			mgr, err = manager.New(restConfig, manager.Options{
+				Scheme:             kubernetes.SeedScheme,
+				MetricsBindAddress: "0",
+			})
+			Expect(err).NotTo(HaveOccurred())
 
-		By("registering webhooks")
-		var (
-			serverOptions = &webhookcmd.ServerOptions{
-				Mode:        extensionswebhook.ModeService,
-				ServicePort: servicePort,
-				Namespace:   extensionNamespace.Name,
-			}
-			switchOptions = webhookcmd.NewSwitchOptions(
-				webhookcmd.Switch(seedWebhookName, newSeedWebhook),
-				webhookcmd.Switch(shootWebhookName, newShootWebhook),
+			By("registering webhooks")
+			var (
+				serverOptions = &webhookcmd.ServerOptions{
+					Mode:        extensionswebhook.ModeService,
+					ServicePort: servicePort,
+					Namespace:   extensionNamespace.Name,
+				}
+				switchOptions = webhookcmd.NewSwitchOptions(
+					webhookcmd.Switch(shootWebhookName, newShootWebhook),
+				)
+				webhookOptions = webhookcmd.NewAddToManagerOptions(extensionName, shootWebhookManagedResourceName, shootNamespaceSelector, serverOptions, switchOptions)
 			)
-			webhookOptions = webhookcmd.NewAddToManagerOptions(extensionName, shootWebhookManagedResourceName, shootNamespaceSelector, serverOptions, switchOptions)
-		)
 
-		Expect(webhookOptions.Complete()).To(Succeed())
-		webhookConfig := webhookOptions.Completed()
-		webhookConfig.Clock = fakeClock
-		atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr)
-		Expect(err).NotTo(HaveOccurred())
+			Expect(webhookOptions.Complete()).To(Succeed())
+			webhookConfig := webhookOptions.Completed()
+			webhookConfig.Clock = fakeClock
+			atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr)
+			Expect(err).NotTo(HaveOccurred())
 
-		By("verifying certificates exist on disk")
-		serverCert, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
-		Expect(err).NotTo(HaveOccurred())
-		Expect(serverCert).NotTo(BeEmpty())
+			By("verifying certificates exist on disk")
+			serverCert, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(serverCert).NotTo(BeEmpty())
 
-		serverKey, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.key"))
-		Expect(err).NotTo(HaveOccurred())
-		Expect(serverKey).NotTo(BeEmpty())
+			serverKey, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.key"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(serverKey).NotTo(BeEmpty())
 
-		By("starting manager")
-		var mgrContext context.Context
-		mgrContext, mgrCancel = context.WithCancel(ctx)
+			By("starting manager")
+			var mgrContext context.Context
+			mgrContext, mgrCancel = context.WithCancel(ctx)
 
-		go func() {
-			defer GinkgoRecover()
-			Expect(mgr.Start(mgrContext)).To(Succeed())
-		}()
-
-		DeferCleanup(func() {
-			By("stopping manager")
-			mgrCancel()
-		})
-
-		By("verifying CA bundle was written in atomic shoot webhook config")
-		Eventually(func() []byte {
-			val, ok := atomicShootWebhookConfig.Load().(*admissionregistrationv1.MutatingWebhookConfiguration)
-			if !ok {
-				return nil
-			}
-			return val.Webhooks[0].ClientConfig.CABundle
-		}).ShouldNot(BeEmpty())
-	})
-
-	AfterEach(func() {
-		By("deleting webhook config")
-		Expect(testClient.Delete(ctx, seedWebhookConfig)).To(Or(Succeed(), BeNotFoundError()))
-	})
-
-	Context("seed webhook does not yet exist", func() {
-		It("should create the webhook and inject the CA bundle", func() {
-			Eventually(func(g Gomega) {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seedWebhookConfig), seedWebhookConfig)).To(Succeed())
-				g.Expect(extensionswebhook.InjectCABundleIntoWebhookConfig(seedWebhookConfig, nil)).To(Succeed())
-				g.Expect(seedWebhookConfig.Webhooks).To(ConsistOf(seedWebhook))
-			}).Should(Succeed())
-
-			Eventually(func(g Gomega) []byte {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seedWebhookConfig), seedWebhookConfig)).To(Succeed())
-				return seedWebhookConfig.Webhooks[0].ClientConfig.CABundle
-			}).Should(Not(BeEmpty()))
-		})
-	})
-
-	Context("certificate rotation", func() {
-		BeforeEach(func() {
-			By("preparing existing shoot webhook resources")
-			Expect(testClient.Create(ctx, shootNetworkPolicy)).To(Succeed())
-			Expect(testClient.Create(ctx, cluster)).To(Succeed())
-			Expect(extensionswebhookshoot.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionName, shootWebhookManagedResourceName, servicePort, shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
+			go func() {
+				defer GinkgoRecover()
+				Expect(mgr.Start(mgrContext)).To(Succeed())
+			}()
 
 			DeferCleanup(func() {
-				Expect(testClient.Delete(ctx, shootNetworkPolicy)).To(Or(Succeed(), BeNotFoundError()))
-				Expect(testClient.Delete(ctx, cluster)).To(Or(Succeed(), BeNotFoundError()))
+				By("stopping manager")
+				mgrCancel()
 			})
 
-			DeferCleanup(test.WithVars(
-				&certificates.DefaultSyncPeriod, 100*time.Millisecond,
-				&secretutils.GenerateKey, secretutils.FakeGenerateKey,
-				&secretutils.Clock, fakeClock,
-			))
+			By("verifying CA bundle was written in atomic shoot webhook config")
+			Eventually(func() []byte {
+				val, ok := atomicShootWebhookConfig.Load().(*admissionregistrationv1.MutatingWebhookConfiguration)
+				if !ok {
+					return nil
+				}
+				return val.Webhooks[0].ClientConfig.CABundle
+			}).ShouldNot(BeEmpty())
 		})
 
-		It("should rotate the certificates and update the webhook configs", func() {
-			var caBundle1, caBundle2, caBundle3, serverCert1 []byte
+		Context("certificate rotation", func() {
+			BeforeEach(func() {
+				By("preparing existing shoot webhook resources")
+				Expect(testClient.Create(ctx, shootNetworkPolicy)).To(Succeed())
+				Expect(testClient.Create(ctx, cluster)).To(Succeed())
+				Expect(extensionswebhookshoot.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionName, shootWebhookManagedResourceName, servicePort, shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
 
-			By("retrieving CA bundle (before first reconciliation)")
-			Eventually(func(g Gomega) []byte {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seedWebhookConfig), seedWebhookConfig)).To(Succeed())
-				caBundle1 = seedWebhookConfig.Webhooks[0].ClientConfig.CABundle
-				return caBundle1
-			}).Should(Not(BeEmpty()))
+				DeferCleanup(func() {
+					Expect(testClient.Delete(ctx, shootNetworkPolicy)).To(Or(Succeed(), BeNotFoundError()))
+					Expect(testClient.Delete(ctx, cluster)).To(Or(Succeed(), BeNotFoundError()))
+				})
 
-			Eventually(func(g Gomega) []byte {
-				g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
-				return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
-			}).Should(Equal(caBundle1))
+				DeferCleanup(test.WithVars(
+					&certificates.DefaultSyncPeriod, 100*time.Millisecond,
+					&secretutils.GenerateKey, secretutils.FakeGenerateKey,
+					&secretutils.Clock, fakeClock,
+				))
+			})
 
-			By("reading generated server certificate from disk")
-			Eventually(func(g Gomega) []byte {
-				serverCert1, err = os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
-				g.Expect(err).NotTo(HaveOccurred())
-				return serverCert1
-			}).Should(Not(BeEmpty()))
+			It("should rotate the certificates and update the webhook configs", func() {
+				var caBundle1, caBundle2, serverCert1 []byte
 
-			Eventually(func(g Gomega) []byte {
-				serverKey1, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.key"))
-				g.Expect(err).NotTo(HaveOccurred())
-				return serverKey1
-			}).Should(Not(BeEmpty()))
+				By("retrieving CA bundle (before first reconciliation)")
 
-			By("retrieving CA bundle again (after validity has expired)")
-			fakeClock.Step(30 * 24 * time.Hour)
+				Eventually(func(g Gomega) []byte {
+					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
+					return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
+				}).Should(Equal(caBundle1))
 
-			Eventually(func(g Gomega) string {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seedWebhookConfig), seedWebhookConfig)).To(Succeed())
-				caBundle2 = seedWebhookConfig.Webhooks[0].ClientConfig.CABundle
-				return string(caBundle2)
-			}).Should(And(
-				Not(BeEmpty()),
-				Not(BeEquivalentTo(caBundle1)),
-				ContainSubstring(string(caBundle1)),
-			))
+				By("reading generated server certificate from disk")
+				Eventually(func(g Gomega) []byte {
+					serverCert1, err = os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
+					g.Expect(err).NotTo(HaveOccurred())
+					return serverCert1
+				}).Should(Not(BeEmpty()))
 
-			Eventually(func(g Gomega) []byte {
-				g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
-				return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
-			}).Should(Equal(caBundle2))
+				Eventually(func(g Gomega) []byte {
+					serverKey1, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.key"))
+					g.Expect(err).NotTo(HaveOccurred())
+					return serverKey1
+				}).Should(Not(BeEmpty()))
 
-			caCert2 := strings.TrimPrefix(string(caBundle2), string(caBundle1))
+				By("retrieving CA bundle again (after validity has expired)")
+				fakeClock.Step(30 * 24 * time.Hour)
 
-			By("reading re-generated server certificate from disk")
-			Eventually(func(g Gomega) []byte {
-				serverCert2, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
-				g.Expect(err).NotTo(HaveOccurred())
-				return serverCert2
-			}).Should(And(
-				Not(BeEmpty()),
-				Not(Equal(serverCert1)),
-			))
+				Eventually(func(g Gomega) []byte {
+					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
+					return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
+				}).Should(Equal(caBundle2))
 
-			// we don't assert that the server key changed since we have overwritten the 'GenerateKey' function with
-			// a fake implementation above (hence, it cannot change)
+				By("reading re-generated server certificate from disk")
+				Eventually(func(g Gomega) []byte {
+					serverCert2, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
+					g.Expect(err).NotTo(HaveOccurred())
+					return serverCert2
+				}).Should(And(
+					Not(BeEmpty()),
+					Not(Equal(serverCert1)),
+				))
+			})
+		})
+	})
 
-			By("retrieving CA bundle again (after old secrets are ignored)")
-			fakeClock.Step(24 * time.Hour)
+	Context("run with seed webhook", func() {
+		BeforeEach(func() {
 
-			Eventually(func(g Gomega) string {
-				g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seedWebhookConfig), seedWebhookConfig)).To(Succeed())
-				caBundle3 = seedWebhookConfig.Webhooks[0].ClientConfig.CABundle
-				return string(caBundle3)
-			}).Should(And(
-				Not(BeEmpty()),
-				Equal(caCert2),
-			))
+			seedWebhook = admissionregistrationv1.MutatingWebhook{
+				Name: fmt.Sprintf("%s.%s.extensions.gardener.cloud", seedWebhookName, extensionType),
+				ClientConfig: admissionregistrationv1.WebhookClientConfig{
+					Service: &admissionregistrationv1.ServiceReference{
+						Name:      "gardener-extension-" + extensionName,
+						Namespace: extensionNamespace.Name,
+						Path:      pointer.String("/" + seedWebhookPath),
+						Port:      pointer.Int32(443),
+					},
+				},
+				Rules: []admissionregistrationv1.RuleWithOperations{
+					{
+						Rule:       admissionregistrationv1.Rule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"services"}, Scope: &scope},
+						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+					},
+				},
+				AdmissionReviewVersions: []string{"v1", "v1beta1"},
+				FailurePolicy:           &failurePolicyFail,
+				MatchPolicy:             &matchPolicyExact,
+				SideEffects:             &sideEffectsNone,
+				TimeoutSeconds:          &timeoutSeconds,
+				ReinvocationPolicy:      &reinvocationPolicy,
+				NamespaceSelector:       &metav1.LabelSelector{},
+				ObjectSelector:          &metav1.LabelSelector{},
+			}
 
-			Eventually(func(g Gomega) []byte {
-				g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
-				return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
-			}).Should(Equal(caBundle3))
+			seedWebhookConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: "gardener-extension-" + extensionName},
+				Webhooks:   []admissionregistrationv1.MutatingWebhook{seedWebhook},
+			}
+
+		})
+
+		JustBeforeEach(func() {
+			By("setting up manager")
+			mgr, err = manager.New(restConfig, manager.Options{
+				Scheme:             kubernetes.SeedScheme,
+				MetricsBindAddress: "0",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			By("registering webhooks")
+			var (
+				serverOptions = &webhookcmd.ServerOptions{
+					Mode:        extensionswebhook.ModeService,
+					ServicePort: servicePort,
+					Namespace:   extensionNamespace.Name,
+				}
+				switchOptions = webhookcmd.NewSwitchOptions(
+					webhookcmd.Switch(seedWebhookName, newSeedWebhook),
+					webhookcmd.Switch(shootWebhookName, newShootWebhook),
+				)
+				webhookOptions = webhookcmd.NewAddToManagerOptions(extensionName, shootWebhookManagedResourceName, shootNamespaceSelector, serverOptions, switchOptions)
+			)
+
+			Expect(webhookOptions.Complete()).To(Succeed())
+			webhookConfig := webhookOptions.Completed()
+			webhookConfig.Clock = fakeClock
+			atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("verifying certificates exist on disk")
+			serverCert, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(serverCert).NotTo(BeEmpty())
+
+			serverKey, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.key"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(serverKey).NotTo(BeEmpty())
+
+			By("starting manager")
+			var mgrContext context.Context
+			mgrContext, mgrCancel = context.WithCancel(ctx)
+
+			go func() {
+				defer GinkgoRecover()
+				Expect(mgr.Start(mgrContext)).To(Succeed())
+			}()
+
+			DeferCleanup(func() {
+				By("stopping manager")
+				mgrCancel()
+			})
+
+			By("verifying CA bundle was written in atomic shoot webhook config")
+			Eventually(func() []byte {
+				val, ok := atomicShootWebhookConfig.Load().(*admissionregistrationv1.MutatingWebhookConfiguration)
+				if !ok {
+					return nil
+				}
+				return val.Webhooks[0].ClientConfig.CABundle
+			}).ShouldNot(BeEmpty())
+		})
+
+		AfterEach(func() {
+			By("deleting webhook config")
+			Expect(testClient.Delete(ctx, seedWebhookConfig)).To(Or(Succeed(), BeNotFoundError()))
+		})
+
+		Context("seed webhook does not yet exist", func() {
+			It("should create the webhook and inject the CA bundle", func() {
+				Eventually(func(g Gomega) {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seedWebhookConfig), seedWebhookConfig)).To(Succeed())
+					g.Expect(extensionswebhook.InjectCABundleIntoWebhookConfig(seedWebhookConfig, nil)).To(Succeed())
+					g.Expect(seedWebhookConfig.Webhooks).To(ConsistOf(seedWebhook))
+				}).Should(Succeed())
+
+				Eventually(func(g Gomega) []byte {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seedWebhookConfig), seedWebhookConfig)).To(Succeed())
+					return seedWebhookConfig.Webhooks[0].ClientConfig.CABundle
+				}).Should(Not(BeEmpty()))
+			})
+		})
+
+		Context("certificate rotation", func() {
+			BeforeEach(func() {
+				By("preparing existing shoot webhook resources")
+				Expect(testClient.Create(ctx, shootNetworkPolicy)).To(Succeed())
+				Expect(testClient.Create(ctx, cluster)).To(Succeed())
+				Expect(extensionswebhookshoot.ReconcileWebhookConfig(ctx, testClient, shootNamespace.Name, extensionName, shootWebhookManagedResourceName, servicePort, shootWebhookConfig, &extensions.Cluster{Shoot: &gardencorev1beta1.Shoot{}})).To(Succeed())
+
+				DeferCleanup(func() {
+					Expect(testClient.Delete(ctx, shootNetworkPolicy)).To(Or(Succeed(), BeNotFoundError()))
+					Expect(testClient.Delete(ctx, cluster)).To(Or(Succeed(), BeNotFoundError()))
+				})
+
+				DeferCleanup(test.WithVars(
+					&certificates.DefaultSyncPeriod, 100*time.Millisecond,
+					&secretutils.GenerateKey, secretutils.FakeGenerateKey,
+					&secretutils.Clock, fakeClock,
+				))
+			})
+
+			It("should rotate the certificates and update the webhook configs", func() {
+				var caBundle1, caBundle2, caBundle3, serverCert1 []byte
+
+				By("retrieving CA bundle (before first reconciliation)")
+				Eventually(func(g Gomega) []byte {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seedWebhookConfig), seedWebhookConfig)).To(Succeed())
+					caBundle1 = seedWebhookConfig.Webhooks[0].ClientConfig.CABundle
+					return caBundle1
+				}).Should(Not(BeEmpty()))
+
+				Eventually(func(g Gomega) []byte {
+					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
+					return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
+				}).Should(Equal(caBundle1))
+
+				By("reading generated server certificate from disk")
+				Eventually(func(g Gomega) []byte {
+					serverCert1, err = os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
+					g.Expect(err).NotTo(HaveOccurred())
+					return serverCert1
+				}).Should(Not(BeEmpty()))
+
+				Eventually(func(g Gomega) []byte {
+					serverKey1, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.key"))
+					g.Expect(err).NotTo(HaveOccurred())
+					return serverKey1
+				}).Should(Not(BeEmpty()))
+
+				By("retrieving CA bundle again (after validity has expired)")
+				fakeClock.Step(30 * 24 * time.Hour)
+
+				Eventually(func(g Gomega) string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seedWebhookConfig), seedWebhookConfig)).To(Succeed())
+					caBundle2 = seedWebhookConfig.Webhooks[0].ClientConfig.CABundle
+					return string(caBundle2)
+				}).Should(And(
+					Not(BeEmpty()),
+					Not(BeEquivalentTo(caBundle1)),
+					ContainSubstring(string(caBundle1)),
+				))
+
+				Eventually(func(g Gomega) []byte {
+					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
+					return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
+				}).Should(Equal(caBundle2))
+
+				caCert2 := strings.TrimPrefix(string(caBundle2), string(caBundle1))
+
+				By("reading re-generated server certificate from disk")
+				Eventually(func(g Gomega) []byte {
+					serverCert2, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
+					g.Expect(err).NotTo(HaveOccurred())
+					return serverCert2
+				}).Should(And(
+					Not(BeEmpty()),
+					Not(Equal(serverCert1)),
+				))
+
+				// we don't assert that the server key changed since we have overwritten the 'GenerateKey' function with
+				// a fake implementation above (hence, it cannot change)
+
+				By("retrieving CA bundle again (after old secrets are ignored)")
+				fakeClock.Step(24 * time.Hour)
+
+				Eventually(func(g Gomega) string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(seedWebhookConfig), seedWebhookConfig)).To(Succeed())
+					caBundle3 = seedWebhookConfig.Webhooks[0].ClientConfig.CABundle
+					return string(caBundle3)
+				}).Should(And(
+					Not(BeEmpty()),
+					Equal(caCert2),
+				))
+
+				Eventually(func(g Gomega) []byte {
+					g.Expect(getShootWebhookConfig(codec, shootWebhookConfig, shootNamespace.Name)).To(Succeed())
+					return shootWebhookConfig.Webhooks[0].ClientConfig.CABundle
+				}).Should(Equal(caBundle3))
+
+			})
 		})
 	})
 
 	Context("legacy secret", func() {
 		var legacySecret *corev1.Secret
+
+		JustBeforeEach(func() {
+			By("setting up manager")
+			mgr, err = manager.New(restConfig, manager.Options{
+				Scheme:             kubernetes.SeedScheme,
+				MetricsBindAddress: "0",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			By("registering webhooks")
+			var (
+				serverOptions = &webhookcmd.ServerOptions{
+					Mode:        extensionswebhook.ModeService,
+					ServicePort: servicePort,
+					Namespace:   extensionNamespace.Name,
+				}
+				switchOptions = webhookcmd.NewSwitchOptions(
+					webhookcmd.Switch(shootWebhookName, newShootWebhook),
+				)
+				webhookOptions = webhookcmd.NewAddToManagerOptions(extensionName, shootWebhookManagedResourceName, shootNamespaceSelector, serverOptions, switchOptions)
+			)
+
+			Expect(webhookOptions.Complete()).To(Succeed())
+			webhookConfig := webhookOptions.Completed()
+			webhookConfig.Clock = fakeClock
+			atomicShootWebhookConfig, err = webhookConfig.AddToManager(ctx, mgr)
+			Expect(err).NotTo(HaveOccurred())
+
+			By("verifying certificates exist on disk")
+			serverCert, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.crt"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(serverCert).NotTo(BeEmpty())
+
+			serverKey, err := os.ReadFile(filepath.Join(mgr.GetWebhookServer().CertDir, "tls.key"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(serverKey).NotTo(BeEmpty())
+
+			By("starting manager")
+			var mgrContext context.Context
+			mgrContext, mgrCancel = context.WithCancel(ctx)
+
+			go func() {
+				defer GinkgoRecover()
+				Expect(mgr.Start(mgrContext)).To(Succeed())
+			}()
+
+			DeferCleanup(func() {
+				By("stopping manager")
+				mgrCancel()
+			})
+
+			By("verifying CA bundle was written in atomic shoot webhook config")
+			Eventually(func() []byte {
+				val, ok := atomicShootWebhookConfig.Load().(*admissionregistrationv1.MutatingWebhookConfiguration)
+				if !ok {
+					return nil
+				}
+				return val.Webhooks[0].ClientConfig.CABundle
+			}).ShouldNot(BeEmpty())
+		})
 
 		BeforeEach(func() {
 			legacySecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "gardener-extension-webhook-cert", Namespace: extensionNamespace.Name}}
