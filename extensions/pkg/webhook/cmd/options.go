@@ -284,8 +284,10 @@ func (c *AddToManagerConfig) AddToManager(ctx context.Context, mgr manager.Manag
 			return nil, fmt.Errorf("error generating new certificates for webhook server: %w", err)
 		}
 
-		if err := extensionswebhook.InjectCABundleIntoWebhookConfig(shootWebhookConfig, caBundle); err != nil {
-			return nil, err
+		if shootWebhookConfig != nil {
+			if err := extensionswebhook.InjectCABundleIntoWebhookConfig(shootWebhookConfig, caBundle); err != nil {
+				return nil, err
+			}
 		}
 		atomicShootWebhookConfig.Store(shootWebhookConfig.DeepCopy())
 
