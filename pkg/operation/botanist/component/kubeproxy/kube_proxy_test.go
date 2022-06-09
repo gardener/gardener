@@ -629,6 +629,9 @@ spec:
     containerPolicies:
     - containerName: '*'
       controlledValues: RequestsOnly
+      maxAllowed:
+        cpu: "4"
+        memory: 10G
   targetRef:
     apiVersion: apps/v1
     kind: DaemonSet
