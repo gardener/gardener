@@ -19,10 +19,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
+
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 var commonCfg *CommonConfig
@@ -139,7 +140,7 @@ func mergeCommonConfigs(base, overwrite *CommonConfig) *CommonConfig {
 func RegisterCommonFrameworkFlags() *CommonConfig {
 	newCfg := &CommonConfig{}
 
-	flag.StringVar(&newCfg.LogLevel, "verbose", "", "verbosity level, when set, logging level will be DEBUG")
+	flag.StringVar(&newCfg.LogLevel, "verbose", logger.InfoLevel, "verbosity level (defaults to info)")
 	flag.BoolVar(&newCfg.DisableStateDump, "disable-dump", false, "Disable the state dump if a test fails")
 
 	commonCfg = newCfg

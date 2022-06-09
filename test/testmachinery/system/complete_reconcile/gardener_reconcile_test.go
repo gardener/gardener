@@ -62,7 +62,7 @@ var _ = Describe("Shoot reconciliation testing", func() {
 			shoots := &gardencorev1beta1.ShootList{}
 			err := f.GardenClient.Client().List(ctx, shoots)
 			if err != nil {
-				f.Logger.Debug(err.Error())
+				f.Logger.Info(err.Error())
 				return retry.MinorError(err)
 			}
 
@@ -71,13 +71,13 @@ var _ = Describe("Shoot reconciliation testing", func() {
 				// check if the last acted gardener version is the current version,
 				// to determine if the updated gardener version reconciled the shoot.
 				if shoot.Status.Gardener.Version != *gardenerVersion {
-					f.Logger.Debugf("last acted gardener version %s does not match current gardener version %s", shoot.Status.Gardener.Version, *gardenerVersion)
+					f.Logger.Infof("last acted gardener version %s does not match current gardener version %s", shoot.Status.Gardener.Version, *gardenerVersion)
 					continue
 				}
 				if completed, msg := framework.ShootReconciliationSuccessful(&shoot); completed {
 					reconciledShoots++
 				} else {
-					f.Logger.Debugf("Shoot %s not yet reconciled successfully (%s)", shoot.Name, msg)
+					f.Logger.Infof("Shoot %s not yet reconciled successfully (%s)", shoot.Name, msg)
 				}
 
 			}
