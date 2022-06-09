@@ -106,7 +106,7 @@ func (r *reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
-	patch := client.MergeFromWithOptions(shootState.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	patch := client.StrategicMergeFrom(shootState.DeepCopy())
 
 	dataList := gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
 	dataList.Upsert(&gardencorev1alpha1.GardenerResourceData{
@@ -135,7 +135,7 @@ func (r *reconciler) delete(
 	} else {
 		log.Info("Removing Secret from ShootState and releasing its finalizer")
 
-		patch := client.MergeFromWithOptions(shootState.DeepCopy(), client.MergeFromWithOptimisticLock{})
+		patch := client.StrategicMergeFrom(shootState.DeepCopy())
 
 		dataList := gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
 		dataList.Delete(secret.Name)

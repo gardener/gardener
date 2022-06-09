@@ -19,6 +19,8 @@ import (
 	"errors"
 	"time"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -263,7 +265,7 @@ var _ = Describe("operation", func() {
 
 			shootState := o.GetShootState().DeepCopy()
 			shootState.Spec.Gardener = gardenerResourceList
-			test.EXPECTPatchWithOptimisticLock(ctx, k8sGardenRuntimeClient, shootState, o.GetShootState())
+			test.EXPECTPatch(ctx, k8sGardenRuntimeClient, shootState, o.GetShootState(), types.StrategicMergePatchType)
 
 			Expect(
 				o.SaveGardenerResourceDataInShootState(

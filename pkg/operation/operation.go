@@ -565,7 +565,7 @@ func (o *Operation) SaveGardenerResourceDataInShootState(ctx context.Context, f 
 
 	shootState := o.GetShootState().DeepCopy()
 	original := shootState.DeepCopy()
-	patch := client.MergeFromWithOptions(original, client.MergeFromWithOptimisticLock{})
+	patch := client.StrategicMergeFrom(original)
 
 	if err := f(&shootState.Spec.Gardener); err != nil {
 		return err
