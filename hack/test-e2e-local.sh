@@ -26,8 +26,10 @@ if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
   mkdir -p "$ARTIFACTS"
   ginkgo_flags="--output-dir=$ARTIFACTS --junit-report=junit.xml"
 
-  # make shoot domain accessible to test
-  printf "\n127.0.0.1 api.e2e-default.local.external.local.gardener.cloud\n127.0.0.1 api.e2e-default.local.internal.local.gardener.cloud\n" >>/etc/hosts
+  # make shoot domains accessible to test
+  for shoot in e2e-default e2e-rotate ; do
+    printf "\n127.0.0.1 api.%s.local.external.local.gardener.cloud\n127.0.0.1 api.%s.local.internal.local.gardener.cloud\n" $shoot $shoot >>/etc/hosts
+  done
 
   # dump all container logs after test execution
   trap dump_logs EXIT

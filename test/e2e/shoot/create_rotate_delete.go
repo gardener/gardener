@@ -29,7 +29,8 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = defaultShoot("rotate-")
+	f.Shoot = defaultShoot("")
+	f.Shoot.Name = "e2e-rotate"
 
 	It("Create Shoot, Rotate Credentials and Delete Shoot", Label("credentials-rotation"), func() {
 		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
