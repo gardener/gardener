@@ -374,7 +374,20 @@ func (a *actuator) deployGardenlet(
 	}
 
 	// Apply gardenlet chart
-	return shootClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "gardener", "gardenlet"), v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(values))
+	if err := shootClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "gardener", "gardenlet"), v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(values)); err != nil {
+		return err
+	}
+
+	// remove renew-kubeconfig annotation, if it exists
+	if managedSeed.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRenewKubeconfig {
+		patch := client.MergeFrom(managedSeed.DeepCopy())
+		delete(managedSeed.Annotations, v1beta1constants.GardenerOperation)
+		if err := a.gardenClient.Client().Patch(ctx, managedSeed, patch); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (a *actuator) deleteGardenlet(
@@ -714,11 +727,6 @@ func (a *actuator) prepareGardenClientConnectionWithBootstrap(
 		// Also remove the kubeconfig if the renew-kubeconfig operation annotation is set on the ManagedSeed resource.
 		a.reconcilingInfoEventf(managedSeed, "Renewing gardenlet kubeconfig secret due to '%s=%s' annotation", v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRenewKubeconfig)
 		if err := kutil.DeleteSecretByReference(ctx, shootClient.Client(), gcc.KubeconfigSecret); err != nil {
-			return "", err
-		}
-		patch := client.MergeFrom(managedSeed.DeepCopy())
-		delete(managedSeed.Annotations, v1beta1constants.GardenerOperation)
-		if err := shootClient.Client().Patch(ctx, managedSeed, patch); err != nil {
 			return "", err
 		}
 	} else {
