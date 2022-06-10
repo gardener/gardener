@@ -26,6 +26,7 @@ VERSION                                    := $(shell cat VERSION)
 EFFECTIVE_VERSION                          := $(VERSION)-$(shell git rev-parse HEAD)
 REPO_ROOT                                  := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 GARDENER_LOCAL_KUBECONFIG                  := $(REPO_ROOT)/example/gardener-local/kind/kubeconfig
+GARDENER_LOCAL2_KUBECONFIG                 := $(REPO_ROOT)/example/gardener-local/kind/kubeconfig2
 LOCAL_GARDEN_LABEL                         := local-garden
 REMOTE_GARDEN_LABEL                        := remote-garden
 ACTIVATE_SEEDAUTHORIZER                    := false
@@ -260,6 +261,8 @@ verify-extended: check-generate check format test-cov test-cov-clean test-integr
 
 kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-env test-e2e-local-fast test-e2e-local: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
 
+kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down register-kind2-env tear-down-kind2-env: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
+
 kind-up: $(KIND)
 	mkdir -m 775 -p $(REPO_ROOT)/dev/local-backupbuckets
 	$(KIND) create cluster --name gardener-local --config $(REPO_ROOT)/example/gardener-local/kind/cluster-$(KIND_ENV).yaml --kubeconfig $(GARDENER_LOCAL_KUBECONFIG)
@@ -272,6 +275,16 @@ kind-down: $(KIND)
 	rm -f $(REPO_ROOT)/example/provider-local/base/kubeconfig
 	rm -rf dev/local-backupbuckets
 
+kind2-up: $(KIND)
+	$(KIND) create cluster --name gardener-local2 --config $(REPO_ROOT)/example/gardener-local/kind/cluster2-$(KIND_ENV).yaml --kubeconfig $(GARDENER_LOCAL2_KUBECONFIG)
+	docker exec gardener-local2-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+	cp $(GARDENER_LOCAL2_KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed2/kubeconfig
+	kubectl apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
+
+kind2-down: $(KIND)
+	$(KIND) delete cluster --name gardener-local2
+	rm -f $(REPO_ROOT)/example/provider-local/seed2/kubeconfig
+
 # use static label for skaffold to prevent rolling all gardener components on every `skaffold` invocation
 gardener-up gardener-down: export SKAFFOLD_LABEL = skaffold.dev/run-id=gardener-local
 
@@ -281,6 +294,7 @@ gardener-up: $(SKAFFOLD) $(HELM)
 gardener-down: $(SKAFFOLD) $(HELM)
 	@# delete stuff gradually in the right order, otherwise several dependencies will prevent the cleanup from succeeding
 	kubectl delete seed local --ignore-not-found --wait --timeout 5m
+	kubectl delete seed local2 --ignore-not-found --wait --timeout 5m
 	$(SKAFFOLD) delete -m provider-local,gardenlet
 	kubectl delete validatingwebhookconfiguration/validate-namespace-deletion --ignore-not-found
 	kubectl annotate project local confirmation.gardener.cloud/deletion=true
@@ -291,12 +305,24 @@ gardener-down: $(SKAFFOLD) $(HELM)
 	@# cleanup namespaces that don't get deleted automatically
 	kubectl delete ns gardener-system-seed-lease istio-ingress istio-system --ignore-not-found
 
+gardenlet-kind2-up: $(SKAFFOLD) $(HELM)
+	$(SKAFFOLD) run -m gardenlet,provider-local -p kind2
+
+gardenlet-kind2-down: $(SKAFFOLD) $(HELM)
+	$(SKAFFOLD) delete -m gardenlet -p kind2
+
 register-local-env:
 	kubectl apply -k $(REPO_ROOT)/example/provider-local/overlays/local
 
 tear-down-local-env:
 	kubectl annotate project local confirmation.gardener.cloud/deletion=true
 	kubectl delete -k $(REPO_ROOT)/example/provider-local/overlays/local
+
+register-kind2-env:
+	kubectl apply -k $(REPO_ROOT)/example/provider-local/seed2
+
+tear-down-kind2-env:
+	kubectl delete -k $(REPO_ROOT)/example/provider-local/seed2
 
 test-e2e-local-fast: $(GINKGO)
 	./hack/test-e2e-local.sh --label-filter "Shoot && fast"

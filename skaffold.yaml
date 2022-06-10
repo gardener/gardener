@@ -101,6 +101,13 @@ deploy:
           image: eu.gcr.io/gardener-project/gardener/extensions/provider-local
       imageStrategy:
         helm: {}
+profiles:
+- name: kind2
+  patches:
+    # The deploy stage must be skipped because provider-local can only be registered in the garden cluster.
+    # The build stage is still necessary so that the image can be loaded into the kind cluster later on.
+  - op: remove
+    path: /deploy
 
 ---
 apiVersion: skaffold/v2beta25
@@ -138,6 +145,9 @@ build:
       dockerfile: Dockerfile.local
       target: seed-admission-controller
 deploy:
+  kubectl:
+    manifests:
+    - example/00-namespace-garden.yaml
   helm:
     hooks:
       after:
@@ -189,3 +199,33 @@ deploy:
         helm: {}
       valuesFiles:
       - example/gardener-local/gardenlet/values.yaml
+profiles:
+- name: kind2
+  patches:
+  # remove the check whether the local seed is ready because the garden cluster is not targeted for the kind2 profile
+  - op: remove
+    path: /deploy/helm/hooks/after/0
+  # add dummy artifact override to make skaffold the load local-provider image into cluster
+  - op: add
+    path: /deploy/helm/releases/0/artifactOverrides/global
+    value:
+      provider-local:
+        image: eu.gcr.io/gardener-project/gardener/extensions/provider-local
+  - op: add
+    path: /deploy/helm/releases/0/valuesFiles/-
+    value: example/gardener-local/gardenlet/values-seed2.yaml
+    # for the kind2 profile only 4 images are built - local-provider, gardenlet, resource-manager and gardener-seed-admission-controller
+    # so the imageVectorOverwrite must be patched to specify the correct tags
+  - op: replace
+    path: /deploy/helm/releases/0/setValueTemplates
+    value:
+      global:
+        gardenlet:
+          imageVectorOverwrite: |
+            images:
+            - name: gardener-resource-manager
+              repository: eu.gcr.io/gardener-project/gardener/resource-manager
+              tag: "{{.IMAGE_TAG3}}"
+            - name: gardener-seed-admission-controller
+              repository: eu.gcr.io/gardener-project/gardener/seed-admission-controller
+              tag: "{{.IMAGE_TAG4}}"

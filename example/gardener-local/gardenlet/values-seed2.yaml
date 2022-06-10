@@ -1,0 +1,30 @@
+global:
+  gardenlet:
+    config:
+      gardenClientConnection:
+        bootstrapKubeconfig:
+          kubeconfig: |
+            apiVersion: v1
+            kind: Config
+            current-context: gardenlet-bootstrap
+            clusters:
+            - cluster:
+                insecure-skip-tls-verify: true
+                server: https://gardener-local-control-plane:6443
+              name: default
+            contexts:
+            - context:
+                cluster: default
+                user: gardenlet-bootstrap
+              name: gardenlet-bootstrap
+            users:
+            - name: gardenlet-bootstrap
+              user:
+                token: 07401c.f395accd246ae52d
+      seedConfig:
+        metadata:
+          name: local2
+        spec:
+          ingress:
+            domain: ingress.local2.seed.local.gardener.cloud
+          secretRef: {}

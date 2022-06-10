@@ -1,0 +1,12 @@
+- op: replace
+  path: /metadata/name
+  value: local2
+- op: replace
+  path: /spec/backup/secretRef/name
+  value: seed-local2
+- op: replace
+  path: /spec/ingress/domain
+  value: ingress.local2.seed.local.gardener.cloud
+- op: replace
+  path: /spec/secretRef/name
+  value: seed-local2

@@ -3,9 +3,9 @@ kind: Kustomization
 
 resources:
 - ../../base
+- ../../seed-base
 - secret-default-domain.yaml
 - secret-internal-domain.yaml
-- seed.yaml
 
 patchesStrategicMerge:
 - patch-controller-deployment.yaml
