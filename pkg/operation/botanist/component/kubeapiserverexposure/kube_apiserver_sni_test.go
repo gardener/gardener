@@ -18,7 +18,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
