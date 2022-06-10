@@ -1760,6 +1760,21 @@ BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
+
+					It("should allow if the seed does exist but the managedseed is annotated with the renew-kubeconfig annotation", func() {
+						managedSeed.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRenewKubeconfig}
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
+							managedSeed.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+							shoot.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}))
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
 				})
 
 				Context("managed seed secret", func() {
