@@ -20,6 +20,7 @@ Check out these repositories for implementations of the Gardener Extension contr
 - [Azure](https://github.com/gardener/gardener-extension-provider-azure)
 - [Equinix Metal](https://github.com/gardener/gardener-extension-provider-equinix-metal)
 - [GCP](https://github.com/gardener/gardener-extension-provider-gcp)
+- [Hetzner Cloud](https://github.com/23technologies/gardener-extension-provider-hcloud)
 - [Kubevirt](https://github.com/gardener/gardener-extension-provider-kubevirt)
 - [MetalStack](https://github.com/metal-stack/gardener-extension-provider-metal)
 - [OpenStack](https://github.com/gardener/gardener-extension-provider-openstack)
@@ -27,21 +28,30 @@ Check out these repositories for implementations of the Gardener Extension contr
 
 ### DNS Provider
 
-- [External DNS Management](https://github.com/gardener/external-dns-management) [*]
-
-<sub>[*] Alicoud DNS, AWS Route53, Azure DNS, Cloudflare DNS, Google CloudDNS, OpenStack Designate</sub>
+- [Alicloud](https://github.com/gardener/gardener-extension-provider-alicloud)
+- [AWS](https://github.com/gardener/gardener-extension-provider-aws)
+- [Azure](https://github.com/gardener/gardener-extension-provider-azure)
+- [CloudFlare](https://github.com/schrodit/gardener-extension-provider-dns-cloudflare)
+- [GCP](https://github.com/gardener/gardener-extension-provider-gcp)
+- [OpenStack](https://github.com/gardener/gardener-extension-provider-openstack)
+- [External DNS Management](https://github.com/gardener/external-dns-management)
+  - Alicoud DNS, AWS Route53, Azure DNS, Cloudflare DNS, Google CloudDNS, OpenStack Designate
+  - legacy `DNSProvider/DNSEntry` integration before the [`UseDNSRecords` feature gate](https://github.com/gardener/gardener/blob/master/docs/deployment/feature_gates.md)
+  - used for preparing `DNSProviders` for the [Shoot DNS Service](https://github.com/gardener/gardener-extension-shoot-dns-service) if the [`DisableDNSProviderManagement` feature gate](https://github.com/gardener/gardener/blob/master/docs/deployment/feature_gates.md) is not enabled
 
 ### Operating System
 
 - [CoreOS/FlatCar](https://github.com/gardener/gardener-extension-os-coreos)
-- [GardenLinux](https://github.com/gardener/gardener-extension-os-gardenlinux)
 - [Debian/Ubuntu (MetalStack)](https://github.com/metal-stack/os-metal-extension)
-- [Ubuntu](https://github.com/gardener/gardener-extension-os-ubuntu)
+- [GardenLinux](https://github.com/gardener/gardener-extension-os-gardenlinux)
+- [k3os](https://github.com/23technologies/gardener-extension-os-k3os)
 - [SuSE CHost](https://github.com/gardener/gardener-extension-os-suse-chost)
+- [Ubuntu](https://github.com/gardener/gardener-extension-os-ubuntu)
 
 ### Container Runtime
 
 - [gVisor](https://github.com/gardener/gardener-extension-runtime-gvisor)
+- [Kata Containers](https://github.com/23technologies/gardener-extension-runtime-kata)
 
 ### Network Plugin
 
@@ -50,10 +60,13 @@ Check out these repositories for implementations of the Gardener Extension contr
 
 ### Generic Extensions
 
+- [Minimal Working Example](https://github.com/23technologies/gardener-extension-mwe)
 - [Shoot Certificate Service](https://github.com/gardener/gardener-extension-shoot-cert-service)
 - [Shoot DNS Service](https://github.com/gardener/gardener-extension-shoot-dns-service)
+- [Shoot Flux Service](https://github.com/23technologies/gardener-extension-shoot-flux)
 - [Shoot OpenID Connect Service](https://github.com/gardener/gardener-extension-shoot-oidc-service)
 - [Shoot Networking Filter](https://github.com/gardener/gardener-extension-shoot-networking-filter)
+- [Shoot Networking Problem Detector](https://github.com/gardener/gardener-extension-shoot-networking-problemdetector)
 
 If you implemented a new extension, please feel free to add it to this list!
 
