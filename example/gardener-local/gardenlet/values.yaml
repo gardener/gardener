@@ -46,6 +46,7 @@ global:
         ReversedVPN: true
         ShootCARotation: true
         ShootSARotation: true
+        CopyEtcdBackupsDuringControlPlaneMigration: true
       logging:
         enabled: true
         loki:
