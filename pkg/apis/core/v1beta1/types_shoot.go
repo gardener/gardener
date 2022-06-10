@@ -708,8 +708,7 @@ const (
 type Source struct {
 	// A list of IP blocks (Ipv4 & Ipv6), populated from the source address of the IP packet.
 	// Single IP (e.g. "1.2.3.4") and CIDR (e.g. "1.2.3.0/24") are supported.
-	// +optional
-	IPBlocks []string `json:"ipBlocks,omitempty" protobuf:"bytes,1,opt,name=ipBlocks"`
+	IPBlocks []string `json:"ipBlocks" protobuf:"bytes,1,opt,name=ipBlocks"`
 }
 
 // KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
