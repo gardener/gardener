@@ -991,6 +991,17 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1.Spec.SeedTemplate.Spec.SecretRef.Namespace, managedSeed1.Spec.SeedTemplate.Spec.SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeFalse())
 
+		By("update (renew-kubeconfig annotation), seed exists")
+		managedSeed1Copy = managedSeed1.DeepCopy()
+		managedSeed1.Annotations = map[string]string{"gardener.cloud/operation": "renew-kubeconfig"}
+		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(5))
+		Expect(graph.graph.Edges().Len()).To(Equal(4))
+		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1.Spec.SeedTemplate.Spec.Backup.SecretRef.Namespace, managedSeed1.Spec.SeedTemplate.Spec.Backup.SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1.Spec.SeedTemplate.Spec.SecretRef.Namespace, managedSeed1.Spec.SeedTemplate.Spec.SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+
 		By("update (bootstrap mode), seed does not exist")
 		Expect(fakeClient.Delete(ctx, seed)).To(Succeed())
 		managedSeed1Copy = managedSeed1.DeepCopy()
