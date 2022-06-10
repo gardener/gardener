@@ -536,7 +536,7 @@ type KubeAPIServerConfig struct {
 	EnableAnonymousAuthentication *bool
 	// EventTTL controls the amount of time to retain events.
 	EventTTL *metav1.Duration
-	// AccessControl provides authorization mechanisms for Shoot-API-Server.
+	// AccessControl provides access control configurations for the API server.
 	AccessControl *AccessControl
 }
 
