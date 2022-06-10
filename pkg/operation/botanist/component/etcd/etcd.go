@@ -281,7 +281,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	serverSecret, err := e.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
 		Name:                        secretNamePrefixServer + e.role,
 		CommonName:                  "etcd-server",
-		DNSNames:                    e.serviceDNSNames(),
+		DNSNames:                    e.clientServiceDNSNames(),
 		CertType:                    secretutils.ServerClientCert,
 		SkipPublishingCACertificate: true,
 	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCD), secretsmanager.Rotate(secretsmanager.InPlace))
@@ -313,7 +313,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		peerServerSecret, err = e.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
 			Name:                        secretNamePrefixPeerServer + e.role,
 			CommonName:                  "etcd-server",
-			DNSNames:                    e.serviceDNSNames(),
+			DNSNames:                    e.peerServiceDNSNames(),
 			CertType:                    secretutils.ServerClientCert,
 			SkipPublishingCACertificate: true,
 		}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer), secretsmanager.Rotate(secretsmanager.InPlace))
@@ -328,7 +328,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			PodAntiAffinity: &corev1.PodAntiAffinity{
 				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
 					{
-						TopologyKey: "topology.kubernetes.io/zone",
+						TopologyKey: corev1.LabelTopologyZone,
 						LabelSelector: &metav1.LabelSelector{
 							MatchLabels: e.getRoleLabels(),
 						},
@@ -341,7 +341,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			PodAntiAffinity: &corev1.PodAntiAffinity{
 				RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
 					{
-						TopologyKey: "kubernetes.io/hostname",
+						TopologyKey: corev1.LabelHostname,
 						LabelSelector: &metav1.LabelSelector{
 							MatchLabels: e.getRoleLabels(),
 						},
@@ -834,12 +834,14 @@ func (e *etcd) Snapshot(ctx context.Context, podExecutor kubernetes.PodExecutor)
 	return err
 }
 
-func (e *etcd) serviceDNSNames() []string {
-	names := []string{fmt.Sprintf("etcd-%s-local", e.role)}
-	names = append(names, kutil.DNSNamesForService(fmt.Sprintf("etcd-%s-client", e.role), e.namespace)...)
-	names = append(names, kutil.DNSNamesForService(fmt.Sprintf("etcd-%s-peer", e.role), e.namespace)...)
-	names = append(names, kutil.DNSNamesForService(fmt.Sprintf("*.etcd-%s-peer", e.role), e.namespace)...)
-	return names
+func (e *etcd) clientServiceDNSNames() []string {
+	return append([]string{fmt.Sprintf("etcd-%s-local", e.role)},
+		kutil.DNSNamesForService(fmt.Sprintf("etcd-%s-client", e.role), e.namespace)...)
+}
+
+func (e *etcd) peerServiceDNSNames() []string {
+	return append(kutil.DNSNamesForService(fmt.Sprintf("etcd-%s-peer", e.role), e.namespace),
+		kutil.DNSNamesForService(fmt.Sprintf("*.etcd-%s-peer", e.role), e.namespace)...)
 }
 
 // Get retrieves the Etcd resource

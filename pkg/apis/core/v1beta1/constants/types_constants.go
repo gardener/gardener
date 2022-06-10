@@ -283,6 +283,9 @@ const (
 	// ShootAlphaControlPlaneHighAvailabilitySingleZone is a specific value that can be set for the shoot control
 	// plane high availability annotation, that allows gardener to spread the shoot control plane across
 	// multiple nodes within a single availability zone if it is possible.
+	// This enables shoot clusters having a control plane with a higher failure tolerance as well as zero downtime maintenance,
+	// especially for infrastructure providers that provide less than three zones in a region and thus a multi-zone setup
+	// is not possible there.
 	ShootAlphaControlPlaneHighAvailabilitySingleZone = "single-zone"
 	// ShootAlphaControlPlaneHighAvailabilityMultiZone is a specific value that can be set for the shoot control
 	// plane high availability annotation, that allows gardener to spread the shoot control plane across

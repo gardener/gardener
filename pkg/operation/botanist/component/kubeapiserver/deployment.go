@@ -477,7 +477,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 		k.handleServiceAccountSigningKeySettings(deployment, secretUserProvidedServiceAccountSigningKey)
 
 		utilruntime.Must(references.InjectAnnotations(deployment))
-
 		return nil
 	})
 	return err

@@ -17,6 +17,7 @@ package etcd_test
 import (
 	"testing"
 
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 
@@ -25,6 +26,7 @@ import (
 )
 
 func TestEtcd(t *testing.T) {
+	gardenletfeatures.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Botanist Component Etcd Suite")
 }

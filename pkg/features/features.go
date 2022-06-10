@@ -175,7 +175,7 @@ const (
 
 	// HAControlPlanes allows shoot control planes to be run in high availability mode.
 	// owner: @shreyas-s-rao @timuthy
-	// alpha: v1.47.0
+	// alpha: v1.49.0
 	HAControlPlanes featuregate.Feature = "HAControlPlanes"
 )
 

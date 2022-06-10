@@ -91,10 +91,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		watchCacheSizes = apiServerConfig.WatchCacheSizes
 	}
 
-	var zoneSpread bool
-	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && b.Shoot.GetInfo().ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
-		zoneSpread = true
-	}
+	zoneSpread := gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && b.Shoot.GetInfo().ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
 
 	return kubeapiserver.New(
 		b.K8sSeedClient,

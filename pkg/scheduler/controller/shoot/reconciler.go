@@ -226,7 +226,6 @@ func filterSeedsMatchingMultiZonalAttribute(seedList []gardencorev1beta1.Seed, s
 		return seedList, nil
 	}
 
-	// TODO(shreyas-s-rao): switch from shoot annotation to shoot spec field for beta release of HAControlPlanes
 	var multiZonalSeeds []gardencorev1beta1.Seed
 
 	for _, seed := range seedList {
