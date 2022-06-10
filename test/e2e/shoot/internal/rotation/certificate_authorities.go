@@ -234,6 +234,9 @@ func (v *CAVerifier) AfterCompleted(ctx context.Context) {
 	}).Should(Succeed())
 }
 
+// verifyCABundleInKubeconfigSecret asserts that the static-token kubeconfig secret contains the expected CA bundle,
+// i.e. that .data[ca.crt] is the same as in the ca-cluster secret.
+// KubeconfigVerifier takes care of asserting that the kubeconfig actually contains the same CA bundle as .data[ca.crt].
 func verifyCABundleInKubeconfigSecret(ctx context.Context, g Gomega, c client.Reader, shootKey client.ObjectKey, expectedBundle []byte) {
 	secret := &corev1.Secret{}
 	shootKey.Name = gutil.ComputeShootProjectSecretName(shootKey.Name, "kubeconfig")
