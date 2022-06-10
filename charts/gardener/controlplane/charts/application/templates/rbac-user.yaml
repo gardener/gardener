@@ -87,6 +87,8 @@ aggregationRule:
       gardener.cloud/role: admin
   - matchLabels:
       gardener.cloud/role: project-member
+  - matchLabels:
+      gardener.cloud/role: project-serviceaccountmanager
 rules: []
 
 # Cluster role granting viewer permissions for the resources in the gardener API group
