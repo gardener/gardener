@@ -141,7 +141,11 @@ func (r *reconciler) reconcileServiceAccount(ctx context.Context, secret *corev1
 }
 
 func (r *reconciler) reconcileSecret(ctx context.Context, log logr.Logger, sourceSecret *corev1.Secret, token string, renewDuration time.Duration) error {
-	patch := client.MergeFrom(sourceSecret.DeepCopy())
+	// The "requesting component" (e.g. gardenlet) might concurrently update the kubeconfig field in order to update the
+	// included CA bundle. Hence, we need to use optimistic locking to ensure we don't accidentally overwrite concurrent
+	// updates.
+	// ref https://github.com/gardener/gardener/issues/6092#issuecomment-1152434616
+	patch := client.MergeFromWithOptions(sourceSecret.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	metav1.SetMetaDataAnnotation(&sourceSecret.ObjectMeta, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, r.clock.Now().UTC().Add(renewDuration).Format(time.RFC3339))
 
 	if targetSecret := getTargetSecretFromAnnotations(sourceSecret.Annotations); targetSecret != nil {
