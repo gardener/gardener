@@ -78,8 +78,8 @@ var (
 		string(v1beta1constants.ShootOperationRotateKubeconfigCredentials),
 		string(v1beta1constants.ShootOperationRotateObservabilityCredentials),
 		string(v1beta1constants.ShootOperationRotateSSHKeypair),
-		string(v1beta1constants.ShootOperationRotateServiceAccountKeyComplete),
 		string(v1beta1constants.ShootOperationRotateServiceAccountKeyStart),
+		string(v1beta1constants.ShootOperationRotateServiceAccountKeyComplete),
 	)
 	availableShootPurposes = sets.NewString(
 		string(core.ShootPurposeEvaluation),

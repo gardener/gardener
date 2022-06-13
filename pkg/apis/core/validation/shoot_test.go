@@ -3450,7 +3450,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}),
 			)
 
-			It("should return an error if the annotation is invalid", func() {
+			It("should return an error if the reconciliation operation annotation is invalid", func() {
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "foo-bar")
 				matcher := ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
@@ -3459,7 +3459,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateShoot(shoot)).To(matcher)
 			})
 
-			It("should return an error if the annotation is invalid", func() {
+			It("should return an error if the maintenance operation annotation is invalid", func() {
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "foo-bar")
 				matcher := ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
