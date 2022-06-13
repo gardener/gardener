@@ -176,10 +176,12 @@ func (r *reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	}
 	log.Info("Generated webhook server cert", "serverSecretName", serverSecret.Name)
 
-	if err := r.reconcileSeedWebhookConfig(ctx, caBundleSecret); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error reconciling seed webhook config: %w", err)
+	if r.SeedWebhookConfig != nil {
+		if err := r.reconcileSeedWebhookConfig(ctx, caBundleSecret); err != nil {
+			return reconcile.Result{}, fmt.Errorf("error reconciling seed webhook config: %w", err)
+		}
+		log.Info("Updated seed webhook config with new CA bundle", "webhookConfig", r.SeedWebhookConfig)
 	}
-	log.Info("Updated seed webhook config with new CA bundle", "webhookConfig", r.SeedWebhookConfig)
 
 	if r.ShootWebhookConfig != nil {
 		// update shoot webhook config object (in memory) with the freshly created CA bundle which is also used by the
