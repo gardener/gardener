@@ -49,6 +49,7 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 			&rotation.ServiceAccountKeyVerifier{ShootCreationFramework: f},
 			&rotation.SSHKeypairVerifier{ShootCreationFramework: f},
 			// advanced verifiers testing things from the user's perspective
+			&rotation.SecretEncryptionVerifier{ShootCreationFramework: f},
 			&rotation.ShootAccessVerifier{ShootCreationFramework: f},
 		}
 
