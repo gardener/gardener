@@ -41,12 +41,15 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 		f.Verify()
 
 		v := rotation.Verifiers{
+			// basic verifiers checking secrets
 			&rotation.CAVerifier{ShootCreationFramework: f},
 			&rotation.ETCDEncryptionKeyVerifier{ShootCreationFramework: f},
 			&rotation.KubeconfigVerifier{ShootCreationFramework: f},
 			&rotation.ObservabilityVerifier{ShootCreationFramework: f},
 			&rotation.ServiceAccountKeyVerifier{ShootCreationFramework: f},
 			&rotation.SSHKeypairVerifier{ShootCreationFramework: f},
+			// advanced verifiers testing things from the user's perspective
+			&rotation.ShootAccessVerifier{ShootCreationFramework: f},
 		}
 
 		v.Before(ctx)
