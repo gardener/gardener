@@ -172,6 +172,11 @@ const (
 	// beta: v1.46.0
 	// GA: v1.48.0
 	ShootMaxTokenExpirationValidation featuregate.Feature = "ShootMaxTokenExpirationValidation"
+
+	// HAControlPlanes allows shoot control planes to be run in high availability mode.
+	// owner: @shreyas-s-rao @timuthy
+	// alpha: v1.49.0
+	HAControlPlanes featuregate.Feature = "HAControlPlanes"
 )
 
 var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
@@ -196,6 +201,7 @@ var allFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ShootSARotation:                            {Default: false, PreRelease: featuregate.Alpha},
 	ShootMaxTokenExpirationOverwrite:           {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
 	ShootMaxTokenExpirationValidation:          {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	HAControlPlanes:                            {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.

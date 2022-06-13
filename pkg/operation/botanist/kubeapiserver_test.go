@@ -21,6 +21,7 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -509,6 +510,70 @@ var _ = Describe("KubeAPIServer", func() {
 			)
 		})
 
+		Describe("ZoneSpreadConfig", func() {
+			DescribeTable("should have the expected zoneSpread config",
+				func(prepTest func(), featureGate *featuregate.Feature, value *bool, enabled bool) {
+					if prepTest != nil {
+						prepTest()
+					}
+
+					if featureGate != nil && value != nil {
+						defer test.WithFeatureGate(gardenletfeatures.FeatureGate, *featureGate, *value)()
+					}
+
+					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(kubeAPIServer.GetValues().ZoneSpread).To(Equal(enabled))
+				},
+				Entry("when HAControlPlanes feature gate is disabled and annotation is not set",
+					func() {
+						botanist.Shoot.GetInfo().Annotations = nil
+					},
+					featureGatePtr(features.HAControlPlanes),
+					pointer.Bool(false),
+					false,
+				),
+				Entry("when HAControlPlanes feature gate is disabled and annotation is set",
+					func() {
+						botanist.Shoot.GetInfo().Annotations = map[string]string{
+							v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
+						}
+					},
+					featureGatePtr(features.HAControlPlanes),
+					pointer.Bool(false),
+					false,
+				),
+				Entry("when HAControlPlanes feature gate is enabled and annotation is not set",
+					func() {
+						botanist.Shoot.GetInfo().Annotations = nil
+					},
+					featureGatePtr(features.HAControlPlanes),
+					pointer.Bool(true),
+					false,
+				),
+				Entry("when HAControlPlanes feature gate is enabled and annotation is set",
+					func() {
+						botanist.Shoot.GetInfo().Annotations = map[string]string{
+							v1beta1constants.ShootAlphaControlPlaneHighAvailability: v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone,
+						}
+					},
+					featureGatePtr(features.HAControlPlanes),
+					pointer.Bool(true),
+					true,
+				),
+				Entry("when HAControlPlanes feature gate is enabled and annotation is set to any value but multi-zone",
+					func() {
+						botanist.Shoot.GetInfo().Annotations = map[string]string{
+							v1beta1constants.ShootAlphaControlPlaneHighAvailability: "foo",
+						}
+					},
+					featureGatePtr(features.HAControlPlanes),
+					pointer.Bool(true),
+					false,
+				),
+			)
+		})
+
 		Describe("AutoscalingConfig", func() {
 			DescribeTable("should have the expected autoscaling config",
 				func(prepTest func(), featureGate *featuregate.Feature, value *bool, expectedConfig kubeapiserver.AutoscalingConfig) {
@@ -650,6 +715,22 @@ var _ = Describe("KubeAPIServer", func() {
 						MaxReplicas:               32,
 						Replicas:                  pointer.Int32(24),
 						UseMemoryMetricForHvpaHPA: true,
+						ScaleDownDisabledForHvpa:  false,
+					},
+				),
+				Entry("shoot enables HA control planes",
+					func() {
+						botanist.Shoot.GetInfo().Annotations = map[string]string{
+							v1beta1constants.ShootAlphaControlPlaneHighAvailability: "foo",
+						}
+					},
+					featureGatePtr(features.HAControlPlanes), pointer.Bool(true),
+					kubeapiserver.AutoscalingConfig{
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
+						HVPAEnabled:               false,
+						MinReplicas:               3,
+						MaxReplicas:               4,
+						UseMemoryMetricForHvpaHPA: false,
 						ScaleDownDisabledForHvpa:  false,
 					},
 				),

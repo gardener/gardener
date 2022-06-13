@@ -20,9 +20,12 @@ import (
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	"github.com/gardener/gardener/pkg/scheduler/controller/common"
+	gardenerschedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 
@@ -141,6 +144,10 @@ func determineSeed(
 	if err != nil {
 		return nil, err
 	}
+	filteredSeeds, err = filterSeedsMatchingMultiZonalAttribute(filteredSeeds, shoot)
+	if err != nil {
+		return nil, err
+	}
 	filteredSeeds, err = filterCandidates(shoot, shootList.Items, filteredSeeds)
 	if err != nil {
 		return nil, err
@@ -206,6 +213,32 @@ func filterSeedsMatchingProviders(cloudProfile *gardencorev1beta1.CloudProfile, 
 		}
 	}
 	return matchingSeeds, nil
+}
+
+// filterSeedsMatchingMultiZonalAttribute filters seeds by label `seed.gardener.cloud/multi-zonal`,
+// based on whether the shoot requires a multi-zonal control plane or not
+func filterSeedsMatchingMultiZonalAttribute(seedList []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) ([]gardencorev1beta1.Seed, error) {
+	if !gardenerschedulerfeatures.FeatureGate.Enabled(features.HAControlPlanes) {
+		return seedList, nil
+	}
+
+	if shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] != v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
+		return seedList, nil
+	}
+
+	var multiZonalSeeds []gardencorev1beta1.Seed
+
+	for _, seed := range seedList {
+		if metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal) {
+			multiZonalSeeds = append(multiZonalSeeds, seed)
+		}
+	}
+
+	if len(multiZonalSeeds) == 0 {
+		return nil, fmt.Errorf("none of the %d seeds can host a multi-zonal control plane for the given shoot", len(seedList))
+	}
+
+	return multiZonalSeeds, nil
 }
 
 func applyStrategy(shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed, strategy config.CandidateDeterminationStrategy) ([]gardencorev1beta1.Seed, error) {

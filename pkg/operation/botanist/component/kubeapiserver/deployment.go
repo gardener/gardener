@@ -135,8 +135,9 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretLegacyVPNSeedTLSAuth *corev1.Secret,
 ) error {
 	var (
-		maxSurge       = intstr.FromString("25%")
-		maxUnavailable = intstr.FromInt(0)
+		maxSurge                   = intstr.FromString("25%")
+		maxUnavailable             = intstr.FromInt(0)
+		podAntiAffinityTopologyKey = corev1.LabelHostname
 	)
 
 	var healthCheckToken string
@@ -189,6 +190,10 @@ func (k *kubeAPIServer) reconcileDeployment(
 		return fmt.Errorf("secret %q not found", v1beta1constants.SecretNameServiceAccountKey)
 	}
 
+	if k.values.ZoneSpread {
+		podAntiAffinityTopologyKey = corev1.LabelTopologyZone
+	}
+
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), deployment, func() error {
 		deployment.Labels = GetLabels()
 		deployment.Spec = appsv1.DeploymentSpec{
@@ -219,7 +224,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
 								Weight: 1,
 								PodAffinityTerm: corev1.PodAffinityTerm{
-									TopologyKey:   corev1.LabelHostname,
+									TopologyKey:   podAntiAffinityTopologyKey,
 									LabelSelector: &metav1.LabelSelector{MatchLabels: getLabels()},
 								},
 							}},

@@ -113,13 +113,18 @@ var _ = Describe("KubeAPIServer", func() {
 		configMapEgressSelector              *corev1.ConfigMap
 		managedResource                      *resourcesv1alpha1.ManagedResource
 		managedResourceSecret                *corev1.Secret
+
+		values Values
 	)
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		kubernetesInterface = fakekubernetes.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
 		sm = fakesecretsmanager.New(c, namespace)
-		kapi = New(kubernetesInterface, namespace, sm, Values{Version: version})
+		values = Values{
+			Version: version,
+		}
+		kapi = New(kubernetesInterface, namespace, sm, values)
 
 		By("creating secrets managed outside of this package for whose secretsmanager.Get() will be called")
 		Expect(c.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: namespace}})).To(Succeed())
@@ -766,8 +771,8 @@ var _ = Describe("KubeAPIServer", func() {
 								To: []networkingv1.NetworkPolicyPeer{{
 									PodSelector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
-											"app":                     "etcd-statefulset",
-											"garden.sapcloud.io/role": "controlplane",
+											"app":                 "etcd-statefulset",
+											"gardener.cloud/role": "controlplane",
 										},
 									},
 								}},
@@ -848,8 +853,8 @@ var _ = Describe("KubeAPIServer", func() {
 									To: []networkingv1.NetworkPolicyPeer{{
 										PodSelector: &metav1.LabelSelector{
 											MatchLabels: map[string]string{
-												"app":                     "etcd-statefulset",
-												"garden.sapcloud.io/role": "controlplane",
+												"app":                 "etcd-statefulset",
+												"gardener.cloud/role": "controlplane",
 											},
 										},
 									}},
@@ -1549,6 +1554,28 @@ rules:
 				Expect(deployment.Spec.Template.Spec.RestartPolicy).To(Equal(corev1.RestartPolicyAlways))
 				Expect(deployment.Spec.Template.Spec.SchedulerName).To(Equal("default-scheduler"))
 				Expect(deployment.Spec.Template.Spec.TerminationGracePeriodSeconds).To(PointTo(Equal(int64(30))))
+			})
+
+			It("should have pod anti affinity for zone", func() {
+				v := values
+				v.ZoneSpread = true
+				kapi = New(kubernetesInterface, namespace, sm, v)
+				deployAndRead()
+
+				Expect(deployment.Spec.Template.Spec.Affinity).To(Equal(&corev1.Affinity{
+					PodAntiAffinity: &corev1.PodAntiAffinity{
+						PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
+							Weight: 1,
+							PodAffinityTerm: corev1.PodAffinityTerm{
+								TopologyKey: "topology.kubernetes.io/zone",
+								LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+									"app":  "kubernetes",
+									"role": "apiserver",
+								}},
+							},
+						}},
+					},
+				}))
 			})
 
 			It("should have no init containers when reversed vpn is enabled", func() {

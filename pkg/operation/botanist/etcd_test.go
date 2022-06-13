@@ -43,6 +43,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -142,7 +143,7 @@ var _ = Describe("Etcd", func() {
 							expectedSecretsManager:          Equal(sm),
 							expectedRole:                    Equal(role),
 							expectedClass:                   Equal(class),
-							expectedRetainReplicas:          BeFalse(),
+							expectedReplicas:                PointTo(Equal(int32(1))),
 							expectedStorageCapacity:         Equal("10Gi"),
 							expectedDefragmentationSchedule: Equal(pointer.String("34 12 */3 * *")),
 							expectedHVPAConfig: Equal(&etcd.HVPAConfig{
@@ -181,7 +182,7 @@ var _ = Describe("Etcd", func() {
 					expectedSecretsManager:          Equal(sm),
 					expectedRole:                    Equal(role),
 					expectedClass:                   Equal(class),
-					expectedRetainReplicas:          BeFalse(),
+					expectedReplicas:                PointTo(Equal(int32(1))),
 					expectedStorageCapacity:         Equal("10Gi"),
 					expectedDefragmentationSchedule: Equal(pointer.String("34 12 * * *")),
 					expectedHVPAConfig: Equal(&etcd.HVPAConfig{
@@ -212,7 +213,7 @@ var _ = Describe("Etcd", func() {
 					expectedSecretsManager:          Equal(sm),
 					expectedRole:                    Equal(role),
 					expectedClass:                   Equal(class),
-					expectedRetainReplicas:          BeFalse(),
+					expectedReplicas:                PointTo(Equal(int32(1))),
 					expectedStorageCapacity:         Equal("10Gi"),
 					expectedDefragmentationSchedule: Equal(pointer.String("34 12 * * *")),
 					expectedHVPAConfig: Equal(&etcd.HVPAConfig{
@@ -471,7 +472,7 @@ type newEtcdValidator struct {
 	expectedSecretsManager          gomegatypes.GomegaMatcher
 	expectedRole                    gomegatypes.GomegaMatcher
 	expectedClass                   gomegatypes.GomegaMatcher
-	expectedRetainReplicas          gomegatypes.GomegaMatcher
+	expectedReplicas                gomegatypes.GomegaMatcher
 	expectedStorageCapacity         gomegatypes.GomegaMatcher
 	expectedDefragmentationSchedule gomegatypes.GomegaMatcher
 	expectedHVPAConfig              gomegatypes.GomegaMatcher
@@ -484,7 +485,8 @@ func (v *newEtcdValidator) NewEtcd(
 	secretsManager secretsmanager.Interface,
 	role string,
 	class etcd.Class,
-	retainReplicas bool,
+	annotations map[string]string,
+	replicas *int32,
 	storageCapacity string,
 	defragmentationSchedule *string,
 ) etcd.Interface {
@@ -494,7 +496,7 @@ func (v *newEtcdValidator) NewEtcd(
 	Expect(secretsManager).To(v.expectedSecretsManager)
 	Expect(role).To(v.expectedRole)
 	Expect(class).To(v.expectedClass)
-	Expect(retainReplicas).To(v.expectedRetainReplicas)
+	Expect(replicas).To(v.expectedReplicas)
 	Expect(storageCapacity).To(v.expectedStorageCapacity)
 	Expect(defragmentationSchedule).To(v.expectedDefragmentationSchedule)
 

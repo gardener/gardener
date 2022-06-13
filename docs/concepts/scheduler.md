@@ -35,6 +35,7 @@ The following **sequence** describes the steps involved to determine a seed cand
    * having `.spec.settings.shootDNS.enabled=false` (only if the shoot specifies a DNS domain or does not use the `unmanaged` DNS provider)
    * whose taints (`.spec.taints`) are tolerated by the `Shoot` (`.spec.tolerations`)
    * whose capacity for shoots would not be exceeded if the shoot is scheduled onto the seed, see [Ensuring seeds capacity for shoots is not exceeded](#ensuring-seeds-capacity-for-shoots-is-not-exceeded)
+   * which are labelled with `seed.gardener.cloud/multi-zonal` if feature gate `HAControlPlanes` is turned on and shoot requests a high available control plane.
 1. Apply active [strategy](#strategies) e.g., _Minimal Distance strategy_
 1. Choose least utilized seed, i.e., the one with the least number of shoot control planes, will be the winner and written to the `.spec.seedName` field of the `Shoot`.
 

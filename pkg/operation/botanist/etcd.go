@@ -51,6 +51,11 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		return nil, err
 	}
 
+	var replicas *int32
+	if !b.Shoot.HibernationEnabled {
+		replicas = pointer.Int32(getReplicas(b.Shoot.GetInfo()))
+	}
+
 	e := NewEtcd(
 		b.K8sSeedClient.Client(),
 		b.Logger,
@@ -58,7 +63,8 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 		b.SecretsManager,
 		role,
 		class,
-		b.Shoot.HibernationEnabled,
+		b.Shoot.GetInfo().ObjectMeta.Annotations,
+		replicas,
 		b.Seed.GetValidVolumeSize("10Gi"),
 		&defragmentationSchedule,
 	)
@@ -167,9 +173,9 @@ func (b *Botanist) ScaleETCDToZero(ctx context.Context) error {
 	return b.scaleETCD(ctx, 0)
 }
 
-// ScaleETCDToOne scales ETCD main and events replicas to one.
-func (b *Botanist) ScaleETCDToOne(ctx context.Context) error {
-	return b.scaleETCD(ctx, 1)
+// ScaleUpETCD scales ETCD main and events replicas to the configured replica count.
+func (b *Botanist) ScaleUpETCD(ctx context.Context) error {
+	return b.scaleETCD(ctx, getReplicas(b.Shoot.GetInfo()))
 }
 
 func (b *Botanist) scaleETCD(ctx context.Context, replicas int32) error {
@@ -235,4 +241,11 @@ func determineSchedule(shoot *gardencorev1beta1.Shoot, schedule string, f func(*
 	creationMinute := shoot.CreationTimestamp.Minute()
 	creationHour := shoot.CreationTimestamp.Hour()
 	return fmt.Sprintf(schedule, creationMinute, creationHour), nil
+}
+
+func getReplicas(shoot *gardencorev1beta1.Shoot) int32 {
+	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) && metav1.HasAnnotation(shoot.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) {
+		return 3
+	}
+	return 1
 }

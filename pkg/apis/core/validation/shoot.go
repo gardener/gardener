@@ -148,6 +148,7 @@ func ValidateShootObjectMetaUpdate(newMeta, oldMeta metav1.ObjectMeta, fldPath *
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateShootKubeconfigRotation(newMeta, oldMeta, fldPath)...)
+	allErrs = append(allErrs, validateShootHAControlPlaneUpdate(newMeta, oldMeta, fldPath)...)
 
 	return allErrs
 }
@@ -1792,6 +1793,18 @@ func validateShootOperation(operation string, shoot *core.Shoot, fldPath *field.
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot complete ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Prepared'"))
 		}
 	}
+
+	return allErrs
+}
+
+func validateShootHAControlPlaneUpdate(newMeta, oldMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	oldVal := oldMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
+	newVal := newMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability]
+
+	// The etcd cluster cannot be scaled up/down nor is there an automatic re-scheduling to move from single- to multi-zone or the other way around.
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(oldVal, newVal, fldPath.Child("annotations").Key(v1beta1constants.ShootAlphaControlPlaneHighAvailability))...)
 
 	return allErrs
 }

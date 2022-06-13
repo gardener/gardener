@@ -18,6 +18,8 @@ import (
 	"context"
 	"testing"
 
+	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/envtest"
@@ -35,6 +37,7 @@ import (
 )
 
 func TestScheduler(t *testing.T) {
+	schedulerfeatures.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Scheduler Test Suite")
 }
