@@ -40,8 +40,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	audit_internal "k8s.io/apiserver/pkg/apis/audit"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
-	auditv1alpha1 "k8s.io/apiserver/pkg/apis/audit/v1alpha1"
-	auditv1beta1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
 	auditvalidation "k8s.io/apiserver/pkg/apis/audit/validation"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -75,8 +73,6 @@ func New(logger logr.Logger) *handler {
 func init() {
 	auditPolicyScheme := runtime.NewScheme()
 	schemeBuilder := runtime.NewSchemeBuilder(
-		auditv1alpha1.AddToScheme,
-		auditv1beta1.AddToScheme,
 		auditv1.AddToScheme,
 		audit_internal.AddToScheme,
 	)
