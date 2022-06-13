@@ -2721,14 +2721,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, true)()
 					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootSARotation, true)()
 
-					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-credentials-complete")
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-credentials-complete")
 					shoot.Status = status
 
 					matcher := BeEmpty()
 					if !allowed {
 						matcher = ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeForbidden),
-							"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+							"Field": Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
 						})))
 					}
 
@@ -2928,14 +2928,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 			DescribeTable("starting CA rotation",
 				func(allowed bool, status core.ShootStatus) {
 					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, true)()
-					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-ca-start")
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-ca-start")
 					shoot.Status = status
 
 					matcher := BeEmpty()
 					if !allowed {
 						matcher = ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeForbidden),
-							"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+							"Field": Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
 						})))
 					}
 
@@ -3215,14 +3215,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 			DescribeTable("completing service account key rotation",
 				func(allowed bool, status core.ShootStatus) {
 					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootSARotation, true)()
-					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-serviceaccount-key-complete")
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-serviceaccount-key-complete")
 					shoot.Status = status
 
 					matcher := BeEmpty()
 					if !allowed {
 						matcher = ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeForbidden),
-							"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+							"Field": Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
 						})))
 					}
 
@@ -3281,14 +3281,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			DescribeTable("starting ETCD encryption key rotation",
 				func(allowed bool, status core.ShootStatus) {
-					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-etcd-encryption-key-start")
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-etcd-encryption-key-start")
 					shoot.Status = status
 
 					matcher := BeEmpty()
 					if !allowed {
 						matcher = ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":  Equal(field.ErrorTypeForbidden),
-							"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
+							"Field": Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
 						})))
 					}
 
