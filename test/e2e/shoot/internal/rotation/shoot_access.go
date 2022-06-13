@@ -189,6 +189,11 @@ func (v *ShootAccessVerifier) AfterCompleted(ctx context.Context) {
 
 // Cleanup is passed to ginkgo.DeferCleanup.
 func (v *ShootAccessVerifier) Cleanup(ctx context.Context) {
+	if v.Config.GardenerConfig.ExistingShootName == "" {
+		// we only have to clean up if we are using an existing shoot, otherwise the shoot will be deleted
+		return
+	}
+
 	// figure out the right shoot client to use, depending on how far the test was executed
 	shootClient := v.clientsBefore.adminKubeconfig
 	if shootClient == nil {
