@@ -17,6 +17,7 @@ package shoot
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -156,7 +157,9 @@ func determineSeed(
 	if err != nil {
 		return nil, err
 	}
-	return getSeedWithLeastShootsDeployed(filteredSeeds, shootList.Items)
+	return getSeedWithLeastScore(filteredSeeds,
+		seedWithLeastShootsDeployedFn(shootList.Items),
+	)
 }
 
 func isUsableSeed(seed *gardencorev1beta1.Seed) bool {
@@ -298,22 +301,37 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []gardencorev1be
 	return candidates, nil
 }
 
-// getSeedWithLeastShootsDeployed finds the best candidate (i.e. the one managing the smallest number of shoots right now).
-func getSeedWithLeastShootsDeployed(seedList []gardencorev1beta1.Seed, shootList []gardencorev1beta1.Shoot) (*gardencorev1beta1.Seed, error) {
+type scoreFn func(seed gardencorev1beta1.Seed) int
+
+func getSeedWithLeastScore(seedList []gardencorev1beta1.Seed, scoreFns ...scoreFn) (*gardencorev1beta1.Seed, error) {
 	var (
 		bestCandidate gardencorev1beta1.Seed
 		min           *int
-		seedUsage     = gardencorev1beta1helper.CalculateSeedUsage(shootList)
 	)
 
 	for _, seed := range seedList {
-		if numberOfManagedShoots := seedUsage[seed.Name]; min == nil || numberOfManagedShoots < *min {
+		var currentScore int
+		for _, scoreFn := range scoreFns {
+			currentScore += scoreFn(seed)
+		}
+		if min == nil || currentScore < *min {
 			bestCandidate = seed
-			min = &numberOfManagedShoots
+			min = &currentScore
 		}
 	}
 
 	return &bestCandidate, nil
+}
+
+// seedWithLeastShootsDeployedFn returns a `scoreFn` that assigns the score according to the current seed usage (number of shoots).
+func seedWithLeastShootsDeployedFn(shootList []gardencorev1beta1.Shoot) scoreFn {
+	seedUsage := gardencorev1beta1helper.CalculateSeedUsage(shootList)
+	return func(seed gardencorev1beta1.Seed) int {
+		if numOfShoots, ok := seedUsage[seed.Name]; ok {
+			return numOfShoots
+		}
+		return 0
+	}
 }
 
 func matchProvider(seedProviderType, shootProviderType string, enabledProviderTypes []string) bool {
