@@ -68,7 +68,7 @@ type clientMapEntry struct {
 	cancel    context.CancelFunc
 	hash      string
 
-	// refreshLimiter limits the attempts to refresh the entry due to an outdated server version.
+	// refreshLimiter limits the attempts to refresh the entry due to an outdated ClientSetHash or server version.
 	refreshLimiter *rate.Limiter
 }
 
