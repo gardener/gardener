@@ -196,6 +196,10 @@ var _ = Describe("Machines", func() {
 				c.Shoot.Annotations = map[string]string{"alpha.featuregates.shoot.gardener.cloud/node-local-dns": "false"}
 			})
 
+			It("when enabling node local dns via annotations", func() {
+				c.Shoot.Annotations = map[string]string{"alpha.featuregates.shoot.gardener.cloud/node-local-dns": "true"}
+			})
+
 			It("when disabling node local dns via specification", func() {
 				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}
 			})
@@ -274,10 +278,6 @@ var _ = Describe("Machines", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey = credentialStatusWithInitiatedRotation
-			})
-
-			It("when enabling node local dns via annotations", func() {
-				c.Shoot.Annotations = map[string]string{"alpha.featuregates.shoot.gardener.cloud/node-local-dns": "true"}
 			})
 
 			It("when enabling node local dns via specification", func() {
