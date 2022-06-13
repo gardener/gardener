@@ -37,8 +37,9 @@ The following **sequence** describes the steps involved to determine a seed cand
    * whose capacity for shoots would not be exceeded if the shoot is scheduled onto the seed, see [Ensuring seeds capacity for shoots is not exceeded](#ensuring-seeds-capacity-for-shoots-is-not-exceeded)
    * which are labelled with `seed.gardener.cloud/multi-zonal` if feature gate `HAControlPlanes` is turned on and shoot requests a high available control plane.
 1. Apply active [strategy](#strategies) e.g., _Minimal Distance strategy_
-1. Choose least utilized seed, i.e., the one with the least number of shoot control planes, will be the winner and written to the `.spec.seedName` field of the `Shoot`.
-
+1. Determine scores for seeds. The one with the least score will be the winner:
+   * Assign a smaller score to seeds which host less shoot clusters.
+   * Prefer non-zonal seed clusters for shoot clusters which don't require a zonal control-plane.
 ## Configuration
 
 The Gardener Scheduler configuration has to be supplied on startup. It is a mandatory and also the only available flag.

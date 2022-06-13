@@ -17,7 +17,6 @@ package shoot
 import (
 	"context"
 	"fmt"
-	"math"
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -145,10 +144,14 @@ func determineSeed(
 	if err != nil {
 		return nil, err
 	}
-	filteredSeeds, err = filterSeedsMatchingMultiZonalAttribute(filteredSeeds, shoot)
-	if err != nil {
-		return nil, err
+
+	if gardenerschedulerfeatures.FeatureGate.Enabled(features.HAControlPlanes) {
+		filteredSeeds, err = filterSeedsMatchingMultiZonalAttribute(filteredSeeds, shoot)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	filteredSeeds, err = filterCandidates(shoot, shootList.Items, filteredSeeds)
 	if err != nil {
 		return nil, err
@@ -157,9 +160,16 @@ func determineSeed(
 	if err != nil {
 		return nil, err
 	}
-	return getSeedWithLeastScore(filteredSeeds,
+
+	scoreFns := []scoreFn{
 		seedWithLeastShootsDeployedFn(shootList.Items),
-	)
+	}
+
+	if gardenerschedulerfeatures.FeatureGate.Enabled(features.HAControlPlanes) {
+		scoreFns = append(scoreFns, seedWithPreferredHASetting(shoot))
+	}
+
+	return getSeedWithLeastScore(filteredSeeds, scoreFns...)
 }
 
 func isUsableSeed(seed *gardencorev1beta1.Seed) bool {
@@ -221,10 +231,6 @@ func filterSeedsMatchingProviders(cloudProfile *gardencorev1beta1.CloudProfile, 
 // filterSeedsMatchingMultiZonalAttribute filters seeds by label `seed.gardener.cloud/multi-zonal`,
 // based on whether the shoot requires a multi-zonal control plane or not
 func filterSeedsMatchingMultiZonalAttribute(seedList []gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) ([]gardencorev1beta1.Seed, error) {
-	if !gardenerschedulerfeatures.FeatureGate.Enabled(features.HAControlPlanes) {
-		return seedList, nil
-	}
-
 	if shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] != v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
 		return seedList, nil
 	}
@@ -321,6 +327,19 @@ func getSeedWithLeastScore(seedList []gardencorev1beta1.Seed, scoreFns ...scoreF
 	}
 
 	return &bestCandidate, nil
+}
+
+// seedWithPreferredHASetting returns a `scoreFn` that prefers seeds that don't run on multiple zones if shoot doesn't request an HA multi-zone setup.
+// This saves capacity on multi-zone seeds for shoot that really need to run there.
+func seedWithPreferredHASetting(shoot *gardencorev1beta1.Shoot) scoreFn {
+	hasMultiZoneAnnotation := shoot.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
+	return func(seed gardencorev1beta1.Seed) int {
+		if !hasMultiZoneAnnotation && !metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal) {
+			return 0
+		}
+		// return a high penalty score for multi-zonal seeds
+		return 10000
+	}
 }
 
 // seedWithLeastShootsDeployedFn returns a `scoreFn` that assigns the score according to the current seed usage (number of shoots).
