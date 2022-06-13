@@ -734,10 +734,11 @@ func RunReconcileSeedFlow(
 		imageVectorOverwrites[name] = data
 	}
 
-	anySNI, err := kubeapiserverexposure.AnyDeployedSNI(ctx, seedClient)
+	anySNIInUse, err := kubeapiserverexposure.AnyDeployedSNI(ctx, seedClient)
 	if err != nil {
 		return err
 	}
+	sniEnabledOrInUse := anySNIInUse || gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI)
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
 		istiodImage, err := imageVector.FindImage(images.ImageNameIstioIstiod)
@@ -775,7 +776,7 @@ func RunReconcileSeedFlow(
 
 		// even if SNI is being disabled, the existing ports must stay the same
 		// until all APIServer SNI resources are removed.
-		if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) || anySNI {
+		if sniEnabledOrInUse {
 			defaultIngressGatewayConfig.Ports = append(
 				defaultIngressGatewayConfig.Ports,
 				corev1.ServicePort{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt(8443)},
@@ -950,7 +951,7 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	if err := runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, secretsManager, imageVector, imageVectorOverwrites, seed, conf, log, anySNI, vpaEnabled); err != nil {
+	if err := runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, secretsManager, imageVector, imageVectorOverwrites, seed, conf, log, sniEnabledOrInUse, vpaEnabled); err != nil {
 		return err
 	}
 
@@ -968,7 +969,7 @@ func runCreateSeedFlow(
 	seed *Seed,
 	conf *config.GardenletConfiguration,
 	log logrus.FieldLogger,
-	anySNI, vpaEnabled bool,
+	sniEnabledOrInUse, vpaEnabled bool,
 ) error {
 	secretData, err := getDNSProviderSecretData(ctx, gardenClient, seed)
 	if err != nil {
@@ -1001,7 +1002,7 @@ func runCreateSeedFlow(
 	dnsOwner := getManagedIngressDNSOwner(seedClient, *seed.GetInfo().Status.ClusterIdentity)
 	dnsRecord := getManagedIngressDNSRecord(seedClient, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress, log)
 
-	networkPolicies, err := defaultNetworkPolicies(seedClient, seed.GetInfo(), anySNI)
+	networkPolicies, err := defaultNetworkPolicies(seedClient, seed.GetInfo(), sniEnabledOrInUse)
 	if err != nil {
 		return err
 	}
