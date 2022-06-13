@@ -53,6 +53,13 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 			&rotation.ShootAccessVerifier{ShootCreationFramework: f},
 		}
 
+		DeferCleanup(func() {
+			ctx, cancel := context.WithTimeout(parentCtx, 2*time.Minute)
+			defer cancel()
+
+			v.Cleanup(ctx)
+		})
+
 		v.Before(ctx)
 
 		By("Start credentials rotation")

@@ -16,15 +16,29 @@ package internal
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/x509/pkix"
+	"time"
 
+	certificatesv1 "k8s.io/api/certificates/v1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/cert"
+	csrutil "k8s.io/client-go/util/certificate/csr"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	authenticationv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 // CreateShootClientFromStaticTokenKubeconfig retrieves the static token kubeconfig secret and creates a shoot client.
@@ -52,4 +66,109 @@ func CreateShootClientFromAdminKubeconfig(ctx context.Context, gardenClient kube
 	}
 
 	return kubernetes.NewClientFromBytes(adminKubeconfig.Status.Kubeconfig, kubernetes.WithDisabledCachedClient())
+}
+
+// labelsE2ETestCSRAccess is the set of labels added to all CSRs and ClusterRoleBindings for easy cleanup.
+var labelsE2ETestCSRAccess = map[string]string{"e2e-test": "csr-access"}
+
+// CreateShootClientFromCSR creates and approves a CSR in the shoot and creates a new shoot client from it.
+// You should call CleanupObjectsFromCSRAccess to clean up the objects created by this function.
+func CreateShootClientFromCSR(ctx context.Context, shootClient kubernetes.Interface, commonName string) (kubernetes.Interface, error) {
+	// use fake key to avoid building complex retry/update logic
+	privateKey, err := secretutils.FakeGenerateKey(rand.Reader, 4096)
+	if err != nil {
+		return nil, err
+	}
+
+	csrData, err := cert.MakeCSR(privateKey, &pkix.Name{CommonName: commonName}, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	reqName, reqUID, err := csrutil.RequestCertificate(shootClient.Kubernetes(), csrData, commonName,
+		certificatesv1.KubeAPIServerClientSignerName, pointer.Duration(3600*time.Second), []certificatesv1.KeyUsage{
+			certificatesv1.UsageDigitalSignature,
+			certificatesv1.UsageKeyEncipherment,
+			certificatesv1.UsageClientAuth,
+		}, privateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	csr := &certificatesv1.CertificateSigningRequest{}
+	if err = shootClient.Client().Get(ctx, client.ObjectKey{Name: reqName}, csr); err != nil {
+		return nil, err
+	}
+
+	patch := client.MergeFrom(csr.DeepCopy())
+	csr.Labels = utils.MergeStringMaps(csr.Labels, labelsE2ETestCSRAccess)
+	if err = shootClient.Client().Patch(ctx, csr, patch); err != nil {
+		return nil, err
+	}
+
+	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: commonName, Labels: labelsE2ETestCSRAccess},
+	}
+
+	if _, err = controllerutils.GetAndCreateOrMergePatch(ctx, shootClient.Client(), clusterRoleBinding, func() error {
+		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     "cluster-admin",
+		}
+		clusterRoleBinding.Subjects = []rbacv1.Subject{{
+			Kind: rbacv1.UserKind,
+			Name: commonName,
+		}}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	hasApprovedCondition := false
+	for _, condition := range csr.Status.Conditions {
+		if condition.Type == certificatesv1.CertificateApproved {
+			hasApprovedCondition = true
+			break
+		}
+	}
+
+	if !hasApprovedCondition {
+		csr.Status.Conditions = append(csr.Status.Conditions, certificatesv1.CertificateSigningRequestCondition{
+			Type:    certificatesv1.CertificateApproved,
+			Reason:  "AutoApproved",
+			Message: "Auto approving test CertificateSigningRequest",
+			Status:  corev1.ConditionTrue,
+		})
+		_, err = shootClient.Kubernetes().CertificatesV1().CertificateSigningRequests().UpdateApproval(ctx, reqName, csr, metav1.UpdateOptions{})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	certData, err := csrutil.WaitForCertificate(ctx, shootClient.Kubernetes(), reqName, reqUID)
+	if err != nil {
+		return nil, err
+	}
+
+	r := shootClient.RESTConfig()
+	restConfig := &rest.Config{
+		Host: r.Host,
+		TLSClientConfig: rest.TLSClientConfig{
+			CAData:   r.CAData,
+			CertData: certData,
+			KeyData:  utils.EncodePrivateKey(privateKey),
+		},
+	}
+
+	return kubernetes.NewWithConfig(kubernetes.WithRESTConfig(restConfig), kubernetes.WithDisabledCachedClient())
+}
+
+// CleanupObjectsFromCSRAccess cleans up all objects in the shoot created by all calls to CreateShootClientFromCSR.
+func CleanupObjectsFromCSRAccess(ctx context.Context, shootClient kubernetes.Interface) error {
+	return flow.Parallel(func(ctx context.Context) error {
+		return shootClient.Client().DeleteAllOf(ctx, &certificatesv1.CertificateSigningRequest{}, client.MatchingLabels(labelsE2ETestCSRAccess))
+	}, func(ctx context.Context) error {
+		return shootClient.Client().DeleteAllOf(ctx, &rbacv1.ClusterRoleBinding{}, client.MatchingLabels(labelsE2ETestCSRAccess))
+	})(ctx)
 }
