@@ -166,6 +166,7 @@ spec:
   policyTypes:
   - Egress
   - Ingress
+status: {}
 `
 			serviceAccountYAML = `apiVersion: v1
 automountServiceAccountToken: false

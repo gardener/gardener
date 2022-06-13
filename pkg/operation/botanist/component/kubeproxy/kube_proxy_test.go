@@ -187,9 +187,9 @@ type: Opaque
 
 			configMapNameFor = func(ipvsEnabled bool) string {
 				if !ipvsEnabled {
-					return "kube-proxy-config-1212aab2"
+					return "kube-proxy-config-1c3aa913"
 				}
-				return "kube-proxy-config-b9f4a324"
+				return "kube-proxy-config-ef237614"
 			}
 			configMapYAMLFor = func(ipvsEnabled bool) string {
 				out := `apiVersion: v1
@@ -218,6 +218,9 @@ data:
       min: null
       tcpCloseWaitTimeout: null
       tcpEstablishedTimeout: null
+    detectLocal:
+      bridgeInterface: ""
+      interfaceNamePrefix: ""
     detectLocalMode: ""
     enableProfiling: false
     featureGates:
@@ -256,7 +259,9 @@ data:
     udpIdleTimeout: 0s
     winkernel:
       enableDSR: false
+      forwardHealthCheckVip: false
       networkName: ""
+      rootHnsEndpointName: ""
       sourceVip: ""
 immutable: true
 kind: ConfigMap
@@ -424,16 +429,16 @@ subjects:
 
 					if ipvsEnabled {
 						annotations = []string{
-							references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled),
 							references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName,
+							references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled),
 							references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName,
 							references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName,
 						}
 					} else {
 						annotations = []string{
 							references.AnnotationKey(references.KindConfigMap, configMapConntrackFixScriptName) + `: ` + configMapConntrackFixScriptName,
-							references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName,
 							references.AnnotationKey(references.KindConfigMap, configMapNameFor(ipvsEnabled)) + `: ` + configMapNameFor(ipvsEnabled),
+							references.AnnotationKey(references.KindConfigMap, configMapCleanupScriptName) + `: ` + configMapCleanupScriptName,
 							references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName,
 						}
 					}

@@ -78,7 +78,7 @@ var _ = Describe("handler", func() {
 
 		validAuditPolicy = `
 ---
-apiVersion: audit.k8s.io/v1beta1
+apiVersion: audit.k8s.io/v1
 kind: Policy
 rules:
   - level: RequestResponse
@@ -92,7 +92,7 @@ rules:
 `
 		anotherValidAuditPolicy = `
 ---
-apiVersion: audit.k8s.io/v1beta1
+apiVersion: audit.k8s.io/v1
 kind: Policy
 rules:
   - level: RequestResponse
@@ -106,7 +106,7 @@ rules:
 `
 		missingKeyAuditPolicy = `
 ---
-apiVersion: audit.k8s.io/v1beta1
+apiVersion: audit.k8s.io/v1
 kind: Policy
 rules:
   - level: RequestResponse
@@ -116,7 +116,7 @@ rules:
 `
 		invalidAuditPolicy = `
 ---
-apiVersion: audit.k8s.io/v1beta1
+apiVersion: audit.k8s.io/v1
 kind: Policy
 rules:
   - level: FakeLevel
