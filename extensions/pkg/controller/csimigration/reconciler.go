@@ -144,7 +144,7 @@ func (r *reconciler) reconcile(ctx context.Context, cluster *extensionsv1alpha1.
 			return reconcile.Result{}, nil
 		}
 
-		_, shootClient, err := NewClientForShoot(ctx, r.client, cluster.Name, client.Options{})
+		_, shootClient, err := NewClientForShoot(ctx, r.client, cluster.Name, client.Options{}, util.RESTOptions{})
 		if err != nil {
 			return reconcile.Result{}, err
 		}
