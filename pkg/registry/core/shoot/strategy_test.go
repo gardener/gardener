@@ -62,7 +62,7 @@ var _ = Describe("Strategy", func() {
 					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootMaxTokenExpirationOverwrite, featureGateEnabled)()
 
 					shoot := newShoot(maxTokenExpiration, shootHasDeletionTimestamp)
-					shootregistry.Strategy.PrepareForCreate(context.TODO(), shoot)
+					shootregistry.NewStrategy(0).PrepareForCreate(context.TODO(), shoot)
 					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(expectedDuration))
 				},
 
@@ -92,7 +92,7 @@ var _ = Describe("Strategy", func() {
 						mutateNewShoot(newShoot)
 					}
 
-					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+					shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
 					expectedGeneration := oldShoot.Generation
 					if shouldIncreaseGeneration {
@@ -140,7 +140,7 @@ var _ = Describe("Strategy", func() {
 							mutateNewShoot(newShoot)
 						}
 
-						shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+						shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
 						expectedGeneration := oldShoot.Generation
 						if shouldIncreaseGeneration {
@@ -278,7 +278,7 @@ var _ = Describe("Strategy", func() {
 					newShoot := oldShoot.DeepCopy()
 					newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: operationAnnotation}
 
-					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+					shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
 					expectedGeneration := oldShoot.Generation
 					if shouldIncreaseGeneration {
@@ -462,7 +462,7 @@ var _ = Describe("Strategy", func() {
 					shoot := newShoot(maxTokenExpiration, shootHasDeletionTimestamp)
 					oldShoot := shoot.DeepCopy()
 
-					shootregistry.Strategy.PrepareForUpdate(context.TODO(), shoot, oldShoot)
+					shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), shoot, oldShoot)
 					Expect(shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration).To(Equal(expectedDuration))
 				},
 

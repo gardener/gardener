@@ -42,13 +42,17 @@ import (
 type shootStrategy struct {
 	runtime.ObjectTyper
 	names.NameGenerator
+
+	credentialsRotationInterval time.Duration
 }
 
-// Strategy defines the storage strategy for Shoots.
-var Strategy = shootStrategy{api.Scheme, names.SimpleNameGenerator}
+// NewStrategy returns a new storage strategy for Shoots.
+func NewStrategy(credentialsRotationInterval time.Duration) shootStrategy {
+	return shootStrategy{api.Scheme, names.SimpleNameGenerator, credentialsRotationInterval}
+}
 
 // Strategy should implement rest.RESTCreateUpdateStrategy
-var _ rest.RESTCreateUpdateStrategy = Strategy
+var _ rest.RESTCreateUpdateStrategy = shootStrategy{}
 
 func (shootStrategy) NamespaceScoped() bool {
 	return true
@@ -217,8 +221,10 @@ type shootStatusStrategy struct {
 	shootStrategy
 }
 
-// StatusStrategy defines the storage strategy for the status subresource of Shoots.
-var StatusStrategy = shootStatusStrategy{Strategy}
+// NewStatusStrategy returns a new storage strategy for the status subresource of Shoots.
+func NewStatusStrategy() shootStatusStrategy {
+	return shootStatusStrategy{NewStrategy(0)}
+}
 
 func (shootStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
 	newShoot := obj.(*core.Shoot)

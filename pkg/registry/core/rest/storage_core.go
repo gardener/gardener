@@ -45,6 +45,7 @@ import (
 // StorageProvider contains configurations related to the core resources.
 type StorageProvider struct {
 	AdminKubeconfigMaxExpiration time.Duration
+	CredentialsRotationInterval  time.Duration
 }
 
 // NewRESTStorage creates a new API group info object and registers the v1alpha1 core storage.
@@ -108,7 +109,7 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	shootStateStorage := shootstatestore.NewStorage(restOptionsGetter)
 	storage["shootstates"] = shootStateStorage.ShootState
 
-	shootStorage := shootstore.NewStorage(restOptionsGetter, shootStateStorage.ShootState.Store, p.AdminKubeconfigMaxExpiration)
+	shootStorage := shootstore.NewStorage(restOptionsGetter, shootStateStorage.ShootState.Store, p.AdminKubeconfigMaxExpiration, p.CredentialsRotationInterval)
 	storage["shoots"] = shootStorage.Shoot
 	storage["shoots/status"] = shootStorage.Status
 
@@ -161,7 +162,7 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 	storage["seeds"] = seedStorage.Seed
 	storage["seeds/status"] = seedStorage.Status
 
-	shootStorage := shootstore.NewStorage(restOptionsGetter, shootstatestore.NewStorage(restOptionsGetter).ShootState.Store, p.AdminKubeconfigMaxExpiration)
+	shootStorage := shootstore.NewStorage(restOptionsGetter, shootstatestore.NewStorage(restOptionsGetter).ShootState.Store, p.AdminKubeconfigMaxExpiration, p.CredentialsRotationInterval)
 	storage["shoots"] = shootStorage.Shoot
 	storage["shoots/status"] = shootStorage.Status
 
