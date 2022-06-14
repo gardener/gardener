@@ -37,7 +37,7 @@ type SSHKeypairVerifier struct {
 
 // Before is called before the rotation is started.
 func (v *SSHKeypairVerifier) Before(ctx context.Context) {
-	By("Verify old ssh-keypair secret")
+	By("Verifying old ssh-keypair secret")
 	Eventually(func(g Gomega) {
 		secret := &corev1.Secret{}
 		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(v.Shoot.Name, "ssh-keypair")}, secret)).To(Succeed())
@@ -72,7 +72,7 @@ func (v *SSHKeypairVerifier) AfterPrepared(ctx context.Context) {
 	sshKeypairRotation := v.Shoot.Status.Credentials.Rotation.SSHKeypair
 	Expect(sshKeypairRotation.LastCompletionTime.Time.UTC().After(sshKeypairRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
 
-	By("Verify new ssh-keypair secret")
+	By("Verifying new ssh-keypair secret")
 	Eventually(func(g Gomega) {
 		secret := &corev1.Secret{}
 		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(v.Shoot.Name, "ssh-keypair")}, secret)).To(Succeed())

@@ -40,7 +40,7 @@ type KubeconfigVerifier struct {
 
 // Before is called before the rotation is started.
 func (v *KubeconfigVerifier) Before(ctx context.Context) {
-	By("Verify old kubeconfig secret")
+	By("Verifying old kubeconfig secret")
 	Eventually(func(g Gomega) {
 		secret := &corev1.Secret{}
 		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(v.Shoot.Name, "kubeconfig")}, secret)).To(Succeed())
@@ -74,7 +74,7 @@ func (v *KubeconfigVerifier) AfterPrepared(ctx context.Context) {
 	kubeconfigRotation := v.Shoot.Status.Credentials.Rotation.Kubeconfig
 	Expect(kubeconfigRotation.LastCompletionTime.Time.UTC().After(kubeconfigRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
 
-	By("Verify new kubeconfig secret")
+	By("Verifying new kubeconfig secret")
 	Eventually(func(g Gomega) {
 		secret := &corev1.Secret{}
 		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(v.Shoot.Name, "kubeconfig")}, secret)).To(Succeed())
@@ -108,7 +108,7 @@ func (v *KubeconfigVerifier) AfterCompleted(ctx context.Context) {
 	// Rotation of the kubeconfig credential (static token) as such is completed after one reconciliation
 	// (there is no second phase). Hence, after completing the credentials rotation the token will be the same as after
 	// preparation. We want to inspect the contained CA nevertheless, which must have changed after Completion.
-	By("Verify new kubeconfig secret with new CA")
+	By("Verifying new kubeconfig secret with new CA")
 	Eventually(func(g Gomega) {
 		secret := &corev1.Secret{}
 		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(v.Shoot.Name, "kubeconfig")}, secret)).To(Succeed())

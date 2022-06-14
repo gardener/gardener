@@ -34,7 +34,7 @@ type SecretEncryptionVerifier struct {
 
 // Before is called before the rotation is started.
 func (v *SecretEncryptionVerifier) Before(ctx context.Context) {
-	By("Verifying secret encryption before credentials rotation")
+	By("Verifyinging secret encryption before credentials rotation")
 	v.verifySecretEncryption(ctx)
 }
 
@@ -43,7 +43,7 @@ func (v *SecretEncryptionVerifier) ExpectPreparingStatus(g Gomega) {}
 
 // AfterPrepared is called when the Shoot is in Prepared status.
 func (v *SecretEncryptionVerifier) AfterPrepared(ctx context.Context) {
-	By("Verifying secret encryption after preparing credentials rotation")
+	By("Verifyinging secret encryption after preparing credentials rotation")
 	v.verifySecretEncryption(ctx)
 }
 
@@ -52,7 +52,7 @@ func (v *SecretEncryptionVerifier) ExpectCompletingStatus(g Gomega) {}
 
 // AfterCompleted is called when the Shoot is in Completed status.
 func (v *SecretEncryptionVerifier) AfterCompleted(ctx context.Context) {
-	By("Verifying secret encryption after credentials rotation")
+	By("Verifyinging secret encryption after credentials rotation")
 	v.verifySecretEncryption(ctx)
 }
 

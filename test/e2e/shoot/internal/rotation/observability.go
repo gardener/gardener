@@ -41,7 +41,7 @@ type ObservabilityVerifier struct {
 
 // Before is called before the rotation is started.
 func (v *ObservabilityVerifier) Before(ctx context.Context) {
-	By("Verify old observability secret")
+	By("Verifying old observability secret")
 	secret := &corev1.Secret{}
 	Eventually(func(g Gomega) {
 		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(v.Shoot.Name, "monitoring")}, secret)).To(Succeed())
@@ -79,7 +79,7 @@ func (v *ObservabilityVerifier) AfterPrepared(ctx context.Context) {
 		Expect(response.StatusCode).To(Equal(http.StatusUnauthorized))
 	}).Should(Succeed())
 
-	By("Verify new observability secret")
+	By("Verifying new observability secret")
 	secret := &corev1.Secret{}
 	Eventually(func(g Gomega) {
 		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(v.Shoot.Name, "monitoring")}, secret)).To(Succeed())
