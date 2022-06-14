@@ -126,9 +126,6 @@ var (
 			Verbs:         []string{"get", "watch", "update"},
 		},
 	}
-
-	rootCAVolumeSourceName string
-	volumeProjection       corev1.VolumeProjection
 )
 
 // Interface contains functions for a gardener-resource-manager deployer.
@@ -455,29 +452,25 @@ func (r *resourceManager) getRootCAVolumeSourceName(ctx context.Context) (string
 func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 	deployment := r.emptyDeployment()
 
+	volumeProjection := corev1.VolumeProjection{
+		ConfigMap: &corev1.ConfigMapProjection{
+			LocalObjectReference: corev1.LocalObjectReference{
+				Name: "kube-root-ca.crt",
+			},
+			Items: []corev1.KeyToPath{{
+				Key:  "ca.crt",
+				Path: "ca.crt",
+			}},
+		},
+	}
 	if version.ConstraintK8sLess124.Check(r.values.Version) {
-		var err error
-		rootCAVolumeSourceName, err = r.getRootCAVolumeSourceName(ctx)
+		rootCAVolumeSourceName, err := r.getRootCAVolumeSourceName(ctx)
 		if err != nil {
 			return err
 		}
 
 		volumeProjection = corev1.VolumeProjection{
 			Secret: &corev1.SecretProjection{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: rootCAVolumeSourceName,
-				},
-				Items: []corev1.KeyToPath{{
-					Key:  "ca.crt",
-					Path: "ca.crt",
-				}},
-			},
-		}
-	} else {
-		rootCAVolumeSourceName = "kube-root-ca.crt"
-
-		volumeProjection = corev1.VolumeProjection{
-			ConfigMap: &corev1.ConfigMapProjection{
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: rootCAVolumeSourceName,
 				},
