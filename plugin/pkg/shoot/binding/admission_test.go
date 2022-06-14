@@ -68,6 +68,9 @@ var _ = Describe("validator", func() {
 			volumeType            = "volume-type-1"
 
 			seedBase = core.Seed{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "Seed",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: targetSeedName,
 				},
@@ -172,6 +175,17 @@ var _ = Describe("validator", func() {
 
 		AfterEach(func() {
 			cleanup()
+		})
+
+		It("should reject creating binding if target Kind is empty", func() {
+			bindingCopy := binding.DeepCopy()
+			bindingCopy.Target.Kind = ""
+
+			attrs := admission.NewAttributesRecord(bindingCopy, bindingCopy, core.Kind("Binding").WithVersion("version"), bindingCopy.Namespace, bindingCopy.Name, core.Resource("bindings").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+			err := admissionHandler.Validate(context.TODO(), attrs, nil)
+
+			Expect(err).To(HaveOccurred())
 		})
 
 		It("should reject creating binding if target Kind is not Seed", func() {

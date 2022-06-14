@@ -44,7 +44,7 @@ Here, the `binding-request.json` has the following content:
   "kind": "Binding",
   "metadata": {
     "name": "<shoot-name>",
-    "namespace": "<shoot-namespace>",
+    "namespace": "<shoot-namespace>"
   },
   "target": {
     "apiVersion": "core.gardener.cloud/v1beta1",

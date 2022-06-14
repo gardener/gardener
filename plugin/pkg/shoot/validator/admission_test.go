@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
@@ -57,7 +56,6 @@ var _ = Describe("validator", func() {
 			secretBinding          core.SecretBinding
 			project                core.Project
 			shoot                  core.Shoot
-			shootState             gardencorev1alpha1.ShootState
 
 			podsCIDR     = "100.96.0.0/11"
 			servicesCIDR = "100.64.0.0/13"
@@ -256,12 +254,6 @@ var _ = Describe("validator", func() {
 					},
 				},
 			}
-			shootStateBase = gardencorev1alpha1.ShootState{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      shootBase.Name,
-					Namespace: shootBase.Namespace,
-				},
-			}
 
 			cleanup func()
 		)
@@ -272,7 +264,6 @@ var _ = Describe("validator", func() {
 			seed = seedBase
 			secretBinding = secretBindingBase
 			shoot = *shootBase.DeepCopy()
-			shootState = *shootStateBase.DeepCopy()
 
 			admissionHandler, _ = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
@@ -933,30 +924,6 @@ var _ = Describe("validator", func() {
 						Expect(err).ToNot(HaveOccurred())
 					})
 
-					It("update should pass because the Seed specified in shoot manifest does not have any taints", func() {
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-						attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
-						err := admissionHandler.Admit(context.TODO(), attrs, nil)
-						Expect(err).ToNot(HaveOccurred())
-					})
-
-					It("update should pass because the Seed has new non-tolerated taints that were added after the shoot was scheduled to it", func() {
-						seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
-						oldShoot.Spec.SeedName = shoot.Spec.SeedName
-						shoot.Spec.Provider.Workers[0].Maximum++
-
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-						attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
-						err := admissionHandler.Admit(context.TODO(), attrs, nil)
-						Expect(err).ToNot(HaveOccurred())
-					})
-
 					It("create should fail because the Seed specified in shoot manifest has non-tolerated taints", func() {
 						seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
 
@@ -969,35 +936,6 @@ var _ = Describe("validator", func() {
 						Expect(err).To(BeForbiddenError())
 					})
 
-					It("update should fail because the new Seed specified in shoot manifest has non-tolerated taints", func() {
-						oldShoot.Spec.SeedName = pointer.String("old-seed")
-						seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
-
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-						attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
-						err := admissionHandler.Admit(context.TODO(), attrs, nil)
-						Expect(err).To(HaveOccurred())
-					})
-
-					It("update should pass because the Seed stays the same, even if it has non-tolerated taints", func() {
-						oldShoot.Spec.SeedName = pointer.String("seed")
-						seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
-
-						// Modify the Shoot spec to avoid an early exit optimization during the admission
-						shoot.Spec.Provider.Workers[0].Maximum = 10
-
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-						attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
-						err := admissionHandler.Admit(context.TODO(), attrs, nil)
-						Expect(err).ToNot(HaveOccurred())
-					})
-
 					It("create should pass because shoot tolerates all taints of the seed", func() {
 						seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
 						shoot.Spec.Tolerations = []core.Toleration{{Key: core.SeedTaintProtected}}
@@ -1006,19 +944,6 @@ var _ = Describe("validator", func() {
 						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-						err := admissionHandler.Admit(context.TODO(), attrs, nil)
-						Expect(err).ToNot(HaveOccurred())
-					})
-
-					It("update should pass because shoot tolerates all taints of the seed", func() {
-						seed.Spec.Taints = []core.SeedTaint{{Key: "foo"}}
-						shoot.Spec.Tolerations = []core.Toleration{{Key: "foo", Value: pointer.String("bar")}}
-
-						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-						attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 						err := admissionHandler.Admit(context.TODO(), attrs, nil)
 						Expect(err).ToNot(HaveOccurred())
@@ -2574,119 +2499,6 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).ToNot(HaveOccurred())
-			})
-		})
-
-		Context("control plane migration", func() {
-			var (
-				oldSeedName string
-				oldSeed     *core.Seed
-				oldShoot    *core.Shoot
-			)
-			BeforeEach(func() {
-				oldSeedName = fmt.Sprintf("old-%s", seedName)
-				oldSeed = seed.DeepCopy()
-				oldSeed.Name = oldSeedName
-
-				oldShoot = shoot.DeepCopy()
-				oldShoot.Spec.SeedName = &oldSeedName
-
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(oldSeed)).To(Succeed())
-				Expect(extCoreInformerFactory.Core().V1alpha1().ShootStates().Informer().GetStore().Add(&shootState)).To(Succeed())
-			})
-
-			It("should fail to change Seed name, because Seed doesn't have configuration for backup", func() {
-				seed.Spec.Backup = nil
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("backup is not configured for seed %q", seedName))))
-			})
-
-			It("should fail to change Seed name, because old Seed doesn't have configuration for backup", func() {
-				oldSeed.Spec.Backup = nil
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("backup is not configured for old seed %q", oldSeedName))))
-			})
-
-			It("should fail to change Seed name, because cloud provider for new Seed is not equal to cloud provider for old Seed", func() {
-				oldSeed.Spec.Provider.Type = "gcp"
-				seed.Spec.Provider.Type = "aws"
-
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).To(BeForbiddenError())
-			})
-
-			It("should fail to change Seed name when other values in the Shoot's spec are changed as well", func() {
-				shoot.Spec.Kubernetes.Version = "1.6.4"
-				oldShoot.Spec.Kubernetes.Version = "1.6.3"
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).To(BeForbiddenError())
-			})
-
-			DescribeTable("Changing shoot spec during migration",
-				func(newSeedName *string, lastOperationType core.LastOperationType, lastOperationState core.LastOperationState, matcher types.GomegaMatcher) {
-					shoot.Status.LastOperation = &core.LastOperation{
-						Type:  lastOperationType,
-						State: lastOperationState,
-					}
-
-					oldShoot.Spec.SeedName = &seedName
-					oldShoot.Spec.Kubernetes.Version = "1.6.3"
-
-					shoot.Spec.Kubernetes.Version = "1.6.4"
-					shoot.Status.SeedName = newSeedName
-
-					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-					err := admissionHandler.Admit(context.TODO(), attrs, nil)
-					Expect(err).To(matcher)
-				},
-				Entry("should reject if migration has not started, but seed was previously changed", &oldSeedName, core.LastOperationTypeReconcile, core.LastOperationStateSucceeded, BeForbiddenError()),
-				Entry("should reject if the shoot has lastOperation=Migrate:Processing", &oldSeedName, core.LastOperationTypeMigrate, core.LastOperationStateProcessing, BeForbiddenError()),
-				Entry("should reject if the shoot has lastOperation=Migrate:Error", &oldSeedName, core.LastOperationTypeMigrate, core.LastOperationStateError, BeForbiddenError()),
-				Entry("should reject if the shoot has lastOperation=Migrate:Succeeded", nil, core.LastOperationTypeMigrate, core.LastOperationStateSucceeded, BeForbiddenError()),
-				Entry("should reject if the shoot has lastOperation=Restore:Pending", nil, core.LastOperationTypeRestore, core.LastOperationStatePending, BeForbiddenError()),
-				Entry("should reject if the shoot has lastOperation=Restore:Processing", &seedName, core.LastOperationTypeRestore, core.LastOperationStateProcessing, BeForbiddenError()),
-				Entry("should reject if the shoot has lastOperation=Restore:Error", &seedName, core.LastOperationTypeRestore, core.LastOperationStateError, BeForbiddenError()),
-				Entry("should allow if the shoot has lastOperation=Restore:Succeeded", &seedName, core.LastOperationTypeRestore, core.LastOperationStateSucceeded, Not(HaveOccurred())),
-			)
-
-			It("should allow changes to shoot spec if nothing else has changed", func() {
-				oldShoot.Spec.SeedName = &seedName
-				shoot.Spec.Kubernetes.Version = "1.6.4"
-				oldShoot.Spec.Kubernetes.Version = "1.6.3"
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("should forbid changes to Seed name when etcd encryption key is missing", func() {
-				oldShoot.Spec.SeedName = &oldSeedName
-				shoot.Spec.SeedName = &seedName
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).To(MatchError(ContainSubstring("because etcd encryption key not found in shoot state")))
-			})
-
-			It("should allow changes to Seed name when etcd encryption key is present and nothing else has changed", func() {
-				shootState.Spec.Gardener = append(shootState.Spec.Gardener, gardencorev1alpha1.GardenerResourceData{
-					Labels: map[string]string{
-						"name":       "kube-apiserver-etcd-encryption-key",
-						"managed-by": "secrets-manager",
-					},
-				})
-				Expect(extCoreInformerFactory.Core().V1alpha1().ShootStates().Informer().GetStore().Update(&shootState)).To(Succeed())
-
-				oldShoot.Spec.SeedName = &oldSeedName
-				shoot.Spec.SeedName = &seedName
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 

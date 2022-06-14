@@ -143,10 +143,10 @@ func (b *Binding) Validate(ctx context.Context, a admission.Attributes, o admiss
 
 	binding, convertIsSuccessful := a.GetObject().(*core.Binding)
 	if !convertIsSuccessful {
-		return apierrors.NewInternalError(errors.New("could not convert resource into Shoot object"))
+		return apierrors.NewInternalError(errors.New("could not convert resource into Binding object"))
 	}
 
-	if len(binding.Target.Kind) != 0 && binding.Target.Kind != "Seed" {
+	if len(binding.Target.Kind) == 0 || binding.Target.Kind != "Seed" {
 		return field.NotSupported(field.NewPath("target", "kind"), binding.Target.Kind, []string{"Seed", "<empty>"})
 	}
 
