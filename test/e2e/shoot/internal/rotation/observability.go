@@ -15,7 +15,11 @@
 package rotation
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
+	"encoding/base64"
+	"net/http"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -31,21 +35,31 @@ import (
 type ObservabilityVerifier struct {
 	*framework.ShootCreationFramework
 
-	oldKeypairData map[string][]byte
+	observabilityEndpoint string
+	oldKeypairData        map[string][]byte
 }
 
 // Before is called before the rotation is started.
 func (v *ObservabilityVerifier) Before(ctx context.Context) {
 	By("Verify old observability secret")
+	secret := &corev1.Secret{}
 	Eventually(func(g Gomega) {
-		secret := &corev1.Secret{}
 		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(v.Shoot.Name, "monitoring")}, secret)).To(Succeed())
 		g.Expect(secret.Data).To(And(
 			HaveKeyWithValue("username", Not(BeEmpty())),
 			HaveKeyWithValue("password", Not(BeEmpty())),
 		))
+
+		v.observabilityEndpoint = secret.Annotations["url"]
 		v.oldKeypairData = secret.Data
 	}).Should(Succeed(), "old observability secret should be present")
+
+	By("Using old credentials to access observability endpoint")
+	Eventually(func(g Gomega) {
+		response, err := v.accessEndpoint(ctx, v.observabilityEndpoint, v.oldKeypairData["username"], v.oldKeypairData["password"])
+		Expect(err).NotTo(HaveOccurred())
+		Expect(response.StatusCode).To(Equal(http.StatusOK))
+	}).Should(Succeed())
 }
 
 // ExpectPreparingStatus is called while waiting for the Preparing status.
@@ -58,15 +72,29 @@ func (v *ObservabilityVerifier) AfterPrepared(ctx context.Context) {
 	observabilityRotation := v.Shoot.Status.Credentials.Rotation.Observability
 	Expect(observabilityRotation.LastCompletionTime.Time.UTC().After(observabilityRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
 
+	By("Using old credentials to access observability endpoint")
+	Consistently(func(g Gomega) {
+		response, err := v.accessEndpoint(ctx, v.observabilityEndpoint, v.oldKeypairData["username"], v.oldKeypairData["password"])
+		Expect(err).NotTo(HaveOccurred())
+		Expect(response.StatusCode).To(Equal(http.StatusUnauthorized))
+	}).Should(Succeed())
+
 	By("Verify new observability secret")
+	secret := &corev1.Secret{}
 	Eventually(func(g Gomega) {
-		secret := &corev1.Secret{}
 		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(v.Shoot.Name, "monitoring")}, secret)).To(Succeed())
 		g.Expect(secret.Data).To(And(
 			HaveKeyWithValue("username", Equal(v.oldKeypairData["username"])),
 			HaveKeyWithValue("password", Not(Equal(v.oldKeypairData["password"]))),
 		))
 	}).Should(Succeed(), "observability secret should have been rotated")
+
+	By("Using new credentials to access observability endpoint")
+	Eventually(func(g Gomega) {
+		response, err := v.accessEndpoint(ctx, v.observabilityEndpoint, secret.Data["username"], secret.Data["password"])
+		Expect(err).NotTo(HaveOccurred())
+		Expect(response.StatusCode).To(Equal(http.StatusOK))
+	}).Should(Succeed())
 }
 
 // observability credentials rotation is completed after one reconciliation (there is no second phase)
@@ -77,3 +105,19 @@ func (v *ObservabilityVerifier) ExpectCompletingStatus(g Gomega) {}
 
 // AfterCompleted is called when the Shoot is in Completed status.
 func (v *ObservabilityVerifier) AfterCompleted(ctx context.Context) {}
+
+func (v *ObservabilityVerifier) accessEndpoint(ctx context.Context, url string, username, password []byte) (*http.Response, error) {
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	request, err := http.NewRequestWithContext(ctx, "GET", url+":8448", nil)
+	if err != nil {
+		return nil, err
+	}
+	request.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString(bytes.Join([][]byte{username, password}, []byte(":"))))
+
+	return httpClient.Do(request)
+}
