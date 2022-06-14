@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/api/core/shoot"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -208,13 +209,13 @@ func (shootStrategy) AllowUnconditionalUpdate() bool {
 }
 
 // WarningsOnCreate returns warnings to the client performing a create.
-func (shootStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
-	return nil
+func (s shootStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+	return shoot.GetWarnings(ctx, obj.(*core.Shoot), nil, s.credentialsRotationInterval)
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
-func (shootStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
-	return nil
+func (s shootStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+	return shoot.GetWarnings(ctx, obj.(*core.Shoot), old.(*core.Shoot), s.credentialsRotationInterval)
 }
 
 type shootStatusStrategy struct {
