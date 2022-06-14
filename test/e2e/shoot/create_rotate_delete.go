@@ -29,7 +29,8 @@ import (
 
 var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 	f := defaultShootCreationFramework()
-	f.Shoot = defaultShoot("rotate-")
+	f.Shoot = defaultShoot("")
+	f.Shoot.Name = "e2e-rotate"
 
 	It("Create Shoot, Rotate Credentials and Delete Shoot", Label("credentials-rotation"), func() {
 		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
@@ -40,13 +41,24 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 		f.Verify()
 
 		v := rotation.Verifiers{
+			// basic verifiers checking secrets
 			&rotation.CAVerifier{ShootCreationFramework: f},
 			&rotation.ETCDEncryptionKeyVerifier{ShootCreationFramework: f},
 			&rotation.KubeconfigVerifier{ShootCreationFramework: f},
 			&rotation.ObservabilityVerifier{ShootCreationFramework: f},
 			&rotation.ServiceAccountKeyVerifier{ShootCreationFramework: f},
 			&rotation.SSHKeypairVerifier{ShootCreationFramework: f},
+			// advanced verifiers testing things from the user's perspective
+			&rotation.SecretEncryptionVerifier{ShootCreationFramework: f},
+			&rotation.ShootAccessVerifier{ShootCreationFramework: f},
 		}
+
+		DeferCleanup(func() {
+			ctx, cancel := context.WithTimeout(parentCtx, 2*time.Minute)
+			defer cancel()
+
+			v.Cleanup(ctx)
+		})
 
 		v.Before(ctx)
 

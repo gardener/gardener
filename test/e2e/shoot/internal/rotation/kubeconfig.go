@@ -35,6 +35,7 @@ type KubeconfigVerifier struct {
 	*framework.ShootCreationFramework
 
 	oldKubeconfigData map[string][]byte
+	newKubeconfigData map[string][]byte
 }
 
 // Before is called before the rotation is started.
@@ -44,6 +45,7 @@ func (v *KubeconfigVerifier) Before(ctx context.Context) {
 		secret := &corev1.Secret{}
 		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(v.Shoot.Name, "kubeconfig")}, secret)).To(Succeed())
 		g.Expect(secret.Data).To(And(
+			HaveKeyWithValue("ca.crt", Not(BeEmpty())),
 			HaveKeyWithValue("kubeconfig", Not(BeEmpty())),
 			HaveKeyWithValue("token", Not(BeEmpty())),
 		))
@@ -53,6 +55,8 @@ func (v *KubeconfigVerifier) Before(ctx context.Context) {
 		_, _, err := clientcmdlatest.Codec.Decode(secret.Data["kubeconfig"], nil, kubeconfig)
 		Expect(err).NotTo(HaveOccurred())
 
+		Expect(kubeconfig.Clusters).To(HaveLen(1))
+		Expect(kubeconfig.Clusters[0].Cluster.CertificateAuthorityData).To(Equal(secret.Data["ca.crt"]))
 		Expect(kubeconfig.AuthInfos).To(HaveLen(1))
 		Expect(kubeconfig.AuthInfos[0].AuthInfo).To(DeepEqual(clientcmdv1.AuthInfo{
 			Token: string(secret.Data["token"]),
@@ -75,14 +79,18 @@ func (v *KubeconfigVerifier) AfterPrepared(ctx context.Context) {
 		secret := &corev1.Secret{}
 		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(v.Shoot.Name, "kubeconfig")}, secret)).To(Succeed())
 		g.Expect(secret.Data).To(And(
+			HaveKeyWithValue("ca.crt", Not(Equal(v.oldKubeconfigData["ca.crt"]))),
 			HaveKeyWithValue("kubeconfig", Not(Equal(v.oldKubeconfigData["kubeconfig"]))),
 			HaveKeyWithValue("token", Not(Equal(v.oldKubeconfigData["token"]))),
 		))
+		v.newKubeconfigData = secret.Data
 
 		kubeconfig := &clientcmdv1.Config{}
 		_, _, err := clientcmdlatest.Codec.Decode(secret.Data["kubeconfig"], nil, kubeconfig)
 		Expect(err).NotTo(HaveOccurred())
 
+		Expect(kubeconfig.Clusters).To(HaveLen(1))
+		Expect(kubeconfig.Clusters[0].Cluster.CertificateAuthorityData).To(Equal(secret.Data["ca.crt"]))
 		Expect(kubeconfig.AuthInfos).To(HaveLen(1))
 		Expect(kubeconfig.AuthInfos[0].AuthInfo).To(DeepEqual(clientcmdv1.AuthInfo{
 			Token: string(secret.Data["token"]),
@@ -90,11 +98,35 @@ func (v *KubeconfigVerifier) AfterPrepared(ctx context.Context) {
 	}).Should(Succeed(), "kubeconfig secret should have been rotated")
 }
 
-// kubeconfig rotation is completed after one reconciliation (there is no second phase)
-// hence, there is nothing to check in the second part of the credentials rotation
-
 // ExpectCompletingStatus is called while waiting for the Completing status.
-func (v *KubeconfigVerifier) ExpectCompletingStatus(g Gomega) {}
+func (v *KubeconfigVerifier) ExpectCompletingStatus(g Gomega) {
+	// there is no second phase for the kubeconfig rotation
+}
 
 // AfterCompleted is called when the Shoot is in Completed status.
-func (v *KubeconfigVerifier) AfterCompleted(ctx context.Context) {}
+func (v *KubeconfigVerifier) AfterCompleted(ctx context.Context) {
+	// Rotation of the kubeconfig credential (static token) as such is completed after one reconciliation
+	// (there is no second phase). Hence, after completing the credentials rotation the token will be the same as after
+	// preparation. We want to inspect the contained CA nevertheless, which must have changed after Completion.
+	By("Verify new kubeconfig secret with new CA")
+	Eventually(func(g Gomega) {
+		secret := &corev1.Secret{}
+		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(v.Shoot.Name, "kubeconfig")}, secret)).To(Succeed())
+		g.Expect(secret.Data).To(And(
+			HaveKeyWithValue("ca.crt", Not(Equal(v.newKubeconfigData["ca.crt"]))),
+			HaveKeyWithValue("kubeconfig", Not(Equal(v.newKubeconfigData["kubeconfig"]))),
+			HaveKeyWithValue("token", Equal(v.newKubeconfigData["token"])),
+		))
+
+		kubeconfig := &clientcmdv1.Config{}
+		_, _, err := clientcmdlatest.Codec.Decode(secret.Data["kubeconfig"], nil, kubeconfig)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(kubeconfig.Clusters).To(HaveLen(1))
+		Expect(kubeconfig.Clusters[0].Cluster.CertificateAuthorityData).To(Equal(secret.Data["ca.crt"]))
+		Expect(kubeconfig.AuthInfos).To(HaveLen(1))
+		Expect(kubeconfig.AuthInfos[0].AuthInfo).To(DeepEqual(clientcmdv1.AuthInfo{
+			Token: string(secret.Data["token"]),
+		}))
+	}).Should(Succeed(), "kubeconfig secret should have been rotated")
+}

@@ -24,7 +24,7 @@ import (
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
 	mockgenericmutator "github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator/mock"
-	gardencorevalpha1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -85,25 +85,25 @@ var _ = Describe("Mutator", func() {
 
 		clusterKey = client.ObjectKey{Name: namespace}
 		cluster    = &extensionscontroller.Cluster{
-			CloudProfile: &gardencorevalpha1.CloudProfile{
+			CloudProfile: &gardencorev1beta1.CloudProfile{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: gardencorevalpha1.SchemeGroupVersion.String(),
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 					Kind:       "CloudProfile",
 				},
 			},
-			Seed: &gardencorevalpha1.Seed{
+			Seed: &gardencorev1beta1.Seed{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: gardencorevalpha1.SchemeGroupVersion.String(),
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 					Kind:       "Seed",
 				},
 			},
-			Shoot: &gardencorevalpha1.Shoot{
+			Shoot: &gardencorev1beta1.Shoot{
 				TypeMeta: metav1.TypeMeta{
-					APIVersion: gardencorevalpha1.SchemeGroupVersion.String(),
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 					Kind:       "Shoot",
 				},
-				Spec: gardencorevalpha1.ShootSpec{
-					Kubernetes: gardencorevalpha1.Kubernetes{
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
 						Version: kubernetesVersion,
 					},
 				},
