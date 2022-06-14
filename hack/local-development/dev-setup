@@ -22,6 +22,12 @@ EXAMPLE_DIR=$(dirname "${0}")/../../example
 source $(dirname "${0}")/common/helpers
 kubernetes_env="$(k8s_env)"
 
+# fail if context is not named "gardener-local" amd --ignore-context is not set
+if [[ "$*" != *"--ignore-context"* ]] && [[ $(kubectl config current-context) != *"gardener-local" ]]; then
+    echo "Current context is not 'gardener-local', override with '--ignore-context'"
+    exit 1
+fi
+
 # test if we are running against a Minikube, Docker or kind Kubernetes local setup
 case "${kubernetes_env}" in
     $NODELESS)
