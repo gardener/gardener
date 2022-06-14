@@ -486,7 +486,10 @@ func RunReconcileSeedFlow(
 				}
 				if len(currentResources) != 0 && currentResources[v1beta1constants.StatefulSetNameLoki] != nil {
 					lokiValues["resources"] = map[string]interface{}{
-						v1beta1constants.StatefulSetNameLoki: currentResources[v1beta1constants.StatefulSetNameLoki],
+						// Copy requests only, effectively removing limits
+						v1beta1constants.StatefulSetNameLoki: &corev1.ResourceRequirements{
+							Requests: currentResources[v1beta1constants.StatefulSetNameLoki].Requests,
+						},
 					}
 				}
 			}

@@ -127,7 +127,8 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		}
 		if len(currentResources) != 0 && currentResources["loki"] != nil {
 			lokiValues["resources"] = map[string]interface{}{
-				"loki": currentResources["loki"],
+				// Copy requests only, effectively removing limits
+				"loki": &corev1.ResourceRequirements{Requests: currentResources["loki"].Requests},
 			}
 		}
 	}
