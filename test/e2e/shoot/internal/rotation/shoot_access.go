@@ -27,7 +27,7 @@ import (
 )
 
 type clients struct {
-	staticToken, adminKubeconfig, clientCert kubernetes.Interface
+	staticToken, adminKubeconfig, clientCert, serviceAccountDynamic, serviceAccountStatic kubernetes.Interface
 }
 
 // ShootAccessVerifier uses the static token and admin kubeconfig to access the Shoot.
@@ -61,12 +61,32 @@ func (v *ShootAccessVerifier) Before(ctx context.Context) {
 
 	By("Requesting new client certificate and using it to access shoot")
 	Eventually(func(g Gomega) {
-		shootClient, err := internal.CreateShootClientFromCSR(ctx, v.clientsBefore.adminKubeconfig, "e2e-rotate-before")
+		shootClient, err := internal.CreateShootClientFromCSR(ctx, v.clientsBefore.adminKubeconfig, "e2e-rotate-csr-before")
 		g.Expect(err).NotTo(HaveOccurred())
 
 		g.Expect(shootClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
 
 		v.clientsBefore.clientCert = shootClient
+	}).Should(Succeed())
+
+	By("Requesting new dynamic token for a ServiceAccount and using it to access shoot")
+	Eventually(func(g Gomega) {
+		shootClient, err := internal.CreateShootClientFromDynamicServiceAccountToken(ctx, v.clientsBefore.adminKubeconfig, "e2e-rotate-sa-dynamic-before")
+		g.Expect(err).NotTo(HaveOccurred())
+
+		g.Expect(shootClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
+
+		v.clientsBefore.serviceAccountDynamic = shootClient
+	}).Should(Succeed())
+
+	By("Requesting new static token for a ServiceAccount and using it to access shoot")
+	Eventually(func(g Gomega) {
+		shootClient, err := internal.CreateShootClientFromStaticServiceAccountToken(ctx, v.clientsBefore.adminKubeconfig, "e2e-rotate-sa-static-before")
+		g.Expect(err).NotTo(HaveOccurred())
+
+		g.Expect(shootClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
+
+		v.clientsBefore.serviceAccountStatic = shootClient
 	}).Should(Succeed())
 }
 
@@ -88,6 +108,16 @@ func (v *ShootAccessVerifier) AfterPrepared(ctx context.Context) {
 	By("Using client certificate from before rotation to access shoot")
 	Eventually(func(g Gomega) {
 		g.Expect(v.clientsBefore.clientCert.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
+	}).Should(Succeed())
+
+	By("Using dynamic ServiceAccount token from before rotation to access shoot")
+	Eventually(func(g Gomega) {
+		g.Expect(v.clientsBefore.serviceAccountDynamic.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
+	}).Should(Succeed())
+
+	By("Using static ServiceAccount token from before rotation to access shoot")
+	Eventually(func(g Gomega) {
+		g.Expect(v.clientsBefore.serviceAccountStatic.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
 	}).Should(Succeed())
 
 	By("Using rotated static token kubeconfig with CA bundle to access shoot")
@@ -112,12 +142,32 @@ func (v *ShootAccessVerifier) AfterPrepared(ctx context.Context) {
 
 	By("Requesting new client certificate and using it to access shoot")
 	Eventually(func(g Gomega) {
-		shootClient, err := internal.CreateShootClientFromCSR(ctx, v.clientsPrepared.adminKubeconfig, "e2e-rotate-prepared")
+		shootClient, err := internal.CreateShootClientFromCSR(ctx, v.clientsPrepared.adminKubeconfig, "e2e-rotate-csr-prepared")
 		g.Expect(err).NotTo(HaveOccurred())
 
 		g.Expect(shootClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
 
 		v.clientsPrepared.clientCert = shootClient
+	}).Should(Succeed())
+
+	By("Requesting new dynamic token for a ServiceAccount and using it to access shoot")
+	Eventually(func(g Gomega) {
+		shootClient, err := internal.CreateShootClientFromDynamicServiceAccountToken(ctx, v.clientsPrepared.adminKubeconfig, "e2e-rotate-sa-dynamic-prepared")
+		g.Expect(err).NotTo(HaveOccurred())
+
+		g.Expect(shootClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
+
+		v.clientsPrepared.serviceAccountDynamic = shootClient
+	}).Should(Succeed())
+
+	By("Requesting new static token for a ServiceAccount and using it to access shoot")
+	Eventually(func(g Gomega) {
+		shootClient, err := internal.CreateShootClientFromStaticServiceAccountToken(ctx, v.clientsPrepared.adminKubeconfig, "e2e-rotate-sa-static-prepared")
+		g.Expect(err).NotTo(HaveOccurred())
+
+		g.Expect(shootClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
+
+		v.clientsPrepared.serviceAccountStatic = shootClient
 	}).Should(Succeed())
 }
 
@@ -141,6 +191,16 @@ func (v *ShootAccessVerifier) AfterCompleted(ctx context.Context) {
 		g.Expect(v.clientsBefore.clientCert.Client().List(ctx, &corev1.NamespaceList{})).NotTo(Succeed())
 	}).Should(Succeed())
 
+	By("Using dynamic ServiceAccount token from before rotation to access shoot")
+	Consistently(func(g Gomega) {
+		g.Expect(v.clientsBefore.serviceAccountDynamic.Client().List(ctx, &corev1.NamespaceList{})).NotTo(Succeed())
+	}).Should(Succeed())
+
+	By("Using static ServiceAccount token from before rotation to access shoot")
+	Consistently(func(g Gomega) {
+		g.Expect(v.clientsBefore.serviceAccountStatic.Client().List(ctx, &corev1.NamespaceList{})).NotTo(Succeed())
+	}).Should(Succeed())
+
 	By("Using rotated static token kubeconfig with CA bundle to access shoot")
 	Eventually(func(g Gomega) {
 		g.Expect(v.clientsPrepared.staticToken.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
@@ -154,6 +214,16 @@ func (v *ShootAccessVerifier) AfterCompleted(ctx context.Context) {
 	By("Using client certificate from after preparation to access shoot")
 	Eventually(func(g Gomega) {
 		g.Expect(v.clientsPrepared.clientCert.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
+	}).Should(Succeed())
+
+	By("Using dynamic ServiceAccount token from after preparation to access shoot")
+	Eventually(func(g Gomega) {
+		g.Expect(v.clientsPrepared.serviceAccountDynamic.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
+	}).Should(Succeed())
+
+	By("Using static ServiceAccount token from after preparation to access shoot")
+	Eventually(func(g Gomega) {
+		g.Expect(v.clientsPrepared.serviceAccountStatic.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
 	}).Should(Succeed())
 
 	By("Using rotated static token kubeconfig with new CA to access shoot")
@@ -178,12 +248,32 @@ func (v *ShootAccessVerifier) AfterCompleted(ctx context.Context) {
 
 	By("Requesting new client certificate and using it to access shoot")
 	Eventually(func(g Gomega) {
-		shootClient, err := internal.CreateShootClientFromCSR(ctx, v.clientsAfter.adminKubeconfig, "e2e-rotate-after")
+		shootClient, err := internal.CreateShootClientFromCSR(ctx, v.clientsAfter.adminKubeconfig, "e2e-rotate-csr-after")
 		g.Expect(err).NotTo(HaveOccurred())
 
 		g.Expect(shootClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
 
 		v.clientsAfter.clientCert = shootClient
+	}).Should(Succeed())
+
+	By("Requesting new dynamic token for a ServiceAccount and using it to access shoot")
+	Eventually(func(g Gomega) {
+		shootClient, err := internal.CreateShootClientFromDynamicServiceAccountToken(ctx, v.clientsAfter.adminKubeconfig, "e2e-rotate-sa-dynamic-after")
+		g.Expect(err).NotTo(HaveOccurred())
+
+		g.Expect(shootClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
+
+		v.clientsAfter.serviceAccountDynamic = shootClient
+	}).Should(Succeed())
+
+	By("Requesting new static token for a ServiceAccount and using it to access shoot")
+	Eventually(func(g Gomega) {
+		shootClient, err := internal.CreateShootClientFromStaticServiceAccountToken(ctx, v.clientsAfter.adminKubeconfig, "e2e-rotate-sa-static-after")
+		g.Expect(err).NotTo(HaveOccurred())
+
+		g.Expect(shootClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
+
+		v.clientsAfter.serviceAccountStatic = shootClient
 	}).Should(Succeed())
 }
 
@@ -210,5 +300,15 @@ func (v *ShootAccessVerifier) Cleanup(ctx context.Context) {
 	By("Cleaning up objects in shoot from client certificate access")
 	Eventually(func(g Gomega) {
 		g.Expect(internal.CleanupObjectsFromCSRAccess(ctx, shootClient)).To(Succeed())
+	}).Should(Succeed())
+
+	By("Cleaning up objects in shoot from dynamic ServiceAccount token access")
+	Eventually(func(g Gomega) {
+		g.Expect(internal.CleanupObjectsFromDynamicServiceAccountTokenAccess(ctx, shootClient)).To(Succeed())
+	}).Should(Succeed())
+
+	By("Cleaning up objects in shoot from dynamic ServiceAccount token access")
+	Eventually(func(g Gomega) {
+		g.Expect(internal.CleanupObjectsFromStaticServiceAccountTokenAccess(ctx, shootClient)).To(Succeed())
 	}).Should(Succeed())
 }
