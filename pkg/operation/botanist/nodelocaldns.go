@@ -86,12 +86,5 @@ func (b *Botanist) isNodeLocalDNSStillDesired(ctx context.Context) (bool, error)
 		return false, err
 	}
 
-	for _, node := range nodeList.Items {
-		nodeLocalDNSLabelValue := node.Labels[v1beta1constants.LabelNodeLocalDNS]
-		if strconv.FormatBool(true) == nodeLocalDNSLabelValue {
-			return true, nil
-		}
-	}
-
-	return false, nil
+	return len(nodeList.Items) > 0, nil
 }
