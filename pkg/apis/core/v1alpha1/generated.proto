@@ -31,7 +31,7 @@ import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
 import "k8s.io/apimachinery/pkg/util/intstr/generated.proto";
 
 // Package-wide variables from generator "generated".
-option go_package = "v1alpha1";
+option go_package = "github.com/gardener/gardener/pkg/apis/core/v1alpha1";
 
 // Addon allows enabling or disabling a specific addon and is used to derive from.
 message Addon {
