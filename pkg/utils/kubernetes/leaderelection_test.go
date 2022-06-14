@@ -86,7 +86,7 @@ var _ = Describe("LeaderElection", func() {
 	Describe("#ReadLeaderElectionRecord", func() {
 		Context("endpoints lock", func() {
 			BeforeEach(func() {
-				lock = resourcelock.EndpointsLeasesResourceLock
+				lock = "endpoints"
 			})
 
 			It("should fail if the object cannot be retrieved", func() {
@@ -136,7 +136,7 @@ var _ = Describe("LeaderElection", func() {
 
 		Context("configmaps lock", func() {
 			BeforeEach(func() {
-				lock = resourcelock.ConfigMapsLeasesResourceLock
+				lock = "configmaps"
 			})
 
 			It("should fail if the object cannot be retrieved", func() {
