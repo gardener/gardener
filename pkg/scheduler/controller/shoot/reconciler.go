@@ -222,23 +222,31 @@ func filterSeedsMatchingMultiZonalAttribute(seedList []gardencorev1beta1.Seed, s
 		return seedList, nil
 	}
 
-	if shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] != v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
-		return seedList, nil
-	}
-
-	var multiZonalSeeds []gardencorev1beta1.Seed
+	var (
+		singleZonalSeeds []gardencorev1beta1.Seed
+		multiZonalSeeds  []gardencorev1beta1.Seed
+	)
 
 	for _, seed := range seedList {
 		if metav1.HasLabel(seed.ObjectMeta, v1beta1constants.LabelSeedMultiZonal) {
 			multiZonalSeeds = append(multiZonalSeeds, seed)
+			continue
 		}
+		singleZonalSeeds = append(singleZonalSeeds, seed)
 	}
 
-	if len(multiZonalSeeds) == 0 {
-		return nil, fmt.Errorf("none of the %d seeds can host a multi-zonal control plane for the given shoot", len(seedList))
+	if shoot.ObjectMeta.Annotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] == v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone {
+		if len(multiZonalSeeds) == 0 {
+			return nil, fmt.Errorf("none of the %d seeds can host a multi-zonal control plane for the given shoot", len(seedList))
+		}
+		return multiZonalSeeds, nil
 	}
 
-	return multiZonalSeeds, nil
+	if len(singleZonalSeeds) == 0 {
+		return nil, fmt.Errorf("none of the %d seeds can host a control plane for the given shoot", len(seedList))
+	}
+
+	return singleZonalSeeds, nil
 }
 
 func applyStrategy(shoot *gardencorev1beta1.Shoot, seedList []gardencorev1beta1.Seed, strategy config.CandidateDeterminationStrategy) ([]gardencorev1beta1.Seed, error) {
