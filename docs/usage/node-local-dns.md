@@ -25,11 +25,16 @@ To workaround the issues described above, `node-local-dns` was introduced. The a
 
 ## Configuring NodeLocalDNS
 
-All that needs to be done to enable the usage of the `node-local-dns` feature is to annotate the `Shoot` resource with the annotation `alpha.featuregates.shoot.gardener.cloud/node-local-dns` set to `"true"`:
+All that needs to be done to enable the usage of the `node-local-dns` feature is to set the corresponding option (`spec.systemComponents.nodeLocalDNS.enabled`) in the `Shoot` resource to `true`:
 
 ```yaml
- annotations:
-   alpha.featuregates.shoot.gardener.cloud/node-local-dns: "true"
+...
+spec:
+  ...
+  systemComponents:
+    nodeLocalDNS:
+      enabled: true
+...
 ```
 
 It is worth noting that: 

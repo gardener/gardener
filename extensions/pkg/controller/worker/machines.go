@@ -23,6 +23,7 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 
@@ -163,6 +164,11 @@ func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontr
 		if status.Credentials.Rotation.ServiceAccountKey != nil && status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime != nil {
 			data = append(data, status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime.Time.String())
 		}
+	}
+
+	// Do not consider the shoot annotations here to prevent unintended node roll outs.
+	if helper.IsNodeLocalDNSEnabled(cluster.Shoot.Spec.SystemComponents, map[string]string{}) {
+		data = append(data, "node-local-dns")
 	}
 
 	var result string

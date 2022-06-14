@@ -191,6 +191,18 @@ var _ = Describe("Machines", func() {
 				c.Shoot.Spec.Provider = gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
 					{Name: "test-worker", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker}}}}
 			})
+
+			It("when disabling node local dns via annotations", func() {
+				c.Shoot.Annotations = map[string]string{"alpha.featuregates.shoot.gardener.cloud/node-local-dns": "false"}
+			})
+
+			It("when enabling node local dns via annotations", func() {
+				c.Shoot.Annotations = map[string]string{"alpha.featuregates.shoot.gardener.cloud/node-local-dns": "true"}
+			})
+
+			It("when disabling node local dns via specification", func() {
+				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: false}}
+			})
 		})
 
 		Context("hash value should change", func() {
@@ -266,6 +278,10 @@ var _ = Describe("Machines", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				c.Shoot.Status.Credentials.Rotation.ServiceAccountKey = credentialStatusWithInitiatedRotation
+			})
+
+			It("when enabling node local dns via specification", func() {
+				c.Shoot.Spec.SystemComponents = &gardencorev1beta1.SystemComponents{NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{Enabled: true}}
 			})
 		})
 	})

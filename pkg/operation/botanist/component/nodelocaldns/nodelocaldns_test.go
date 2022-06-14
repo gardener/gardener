@@ -319,6 +319,9 @@ status:
 										Effect:   corev1.TaintEffectNoSchedule,
 									},
 								},
+								NodeSelector: map[string]string{
+									v1beta1constants.LabelNodeLocalDNS: "true",
+								},
 								Containers: []corev1.Container{
 									{
 										Name:  "node-cache",

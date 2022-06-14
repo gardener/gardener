@@ -474,6 +474,10 @@ const (
 	// LabelExposureClassHandlerName is the label key for exposure class handler names.
 	LabelExposureClassHandlerName = "handler.exposureclass.gardener.cloud/name"
 
+	// LabelNodeLocalDNS is a constant for a label key, which the provider extensions set on the nodes.
+	// The value can be true or false.
+	LabelNodeLocalDNS = "networking.gardener.cloud/node-local-dns-enabled"
+
 	// GardenNamespace is the namespace in which the configuration and secrets for
 	// the Gardener controller manager will be stored (e.g., secrets for the Seed clusters).
 	// It is also used by the gardener-apiserver.

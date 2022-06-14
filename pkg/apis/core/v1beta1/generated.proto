@@ -1378,6 +1378,22 @@ message NginxIngress {
   optional string externalTrafficPolicy = 4;
 }
 
+// NodeLocalDNS contains the settings of the node local DNS components running in the data plane of the Shoot cluster.
+message NodeLocalDNS {
+  // Enabled indicates whether node local DNS is enabled or not.
+  optional bool enabled = 1;
+
+  // ForceTCPToClusterDNS indicates whether the connection from the node local DNS to the cluster DNS (Core DNS) will be forced to TCP or not.
+  // Default, if unspecified, is to enforce TCP.
+  // +optional
+  optional bool forceTCPToClusterDNS = 2;
+
+  // ForceTCPToUpstreamDNS indicates whether the connection from the node local DNS to the upstream DNS (infrastructure DNS) will be forced to TCP or not.
+  // Default, if unspecified, is to enforce TCP.
+  // +optional
+  optional bool forceTCPToUpstreamDNS = 3;
+}
+
 // OIDCConfig contains configuration settings for the OIDC provider.
 // Note: Descriptions were taken from the Kubernetes documentation.
 message OIDCConfig {
@@ -2464,6 +2480,10 @@ message SystemComponents {
   // CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.
   // +optional
   optional CoreDNS coreDNS = 1;
+
+  // NodeLocalDNS contains the settings of the node local DNS components running in the data plane of the Shoot cluster.
+  // +optional
+  optional NodeLocalDNS nodeLocalDNS = 2;
 }
 
 // Toleration is a toleration for a seed taint.

@@ -25,6 +25,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -260,10 +261,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 	shoot.Networks = networks
 
-	shoot.NodeLocalDNSEnabled = false
-	if nodeLocalDNSEnabled, err := strconv.ParseBool(shoot.GetInfo().Annotations[v1beta1constants.AnnotationNodeLocalDNS]); err == nil {
-		shoot.NodeLocalDNSEnabled = nodeLocalDNSEnabled
-	}
+	shoot.NodeLocalDNSEnabled = helper.IsNodeLocalDNSEnabled(shoot.GetInfo().Spec.SystemComponents, shoot.GetInfo().Annotations)
 
 	shoot.Purpose = gardencorev1beta1helper.GetPurpose(shootObject)
 

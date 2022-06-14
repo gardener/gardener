@@ -17,6 +17,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -85,6 +86,8 @@ type Values struct {
 	InfrastructureProviderStatus *runtime.RawExtension
 	// WorkerNameToOperatingSystemConfigsMap contains the operating system configurations for the worker pools.
 	WorkerNameToOperatingSystemConfigsMap map[string]*operatingsystemconfig.OperatingSystemConfigs
+	// NodeLocalDNSENabled indicates whether node local dns is enabled or not.
+	NodeLocalDNSENabled bool
 }
 
 // New creates a new instance of Interface.
@@ -170,6 +173,8 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			labels = map[string]string{}
 		}
 		labels["node.kubernetes.io/role"] = "node"
+
+		labels[v1beta1constants.LabelNodeLocalDNS] = strconv.FormatBool(w.values.NodeLocalDNSENabled)
 
 		if gardencorev1beta1helper.SystemComponentsAllowed(&workerPool) {
 			labels[v1beta1constants.LabelWorkerPoolSystemComponents] = "true"
