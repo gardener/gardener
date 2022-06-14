@@ -30,6 +30,7 @@ import (
 // ExtraConfig contains non-generic Gardener API server configuration.
 type ExtraConfig struct {
 	AdminKubeconfigMaxExpiration time.Duration
+	CredentialsRotationInterval  time.Duration
 }
 
 // Config contains Gardener API server configuration.
@@ -74,6 +75,7 @@ func (c completedConfig) New() (*GardenerServer, error) {
 		s                = &GardenerServer{GenericAPIServer: genericServer}
 		coreAPIGroupInfo = (corerest.StorageProvider{
 			AdminKubeconfigMaxExpiration: c.ExtraConfig.AdminKubeconfigMaxExpiration,
+			CredentialsRotationInterval:  c.ExtraConfig.CredentialsRotationInterval,
 		}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		seedManagementAPIGroupInfo = (seedmanagementrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		settingsAPIGroupInfo       = (settingsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
@@ -91,6 +93,7 @@ func (c completedConfig) New() (*GardenerServer, error) {
 type ExtraOptions struct {
 	ClusterIdentity              string
 	AdminKubeconfigMaxExpiration time.Duration
+	CredentialsRotationInterval  time.Duration
 }
 
 // Validate checks if the required flags are set
@@ -105,6 +108,11 @@ func (o *ExtraOptions) Validate() []error {
 		allErrors = append(allErrors, fmt.Errorf("--shoot-admin-kubeconfig-max-expiration must be between 1 hour and 2^32 seconds"))
 	}
 
+	if o.CredentialsRotationInterval < 24*time.Hour ||
+		o.CredentialsRotationInterval > time.Duration(1<<32)*time.Second {
+		allErrors = append(allErrors, fmt.Errorf("--shoot-credentials-rotation-interval must be between 24 hours and 2^32 seconds"))
+	}
+
 	return allErrors
 }
 
@@ -112,11 +120,13 @@ func (o *ExtraOptions) Validate() []error {
 func (o *ExtraOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.ClusterIdentity, "cluster-identity", o.ClusterIdentity, "This flag is used for specifying the identity of the Garden cluster")
 	fs.DurationVar(&o.AdminKubeconfigMaxExpiration, "shoot-admin-kubeconfig-max-expiration", time.Hour*24, "The maximum validity duration of a credential requested to a Shoot by an AdminKubeconfigRequest. If an otherwise valid AdminKubeconfigRequest with a validity duration larger than this value is requested, a credential will be issued with a validity duration of this value.")
+	fs.DurationVar(&o.CredentialsRotationInterval, "shoot-credentials-rotation-interval", time.Hour*24*90, "The duration after the initial shoot creation or the last credentials rotation when a client warning for the next credentials rotation is issued.")
 }
 
 // ApplyTo applies the extra options to the API Server config.
 func (o *ExtraOptions) ApplyTo(c *Config) error {
 	c.ExtraConfig.AdminKubeconfigMaxExpiration = o.AdminKubeconfigMaxExpiration
+	c.ExtraConfig.CredentialsRotationInterval = o.CredentialsRotationInterval
 
 	return nil
 }
