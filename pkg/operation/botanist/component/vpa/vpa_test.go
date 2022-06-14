@@ -750,7 +750,7 @@ var _ = Describe("VPA", func() {
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Command:         []string{"./recommender"},
 								Args: []string{
-									"--v=2",
+									"--v=3",
 									"--stderrthreshold=info",
 									"--pod-recommendation-min-cpu-millicores=5",
 									"--pod-recommendation-min-memory-mb=10",

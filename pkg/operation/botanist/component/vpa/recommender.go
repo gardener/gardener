@@ -159,7 +159,7 @@ func (v *vpa) reconcileRecommenderDeployment(deployment *appsv1.Deployment, serv
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Command:         v.computeRecommenderCommands(),
 					Args: []string{
-						"--v=2",
+						"--v=3",
 						"--stderrthreshold=info",
 						"--pod-recommendation-min-cpu-millicores=5",
 						"--pod-recommendation-min-memory-mb=10",
