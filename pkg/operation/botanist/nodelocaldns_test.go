@@ -15,13 +15,18 @@
 package botanist_test
 
 import (
+	"context"
+	"fmt"
 	"net"
+	"strconv"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	mocknodelocaldns "github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -29,7 +34,10 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("NodeLocalDNS", func() {
@@ -46,6 +54,13 @@ var _ = Describe("NodeLocalDNS", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
 					v1beta1constants.AnnotationNodeLocalDNS: "true",
+				},
+			},
+			Spec: gardencorev1beta1.ShootSpec{
+				SystemComponents: &gardencorev1beta1.SystemComponents{
+					NodeLocalDNS: &gardencorev1beta1.NodeLocalDNS{
+						Enabled: true,
+					},
 				},
 			},
 		})
@@ -82,6 +97,97 @@ var _ = Describe("NodeLocalDNS", func() {
 			nodeLocalDNS, err := botanist.DefaultNodeLocalDNS()
 			Expect(nodeLocalDNS).To(BeNil())
 			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("#ReconcileNodeLocalDNS", func() {
+		var (
+			nodelocaldns     *mocknodelocaldns.MockInterface
+			kubernetesClient *mockkubernetes.MockInterface
+			c                client.Client
+
+			ctx     = context.TODO()
+			fakeErr = fmt.Errorf("fake err")
+		)
+
+		BeforeEach(func() {
+			nodelocaldns = mocknodelocaldns.NewMockInterface(ctrl)
+			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
+			c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+
+			botanist.K8sShootClient = kubernetesClient
+			botanist.Shoot.Components = &shootpkg.Components{
+				SystemComponents: &shootpkg.SystemComponents{
+					NodeLocalDNS: nodelocaldns,
+				},
+			}
+			botanist.Shoot.NodeLocalDNSEnabled = true
+		})
+
+		It("should fail when the deploy function fails", func() {
+			nodelocaldns.EXPECT().Deploy(ctx).Return(fakeErr)
+
+			Expect(botanist.ReconcileNodeLocalDNS(ctx)).To(MatchError(fakeErr))
+		})
+
+		It("should successfully deploy when enabled", func() {
+			nodelocaldns.EXPECT().Deploy(ctx)
+
+			Expect(botanist.ReconcileNodeLocalDNS(ctx)).To(Succeed())
+		})
+
+		Context("node-local-dns disabled", func() {
+			BeforeEach(func() {
+				botanist.Shoot.NodeLocalDNSEnabled = false
+			})
+
+			Context("but still node with label existing", func() {
+				It("label enabled", func() {
+					node := corev1.Node{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   "node",
+							Labels: map[string]string{v1beta1constants.LabelNodeLocalDNS: strconv.FormatBool(true)},
+						},
+					}
+					Expect(c.Create(ctx, &node)).To(Succeed())
+
+					kubernetesClient.EXPECT().Client().Return(c)
+
+					Expect(botanist.ReconcileNodeLocalDNS(ctx)).To(Succeed())
+				})
+
+				It("label disabled", func() {
+					node := corev1.Node{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   "node",
+							Labels: map[string]string{v1beta1constants.LabelNodeLocalDNS: strconv.FormatBool(false)},
+						},
+					}
+					Expect(c.Create(ctx, &node)).To(Succeed())
+
+					kubernetesClient.EXPECT().Client().Return(c)
+
+					nodelocaldns.EXPECT().Destroy(ctx)
+
+					Expect(botanist.ReconcileNodeLocalDNS(ctx)).To(Succeed())
+				})
+			})
+
+			It("should fail when the destroy function fails", func() {
+				kubernetesClient.EXPECT().Client().Return(c)
+
+				nodelocaldns.EXPECT().Destroy(ctx).Return(fakeErr)
+
+				Expect(botanist.ReconcileNodeLocalDNS(ctx)).To(MatchError(fakeErr))
+			})
+
+			It("should successfully destroy", func() {
+				kubernetesClient.EXPECT().Client().Return(c)
+
+				nodelocaldns.EXPECT().Destroy(ctx)
+
+				Expect(botanist.ReconcileNodeLocalDNS(ctx)).To(Succeed())
+			})
 		})
 	})
 })
