@@ -396,7 +396,7 @@ func getOperation(shoot *gardencorev1beta1.Shoot) string {
 		maintenanceOperation = shoot.Annotations[v1beta1constants.GardenerMaintenanceOperation]
 	)
 
-	if gardencorev1beta1helper.IsValidShootOperation(maintenanceOperation, shoot.Status.LastOperation) {
+	if maintenanceOperation != "" {
 		operation = maintenanceOperation
 	}
 
