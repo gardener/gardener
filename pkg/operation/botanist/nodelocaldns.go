@@ -23,7 +23,10 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DefaultNodeLocalDNS returns a deployer for the node-local-dns.
@@ -62,19 +65,24 @@ func (b *Botanist) ReconcileNodeLocalDNS(ctx context.Context) error {
 	if b.Shoot.NodeLocalDNSEnabled {
 		return b.Shoot.Components.SystemComponents.NodeLocalDNS.Deploy(ctx)
 	}
+
 	if stillDesired, err := b.isNodeLocalDNSStillDesired(ctx); err != nil {
 		return err
 	} else if stillDesired {
 		// Leave NodeLocalDNS components in the cluster until all nodes have been rolled
 		return nil
 	}
+
 	return b.Shoot.Components.SystemComponents.NodeLocalDNS.Destroy(ctx)
 }
 
 // isNodeLocalDNSStillDesired indicates whether any node still requires node-local-dns components.
 func (b *Botanist) isNodeLocalDNSStillDesired(ctx context.Context) (bool, error) {
-	nodeList := &corev1.NodeList{}
-	if err := b.K8sShootClient.Client().List(ctx, nodeList); err != nil {
+	nodeList := &metav1.PartialObjectMetadataList{}
+	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
+	if err := b.K8sShootClient.Client().List(ctx, nodeList, client.Limit(1), client.MatchingLabels{
+		v1beta1constants.LabelNodeLocalDNS: strconv.FormatBool(true),
+	}); err != nil {
 		return false, err
 	}
 
