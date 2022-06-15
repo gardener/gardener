@@ -30,6 +30,7 @@ if [ -n "${CI:-}" -a -n "${ARTIFACTS:-}" ]; then
   for shoot in e2e-default e2e-rotate ; do
     printf "\n127.0.0.1 api.%s.local.external.local.gardener.cloud\n127.0.0.1 api.%s.local.internal.local.gardener.cloud\n" $shoot $shoot >>/etc/hosts
   done
+  printf "\n127.0.0.1 gu-local--e2e-rotate.ingress.local.seed.local.gardener.cloud\n" >>/etc/hosts
 
   # dump all container logs after test execution
   trap dump_logs EXIT

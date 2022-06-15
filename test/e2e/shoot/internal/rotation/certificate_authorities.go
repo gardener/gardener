@@ -80,7 +80,7 @@ const (
 func (v *CAVerifier) Before(ctx context.Context) {
 	seedClient := v.ShootFramework.SeedClient.Client()
 
-	By("Verify CA secrets of gardenlet before rotation")
+	By("Verifying CA secrets of gardenlet before rotation")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
@@ -94,7 +94,7 @@ func (v *CAVerifier) Before(ctx context.Context) {
 		v.gardenletSecretsBefore = grouped
 	}).Should(Succeed())
 
-	By("Verify old CA secret in garden cluster")
+	By("Verifying old CA secret in garden cluster")
 	Eventually(func(g Gomega) {
 		secret := &corev1.Secret{}
 		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(v.Shoot.Name, "ca-cluster")}, secret)).To(Succeed())
@@ -107,7 +107,7 @@ func (v *CAVerifier) Before(ctx context.Context) {
 		verifyCABundleInKubeconfigSecret(ctx, g, v.GardenClient.Client(), client.ObjectKeyFromObject(v.Shoot), v.oldCACert)
 	}).Should(Succeed(), "old CA cert should be synced to garden")
 
-	By("Verify secrets of provider-local before rotation")
+	By("Verifying secrets of provider-local before rotation")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByProviderLocalSecretsManager)).To(Succeed())
@@ -133,7 +133,7 @@ func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 	seedClient := v.ShootFramework.SeedClient.Client()
 	Expect(v.Shoot.Status.Credentials.Rotation.CertificateAuthorities.Phase).To(Equal(gardencorev1beta1.RotationPrepared), "ca rotation phase should be 'Prepared'")
 
-	By("Verify CA secrets of gardenlet after preparation")
+	By("Verifying CA secrets of gardenlet after preparation")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
@@ -149,7 +149,7 @@ func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 		v.gardenletSecretsPrepared = grouped
 	}).Should(Succeed())
 
-	By("Verify CA bundle secret in garden cluster")
+	By("Verifying CA bundle secret in garden cluster")
 	Eventually(func(g Gomega) {
 		secret := &corev1.Secret{}
 		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(v.Shoot.Name, "ca-cluster")}, secret)).To(Succeed())
@@ -166,7 +166,7 @@ func (v *CAVerifier) AfterPrepared(ctx context.Context) {
 		verifyCABundleInKubeconfigSecret(ctx, g, v.GardenClient.Client(), client.ObjectKeyFromObject(v.Shoot), v.caBundle)
 	}).Should(Succeed(), "CA bundle should be synced to garden")
 
-	By("Verify secrets of provider-local after preparation")
+	By("Verifying secrets of provider-local after preparation")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByProviderLocalSecretsManager)).To(Succeed())
@@ -199,7 +199,7 @@ func (v *CAVerifier) AfterCompleted(ctx context.Context) {
 	Expect(v1beta1helper.GetShootCARotationPhase(v.Shoot.Status.Credentials)).To(Equal(gardencorev1beta1.RotationCompleted))
 	Expect(caRotation.LastCompletionTime.Time.UTC().After(caRotation.LastInitiationTime.Time.UTC())).To(BeTrue())
 
-	By("Verify CA secrets of gardenlet after completion")
+	By("Verifying CA secrets of gardenlet after completion")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByGardenletSecretsManager)).To(Succeed())
@@ -215,7 +215,7 @@ func (v *CAVerifier) AfterCompleted(ctx context.Context) {
 		v.gardenletSecretsCompleted = grouped
 	}).Should(Succeed())
 
-	By("Verify new CA secret in garden cluster")
+	By("Verifying new CA secret in garden cluster")
 	Eventually(func(g Gomega) {
 		secret := &corev1.Secret{}
 		g.Expect(v.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v.Shoot.Namespace, Name: gutil.ComputeShootProjectSecretName(v.Shoot.Name, "ca-cluster")}, secret)).To(Succeed())
@@ -228,7 +228,7 @@ func (v *CAVerifier) AfterCompleted(ctx context.Context) {
 		verifyCABundleInKubeconfigSecret(ctx, g, v.GardenClient.Client(), client.ObjectKeyFromObject(v.Shoot), v.newCACert)
 	}).Should(Succeed(), "new CA cert should be synced to garden")
 
-	By("Verify secrets of provider-local after completion")
+	By("Verifying secrets of provider-local after completion")
 	Eventually(func(g Gomega) {
 		secretList := &corev1.SecretList{}
 		g.Expect(seedClient.List(ctx, secretList, client.InNamespace(v.Shoot.Status.TechnicalID), managedByProviderLocalSecretsManager)).To(Succeed())
