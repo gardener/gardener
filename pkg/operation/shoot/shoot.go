@@ -262,15 +262,15 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	shoot.Networks = networks
 
 	shoot.NodeLocalDNSEnabled = helper.IsNodeLocalDNSEnabled(shoot.GetInfo().Spec.SystemComponents, shoot.GetInfo().Annotations)
-
 	shoot.Purpose = gardencorev1beta1helper.GetPurpose(shootObject)
 
-	// Determine backup entry name
 	backupEntryName, err := gutil.GenerateBackupEntryName(shootObject.Status.TechnicalID, shootObject.UID)
 	if err != nil {
 		return nil, err
 	}
 	shoot.BackupEntryName = backupEntryName
+
+	shoot.CloudConfigExecutionMaxDelaySeconds = 300
 
 	return shoot, nil
 }

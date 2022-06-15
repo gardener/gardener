@@ -33,10 +33,11 @@ import (
 var _ = Describe("Executor", func() {
 	Describe("#Script", func() {
 		var (
-			cloudConfigUserData []byte
-			hyperkubeImage      *imagevector.Image
-			reloadConfigCommand string
-			units               []string
+			cloudConfigUserData                 []byte
+			cloudConfigExecutionMaxDelaySeconds int
+			hyperkubeImage                      *imagevector.Image
+			reloadConfigCommand                 string
+			units                               []string
 
 			defaultKubeletDataVolume     = &gardencorev1beta1.DataVolume{VolumeSize: "64Gi"}
 			defaultKubeletDataVolumeSize = pointer.String("68719476736")
@@ -44,6 +45,7 @@ var _ = Describe("Executor", func() {
 
 		BeforeEach(func() {
 			cloudConfigUserData = []byte("user-data")
+			cloudConfigExecutionMaxDelaySeconds = 300
 			hyperkubeImage = &imagevector.Image{Repository: "bar", Tag: pointer.String("v1.0")}
 			reloadConfigCommand = "/var/bin/reload"
 			units = []string{
@@ -59,7 +61,7 @@ var _ = Describe("Executor", func() {
 
 		DescribeTable("should correctly render the executor script",
 			func(kubernetesVersion string, copyKubernetesBinariesFn func(*imagevector.Image) string, kubeletDataVol *gardencorev1beta1.DataVolume, kubeletDataVolSize *string) {
-				script, err := executor.Script(cloudConfigUserData, hyperkubeImage, kubernetesVersion, kubeletDataVol, reloadConfigCommand, units)
+				script, err := executor.Script(cloudConfigUserData, cloudConfigExecutionMaxDelaySeconds, hyperkubeImage, kubernetesVersion, kubeletDataVol, reloadConfigCommand, units)
 				Expect(err).ToNot(HaveOccurred())
 				testScript := scriptFor(cloudConfigUserData, hyperkubeImage, kubernetesVersion, copyKubernetesBinariesFn, kubeletDataVolSize, reloadConfigCommand, units)
 				Expect(string(script)).To(Equal(testScript))
@@ -87,7 +89,7 @@ var _ = Describe("Executor", func() {
 		It("should return an error because the data volume size cannot be parsed", func() {
 			kubeletDataVolume := &gardencorev1beta1.DataVolume{VolumeSize: "not-parsable"}
 
-			script, err := executor.Script(cloudConfigUserData, hyperkubeImage, "1.2.3", kubeletDataVolume, reloadConfigCommand, units)
+			script, err := executor.Script(cloudConfigUserData, cloudConfigExecutionMaxDelaySeconds, hyperkubeImage, "1.2.3", kubeletDataVolume, reloadConfigCommand, units)
 			Expect(script).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("quantities must match the regular expression")))
 		})
