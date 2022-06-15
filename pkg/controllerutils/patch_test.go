@@ -49,7 +49,11 @@ var _ = Describe("Patch", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
-		obj = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "bar"}}
+		obj = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+			Name:            "foo",
+			Namespace:       "bar",
+			ResourceVersion: "42",
+		}}
 
 		scheme = runtime.NewScheme()
 		Expect(corescheme.AddToScheme(scheme)).NotTo(HaveOccurred())
@@ -62,7 +66,7 @@ var _ = Describe("Patch", func() {
 	})
 
 	Describe("GetAndCreateOr*Patch", func() {
-		testSuite := func(f func(ctx context.Context, c client.Client, obj client.Object, f controllerutil.MutateFn) (controllerutil.OperationResult, error), patchType types.PatchType) {
+		testSuite := func(f func(ctx context.Context, c client.Client, obj client.Object, f controllerutil.MutateFn, opts ...client.MergeFromOption) (controllerutil.OperationResult, error), patchType types.PatchType) {
 			It("should return an error because reading the object fails", func() {
 				c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).Return(fakeErr)
 
@@ -139,6 +143,26 @@ var _ = Describe("Patch", func() {
 				Expect(result).To(Equal(controllerutil.OperationResultUpdated))
 				Expect(err).NotTo(HaveOccurred())
 			})
+
+			It("should successfully patch the object with optimistic locking", func() {
+				objCopy := obj.DeepCopy()
+				mutateFn := func(o *corev1.ServiceAccount) func() error {
+					return func() error {
+						o.Labels = map[string]string{"foo": "bar"}
+						return nil
+					}
+				}
+				_ = mutateFn(objCopy)()
+
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj),
+					test.EXPECTPatchWithOptimisticLock(ctx, c, objCopy, obj, patchType),
+				)
+
+				result, err := f(ctx, c, obj, mutateFn(obj), client.MergeFromWithOptimisticLock{})
+				Expect(result).To(Equal(controllerutil.OperationResultUpdated))
+				Expect(err).NotTo(HaveOccurred())
+			})
 		}
 
 		Describe("#GetAndCreateOrMergePatch", func() { testSuite(GetAndCreateOrMergePatch, types.MergePatchType) })
@@ -146,7 +170,7 @@ var _ = Describe("Patch", func() {
 	})
 
 	Describe("CreateOrGetAnd*Patch", func() {
-		testSuite := func(f func(ctx context.Context, c client.Client, obj client.Object, f controllerutil.MutateFn) (controllerutil.OperationResult, error), patchType types.PatchType) {
+		testSuite := func(f func(ctx context.Context, c client.Client, obj client.Object, f controllerutil.MutateFn, opts ...client.MergeFromOption) (controllerutil.OperationResult, error), patchType types.PatchType) {
 			It("should return an error because the mutate function returned an error", func() {
 				result, err := f(ctx, c, obj, func() error { return fakeErr })
 				Expect(result).To(Equal(controllerutil.OperationResultNone))
@@ -215,6 +239,30 @@ var _ = Describe("Patch", func() {
 				)
 
 				result, err := f(ctx, c, obj, mutateFn(obj))
+				Expect(result).To(Equal(controllerutil.OperationResultUpdated))
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should successfully patch the object with optimistic locking", func() {
+				objCopy := obj.DeepCopy()
+				mutateFn := func(o *corev1.ServiceAccount) func() error {
+					return func() error {
+						o.Labels = map[string]string{"foo": "bar"}
+						return nil
+					}
+				}
+				_ = mutateFn(objCopy)()
+
+				gomock.InOrder(
+					c.EXPECT().Create(ctx, obj).Return(apierrors.NewAlreadyExists(schema.GroupResource{}, "")),
+					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, objToReturn *corev1.ServiceAccount) error {
+						obj.DeepCopyInto(objToReturn)
+						return nil
+					}),
+					test.EXPECTPatchWithOptimisticLock(ctx, c, objCopy, obj, patchType),
+				)
+
+				result, err := f(ctx, c, obj, mutateFn(obj), client.MergeFromWithOptimisticLock{})
 				Expect(result).To(Equal(controllerutil.OperationResultUpdated))
 				Expect(err).NotTo(HaveOccurred())
 			})
