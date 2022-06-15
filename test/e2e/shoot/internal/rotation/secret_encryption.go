@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/test/e2e/shoot/internal"
+	"github.com/gardener/gardener/test/e2e/shoot/internal/access"
 	"github.com/gardener/gardener/test/framework"
 )
 
@@ -63,7 +63,7 @@ func (v *SecretEncryptionVerifier) verifySecretEncryption(ctx context.Context) {
 	)
 
 	Eventually(func(g Gomega) {
-		shootClient, err = internal.CreateShootClientFromAdminKubeconfig(ctx, v.GardenClient, v.Shoot)
+		shootClient, err = access.CreateShootClientFromAdminKubeconfig(ctx, v.GardenClient, v.Shoot)
 		g.Expect(err).NotTo(HaveOccurred())
 	}).Should(Succeed())
 

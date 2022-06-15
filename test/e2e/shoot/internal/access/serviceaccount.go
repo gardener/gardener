@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package access
 
 import (
 	"context"
@@ -45,7 +45,7 @@ var labelsE2ETestDynamicServiceAccountTokenAccess = map[string]string{"e2e-test"
 // to request a token for it, and then creates a new shoot client from it.
 // You should call CleanupObjectsFromDynamicServiceAccountTokenAccess to clean up the objects created by this function.
 func CreateShootClientFromDynamicServiceAccountToken(ctx context.Context, shootClient kubernetes.Interface, name string) (kubernetes.Interface, error) {
-	return createShootClientFromServiceAccount(ctx, shootClient, name, func(serviceAccount *corev1.ServiceAccount) (string, error) {
+	return createShootClientFromServiceAccount(ctx, shootClient, name, labelsE2ETestDynamicServiceAccountTokenAccess, func(serviceAccount *corev1.ServiceAccount) (string, error) {
 		tokenRequest := &authenticationv1.TokenRequest{
 			Spec: authenticationv1.TokenRequestSpec{
 				Audiences:         []string{v1beta1constants.GardenerAudience},
@@ -80,7 +80,7 @@ var labelsE2ETestStaticServiceAccountToken = map[string]string{"e2e-test": "serv
 // by kube-controller-manager), and then creates a new shoot client from it.
 // You should call CleanupObjectsFromStaticServiceAccountTokenAccess to clean up the objects created by this function.
 func CreateShootClientFromStaticServiceAccountToken(ctx context.Context, shootClient kubernetes.Interface, name string) (kubernetes.Interface, error) {
-	return createShootClientFromServiceAccount(ctx, shootClient, name, func(serviceAccount *corev1.ServiceAccount) (string, error) {
+	return createShootClientFromServiceAccount(ctx, shootClient, name, labelsE2ETestStaticServiceAccountToken, func(serviceAccount *corev1.ServiceAccount) (string, error) {
 		secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: serviceAccount.Namespace}}
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, shootClient.Client(), secret, func() error {
 			secret.Labels = utils.MergeStringMaps(secret.Labels, labelsE2ETestStaticServiceAccountToken)
@@ -128,6 +128,7 @@ func createShootClientFromServiceAccount(
 	ctx context.Context,
 	shootClient kubernetes.Interface,
 	name string,
+	labels map[string]string,
 	getTokenForServiceAccount func(*corev1.ServiceAccount) (string, error),
 ) (
 	kubernetes.Interface,
@@ -135,7 +136,7 @@ func createShootClientFromServiceAccount(
 ) {
 	serviceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespaceE2ETestServiceAccountTokenAccess}}
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, shootClient.Client(), serviceAccount, func() error {
-		serviceAccount.Labels = utils.MergeStringMaps(serviceAccount.Labels, labelsE2ETestDynamicServiceAccountTokenAccess)
+		serviceAccount.Labels = utils.MergeStringMaps(serviceAccount.Labels, labels)
 		return nil
 	}); err != nil {
 		return nil, err
@@ -143,7 +144,7 @@ func createShootClientFromServiceAccount(
 
 	clusterRoleBinding := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, shootClient.Client(), clusterRoleBinding, func() error {
-		clusterRoleBinding.Labels = utils.MergeStringMaps(serviceAccount.Labels, labelsE2ETestDynamicServiceAccountTokenAccess)
+		clusterRoleBinding.Labels = utils.MergeStringMaps(serviceAccount.Labels, labels)
 		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",

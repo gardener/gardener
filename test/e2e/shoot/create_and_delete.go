@@ -18,12 +18,11 @@ import (
 	"context"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-
-	"github.com/gardener/gardener/test/e2e/shoot/internal"
+	"github.com/gardener/gardener/test/e2e/shoot/internal/access"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot"), func() {
@@ -40,7 +39,7 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 
 		By("Verify shoot access using admin kubeconfig")
 		Eventually(func(g Gomega) {
-			shootClient, err := internal.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
+			shootClient, err := access.CreateShootClientFromAdminKubeconfig(ctx, f.GardenClient, f.Shoot)
 			g.Expect(err).NotTo(HaveOccurred())
 
 			g.Expect(shootClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
