@@ -197,8 +197,16 @@ func EXPECTPatch(ctx interface{}, c *mockclient.MockClient, expectedObj, mergeFr
 
 // EXPECTPatchWithOptimisticLock is a helper function for a GoMock call with the mock client
 // expecting a merge patch with optimistic lock.
-func EXPECTPatchWithOptimisticLock(ctx interface{}, c *mockclient.MockClient, expectedObj, mergeFrom client.Object, rets ...interface{}) *gomock.Call {
-	expectedPatch := client.MergeFromWithOptions(mergeFrom, client.MergeFromWithOptimisticLock{})
+func EXPECTPatchWithOptimisticLock(ctx interface{}, c *mockclient.MockClient, expectedObj, mergeFrom client.Object, patchType types.PatchType, rets ...interface{}) *gomock.Call {
+	var expectedPatch client.Patch
+
+	switch patchType {
+	case types.MergePatchType:
+		expectedPatch = client.MergeFromWithOptions(mergeFrom, client.MergeFromWithOptimisticLock{})
+	case types.StrategicMergePatchType:
+		expectedPatch = client.StrategicMergeFrom(mergeFrom.DeepCopyObject().(client.Object), client.MergeFromWithOptimisticLock{})
+	}
+
 	return expectPatch(ctx, c, expectedObj, expectedPatch, rets...)
 }
 

@@ -305,7 +305,7 @@ var _ = Describe("SecretReconciler", func() {
 
 			secretAfter := secret.DeepCopy()
 			secretAfter.SetFinalizers(nil)
-			test.EXPECTPatchWithOptimisticLock(gomock.Any(), c, secretAfter, secret)
+			test.EXPECTPatchWithOptimisticLock(gomock.Any(), c, secretAfter, secret, types.MergePatchType)
 
 			res, err := r.Reconcile(ctx, secretReq)
 			Expect(err).NotTo(HaveOccurred())
@@ -339,7 +339,7 @@ var _ = Describe("SecretReconciler", func() {
 
 			secretAfter := secret.DeepCopy()
 			secretAfter.SetFinalizers(nil)
-			test.EXPECTPatchWithOptimisticLock(gomock.Any(), c, secretAfter, secret)
+			test.EXPECTPatchWithOptimisticLock(gomock.Any(), c, secretAfter, secret, types.MergePatchType)
 
 			res, err := r.Reconcile(ctx, secretReq)
 			Expect(err).NotTo(HaveOccurred())
@@ -373,7 +373,7 @@ var _ = Describe("SecretReconciler", func() {
 
 			secretAfter := secret.DeepCopy()
 			secretAfter.SetFinalizers(nil)
-			test.EXPECTPatchWithOptimisticLock(gomock.Any(), c, secretAfter, secret, fmt.Errorf("fake"))
+			test.EXPECTPatchWithOptimisticLock(gomock.Any(), c, secretAfter, secret, types.MergePatchType, fmt.Errorf("fake"))
 
 			res, err := r.Reconcile(ctx, secretReq)
 			Expect(err).To(MatchError(ContainSubstring("fake")))
