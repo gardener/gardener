@@ -178,7 +178,7 @@ images:
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: k8s.gcr.io/ingress-nginx/controller-chroot
-  tag: "v1.2.0"
+  tag: "v1.2.1"
   targetVersion: ">= 1.22"
 - name: nginx-ingress-controller-seed
   sourceRepository: github.com/kubernetes/ingress-nginx
@@ -188,7 +188,7 @@ images:
 - name: nginx-ingress-controller-seed
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: k8s.gcr.io/ingress-nginx/controller-chroot
-  tag: "v1.2.0"
+  tag: "v1.2.1"
   targetVersion: ">= 1.22"
 - name: ingress-default-backend
   sourceRepository: https://github.com/kubernetes/ingress-gce
