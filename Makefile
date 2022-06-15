@@ -263,25 +263,22 @@ kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-e
 
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 
-kind-up kind-down: CLUSTER_NAME := gardener-local
-kind-up kind-down: KUSTOMIZE_DIR :=  $(REPO_ROOT)/example/provider-local/base
-kind-up: CONFIG_DIR := $(REPO_ROOT)/example/gardener-local/kind
+kind-up kind-down: KUSTOMIZE_DIR = $(REPO_ROOT)/example/provider-local/base
 
-kind2-up kind2-down: CLUSTER_NAME := gardener-local2
-kind2-up kind2-down: KUSTOMIZE_DIR :=  $(REPO_ROOT)/example/provider-local/seed-kind2
-kind2-up: CONFIG_DIR := $(REPO_ROOT)/example/gardener-local/kind2
+kind2-up kind2-down: TARGET_SUFFIX := 2
+kind2-up kind2-down: KUSTOMIZE_DIR = $(REPO_ROOT)/example/provider-local/kind2
 
 kind-up kind2-up: $(KIND)
 ifeq ($(MAKECMDGOALS), kind-up)
 	mkdir -m 775 -p $(REPO_ROOT)/dev/local-backupbuckets
 endif
-	$(KIND) create cluster --name $(CLUSTER_NAME) --config $(CONFIG_DIR)/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
-	docker exec $(CLUSTER_NAME)-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+	$(KIND) create cluster --name gardener-local$(TARGET_SUFFIX) --config $(REPO_ROOT)/example/gardener-local/kind$(TARGET_SUFFIX)/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
+	docker exec gardener-local$(TARGET_SUFFIX)-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
 	cp $(KUBECONFIG) $(KUSTOMIZE_DIR)/kubeconfig
 	kubectl apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
 
 kind-down kind2-down: $(KIND)
-	$(KIND) delete cluster --name $(CLUSTER_NAME)
+	$(KIND) delete cluster --name gardener-local$(TARGET_SUFFIX)
 	rm -f $(KUSTOMIZE_DIR)/kubeconfig
 ifeq ($(MAKECMDGOALS), kind-down)
 	rm -rf dev/local-backupbuckets
@@ -308,10 +305,13 @@ gardener-down: $(SKAFFOLD) $(HELM)
 	kubectl delete ns gardener-system-seed-lease istio-ingress istio-system --ignore-not-found
 
 gardenlet-kind2-up: $(SKAFFOLD) $(HELM)
-	$(SKAFFOLD) run -m gardenlet,provider-local -p kind2
+	$(SKAFFOLD) deploy -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
+	@# define GARDENER_LOCAL_KUBECONFIG so that it can be used by skaffold when checking whether the seed managed by this gardenlet is ready
+	GARDENER_LOCAL_KUBECONFIG=$(GARDENER_LOCAL_KUBECONFIG) $(SKAFFOLD) run -m provider-local,gardenlet -p kind2
 
 gardenlet-kind2-down: $(SKAFFOLD) $(HELM)
-	$(SKAFFOLD) delete -m gardenlet -p kind2
+	$(SKAFFOLD) delete -m kind2-env -p kind2 --kubeconfig=$(GARDENER_LOCAL_KUBECONFIG)
+	$(SKAFFOLD) delete -m gardenlet,kind2-env -p kind2
 
 register-local-env:
 	kubectl apply -k $(REPO_ROOT)/example/provider-local/overlays/local

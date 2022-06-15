@@ -1,6 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+
 generatorOptions:
   disableNameSuffixHash: true
 
@@ -14,6 +15,7 @@ resources:
 - cloudprofile.yaml
 - controller-registration.yaml
 - project.yaml
+- secret-backup.yaml
 - secretbinding.yaml
 - https://raw.githubusercontent.com/gardener/gardener-extension-networking-calico/v1.23.0/example/controller-registration.yaml
 

@@ -126,6 +126,18 @@ deploy:
 apiVersion: skaffold/v2beta25
 kind: Config
 metadata:
+  name: kind2-env
+profiles:
+- name: kind2
+  deploy:
+    kustomize:
+      paths:
+      - example/provider-local/kind2
+
+---
+apiVersion: skaffold/v2beta25
+kind: Config
+metadata:
   name: gardenlet
 build:
   local:
@@ -211,13 +223,13 @@ profiles:
       echo "Wait until seed is ready"
       for i in `seq 1 30`;
       do
-        if kubectl --kubeconfig=example/gardener-local/kind/kubeconfig get seed local2 2> /dev/null; then
+        if kubectl --kubeconfig=$GARDENER_LOCAL_KUBECONFIG get seed local2 2> /dev/null; then
           break
         fi
         echo "Wait until seed gets created by gardenlet"
         sleep 2
       done
-      kubectl --kubeconfig=example/gardener-local/kind/kubeconfig wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local2 --timeout=5m
+      kubectl --kubeconfig=$GARDENER_LOCAL_KUBECONFIG wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local2 --timeout=5m
   # add dummy artifact override to make skaffold the load provider-local image into cluster
   - op: add
     path: /deploy/helm/releases/0/artifactOverrides/global

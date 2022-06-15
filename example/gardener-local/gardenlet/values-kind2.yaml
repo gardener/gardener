@@ -27,4 +27,6 @@ global:
         spec:
           ingress:
             domain: ingress.local2.seed.local.gardener.cloud
-          secretRef: {}
+          secretRef:
+            name: seed-local2
+            namespace: garden
