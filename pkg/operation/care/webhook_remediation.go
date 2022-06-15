@@ -23,7 +23,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/botanist/matchers"
+	webhookmatchers "github.com/gardener/gardener/pkg/operation/botanist/matchers"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 
@@ -32,6 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -97,26 +98,22 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 				webhookConfig.Webhooks[i].TimeoutSeconds = remediate.timeoutSeconds()
 			}
 
-			if mustRemediate, matcher := mustRemediateSelector(w.FailurePolicy, w.Rules, w.ObjectSelector, w.NamespaceSelector); mustRemediate {
+			if w.FailurePolicy != nil && *w.FailurePolicy == admissionregistrationv1.Ignore {
+				return nil
+			}
+
+			matchers := getMatchingRules(w.Rules, w.ObjectSelector, w.NamespaceSelector)
+
+			if mustRemediateFailurePolicy(matchers) {
 				mustPatch = true
+				webhookConfig.Webhooks[i].FailurePolicy = remediate.failurePolicy()
+			}
 
-				if matcher.NamespaceLabels == nil && matcher.ObjectLabels == nil {
-					// If the matcher has neither namespaceLabels nor objectLabels then our only option for remediation
-					// is setting the failurePolicy to 'Ignore'.
-					webhookConfig.Webhooks[i].FailurePolicy = remediate.failurePolicy()
-				} else {
-					matchExpressions := remediate.selector(matcher)
-
-					if matcher.ClusterScoped {
-						// If a rule was matched for a cluster-scoped resource then we can remediate by extending the
-						// objectSelector so that our resources are getting excluded.
-						webhookConfig.Webhooks[i].ObjectSelector = extendSelector(webhookConfig.Webhooks[i].ObjectSelector, matchExpressions...)
-					} else {
-						// If a rule was matched for a namespace-scoped resource then we can remediate by extending the
-						// namespaceSelector so that our resources are getting excluded.
-						webhookConfig.Webhooks[i].NamespaceSelector = extendSelector(webhookConfig.Webhooks[i].NamespaceSelector, matchExpressions...)
-					}
-				}
+			if mustRemediateSelectors(matchers) {
+				mustPatch = true
+				objectSelector, namespaceSelector := remediate.selectors(matchers)
+				webhookConfig.Webhooks[i].ObjectSelector = extendSelector(webhookConfig.Webhooks[i].ObjectSelector, objectSelector...)
+				webhookConfig.Webhooks[i].NamespaceSelector = extendSelector(webhookConfig.Webhooks[i].NamespaceSelector, namespaceSelector...)
 			}
 		}
 
@@ -150,26 +147,22 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 				webhookConfig.Webhooks[i].TimeoutSeconds = remediate.timeoutSeconds()
 			}
 
-			if mustRemediate, matcher := mustRemediateSelector(w.FailurePolicy, w.Rules, w.ObjectSelector, w.NamespaceSelector); mustRemediate {
+			if w.FailurePolicy != nil && *w.FailurePolicy == admissionregistrationv1.Ignore {
+				return nil
+			}
+
+			matchers := getMatchingRules(w.Rules, w.ObjectSelector, w.NamespaceSelector)
+
+			if mustRemediateFailurePolicy(matchers) {
 				mustPatch = true
+				webhookConfig.Webhooks[i].FailurePolicy = remediate.failurePolicy()
+			}
 
-				if matcher.NamespaceLabels == nil && matcher.ObjectLabels == nil {
-					// If the matcher has neither namespaceLabels nor objectLabels then our only option for remediation
-					// is setting the failurePolicy to 'Ignore'.
-					webhookConfig.Webhooks[i].FailurePolicy = remediate.failurePolicy()
-				} else {
-					matchExpressions := remediate.selector(matcher)
-
-					if matcher.ClusterScoped {
-						// If a rule was matched for a cluster-scoped resource then we can remediate by extending the
-						// objectSelector so that our resources are getting excluded.
-						webhookConfig.Webhooks[i].ObjectSelector = extendSelector(webhookConfig.Webhooks[i].ObjectSelector, matchExpressions...)
-					} else {
-						// If a rule was matched for a namespace-scoped resource then we can remediate by extending the
-						// namespaceSelector so that our resources are getting excluded.
-						webhookConfig.Webhooks[i].NamespaceSelector = extendSelector(webhookConfig.Webhooks[i].NamespaceSelector, matchExpressions...)
-					}
-				}
+			if mustRemediateSelectors(matchers) {
+				mustPatch = true
+				objectSelector, namespaceSelector := remediate.selectors(matchers)
+				webhookConfig.Webhooks[i].ObjectSelector = extendSelector(webhookConfig.Webhooks[i].ObjectSelector, objectSelector...)
+				webhookConfig.Webhooks[i].NamespaceSelector = extendSelector(webhookConfig.Webhooks[i].NamespaceSelector, namespaceSelector...)
 			}
 		}
 
@@ -181,28 +174,34 @@ func (r *WebhookRemediation) Remediate(ctx context.Context) error {
 	return flow.Parallel(fns...)(ctx)
 }
 
+func getMatchingRules(
+	rules []admissionregistrationv1.RuleWithOperations,
+	objectSelector, namespaceSelector *metav1.LabelSelector,
+) []webhookmatchers.WebhookConstraintMatcher {
+	var matchers []webhookmatchers.WebhookConstraintMatcher
+	for _, rule := range rules {
+		for _, matcher := range webhookmatchers.WebhookConstraintMatchers {
+			if matcher.Match(rule, objectSelector, namespaceSelector) {
+				matchers = append(matchers, matcher)
+			}
+		}
+	}
+	return matchers
+}
+
 func mustRemediateTimeoutSeconds(timeoutSeconds *int32) bool {
 	return timeoutSeconds == nil || *timeoutSeconds > WebhookMaximumTimeoutSecondsNotProblematic
 }
 
-func mustRemediateSelector(
-	failurePolicy *admissionregistrationv1.FailurePolicyType,
-	rules []admissionregistrationv1.RuleWithOperations,
-	objectSelector, namespaceSelector *metav1.LabelSelector,
-) (
-	bool,
-	matchers.WebhookConstraintMatcher,
-) {
-	if failurePolicy == nil || *failurePolicy != admissionregistrationv1.Ignore {
-		for _, rule := range rules {
-			for _, matcher := range matchers.WebhookConstraintMatchers {
-				if matcher.Match(rule, objectSelector, namespaceSelector) {
-					return true, matcher
-				}
-			}
-		}
+func mustRemediateSelectors(matchers []webhookmatchers.WebhookConstraintMatcher) bool {
+	return len(matchers) > 0
+}
+
+func mustRemediateFailurePolicy(matchers []webhookmatchers.WebhookConstraintMatcher) bool {
+	for _, matcher := range matchers {
+		return matcher.NamespaceLabels == nil && matcher.ObjectLabels == nil
 	}
-	return false, matchers.WebhookConstraintMatcher{}
+	return false
 }
 
 type remediator struct {
@@ -229,46 +228,42 @@ func newRemediator(logger logrus.FieldLogger, webhookConfigKind, webhookConfigNa
 
 func (r *remediator) timeoutSeconds() *int32 {
 	var timeoutSeconds int32 = WebhookMaximumTimeoutSecondsNotProblematic
-
-	r.logger.Info("Remediating timeout seconds")
-	*r.remediations = append(*r.remediations, fmt.Sprintf("timeoutSeconds of webhook %q was set to %d", r.webhookName, WebhookMaximumTimeoutSecondsNotProblematic))
-
+	r.reportf("timeoutSeconds", "set to %d", timeoutSeconds)
 	return pointer.Int32(timeoutSeconds)
 }
 
-func (r *remediator) selector(matcher matchers.WebhookConstraintMatcher) []metav1.LabelSelectorRequirement {
-	var (
-		selectorFieldName = "namespaceSelector"
-		matcherLabels     = matcher.NamespaceLabels
-	)
-
-	if matcher.ClusterScoped {
-		selectorFieldName = "objectSelector"
-		matcherLabels = matcher.ObjectLabels
+func (r *remediator) selectors(matchers []webhookmatchers.WebhookConstraintMatcher) (objectSelector, namespaceSelector []metav1.LabelSelectorRequirement) {
+	for _, matcher := range matchers {
+		for k, v := range matcher.ObjectLabels {
+			objectSelector = append(objectSelector, newNotInLabelSelectorRequirement(k, v))
+		}
+		for k, v := range matcher.NamespaceLabels {
+			namespaceSelector = append(namespaceSelector, newNotInLabelSelectorRequirement(k, v))
+		}
 	}
 
-	selectorExtensions := make([]metav1.LabelSelectorRequirement, 0, len(matcherLabels))
-	for k, v := range matcherLabels {
-		selectorExtensions = append(selectorExtensions, metav1.LabelSelectorRequirement{
-			Key:      k,
-			Operator: metav1.LabelSelectorOpNotIn,
-			Values:   []string{v},
-		})
+	objectSelector = removeDuplicateRequirements(objectSelector)
+	namespaceSelector = removeDuplicateRequirements(namespaceSelector)
+
+	if len(objectSelector) > 0 {
+		r.reportf("objectSelector", "extended with %s", objectSelector)
+	}
+	if len(namespaceSelector) > 0 {
+		r.reportf("namespaceSelector", "extended with %s", namespaceSelector)
 	}
 
-	r.logger.Infof("Remediating %s", selectorFieldName)
-	*r.remediations = append(*r.remediations, fmt.Sprintf("%s of webhook %q was extended with %s", selectorFieldName, r.webhookName, selectorExtensions))
-
-	return selectorExtensions
+	return
 }
 
 func (r *remediator) failurePolicy() *admissionregistrationv1.FailurePolicyType {
 	ignore := admissionregistrationv1.Ignore
-
-	r.logger.Info("Remediating failurePolicy")
-	*r.remediations = append(*r.remediations, fmt.Sprintf("failurePolicy of webhook %q was set to %s", r.webhookName, ignore))
-
+	r.reportf("failurePolicy", "set to %s", ignore)
 	return &ignore
+}
+
+func (r *remediator) reportf(fieldName string, messageFmt string, args ...interface{}) {
+	r.logger.Infof("Remediating %s", fieldName)
+	*r.remediations = append(*r.remediations, fmt.Sprintf("%s of webhook %q was %s", fieldName, r.webhookName, fmt.Sprintf(messageFmt, args...)))
 }
 
 func newPatchFunc(shootClient client.Client, webhookConfig client.Object, patch client.Patch, remediations []string) func(context.Context) error {
@@ -297,6 +292,38 @@ func addHyphenPrefix(list []string) []string {
 	for _, v := range list {
 		out = append(out, "- "+v)
 	}
+	return out
+}
+
+func newNotInLabelSelectorRequirement(key, value string) metav1.LabelSelectorRequirement {
+	return metav1.LabelSelectorRequirement{
+		Key:      key,
+		Operator: metav1.LabelSelectorOpNotIn,
+		Values:   []string{value},
+	}
+}
+
+func removeDuplicateRequirements(requirements []metav1.LabelSelectorRequirement) []metav1.LabelSelectorRequirement {
+	var (
+		keyValues   = sets.NewString()
+		keyValuesID = func(requirement metav1.LabelSelectorRequirement) string {
+			return requirement.Key + strings.Join(requirement.Values, "")
+		}
+
+		out []metav1.LabelSelectorRequirement
+	)
+
+	for _, requirement := range requirements {
+		id := keyValuesID(requirement)
+
+		if keyValues.Has(id) {
+			continue
+		}
+
+		out = append(out, requirement)
+		keyValues.Insert(id)
+	}
+
 	return out
 }
 

@@ -197,7 +197,7 @@ var _ = Describe("WebhookRemediation", func() {
 
 				It("objectSelector", func() {
 					defer test.WithVar(&matchers.WebhookConstraintMatchers, []matchers.WebhookConstraintMatcher{
-						{GVR: corev1.SchemeGroupVersion.WithResource("foobars"), ClusterScoped: true, ObjectLabels: map[string]string{"foo": "bar"}},
+						{GVR: corev1.SchemeGroupVersion.WithResource("foobars"), ObjectLabels: map[string]string{"foo": "bar"}},
 					})()
 
 					validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
@@ -222,6 +222,57 @@ var _ = Describe("WebhookRemediation", func() {
 					Expect(validatingWebhookConfiguration.Webhooks[0].ObjectSelector).To(Equal(&metav1.LabelSelector{
 						MatchExpressions: []metav1.LabelSelectorRequirement{
 							{Key: "foo", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"bar"}},
+						},
+					}))
+				})
+
+				It("both selectors (multiple matching rules)", func() {
+					defer test.WithVar(&matchers.WebhookConstraintMatchers, []matchers.WebhookConstraintMatcher{
+						{GVR: corev1.SchemeGroupVersion.WithResource("foobars"), ObjectLabels: map[string]string{"foo": "bar"}},
+						{GVR: corev1.SchemeGroupVersion.WithResource("barfoos"), NamespaceLabels: map[string]string{"bar": "foo"}},
+						{GVR: corev1.SchemeGroupVersion.WithResource("foobazs"), NamespaceLabels: map[string]string{"foo": "baz"}, ObjectLabels: map[string]string{"foo": "baz"}},
+						{GVR: corev1.SchemeGroupVersion.WithResource("foobaz2s"), NamespaceLabels: map[string]string{"foo": "baz"}, ObjectLabels: map[string]string{"foo": "baz"}},
+					})()
+
+					validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
+						Name:          "some-webhook.example.com",
+						FailurePolicy: &fail,
+						Rules: []admissionregistrationv1.RuleWithOperations{
+							{
+								Rule: admissionregistrationv1.Rule{
+									APIGroups:   []string{""},
+									APIVersions: []string{"v1"},
+									Resources:   []string{"foobars", "barfoos", "foobazs"},
+								},
+								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+							},
+							{
+								Rule: admissionregistrationv1.Rule{
+									APIGroups:   []string{""},
+									APIVersions: []string{"v1"},
+									Resources:   []string{"foobaz2s"},
+								},
+								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+							},
+						},
+					}}
+					Expect(fakeClient.Create(ctx, validatingWebhookConfiguration)).To(Succeed())
+
+					Expect(remediator.Remediate(ctx)).To(Succeed())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(validatingWebhookConfiguration), validatingWebhookConfiguration)).To(Succeed())
+					Expect(validatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
+					Expect(validatingWebhookConfiguration.Webhooks[0].FailurePolicy).To(Equal(&fail))
+					Expect(validatingWebhookConfiguration.Webhooks[0].ObjectSelector).To(Equal(&metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{Key: "foo", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"bar"}},
+							{Key: "foo", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"baz"}},
+						},
+					}))
+					Expect(validatingWebhookConfiguration.Webhooks[0].NamespaceSelector).To(Equal(&metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{Key: "bar", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"foo"}},
+							{Key: "foo", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"baz"}},
 						},
 					}))
 				})
@@ -293,7 +344,7 @@ var _ = Describe("WebhookRemediation", func() {
 
 				It("objectSelector", func() {
 					defer test.WithVar(&matchers.WebhookConstraintMatchers, []matchers.WebhookConstraintMatcher{
-						{GVR: corev1.SchemeGroupVersion.WithResource("foobars"), ClusterScoped: true, ObjectLabels: map[string]string{"foo": "bar"}},
+						{GVR: corev1.SchemeGroupVersion.WithResource("foobars"), ObjectLabels: map[string]string{"foo": "bar"}},
 					})()
 
 					mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
@@ -318,6 +369,57 @@ var _ = Describe("WebhookRemediation", func() {
 					Expect(mutatingWebhookConfiguration.Webhooks[0].ObjectSelector).To(Equal(&metav1.LabelSelector{
 						MatchExpressions: []metav1.LabelSelectorRequirement{
 							{Key: "foo", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"bar"}},
+						},
+					}))
+				})
+
+				It("both selectors (multiple matching rules)", func() {
+					defer test.WithVar(&matchers.WebhookConstraintMatchers, []matchers.WebhookConstraintMatcher{
+						{GVR: corev1.SchemeGroupVersion.WithResource("foobars"), ObjectLabels: map[string]string{"foo": "bar"}},
+						{GVR: corev1.SchemeGroupVersion.WithResource("barfoos"), NamespaceLabels: map[string]string{"bar": "foo"}},
+						{GVR: corev1.SchemeGroupVersion.WithResource("foobazs"), NamespaceLabels: map[string]string{"foo": "baz"}, ObjectLabels: map[string]string{"foo": "baz"}},
+						{GVR: corev1.SchemeGroupVersion.WithResource("foobaz2s"), NamespaceLabels: map[string]string{"foo": "baz"}, ObjectLabels: map[string]string{"foo": "baz"}},
+					})()
+
+					mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
+						Name:          "some-webhook.example.com",
+						FailurePolicy: &fail,
+						Rules: []admissionregistrationv1.RuleWithOperations{
+							{
+								Rule: admissionregistrationv1.Rule{
+									APIGroups:   []string{""},
+									APIVersions: []string{"v1"},
+									Resources:   []string{"foobars", "barfoos", "foobazs"},
+								},
+								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+							},
+							{
+								Rule: admissionregistrationv1.Rule{
+									APIGroups:   []string{""},
+									APIVersions: []string{"v1"},
+									Resources:   []string{"foobaz2s"},
+								},
+								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+							},
+						},
+					}}
+					Expect(fakeClient.Create(ctx, mutatingWebhookConfiguration)).To(Succeed())
+
+					Expect(remediator.Remediate(ctx)).To(Succeed())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(mutatingWebhookConfiguration), mutatingWebhookConfiguration)).To(Succeed())
+					Expect(mutatingWebhookConfiguration.Annotations).To(HaveKey("gardener.cloud/warning"))
+					Expect(mutatingWebhookConfiguration.Webhooks[0].FailurePolicy).To(Equal(&fail))
+					Expect(mutatingWebhookConfiguration.Webhooks[0].ObjectSelector).To(Equal(&metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{Key: "foo", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"bar"}},
+							{Key: "foo", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"baz"}},
+						},
+					}))
+					Expect(mutatingWebhookConfiguration.Webhooks[0].NamespaceSelector).To(Equal(&metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{Key: "bar", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"foo"}},
+							{Key: "foo", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"baz"}},
 						},
 					}))
 				})
