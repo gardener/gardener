@@ -344,7 +344,11 @@ if [[ -f "/var/lib/kubelet/kubeconfig-real" ]]; then
   # and don't apply the (potentially updated) cloud-config user data. This is to spread the restarts of the systemd
   # units and to prevent too many restarts happening on the nodes at roughly the same time.
   if [[ ! -f "$PATH_EXECUTION_DELAY_SECONDS" ]]; then
-    echo $((30 + $RANDOM % 300)) > "$PATH_EXECUTION_DELAY_SECONDS"
+    if [[ "300" -gt "0" ]]; then
+      echo $((30 + $RANDOM % 300)) > "$PATH_EXECUTION_DELAY_SECONDS"
+    else
+      echo "30" > "$PATH_EXECUTION_DELAY_SECONDS"
+    fi
   fi
   execution_delay_seconds=$(cat "$PATH_EXECUTION_DELAY_SECONDS")
 

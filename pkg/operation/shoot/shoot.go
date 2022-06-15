@@ -271,6 +271,16 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	shoot.BackupEntryName = backupEntryName
 
 	shoot.CloudConfigExecutionMaxDelaySeconds = 300
+	if v, ok := shootObject.Annotations[v1beta1constants.AnnotationShootCloudConfigExecutionMaxDelaySeconds]; ok {
+		seconds, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, err
+		}
+
+		if seconds <= 1800 {
+			shoot.CloudConfigExecutionMaxDelaySeconds = seconds
+		}
+	}
 
 	return shoot, nil
 }
