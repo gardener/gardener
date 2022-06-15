@@ -15,7 +15,7 @@ Based on [Skaffold](https://skaffold.dev/), the container images for all require
 - Make sure that you have followed the [Local Setup guide](../development/local_setup.md) up until the [Get the sources]../development/local_setup.md#get-the-sources) step.
 - Make sure your Docker daemon is up-to-date, up and running and has enough resources (at least `8` CPUs and `8Gi` memory; see [here](https://docs.docker.com/desktop/mac/#resources) how to configure the resources for Docker for Mac).
   > Please note that 8 CPU / 8Gi memory might not be enough for more than two `Shoot` clusters, i.e., you might need to increase these values if you want to run additional `Shoot`s.
-  > If you plan on following the optional steps to [create a second seed cluster](#optional-setting-up-a-second-seed-cluster), the required resources will be more - at least `10` CPUs and `18Gi` memory
+  > If you plan on following the optional steps to [create a second seed cluster](#optional-setting-up-a-second-seed-cluster), the required resources will be more - at least `10` CPUs and `18Gi` memory.
   Additionally, please configure at least `120Gi` of disk size for the Docker daemon.
   > Tip: With `docker system df` and `docker system prune -a` you can cleanup unused data.
 
@@ -115,7 +115,7 @@ There are cases where you would want to create a second cluster seed in your loc
 make kind2-up
 ```
 
-This command sets up a new KinD cluster named `gardener-local2` and stores its kubeconfig in the `./example/gardener-local/kind/kubeconfig2` file.
+This command sets up a new KinD cluster named `gardener-local2` and stores its kubeconfig in the `./example/gardener-local/kind2/kubeconfig` file.
 
 In order to deploy required resources in the KinD cluster that you just created, run:
 
@@ -123,7 +123,7 @@ In order to deploy required resources in the KinD cluster that you just created,
 make gardenlet-kind2-up
 ```
 
-The following steps assume that your are using the kubeconfig that points to the `gardener-local` cluster: `export KUBECONFIG=example/gardener-local/kind/kubeconfig`.
+The following steps assume that your are using the kubeconfig that points to the `gardener-local`  cluster (first KinD cluster): `export KUBECONFIG=example/gardener-local/kind/kubeconfig`.
 
 You can wait for the `local2` `Seed` to be ready by running:
 
@@ -146,16 +146,15 @@ If you want to perform control plane migration you can follow the steps outlined
 ./hack/usage/delete shoot local garden-local
 ```
 
-## Tear down the Gardener environment
-
-```shell
-make kind-down
-```
-
-## (Optional): Tear down the Gardener environment if you added a second seed
+## (Optional): Tear down the second seed cluster
 
 ``` shell
 make kind2-down
+```
+
+## Tear down the Gardener environment
+
+```shell
 make kind-down
 ```
 
