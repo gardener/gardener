@@ -5,7 +5,7 @@ generatorOptions:
   disableNameSuffixHash: true
 
 resources:
-- ../seed-base
+- ../seed-kind
 
 secretGenerator:
 - name: seed-local2

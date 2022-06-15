@@ -25,7 +25,6 @@ SERVICE_HOST_IP=${SERVICE_HOST_IP:-127.0.0.1}
 METRICS_BIND_ADDRESS=${METRICS_BIND_ADDRESS:-:8080}
 HEALTH_BIND_ADDRESS=${HEALTH_BIND_ADDRESS:-:8081}
 
-
 mktemp_kubeconfig
 kubeconfig="$__tmp_kubeconfig"
 trap cleanup_kubeconfig EXIT

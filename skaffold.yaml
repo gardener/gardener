@@ -202,10 +202,23 @@ deploy:
 profiles:
 - name: kind2
   patches:
-  # remove the check whether the local seed is ready because the garden cluster is not targeted for the kind2 profile
-  - op: remove
-    path: /deploy/helm/hooks/after/0
-  # add dummy artifact override to make skaffold the load local-provider image into cluster
+  - op: replace
+    path: /deploy/helm/hooks/after/0/host/command
+    value:
+    - bash
+    - -ec
+    - |
+      echo "Wait until seed is ready"
+      for i in `seq 1 30`;
+      do
+        if kubectl --kubeconfig=example/gardener-local/kind/kubeconfig get seed local2 2> /dev/null; then
+          break
+        fi
+        echo "Wait until seed gets created by gardenlet"
+        sleep 2
+      done
+      kubectl --kubeconfig=example/gardener-local/kind/kubeconfig wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local2 --timeout=5m
+  # add dummy artifact override to make skaffold the load provider-local image into cluster
   - op: add
     path: /deploy/helm/releases/0/artifactOverrides/global
     value:
@@ -213,8 +226,8 @@ profiles:
         image: eu.gcr.io/gardener-project/gardener/extensions/provider-local
   - op: add
     path: /deploy/helm/releases/0/valuesFiles/-
-    value: example/gardener-local/gardenlet/values-seed2.yaml
-    # for the kind2 profile only 4 images are built - local-provider, gardenlet, resource-manager and gardener-seed-admission-controller
+    value: example/gardener-local/gardenlet/values-kind2.yaml
+    # for the kind2 profile only 4 images are built: provider-local, gardenlet, resource-manager and gardener-seed-admission-controller
     # so the imageVectorOverwrite must be patched to specify the correct tags
   - op: replace
     path: /deploy/helm/releases/0/setValueTemplates
