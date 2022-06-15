@@ -199,7 +199,9 @@ func mustRemediateSelectors(matchers []webhookmatchers.WebhookConstraintMatcher)
 
 func mustRemediateFailurePolicy(matchers []webhookmatchers.WebhookConstraintMatcher) bool {
 	for _, matcher := range matchers {
-		return matcher.NamespaceLabels == nil && matcher.ObjectLabels == nil
+		if matcher.NamespaceLabels == nil && matcher.ObjectLabels == nil {
+			return true
+		}
 	}
 	return false
 }

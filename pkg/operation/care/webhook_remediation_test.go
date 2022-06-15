@@ -147,6 +147,11 @@ var _ = Describe("WebhookRemediation", func() {
 				})
 
 				It("failurePolicy", func() {
+					defer test.WithVar(&matchers.WebhookConstraintMatchers, []matchers.WebhookConstraintMatcher{
+						{GVR: corev1.SchemeGroupVersion.WithResource("foobars")},
+						{GVR: corev1.SchemeGroupVersion.WithResource("barfoos"), ObjectLabels: map[string]string{"foo": "bar"}},
+					})()
+
 					validatingWebhookConfiguration.Webhooks = []admissionregistrationv1.ValidatingWebhook{{
 						Name:          "some-webhook.example.com",
 						FailurePolicy: &fail,
@@ -154,7 +159,7 @@ var _ = Describe("WebhookRemediation", func() {
 							Rule: admissionregistrationv1.Rule{
 								APIGroups:   []string{""},
 								APIVersions: []string{"v1"},
-								Resources:   []string{"endpoints"},
+								Resources:   []string{"foobars", "barfoos"},
 							},
 							Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
 						}},
@@ -294,6 +299,11 @@ var _ = Describe("WebhookRemediation", func() {
 				})
 
 				It("failurePolicy", func() {
+					defer test.WithVar(&matchers.WebhookConstraintMatchers, []matchers.WebhookConstraintMatcher{
+						{GVR: corev1.SchemeGroupVersion.WithResource("foobars")},
+						{GVR: corev1.SchemeGroupVersion.WithResource("barfoos"), ObjectLabels: map[string]string{"foo": "bar"}},
+					})()
+
 					mutatingWebhookConfiguration.Webhooks = []admissionregistrationv1.MutatingWebhook{{
 						Name:          "some-webhook.example.com",
 						FailurePolicy: &fail,
@@ -301,7 +311,7 @@ var _ = Describe("WebhookRemediation", func() {
 							Rule: admissionregistrationv1.Rule{
 								APIGroups:   []string{""},
 								APIVersions: []string{"v1"},
-								Resources:   []string{"endpoints"},
+								Resources:   []string{"foobars", "barfoos"},
 							},
 							Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
 						}},
