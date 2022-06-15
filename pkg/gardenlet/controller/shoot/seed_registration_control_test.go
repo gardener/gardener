@@ -28,6 +28,7 @@ import (
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	gardenerlogger "github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -208,7 +209,7 @@ var _ = Describe("SeedRegistrationReconciler", func() {
 										},
 									},
 									Volume: &gardencorev1beta1.SeedVolume{
-										MinimumSize: quantityPtr(resource.MustParse("20Gi")),
+										MinimumSize: utils.QuantityPtr(resource.MustParse("20Gi")),
 									},
 									Settings: &gardencorev1beta1.SeedSettings{
 										ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{
@@ -354,7 +355,7 @@ var _ = Describe("SeedRegistrationReconciler", func() {
 													},
 												},
 												Volume: &gardencorev1beta1.SeedVolume{
-													MinimumSize: quantityPtr(resource.MustParse("20Gi")),
+													MinimumSize: utils.QuantityPtr(resource.MustParse("20Gi")),
 												},
 												Settings: &gardencorev1beta1.SeedSettings{
 													ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{
@@ -421,7 +422,5 @@ func rawExtension(cfg *configv1alpha1.GardenletConfiguration) runtime.RawExtensi
 	re.Object = nil
 	return *re
 }
-
-func quantityPtr(v resource.Quantity) *resource.Quantity { return &v }
 
 func bootstrapPtr(v seedmanagementv1alpha1.Bootstrap) *seedmanagementv1alpha1.Bootstrap { return &v }

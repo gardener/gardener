@@ -23,8 +23,9 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
-	"github.com/gardener/gardener/pkg/utils"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+
+	"k8s.io/utils/pointer"
 )
 
 // GenerateUnmanagedCertificates generates a one-off CA and server cert for a webhook server. The server certificate and
@@ -32,7 +33,7 @@ import (
 func GenerateUnmanagedCertificates(providerName, certDir, mode, url string) ([]byte, error) {
 	caConfig := getWebhookCAConfig(providerName)
 	// we want to use a long validity here, because we don't auto-renew certificates
-	caConfig.Validity = utils.DurationPtr(10 * 365 * 24 * time.Hour) // 10y
+	caConfig.Validity = pointer.Duration(10 * 365 * 24 * time.Hour) // 10y
 
 	caCert, err := caConfig.GenerateCertificate()
 	if err != nil {

@@ -19,7 +19,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gardener/gardener/pkg/utils"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/test"
 
@@ -31,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	testclock "k8s.io/utils/clock/testing"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -652,7 +652,7 @@ var _ = Describe("Generate", func() {
 				expectSecretWasCreated(ctx, fakeClient, caSecret)
 
 				By("generating new control plane secret")
-				serverConfig.Validity = utils.DurationPtr(1337 * time.Minute)
+				serverConfig.Validity = pointer.Duration(1337 * time.Minute)
 				controlPlaneSecretConfig := &secretutils.ControlPlaneSecretConfig{
 					Name:                    "control-plane-secret",
 					CertificateSecretConfig: serverConfig,
