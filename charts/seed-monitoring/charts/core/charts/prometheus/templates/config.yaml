@@ -440,7 +440,7 @@ data:
       metrics_path: /probe
 {{ include "prometheus.kube-auth" . | indent 6 }}
       kubernetes_sd_configs:
-      - role: endpoints
+      - role: service
         namespaces:
           names: [ kube-system ]
         api_server: https://kube-apiserver:443
