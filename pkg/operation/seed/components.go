@@ -38,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -120,11 +119,11 @@ func defaultGardenerResourceManager(c client.Client, seedClientVersion string, i
 		ConcurrentSyncs:                      pointer.Int32(20),
 		MaxConcurrentTokenInvalidatorWorkers: pointer.Int32(5),
 		MaxConcurrentRootCAPublisherWorkers:  pointer.Int32(5),
-		HealthSyncPeriod:                     utils.DurationPtr(time.Minute),
+		HealthSyncPeriod:                     pointer.Duration(time.Minute),
 		Replicas:                             pointer.Int32(3),
 		ResourceClass:                        pointer.String(v1beta1constants.SeedResourceManagerClass),
 		SecretNameServerCA:                   v1beta1constants.SecretNameCASeed,
-		SyncPeriod:                           utils.DurationPtr(time.Hour),
+		SyncPeriod:                           pointer.Duration(time.Hour),
 		Version:                              semver.MustParse(seedClientVersion),
 		VPA: &resourcemanager.VPAConfig{
 			MinAllowed: corev1.ResourceList{

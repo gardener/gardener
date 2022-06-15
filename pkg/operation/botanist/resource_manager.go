@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
-	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -65,13 +64,13 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 		AlwaysUpdate:                         pointer.Bool(true),
 		ClusterIdentity:                      b.Seed.GetInfo().Status.ClusterIdentity,
 		ConcurrentSyncs:                      pointer.Int32(20),
-		HealthSyncPeriod:                     utils.DurationPtr(time.Minute),
+		HealthSyncPeriod:                     pointer.Duration(time.Minute),
 		MaxConcurrentHealthWorkers:           pointer.Int32(10),
 		MaxConcurrentTokenInvalidatorWorkers: pointer.Int32(5),
 		MaxConcurrentTokenRequestorWorkers:   pointer.Int32(5),
 		MaxConcurrentRootCAPublisherWorkers:  pointer.Int32(5),
 		SecretNameServerCA:                   v1beta1constants.SecretNameCACluster,
-		SyncPeriod:                           utils.DurationPtr(time.Minute),
+		SyncPeriod:                           pointer.Duration(time.Minute),
 		TargetDiffersFromSourceCluster:       true,
 		TargetDisableCache:                   pointer.Bool(true),
 		Version:                              semver.MustParse(b.K8sSeedClient.Version()),
@@ -213,7 +212,7 @@ func (b *Botanist) reconcileGardenerResourceManagerBootstrapKubeconfigSecret(ctx
 			CommonName:                  "gardener.cloud:system:gardener-resource-manager",
 			Organization:                []string{user.SystemPrivilegedGroup},
 			CertType:                    secretutils.ClientCert,
-			Validity:                    utils.DurationPtr(10 * time.Minute),
+			Validity:                    pointer.Duration(10 * time.Minute),
 			SkipPublishingCACertificate: true,
 		},
 		KubeConfigRequests: []secretutils.KubeConfigRequest{{
