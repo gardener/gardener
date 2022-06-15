@@ -20,11 +20,14 @@ import (
 
 	. "github.com/gardener/gardener/pkg/api/core/shoot"
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 )
 
@@ -80,6 +83,9 @@ var _ = Describe("Warnings", func() {
 
 			DescribeTable("warnings for specific credentials rotations",
 				func(matcher gomegatypes.GomegaMatcher, mutateShoot func(*core.Shoot), mutateRotation func(rotation *core.ShootCredentialsRotation)) {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootCARotation, true)()
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootSARotation, true)()
+
 					if mutateShoot != nil {
 						mutateShoot(shoot)
 					}

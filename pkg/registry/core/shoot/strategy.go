@@ -242,6 +242,14 @@ func (shootStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.
 	return validation.ValidateShootStatusUpdate(obj.(*core.Shoot).Status, old.(*core.Shoot).Status)
 }
 
+func (shootStatusStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
+	return nil
+}
+
+func (shootStatusStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
+	return nil
+}
+
 // ToSelectableFields returns a field set that represents the object
 // TODO: fields are not labels, and the validation rules for them do not apply.
 func ToSelectableFields(shoot *core.Shoot) fields.Set {
