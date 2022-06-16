@@ -27,6 +27,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	auditv1alpha1 "github.com/gardener/gardener/third_party/apiserver/pkg/apis/audit/v1alpha1"
+	auditv1beta1 "github.com/gardener/gardener/third_party/apiserver/pkg/apis/audit/v1beta1"
+	"golang.org/x/mod/semver"
 
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -73,6 +76,8 @@ func New(logger logr.Logger) *handler {
 func init() {
 	auditPolicyScheme := runtime.NewScheme()
 	schemeBuilder := runtime.NewSchemeBuilder(
+		auditv1alpha1.AddToScheme,
+		auditv1beta1.AddToScheme,
 		auditv1.AddToScheme,
 		audit_internal.AddToScheme,
 	)
@@ -186,7 +191,12 @@ func (h *handler) admitShoot(ctx context.Context, request admission.Request) adm
 		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting auditlog policy from ConfigMap %s/%s: %w", shoot.Namespace, newAuditPolicyConfigMapName, err))
 	}
 
-	errCode, err := validateAuditPolicySemantics(auditPolicy)
+	var errCode int32
+	if request.Operation == admissionv1.Create {
+		errCode, err = validateAuditPolicySemanticsForKubernetesVersion(auditPolicy, &shoot.Spec.Kubernetes.Version)
+	} else {
+		errCode, err = validateAuditPolicySemantics(auditPolicy)
+	}
 	if err != nil {
 		return admission.Errored(errCode, err)
 	}
@@ -248,6 +258,10 @@ func (h *handler) admitConfigMap(ctx context.Context, request admission.Request)
 }
 
 func validateAuditPolicySemantics(auditPolicy string) (errCode int32, err error) {
+	return validateAuditPolicySemanticsForKubernetesVersion(auditPolicy, nil)
+}
+
+func validateAuditPolicySemanticsForKubernetesVersion(auditPolicy string, kubernetesVersion *string) (errCode int32, err error) {
 	auditPolicyObj, schemaVersion, err := policyDecoder.Decode([]byte(auditPolicy), nil, nil)
 	if err != nil {
 		return http.StatusUnprocessableEntity, fmt.Errorf("failed to decode the provided audit policy: %w", err)
@@ -259,6 +273,9 @@ func validateAuditPolicySemantics(auditPolicy string) (errCode int32, err error)
 	errList := auditvalidation.ValidatePolicy(auditPolicyInternal)
 	if len(errList) != 0 {
 		return http.StatusUnprocessableEntity, fmt.Errorf("provided invalid audit policy: %v", errList)
+	}
+	if kubernetesVersion != nil && semver.Compare(fmt.Sprintf("v%s", *kubernetesVersion), "v1.24.0") >= 0 && schemaVersion.Version != "v1" {
+		return http.StatusUnprocessableEntity, fmt.Errorf("audit policy with apiVersion '%s' is not supported for kubernetes version >= 1.24.0", schemaVersion.Version)
 	}
 	return 0, nil
 }

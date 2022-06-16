@@ -66,7 +66,10 @@ require (
 	sigs.k8s.io/yaml v1.3.0
 )
 
-require github.com/google/gnostic v0.5.7-v3refs
+require (
+	github.com/google/gnostic v0.5.7-v3refs
+	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3
+)
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
@@ -156,7 +159,6 @@ require (
 	go.opentelemetry.io/proto/otlp v0.7.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
 	golang.org/x/net v0.0.0-20220412020605-290c469a71a5 // indirect
 	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
