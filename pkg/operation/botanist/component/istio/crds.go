@@ -49,7 +49,9 @@ func (c *crds) Deploy(ctx context.Context) error {
 }
 
 func (c *crds) Destroy(ctx context.Context) error {
-	// istio cannot be safely removed
+	if err := c.Delete(ctx, c.chartPath, "", "istio"); err != nil {
+		return err
+	}
 	return nil
 }
 

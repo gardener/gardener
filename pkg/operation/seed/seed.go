@@ -1145,6 +1145,7 @@ func RunDeleteSeedFlow(
 		systemResources = seedsystem.New(seedClient, v1beta1constants.GardenNamespace, seedsystem.Values{})
 		vpa             = vpa.New(seedClient, v1beta1constants.GardenNamespace, nil, vpa.Values{ClusterType: vpa.ClusterTypeSeed})
 		vpnAuthzServer  = vpnauthzserver.New(seedClient, v1beta1constants.GardenNamespace, "", 1)
+		istioCRDs       = istio.NewIstioCRD(seedClientSet.ChartApplier(), charts.Path, seedClient)
 		istio           = istio.NewIstio(seedClient, seedClientSet.ChartRenderer(), nil, common.IstioNamespace, charts.Path, istioIngressGateway, nil)
 	)
 
@@ -1222,6 +1223,11 @@ func RunDeleteSeedFlow(
 			Name: "Destroy Istio",
 			Fn:   component.OpDestroyAndWait(istio).Destroy,
 		})
+		destroyIstioCRDs = g.Add(flow.Task{
+			Name:         "Destroy Istio CRDs",
+			Fn:           component.OpDestroyAndWait(istioCRDs).Destroy,
+			Dependencies: flow.NewTaskIDs(destroyIstio),
+		})
 		_ = g.Add(flow.Task{
 			Name: "Destroying gardener-resource-manager",
 			Fn:   resourceManager.Destroy,
@@ -1240,6 +1246,7 @@ func RunDeleteSeedFlow(
 				destroyVPNAuthzServer,
 				destroySystemResources,
 				destroyIstio,
+				destroyIstioCRDs,
 				noControllerInstallations,
 			),
 		})
