@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -71,10 +72,76 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
+		clusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "system:hvpa-controller",
+				Labels: getLabels(),
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"events"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{""},
+					Resources: []string{"pods", "replicationcontrollers"},
+					Verbs:     []string{"get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"apps"},
+					Resources: []string{"daemonsets", "deployments", "replicasets", "statefulsets"},
+					Verbs:     []string{"get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"autoscaling"},
+					Resources: []string{"horizontalpodautoscalers"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"autoscaling.k8s.io"},
+					Resources: []string{"hvpas"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"autoscaling.k8s.io"},
+					Resources: []string{"hvpas/status"},
+					Verbs:     []string{"get", "patch", "update"},
+				},
+				{
+					APIGroups: []string{"autoscaling.k8s.io"},
+					Resources: []string{"verticalpodautoscalers"},
+					Verbs:     []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{"batch"},
+					Resources: []string{"jobs"},
+					Verbs:     []string{"get", "list", "patch", "update", "watch"},
+				},
+			},
+		}
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "hvpa-controller-rolebinding",
+				Labels: getLabels(),
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     clusterRole.Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
+			}},
+		}
 	)
 
 	resources, err := registry.AddAllAndSerialize(
 		serviceAccount,
+		clusterRole,
+		clusterRoleBinding,
 	)
 	if err != nil {
 		return err
