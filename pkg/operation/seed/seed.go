@@ -340,7 +340,6 @@ func RunReconcileSeedFlow(
 			images.ImageNameFluentBit,
 			images.ImageNameFluentBitPluginInstaller,
 			images.ImageNameGrafana,
-			images.ImageNamePauseContainer,
 			images.ImageNamePrometheus,
 			images.ImageNameHvpaController,
 			images.ImageNameKubeStateMetrics,
@@ -885,10 +884,6 @@ func RunReconcileSeedFlow(
 		"global": map[string]interface{}{
 			"ingressClass": ingressClass,
 			"images":       imagevector.ImageMapToValues(seedImages),
-		},
-		"reserveExcessCapacity": seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled,
-		"replicas": map[string]interface{}{
-			"reserve-excess-capacity": desiredExcessCapacity(),
 		},
 		"prometheus": map[string]interface{}{
 			"resources":               monitoringResources["prometheus"],
