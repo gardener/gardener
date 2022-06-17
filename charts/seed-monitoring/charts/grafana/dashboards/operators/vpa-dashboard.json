@@ -468,33 +468,15 @@
         "label": "Recommendation",
         "multi": false,
         "name": "recommendation",
-        "options": [
-          {
-            "selected": false,
-            "text": "lowerBound",
-            "value": "lowerBound"
-          },
-          {
-            "selected": true,
-            "text": "target",
-            "value": "target"
-          },
-          {
-            "selected": false,
-            "text": "uncappedTarget",
-            "value": "uncappedTarget"
-          },
-          {
-            "selected": false,
-            "text": "upperBound",
-            "value": "upperBound"
-          }
-        ],
-        "query": "label_values(vpa_status_recommendation, recommendation)",
-        "refresh": 0,
+        "options": [],
+        "query": {
+          "query": "label_values(vpa_status_recommendation, recommendation)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 0,
+        "sort": 1,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
@@ -525,7 +507,7 @@
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 0,
+        "sort": 1,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
@@ -548,53 +530,15 @@
         "label": "Target",
         "multi": false,
         "name": "targetName",
-        "options": [
-          {
-            "selected": true,
-            "text": "kube-apiserver",
-            "value": "kube-apiserver"
-          },
-          {
-            "selected": false,
-            "text": "etcd-events",
-            "value": "etcd-events"
-          },
-          {
-            "selected": false,
-            "text": "etcd-main",
-            "value": "etcd-main"
-          },
-          {
-            "selected": false,
-            "text": "prometheus",
-            "value": "prometheus"
-          },
-          {
-            "selected": false,
-            "text": "cloud-controller-manager",
-            "value": "cloud-controller-manager"
-          },
-          {
-            "selected": false,
-            "text": "gardener-resource-manager",
-            "value": "gardener-resource-manager"
-          },
-          {
-            "selected": false,
-            "text": "kube-controller-manager",
-            "value": "kube-controller-manager"
-          },
-          {
-            "selected": false,
-            "text": "kube-scheduler",
-            "value": "kube-scheduler"
-          }
-        ],
-        "query": "label_values(vpa_status_recommendation{targetKind=~\"$targetKind\"}, targetName)",
-        "refresh": 0,
+        "options": [],
+        "query": {
+          "query": "label_values(vpa_status_recommendation{targetKind=~\"$targetKind\"}, targetName)",
+          "refId": "prometheus-targetName-Variable-Query"
+        },
+        "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 0,
+        "sort": 1,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
@@ -629,7 +573,7 @@
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 0,
+        "sort": 1,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
