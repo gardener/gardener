@@ -110,7 +110,7 @@
       "pluginVersion": "7.5.16",
       "targets": [
         {
-          "expr": "sum(rate(node_cpu_seconds_total{mode!=\"idle\", node=~\"$Node\"}[$__rate_interval])) / sum(kube_node_status_allocatable_cpu_cores{node=~\"$Node\"}) * 100",
+          "expr": "sum(rate(node_cpu_seconds_total{mode!=\"idle\", node=~\"$Node\"}[$__rate_interval])) / sum(kube_node_status_capacity_cpu_cores{node=~\"$Node\"}) * 100",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -198,7 +198,7 @@
       "pluginVersion": "7.5.16",
       "targets": [
         {
-          "expr": "sum(node_memory_Active_bytes{node=~\"$Node\"}) / sum(kube_node_status_allocatable_memory_bytes{node=~\"$Node\"}) * 100",
+          "expr": "sum((node_memory_MemTotal_bytes{node=~\"$Node\"} - node_memory_MemAvailable_bytes{node=~\"$Node\"}) / node_memory_MemTotal_bytes{node=~\"$Node\"}) * 100",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -268,7 +268,7 @@
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "CPU",
+          "legendFormat": "Used",
           "refId": "A"
         },
         {
@@ -280,12 +280,22 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(kube_node_status_allocatable_cpu_cores{node=~\"$Node\"}) - sum(rate(node_cpu_seconds_total{mode!=\"idle\", node=~\"$Node\"}[$__rate_interval]))",
+          "expr": "sum(kube_node_status_capacity_cpu_cores{node=~\"$Node\"}) - sum(rate(node_cpu_seconds_total{mode!=\"idle\", node=~\"$Node\"}[$__rate_interval]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Idle",
           "refId": "C"
+        },
+        {
+          "exemplar": true,
+          "expr": "sum(kube_node_status_capacity_cpu_cores{node=~\"$Node\"})",
+          "format": "time_series",
+          "hide": false,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "D"
         }
       ],
       "thresholds": [],
@@ -383,10 +393,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(node_memory_Active_bytes{node=~\"$Node\"})",
+          "expr": "node_memory_MemTotal_bytes{node=~\"$Node\"} - node_memory_MemAvailable_bytes{node=~\"$Node\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Current",
+          "legendFormat": "Used (Total - Available)",
           "refId": "A"
         },
         {
@@ -397,11 +407,21 @@
           "refId": "B"
         },
         {
-          "expr": "sum(kube_node_status_allocatable_memory_bytes{node=~\"$Node\"}) - sum(node_memory_Active_bytes{node=~\"$Node\"})",
+          "expr": "node_memory_MemAvailable_bytes{node=~\"$Node\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Unused",
+          "legendFormat": "Available",
           "refId": "C"
+        },
+        {
+          "exemplar": true,
+          "expr": "node_memory_MemTotal_bytes{node=~\"$Node\"}",
+          "format": "time_series",
+          "hide": false,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "Total",
+          "refId": "D"
         }
       ],
       "thresholds": [],
