@@ -26,11 +26,13 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -201,6 +203,34 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 				},
 			},
 		}
+		vpaUpdateMode = vpaautoscalingv1.UpdateModeAuto
+		vpa           = &vpaautoscalingv1.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "hvpa-controller-vpa",
+				Namespace: h.namespace,
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "Deployment",
+					Name:       deployment.Name,
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+					UpdateMode: &vpaUpdateMode,
+				},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("100m"),
+								corev1.ResourceMemory: resource.MustParse("128Mi"),
+							},
+						},
+					},
+				},
+			},
+		}
 	)
 
 	resources, err := registry.AddAllAndSerialize(
@@ -209,6 +239,7 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 		clusterRoleBinding,
 		service,
 		deployment,
+		vpa,
 	)
 	if err != nil {
 		return err

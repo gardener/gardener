@@ -30,6 +30,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -40,6 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -65,6 +67,7 @@ var _ = Describe("HVPA", func() {
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
 		service            *corev1.Service
 		deployment         *appsv1.Deployment
+		vpa                *vpaautoscalingv1.VerticalPodAutoscaler
 	)
 
 	BeforeEach(func() {
@@ -224,6 +227,34 @@ var _ = Describe("HVPA", func() {
 				},
 			},
 		}
+		vpaUpdateMode := vpaautoscalingv1.UpdateModeAuto
+		vpa = &vpaautoscalingv1.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "hvpa-controller-vpa",
+				Namespace: namespace,
+			},
+			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "Deployment",
+					Name:       "hvpa-controller",
+				},
+				UpdatePolicy: &vpaautoscalingv1.PodUpdatePolicy{
+					UpdateMode: &vpaUpdateMode,
+				},
+				ResourcePolicy: &vpaautoscalingv1.PodResourcePolicy{
+					ContainerPolicies: []vpaautoscalingv1.ContainerResourcePolicy{
+						{
+							ContainerName: vpaautoscalingv1.DefaultContainerResourcePolicy,
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("100m"),
+								corev1.ResourceMemory: resource.MustParse("128Mi"),
+							},
+						},
+					},
+				},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -270,12 +301,13 @@ var _ = Describe("HVPA", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(5))
+			Expect(managedResourceSecret.Data).To(HaveLen(6))
 			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__hvpa-controller.yaml"])).To(Equal(serialize(serviceAccount)))
 			Expect(string(managedResourceSecret.Data["clusterrole____system_hvpa-controller.yaml"])).To(Equal(serialize(clusterRole)))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____hvpa-controller-rolebinding.yaml"])).To(Equal(serialize(clusterRoleBinding)))
 			Expect(string(managedResourceSecret.Data["service__"+namespace+"__hvpa-controller.yaml"])).To(Equal(serialize(service)))
 			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__hvpa-controller.yaml"])).To(Equal(serialize(deployment)))
+			Expect(string(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__hvpa-controller-vpa.yaml"])).To(Equal(serialize(vpa)))
 		})
 	})
 
