@@ -29,6 +29,9 @@ const (
 	managedResourceName = "hvpa"
 	deploymentName      = "hvpa-controller"
 	containerName       = "hvpa-controller"
+	serviceName         = "hvpa-controller"
+
+	portNameMetrics = "metrics"
 )
 
 // New creates a new instance of DeployWaiter for the HVPA controller.

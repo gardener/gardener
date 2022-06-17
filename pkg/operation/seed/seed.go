@@ -393,7 +393,9 @@ func RunReconcileSeedFlow(
 		centralCAdvisorScrapeConfigMetricRelabelConfigs = strings.Builder{}
 	)
 
-	for _, componentFn := range []component.CentralMonitoringConfiguration{} {
+	for _, componentFn := range []component.CentralMonitoringConfiguration{
+		hvpa.CentralMonitoringConfiguration,
+	} {
 		centralMonitoringConfig, err := componentFn()
 		if err != nil {
 			return err
