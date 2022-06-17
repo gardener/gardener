@@ -509,6 +509,7 @@ func RunReconcileSeedFlow(
 			kubeapiserver.CentralLoggingConfiguration,
 			kubescheduler.CentralLoggingConfiguration,
 			kubecontrollermanager.CentralLoggingConfiguration,
+			hvpa.CentralLoggingConfiguration,
 			vpa.CentralLoggingConfiguration,
 			// shoot system components
 			coredns.CentralLoggingConfiguration,

@@ -27,6 +27,8 @@ import (
 
 const (
 	managedResourceName = "hvpa"
+	deploymentName      = "hvpa-controller"
+	containerName       = "hvpa-controller"
 )
 
 // New creates a new instance of DeployWaiter for the HVPA controller.
