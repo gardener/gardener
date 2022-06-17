@@ -120,7 +120,8 @@ deploy:
     - example/gardener-local/gardenlet/secret-bootstrap-token.yaml
   kustomize:
     paths:
-    - example/provider-local/overlays/skaffold
+    - example/provider-local/garden/skaffold
+    - example/provider-local/seed-kind/skaffold
 
 ---
 apiVersion: skaffold/v2beta25
@@ -132,7 +133,7 @@ profiles:
   deploy:
     kustomize:
       paths:
-      - example/provider-local/kind2
+      - example/provider-local/seed-kind2/skaffold
 
 ---
 apiVersion: skaffold/v2beta25

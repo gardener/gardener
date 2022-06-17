@@ -4,7 +4,6 @@ kind: Kustomization
 generatorOptions:
   disableNameSuffixHash: true
 
-
 secretGenerator:
 - name: seed-local2
   namespace: garden

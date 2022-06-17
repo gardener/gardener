@@ -263,10 +263,7 @@ kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-e
 
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 
-kind-up kind-down: KUSTOMIZE_DIR = $(REPO_ROOT)/example/provider-local/base
-
 kind2-up kind2-down: TARGET_SUFFIX := 2
-kind2-up kind2-down: KUSTOMIZE_DIR = $(REPO_ROOT)/example/provider-local/kind2
 
 kind-up kind2-up: $(KIND)
 ifeq ($(MAKECMDGOALS), kind-up)
@@ -274,12 +271,12 @@ ifeq ($(MAKECMDGOALS), kind-up)
 endif
 	$(KIND) create cluster --name gardener-local$(TARGET_SUFFIX) --config $(REPO_ROOT)/example/gardener-local/kind$(TARGET_SUFFIX)/cluster-$(KIND_ENV).yaml --kubeconfig $(KUBECONFIG)
 	docker exec gardener-local$(TARGET_SUFFIX)-control-plane sh -c "sysctl fs.inotify.max_user_instances=8192" # workaround https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
-	cp $(KUBECONFIG) $(KUSTOMIZE_DIR)/kubeconfig
+	cp $(KUBECONFIG) $(REPO_ROOT)/example/provider-local/seed-kind$(TARGET_SUFFIX)/base/kubeconfig
 	kubectl apply -k $(REPO_ROOT)/example/gardener-local/calico --server-side
 
 kind-down kind2-down: $(KIND)
 	$(KIND) delete cluster --name gardener-local$(TARGET_SUFFIX)
-	rm -f $(KUSTOMIZE_DIR)/kubeconfig
+	rm -f $(REPO_ROOT)/example/provider-local/seed-kind$(TARGET_SUFFIX)/base/kubeconfig
 ifeq ($(MAKECMDGOALS), kind-down)
 	rm -rf dev/local-backupbuckets
 endif
@@ -314,17 +311,19 @@ gardenlet-kind2-down: $(SKAFFOLD) $(HELM)
 	$(SKAFFOLD) delete -m gardenlet,kind2-env -p kind2
 
 register-local-env:
-	kubectl apply -k $(REPO_ROOT)/example/provider-local/overlays/local
+	kubectl apply -k $(REPO_ROOT)/example/provider-local/garden/local
+	kubectl apply -k $(REPO_ROOT)/example/provider-local/seed-kind/local
 
 tear-down-local-env:
 	kubectl annotate project local confirmation.gardener.cloud/deletion=true
-	kubectl delete -k $(REPO_ROOT)/example/provider-local/overlays/local
+	kubectl delete -k $(REPO_ROOT)/example/provider-local/seed-kind/local
+	kubectl delete -k $(REPO_ROOT)/example/provider-local/garden/local
 
 register-kind2-env:
-	kubectl apply -k $(REPO_ROOT)/example/provider-local/seed-kind2
+	kubectl apply -k $(REPO_ROOT)/example/provider-local/seed-kind2/local
 
 tear-down-kind2-env:
-	kubectl delete -k $(REPO_ROOT)/example/provider-local/seed-kind2
+	kubectl delete -k $(REPO_ROOT)/example/provider-local/seed-kind2/local
 
 test-e2e-local-fast: $(GINKGO)
 	./hack/test-e2e-local.sh --label-filter "Shoot && fast"
