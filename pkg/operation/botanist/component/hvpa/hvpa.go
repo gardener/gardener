@@ -21,11 +21,13 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -37,6 +39,7 @@ const (
 	serviceName         = "hvpa-controller"
 
 	portNameMetrics = "metrics"
+	portMetrics     = 9569
 )
 
 // New creates a new instance of DeployWaiter for the HVPA controller.
@@ -136,12 +139,31 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 				Namespace: serviceAccount.Namespace,
 			}},
 		}
+		service = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      serviceName,
+				Namespace: h.namespace,
+				Labels:    utils.MergeStringMaps(getLabels(), getDeploymentLabels()),
+			},
+			Spec: corev1.ServiceSpec{
+				Type:            corev1.ServiceTypeClusterIP,
+				SessionAffinity: corev1.ServiceAffinityNone,
+				Selector:        getDeploymentLabels(),
+				Ports: []corev1.ServicePort{{
+					Name:       portNameMetrics,
+					Protocol:   corev1.ProtocolTCP,
+					Port:       portMetrics,
+					TargetPort: intstr.FromInt(portMetrics),
+				}},
+			},
+		}
 	)
 
 	resources, err := registry.AddAllAndSerialize(
 		serviceAccount,
 		clusterRole,
 		clusterRoleBinding,
+		service,
 	)
 	if err != nil {
 		return err
@@ -174,4 +196,8 @@ func (h *hvpa) WaitCleanup(ctx context.Context) error {
 
 func getLabels() map[string]string {
 	return map[string]string{v1beta1constants.GardenRole: "hvpa"}
+}
+
+func getDeploymentLabels() map[string]string {
+	return map[string]string{v1beta1constants.LabelApp: "hvpa-controller"}
 }

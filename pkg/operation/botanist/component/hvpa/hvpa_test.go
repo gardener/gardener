@@ -37,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -59,6 +60,7 @@ var _ = Describe("HVPA", func() {
 		serviceAccount     *corev1.ServiceAccount
 		clusterRole        *rbacv1.ClusterRole
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
+		service            *corev1.Service
 	)
 
 	BeforeEach(func() {
@@ -141,6 +143,31 @@ var _ = Describe("HVPA", func() {
 				Namespace: namespace,
 			}},
 		}
+		service = &corev1.Service{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Service",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "hvpa-controller",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"gardener.cloud/role": "hvpa",
+					"app":                 "hvpa-controller",
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Type:            corev1.ServiceTypeClusterIP,
+				SessionAffinity: corev1.ServiceAffinityNone,
+				Selector:        map[string]string{"app": "hvpa-controller"},
+				Ports: []corev1.ServicePort{{
+					Name:       "metrics",
+					Protocol:   corev1.ProtocolTCP,
+					Port:       9569,
+					TargetPort: intstr.FromInt(9569),
+				}},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -187,10 +214,11 @@ var _ = Describe("HVPA", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(3))
+			Expect(managedResourceSecret.Data).To(HaveLen(4))
 			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__hvpa-controller.yaml"])).To(Equal(serialize(serviceAccount)))
 			Expect(string(managedResourceSecret.Data["clusterrole____system_hvpa-controller.yaml"])).To(Equal(serialize(clusterRole)))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____hvpa-controller-rolebinding.yaml"])).To(Equal(serialize(clusterRoleBinding)))
+			Expect(string(managedResourceSecret.Data["service__"+namespace+"__hvpa-controller.yaml"])).To(Equal(serialize(service)))
 		})
 	})
 
