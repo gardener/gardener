@@ -16,30 +16,33 @@ package shootsystem
 
 import (
 	"context"
+	"sort"
+	"strings"
 	"time"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
-	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
-	ManagedResourceName = "shoot-core-system"
-)
+// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
+const ManagedResourceName = "shoot-core-system"
 
 // Values is a set of configuration values for the system resources.
 type Values struct {
-	// KubernetesVersion is the Kubernetes version of the shoot cluster.
-	KubernetesVersion *semver.Version
+	// ProjectName is the name of the project of the shoot cluster.
+	ProjectName string
+	// Shoot is an object containing information about the shoot cluster.
+	Shoot *shootpkg.Shoot
 }
 
 // New creates a new instance of DeployWaiter for shoot system resources.
@@ -96,21 +99,31 @@ func (s *shootSystem) computeResourcesData() (map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
-		kubeControllerManagerServiceAccounts []client.Object
+		shootInfoConfigMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      v1beta1constants.ConfigMapNameShootInfo,
+				Namespace: metav1.NamespaceSystem,
+			},
+			Data: s.shootInfoData(),
+		}
 	)
 
 	for _, name := range s.getServiceAccountNamesToInvalidate() {
-		kubeControllerManagerServiceAccounts = append(kubeControllerManagerServiceAccounts, &corev1.ServiceAccount{
+		if err := registry.Add(&corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        name,
 				Namespace:   metav1.NamespaceSystem,
 				Annotations: map[string]string{resourcesv1alpha1.KeepObject: "true"},
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
-		})
+		}); err != nil {
+			return nil, err
+		}
 	}
 
-	return registry.AddAllAndSerialize(kubeControllerManagerServiceAccounts...)
+	return registry.AddAllAndSerialize(
+		shootInfoConfigMap,
+	)
 }
 
 func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
@@ -157,14 +170,14 @@ func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 		"ttl-controller",
 	}
 
-	if versionutils.ConstraintK8sGreaterEqual119.Check(s.values.KubernetesVersion) {
+	if versionutils.ConstraintK8sGreaterEqual119.Check(s.values.Shoot.KubernetesVersion) {
 		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
 			"endpointslicemirroring-controller",
 			"ephemeral-volume-controller",
 		)
 	}
 
-	if versionutils.ConstraintK8sGreaterEqual120.Check(s.values.KubernetesVersion) {
+	if versionutils.ConstraintK8sGreaterEqual120.Check(s.values.Shoot.KubernetesVersion) {
 		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
 			"storage-version-garbage-collector",
 		)
@@ -174,7 +187,7 @@ func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 	// ServiceAccount secrets anymore. Prior versions still need them, so let's add the ServiceAccount names for
 	// controllers which are part of cloud-controller-managers only for 1.21+.
 	// See https://github.com/kubernetes/kubernetes/pull/99291 for more details.
-	if versionutils.ConstraintK8sGreaterEqual121.Check(s.values.KubernetesVersion) {
+	if versionutils.ConstraintK8sGreaterEqual121.Check(s.values.Shoot.KubernetesVersion) {
 		kubeControllerManagerServiceAccountNames = append(kubeControllerManagerServiceAccountNames,
 			"node-controller",
 			"route-controller",
@@ -183,4 +196,35 @@ func (s *shootSystem) getServiceAccountNamesToInvalidate() []string {
 	}
 
 	return append(kubeControllerManagerServiceAccountNames, "default")
+}
+
+func (s *shootSystem) shootInfoData() map[string]string {
+	data := map[string]string{
+		"projectName":       s.values.ProjectName,
+		"shootName":         s.values.Shoot.GetInfo().Name,
+		"provider":          s.values.Shoot.GetInfo().Spec.Provider.Type,
+		"region":            s.values.Shoot.GetInfo().Spec.Region,
+		"kubernetesVersion": s.values.Shoot.GetInfo().Spec.Kubernetes.Version,
+		"podNetwork":        s.values.Shoot.Networks.Pods.String(),
+		"serviceNetwork":    s.values.Shoot.Networks.Services.String(),
+		"maintenanceBegin":  s.values.Shoot.GetInfo().Spec.Maintenance.TimeWindow.Begin,
+		"maintenanceEnd":    s.values.Shoot.GetInfo().Spec.Maintenance.TimeWindow.End,
+	}
+
+	if domain := s.values.Shoot.ExternalClusterDomain; domain != nil {
+		data["domain"] = *domain
+	}
+
+	if nodeNetwork := s.values.Shoot.GetInfo().Spec.Networking.Nodes; nodeNetwork != nil {
+		data["nodeNetwork"] = *nodeNetwork
+	}
+
+	var extensions []string
+	for extensionType := range s.values.Shoot.Components.Extensions.Extension.Extensions() {
+		extensions = append(extensions, extensionType)
+	}
+	sort.Strings(extensions)
+	data["extensions"] = strings.Join(extensions, ",")
+
+	return data
 }
