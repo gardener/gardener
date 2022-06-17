@@ -20,6 +20,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/monitoring"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
@@ -140,6 +141,14 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowKubeAPIServer(ctx context.Con
 					From: []networkingv1.NetworkPolicyPeer{
 						// Allow all other Pods in the Seed cluster to access it.
 						{PodSelector: &metav1.LabelSelector{}},
+						// Allow all istio-ingress Pods in the Seed cluster to access it.
+						{
+							// we don't want to modify existing labels on the istio namespace
+							NamespaceSelector: &metav1.LabelSelector{},
+							PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+								v1beta1constants.LabelApp: gardenletconfigv1alpha1.DefaultIngressGatewayAppLabelValue,
+							}},
+						},
 						// kube-apiserver can be accessed from anywhere using the LoadBalancer.
 						{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
 					},
