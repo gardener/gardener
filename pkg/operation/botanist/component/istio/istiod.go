@@ -176,10 +176,7 @@ func (i *istiod) Destroy(ctx context.Context) error {
 var TimeoutWaitForManagedResource = 2 * time.Minute
 
 func (i *istiod) Wait(ctx context.Context) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
-	defer cancel()
-
-	return managedresources.WaitUntilHealthy(timeoutCtx, i.client, i.namespace, ManagedResourceIstio)
+	return nil
 }
 
 func (i *istiod) WaitCleanup(ctx context.Context) error {

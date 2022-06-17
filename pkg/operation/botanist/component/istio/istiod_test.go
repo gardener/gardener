@@ -18,7 +18,6 @@ import (
 	"context"
 	"path/filepath"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -1820,66 +1819,6 @@ spec:
 
 		AfterEach(func() {
 			resetVars()
-		})
-
-		Describe("#Wait", func() {
-			It("should fail because reading the ManagedResource fails", func() {
-				Expect(istiod.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
-			})
-
-			It("should fail because the ManagedResource doesn't become healthy", func() {
-				fakeOps.MaxAttempts = 2
-
-				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       managedResourceName,
-						Namespace:  deployNS,
-						Generation: 1,
-					},
-					Status: resourcesv1alpha1.ManagedResourceStatus{
-						ObservedGeneration: 1,
-						Conditions: []gardencorev1beta1.Condition{
-							{
-								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: gardencorev1beta1.ConditionFalse,
-							},
-							{
-								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: gardencorev1beta1.ConditionFalse,
-							},
-						},
-					},
-				}))
-
-				Expect(istiod.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
-			})
-
-			It("should successfully wait for the managed resource to become healthy", func() {
-				fakeOps.MaxAttempts = 2
-
-				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       managedResourceName,
-						Namespace:  deployNS,
-						Generation: 1,
-					},
-					Status: resourcesv1alpha1.ManagedResourceStatus{
-						ObservedGeneration: 1,
-						Conditions: []gardencorev1beta1.Condition{
-							{
-								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: gardencorev1beta1.ConditionTrue,
-							},
-							{
-								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: gardencorev1beta1.ConditionTrue,
-							},
-						},
-					},
-				}))
-
-				Expect(istiod.Wait(ctx)).To(Succeed())
-			})
 		})
 
 		Describe("#WaitCleanup", func() {
