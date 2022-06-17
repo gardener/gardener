@@ -18,10 +18,14 @@ import (
 	"context"
 	"time"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -58,14 +62,25 @@ type Values struct {
 func (h *hvpa) Deploy(ctx context.Context) error {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+
+		serviceAccount = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "hvpa-controller",
+				Namespace: h.namespace,
+				Labels:    getLabels(),
+			},
+			AutomountServiceAccountToken: pointer.Bool(false),
+		}
 	)
 
-	resources, err := registry.AddAllAndSerialize()
+	resources, err := registry.AddAllAndSerialize(
+		serviceAccount,
+	)
 	if err != nil {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, v.client, v.namespace, managedResourceName, false, resources)
+	return managedresources.CreateForSeed(ctx, h.client, h.namespace, managedResourceName, false, resources)
 }
 
 func (h *hvpa) Destroy(ctx context.Context) error {
@@ -88,4 +103,8 @@ func (h *hvpa) WaitCleanup(ctx context.Context) error {
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, h.client, h.namespace, managedResourceName)
+}
+
+func getLabels() map[string]string {
+	return map[string]string{v1beta1constants.GardenRole: "hvpa"}
 }
