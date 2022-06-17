@@ -41,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/crds"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
@@ -275,8 +276,7 @@ func RunReconcileSeedFlow(
 	}
 
 	const (
-		seedBoostrapChartName     = "seed-bootstrap"
-		seedBoostrapCRDsChartName = "seed-bootstrap-crds"
+		seedBoostrapChartName = "seed-bootstrap"
 	)
 	var (
 		loggingConfig   = conf.Logging
@@ -370,14 +370,10 @@ func RunReconcileSeedFlow(
 	}
 
 	// Deploy the CRDs in the seed cluster.
-	crdsChartValues := kubernetes.Values(map[string]interface{}{
-		"hvpa": map[string]interface{}{
-			"enabled": hvpaEnabled,
-		},
-	})
-
-	if err := chartApplier.Apply(ctx, filepath.Join(charts.Path, seedBoostrapCRDsChartName), v1beta1constants.GardenNamespace, seedBoostrapCRDsChartName, crdsChartValues); err != nil {
-		return err
+	if hvpaEnabled {
+		if err := hvpa.NewCRD(applier).Deploy(ctx); err != nil {
+			return err
+		}
 	}
 
 	if vpaEnabled {
