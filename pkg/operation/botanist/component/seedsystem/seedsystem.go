@@ -18,12 +18,17 @@ import (
 	"context"
 	"time"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -118,9 +123,68 @@ func (s *seedSystem) addReserveExcessCapacityResources(registry *managedresource
 			GlobalDefault: false,
 			Description:   "This class is used to reserve excess resource capacity on a cluster",
 		}
+		deployment = &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "reserve-excess-capacity",
+				Namespace: s.namespace,
+				Labels:    getExcessCapacityReservationLabels(),
+			},
+			Spec: appsv1.DeploymentSpec{
+				RevisionHistoryLimit: pointer.Int32(2),
+				Replicas:             desiredExcessCapacity(),
+				Selector:             &metav1.LabelSelector{MatchLabels: getExcessCapacityReservationLabels()},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: getExcessCapacityReservationLabels(),
+					},
+					Spec: corev1.PodSpec{
+						TerminationGracePeriodSeconds: pointer.Int64(5),
+						Containers: []corev1.Container{{
+							Name:            "pause-container",
+							Image:           s.values.ReserveExcessCapacity.Image,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("2"),
+									corev1.ResourceMemory: resource.MustParse("6Gi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("2"),
+									corev1.ResourceMemory: resource.MustParse("6Gi"),
+								},
+							},
+						}},
+						PriorityClassName: priorityClass.Name,
+					},
+				},
+			},
+		}
 	)
 
 	return registry.Add(
 		priorityClass,
+		deployment,
 	)
+}
+
+func getExcessCapacityReservationLabels() map[string]string {
+	return map[string]string{
+		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
+		v1beta1constants.LabelRole: "reserve-excess-capacity",
+	}
+}
+
+// desiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes
+// (on the seed) in terms of reserve-excess-capacity deployment replicas. Each deployment replica currently
+// corresponds to resources of (request/limits) 2 cores of CPU and 6Gi of RAM.
+// This roughly corresponds to a single, moderately large control-plane.
+// The logic for computation of desired excess capacity corresponds to deploying 2 such shoot control planes.
+// This excess capacity can be used for hosting new control planes or newly vertically scaled old control-planes.
+func desiredExcessCapacity() *int32 {
+	var (
+		replicasToSupportSingleShoot int32 = 1
+		effectiveExcessCapacity      int32 = 2
+	)
+
+	return pointer.Int32(effectiveExcessCapacity * replicasToSupportSingleShoot)
 }

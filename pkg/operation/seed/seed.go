@@ -1381,21 +1381,6 @@ func getDNSProviderSecretData(ctx context.Context, gardenClient client.Client, s
 	return nil, nil
 }
 
-// desiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes
-// (on the seed) in terms of reserve-excess-capacity deployment replicas. Each deployment replica currently
-// corresponds to resources of (request/limits) 2 cores of CPU and 6Gi of RAM.
-// This roughly corresponds to a single, moderately large control-plane.
-// The logic for computation of desired excess capacity corresponds to deploying 2 such shoot control planes.
-// This excess capacity can be used for hosting new control planes or newly vertically scaled old control-planes.
-func desiredExcessCapacity() int {
-	var (
-		replicasToSupportSingleShoot = 1
-		effectiveExcessCapacity      = 2
-	)
-
-	return effectiveExcessCapacity * replicasToSupportSingleShoot
-}
-
 // GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Seed cluster. The
 // end result is '<subDomain>.<shootName>.<projectName>.<seed-ingress-domain>'.
 func (s *Seed) GetIngressFQDN(subDomain string) string {

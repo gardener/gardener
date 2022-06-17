@@ -61,6 +61,45 @@ metadata:
   name: gardener-reserve-excess-capacity
 value: -5
 `
+		deploymentYAML = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: kubernetes
+    role: reserve-excess-capacity
+  name: reserve-excess-capacity
+  namespace: ` + namespace + `
+spec:
+  replicas: 2
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: kubernetes
+      role: reserve-excess-capacity
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: kubernetes
+        role: reserve-excess-capacity
+    spec:
+      containers:
+      - image: ` + reserveExcessCapacityImage + `
+        imagePullPolicy: IfNotPresent
+        name: pause-container
+        resources:
+          limits:
+            cpu: "2"
+            memory: 6Gi
+          requests:
+            cpu: "2"
+            memory: 6Gi
+      priorityClassName: gardener-reserve-excess-capacity
+      terminationGracePeriodSeconds: 5
+status: {}
+`
 	)
 
 	BeforeEach(func() {
@@ -119,8 +158,9 @@ value: -5
 		})
 
 		It("should successfully deploy the resources", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(1))
+			Expect(managedResourceSecret.Data).To(HaveLen(2))
 			Expect(string(managedResourceSecret.Data["priorityclass____gardener-reserve-excess-capacity.yaml"])).To(Equal(priorityClassYAML))
+			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__reserve-excess-capacity.yaml"])).To(Equal(deploymentYAML))
 		})
 	})
 
