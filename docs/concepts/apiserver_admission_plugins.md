@@ -1,3 +1,7 @@
+---
+title: APIServer Admission Plugins
+---
+
 # Admission Plugins
 
 Similar to the kube-apiserver, the gardener-apiserver comes with a few in-tree managed admission plugins.

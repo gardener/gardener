@@ -1,3 +1,7 @@
+---
+title: Cluster API
+---
+
 # Relation between Gardener API and Cluster API (SIG Cluster Lifecycle)
 
 In essence, the Cluster API harmonizes how to get to clusters, while Gardener goes one step further and also harmonizes the clusters themselves. The Cluster API delegates the specifics to so-called providers for infrastructures or control planes via specific CR(D)s while Gardener only has one cluster CR(D). Different Cluster API providers, e.g. for AWS, Azure, GCP, etc. give you vastly different Kubernetes clusters. In contrast, Gardener gives you the exact same clusters with the exact same K8s version, operating system, control plane configuration like for API server or kubelet, add-ons like overlay network, HPA/VPA, DNS and certificate controllers, ingress and network policy controllers, control plane monitoring and logging stacks, down to the behavior of update procedures, auto-scaling, self-healing, etc. on all supported infrastructures. These homogeneous clusters are an essential goal for Gardener as its main purpose is to simplify operations for teams that need to develop and ship software on Kubernetes clusters on a plethora of infrastructures (a.k.a. multi-cloud).

@@ -1,3 +1,7 @@
+---
+title: ControllerRegistration
+---
+
 # Registering Extension Controllers
 
 Extensions are registered in the garden cluster via [`ControllerRegistration`](../../example/25-controllerregistration.yaml) resources.
