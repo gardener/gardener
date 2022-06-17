@@ -1,11 +1,21 @@
 {
   "annotations": {
-    "list": []
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
   },
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1560846917827,
+  "iteration": 1655446204243,
   "links": [],
   "panels": [
     {
@@ -13,14 +23,21 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Shows the recommendations that the VPA gives as target usage. The graph also shows the actual usage of each container.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 10,
         "w": 12,
         "x": 0,
         "y": 0
       },
+      "hiddenSeries": false,
       "id": 3,
       "legend": {
         "avg": false,
@@ -35,7 +52,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
+      "pluginVersion": "7.5.16",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -105,14 +126,21 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Shows the recommendation of the VPA and compares it to the requests and limits of all containers in a pod. \n\n**Requests and/or limits may not reflect useful values if they are not defined for each container in a pod.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 10,
         "w": 12,
         "x": 12,
         "y": 0
       },
+      "hiddenSeries": false,
       "id": 6,
       "legend": {
         "avg": false,
@@ -127,7 +155,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
+      "pluginVersion": "7.5.16",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -204,14 +236,21 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Shows the recommendations that the VPA gives as target usage. The graph also shows the actual usage of each container.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 10,
         "w": 12,
         "x": 0,
         "y": 10
       },
+      "hiddenSeries": false,
       "id": 2,
       "legend": {
         "avg": false,
@@ -226,7 +265,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
+      "pluginVersion": "7.5.16",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -296,14 +339,21 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Shows the recommendation of the VPA and compares it to the requests and limits of all containers in a pod. \n\n**Requests and/or limits may not reflect useful values if they are not defined for each container in a pod.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 10,
         "w": 12,
         "x": 12,
         "y": 10
       },
+      "hiddenSeries": false,
       "id": 5,
       "legend": {
         "avg": false,
@@ -318,7 +368,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
+      "pluginVersion": "7.5.16",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -391,7 +445,7 @@
       }
     }
   ],
-  "schemaVersion": 18,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [
     "Autoscaling"
@@ -407,38 +461,22 @@
         },
         "datasource": "prometheus",
         "definition": "label_values(vpa_status_recommendation, recommendation)",
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": false,
         "label": "Recommendation",
         "multi": false,
         "name": "recommendation",
-        "options": [
-          {
-            "selected": false,
-            "text": "lowerBound",
-            "value": "lowerBound"
-          },
-          {
-            "selected": true,
-            "text": "target",
-            "value": "target"
-          },
-          {
-            "selected": false,
-            "text": "uncappedTarget",
-            "value": "uncappedTarget"
-          },
-          {
-            "selected": false,
-            "text": "upperBound",
-            "value": "upperBound"
-          }
-        ],
-        "query": "label_values(vpa_status_recommendation, recommendation)",
-        "refresh": 0,
+        "options": [],
+        "query": {
+          "query": "label_values(vpa_status_recommendation, recommendation)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 0,
+        "sort": 1,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
@@ -448,23 +486,28 @@
       {
         "allValue": null,
         "current": {
-          "tags": [],
+          "selected": false,
           "text": "StatefulSet",
           "value": "StatefulSet"
         },
         "datasource": "prometheus",
         "definition": "label_values(vpa_status_recommendation, targetKind)",
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": false,
         "label": "Kind",
         "multi": false,
         "name": "targetKind",
         "options": [],
-        "query": "label_values(vpa_status_recommendation, targetKind)",
+        "query": {
+          "query": "label_values(vpa_status_recommendation, targetKind)",
+          "refId": "prometheus-targetKind-Variable-Query"
+        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 0,
+        "sort": 1,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
@@ -480,58 +523,22 @@
         },
         "datasource": "prometheus",
         "definition": "label_values(vpa_status_recommendation{targetKind=~\"$targetKind\"}, targetName)",
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": false,
         "label": "Target",
         "multi": false,
         "name": "targetName",
-        "options": [
-          {
-            "selected": true,
-            "text": "kube-apiserver",
-            "value": "kube-apiserver"
-          },
-          {
-            "selected": false,
-            "text": "etcd-events",
-            "value": "etcd-events"
-          },
-          {
-            "selected": false,
-            "text": "etcd-main",
-            "value": "etcd-main"
-          },
-          {
-            "selected": false,
-            "text": "prometheus",
-            "value": "prometheus"
-          },
-          {
-            "selected": false,
-            "text": "cloud-controller-manager",
-            "value": "cloud-controller-manager"
-          },
-          {
-            "selected": false,
-            "text": "gardener-resource-manager",
-            "value": "gardener-resource-manager"
-          },
-          {
-            "selected": false,
-            "text": "kube-controller-manager",
-            "value": "kube-controller-manager"
-          },
-          {
-            "selected": false,
-            "text": "kube-scheduler",
-            "value": "kube-scheduler"
-          }
-        ],
-        "query": "label_values(vpa_status_recommendation{targetKind=~\"$targetKind\"}, targetName)",
-        "refresh": 0,
+        "options": [],
+        "query": {
+          "query": "label_values(vpa_status_recommendation{targetKind=~\"$targetKind\"}, targetName)",
+          "refId": "prometheus-targetName-Variable-Query"
+        },
+        "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 0,
+        "sort": 1,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
@@ -541,24 +548,32 @@
       {
         "allValue": null,
         "current": {
-          "text": "All",
+          "selected": true,
+          "text": [
+            "All"
+          ],
           "value": [
             "$__all"
           ]
         },
         "datasource": "prometheus",
         "definition": "label_values(container_memory_working_set_bytes{pod=~\"$targetName-(.+)\"}, container)",
+        "description": null,
+        "error": null,
         "hide": 0,
         "includeAll": true,
         "label": "Container",
         "multi": true,
         "name": "container",
         "options": [],
-        "query": "label_values(container_memory_working_set_bytes{pod=~\"$targetName-(.+)\"}, container)",
+        "query": {
+          "query": "label_values(container_memory_working_set_bytes{pod=~\"$targetName-(.+)\"}, container)",
+          "refId": "prometheus-container-Variable-Query"
+        },
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 0,
+        "sort": 1,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
