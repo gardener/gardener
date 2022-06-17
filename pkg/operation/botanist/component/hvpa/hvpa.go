@@ -38,10 +38,12 @@ import (
 )
 
 const (
-	managedResourceName = "hvpa"
-	deploymentName      = "hvpa-controller"
-	containerName       = "hvpa-controller"
-	serviceName         = "hvpa-controller"
+	// ManagedResourceName is the name of the managed resource for the resources.
+	ManagedResourceName = "hvpa"
+
+	deploymentName = "hvpa-controller"
+	containerName  = "hvpa-controller"
+	serviceName    = "hvpa-controller"
 
 	portNameMetrics = "metrics"
 	portMetrics     = 9569
@@ -245,11 +247,11 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, h.client, h.namespace, managedResourceName, false, resources)
+	return managedresources.CreateForSeed(ctx, h.client, h.namespace, ManagedResourceName, false, resources)
 }
 
 func (h *hvpa) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, h.client, h.namespace, managedResourceName)
+	return managedresources.DeleteForSeed(ctx, h.client, h.namespace, ManagedResourceName)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -260,14 +262,14 @@ func (h *hvpa) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, h.client, h.namespace, managedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, h.client, h.namespace, ManagedResourceName)
 }
 
 func (h *hvpa) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, h.client, h.namespace, managedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, h.client, h.namespace, ManagedResourceName)
 }
 
 func getLabels() map[string]string {
