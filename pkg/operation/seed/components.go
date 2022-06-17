@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
@@ -240,6 +241,27 @@ func defaultDependencyWatchdogs(
 	}
 
 	return
+}
+
+func defaultHVPA(c client.Client, imageVector imagevector.ImageVector, enabled bool) (component.DeployWaiter, error) {
+	image, err := imageVector.FindImage(images.ImageNameHvpaController)
+	if err != nil {
+		return nil, err
+	}
+
+	deployer := hvpa.New(
+		c,
+		v1beta1constants.GardenNamespace,
+		hvpa.Values{
+			Image: image.String(),
+		},
+	)
+
+	if !enabled {
+		deployer = component.OpDestroy(deployer)
+	}
+
+	return deployer, nil
 }
 
 func defaultVerticalPodAutoscaler(c client.Client, imageVector imagevector.ImageVector, secretsManager secretsmanager.Interface, enabled bool) (component.DeployWaiter, error) {

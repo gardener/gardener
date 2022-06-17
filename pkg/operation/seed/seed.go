@@ -265,20 +265,16 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	vpaGK := schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}
+	const seedBoostrapChartName = "seed-bootstrap"
 
-	vpaEnabled := seed.GetInfo().Spec.Settings == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler.Enabled
-	if !vpaEnabled {
-		// VPA is a prerequisite. If it's not enabled via the seed spec it must be provided through some other mechanism.
-		if _, err := seedClient.RESTMapper().RESTMapping(vpaGK); err != nil {
-			return fmt.Errorf("VPA is required for seed cluster: %s", err)
-		}
-	}
-
-	const (
-		seedBoostrapChartName = "seed-bootstrap"
-	)
 	var (
+		vpaGK    = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}
+		hvpaGK   = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "Hvpa"}
+		issuerGK = schema.GroupKind{Group: "certmanager.k8s.io", Kind: "ClusterIssuer"}
+
+		vpaEnabled  = seed.GetInfo().Spec.Settings == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler.Enabled
+		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
+
 		loggingConfig   = conf.Logging
 		gardenNamespace = &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -286,6 +282,13 @@ func RunReconcileSeedFlow(
 			},
 		}
 	)
+
+	if !vpaEnabled {
+		// VPA is a prerequisite. If it's not enabled via the seed spec it must be provided through some other mechanism.
+		if _, err := seedClient.RESTMapper().RESTMapping(vpaGK); err != nil {
+			return fmt.Errorf("VPA is required for seed cluster: %s", err)
+		}
+	}
 
 	// create + label garden namespace
 	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, seedClient, gardenNamespace, func() error {
@@ -341,7 +344,6 @@ func RunReconcileSeedFlow(
 			images.ImageNameFluentBitPluginInstaller,
 			images.ImageNameGrafana,
 			images.ImageNamePrometheus,
-			images.ImageNameHvpaController,
 			images.ImageNameKubeStateMetrics,
 		},
 		imagevector.RuntimeVersion(kubernetesVersion.String()),
@@ -351,26 +353,15 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	// HVPA feature gate
-	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
-	if !hvpaEnabled {
-		if err := common.DeleteHvpa(ctx, seedClient, v1beta1constants.GardenNamespace); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	} else {
-		// Clean up stale vpa objects
-		resources := []client.Object{
-			&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-vpa", Namespace: v1beta1constants.GardenNamespace}},
-			&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-vpa", Namespace: v1beta1constants.GardenNamespace}},
-		}
-
-		if err := kutil.DeleteObjects(ctx, seedClient, resources...); err != nil {
-			return err
-		}
-	}
-
 	// Deploy the CRDs in the seed cluster.
 	if hvpaEnabled {
+		if err := kutil.DeleteObjects(ctx, seedClient,
+			&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-vpa", Namespace: v1beta1constants.GardenNamespace}},
+			&vpaautoscalingv1.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-vpa", Namespace: v1beta1constants.GardenNamespace}},
+		); err != nil {
+			return err
+		}
+
 		if err := hvpa.NewCRD(applier).Deploy(ctx); err != nil {
 			return err
 		}
@@ -674,8 +665,6 @@ func RunReconcileSeedFlow(
 			// Apply status from old Object to retain status information
 			new.Object["status"] = old.Object["status"]
 		}
-		hvpaGK         = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "Hvpa"}
-		issuerGK       = schema.GroupKind{Group: "certmanager.k8s.io", Kind: "ClusterIssuer"}
 		grafanaHost    = seed.GetIngressFQDN(grafanaPrefix)
 		prometheusHost = seed.GetIngressFQDN(prometheusPrefix)
 	)
@@ -946,7 +935,7 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	if err := runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, secretsManager, imageVector, imageVectorOverwrites, seed, conf, log, sniEnabledOrInUse, vpaEnabled); err != nil {
+	if err := runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, secretsManager, imageVector, imageVectorOverwrites, seed, conf, log, sniEnabledOrInUse, hvpaEnabled, vpaEnabled); err != nil {
 		return err
 	}
 
@@ -964,7 +953,7 @@ func runCreateSeedFlow(
 	seed *Seed,
 	conf *config.GardenletConfiguration,
 	log logrus.FieldLogger,
-	sniEnabledOrInUse, vpaEnabled bool,
+	sniEnabledOrInUse, hvpaEnabled, vpaEnabled bool,
 ) error {
 	secretData, err := getDNSProviderSecretData(ctx, gardenClient, seed)
 	if err != nil {
@@ -1018,6 +1007,10 @@ func runCreateSeedFlow(
 		return err
 	}
 	systemResources, err := defaultSystem(seedClient, imageVector, seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled)
+	if err != nil {
+		return err
+	}
+	hvpa, err := defaultHVPA(seedClient, imageVector, hvpaEnabled)
 	if err != nil {
 		return err
 	}
@@ -1081,6 +1074,10 @@ func runCreateSeedFlow(
 			Fn:   vpa.Deploy,
 		})
 		_ = g.Add(flow.Task{
+			Name: "Deploying HVPA controller",
+			Fn:   hvpa.Deploy,
+		})
+		_ = g.Add(flow.Task{
 			Name: "Deploying VPN authorization server",
 			Fn:   vpnAuthzServer.Deploy,
 		})
@@ -1138,6 +1135,7 @@ func RunDeleteSeedFlow(
 		dnsRecord       = getManagedIngressDNSRecord(seedClient, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), "", log)
 		autoscaler      = clusterautoscaler.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace)
 		gsac            = seedadmissioncontroller.New(seedClient, v1beta1constants.GardenNamespace, nil, "")
+		hvpa            = hvpa.New(seedClient, v1beta1constants.GardenNamespace, hvpa.Values{})
 		resourceManager = resourcemanager.New(seedClient, v1beta1constants.GardenNamespace, nil, "", resourcemanager.Values{})
 		nginxIngress    = nginxingress.New(seedClient, v1beta1constants.GardenNamespace, nginxingress.Values{})
 		etcdDruid       = etcd.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, conf, "", nil)
@@ -1204,6 +1202,10 @@ func RunDeleteSeedFlow(
 			Name: "Destroy dependency-watchdog-probe",
 			Fn:   component.OpDestroyAndWait(dwdProbe).Destroy,
 		})
+		destroyHVPA = g.Add(flow.Task{
+			Name: "Destroy HVPA controller",
+			Fn:   component.OpDestroyAndWait(hvpa).Destroy,
+		})
 		destroyVPA = g.Add(flow.Task{
 			Name: "Destroy Kubernetes vertical pod autoscaler",
 			Fn:   component.OpDestroyAndWait(vpa).Destroy,
@@ -1229,6 +1231,7 @@ func RunDeleteSeedFlow(
 				destroyNetworkPolicies,
 				destroyDWDEndpoint,
 				destroyDWDProbe,
+				destroyHVPA,
 				destroyVPA,
 				destroyVPNAuthzServer,
 				destroySystemResources,
