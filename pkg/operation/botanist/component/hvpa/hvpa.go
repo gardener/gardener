@@ -16,6 +16,7 @@ package hvpa
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -24,8 +25,10 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
@@ -157,6 +160,47 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 				}},
 			},
 		}
+		deployment = &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      deploymentName,
+				Namespace: h.namespace,
+				Labels:    utils.MergeStringMaps(getLabels(), getDeploymentLabels()),
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas:             pointer.Int32(1),
+				RevisionHistoryLimit: pointer.Int32(2),
+				Selector:             &metav1.LabelSelector{MatchLabels: utils.MergeStringMaps(getLabels(), getDeploymentLabels())},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: utils.MergeStringMaps(getLabels(), getDeploymentLabels()),
+					},
+					Spec: corev1.PodSpec{
+						ServiceAccountName: serviceAccount.Name,
+						Containers: []corev1.Container{{
+							Name:            containerName,
+							Image:           h.values.Image,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command: []string{
+								"./manager",
+								"--logtostderr=true",
+								"--enable-detailed-metrics=true",
+								fmt.Sprintf("--metrics-addr=:%d", portMetrics),
+								"--v=2",
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("50m"),
+									corev1.ResourceMemory: resource.MustParse("500Mi"),
+								},
+							},
+							Ports: []corev1.ContainerPort{{
+								ContainerPort: portMetrics,
+							}},
+						}},
+					},
+				},
+			},
+		}
 	)
 
 	resources, err := registry.AddAllAndSerialize(
@@ -164,6 +208,7 @@ func (h *hvpa) Deploy(ctx context.Context) error {
 		clusterRole,
 		clusterRoleBinding,
 		service,
+		deployment,
 	)
 	if err != nil {
 		return err

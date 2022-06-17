@@ -29,9 +29,11 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -48,7 +50,8 @@ var _ = Describe("HVPA", func() {
 		ctx = context.TODO()
 
 		namespace = "some-namespace"
-		values    = Values{}
+		image     = "some-image:some-tag"
+		values    = Values{Image: image}
 
 		c         client.Client
 		component component.DeployWaiter
@@ -61,6 +64,7 @@ var _ = Describe("HVPA", func() {
 		clusterRole        *rbacv1.ClusterRole
 		clusterRoleBinding *rbacv1.ClusterRoleBinding
 		service            *corev1.Service
+		deployment         *appsv1.Deployment
 	)
 
 	BeforeEach(func() {
@@ -168,6 +172,58 @@ var _ = Describe("HVPA", func() {
 				}},
 			},
 		}
+		deployment = &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "hvpa-controller",
+				Namespace: namespace,
+				Labels: map[string]string{
+					"gardener.cloud/role": "hvpa",
+					"app":                 "hvpa-controller",
+				},
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas:             pointer.Int32(1),
+				RevisionHistoryLimit: pointer.Int32(2),
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"gardener.cloud/role": "hvpa",
+						"app":                 "hvpa-controller",
+					},
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"gardener.cloud/role": "hvpa",
+							"app":                 "hvpa-controller",
+						},
+					},
+					Spec: corev1.PodSpec{
+						ServiceAccountName: serviceAccount.Name,
+						Containers: []corev1.Container{{
+							Name:            "hvpa-controller",
+							Image:           image,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command: []string{
+								"./manager",
+								"--logtostderr=true",
+								"--enable-detailed-metrics=true",
+								"--metrics-addr=:9569",
+								"--v=2",
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("50m"),
+									corev1.ResourceMemory: resource.MustParse("500Mi"),
+								},
+							},
+							Ports: []corev1.ContainerPort{{
+								ContainerPort: 9569,
+							}},
+						}},
+					},
+				},
+			},
+		}
 	})
 
 	JustBeforeEach(func() {
@@ -214,11 +270,12 @@ var _ = Describe("HVPA", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(4))
+			Expect(managedResourceSecret.Data).To(HaveLen(5))
 			Expect(string(managedResourceSecret.Data["serviceaccount__"+namespace+"__hvpa-controller.yaml"])).To(Equal(serialize(serviceAccount)))
 			Expect(string(managedResourceSecret.Data["clusterrole____system_hvpa-controller.yaml"])).To(Equal(serialize(clusterRole)))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____hvpa-controller-rolebinding.yaml"])).To(Equal(serialize(clusterRoleBinding)))
 			Expect(string(managedResourceSecret.Data["service__"+namespace+"__hvpa-controller.yaml"])).To(Equal(serialize(service)))
+			Expect(string(managedResourceSecret.Data["deployment__"+namespace+"__hvpa-controller.yaml"])).To(Equal(serialize(deployment)))
 		})
 	})
 
