@@ -53,6 +53,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
@@ -1025,6 +1026,10 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
+	systemResources, err := defaultSystem(seedClient, imageVector, seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled)
+	if err != nil {
+		return err
+	}
 	vpa, err := defaultVerticalPodAutoscaler(seedClient, imageVector, secretsManager, vpaEnabled)
 	if err != nil {
 		return err
@@ -1088,6 +1093,10 @@ func runCreateSeedFlow(
 			Name: "Deploying VPN authorization server",
 			Fn:   vpnAuthzServer.Deploy,
 		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying system resources",
+			Fn:   systemResources.Deploy,
+		})
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{Logger: log}); err != nil {
@@ -1145,6 +1154,7 @@ func RunDeleteSeedFlow(
 		clusterIdentity = clusteridentity.NewForSeed(seedClient, v1beta1constants.GardenNamespace, "")
 		dwdEndpoint     = dependencywatchdog.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
 		dwdProbe        = dependencywatchdog.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
+		systemResources = seedsystem.New(seedClient, v1beta1constants.GardenNamespace, seedsystem.Values{})
 		vpa             = vpa.New(seedClient, v1beta1constants.GardenNamespace, nil, vpa.Values{ClusterType: vpa.ClusterTypeSeed})
 		vpnAuthzServer  = vpnauthzserver.New(seedClient, v1beta1constants.GardenNamespace, "", 1)
 	)
@@ -1211,6 +1221,10 @@ func RunDeleteSeedFlow(
 			Name: "Destroy VPN authorization server",
 			Fn:   component.OpDestroyAndWait(vpnAuthzServer).Destroy,
 		})
+		destroySystemResources = g.Add(flow.Task{
+			Name: "Destroy system resources",
+			Fn:   component.OpDestroyAndWait(systemResources).Destroy,
+		})
 		_ = g.Add(flow.Task{
 			Name: "Destroying gardener-resource-manager",
 			Fn:   resourceManager.Destroy,
@@ -1226,6 +1240,7 @@ func RunDeleteSeedFlow(
 				destroyDWDProbe,
 				destroyVPA,
 				destroyVPNAuthzServer,
+				destroySystemResources,
 				noControllerInstallations,
 			),
 		})

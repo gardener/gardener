@@ -42,8 +42,9 @@ var _ = Describe("SeedSystem", func() {
 	var (
 		ctx = context.TODO()
 
-		managedResourceName = "system"
-		namespace           = "some-namespace"
+		managedResourceName        = "system"
+		namespace                  = "some-namespace"
+		reserveExcessCapacityImage = "some-image:some-tag"
 
 		c         client.Client
 		values    Values
@@ -55,7 +56,12 @@ var _ = Describe("SeedSystem", func() {
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		values = Values{}
+		values = Values{
+			ReserveExcessCapacity: ReserveExcessCapacityValues{
+				Enabled: true,
+				Image:   reserveExcessCapacityImage,
+			},
+		}
 		component = New(c, namespace, values)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{

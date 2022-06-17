@@ -22,6 +22,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
+	schedulingv1 "k8s.io/api/scheduling/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -29,7 +31,18 @@ import (
 const ManagedResourceName = "system"
 
 // Values is a set of configuration values for the system resources.
-type Values struct{}
+type Values struct {
+	// ReserveExcessCapacity contains configuration for the deployment of the excess capacity reservation resources.
+	ReserveExcessCapacity ReserveExcessCapacityValues
+}
+
+// ReserveExcessCapacityValues contains configuration for the deployment of the excess capacity reservation resources.
+type ReserveExcessCapacityValues struct {
+	// Enabled specifies whether excess capacity reservation should be enabled.
+	Enabled bool
+	// Image is the container image.
+	Image string
+}
 
 // New creates a new instance of DeployWaiter for seed system resources.
 func New(
