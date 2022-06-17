@@ -323,7 +323,6 @@ global:
     vpa-admission-controller: image-repository:image-tag
     vpa-recommender: image-repository:image-tag
     vpa-updater: image-repository:image-tag
-    hvpa-controller: image-repository:image-tag
 
 fluent-bit:
   enabled: true
