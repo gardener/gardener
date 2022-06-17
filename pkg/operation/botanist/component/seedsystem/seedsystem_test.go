@@ -52,6 +52,15 @@ var _ = Describe("SeedSystem", func() {
 
 		managedResource       *resourcesv1alpha1.ManagedResource
 		managedResourceSecret *corev1.Secret
+
+		priorityClassYAML = `apiVersion: scheduling.k8s.io/v1
+description: This class is used to reserve excess resource capacity on a cluster
+kind: PriorityClass
+metadata:
+  creationTimestamp: null
+  name: gardener-reserve-excess-capacity
+value: -5
+`
 	)
 
 	BeforeEach(func() {
@@ -110,7 +119,8 @@ var _ = Describe("SeedSystem", func() {
 		})
 
 		It("should successfully deploy the resources", func() {
-			Expect(managedResourceSecret.Data).To(HaveLen(0))
+			Expect(managedResourceSecret.Data).To(HaveLen(1))
+			Expect(string(managedResourceSecret.Data["priorityclass____gardener-reserve-excess-capacity.yaml"])).To(Equal(priorityClassYAML))
 		})
 	})
 

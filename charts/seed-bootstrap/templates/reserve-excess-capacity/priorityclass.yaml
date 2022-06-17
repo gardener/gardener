@@ -1,9 +1,0 @@
-{{- if .Values.reserveExcessCapacity }}
-apiVersion: {{ include "priorityclassversion" . }}
-kind: PriorityClass
-metadata:
-  name: gardener-reserve-excess-capacity
-value: -5
-globalDefault: false
-description: "This class is used to reserve excess resource capacity on a cluster"
-{{- end }}

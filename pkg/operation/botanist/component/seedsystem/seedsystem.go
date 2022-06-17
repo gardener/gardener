@@ -99,5 +99,28 @@ func (s *seedSystem) computeResourcesData() (map[string][]byte, error) {
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 	)
 
-	return registry.AddAllAndSerialize()
+	if s.values.ReserveExcessCapacity.Enabled {
+		if err := s.addReserveExcessCapacityResources(registry); err != nil {
+			return nil, err
+		}
+	}
+
+	return registry.SerializedObjects(), nil
+}
+
+func (s *seedSystem) addReserveExcessCapacityResources(registry *managedresources.Registry) error {
+	var (
+		priorityClass = &schedulingv1.PriorityClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener-reserve-excess-capacity",
+			},
+			Value:         -5,
+			GlobalDefault: false,
+			Description:   "This class is used to reserve excess resource capacity on a cluster",
+		}
+	)
+
+	return registry.Add(
+		priorityClass,
+	)
 }
