@@ -42,8 +42,13 @@ type ShootStorage struct {
 }
 
 // NewStorage creates a new ShootStorage object.
-func NewStorage(optsGetter generic.RESTOptionsGetter, shootStateStore *genericregistry.Store, max time.Duration) ShootStorage {
-	shootRest, shootStatusRest := NewREST(optsGetter)
+func NewStorage(
+	optsGetter generic.RESTOptionsGetter,
+	shootStateStore *genericregistry.Store,
+	adminKubeconfigMaxExpiration time.Duration,
+	credentialsRotationInterval time.Duration,
+) ShootStorage {
+	shootRest, shootStatusRest := NewREST(optsGetter, credentialsRotationInterval)
 
 	s := ShootStorage{
 		Shoot:  shootRest,
@@ -53,38 +58,42 @@ func NewStorage(optsGetter generic.RESTOptionsGetter, shootStateStore *genericre
 	s.AdminKubeconfig = &AdminKubeconfigREST{
 		shootStateStorage:    shootStateStore,
 		shootStorage:         shootRest,
-		maxExpirationSeconds: int64(max.Seconds()),
+		maxExpirationSeconds: int64(adminKubeconfigMaxExpiration.Seconds()),
 	}
 
 	return s
 }
 
 // NewREST returns a RESTStorage object that will work against shoots.
-func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
-	store := &genericregistry.Store{
-		NewFunc:                  func() runtime.Object { return &core.Shoot{} },
-		NewListFunc:              func() runtime.Object { return &core.ShootList{} },
-		PredicateFunc:            shoot.MatchShoot,
-		DefaultQualifiedResource: core.Resource("shoots"),
-		EnableGarbageCollection:  true,
+func NewREST(optsGetter generic.RESTOptionsGetter, credentialsRotationInterval time.Duration) (*REST, *StatusREST) {
+	var (
+		shootStrategy = shoot.NewStrategy(credentialsRotationInterval)
+		store         = &genericregistry.Store{
+			NewFunc:                  func() runtime.Object { return &core.Shoot{} },
+			NewListFunc:              func() runtime.Object { return &core.ShootList{} },
+			PredicateFunc:            shoot.MatchShoot,
+			DefaultQualifiedResource: core.Resource("shoots"),
+			EnableGarbageCollection:  true,
 
-		CreateStrategy: shoot.Strategy,
-		UpdateStrategy: shoot.Strategy,
-		DeleteStrategy: shoot.Strategy,
+			CreateStrategy: shootStrategy,
+			UpdateStrategy: shootStrategy,
+			DeleteStrategy: shootStrategy,
 
-		TableConvertor: newTableConvertor(),
-	}
-	options := &generic.StoreOptions{
-		RESTOptions: optsGetter,
-		AttrFunc:    shoot.GetAttrs,
-		TriggerFunc: map[string]storage.IndexerFunc{core.ShootSeedName: shoot.SeedNameTriggerFunc},
-	}
+			TableConvertor: newTableConvertor(),
+		}
+		options = &generic.StoreOptions{
+			RESTOptions: optsGetter,
+			AttrFunc:    shoot.GetAttrs,
+			TriggerFunc: map[string]storage.IndexerFunc{core.ShootSeedName: shoot.SeedNameTriggerFunc},
+		}
+	)
+
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err)
 	}
 
 	statusStore := *store
-	statusStore.UpdateStrategy = shoot.StatusStrategy
+	statusStore.UpdateStrategy = shoot.NewStatusStrategy()
 	return &REST{store}, &StatusREST{store: &statusStore}
 }
 

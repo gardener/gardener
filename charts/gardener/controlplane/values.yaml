@@ -134,6 +134,8 @@ global:
       enabled: false
       expirationSeconds: 43200
       audience: ""
+  # shootAdminKubeconfigMaxExpiration: 24h
+  # shootCredentialsRotationInterval: 2160h
     vpa: false
     hvpa:
       enabled: false

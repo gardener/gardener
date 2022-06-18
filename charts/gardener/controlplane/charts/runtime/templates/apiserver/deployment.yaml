@@ -247,6 +247,12 @@ spec:
         {{- end }}
         {{- end }}
         - --secure-port=443
+        {{- if .Values.global.apiserver.shootAdminKubeconfigMaxExpiration }}
+        - --shoot-admin-kubeconfig-max-expiration={{ .Values.global.apiserver.shootAdminKubeconfigMaxExpiration }}
+        {{- end }}
+        {{- if .Values.global.apiserver.shootCredentialsRotationInterval }}
+        - --shoot-credentials-rotation-interval={{ .Values.global.apiserver.shootCredentialsRotationInterval }}
+        {{- end }}
         {{- if .Values.global.apiserver.shutdownDelayDuration }}
         - --shutdown-delay-duration={{ .Values.global.apiserver.shutdownDelayDuration }}
         {{- end }}

@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/api/core/shoot"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -42,13 +43,17 @@ import (
 type shootStrategy struct {
 	runtime.ObjectTyper
 	names.NameGenerator
+
+	credentialsRotationInterval time.Duration
 }
 
-// Strategy defines the storage strategy for Shoots.
-var Strategy = shootStrategy{api.Scheme, names.SimpleNameGenerator}
+// NewStrategy returns a new storage strategy for Shoots.
+func NewStrategy(credentialsRotationInterval time.Duration) shootStrategy {
+	return shootStrategy{api.Scheme, names.SimpleNameGenerator, credentialsRotationInterval}
+}
 
 // Strategy should implement rest.RESTCreateUpdateStrategy
-var _ rest.RESTCreateUpdateStrategy = Strategy
+var _ rest.RESTCreateUpdateStrategy = shootStrategy{}
 
 func (shootStrategy) NamespaceScoped() bool {
 	return true
@@ -204,21 +209,23 @@ func (shootStrategy) AllowUnconditionalUpdate() bool {
 }
 
 // WarningsOnCreate returns warnings to the client performing a create.
-func (shootStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
-	return nil
+func (s shootStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+	return shoot.GetWarnings(ctx, obj.(*core.Shoot), nil, s.credentialsRotationInterval)
 }
 
 // WarningsOnUpdate returns warnings to the client performing the update.
-func (shootStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
-	return nil
+func (s shootStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+	return shoot.GetWarnings(ctx, obj.(*core.Shoot), old.(*core.Shoot), s.credentialsRotationInterval)
 }
 
 type shootStatusStrategy struct {
 	shootStrategy
 }
 
-// StatusStrategy defines the storage strategy for the status subresource of Shoots.
-var StatusStrategy = shootStatusStrategy{Strategy}
+// NewStatusStrategy returns a new storage strategy for the status subresource of Shoots.
+func NewStatusStrategy() shootStatusStrategy {
+	return shootStatusStrategy{NewStrategy(0)}
+}
 
 func (shootStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
 	newShoot := obj.(*core.Shoot)
@@ -233,6 +240,14 @@ func (shootStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtim
 
 func (shootStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateShootStatusUpdate(obj.(*core.Shoot).Status, old.(*core.Shoot).Status)
+}
+
+func (shootStatusStrategy) WarningsOnCreate(_ context.Context, _ runtime.Object) []string {
+	return nil
+}
+
+func (shootStatusStrategy) WarningsOnUpdate(_ context.Context, _, _ runtime.Object) []string {
+	return nil
 }
 
 // ToSelectableFields returns a field set that represents the object
