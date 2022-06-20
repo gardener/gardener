@@ -478,7 +478,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		_ = g.Add(flow.Task{
 			Name:         "Reconcile node-local-dns system component",
 			Fn:           flow.TaskFn(botanist.ReconcileNodeLocalDNS).SkipIf(o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, initializeShootClients, waitUntilOperatingSystemConfigReady, deployKubeScheduler, waitUntilShootNamespacesReady),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, initializeShootClients, waitUntilOperatingSystemConfigReady, deployKubeScheduler, waitUntilShootNamespacesReady, waitUntilNetworkIsReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying metrics-server system component",
