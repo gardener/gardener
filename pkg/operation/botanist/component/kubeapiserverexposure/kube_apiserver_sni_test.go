@@ -18,7 +18,6 @@ import (
 	"context"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -27,6 +26,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	protobuftypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
@@ -236,9 +236,9 @@ var _ = Describe("#SNI", func() {
 				Labels:    istioLabels,
 			},
 			NamespaceUID: namespaceUID,
-			AccessControl: &v1beta1.AccessControl{
-				Action: v1beta1.AuthorizationAction_ALLOW,
-				Source: v1beta1.Source{
+			AccessControl: &gardencorev1beta1.AccessControl{
+				Action: gardencorev1beta1.AuthorizationActionAllow,
+				Source: gardencorev1beta1.Source{
 					IPBlocks: ipBlocks,
 				},
 			},
