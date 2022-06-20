@@ -700,9 +700,9 @@ type AuthorizationAction string
 
 const (
 	// Allows the request from a source.
-	AuthorizationAction_ALLOW AuthorizationAction = "ALLOW"
+	AuthorizationActionAllowAuthorizationAction = "ALLOW"
 	// Denies the request from a source.
-	AuthorizationAction_DENY AuthorizationAction = "DENY"
+	AuthorizationActionDeny AuthorizationAction = "DENY"
 )
 
 type Source struct {

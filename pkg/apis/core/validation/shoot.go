@@ -121,8 +121,8 @@ var (
 	)
 
 	availableAccessControlAction = sets.NewString(
-		string(core.AuthorizationAction_ALLOW),
-		string(core.AuthorizationAction_DENY),
+		string(core.AuthorizationActionAllow),
+		string(core.AuthorizationActionDeny),
 	)
 )
 

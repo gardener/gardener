@@ -556,7 +556,7 @@ const (
 	// Allows the request from a source.
 	AuthorizationActionAllow AuthorizationAction = "ALLOW"
 	// Denies the request from a source.
-	AuthorizationAction_DENY AuthorizationAction = "DENY"
+	AuthorizationActionDeny AuthorizationAction = "DENY"
 )
 
 // Source contains the origin of request to which access control is applied to.

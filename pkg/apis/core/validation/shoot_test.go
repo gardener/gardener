@@ -1806,7 +1806,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		It("should forbid enabling access control due to empty Ip-Blocks field", func() {
 
 			shoot.Spec.Kubernetes.KubeAPIServer.AccessControl = &core.AccessControl{
-				Action: core.AuthorizationAction_ALLOW,
+				Action: core.AuthorizationActionAllow,
 			}
 
 			errorList := ValidateShoot(shoot)
@@ -1823,7 +1823,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Source: core.Source{
 					IPBlocks: []string{"foo"},
 				},
-				Action: core.AuthorizationAction_ALLOW,
+				Action: core.AuthorizationActionAllow,
 			}
 
 			errorList := ValidateShoot(shoot)
@@ -1840,7 +1840,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Source: core.Source{
 					IPBlocks: []string{"127.0.0.1"},
 				},
-				Action: core.AuthorizationAction_ALLOW,
+				Action: core.AuthorizationActionAllow,
 			}
 
 			errorList := ValidateShoot(shoot)
