@@ -97,7 +97,7 @@ func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
 	return b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(ctx)
 }
 
-func (b *Botanist) getAccessControl() *v1beta1.AccessControl {
+func (b *Botanist) getAccessControl() *gardencorev1beta1.AccessControl {
 	if b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer != nil {
 		return b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer.AccessControl
 	}
