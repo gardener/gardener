@@ -206,7 +206,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 						},
 					},
 				},
-				Action: istioapisecurityv1beta1.AuthorizationPolicy_Action(AuthorizationPolicyMapping[string(s.values.AccessControl.Action)]),
+				Action: istioapisecurityv1beta1.AuthorizationPolicy_Action(authorizationPolicyMapping[string(s.values.AccessControl.Action)]),
 			}
 			return nil
 		}); err != nil {
@@ -275,7 +275,7 @@ var (
 )
 
 var (
-	AuthorizationPolicyMapping = map[string]int32{
+	authorizationPolicyMapping = map[string]int32{
 		"ALLOW": 0,
 		"DENY":  1,
 	}

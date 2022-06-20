@@ -705,6 +705,7 @@ const (
 	AuthorizationActionDeny AuthorizationAction = "DENY"
 )
 
+// Source holds origin of requests.
 type Source struct {
 	// A list of IP blocks (Ipv4 & Ipv6), populated from the source address of the IP packet.
 	// Single IP (e.g. "1.2.3.4") and CIDR (e.g. "1.2.3.0/24") are supported.
