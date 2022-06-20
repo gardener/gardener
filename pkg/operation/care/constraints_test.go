@@ -17,9 +17,11 @@ package care_test
 import (
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	. "github.com/gardener/gardener/pkg/operation/care"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
@@ -45,8 +47,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
-
-	"github.com/gardener/gardener/pkg/operation/care"
 )
 
 type webhookTestCase struct {
@@ -68,6 +68,7 @@ func (w *webhookTestCase) build() (
 	failurePolicy = w.failurePolicy
 	nsSelector = w.namespaceSelector
 	objSelector = w.objectSelector
+	timeoutSeconds = w.timeoutSeconds
 	rules = []admissionregistrationv1.RuleWithOperations{{
 		Rule: admissionregistrationv1.Rule{
 			APIGroups:   []string{w.gvr.Group},
@@ -75,7 +76,6 @@ func (w *webhookTestCase) build() (
 			APIVersions: []string{w.gvr.Version},
 		}},
 	}
-	timeoutSeconds = w.timeoutSeconds
 
 	opType := admissionregistrationv1.OperationAll
 	if w.operationType != nil {
@@ -83,327 +83,328 @@ func (w *webhookTestCase) build() (
 	}
 
 	rules[0].Operations = []admissionregistrationv1.OperationType{opType}
-
 	return
 }
 
-var _ = Describe("#IsProblematicWebhook", func() {
-	var (
-		failurePolicyIgnore = admissionregistrationv1.Ignore
-		failurePolicyFail   = admissionregistrationv1.Fail
+var _ = Describe("Constraints", func() {
+	Describe("#IsProblematicWebhook", func() {
+		var (
+			failurePolicyIgnore = admissionregistrationv1.Ignore
+			failurePolicyFail   = admissionregistrationv1.Fail
 
-		timeoutSecondsNotProblematic int32 = 15
-		timeoutSecondsProblematic    int32 = 16
+			timeoutSecondsNotProblematic int32 = 15
+			timeoutSecondsProblematic    int32 = 16
 
-		operationCreate = admissionregistrationv1.Create
-		operationUpdate = admissionregistrationv1.Update
-		operationAll    = admissionregistrationv1.OperationAll
-		operationDelete = admissionregistrationv1.Delete
+			operationCreate = admissionregistrationv1.Create
+			operationUpdate = admissionregistrationv1.Update
+			operationAll    = admissionregistrationv1.OperationAll
+			operationDelete = admissionregistrationv1.Delete
 
-		kubeSystemNamespaceProblematic = []TableEntry{
-			Entry("namespaceSelector matching no-cleanup", webhookTestCase{
-				namespaceSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"}},
-			}),
-			Entry("namespaceSelector matching purpose", webhookTestCase{
-				namespaceSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
-			}),
-			Entry("namespaceSelector matching all gardener labels", webhookTestCase{
-				namespaceSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"shoot.gardener.cloud/no-cleanup": "true",
-						"gardener.cloud/purpose":          "kube-system",
-					}},
-			}),
-		}
-
-		kubeSystemNamespaceNotProblematic = []TableEntry{
-			Entry("not matching namespaceSelector", webhookTestCase{
-				namespaceSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{"foo": "bar"}},
-			}),
-		}
-
-		commonTests = func(gvr schema.GroupVersionResource, problematic, notProblematic []TableEntry) {
-			DescribeTable(fmt.Sprintf("problematic webhook for %s", gvr.String()),
-				func(testCase webhookTestCase) {
-					testCase.gvr = gvr
-					Expect(care.IsProblematicWebhook(testCase.build())).To(BeTrue(), "expected webhook to be problematic")
-				},
-				Entry("CREATE", webhookTestCase{
-					failurePolicy:  &failurePolicyFail,
-					timeoutSeconds: &timeoutSecondsProblematic,
-					operationType:  &operationCreate,
-				}),
-				Entry("CREATE with nil failurePolicy and nil timeoutSeconds", webhookTestCase{operationType: &operationCreate}),
-				Entry("CREATE with nil failurePolicy and timeoutSeconds too high",
-					webhookTestCase{operationType: &operationCreate, timeoutSeconds: &timeoutSecondsProblematic}),
-				Entry("CREATE with failurePolicy 'Ignore' and nil timeoutSeconds",
-					webhookTestCase{failurePolicy: &failurePolicyIgnore, operationType: &operationCreate}),
-				Entry("CREATE with failurePolicy 'Ignore' and timeoutSeconds too high",
-					webhookTestCase{failurePolicy: &failurePolicyIgnore, operationType: &operationCreate, timeoutSeconds: &timeoutSecondsProblematic}),
-				Entry("CREATE with failurePolicy 'Fail' and nil timeoutSeconds",
-					webhookTestCase{failurePolicy: &failurePolicyFail, operationType: &operationCreate}),
-				Entry("CREATE with failurePolicy 'Fail' and timeoutSeconds ok",
-					webhookTestCase{failurePolicy: &failurePolicyFail, operationType: &operationCreate, timeoutSeconds: &timeoutSecondsNotProblematic}),
-				Entry("UPDATE", webhookTestCase{operationType: &operationUpdate}),
-				Entry("*", webhookTestCase{operationType: &operationAll}),
-				problematic,
-			)
-
-			DescribeTable(fmt.Sprintf("not problematic webhook for %s", gvr.String()),
-				func(testCase webhookTestCase) {
-					testCase.gvr = gvr
-					Expect(care.IsProblematicWebhook(testCase.build())).To(BeFalse(), "expected webhook not to be problematic")
-				},
-				Entry("failurePolicy 'Ignore' and timeoutSeconds ok", webhookTestCase{failurePolicy: &failurePolicyIgnore, timeoutSeconds: &timeoutSecondsNotProblematic}),
-				Entry("operationType 'DELETE'", webhookTestCase{operationType: &operationDelete}),
-				notProblematic,
-			)
-		}
-
-		podsTestTables = func(gvr schema.GroupVersionResource) {
-			commonTests(gvr, append(kubeSystemNamespaceProblematic,
-				Entry("objectSelector matching no-cleanup", webhookTestCase{
-					objectSelector: &metav1.LabelSelector{
+			kubeSystemNamespaceProblematic = []TableEntry{
+				Entry("namespaceSelector matching no-cleanup", webhookTestCase{
+					namespaceSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"}},
 				}),
-				Entry("objectSelector matching origin", webhookTestCase{
-					objectSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{"origin": "gardener"}},
+				Entry("namespaceSelector matching purpose", webhookTestCase{
+					namespaceSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
 				}),
-				Entry("objectSelector matching all gardener labels", webhookTestCase{
-					objectSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"shoot.gardener.cloud/no-cleanup": "true",
-							"origin":                          "gardener",
-						}},
-				}),
-				Entry("objectSelector and namespaceSelector matching all gardener labels", webhookTestCase{
-					objectSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"shoot.gardener.cloud/no-cleanup": "true",
-							"origin":                          "gardener",
-						}},
+				Entry("namespaceSelector matching all gardener labels", webhookTestCase{
 					namespaceSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"shoot.gardener.cloud/no-cleanup": "true",
 							"gardener.cloud/purpose":          "kube-system",
 						}},
 				}),
-			), append(kubeSystemNamespaceNotProblematic,
-				Entry("matching objectSelector, not matching namespaceSelector", webhookTestCase{
-					objectSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"origin":                          "gardener",
-							"shoot.gardener.cloud/no-cleanup": "true",
-						}},
-					namespaceSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{"foo": "bar"}},
-				}),
-				Entry("not matching objectSelector", webhookTestCase{
-					objectSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{"foo": "bar"}},
-				}),
-				Entry("matching namespaceSelector, not matching objectSelector", webhookTestCase{
-					objectSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{"foo": "bar"}},
-					namespaceSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							"shoot.gardener.cloud/no-cleanup": "true",
-							"gardener.cloud/purpose":          "kube-system",
-						}},
-				}),
-			))
-		}
+			}
 
-		namespacesTestTables = func(gvr schema.GroupVersionResource) {
-			var (
-				problematic = []TableEntry{
-					Entry("namespaceSelector matching purpose", webhookTestCase{
-						namespaceSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
+			kubeSystemNamespaceNotProblematic = []TableEntry{
+				Entry("not matching namespaceSelector", webhookTestCase{
+					namespaceSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"foo": "bar"}},
+				}),
+			}
+
+			commonTests = func(gvr schema.GroupVersionResource, problematic, notProblematic []TableEntry) {
+				DescribeTable(fmt.Sprintf("problematic webhook for %s", gvr.String()),
+					func(testCase webhookTestCase) {
+						testCase.gvr = gvr
+						Expect(IsProblematicWebhook(testCase.build())).To(BeTrue(), "expected webhook to be problematic")
+					},
+					Entry("CREATE", webhookTestCase{
+						failurePolicy:  &failurePolicyFail,
+						timeoutSeconds: &timeoutSecondsProblematic,
+						operationType:  &operationCreate,
 					}),
-					Entry("objectSelector matching purpose", webhookTestCase{
+					Entry("CREATE with nil failurePolicy and nil timeoutSeconds", webhookTestCase{operationType: &operationCreate}),
+					Entry("CREATE with nil failurePolicy and timeoutSeconds too high",
+						webhookTestCase{operationType: &operationCreate, timeoutSeconds: &timeoutSecondsProblematic}),
+					Entry("CREATE with failurePolicy 'Ignore' and nil timeoutSeconds",
+						webhookTestCase{failurePolicy: &failurePolicyIgnore, operationType: &operationCreate}),
+					Entry("CREATE with failurePolicy 'Ignore' and timeoutSeconds too high",
+						webhookTestCase{failurePolicy: &failurePolicyIgnore, operationType: &operationCreate, timeoutSeconds: &timeoutSecondsProblematic}),
+					Entry("CREATE with failurePolicy 'Fail' and nil timeoutSeconds",
+						webhookTestCase{failurePolicy: &failurePolicyFail, operationType: &operationCreate}),
+					Entry("CREATE with failurePolicy 'Fail' and timeoutSeconds ok",
+						webhookTestCase{failurePolicy: &failurePolicyFail, operationType: &operationCreate, timeoutSeconds: &timeoutSecondsNotProblematic}),
+					Entry("UPDATE", webhookTestCase{operationType: &operationUpdate}),
+					Entry("*", webhookTestCase{operationType: &operationAll}),
+					problematic,
+				)
+
+				DescribeTable(fmt.Sprintf("not problematic webhook for %s", gvr.String()),
+					func(testCase webhookTestCase) {
+						testCase.gvr = gvr
+						Expect(IsProblematicWebhook(testCase.build())).To(BeFalse(), "expected webhook not to be problematic")
+					},
+					Entry("failurePolicy 'Ignore' and timeoutSeconds ok", webhookTestCase{failurePolicy: &failurePolicyIgnore, timeoutSeconds: &timeoutSecondsNotProblematic}),
+					Entry("operationType 'DELETE'", webhookTestCase{operationType: &operationDelete}),
+					notProblematic,
+				)
+			}
+
+			podsTestTables = func(gvr schema.GroupVersionResource) {
+				commonTests(gvr, append(kubeSystemNamespaceProblematic,
+					Entry("objectSelector matching no-cleanup", webhookTestCase{
 						objectSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
+							MatchLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"}},
 					}),
-				}
-				notProblematic = []TableEntry{
-					Entry("namespaceSelector not matching purpose", webhookTestCase{
+					Entry("objectSelector matching origin", webhookTestCase{
+						objectSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{"origin": "gardener"}},
+					}),
+					Entry("objectSelector matching all gardener labels", webhookTestCase{
+						objectSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"shoot.gardener.cloud/no-cleanup": "true",
+								"origin":                          "gardener",
+							}},
+					}),
+					Entry("objectSelector and namespaceSelector matching all gardener labels", webhookTestCase{
+						objectSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"shoot.gardener.cloud/no-cleanup": "true",
+								"origin":                          "gardener",
+							}},
 						namespaceSelector: &metav1.LabelSelector{
-							MatchExpressions: []metav1.LabelSelectorRequirement{
-								{Key: "gardener.cloud/purpose", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
-							},
-						},
+							MatchLabels: map[string]string{
+								"shoot.gardener.cloud/no-cleanup": "true",
+								"gardener.cloud/purpose":          "kube-system",
+							}},
 					}),
-					Entry("not matching namespaceSelector", webhookTestCase{
+				), append(kubeSystemNamespaceNotProblematic,
+					Entry("matching objectSelector, not matching namespaceSelector", webhookTestCase{
+						objectSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"origin":                          "gardener",
+								"shoot.gardener.cloud/no-cleanup": "true",
+							}},
 						namespaceSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{"foo": "bar"}},
-					}),
-					Entry("objectSelector not matching purpose", webhookTestCase{
-						objectSelector: &metav1.LabelSelector{
-							MatchExpressions: []metav1.LabelSelectorRequirement{
-								{Key: "gardener.cloud/purpose", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
-							},
-						},
 					}),
 					Entry("not matching objectSelector", webhookTestCase{
 						objectSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{"foo": "bar"}},
-					}),
-					Entry("matching objectSelector, not matching namespaceSelector", webhookTestCase{
-						objectSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
-						namespaceSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{"foo": "bar"}},
 					}),
 					Entry("matching namespaceSelector, not matching objectSelector", webhookTestCase{
 						objectSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{"foo": "bar"}},
 						namespaceSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
+							MatchLabels: map[string]string{
+								"shoot.gardener.cloud/no-cleanup": "true",
+								"gardener.cloud/purpose":          "kube-system",
+							}},
 					}),
-				}
-			)
+				))
+			}
 
-			commonTests(gvr, problematic, notProblematic)
-		}
+			namespacesTestTables = func(gvr schema.GroupVersionResource) {
+				var (
+					problematic = []TableEntry{
+						Entry("namespaceSelector matching purpose", webhookTestCase{
+							namespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
+						}),
+						Entry("objectSelector matching purpose", webhookTestCase{
+							objectSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
+						}),
+					}
+					notProblematic = []TableEntry{
+						Entry("namespaceSelector not matching purpose", webhookTestCase{
+							namespaceSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{Key: "gardener.cloud/purpose", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
+								},
+							},
+						}),
+						Entry("not matching namespaceSelector", webhookTestCase{
+							namespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"foo": "bar"}},
+						}),
+						Entry("objectSelector not matching purpose", webhookTestCase{
+							objectSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{Key: "gardener.cloud/purpose", Operator: metav1.LabelSelectorOpNotIn, Values: []string{"kube-system"}},
+								},
+							},
+						}),
+						Entry("not matching objectSelector", webhookTestCase{
+							objectSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"foo": "bar"}},
+						}),
+						Entry("matching objectSelector, not matching namespaceSelector", webhookTestCase{
+							objectSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
+							namespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"foo": "bar"}},
+						}),
+						Entry("matching namespaceSelector, not matching objectSelector", webhookTestCase{
+							objectSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"foo": "bar"}},
+							namespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
+						}),
+					}
+				)
 
-		kubeSystemNamespaceTables = func(gvr schema.GroupVersionResource) {
-			commonTests(gvr, kubeSystemNamespaceProblematic, kubeSystemNamespaceNotProblematic)
-		}
+				commonTests(gvr, problematic, notProblematic)
+			}
 
-		withoutSelectorsTables = func(gvr schema.GroupVersionResource) {
-			commonTests(gvr, []TableEntry{}, []TableEntry{})
-		}
-	)
+			kubeSystemNamespaceTables = func(gvr schema.GroupVersionResource) {
+				commonTests(gvr, kubeSystemNamespaceProblematic, kubeSystemNamespaceNotProblematic)
+			}
 
-	podsTestTables(corev1.SchemeGroupVersion.WithResource("pods"))
-	podsTestTables(corev1.SchemeGroupVersion.WithResource("pods/status"))
-	kubeSystemNamespaceTables(corev1.SchemeGroupVersion.WithResource("configmaps"))
-	withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("endpoints"))
-	kubeSystemNamespaceTables(corev1.SchemeGroupVersion.WithResource("secrets"))
-	kubeSystemNamespaceTables(corev1.SchemeGroupVersion.WithResource("serviceaccounts"))
-	withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("services"))
-	withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("services/status"))
-	withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("nodes"))
-	withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("nodes/status"))
-	namespacesTestTables(corev1.SchemeGroupVersion.WithResource("namespaces"))
-	namespacesTestTables(corev1.SchemeGroupVersion.WithResource("namespaces/status"))
+			withoutSelectorsTables = func(gvr schema.GroupVersionResource) {
+				commonTests(gvr, []TableEntry{}, []TableEntry{})
+			}
+		)
 
-	kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("controllerrevisions"))
-	kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("daemonsets"))
-	kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("daemonsets/status"))
-	kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("deployments"))
-	kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("deployments/scale"))
-	kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("replicasets"))
-	kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("replicasets/status"))
-	kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("replicasets/scale"))
+		podsTestTables(corev1.SchemeGroupVersion.WithResource("pods"))
+		podsTestTables(corev1.SchemeGroupVersion.WithResource("pods/status"))
+		kubeSystemNamespaceTables(corev1.SchemeGroupVersion.WithResource("configmaps"))
+		withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("endpoints"))
+		kubeSystemNamespaceTables(corev1.SchemeGroupVersion.WithResource("secrets"))
+		kubeSystemNamespaceTables(corev1.SchemeGroupVersion.WithResource("serviceaccounts"))
+		withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("services"))
+		withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("services/status"))
+		withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("nodes"))
+		withoutSelectorsTables(corev1.SchemeGroupVersion.WithResource("nodes/status"))
+		namespacesTestTables(corev1.SchemeGroupVersion.WithResource("namespaces"))
+		namespacesTestTables(corev1.SchemeGroupVersion.WithResource("namespaces/status"))
 
-	// don't remove this version if deprecated / removed
-	kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("controllerrevisions"))
-	kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("daemonsets"))
-	kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("daemonsets/status"))
-	kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("deployments"))
-	kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("deployments/scale"))
-	kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("replicasets"))
-	kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("replicasets/status"))
-	kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("replicasets/scale"))
+		kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("controllerrevisions"))
+		kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("daemonsets"))
+		kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("daemonsets/status"))
+		kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("deployments"))
+		kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("deployments/scale"))
+		kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("replicasets"))
+		kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("replicasets/status"))
+		kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("replicasets/scale"))
 
-	// don't remove this version if deprecated / removed
-	kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("controllerrevisions"))
-	kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("daemonsets"))
-	kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("daemonsets/status"))
-	kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("deployments"))
-	kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("deployments/scale"))
-	kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("replicasets"))
-	kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("replicasets/status"))
-	kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("replicasets/scale"))
+		// don't remove this version if deprecated / removed
+		kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("controllerrevisions"))
+		kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("daemonsets"))
+		kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("daemonsets/status"))
+		kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("deployments"))
+		kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("deployments/scale"))
+		kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("replicasets"))
+		kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("replicasets/status"))
+		kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("replicasets/scale"))
 
-	// don't remove this version if deprecated / removed
-	kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("controllerrevisions"))
-	kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("daemonsets"))
-	kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("daemonsets/status"))
-	kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("deployments"))
-	kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("deployments/scale"))
-	kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("replicasets"))
-	kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("replicasets/status"))
-	kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("replicasets/scale"))
-	kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("networkpolicies"))
-	withoutSelectorsTables(extensionsv1beta1.SchemeGroupVersion.WithResource("podsecuritypolicies"))
+		// don't remove this version if deprecated / removed
+		kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("controllerrevisions"))
+		kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("daemonsets"))
+		kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("daemonsets/status"))
+		kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("deployments"))
+		kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("deployments/scale"))
+		kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("replicasets"))
+		kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("replicasets/status"))
+		kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("replicasets/scale"))
 
-	withoutSelectorsTables(coordinationv1.SchemeGroupVersion.WithResource("leases"))
-	withoutSelectorsTables(coordinationv1beta1.SchemeGroupVersion.WithResource("leases"))
+		// don't remove this version if deprecated / removed
+		kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("controllerrevisions"))
+		kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("daemonsets"))
+		kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("daemonsets/status"))
+		kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("deployments"))
+		kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("deployments/scale"))
+		kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("replicasets"))
+		kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("replicasets/status"))
+		kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("replicasets/scale"))
+		kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("networkpolicies"))
+		withoutSelectorsTables(extensionsv1beta1.SchemeGroupVersion.WithResource("podsecuritypolicies"))
 
-	kubeSystemNamespaceTables(networkingv1.SchemeGroupVersion.WithResource("networkpolicies"))
-	kubeSystemNamespaceTables(networkingv1beta1.SchemeGroupVersion.WithResource("networkpolicies"))
+		withoutSelectorsTables(coordinationv1.SchemeGroupVersion.WithResource("leases"))
+		withoutSelectorsTables(coordinationv1beta1.SchemeGroupVersion.WithResource("leases"))
 
-	withoutSelectorsTables(policyv1beta1.SchemeGroupVersion.WithResource("podsecuritypolicies"))
+		kubeSystemNamespaceTables(networkingv1.SchemeGroupVersion.WithResource("networkpolicies"))
+		kubeSystemNamespaceTables(networkingv1beta1.SchemeGroupVersion.WithResource("networkpolicies"))
 
-	withoutSelectorsTables(rbacv1.SchemeGroupVersion.WithResource("clusterroles"))
-	withoutSelectorsTables(rbacv1.SchemeGroupVersion.WithResource("clusterrolebindings"))
-	kubeSystemNamespaceTables(rbacv1.SchemeGroupVersion.WithResource("roles"))
-	kubeSystemNamespaceTables(rbacv1.SchemeGroupVersion.WithResource("rolebindings"))
+		withoutSelectorsTables(policyv1beta1.SchemeGroupVersion.WithResource("podsecuritypolicies"))
 
-	withoutSelectorsTables(rbacv1alpha1.SchemeGroupVersion.WithResource("clusterroles"))
-	withoutSelectorsTables(rbacv1alpha1.SchemeGroupVersion.WithResource("clusterrolebindings"))
-	kubeSystemNamespaceTables(rbacv1alpha1.SchemeGroupVersion.WithResource("roles"))
-	kubeSystemNamespaceTables(rbacv1alpha1.SchemeGroupVersion.WithResource("rolebindings"))
+		withoutSelectorsTables(rbacv1.SchemeGroupVersion.WithResource("clusterroles"))
+		withoutSelectorsTables(rbacv1.SchemeGroupVersion.WithResource("clusterrolebindings"))
+		kubeSystemNamespaceTables(rbacv1.SchemeGroupVersion.WithResource("roles"))
+		kubeSystemNamespaceTables(rbacv1.SchemeGroupVersion.WithResource("rolebindings"))
 
-	withoutSelectorsTables(rbacv1beta1.SchemeGroupVersion.WithResource("clusterroles"))
-	withoutSelectorsTables(rbacv1beta1.SchemeGroupVersion.WithResource("clusterrolebindings"))
-	kubeSystemNamespaceTables(rbacv1beta1.SchemeGroupVersion.WithResource("roles"))
-	kubeSystemNamespaceTables(rbacv1beta1.SchemeGroupVersion.WithResource("rolebindings"))
+		withoutSelectorsTables(rbacv1alpha1.SchemeGroupVersion.WithResource("clusterroles"))
+		withoutSelectorsTables(rbacv1alpha1.SchemeGroupVersion.WithResource("clusterrolebindings"))
+		kubeSystemNamespaceTables(rbacv1alpha1.SchemeGroupVersion.WithResource("roles"))
+		kubeSystemNamespaceTables(rbacv1alpha1.SchemeGroupVersion.WithResource("rolebindings"))
 
-	withoutSelectorsTables(apiextensionsv1.SchemeGroupVersion.WithResource("customresourcedefinitions"))
-	withoutSelectorsTables(apiextensionsv1.SchemeGroupVersion.WithResource("customresourcedefinitions/status"))
+		withoutSelectorsTables(rbacv1beta1.SchemeGroupVersion.WithResource("clusterroles"))
+		withoutSelectorsTables(rbacv1beta1.SchemeGroupVersion.WithResource("clusterrolebindings"))
+		kubeSystemNamespaceTables(rbacv1beta1.SchemeGroupVersion.WithResource("roles"))
+		kubeSystemNamespaceTables(rbacv1beta1.SchemeGroupVersion.WithResource("rolebindings"))
 
-	withoutSelectorsTables(apiextensionsv1beta1.SchemeGroupVersion.WithResource("customresourcedefinitions"))
-	withoutSelectorsTables(apiextensionsv1beta1.SchemeGroupVersion.WithResource("customresourcedefinitions/status"))
+		withoutSelectorsTables(apiextensionsv1.SchemeGroupVersion.WithResource("customresourcedefinitions"))
+		withoutSelectorsTables(apiextensionsv1.SchemeGroupVersion.WithResource("customresourcedefinitions/status"))
 
-	withoutSelectorsTables(apiregistrationv1.SchemeGroupVersion.WithResource("apiservices"))
-	withoutSelectorsTables(apiregistrationv1.SchemeGroupVersion.WithResource("apiservices/status"))
+		withoutSelectorsTables(apiextensionsv1beta1.SchemeGroupVersion.WithResource("customresourcedefinitions"))
+		withoutSelectorsTables(apiextensionsv1beta1.SchemeGroupVersion.WithResource("customresourcedefinitions/status"))
 
-	withoutSelectorsTables(apiregistrationv1beta1.SchemeGroupVersion.WithResource("apiservices"))
-	withoutSelectorsTables(apiregistrationv1beta1.SchemeGroupVersion.WithResource("apiservices/status"))
+		withoutSelectorsTables(apiregistrationv1.SchemeGroupVersion.WithResource("apiservices"))
+		withoutSelectorsTables(apiregistrationv1.SchemeGroupVersion.WithResource("apiservices/status"))
 
-	withoutSelectorsTables(certificatesv1.SchemeGroupVersion.WithResource("certificatesigningrequests"))
-	withoutSelectorsTables(certificatesv1.SchemeGroupVersion.WithResource("certificatesigningrequests/status"))
-	withoutSelectorsTables(certificatesv1.SchemeGroupVersion.WithResource("certificatesigningrequests/approval"))
+		withoutSelectorsTables(apiregistrationv1beta1.SchemeGroupVersion.WithResource("apiservices"))
+		withoutSelectorsTables(apiregistrationv1beta1.SchemeGroupVersion.WithResource("apiservices/status"))
 
-	withoutSelectorsTables(certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests"))
-	withoutSelectorsTables(certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests/status"))
-	withoutSelectorsTables(certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests/approval"))
+		withoutSelectorsTables(certificatesv1.SchemeGroupVersion.WithResource("certificatesigningrequests"))
+		withoutSelectorsTables(certificatesv1.SchemeGroupVersion.WithResource("certificatesigningrequests/status"))
+		withoutSelectorsTables(certificatesv1.SchemeGroupVersion.WithResource("certificatesigningrequests/approval"))
 
-	withoutSelectorsTables(schedulingv1.SchemeGroupVersion.WithResource("priorityclasses"))
-	withoutSelectorsTables(schedulingv1alpha1.SchemeGroupVersion.WithResource("priorityclasses"))
-	withoutSelectorsTables(schedulingv1beta1.SchemeGroupVersion.WithResource("priorityclasses"))
+		withoutSelectorsTables(certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests"))
+		withoutSelectorsTables(certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests/status"))
+		withoutSelectorsTables(certificatesv1beta1.SchemeGroupVersion.WithResource("certificatesigningrequests/approval"))
 
-	withoutSelectorsTables(schema.GroupVersionResource{
-		Group:    "*",
-		Version:  "*",
-		Resource: "*",
-	})
-	withoutSelectorsTables(schema.GroupVersionResource{
-		Group:    "apps",
-		Version:  "*",
-		Resource: "*",
-	})
-	withoutSelectorsTables(schema.GroupVersionResource{
-		Group:    "apps",
-		Version:  "v1",
-		Resource: "*",
-	})
+		withoutSelectorsTables(schedulingv1.SchemeGroupVersion.WithResource("priorityclasses"))
+		withoutSelectorsTables(schedulingv1alpha1.SchemeGroupVersion.WithResource("priorityclasses"))
+		withoutSelectorsTables(schedulingv1beta1.SchemeGroupVersion.WithResource("priorityclasses"))
 
-	It("should not block another resource", func() {
-		wh := webhookTestCase{
-			failurePolicy: &failurePolicyFail,
-			gvr:           schema.GroupVersionResource{Group: "foo", Resource: "bar", Version: "baz"},
-			operationType: &operationCreate,
-		}
+		withoutSelectorsTables(schema.GroupVersionResource{
+			Group:    "*",
+			Version:  "*",
+			Resource: "*",
+		})
+		withoutSelectorsTables(schema.GroupVersionResource{
+			Group:    "apps",
+			Version:  "*",
+			Resource: "*",
+		})
+		withoutSelectorsTables(schema.GroupVersionResource{
+			Group:    "apps",
+			Version:  "v1",
+			Resource: "*",
+		})
 
-		Expect(care.IsProblematicWebhook(wh.build())).To(BeFalse())
+		It("should not block another resource", func() {
+			wh := webhookTestCase{
+				failurePolicy: &failurePolicyFail,
+				gvr:           schema.GroupVersionResource{Group: "foo", Resource: "bar", Version: "baz"},
+				operationType: &operationCreate,
+			}
+
+			Expect(IsProblematicWebhook(wh.build())).To(BeFalse())
+		})
 	})
 })

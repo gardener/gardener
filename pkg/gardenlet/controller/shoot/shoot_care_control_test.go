@@ -213,12 +213,9 @@ var _ = Describe("Shoot Care Control", func() {
 
 		Context("when health check setup is successful", func() {
 			var (
-				clientMap clientmap.ClientMap
-
-				managedSeed *seedmanagementv1alpha1.ManagedSeed
-
+				clientMap     clientmap.ClientMap
+				managedSeed   *seedmanagementv1alpha1.ManagedSeed
 				operationFunc NewOperationFunc
-				revertFns     []func()
 			)
 
 			JustBeforeEach(func() {
@@ -242,36 +239,25 @@ var _ = Describe("Shoot Care Control", func() {
 				op.Shoot.SetInfo(shoot)
 				operationFunc = opFunc(op, nil)
 
-				revertFns = append(revertFns,
-					test.WithVar(&NewOperation, operationFunc),
-					test.WithVar(&NewGarbageCollector, nopGarbageCollectorFunc()),
-				)
+				DeferCleanup(test.WithVars(
+					&NewOperation, operationFunc,
+					&NewGarbageCollector, nopGarbageCollectorFunc(),
+				))
 				careControl = NewCareReconciler(clientMap, log, nil, nil, "", gardenletConf)
 			})
 
 			AfterEach(func() {
 				shoot = nil
-
-				for _, fn := range revertFns {
-					fn()
-				}
 			})
 
 			Context("when no conditions / constraints are returned", func() {
-				var revertFns []func()
 				BeforeEach(func() {
-					revertFns = append(revertFns,
-						test.WithVars(&NewHealthCheck,
-							healthCheckFunc(func(_ []gardencorev1beta1.Condition) []gardencorev1beta1.Condition { return nil })),
-						test.WithVars(&NewConstraintCheck,
-							constraintCheckFunc(func(_ []gardencorev1beta1.Condition) []gardencorev1beta1.Condition { return nil })),
-					)
+					DeferCleanup(test.WithVars(
+						&NewHealthCheck, healthCheckFunc(func(_ []gardencorev1beta1.Condition) []gardencorev1beta1.Condition { return nil }),
+						&NewConstraintCheck, constraintCheckFunc(func(_ []gardencorev1beta1.Condition) []gardencorev1beta1.Condition { return nil }),
+					))
 				})
-				AfterEach(func() {
-					for _, fn := range revertFns {
-						fn()
-					}
-				})
+
 				It("should not set conditions / constraints", func() {
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
@@ -280,6 +266,7 @@ var _ = Describe("Shoot Care Control", func() {
 					Expect(updatedShoot.Status.Conditions).To(BeEmpty())
 					Expect(updatedShoot.Status.Constraints).To(BeEmpty())
 				})
+
 				It("should remove conditions / constraints", func() {
 					apiServerCondition := gardencorev1beta1.Condition{
 						Type:   gardencorev1beta1.ShootAPIServerAvailable,
@@ -307,27 +294,17 @@ var _ = Describe("Shoot Care Control", func() {
 			})
 
 			Context("when conditions / constraints are returned unchanged", func() {
-				var revertFns []func()
 				BeforeEach(func() {
-					revertFns = append(revertFns,
-						test.WithVars(&NewHealthCheck,
-							healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-								conditionsCopy := append(cond[:0:0], cond...)
-								return conditionsCopy
-							}),
-						),
-						test.WithVars(&NewConstraintCheck,
-							constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-								constraintsCopy := append(constr[:0:0], constr...)
-								return constraintsCopy
-							}),
-						),
-					)
-				})
-				AfterEach(func() {
-					for _, fn := range revertFns {
-						fn()
-					}
+					DeferCleanup(test.WithVars(
+						&NewHealthCheck, healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+							conditionsCopy := append(cond[:0:0], cond...)
+							return conditionsCopy
+						}),
+						&NewConstraintCheck, constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+							constraintsCopy := append(constr[:0:0], constr...)
+							return constraintsCopy
+						}),
+					))
 				})
 
 				It("should not set conditions / constraints", func() {
@@ -337,6 +314,7 @@ var _ = Describe("Shoot Care Control", func() {
 					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
 					Expect(updatedShoot.Status.Conditions).To(BeEmpty())
 				})
+
 				It("should not amend existing conditions / constraints", func() {
 					apiServerCondition := gardencorev1beta1.Condition{
 						Type:   gardencorev1beta1.ShootAPIServerAvailable,
@@ -364,11 +342,7 @@ var _ = Describe("Shoot Care Control", func() {
 			})
 
 			Context("when conditions / constraints are changed", func() {
-				var (
-					conditions, constraints []gardencorev1beta1.Condition
-
-					revertFns []func()
-				)
+				var conditions, constraints []gardencorev1beta1.Condition
 
 				BeforeEach(func() {
 					conditions = []gardencorev1beta1.Condition{
@@ -406,24 +380,14 @@ var _ = Describe("Shoot Care Control", func() {
 						},
 					}
 
-					revertFns = append(revertFns,
-						test.WithVars(&NewHealthCheck,
-							healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-								return conditions
-							}),
-						),
-						test.WithVars(&NewConstraintCheck,
-							constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-								return constraints
-							}),
-						),
-					)
-				})
-
-				AfterEach(func() {
-					for _, fn := range revertFns {
-						fn()
-					}
+					DeferCleanup(test.WithVars(
+						&NewHealthCheck, healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+							return conditions
+						}),
+						&NewConstraintCheck, constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+							return constraints
+						}),
+					))
 				})
 
 				It("should update shoot conditions", func() {
@@ -471,6 +435,7 @@ var _ = Describe("Shoot Care Control", func() {
 							},
 						}
 					})
+
 					It("should set shoot to unhealthy", func() {
 						Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
@@ -480,15 +445,10 @@ var _ = Describe("Shoot Care Control", func() {
 						Expect(updatedShoot.Status.Constraints).To(ConsistOf(constraints))
 					})
 				})
-
 			})
 
 			Context("when conditions / constraints are changed to healthy", func() {
-				var (
-					conditions, constraints []gardencorev1beta1.Condition
-
-					revertFns []func()
-				)
+				var conditions, constraints []gardencorev1beta1.Condition
 
 				BeforeEach(func() {
 					conditions = []gardencorev1beta1.Condition{
@@ -527,24 +487,14 @@ var _ = Describe("Shoot Care Control", func() {
 						},
 					}
 
-					revertFns = append(revertFns,
-						test.WithVars(&NewHealthCheck,
-							healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-								return conditions
-							}),
-						),
-						test.WithVars(&NewConstraintCheck,
-							constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-								return constraints
-							}),
-						),
-					)
-				})
-
-				AfterEach(func() {
-					for _, fn := range revertFns {
-						fn()
-					}
+					DeferCleanup(test.WithVars(
+						&NewHealthCheck, healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+							return conditions
+						}),
+						&NewConstraintCheck, constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+							return constraints
+						}),
+					))
 				})
 
 				Context("when shoot has a successful last operation", func() {
@@ -556,6 +506,7 @@ var _ = Describe("Shoot Care Control", func() {
 							},
 						}
 					})
+
 					It("should set shoot to healthy", func() {
 						Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
@@ -564,7 +515,6 @@ var _ = Describe("Shoot Care Control", func() {
 						Expect(updatedShoot.Status.Conditions).To(ConsistOf(conditions))
 					})
 				})
-
 			})
 		})
 	})
@@ -592,7 +542,6 @@ func constraintCheckFunc(fn resultingConstraintFunc) NewConstraintCheckFunc {
 	return func(op *operation.Operation, init care.ShootClientInit) ConstraintCheck {
 		return fn
 	}
-
 }
 
 func opFunc(op *operation.Operation, err error) NewOperationFunc {
@@ -661,14 +610,4 @@ func consistOfConstraintsInUnknownStatus(message string) types.GomegaMatcher {
 			"Message": Equal(message),
 		}),
 	)
-}
-
-// failingPatchClient returns fake errors for patch operations for testing purposes
-type failingPatchClient struct {
-	err error
-	client.Client
-}
-
-func (c failingPatchClient) Patch(context.Context, client.Object, client.Patch, ...client.PatchOption) error {
-	return c.err
 }

@@ -104,7 +104,7 @@ func (c *Constraint) constraintsChecks(
 		}
 	}
 
-	client, apiServerRunning, err := c.initializeShootClients()
+	shootClient, apiServerRunning, err := c.initializeShootClients()
 	if err != nil {
 		message := fmt.Sprintf("Could not initialize Shoot client for constraints check: %+v", err)
 		c.logger.Error(message)
@@ -113,27 +113,20 @@ func (c *Constraint) constraintsChecks(
 
 		return []gardencorev1beta1.Condition{hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint}
 	}
-
 	if !apiServerRunning {
 		// don't check constraints if API server has already been deleted or has not been created yet
 		return shootControlPlaneNotRunningConstraints(hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint)
 	}
+	c.shootClient = shootClient.Client()
 
-	c.shootClient = client.Client()
-
-	var newHibernationConstraint, newMaintenancePreconditionsSatisfiedConstraint *gardencorev1beta1.Condition
-
-	status, reason, message, errorCodes, err := c.CheckForProblematicWebhooks(ctx)
-	if err == nil {
-		updatedHibernationCondition := gardencorev1beta1helper.UpdatedCondition(hibernationPossibleConstraint, status, reason, message, errorCodes...)
-		newHibernationConstraint = &updatedHibernationCondition
-
-		updatedMaintenanceCondition := gardencorev1beta1helper.UpdatedCondition(maintenancePreconditionsSatisfiedConstraint, status, reason, message, errorCodes...)
-		newMaintenancePreconditionsSatisfiedConstraint = &updatedMaintenanceCondition
+	status, reason, message, errorCodes, err = c.CheckForProblematicWebhooks(ctx)
+	if err != nil {
+		hibernationPossibleConstraint = NewConditionOrError(hibernationPossibleConstraint, nil, err)
+		maintenancePreconditionsSatisfiedConstraint = NewConditionOrError(maintenancePreconditionsSatisfiedConstraint, nil, err)
+	} else {
+		hibernationPossibleConstraint = gardencorev1beta1helper.UpdatedCondition(hibernationPossibleConstraint, status, reason, message, errorCodes...)
+		maintenancePreconditionsSatisfiedConstraint = gardencorev1beta1helper.UpdatedCondition(maintenancePreconditionsSatisfiedConstraint, status, reason, message, errorCodes...)
 	}
-
-	hibernationPossibleConstraint = NewConditionOrError(hibernationPossibleConstraint, newHibernationConstraint, err)
-	maintenancePreconditionsSatisfiedConstraint = NewConditionOrError(maintenancePreconditionsSatisfiedConstraint, newMaintenancePreconditionsSatisfiedConstraint, err)
 
 	return []gardencorev1beta1.Condition{hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint}
 }
