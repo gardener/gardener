@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 
-	"github.com/Masterminds/semver"
 	"github.com/sirupsen/logrus"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -139,7 +138,7 @@ func (c *Constraint) constraintsChecks(
 	return []gardencorev1beta1.Condition{hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint}
 }
 
-func getValidatingWebhookConfigurations(ctx context.Context, client client.Client, k8sVersion *semver.Version) ([]admissionregistrationv1.ValidatingWebhookConfiguration, error) {
+func getValidatingWebhookConfigurations(ctx context.Context, client client.Client) ([]admissionregistrationv1.ValidatingWebhookConfiguration, error) {
 	validatingWebhookConfigs := &admissionregistrationv1.ValidatingWebhookConfigurationList{}
 	if err := client.List(ctx, validatingWebhookConfigs); err != nil {
 		return nil, err
@@ -152,7 +151,7 @@ var (
 	labelSelectorNotResourceManager = labels.NewSelector().Add(notResourceManager)
 )
 
-func getMutatingWebhookConfigurations(ctx context.Context, c client.Client, k8sVersion *semver.Version) ([]admissionregistrationv1.MutatingWebhookConfiguration, error) {
+func getMutatingWebhookConfigurations(ctx context.Context, c client.Client) ([]admissionregistrationv1.MutatingWebhookConfiguration, error) {
 	mutatingWebhookConfigs := &admissionregistrationv1.MutatingWebhookConfigurationList{}
 	if err := c.List(ctx, mutatingWebhookConfigs, client.MatchingLabelsSelector{Selector: labelSelectorNotResourceManager}); err != nil {
 		return nil, err
@@ -163,7 +162,7 @@ func getMutatingWebhookConfigurations(ctx context.Context, c client.Client, k8sV
 // CheckForProblematicWebhooks checks the Shoot for problematic webhooks which could prevent shoot worker nodes from
 // joining the cluster.
 func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencorev1beta1.ConditionStatus, string, string, []gardencorev1beta1.ErrorCode, error) {
-	validatingWebhookConfigs, err := getValidatingWebhookConfigurations(ctx, c.shootClient, c.shoot.KubernetesVersion)
+	validatingWebhookConfigs, err := getValidatingWebhookConfigurations(ctx, c.shootClient)
 	if err != nil {
 		return "", "", "", nil, fmt.Errorf("could not get ValidatingWebhookConfigurations of Shoot cluster to check for problematic webhooks: %w", err)
 	}
@@ -179,9 +178,17 @@ func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencor
 					nil
 			}
 		}
+
+		if wasRemediatedByGardener(webhookConfig.Annotations) {
+			return gardencorev1beta1.ConditionFalse,
+				"RemediatedWebhooks",
+				fmt.Sprintf("ValidatingWebhookConfiguration %q is problematic and was remediated by Gardener (please check its annotations for details).", webhookConfig.Name),
+				[]gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorProblematicWebhook},
+				nil
+		}
 	}
 
-	mutatingWebhookConfigs, err := getMutatingWebhookConfigurations(ctx, c.shootClient, c.shoot.KubernetesVersion)
+	mutatingWebhookConfigs, err := getMutatingWebhookConfigurations(ctx, c.shootClient)
 	if err != nil {
 		return "", "", "", nil, fmt.Errorf("could not get MutatingWebhookConfigurations of Shoot cluster to check for problematic webhooks: %w", err)
 	}
@@ -196,6 +203,14 @@ func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencor
 					[]gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorProblematicWebhook},
 					nil
 			}
+		}
+
+		if wasRemediatedByGardener(webhookConfig.Annotations) {
+			return gardencorev1beta1.ConditionFalse,
+				"RemediatedWebhooks",
+				fmt.Sprintf("MutatingWebhookConfiguration %q is problematic and was remediated by Gardener (please check its annotations for details).", webhookConfig.Name),
+				[]gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorProblematicWebhook},
+				nil
 		}
 	}
 
@@ -262,4 +277,8 @@ func IsProblematicWebhook(
 	}
 
 	return false
+}
+
+func wasRemediatedByGardener(annotations map[string]string) bool {
+	return annotations[v1beta1constants.GardenerWarning] != ""
 }

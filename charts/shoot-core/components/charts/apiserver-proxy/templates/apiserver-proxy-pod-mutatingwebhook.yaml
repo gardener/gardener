@@ -10,6 +10,7 @@ metadata:
   labels:
     gardener.cloud/role: system-component
     origin: gardener
+    remediation.webhook.shoot.gardener.cloud/exclude: true
 webhooks:
 - admissionReviewVersions:
   - v1beta1

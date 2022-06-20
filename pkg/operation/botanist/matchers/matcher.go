@@ -189,8 +189,8 @@ type WebhookConstraintMatcher struct {
 	GVR             schema.GroupVersionResource
 	Subresource     string
 	ClusterScoped   bool
-	ObjectLabels    labels.Labels
-	NamespaceLabels labels.Labels
+	ObjectLabels    labels.Set
+	NamespaceLabels labels.Set
 }
 
 // Match rule with objLabelSelector and namespaceLabelSelector if

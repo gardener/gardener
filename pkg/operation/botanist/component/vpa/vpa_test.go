@@ -1332,7 +1332,8 @@ var _ = Describe("VPA", func() {
 				Kind:       "MutatingWebhookConfiguration",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "vpa-webhook-config-target",
+				Name:   "vpa-webhook-config-target",
+				Labels: map[string]string{"remediation.webhook.shoot.gardener.cloud/exclude": "true"},
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{{
 				Name:                    "vpa.k8s.io",

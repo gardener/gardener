@@ -70,6 +70,19 @@ var defaultNewGarbageCollector = func(op *operation.Operation, init care.ShootCl
 	return care.NewGarbageCollection(op, init)
 }
 
+// WebhookRemediator is an interface used to perform webhook remediation.
+type WebhookRemediator interface {
+	Remediate(ctx context.Context) error
+}
+
+// NewWebhookRemediatorFunc is a function used to create a new instance to perform webhook remediation.
+type NewWebhookRemediatorFunc func(op *operation.Operation, init care.ShootClientInit) WebhookRemediator
+
+// defaultNewWebhookRemediator is the default function to create a new instance to perform webhook remediation.
+var defaultNewWebhookRemediator = func(op *operation.Operation, init care.ShootClientInit) WebhookRemediator {
+	return care.NewWebhookRemediation(op, init)
+}
+
 // NewOperationFunc is a function used to create a new `operation.Operation` instance.
 type NewOperationFunc func(
 	ctx context.Context,

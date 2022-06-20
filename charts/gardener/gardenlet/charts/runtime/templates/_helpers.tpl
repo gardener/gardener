@@ -169,6 +169,7 @@ config.yaml: |
       {{- if .Values.global.gardenlet.config.controllers.shootCare.conditionThresholds }}
 {{ toYaml .Values.global.gardenlet.config.controllers.shootCare.conditionThresholds | indent 6 }}
       {{- end }}
+      webhookRemediatorEnabled: {{ required ".Values.global.gardenlet.config.controllers.shootCare.webhookRemediatorEnabled is required" .Values.global.gardenlet.config.controllers.shootCare.webhookRemediatorEnabled }}
     seedCare:
       syncPeriod: {{ required ".Values.global.gardenlet.config.controllers.seedCare.syncPeriod is required" .Values.global.gardenlet.config.controllers.seedCare.syncPeriod }}
       conditionThresholds:

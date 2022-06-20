@@ -76,6 +76,15 @@ namespaceSelector:
 If the Shoot still has webhooks with either `failurePolicy={Fail,nil}` or `failurePolicy=Ignore && timeoutSeconds>15` that act on [critical resources](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/matchers/matcher.go#L60) in the `kube-system` namespace, Gardener will set the `HibernationPossible` to `False` indicating, that the Shoot can probably not be woken up again after hibernation without manual intervention of the Gardener Operator.
 `gardener-apiserver` will prevent any Shoot with the `HibernationPossible` constraint set to `False` from being hibernated, that is via manual hibernation as well as scheduled hibernation.
 
+> By setting `.controllers.shootCare.webhookRemediatorEnabled=true` in the gardenlet configuration, the auto-remediation of webhooks not following the best practices can be turned on in the shoot clusters.
+> Concretely, missing `namespaceSelector`s or `objectSelector`s will be added and too high `timeoutSeconds` will be lowered.
+> In some cases, the `failurePolicy` will be set from `Fail` to `Ignore`.
+> Gardenlet will also add an annotation to make it visible to end-users that their webhook configurations were mutated and should be fixed by them in the first place.
+> Note that all of this is no perfect solution and just done on a best effort basis.
+> Only the owner of the webhook can know whether it indeed is problematic and configured correctly.
+> 
+> Webhooks labeled with `remediation.webhook.shoot.gardener.cloud/exclude=true` will be excluded from auto-remediation.
+
 **`MaintenancePreconditionsSatisfied`**:
 
 This constraint indicates whether all preconditions for a safe maintenance operation are satisfied (see also [this document](shoot_maintenance.md) for more information about what happens during a shoot maintenance).

@@ -682,7 +682,10 @@ var _ = Describe("ResourceManager", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "gardener-resource-manager",
 				Namespace: deployNamespace,
-				Labels:    map[string]string{"app": "gardener-resource-manager"},
+				Labels: map[string]string{
+					"app": "gardener-resource-manager",
+					"remediation.webhook.shoot.gardener.cloud/exclude": "true",
+				},
 			},
 			Webhooks: []admissionregistrationv1.MutatingWebhook{
 				{

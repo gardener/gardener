@@ -338,6 +338,11 @@ type ShootCareControllerConfiguration struct {
 	// ConditionThresholds defines the condition threshold per condition type.
 	// +optional
 	ConditionThresholds []ConditionThreshold `json:"conditionThresholds,omitempty"`
+	// WebhookRemediatorEnabled specifies whether the remediator for webhooks not following the Kubernetes best
+	// practices (https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#best-practices-and-warnings)
+	// is enabled.
+	// +optional
+	WebhookRemediatorEnabled *bool `json:"webhookRemediatorEnabled,omitempty"`
 }
 
 // SeedCareControllerConfiguration defines the configuration of the SeedCare

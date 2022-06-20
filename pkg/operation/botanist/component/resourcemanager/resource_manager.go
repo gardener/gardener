@@ -832,7 +832,9 @@ func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, mutatingWebhookConfiguration, func() error {
-		mutatingWebhookConfiguration.Labels = appLabel()
+		mutatingWebhookConfiguration.Labels = utils.MergeStringMaps(appLabel(), map[string]string{
+			v1beta1constants.LabelExcludeWebhookFromRemediation: "true",
+		})
 		mutatingWebhookConfiguration.Webhooks = GetMutatingWebhookConfigurationWebhooks(r.buildWebhookNamespaceSelector(), secretServerCA, r.buildWebhookClientConfig)
 		return nil
 	})

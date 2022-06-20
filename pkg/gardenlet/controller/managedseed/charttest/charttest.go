@@ -732,6 +732,7 @@ func ComputeExpectedGardenletConfiguration(
 						},
 					},
 				},
+				WebhookRemediatorEnabled: pointer.Bool(false),
 			},
 			SeedCare: &gardenletconfigv1alpha1.SeedCareControllerConfiguration{
 				SyncPeriod: &metav1.Duration{
