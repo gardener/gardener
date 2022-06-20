@@ -158,19 +158,16 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 		return err
 	}
 
-	specPath := field.NewPath("spec")
-	// If shoot uses deafult domain validate domain even though shoot can be assigned to seed
-	// having dns disabled
-	if shoot.Spec.DNS != nil && shoot.Spec.DNS.Domain != nil && !helper.ShootUsesUnmanagedDNS(shoot) {
-		if err := checkDefaultDomainFormat(a, shoot, d.projectLister, defaultDomains); err != nil {
-			return err
-		}
-	}
-
-	// If a shoot is newly created and not yet assigned to a seed we do nothing. We need to know the seed
-	// in order to check whether it's tainted to not use DNS.
 	switch a.GetOperation() {
 	case admission.Create:
+		// If shoot uses deafult domain validate domain even though shoot can be assigned to seed
+		// having dns disabled later on
+		if isShootDomainSet(shoot) && !helper.ShootUsesUnmanagedDNS(shoot) {
+			if err := checkDefaultDomainFormat(a, shoot, d.projectLister, defaultDomains); err != nil {
+				return err
+			}
+		}
+
 		if shoot.Spec.SeedName == nil {
 			return nil
 		}
@@ -179,6 +176,17 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 		oldShoot, ok := a.GetOldObject().(*core.Shoot)
 		if !ok {
 			return apierrors.NewBadRequest("could not convert old resource into Shoot object")
+		}
+
+		// Only validate domain on updates if the shoot's domain was not set previously and is being currently set.
+		// This is necessary to avoid reconciliation errors for older shoots that already use a domain with an incorrect format.
+		// There is also a possibility that an old shoot had an invalid domain, but was never assigned to a seed. This is why we check
+		// if the shoot was previously not assigned to a seed and if the shoot's domain is invalid, the update is denied so that the invalid
+		// domain does not get created.
+		if (oldShoot.Spec.SeedName == nil || !isShootDomainSet(oldShoot)) && isShootDomainSet(shoot) && !helper.ShootUsesUnmanagedDNS(shoot) {
+			if err := checkDefaultDomainFormat(a, shoot, d.projectLister, defaultDomains); err != nil {
+				return err
+			}
 		}
 
 		if oldShoot.Spec.DNS != nil && shoot.Spec.DNS != nil {
@@ -215,6 +223,8 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 		}
 	}
 
+	specPath := field.NewPath("spec")
+
 	dnsDisabled, err := seedDisablesDNS(d.seedLister, *shoot.Spec.SeedName)
 	if err != nil {
 		return apierrors.NewInternalError(fmt.Errorf("could not get referenced seed: %+v", err.Error()))
@@ -234,7 +244,7 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 			return err
 		}
 
-		if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
+		if !isShootDomainSet(shoot) {
 			fieldErr := field.Required(specPath.Child("DNS"), fmt.Sprintf("shoot domain field .spec.dns.domain must be set if provider != %s and assigned to a seed which does not disable DNS", core.DNSUnmanaged))
 			return apierrors.NewInvalid(a.GetKind().GroupKind(), shoot.Name, field.ErrorList{fieldErr})
 		}
@@ -294,6 +304,10 @@ func checkPrimaryDNSProvider(a admission.Attributes, shoot *core.Shoot, defaultD
 		}
 	}
 	return nil
+}
+
+func isShootDomainSet(shoot *core.Shoot) bool {
+	return shoot.Spec.DNS != nil && shoot.Spec.DNS.Domain != nil
 }
 
 func isDefaultDomain(domain string, defaultDomains []string) bool {
