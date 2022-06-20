@@ -192,27 +192,25 @@ func (s *sni) Deploy(ctx context.Context) error {
 	}
 
 	if s.values.AccessControl != nil {
-		if authrActionEnum, ok := istioapisecurityv1beta1.AuthorizationPolicy_Action_value[string(s.values.AccessControl.Action)]; ok {
-			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, accessControl, func() error {
-				accessControl.Labels = getLabels()
-				accessControl.Spec = istioapisecurityv1beta1.AuthorizationPolicy{
-					Rules: []*istioapisecurityv1beta1.Rule{
-						&istioapisecurityv1beta1.Rule{
-							From: []*istioapisecurityv1beta1.Rule_From{
-								&istioapisecurityv1beta1.Rule_From{
-									Source: &istioapisecurityv1beta1.Source{
-										IpBlocks: s.values.AccessControl.Source.IPBlocks,
-									},
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, accessControl, func() error {
+			accessControl.Labels = getLabels()
+			accessControl.Spec = istioapisecurityv1beta1.AuthorizationPolicy{
+				Rules: []*istioapisecurityv1beta1.Rule{
+					&istioapisecurityv1beta1.Rule{
+						From: []*istioapisecurityv1beta1.Rule_From{
+							&istioapisecurityv1beta1.Rule_From{
+								Source: &istioapisecurityv1beta1.Source{
+									IpBlocks: s.values.AccessControl.Source.IPBlocks,
 								},
 							},
 						},
 					},
-					Action: istioapisecurityv1beta1.AuthorizationPolicy_Action(authrActionEnum),
-				}
-				return nil
-			}); err != nil {
-				return err
+				},
+				Action: istioapisecurityv1beta1.AuthorizationPolicy_Action(AuthorizationPolicyMapping[string(s.values.AccessControl.Action)]),
 			}
+			return nil
+		}); err != nil {
+			return err
 		}
 	}
 
@@ -274,6 +272,13 @@ var (
 	//go:embed templates/envoyfilter.yaml
 	envoyFilterSpecTemplateContent string
 	envoyFilterSpecTemplate        *template.Template
+)
+
+var (
+	AuthorizationPolicyMapping = map[string]int32{
+		"ALLOW": 0,
+		"DENY":  1,
+	}
 )
 
 func init() {
