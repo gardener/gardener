@@ -699,9 +699,9 @@ type AccessControl struct {
 type AuthorizationAction string
 
 const (
-	// Allows the request from a source.
+	// AuthorizationActionAllow allows the request from a source.
 	AuthorizationActionAllow AuthorizationAction = "ALLOW"
-	// Denies the request from a source.
+	// AuthorizationActionDeny denies the request from a source.
 	AuthorizationActionDeny AuthorizationAction = "DENY"
 )
 
