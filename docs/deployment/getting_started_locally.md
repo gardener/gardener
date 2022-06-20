@@ -15,7 +15,7 @@ Based on [Skaffold](https://skaffold.dev/), the container images for all require
 - Make sure that you have followed the [Local Setup guide](../development/local_setup.md) up until the [Get the sources]../development/local_setup.md#get-the-sources) step.
 - Make sure your Docker daemon is up-to-date, up and running and has enough resources (at least `8` CPUs and `8Gi` memory; see [here](https://docs.docker.com/desktop/mac/#resources) how to configure the resources for Docker for Mac).
   > Please note that 8 CPU / 8Gi memory might not be enough for more than two `Shoot` clusters, i.e., you might need to increase these values if you want to run additional `Shoot`s.
-
+  > If you plan on following the optional steps to [create a second seed cluster](#optional-setting-up-a-second-seed-cluster), the required resources will be more - at least `10` CPUs and `18Gi` memory.
   Additionally, please configure at least `120Gi` of disk size for the Docker daemon.
   > Tip: With `docker system df` and `docker system prune -a` you can cleanup unused data.
 
@@ -106,10 +106,50 @@ kubectl -n garden-local get secret local.kubeconfig -o jsonpath={.data.kubeconfi
 kubectl --kubeconfig=/tmp/kubeconfig-shoot-local.yaml get nodes
 ```
 
+## (Optional): Setting up a second seed cluster
+
+There are cases where you would want to create a second cluster seed in your local setup. For example, if you want to test the [control plane migration](../usage/control_plane_migration.md) feature. The following steps describe how to do that.
+
+
+```bash
+make kind2-up
+```
+
+This command sets up a new KinD cluster named `gardener-local2` and stores its kubeconfig in the `./example/gardener-local/kind2/kubeconfig` file.
+
+In order to deploy required resources in the KinD cluster that you just created, run:
+
+```bash
+make gardenlet-kind2-up
+```
+
+The following steps assume that your are using the kubeconfig that points to the `gardener-local`  cluster (first KinD cluster): `export KUBECONFIG=example/gardener-local/kind/kubeconfig`.
+
+You can wait for the `local2` `Seed` to be ready by running:
+
+```bash
+kubectl wait --for=condition=gardenletready --for=condition=extensionsready --for=condition=bootstrapped seed local2 --timeout=5m
+```
+
+Alternatively, you can run `kubectl get seed local2` and wait for the `STATUS` to indicate readiness:
+
+```bash
+NAME    STATUS   PROVIDER   REGION   AGE     VERSION       K8S VERSION
+local2  Ready    local      local    4m42s   vX.Y.Z-dev    v1.21.1
+```
+
+If you want to perform control plane migration you can follow the steps outlined [here](../usage/control_plane_migration.md) to migrate the shoot cluster to the second seed you just created.
+
 ## Deleting the `Shoot` cluster
 
 ```shell
 ./hack/usage/delete shoot local garden-local
+```
+
+## (Optional): Tear down the second seed cluster
+
+``` shell
+make kind2-down
 ```
 
 ## Tear down the Gardener environment

@@ -46,6 +46,7 @@ global:
         ReversedVPN: true
         ShootCARotation: true
         ShootSARotation: true
+        CopyEtcdBackupsDuringControlPlaneMigration: true
       logging:
         enabled: true
         loki:
@@ -66,7 +67,7 @@ global:
             provider: local
             region: local
             secretRef:
-              name: seed-local
+              name: backup-local
               namespace: garden
           provider:
             type: local

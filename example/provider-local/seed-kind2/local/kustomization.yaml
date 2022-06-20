@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../base
+- ../../seed-kind/local
+
+patchesJson6902:
+- target:
+    group: core.gardener.cloud
+    version: v1beta1
+    kind: Seed
+    name: local
+  path: patch-seed.yaml

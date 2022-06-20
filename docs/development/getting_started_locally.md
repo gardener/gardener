@@ -15,6 +15,7 @@ The Gardener components, however, will be run as regular processes on your machi
 - Make sure that you have followed the [Local Setup guide](./local_setup.md) up until the [Get the sources](./local_setup.md#get-the-sources) step.
 - Make sure your Docker daemon is up-to-date, up and running and has enough resources (at least `4` CPUs and `4Gi` memory; see [here](https://docs.docker.com/desktop/mac/#resources) how to configure the resources for Docker for Mac).
   > Please note that 4 CPU / 4Gi memory might not be enough for more than one `Shoot` cluster, i.e., you might need to increase these values if you want to run additional `Shoot`s.
+  > If you plan on following the optional steps to [create a second seed cluster](#optional-setting-up-a-second-seed-cluster), the required resources will be more - at least `10` CPUs and `16Gi` memory.
 
   Additionally, please configure at least `120Gi` of disk size for the Docker daemon.
   > Tip: With `docker system df` and `docker system prune -a` you can cleanup unused data.
@@ -132,10 +133,54 @@ kubectl -n garden-local get secret local.kubeconfig -o jsonpath={.data.kubeconfi
 kubectl --kubeconfig=/tmp/kubeconfig-shoot-local.yaml get nodes
 ```
 
+## (Optional): Setting up a second seed cluster
+
+There are cases where you would want to create a second seed cluster in your local setup. For example, if you want to test the [control plane migration](../usage/control_plane_migration.md) feature. The following steps describe how to do that.
+
+Add a new IP address on your loopback device which will be necessary for the new KinD cluster that you will create. On Mac, the default loopback device is `lo0`.
+
+```bash
+sudo ip addr add 127.0.0.2 dev lo0                                     # adding 127.0.0.2 ip to the loopback interface
+```
+
+Next, setup the second KinD cluster:
+
+```bash
+make kind2-up KIND_ENV=local
+```
+
+This command sets up a new KinD cluster named `gardener-local2` and stores its kubeconfig in the `./example/gardener-local/kind2/kubeconfig` file. You will need this file when starting the `provider-local` extension controller for the second seed cluster.
+
+```bash
+make register-kind2-env                                           # registering the local2 seed
+make start-gardenlet SEED_NAME=local2                             # starting gardenlet for the local2 seed
+```
+
+In a new terminal pane, run
+
+```bash
+export KUBECONFIG=./example/gardener-local/kind2/kubeconfig       # setting KUBECONFIG to point to second kind cluster
+make start-extension-provider-local \
+  WEBHOOK_SERVER_PORT=9444 \
+  WEBHOOK_CERT_DIR=/tmp/gardener-extension-provider-local2 \
+  SERVICE_HOST_IP=127.0.0.2 \
+  METRICS_BIND_ADDRESS=:8082 \
+  HEALTH_BIND_ADDRESS=:8083                                       # starting gardener-extension-provider-local
+```
+
+If you want to perform a control plane migration you can follow the steps outlined [here](../usage/control_plane_migration.md) to migrate the shoot cluster to the second seed you just created.
+
 ## Deleting the `Shoot` cluster
 
 ```shell
 ./hack/usage/delete shoot local garden-local
+```
+
+## (Optional): Tear down the second seed cluster
+
+```bash
+make tear-down-kind2-env
+make kind2-down
 ```
 
 ## Tear down the Gardener environment

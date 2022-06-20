@@ -7,7 +7,7 @@ spec:
     provider: local
     region: local
     secretRef:
-      name: seed-local
+      name: backup-local
       namespace: garden
   provider:
     type: local

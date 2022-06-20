@@ -65,6 +65,7 @@ webhookConfig:
   servicePort: 443
   serverPort: 10250
 
+metricsPort: 8080
 healthPort: 8081
 
 leaderElection:
