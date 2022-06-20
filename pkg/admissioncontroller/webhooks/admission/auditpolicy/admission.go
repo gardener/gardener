@@ -27,10 +27,11 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/version"
 	auditv1alpha1 "github.com/gardener/gardener/third_party/apiserver/pkg/apis/audit/v1alpha1"
 	auditv1beta1 "github.com/gardener/gardener/third_party/apiserver/pkg/apis/audit/v1beta1"
-	"golang.org/x/mod/semver"
 
+	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -274,9 +275,17 @@ func validateAuditPolicySemanticsForKubernetesVersion(auditPolicy string, kubern
 	if len(errList) != 0 {
 		return http.StatusUnprocessableEntity, fmt.Errorf("provided invalid audit policy: %v", errList)
 	}
-	if kubernetesVersion != nil && semver.Compare(fmt.Sprintf("v%s", *kubernetesVersion), "v1.24.0") >= 0 && schemaVersion.Version != "v1" {
-		return http.StatusUnprocessableEntity, fmt.Errorf("audit policy with apiVersion '%s' is not supported for kubernetes version >= 1.24.0", schemaVersion.Version)
+
+	if kubernetesVersion != nil && schemaVersion.Version != "v1" {
+		v, err := semver.NewVersion(*kubernetesVersion)
+		if err != nil {
+			return http.StatusUnprocessableEntity, fmt.Errorf("unable to build version: %w", err)
+		}
+		if !version.ConstraintK8sLess124.Check(v) {
+			return http.StatusUnprocessableEntity, fmt.Errorf("audit policy with apiVersion '%s' is not supported for kubernetes version >= 1.24.0", schemaVersion.Version)
+		}
 	}
+
 	return 0, nil
 }
 
