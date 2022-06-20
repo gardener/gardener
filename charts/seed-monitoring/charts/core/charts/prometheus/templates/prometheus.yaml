@@ -59,7 +59,9 @@ spec:
         role: monitoring
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-public-networks: allowed
+{{- if not .Values.reversedVPN.enabled }}
         networking.gardener.cloud/to-shoot-networks: allowed
+{{- end }}
         networking.gardener.cloud/to-shoot-apiserver: allowed
         networking.gardener.cloud/to-seed-apiserver: allowed
     spec:

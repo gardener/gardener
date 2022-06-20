@@ -99,6 +99,7 @@ var _ = Describe("KubeAPIServer", func() {
 		secretNameAdmissionConfig      = "kube-apiserver-admission-config-e38ff146"
 		secretNameETCDEncryptionConfig = "kube-apiserver-etcd-encryption-configuration-235f7353"
 		configMapNameAuditPolicy       = "audit-policy-config-f5b578b4"
+		configMapNameEgressPolicy      = "kube-apiserver-egress-selector-config-53d92abc"
 
 		deployment                           *appsv1.Deployment
 		horizontalPodAutoscaler              *autoscalingv2beta1.HorizontalPodAutoscaler
@@ -1527,6 +1528,40 @@ rules:
 					"networking.gardener.cloud/to-private-networks": "allowed",
 					"networking.gardener.cloud/to-public-networks":  "allowed",
 					"networking.gardener.cloud/to-shoot-networks":   "allowed",
+					"networking.gardener.cloud/from-prometheus":     "allowed",
+				}))
+			})
+
+			It("should have the expected pod template metadata with reversed vpn enabled", func() {
+				kapi = New(kubernetesInterface, namespace, sm, Values{VPN: VPNConfig{ReversedVPNEnabled: true}, Version: version})
+				deployAndRead()
+
+				Expect(deployment.Spec.Template.Annotations).To(Equal(map[string]string{
+					"reference.resources.gardener.cloud/secret-a709ce3a":    secretNameServiceAccountKey,
+					"reference.resources.gardener.cloud/secret-ad29e1cc":    secretNameServiceAccountKeyBundle,
+					"reference.resources.gardener.cloud/secret-69590970":    secretNameCA,
+					"reference.resources.gardener.cloud/secret-17c26aa4":    secretNameCAClient,
+					"reference.resources.gardener.cloud/secret-e01f5645":    secretNameCAEtcd,
+					"reference.resources.gardener.cloud/secret-a92da147":    secretNameCAFrontProxy,
+					"reference.resources.gardener.cloud/secret-389fbba5":    secretNameEtcd,
+					"reference.resources.gardener.cloud/secret-c1267cc2":    secretNameKubeAPIServerToKubelet,
+					"reference.resources.gardener.cloud/secret-998b2966":    secretNameKubeAggregator,
+					"reference.resources.gardener.cloud/secret-3ddd1800":    secretNameServer,
+					"reference.resources.gardener.cloud/secret-430944e0":    secretNameStaticToken,
+					"reference.resources.gardener.cloud/secret-b1b53288":    secretNameETCDEncryptionConfig,
+					"reference.resources.gardener.cloud/secret-0acc967c":    secretNameHTTPProxy,
+					"reference.resources.gardener.cloud/secret-8ddd8e24":    secretNameCAVPN,
+					"reference.resources.gardener.cloud/configmap-f79954be": configMapNameEgressPolicy,
+					"reference.resources.gardener.cloud/configmap-130aa219": secretNameAdmissionConfig,
+					"reference.resources.gardener.cloud/configmap-d4419cd4": configMapNameAuditPolicy,
+				}))
+				Expect(deployment.Spec.Template.Labels).To(Equal(map[string]string{
+					"gardener.cloud/role":              "controlplane",
+					"app":                              "kubernetes",
+					"role":                             "apiserver",
+					"networking.gardener.cloud/to-dns": "allowed",
+					"networking.gardener.cloud/to-private-networks": "allowed",
+					"networking.gardener.cloud/to-public-networks":  "allowed",
 					"networking.gardener.cloud/from-prometheus":     "allowed",
 				}))
 			})

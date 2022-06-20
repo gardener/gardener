@@ -23,6 +23,7 @@ In contrast to other network policies, the policy `allow-to-shoot-networks` is t
 because it is based on the network configuration in the Shoot manifest.
 It allows pods with the label `networking.gardener.cloud/to-shoot-networks=allowed` to access pods in the Shoot pod, 
 service and node CIDR range. This is used by the Shoot API Server and the prometheus pods to communicate over VPN/proxy with pods in the Shoot cluster.
+This network policy is only useful if reversed vpn is disabled as otherwise the vpn-seed-server pod in the control plane is the only pod with layer 3 routing to the shoot network.
 
 The policy `allow-to-blocked-cidrs` allows pods with the label `networking.gardener.cloud/to-blocked-cidrs=allowed` to access IPs that are explicitly blocked for all control planes in a Seed cluster (configurable via `spec.networks.blockCIDRS`). 
 This is used for instance to block the cloud provider's metadata service.
