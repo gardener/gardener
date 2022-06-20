@@ -184,6 +184,11 @@ spec:
   #     - foo2
   #     extendTokenExpiration: true
   #     maxTokenExpiration: 45d
+  #   accessControl:
+  #     action: ALLOW
+  #     source: 
+  #       ipBlocks:
+  #       - "1.2.3.4"
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
   #   podEvictionTimeout: 2m0s
