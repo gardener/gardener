@@ -38,6 +38,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -253,6 +254,7 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 	constraintTypes := []gardencorev1beta1.ConditionType{
 		gardencorev1beta1.ShootHibernationPossible,
 		gardencorev1beta1.ShootMaintenancePreconditionsSatisfied,
+		gardencorev1beta1.ShootCACertificateValiditiesAcceptable,
 	}
 	var constraints []gardencorev1beta1.Condition
 	for _, constr := range constraintTypes {
@@ -328,7 +330,7 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 		},
 		// Trigger constraint checks
 		func(ctx context.Context) error {
-			constraint := NewConstraintCheck(o, initializeShootClients)
+			constraint := NewConstraintCheck(clock.RealClock{}, o, initializeShootClients)
 			updatedConstraints = constraint.Check(
 				ctx,
 				constraints,

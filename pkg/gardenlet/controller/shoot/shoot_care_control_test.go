@@ -46,6 +46,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -539,7 +540,7 @@ func (c resultingConstraintFunc) Check(_ context.Context, constraints []gardenco
 }
 
 func constraintCheckFunc(fn resultingConstraintFunc) NewConstraintCheckFunc {
-	return func(op *operation.Operation, init care.ShootClientInit) ConstraintCheck {
+	return func(clock clock.Clock, op *operation.Operation, init care.ShootClientInit) ConstraintCheck {
 		return fn
 	}
 }
@@ -606,6 +607,11 @@ func consistOfConstraintsInUnknownStatus(message string) types.GomegaMatcher {
 		}),
 		MatchFields(IgnoreExtras, Fields{
 			"Type":    Equal(gardencorev1beta1.ShootMaintenancePreconditionsSatisfied),
+			"Status":  Equal(gardencorev1beta1.ConditionUnknown),
+			"Message": Equal(message),
+		}),
+		MatchFields(IgnoreExtras, Fields{
+			"Type":    Equal(gardencorev1beta1.ShootCACertificateValiditiesAcceptable),
 			"Status":  Equal(gardencorev1beta1.ConditionUnknown),
 			"Message": Equal(message),
 		}),

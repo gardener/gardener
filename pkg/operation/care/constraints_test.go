@@ -15,13 +15,21 @@
 package care_test
 
 import (
+	"context"
 	"fmt"
+	"strconv"
+	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/care"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
@@ -47,6 +55,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
+	"k8s.io/utils/clock"
+	"k8s.io/utils/clock/testing"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 type webhookTestCase struct {
@@ -405,6 +417,168 @@ var _ = Describe("Constraints", func() {
 			}
 
 			Expect(IsProblematicWebhook(wh.build())).To(BeFalse())
+		})
+	})
+
+	Describe("Constraint", func() {
+		var (
+			ctx           = context.TODO()
+			seedNamespace = "shoot--foo--bar"
+			seedClient    client.Client
+
+			now   = time.Date(2022, 2, 22, 22, 22, 22, 0, time.UTC)
+			clock clock.Clock
+
+			op         *operation.Operation
+			constraint *Constraint
+
+			newCASecret = func(validUntilTime time.Time) *corev1.Secret {
+				return &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						GenerateName: "some-secret-",
+						Namespace:    seedNamespace,
+						Labels: map[string]string{
+							"managed-by":       "secrets-manager",
+							"manager-identity": "gardenlet",
+							"persist":          "true",
+							"valid-until-time": strconv.FormatInt(validUntilTime.Unix(), 10),
+						},
+					},
+					Data: map[string][]byte{"ca.crt": []byte(""), "ca.key": []byte("")},
+				}
+			}
+		)
+
+		BeforeEach(func() {
+			seedClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+
+			clock = testing.NewFakeClock(now)
+			op = &operation.Operation{
+				K8sSeedClient: fakekubernetes.NewClientSetBuilder().WithClient(seedClient).Build(),
+				Shoot: &shootpkg.Shoot{
+					SeedNamespace: seedNamespace,
+				},
+			}
+			op.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
+			constraint = NewConstraint(clock, op, func() (kubernetes.Interface, bool, error) {
+				return nil, false, nil
+			})
+		})
+
+		Describe("#Check", func() {
+			var (
+				constraints = []gardencorev1beta1.Condition{
+					{Type: gardencorev1beta1.ShootHibernationPossible},
+					{Type: gardencorev1beta1.ShootMaintenancePreconditionsSatisfied},
+				}
+			)
+
+			It("should remove the 'CACertificateValiditiesAcceptable' constraint because it's true", func() {
+				Expect(constraint.Check(ctx, constraints)).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":    Equal(gardencorev1beta1.ShootHibernationPossible),
+						"Reason":  Equal("ConstraintNotChecked"),
+						"Message": Equal("Shoot control plane is not running at the moment."),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":    Equal(gardencorev1beta1.ShootMaintenancePreconditionsSatisfied),
+						"Reason":  Equal("ConstraintNotChecked"),
+						"Message": Equal("Shoot control plane is not running at the moment."),
+					}),
+				))
+			})
+
+			It("should keep the 'CACertificateValiditiesAcceptable' constraint because it's false (before pardoned)", func() {
+				Expect(seedClient.Create(ctx, newCASecret(now))).To(Succeed())
+
+				Expect(constraint.Check(ctx, constraints)).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":    Equal(gardencorev1beta1.ShootHibernationPossible),
+						"Status":  Equal(gardencorev1beta1.ConditionProgressing),
+						"Reason":  Equal("ConstraintNotChecked"),
+						"Message": Equal("Shoot control plane is not running at the moment."),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":    Equal(gardencorev1beta1.ShootMaintenancePreconditionsSatisfied),
+						"Status":  Equal(gardencorev1beta1.ConditionProgressing),
+						"Reason":  Equal("ConstraintNotChecked"),
+						"Message": Equal("Shoot control plane is not running at the moment."),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(gardencorev1beta1.ShootCACertificateValiditiesAcceptable),
+						"Status": Equal(gardencorev1beta1.ConditionProgressing),
+						"Reason": Equal("ExpiringCACertificates"),
+					}),
+				))
+			})
+		})
+
+		Describe("#CheckIfCACertificateValiditiesAcceptable", func() {
+			var (
+				expectTrueCondition = func(status gardencorev1beta1.ConditionStatus, reason, message string, errorCodes []gardencorev1beta1.ErrorCode) {
+					Expect(status).To(Equal(gardencorev1beta1.ConditionTrue))
+					Expect(reason).To(Equal("NoExpiringCACertificates"))
+					Expect(message).To(Equal("All CA certificates are still valid for at least 8760h0m0s."))
+					Expect(errorCodes).To(BeNil())
+				}
+				expectFalseCondition = func(status gardencorev1beta1.ConditionStatus, reason, message string, errorCodes []gardencorev1beta1.ErrorCode, expectedMessage string) {
+					Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
+					Expect(reason).To(Equal("ExpiringCACertificates"))
+					Expect(message).To(Equal("Some CA certificates are expiring in less than 8760h0m0s, you should rotate them: " + expectedMessage))
+					Expect(errorCodes).To(BeNil())
+				}
+			)
+
+			It("should return a 'true' condition when there are no secrets", func() {
+				status, reason, message, errorCodes, err := constraint.CheckIfCACertificateValiditiesAcceptable(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				expectTrueCondition(status, reason, message, errorCodes)
+			})
+
+			It("should return a 'true' condition when there are no CA secrets", func() {
+				secret := newCASecret(now.Add(time.Second))
+				secret.Data = nil
+				Expect(seedClient.Create(ctx, secret)).To(Succeed())
+
+				status, reason, message, errorCodes, err := constraint.CheckIfCACertificateValiditiesAcceptable(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				expectTrueCondition(status, reason, message, errorCodes)
+			})
+
+			It("should return a 'true' condition when there are only CA secrets valid long enough", func() {
+				Expect(seedClient.Create(ctx, newCASecret(now.Add(24*time.Hour*365*4)))).To(Succeed())
+				Expect(seedClient.Create(ctx, newCASecret(now.Add(24*time.Hour*365*3)))).To(Succeed())
+				Expect(seedClient.Create(ctx, newCASecret(now.Add(24*time.Hour*365*2)))).To(Succeed())
+
+				status, reason, message, errorCodes, err := constraint.CheckIfCACertificateValiditiesAcceptable(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				expectTrueCondition(status, reason, message, errorCodes)
+			})
+
+			It("should return a 'false' condition when there are CA secrets not valid long enough", func() {
+				Expect(seedClient.Create(ctx, newCASecret(now.Add(24*time.Hour*365*4)))).To(Succeed())
+				Expect(seedClient.Create(ctx, newCASecret(now.Add(24*time.Hour*365*3)))).To(Succeed())
+				Expect(seedClient.Create(ctx, newCASecret(now.Add(24*time.Hour*365*2)))).To(Succeed())
+				Expect(seedClient.Create(ctx, newCASecret(now.Add(24*time.Hour*365*1)))).To(Succeed())
+				Expect(seedClient.Create(ctx, newCASecret(now))).To(Succeed())
+
+				status, reason, message, errorCodes, err := constraint.CheckIfCACertificateValiditiesAcceptable(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				expectFalseCondition(status, reason, message, errorCodes, fmt.Sprintf(`"" (expiring at %s)`, now.String()))
+			})
+
+			It("should return an error when the valid-until-time label cannot be parsed", func() {
+				secret := newCASecret(now)
+				secret.Labels["valid-until-time"] = "unparseable"
+				Expect(seedClient.Create(ctx, secret)).To(Succeed())
+
+				status, reason, message, errorCodes, err := constraint.CheckIfCACertificateValiditiesAcceptable(ctx)
+				Expect(err).To(MatchError(ContainSubstring("could not parse valid-until-time label from secret")))
+				Expect(status).To(BeEmpty())
+				Expect(reason).To(BeEmpty())
+				Expect(message).To(BeEmpty())
+				Expect(errorCodes).To(BeNil())
+			})
 		})
 	})
 })

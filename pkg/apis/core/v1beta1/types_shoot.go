@@ -1461,6 +1461,9 @@ const (
 	// ShootMaintenancePreconditionsSatisfied is a constant for a condition type indicating whether all preconditions
 	// for a shoot maintenance operation are satisfied.
 	ShootMaintenancePreconditionsSatisfied ConditionType = "MaintenancePreconditionsSatisfied"
+	// ShootCACertificateValiditiesAcceptable is a constant for a condition type indicating that the validities of all
+	// CA certificates is long enough.
+	ShootCACertificateValiditiesAcceptable ConditionType = "CACertificateValiditiesAcceptable"
 )
 
 // ShootPurpose is a type alias for string.
