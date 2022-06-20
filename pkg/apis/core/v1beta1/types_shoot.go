@@ -700,7 +700,7 @@ type AuthorizationAction string
 
 const (
 	// Allows the request from a source.
-	AuthorizationActionAllowAuthorizationAction = "ALLOW"
+	AuthorizationActionAllow AuthorizationAction = "ALLOW"
 	// Denies the request from a source.
 	AuthorizationActionDeny AuthorizationAction = "DENY"
 )
