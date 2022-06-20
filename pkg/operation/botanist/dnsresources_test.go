@@ -18,15 +18,16 @@ import (
 	"context"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/seed"
+	"github.com/gardener/gardener/pkg/utils/test"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"k8s.io/utils/pointer"
 
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
@@ -34,7 +35,6 @@ import (
 	mockcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/mock"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("dnsrecord", func() {
@@ -134,6 +134,7 @@ var _ = Describe("dnsrecord", func() {
 
 	Describe("#DeployInternalDNSResources", func() {
 		It("should delete the DNSOwner, DNSProvider, and DNSEntry resources, and then deploy the DNSRecord resource", func() {
+			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.DisableDNSProviderManagement, false)()
 			gomock.InOrder(
 				internalDNSOwner.EXPECT().Destroy(ctx),
 				internalDNSOwner.EXPECT().WaitCleanup(ctx),
@@ -150,6 +151,7 @@ var _ = Describe("dnsrecord", func() {
 
 	Describe("#DeployExternalDNSResources", func() {
 		It("should delete the DNSOwner and DNSEntry resources, and then deploy the DNSProvider and DNSRecord resources", func() {
+			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.DisableDNSProviderManagement, false)()
 			gomock.InOrder(
 				externalDNSOwner.EXPECT().Destroy(ctx),
 				externalDNSOwner.EXPECT().WaitCleanup(ctx),
@@ -166,6 +168,7 @@ var _ = Describe("dnsrecord", func() {
 
 	Describe("#DeployIngressDNSResources", func() {
 		It("should delete the DNSOwner and DNSEntry resources, and then deploy the DNSRecord resource", func() {
+			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.DisableDNSProviderManagement, false)()
 			gomock.InOrder(
 				ingressDNSOwner.EXPECT().Destroy(ctx),
 				ingressDNSOwner.EXPECT().WaitCleanup(ctx),
@@ -203,6 +206,7 @@ var _ = Describe("dnsrecord", func() {
 
 	Describe("#DestroyInternalDNSResources", func() {
 		It("should delete all internal DNS resources so that the DNS record is deleted", func() {
+			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.DisableDNSProviderManagement, false)()
 			gomock.InOrder(
 				internalDNSEntry.EXPECT().Destroy(ctx),
 				internalDNSEntry.EXPECT().WaitCleanup(ctx),
@@ -219,6 +223,7 @@ var _ = Describe("dnsrecord", func() {
 
 	Describe("#DestroyExternalDNSResources", func() {
 		It("should delete all external DNS resources so that the DNS record is deleted", func() {
+			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.DisableDNSProviderManagement, false)()
 			gomock.InOrder(
 				externalDNSEntry.EXPECT().Destroy(ctx),
 				externalDNSEntry.EXPECT().WaitCleanup(ctx),
@@ -232,7 +237,6 @@ var _ = Describe("dnsrecord", func() {
 			Expect(b.DestroyExternalDNSResources(ctx)).To(Succeed())
 		})
 		It("should delete all external DNS resources but DNSProvider if feature DisableDNSProviderManagement is set", func() {
-			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.DisableDNSProviderManagement, true)()
 			gomock.InOrder(
 				externalDNSEntry.EXPECT().Destroy(ctx),
 				externalDNSEntry.EXPECT().WaitCleanup(ctx),
@@ -287,6 +291,7 @@ var _ = Describe("dnsrecord", func() {
 
 	Describe("#MigrateExternalDNSResources", func() {
 		It("should migrate or delete all external DNS resources so that the DNS record is not deleted", func() {
+			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.DisableDNSProviderManagement, false)()
 			gomock.InOrder(
 				externalDNSOwner.EXPECT().Destroy(ctx),
 				externalDNSOwner.EXPECT().WaitCleanup(ctx),
@@ -303,6 +308,7 @@ var _ = Describe("dnsrecord", func() {
 
 	Describe("#MigrateIngressDNSResources", func() {
 		It("should migrate or delete all ingress DNS resources so that the DNS record is not deleted", func() {
+			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.DisableDNSProviderManagement, false)()
 			gomock.InOrder(
 				ingressDNSOwner.EXPECT().Destroy(ctx),
 				ingressDNSOwner.EXPECT().WaitCleanup(ctx),
