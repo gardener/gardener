@@ -40,7 +40,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` |        |
 | SecretBindingProviderValidation              | `false` | `Alpha` | `1.38` |        |
 | ForceRestore                                 | `false` | `Alpha` | `1.39` |        |
-| DisableDNSProviderManagement                 | `false` | `Alpha` | `1.41` |        |
+| DisableDNSProviderManagement                 | `false` | `Alpha` | `1.41` | `1.49` |
+| DisableDNSProviderManagement                 | `true`  | `Beta`  | `1.50` |        |
 | ShootCARotation                              | `false` | `Alpha` | `1.42` |        |
 | ShootSARotation                              | `false` | `Alpha` | `1.48` |        |
 | HAControlPlanes                              | `false` | `Alpha` | `1.49` |        |
