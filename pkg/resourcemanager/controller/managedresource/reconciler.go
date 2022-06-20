@@ -27,12 +27,14 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	resourceshelper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	"github.com/gardener/gardener/pkg/utils"
 	errorutils "github.com/gardener/gardener/pkg/utils/errors"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -134,6 +136,8 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		return reconcile.Result{}, err
 	}
 
+	patch := client.MergeFrom(mr.DeepCopy())
+
 	var (
 		newResourcesObjects          []object
 		newResourcesObjectReferences []resourcesv1alpha1.ObjectReference
@@ -147,6 +151,8 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		forceOverwriteAnnotations bool
 
 		decodingErrors []*decodingError
+
+		secretChecksum string
 	)
 
 	if v := mr.Spec.ForceOverwriteLabels; v != nil {
@@ -172,6 +178,8 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 
 			return reconcile.Result{}, fmt.Errorf("could not read secret '%s': %+v", secret.Name, err)
 		}
+
+		secretChecksum = secretChecksum + utils.ComputeChecksum(secret.Data)
 
 		for secretKey, value := range secret.Data {
 			var (
@@ -270,12 +278,15 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 		}
 	}
 
+	// get the current checksum of referenced secret data stored as annotation.
+	currentChecksum := mr.ObjectMeta.GetAnnotations()[v1beta1constants.AnnotationManagedResourceSecretChecksum]
+
 	// sort object references before updating status, to keep consistent ordering
 	// (otherwise, the order will be different on each update)
 	sortObjectReferences(newResourcesObjectReferences)
 
 	// invalidate conditions, if resources have been added/removed from the managed resource
-	if !apiequality.Semantic.DeepEqual(mr.Status.Resources, newResourcesObjectReferences) {
+	if !apiequality.Semantic.DeepEqual(mr.Status.Resources, newResourcesObjectReferences) || currentChecksum != secretChecksum {
 		conditionResourcesHealthy := v1beta1helper.GetOrInitCondition(mr.Status.Conditions, resourcesv1alpha1.ResourcesHealthy)
 		conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionUnknown,
 			resourcesv1alpha1.ConditionChecksPending, "The health checks have not yet been executed for the current set of resources.")
@@ -351,6 +362,13 @@ func (r *reconciler) reconcile(ctx context.Context, mr *resourcesv1alpha1.Manage
 
 	if err := updateManagedResourceStatus(ctx, r.client, mr, newResourcesObjectReferences, conditionResourcesApplied); err != nil {
 		return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
+	}
+
+	secretChecksum = utils.ComputeChecksum(secretChecksum)
+	metav1.SetMetaDataAnnotation(&mr.ObjectMeta, v1beta1constants.AnnotationManagedResourceSecretChecksum, secretChecksum)
+
+	if err := r.client.Patch(ctx, mr, patch); err != nil {
+		return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource annotation: %w", err)
 	}
 
 	log.Info("Finished to reconcile ManagedResource")

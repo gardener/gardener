@@ -76,6 +76,7 @@ var _ = Describe("ManagedResource controller tests", func() {
 				Name:      resourceName,
 				Namespace: testNamespace.Name,
 			},
+			Data: map[string]string{"abc": "xyz"},
 		}
 
 		secretForManagedResource = &corev1.Secret{
@@ -242,6 +243,33 @@ var _ = Describe("ManagedResource controller tests", func() {
 				patch = client.MergeFrom(configMap.DeepCopy())
 				controllerutil.RemoveFinalizer(configMap, testFinalizer)
 				Expect(testClient.Patch(ctx, configMap, patch)).To(Succeed())
+			})
+		})
+
+		Describe("resource data changes", func() {
+			BeforeEach(func() {
+				configMap.Data = map[string]string{"foo": "bar"}
+				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
+			})
+			It("should set ManagedResource to unhealthy", func() {
+
+				patch := client.MergeFrom(secretForManagedResource.DeepCopy())
+				secretForManagedResource.Data = secretDataForObject(configMap, dataKey)
+				Expect(testClient.Patch(ctx, secretForManagedResource, patch)).To(Succeed())
+
+				Eventually(func(g Gomega) []gardencorev1beta1.Condition {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					return managedResource.Status.Conditions
+				}).Should(
+					containCondition(ofType(resourcesv1alpha1.ResourcesApplied), withStatus(gardencorev1beta1.ConditionTrue), withReason(resourcesv1alpha1.ConditionApplySucceeded)),
+					containCondition(ofType(resourcesv1alpha1.ResourcesHealthy), withStatus(gardencorev1beta1.ConditionUnknown), withReason(resourcesv1alpha1.ConditionChecksPending)),
+					containCondition(ofType(resourcesv1alpha1.ResourcesProgressing), withStatus(gardencorev1beta1.ConditionUnknown), withReason(resourcesv1alpha1.ConditionChecksPending)),
+				)
+
+				Consistently(func(g Gomega) map[string]string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+					return configMap.Data
+				}).Should(HaveKeyWithValue("foo", "bar"))
 			})
 		})
 
