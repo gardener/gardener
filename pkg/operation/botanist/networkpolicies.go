@@ -53,8 +53,10 @@ func (b *Botanist) DefaultNetworkPolicies(sniPhase component.Phase) (component.D
 		seedCIDRNetworks = append(seedCIDRNetworks, *v)
 	}
 
-	allCIDRNetworks := append(seedCIDRNetworks, shootCIDRNetworks...)
-	allCIDRNetworks = append(allCIDRNetworks, b.Seed.GetInfo().Spec.Networks.BlockCIDRs...)
+	allCIDRNetworks := append(seedCIDRNetworks, b.Seed.GetInfo().Spec.Networks.BlockCIDRs...)
+	if !b.Shoot.ReversedVPNEnabled {
+		allCIDRNetworks = append(allCIDRNetworks, shootCIDRNetworks...)
+	}
 
 	privateNetworkPeers, err := networkpolicies.ToNetworkPolicyPeersWithExceptions(networkpolicies.AllPrivateNetworkBlocks(), allCIDRNetworks...)
 	if err != nil {

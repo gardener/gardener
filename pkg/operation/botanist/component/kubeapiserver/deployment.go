@@ -214,7 +214,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 						v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyToPublicNetworks:  v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
-						v1beta1constants.LabelNetworkPolicyToShootNetworks:   v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyFromPrometheus:    v1beta1constants.LabelNetworkPolicyAllowed,
 					}),
 				},
@@ -720,6 +719,7 @@ func (k *kubeAPIServer) handleVPNSettings(
 	secretLegacyVPNSeedTLSAuth *corev1.Secret,
 ) {
 	if !k.values.VPN.ReversedVPNEnabled {
+		deployment.Spec.Template.Labels[v1beta1constants.LabelNetworkPolicyToShootNetworks] = v1beta1constants.LabelNetworkPolicyAllowed
 		deployment.Spec.Template.Spec.InitContainers = []corev1.Container{{
 			Name:  "set-iptable-rules",
 			Image: k.values.Images.AlpineIPTables,
