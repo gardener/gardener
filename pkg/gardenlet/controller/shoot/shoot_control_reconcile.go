@@ -101,7 +101,6 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		shootControlPlaneLoggingEnabled = botanist.Shoot.IsShootControlPlaneLoggingEnabled(botanist.Config)
 		deployKubeAPIServerTaskTimeout  = defaultTimeout
 		deployEtcdTaskTimeout           = defaultTimeout
-		deployEtcdTaskInterval          = defaultInterval
 	)
 
 	// During the 'Preparing' phase of different rotation operations, components are deployed twice. Also, the
@@ -113,10 +112,8 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 	}
 
 	if gardenletfeatures.FeatureGate.Enabled(features.HAControlPlanes) &&
-		metav1.HasAnnotation(o.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) &&
-		gardencorev1beta1helper.GetShootCARotationPhase(o.Shoot.GetInfo().Status.Credentials) == gardencorev1beta1.RotationPreparing {
+		metav1.HasAnnotation(o.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneHighAvailability) {
 		deployEtcdTaskTimeout = etcd.DefaultTimeout
-		deployEtcdTaskInterval = 1 * time.Minute
 	}
 
 	var (
@@ -271,7 +268,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
-			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(deployEtcdTaskInterval, deployEtcdTaskTimeout),
+			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(defaultInterval, deployEtcdTaskTimeout),
 			Dependencies: flow.NewTaskIDs(initializeSecretsManagement, deployCloudProviderSecret, waitUntilBackupEntryInGardenReconciled, waitUntilEtcdBackupsCopied),
 		})
 		_ = g.Add(flow.Task{
