@@ -340,7 +340,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "count(ALERTS{alertstate=\"pending\"}) by (cluster)",
+          "expr": "count(count(ALERTS{alertstate=\"pending\"}) by (cluster))",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -429,7 +429,7 @@
       "pluginVersion": "6.3.2",
       "targets": [
         {
-          "expr": "(count(count(ALERTS) by (cluster)) / count(count(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"shoot-(.+)\"}) by (namespace))) * 100",
+          "expr": "count(count(ALERTS) by (cluster)) / sum(seed:active_shoots_total:sum) * 100",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
@@ -503,7 +503,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "count(count(seed:container_cpu_usage_seconds_total:sum_by_pod{namespace=~\"shoot-(.+)\"}) by (namespace))",
+          "expr": "seed:active_shoots_total:sum",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
