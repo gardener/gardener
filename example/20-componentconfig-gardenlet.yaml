@@ -125,7 +125,7 @@ featureGates:
   DisableDNSProviderManagement: false
   ShootCARotation: true
   ShootSARotation: true
-  HAControlPlanes: false
+  HAControlPlanes: true
 # seedConfig:
 #   metadata:
 #     name: my-seed
