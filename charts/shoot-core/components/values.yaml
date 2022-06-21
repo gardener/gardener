@@ -25,17 +25,5 @@ podsecuritypolicies:
   allowPrivilegedContainers: false
 shoot-info:
   enabled: true
-  projectName: core
-  shootName: crazy-botany
-  provider: aws
-  region: eu-west-1
-  kubernetesVersion: 1.20.1
-  domain: crazy-botany.core.my-custom-domain.com
-  podNetwork: 100.96.0.0/11
-  serviceNetwork: 100.64.0.0/13
-# nodeNetwork: 10.250.0.0/16
-  maintenanceBegin: 210000+0000
-  maintenanceEnd: 220000+0000
-  extensions: shoot-dns-service,foo-bar
 vertical-pod-autoscaler:
   enabled: false

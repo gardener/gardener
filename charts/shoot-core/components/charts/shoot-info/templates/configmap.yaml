@@ -1,21 +1,9 @@
+# TODO(rfranzke): Delete this Helm chart in a future version.
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: shoot-info
   namespace: kube-system
-data:
-  projectName: "{{ .Values.projectName }}"
-  shootName: "{{ .Values.shootName }}"
-  provider: {{ .Values.provider }}
-  region: {{ .Values.region }}
-  kubernetesVersion: {{ .Values.kubernetesVersion }}
-  domain: {{ .Values.domain }}
-  podNetwork: {{ .Values.podNetwork }}
-  serviceNetwork: {{ .Values.serviceNetwork }}
-  {{- if .Values.nodeNetwork }}
-  nodeNetwork: {{ .Values.nodeNetwork }}
-  {{- end }}
-  maintenanceBegin: {{ .Values.maintenanceBegin }}
-  maintenanceEnd: {{ .Values.maintenanceEnd }}
-  extensions: {{ .Values.extensions }}
+  annotations:
+    resources.gardener.cloud/mode: Ignore

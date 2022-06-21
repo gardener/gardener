@@ -22,7 +22,8 @@ import (
 // DefaultShootSystem returns a deployer for the shoot system resources.
 func (b *Botanist) DefaultShootSystem() component.DeployWaiter {
 	values := shootsystem.Values{
-		KubernetesVersion: b.Shoot.KubernetesVersion,
+		ProjectName: b.Garden.Project.Name,
+		Shoot:       b.Shoot,
 	}
 
 	return shootsystem.New(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, values)

@@ -453,7 +453,7 @@ func RunReconcileSeedFlow(
 				shootInfo := &corev1.ConfigMap{}
 				maintenanceBegin := "220000-0000"
 				maintenanceEnd := "230000-0000"
-				if err := seedClient.Get(ctx, kutil.Key(metav1.NamespaceSystem, "shoot-info"), shootInfo); err != nil {
+				if err := seedClient.Get(ctx, kutil.Key(metav1.NamespaceSystem, v1beta1constants.ConfigMapNameShootInfo), shootInfo); err != nil {
 					if !apierrors.IsNotFound(err) {
 						return err
 					}

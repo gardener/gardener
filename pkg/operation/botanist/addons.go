@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -288,17 +287,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"allowPrivilegedContainers": *b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers,
 		}
 
-		shootInfo = map[string]interface{}{
-			"projectName":       b.Garden.Project.Name,
-			"shootName":         b.Shoot.GetInfo().Name,
-			"provider":          b.Shoot.GetInfo().Spec.Provider.Type,
-			"region":            b.Shoot.GetInfo().Spec.Region,
-			"kubernetesVersion": b.Shoot.GetInfo().Spec.Kubernetes.Version,
-			"podNetwork":        b.Shoot.Networks.Pods.String(),
-			"serviceNetwork":    b.Shoot.Networks.Services.String(),
-			"maintenanceBegin":  b.Shoot.GetInfo().Spec.Maintenance.TimeWindow.Begin,
-			"maintenanceEnd":    b.Shoot.GetInfo().Spec.Maintenance.TimeWindow.End,
-		}
 		nodeExporterConfig     = map[string]interface{}{}
 		blackboxExporterConfig = map[string]interface{}{}
 		networkPolicyConfig    = netpol.ShootNetworkPolicyValues{
@@ -308,22 +296,11 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 				KubeDNSClusterIP: b.Shoot.Networks.CoreDNS.String(),
 			},
 		}
-
-		nodeNetwork = b.Shoot.GetInfo().Spec.Networking.Nodes
 	)
 
 	if b.Shoot.IPVSEnabled() {
 		networkPolicyConfig.NodeLocalDNS.KubeDNSClusterIP = nodelocaldns.IPVSAddress
 	}
-
-	if domain := b.Shoot.ExternalClusterDomain; domain != nil {
-		shootInfo["domain"] = *domain
-	}
-	var extensions []string
-	for extensionType := range b.Shoot.Components.Extensions.Extension.Extensions() {
-		extensions = append(extensions, extensionType)
-	}
-	shootInfo["extensions"] = strings.Join(extensions, ",")
 
 	nodeExporter, err := b.InjectShootShootImages(nodeExporterConfig, images.ImageNameNodeExporter)
 	if err != nil {
@@ -356,10 +333,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		return nil, err
 	}
 
-	if nodeNetwork != nil {
-		shootInfo["nodeNetwork"] = *nodeNetwork
-	}
-
 	values := map[string]interface{}{
 		"global":          global,
 		"apiserver-proxy": common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
@@ -369,7 +342,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		}, b.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting),
 		"network-policies":        networkPolicyConfig,
 		"podsecuritypolicies":     common.GenerateAddonConfig(podSecurityPolicies, true),
-		"shoot-info":              common.GenerateAddonConfig(shootInfo, true),
+		"shoot-info":              common.GenerateAddonConfig(nil, true),
 		"vertical-pod-autoscaler": common.GenerateAddonConfig(nil, b.Shoot.WantsVerticalPodAutoscaler),
 		"cluster-identity":        map[string]interface{}{"clusterIdentity": b.Shoot.GetInfo().Status.ClusterIdentity},
 	}
