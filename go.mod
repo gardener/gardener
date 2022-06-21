@@ -42,23 +42,23 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	istio.io/api v0.0.0-20220304035241-8c47cbbea144
 	istio.io/client-go v1.12.5
-	k8s.io/api v0.24.1
-	k8s.io/apiextensions-apiserver v0.24.1
-	k8s.io/apimachinery v0.24.1
-	k8s.io/apiserver v0.24.1
+	k8s.io/api v0.24.2
+	k8s.io/apiextensions-apiserver v0.24.2
+	k8s.io/apimachinery v0.24.2
+	k8s.io/apiserver v0.24.2
 	k8s.io/autoscaler/vertical-pod-autoscaler v0.10.0
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
-	k8s.io/cluster-bootstrap v0.24.1
-	k8s.io/code-generator v0.24.1
-	k8s.io/component-base v0.24.1
+	k8s.io/cluster-bootstrap v0.24.2
+	k8s.io/code-generator v0.24.2
+	k8s.io/component-base v0.24.2
 	k8s.io/helm v2.16.1+incompatible
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.60.1
-	k8s.io/kube-aggregator v0.24.1
+	k8s.io/kube-aggregator v0.24.2
 	k8s.io/kube-openapi v0.0.0-20220328201542-3ee0da9b0b42
-	k8s.io/kube-proxy v0.24.1
-	k8s.io/kubelet v0.24.1
-	k8s.io/metrics v0.24.1
+	k8s.io/kube-proxy v0.24.2
+	k8s.io/kubelet v0.24.2
+	k8s.io/metrics v0.24.2
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
 	sigs.k8s.io/controller-runtime v0.12.1
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220613074012-11e533d55213 // v0.12.1
@@ -188,16 +188,16 @@ replace (
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.12.1 // keep this value in sync with sigs.k8s.io/controller-runtime
 	golang.org/x/crypto => golang.org/x/crypto v0.0.0-20220516162934-403b01795ae8
 	google.golang.org/grpc => google.golang.org/grpc v1.40.0 // keep this value in sync with k8s.io/apiserver
-	k8s.io/api => k8s.io/api v0.24.1
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.24.1
-	k8s.io/apimachinery => k8s.io/apimachinery v0.24.1
-	k8s.io/apiserver => k8s.io/apiserver v0.24.1
+	k8s.io/api => k8s.io/api v0.24.2
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.24.2
+	k8s.io/apimachinery => k8s.io/apimachinery v0.24.2
+	k8s.io/apiserver => k8s.io/apiserver v0.24.2
 	k8s.io/autoscaler => k8s.io/autoscaler v0.0.0-20220125093630-6d1a1514af44 // translates to k8s.io/autoscaler/vertical-pod-autoscaler@v0.10.0
-	k8s.io/client-go => k8s.io/client-go v0.24.1
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.24.1
-	k8s.io/code-generator => k8s.io/code-generator v0.24.1
-	k8s.io/component-base => k8s.io/component-base v0.24.1
+	k8s.io/client-go => k8s.io/client-go v0.24.2
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.24.2
+	k8s.io/code-generator => k8s.io/code-generator v0.24.2
+	k8s.io/component-base => k8s.io/component-base v0.24.2
 	k8s.io/helm => k8s.io/helm v2.16.1+incompatible
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.24.1
-	k8s.io/kube-proxy => k8s.io/kube-proxy v0.24.1
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.24.2
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.24.2
 )
