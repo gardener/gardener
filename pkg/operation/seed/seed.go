@@ -53,6 +53,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodeproblemdetector"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
@@ -339,7 +340,6 @@ func RunReconcileSeedFlow(
 			images.ImageNameFluentBit,
 			images.ImageNameFluentBitPluginInstaller,
 			images.ImageNameGrafana,
-			images.ImageNamePauseContainer,
 			images.ImageNamePrometheus,
 			images.ImageNameHvpaController,
 			images.ImageNameKubeStateMetrics,
@@ -885,10 +885,6 @@ func RunReconcileSeedFlow(
 			"ingressClass": ingressClass,
 			"images":       imagevector.ImageMapToValues(seedImages),
 		},
-		"reserveExcessCapacity": seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled,
-		"replicas": map[string]interface{}{
-			"reserve-excess-capacity": desiredExcessCapacity(),
-		},
 		"prometheus": map[string]interface{}{
 			"resources":               monitoringResources["prometheus"],
 			"storage":                 seed.GetValidVolumeSize("10Gi"),
@@ -1025,6 +1021,10 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
+	systemResources, err := defaultSystem(seedClient, imageVector, seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled)
+	if err != nil {
+		return err
+	}
 	vpa, err := defaultVerticalPodAutoscaler(seedClient, imageVector, secretsManager, vpaEnabled)
 	if err != nil {
 		return err
@@ -1088,6 +1088,10 @@ func runCreateSeedFlow(
 			Name: "Deploying VPN authorization server",
 			Fn:   vpnAuthzServer.Deploy,
 		})
+		_ = g.Add(flow.Task{
+			Name: "Deploying system resources",
+			Fn:   systemResources.Deploy,
+		})
 	)
 
 	if err := g.Compile().Run(ctx, flow.Opts{Logger: log}); err != nil {
@@ -1145,6 +1149,7 @@ func RunDeleteSeedFlow(
 		clusterIdentity = clusteridentity.NewForSeed(seedClient, v1beta1constants.GardenNamespace, "")
 		dwdEndpoint     = dependencywatchdog.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint})
 		dwdProbe        = dependencywatchdog.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace, dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe})
+		systemResources = seedsystem.New(seedClient, v1beta1constants.GardenNamespace, seedsystem.Values{})
 		vpa             = vpa.New(seedClient, v1beta1constants.GardenNamespace, nil, vpa.Values{ClusterType: vpa.ClusterTypeSeed})
 		vpnAuthzServer  = vpnauthzserver.New(seedClient, v1beta1constants.GardenNamespace, "", 1)
 	)
@@ -1211,6 +1216,10 @@ func RunDeleteSeedFlow(
 			Name: "Destroy VPN authorization server",
 			Fn:   component.OpDestroyAndWait(vpnAuthzServer).Destroy,
 		})
+		destroySystemResources = g.Add(flow.Task{
+			Name: "Destroy system resources",
+			Fn:   component.OpDestroyAndWait(systemResources).Destroy,
+		})
 		_ = g.Add(flow.Task{
 			Name: "Destroying gardener-resource-manager",
 			Fn:   resourceManager.Destroy,
@@ -1226,6 +1235,7 @@ func RunDeleteSeedFlow(
 				destroyDWDProbe,
 				destroyVPA,
 				destroyVPNAuthzServer,
+				destroySystemResources,
 				noControllerInstallations,
 			),
 		})
@@ -1364,21 +1374,6 @@ func getDNSProviderSecretData(ctx context.Context, gardenClient client.Client, s
 		return secret.Data, nil
 	}
 	return nil, nil
-}
-
-// desiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes
-// (on the seed) in terms of reserve-excess-capacity deployment replicas. Each deployment replica currently
-// corresponds to resources of (request/limits) 2 cores of CPU and 6Gi of RAM.
-// This roughly corresponds to a single, moderately large control-plane.
-// The logic for computation of desired excess capacity corresponds to deploying 2 such shoot control planes.
-// This excess capacity can be used for hosting new control planes or newly vertically scaled old control-planes.
-func desiredExcessCapacity() int {
-	var (
-		replicasToSupportSingleShoot = 1
-		effectiveExcessCapacity      = 2
-	)
-
-	return effectiveExcessCapacity * replicasToSupportSingleShoot
 }
 
 // GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Seed cluster. The

@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -331,4 +332,22 @@ func defaultVPNAuthzServer(
 	}
 
 	return component.OpDestroy(vpnAuthzServer), nil
+}
+
+func defaultSystem(c client.Client, imageVector imagevector.ImageVector, reserveExcessCapacity bool) (component.DeployWaiter, error) {
+	image, err := imageVector.FindImage(images.ImageNamePauseContainer)
+	if err != nil {
+		return nil, err
+	}
+
+	return seedsystem.New(
+		c,
+		v1beta1constants.GardenNamespace,
+		seedsystem.Values{
+			ReserveExcessCapacity: seedsystem.ReserveExcessCapacityValues{
+				Enabled: reserveExcessCapacity,
+				Image:   image.String(),
+			},
+		},
+	), nil
 }

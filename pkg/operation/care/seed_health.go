@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -43,6 +44,7 @@ var requiredManagedResourcesSeed = sets.NewString(
 	networkpolicies.ManagedResourceControlName,
 	clusteridentity.ManagedResourceControlName,
 	clusterautoscaler.ManagedResourceControlName,
+	seedsystem.ManagedResourceName,
 	vpa.ManagedResourceControlName,
 )
 
