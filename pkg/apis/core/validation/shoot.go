@@ -64,22 +64,22 @@ var (
 		string(corev1.ServiceExternalTrafficPolicyTypeLocal),
 	)
 	availableShootOperations = sets.NewString(
-		string(v1beta1constants.ShootOperationMaintain),
-		string(v1beta1constants.ShootOperationRetry),
+		v1beta1constants.ShootOperationMaintain,
+		v1beta1constants.ShootOperationRetry,
 	).Union(availableShootMaintenanceOperations)
 	availableShootMaintenanceOperations = sets.NewString(
-		string(v1beta1constants.GardenerOperationReconcile),
-		string(v1beta1constants.ShootOperationRotateCAStart),
-		string(v1beta1constants.ShootOperationRotateCAComplete),
-		string(v1beta1constants.ShootOperationRotateCredentialsStart),
-		string(v1beta1constants.ShootOperationRotateCredentialsComplete),
-		string(v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart),
-		string(v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete),
-		string(v1beta1constants.ShootOperationRotateKubeconfigCredentials),
-		string(v1beta1constants.ShootOperationRotateObservabilityCredentials),
-		string(v1beta1constants.ShootOperationRotateSSHKeypair),
-		string(v1beta1constants.ShootOperationRotateServiceAccountKeyStart),
-		string(v1beta1constants.ShootOperationRotateServiceAccountKeyComplete),
+		v1beta1constants.GardenerOperationReconcile,
+		v1beta1constants.ShootOperationRotateCAStart,
+		v1beta1constants.ShootOperationRotateCAComplete,
+		v1beta1constants.ShootOperationRotateCredentialsStart,
+		v1beta1constants.ShootOperationRotateCredentialsComplete,
+		v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart,
+		v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete,
+		v1beta1constants.ShootOperationRotateKubeconfigCredentials,
+		v1beta1constants.ShootOperationRotateObservabilityCredentials,
+		v1beta1constants.ShootOperationRotateSSHKeypair,
+		v1beta1constants.ShootOperationRotateServiceAccountKeyStart,
+		v1beta1constants.ShootOperationRotateServiceAccountKeyComplete,
 	)
 	availableShootPurposes = sets.NewString(
 		string(core.ShootPurposeEvaluation),
@@ -1737,11 +1737,11 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("annotations %s and %s must not be equal", fldPathOp, fldPathMaintOp)))
 	}
 
-	if operation != "" && !availableShootOperations.Has(string(operation)) {
+	if operation != "" && !availableShootOperations.Has(operation) {
 		allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, availableShootOperations.List()))
 	}
 
-	if maintenanceOperation != "" && !availableShootMaintenanceOperations.Has(string(maintenanceOperation)) {
+	if maintenanceOperation != "" && !availableShootMaintenanceOperations.Has(maintenanceOperation) {
 		allErrs = append(allErrs, field.NotSupported(fldPathMaintOp, maintenanceOperation, availableShootMaintenanceOperations.List()))
 	}
 
