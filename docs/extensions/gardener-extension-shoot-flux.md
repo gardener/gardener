@@ -1,17 +1,10 @@
 ---
-title: zniversal Shoot Configuration
+title: Universal Shoot Configuration
 ---
-by [Jens Schneider](https://github.com/jensac)
-
-## TLDR;
-Recently, we developed the [gardener-extension-shoot-flux](https://github.com/23technologies/gardener-extension-shoot-flux), which enables preconfiguring `Shoot` clusters.
-If you want to give it a try, go and checkout the repository on Github.
-If you want to learn more, keep on reading.
 
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
 
-- [TLDR;](#tldr)
 - [Introduction](#introduction)
 - [Example use cases](#example-use-cases)
   - [Development](#development)
@@ -33,10 +26,6 @@ Thus, the combination of Gardener and Flux features the potential of creating ne
 For the end users, this results in the seamless creation of clusters with all components on their wish list installed.
 The [gardener-extension-shoot-flux](https://github.com/23technologies/gardener-extension-shoot-flux) bridges the gap between Gardener and Flux and allows for reconciliation of `Shoot` clusters to resources defined in a Git repository.
 By concept, the extension operates on a per-project basis so that clusters in different projects can be reconciled to different repositories.
-
-The rest of this post is organized as follows:
-First, we will review a few use cases for this extension.
-Further, the general concept of the extension is outlined, and finally we provide an example on how to use the extension.
 
 ## Example use cases
 
@@ -124,7 +113,7 @@ Most probably, this is not the most elegant solution, but it resulted in a quick
 
 ## Example Usage
 Of course, you need to install the extension before you can use it.
-You can find `ControllerRegistration`s on our [Github release page](https://github.com/23technologies/gardener-extension-shoot-flux/releases).
+You can find `ControllerRegistration`s on the extension's [Github release page](https://github.com/23technologies/gardener-extension-shoot-flux/releases).
 So, you can simply go for
 ``` shell
 export KUBECONFIG=KUBECONFIG-FOR-GARDEN-CLUSTER
@@ -132,7 +121,7 @@ kubectl -f https://github.com/23technologies/gardener-extension-shoot-flux/relea
 ```
 in order to install the extension.
 
-For an exemplary use of the extension, we prepared a public repository containing manifest for the installation of [Podinfo](https://github.com/stefanprodan/podinfo).
+For an exemplary use of the extension, 23Technologies have prepared a public repository containing manifest for the installation of [Podinfo](https://github.com/stefanprodan/podinfo).
 As a Gardener operator you can apply the following `ConfigMap` to your Garden cluster
 ``` yaml
 apiVersion: v1
