@@ -429,7 +429,7 @@
       "pluginVersion": "6.3.2",
       "targets": [
         {
-          "expr": "count(count(ALERTS)by(cluster)) / sum(seed:active_shoots_total:sum) * 100",
+          "expr": "count(count(ALERTS) by (cluster)) / sum(seed:active_shoots_total:sum) * 100",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
