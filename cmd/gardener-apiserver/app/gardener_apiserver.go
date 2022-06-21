@@ -176,7 +176,7 @@ func (o *Options) Validate() error {
 	}
 
 	// Activate logging as soon as possible
-	if err := o.Logs.ValidateAndApply(); err != nil {
+	if err := o.Logs.ValidateAndApply(nil); err != nil {
 		return err
 	}
 

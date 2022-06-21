@@ -18,7 +18,6 @@ require (
 	github.com/go-logr/logr v1.2.3
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
-	github.com/googleapis/gnostic v0.5.5
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/kubernetes-csi/external-snapshotter/v2 v2.1.4
 	github.com/mholt/archiver v3.1.1+incompatible
@@ -36,36 +35,38 @@ require (
 	go.uber.org/goleak v1.1.12
 	go.uber.org/zap v1.21.0
 	golang.org/x/crypto v0.0.0-20220516162934-403b01795ae8
-	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
+	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8
 	golang.org/x/tools v0.1.10
 	gomodules.xyz/jsonpatch/v2 v2.2.0
 	gonum.org/v1/gonum v0.11.0
 	gopkg.in/yaml.v2 v2.4.0
 	istio.io/api v0.0.0-20220304035241-8c47cbbea144
 	istio.io/client-go v1.12.5
-	k8s.io/api v0.23.3
-	k8s.io/apiextensions-apiserver v0.23.3
-	k8s.io/apimachinery v0.23.3
-	k8s.io/apiserver v0.23.3
+	k8s.io/api v0.24.2
+	k8s.io/apiextensions-apiserver v0.24.2
+	k8s.io/apimachinery v0.24.2
+	k8s.io/apiserver v0.24.2
 	k8s.io/autoscaler/vertical-pod-autoscaler v0.10.0
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
-	k8s.io/cluster-bootstrap v0.23.3
-	k8s.io/code-generator v0.23.3
-	k8s.io/component-base v0.23.3
+	k8s.io/cluster-bootstrap v0.24.2
+	k8s.io/code-generator v0.24.2
+	k8s.io/component-base v0.24.2
 	k8s.io/helm v2.16.1+incompatible
 	k8s.io/klog v1.0.0
-	k8s.io/klog/v2 v2.30.0
-	k8s.io/kube-aggregator v0.23.3
-	k8s.io/kube-openapi v0.0.0-20211115234752-e816edb12b65
-	k8s.io/kube-proxy v0.23.3
-	k8s.io/kubelet v0.23.3
-	k8s.io/metrics v0.23.3
+	k8s.io/klog/v2 v2.60.1
+	k8s.io/kube-aggregator v0.24.2
+	k8s.io/kube-openapi v0.0.0-20220328201542-3ee0da9b0b42
+	k8s.io/kube-proxy v0.24.2
+	k8s.io/kubelet v0.24.2
+	k8s.io/metrics v0.24.2
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
-	sigs.k8s.io/controller-runtime v0.11.1
-	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220513175748-3f265c36d7bf // v0.11.0
-	sigs.k8s.io/controller-tools v0.8.0
+	sigs.k8s.io/controller-runtime v0.12.1
+	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220613074012-11e533d55213 // v0.12.1
+	sigs.k8s.io/controller-tools v0.9.0
 	sigs.k8s.io/yaml v1.3.0
 )
+
+require github.com/google/gnostic v0.5.7-v3refs
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
@@ -74,7 +75,7 @@ require (
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/blang/semver v3.5.1+incompatible // indirect
+	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/census-instrumentation/opencensus-proto v0.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403 // indirect
@@ -94,7 +95,7 @@ require (
 	github.com/go-openapi/jsonreference v0.19.5 // indirect
 	github.com/go-openapi/swag v0.19.14 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0 // indirect
-	github.com/gobuffalo/flect v0.2.3 // indirect
+	github.com/gobuffalo/flect v0.2.5 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
@@ -141,7 +142,7 @@ require (
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.2 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.2 // indirect
-	go.etcd.io/etcd/client/v3 v3.5.0 // indirect
+	go.etcd.io/etcd/client/v3 v3.5.1 // indirect
 	go.opentelemetry.io/contrib v0.20.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.20.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.20.0 // indirect
@@ -172,9 +173,9 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	istio.io/gogo-genproto v0.0.0-20210113155706-4daf5697332f // indirect
-	k8s.io/gengo v0.0.0-20210813121822-485abfe95c7c // indirect
-	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.27 // indirect
-	sigs.k8s.io/json v0.0.0-20211020170558-c049b76a60c6 // indirect
+	k8s.io/gengo v0.0.0-20211129171323-c02415ce4185 // indirect
+	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.30 // indirect
+	sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 )
 
@@ -184,19 +185,19 @@ replace (
 	github.com/gardener/hvpa-controller => github.com/gardener/hvpa-controller v0.5.0
 	github.com/gardener/hvpa-controller/api => github.com/gardener/hvpa-controller/api v0.5.0
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.5.5 // keep this value in sync with k8s.io/apiserver
-	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.1 // keep this value in sync with sigs.k8s.io/controller-runtime
+	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.12.1 // keep this value in sync with sigs.k8s.io/controller-runtime
 	golang.org/x/crypto => golang.org/x/crypto v0.0.0-20220516162934-403b01795ae8
 	google.golang.org/grpc => google.golang.org/grpc v1.40.0 // keep this value in sync with k8s.io/apiserver
-	k8s.io/api => k8s.io/api v0.23.3
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.23.3
-	k8s.io/apimachinery => k8s.io/apimachinery v0.23.3
-	k8s.io/apiserver => k8s.io/apiserver v0.23.3
+	k8s.io/api => k8s.io/api v0.24.2
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.24.2
+	k8s.io/apimachinery => k8s.io/apimachinery v0.24.2
+	k8s.io/apiserver => k8s.io/apiserver v0.24.2
 	k8s.io/autoscaler => k8s.io/autoscaler v0.0.0-20220125093630-6d1a1514af44 // translates to k8s.io/autoscaler/vertical-pod-autoscaler@v0.10.0
-	k8s.io/client-go => k8s.io/client-go v0.23.3
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.23.3
-	k8s.io/code-generator => k8s.io/code-generator v0.23.3
-	k8s.io/component-base => k8s.io/component-base v0.23.3
+	k8s.io/client-go => k8s.io/client-go v0.24.2
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.24.2
+	k8s.io/code-generator => k8s.io/code-generator v0.24.2
+	k8s.io/component-base => k8s.io/component-base v0.24.2
 	k8s.io/helm => k8s.io/helm v2.16.1+incompatible
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.23.3
-	k8s.io/kube-proxy => k8s.io/kube-proxy v0.23.3
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.24.2
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.24.2
 )

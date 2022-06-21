@@ -33,7 +33,7 @@ func PatchRemoveFinalizers(ctx context.Context, writer client.Writer, obj client
 	return patchFinalizers(ctx, writer, obj, mergeFromWithOptimisticLock, controllerutil.RemoveFinalizer, finalizers...)
 }
 
-func patchFinalizers(ctx context.Context, writer client.Writer, obj client.Object, patchFunc patchFn, mutate func(client.Object, string), finalizers ...string) error {
+func patchFinalizers(ctx context.Context, writer client.Writer, obj client.Object, patchFunc patchFn, mutate func(client.Object, string) bool, finalizers ...string) error {
 	beforePatch := obj.DeepCopyObject().(client.Object)
 	for _, finalizer := range finalizers {
 		mutate(obj, finalizer)
@@ -74,7 +74,7 @@ func RemoveAllFinalizers(ctx context.Context, reader client.Reader, writer clien
 	})
 }
 
-func tryPatchFinalizers(ctx context.Context, reader client.Reader, writer client.Writer, obj client.Object, mutate func(client.Object, string), finalizer string) error {
+func tryPatchFinalizers(ctx context.Context, reader client.Reader, writer client.Writer, obj client.Object, mutate func(client.Object, string) bool, finalizer string) error {
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		// Unset finalizers array manually here, because finalizers array won't be unset in decoder, if it's empty on
 		// the API server. This can lead to an empty patch, although we want to ensure, that the finalizer is present.

@@ -28,14 +28,14 @@ import (
 // ReadLeaderElectionRecord returns the leader election record for a given lock type and a namespace/name combination.
 func ReadLeaderElectionRecord(ctx context.Context, client client.Client, lock, namespace, name string) (*resourcelock.LeaderElectionRecord, error) {
 	switch lock {
-	case resourcelock.EndpointsResourceLock:
+	case "endpoints":
 		endpoint := &corev1.Endpoints{}
 		if err := client.Get(ctx, Key(namespace, name), endpoint); err != nil {
 			return nil, err
 		}
 		return leaderElectionRecordFromAnnotations(endpoint.Annotations)
 
-	case resourcelock.ConfigMapsResourceLock:
+	case "configmaps":
 		configmap := &corev1.ConfigMap{}
 		if err := client.Get(ctx, Key(namespace, name), configmap); err != nil {
 			return nil, err

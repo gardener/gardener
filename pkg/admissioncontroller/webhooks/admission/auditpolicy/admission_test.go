@@ -72,13 +72,15 @@ var _ = Describe("handler", func() {
 		shootName      = "fake-shoot-name"
 		shootNamespace = cmNamespace
 
-		cm            *v1.ConfigMap
-		shootv1beta1  *gardencorev1beta1.Shoot
-		shootv1alpha1 *gardencorev1alpha1.Shoot
+		cm                  *v1.ConfigMap
+		shootv1beta1        *gardencorev1beta1.Shoot
+		shootv1alpha1       *gardencorev1alpha1.Shoot
+		shootv1beta1K8sV124 *gardencorev1beta1.Shoot
+		shootv1beta1K8sV123 *gardencorev1beta1.Shoot
 
 		validAuditPolicy = `
 ---
-apiVersion: audit.k8s.io/v1beta1
+apiVersion: audit.k8s.io/v1
 kind: Policy
 rules:
   - level: RequestResponse
@@ -92,7 +94,7 @@ rules:
 `
 		anotherValidAuditPolicy = `
 ---
-apiVersion: audit.k8s.io/v1beta1
+apiVersion: audit.k8s.io/v1
 kind: Policy
 rules:
   - level: RequestResponse
@@ -106,7 +108,7 @@ rules:
 `
 		missingKeyAuditPolicy = `
 ---
-apiVersion: audit.k8s.io/v1beta1
+apiVersion: audit.k8s.io/v1
 kind: Policy
 rules:
   - level: RequestResponse
@@ -116,10 +118,38 @@ rules:
 `
 		invalidAuditPolicy = `
 ---
-apiVersion: audit.k8s.io/v1beta1
+apiVersion: audit.k8s.io/v1
 kind: Policy
 rules:
   - level: FakeLevel
+    resources:
+    - group: ""
+      resources: ["pods"]
+  - level: Metadata
+    resources:
+    - group: ""
+      resources: ["pods/log", "pods/status"]
+`
+		validAuditPolicyV1alpha1 = `
+---
+apiVersion: audit.k8s.io/v1alpha1
+kind: Policy
+rules:
+  - level: RequestResponse
+    resources:
+    - group: ""
+      resources: ["pods"]
+  - level: Metadata
+    resources:
+    - group: ""
+      resources: ["pods/log", "pods/status"]
+`
+		validAuditPolicyV1beta1 = `
+---
+apiVersion: audit.k8s.io/v1beta1
+kind: Policy
+rules:
+  - level: RequestResponse
     resources:
     - group: ""
       resources: ["pods"]
@@ -191,6 +221,56 @@ rules:
 							},
 						},
 					},
+				},
+			},
+		}
+
+		shootv1beta1K8sV124 = &gardencorev1beta1.Shoot{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+				Kind:       "Shoot",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      shootName,
+				Namespace: shootNamespace,
+			},
+			Spec: gardencorev1beta1.ShootSpec{
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+						AuditConfig: &gardencorev1beta1.AuditConfig{
+							AuditPolicy: &gardencorev1beta1.AuditPolicy{
+								ConfigMapRef: &v1.ObjectReference{
+									Name: cmName,
+								},
+							},
+						},
+					},
+					Version: "1.24.0",
+				},
+			},
+		}
+
+		shootv1beta1K8sV123 = &gardencorev1beta1.Shoot{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+				Kind:       "Shoot",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      shootName,
+				Namespace: shootNamespace,
+			},
+			Spec: gardencorev1beta1.ShootSpec{
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+						AuditConfig: &gardencorev1beta1.AuditConfig{
+							AuditPolicy: &gardencorev1beta1.AuditPolicy{
+								ConfigMapRef: &v1.ObjectReference{
+									Name: cmName,
+								},
+							},
+						},
+					},
+					Version: "1.23.2",
 				},
 			},
 		}
@@ -285,6 +365,32 @@ rules:
 					return nil
 				})
 				test(admissionv1.Create, nil, shootv1alpha1, true, statusCodeAllowed, "referenced audit policy is valid", "")
+			})
+
+			It("references a valid auditPolicy/v1alhpa1 (CREATE k8s < 1.24.0)", func() {
+				returnedCm := v1.ConfigMap{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "1"},
+					Data:       map[string]string{"policy": validAuditPolicyV1alpha1},
+				}
+				mockReader.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&v1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *v1.ConfigMap) error {
+					*cm = returnedCm
+					return nil
+				})
+				test(admissionv1.Create, nil, shootv1beta1K8sV123, true, statusCodeAllowed, "referenced audit policy is valid", "")
+			})
+
+			It("references a valid auditPolicy/v1beta1 (CREATE k8s < 1.24.0)", func() {
+				returnedCm := v1.ConfigMap{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "1"},
+					Data:       map[string]string{"policy": validAuditPolicyV1beta1},
+				}
+				mockReader.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&v1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *v1.ConfigMap) error {
+					*cm = returnedCm
+					return nil
+				})
+				test(admissionv1.Create, nil, shootv1beta1K8sV123, true, statusCodeAllowed, "referenced audit policy is valid", "")
 			})
 
 			It("referenced auditPolicy name was not changed (UPDATE)", func() {
@@ -436,6 +542,33 @@ rules:
 				})
 				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "did not find expected key", "")
 			})
+
+			It("references a valid auditPolicy/v1alhpa1 (CREATE k8s >= 1.24.0)", func() {
+				returnedCm := v1.ConfigMap{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
+					Data:       map[string]string{"policy": validAuditPolicyV1alpha1},
+				}
+				mockReader.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&v1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *v1.ConfigMap) error {
+					*cm = returnedCm
+					return nil
+				})
+				test(admissionv1.Create, nil, shootv1beta1K8sV124, false, statusCodeInvalid, "audit policy with apiVersion 'v1alpha1' is not supported for kubernetes version >= 1.24.0", "")
+			})
+
+			It("references a valid auditPolicy/v1beta1 (CREATE k8s >= 1.24.0)", func() {
+				returnedCm := v1.ConfigMap{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
+					Data:       map[string]string{"policy": validAuditPolicyV1beta1},
+				}
+				mockReader.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&v1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *v1.ConfigMap) error {
+					*cm = returnedCm
+					return nil
+				})
+				test(admissionv1.Create, nil, shootv1beta1K8sV124, false, statusCodeInvalid, "audit policy with apiVersion 'v1beta1' is not supported for kubernetes version >= 1.24.0", "")
+			})
+
 		})
 	})
 

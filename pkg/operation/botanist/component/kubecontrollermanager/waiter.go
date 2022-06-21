@@ -88,7 +88,7 @@ func (k *kubeControllerManager) WaitForControllerToBeActive(ctx context.Context)
 		}
 
 		// Check if the controller is active by reading its leader election record.
-		lock := resourcelock.EndpointsResourceLock
+		lock := "endpoints"
 		if version.ConstraintK8sGreaterEqual120.Check(k.version) {
 			lock = resourcelock.LeasesResourceLock
 		}

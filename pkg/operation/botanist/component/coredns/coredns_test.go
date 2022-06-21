@@ -228,6 +228,7 @@ spec:
   policyTypes:
   - Ingress
   - Egress
+status: {}
 `
 		deploymentYAMLFor = func(apiserverHost string, podAnnotations map[string]string) string {
 			out := `apiVersion: apps/v1

@@ -25,7 +25,7 @@ import "k8s.io/apimachinery/pkg/runtime/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
 
 // Package-wide variables from generator "generated".
-option go_package = "v1alpha1";
+option go_package = "github.com/gardener/gardener/pkg/apis/settings/v1alpha1";
 
 // ClusterOpenIDConnectPreset is a OpenID Connect configuration that is applied
 // to a Shoot objects cluster-wide.
