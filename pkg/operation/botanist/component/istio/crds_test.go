@@ -83,5 +83,6 @@ var _ = Describe("#CRDs", func() {
 		Entry("WorkloadEntries", "workloadentries.networking.istio.io"),
 		Entry("WorkloadGroups", "workloadgroups.networking.istio.io"),
 		Entry("Telemetry", "telemetries.telemetry.istio.io"),
+		Entry("WasmPlugin", "wasmplugins.extensions.istio.io"),
 	)
 })
