@@ -22,6 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -391,20 +392,38 @@ func (f *GardenerFramework) MigrateShoot(ctx context.Context, shoot *gardencorev
 		}
 	}
 
-	if err := f.UpdateShoot(ctx, shoot, func(shoot *gardencorev1beta1.Shoot) error {
-		if err := f.GetShoot(ctx, shoot); err != nil {
-			return err
-		}
-
-		if _, _, err := f.GetSeed(ctx, seed.Name); err != nil {
-			return err
-		}
-
-		shoot.Spec.SeedName = &seed.Name
-		return nil
-	}); err != nil {
+	if err := f.GetShoot(ctx, shoot); err != nil {
 		return err
 	}
+
+	if _, _, err := f.GetSeed(ctx, seed.Name); err != nil {
+		return err
+	}
+
+	restConfig := f.GardenClient.RESTConfig()
+	versionedCoreClient, err := gardenversionedcoreclientset.NewForConfig(restConfig)
+	if err != nil {
+		f.Logger.Errorf("cannot create versioned client %s", err)
+		return err
+	}
+
+	binding := &gardencorev1beta1.Binding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      shoot.GetName(),
+			Namespace: shoot.GetNamespace(),
+		},
+		Target: corev1.ObjectReference{
+			Kind:       "Seed",
+			APIVersion: "core.gardener.cloud/v1beta1",
+			Name:       seed.Name,
+		},
+	}
+
+	if _, err := versionedCoreClient.CoreV1beta1().Shoots(shoot.GetNamespace()).CreateBinding(ctx, shoot.GetName(), binding, metav1.CreateOptions{}); err != nil {
+		f.Logger.Errorf("cannot create binding for shoot %s: %s", shoot.GetName(), err)
+		return err
+	}
+
 	return f.WaitForShootToBeCreated(ctx, shoot)
 }
 
