@@ -157,23 +157,6 @@ data:
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.vpa | indent 6 }}
 
-{{- if .Values.hvpa.enabled }}
-    - job_name: 'hvpa-controller'
-      kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          names: [ garden ]
-      relabel_configs:
-      - source_labels:
-        - __meta_kubernetes_service_name
-        - __meta_kubernetes_endpoint_port_name
-        - __meta_kubernetes_namespace
-        action: keep
-        regex: hvpa-controller;metrics;garden
-      metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.hvpa | indent 6 }}
-{{- end }}
-
 {{- if .Values.prometheus.additionalScrapeConfigs }}
 {{ toString .Values.prometheus.additionalScrapeConfigs | indent 4 }}
 {{- end }}

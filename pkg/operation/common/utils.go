@@ -33,7 +33,6 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -98,42 +97,6 @@ func GenerateAddonConfig(values map[string]interface{}, enabled bool) map[string
 		}
 	}
 	return v
-}
-
-// DeleteHvpa delete all resources required for the HVPA in the given namespace.
-func DeleteHvpa(ctx context.Context, c client.Client, namespace string) error {
-	labelSelectorHVPA := client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleHvpa}
-
-	// Delete all CRDs with label "gardener.cloud/role=hvpa"
-	// Workaround: Due to https://github.com/gardener/gardener/issues/2257, we first list the HVPA CRDs and then remove
-	// them one by one.
-	crdList := &apiextensionsv1.CustomResourceDefinitionList{}
-	if err := c.List(ctx, crdList, labelSelectorHVPA); err != nil {
-		return err
-	}
-	for _, crd := range crdList.Items {
-		if err := c.Delete(ctx, &crd); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-
-	// Delete all Deployments with label "gardener.cloud/role=hvpa"
-	if err := c.DeleteAllOf(ctx, &appsv1.Deployment{}, client.InNamespace(namespace), labelSelectorHVPA, client.PropagationPolicy(metav1.DeletePropagationForeground)); err != nil {
-		return err
-	}
-
-	// Delete all ClusterRoles with label "gardener.cloud/role=hvpa"
-	if err := c.DeleteAllOf(ctx, &rbacv1.ClusterRole{}, labelSelectorHVPA); err != nil {
-		return err
-	}
-
-	// Delete all ClusterRoleBindings with label "gardener.cloud/role=hvpa"
-	if err := c.DeleteAllOf(ctx, &rbacv1.ClusterRoleBinding{}, labelSelectorHVPA); err != nil {
-		return err
-	}
-
-	// Delete all ServiceAccounts with label "gardener.cloud/role=hvpa"
-	return c.DeleteAllOf(ctx, &corev1.ServiceAccount{}, client.InNamespace(namespace), labelSelectorHVPA)
 }
 
 // DeleteLoki  deletes all resources of the Loki in a given namespace.

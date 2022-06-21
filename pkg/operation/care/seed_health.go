@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
@@ -46,6 +47,7 @@ var requiredManagedResourcesSeed = sets.NewString(
 	clusterautoscaler.ManagedResourceControlName,
 	seedsystem.ManagedResourceName,
 	vpa.ManagedResourceControlName,
+	hvpa.ManagedResourceName,
 )
 
 // SeedHealth contains information needed to execute health checks for seed.

@@ -110,13 +110,6 @@ filter-kubernetes.conf: |-
       Parser              grafanaParser
       Reserve_Data        True
 
-  [FILTER]
-      Name                parser
-      Match               kubernetes.*hvpa-controller*hvpa-controller*
-      Key_Name            log
-      Parser              kubeapiserverParser
-      Reserve_Data        True
-
   # Extension filters
   [FILTER]
       Name                parser
