@@ -48,6 +48,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	"k8s.io/utils/pointer"
 )
 
 var (
@@ -64,22 +65,24 @@ var (
 		string(corev1.ServiceExternalTrafficPolicyTypeLocal),
 	)
 	availableShootOperations = sets.NewString(
-		string(v1beta1constants.ShootOperationMaintain),
-		string(v1beta1constants.ShootOperationRetry),
+		v1beta1constants.ShootOperationMaintain,
+		v1beta1constants.ShootOperationRetry,
 	).Union(availableShootMaintenanceOperations)
 	availableShootMaintenanceOperations = sets.NewString(
-		string(v1beta1constants.GardenerOperationReconcile),
-		string(v1beta1constants.ShootOperationRotateCAStart),
-		string(v1beta1constants.ShootOperationRotateCAComplete),
-		string(v1beta1constants.ShootOperationRotateCredentialsStart),
-		string(v1beta1constants.ShootOperationRotateCredentialsComplete),
-		string(v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart),
-		string(v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete),
-		string(v1beta1constants.ShootOperationRotateKubeconfigCredentials),
-		string(v1beta1constants.ShootOperationRotateObservabilityCredentials),
-		string(v1beta1constants.ShootOperationRotateSSHKeypair),
-		string(v1beta1constants.ShootOperationRotateServiceAccountKeyStart),
-		string(v1beta1constants.ShootOperationRotateServiceAccountKeyComplete),
+		v1beta1constants.GardenerOperationReconcile,
+		v1beta1constants.ShootOperationRotateCAStart,
+		v1beta1constants.ShootOperationRotateCAComplete,
+		v1beta1constants.ShootOperationRotateKubeconfigCredentials,
+		v1beta1constants.ShootOperationRotateObservabilityCredentials,
+		v1beta1constants.ShootOperationRotateSSHKeypair,
+	).Union(forbiddenShootOperationsWhenHibernated)
+	forbiddenShootOperationsWhenHibernated = sets.NewString(
+		v1beta1constants.ShootOperationRotateCredentialsStart,
+		v1beta1constants.ShootOperationRotateCredentialsComplete,
+		v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart,
+		v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete,
+		v1beta1constants.ShootOperationRotateServiceAccountKeyStart,
+		v1beta1constants.ShootOperationRotateServiceAccountKeyComplete,
 	)
 	availableShootPurposes = sets.NewString(
 		string(core.ShootPurposeEvaluation),
@@ -204,7 +207,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, validateNetworking(spec.Networking, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
-	allErrs = append(allErrs, ValidateHibernation(spec.Hibernation, fldPath.Child("hibernation"))...)
+	allErrs = append(allErrs, ValidateHibernation(meta.Annotations, spec.Hibernation, fldPath.Child("hibernation"))...)
 	allErrs = append(allErrs, validateProvider(spec.Provider, spec.Kubernetes, fldPath.Child("provider"), inTemplate)...)
 
 	if len(spec.Region) == 0 {
@@ -1506,11 +1509,15 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 }
 
 // ValidateHibernation validates a Hibernation object.
-func ValidateHibernation(hibernation *core.Hibernation, fldPath *field.Path) field.ErrorList {
+func ValidateHibernation(annotations map[string]string, hibernation *core.Hibernation, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if hibernation == nil {
 		return allErrs
+	}
+
+	if maintenanceOp := annotations[v1beta1constants.GardenerMaintenanceOperation]; forbiddenShootOperationsWhenHibernated.Has(maintenanceOp) && pointer.BoolDeref(hibernation.Enabled, false) {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("enabled"), fmt.Sprintf("shoot cannot be hibernated when %s=%s annotation is set", v1beta1constants.GardenerMaintenanceOperation, maintenanceOp)))
 	}
 
 	allErrs = append(allErrs, ValidateHibernationSchedules(hibernation.Schedules, fldPath.Child("schedules"))...)
@@ -1737,12 +1744,22 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("annotations %s and %s must not be equal", fldPathOp, fldPathMaintOp)))
 	}
 
-	if operation != "" && !availableShootOperations.Has(string(operation)) {
-		allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, availableShootOperations.List()))
+	if operation != "" {
+		if !availableShootOperations.Has(operation) {
+			allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, availableShootOperations.List()))
+		}
+		if helper.HibernationIsEnabled(shoot) && forbiddenShootOperationsWhenHibernated.Has(operation) {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is not permitted when shoot is hibernated"))
+		}
 	}
 
-	if maintenanceOperation != "" && !availableShootMaintenanceOperations.Has(string(maintenanceOperation)) {
-		allErrs = append(allErrs, field.NotSupported(fldPathMaintOp, maintenanceOperation, availableShootMaintenanceOperations.List()))
+	if maintenanceOperation != "" {
+		if !availableShootMaintenanceOperations.Has(maintenanceOperation) {
+			allErrs = append(allErrs, field.NotSupported(fldPathMaintOp, maintenanceOperation, availableShootMaintenanceOperations.List()))
+		}
+		if helper.HibernationIsEnabled(shoot) && forbiddenShootOperationsWhenHibernated.Has(maintenanceOperation) {
+			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is not permitted when shoot is hibernated"))
+		}
 	}
 
 	allErrs = append(allErrs, validateShootOperationContext(operation, shoot, fldPathOp)...)

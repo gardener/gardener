@@ -3501,22 +3501,20 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}),
 			)
 
-			It("should return an error if the reconciliation operation annotation is invalid", func() {
+			It("should return an error if the operation annotation is invalid", func() {
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "foo-bar")
-				matcher := ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("metadata.annotations[gardener.cloud/operation]"),
-				})))
-				Expect(ValidateShoot(shoot)).To(matcher)
+				}))))
 			})
 
 			It("should return an error if the maintenance operation annotation is invalid", func() {
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "foo-bar")
-				matcher := ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
-				})))
-				Expect(ValidateShoot(shoot)).To(matcher)
+				}))))
 			})
 
 			It("should return an error if maintenance annotation is not allowed in this context", func() {
@@ -3527,14 +3525,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 						State: core.LastOperationStateSucceeded,
 					},
 				}
-				matcher := ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
-				})))
-				Expect(ValidateShoot(shoot)).To(matcher)
+				}))))
 			})
 
-			It("should return an error if both annotation have the same value", func() {
+			It("should return an error if both operation annotations have the same value", func() {
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-etcd-encryption-key-start")
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-etcd-encryption-key-start")
 				shoot.Status = core.ShootStatus{
@@ -3543,11 +3540,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 						State: core.LastOperationStateSucceeded,
 					},
 				}
-				matcher := ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				Expect(ValidateShoot(shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("metadata.annotations"),
-				})))
-				Expect(ValidateShoot(shoot)).To(matcher)
+				}))))
 			})
 
 			It("should return nothing if maintenance annotation is valid", func() {
@@ -3555,7 +3551,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateShoot(shoot)).To(BeEmpty())
 			})
 
-			It("should return nothing if both annotations are valid and do not have the same value", func() {
+			It("should return nothing if both operation annotations are valid and do not have the same value", func() {
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-serviceaccount-key-start")
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-etcd-encryption-key-start")
 				shoot.Status = core.ShootStatus{
@@ -3567,6 +3563,54 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateShoot(shoot)).To(BeEmpty())
 			})
 
+			DescribeTable("forbid certain rotation operations when shoot is hibernated",
+				func(operation string) {
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
+
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", operation)
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+						"Detail": ContainSubstring("operation is not permitted when shoot is hibernated"),
+					}))))
+					delete(shoot.Annotations, "gardener.cloud/operation")
+
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", operation)
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("metadata.annotations[maintenance.gardener.cloud/operation]"),
+						"Detail": ContainSubstring("operation is not permitted when shoot is hibernated"),
+					}))))
+					delete(shoot.Annotations, "maintenance.gardener.cloud/operation")
+				},
+
+				Entry("rotate-credentials-start", "rotate-credentials-start"),
+				Entry("rotate-credentials-complete", "rotate-credentials-complete"),
+				Entry("rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start"),
+				Entry("rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete"),
+				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
+				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
+			)
+
+			DescribeTable("forbid hibernating the shoot when certain rotation maintenance operations are set",
+				func(operation string) {
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", operation)
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
+
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.hibernation.enabled"),
+						"Detail": ContainSubstring("shoot cannot be hibernated when maintenance.gardener.cloud/operation=" + operation + " annotation is set"),
+					}))))
+				},
+
+				Entry("rotate-credentials-start", "rotate-credentials-start"),
+				Entry("rotate-credentials-complete", "rotate-credentials-complete"),
+				Entry("rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start"),
+				Entry("rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete"),
+				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
+				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
+			)
 		})
 	})
 
