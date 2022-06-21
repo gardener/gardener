@@ -22,16 +22,20 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
+	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -90,6 +94,9 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	error) {
 	managedResources := requiredManagedResourcesSeed.List()
 
+	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
+		managedResources = append(managedResources, istio.ManagedResourceControlName)
+	}
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogEndpointEnabled(h.seed.Spec.Settings) {
 		managedResources = append(managedResources, dependencywatchdog.ManagedResourceDependencyWatchdogEndpoint)
 
@@ -102,8 +109,15 @@ func (h *SeedHealth) checkSeedSystemComponents(
 	}
 
 	for _, name := range managedResources {
+		var namespcae string
+		if name == istio.ManagedResourceControlName {
+			namespcae = common.IstioNamespace
+		} else {
+			namespcae = v1beta1constants.GardenNamespace
+		}
+
 		mr := &resourcesv1alpha1.ManagedResource{}
-		if err := h.seedClient.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, name), mr); err != nil {
+		if err := h.seedClient.Get(ctx, kutil.Key(namespcae, name), mr); err != nil {
 			if apierrors.IsNotFound(err) {
 				exitCondition := checker.FailedCondition(condition, "ResourceNotFound", err.Error())
 				return &exitCondition, nil

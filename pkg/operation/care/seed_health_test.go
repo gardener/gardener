@@ -22,17 +22,20 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nginxingress"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/care"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -54,6 +57,7 @@ var (
 		seedsystem.ManagedResourceName,
 		vpa.ManagedResourceControlName,
 		hvpa.ManagedResourceName,
+		istio.ManagedResourceControlName,
 	}
 
 	optionalManagedResources = []string{
@@ -106,6 +110,8 @@ var _ = Describe("Seed health", func() {
 		seedSystemComponentsHealthyCondition = gardencorev1beta1.Condition{
 			Type: gardencorev1beta1.SeedSystemComponentsHealthy,
 		}
+
+		gardenletfeatures.RegisterFeatureGates()
 	})
 
 	Describe("#CheckSeed", func() {
@@ -367,10 +373,17 @@ func progressingManagedResource(name string) *resourcesv1alpha1.ManagedResource 
 }
 
 func managedResource(name string, conditions []gardencorev1beta1.Condition) *resourcesv1alpha1.ManagedResource {
+	var namespcae string
+	if name == istio.ManagedResourceControlName {
+		namespcae = common.IstioNamespace
+	} else {
+		namespcae = v1beta1constants.GardenNamespace
+	}
+
 	return &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: v1beta1constants.GardenNamespace,
+			Namespace: namespcae,
 		},
 		Status: resourcesv1alpha1.ManagedResourceStatus{
 			Conditions: conditions,

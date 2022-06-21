@@ -60,7 +60,7 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			"loadBalancerIP":    istioIngressGateway.Values.LoadBalancerIP,
 		}
 
-		renderedIngressChart, err := i.chartRenderer.Render(istioIngressGateway.ChartPath, ManagedResourceName, istioIngressGateway.Namespace, values)
+		renderedIngressChart, err := i.chartRenderer.Render(istioIngressGateway.ChartPath, ManagedResourceControlName, istioIngressGateway.Namespace, values)
 		if err != nil {
 			return nil, err
 		}

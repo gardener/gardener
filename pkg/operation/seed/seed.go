@@ -367,6 +367,13 @@ func RunReconcileSeedFlow(
 		}
 	}
 
+	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
+		istioCRDs := istio.NewIstioCRD(chartApplier, charts.Path, seedClient)
+		if err := istioCRDs.Deploy(ctx); err != nil {
+			return err
+		}
+	}
+
 	if vpaEnabled {
 		if err := vpa.NewCRD(applier, nil).Deploy(ctx); err != nil {
 			return err
@@ -855,12 +862,12 @@ func runCreateSeedFlow(
 
 	// setup for flow graph
 	var (
-		istio                      []component.DeployWaiter
+		istio                      component.DeployWaiter
 		ingressLoadBalancerAddress string
 	)
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
-		istio, err = defaultIstio(ctx, seedClient, imageVector, chartApplier, chartRenderer, seed, conf, sniEnabledOrInUse)
+		istio, err = defaultIstio(ctx, seedClient, imageVector, chartRenderer, seed, conf, sniEnabledOrInUse)
 		if err != nil {
 			return err
 		}
@@ -930,8 +937,10 @@ func runCreateSeedFlow(
 	var (
 		g = flow.NewGraph("Seed cluster creation")
 		_ = g.Add(flow.Task{
-			Name: "Deploy Istio",
-			Fn:   component.OpWaiter(istio...).Deploy,
+			Name: "Deploying Istio",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return istio.Deploy(ctx)
+			}).DoIf(gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio)),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Ensuring network policies",
@@ -1141,11 +1150,15 @@ func RunDeleteSeedFlow(
 		})
 		destroyIstio = g.Add(flow.Task{
 			Name: "Destroy Istio",
-			Fn:   component.OpDestroyAndWait(istio).Destroy,
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return component.OpDestroyAndWait(istio).Destroy(ctx)
+			}).DoIf(gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio)),
 		})
 		destroyIstioCRDs = g.Add(flow.Task{
-			Name:         "Destroy Istio CRDs",
-			Fn:           component.OpDestroyAndWait(istioCRDs).Destroy,
+			Name: "Destroy Istio CRDs",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return component.OpDestroyAndWait(istioCRDs).Destroy(ctx)
+			}).DoIf(gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio)),
 			Dependencies: flow.NewTaskIDs(destroyIstio),
 		})
 		_ = g.Add(flow.Task{

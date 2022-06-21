@@ -40,7 +40,7 @@ func (i *istiod) generateIstioProxyProtocolChart(ctx context.Context) (*chartren
 			"labels": istioProxyProtocol.Values.Labels,
 		}
 
-		renderedProxyProtocolChart, err := i.chartRenderer.Render(istioProxyProtocol.ChartPath, ManagedResourceName, istioProxyProtocol.Namespace, values)
+		renderedProxyProtocolChart, err := i.chartRenderer.Render(istioProxyProtocol.ChartPath, ManagedResourceControlName, istioProxyProtocol.Namespace, values)
 		if err != nil {
 			return nil, err
 		}

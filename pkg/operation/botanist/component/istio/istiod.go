@@ -33,8 +33,8 @@ import (
 )
 
 const (
-	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
-	ManagedResourceName = "istio"
+	// ManagedResourceControlName is the name of the ManagedResource containing the resource specifications.
+	ManagedResourceControlName = "istio"
 )
 
 type istiod struct {
@@ -135,12 +135,12 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		renderedChart.Manifests = append(renderedChart.Manifests, renderedIstioProxyProtocolChart.Manifests...)
 	}
 
-	return managedresources.CreateForSeed(ctx, i.client, i.namespace, ManagedResourceName, false, renderedChart.AsSecretData())
+	return managedresources.CreateForSeed(ctx, i.client, i.namespace, ManagedResourceControlName, false, renderedChart.AsSecretData())
 }
 
 func (i *istiod) Destroy(ctx context.Context) error {
 
-	if err := managedresources.DeleteForSeed(ctx, i.client, i.namespace, ManagedResourceName); err != nil {
+	if err := managedresources.DeleteForSeed(ctx, i.client, i.namespace, ManagedResourceControlName); err != nil {
 		return err
 	}
 
@@ -174,14 +174,14 @@ func (i *istiod) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, i.client, i.namespace, ManagedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, i.client, i.namespace, ManagedResourceControlName)
 }
 
 func (i *istiod) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, i.client, i.namespace, ManagedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, i.client, i.namespace, ManagedResourceControlName)
 }
 
 func (i *istiod) generateIstioIstiodChart(ctx context.Context) (*chartrenderer.RenderedChart, error) {
@@ -195,5 +195,5 @@ func (i *istiod) generateIstioIstiodChart(ctx context.Context) (*chartrenderer.R
 		"image":             i.values.Image,
 	}
 
-	return i.chartRenderer.Render(i.chartPath, ManagedResourceName, i.namespace, values)
+	return i.chartRenderer.Render(i.chartPath, ManagedResourceControlName, i.namespace, values)
 }

@@ -26,7 +26,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -150,11 +149,10 @@ func defaultGardenerResourceManager(c client.Client, seedClientVersion string, i
 func defaultIstio(ctx context.Context,
 	seedClient client.Client,
 	imageVector imagevector.ImageVector,
-	chartApplier kubernetes.ChartApplier,
 	chartRenderer chartrenderer.Interface,
 	seed *Seed,
 	conf *config.GardenletConfiguration,
-	sniEnabledOrInUse bool) ([]component.DeployWaiter, error) {
+	sniEnabledOrInUse bool) (component.DeployWaiter, error) {
 	istiodImage, err := imageVector.FindImage(images.ImageNameIstioIstiod)
 	if err != nil {
 		return nil, err
@@ -164,8 +162,6 @@ func defaultIstio(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
-
-	istioCRDs := istio.NewIstioCRD(chartApplier, charts.Path, seedClient)
 
 	defaultIngressGatewayConfig := istio.IngressValues{
 		TrustDomain:     gardencorev1beta1.DefaultDomain,
@@ -231,7 +227,7 @@ func defaultIstio(ctx context.Context,
 		istioProxyGateway = nil
 	}
 
-	istiod := istio.NewIstio(
+	return istio.NewIstio(
 		seedClient,
 		chartRenderer,
 		istio.IstiodValues{
@@ -242,14 +238,7 @@ func defaultIstio(ctx context.Context,
 		charts.Path,
 		istioIngressGateway,
 		istioProxyGateway,
-	)
-	istioDeployers := []component.DeployWaiter{istioCRDs, istiod}
-	return istioDeployers, nil
-	// if err := component.OpWaiter(istioDeployers...).Deploy(ctx); err != nil {
-	// 	return err
-	// }
-
-	// return nil
+	), nil
 }
 
 func defaultNetworkPolicies(c client.Client, seed *gardencorev1beta1.Seed, sniEnabled bool) (component.DeployWaiter, error) {
