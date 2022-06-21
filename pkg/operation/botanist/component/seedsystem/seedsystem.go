@@ -101,7 +101,7 @@ func (s *seedSystem) WaitCleanup(ctx context.Context) error {
 
 func (s *seedSystem) computeResourcesData() (map[string][]byte, error) {
 	var (
-		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	)
 
 	if s.values.ReserveExcessCapacity.Enabled {
