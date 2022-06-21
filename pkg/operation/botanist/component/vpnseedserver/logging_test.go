@@ -1,4 +1,4 @@
-// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubeapiserver_test
+package vpnseedserver_test
 
 import (
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -28,50 +28,33 @@ var _ = Describe("Logging", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(loggingConfig.Parsers).To(Equal(`[PARSER]
-    Name        kubeAPIServerParser
+    Name        vpnSeedServerParser
     Format      regex
-    Regex       ^(?<severity>\w)(?<time>\d{4} [^\s]*)\s+(?<pid>\d+)\s+(?<source>[^ \]]+)\] (?<log>.*)$
+    Regex       ^(?<time>\d{4}-\d{2}-\d{2}\s+[^\s]+)\s+(?<log>.*)$
     Time_Key    time
     Time_Format %m%d %H:%M:%S.%L
 
 [PARSER]
-    Name        vpnSeedParser
+    Name        vpnSeedServerEnvoyProxyParser
     Format      regex
-    Regex       ^(?<time>[^0-9]*\d{1,2}\s+[^\s]+\s+\d{4})\s+(?<log>.*)
+    Regex       ^\[(?<time>\d{4}-\d{2}-\d{2}T[^"]*)]\s+(?<log>.*)$
     Time_Key    time
-    Time_Format %a %b%t%d %H:%M:%S %Y
-
-[PARSER]
-    Name        apiProxyMutatorParser
-    Format      json
-    Time_Key    ts
+    Time_Format %Y-%m-%dT%H:%M:%S%z
 `))
 
 			Expect(loggingConfig.Filters).To(Equal(`[FILTER]
     Name                parser
-    Match               kubernetes.*kube-apiserver*kube-apiserver*
+    Match               kubernetes.*vpn-seed-server*vpn-seed-server*
     Key_Name            log
-    Parser              kubeAPIServerParser
+    Parser              vpnSeedServerParser
     Reserve_Data        True
 
 [FILTER]
     Name                parser
-    Match               kubernetes.*kube-apiserver*vpn-seed*
+    Match               kubernetes.*vpn-seed-server*envoy-proxy*
     Key_Name            log
-    Parser              vpnSeedParser
+    Parser              vpnSeedServerEnvoyProxyParser
     Reserve_Data        True
-
-[FILTER]
-    Name                parser
-    Match               kubernetes.*kube-apiserver*apiserver-proxy-pod-mutator*
-    Key_Name            log
-    Parser              apiProxyMutatorParser
-    Reserve_Data        True
-
-[FILTER]
-    Name                modify
-    Match               kubernetes.*kube-apiserver*apiserver-proxy-pod-mutator*
-    Copy                level    severity
 `))
 			Expect(loggingConfig.PodPrefix).To(BeEmpty())
 			Expect(loggingConfig.UserExposed).To(BeFalse())
