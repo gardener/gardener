@@ -1816,6 +1816,28 @@ var _ = Describe("Etcd", func() {
 		})
 
 		Context("when HA control-plane is requested", func() {
+			createEtcdObj := func(caName string) *druidv1alpha1.Etcd {
+				return &druidv1alpha1.Etcd{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      etcdName,
+						Namespace: testNamespace,
+					},
+					Spec: druidv1alpha1.EtcdSpec{
+						Etcd: druidv1alpha1.EtcdConfig{
+							PeerUrlTLS: &druidv1alpha1.TLSConfig{
+								TLSCASecretRef: druidv1alpha1.SecretReference{
+									SecretReference: corev1.SecretReference{
+										Name:      caName,
+										Namespace: testNamespace,
+									},
+									DataKey: pointer.String(secretutils.DataKeyCertificateBundle),
+								},
+							},
+						},
+					},
+				}
+			}
+
 			BeforeEach(func() {
 				Expect(gardenletfeatures.FeatureGate.Set(fmt.Sprintf("%s=true", features.HAControlPlanes))).To(Succeed())
 				zoneAnnotations[v1beta1constants.ShootAlphaControlPlaneHighAvailability] = v1beta1constants.ShootAlphaControlPlaneHighAvailabilityMultiZone
@@ -1826,25 +1848,7 @@ var _ = Describe("Etcd", func() {
 				Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca-etcd-peer", Namespace: testNamespace}})).To(Succeed())
 
 				c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object) error {
-					(&druidv1alpha1.Etcd{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      etcdName,
-							Namespace: testNamespace,
-						},
-						Spec: druidv1alpha1.EtcdSpec{
-							Etcd: druidv1alpha1.EtcdConfig{
-								PeerUrlTLS: &druidv1alpha1.TLSConfig{
-									TLSCASecretRef: druidv1alpha1.SecretReference{
-										SecretReference: corev1.SecretReference{
-											Name:      "old-ca",
-											Namespace: testNamespace,
-										},
-										DataKey: pointer.String(secretutils.DataKeyCertificateBundle),
-									},
-								},
-							},
-						},
-					}).DeepCopyInto(obj.(*druidv1alpha1.Etcd))
+					createEtcdObj("old-ca").DeepCopyInto(obj.(*druidv1alpha1.Etcd))
 					return nil
 				})
 
@@ -1852,7 +1856,28 @@ var _ = Describe("Etcd", func() {
 					func(_ context.Context, obj *druidv1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
 						data, err := patch.Data(obj)
 						Expect(err).ToNot(HaveOccurred())
-						Expect(string(data)).To(Equal("{\"metadata\":{\"annotations\":{\"gardener.cloud/operation\":\"reconcile\",\"gardener.cloud/timestamp\":\"0001-01-01 00:00:00 +0000 UTC\"}},\"spec\":{\"etcd\":{\"peerUrlTls\":{\"tlsCASecretRef\":{\"name\":\"ca-etcd-peer\"}}}}}"))
+						Expect(data).To(MatchJSON("{\"metadata\":{\"annotations\":{\"gardener.cloud/operation\":\"reconcile\",\"gardener.cloud/timestamp\":\"0001-01-01 00:00:00 +0000 UTC\"}},\"spec\":{\"etcd\":{\"peerUrlTls\":{\"tlsCASecretRef\":{\"name\":\"ca-etcd-peer\"}}}}}"))
+						return nil
+					})
+
+				Expect(etcd.RolloutPeerCA(ctx)).To(Succeed())
+			})
+
+			It("should not patch anything because the expected CA ref is already configured", func() {
+				peerCAName := "ca-etcd-peer"
+
+				Expect(fakeClient.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: peerCAName, Namespace: testNamespace}})).To(Succeed())
+
+				c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object) error {
+					createEtcdObj(peerCAName).DeepCopyInto(obj.(*druidv1alpha1.Etcd))
+					return nil
+				})
+
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).DoAndReturn(
+					func(_ context.Context, obj *druidv1alpha1.Etcd, patch client.Patch, _ ...client.PatchOption) error {
+						data, err := patch.Data(obj)
+						Expect(err).ToNot(HaveOccurred())
+						Expect(data).To(MatchJSON("{}"))
 						return nil
 					})
 

@@ -900,6 +900,12 @@ func (e *etcd) RolloutPeerCA(ctx context.Context) error {
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, e.etcd, func() error {
+		// Exit early if etcd object has already the expected CA reference.
+		if peerTLS := e.etcd.Spec.Etcd.PeerUrlTLS; peerTLS != nil &&
+			peerTLS.TLSCASecretRef.Name == etcdPeerCASecret.Name {
+			return nil
+		}
+
 		e.etcd.Annotations = map[string]string{
 			v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 			v1beta1constants.GardenerTimestamp: TimeNow().UTC().String(),
@@ -917,7 +923,7 @@ func (e *etcd) RolloutPeerCA(ctx context.Context) error {
 		e.etcd.Spec.Etcd.PeerUrlTLS.TLSCASecretRef = druidv1alpha1.SecretReference{
 			SecretReference: corev1.SecretReference{
 				Name:      etcdPeerCASecret.Name,
-				Namespace: etcdPeerCASecret.Namespace,
+				Namespace: e.etcd.Namespace,
 			},
 			DataKey: dataKey,
 		}
@@ -1006,10 +1012,10 @@ func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSe
 		return
 	}
 
-	var singedByCAOption []secretsmanager.SignedByCAOption
+	var singedByCAOptions []secretsmanager.SignedByCAOption
 
 	if e.caRotationPhase == gardencorev1beta1.RotationPreparing {
-		singedByCAOption = append(singedByCAOption, secretsmanager.UseCurrentCA)
+		singedByCAOptions = append(singedByCAOptions, secretsmanager.UseCurrentCA)
 	}
 
 	peerServerSecret, err := e.secretsManager.Generate(ctx, &secretutils.CertificateSecretConfig{
@@ -1018,7 +1024,7 @@ func (e *etcd) handlePeerCertificates(ctx context.Context) (caSecretName, peerSe
 		DNSNames:                    e.peerServiceDNSNames(),
 		CertType:                    secretutils.ServerClientCert,
 		SkipPublishingCACertificate: true,
-	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer, singedByCAOption...), secretsmanager.Rotate(secretsmanager.InPlace))
+	}, secretsmanager.SignedByCA(v1beta1constants.SecretNameCAETCDPeer, singedByCAOptions...), secretsmanager.Rotate(secretsmanager.InPlace))
 	if err != nil {
 		err = fmt.Errorf("secret %q not found", v1beta1constants.SecretNameCAETCDPeer)
 		return
