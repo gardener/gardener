@@ -28,24 +28,23 @@ import (
 
 	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	// ManagedResourceIstio is the name of the ManagedResource containing the resource specifications.
-	ManagedResourceIstio = "istio"
+	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
+	ManagedResourceName = "istio"
 )
 
 type istiod struct {
 	client                    crclient.Client
 	chartRenderer             chartrenderer.Interface
 	namespace                 string
-	values                    *IstiodValues
+	values                    IstiodValues
 	chartPath                 string
-	istioIngressGatewayValues []*IngressGateway
-	istioProxyProtocolValues  []*IstioProxyProtocol
+	istioIngressGatewayValues []IngressGateway
+	istioProxyProtocolValues  []IstioProxyProtocol
 }
 
 // IstiodValues holds values for the istio-istiod chart.
@@ -59,11 +58,11 @@ type IstiodValues struct {
 func NewIstio(
 	client crclient.Client,
 	chartRenderer chartrenderer.Interface,
-	values *IstiodValues,
+	values IstiodValues,
 	namespace string,
 	chartsRootPath string,
-	istioIngressGatewayValues []*IngressGateway,
-	istioProxyProtocolValues []*IstioProxyProtocol,
+	istioIngressGatewayValues []IngressGateway,
+	istioProxyProtocolValues []IstioProxyProtocol,
 ) component.DeployWaiter {
 	return &istiod{
 		client:                    client,
@@ -136,12 +135,12 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		renderedChart.Manifests = append(renderedChart.Manifests, renderedIstioProxyProtocolChart.Manifests...)
 	}
 
-	return managedresources.CreateForSeed(ctx, i.client, i.namespace, ManagedResourceIstio, false, renderedChart.AsSecretData())
+	return managedresources.CreateForSeed(ctx, i.client, i.namespace, ManagedResourceName, false, renderedChart.AsSecretData())
 }
 
 func (i *istiod) Destroy(ctx context.Context) error {
 
-	if err := managedresources.DeleteForSeed(ctx, i.client, i.namespace, ManagedResourceIstio); err != nil {
+	if err := managedresources.DeleteForSeed(ctx, i.client, i.namespace, ManagedResourceName); err != nil {
 		return err
 	}
 
@@ -150,10 +149,8 @@ func (i *istiod) Destroy(ctx context.Context) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: i.namespace,
 		},
-	}); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
+	}); crclient.IgnoreNotFound(err) != nil {
+		return err
 	}
 
 	for _, istioIngressGateway := range i.istioIngressGatewayValues {
@@ -161,10 +158,8 @@ func (i *istiod) Destroy(ctx context.Context) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: istioIngressGateway.Namespace,
 			},
-		}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return err
-			}
+		}); crclient.IgnoreNotFound(err) != nil {
+			return err
 		}
 	}
 
@@ -176,14 +171,17 @@ func (i *istiod) Destroy(ctx context.Context) error {
 var TimeoutWaitForManagedResource = 2 * time.Minute
 
 func (i *istiod) Wait(ctx context.Context) error {
-	return nil
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilHealthy(timeoutCtx, i.client, i.namespace, ManagedResourceName)
 }
 
 func (i *istiod) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, i.client, i.namespace, ManagedResourceIstio)
+	return managedresources.WaitUntilDeleted(timeoutCtx, i.client, i.namespace, ManagedResourceName)
 }
 
 func (i *istiod) generateIstioIstiodChart(ctx context.Context) (*chartrenderer.RenderedChart, error) {
@@ -197,5 +195,5 @@ func (i *istiod) generateIstioIstiodChart(ctx context.Context) (*chartrenderer.R
 		"image":             i.values.Image,
 	}
 
-	return i.chartRenderer.Render(i.chartPath, ManagedResourceIstio, i.namespace, values)
+	return i.chartRenderer.Render(i.chartPath, ManagedResourceName, i.namespace, values)
 }

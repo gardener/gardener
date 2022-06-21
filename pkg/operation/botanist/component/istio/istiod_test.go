@@ -18,6 +18,7 @@ import (
 	"context"
 	"path/filepath"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -53,8 +54,8 @@ var _ = Describe("istiod", func() {
 		ctx                   context.Context
 		c                     client.Client
 		istiod                component.DeployWaiter
-		igw                   []*IngressGateway
-		ipp                   []*IstioProxyProtocol
+		igw                   []IngressGateway
+		ipp                   []IstioProxyProtocol
 		igwAnnotations        map[string]string
 		labels                map[string]string
 		managedResourceName   string
@@ -1679,7 +1680,7 @@ spec:
 		istiod = NewIstio(
 			c,
 			renderer,
-			&IstiodValues{Image: "foo/bar", TrustDomain: "foo.local"},
+			IstiodValues{Image: "foo/bar", TrustDomain: "foo.local"},
 			deployNS,
 			chartsRootPath,
 			igw,
@@ -1805,20 +1806,76 @@ spec:
 
 	Context("waiting functions", func() {
 		var (
-			fakeOps   *retryfake.Ops
-			resetVars func()
+			fakeOps *retryfake.Ops
 		)
 
 		BeforeEach(func() {
 			fakeOps = &retryfake.Ops{MaxAttempts: 1}
-			resetVars = test.WithVars(
+
+			DeferCleanup(test.WithVars(
 				&retry.Until, fakeOps.Until,
 				&retry.UntilTimeout, fakeOps.UntilTimeout,
-			)
+			))
 		})
 
-		AfterEach(func() {
-			resetVars()
+		Describe("#Wait", func() {
+			It("should fail because reading the ManagedResource fails", func() {
+				Expect(istiod.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
+			})
+
+			It("should fail because the ManagedResource doesn't become healthy", func() {
+				fakeOps.MaxAttempts = 2
+
+				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       managedResourceName,
+						Namespace:  deployNS,
+						Generation: 1,
+					},
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+						Conditions: []gardencorev1beta1.Condition{
+							{
+								Type:   resourcesv1alpha1.ResourcesApplied,
+								Status: gardencorev1beta1.ConditionFalse,
+							},
+							{
+								Type:   resourcesv1alpha1.ResourcesHealthy,
+								Status: gardencorev1beta1.ConditionFalse,
+							},
+						},
+					},
+				}))
+
+				Expect(istiod.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
+			})
+
+			It("should successfully wait for the managed resource to become healthy", func() {
+				fakeOps.MaxAttempts = 2
+
+				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       managedResourceName,
+						Namespace:  deployNS,
+						Generation: 1,
+					},
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+						Conditions: []gardencorev1beta1.Condition{
+							{
+								Type:   resourcesv1alpha1.ResourcesApplied,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+							{
+								Type:   resourcesv1alpha1.ResourcesHealthy,
+								Status: gardencorev1beta1.ConditionTrue,
+							},
+						},
+					},
+				}))
+
+				Expect(istiod.Wait(ctx)).To(Succeed())
+			})
 		})
 
 		Describe("#WaitCleanup", func() {
@@ -1837,7 +1894,7 @@ spec:
 	})
 })
 
-func makeIngressGateway(namespace string, annotations, labels map[string]string) []*IngressGateway {
+func makeIngressGateway(namespace string, annotations, labels map[string]string) []IngressGateway {
 	values := IngressValues{
 		Image:           "foo/bar",
 		TrustDomain:     "foo.bar",
@@ -1851,15 +1908,15 @@ func makeIngressGateway(namespace string, annotations, labels map[string]string)
 
 	chartPath := filepath.Join(chartsRootPath, "istio", "istio-ingress")
 
-	return []*IngressGateway{&IngressGateway{Values: &values, Namespace: namespace, ChartPath: chartPath}}
+	return []IngressGateway{IngressGateway{Values: values, Namespace: namespace, ChartPath: chartPath}}
 }
 
-func makeProxyProtocol(namespace string, labels map[string]string) []*IstioProxyProtocol {
+func makeProxyProtocol(namespace string, labels map[string]string) []IstioProxyProtocol {
 	values := ProxyValues{
 		Labels: labels,
 	}
 
 	chartPath := filepath.Join(chartsRootPath, "istio", "istio-proxy-protocol")
 
-	return []*IstioProxyProtocol{&IstioProxyProtocol{Values: &values, Namespace: namespace, ChartPath: chartPath}}
+	return []IstioProxyProtocol{IstioProxyProtocol{Values: values, Namespace: namespace, ChartPath: chartPath}}
 }

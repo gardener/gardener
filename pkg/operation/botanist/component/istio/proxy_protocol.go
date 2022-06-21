@@ -22,7 +22,7 @@ import (
 
 // IstioProxyProtocol is a set of configuration values for the istio-proxy-protocol chart.
 type IstioProxyProtocol struct {
-	Values    *ProxyValues
+	Values    ProxyValues
 	Namespace string
 	ChartPath string
 }
@@ -40,7 +40,7 @@ func (i *istiod) generateIstioProxyProtocolChart(ctx context.Context) (*chartren
 			"labels": istioProxyProtocol.Values.Labels,
 		}
 
-		renderedProxyProtocolChart, err := i.chartRenderer.Render(istioProxyProtocol.ChartPath, ManagedResourceIstio, istioProxyProtocol.Namespace, values)
+		renderedProxyProtocolChart, err := i.chartRenderer.Render(istioProxyProtocol.ChartPath, ManagedResourceName, istioProxyProtocol.Namespace, values)
 		if err != nil {
 			return nil, err
 		}

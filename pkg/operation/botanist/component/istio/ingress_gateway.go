@@ -25,7 +25,7 @@ import (
 
 // IngressGateway is a set of configuration values for the istio-ingress chart.
 type IngressGateway struct {
-	Values    *IngressValues
+	Values    IngressValues
 	Namespace string
 	ChartPath string
 }
@@ -60,7 +60,7 @@ func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartre
 			"loadBalancerIP":    istioIngressGateway.Values.LoadBalancerIP,
 		}
 
-		renderedIngressChart, err := i.chartRenderer.Render(istioIngressGateway.ChartPath, ManagedResourceIstio, istioIngressGateway.Namespace, values)
+		renderedIngressChart, err := i.chartRenderer.Render(istioIngressGateway.ChartPath, ManagedResourceName, istioIngressGateway.Namespace, values)
 		if err != nil {
 			return nil, err
 		}
