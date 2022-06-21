@@ -660,6 +660,11 @@ const (
 	DNSRecordExternalName = "external"
 	// DNSRecordOwnerName is a constant for DNSRecord objects used for the owner domain name.
 	DNSRecordOwnerName = "owner"
+
+	// ArchitectureAMD64 is a constant for the 'amd64' architecture.
+	ArchitectureAMD64 = "amd64"
+	// ArchitectureARM64 is a constant for the 'arm64' architecture.
+	ArchitectureARM64 = "arm64"
 )
 
 // ControlPlaneSecretRoles contains all role values used for control plane secrets synced to the Garden cluster.

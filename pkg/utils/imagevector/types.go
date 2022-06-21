@@ -22,9 +22,10 @@ package imagevector
 // in the seed cluster and act on the shoot cluster. Different versions might be used depending on the
 // seed and the shoot version.
 type ImageSource struct {
-	Name           string  `json:"name" yaml:"name"`
-	RuntimeVersion *string `json:"runtimeVersion,omitempty" yaml:"runtimeVersion,omitempty"`
-	TargetVersion  *string `json:"targetVersion,omitempty" yaml:"targetVersion,omitempty"`
+	Name           string   `json:"name" yaml:"name"`
+	RuntimeVersion *string  `json:"runtimeVersion,omitempty" yaml:"runtimeVersion,omitempty"`
+	TargetVersion  *string  `json:"targetVersion,omitempty" yaml:"targetVersion,omitempty"`
+	Architectures  []string `json:"architectures,omitempty" yaml:"architectures,omitempty"`
 
 	Repository string  `json:"repository" yaml:"repository"`
 	Tag        *string `json:"tag,omitempty" yaml:"tag,omitempty"`
@@ -53,6 +54,7 @@ type ComponentImageVectors map[string]string
 type FindOptions struct {
 	RuntimeVersion *string
 	TargetVersion  *string
+	Architecture   *string
 }
 
 // FindOptionFunc is a function that mutates FindOptions.

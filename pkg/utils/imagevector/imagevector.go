@@ -15,16 +15,19 @@
 package imagevector
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"os"
 	"regexp"
 	"strings"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/strings/slices"
 )
 
 const (
@@ -92,10 +95,16 @@ func mergeImageSources(old, override *ImageSource) *ImageSource {
 		targetVersion = old.TargetVersion
 	}
 
+	architectures := override.Architectures
+	if architectures == nil {
+		architectures = old.Architectures
+	}
+
 	return &ImageSource{
 		Name:           override.Name,
 		RuntimeVersion: runtimeVersion,
 		TargetVersion:  targetVersion,
+		Architectures:  architectures,
 		Repository:     override.Repository,
 		Tag:            tag,
 	}
@@ -105,10 +114,14 @@ type imageSourceKey struct {
 	Name           string
 	RuntimeVersion string
 	TargetVersion  string
+	Architectures  [32]byte
 }
 
 func computeKey(source *ImageSource) imageSourceKey {
-	var runtimeVersion, targetVersion string
+	var (
+		runtimeVersion, targetVersion string
+		architectures                 [32]byte
+	)
 
 	if source.RuntimeVersion != nil {
 		runtimeVersion = *source.RuntimeVersion
@@ -116,11 +129,16 @@ func computeKey(source *ImageSource) imageSourceKey {
 	if source.TargetVersion != nil {
 		targetVersion = *source.TargetVersion
 	}
+	if source.Architectures != nil {
+		archs := strings.Join(source.Architectures, "")
+		architectures = sha256.Sum256([]byte(archs))
+	}
 
 	return imageSourceKey{
 		Name:           source.Name,
 		RuntimeVersion: runtimeVersion,
 		TargetVersion:  targetVersion,
+		Architectures:  architectures,
 	}
 }
 
@@ -177,10 +195,15 @@ func (o *FindOptions) String() string {
 
 	var targetVersion string
 	if o.TargetVersion != nil {
-		targetVersion = "target version " + *o.TargetVersion
+		targetVersion = "target version " + *o.TargetVersion + " "
 	}
 
-	return runtimeVersion + targetVersion
+	var architecture string
+	if o.Architecture != nil {
+		architecture = "architecture " + *o.Architecture
+	}
+
+	return runtimeVersion + targetVersion + architecture
 }
 
 // ApplyOptions applies the given FindOptionFuncs to these FindOptions. Returns a pointer to the mutated value.
@@ -205,9 +228,16 @@ func TargetVersion(version string) FindOptionFunc {
 	}
 }
 
+// Architecture sets the Architecture of the FindOptions to the given arch.
+func Architecture(arch string) FindOptionFunc {
+	return func(options *FindOptions) {
+		options.Architecture = &arch
+	}
+}
+
 var r = regexp.MustCompile(`^(v?[0-9]+\.[0-9]+\.[0-9]+|=)`)
 
-func checkConstraint(constraint, version *string) (score int, ok bool, err error) {
+func checkVersionConstraint(constraint, version *string) (score int, ok bool, err error) {
 	if constraint == nil || version == nil {
 		return 0, true, nil
 	}
@@ -227,22 +257,51 @@ func checkConstraint(constraint, version *string) (score int, ok bool, err error
 	return score, true, nil
 }
 
+func checkArchitectureConstraint(source []string, desired *string) (score int, ok bool, err error) {
+	// if image doesn't have a architecture tag it is considered as multi arch image
+	// and if worker pool machine doesn't have architecture tag it is by default considered amd64 machine.
+	var sourceArch, desiredArch = []string{v1beta1constants.ArchitectureAMD64, v1beta1constants.ArchitectureARM64}, v1beta1constants.ArchitectureAMD64
+
+	if source != nil {
+		sourceArch = source
+	}
+	if desired != nil {
+		desiredArch = *desired
+	}
+
+	if len(sourceArch) > 1 && slices.Contains(sourceArch, desiredArch) {
+		return 1, true, nil
+	}
+	if len(sourceArch) == 1 && slices.Contains(sourceArch, desiredArch) {
+		// prioritize equal constraints
+		return 2, true, nil
+	}
+
+	return
+}
+
 func match(source *ImageSource, name string, opts *FindOptions) (score int, ok bool, err error) {
 	if source.Name != name {
 		return 0, false, nil
 	}
 
-	runtimeScore, ok, err := checkConstraint(source.RuntimeVersion, opts.RuntimeVersion)
+	runtimeScore, ok, err := checkVersionConstraint(source.RuntimeVersion, opts.RuntimeVersion)
 	if err != nil || !ok {
 		return 0, false, err
 	}
 	score += runtimeScore
 
-	targetScore, ok, err := checkConstraint(source.TargetVersion, opts.TargetVersion)
+	targetScore, ok, err := checkVersionConstraint(source.TargetVersion, opts.TargetVersion)
 	if err != nil || !ok {
 		return 0, false, err
 	}
 	score += targetScore
+
+	archScore, ok, err := checkArchitectureConstraint(source.Architectures, opts.Architecture)
+	if err != nil || !ok {
+		return 0, false, err
+	}
+	score += archScore
 
 	return score, true, nil
 }
@@ -304,7 +363,7 @@ func FindImages(v ImageVector, names []string, opts ...FindOptionFunc) (map[stri
 }
 
 // ToImage applies the given <targetK8sVersion> to the source to produce an output image.
-// If the tag of an image source is empty, it will use the given <k8sVersion> as tag.
+// If the tag of an image source is empty, it will use the given <targetVersion> as tag.
 func (i *ImageSource) ToImage(targetVersion *string) *Image {
 	tag := i.Tag
 	if tag == nil && targetVersion != nil {
