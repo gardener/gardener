@@ -71,13 +71,15 @@ var (
 		v1beta1constants.GardenerOperationReconcile,
 		v1beta1constants.ShootOperationRotateCAStart,
 		v1beta1constants.ShootOperationRotateCAComplete,
+		v1beta1constants.ShootOperationRotateKubeconfigCredentials,
+		v1beta1constants.ShootOperationRotateObservabilityCredentials,
+		v1beta1constants.ShootOperationRotateSSHKeypair,
+	).Union(forbiddenShootOperationsWhenHibernated)
+	forbiddenShootOperationsWhenHibernated = sets.NewString(
 		v1beta1constants.ShootOperationRotateCredentialsStart,
 		v1beta1constants.ShootOperationRotateCredentialsComplete,
 		v1beta1constants.ShootOperationRotateETCDEncryptionKeyStart,
 		v1beta1constants.ShootOperationRotateETCDEncryptionKeyComplete,
-		v1beta1constants.ShootOperationRotateKubeconfigCredentials,
-		v1beta1constants.ShootOperationRotateObservabilityCredentials,
-		v1beta1constants.ShootOperationRotateSSHKeypair,
 		v1beta1constants.ShootOperationRotateServiceAccountKeyStart,
 		v1beta1constants.ShootOperationRotateServiceAccountKeyComplete,
 	)
@@ -1737,12 +1739,22 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("annotations %s and %s must not be equal", fldPathOp, fldPathMaintOp)))
 	}
 
-	if operation != "" && !availableShootOperations.Has(operation) {
-		allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, availableShootOperations.List()))
+	if operation != "" {
+		if !availableShootOperations.Has(operation) {
+			allErrs = append(allErrs, field.NotSupported(fldPathOp, operation, availableShootOperations.List()))
+		}
+		if helper.HibernationIsEnabled(shoot) && forbiddenShootOperationsWhenHibernated.Has(operation) {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is not permitted when shoot is hibernated"))
+		}
 	}
 
-	if maintenanceOperation != "" && !availableShootMaintenanceOperations.Has(maintenanceOperation) {
-		allErrs = append(allErrs, field.NotSupported(fldPathMaintOp, maintenanceOperation, availableShootMaintenanceOperations.List()))
+	if maintenanceOperation != "" {
+		if !availableShootMaintenanceOperations.Has(maintenanceOperation) {
+			allErrs = append(allErrs, field.NotSupported(fldPathMaintOp, maintenanceOperation, availableShootMaintenanceOperations.List()))
+		}
+		if helper.HibernationIsEnabled(shoot) && forbiddenShootOperationsWhenHibernated.Has(maintenanceOperation) {
+			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is not permitted when shoot is hibernated"))
+		}
 	}
 
 	allErrs = append(allErrs, validateShootOperationContext(operation, shoot, fldPathOp)...)
