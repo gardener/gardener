@@ -48,6 +48,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	"k8s.io/utils/pointer"
 )
 
 var (
@@ -206,7 +207,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, validateNetworking(spec.Networking, fldPath.Child("networking"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
-	allErrs = append(allErrs, ValidateHibernation(spec.Hibernation, fldPath.Child("hibernation"))...)
+	allErrs = append(allErrs, ValidateHibernation(meta.Annotations, spec.Hibernation, fldPath.Child("hibernation"))...)
 	allErrs = append(allErrs, validateProvider(spec.Provider, spec.Kubernetes, fldPath.Child("provider"), inTemplate)...)
 
 	if len(spec.Region) == 0 {
@@ -1508,11 +1509,15 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 }
 
 // ValidateHibernation validates a Hibernation object.
-func ValidateHibernation(hibernation *core.Hibernation, fldPath *field.Path) field.ErrorList {
+func ValidateHibernation(annotations map[string]string, hibernation *core.Hibernation, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if hibernation == nil {
 		return allErrs
+	}
+
+	if maintenanceOp := annotations[v1beta1constants.GardenerMaintenanceOperation]; forbiddenShootOperationsWhenHibernated.Has(maintenanceOp) && pointer.BoolDeref(hibernation.Enabled, false) {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("enabled"), fmt.Sprintf("shoot cannot be hibernated when %s=%s annotation is set", v1beta1constants.GardenerMaintenanceOperation, maintenanceOp)))
 	}
 
 	allErrs = append(allErrs, ValidateHibernationSchedules(hibernation.Schedules, fldPath.Child("schedules"))...)

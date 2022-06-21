@@ -3551,7 +3551,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(ValidateShoot(shoot)).To(BeEmpty())
 			})
 
-			It("should return nothing if both operations annotations are valid and do not have the same value", func() {
+			It("should return nothing if both operation annotations are valid and do not have the same value", func() {
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "gardener.cloud/operation", "rotate-serviceaccount-key-start")
 				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", "rotate-etcd-encryption-key-start")
 				shoot.Status = core.ShootStatus{
@@ -3582,6 +3582,26 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Detail": ContainSubstring("operation is not permitted when shoot is hibernated"),
 					}))))
 					delete(shoot.Annotations, "maintenance.gardener.cloud/operation")
+				},
+
+				Entry("rotate-credentials-start", "rotate-credentials-start"),
+				Entry("rotate-credentials-complete", "rotate-credentials-complete"),
+				Entry("rotate-etcd-encryption-key-start", "rotate-etcd-encryption-key-start"),
+				Entry("rotate-etcd-encryption-key-complete", "rotate-etcd-encryption-key-complete"),
+				Entry("rotate-serviceaccount-key-start", "rotate-serviceaccount-key-start"),
+				Entry("rotate-serviceaccount-key-complete", "rotate-serviceaccount-key-complete"),
+			)
+
+			DescribeTable("forbid hibernating the shoot when certain rotation maintenance operations are set",
+				func(operation string) {
+					metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "maintenance.gardener.cloud/operation", operation)
+					shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
+
+					Expect(ValidateShoot(shoot)).To(ContainElement(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("spec.hibernation.enabled"),
+						"Detail": ContainSubstring("shoot cannot be hibernated when maintenance.gardener.cloud/operation=" + operation + " annotation is set"),
+					}))))
 				},
 
 				Entry("rotate-credentials-start", "rotate-credentials-start"),
