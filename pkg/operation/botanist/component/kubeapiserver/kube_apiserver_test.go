@@ -786,6 +786,12 @@ var _ = Describe("KubeAPIServer", func() {
 								{
 									From: []networkingv1.NetworkPolicyPeer{
 										{PodSelector: &metav1.LabelSelector{}},
+										{
+											NamespaceSelector: &metav1.LabelSelector{},
+											PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+												"app": "istio-ingressgateway",
+											}},
+										},
 										{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
 									},
 									Ports: []networkingv1.NetworkPolicyPort{{
@@ -883,6 +889,12 @@ var _ = Describe("KubeAPIServer", func() {
 								{
 									From: []networkingv1.NetworkPolicyPeer{
 										{PodSelector: &metav1.LabelSelector{}},
+										{
+											NamespaceSelector: &metav1.LabelSelector{},
+											PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+												"app": "istio-ingressgateway",
+											}},
+										},
 										{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
 									},
 									Ports: []networkingv1.NetworkPolicyPort{{
