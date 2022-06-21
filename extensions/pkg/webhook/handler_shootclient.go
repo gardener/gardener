@@ -122,7 +122,7 @@ func (h *handlerShootClient) Handle(ctx context.Context, req admission.Request) 
 			return fmt.Errorf("could not find shoot namespace for webhook request")
 		}
 
-		_, shootClient, err := util.NewClientForShoot(ctx, h.client, shootNamespace, client.Options{})
+		_, shootClient, err := util.NewClientForShoot(ctx, h.client, shootNamespace, client.Options{}, util.RESTOptions{})
 		if err != nil {
 			return fmt.Errorf("could not create shoot client: %w", err)
 		}
