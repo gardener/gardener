@@ -4187,6 +4187,13 @@ func schema_pkg_apis_core_v1alpha1_Machine(ref common.ReferenceCallback) common.
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootMachineImage"),
 						},
 					},
+					"architecture": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Architecture is the CPU architecture of the machines in this worker pool.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"type"},
 			},
@@ -11421,6 +11428,13 @@ func schema_pkg_apis_core_v1beta1_Machine(ref common.ReferenceCallback) common.O
 						SchemaProps: spec.SchemaProps{
 							Description: "Image holds information about the machine image to use for all nodes of this pool. It will default to the latest version of the first image stated in the referenced CloudProfile if no value has been provided.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootMachineImage"),
+						},
+					},
+					"architecture": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Architecture is CPU architecture of machines in this worker pool.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},

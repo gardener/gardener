@@ -537,6 +537,17 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(PointTo(BeTrue()))
 		})
 
+		It("should default architecture of worker's machine to amd64", func() {
+			obj.Spec.Provider.Workers = []Worker{
+				{Name: "Default Worker"},
+				{Name: "Worker with machine architecture type",
+					Machine: Machine{Architecture: pointer.String("test")}},
+			}
+			SetDefaults_Shoot(obj)
+			Expect(*obj.Spec.Provider.Workers[0].Machine.Architecture).To(Equal(v1beta1constants.ArchitectureAMD64))
+			Expect(*obj.Spec.Provider.Workers[1].Machine.Architecture).To(Equal("test"))
+		})
+
 		It("should default cri.name to containerd when control plane Kubernetes version >= 1.22", func() {
 			obj.Spec.Kubernetes.Version = "1.22"
 			obj.Spec.Provider.Workers = []Worker{

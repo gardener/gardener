@@ -3597,6 +3597,7 @@ func autoConvert_v1alpha1_Machine_To_core_Machine(in *Machine, out *core.Machine
 	} else {
 		out.Image = nil
 	}
+	out.Architecture = (*string)(unsafe.Pointer(in.Architecture))
 	return nil
 }
 
@@ -3616,6 +3617,7 @@ func autoConvert_core_Machine_To_v1alpha1_Machine(in *core.Machine, out *Machine
 	} else {
 		out.Image = nil
 	}
+	out.Architecture = (*string)(unsafe.Pointer(in.Architecture))
 	return nil
 }
 

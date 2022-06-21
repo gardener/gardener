@@ -5716,6 +5716,18 @@ ShootMachineImage
 latest version of the first image stated in the referenced CloudProfile if no value has been provided.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>architecture</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Architecture is CPU architecture of machines in this worker pool.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.MachineControllerManagerSettings">MachineControllerManagerSettings

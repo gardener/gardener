@@ -1283,6 +1283,9 @@ type Machine struct {
 	// latest version of the first image stated in the referenced CloudProfile if no value has been provided.
 	// +optional
 	Image *ShootMachineImage `json:"image,omitempty" protobuf:"bytes,2,opt,name=image"`
+	// Architecture is the CPU architecture of the machines in this worker pool.
+	// +optional
+	Architecture *string `json:"architecture,omitempty" protobuf:"bytes,3,opt,name=architecture"`
 }
 
 // ShootMachineImage defines the name and the version of the shoot's machine image in any environment. Has to be
