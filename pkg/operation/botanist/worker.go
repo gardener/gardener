@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -163,21 +164,25 @@ func nodeToBeDeleted(node corev1.Node) bool {
 var (
 	// IntervalWaitCloudConfigUpdated is the interval when waiting until the cloud config was updated for all worker pools.
 	IntervalWaitCloudConfigUpdated = 5 * time.Second
-	// TimeoutWaitCloudConfigUpdated is the timeout when waiting until the cloud config was updated for all worker pools.
-	TimeoutWaitCloudConfigUpdated = downloader.UnitRestartSeconds*time.Second*2 + executor.ExecutionMaxDelaySeconds*time.Second
+	// GetTimeoutWaitCloudConfigUpdated retrieves the timeout when waiting until the cloud config was updated for all worker pools.
+	GetTimeoutWaitCloudConfigUpdated = getTimeoutWaitCloudConfigUpdated
 )
+
+func getTimeoutWaitCloudConfigUpdated(shoot *shootpkg.Shoot) time.Duration {
+	return downloader.UnitRestartSeconds*time.Second*2 + time.Duration(shoot.CloudConfigExecutionMaxDelaySeconds)*time.Second
+}
 
 // WaitUntilCloudConfigUpdatedForAllWorkerPools waits for a maximum of 6 minutes until all the nodes for all the worker
 // pools in the Shoot have successfully applied the desired version of their cloud-config user data.
 func (b *Botanist) WaitUntilCloudConfigUpdatedForAllWorkerPools(ctx context.Context) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitCloudConfigUpdated)
+	timeoutCtx, cancel := context.WithTimeout(ctx, GetTimeoutWaitCloudConfigUpdated(b.Shoot))
 	defer cancel()
 
 	if err := managedresources.WaitUntilHealthy(timeoutCtx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, CloudConfigExecutionManagedResourceName); err != nil {
 		return fmt.Errorf("the cloud-config user data scripts for the worker nodes were not populated yet: %w", err)
 	}
 
-	timeoutCtx2, cancel2 := context.WithTimeout(ctx, TimeoutWaitCloudConfigUpdated)
+	timeoutCtx2, cancel2 := context.WithTimeout(ctx, GetTimeoutWaitCloudConfigUpdated(b.Shoot))
 	defer cancel2()
 
 	return retry.Until(timeoutCtx2, IntervalWaitCloudConfigUpdated, func(ctx context.Context) (done bool, err error) {

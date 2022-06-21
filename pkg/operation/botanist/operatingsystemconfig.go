@@ -267,7 +267,15 @@ func (b *Botanist) generateCloudConfigExecutorResourcesForWorker(
 		}
 	}
 
-	executorScript, err := ExecutorScriptFn([]byte(oscDataOriginal.Content), hyperkubeImage, kubernetesVersion.String(), kubeletDataVolume, *oscDataOriginal.Command, oscDataOriginal.Units)
+	executorScript, err := ExecutorScriptFn(
+		[]byte(oscDataOriginal.Content),
+		b.Shoot.CloudConfigExecutionMaxDelaySeconds,
+		hyperkubeImage,
+		kubernetesVersion.String(),
+		kubeletDataVolume,
+		*oscDataOriginal.Command,
+		oscDataOriginal.Units,
+	)
 	if err != nil {
 		return "", nil, err
 	}

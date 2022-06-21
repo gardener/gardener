@@ -527,6 +527,15 @@ const (
 	// Gardener will wait for the specified time after the Infrastructure extension object has been deleted to allow
 	// controllers to gracefully cleanup everything (default behaviour is 300s).
 	AnnotationShootInfrastructureCleanupWaitPeriodSeconds = "shoot.gardener.cloud/infrastructure-cleanup-wait-period-seconds"
+	// AnnotationShootCloudConfigExecutionMaxDelaySeconds is a key for an annotation on a Shoot resource that declares
+	// the maximum delay in seconds when potentially updated cloud-config user data is executed on the worker nodes.
+	// Concretely, the cloud-config-downloader systemd service running on all worker nodes will wait for a random
+	// duration based on the configured value before executing the user data (default value is 300) plus an additional
+	// offset of 30s. If set to 0 then no random delay will be applied and the minimum delay (30s) applies. Any value
+	// above 1800 is ignored (in this case the default value is used).
+	// Note that changing this value only applies to new nodes. Existing nodes which already computed their individual
+	// delays will not recompute it.
+	AnnotationShootCloudConfigExecutionMaxDelaySeconds = "shoot.gardener.cloud/cloud-config-execution-max-delay-seconds"
 	// AnnotationShootForceRestore is a key for an annotation on a Shoot or BackupEntry resource to trigger a forceful restoration to a different seed.
 	AnnotationShootForceRestore = "shoot.gardener.cloud/force-restore"
 	// AnnotationReversedVPN moves the vpn-server to the seed.

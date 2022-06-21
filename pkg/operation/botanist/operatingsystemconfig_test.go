@@ -65,11 +65,12 @@ var _ = Describe("operatingsystemconfig", func() {
 		fakeErr    = fmt.Errorf("fake")
 		shootState = &gardencorev1alpha1.ShootState{}
 
-		apiServerAddress  = "1.2.3.4"
-		caCloudProfile    = "ca-cloud-profile"
-		shootDomain       = "shoot.domain.com"
-		kubernetesVersion = "1.2.3"
-		ingressDomain     = "seed-test.ingress.domain.com"
+		cloudConfigExecutionMaxDelaySeconds = 500
+		apiServerAddress                    = "1.2.3.4"
+		caCloudProfile                      = "ca-cloud-profile"
+		shootDomain                         = "shoot.domain.com"
+		kubernetesVersion                   = "1.2.3"
+		ingressDomain                       = "seed-test.ingress.domain.com"
 	)
 
 	BeforeEach(func() {
@@ -94,8 +95,9 @@ var _ = Describe("operatingsystemconfig", func() {
 							OperatingSystemConfig: operatingSystemConfig,
 						},
 					},
-					InternalClusterDomain: shootDomain,
-					Purpose:               "development",
+					InternalClusterDomain:               shootDomain,
+					Purpose:                             "development",
+					CloudConfigExecutionMaxDelaySeconds: cloudConfigExecutionMaxDelaySeconds,
 				},
 				Seed: &seedpkg.Seed{},
 			},
@@ -307,8 +309,8 @@ var _ = Describe("operatingsystemconfig", func() {
 				// fake function for generation of executor script
 				oldExecutorScriptFn := ExecutorScriptFn
 				defer func() { ExecutorScriptFn = oldExecutorScriptFn }()
-				ExecutorScriptFn = func(cloudConfigUserData []byte, hyperkubeImage *imagevector.Image, kubernetesVersion string, kubeletDataVolume *gardencorev1beta1.DataVolume, reloadConfigCommand string, units []string) ([]byte, error) {
-					return []byte(fmt.Sprintf("%s_%s_%s_%s_%s_%s", cloudConfigUserData, hyperkubeImage.String(), kubernetesVersion, kubeletDataVolume, reloadConfigCommand, units)), params.executorScriptFnError
+				ExecutorScriptFn = func(cloudConfigUserData []byte, cloudConfigExecutionMaxDelaySeconds int, hyperkubeImage *imagevector.Image, kubernetesVersion string, kubeletDataVolume *gardencorev1beta1.DataVolume, reloadConfigCommand string, units []string) ([]byte, error) {
+					return []byte(fmt.Sprintf("%s_%d_%s_%s_%s_%s_%s", cloudConfigUserData, cloudConfigExecutionMaxDelaySeconds, hyperkubeImage.String(), kubernetesVersion, kubeletDataVolume, reloadConfigCommand, units)), params.executorScriptFnError
 				}
 
 				// operating system config maps retrieval for the worker pools
@@ -324,7 +326,7 @@ var _ = Describe("operatingsystemconfig", func() {
 
 						// managed resource secret reconciliation for executor scripts for worker pools
 						// worker pool 1
-						worker1ExecutorScript, _ := ExecutorScriptFn([]byte(worker1OriginalContent), hyperkubeImage.ToImage(&kubernetesVersion), kubernetesVersion, nil, worker1OriginalCommand, worker1OriginalUnits)
+						worker1ExecutorScript, _ := ExecutorScriptFn([]byte(worker1OriginalContent), cloudConfigExecutionMaxDelaySeconds, hyperkubeImage.ToImage(&kubernetesVersion), kubernetesVersion, nil, worker1OriginalCommand, worker1OriginalUnits)
 						kubernetesClientSeed.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-shoot-cloud-config-execution-"+worker1Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
 						kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{
@@ -350,7 +352,7 @@ metadata:
 						})
 
 						// worker pool 2
-						worker2ExecutorScript, _ := ExecutorScriptFn([]byte(worker2OriginalContent), hyperkubeImage.ToImage(&worker2KubernetesVersion), worker2KubernetesVersion, &gardencorev1beta1.DataVolume{Name: worker2KubeletDataVolumeName}, worker2OriginalCommand, worker2OriginalUnits)
+						worker2ExecutorScript, _ := ExecutorScriptFn([]byte(worker2OriginalContent), cloudConfigExecutionMaxDelaySeconds, hyperkubeImage.ToImage(&worker2KubernetesVersion), worker2KubernetesVersion, &gardencorev1beta1.DataVolume{Name: worker2KubeletDataVolumeName}, worker2OriginalCommand, worker2OriginalUnits)
 						kubernetesClientSeed.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-shoot-cloud-config-execution-"+worker2Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
 						kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{

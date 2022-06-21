@@ -33,6 +33,7 @@ import (
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	fakesecretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/golang/mock/gomock"
@@ -317,13 +318,10 @@ var _ = Describe("Worker", func() {
 		})
 
 		It("should fail when the cloud-config user data script secret was not updated yet", func() {
-			oldInterval := IntervalWaitCloudConfigUpdated
-			defer func() { IntervalWaitCloudConfigUpdated = oldInterval }()
-			IntervalWaitCloudConfigUpdated = time.Millisecond
-
-			oldTimeout := TimeoutWaitCloudConfigUpdated
-			defer func() { TimeoutWaitCloudConfigUpdated = oldTimeout }()
-			TimeoutWaitCloudConfigUpdated = 5 * time.Millisecond
+			DeferCleanup(test.WithVars(
+				&IntervalWaitCloudConfigUpdated, time.Millisecond,
+				&GetTimeoutWaitCloudConfigUpdated, func(*shootpkg.Shoot) time.Duration { return 5 * time.Millisecond },
+			))
 
 			gomock.InOrder(
 				seedInterface.EXPECT().Client().Return(seedClient),
@@ -337,13 +335,10 @@ var _ = Describe("Worker", func() {
 		})
 
 		It("should fail when the cloud-config was not updated for all worker pools", func() {
-			oldInterval := IntervalWaitCloudConfigUpdated
-			defer func() { IntervalWaitCloudConfigUpdated = oldInterval }()
-			IntervalWaitCloudConfigUpdated = time.Millisecond
-
-			oldTimeout := TimeoutWaitCloudConfigUpdated
-			defer func() { TimeoutWaitCloudConfigUpdated = oldTimeout }()
-			TimeoutWaitCloudConfigUpdated = time.Millisecond
+			DeferCleanup(test.WithVars(
+				&IntervalWaitCloudConfigUpdated, time.Millisecond,
+				&GetTimeoutWaitCloudConfigUpdated, func(*shootpkg.Shoot) time.Duration { return time.Millisecond },
+			))
 
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
@@ -401,13 +396,10 @@ var _ = Describe("Worker", func() {
 		})
 
 		It("should succeed when the cloud-config was updated for all worker pools", func() {
-			oldInterval := IntervalWaitCloudConfigUpdated
-			defer func() { IntervalWaitCloudConfigUpdated = oldInterval }()
-			IntervalWaitCloudConfigUpdated = time.Millisecond
-
-			oldTimeout := TimeoutWaitCloudConfigUpdated
-			defer func() { TimeoutWaitCloudConfigUpdated = oldTimeout }()
-			TimeoutWaitCloudConfigUpdated = time.Millisecond
+			DeferCleanup(test.WithVars(
+				&IntervalWaitCloudConfigUpdated, time.Millisecond,
+				&GetTimeoutWaitCloudConfigUpdated, func(*shootpkg.Shoot) time.Duration { return time.Millisecond },
+			))
 
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
