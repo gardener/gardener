@@ -95,6 +95,7 @@ FROM builder-base AS builder-admission-controller
 # manually copy the packages we need to keep the build context slim
 COPY cmd cmd
 COPY pkg pkg
+COPY third_party third_party
 
 COPY go.mod go.sum ./
 
