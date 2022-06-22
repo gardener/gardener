@@ -23,8 +23,8 @@ import (
 	"github.com/gardener/gardener/pkg/apiserver/features"
 )
 
-func TestValidator(t *testing.T) {
+func TestBinding(t *testing.T) {
 	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission ShootBinding Suite")
+	RunSpecs(t, "Admission Shoot Binding Suite")
 }

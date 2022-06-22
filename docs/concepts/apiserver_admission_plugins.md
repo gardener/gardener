@@ -113,8 +113,8 @@ Rejects the deletion if `Shoot`(s) reference the seed cluster.
 _(enabled by default)_
 
 This admission controller reacts on `CREATE` operation for `Binding` subresource of `Shoot`s.
-It validates whether the target object is of type `Seed` and `.target.Name` contains a valid `Seed`.
-It rejects the Binding subresource if `SeedChange` featuregate is disabled.
+It validates whether the target object is of type `Seed` and `.target.name` contains a valid `Seed`.
+It rejects the Binding object if `SeedChange` feature gate is disabled and the `Shoot` is already assigned to a `Seed`.
 
 ## `ShootDNS`
 

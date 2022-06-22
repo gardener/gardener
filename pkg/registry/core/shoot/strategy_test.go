@@ -75,6 +75,29 @@ var _ = Describe("Strategy", func() {
 	})
 
 	Describe("#PrepareForUpdate", func() {
+		Context("seedName change", func() {
+			var (
+				oldShoot *core.Shoot
+				newShoot *core.Shoot
+			)
+
+			BeforeEach(func() {
+				oldShoot = &core.Shoot{
+					Spec: core.ShootSpec{
+						SeedName: pointer.String("seed"),
+					},
+				}
+				newShoot = oldShoot.DeepCopy()
+			})
+
+			It("should not allow change of seedName on shoot spec update", func() {
+				newShoot.Spec.SeedName = pointer.String("new-seed")
+				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
+
+				Expect(newShoot.Spec.SeedName).To(Equal(oldShoot.Spec.SeedName))
+			})
+		})
+
 		Context("generation increment", func() {
 			var (
 				oldShoot *core.Shoot

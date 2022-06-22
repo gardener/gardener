@@ -146,8 +146,8 @@ func (b *Binding) Validate(ctx context.Context, a admission.Attributes, o admiss
 		return apierrors.NewInternalError(errors.New("could not convert resource into Binding object"))
 	}
 
-	if len(binding.Target.Kind) != 0 && binding.Target.Kind != "Seed" {
-		return field.NotSupported(field.NewPath("target", "kind"), binding.Target.Kind, []string{"Seed", ""})
+	if len(binding.Target.Kind) == 0 || binding.Target.Kind != "Seed" {
+		return field.NotSupported(field.NewPath("target", "kind"), binding.Target.Kind, []string{"Seed"})
 	}
 
 	if len(binding.Target.Name) == 0 {
@@ -168,7 +168,6 @@ func (b *Binding) Validate(ctx context.Context, a admission.Attributes, o admiss
 		return apierrors.NewInternalError(fmt.Errorf("could not find referenced seed %q: %+v", binding.Target.Name, err.Error()))
 	}
 
-	// begin of validation code
 	validationContext := &validationContext{
 		seed:    seed,
 		shoot:   shoot,
@@ -188,7 +187,7 @@ func (c *validationContext) validateScheduling(a admission.Attributes, shootList
 	var (
 		// Ideally, the initial scheduling is always done by the scheduler. In that case, all these checks are already
 		// performed by the scheduler before assigning the seed. But if a operator tries to create the binding for a shoot
-		// which doesn't have a seed assigned by the scheduler yet, we still need this checks.
+		// which doesn't have a seed assigned by the scheduler yet, we still need these checks.
 		shootIsBeingScheduled          = c.shoot.Spec.SeedName == nil
 		shootIsBeingRescheduled        = c.shoot.Spec.SeedName != nil && *c.shoot.Spec.SeedName != c.binding.Target.Name
 		mustCheckSchedulingConstraints = shootIsBeingScheduled || shootIsBeingRescheduled
