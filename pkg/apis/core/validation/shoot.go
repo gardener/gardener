@@ -49,6 +49,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/strings/slices"
 )
 
 var (
@@ -1238,6 +1239,8 @@ func ValidateWorker(worker core.Worker, kubernetesVersion string, fldPath *field
 		allErrs = append(allErrs, ValidateCRI(worker.CRI, kubernetesVersion, fldPath.Child("cri"))...)
 	}
 
+	allErrs = append(allErrs, ValidateArchitecture(worker.Machine.Architecture, fldPath.Child("architecture"))...)
+
 	return allErrs
 }
 
@@ -1687,6 +1690,16 @@ func ValidateContainerRuntimes(containerRuntime []core.ContainerRuntime, fldPath
 			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("type"), fmt.Sprintf("must specify different type, %s already exist", cr.Type)))
 		}
 		crSet[cr.Type] = true
+	}
+
+	return allErrs
+}
+
+// ValidateArchitecture validates the CPU architecure of the machines in this worker pool.
+func ValidateArchitecture(arch *string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if !slices.Contains(v1beta1constants.ValidArchitectures, *arch) {
+		allErrs = append(allErrs, field.NotSupported(fldPath, *arch, v1beta1constants.ValidArchitectures))
 	}
 
 	return allErrs
