@@ -18,11 +18,15 @@ import (
 	"context"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/test/e2e/shoot/internal/access"
+	"github.com/gardener/gardener/test/framework"
+	shootupdatetest "github.com/gardener/gardener/test/testmachinery/shoots/update"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Shoot Tests", Label("Shoot"), func() {
@@ -30,7 +34,20 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 	f.Shoot = defaultShoot("")
 	f.Shoot.Name = "e2e-default"
 
-	It("Create and Delete", Label("simple"), func() {
+	// explicitly use one version below the latest supported minor version so that Kubernetes version update test can be
+	// performed
+	f.Shoot.Spec.Kubernetes.Version = "1.23.6"
+
+	// create two additional worker pools which explicitly specify the kubernetes version
+	pool1 := f.Shoot.Spec.Provider.Workers[0]
+	pool2, pool3 := pool1.DeepCopy(), pool1.DeepCopy()
+	pool2.Name += "2"
+	pool2.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: &f.Shoot.Spec.Kubernetes.Version}
+	pool3.Name += "3"
+	pool3.Kubernetes = &gardencorev1beta1.WorkerKubernetes{Version: pointer.String("1.22.0")}
+	f.Shoot.Spec.Provider.Workers = append(f.Shoot.Spec.Provider.Workers, *pool2, *pool3)
+
+	It("Create, Update, Delete", Label("simple"), func() {
 		By("Create Shoot")
 		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
@@ -44,6 +61,12 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 
 			g.Expect(shootClient.Client().List(ctx, &corev1.NamespaceList{})).To(Succeed())
 		}).Should(Succeed())
+
+		By("Update Shoot")
+		shootupdatetest.RunTest(ctx, &framework.ShootFramework{
+			GardenerFramework: f.GardenerFramework,
+			Shoot:             f.Shoot,
+		}, nil, nil)
 
 		By("Delete Shoot")
 		ctx, cancel = context.WithTimeout(parentCtx, 15*time.Minute)
