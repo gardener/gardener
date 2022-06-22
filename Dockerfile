@@ -11,10 +11,11 @@ RUN make install EFFECTIVE_VERSION=$EFFECTIVE_VERSION
 ############# base
 FROM alpine:3.15.4 AS base
 
-#############      apiserver     #############
-FROM base AS apiserver
+############# distroless-static
+FROM gcr.io/distroless/static-debian11:nonroot as distroless-static
 
-RUN apk add --update tzdata
+#############      apiserver     #############
+FROM distroless-static AS apiserver
 
 COPY --from=builder /go/bin/gardener-apiserver /gardener-apiserver
 
@@ -23,9 +24,7 @@ WORKDIR /
 ENTRYPOINT ["/gardener-apiserver"]
 
 ############# controller-manager #############
-FROM base AS controller-manager
-
-RUN apk add --update tzdata
+FROM distroless-static AS controller-manager
 
 COPY --from=builder /go/bin/gardener-controller-manager /gardener-controller-manager
 COPY charts /charts
@@ -35,7 +34,7 @@ WORKDIR /
 ENTRYPOINT ["/gardener-controller-manager"]
 
 ############# scheduler #############
-FROM base AS scheduler
+FROM distroless-static AS scheduler
 
 COPY --from=builder /go/bin/gardener-scheduler /gardener-scheduler
 
@@ -56,7 +55,7 @@ WORKDIR /
 ENTRYPOINT ["/gardenlet"]
 
 ############# admission-controller #############
-FROM base AS admission-controller
+FROM distroless-static AS admission-controller
 
 COPY --from=builder /go/bin/gardener-admission-controller /gardener-admission-controller
 
@@ -65,7 +64,7 @@ WORKDIR /
 ENTRYPOINT ["/gardener-admission-controller"]
 
 ############# seed-admission-controller #############
-FROM base AS seed-admission-controller
+FROM distroless-static AS seed-admission-controller
 
 COPY --from=builder /go/bin/gardener-seed-admission-controller /gardener-seed-admission-controller
 
@@ -74,7 +73,7 @@ WORKDIR /
 ENTRYPOINT ["/gardener-seed-admission-controller"]
 
 ############# resource-manager #############
-FROM base AS resource-manager
+FROM distroless-static AS resource-manager
 
 COPY --from=builder /go/bin/gardener-resource-manager /gardener-resource-manager
 

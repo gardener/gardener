@@ -7,6 +7,9 @@ ENV GOTRACEBACK=single
 
 RUN apk add --update tzdata
 
+############# distroless-static
+FROM gcr.io/distroless/static-debian11:nonroot as distroless-static
+
 ############# builder-base #############
 FROM golang:1.18.1 AS builder-base
 
@@ -44,7 +47,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     -ldflags="$(cat /tmp/build-flags)" \
     -o /gardener-apiserver ./cmd/gardener-apiserver
 
-FROM base AS apiserver
+FROM distroless-static AS apiserver
 
 COPY --from=builder-apiserver /gardener-apiserver /gardener-apiserver
 ENTRYPOINT ["/gardener-apiserver"]
@@ -64,7 +67,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     -ldflags="$(cat /tmp/build-flags)" \
     -o /gardener-controller-manager ./cmd/gardener-controller-manager
 
-FROM base AS controller-manager
+FROM distroless-static AS controller-manager
 
 COPY --from=builder-controller-manager /gardener-controller-manager /gardener-controller-manager
 ENTRYPOINT ["/gardener-controller-manager"]
@@ -84,7 +87,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     -ldflags="$(cat /tmp/build-flags)" \
     -o /gardener-scheduler ./cmd/gardener-scheduler
 
-FROM base AS scheduler
+FROM distroless-static AS scheduler
 
 COPY --from=builder-scheduler /gardener-scheduler /gardener-scheduler
 ENTRYPOINT ["/gardener-scheduler"]
@@ -104,7 +107,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     -ldflags="$(cat /tmp/build-flags)" \
     -o /gardener-admission-controller ./cmd/gardener-admission-controller
 
-FROM base AS admission-controller
+FROM distroless-static AS admission-controller
 
 COPY --from=builder-admission-controller /gardener-admission-controller /gardener-admission-controller
 ENTRYPOINT ["/gardener-admission-controller"]
@@ -124,7 +127,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     -ldflags="$(cat /tmp/build-flags)" \
     -o /gardener-resource-manager ./cmd/gardener-resource-manager
 
-FROM base AS resource-manager
+FROM distroless-static AS resource-manager
 
 COPY --from=builder-resource-manager /gardener-resource-manager /gardener-resource-manager
 ENTRYPOINT ["/gardener-resource-manager"]
@@ -144,7 +147,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     -ldflags="$(cat /tmp/build-flags)" \
     -o /gardener-seed-admission-controller ./cmd/gardener-seed-admission-controller
 
-FROM base AS seed-admission-controller
+FROM distroless-static AS seed-admission-controller
 
 COPY --from=builder-seed-admission-controller /gardener-seed-admission-controller /gardener-seed-admission-controller
 ENTRYPOINT ["/gardener-seed-admission-controller"]
