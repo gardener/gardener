@@ -3311,6 +3311,7 @@ CoreDNSAutoscaling
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Autoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.</p>
 </td>
 </tr>

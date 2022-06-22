@@ -2440,7 +2440,6 @@ func schema_pkg_apis_core_v1alpha1_CoreDNS(ref common.ReferenceCallback) common.
 						},
 					},
 				},
-				Required: []string{"autoscaling"},
 			},
 		},
 		Dependencies: []string{
@@ -9911,7 +9910,6 @@ func schema_pkg_apis_core_v1beta1_CoreDNS(ref common.ReferenceCallback) common.O
 						},
 					},
 				},
-				Required: []string{"autoscaling"},
 			},
 		},
 		Dependencies: []string{
