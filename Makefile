@@ -259,7 +259,7 @@ verify-extended: check-generate check format test-cov test-cov-clean test-integr
 # Rules for local environment                                       #
 #####################################################################
 
-kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-env register-kind2-env tear-down-kind2-env test-e2e-local-fast test-e2e-local: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
+kind-up kind-down gardener-up gardener-down register-local-env tear-down-local-env register-kind2-env tear-down-kind2-env test-e2e-local-simple test-e2e-local: export KUBECONFIG = $(GARDENER_LOCAL_KUBECONFIG)
 
 kind2-up kind2-down gardenlet-kind2-up gardenlet-kind2-down: export KUBECONFIG = $(GARDENER_LOCAL2_KUBECONFIG)
 
@@ -325,8 +325,8 @@ register-kind2-env:
 tear-down-kind2-env:
 	kubectl delete -k $(REPO_ROOT)/example/provider-local/seed-kind2/local
 
-test-e2e-local-fast: $(GINKGO)
-	./hack/test-e2e-local.sh --label-filter "Shoot && fast"
+test-e2e-local-simple: $(GINKGO)
+	./hack/test-e2e-local.sh --label-filter "Shoot && simple"
 
 test-e2e-local: $(GINKGO)
 	@# run at maximum 5 tests in parallel for now until we have better experience of how much load a single prow pod can take

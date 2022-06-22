@@ -66,7 +66,7 @@ You can also run these tests on your development machine, using the following co
 make kind-up
 export KUBECONFIG=$PWD/example/gardener-local/kind/kubeconfig
 make gardener-up
-make test-e2e-local  # alternatively: make test-e2e-local-fast
+make test-e2e-local  # alternatively: make test-e2e-local-simple
 ```
 
 If you want to run a specific set of e2e test cases, you can also execute them using `./hack/test-e2e-local.sh` directly in combination with [ginkgo label filters](https://onsi.github.io/ginkgo/#spec-labels). For example:

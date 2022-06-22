@@ -30,7 +30,7 @@ var _ = Describe("Shoot Tests", Label("Shoot"), func() {
 	f.Shoot = defaultShoot("")
 	f.Shoot.Name = "e2e-default"
 
-	It("Create and Delete", Label("fast"), func() {
+	It("Create and Delete", Label("simple"), func() {
 		By("Create Shoot")
 		ctx, cancel := context.WithTimeout(parentCtx, 15*time.Minute)
 		defer cancel()
