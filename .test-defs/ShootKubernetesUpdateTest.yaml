@@ -18,4 +18,5 @@ spec:
     -shoot-name=$SHOOT_NAME
     -project-namespace=$PROJECT_NAMESPACE
     -version=$K8S_VERSION
+    -version-worker-pools=$K8S_VERSION_WORKER_POOLS
   image: eu.gcr.io/gardener-project/3rd/golang:1.18.1
