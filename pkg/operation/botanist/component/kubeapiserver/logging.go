@@ -53,12 +53,31 @@ const (
     Parser              ` + loggingParserNameVPNSeed + `
     Reserve_Data        True
 `
+
+	loggingParserNameAPIProxyMutator = "apiProxyMutatorParser"
+	loggingParserAPIProxyMutator     = `[PARSER]
+    Name        ` + loggingParserNameAPIProxyMutator + `
+    Format      json
+    Time_Key    ts
+`
+	loggingFilterAPIProxyMutator = `[FILTER]
+    Name                parser
+    Match               kubernetes.*` + v1beta1constants.DeploymentNameKubeAPIServer + `*` + containerNameAPIServerProxyPodMutator + `*
+    Key_Name            log
+    Parser              ` + loggingParserNameAPIProxyMutator + `
+    Reserve_Data        True
+`
+	loggingModifyFilterAPIProxyMutator = `[FILTER]
+    Name                modify
+    Match               kubernetes.*` + v1beta1constants.DeploymentNameKubeAPIServer + `*` + containerNameAPIServerProxyPodMutator + `*
+    Copy                level    severity
+`
 )
 
 // CentralLoggingConfiguration returns a fluent-bit parser and filter for the kube-apiserver logs.
 func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
 	return component.CentralLoggingConfig{
-		Filters: fmt.Sprintf("%s\n%s", loggingFilterAPIServer, loggingFilterVPNSeed),
-		Parsers: fmt.Sprintf("%s\n%s", loggingParserAPIServer, loggingParserVPNSeed),
+		Filters: fmt.Sprintf("%s\n%s\n%s\n%s", loggingFilterAPIServer, loggingFilterVPNSeed, loggingFilterAPIProxyMutator, loggingModifyFilterAPIProxyMutator),
+		Parsers: fmt.Sprintf("%s\n%s\n%s", loggingParserAPIServer, loggingParserVPNSeed, loggingParserAPIProxyMutator),
 	}, nil
 }

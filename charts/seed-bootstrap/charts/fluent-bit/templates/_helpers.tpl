@@ -100,7 +100,14 @@ filter-kubernetes.conf: |-
       Name                parser
       Match               kubernetes.*prometheus*prometheus*
       Key_Name            log
-      Parser              alertmanagerParser
+      Parser              prometheusParser
+      Reserve_Data        True
+
+  [FILTER]
+      Name                parser
+      Match               kubernetes.*prometheus*blackbox-exporter*
+      Key_Name            log
+      Parser              prometheusParser
       Reserve_Data        True
 
   [FILTER]
@@ -108,6 +115,27 @@ filter-kubernetes.conf: |-
       Match               kubernetes.*grafana*grafana*
       Key_Name            log
       Parser              grafanaParser
+      Reserve_Data        True
+
+  [FILTER]
+      Name                parser
+      Match               kubernetes.*hvpa-controller*hvpa-controller*
+      Key_Name            log
+      Parser              kubeapiserverParser
+      Reserve_Data        True
+
+  [FILTER]
+      Name                parser
+      Match               kubernetes.*loki*loki*
+      Key_Name            log
+      Parser              lokiParser
+      Reserve_Data        True
+
+  [FILTER]
+      Name                parser
+      Match               kubernetes.*loki*curator*
+      Key_Name            log
+      Parser              lokiCuratorParser
       Reserve_Data        True
 
   # Extension filters
@@ -187,6 +215,27 @@ parsers.conf: |-
       Regex       ^t=(?<time>\d{4}-\d{2}-\d{2}T[^ ]*)\s+lvl=(?<severity>\w+)\smsg="(?<log>.*)"\s+logger=(?<source>.*)
       Time_Key    time
       Time_Format %Y-%m-%dT%H:%M:%S%z
+
+  [PARSER]
+      Name        lokiParser
+      Format      regex
+      Regex       ^level=(?<severity>\w+)\s+ts=(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+caller=(?<source>[^\s]*+)\s+(?<log>.*)$
+      Time_Key    time
+      Time_Format %Y-%m-%dT%H:%M:%S%Z
+
+  [PARSER]
+      Name        prometheusParser
+      Format      regex
+      Regex       ^ts=(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+caller=(?<source>[^\s]*+)\s+level=(?<severity>\w+).*\s+msg=(?<log>.*)$
+      Time_Key    time
+      Time_Format %Y-%m-%dT%H:%M:%S%Z
+
+  [PARSER]
+      Name        lokiCuratorParser
+      Format      regex
+      Regex       ^level=(?<severity>\w+)\s+caller=(?<source>[^\s]*+)\s+ts=(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+(?<log>.*)$
+      Time_Key    time
+      Time_Format %Y-%m-%dT%H:%M:%S%Z
 
   [PARSER]
       Name        extensionsParser
