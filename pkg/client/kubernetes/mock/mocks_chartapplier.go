@@ -6,6 +6,7 @@ package mock
 
 import (
 	context "context"
+	embed "embed"
 	reflect "reflect"
 
 	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
@@ -102,4 +103,19 @@ func (m *MockChartApplier) RenderArchive(arg0 []byte, arg1, arg2 string, arg3 in
 func (mr *MockChartApplierMockRecorder) RenderArchive(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RenderArchive", reflect.TypeOf((*MockChartApplier)(nil).RenderArchive), arg0, arg1, arg2, arg3)
+}
+
+// RenderEmbeddedFS mocks base method.
+func (m *MockChartApplier) RenderEmbeddedFS(arg0 embed.FS, arg1, arg2, arg3 string, arg4 interface{}) (*chartrenderer.RenderedChart, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RenderEmbeddedFS", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(*chartrenderer.RenderedChart)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RenderEmbeddedFS indicates an expected call of RenderEmbeddedFS.
+func (mr *MockChartApplierMockRecorder) RenderEmbeddedFS(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RenderEmbeddedFS", reflect.TypeOf((*MockChartApplier)(nil).RenderEmbeddedFS), arg0, arg1, arg2, arg3, arg4)
 }

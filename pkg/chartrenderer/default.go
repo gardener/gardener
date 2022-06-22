@@ -16,17 +16,20 @@ package chartrenderer
 
 import (
 	"bytes"
+	"embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
-
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/engine"
+	"k8s.io/helm/pkg/ignore"
 	"k8s.io/helm/pkg/manifest"
 	chartapi "k8s.io/helm/pkg/proto/hapi/chart"
 	"k8s.io/helm/pkg/timeconv"
@@ -79,10 +82,11 @@ func DiscoverCapabilities(disc discovery.DiscoveryInterface) (*chartutil.Capabil
 
 // Render loads the chart from the given location <chartPath> and calls the Render() function
 // to convert it into a ChartRelease object.
+// Deprecated: Use RenderEmbeddedFS for new code!
 func (r *chartRenderer) Render(chartPath, releaseName, namespace string, values interface{}) (*RenderedChart, error) {
 	chart, err := chartutil.Load(chartPath)
 	if err != nil {
-		return nil, fmt.Errorf("can't create load chart from path %s:, %s", chartPath, err)
+		return nil, fmt.Errorf("can't load chart from path %s:, %s", chartPath, err)
 	}
 	return r.renderRelease(chart, releaseName, namespace, values)
 }
@@ -92,7 +96,17 @@ func (r *chartRenderer) Render(chartPath, releaseName, namespace string, values 
 func (r *chartRenderer) RenderArchive(archive []byte, releaseName, namespace string, values interface{}) (*RenderedChart, error) {
 	chart, err := chartutil.LoadArchive(bytes.NewReader(archive))
 	if err != nil {
-		return nil, fmt.Errorf("can't create load chart from archive: %s", err)
+		return nil, fmt.Errorf("can't load chart from archive: %s", err)
+	}
+	return r.renderRelease(chart, releaseName, namespace, values)
+}
+
+// RenderEmbeddedFS loads the chart from the given embed.FS and calls the Render() function
+// to convert it into a ChartRelease object.
+func (r *chartRenderer) RenderEmbeddedFS(embeddedFS embed.FS, chartPath, releaseName, namespace string, values interface{}) (*RenderedChart, error) {
+	chart, err := loadEmbeddedFS(embeddedFS, chartPath)
+	if err != nil {
+		return nil, fmt.Errorf("can't load chart %q from embedded file system: %w", chartPath, err)
 	}
 	return r.renderRelease(chart, releaseName, namespace, values)
 }
@@ -194,4 +208,73 @@ func (c *RenderedChart) AsSecretData() map[string][]byte {
 		data[key] = []byte(fileContent)
 	}
 	return data
+}
+
+// loadEmbeddedFS is a copy of chartutil.LoadDir with the difference that it uses an embed.FS.
+func loadEmbeddedFS(embeddedFS embed.FS, chartPath string) (*chartapi.Chart, error) {
+	var (
+		rules = ignore.Empty()
+		files []*chartutil.BufferedFile
+	)
+
+	if helmIgnore, err := embeddedFS.ReadFile(filepath.Join(chartPath, ignore.HelmIgnore)); err == nil {
+		r, err := ignore.Parse(bytes.NewReader(helmIgnore))
+		if err != nil {
+			return nil, err
+		}
+		rules = r
+	}
+
+	if err := fs.WalkDir(embeddedFS, chartPath, func(path string, dirEntry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		fileInfo, err := dirEntry.Info()
+		if err != nil {
+			return err
+		}
+
+		normalizedPath := strings.TrimPrefix(strings.TrimPrefix(path, chartPath), "/")
+		if normalizedPath == "" {
+			// No need to process top level. Avoid bug with helmignore .* matching
+			// empty names. See issue 1779.
+			return nil
+		}
+		// Normalize to / since it will also work on Windows
+		normalizedPath = filepath.ToSlash(normalizedPath)
+
+		if dirEntry.IsDir() {
+			// Directory-based ignore rules should involve skipping the entire
+			// contents of that directory.
+			if rules.Ignore(normalizedPath, fileInfo) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		// If a .helmignore file matches, skip this file.
+		if rules.Ignore(normalizedPath, fileInfo) {
+			return nil
+		}
+
+		// Irregular files include devices, sockets, and other uses of files that
+		// are not regular files. In Go they have a file mode type bit set.
+		// See https://golang.org/pkg/os/#FileMode for examples.
+		if !fileInfo.Mode().IsRegular() {
+			return fmt.Errorf("cannot load irregular file %s as it has file mode type bits set", path)
+		}
+
+		data, err := embeddedFS.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("error reading %s: %s", normalizedPath, err)
+		}
+		files = append(files, &chartutil.BufferedFile{Name: normalizedPath, Data: data})
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return chartutil.LoadFiles(files)
 }
