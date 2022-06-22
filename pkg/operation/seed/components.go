@@ -18,11 +18,14 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"path/filepath"
 	"time"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -31,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/hvpa"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
@@ -39,7 +43,10 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedsystem"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpa"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnauthzserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -51,6 +58,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -136,6 +144,101 @@ func defaultGardenerResourceManager(c client.Client, seedClientVersion string, i
 	})
 
 	return gardenerResourceManager, nil
+}
+
+func defaultIstio(ctx context.Context,
+	seedClient client.Client,
+	imageVector imagevector.ImageVector,
+	chartRenderer chartrenderer.Interface,
+	seed *Seed,
+	conf *config.GardenletConfiguration,
+	sniEnabledOrInUse bool) (component.DeployWaiter, error) {
+	istiodImage, err := imageVector.FindImage(images.ImageNameIstioIstiod)
+	if err != nil {
+		return nil, err
+	}
+
+	igwImage, err := imageVector.FindImage(images.ImageNameIstioProxy)
+	if err != nil {
+		return nil, err
+	}
+
+	defaultIngressGatewayConfig := istio.IngressValues{
+		TrustDomain:     gardencorev1beta1.DefaultDomain,
+		Image:           igwImage.String(),
+		IstiodNamespace: common.IstioNamespace,
+		Annotations:     seed.LoadBalancerServiceAnnotations,
+		Ports:           []corev1.ServicePort{},
+		LoadBalancerIP:  conf.SNI.Ingress.ServiceExternalIP,
+		Labels:          conf.SNI.Ingress.Labels,
+	}
+
+	// even if SNI is being disabled, the existing ports must stay the same
+	// until all APIServer SNI resources are removed.
+	if sniEnabledOrInUse {
+		defaultIngressGatewayConfig.Ports = append(
+			defaultIngressGatewayConfig.Ports,
+			corev1.ServicePort{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt(8443)},
+			corev1.ServicePort{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(9443)},
+			corev1.ServicePort{Name: "tls-tunnel", Port: vpnseedserver.GatewayPort, TargetPort: intstr.FromInt(vpnseedserver.GatewayPort)},
+		)
+	}
+
+	istioIngressGateway := []istio.IngressGateway{istio.IngressGateway{
+		Values:    defaultIngressGatewayConfig,
+		Namespace: *conf.SNI.Ingress.Namespace,
+		ChartPath: filepath.Join(charts.Path, "istio", "istio-ingress"),
+	}}
+
+	istioProxyGateway := []istio.IstioProxyProtocol{istio.IstioProxyProtocol{
+		Values: istio.ProxyValues{
+			Labels: conf.SNI.Ingress.Labels,
+		},
+		Namespace: *conf.SNI.Ingress.Namespace,
+		ChartPath: filepath.Join(charts.Path, "istio", "istio-proxy-protocol"),
+	}}
+
+	// Add for each ExposureClass handler in the config an own Ingress Gateway and Proxy Gateway.
+	for _, handler := range conf.ExposureClassHandlers {
+		istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{
+			Values: istio.IngressValues{
+				TrustDomain:     gardencorev1beta1.DefaultDomain,
+				Image:           igwImage.String(),
+				IstiodNamespace: common.IstioNamespace,
+				Annotations:     utils.MergeStringMaps(seed.LoadBalancerServiceAnnotations, handler.LoadBalancerService.Annotations),
+				Ports:           defaultIngressGatewayConfig.Ports,
+				LoadBalancerIP:  handler.SNI.Ingress.ServiceExternalIP,
+				Labels:          gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name),
+			},
+			Namespace: *handler.SNI.Ingress.Namespace,
+			ChartPath: filepath.Join(charts.Path, "istio", "istio-ingress"),
+		})
+
+		istioProxyGateway = append(istioProxyGateway, istio.IstioProxyProtocol{
+			Values: istio.ProxyValues{
+				Labels: gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name),
+			},
+			Namespace: *handler.SNI.Ingress.Namespace,
+			ChartPath: filepath.Join(charts.Path, "istio", "istio-proxy-protocol"),
+		})
+	}
+
+	if !gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
+		istioProxyGateway = nil
+	}
+
+	return istio.NewIstio(
+		seedClient,
+		chartRenderer,
+		istio.IstiodValues{
+			TrustDomain: gardencorev1beta1.DefaultDomain,
+			Image:       istiodImage.String(),
+		},
+		common.IstioNamespace,
+		charts.Path,
+		istioIngressGateway,
+		istioProxyGateway,
+	), nil
 }
 
 func defaultNetworkPolicies(c client.Client, seed *gardencorev1beta1.Seed, sniEnabled bool) (component.DeployWaiter, error) {

@@ -16,26 +16,18 @@ package istio
 
 import (
 	"context"
-	"path/filepath"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/chartrenderer"
 
-	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type ingress struct {
-	values    *IngressValues
-	namespace string
-	kubernetes.ChartApplier
-	chartPath string
-	client    crclient.Client
+// IngressGateway is a set of configuration values for the istio-ingress chart.
+type IngressGateway struct {
+	Values    IngressValues
+	Namespace string
+	ChartPath string
 }
 
 // IngressValues holds values for the istio-ingress chart.
@@ -52,64 +44,32 @@ type IngressValues struct {
 	Ports []corev1.ServicePort `json:"ports,omitempty"`
 }
 
-// NewIngressGateway creates a new DeployWaiter for istio ingress gateway in
-// "istio-ingress" namespace.
-// It only supports Deploy. Destroy does nothing.
-func NewIngressGateway(
-	values *IngressValues,
-	namespace string,
-	applier kubernetes.ChartApplier,
-	chartsRootPath string,
-	client crclient.Client,
-) component.DeployWaiter {
-	return &ingress{
-		values:       values,
-		namespace:    namespace,
-		ChartApplier: applier,
-		chartPath:    filepath.Join(chartsRootPath, istioReleaseName, "istio-ingress"),
-		client:       client,
-	}
-}
+func (i *istiod) generateIstioIngressGatewayChart(ctx context.Context) (*chartrenderer.RenderedChart, error) {
+	renderedChart := &chartrenderer.RenderedChart{}
 
-func (i *ingress) Deploy(ctx context.Context) error {
-	// TODO(mvladev): Rotate this on on every istio version upgrade.
-	for _, filterName := range []string{"tcp-metadata-exchange-1.9", "tcp-metadata-exchange-1.10", "metadata-exchange-1.9", "metadata-exchange-1.10", "tcp-stats-filter-1.9", "stats-filter-1.9"} {
-		if err := crclient.IgnoreNotFound(i.client.Delete(ctx, &networkingv1alpha3.EnvoyFilter{
-			ObjectMeta: metav1.ObjectMeta{Name: filterName, Namespace: i.namespace},
-		})); err != nil {
-			return err
+	for _, istioIngressGateway := range i.istioIngressGatewayValues {
+		values := map[string]interface{}{
+			"trustDomain":       istioIngressGateway.Values.TrustDomain,
+			"labels":            istioIngressGateway.Values.Labels,
+			"annotations":       istioIngressGateway.Values.Annotations,
+			"deployNamespace":   false,
+			"priorityClassName": "istio-ingressgateway",
+			"ports":             istioIngressGateway.Values.Ports,
+			"image":             istioIngressGateway.Values.Image,
+			"istiodNamespace":   istioIngressGateway.Values.IstiodNamespace,
+			"loadBalancerIP":    istioIngressGateway.Values.LoadBalancerIP,
 		}
+
+		renderedIngressChart, err := i.chartRenderer.Render(istioIngressGateway.ChartPath, ManagedResourceControlName, istioIngressGateway.Namespace, values)
+		if err != nil {
+			return nil, err
+		}
+
+		renderedChart.ChartName = renderedIngressChart.ChartName
+		renderedChart.Manifests = append(renderedChart.Manifests, renderedIngressChart.Manifests...)
 	}
 
-	if err := i.client.Create(
-		ctx,
-		&corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   i.namespace,
-				Labels: getIngressGatewayNamespaceLabels(i.values.Labels),
-			},
-		},
-	); kutil.IgnoreAlreadyExists(err) != nil {
-		return err
-	}
-
-	applierOptions := kubernetes.CopyApplierOptions(kubernetes.DefaultMergeFuncs)
-	applierOptions[appsv1.SchemeGroupVersion.WithKind("Deployment").GroupKind()] = kubernetes.DeploymentKeepReplicasMergeFunc
-
-	return i.Apply(ctx, i.chartPath, i.namespace, istioReleaseName, kubernetes.Values(i.values), applierOptions)
-}
-
-func (i *ingress) Destroy(ctx context.Context) error {
-	// istio cannot be safely removed
-	return nil
-}
-
-func (i *ingress) Wait(ctx context.Context) error {
-	return nil
-}
-
-func (i *ingress) WaitCleanup(ctx context.Context) error {
-	return nil
+	return renderedChart, nil
 }
 
 func getIngressGatewayNamespaceLabels(labels map[string]string) map[string]string {

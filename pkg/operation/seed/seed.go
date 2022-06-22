@@ -27,6 +27,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
@@ -62,7 +63,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/images"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -83,7 +83,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
@@ -230,9 +229,10 @@ func RunReconcileSeedFlow(
 	log logrus.FieldLogger,
 ) error {
 	var (
-		applier      = seedClientSet.Applier()
-		seedClient   = seedClientSet.Client()
-		chartApplier = seedClientSet.ChartApplier()
+		applier       = seedClientSet.Applier()
+		seedClient    = seedClientSet.Client()
+		chartApplier  = seedClientSet.ChartApplier()
+		chartRenderer = seedClientSet.ChartRenderer()
 	)
 
 	secretsManager, err := secretsmanager.New(
@@ -363,6 +363,13 @@ func RunReconcileSeedFlow(
 		}
 
 		if err := hvpa.NewCRD(applier).Deploy(ctx); err != nil {
+			return err
+		}
+	}
+
+	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
+		istioCRDs := istio.NewIstioCRD(chartApplier, charts.Path, seedClient)
+		if err := istioCRDs.Deploy(ctx); err != nil {
 			return err
 		}
 	}
@@ -732,119 +739,6 @@ func RunReconcileSeedFlow(
 	}
 	sniEnabledOrInUse := anySNIInUse || gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI)
 
-	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
-		istiodImage, err := imageVector.FindImage(images.ImageNameIstioIstiod)
-		if err != nil {
-			return err
-		}
-
-		igwImage, err := imageVector.FindImage(images.ImageNameIstioProxy)
-		if err != nil {
-			return err
-		}
-
-		istioCRDs := istio.NewIstioCRD(chartApplier, charts.Path, seedClient)
-		istiod := istio.NewIstiod(
-			&istio.IstiodValues{
-				TrustDomain: gardencorev1beta1.DefaultDomain,
-				Image:       istiodImage.String(),
-			},
-			common.IstioNamespace,
-			chartApplier,
-			charts.Path,
-			seedClient,
-		)
-		istioDeployers := []component.DeployWaiter{istioCRDs, istiod}
-
-		defaultIngressGatewayConfig := &istio.IngressValues{
-			TrustDomain:     gardencorev1beta1.DefaultDomain,
-			Image:           igwImage.String(),
-			IstiodNamespace: common.IstioNamespace,
-			Annotations:     seed.LoadBalancerServiceAnnotations,
-			Ports:           []corev1.ServicePort{},
-			LoadBalancerIP:  conf.SNI.Ingress.ServiceExternalIP,
-			Labels:          conf.SNI.Ingress.Labels,
-		}
-
-		// even if SNI is being disabled, the existing ports must stay the same
-		// until all APIServer SNI resources are removed.
-		if sniEnabledOrInUse {
-			defaultIngressGatewayConfig.Ports = append(
-				defaultIngressGatewayConfig.Ports,
-				corev1.ServicePort{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt(8443)},
-				corev1.ServicePort{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(9443)},
-				corev1.ServicePort{Name: "tls-tunnel", Port: vpnseedserver.GatewayPort, TargetPort: intstr.FromInt(vpnseedserver.GatewayPort)},
-			)
-		}
-
-		istioDeployers = append(istioDeployers, istio.NewIngressGateway(
-			defaultIngressGatewayConfig,
-			*conf.SNI.Ingress.Namespace,
-			chartApplier,
-			charts.Path,
-			seedClient,
-		))
-
-		// Add for each ExposureClass handler in the config an own Ingress Gateway.
-		for _, handler := range conf.ExposureClassHandlers {
-			istioDeployers = append(istioDeployers, istio.NewIngressGateway(
-				&istio.IngressValues{
-					TrustDomain:     gardencorev1beta1.DefaultDomain,
-					Image:           igwImage.String(),
-					IstiodNamespace: common.IstioNamespace,
-					Annotations:     utils.MergeStringMaps(seed.LoadBalancerServiceAnnotations, handler.LoadBalancerService.Annotations),
-					Ports:           defaultIngressGatewayConfig.Ports,
-					LoadBalancerIP:  handler.SNI.Ingress.ServiceExternalIP,
-					Labels:          gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name),
-				},
-				*handler.SNI.Ingress.Namespace,
-				chartApplier,
-				charts.Path,
-				seedClient,
-			))
-		}
-
-		if err := component.OpWaiter(istioDeployers...).Deploy(ctx); err != nil {
-			return err
-		}
-	}
-
-	var proxyGatewayDeployers = []component.DeployWaiter{
-		istio.NewProxyProtocolGateway(
-			&istio.ProxyValues{
-				Labels: conf.SNI.Ingress.Labels,
-			},
-			*conf.SNI.Ingress.Namespace,
-			chartApplier,
-			charts.Path,
-		),
-	}
-
-	for _, handler := range conf.ExposureClassHandlers {
-		proxyGatewayDeployers = append(proxyGatewayDeployers, istio.NewProxyProtocolGateway(
-			&istio.ProxyValues{
-				Labels: gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name),
-			},
-			*handler.SNI.Ingress.Namespace,
-			chartApplier,
-			charts.Path,
-		))
-	}
-
-	if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
-		for _, proxyDeployer := range proxyGatewayDeployers {
-			if err := proxyDeployer.Deploy(ctx); err != nil {
-				return err
-			}
-		}
-	} else {
-		for _, proxyDeployer := range proxyGatewayDeployers {
-			if err := proxyDeployer.Destroy(ctx); err != nil {
-				return err
-			}
-		}
-	}
-
 	if err := cleanupOrphanExposureClassHandlerResources(ctx, seedClient, conf.ExposureClassHandlers, log); err != nil {
 		return err
 	}
@@ -939,7 +833,7 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	if err := runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, secretsManager, imageVector, imageVectorOverwrites, seed, conf, log, sniEnabledOrInUse, hvpaEnabled, vpaEnabled); err != nil {
+	if err := runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, secretsManager, imageVector, imageVectorOverwrites, chartRenderer, seed, conf, log, sniEnabledOrInUse, hvpaEnabled, vpaEnabled); err != nil {
 		return err
 	}
 
@@ -954,6 +848,7 @@ func runCreateSeedFlow(
 	secretsManager secretsmanager.Interface,
 	imageVector imagevector.ImageVector,
 	imageVectorOverwrites map[string]string,
+	chartRenderer chartrenderer.Interface,
 	seed *Seed,
 	conf *config.GardenletConfiguration,
 	log logrus.FieldLogger,
@@ -965,7 +860,18 @@ func runCreateSeedFlow(
 	}
 
 	// setup for flow graph
-	var ingressLoadBalancerAddress string
+	var (
+		istio                      component.DeployWaiter
+		ingressLoadBalancerAddress string
+	)
+
+	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
+		istio, err = defaultIstio(ctx, seedClient, imageVector, chartRenderer, seed, conf, sniEnabledOrInUse)
+		if err != nil {
+			return err
+		}
+	}
+
 	if gardencorev1beta1helper.SeedUsesNginxIngressController(seed.GetInfo()) {
 		providerConfig, err := getConfig(seed)
 		if err != nil {
@@ -1029,6 +935,12 @@ func runCreateSeedFlow(
 
 	var (
 		g = flow.NewGraph("Seed cluster creation")
+		_ = g.Add(flow.Task{
+			Name: "Deploying Istio",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return istio.Deploy(ctx)
+			}).DoIf(gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio)),
+		})
 		_ = g.Add(flow.Task{
 			Name: "Ensuring network policies",
 			Fn:   networkPolicies.Deploy,
@@ -1132,6 +1044,17 @@ func RunDeleteSeedFlow(
 		return err
 	}
 
+	istioIngressGateway := []istio.IngressGateway{istio.IngressGateway{
+		Namespace: *conf.SNI.Ingress.Namespace,
+	}}
+
+	// Add for each ExposureClass handler in the config an own Ingress Gateway.
+	for _, handler := range conf.ExposureClassHandlers {
+		istioIngressGateway = append(istioIngressGateway, istio.IngressGateway{
+			Namespace: *handler.SNI.Ingress.Namespace,
+		})
+	}
+
 	// setup for flow graph
 	var (
 		dnsEntry        = getManagedIngressDNSEntry(seedClient, seed.GetIngressFQDN("*"), *seed.GetInfo().Status.ClusterIdentity, "", log)
@@ -1150,6 +1073,8 @@ func RunDeleteSeedFlow(
 		systemResources = seedsystem.New(seedClient, v1beta1constants.GardenNamespace, seedsystem.Values{})
 		vpa             = vpa.New(seedClient, v1beta1constants.GardenNamespace, nil, vpa.Values{ClusterType: vpa.ClusterTypeSeed})
 		vpnAuthzServer  = vpnauthzserver.New(seedClient, v1beta1constants.GardenNamespace, "", 1)
+		istioCRDs       = istio.NewIstioCRD(seedClientSet.ChartApplier(), charts.Path, seedClient)
+		istio           = istio.NewIstio(seedClient, seedClientSet.ChartRenderer(), istio.IstiodValues{}, common.IstioNamespace, charts.Path, istioIngressGateway, nil)
 	)
 
 	scheduler, err := gardenerkubescheduler.Bootstrap(seedClient, nil, v1beta1constants.GardenNamespace, nil, kubernetesVersion)
@@ -1222,6 +1147,19 @@ func RunDeleteSeedFlow(
 			Name: "Destroy system resources",
 			Fn:   component.OpDestroyAndWait(systemResources).Destroy,
 		})
+		destroyIstio = g.Add(flow.Task{
+			Name: "Destroy Istio",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return component.OpDestroyAndWait(istio).Destroy(ctx)
+			}).DoIf(gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio)),
+		})
+		destroyIstioCRDs = g.Add(flow.Task{
+			Name: "Destroy Istio CRDs",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return component.OpDestroyAndWait(istioCRDs).Destroy(ctx)
+			}).DoIf(gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio)),
+			Dependencies: flow.NewTaskIDs(destroyIstio),
+		})
 		_ = g.Add(flow.Task{
 			Name: "Destroying gardener-resource-manager",
 			Fn:   resourceManager.Destroy,
@@ -1239,6 +1177,8 @@ func RunDeleteSeedFlow(
 				destroyVPA,
 				destroyVPNAuthzServer,
 				destroySystemResources,
+				destroyIstio,
+				destroyIstioCRDs,
 				noControllerInstallations,
 			),
 		})

@@ -31,7 +31,6 @@ type crds struct {
 }
 
 // NewIstioCRD can be used to deploy istio CRDs.
-// Destroy does nothing.
 func NewIstioCRD(
 	applier kubernetes.ChartApplier,
 	chartsRootPath string,
@@ -49,8 +48,7 @@ func (c *crds) Deploy(ctx context.Context) error {
 }
 
 func (c *crds) Destroy(ctx context.Context) error {
-	// istio cannot be safely removed
-	return nil
+	return c.Delete(ctx, c.chartPath, "", "istio")
 }
 
 func (c *crds) Wait(ctx context.Context) error {
