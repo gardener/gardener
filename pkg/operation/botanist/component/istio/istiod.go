@@ -16,6 +16,7 @@ package istio
 
 import (
 	"context"
+	"embed"
 	"path/filepath"
 	"time"
 
@@ -32,9 +33,13 @@ import (
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	// ManagedResourceControlName is the name of the ManagedResource containing the resource specifications.
-	ManagedResourceControlName = "istio"
+// ManagedResourceControlName is the name of the ManagedResource containing the resource specifications.
+const ManagedResourceControlName = "istio"
+
+var (
+	//go:embed charts/istio/istio-istiod
+	chartIstiod     embed.FS
+	chartPathIstiod = filepath.Join("charts", "istio", "istio-istiod")
 )
 
 type istiod struct {
@@ -42,9 +47,8 @@ type istiod struct {
 	chartRenderer             chartrenderer.Interface
 	namespace                 string
 	values                    IstiodValues
-	chartPath                 string
 	istioIngressGatewayValues []IngressGateway
-	istioProxyProtocolValues  []IstioProxyProtocol
+	istioProxyProtocolValues  []ProxyProtocol
 }
 
 // IstiodValues holds values for the istio-istiod chart.
@@ -60,16 +64,14 @@ func NewIstio(
 	chartRenderer chartrenderer.Interface,
 	values IstiodValues,
 	namespace string,
-	chartsRootPath string,
 	istioIngressGatewayValues []IngressGateway,
-	istioProxyProtocolValues []IstioProxyProtocol,
+	istioProxyProtocolValues []ProxyProtocol,
 ) component.DeployWaiter {
 	return &istiod{
 		client:                    client,
 		chartRenderer:             chartRenderer,
 		values:                    values,
 		namespace:                 namespace,
-		chartPath:                 filepath.Join(chartsRootPath, istioReleaseName, "istio-istiod"),
 		istioIngressGatewayValues: istioIngressGatewayValues,
 		istioProxyProtocolValues:  istioProxyProtocolValues,
 	}
@@ -100,17 +102,17 @@ func (i *istiod) Deploy(ctx context.Context) error {
 		}
 	}
 
-	renderedIstiodChart, err := i.generateIstioIstiodChart(ctx)
+	renderedIstiodChart, err := i.generateIstiodChart()
 	if err != nil {
 		return err
 	}
 
-	renderedIstioIngressGatewayChart, err := i.generateIstioIngressGatewayChart(ctx)
+	renderedIstioIngressGatewayChart, err := i.generateIstioIngressGatewayChart()
 	if err != nil {
 		return err
 	}
 
-	renderedIstioProxyProtocolChart, err := i.generateIstioProxyProtocolChart(ctx)
+	renderedIstioProxyProtocolChart, err := i.generateIstioProxyProtocolChart()
 	if err != nil {
 		return err
 	}
@@ -139,12 +141,10 @@ func (i *istiod) Deploy(ctx context.Context) error {
 }
 
 func (i *istiod) Destroy(ctx context.Context) error {
-
 	if err := managedresources.DeleteForSeed(ctx, i.client, i.namespace, ManagedResourceControlName); err != nil {
 		return err
 	}
 
-	//delete the namespaces
 	if err := i.client.Delete(ctx, &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: i.namespace,
@@ -184,16 +184,13 @@ func (i *istiod) WaitCleanup(ctx context.Context) error {
 	return managedresources.WaitUntilDeleted(timeoutCtx, i.client, i.namespace, ManagedResourceControlName)
 }
 
-func (i *istiod) generateIstioIstiodChart(ctx context.Context) (*chartrenderer.RenderedChart, error) {
-
-	values := map[string]interface{}{
+func (i *istiod) generateIstiodChart() (*chartrenderer.RenderedChart, error) {
+	return i.chartRenderer.RenderEmbeddedFS(chartIstiod, chartPathIstiod, ManagedResourceControlName, i.namespace, map[string]interface{}{
 		"trustDomain":       i.values.TrustDomain,
 		"labels":            map[string]interface{}{"app": "istiod", "istio": "pilot"},
 		"deployNamespace":   false,
 		"priorityClassName": "istio",
 		"ports":             map[string]interface{}{"https": 10250},
 		"image":             i.values.Image,
-	}
-
-	return i.chartRenderer.Render(i.chartPath, ManagedResourceControlName, i.namespace, values)
+	})
 }

@@ -15,16 +15,22 @@
 package istio
 
 import (
-	"context"
+	"embed"
+	"path/filepath"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
 )
 
-// IstioProxyProtocol is a set of configuration values for the istio-proxy-protocol chart.
-type IstioProxyProtocol struct {
+var (
+	//go:embed charts/istio/istio-proxy-protocol
+	chartProxyProtocol     embed.FS
+	chartPathProxyProtocol = filepath.Join("charts", "istio", "istio-proxy-protocol")
+)
+
+// ProxyProtocol is a set of configuration values for the istio-proxy-protocol chart.
+type ProxyProtocol struct {
 	Values    ProxyValues
 	Namespace string
-	ChartPath string
 }
 
 // ProxyValues holds values for the istio-proxy-protocol chart.
@@ -32,7 +38,7 @@ type ProxyValues struct {
 	Labels map[string]string `json:"labels,omitempty"`
 }
 
-func (i *istiod) generateIstioProxyProtocolChart(ctx context.Context) (*chartrenderer.RenderedChart, error) {
+func (i *istiod) generateIstioProxyProtocolChart() (*chartrenderer.RenderedChart, error) {
 	renderedChart := &chartrenderer.RenderedChart{}
 
 	for _, istioProxyProtocol := range i.istioProxyProtocolValues {
@@ -40,7 +46,7 @@ func (i *istiod) generateIstioProxyProtocolChart(ctx context.Context) (*chartren
 			"labels": istioProxyProtocol.Values.Labels,
 		}
 
-		renderedProxyProtocolChart, err := i.chartRenderer.Render(istioProxyProtocol.ChartPath, ManagedResourceControlName, istioProxyProtocol.Namespace, values)
+		renderedProxyProtocolChart, err := i.chartRenderer.RenderEmbeddedFS(chartProxyProtocol, chartPathProxyProtocol, ManagedResourceControlName, istioProxyProtocol.Namespace, values)
 		if err != nil {
 			return nil, err
 		}

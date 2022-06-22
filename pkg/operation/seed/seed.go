@@ -368,7 +368,7 @@ func RunReconcileSeedFlow(
 	}
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
-		istioCRDs := istio.NewIstioCRD(chartApplier, charts.Path, seedClient)
+		istioCRDs := istio.NewIstioCRD(chartApplier, seedClient)
 		if err := istioCRDs.Deploy(ctx); err != nil {
 			return err
 		}
@@ -1073,8 +1073,8 @@ func RunDeleteSeedFlow(
 		systemResources = seedsystem.New(seedClient, v1beta1constants.GardenNamespace, seedsystem.Values{})
 		vpa             = vpa.New(seedClient, v1beta1constants.GardenNamespace, nil, vpa.Values{ClusterType: vpa.ClusterTypeSeed})
 		vpnAuthzServer  = vpnauthzserver.New(seedClient, v1beta1constants.GardenNamespace, "", 1)
-		istioCRDs       = istio.NewIstioCRD(seedClientSet.ChartApplier(), charts.Path, seedClient)
-		istio           = istio.NewIstio(seedClient, seedClientSet.ChartRenderer(), istio.IstiodValues{}, common.IstioNamespace, charts.Path, istioIngressGateway, nil)
+		istioCRDs       = istio.NewIstioCRD(seedClientSet.ChartApplier(), seedClient)
+		istio           = istio.NewIstio(seedClient, seedClientSet.ChartRenderer(), istio.IstiodValues{}, common.IstioNamespace, istioIngressGateway, nil)
 	)
 
 	scheduler, err := gardenerkubescheduler.Bootstrap(seedClient, nil, v1beta1constants.GardenNamespace, nil, kubernetesVersion)

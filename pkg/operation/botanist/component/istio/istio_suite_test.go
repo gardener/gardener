@@ -15,7 +15,6 @@
 package istio_test
 
 import (
-	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -26,5 +25,3 @@ func TestIstio(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Botanist Component Istio Suite")
 }
-
-var chartsRootPath = filepath.Join("..", "..", "..", "..", "..", "charts")
