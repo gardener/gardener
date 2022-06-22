@@ -56,6 +56,25 @@ func (mr *MockChartApplierMockRecorder) Apply(arg0, arg1, arg2, arg3 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockChartApplier)(nil).Apply), varargs...)
 }
 
+// ApplyFromEmbeddedFS mocks base method.
+func (m *MockChartApplier) ApplyFromEmbeddedFS(arg0 context.Context, arg1 embed.FS, arg2, arg3, arg4 string, arg5 ...kubernetes.ApplyOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1, arg2, arg3, arg4}
+	for _, a := range arg5 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ApplyFromEmbeddedFS", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplyFromEmbeddedFS indicates an expected call of ApplyFromEmbeddedFS.
+func (mr *MockChartApplierMockRecorder) ApplyFromEmbeddedFS(arg0, arg1, arg2, arg3, arg4 interface{}, arg5 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1, arg2, arg3, arg4}, arg5...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyFromEmbeddedFS", reflect.TypeOf((*MockChartApplier)(nil).ApplyFromEmbeddedFS), varargs...)
+}
+
 // Delete mocks base method.
 func (m *MockChartApplier) Delete(arg0 context.Context, arg1, arg2, arg3 string, arg4 ...kubernetes.DeleteOption) error {
 	m.ctrl.T.Helper()
@@ -73,6 +92,25 @@ func (mr *MockChartApplierMockRecorder) Delete(arg0, arg1, arg2, arg3 interface{
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1, arg2, arg3}, arg4...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockChartApplier)(nil).Delete), varargs...)
+}
+
+// DeleteFromEmbeddedFS mocks base method.
+func (m *MockChartApplier) DeleteFromEmbeddedFS(arg0 context.Context, arg1 embed.FS, arg2, arg3, arg4 string, arg5 ...kubernetes.DeleteOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1, arg2, arg3, arg4}
+	for _, a := range arg5 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteFromEmbeddedFS", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteFromEmbeddedFS indicates an expected call of DeleteFromEmbeddedFS.
+func (mr *MockChartApplierMockRecorder) DeleteFromEmbeddedFS(arg0, arg1, arg2, arg3, arg4 interface{}, arg5 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1, arg2, arg3, arg4}, arg5...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFromEmbeddedFS", reflect.TypeOf((*MockChartApplier)(nil).DeleteFromEmbeddedFS), varargs...)
 }
 
 // Render mocks base method.
