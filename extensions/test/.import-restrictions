@@ -1,4 +1,0 @@
-rules:
-- selectorRegexp: github[.]com/gardener/gardener/test
-  allowedPrefixes:
-  - github.com/gardener/gardener/test/framework

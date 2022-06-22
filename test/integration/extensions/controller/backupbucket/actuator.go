@@ -19,9 +19,9 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
-	"github.com/gardener/gardener/extensions/test/integration"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	extensionsintegrationtest "github.com/gardener/gardener/test/integration/extensions/controller"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,7 +37,7 @@ func addTestControllerToManagerWithOptions(mgr manager.Manager, ignoreOperationA
 		Actuator:                  &actuator{},
 		ControllerOptions:         controller.Options{},
 		Predicates:                backupbucket.DefaultPredicates(ignoreOperationAnnotation),
-		Type:                      integration.Type,
+		Type:                      extensionsintegrationtest.Type,
 		IgnoreOperationAnnotation: ignoreOperationAnnotation,
 	})
 }
@@ -54,11 +54,11 @@ func (a *actuator) InjectClient(client client.Client) error {
 // Reconcile updates the time-out annotation on the `BackupBucket` with the value of the `time-in` annotation. This is
 // to enable integration tests to ensure that the `Reconcile` function of the actuator was called.
 func (a *actuator) Reconcile(ctx context.Context, bb *extensionsv1alpha1.BackupBucket) error {
-	if bb.Annotations[integration.AnnotationKeyDesiredOperationState] == integration.AnnotationValueDesiredOperationStateError {
-		return fmt.Errorf("error as requested by %s=%s annotation", integration.AnnotationKeyDesiredOperationState, integration.AnnotationValueDesiredOperationStateError)
+	if bb.Annotations[extensionsintegrationtest.AnnotationKeyDesiredOperationState] == extensionsintegrationtest.AnnotationValueDesiredOperationStateError {
+		return fmt.Errorf("error as requested by %s=%s annotation", extensionsintegrationtest.AnnotationKeyDesiredOperationState, extensionsintegrationtest.AnnotationValueDesiredOperationStateError)
 	}
 
-	metav1.SetMetaDataAnnotation(&bb.ObjectMeta, integration.AnnotationKeyTimeOut, bb.Annotations[integration.AnnotationKeyTimeIn])
+	metav1.SetMetaDataAnnotation(&bb.ObjectMeta, extensionsintegrationtest.AnnotationKeyTimeOut, bb.Annotations[extensionsintegrationtest.AnnotationKeyTimeIn])
 	return a.client.Update(ctx, bb)
 }
 
@@ -68,8 +68,8 @@ func (a *actuator) Reconcile(ctx context.Context, bb *extensionsv1alpha1.BackupB
 // directly to the `BackupBucket` resource because tests wouldn't be able to read it (the object would have already been
 // deleted).
 func (a *actuator) Delete(ctx context.Context, bb *extensionsv1alpha1.BackupBucket) error {
-	if bb.Annotations[integration.AnnotationKeyDesiredOperationState] == integration.AnnotationValueDesiredOperationStateError {
-		return fmt.Errorf("error as requested by %s=%s annotation", integration.AnnotationKeyDesiredOperationState, integration.AnnotationValueDesiredOperationStateError)
+	if bb.Annotations[extensionsintegrationtest.AnnotationKeyDesiredOperationState] == extensionsintegrationtest.AnnotationValueDesiredOperationStateError {
+		return fmt.Errorf("error as requested by %s=%s annotation", extensionsintegrationtest.AnnotationKeyDesiredOperationState, extensionsintegrationtest.AnnotationValueDesiredOperationStateError)
 	}
 
 	namespace := &corev1.Namespace{}
@@ -77,6 +77,6 @@ func (a *actuator) Delete(ctx context.Context, bb *extensionsv1alpha1.BackupBuck
 		return err
 	}
 
-	metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, integration.AnnotationKeyDesiredOperation, integration.AnnotationValueOperationDelete)
+	metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, extensionsintegrationtest.AnnotationKeyDesiredOperation, extensionsintegrationtest.AnnotationValueOperationDelete)
 	return a.client.Update(ctx, namespace)
 }

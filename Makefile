@@ -227,7 +227,7 @@ test: $(REPORT_COLLECTOR) $(PROMTOOL)
 
 .PHONY: test-integration
 test-integration: $(REPORT_COLLECTOR) $(SETUP_ENVTEST)
-	@./hack/test-integration.sh ./extensions/test/integration/... ./test/integration/...
+	@./hack/test-integration.sh ./test/integration/...
 
 .PHONY: test-cov
 test-cov: $(PROMTOOL)
